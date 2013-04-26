@@ -213,7 +213,6 @@ void SP_info_player_start_blue (gentity_t *ent);
 void SP_info_firstplace(gentity_t *ent);
 void SP_info_secondplace(gentity_t *ent);
 void SP_info_thirdplace(gentity_t *ent);
-void SP_info_podium(gentity_t *ent);
 
 void SP_info_siege_objective (gentity_t *ent);
 void SP_info_siege_radaricon (gentity_t *ent);
