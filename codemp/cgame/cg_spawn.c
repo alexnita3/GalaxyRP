@@ -255,12 +255,11 @@ typedef struct {
 } spawn_t;
 
 spawn_t spawns [] = {
-	{ "misc_model_static",	   SP_misc_model_static		  },
-	{ "misc_skyportal",	   SP_misc_skyportal		  },
-	{ "misc_skyportal_orient", SP_misc_skyportal_orient	  },
-	{ "misc_weather_zone",	   SP_misc_weather_zone		  },
-
-	{ NULL,							0 },
+	{ "misc_model_static",		SP_misc_model_static },
+	{ "misc_skyportal",			SP_misc_skyportal },
+	{ "misc_skyportal_orient",	SP_misc_skyportal_orient },
+	{ "misc_weather_zone",		SP_misc_weather_zone },
+	{ NULL,						0 },
 };
 
 /*

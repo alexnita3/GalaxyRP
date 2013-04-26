@@ -36,11 +36,6 @@ void SV_GetChallenge( netadr_t from ) {
 	challenge_t	*challenge;
 
 	// ignore if we are in single player
-	/*
-	if ( Cvar_VariableValue( "g_gametype" ) == GT_SINGLE_PLAYER || Cvar_VariableValue("ui_singlePlayerActive")) {
-		return;
-	}
-	*/
 	if (Cvar_VariableValue("ui_singlePlayerActive"))
 	{
 		return;
