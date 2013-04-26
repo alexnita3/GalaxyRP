@@ -944,11 +944,18 @@ void SP_target_deactivate( gentity_t *self )
 	self->use = target_deactivate_use;
 }
 
+extern void ExitLevel( void );
 void target_level_change_use(gentity_t *self, gentity_t *other, gentity_t *activator)
 {
 	G_ActivateBehavior(self,BSET_USE);
 
-	trap_SendConsoleCommand(EXEC_NOW, va("map %s", self->message));
+	if ( !self->message || self->message[0] == '+' ) {
+		G_Printf( "Tier selection not supported yet!" );
+		return;
+	}
+
+	trap_Cvar_Set( "nextmap", va("map %s", self->message));
+	ExitLevel();
 }
 
 /*QUAKED target_level_change (1 0 0) (-4 -4 -4) (4 4 4)
