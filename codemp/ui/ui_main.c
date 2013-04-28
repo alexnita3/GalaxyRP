@@ -1601,6 +1601,7 @@ static const char* UI_GetGameTypeName(int gtEnum)
 	case GT_JEDIMASTER:
 		return UI_GetStringEdString("MENUS", "SAGA");//"Jedi Master";??
 	case GT_SINGLE_PLAYER:
+
 		//COOPFIXME: "Cooperative" string
 		return UI_GetStringEdString("MENUS", "SAGA");//"Team FFA";
 	case GT_DUEL:
