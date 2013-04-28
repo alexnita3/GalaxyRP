@@ -160,36 +160,19 @@ void UI_LoadArenas( void ) {
 
 		type = Info_ValueForKey( ui_arenaInfos[n], "type" );
 		// if no type specified, it will be treated as "ffa"
-		if( *type ) {
-			if( strstr( type, "ffa" ) ) {
-				uiInfo.mapList[uiInfo.mapCount].typeBits |= (1 << GT_FFA);
-			}
-			if( strstr( type, "holocron" ) ) {
-				uiInfo.mapList[uiInfo.mapCount].typeBits |= (1 << GT_HOLOCRON);
-			}
-			if( strstr( type, "jedimaster" ) ) {
-				uiInfo.mapList[uiInfo.mapCount].typeBits |= (1 << GT_JEDIMASTER);
-			}
-			if( strstr( type, "duel" ) ) {
-				uiInfo.mapList[uiInfo.mapCount].typeBits |= (1 << GT_DUEL);
-				uiInfo.mapList[uiInfo.mapCount].typeBits |= (1 << GT_POWERDUEL);
-			}
-			if( strstr( type, "powerduel" ) ) {
-				uiInfo.mapList[uiInfo.mapCount].typeBits |= (1 << GT_DUEL);
-				uiInfo.mapList[uiInfo.mapCount].typeBits |= (1 << GT_POWERDUEL);
-			}
-			if( strstr( type, "siege" ) ) {
-				uiInfo.mapList[uiInfo.mapCount].typeBits |= (1 << GT_SIEGE);
-			}
-			if( strstr( type, "ctf" ) ) {
-				uiInfo.mapList[uiInfo.mapCount].typeBits |= (1 << GT_CTF);
-			}
-			if( strstr( type, "cty" ) ) {
-				uiInfo.mapList[uiInfo.mapCount].typeBits |= (1 << GT_CTY);
-			}
-		} else {
-			uiInfo.mapList[uiInfo.mapCount].typeBits |= (1 << GT_FFA);
+		if ( *type ) {
+			if ( strstr( type, "ffa" ) )		uiInfo.mapList[uiInfo.mapCount].typeBits |= (1<<GT_FFA);
+			if ( strstr( type, "coop" ) )		uiInfo.mapList[uiInfo.mapCount].typeBits |= (1<<GT_SINGLE_PLAYER);
+			if ( strstr( type, "holocron" ) )	uiInfo.mapList[uiInfo.mapCount].typeBits |= (1<<GT_HOLOCRON);
+			if ( strstr( type, "jedimaster" ) )	uiInfo.mapList[uiInfo.mapCount].typeBits |= (1<<GT_JEDIMASTER);
+			if ( strstr( type, "duel" ) )		uiInfo.mapList[uiInfo.mapCount].typeBits |= (1<<GT_DUEL)|(1<<GT_POWERDUEL);
+			if ( strstr( type, "powerduel" ) )	uiInfo.mapList[uiInfo.mapCount].typeBits |= (1<<GT_DUEL)|(1<<GT_POWERDUEL);
+			if ( strstr( type, "siege" ) )		uiInfo.mapList[uiInfo.mapCount].typeBits |= (1<<GT_SIEGE);
+			if ( strstr( type, "ctf" ) )		uiInfo.mapList[uiInfo.mapCount].typeBits |= (1<<GT_CTF);
+			if ( strstr( type, "cty" ) )		uiInfo.mapList[uiInfo.mapCount].typeBits |= (1<<GT_CTY);
 		}
+		else
+			uiInfo.mapList[uiInfo.mapCount].typeBits |= (1 << GT_FFA);
 
 		uiInfo.mapCount++;
 		if (uiInfo.mapCount >= MAX_MAPS) {

@@ -150,16 +150,13 @@ Restart the server on a different map
 ==================
 */
 static void SV_Map_f( void ) {
-	char		*cmd;
-	char		*map;
-	qboolean	killBots, cheat;
-	char		expanded[MAX_QPATH];
-	char		mapname[MAX_QPATH];
+	char		*cmd = NULL, *map = NULL;
+	qboolean	killBots=qfalse, cheat=qfalse;
+	char		expanded[MAX_QPATH] = {0}, mapname[MAX_QPATH] = {0};
 
 	map = Cmd_Argv(1);
-	if ( !map ) {
+	if ( !map )
 		return;
-	}
 
 	// make sure the level exists before trying to change, so that
 	// a typo at the server console won't end the game

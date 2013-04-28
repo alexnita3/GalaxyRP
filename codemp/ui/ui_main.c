@@ -1601,7 +1601,7 @@ static const char* UI_GetGameTypeName(int gtEnum)
 	case GT_JEDIMASTER:
 		return UI_GetStringEdString("MENUS", "SAGA");//"Jedi Master";??
 	case GT_SINGLE_PLAYER:
-		//COOPFIXME: "Single Player" string
+		//COOPFIXME: "Cooperative" string
 		return UI_GetStringEdString("MENUS", "SAGA");//"Team FFA";
 	case GT_DUEL:
 		return UI_GetStringEdString("MENUS", "DUEL");//"Team FFA";
@@ -5880,7 +5880,7 @@ static void UI_RunMenuScript(char **args)
 			{
 				trap_Cvar_SetValue( "dedicated", Com_Clamp( 0, 2, ui_dedicated.integer ) );
 			}
-			trap_Cvar_SetValue( "g_gametype", Com_Clamp( 0, 8, uiInfo.gameTypes[ui_netGameType.integer].gtEnum ) );
+			trap_Cvar_SetValue( "g_gametype", Com_Clamp( 0, GT_MAX_GAME_TYPE, uiInfo.gameTypes[ui_netGameType.integer].gtEnum ) );
 			//trap_Cvar_Set("g_redTeam", UI_Cvar_VariableString("ui_teamName"));
 			//trap_Cvar_Set("g_blueTeam", UI_Cvar_VariableString("ui_opponentName"));
 			trap_Cmd_ExecuteText( EXEC_APPEND, va( "wait ; wait ; map %s\n", uiInfo.mapList[ui_currentNetMap.integer].mapLoadName ) );
