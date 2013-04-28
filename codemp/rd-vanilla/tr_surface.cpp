@@ -1139,6 +1139,15 @@ static void LerpMeshVertexes (md3Surface_t *surf, float backlerp)
 	unsigned lat, lng;
 	int		numVerts;
 
+	if ( backEnd.currentEntity->e.reType == RT_MODEL && !backEnd.currentEntity->e.hModel ) {
+		//Raz: Ran into a crash on yavin2, after the training droids, before force pushing the wall
+		//		haven't had it happen since, but tess.numVertexes was 0, and it was crashing after
+		//		the "just copy the vertexes" comment: outXyz[0] = newXyz[0] * newXyzScale;
+		//		reType was RT_MODEL, hModel was 0
+		assert( 0 );
+		return;
+	}
+
 	outXyz = tess.xyz[tess.numVertexes];
 	outNormal = tess.normal[tess.numVertexes];
 

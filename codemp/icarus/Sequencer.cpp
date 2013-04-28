@@ -673,7 +673,7 @@ int CSequencer::ParseAffect( CBlock *block, bstream_t *bstream )
 		}
 		if(!ent)
 		{	// a valid entity name was not returned from the get command
-			m_ie->I_DPrintf( WL_WARNING, "'%s' : invalid affect() target\n");
+			m_ie->I_DPrintf( WL_WARNING, "'%s' : invalid affect() target\n", entname);
 		}
 	
 	} // end if(!ent)

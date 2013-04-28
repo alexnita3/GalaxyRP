@@ -1,0 +1,90 @@
+movement physics - Raz0r
+tier selection + voting at end of round
+cinematics (e.g. pre-mission movies, vjun1 where the ship lands)
+ingame cutscenes (e.g. rosh opening a door)
+checkpoint system
+	EASY
+		respawn at previous checkpoint when you die
+	MEDIUM
+		respawn all dead players when you reach the next checkpoint
+	HARD
+		can only join at start of mission. late joiners spectate
+		incapacitate player when they 'die' and can be revived X times if you get to them within ~30s
+NPC saber attack speed/cancel - npc spawn desann and see for yourself
+NPCs don't drop weapons
+swoops on t2_trip use a bunch of extra key/value pairs + a bunch of MAX_QPATH spam
+check NPC spawn functions
+	Missing
+		NPC_BobaFett
+		NPC_Chewbacca
+		NPC_Droid_Assassin
+		NPC_Droid_Saber
+		NPC_HazardTrooper
+		NPC_Human_Merc
+		NPC_Kothos
+		NPC_Lannik_Racto
+		NPC_Merchant
+		NPC_Monster_Sand_Creature
+		NPC_Player
+		NPC_Rax
+		NPC_RocketTrooper
+		NPC_Saboteur
+check entity spawn functions
+	Missing
+		emplaced_eweb
+		target_autosave
+		target_secret
+		trigger_location
+		fx_wind
+		misc_atst_drivable
+		misc_camera
+		misc_exploding_crate
+		misc_gas_tank
+		misc_model_beacon
+		misc_model_bomb_planted
+		misc_model_ammo_rack
+		misc_model_gun_rack
+		misc_panel_turret
+		misc_security_panel
+		misc_sentry_turrey
+		misc_trip_mine
+		
+ERRORS:
+	yavin1b: could not open file scripts/yavin1/spawn_silent.IBI
+	t1_surprise: ref_tag (keithcam1a) has invalid target (t500)
+	t1_surprise: ref_tag (keithcam1) has invalid target (t429)
+	t1_surprise: Combat Point at (1816 -4888 224) has no waypoint!
+	t1_surprise: MD3 MODEL NPC'S ARE NOT SUPPORTED IN MP!
+	t1_surprise: MD3 model using NPCs are not supported in MP
+	t1_surprise: SET_SAFE_REMOVE variable or field not found!
+	t1_surprise: Q3_CAMERA_FADE: NOT SUPPORTED IN MP
+	t1_surprise: Camera functions NOT SUPPORTED IN MP
+	t1_surprise: 'player' invalid affect() target
+ICARUS:
+	SET_MISSIONFAILED does nothing
+remove force 'sides' to allow dark and light powers
+
+
+PLAYTHROUGH NOTES
+
+yavin1b
+	SP
+		saber turns off after killing howlers
+		the second howler spawn can do a sonic scream, shakes camera etc
+	MP
+		the intro cinematic doesn't play.
+		after a while, the map will restart when the cinematic would have ended
+		** rosh doesn't walk down the tree
+		howlers are fucking stupid and just sit there bobbing their heads
+		can't kill howlers, we're on the same team :D...
+		can not progress due to rosh being retarded and not moving
+
+
+yavin2
+	SP
+		rain on sabers :D
+	MP
+		"When you're ready, Jaden, go through that door" -> door doesn't open. gg.
+		training droids don't spawn
+		doors don't open
+		force sight "hidden" textures show always
