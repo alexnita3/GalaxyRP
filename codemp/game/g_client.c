@@ -1493,7 +1493,7 @@ void *g2SaberInstance = NULL;
 
 qboolean BG_IsValidCharacterModel(const char *modelName, const char *skinName);
 qboolean BG_ValidateSkinForTeam( const char *modelName, char *skinName, int team, float *colors );
-void BG_GetVehicleModelName(char *modelname);
+void BG_GetVehicleModelName(char *modelname, int len);
 
 void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 {
@@ -1504,6 +1504,15 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 #endif
 	char		GLAName[MAX_QPATH];
 	vec3_t	tempVec = {0,0,0};
+
+	if (strlen(modelname) >= MAX_QPATH )
+	{
+		Com_Error( ERR_FATAL, "SetupGameGhoul2Model(%s): modelname exceeds MAX_QPATH.\n", modelname );
+	}
+	if (skinName && strlen(skinName) >= MAX_QPATH )
+	{
+		Com_Error( ERR_FATAL, "SetupGameGhoul2Model(%s): skinName exceeds MAX_QPATH.\n", skinName );
+	}
 
 	// First things first.  If this is a ghoul2 model, then let's make sure we demolish this first.
 	if (ent->ghoul2 && trap_G2_HaveWeGhoul2Models(ent->ghoul2))
@@ -1544,8 +1553,8 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 			// If this is a vehicle, get it's model name.
 			if ( ent->client->NPC_class == CLASS_VEHICLE )
 			{
-				strcpy(vehicleName, modelname);
-				BG_GetVehicleModelName(modelname);
+				Q_strncpyz( vehicleName, modelname, sizeof( vehicleName ) );
+				BG_GetVehicleModelName(modelname, strlen( modelname ));
 				strcpy(truncModelName, modelname);
 				skin[0] = 0;
 				if ( ent->m_pVehicle
@@ -1621,7 +1630,7 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 							siegeClass_t *scl = &bgSiegeClasses[ent->client->siegeClass];
 							if (scl->forcedSkin[0])
 							{
-								strcpy(skin, scl->forcedSkin);
+								Q_strncpyz( skin, scl->forcedSkin, sizeof( skin ) );
 							}
 						}
 					}
@@ -3338,7 +3347,7 @@ void ClientSpawn(gentity_t *ent) {
 		{//In Team games, force one side to be merc and other to be jedi
 			if ( level.numPlayingClients > 0 )
 			{//already someone in the game
-				int		i, forceTeam = TEAM_SPECTATOR;
+				int forceTeam = TEAM_SPECTATOR;
 				for ( i = 0 ; i < level.maxclients ; i++ ) 
 				{
 					if ( level.clients[i].pers.connected == CON_DISCONNECTED ) {
@@ -3951,7 +3960,7 @@ void ClientDisconnect( int clientNum ) {
 	}
 
 	G_ClearVote( ent );
-	G_ClearVote( ent, ent->client->sess.sessionTeam );
+	G_ClearTeamVote( ent, ent->client->sess.sessionTeam );
 
 	trap_UnlinkEntity (ent);
 	ent->s.modelindex = 0;

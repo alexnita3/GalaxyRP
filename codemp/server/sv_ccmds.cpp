@@ -83,7 +83,8 @@ static client_t *SV_GetPlayerByHandle( void ) {
 		}
 
 		Q_strncpyz( cleanName, cl->name, sizeof(cleanName) );
-		Q_CleanStr( cleanName );
+		Q_StripColor( cleanName );
+		//Q_CleanStr( cleanName );
 		if ( !Q_stricmp( cleanName, s ) ) {
 			return cl;
 		}
@@ -149,16 +150,13 @@ Restart the server on a different map
 ==================
 */
 static void SV_Map_f( void ) {
-	char		*cmd;
-	char		*map;
-	qboolean	killBots, cheat;
-	char		expanded[MAX_QPATH];
-	char		mapname[MAX_QPATH];
+	char		*cmd = NULL, *map = NULL;
+	qboolean	killBots=qfalse, cheat=qfalse;
+	char		expanded[MAX_QPATH] = {0}, mapname[MAX_QPATH] = {0};
 
 	map = Cmd_Argv(1);
-	if ( !map ) {
+	if ( !map )
 		return;
-	}
 
 	// make sure the level exists before trying to change, so that
 	// a typo at the server console won't end the game
@@ -382,7 +380,8 @@ static void SV_KickBlankPlayers( void ) {
 		}
 
 		Q_strncpyz( cleanName, cl->name, sizeof(cleanName) );
-		Q_CleanStr( cleanName );
+		Q_StripColor( cleanName );
+		//Q_CleanStr( cleanName );
 		if ( !Q_stricmp( cleanName, "" ) ) {
 			SV_DropClient( cl, SV_GetStringEdString("MP_SVGAME","WAS_KICKED"));	// "was kicked" );
 			cl->lastPacketTime = svs.time;	// in case there is a funny zombie
@@ -806,7 +805,7 @@ static void SV_Systeminfo_f( void ) {
 	}
 
 	Com_Printf ("System info settings:\n");
-	Info_Print ( Cvar_InfoString( CVAR_SYSTEMINFO ) );
+	Info_Print ( Cvar_InfoString_Big( CVAR_SYSTEMINFO ) );
 }
 
 /*

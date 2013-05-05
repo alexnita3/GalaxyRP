@@ -1,6 +1,6 @@
+#pragma once
+
 // qcommon.h -- definitions common between client and server, but not game.or ref modules
-#ifndef _QCOMMON_H_
-#define _QCOMMON_H_
 
 #include "qcommon/cm_public.h"
 #include "qcommon/q_shared.h"
@@ -612,9 +612,6 @@ int		FS_Seek( fileHandle_t f, long offset, int origin );
 
 qboolean FS_FilenameCompare( const char *s1, const char *s2 );
 
-const char *FS_GamePureChecksum( void );
-// Returns the checksum of the pk3 from which the server loaded the qagame.qvm
-
 const char *FS_LoadedPakNames( void );
 const char *FS_LoadedPakChecksums( void );
 const char *FS_LoadedPakPureChecksums( void );
@@ -1083,4 +1080,3 @@ inline int Round(float value)
 {
 	return((int)floorf(value + 0.5f));
 }
-#endif // _QCOMMON_H_

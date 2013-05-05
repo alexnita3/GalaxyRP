@@ -2337,10 +2337,11 @@ int BG_ParseAnimationFile(const char *filename, animation_t *animset, qboolean i
 	int			nextIndex = bgNumAllAnims;
 	qboolean	dynAlloc = qfalse;
 	qboolean	wasLoaded = qfalse;
-	char		BGPAFtext[60000];
-
+	static char BGPAFtext[60000];
 	fileHandle_t	f;
 	int				animNum;
+
+	BGPAFtext[0] = '\0';
 
 	if (!isHumanoid)
 	{
@@ -2650,7 +2651,7 @@ Override animations for upper body
 */
 void BG_StartTorsoAnim( playerState_t *ps, int anim )
 {
-	if ( ps->pm_type >= PM_DEAD )
+	if ( ps->pm_type >= PM_DEAD && pm->gametype != GT_SINGLE_PLAYER )
 	{
 		assert(!BG_InDeathAnim(anim));
 		//please let me know if this assert fires on you (ideally before you close/ignore it) -rww

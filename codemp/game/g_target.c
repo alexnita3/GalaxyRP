@@ -820,7 +820,11 @@ void scriptrunner_run (gentity_t *self)
 			{
 				Com_Printf( "target_scriptrunner running %s on activator %s\n", self->behaviorSet[BSET_USE], self->activator->targetname );
 			}
-			trap_ICARUS_RunScript( self->activator, va( "%s/%s", Q3_SCRIPT_DIR, self->behaviorSet[BSET_USE] ) );
+
+			if ( !strncmp( self->behaviorSet[BSET_USE], va( "%s/", Q3_SCRIPT_DIR ), 8 ) )
+				trap_ICARUS_RunScript( self->activator, self->behaviorSet[BSET_USE] );
+			else
+				trap_ICARUS_RunScript( self->activator, va( "%s/%s", Q3_SCRIPT_DIR, self->behaviorSet[BSET_USE] ) );
 		}
 		else
 		{

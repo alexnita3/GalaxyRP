@@ -29,26 +29,8 @@ extern void PM_SetLegsAnimTimer( gentity_t *ent, int *legsAnimTimer, int time );
 
 extern void ST_ClearTimers( gentity_t *ent );
 extern void Jedi_ClearTimers( gentity_t *ent );
-extern void NPC_ShadowTrooper_Precache( void );
-extern void NPC_Gonk_Precache( void );
-extern void NPC_Mouse_Precache( void );
-extern void NPC_Seeker_Precache( void );
-extern void NPC_Remote_Precache( void );
-extern void	NPC_R2D2_Precache(void);
-extern void	NPC_R5D2_Precache(void);
-extern void NPC_Probe_Precache(void);
-extern void NPC_Interrogator_Precache(gentity_t *self);
-extern void NPC_MineMonster_Precache( void );
-extern void NPC_Howler_Precache( void );
-extern void NPC_ATST_Precache(void);
-extern void NPC_Sentry_Precache(void);
-extern void NPC_Mark1_Precache(void);
-extern void NPC_Mark2_Precache(void);
-extern void NPC_GalakMech_Precache( void );
-extern void NPC_GalakMech_Init( gentity_t *ent );
-extern void NPC_Protocol_Precache( void );
+void NPC_GalakMech_Init( gentity_t *ent );
 extern void Boba_Precache( void );
-extern void NPC_Wampa_Precache( void );
 gentity_t *NPC_SpawnType( gentity_t *ent, char *npc_type, char *targetname, qboolean isVehicle );
 
 extern void Rancor_SetBolts( gentity_t *self );
@@ -74,7 +56,7 @@ extern void NPC_Seeker_Pain				(gentity_t *self, gentity_t *attacker, int damage
 extern void NPC_Remote_Pain				(gentity_t *self, gentity_t *attacker, int damage);
 extern void emplaced_gun_pain			(gentity_t *self, gentity_t *attacker, int damage);
 extern void NPC_Mark1_Pain				(gentity_t *self, gentity_t *attacker, int damage);
-extern void NPC_GM_Pain				(gentity_t *self, gentity_t *attacker, int damage);
+extern void NPC_GM_Pain					(gentity_t *self, gentity_t *attacker, int damage);
 extern void NPC_Sentry_Pain				(gentity_t *self, gentity_t *attacker, int damage);
 extern void NPC_Mark2_Pain				(gentity_t *self, gentity_t *attacker, int damage);
 extern void PlayerPain					(gentity_t *self, gentity_t *attacker, int damage);
@@ -1113,8 +1095,8 @@ void NPC_Begin (gentity_t *ent)
 	SetNPCGlobals( ent );
 
 	ent->enemy = NULL;
-	NPCInfo->timeOfDeath = 0;
-	NPCInfo->shotTime = 0;
+	NPCS.NPCInfo->timeOfDeath = 0;
+	NPCS.NPCInfo->shotTime = 0;
 	NPC_ClearGoal();
 	NPC_ChangeWeapon( ent->client->ps.weapon );
 
@@ -1944,6 +1926,8 @@ teamnodmg - team that NPC does not take damage from (turrets and other auto-defe
 //void NPC_PrecacheModels ( char *NPCName );
 extern void NPC_PrecacheAnimationCFG( const char *NPC_type );
 void NPC_Precache ( gentity_t *spawner );
+void NPC_PrecacheByClassName( const char *type );
+void Precache_Key( void );
 void NPC_PrecacheType( char *NPC_type )
 {
 	gentity_t *fakespawner = G_Spawn();
@@ -2048,6 +2032,13 @@ void SP_NPC_spawner( gentity_t *self)
 			NPC_Spawn( self, self, self );
 		}
 	}
+
+	// classname-specific precaching
+	NPC_PrecacheByClassName( self->NPC_type );
+	
+	// precache keys
+	if ( self->message )
+		Precache_Key();
 
 	//FIXME: store cameraGroup somewhere else and apply to spawned NPCs' cameraGroup
 	//Or just don't include NPC_spawners in cameraGroupings
@@ -2770,14 +2761,9 @@ SHY - Spawner is shy
 void SP_NPC_Galak( gentity_t *self)
 {
 	if ( self->spawnflags & 1 )
-	{
 		self->NPC_type = "Galak_Mech";
-		NPC_GalakMech_Precache();
-	}
 	else
-	{
 		self->NPC_type = "Galak";
-	}
 
 	SP_NPC_spawner( self );
 }
@@ -3121,6 +3107,33 @@ void SP_NPC_Rodian( gentity_t *self)
 	SP_NPC_spawner( self );
 }
 
+/*QUAKED NPC_Rosh_Penin (1 0 0) (-16 -16 -24) (16 16 32) DARKSIDE NOFORCE x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
+Good Rosh
+DARKSIDE (1) - Evil Rosh
+NOFORCE (2) - Can't jump, starts with no saber
+DROPTOFLOOR (16) - NPC can be in air, but will spawn on the closest floor surface below it
+CINEMATIC (32) - Will spawn with no default AI (BS_CINEMATIC)
+NOTSOLID (64) - Starts not solid
+STARTINSOLID (128) - Don't try to fix if spawn in solid
+SHY (256) - Spawner is shy
+*/
+extern void NPC_Rosh_Dark_Precache( void );
+void SP_NPC_Rosh_Penin( gentity_t *self )
+{
+	if ( self->spawnflags & 1 ) {
+		self->NPC_type = "rosh_dark";
+		NPC_Rosh_Dark_Precache();
+	}
+
+	else if ( self->spawnflags & 2 )
+		self->NPC_type = "rosh_penin_noforce";
+
+	else
+		self->NPC_type = "rosh_penin";
+
+	SP_NPC_spawner( self );
+}
+
 /*QUAKED NPC_Weequay(1 0 0) (-16 -16 -24) (16 16 40) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
 DROPTOFLOOR - NPC can be in air, but will spawn on the closest floor surface below it
 CINEMATIC - Will spawn with no default AI (BS_CINEMATIC)
@@ -3406,7 +3419,6 @@ void SP_NPC_ShadowTrooper( gentity_t *self)
 		}
 	}
 	
-	NPC_ShadowTrooper_Precache();
 	WP_SetSaberModel( NULL, CLASS_SHADOWTROOPER );
 
 	SP_NPC_spawner( self );
@@ -3469,7 +3481,6 @@ void SP_NPC_MineMonster( gentity_t *self)
 	self->NPC_type = "minemonster";
 
 	SP_NPC_spawner( self );
-	NPC_MineMonster_Precache();
 }
 
 /*QUAKED NPC_Monster_Claw (1 0 0) (-12 -12 -24) (12 12 40) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3555,8 +3566,6 @@ void SP_NPC_Monster_Wampa( gentity_t *self)
 {
 	self->NPC_type = "wampa";
 
-	NPC_Wampa_Precache();
-
 	SP_NPC_spawner( self );
 }
 
@@ -3590,8 +3599,6 @@ void SP_NPC_Droid_Interrogator( gentity_t *self)
 	self->NPC_type = "interrogator";
 
 	SP_NPC_spawner( self );
-
-	NPC_Interrogator_Precache(self);
 }
 
 /*QUAKED NPC_Droid_Probe (1 0 0) (-12 -12 -24) (12 12 40) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3608,8 +3615,6 @@ void SP_NPC_Droid_Probe( gentity_t *self)
 	self->NPC_type = "probe";
 
 	SP_NPC_spawner( self );
-
-	NPC_Probe_Precache();
 }
 
 /*QUAKED NPC_Droid_Mark1 (1 0 0) (-36 -36 -24) (36 36 80) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3627,8 +3632,6 @@ void SP_NPC_Droid_Mark1( gentity_t *self)
 	self->NPC_type = "mark1";
 
 	SP_NPC_spawner( self );
-
-	NPC_Mark1_Precache();
 }
 
 /*QUAKED NPC_Droid_Mark2 (1 0 0) (-12 -12 -24) (12 12 40) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3646,8 +3649,6 @@ void SP_NPC_Droid_Mark2( gentity_t *self)
 	self->NPC_type = "mark2";
 
 	SP_NPC_spawner( self );
-
-	NPC_Mark2_Precache();
 }
 
 /*QUAKED NPC_Droid_ATST (1 0 0) (-40 -40 -24) (40 40 248) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3669,8 +3670,6 @@ void SP_NPC_Droid_ATST( gentity_t *self)
 	}
 
 	SP_NPC_spawner( self );
-
-	NPC_ATST_Precache();
 }
 
 /*QUAKED NPC_Droid_Remote (1 0 0) (-12 -12 -24) (12 12 40) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3687,8 +3686,6 @@ void SP_NPC_Droid_Remote( gentity_t *self)
 	self->NPC_type = "remote";
 
 	SP_NPC_spawner( self );
-
-	NPC_Remote_Precache();
 }
 
 /*QUAKED NPC_Droid_Seeker (1 0 0) (-12 -12 -24) (12 12 40) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3705,8 +3702,6 @@ void SP_NPC_Droid_Seeker( gentity_t *self)
 	self->NPC_type = "seeker";
 
 	SP_NPC_spawner( self );
-
-	NPC_Seeker_Precache();
 }
 
 /*QUAKED NPC_Droid_Sentry (1 0 0) (-24 -24 -24) (24 24 40) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3723,8 +3718,6 @@ void SP_NPC_Droid_Sentry( gentity_t *self)
 	self->NPC_type = "sentry";
 
 	SP_NPC_spawner( self );
-
-	NPC_Sentry_Precache();
 }
 
 /*QUAKED NPC_Droid_Gonk (1 0 0) (-12 -12 -24) (12 12 40) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3743,9 +3736,6 @@ void SP_NPC_Droid_Gonk( gentity_t *self)
 	self->NPC_type = "gonk";
 
 	SP_NPC_spawner( self );
-
-	//precache the Gonk sounds
-	NPC_Gonk_Precache();
 }
 
 /*QUAKED NPC_Droid_Mouse (1 0 0) (-12 -12 -24) (12 12 40) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3764,10 +3754,6 @@ void SP_NPC_Droid_Mouse( gentity_t *self)
 	self->NPC_type = "mouse";
 
 	SP_NPC_spawner( self );
-
-	//precache the Mouse sounds
-	NPC_Mouse_Precache();
-
 }
 
 /*QUAKED NPC_Droid_R2D2 (1 0 0) (-12 -12 -24) (12 12 40) IMPERIAL x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3793,8 +3779,6 @@ void SP_NPC_Droid_R2D2( gentity_t *self)
 	}
 
 	SP_NPC_spawner( self );
-
-	NPC_R2D2_Precache();
 }
 
 /*QUAKED NPC_Droid_R5D2 (1 0 0) (-12 -12 -24) (12 12 40) IMPERIAL ALWAYSDIE x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3821,8 +3805,6 @@ void SP_NPC_Droid_R5D2( gentity_t *self)
 	}
 
 	SP_NPC_spawner( self );
-
-	NPC_R5D2_Precache();
 }
 
 /*QUAKED NPC_Droid_Protocol (1 0 0) (-12 -12 -24) (12 12 40) IMPERIAL x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
@@ -3846,7 +3828,6 @@ void SP_NPC_Droid_Protocol( gentity_t *self)
 	}
 
 	SP_NPC_spawner( self );
-	NPC_Protocol_Precache();
 }
 
 
@@ -3926,79 +3907,7 @@ gentity_t *NPC_SpawnType( gentity_t *ent, char *npc_type, char *targetname, qboo
 		NPCspawner->classname = "NPC_Vehicle";
 	}
 
-	//call precache funcs for James' builds
-	if ( !Q_stricmp( "gonk", NPCspawner->NPC_type))
-	{
-		NPC_Gonk_Precache();
-	}
-	else if ( !Q_stricmp( "mouse", NPCspawner->NPC_type))
-	{
-		NPC_Mouse_Precache();
-	}
-	else if ( !Q_strncmp( "r2d2", NPCspawner->NPC_type, 4))
-	{
-		NPC_R2D2_Precache();
-	}
-	else if ( !Q_stricmp( "atst", NPCspawner->NPC_type))
-	{
-		NPC_ATST_Precache();
-	}
-	else if ( !Q_strncmp( "r5d2", NPCspawner->NPC_type, 4))
-	{
-		NPC_R5D2_Precache();
-	}
-	else if ( !Q_stricmp( "mark1", NPCspawner->NPC_type))
-	{
-		NPC_Mark1_Precache();
-	}
-	else if ( !Q_stricmp( "mark2", NPCspawner->NPC_type))
-	{
-		NPC_Mark2_Precache();
-	}
-	else if ( !Q_stricmp( "interrogator", NPCspawner->NPC_type))
-	{
-		NPC_Interrogator_Precache(NULL);
-	}
-	else if ( !Q_stricmp( "probe", NPCspawner->NPC_type))
-	{
-		NPC_Probe_Precache();
-	}
-	else if ( !Q_stricmp( "seeker", NPCspawner->NPC_type))
-	{
-		NPC_Seeker_Precache();
-	}
-	else if ( !Q_stricmp( "remote", NPCspawner->NPC_type))
-	{
-		NPC_Remote_Precache();
-	}
-	else if ( !Q_strncmp( "shadowtrooper", NPCspawner->NPC_type, 13 ) )
-	{
-		NPC_ShadowTrooper_Precache();
-	}
-	else if ( !Q_stricmp( "minemonster", NPCspawner->NPC_type ))
-	{
-		NPC_MineMonster_Precache();
-	}
-	else if ( !Q_stricmp( "howler", NPCspawner->NPC_type ))
-	{
-		NPC_Howler_Precache();
-	}
-	else if ( !Q_stricmp( "sentry", NPCspawner->NPC_type ))
-	{
-		NPC_Sentry_Precache();
-	}
-	else if ( !Q_stricmp( "protocol", NPCspawner->NPC_type ))
-	{
-		NPC_Protocol_Precache();
-	}
-	else if ( !Q_stricmp( "galak_mech", NPCspawner->NPC_type ))
-	{
-		NPC_GalakMech_Precache();
-	}
-	else if ( !Q_stricmp( "wampa", NPCspawner->NPC_type ))
-	{
-		NPC_Wampa_Precache();
-	}
+	NPC_PrecacheByClassName( NPCspawner->NPC_type );
 
 	return (NPC_Spawn_Do( NPCspawner ));
 }
@@ -4195,9 +4104,9 @@ void Cmd_NPC_f( gentity_t *ent )
 	else if ( Q_stricmp ( cmd, "score" ) == 0 )
 	{
 		char		cmd2[1024];
-		gentity_t *ent = NULL;
+		gentity_t *thisent = NULL;
 
-		trap_Argv(2, cmd2, 1024);
+		trap_Argv( 2, cmd2, sizeof( cmd2 ) );
 
 		if ( !cmd2[0] )
 		{//Show the score for all NPCs
@@ -4206,19 +4115,19 @@ void Cmd_NPC_f( gentity_t *ent )
 			Com_Printf( "SCORE LIST:\n" );
 			for ( i = 0; i < ENTITYNUM_WORLD; i++ )
 			{
-				ent = &g_entities[i];
-				if ( !ent || !ent->client )
+				thisent = &g_entities[i];
+				if ( !thisent || !thisent->client )
 				{
 					continue;
 				}
-				NPC_PrintScore( ent );
+				NPC_PrintScore( thisent );
 			}
 		}
 		else
 		{
-			if ( (ent = G_Find( NULL, FOFS(targetname), cmd2 )) != NULL && ent->client )
+			if ( (thisent = G_Find( NULL, FOFS(targetname), cmd2 )) != NULL && thisent->client )
 			{
-				NPC_PrintScore( ent );
+				NPC_PrintScore( thisent );
 			}
 			else
 			{

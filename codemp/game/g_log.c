@@ -119,6 +119,9 @@ void G_LogWeaponInit(void) {
 void QDECL G_LogWeaponPickup(int client, int weaponid)
 {
 #ifdef LOGGING_WEAPONS
+	if (client>=MAX_CLIENTS)
+		return;
+
 	G_WeaponLogPickups[client][weaponid]++;
 	G_WeaponLogClientTouch[client] = qtrue;
 #endif //_LOGGING_WEAPONS
@@ -128,6 +131,9 @@ void QDECL G_LogWeaponFire(int client, int weaponid)
 {
 #ifdef LOGGING_WEAPONS
 	int dur;
+
+	if (client>=MAX_CLIENTS)
+		return;
 
 	G_WeaponLogFired[client][weaponid]++;
 	dur = level.time - G_WeaponLogLastTime[client];
@@ -1577,7 +1583,7 @@ void CalculateAwards(gentity_t *ent, char *msg)
 		strcpy(buf2, buf1);
 		Com_sprintf(buf1, AWARDS_MSG_LENGTH, "%s %d", buf2, 0);
 	}
-	strcpy(buf2, msg);
+	Q_strncpyz( buf2, msg, sizeof( buf2 ) );
 	Com_sprintf( msg, AWARDS_MSG_LENGTH, "%s %d%s", buf2, awardFlags, buf1);
 #endif // LOGGING_WEAPONS
 }
