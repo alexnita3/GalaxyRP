@@ -462,7 +462,7 @@ void NPC_SetMiscDefaultData( gentity_t *ent )
 	else
 	{
 		//for siege, want "bad" npc's allied with the "bad" team
-		if (g_gametype.integer == GT_SIEGE && ent->s.NPC_class != CLASS_VEHICLE)
+		if (level.gametype == GT_SIEGE && ent->s.NPC_class != CLASS_VEHICLE)
 		{
 			if (ent->client->enemyTeam == NPCTEAM_PLAYER)
 			{
@@ -1109,7 +1109,7 @@ void NPC_Begin (gentity_t *ent)
 
 	//MCG - Begin: NPC hacks
 	//FIXME: Set the team correctly
-	if (ent->s.NPC_class != CLASS_VEHICLE || g_gametype.integer != GT_SIEGE)
+	if (ent->s.NPC_class != CLASS_VEHICLE || level.gametype != GT_SIEGE)
 	{
 		ent->client->ps.persistant[PERS_TEAM] = ent->client->playerTeam;
 	}

@@ -4248,7 +4248,7 @@ static void PM_GroundTrace( void ) {
 					pm->ps->weaponTime <= 0)
 				{
 					gentity_t *servEnt = (gentity_t *)pm_entSelf;
-					if (g_gametype.integer < GT_TEAM ||
+					if (level.gametype < GT_TEAM ||
 						!trEnt->alliedTeam ||
 						(trEnt->alliedTeam == servEnt->client->sess.sessionTeam))
 					{ //not belonging to a team, or client is on same team
@@ -5430,7 +5430,7 @@ static void PM_Footsteps( void ) {
 		{ //let it finish first
 			bobmove = 0.2f;
 		}
-		else if ( !(abs(pm->cmd.forwardmove) <= 64 && abs(pm->cmd.rightmove) <= 64) )	// Analog joystick improvement --eez
+		else if ( !( pm->cmd.buttons & BUTTON_WALKING ) )
 		{//running
 			bobmove = 0.4f;	// faster speeds bob faster
 			if ( pm->ps->clientNum >= MAX_CLIENTS &&

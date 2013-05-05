@@ -350,8 +350,7 @@ static void InitOpenGL( void )
 		// print info the first time only
 		GL_SetDefaultState();
 		R_Splash();	//get something on screen asap
-		if ( ri.Cvar_VariableIntegerValue( "com_developer" ) )
-			GfxInfo_f();
+		GfxInfo_f();
 	}
 	else
 	{
@@ -463,6 +462,8 @@ static void R_ModeList_f( void )
 	int i;
 
 	Com_Printf ("\n" );
+	Com_Printf ("Mode -2: Use desktop resolution\n" );
+	Com_Printf ("Mode -1: Use r_customWidth and r_customHeight variables\n" );
 	for ( i = 0; i < s_numVidModes; i++ )
 	{
 		Com_Printf ("%s\n", r_vidModes[i].description );
@@ -1295,7 +1296,7 @@ void R_Init( void ) {
 //	Swap_Init();
 
 #ifndef FINAL_BUILD
-	if ( (int)tess.xyz & 15 ) {
+	if ( (intptr_t)tess.xyz & 15 ) {
 		Com_Printf( "WARNING: tess.xyz not 16 byte aligned (%x)\n",(int)tess.xyz & 15 );
 	}
 #endif
