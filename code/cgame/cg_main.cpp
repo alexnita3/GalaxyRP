@@ -62,15 +62,9 @@ Ghoul2 Insert End
 */
 
 
-#ifdef _XBOX
-extern bool CL_ExtendSelectTime(void);
-#endif
-
-
-
 void CG_LoadHudMenu(void);
 int inv_icons[INV_MAX];
-char *inv_names[] =
+const char *inv_names[] =
 {
 "ELECTROBINOCULARS",
 "BACTA CANISTER",
@@ -109,7 +103,7 @@ This must be the very first function compiled into the .q3vm file
 #ifndef _WIN32
 extern "C"
 #endif
-int vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7 ) {
+Q_EXPORT intptr_t vmMain( intptr_t command, intptr_t arg0, intptr_t arg1, intptr_t arg2, intptr_t arg3, intptr_t arg4, intptr_t arg5, intptr_t arg6, intptr_t arg7  ) {
 	centity_t		*cent;
 
 	switch ( command ) {
@@ -285,6 +279,7 @@ vmCvar_t	cg_drawGun;
 vmCvar_t	cg_autoswitch;
 vmCvar_t	cg_simpleItems;
 vmCvar_t	cg_fov;
+vmCvar_t	cg_fovAspectAdjust;
 vmCvar_t	cg_endcredits;
 vmCvar_t	cg_updatedDataPadForcePower1;
 vmCvar_t	cg_updatedDataPadForcePower2;
@@ -322,7 +317,6 @@ vmCvar_t	cg_panoNumShots;
 
 vmCvar_t	fx_freeze;
 vmCvar_t	fx_debug;
-vmCvar_t	fx_flashRadius;
 
 vmCvar_t	cg_missionInfoFlashTime;
 vmCvar_t	cg_hudFiles;
@@ -344,15 +338,16 @@ vmCvar_t	cg_debugHealthBars;
 
 typedef struct {
 	vmCvar_t	*vmCvar;
-	char		*cvarName;
-	char		*defaultString;
+	const char	*cvarName;
+	const char	*defaultString;
 	int			cvarFlags;
 } cvarTable_t;
 
 static cvarTable_t cvarTable[] = {
 	{ &cg_autoswitch, "cg_autoswitch", "1", CVAR_ARCHIVE },
 	{ &cg_drawGun, "cg_drawGun", "1", CVAR_ARCHIVE },
-	{ &cg_fov, "cg_fov", "80", 0 },//must be 80
+	{ &cg_fov, "cg_fov", "80", CVAR_ARCHIVE },
+	{ &cg_fovAspectAdjust, "cg_fovAspectAdjust", "0", CVAR_ARCHIVE },
 	{ &cg_stereoSeparation, "cg_stereoSeparation", "0.4", CVAR_ARCHIVE  },
 	{ &cg_shadows, "cg_shadows", "1", CVAR_ARCHIVE  },
 	{ &cg_renderToTextureFX, "cg_renderToTextureFX", "1", CVAR_ARCHIVE  },
@@ -431,7 +426,6 @@ static cvarTable_t cvarTable[] = {
 
 	{ &fx_freeze, "fx_freeze", "0", 0 },
 	{ &fx_debug, "fx_debug", "0", 0 },
-	{ &fx_flashRadius, "fx_flashRadius", "12.0", CVAR_ARCHIVE },
 	// the following variables are created in other parts of the system,
 	// but we also reference them here
 
@@ -567,14 +561,12 @@ void CG_TargetCommand_f( void ) {
 	cgi_SendConsoleCommand( va( "gc %i %i", targetNum, atoi( test ) ) );
 }
 
-
-
 void CG_Printf( const char *msg, ... ) {
 	va_list		argptr;
 	char		text[1024];
 
 	va_start (argptr, msg);
-	vsprintf (text, msg, argptr);
+	Q_vsnprintf (text, sizeof(text), msg, argptr);
 	va_end (argptr);
 
 	cgi_Printf( text );
@@ -585,12 +577,11 @@ void CG_Error( const char *msg, ... ) {
 	char		text[1024];
 
 	va_start (argptr, msg);
-	vsprintf (text, msg, argptr);
+	Q_vsnprintf (text, sizeof(text), msg, argptr);
 	va_end (argptr);
 
 	cgi_Error( text );
 }
-
 
 /*
 ================
@@ -605,7 +596,6 @@ const char *CG_Argv( int arg ) {
 	return buffer;
 }
 
-
 //========================================================================
 
 /*
@@ -618,7 +608,7 @@ The server says this item is used on this level
 void CG_RegisterItemSounds( int itemNum ) {
 	gitem_t			*item;
 	char			data[MAX_QPATH];
-	char			*s, *start;
+	const char		*s, *start;
 	int				len;
 
 	item = &bg_itemlist[ itemNum ];
@@ -668,7 +658,6 @@ void CG_LoadingString( const char *s ) {
 	cgi_UpdateScreen();
 }
 
-
 static inline void CG_AS_Register(void)
 {
 	CG_LoadingString( "ambient sound sets" );
@@ -687,7 +676,6 @@ static inline void CG_AS_Register(void)
 
 	cgi_AS_ParseSets();
 }
-
 
 /*
 =================
@@ -825,7 +813,8 @@ static void CG_RegisterSounds( void ) {
 
 	// only register the items that the server says we need
 	char	items[MAX_ITEMS+1];
-	strcpy( items, CG_ConfigString( CS_ITEMS ) );
+	//Raz: Fixed buffer overflow
+	Q_strncpyz(items, CG_ConfigString(CS_ITEMS), sizeof(items));
 
 	for ( i = 1 ; i < bg_numItems ; i++ ) {
 		if ( items[ i ] == '1' )	//even with sound pooling, don't clutter it for low end machines
@@ -1146,7 +1135,7 @@ static void CG_RegisterEffects( void )
 	if (numFailed && g_delayedShutdown->integer)
 	{
 		//assert(0);
-		CG_Error( "CG_RegisterEffects: %i Effects failed to load.  Please fix, or ask Aurelio.", numFailed );
+		//CG_Error( "CG_RegisterEffects: %i Effects failed to load.  Please fix, or ask Aurelio.", numFailed );
 	}
 
 	// Start world effects
@@ -1236,50 +1225,50 @@ void CG_RegisterClientModels (int entityNum)
 
 HUDMenuItem_t forceTics[] = 
 {
-"rightHUD", "force_tic1", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	// Top 
-"rightHUD", "force_tic2", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	// Top 
-"rightHUD", "force_tic3", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	// Top 
-"rightHUD", "force_tic4", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	// Top 
+	 { "rightHUD", "force_tic1", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	// Top 
+	 { "rightHUD", "force_tic2", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	// Top 
+	 { "rightHUD", "force_tic3", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	// Top 
+	 { "rightHUD", "force_tic4", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	// Top 
 };
 
 HUDMenuItem_t ammoTics[] = 
 {
-"rightHUD", "ammo_tic1", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	// Top 
-"rightHUD", "ammo_tic2", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	// Top 
-"rightHUD", "ammo_tic3", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	// Top 
-"rightHUD", "ammo_tic4", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	// Top 
+	{ "rightHUD", "ammo_tic1", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	// Top 
+	{ "rightHUD", "ammo_tic2", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	// Top 
+	{ "rightHUD", "ammo_tic3", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	// Top 
+	{ "rightHUD", "ammo_tic4", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	// Top 
 };
 
 HUDMenuItem_t armorTics[] = 
 {
-"leftHUD", "armor_tic1", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	// Top 
-"leftHUD", "armor_tic2", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	
-"leftHUD", "armor_tic3", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	
-"leftHUD", "armor_tic4", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	
+	{ "leftHUD", "armor_tic1", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	// Top 
+	{ "leftHUD", "armor_tic2", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	
+	{ "leftHUD", "armor_tic3", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	
+	{ "leftHUD", "armor_tic4", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	
 };
 
 HUDMenuItem_t healthTics[] = 
 {
-"leftHUD", "health_tic1", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL, 	// Top 
-"leftHUD", "health_tic2", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// 
-"leftHUD", "health_tic3", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// 
-"leftHUD", "health_tic4", 0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// Bottom
+	{ "leftHUD", "health_tic1", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE }, 	// Top 
+	{ "leftHUD", "health_tic2", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// 
+	{ "leftHUD", "health_tic3", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// 
+	{ "leftHUD", "health_tic4", 0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// Bottom
 };
 
 
 HUDMenuItem_t otherHUDBits[] = 
 {
-"lefthud", "healthamount",			0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// OHB_HEALTHAMOUNT
-"lefthud", "armoramount",			0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// OHB_ARMORAMOUNT
-"righthud", "forceamount",			0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// OHB_FORCEAMOUNT 
-"righthud", "ammoamount",			0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// OHB_AMMOAMOUNT
-"righthud", "saberstyle_strong",	0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// OHB_SABERSTYLE_STRONG
-"righthud", "saberstyle_medium",	0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// OHB_SABERSTYLE_MEDIUM
-"righthud", "saberstyle_fast",		0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// OHB_SABERSTYLE_FAST
-"lefthud",	"scanline",				0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// OHB_SCANLINE_LEFT
-"righthud",	"scanline",				0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// OHB_SCANLINE_RIGHT
-"lefthud",	"frame",				0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// OHB_FRAME_LEFT
-"righthud",	"frame",				0,  0,  0,  0, 0.0f, 0.0f, 0.0f, 0.0f, NULL,	// OHB_FRAME_RIGHT
+	{ "lefthud", "healthamount",			0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// OHB_HEALTHAMOUNT
+	{ "lefthud", "armoramount",			0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// OHB_ARMORAMOUNT
+	{ "righthud", "forceamount",			0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// OHB_FORCEAMOUNT 
+	{ "righthud", "ammoamount",			0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// OHB_AMMOAMOUNT
+	{ "righthud", "saberstyle_strong",	0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// OHB_SABERSTYLE_STRONG
+	{ "righthud", "saberstyle_medium",	0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// OHB_SABERSTYLE_MEDIUM
+	{ "righthud", "saberstyle_fast",		0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// OHB_SABERSTYLE_FAST
+	{ "lefthud",	"scanline",				0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// OHB_SCANLINE_LEFT
+	{ "righthud",	"scanline",				0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// OHB_SCANLINE_RIGHT
+	{ "lefthud",	"frame",				0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// OHB_FRAME_LEFT
+	{ "righthud",	"frame",				0,  0,  0,  0, { 0.0f, 0.0f, 0.0f, 0.0f }, NULL_HANDLE },	// OHB_FRAME_RIGHT
 };
 
 /*const char *HolocronIcons[] = {
@@ -1372,9 +1361,7 @@ static void CG_RegisterGraphics( void ) {
 	cg.loadLCARSStage = 3;
 	CG_LoadingString( cgs.mapname );
 
-#ifndef _XBOX // this gets handled elsewhere on Xbox
 	cgi_R_LoadWorldMap( cgs.mapname );
-#endif
 
 	cg.loadLCARSStage = 4;
 	CG_LoadingString( "game media shaders" );
@@ -1537,7 +1524,7 @@ static void CG_RegisterGraphics( void ) {
 	memset( cg_weapons, 0, sizeof( cg_weapons ) );
 
 	// only register the items that the server says we need
-	strcpy( items, CG_ConfigString( CS_ITEMS) );
+	Q_strncpyz(items, CG_ConfigString(CS_ITEMS), sizeof(items));
 
 	for ( i = 1 ; i < bg_numItems ; i++ ) {
 		if ( items[ i ] == '1' ) 
@@ -1588,7 +1575,7 @@ static void CG_RegisterGraphics( void ) {
 	CG_LoadingString("map brushes");
 	// register the inline models
 	breakPoint = cgs.numInlineModels = cgi_CM_NumInlineModels();
-	assert (cgs.numInlineModels < sizeof(cgs.inlineDrawModel)/sizeof(cgs.inlineDrawModel[0]) );
+	assert ((size_t)cgs.numInlineModels < sizeof(cgs.inlineDrawModel)/sizeof(cgs.inlineDrawModel[0]) );
 	for ( i = 1 ; i < cgs.numInlineModels ; i++ ) {
 		char	name[10];
 		vec3_t			mins, maxs;
@@ -1946,14 +1933,14 @@ static void CG_GameStateReceived( void ) {
 
 void CG_WriteTheEvilCGHackStuff(void)
 {
-	gi.AppendToSaveGame('FPSL', &cg.forcepowerSelect, sizeof(cg.forcepowerSelect));
-	gi.AppendToSaveGame('IVSL', &cg.inventorySelect,  sizeof(cg.inventorySelect));
+	gi.AppendToSaveGame(INT_ID('F','P','S','L'), &cg.forcepowerSelect, sizeof(cg.forcepowerSelect));
+	gi.AppendToSaveGame(INT_ID('I','V','S','L'), &cg.inventorySelect,  sizeof(cg.inventorySelect));
 
 }
 void CG_ReadTheEvilCGHackStuff(void)
 {
-	gi.ReadFromSaveGame('FPSL', (void *)&gi_cg_forcepowerSelect, sizeof(gi_cg_forcepowerSelect), NULL);
-	gi.ReadFromSaveGame('IVSL', (void *)&gi_cg_inventorySelect,  sizeof(gi_cg_inventorySelect), NULL);
+	gi.ReadFromSaveGame(INT_ID('F','P','S','L'), (void *)&gi_cg_forcepowerSelect, sizeof(gi_cg_forcepowerSelect), NULL);
+	gi.ReadFromSaveGame(INT_ID('I','V','S','L'), (void *)&gi_cg_inventorySelect,  sizeof(gi_cg_inventorySelect), NULL);
 	gbUseTheseValuesFromLoadSave = qtrue;
 }
 
@@ -1964,21 +1951,11 @@ Ghoul2 Insert Start
 // initialise the cg_entities structure
 void CG_Init_CG(void)
 {
-#ifdef _XBOX
-	qboolean widescreen = cg.widescreen;
-#endif
 	memset( &cg, 0, sizeof(cg));
-#ifdef _XBOX
-	cg.widescreen = widescreen;
-#endif
 }
 
 
-#ifdef _XBOX	// Enough for all maps right now
-#define MAX_MISC_ENTS	1000
-#else
 #define MAX_MISC_ENTS	2000
-#endif
 
 typedef struct cgMiscEntData_s
 {
@@ -2127,14 +2104,7 @@ void CG_PreInit() {
 //moved from CG_GameStateReceived because it's loaded sooner now
 	CG_InitLocalEntities();
 
-#ifdef _XBOX	// I can't believe that this isn't necessary on PC, but I'll hold off
-	NumMiscEnts = 0;
-	memset( MiscEnts, 0, sizeof(MiscEnts) );
-#endif
-
 	CG_InitMarkPolys();
-
-
 }
 
 /*
@@ -2227,6 +2197,7 @@ void CG_Init( int serverCommandSequence ) {
 	cgi_AddCommand ("saberColor");
 	cgi_AddCommand ("saber");
 	cgi_AddCommand ("saberblade");
+	cgi_AddCommand ("setForceAll");
 
 	cgi_AddCommand ("runscript");
 
@@ -2234,6 +2205,29 @@ void CG_Init( int serverCommandSequence ) {
 	cgi_AddCommand ("playermodel");
 
 	cgi_AddCommand ("saberAttackCycle");
+
+	cgi_AddCommand ("use_electrobinoculars");
+	cgi_AddCommand ("use_bacta");
+	cgi_AddCommand ("use_seeker");
+	cgi_AddCommand ("use_lightamp_goggles");
+	cgi_AddCommand ("use_sentry");
+
+	cgi_AddCommand ("force_throw");
+	cgi_AddCommand ("force_pull");
+	cgi_AddCommand ("force_speed");
+	cgi_AddCommand ("force_heal");
+	cgi_AddCommand ("force_grip");
+	cgi_AddCommand ("force_distract");
+	cgi_AddCommand ("force_rage");
+	cgi_AddCommand ("force_protect");
+	cgi_AddCommand ("force_absorb");
+	cgi_AddCommand ("force_sight");
+
+	cgi_AddCommand ("taunt");
+	cgi_AddCommand ("bow");
+	cgi_AddCommand ("meditate");
+	cgi_AddCommand ("flourish");
+	cgi_AddCommand ("gloat");
 
 	cg.weaponPickupTextTime = 0;
 
@@ -2846,6 +2840,7 @@ void CG_ParseMenu(const char *menuFile)
 		if (!result)
 		{
 			Com_Printf("Unable to load default ui/testhud.menu.\n");
+			cgi_UI_EndParseSession (buf);
 			return;
 		}
 	}
@@ -2957,18 +2952,18 @@ void CG_LoadMenus(const char *menuFile)
 	len = cgi_FS_FOpenFile( menuFile, &f, FS_READ );
 	if ( !f ) 
 	{
-		cgi_Error( va( S_COLOR_YELLOW "menu file not found: %s, using default\n", menuFile ) );
+		CG_Printf( "hud menu file not found: %s, using default\n", menuFile );
 		len = cgi_FS_FOpenFile( "ui/jahud.txt", &f, FS_READ );
 		if (!f) 
 		{
-			cgi_Error( va( S_COLOR_RED "default menu file not found: ui/hud.txt, unable to continue!\n", menuFile ) );
+			cgi_Error( S_COLOR_RED "default menu file not found: ui/hud.txt, unable to continue!\n" );
 		}
 	}
 
 	if ( len >= MAX_MENUDEFFILE ) 
 	{
-		cgi_Error( va( S_COLOR_RED "menu file too large: %s is %i, max allowed is %i", menuFile, len, MAX_MENUDEFFILE ) );
 		cgi_FS_FCloseFile( f );
+		cgi_Error( va( S_COLOR_RED "menu file too large: %s is %i, max allowed is %i", menuFile, len, MAX_MENUDEFFILE ) );
 		return;
 	}
 
@@ -2982,11 +2977,10 @@ void CG_LoadMenus(const char *menuFile)
 
 	p = buf;
 
+	COM_BeginParseSession();
 	while ( 1 ) 
 	{
-		COM_BeginParseSession();
 		token = COM_ParseExt( &p, qtrue );
-		COM_EndParseSession();
 		if( !token || token[0] == 0 || token[0] == '}') 
 		{
 			break;
@@ -2999,9 +2993,7 @@ void CG_LoadMenus(const char *menuFile)
 
 		if (Q_stricmp(token, "loadmenu") == 0) 
 		{
-			COM_BeginParseSession();
 			int menuLoad = CG_Load_Menu(&p);
-			COM_EndParseSession();
 			if (menuLoad) 
 			{
 				continue;
@@ -3012,6 +3004,7 @@ void CG_LoadMenus(const char *menuFile)
 			}
 		}
 	}
+	COM_EndParseSession();
 
 	//Com_Printf("UI menu load time = %d milli seconds\n", cgi_Milliseconds() - start);
 }
@@ -3518,7 +3511,7 @@ void CG_DrawInventorySelect( void )
 
 int cgi_UI_GetItemText(char *menuFile,char *itemName, char *text);
 
-char *inventoryDesc[15] = 
+const char *inventoryDesc[15] = 
 {
 "NEURO_SAAV_DESC",
 "BACTA_DESC",
@@ -3693,7 +3686,7 @@ void CG_DrawDataPadInventorySelect( void )
 	{
 		cgi_SP_GetStringTextString( va("SP_INGAME_%s",inventoryDesc[cg.DataPadInventorySelect]), text, sizeof(text) );
 
-		if (text)
+		if (text[0])
 		{
 			CG_DisplayBoxedText(70,50,500,300,text,
 											cgs.media.qhFontSmall,
@@ -3742,7 +3735,7 @@ int showPowers[MAX_SHOWPOWERS] =
 	FP_GRIP,
 };
 
-char *showPowersName[MAX_SHOWPOWERS] = 
+const char *showPowersName[MAX_SHOWPOWERS] = 
 {
 	"SP_INGAME_ABSORB2",
 	"SP_INGAME_HEAL2",
@@ -3917,14 +3910,6 @@ void CG_DrawForceSelect( void )
 	{
 		return;
 	}
-
-#ifdef _XBOX
-	if(CL_ExtendSelectTime()) {
-		cg.forcepowerSelectTime = cg.time;
-	}
-
-	yOffset = -36;
-#endif
 
 	// count the number of powers owned
 	count = 0;
@@ -4146,7 +4131,7 @@ void CG_DPPrevForcePower_f( void )
 	cg.DataPadforcepowerSelect = original;
 }
 
-char *forcepowerDesc[NUM_FORCE_POWERS] = 
+const char *forcepowerDesc[NUM_FORCE_POWERS] = 
 {
 "FORCE_ABSORB_DESC",
 "FORCE_HEAL_DESC",
@@ -4169,7 +4154,7 @@ char *forcepowerDesc[NUM_FORCE_POWERS] =
 };
 
 
-char *forcepowerLvl1Desc[NUM_FORCE_POWERS] = 
+const char *forcepowerLvl1Desc[NUM_FORCE_POWERS] = 
 {
 "FORCE_ABSORB_LVL1_DESC",
 "FORCE_HEAL_LVL1_DESC",
@@ -4191,7 +4176,7 @@ char *forcepowerLvl1Desc[NUM_FORCE_POWERS] =
 "FORCE_GRIP_LVL1_DESC",
 };
 
-char *forcepowerLvl2Desc[NUM_FORCE_POWERS] = 
+const char *forcepowerLvl2Desc[NUM_FORCE_POWERS] = 
 {
 "FORCE_ABSORB_LVL2_DESC",
 "FORCE_HEAL_LVL2_DESC",
@@ -4213,7 +4198,7 @@ char *forcepowerLvl2Desc[NUM_FORCE_POWERS] =
 "FORCE_GRIP_LVL2_DESC",
 };
 
-char *forcepowerLvl3Desc[NUM_FORCE_POWERS] = 
+const char *forcepowerLvl3Desc[NUM_FORCE_POWERS] = 
 {
 "FORCE_ABSORB_LVL3_DESC",
 "FORCE_HEAL_LVL3_DESC",
@@ -4420,14 +4405,13 @@ void CG_DrawDataPadForceSelect( void )
 		cgi_SP_GetStringTextString( va("SP_INGAME_%s",forcepowerLvl3Desc[cg.DataPadforcepowerSelect]), text2, sizeof(text2) );
 	}
 
-	const short textboxXPos = 40;
-	const short textboxYPos = 60;
-	const int	textboxWidth = 560;
-	const int	textboxHeight = 300;
-	const float	textScale = 1.0f;
-
-	if (text)
+	if (text[0])
 	{
+		const short textboxXPos = 40;
+		const short textboxYPos = 60;
+		const int	textboxWidth = 560;
+		const int	textboxHeight = 300;
+		const float	textScale = 1.0f;
 
 		CG_DisplayBoxedText(textboxXPos,textboxYPos,textboxWidth,textboxHeight,va("%s%s",text,text2),
 													4,

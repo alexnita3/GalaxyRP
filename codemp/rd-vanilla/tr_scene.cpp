@@ -1,17 +1,12 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 #include "tr_local.h"
 
 #include "ghoul2/G2.h"
 #include "G2_local.h"
 #include "qcommon/matcomp.h"
 
-#ifdef VV_LIGHTING
-#include "tr_lightmanager.h"
-#endif
-
+#ifdef _MSC_VER
 #pragma warning (disable: 4512)	//default assignment operator could not be gened
+#endif
 #include "qcommon/disablewarnings.h"
 
 static	int			r_firstSceneDrawSurf;
@@ -44,9 +39,6 @@ void R_ToggleSmpFrame( void ) {
 
 	r_firstSceneDrawSurf = 0;
 
-#ifdef VV_LIGHTING
-	VVLightMan.num_dlights = 0;
-#endif
 	r_numdlights = 0;
 	r_firstSceneDlight = 0;
 
@@ -129,14 +121,14 @@ void RE_AddPolyToScene( qhandle_t hShader, int numVerts, const polyVert_t *verts
 	}
 
 	for ( j = 0; j < numPolys; j++ ) {
-		if ( r_numpolyverts + numVerts > max_polyverts || r_numpolys >= max_polys ) {
+		if ( r_numpolyverts + numVerts >= max_polyverts || r_numpolys >= max_polys ) {
       /*
       NOTE TTimo this was initially a PRINT_WARNING
       but it happens a lot with high fighting scenes and particles
       since we don't plan on changing the const and making for room for those effects
       simply cut this message to developer only
       */
-			ri.Printf( PRINT_DEVELOPER, S_COLOR_YELLOW  "WARNING: RE_AddPolyToScene: r_max_polys or r_max_polyverts reached\n");
+			ri->Printf( PRINT_DEVELOPER, S_COLOR_YELLOW  "WARNING: RE_AddPolyToScene: r_max_polys or r_max_polyverts reached\n");
 			return;
 		}
 
@@ -201,7 +193,7 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 	}
 
 	if ( r_numentities >= MAX_REFENTITIES ) {
-		ri.Printf(PRINT_DEVELOPER, "RE_AddRefEntityToScene: Dropping refEntity, reached MAX_REFENTITIES\n");
+		ri->Printf(PRINT_DEVELOPER, "RE_AddRefEntityToScene: Dropping refEntity, reached MAX_REFENTITIES\n");
 		return;
 	}
 
@@ -209,7 +201,7 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 		static qboolean firstTime = qtrue;
 		if (firstTime) {
 			firstTime = qfalse;
-			ri.Printf( PRINT_WARNING, "RE_AddRefEntityToScene passed a refEntity which has an origin with a NaN component\n");
+			ri->Printf( PRINT_WARNING, "RE_AddRefEntityToScene passed a refEntity which has an origin with a NaN component\n");
 		}
 		return;
 	}*/
@@ -241,10 +233,6 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 
 		if (!ghoul2[0].mModel)
 		{
-#ifdef _DEBUG
-			CGhoul2Info &g2 = ghoul2[0];
-#endif
-			//DebugBreak();
 			Com_Printf("Your ghoul2 instance has no model!\n");
 		}
 	}
@@ -333,7 +321,6 @@ RE_AddDynamicLightToScene
 
 =====================
 */
-#ifndef VV_LIGHTING
 void RE_AddDynamicLightToScene( const vec3_t org, float intensity, float r, float g, float b, int additive ) {
 	dlight_t	*dl;
 
@@ -354,7 +341,6 @@ void RE_AddDynamicLightToScene( const vec3_t org, float intensity, float r, floa
 	dl->color[2] = b;
 	dl->additive = additive;
 }
-#endif
 
 /*
 =====================
@@ -362,11 +348,9 @@ RE_AddLightToScene
 
 =====================
 */
-#ifndef VV_LIGHTING
 void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b ) {
 	RE_AddDynamicLightToScene( org, intensity, r, g, b, qfalse );
 }
-#endif
 
 /*
 =====================
@@ -374,12 +358,9 @@ RE_AddAdditiveLightToScene
 
 =====================
 */
-#ifndef VV_LIGHTING
 void RE_AddAdditiveLightToScene( const vec3_t org, float intensity, float r, float g, float b ) {
 	RE_AddDynamicLightToScene( org, intensity, r, g, b, qtrue );
 }
-#endif
-
 
 enum
 {
@@ -728,7 +709,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 		return;
 	}
 
-	startTime = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
+	startTime = ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" );
 
 	if (!tr.world && !( fd->rdflags & RDF_NOWORLDMODEL ) ) {
 		Com_Error (ERR_DROP, "R_RenderScene: NULL worldmodel");
@@ -813,10 +794,8 @@ void RE_RenderScene( const refdef_t *fd ) {
 	tr.refdef.entities = &backEndData->entities[r_firstSceneEntity];
 	tr.refdef.miniEntities = &backEndData->miniEntities[r_firstSceneMiniEntity];
 
-#ifndef VV_LIGHTING
 	tr.refdef.num_dlights = r_numdlights - r_firstSceneDlight;
 	tr.refdef.dlights = &backEndData->dlights[r_firstSceneDlight];
-#endif
 
 	// Add the decals here because decals add polys and we need to ensure
 	// that the polys are added before the the renderer is prepared
@@ -830,12 +809,10 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	// turn off dynamic lighting globally by clearing all the
 	// dlights if it needs to be disabled or if vertex lighting is enabled
-#ifndef VV_LIGHTING
 	if ( r_dynamiclight->integer == 0 ||
 		 r_vertexLight->integer == 1 ) {
 		tr.refdef.num_dlights = 0;
 	}
-#endif
 
 	// a single frame may have multiple scenes draw inside it --
 	// a 3D game view, 3D status bar renderings, 3D menus, etc.
@@ -879,7 +856,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	refEntParent = -1;
 
-	tr.frontEndMsec += ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" ) - startTime;
+	tr.frontEndMsec += ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" ) - startTime;
 
 	RE_RenderWorldEffects();
 

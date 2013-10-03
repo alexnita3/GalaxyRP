@@ -267,7 +267,7 @@ gentity_t *TossClientItems( gentity_t *self )
 				&& weapon != WP_TRIP_MINE
 				&& weapon != WP_DET_PACK )
 			{
-				gi.G2API_InitGhoul2Model( dropped->ghoul2, item->world_model, G_ModelIndex( item->world_model ), NULL, NULL, 0, 0);
+				gi.G2API_InitGhoul2Model( dropped->ghoul2, item->world_model, G_ModelIndex( item->world_model ), NULL_HANDLE, NULL_HANDLE, 0, 0);
 				dropped->s.radius = 10;
 			}
 		}
@@ -1290,7 +1290,7 @@ qboolean G_GetHitLocFromSurfName( gentity_t *ent, const char *surfName, int *hit
 		{//we care about direction (presumably for dismemberment)
 			if (  g_dismemberProbabilities->value<=0.0f||G_Dismemberable( ent, *hitLoc ) )
 			{//the probability let us continue
-				char *tagName = NULL;
+				const char *tagName = NULL;
 				float	aoa = 0.5f;
 				//dir must be roughly perpendicular to the hitLoc's cap bolt
 				switch ( *hitLoc )
@@ -1819,7 +1819,7 @@ float hitLocHealthPercentage[HL_MAX] =
 	0.0f	//HL_GENERIC6
 };
 
-char *hitLocName[HL_MAX] = 
+const char *hitLocName[HL_MAX] = 
 {
 	"none",	//HL_NONE = 0,
 	"right foot",	//HL_FOOT_RT,
@@ -2025,7 +2025,7 @@ static qboolean G_Dismember( gentity_t *ent, vec3_t point,
 				 int limbAnim, float limbRollBase, float limbPitchBase,
 				 int damage, int hitLoc )
 {
-	int newBolt;
+	//int newBolt;
 	vec3_t	dir, newPoint, limbAngles = {0,ent->client->ps.legsYaw,0};
 	gentity_t *limb;
 	trace_t	trace;
@@ -2068,11 +2068,11 @@ static qboolean G_Dismember( gentity_t *ent, vec3_t point,
 //2) set the root surf on the limb
 	if ( limbTagName )
 	{//add smoke to cap tag
-		newBolt = gi.G2API_AddBolt( &limb->ghoul2[limb->playerModel], limbTagName );
+		/*newBolt = gi.G2API_AddBolt( &limb->ghoul2[limb->playerModel], limbTagName );
 		if ( newBolt != -1 )
 		{
 			G_PlayEffect( G_EffectIndex("saber/limb_bolton"), limb->playerModel, newBolt, limb->s.number, newPoint);
-		}
+		}*/
 	}
 	/*
 	if ( limbBone && hitLoc == HL_HEAD )
@@ -4866,7 +4866,7 @@ void PlayerPain( gentity_t *self, gentity_t *inflictor, gentity_t *other, const 
 							G_StartMatrixEffect( self );
 						}
 					}
-					if ( parts == SETANIM_BOTH && damage > 30 || (self->painDebounceTime>level.time&&damage>10))
+					if ( (parts == SETANIM_BOTH && damage > 30) || (self->painDebounceTime>level.time&&damage>10))
 					{//took a lot of damage in 1 hit //or took 2 hits in quick succession
 						self->aimDebounceTime = level.time + self->client->ps.torsoAnimTimer;
 						self->client->ps.pm_time = self->client->ps.torsoAnimTimer; 
@@ -6260,7 +6260,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, const
 
 		if ( targ->client->NPC_class == CLASS_VEHICLE )
 		{
-			if ( ( targ->m_pVehicle->m_pVehicleInfo->type == VH_ANIMAL ) )
+			if ( targ->m_pVehicle->m_pVehicleInfo->type == VH_ANIMAL )
 			{
 				//((CVehicleNPC *)targ->NPC)->m_ulFlags |= CVehicleNPC::VEH_BUCKING;
 			}

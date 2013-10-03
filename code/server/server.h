@@ -18,7 +18,7 @@ This file is part of Jedi Academy.
 
 // server.h
 
-#include "../game/q_shared.h"
+#include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
 #include "../game/g_public.h"
 #include "../game/bg_public.h"
@@ -42,19 +42,11 @@ typedef struct svEntity_s {
 	struct svEntity_s *nextEntityInWorldSector;
 	
 	entityState_t	baseline;		// for delta compression of initial sighting
-#ifdef _XBOX
-	signed char		numClusters;		// if -1, use headnode instead
-	short			clusternums[MAX_ENT_CLUSTERS];
-	short			lastCluster;		// if all the clusters don't fit in clusternums
-	short			areanum, areanum2;
-	char			snapshotCounter;	// used to prevent double adding from portal views
-#else
 	int			numClusters;		// if -1, use headnode instead
 	int			clusternums[MAX_ENT_CLUSTERS];
 	int			lastCluster;		// if all the clusters don't fit in clusternums
 	int			areanum, areanum2;
 	int			snapshotCounter;	// used to prevent double adding from portal views
-#endif
 } svEntity_t;
 
 typedef enum {
@@ -66,11 +58,7 @@ typedef enum {
 typedef struct {
 	serverState_t	state;
 	int				serverId;			// changes each server start
-#ifdef _XBOX
-	char			snapshotCounter;	// incremented for each snapshot built
-#else
 	int				snapshotCounter;	// incremented for each snapshot built
-#endif
 	int				time;				// all entities are correct for this time		// These 2 saved out
 	int				timeResidual;		// <= 1000 / sv_frame->value					//   during savegame.
 	float			timeResidualFraction;	// fraction of a msec accumulated
@@ -208,7 +196,7 @@ void SV_GetConfigstring( int index, char *buffer, int bufferSize );
 void SV_SetUserinfo( int index, const char *val );
 void SV_GetUserinfo( int index, char *buffer, int bufferSize );
 
-void SV_SpawnServer( char *server, ForceReload_e eForceReload, qboolean bAllowScreenDissolve );
+void SV_SpawnServer( const char *server, ForceReload_e eForceReload, qboolean bAllowScreenDissolve );
 
 
 //
@@ -243,7 +231,7 @@ gentity_t	*SV_GentityNum( int num );
 svEntity_t	*SV_SvEntityForGentity( gentity_t *gEnt );
 gentity_t	*SV_GEntityForSvEntity( svEntity_t *svEnt );
 void		SV_InitGameProgs (void);
-void		SV_ShutdownGameProgs (qboolean shutdownCin);
+void		SV_ShutdownGameProgs (qboolean shutdownCin, qboolean delayFreeGame = qfalse);
 qboolean	SV_inPVS (const vec3_t p1, const vec3_t p2);
 
 
@@ -317,9 +305,9 @@ qboolean SV_TryLoadTransition( const char *mapname );
 qboolean SG_WriteSavegame(const char *psPathlessBaseName, qboolean qbAutosave);
 qboolean SG_ReadSavegame(const char *psPathlessBaseName);
 void SG_WipeSavegame(const char *psPathlessBaseName);
-qboolean SG_Append(unsigned long chid, const void *data, int length);
-int SG_Read			(unsigned long chid, void *pvAddress, int iLength, void **ppvAddressPtr = NULL);
-int SG_ReadOptional	(unsigned long chid, void *pvAddress, int iLength, void **ppvAddressPtr = NULL);
+qboolean SG_Append(unsigned int chid, const void *data, int length);
+int SG_Read			(unsigned int chid, void *pvAddress, int iLength, void **ppvAddressPtr = NULL);
+int SG_ReadOptional	(unsigned int chid, void *pvAddress, int iLength, void **ppvAddressPtr = NULL);
 void SG_Shutdown();
 void SG_TestSave(void);
 //
@@ -335,5 +323,48 @@ extern SavedGameJustLoaded_e eSavedGameJustLoaded;
 extern qboolean qbLoadTransition;
 //
 ///////////////////////////////////////////////
+
+#ifndef __NO_JK2
+// glue
+class cStrings
+{
+private:
+	unsigned int	Flags;
+	char			*Reference;
+	
+public:
+					 cStrings(unsigned int initFlags = 0, char *initReference = NULL);
+	virtual			~cStrings(void);
+
+	virtual void	Clear(void);
+
+	void			SetFlags(unsigned int newFlags);
+	void			SetReference(char *newReference);
+
+	unsigned int	GetFlags(void) { return Flags; }
+	char			*GetReference(void) { return Reference; }
+
+	virtual bool	UnderstandToken(int token, char *data );
+	virtual bool	Load(char *&Data, int &Size );
+};
+
+
+class cStringsSingle : public cStrings
+{
+private:
+	char			*Text;
+
+	virtual void	Clear(void);
+	void			SetText(const char *newText);
+
+public:
+					 cStringsSingle(unsigned int initFlags = 0, char *initReference = NULL);
+	virtual			~cStringsSingle();
+
+	char			*GetText(void) { return Text; }
+
+	virtual bool	UnderstandToken(int token, char *data );
+};
+#endif
 
 #endif	// #ifndef SERVER_H

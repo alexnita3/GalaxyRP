@@ -929,7 +929,6 @@ void set_mission_stats_cvars( void )
 	{
 		return;
 	}
-	cg_entities[0].gent->client->sess.missionStats.enemiesKilled;
 
 	gi.cvar_set("ui_stats_enemieskilled", va("%d",client->sess.missionStats.enemiesKilled));	//pass this on to the menu
 
@@ -1231,8 +1230,10 @@ void target_secret_use(gentity_t *self, gentity_t *other, gentity_t *activator)
 	{
 		G_Sound( self, self->noise_index );
 	}
-	gi.SendServerCommand( NULL, "cp @SP_INGAME_SECRET_AREA" );
-	assert(client->sess.missionStats.totalSecrets);
+	gi.SendServerCommand( 0, "cp @SP_INGAME_SECRET_AREA" );
+	if( client->sess.missionStats.secretsFound > client->sess.missionStats.totalSecrets )
+		client->sess.missionStats.totalSecrets++;
+	//assert(client->sess.missionStats.totalSecrets);
 }
 
 /*QUAKED target_secret (1 0 1) (-4 -4 -4) (4 4 4)

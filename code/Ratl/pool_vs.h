@@ -67,10 +67,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////
 	// Capacity Enum
     ////////////////////////////////////////////////////////////////////////////////////
- 	enum 
-	{
-		CAPACITY		= T::CAPACITY
-	};
+	static const int CAPACITY		= T::CAPACITY;
 private:
     ////////////////////////////////////////////////////////////////////////////////////
 	// Data
@@ -284,9 +281,9 @@ public:
 		//--------------
 		iterator()									: mOwner(0)
 		{}
-		iterator(pool_root<T>* p, int index)	: mOwner(p), mIndex(index)
+		iterator(pool_root<T>* p, int index)	: mIndex(index), mOwner(p)
 		{}
-		iterator(const iterator &t)	: mOwner(t.mOwner), mIndex(t.mIndex)
+		iterator(const iterator &t)	: mIndex(t.mIndex), mOwner(t.mOwner)
 		{}
 
 		// Assignment Operator
@@ -483,7 +480,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////
 	const TTValue&	operator[](int i) const 									
 	{
-		return value_at_index(i);
+		return pool_root<T>::value_at_index(i);
 	}
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -491,12 +488,12 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////
 	TTValue&			operator[](int i)											
 	{
-		return value_at_index(i);
+		return pool_root<T>::value_at_index(i);
 	}
 
 	bool				is_used(int i) const
 	{
-		return is_used_index(i);
+		return pool_root<T>::is_used_index(i);
 	}
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -504,7 +501,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////
 	void swap(int i,int j)
 	{
-		swap_index(i,j);
+		pool_root<T>::swap_index(i,j);
 	}
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -512,7 +509,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////
 	int			alloc()
 	{
-		return	alloc_index();
+		return	pool_root<T>::alloc_index();
 	}
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -520,7 +517,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////
 	int			alloc(const TTValue &v)
 	{
-		return	alloc_index(v);
+		return	pool_root<T>::alloc_index(v);
 	}
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -528,7 +525,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////
 	void		free(int i)
 	{
-		free_index(i);
+		pool_root<T>::free_index(i);
 	}
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -539,7 +536,7 @@ public:
 #endif
 	pool_root<T>::iterator	at(int index)
 	{
-		return at_index(index);
+		return pool_root<T>::at_index(index);
 	}
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -550,7 +547,7 @@ public:
 #endif
 	pool_root<T>::const_iterator	at(int index) const
 	{
-		return at_index(index);
+		return pool_root<T>::at_index(index);
 	}
 };
 
@@ -560,10 +557,7 @@ class pool_vs : public pool_base<storage::value_semantics<T,ARG_CAPACITY> >
 public:
 	typedef typename storage::value_semantics<T,ARG_CAPACITY> TStorageTraits;
 	typedef typename TStorageTraits::TValue TTValue;
- 	enum 
-	{
-		CAPACITY		= ARG_CAPACITY
-	};
+	static const int CAPACITY		= ARG_CAPACITY;
 	pool_vs() {}
 };
 
@@ -573,10 +567,7 @@ class pool_os : public pool_base<storage::object_semantics<T,ARG_CAPACITY> >
 public:
 	typedef typename storage::object_semantics<T,ARG_CAPACITY> TStorageTraits;
 	typedef typename TStorageTraits::TValue TTValue;
- 	enum 
-	{
-		CAPACITY		= ARG_CAPACITY
-	};
+	static const int CAPACITY		= ARG_CAPACITY;
 	pool_os() {}
 };
 
@@ -586,11 +577,8 @@ class pool_is : public pool_base<storage::virtual_semantics<T,ARG_CAPACITY,ARG_M
 public:
 	typedef typename storage::virtual_semantics<T,ARG_CAPACITY,ARG_MAX_CLASS_SIZE> TStorageTraits;
 	typedef typename TStorageTraits::TValue TTValue;
- 	enum 
-	{
-		CAPACITY		= ARG_CAPACITY,
-		MAX_CLASS_SIZE	= ARG_MAX_CLASS_SIZE
-	};
+	static const int CAPACITY		= ARG_CAPACITY;
+	static const int MAX_CLASS_SIZE	= ARG_MAX_CLASS_SIZE;
 	pool_is() {}
 };
 

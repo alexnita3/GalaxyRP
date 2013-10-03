@@ -26,7 +26,7 @@ This file is part of Jedi Academy.
 #include "client.h"
 #include "client_ui.h"
 
-char *svc_strings[256] = {
+const char *svc_strings[256] = {
 	"svc_bad",
 
 	"svc_nop",
@@ -38,7 +38,7 @@ char *svc_strings[256] = {
 	"svc_snapshot"
 };
 
-void SHOWNET( msg_t *msg, char *s) {
+void SHOWNET( msg_t *msg, const char *s) {
 	if ( cl_shownet->integer >= 2) {
 		Com_Printf ("%3i:%s\n", msg->readcount-1, s);
 	}
@@ -305,6 +305,8 @@ void CL_ParseSnapshot( msg_t *msg ) {
 
 //=====================================================================
 
+int cl_connectedToCheatServer;
+
 /*
 ==================
 CL_SystemInfoChanged
@@ -324,7 +326,9 @@ void CL_SystemInfoChanged( void ) {
 	cl.serverId = atoi( Info_ValueForKey( systemInfo, "sv_serverid" ) );
 
 	s = Info_ValueForKey( systemInfo, "helpUsObi" );
-	if ( atoi(s) == 0 ) {
+	cl_connectedToCheatServer = atoi( s );
+	if ( !cl_connectedToCheatServer )
+	{
 		Cvar_SetCheatState();
 	}
 
@@ -344,7 +348,7 @@ void CL_SystemInfoChanged( void ) {
 	//}
 }
 
-void UI_UpdateConnectionString( char *string );
+void UI_UpdateConnectionString( const char *string );
 
 /*
 ==================

@@ -20,7 +20,7 @@ This file is part of Jedi Academy.
 // leave this line at the top for all NPC_xxxx.cpp files...
 #include "g_headers.h"
 
-#include "q_shared.h"
+#include "../qcommon/q_shared.h"
 #include "wp_saber.h"
 
 extern qboolean G_ParseLiteral( const char **data, const char *string );
@@ -72,7 +72,7 @@ stringID_table_t SaberTable[] =
 	ENUM2STRING(SABER_STAR),
 	ENUM2STRING(SABER_TRIDENT),
 	ENUM2STRING(SABER_SITH_SWORD),
-	"",	-1
+	{ "",	-1 }
 };
 
 stringID_table_t SaberMoveTable[] =
@@ -137,7 +137,7 @@ stringID_table_t SaberMoveTable[] =
 	ENUM2STRING(LS_DUAL_FB),
 	ENUM2STRING(LS_DUAL_LR),
 	ENUM2STRING(LS_HILT_BASH),
-	"",	-1
+	{ "",	-1 }
 };
 
 
@@ -2472,7 +2472,7 @@ void WP_RemoveSaber( gentity_t *ent, int saberNum )
 	}
 }
 
-void WP_SetSaber( gentity_t *ent, int saberNum, char *saberName )
+void WP_SetSaber( gentity_t *ent, int saberNum, const char *saberName )
 {
 	if ( !ent || !ent->client )
 	{

@@ -32,7 +32,7 @@ This file is part of Jedi Academy.
 //==================================================================
 
 // the "gameversion" client command will print this plus compile date
-#define	GAMEVERSION	"base"
+#define	GAMEVERSION	"OpenJK"
 
 #define BODY_QUEUE_SIZE		8
 
@@ -80,7 +80,7 @@ This file is part of Jedi Academy.
 #define	VALIDATEB( a )	if ( a == NULL ) {	assert(0);	return qfalse;	}
 #define VALIDATEP( a )	if ( a == NULL ) {	assert(0);	return NULL;	}
 
-#define VALIDSTRING( a )	( ( a != NULL ) && ( a[0] != NULL ) )
+#define VALIDSTRING( a )	( ( a != NULL ) && ( a[0] != '\0' ) )
 
 //animations
 typedef struct
@@ -460,7 +460,7 @@ void DeathmatchScoreboardMessage (gentity_t *client);
 //
 // g_cmds.c
 //
-static void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, const char *name, const char *message );
+void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, const char *name, const char *message );
 
 //
 // g_pweapon.c
@@ -623,16 +623,5 @@ void		TIMER_Remove( gentity_t *ent, const char *identifier );
 
 float NPC_GetHFOVPercentage( vec3_t spot, vec3_t from, vec3_t facing, float hFOV );
 float NPC_GetVFOVPercentage( vec3_t spot, vec3_t from, vec3_t facing, float vFOV );
-
-#ifdef _XBOX
-// data used for NPC water detection
-#define MAX_NPC_WATER_UPDATE 64						// maximum npcs that can be waiting for a water update
-#define	MAX_NPC_WATER_UPDATES_PER_FRAME 2			// updates per frame
-
-extern	short	npcsToUpdate[MAX_NPC_WATER_UPDATE];	// queue of npcs
-extern	short	npcsToUpdateTop;					// top of the queue
-extern	short	npcsToUpdateCount;					// number of npcs in the queue
-
-#endif // _XBOX
 
 #endif//#ifndef __G_LOCAL_H__

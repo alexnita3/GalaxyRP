@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <SDL.h>
 
-#include "../game/q_shared.h"
+#include "../qcommon/q_shared.h"
 #include "../client/client.h"
 #include "../client/snd_local.h"
 
@@ -232,7 +232,7 @@ qboolean SNDDMA_Init(void)
 	dma.submission_chunk = 1;
 	dma.speed = obtained.freq;
 	dmasize = (dma.samples * (dma.samplebits/8));
-	dma.buffer = calloc(1, dmasize);
+	dma.buffer = (byte *)calloc(1, dmasize);
 
 	Com_Printf("Starting SDL audio callback...\n");
 	SDL_PauseAudio(0);  // start callback.

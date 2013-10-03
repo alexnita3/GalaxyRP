@@ -34,9 +34,6 @@ This file is part of Jedi Academy.
 #define	SLOWDOWN_DIST	128.0f
 #define	MIN_NPC_SPEED	16.0f
 
-#ifdef _XBOX
-int g_lastFireTime = 0;
-#endif
 extern void VehicleExplosionDelay( gentity_t *self );
 extern qboolean Q3_TaskIDPending( gentity_t *ent, taskID_t taskType );
 extern void G_MaintainFormations(gentity_t *self);
@@ -185,7 +182,7 @@ int G_FindLookItem( gentity_t *self )
 			continue;
 		}
 		if ( ent->item->giType == IT_WEAPON
-			&& ent->item->giType == WP_SABER )
+			&& ent->item->giTag == WP_SABER )
 		{//a weapon_saber pickup
 			if ( self->client->ps.dualSabers//using 2 sabers already
 				|| (self->client->ps.saber[0].saberFlags&SFL_TWO_HANDED) )//using a 2-handed saber
@@ -549,24 +546,16 @@ void P_WorldEffects( gentity_t *ent ) {
 
 	if ( !in_camera )
 	{
-#ifndef _XBOX
 		if (gi.totalMapContents() & (CONTENTS_WATER|CONTENTS_SLIME))
 		{
 			mouthContents = gi.pointcontents( ent->client->renderInfo.eyePoint, ent->s.number );
 		}
-#endif // _XBOX
 	}
 	//
 	// check for drowning
 	//
 
-#ifdef _XBOX
-	// using waterlevel 3 should be good enough
-	// this saves us from doing an expensive trace
-	if ( ent->waterlevel == 3 )
-#else
 	if ( (mouthContents&(CONTENTS_WATER|CONTENTS_SLIME)) ) 
-#endif // _XBOX
 	{
 
 		if ( ent->client->NPC_class == CLASS_SWAMPTROOPER )
@@ -1171,7 +1160,7 @@ void DoImpact( gentity_t *self, gentity_t *other, qboolean damageSelf, trace_t *
 					}
 				}
 				else if ( self->forcePushTime > level.time - 1000//was force pushed/pulled in the last 1600 milliseconds
-					&& self->forcePuller == other->s.number>=MAX_CLIENTS )//hit the person who pushed/pulled me
+					&& self->forcePuller == other->s.number )//hit the person who pushed/pulled me
 				{//ignore the impact
 				}
 				else if ( other->takedamage )
@@ -1313,7 +1302,26 @@ void DoImpact( gentity_t *self, gentity_t *other, qboolean damageSelf, trace_t *
 					{//FIXME: for now Jedi take no falling damage, but really they should if pushed off?
 						magnitude = 0;
 					}
-					G_Damage( self, NULL, NULL, NULL, self->currentOrigin, magnitude/2, DAMAGE_NO_ARMOR, MOD_FALLING );//FIXME: MOD_IMPACT
+
+					if( (!Q_stricmp(self->NPC_type, "rosh_penin") ||
+						!Q_stricmp(self->NPC_type, "rosh_penin_noforce")) &&
+						!Q_stricmp(level.mapname, "yavin1b") )
+					{
+						// This is a small little fix I implemented over a matter of 3 commits due to bugs/etc.
+						// There is an EXTREMELY frustrating bug on yavin1b where Rosh can take enough damage from howlers to the point
+						// where, during one section where he jumps over a stream, he can suffer falling damage and die. So the player
+						// would be forced to repeat the level over and over again.
+						// Despite it being clearly a jump, the scripters for the level somehow forgot to add a cushion brush on
+						// the landing zone where Rosh would be, (fucking woglodytes that Raven outsourced the levels to, I swear...)
+						// resulting in a very weird and unnatural death. So it didn't make any sense. So I did the nasty thing and did
+						// it through code.
+						// This could also probably explain why Rosh suddenly dies for NO reason whatsoever in rare occasions on Jedi
+						// Master/Jedi Knight mode at the start of the level. --eezstreet
+					}
+					else
+					{
+						G_Damage( self, NULL, NULL, NULL, self->currentOrigin, magnitude/2, DAMAGE_NO_ARMOR, MOD_FALLING );//FIXME: MOD_IMPACT
+					}
 				}
 			}
 		}
@@ -1399,8 +1407,8 @@ void	G_TouchTriggersLerped( gentity_t *ent ) {
 #ifdef _DEBUG
 	for ( int j = 0; j < 3; j++ )
 	{
-		assert( !_isnan(ent->currentOrigin[j]));
-		assert( !_isnan(ent->lastOrigin[j]));
+		assert( !Q_isnan(ent->currentOrigin[j]));
+		assert( !Q_isnan(ent->lastOrigin[j]));
 	}
 #endif// _DEBUG
 	VectorSubtract( ent->currentOrigin, ent->lastOrigin, diff );
@@ -1818,11 +1826,6 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 #endif
 			fired = qtrue;
 			FireWeapon( ent, qfalse );
-#ifdef _XBOX
-			extern int Sys_Milliseconds();
-			if (ent->s.clientNum == 0)
-				g_lastFireTime = Sys_Milliseconds();
-#endif
 			break;
 
 		case EV_ALT_FIRE:
@@ -1833,10 +1836,6 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 #endif
 			fired = qtrue;
 			FireWeapon( ent, qtrue );
-#ifdef _XBOX
-			if (ent->s.clientNum == 0)
-				g_lastFireTime = Sys_Milliseconds();
-#endif
 			break;
 
 		default:
@@ -4438,6 +4437,9 @@ void G_CheckMovingLoopingSounds( gentity_t *ent, usercmd_t *ucmd )
 				break;
 			case CLASS_PROBE:
 				ent->s.loopSound = G_SoundIndex( "sound/chars/probe/misc/probedroidloop" );
+				break;
+			default:
+				break;
 			}
 		}
 		else
@@ -5498,20 +5500,8 @@ extern cvar_t	*g_skippingcin;
 	VectorCopy( pm.mins, ent->mins );
 	VectorCopy( pm.maxs, ent->maxs );
 
-#ifdef _XBOX
-	// if this is the player then set the ent water level
-	// npcs are updated elsewhere
-	if(ent->s.number == 0)
-	{
-		ent->waterlevel = pm.waterlevel;
-		ent->watertype = pm.watertype;
-	}
-#else
 	ent->waterlevel = pm.waterlevel;
 	ent->watertype = pm.watertype;
-#endif
-
-
 
 	_VectorCopy( ucmd->angles, client->pers.cmd_angles );
 

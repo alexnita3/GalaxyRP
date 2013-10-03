@@ -215,17 +215,8 @@ void CG_ToggleLAGoggles( void )
 	}
 }
 
-static void CG_InfoDown_f( void ) {
-//	cg.showInformation = qtrue;
-}
-
-static void CG_InfoUp_f( void ) 
-{
-//	cg.showInformation = qfalse;
-}
-
 typedef struct {
-	char	*cmd;
+	const char	*cmd;
 	void	(*function)(void);
 } consoleCommand_t;
 
@@ -251,8 +242,6 @@ Ghoul2 Insert End
 */
 	{ "viewpos", CG_Viewpos_f },
 	{ "writecam", CG_WriteCam_f },
-	{ "+info", CG_InfoDown_f },
-	{ "-info", CG_InfoUp_f },
 	{ "weapnext", CG_NextWeapon_f },
 	{ "weapprev", CG_PrevWeapon_f },
 	{ "weapon", CG_Weapon_f },
@@ -278,7 +267,7 @@ Ghoul2 Insert End
 
 
 //extern menuDef_t *menuScoreboard;
-void Menu_Reset();	
+//void Menu_Reset();	
 
 void CG_LoadHud_f( void) 
 {
@@ -309,7 +298,7 @@ Cmd_Argc() / Cmd_Argv()
 */
 qboolean CG_ConsoleCommand( void ) {
 	const char	*cmd;
-	int		i;
+	unsigned int i;
 
 	cmd = CG_Argv(0);
 
@@ -333,7 +322,7 @@ so it can perform tab completion
 =================
 */
 void CG_InitConsoleCommands( void ) {
-	int		i;
+	unsigned int i;
 
 	for ( i = 0 ; i < sizeof( commands ) / sizeof( commands[0] ) ; i++ ) {
 		cgi_AddCommand( commands[i].cmd );

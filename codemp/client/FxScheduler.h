@@ -3,12 +3,16 @@
 #include "FxUtil.h"
 #include "qcommon/GenericParser2.h"
 
+#ifdef _MSC_VER
 #pragma warning (push, 3)	//go back down to 3 for the stl include
+#endif
 #include <vector>
 #include <map>
 #include <list>
 #include <string>
+#ifdef _MSC_VER
 #pragma warning (pop)
+#endif
 
 using namespace std;
 
@@ -347,7 +351,7 @@ struct SEffectTemplate
 
 	bool operator == (const char * name) const 
 	{
-		return !stricmp( mEffectName, name );
+		return !Q_stricmp( mEffectName, name );
 	}
 	void operator=(const SEffectTemplate &that);
 };
@@ -475,7 +479,7 @@ public:
 
 	// kef -- called for a 2D effect instead of addRefToScene
 	bool	Add2DEffect(float x, float y, float w, float h, vec4_t color, qhandle_t shaderHandle);
-	// kef -- called once per cgame frame AFTER cgi.RenderScene
+	// kef -- called once per cgame frame AFTER trap->RenderScene
 	void	Draw2DEffects(float screenXScale, float screenYScale);
 
 	int		NumScheduledFx()	{ return mFxSchedule.size();	}

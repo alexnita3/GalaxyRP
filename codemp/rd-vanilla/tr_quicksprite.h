@@ -1,7 +1,5 @@
 #pragma once
 
-// this include must remain at the top of every CPP file
-
 // tr_QuickSprite.h: interface for the CQuickSprite class.
 //
 //////////////////////////////////////////////////////////////////////
@@ -14,7 +12,6 @@ private:
 			int				mFogIndex;
 			qboolean		mUseFog;
 			vec4_t			mVerts[SHADER_MAX_VERTEXES];
-			unsigned int	mIndexes[SHADER_MAX_VERTEXES];			// Ideally this would be static, cause it never changes
 			vec2_t			mTextureCoords[SHADER_MAX_VERTEXES];	// Ideally this would be static, cause it never changes
 			vec2_t			mFogTextureCoords[SHADER_MAX_VERTEXES];
 			unsigned long	mColors[SHADER_MAX_VERTEXES];

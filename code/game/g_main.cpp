@@ -53,7 +53,6 @@ extern void	Pilot_Update(void);
 extern void G_ASPreCacheFree(void);
 
 
-static int 	navCalcPathTime = 0;
 int		eventClearTime = 0;
 
 extern qboolean g_bCollidableRoffs;
@@ -74,16 +73,16 @@ static void ClearAllInUse(void)
 
 void SetInUse(gentity_t *ent)
 {
-	assert(((unsigned int)ent)>=(unsigned int)g_entities);
-	assert(((unsigned int)ent)<=(unsigned int)(g_entities+MAX_GENTITIES-1));
+	assert(((uintptr_t)ent)>=(uintptr_t)g_entities);
+	assert(((uintptr_t)ent)<=(uintptr_t)(g_entities+MAX_GENTITIES-1));
 	unsigned int entNum=ent-g_entities;
 	g_entityInUseBits[entNum/32]|=((unsigned int)1)<<(entNum&0x1f);
 }
 
 void ClearInUse(gentity_t *ent)
 {
-	assert(((unsigned int)ent)>=(unsigned int)g_entities);
-	assert(((unsigned int)ent)<=(unsigned int)(g_entities+MAX_GENTITIES-1));
+	assert(((uintptr_t)ent)>=(uintptr_t)g_entities);
+	assert(((uintptr_t)ent)<=(uintptr_t)(g_entities+MAX_GENTITIES-1));
 	unsigned int entNum=ent-g_entities;
 	g_entityInUseBits[entNum/32]&=~(((unsigned int)1)<<(entNum&0x1f));
 }
@@ -106,12 +105,12 @@ qboolean PInUse(unsigned int entNum)
 
 void WriteInUseBits(void)
 {
-	gi.AppendToSaveGame('INUS', &g_entityInUseBits, sizeof(g_entityInUseBits) );
+	gi.AppendToSaveGame(INT_ID('I','N','U','S'), &g_entityInUseBits, sizeof(g_entityInUseBits) );
 }
 
 void ReadInUseBits(void)
 {
-	gi.ReadFromSaveGame('INUS', &g_entityInUseBits, sizeof(g_entityInUseBits), NULL);
+	gi.ReadFromSaveGame(INT_ID('I','N','U','S'), &g_entityInUseBits, sizeof(g_entityInUseBits), NULL);
 	// This is only temporary. Once I have converted all the ent->inuse refs,
 	// it won;t be needed -MW.
 	for(int i=0;i<MAX_GENTITIES;i++)
@@ -166,11 +165,7 @@ cvar_t	*g_weaponRespawn;
 cvar_t	*g_subtitles;
 cvar_t	*g_ICARUSDebug;
 
-#ifdef _XBOX
-extern cvar_t *com_buildScript;
-#else
 cvar_t	*com_buildScript;
-#endif
 
 cvar_t	*g_skippingcin;
 cvar_t	*g_AIsurrender;
@@ -452,6 +447,8 @@ static void G_DynamicMusicUpdate( void )
 				case AEL_MINOR:
 					//distraction = qtrue;
 					break;
+				default:
+					break;
 				}
 			}
 		}
@@ -633,7 +630,7 @@ void G_InitCvars( void ) {
 
 	g_bobaDebug = gi.cvar ( "g_bobaDebug", "", 0 );
 
-#if defined(FINAL_BUILD) || defined(_XBOX)
+#if defined(FINAL_BUILD)
 	g_delayedShutdown = gi.cvar ( "g_delayedShutdown", "0", 0 );
 #else
 	g_delayedShutdown = gi.cvar ( "g_delayedShutdown", "1", 0 );
@@ -806,14 +803,6 @@ void InitGame(  const char *mapname, const char *spawntarget, int checkSum, cons
 
 	level.curAlertID = 1;//0 is default for lastAlertEvent, so...
 	eventClearTime = 0;
-
-#ifdef _XBOX
-	// clear out NPC water detection data
-	npcsToUpdateTop		= 0;
-	npcsToUpdateCount	= 0;
-	memset(npcsToUpdate, -1, 2 * MAX_NPC_WATER_UPDATE);
-#endif // _XBOX
-
 }
 
 /*
@@ -826,13 +815,6 @@ void ShutdownGame( void )
 	// write all the client session data so we can get it back
 	G_WriteSessionData(); 
 
-#ifdef _XBOX
-	// The following functions, cleverly disguised as memory freeing and dealloction,
-	// actually allocate small blocks. Fooled you!
-	extern void Z_SetNewDeleteTemporary(bool bTemp);
-	Z_SetNewDeleteTemporary( true );
-#endif
-
 	// Destroy the Game Interface.
 	IGameInterface::Destroy();
 
@@ -841,10 +823,6 @@ void ShutdownGame( void )
 
 	// Destroy the Game Interface again.  Only way to really free everything.
 	IGameInterface::Destroy();
-
-#ifdef _XBOX
-	Z_SetNewDeleteTemporary( false );
-#endif
 
 	TAG_Init();	//Clear the reference tags
 /*
@@ -893,7 +871,7 @@ extern int PM_ValidateAnimRange( const int startFrame, const int endFrame, const
 #ifndef _WIN32
 extern "C"
 #endif
-game_export_t *GetGameAPI( game_import_t *import ) {
+Q_EXPORT game_export_t *GetGameAPI( game_import_t *import ) {
 	gameinfo_import_t	gameinfo_import;
 
 	gi = *import;
@@ -942,7 +920,7 @@ void QDECL G_Error( const char *fmt, ... ) {
 	char		text[1024];
 
 	va_start (argptr, fmt);
-	vsprintf (text, fmt, argptr);
+	Q_vsnprintf (text, sizeof(text), fmt, argptr);
 	va_end (argptr);
 
 	gi.Error( ERR_DROP, "%s", text);
@@ -962,7 +940,7 @@ void Com_Error ( int level, const char *error, ... ) {
 	char		text[1024];
 
 	va_start (argptr, error);
-	vsprintf (text, error, argptr);
+	Q_vsnprintf (text, sizeof(text), error, argptr);
 	va_end (argptr);
 
 	gi.Error( level, "%s", text);
@@ -979,7 +957,7 @@ void Com_Printf( const char *msg, ... ) {
 	char		text[1024];
 
 	va_start (argptr, msg);
-	vsprintf (text, msg, argptr);
+	Q_vsnprintf (text, sizeof(text), msg, argptr);
 	va_end (argptr);
 
 	gi.Printf ("%s", text);
@@ -2022,6 +2000,7 @@ void G_RunFrame( int levelTime ) {
 
 		if ( ent->s.eType == ET_MOVER ) 
 		{
+			// FIXME string comparison in per-frame thinks wut???
 			if ( ent->model && Q_stricmp( "models/test/mikeg/tie_fighter.md3", ent->model ) == 0 )
 			{
 				TieFighterThink( ent );
@@ -2131,12 +2110,6 @@ extern int delayedShutDown;
 		ValidateInUseBits();
 	}
 #endif
-
-#ifdef _XBOX
-	// update the water levels for npcs
-	extern void UpdateNPCWaterLevels(void);
-	UpdateNPCWaterLevels();
-#endif // _XBOX
 }
 
 
@@ -2145,14 +2118,14 @@ extern qboolean player_locked;
 
 void G_LoadSave_WriteMiscData(void)
 { 
-	gi.AppendToSaveGame('LCKD', &player_locked, sizeof(player_locked));
+	gi.AppendToSaveGame(INT_ID('L','C','K','D'), &player_locked, sizeof(player_locked));
 }
 
 
 
 void G_LoadSave_ReadMiscData(void)
 {
-	gi.ReadFromSaveGame('LCKD', &player_locked, sizeof(player_locked), NULL);
+	gi.ReadFromSaveGame(INT_ID('L','C','K','D'), &player_locked, sizeof(player_locked), NULL);
 }
 
 

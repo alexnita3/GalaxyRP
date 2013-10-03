@@ -33,7 +33,7 @@ extern void FX_KothosBeam( vec3_t start, vec3_t end );
 //==========================================================================
 
 qboolean CG_IsFemale( const char *infostring ) {
-	char		*sex;
+	const char		*sex;
 
 	sex = Info_ValueForKey( infostring, "s" );
 	if (sex[0] == 'f' || sex[0] == 'F')
@@ -607,9 +607,9 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			int disintPW = es->eventParm;
 			int disintEffect = 0;
 			int disintLength = 0;
-			qhandle_t disintSound1 = NULL;
-			qhandle_t disintSound2 = NULL;
-			qhandle_t disintSound3 = NULL;
+			qhandle_t disintSound1 = NULL_HANDLE;
+			qhandle_t disintSound2 = NULL_HANDLE;
+			qhandle_t disintSound3 = NULL_HANDLE;
 
 			switch( disintPW )
 			{

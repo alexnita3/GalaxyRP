@@ -48,7 +48,7 @@ const char *GetStringForID( stringID_table_t *table, int id )
 	return NULL;
 }
 
-ID_INLINE int Com_Clampi( int min, int max, int value ) 
+int Com_Clampi( int min, int max, int value ) 
 {
 	if ( value < min ) 
 	{
@@ -61,7 +61,7 @@ ID_INLINE int Com_Clampi( int min, int max, int value )
 	return value;
 }
 
-ID_INLINE float Com_Clamp( float min, float max, float value ) {
+float Com_Clamp( float min, float max, float value ) {
 	if ( value < min ) {
 		return min;
 	}
@@ -71,8 +71,7 @@ ID_INLINE float Com_Clamp( float min, float max, float value ) {
 	return value;
 }
 
-// some fucking joker deleted my code for ABSCLAMP, precisely before I was going to use it. so I added this --eez
-ID_INLINE int Com_AbsClampi( int min, int max, int value )
+int Com_AbsClampi( int min, int max, int value )
 {
 	if( value < 0 )
 	{
@@ -84,7 +83,7 @@ ID_INLINE int Com_AbsClampi( int min, int max, int value )
 	}
 }
 
-ID_INLINE float Com_AbsClamp( float min, float max, float value )
+float Com_AbsClamp( float min, float max, float value )
 {
 	if( value < 0.0f )
 	{
@@ -814,7 +813,8 @@ int Com_HexStrToInt( const char *str )
 	// check for hex code
 	if( str[ 0 ] == '0' && str[ 1 ] == 'x' )
 	{
-		int i, n = 0;
+		int  n = 0;
+		size_t i;
 
 		for( i = 2; i < strlen( str ); i++ )
 		{
@@ -1294,12 +1294,30 @@ char * QDECL va( const char *format, ... )
 
 	va_start( argptr, format );
 	buf = (char *)&string[index++ & 3];
-	Q_vsnprintf( buf, MAX_VA_STRING-1, format, argptr );
+	Q_vsnprintf( buf, sizeof(*string), format, argptr );
 	va_end( argptr );
 
 	return buf;
 }
 
+/*
+============
+Com_TruncateLongString
+
+Assumes buffer is atleast TRUNCATE_LENGTH big
+============
+*/
+void Com_TruncateLongString( char *buffer, const char *s ) {
+	int length = strlen( s );
+
+	if ( length <= TRUNCATE_LENGTH )
+		Q_strncpyz( buffer, s, TRUNCATE_LENGTH );
+	else {
+		Q_strncpyz( buffer, s, (TRUNCATE_LENGTH/2) - 3 );
+		Q_strcat( buffer, TRUNCATE_LENGTH, " ... " );
+		Q_strcat( buffer, TRUNCATE_LENGTH, s + length - (TRUNCATE_LENGTH/2) + 3 );
+	}
+}
 
 /*
 =====================================================================
@@ -1626,4 +1644,63 @@ void Info_SetValueForKey_Big( char *s, const char *key, const char *value ) {
 	}
 
 	strcat (s, newi);
+}
+
+/*
+==================
+Com_CharIsOneOfCharset
+==================
+*/
+static qboolean Com_CharIsOneOfCharset( char c, char *set ) {
+	size_t i;
+
+	for ( i=0; i<strlen( set ); i++ ) {
+		if ( set[i] == c )
+			return qtrue;
+	}
+
+	return qfalse;
+}
+
+/*
+==================
+Com_SkipCharset
+==================
+*/
+char *Com_SkipCharset( char *s, char *sep ) {
+	char *p = s;
+
+	while ( p ) {
+		if ( Com_CharIsOneOfCharset( *p, sep ) )
+			p++;
+		else
+			break;
+	}
+
+	return p;
+}
+
+/*
+==================
+Com_SkipTokens
+==================
+*/
+char *Com_SkipTokens( char *s, int numTokens, char *sep ) {
+	int sepCount = 0;
+	char *p = s;
+
+	while ( sepCount < numTokens ) {
+		if ( Com_CharIsOneOfCharset( *p++, sep ) ) {
+			sepCount++;
+			while ( Com_CharIsOneOfCharset( *p, sep ) )
+				p++;
+		}
+		else if ( *p == '\0' )
+			break;
+	}
+
+	if ( sepCount == numTokens )
+		return p;
+	else
+		return s;
 }

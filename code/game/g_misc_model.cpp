@@ -59,7 +59,7 @@ void SetMiscModelModels( char *modelNameString, gentity_t *ent, qboolean damage_
 }
 
 //------------------------------------------------------------
-void SetMiscModelDefaults( gentity_t *ent, useFunc_t use_func, char *material, int solid_mask,int animFlag, 
+void SetMiscModelDefaults( gentity_t *ent, useFunc_t use_func, const char *material, int solid_mask,int animFlag, 
 									qboolean take_damage, qboolean damage_model = qfalse )
 {
 	// Apply damage and chunk models if they exist
@@ -183,7 +183,7 @@ void SP_misc_model_ghoul( gentity_t *ent )
 {
 #if 1
 	ent->s.modelindex = G_ModelIndex( ent->model );
-	gi.G2API_InitGhoul2Model(ent->ghoul2, ent->model, ent->s.modelindex, NULL, NULL, 0, 0);
+	gi.G2API_InitGhoul2Model(ent->ghoul2, ent->model, ent->s.modelindex, NULL_HANDLE, NULL_HANDLE, 0, 0);
 	ent->s.radius = 50;
 #else
 	char name1[200] = "models/players/kyle/model.glm";
@@ -797,7 +797,7 @@ void SP_misc_model_cargo_small( gentity_t *ent )
 
 	G_SpawnInt( "health", "25", &ent->health );
 
-	SetMiscModelDefaults( ent, useF_NULL, "11", CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP, NULL, qtrue, NULL );
+	SetMiscModelDefaults( ent, useF_NULL, "11", CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP, 0, qtrue, qfalse );
 	ent->s.modelindex2 = G_ModelIndex("/models/map_objects/kejim/cargo_small.md3");	// Precache model
 
 	// we only take damage from a heavy weapon class missile

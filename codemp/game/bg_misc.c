@@ -4,20 +4,13 @@
 
 #include "qcommon/q_shared.h"
 #include "bg_public.h"
-#include "bg_strap.h"
 
-#ifdef QAGAME
-#include "g_local.h"
-#endif
-
-#ifdef UI_EXPORTS
-#include "ui/ui_local.h"
-#endif
-
-#ifndef UI_EXPORTS
-#ifndef QAGAME
-#include "cgame/cg_local.h"
-#endif
+#if defined(_GAME)
+	#include "g_local.h"
+#elif defined(_CGAME)
+	#include "cgame/cg_local.h"
+#elif defined(_UI)
+	#include "ui/ui_local.h"
 #endif
 
 const char *bgToggleableSurfaces[BG_NUM_TOGGLEABLE_SURFACES] = 
@@ -314,15 +307,70 @@ qboolean BG_FileExists(const char *fileName)
 	if (fileName && fileName[0])
 	{
 		int fh = 0;
-		trap_FS_FOpenFile(fileName, &fh, FS_READ);
+	#ifdef _GAME
+		trap->FS_Open(fileName, &fh, FS_READ);
+	#elif _CGAME
+		trap->FS_Open(fileName, &fh, FS_READ);
+	#elif _UI
+		trap->FS_Open(fileName, &fh, FS_READ);
+	#endif
 		if (fh > 0)
 		{
-			trap_FS_FCloseFile(fh);
+		#ifdef _GAME
+			trap->FS_Close(fh);
+		#elif _CGAME
+			trap->FS_Close(fh);
+		#elif _UI
+			trap->FS_Close(fh);
+		#endif
 			return qtrue;
 		}
 	}
 
 	return qfalse;
+}
+
+// given a boltmatrix, return in vec a normalised vector for the axis requested in flags
+void BG_GiveMeVectorFromMatrix(mdxaBone_t *boltMatrix, int flags, vec3_t vec)
+{
+	switch (flags)
+	{
+	case ORIGIN:
+		vec[0] = boltMatrix->matrix[0][3];
+		vec[1] = boltMatrix->matrix[1][3];
+		vec[2] = boltMatrix->matrix[2][3];
+		break;
+	case POSITIVE_Y:
+		vec[0] = boltMatrix->matrix[0][1];
+		vec[1] = boltMatrix->matrix[1][1];
+		vec[2] = boltMatrix->matrix[2][1];
+ 		break;
+	case POSITIVE_X:
+		vec[0] = boltMatrix->matrix[0][0];
+		vec[1] = boltMatrix->matrix[1][0];
+		vec[2] = boltMatrix->matrix[2][0];
+		break;
+	case POSITIVE_Z:
+		vec[0] = boltMatrix->matrix[0][2];
+		vec[1] = boltMatrix->matrix[1][2];
+		vec[2] = boltMatrix->matrix[2][2];
+		break;
+	case NEGATIVE_Y:
+		vec[0] = -boltMatrix->matrix[0][1];
+		vec[1] = -boltMatrix->matrix[1][1];
+		vec[2] = -boltMatrix->matrix[2][1];
+		break;
+	case NEGATIVE_X:
+		vec[0] = -boltMatrix->matrix[0][0];
+		vec[1] = -boltMatrix->matrix[1][0];
+		vec[2] = -boltMatrix->matrix[2][0];
+		break;
+	case NEGATIVE_Z:
+		vec[0] = -boltMatrix->matrix[0][2];
+		vec[1] = -boltMatrix->matrix[1][2];
+		vec[2] = -boltMatrix->matrix[2][2];
+		break;
+	}
 }
 
 /*
@@ -616,51 +664,6 @@ qboolean BG_LegalizedForcePowers(char *powerOut, int maxRank, qboolean freeSaber
 
 	return maintainsValidity;
 }
-
-#ifdef __LCC__
-// given a boltmatrix, return in vec a normalised vector for the axis requested in flags
-void BG_GiveMeVectorFromMatrix(mdxaBone_t *boltMatrix, int flags, vec3_t vec)
-{
-	switch (flags)
-	{
-	case ORIGIN:
-		vec[0] = boltMatrix->matrix[0][3];
-		vec[1] = boltMatrix->matrix[1][3];
-		vec[2] = boltMatrix->matrix[2][3];
-		break;
-	case POSITIVE_Y:
-		vec[0] = boltMatrix->matrix[0][1];
-		vec[1] = boltMatrix->matrix[1][1];
-		vec[2] = boltMatrix->matrix[2][1];
- 		break;
-	case POSITIVE_X:
-		vec[0] = boltMatrix->matrix[0][0];
-		vec[1] = boltMatrix->matrix[1][0];
-		vec[2] = boltMatrix->matrix[2][0];
-		break;
-	case POSITIVE_Z:
-		vec[0] = boltMatrix->matrix[0][2];
-		vec[1] = boltMatrix->matrix[1][2];
-		vec[2] = boltMatrix->matrix[2][2];
-		break;
-	case NEGATIVE_Y:
-		vec[0] = -boltMatrix->matrix[0][1];
-		vec[1] = -boltMatrix->matrix[1][1];
-		vec[2] = -boltMatrix->matrix[2][1];
-		break;
-	case NEGATIVE_X:
-		vec[0] = -boltMatrix->matrix[0][0];
-		vec[1] = -boltMatrix->matrix[1][0];
-		vec[2] = -boltMatrix->matrix[2][0];
-		break;
-	case NEGATIVE_Z:
-		vec[0] = -boltMatrix->matrix[0][2];
-		vec[1] = -boltMatrix->matrix[1][2];
-		vec[2] = -boltMatrix->matrix[2][2];
-		break;
-	}
-}
-#endif
 
 /*QUAKED item_***** ( 0 0 0 ) (-16 -16 -16) (16 16 16) suspended
 DO NOT USE THIS CLASS, IT JUST HOLDS GENERAL INFORMATION.
@@ -1904,7 +1907,10 @@ void BG_CycleForce(playerState_t *ps, int direction)
 	int presel = i;
 	int foundnext = -1;
 
+	// This is actually correct otherwise breaks some forcepower strings from working with cycle
+	// If there is a better fix for correcting the bad code + fixing warning on linux please investigate
 	if (!ps->fd.forcePowersKnown & (1 << x) ||
+	//if (!(ps->fd.forcePowersKnown & (1 << x)) ||
 		x >= NUM_FORCE_POWERS ||
 		x == -1)
 	{ //apparently we have no valid force powers
@@ -2135,8 +2141,7 @@ qboolean BG_CanItemBeGrabbed( int gametype, const entityState_t *ent, const play
 		if (item->giTag == WP_THERMAL || item->giTag == WP_TRIP_MINE || item->giTag == WP_DET_PACK)
 		{ //check to see if full on ammo for this, if so, then..
 			int ammoIndex = weaponData[item->giTag].ammoIndex;
-			//JAC: Only restrict pickups on full ammo if the player already has this weapon.
-			if (ps->ammo[ammoIndex] >= ammoData[ammoIndex].max && ps->stats[STAT_WEAPONS] & ( 1 << item->giTag ) )
+			if (ps->ammo[ammoIndex] >= ammoData[ammoIndex].max)
 			{ //don't need it
 				return qfalse;
 			}
@@ -2286,10 +2291,10 @@ void BG_EvaluateTrajectory( const trajectory_t *tr, int atTime, vec3_t result ) 
 		result[2] -= 0.5 * DEFAULT_GRAVITY * deltaTime * deltaTime;		// FIXME: local gravity...
 		break;
 	default:
-#ifdef QAGAME
-		Com_Error( ERR_DROP, "BG_EvaluateTrajectory: [GAME SIDE] unknown trType: %i", tr->trType );
+#ifdef _GAME
+		Com_Error( ERR_DROP, "BG_EvaluateTrajectory: [ GAME] unknown trType: %i", tr->trType );
 #else
-		Com_Error( ERR_DROP, "BG_EvaluateTrajectory: [CLIENTGAME SIDE] unknown trType: %i", tr->trType );
+		Com_Error( ERR_DROP, "BG_EvaluateTrajectory: [CGAME] unknown trType: %i", tr->trType );
 #endif
 		break;
 	}
@@ -2342,10 +2347,10 @@ void BG_EvaluateTrajectoryDelta( const trajectory_t *tr, int atTime, vec3_t resu
 		result[2] -= DEFAULT_GRAVITY * deltaTime;		// FIXME: local gravity...
 		break;
 	default:
-#ifdef QAGAME
-		Com_Error( ERR_DROP, "BG_EvaluateTrajectoryDelta: [GAME SIDE] unknown trType: %i", tr->trType );
+#ifdef _GAME
+		Com_Error( ERR_DROP, "BG_EvaluateTrajectoryDelta: [ GAME] unknown trType: %i", tr->trType );
 #else
-		Com_Error( ERR_DROP, "BG_EvaluateTrajectoryDelta: [CLIENTGAME SIDE] unknown trType: %i", tr->trType );
+		Com_Error( ERR_DROP, "BG_EvaluateTrajectoryDelta: [CGAME] unknown trType: %i", tr->trType );
 #endif
 		break;
 	}
@@ -2522,8 +2527,6 @@ Handles the sequence numbers
 ===============
 */
 
-//void	trap_Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufsize );
-
 void BG_AddPredictableEventToPlayerstate( int newEvent, int eventParm, playerState_t *ps ) {
 
 #ifdef _DEBUG
@@ -2533,12 +2536,12 @@ void BG_AddPredictableEventToPlayerstate( int newEvent, int eventParm, playerSta
 
 		if (!isRegistered)
 		{
-			trap_Cvar_Register(&showEvents, "showevents", "0", 0);
+			trap->Cvar_Register(&showEvents, "showevents", "0", 0);
 			isRegistered = qtrue;
 		}
 
 		if ( showEvents.integer != 0 ) {
-#ifdef QAGAME
+#ifdef _GAME
 			Com_Printf(" game event svt %5d -> %5d: num = %20s parm %d\n", ps->pmove_framecount/*ps->commandTime*/, ps->eventSequence, eventnames[newEvent], eventParm);
 #else
 			Com_Printf("Cgame event svt %5d -> %5d: num = %20s parm %d\n", ps->pmove_framecount/*ps->commandTime*/, ps->eventSequence, eventnames[newEvent], eventParm);
@@ -3080,49 +3083,44 @@ PLAYER ANGLES
 =============================================================================
 */
 
-//perform the appropriate model precache routine
-#ifdef QAGAME //game
-extern int trap_G2API_InitGhoul2Model(void **ghoul2Ptr, const char *fileName, int modelIndex, qhandle_t customSkin,
-						  qhandle_t customShader, int modelFlags, int lodBias); //exists on game/cgame/ui, only used on game
-extern void trap_G2API_CleanGhoul2Models(void **ghoul2Ptr); //exists on game/cgame/ui, only used on game
-#else //cgame/ui
-extern qhandle_t trap_R_RegisterModel( const char *name ); //exists on cgame/ui
-#endif
-//game/cgame/ui
-extern qhandle_t trap_R_RegisterSkin( const char *name ); //exists on game/cgame/ui
-
 int BG_ModelCache(const char *modelName, const char *skinName)
 {
-#ifdef QAGAME
-	void *g2 = NULL;
+	#ifdef _GAME
+		void *g2 = NULL;
+	
+		if ( VALIDSTRING( skinName ) )
+			trap->R_RegisterSkin( skinName );
+	
+		//I could hook up a precache ghoul2 function, but oh well, this works
+		trap->G2API_InitGhoul2Model( &g2, modelName, 0, 0, 0, 0, 0 );
+		//now get rid of it
+		if ( g2 )
+			trap->G2API_CleanGhoul2Models( &g2 );
 
-	if (skinName && skinName[0])
-	{
-		trap_R_RegisterSkin(skinName);
-	}
-
-	//I could hook up a precache ghoul2 function, but oh well, this works
-	trap_G2API_InitGhoul2Model(&g2, modelName, 0, 0, 0, 0, 0);
-	if (g2)
-	{ //now get rid of it
-		trap_G2API_CleanGhoul2Models(&g2);
-	}
-	return 0;
-#else
-	if (skinName && skinName[0])
-	{
-		trap_R_RegisterSkin(skinName);
-	}
-	return trap_R_RegisterModel(modelName);
-#endif
+		return 0;
+	#else // !_GAME
+		if ( VALIDSTRING( skinName ) )
+		{
+			#ifdef _CGAME
+				trap->R_RegisterSkin( skinName );
+			#else // !_CGAME
+				trap->R_RegisterSkin( skinName );
+			#endif // _CGAME
+		}
+		#ifdef _CGAME
+			return trap->R_RegisterModel( modelName );
+		#else // !_CGAME
+			return trap->R_RegisterModel( modelName );
+		#endif // _CGAME
+	#endif // _GAME
 }
 
-#ifdef QAGAME
-#define MAX_POOL_SIZE	3000000 //1024000
-#elif defined CGAME //don't need as much for cgame stuff. 2mb will be fine.
-#define MAX_POOL_SIZE	2048000
-#else //And for the ui the only thing we'll be using this for anyway is allocating anim data for g2 menu models
-#define MAX_POOL_SIZE	512000
+#if defined(_GAME)
+	#define MAX_POOL_SIZE	3000000 //1024000
+#elif defined(_CGAME) //don't need as much for cgame stuff. 2mb will be fine.
+	#define MAX_POOL_SIZE	2048000
+#elif defined(_UI) //And for the ui the only thing we'll be using this for anyway is allocating anim data for g2 menu models
+	#define MAX_POOL_SIZE	512000
 #endif
 
 //I am using this for all the stuff like NPC client structures on server/client and

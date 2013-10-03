@@ -61,7 +61,7 @@ void CCMLandScape::LoadTerrainDef(const char *td)
 		items = classes->GetSubGroups();
 		while(items)
 		{
-			if(!stricmp(items->GetName(), "altitudetexture"))
+			if(!Q_stricmp(items->GetName(), "altitudetexture"))
 			{
 				int			height;
 				const char	*shaderName;
@@ -81,7 +81,7 @@ void CCMLandScape::LoadTerrainDef(const char *td)
 					}
 				}
 			}
-			else if(!stricmp(items->GetName(), "water"))
+			else if(!Q_stricmp(items->GetName(), "water"))
 			{
 				const char	*shaderName;
 				CCMShader	*shader;
@@ -112,9 +112,9 @@ CCMPatch::~CCMPatch(void)
 
 CCMLandScape::CCMLandScape(const char *configstring, bool server)
 {
-	int			numPatches, numBrushesPerPatch, size, seed;
+	int			numPatches, numBrushesPerPatch, size;//, seed;
 	char		heightMap[MAX_QPATH];
-	char		*ptr;
+	//char		*ptr;
 
 	holdrand = 0x89abcdef;
 
@@ -131,7 +131,7 @@ CCMLandScape::CCMLandScape(const char *configstring, bool server)
 	numPatches = atol(Info_ValueForKey(configstring, "numPatches"));
 	mTerxels = atol(Info_ValueForKey(configstring, "terxels"));
 	mHasPhysics = !!atol(Info_ValueForKey(configstring, "physics"));
-	seed = strtoul(Info_ValueForKey(configstring, "seed"), &ptr, 10);
+	//seed = strtoul(Info_ValueForKey(configstring, "seed"), &ptr, 10);
 
 	mBounds[0][0] = (float)atof(Info_ValueForKey(configstring, "minx"));
 	mBounds[0][1] = (float)atof(Info_ValueForKey(configstring, "miny"));
@@ -169,7 +169,7 @@ CCMLandScape::CCMLandScape(const char *configstring, bool server)
 #ifdef DEDICATED
 		imageData=NULL;
 #else
-		re.LoadDataImage(heightMap, &imageData, &iWidth, &iHeight); 
+		re->LoadDataImage(heightMap, &imageData, &iWidth, &iHeight); 
 		if(imageData)
 		{
 			if(strstr(heightMap, "random_"))
@@ -179,8 +179,8 @@ CCMLandScape::CCMLandScape(const char *configstring, bool server)
 			else
 			{
 				// Flip to make the same as GenSurf
-				re.InvertImage(imageData, iWidth, iHeight, 1);
-				re.Resample(imageData, iWidth, iHeight, mHeightMap, GetRealWidth(), GetRealHeight(), 1);
+				re->InvertImage(imageData, iWidth, iHeight, 1);
+				re->Resample(imageData, iWidth, iHeight, mHeightMap, GetRealWidth(), GetRealHeight(), 1);
 			}
 			Z_Free(imageData);
 		}

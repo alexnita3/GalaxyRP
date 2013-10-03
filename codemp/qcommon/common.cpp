@@ -6,10 +6,6 @@
 #include "GenericParser2.h"
 #include "stringed_ingame.h"
 #include "qcommon/game_version.h"
-#ifndef __linux__
-#include "qcommon/platform.h"
-#endif
-
 #include "../server/NPCNav/navigator.h"
 
 #define	MAXPRINTMSG	4096
@@ -28,7 +24,6 @@ fileHandle_t	com_journalDataFile;		// config files are written here
 cvar_t	*com_viewlog;
 cvar_t	*com_speeds;
 cvar_t	*com_developer;
-cvar_t	*com_vmdebug;
 cvar_t	*com_dedicated;
 cvar_t	*com_timescale;
 cvar_t	*com_fixedtime;
@@ -51,18 +46,19 @@ cvar_t	*com_terrainPhysics; //rwwRMG - added
 
 cvar_t	*com_version;
 cvar_t	*com_buildScript;	// for automated data building scripts
-cvar_t	*com_introPlayed;
+cvar_t	*com_bootlogo;
 cvar_t	*cl_paused;
 cvar_t	*sv_paused;
 cvar_t	*com_cameraMode;
 cvar_t	*com_unfocused;
 cvar_t	*com_minimized;
 cvar_t  *com_homepath;
-#if defined(_WIN32) && defined(_DEBUG)
-cvar_t	*com_noErrorInterrupt;
-#endif
 
 cvar_t	*com_RMG;
+
+#ifdef _DEBUG
+cvar_t	*vm_legacy;
+#endif
 
 // com_speeds times
 int		time_game;
@@ -73,10 +69,10 @@ int			com_frameTime;
 int			com_frameMsec;
 int			com_frameNumber;
 
-qboolean	com_errorEntered;
-qboolean	com_fullyInitialized;
+qboolean	com_errorEntered = qfalse;
+qboolean	com_fullyInitialized = qfalse;
 
-char	com_errorMessage[MAXPRINTMSG];
+char	com_errorMessage[MAXPRINTMSG] = {0};
 
 void Com_WriteConfig_f( void );
 
@@ -128,7 +124,7 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 	va_end (argptr);
 
 	if ( rd_buffer ) {
-		if ((strlen (msg) + strlen(rd_buffer)) > (rd_buffersize - 1)) {
+		if ((strlen (msg) + strlen(rd_buffer)) > (size_t)(rd_buffersize - 1)) {
 			rd_flush(rd_buffer);
 			*rd_buffer = 0;
 		}
@@ -226,7 +222,7 @@ void QDECL Com_OPrintf( const char *fmt, ...)
 #ifdef _WIN32
 	OutputDebugString(msg);
 #else
-	printf(msg);
+	printf("%s", msg);
 #endif
 }
 
@@ -244,24 +240,16 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 	static int	errorCount;
 	int			currentTime;
 
-#if defined(_WIN32) && defined(_DEBUG)
-	if ( code != ERR_DISCONNECT && code != ERR_NEED_CD ) {
-		if (com_noErrorInterrupt && !com_noErrorInterrupt->integer) {
-			__asm {
-				int 0x03
-			}
-		}
+	if ( com_errorEntered ) {
+		Sys_Error( "recursive error after: %s", com_errorMessage );
 	}
-#endif
+	com_errorEntered = qtrue;
 
 	// when we are running automated scripts, make sure we
 	// know if anything failed
 	if ( com_buildScript && com_buildScript->integer ) {
 		code = ERR_FATAL;
 	}
-
-	// make sure we can get at our local stuff
-	FS_PureServerSetLoadedPaks( "", "" );
 
 	// if we are getting a solid stream of ERR_DROP, do an ERR_FATAL
 	currentTime = Sys_Milliseconds();
@@ -274,44 +262,17 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 	}
 	lastErrorTime = currentTime;
 
-	if ( com_errorEntered ) {
-		Sys_Error( "recursive error after: %s", com_errorMessage );
-	}
-	com_errorEntered = qtrue;
-
 	va_start (argptr,fmt);
 	Q_vsnprintf (com_errorMessage,sizeof(com_errorMessage), fmt,argptr);
 	va_end (argptr);
 
-	if ( code != ERR_DISCONNECT ) {
+	if ( code != ERR_DISCONNECT && code != ERR_NEED_CD ) {
 		Cvar_Get("com_errorMessage", "", CVAR_ROM);	//give com_errorMessage a default so it won't come back to life after a resetDefaults
 		Cvar_Set("com_errorMessage", com_errorMessage);
 	}
 
-	if ( code == ERR_SERVERDISCONNECT ) {
-		CL_Disconnect( qtrue );
-		CL_FlushMemory( );
-		com_errorEntered = qfalse;
-
-		throw ("DISCONNECTED\n");
-	} else if ( code == ERR_DROP || code == ERR_DISCONNECT ) {
-		Com_Printf ("********************\nERROR: %s\n********************\n", com_errorMessage);
-		SV_Shutdown (va("Server crashed: %s\n",  com_errorMessage));
-		CL_Disconnect( qtrue );
-		CL_FlushMemory( );
-		com_errorEntered = qfalse;
-
-		throw ("DROPPED\n");
-	} else if ( code == ERR_NEED_CD ) {
-		SV_Shutdown( "Server didn't have CD\n" );
-		if ( com_cl_running && com_cl_running->integer ) {
-			CL_Disconnect( qtrue );
-			CL_FlushMemory( );
-			com_errorEntered = qfalse;
-		} else {
-			Com_Printf("Server didn't have CD\n" );
-		}
-		throw ("NEED CD\n");
+	if ( code == ERR_DISCONNECT || code == ERR_SERVERDISCONNECT || code == ERR_DROP ) {
+		throw code;
 	} else {
 		CL_Shutdown ();
 		SV_Shutdown (va("Server fatal crashed: %s\n", com_errorMessage));
@@ -373,13 +334,17 @@ Break it up into multiple console lines
 ==================
 */
 void Com_ParseCommandLine( char *commandLine ) {
+	int inq = 0;
 	com_consoleLines[0] = commandLine;
 	com_numConsoleLines = 1;
 
 	while ( *commandLine ) {
+		if (*commandLine == '"') {
+			inq = !inq;
+		}
 		// look for a + seperating character
 		// if commandLine came from a file, we might have real line seperators
-		if ( *commandLine == '+' || *commandLine == '\n' ) {
+		if ( (*commandLine == '+' && !inq) || *commandLine == '\n'  || *commandLine == '\r' ) {
 			if ( com_numConsoleLines == MAX_CONSOLE_LINES ) {
 				return;
 			}
@@ -427,10 +392,9 @@ be after execing the config and default.
 ===============
 */
 void Com_StartupVariable( const char *match ) {
-	int		i;
 	char	*s;
 
-	for (i=0 ; i < com_numConsoleLines ; i++) {
+	for (int i=0 ; i < com_numConsoleLines ; i++) {
 		Cmd_TokenizeString( com_consoleLines[i] );
 		if ( strcmp( Cmd_Argv(0), "set" ) ) {
 			continue;
@@ -440,7 +404,7 @@ void Com_StartupVariable( const char *match ) {
 
 		if(!match || !strcmp(s, match))
 		{
-			if(Cvar_Flags(s) == CVAR_NONEXISTENT)
+			if((unsigned)Cvar_Flags(s) == CVAR_NONEXISTENT)
 				Cvar_Get(s, Cmd_Argv(2), CVAR_USER_CREATED);
 			else
 				Cvar_Set2(s, Cmd_Argv(2), qfalse);
@@ -975,7 +939,7 @@ int Com_EventLoop( void ) {
 			// the event buffers are only large enough to hold the
 			// exact payload, but channel messages need to be large
 			// enough to hold fragment reassembly
-			if ( (unsigned)buf.cursize > buf.maxsize ) {
+			if ( (unsigned)buf.cursize > (unsigned)buf.maxsize ) {
 				Com_Printf("Com_EventLoop: oversize packet\n");
 				continue;
 			}
@@ -1074,9 +1038,8 @@ A way to force a bus error for development reasons
 =================
 */
 static void Com_Crash_f( void ) {
-	* ( int * ) 0 = 0x12345678;
+	* ( volatile int * ) 0 = 0x12345678;
 }
-
 
 #ifdef MEM_DEBUG
 	void SH_Register(void);
@@ -1105,6 +1068,73 @@ void Com_ExecuteCfg(void)
 
 /*
 =================
+Com_InitRand
+Seed the random number generator, if possible with an OS supplied random seed.
+=================
+*/
+static void Com_InitRand(void)
+{
+	unsigned int seed;
+
+	if(Sys_RandomBytes((byte *) &seed, sizeof(seed)))
+		srand(seed);
+	else
+		srand(time(NULL));
+}
+
+/*
+=================
+Com_ErrorString
+Error string for the given error code (from Com_Error).
+=================
+*/
+static const char *Com_ErrorString ( int code )
+{
+	switch ( code )
+	{
+		case ERR_DISCONNECT:
+		// fallthrough
+		case ERR_SERVERDISCONNECT:
+			return "DISCONNECTED";
+
+		case ERR_DROP:
+			return "DROPPED";
+
+		default:
+			return "UNKNOWN";
+	}
+}
+
+/*
+=================
+Com_CatchError
+Handles freeing up of resources when Com_Error is called.
+=================
+*/
+static void Com_CatchError ( int code )
+{
+	if ( code == ERR_DISCONNECT || code == ERR_SERVERDISCONNECT ) {
+		SV_Shutdown( "Server disconnected" );
+		CL_Disconnect( qtrue );
+		CL_FlushMemory( qtrue );
+		// make sure we can get at our local stuff
+		FS_PureServerSetLoadedPaks( "", "" );
+		com_errorEntered = qfalse;
+	} else if ( code == ERR_DROP ) {
+		Com_Printf ("********************\n"
+					"ERROR: %s\n"
+					"********************\n", com_errorMessage);
+		SV_Shutdown (va("Server crashed: %s\n",  com_errorMessage));
+		CL_Disconnect( qtrue );
+		CL_FlushMemory( qtrue );
+		// make sure we can get at our local stuff
+		FS_PureServerSetLoadedPaks( "", "" );
+		com_errorEntered = qfalse;
+	}
+}
+
+/*
+=================
 Com_Init
 =================
 */
@@ -1121,6 +1151,9 @@ void Com_Init( char *commandLine ) {
 		Cvar_Init ();
 
 		navigator.Init();
+
+		// initialize the weak pseudo-random number generator for use later.
+		Com_InitRand();
 
 		// prepare enough of the subsystems to handle
 		// cvar and command buffer management
@@ -1161,8 +1194,14 @@ void Com_Init( char *commandLine ) {
 		com_dedicated = Cvar_Get ("dedicated", "2", CVAR_ROM);
 		Cvar_CheckRange( com_dedicated, 1, 2, qtrue );
 	#else
-		com_dedicated = Cvar_Get ("dedicated", "0", CVAR_LATCH);
-		Cvar_CheckRange( com_dedicated, 0, 2, qtrue );
+		//OJKFIXME: Temporarily disabled dedicated server when not using the dedicated server binary.
+		//			Issue is the server not having a renderer when not using ^^^^^
+		//				and crashing in SV_SpawnServer calling re.RegisterMedia_LevelLoadBegin
+		//			Until we fully remove the renderer from the server, the client executable
+		//				will not have dedicated support capabilities.
+		//			Use the dedicated server package.
+		com_dedicated = Cvar_Get ("_dedicated", "0", CVAR_ROM|CVAR_INIT|CVAR_PROTECTED);
+	//	Cvar_CheckRange( com_dedicated, 0, 2, qtrue );
 	#endif
 		// allocate the stack based hunk allocator
 		Com_InitHunkMemory();
@@ -1176,7 +1215,6 @@ void Com_Init( char *commandLine ) {
 		//
 		com_maxfps = Cvar_Get ("com_maxfps", "125", CVAR_ARCHIVE);
 
-		com_vmdebug = Cvar_Get ("vmdebug", "0", CVAR_TEMP );
 		com_logfile = Cvar_Get ("logfile", "0", CVAR_TEMP );
 
 		com_timescale = Cvar_Get ("timescale", "1", CVAR_CHEAT | CVAR_SYSTEMINFO );
@@ -1227,11 +1265,11 @@ void Com_Init( char *commandLine ) {
 		Cvar_Get ("RMG_course", "standard", CVAR_SYSTEMINFO );
 		Cvar_Get ("RMG_distancecull", "5000", CVAR_CHEAT );
 
-		com_introPlayed = Cvar_Get( "com_introplayed", "0", CVAR_ARCHIVE);
+		com_bootlogo = Cvar_Get( "com_bootlogo", "1", CVAR_ARCHIVE);
 
-	#if defined(_WIN32) && defined(_DEBUG)
-		com_noErrorInterrupt = Cvar_Get( "com_noErrorInterrupt", "0", 0 );
-	#endif
+#ifdef _DEBUG
+		vm_legacy = Cvar_Get( "vm_legacy", "0", 0 );
+#endif
 
 		if ( com_dedicated->integer ) {
 			if ( !com_viewlog->integer ) {
@@ -1248,14 +1286,13 @@ void Com_Init( char *commandLine ) {
 		Cmd_AddCommand ("changeVectors", MSG_ReportChangeVectors_f );
 		Cmd_AddCommand ("writeconfig", Com_WriteConfig_f );
 
-		s = va("%s %s %s", JK_VERSION, PLATFORM_STRING, __DATE__ );
+		s = va("%s %s %s", JK_VERSION_OLD, PLATFORM_STRING, __DATE__ );
 		com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO );
 
 		SE_Init();
 
 		Sys_Init();
 		Netchan_Init( Com_Milliseconds() & 0xffff );	// pick a port value that should be nice and random
-		VM_Init();
 		SV_Init();
 
 		com_dedicated->modified = qfalse;
@@ -1276,14 +1313,10 @@ void Com_Init( char *commandLine ) {
 			// if the user didn't give any commands, run default action
 			if ( !com_dedicated->integer ) 
 			{
-#ifndef _DEBUG
-				Cbuf_AddText ("cinematic openinglogos.roq\n");
-#endif
-				// intro.roq is iD's.
-//				if( !com_introPlayed->integer ) {
-//					Cvar_Set( com_introPlayed->name, "1" );
-//					Cvar_Set( "nextmap", "cinematic intro.RoQ" );
-//				}
+				if ( com_bootlogo->integer )
+				{
+					Cbuf_AddText ("cinematic openinglogos.roq\n");
+				}
 			}
 		}
 
@@ -1303,9 +1336,10 @@ void Com_Init( char *commandLine ) {
 		Com_Printf ("--- Common Initialization Complete ---\n");	
 
 	}
-
-	catch (const char* reason) {
-		Sys_Error ("Error during initialization: %s", reason);
+	catch ( int code )
+	{
+		Com_CatchError (code);
+		Sys_Error ("Error during initialization: %s", Com_ErrorString (code));
 	}
 }
 
@@ -1320,7 +1354,7 @@ void Com_WriteConfigToFile( const char *filename ) {
 		return;
 	}
 
-	FS_Printf (f, "// generated by Star Wars Jedi Academy MP, do not modify\n");
+	FS_Printf (f, "// generated by OpenJK MP, do not modify\n");
 	Key_WriteBindings (f);
 	Cvar_WriteVariables (f);
 	FS_FCloseFile( f );
@@ -1521,7 +1555,7 @@ try
 	// but before the client tries to auto-connect
 	if ( com_dedicated->modified ) {
 		// get the latched value
-		Cvar_Get( "dedicated", "0", 0 );
+		Cvar_Get( "_dedicated", "0", 0 );
 		com_dedicated->modified = qfalse;
 		if ( !com_dedicated->integer ) {
 			CL_Init();
@@ -1598,9 +1632,10 @@ try
 	com_frameNumber++;
 
 }//try
-	catch (const char* reason) {
-		Com_Printf (reason);
-		return;			// an ERR_DROP was thrown
+	catch (int code) {
+		Com_CatchError (code);
+		Com_Printf ("%s\n", Com_ErrorString (code));
+		return;
 	}
 
 #ifdef G2_PERFORMANCE_ANALYSIS
@@ -1648,6 +1683,285 @@ void Com_Shutdown (void)
 */
 }
 
+/*
+==================
+Field_Clear
+==================
+*/
+void Field_Clear( field_t *edit ) {
+	edit->buffer[0] = 0;
+	edit->cursor = 0;
+	edit->scroll = 0;
+}
+
+/*
+=============================================================================
+
+CONSOLE LINE EDITING
+
+==============================================================================
+*/
+
+static const char *completionString;
+static char shortestMatch[MAX_TOKEN_CHARS];
+static int	matchCount;
+// field we are working on, passed to Field_AutoComplete(&g_consoleCommand for instance)
+static field_t *completionField;
+
+/*
+===============
+FindMatches
+
+===============
+*/
+static void FindMatches( const char *s ) {
+	int		i;
+
+	if ( Q_stricmpn( s, completionString, strlen( completionString ) ) ) {
+		return;
+	}
+	matchCount++;
+	if ( matchCount == 1 ) {
+		Q_strncpyz( shortestMatch, s, sizeof( shortestMatch ) );
+		return;
+	}
+
+	// cut shortestMatch to the amount common with s
+	for ( i = 0 ; s[i] ; i++ ) {
+		if ( tolower(shortestMatch[i]) != tolower(s[i]) ) {
+			shortestMatch[i] = 0;
+			break;
+		}
+	}
+	if (!s[i])
+	{
+		shortestMatch[i] = 0;
+	}
+}
+
+/*
+===============
+PrintMatches
+
+===============
+*/
+static void PrintMatches( const char *s ) {
+	if ( !Q_stricmpn( s, shortestMatch, strlen( shortestMatch ) ) ) {
+		Com_Printf( S_COLOR_GREY"Cmd  "S_COLOR_WHITE"%s\n", s );
+	}
+}
+
+/*
+===============
+PrintArgMatches
+
+===============
+*/
+#if 0
+// This is here for if ever commands with other argument completion
+static void PrintArgMatches( const char *s ) {
+	if ( !Q_stricmpn( s, shortestMatch, strlen( shortestMatch ) ) ) {
+		Com_Printf( S_COLOR_WHITE"  %s\n", s );
+	}
+}
+#endif
+
+#ifndef DEDICATED
+/*
+===============
+PrintKeyMatches
+
+===============
+*/
+static void PrintKeyMatches( const char *s ) {
+	if ( !Q_stricmpn( s, shortestMatch, strlen( shortestMatch ) ) ) {
+		Com_Printf( S_COLOR_GREY"Key  "S_COLOR_WHITE"%s\n", s );
+	}
+}
+#endif
+
+/*
+===============
+PrintFileMatches
+
+===============
+*/
+static void PrintFileMatches( const char *s ) {
+	if ( !Q_stricmpn( s, shortestMatch, strlen( shortestMatch ) ) ) {
+		Com_Printf( S_COLOR_GREY"File "S_COLOR_WHITE"%s\n", s );
+	}
+}
+
+/*
+===============
+PrintCvarMatches
+
+===============
+*/
+static void PrintCvarMatches( const char *s ) {
+	char value[TRUNCATE_LENGTH] = {0};
+
+	if ( !Q_stricmpn( s, shortestMatch, (int)strlen( shortestMatch ) ) ) {
+		Com_TruncateLongString( value, Cvar_VariableString( s ) );
+		Com_Printf( S_COLOR_GREY"Cvar "S_COLOR_WHITE"%s = "S_COLOR_GREY"\""S_COLOR_WHITE"%s"S_COLOR_GREY"\""S_COLOR_WHITE"\n", s, value );
+	}
+}
+
+/*
+===============
+Field_FindFirstSeparator
+===============
+*/
+static char *Field_FindFirstSeparator( char *s ) {
+	for ( size_t i=0; i<strlen( s ); i++ ) {
+		if ( s[i] == ';' )
+			return &s[ i ];
+	}
+
+	return NULL;
+}
+
+/*
+===============
+Field_Complete
+===============
+*/
+static qboolean Field_Complete( void ) {
+	int completionOffset;
+
+	if ( matchCount == 0 )
+		return qtrue;
+
+	completionOffset = strlen( completionField->buffer ) - strlen( completionString );
+
+	Q_strncpyz( &completionField->buffer[completionOffset], shortestMatch, sizeof( completionField->buffer ) - completionOffset );
+
+	completionField->cursor = strlen( completionField->buffer );
+
+	if ( matchCount == 1 ) {
+		Q_strcat( completionField->buffer, sizeof( completionField->buffer ), " " );
+		completionField->cursor++;
+		return qtrue;
+	}
+
+	Com_Printf( "%c%s\n", CONSOLE_PROMPT_CHAR, completionField->buffer );
+
+	return qfalse;
+}
+
+#ifndef DEDICATED
+/*
+===============
+Field_CompleteKeyname
+===============
+*/
+void Field_CompleteKeyname( void )
+{
+	matchCount = 0;
+	shortestMatch[ 0 ] = 0;
+
+	Key_KeynameCompletion( FindMatches );
+
+	if( !Field_Complete( ) )
+		Key_KeynameCompletion( PrintKeyMatches );
+}
+#endif
+
+/*
+===============
+Field_CompleteFilename
+===============
+*/
+void Field_CompleteFilename( const char *dir, const char *ext, qboolean stripExt, qboolean allowNonPureFilesOnDisk )
+{
+	matchCount = 0;
+	shortestMatch[ 0 ] = 0;
+
+	FS_FilenameCompletion( dir, ext, stripExt, FindMatches, allowNonPureFilesOnDisk );
+
+	if ( !Field_Complete() )
+		FS_FilenameCompletion( dir, ext, stripExt, PrintFileMatches, allowNonPureFilesOnDisk );
+}
+
+/*
+===============
+Field_CompleteCommand
+===============
+*/
+void Field_CompleteCommand( char *cmd, qboolean doCommands, qboolean doCvars )
+{
+	int completionArgument = 0;
+
+	// Skip leading whitespace and quotes
+	cmd = Com_SkipCharset( cmd, " \"" );
+
+	Cmd_TokenizeStringIgnoreQuotes( cmd );
+	completionArgument = Cmd_Argc();
+
+	// If there is trailing whitespace on the cmd
+	if ( *(cmd + strlen( cmd )-1) == ' ' ) {
+		completionString = "";
+		completionArgument++;
+	}
+	else
+		completionString = Cmd_Argv( completionArgument - 1 );
+
+	if ( completionArgument > 1 ) {
+		const char *baseCmd = Cmd_Argv( 0 );
+		char *p;
+
+#ifndef DEDICATED
+		if ( baseCmd[0] == '\\' || baseCmd[0] == '/' )
+			baseCmd++;
+#endif
+
+		if( ( p = Field_FindFirstSeparator( cmd ) ) )
+			Field_CompleteCommand( p + 1, qtrue, qtrue ); // Compound command
+		else
+			Cmd_CompleteArgument( baseCmd, cmd, completionArgument ); 
+	}
+	else {
+		if ( completionString[0] == '\\' || completionString[0] == '/' )
+			completionString++;
+
+		matchCount = 0;
+		shortestMatch[ 0 ] = 0;
+
+		if ( strlen( completionString ) == 0 )
+			return;
+
+		if ( doCommands )
+			Cmd_CommandCompletion( FindMatches );
+
+		if ( doCvars )
+			Cvar_CommandCompletion( FindMatches );
+
+		if ( !Field_Complete() ) {
+			// run through again, printing matches
+			if ( doCommands )
+				Cmd_CommandCompletion( PrintMatches );
+
+			if ( doCvars )
+				Cvar_CommandCompletion( PrintCvarMatches );
+		}
+	}
+}
+
+/*
+===============
+Field_AutoComplete
+
+Perform Tab expansion
+===============
+*/
+void Field_AutoComplete( field_t *field ) {
+	if ( !field || !field->buffer[0] )
+		return;
+
+	completionField = field;
+
+	Field_CompleteCommand( completionField->buffer, qtrue, qtrue );
+}
 
 //rwwRMG: Inserted:
 /*
@@ -1718,3 +2032,21 @@ CGenericParser2 *Com_ParseTextFile(const char *file, bool cleanFirst, bool write
 	return parse;
 }
 
+/*
+==================
+Com_RandomBytes
+
+fills string array with len radom bytes, peferably from the OS randomizer
+==================
+*/
+void Com_RandomBytes( byte *string, int len )
+{
+	int i;
+
+	if( Sys_RandomBytes( string, len ) )
+		return;
+
+	Com_Printf( "Com_RandomBytes: using weak randomization\n" );
+	for( i = 0; i < len; i++ )
+		string[i] = (unsigned char)( rand() % 255 );
+}

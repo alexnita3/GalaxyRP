@@ -253,7 +253,7 @@ Build a client snapshot structure
 */
 
 #define	MAX_SNAPSHOT_ENTITIES	1024
-typedef struct {
+typedef struct snapshotEntityNumbers_s {
 	int		numSnapshotEntities;
 	int		snapshotEntities[MAX_SNAPSHOT_ENTITIES];	
 } snapshotEntityNumbers_t;
@@ -316,7 +316,6 @@ static void SV_AddEntitiesVisibleFromPoint( vec3_t origin, clientSnapshot_t *fra
 	int		l;
 	int		clientarea, clientcluster;
 	int		leafnum;
-	int		c_fullsend;
 	byte	*clientpvs;
 	byte	*bitvector;
 	vec3_t	difference;
@@ -337,8 +336,6 @@ static void SV_AddEntitiesVisibleFromPoint( vec3_t origin, clientSnapshot_t *fra
 	frame->areabytes = CM_WriteAreaBits( frame->areabits, clientarea );
 
 	clientpvs = CM_ClusterPVS (clientcluster);
-
-	c_fullsend = 0;
 
 	for ( e = 0 ; e < sv.num_entities ; e++ ) {
 		ent = SV_GentityNum(e);
@@ -543,7 +540,7 @@ static void SV_BuildClientSnapshot( client_t *client ) {
 
 		if (veh && veh->playerState)
 		{ //Now VMA it and we've got ourselves a playerState
-			playerState_t *vps = ((playerState_t *)VM_ArgPtr((int)veh->playerState));
+			playerState_t *vps = ((playerState_t *)VM_ArgPtr((intptr_t)veh->playerState));
 
             frame->vps = *vps;
 #ifdef _ONEBIT_COMBO

@@ -3,11 +3,8 @@
 #include "qcommon/exe_headers.h"
 
 #include "client.h"
+#include "cl_cgameapi.h"
 #include "FxScheduler.h"
-
-#ifdef VV_LIGHTING
-#include "renderer/tr_lightmanager.h"
-#endif
 
 extern int		drawnFx;
 
@@ -17,11 +14,11 @@ extern int		drawnFx;
 //
 //--------------------------
 CEffect::CEffect(void) :
+	mFlags(0),
 	mMatImpactFX(MATIMPACTFX_NONE),
 	mMatImpactParm(-1),
-	mSoundVolume(-1),
 	mSoundRadius(-1),
-	mFlags(0)
+	mSoundVolume(-1)
 {
 	memset( &mRefEnt, 0, sizeof( mRefEnt ));
 }
@@ -111,7 +108,7 @@ void CParticle::Draw(void)
 		color[2] = mRefEnt.shaderRGBA[2] / 255.0;
 		color[3] = mRefEnt.shaderRGBA[3] / 255.0;
 
-		// add this 2D effect to the proper list. it will get drawn after the cgi.RenderScene call
+		// add this 2D effect to the proper list. it will get drawn after the trap->RenderScene call
 		theFxScheduler.Add2DEffect(mOrigin1[0], mOrigin1[1], mRefEnt.radius, mRefEnt.radius, color, mRefEnt.customShader);
 	}
 	else
@@ -229,7 +226,7 @@ bool CParticle::UpdateOrigin(void)
 				data->mPassEntityNum = ENTITYNUM_WORLD;
 
 				// if this returns solid, we need to do a trace
-				solid = !!(VM_Call( cgvm, CG_POINT_CONTENTS ) & MASK_SOLID); 
+				solid = !!(CGVM_PointContents() & MASK_SOLID); 
 			}
 			else
 			{
@@ -414,10 +411,10 @@ void CParticle::UpdateSize(void)
 
 inline int VectorToInt(vec3_t vec)
 {
-	int			tmp, retval;
-
+	int retval = 0;
 	// FIXME: unix compatibility needed
-#ifdef _WIN32
+#if defined(_MSC_VER) && !defined(idx64)
+	int			tmp;
 	_asm
 	{
 		push	edx
@@ -524,7 +521,7 @@ void CParticle::UpdateRGB(void)
 	res[1] = Com_Clamp(0.0f, 1.0f, res[1]) * 255.0f;
 	res[2] = Com_Clamp(0.0f, 1.0f, res[2]) * 255.0f;
 
-#ifdef _WIN32
+#if defined(_MSC_VER) && !defined(idx64)
 	*(int *)mRefEnt.shaderRGBA = VectorToInt(res);
 #else
     mRefEnt.shaderRGBA[0] = (char)res[0];
@@ -1495,11 +1492,7 @@ void CEmitter::UpdateAngles(void)
 //----------------------------
 void CLight::Draw(void)
 {
-#ifdef VV_LIGHTING
-	VVLightMan.RE_AddLightToScene( mOrigin1, mRefEnt.radius, mRefEnt.origin[0], mRefEnt.origin[1], mRefEnt.origin[2] );
-#else
 	theFxHelper.AddLightToScene( mOrigin1, mRefEnt.radius, mRefEnt.origin[0], mRefEnt.origin[1], mRefEnt.origin[2] );
-#endif
 	drawnFx++;	
 }
 
@@ -2288,6 +2281,9 @@ void CFlash::Init( void )
 //----------------------------
 void CFlash::Draw( void )	
 {
+    // Interestingly, if znear is set > than this, then the flash
+    // doesn't appear at all.
+    const float FLASH_DISTANCE_FROM_VIEWER = 12.0f;
 	mRefEnt.reType = RT_SPRITE;
 
 	if ( mFlags & FX_LOCALIZED_FLASH )
@@ -2299,14 +2295,16 @@ void CFlash::Draw( void )
 		color[2] = mRefEnt.shaderRGBA[2] / 255.0;
 		color[3] = mRefEnt.shaderRGBA[3] / 255.0;
 
-		// add this 2D effect to the proper list. it will get drawn after the cgi.RenderScene call
+		// add this 2D effect to the proper list. it will get drawn after the trap->RenderScene call
 		theFxScheduler.Add2DEffect(mScreenX, mScreenY, mRefEnt.radius, mRefEnt.radius, color, mRefEnt.customShader);
 	}
 	else
 	{
 		VectorCopy( theFxHelper.refdef->vieworg, mRefEnt.origin );
-		VectorMA( mRefEnt.origin, 12, theFxHelper.refdef->viewaxis[0], mRefEnt.origin );
-		mRefEnt.radius = fx_flashRadius->value; // 11.0f
+		VectorMA( mRefEnt.origin, FLASH_DISTANCE_FROM_VIEWER, theFxHelper.refdef->viewaxis[0], mRefEnt.origin );
+
+        // This is assuming that the screen is wider than it is tall.
+        mRefEnt.radius = FLASH_DISTANCE_FROM_VIEWER * tan (DEG2RAD (theFxHelper.refdef->fov_x * 0.5f));
 
 		theFxHelper.AddFxToScene( &mRefEnt );
 	}

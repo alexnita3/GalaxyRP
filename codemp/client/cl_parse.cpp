@@ -4,11 +4,12 @@
 // cl_parse.c  -- parse a message received from the server
 
 #include "client.h"
+#include "cl_cgameapi.h"
 #include "qcommon/stringed_ingame.h"
 #ifdef _DONETPROFILE_
 #include "qcommon/INetProfile.h"
 #endif
-#include "../zlib/zlib.h"
+#include "zlib/zlib.h"
 
 static char hiddenCvarVal[128];
 
@@ -255,7 +256,7 @@ void CL_ParseSnapshot( msg_t *msg ) {
 	// read areamask
 	len = MSG_ReadByte( msg );
 
-	if(len > sizeof(newSnap.areamask))
+	if((unsigned)len > sizeof(newSnap.areamask))
 	{
 		Com_Error (ERR_DROP,"CL_ParseSnapshot: Invalid size %d for areamask", len);
 		return;
@@ -447,7 +448,7 @@ void CL_SystemInfoChanged( void ) {
 			gameSet = qtrue;
 		}
 
-		if((cvar_flags = Cvar_Flags(key)) == CVAR_NONEXISTENT)
+		if((unsigned)(cvar_flags = Cvar_Flags(key)) == CVAR_NONEXISTENT)
 			Cvar_Get(key, value, CVAR_SERVER_CREATED | CVAR_ROM);
 		else
 		{
@@ -731,7 +732,7 @@ void CL_ParseDownload ( msg_t *msg ) {
 	}
 
 	size = /*(unsigned short)*/MSG_ReadShort ( msg );
-	if (size < 0 || size > sizeof(data))
+	if (size < 0 || size > (int)sizeof(data))
 	{
 		Com_Error(ERR_DROP, "CL_ParseDownload: Invalid size %d for download chunk", size);
 		return;
@@ -947,15 +948,9 @@ void CL_ParseServerMessage( msg_t *msg ) {
 			CL_ParseDownload( msg );
 			break;
 		case svc_mapchange:
-			if (cgvm)
-			{
-				VM_Call( cgvm, CG_MAP_CHANGE );
-			}
+			if ( cls.cgameStarted )
+				CGVM_MapChange();
 			break;
 		}
 	}
 }
-
-
-extern int			scr_center_y;
-void SCR_CenterPrint (char *str);//, PalIdx_t colour)

@@ -563,7 +563,7 @@ static qboolean GLW_CreateWindow( int width, int height, int colorbits, qboolean
 
 		if ( !RegisterClass( &wc ) )
 		{
-			Com_Error( ERR_FATAL, "GLW_CreateWindow: could not register window class" );
+			Com_Error( ERR_FATAL, "GLW_CreateWindow: could not register window class, error code: 0x%x", GetLastError() );
 		}
 		s_classRegistered = qtrue;
 //		Com_Printf ("...registered window class\n" );
@@ -590,7 +590,14 @@ static qboolean GLW_CreateWindow( int width, int height, int colorbits, qboolean
 		else
 		{
 			exstyle = 0;
-			stylebits = WS_SYSMENU|WINDOW_STYLE|WS_MINIMIZEBOX;
+			if ( r_noborder->integer == 0 )
+			{
+				stylebits = WS_SYSMENU|WINDOW_STYLE|WS_MINIMIZEBOX;
+			}
+			else
+			{
+				stylebits = WS_POPUP|WS_VISIBLE;
+			}
 			AdjustWindowRect (&r, stylebits, FALSE);
 		}
 
@@ -604,10 +611,18 @@ static qboolean GLW_CreateWindow( int width, int height, int colorbits, qboolean
 		}
 		else
 		{
-			vid_xpos = ri.Cvar_Get ("vid_xpos", "", 0);
-			vid_ypos = ri.Cvar_Get ("vid_ypos", "", 0);
-			x = vid_xpos->integer;
-			y = vid_ypos->integer;
+			vid_xpos = ri->Cvar_Get ("vid_xpos", "", 0);
+			vid_ypos = ri->Cvar_Get ("vid_ypos", "", 0);
+			if ( r_centerWindow->integer == 0 )
+			{
+				x = vid_xpos->integer;
+				y = vid_ypos->integer;
+			}
+			else
+			{
+				x = ( glw_state.desktopWidth - w ) / 2;
+				y = ( glw_state.desktopHeight - h ) / 2;
+			}
 
 			// adjust window coordinates if necessary 
 			// so that the window is completely on screen
@@ -761,7 +776,7 @@ static rserr_t GLW_SetMode( int mode,
 			char sErrorHead[1024];	// ott
 
 			extern qboolean Language_IsAsian(void);
-			Q_strncpyz(sErrorHead, Language_IsAsian() ? "Low Desktop Color Depth" : ri.SE_GetString("CON_TEXT_LOW_DESKTOP_COLOUR_DEPTH"), sizeof(sErrorHead) );
+			Q_strncpyz(sErrorHead, Language_IsAsian() ? "Low Desktop Color Depth" : ri->SE_GetString("CON_TEXT_LOW_DESKTOP_COLOUR_DEPTH"), sizeof(sErrorHead) );
 
 			const char *psErrorBody = Language_IsAsian() ?
 												"It is highly unlikely that a correct windowed\n"
@@ -770,7 +785,7 @@ static rserr_t GLW_SetMode( int mode,
 												"anyway.  Select 'Cancel' to try a fullscreen\n"
 												"mode instead."
 												:
-												ri.SE_GetString("CON_TEXT_TRY_ANYWAY");
+												ri->SE_GetString("CON_TEXT_TRY_ANYWAY");
 
 			if ( MessageBox( NULL, 							
 						psErrorBody,
@@ -1089,7 +1104,7 @@ static void GLW_InitExtensions( void )
 	{
 		Com_Printf ("*** IGNORING OPENGL EXTENSIONS ***\n" );
 		g_bDynamicGlowSupported = false;
-		ri.Cvar_Set( "r_DynamicGlow","0" );
+		ri->Cvar_Set( "r_DynamicGlow","0" );
 		return;
 	}
 
@@ -1134,16 +1149,16 @@ static void GLW_InitExtensions( void )
 		{
 			Com_Printf ("...ignoring GL_EXT_texture_filter_anisotropic\n" );
 		}
-		ri.Cvar_Set( "r_ext_texture_filter_anisotropic_avail", va("%f",glConfig.maxTextureFilterAnisotropy) );
+		ri->Cvar_SetValue( "r_ext_texture_filter_anisotropic_avail", glConfig.maxTextureFilterAnisotropy );
 		if ( r_ext_texture_filter_anisotropic->value > glConfig.maxTextureFilterAnisotropy )
 		{
-			ri.Cvar_Set( "r_ext_texture_filter_anisotropic", va("%f",glConfig.maxTextureFilterAnisotropy) );
+			ri->Cvar_SetValue( "r_ext_texture_filter_anisotropic_avail", glConfig.maxTextureFilterAnisotropy );
 		}
 	}
 	else
 	{
 		Com_Printf ("...GL_EXT_texture_filter_anisotropic not found\n" );
-		ri.Cvar_Set( "r_ext_texture_filter_anisotropic_avail", "0" );
+		ri->Cvar_Set( "r_ext_texture_filter_anisotropic_avail", "0" );
 	}
 
 	// GL_EXT_clamp_to_edge
@@ -1501,7 +1516,7 @@ static void GLW_InitExtensions( void )
 	else
 	{
 		g_bDynamicGlowSupported = false;
-		ri.Cvar_Set( "r_DynamicGlow","0" );
+		ri->Cvar_Set( "r_DynamicGlow","0" );
 	}
 }
 
@@ -1621,7 +1636,7 @@ void GLimp_EndFrame (void)
 
 
 	// don't flip if drawing to front buffer
-	//if ( stricmp( r_drawBuffer->string, "GL_FRONT" ) != 0 )
+	//if ( Q_stricmp( r_drawBuffer->string, "GL_FRONT" ) != 0 )
 	{
 		SwapBuffers( glw_state.hDC );
 	}
@@ -1654,7 +1669,7 @@ static void GLW_StartOpenGL( void )
 void GLimp_Init( void )
 {
 	char	buf[MAX_STRING_CHARS];
-	cvar_t *lastValidRenderer = ri.Cvar_Get( "r_lastValidRenderer", "(uninitialized)", CVAR_ARCHIVE );
+	cvar_t *lastValidRenderer = ri->Cvar_Get( "r_lastValidRenderer", "(uninitialized)", CVAR_ARCHIVE );
 	cvar_t	*cv;
 
 //	Com_Printf ("Initializing OpenGL subsystem\n" );
@@ -1668,13 +1683,13 @@ void GLimp_Init( void )
 	}
 
 	// save off hInstance and wndproc
-	cv = ri.Cvar_Get( "win_hinstance", "", 0 );
+	cv = ri->Cvar_Get( "win_hinstance", "", 0 );
 	sscanf( cv->string, "%i", (int *)&tr.wv->hInstance );
 
-	cv = ri.Cvar_Get( "win_wndproc", "", 0 );
+	cv = ri->Cvar_Get( "win_wndproc", "", 0 );
 	sscanf( cv->string, "%i", (int *)&glw_state.wndproc );
 
-	r_allowSoftwareGL = ri.Cvar_Get( "r_allowSoftwareGL", "0", CVAR_LATCH );
+	r_allowSoftwareGL = ri->Cvar_Get( "r_allowSoftwareGL", "0", CVAR_LATCH );
 
 	// load appropriate DLL and initialize subsystem
 	GLW_StartOpenGL();
@@ -1711,51 +1726,51 @@ void GLimp_Init( void )
 	//
 	if ( Q_stricmp( lastValidRenderer->string, glConfig.renderer_string ) )
 	{
-		if (ri.Sys_LowPhysicalMemory())
+		if (ri->Sys_LowPhysicalMemory())
 		{
-			ri.Cvar_Set("s_khz", "11");// this will get called before S_Init
+			ri->Cvar_Set("s_khz", "11");// this will get called before S_Init
 		}
 		//reset to defaults
-		ri.Cvar_Set( "r_picmip", "1" );
+		ri->Cvar_Set( "r_picmip", "1" );
 
 		// Savage3D and Savage4 should always have trilinear enabled
 		if ( strstr( buf, "savage3d" ) || strstr( buf, "s3 savage4" ) || strstr( buf, "geforce" ) || strstr( buf, "quadro" ) )
 		{
-			ri.Cvar_Set( "r_texturemode", "GL_LINEAR_MIPMAP_LINEAR" );
+			ri->Cvar_Set( "r_texturemode", "GL_LINEAR_MIPMAP_LINEAR" );
 		}
 		else
 		{
-			ri.Cvar_Set( "r_textureMode", "GL_LINEAR_MIPMAP_NEAREST" );
+			ri->Cvar_Set( "r_textureMode", "GL_LINEAR_MIPMAP_NEAREST" );
 		}
 		
 		if ( strstr( buf, "kyro" ) )	
 		{
-			ri.Cvar_Set( "r_ext_texture_filter_anisotropic", "0");	//KYROs have it avail, but suck at it!
-			ri.Cvar_Set( "r_ext_preferred_tc_method", "1");			//(Use DXT1 instead of DXT5 - same quality but much better performance on KYRO)
+			ri->Cvar_Set( "r_ext_texture_filter_anisotropic", "0");	//KYROs have it avail, but suck at it!
+			ri->Cvar_Set( "r_ext_preferred_tc_method", "1");			//(Use DXT1 instead of DXT5 - same quality but much better performance on KYRO)
 		}
 		if ( strstr( buf, "geforce2" ) )	
 		{
-			ri.Cvar_Set( "cg_renderToTextureFX", "0");	// slow to zero bug fix
+			ri->Cvar_Set( "cg_renderToTextureFX", "0");	// slow to zero bug fix
 		}
 
 		if ( strstr( buf, "radeon 9000" ) )	
 		{
-			ri.Cvar_Set( "cg_renderToTextureFX", "0");	// white texture bug
+			ri->Cvar_Set( "cg_renderToTextureFX", "0");	// white texture bug
 		}
 		
 		GLW_InitExtensions();	//get the values for test below
 		//this must be a really sucky card!
 		if ( (glConfig.textureCompression == TC_NONE) || (glConfig.maxActiveTextures < 2)  || (glConfig.maxTextureSize <= 512) )
 		{
-			ri.Cvar_Set( "r_picmip", "2");
-			ri.Cvar_Set( "r_colorbits", "16");
-			ri.Cvar_Set( "r_texturebits", "16");
-			ri.Cvar_Set( "r_mode", "3");	//force 640
-			ri.Cmd_ExecuteString ("exec low.cfg\n");	//get the rest which can be pulled in after init
+			ri->Cvar_Set( "r_picmip", "2");
+			ri->Cvar_Set( "r_colorbits", "16");
+			ri->Cvar_Set( "r_texturebits", "16");
+			ri->Cvar_Set( "r_mode", "3");	//force 640
+			ri->Cmd_ExecuteString ("exec low.cfg\n");	//get the rest which can be pulled in after init
 		}
 	}
 	
-	ri.Cvar_Set( "r_lastValidRenderer", glConfig.renderer_string );
+	ri->Cvar_Set( "r_lastValidRenderer", glConfig.renderer_string );
 	GLW_InitExtensions();
 
 	WG_CheckHardwareGamma();
@@ -1815,6 +1830,16 @@ void GLimp_Shutdown( void )
 		DestroyWindow( tr.wv->hWnd );
 		tr.wv->hWnd = NULL;
 		glw_state.pixelFormatSet = qfalse;
+	}
+
+	// unregister the window class
+	if ( s_classRegistered )
+	{
+		if ( FAILED (UnregisterClass (WINDOW_CLASS_NAME, tr.wv->hInstance)) )
+		{
+			Com_Error (ERR_FATAL, "GLimp_Shutdown: could not unregister window class, error code 0x%x", GetLastError());
+		}
+		s_classRegistered = qfalse;
 	}
 
 	// close the r_logFile
@@ -1972,162 +1997,3 @@ void GLimp_WakeRenderer( void *data ) {
 	WaitForSingleObject( renderActiveEvent, INFINITE );
 }
 
-
-// Allocate and create a new PBuffer.
-bool CPBUFFER::Create( int iWidth, int iHeight, int iColorBits, int iDepthBits, int iStencilBits )
-{
-	m_iWidth = iWidth;
-	m_iHeight = iHeight;
-	m_iColorBits = iColorBits;
-	m_iDepthBits = iDepthBits;
-	m_iStencilBits = iStencilBits;
-	
-	extern glwstate_t glw_state;
-	m_hOldRC = glw_state.hGLRC; //qwglGetCurrentContext();
-	
-	// Get the current device context.
-	m_hOldDC = glw_state.hDC; //qwglGetCurrentDC();
-
-	if( !m_hOldDC )
-	{
-		return false;
-	}
-
-#define WGL_BIND_TO_TEXTURE_RGB_ARB        0x2070
-
-	// These are standard settings. I suppose if one wanted more control you could pass an attrib list in (but why?).
-	const int iAttribList[] =
-	{
-		WGL_SUPPORT_OPENGL_ARB,			true,       // P-buffer will be used with OpenGL.
-		WGL_DRAW_TO_PBUFFER_ARB,		true,		// Enable render to p-buffer.
-		WGL_BIND_TO_TEXTURE_RGBA_ARB,	true,		// P-buffer will be used as a texture.
-		WGL_RED_BITS_ARB,				8,          // At least 8 bits for RED channel.
-		WGL_GREEN_BITS_ARB,				8,          // At least 8 bits for GREEN channel.
-		WGL_BLUE_BITS_ARB,				8,          // At least 8 bits for BLUE channel.
-		WGL_ALPHA_BITS_ARB,				8,          // At least 8 bits for ALPHA channel.
-		WGL_DEPTH_BITS_ARB,				16,         // At least 16 bits for depth buffer.
-		WGL_DOUBLE_BUFFER_ARB,			false,		// We don't require double buffering
-		0											// Zero terminates the list.
-	};
-
-#define		WGL_TEXTURE_RECTANGLE_NV		0x20A2
-
-	//const float fAttribList[] = { 0 };
-	const int iFlags[] =
-	{
-		WGL_TEXTURE_FORMAT_ARB, WGL_TEXTURE_RGBA_ARB, // Our p-buffer will have a texture format of RGBA.
-		WGL_TEXTURE_TARGET_ARB, WGL_TEXTURE_RECTANGLE_NV,   // Texture target will be GL_TEXTURE_RECTANGLE.
-		0                                             // Zero terminates the list.
-	};
-
-	// Choose pixel format.
-	unsigned int numFormats;
-	GLint pixelFormat;
-	if( !qwglChoosePixelFormatARB( m_hOldDC, iAttribList, NULL, 1, &pixelFormat, &numFormats ) )
-	{
-		return false;
-	}
-
-	// Create the pbuffer.
-	m_hBuffer = qwglCreatePbufferARB( m_hOldDC, pixelFormat, m_iWidth, m_iHeight, iFlags );
-	if( !m_hBuffer )
-	{
-		return false;
-	}
-
-	// Get the pbuffer's device context.
-	m_hDC = qwglGetPbufferDCARB( m_hBuffer );
-	if( !m_hDC )
-	{
-		return false;
-	}
-
-	// Create a rendering context for the pbuffer.
-	m_hRC = qwglCreateContext( m_hDC );
-	if( !m_hRC )
-	{
-		return false;
-	}
-
-	// Share Display Lists and Texture Objects between contexts (NOTE: Could
-	// also just use parent app RC).
-	qwglShareLists( m_hOldRC, m_hRC );
-
-	// Set and output the actual pBuffer dimensions.
-	qwglQueryPbufferARB( m_hBuffer, WGL_PBUFFER_WIDTH_ARB, &m_iWidth );
-	qwglQueryPbufferARB( m_hBuffer, WGL_PBUFFER_HEIGHT_ARB, &m_iHeight );
-	
-
-	// Create the PBuffer Texture.
-	extern int giTextureBindNum;
-	m_uiPBufferTexture = 1024 + giTextureBindNum++;
-
-	qglDisable( GL_TEXTURE_2D );
-	qglEnable( GL_TEXTURE_RECTANGLE_EXT );
-
-	/*int *pTexture = new int [m_iWidth * m_iHeight];
-	memset( pTexture, 0, m_iWidth * m_iHeight * sizeof( int ) );	*/
-
-	qglBindTexture( GL_TEXTURE_RECTANGLE_EXT, m_uiPBufferTexture );
-	//qglTexImage2D( GL_TEXTURE_RECTANGLE_EXT, 0, GL_RGB, m_iWidth, m_iHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture );
-	qglTexImage2D( GL_TEXTURE_RECTANGLE_EXT, 0, GL_RGB, m_iWidth, m_iHeight, 0, GL_RGB, GL_FLOAT, 0 );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_S, GL_CLAMP );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_T, GL_CLAMP );
-
-	qglDisable( GL_TEXTURE_RECTANGLE_EXT );
-	qglEnable( GL_TEXTURE_2D );
-
-	//delete [] pTexture;
-
-	return true;
-}
-
-// Destroy and deallocate a PBuffer.
-void CPBUFFER::Destroy()
-{
-	// Release the pbuffer texture.
-	qglDeleteTextures( 1, &m_uiPBufferTexture );
-
-	// Release RC.
-	if( m_hRC )
-	{
-		qwglDeleteContext( m_hRC );
-		m_hRC = NULL;
-	}
-
-	// Release DC.
-	if( m_hDC )
-	{
-		qwglReleasePbufferDCARB( m_hBuffer, m_hDC);
-		m_hDC = NULL;
-	}
-	
-	// Release PBuffer.
-	qwglDestroyPbufferARB( m_hBuffer );
-}
-
-// Make this PBuffer the current render device.
-bool CPBUFFER::Begin()
-{
-	if( !qwglMakeCurrent( m_hDC, m_hRC ) )
-	{
-		return false;
-	}
-
-	qwglCopyContext( m_hOldRC, m_hRC, GL_ALL_ATTRIB_BITS  );
-
-	return true;
-}
-
-// Restore the previous render device.
-bool CPBUFFER::End()
-{
-	if( !qwglMakeCurrent( m_hOldDC, m_hOldRC ) )
-	{
-		return false;
-	}
-
-	return true;
-}

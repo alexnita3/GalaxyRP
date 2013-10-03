@@ -18,11 +18,9 @@ This file is part of Jedi Academy.
 
 // Created 2/3/03 by Brian Osman - split Zone code from common.cpp
 
-#include "../game/q_shared.h"
+#include "q_shared.h"
 #include "qcommon.h"
-#include "../qcommon/sstring.h"
-
-#include "platform.h"
+#include "sstring.h"
 
 #ifdef DEBUG_ZONE_ALLOCS
 int giZoneSnaphotNum=0;
@@ -40,7 +38,7 @@ static void Z_Details_f(void);
 #define TAGDEF(blah) #blah
 static const char *psTagStrings[TAG_COUNT+1]=	// +1 because TAG_COUNT will itself become a string here. Oh well.
 {
-	#include "../qcommon/tags.h"
+	#include "tags.h"
 };
 
 // This handles zone memory allocation.
@@ -105,7 +103,7 @@ typedef struct zone_s
 
 cvar_t	*com_validateZone;
 
-zone_t	TheZone = {0};
+zone_t	TheZone = {};
 
 
 
@@ -192,9 +190,9 @@ const static StaticZeroMem_t gZeroMalloc  =
 	{ {ZONE_MAGIC, TAG_STATIC,0,NULL,NULL},{ZONE_MAGIC}};
 
 #ifdef DEBUG_ZONE_ALLOCS
-#define DEF_STATIC(_char) {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL, "<static>",0,"",0},_char,'\0',{ZONE_MAGIC}
+#define DEF_STATIC(_char) {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL, "<static>",0,"",0},{_char,'\0'},{ZONE_MAGIC}
 #else
-#define DEF_STATIC(_char) {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL			        },_char,'\0',{ZONE_MAGIC}	
+#define DEF_STATIC(_char) {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL			        },{_char,'\0'},{ZONE_MAGIC}
 #endif
 
 const static StaticMem_t gEmptyString =
@@ -214,6 +212,9 @@ const static StaticMem_t gNumberString[] = {
 };
 
 qboolean gbMemFreeupOccured = qfalse;
+
+#include "../renderer/tr_public.h"	// sorta hack sorta not
+extern refexport_t re;
 
 #ifdef DEBUG_ZONE_ALLOCS
 void *_D_Z_Malloc ( int iSize, memtag_t eTag, qboolean bZeroit, const char *psFile, int iLine)
@@ -277,8 +278,7 @@ void *Z_Malloc(int iSize, memtag_t eTag, qboolean bZeroit, int unusedAlign)
 
 			// ditch any image_t's (and associated GL texture mem) not used on this level...
 			//
-			extern qboolean RE_RegisterImages_LevelLoadEnd(void);
-			if (RE_RegisterImages_LevelLoadEnd())
+			if (re.RegisterImages_LevelLoadEnd())
 			{
 				gbMemFreeupOccured = qtrue;
 				continue;		// we've dropped at least one image, so try again with the malloc
@@ -287,8 +287,7 @@ void *Z_Malloc(int iSize, memtag_t eTag, qboolean bZeroit, int unusedAlign)
 
 			// ditch the model-binaries cache...  (must be getting desperate here!)
 			//
-			extern qboolean RE_RegisterModels_LevelLoadEnd(qboolean bDeleteEverythingNotUsedThisLevel);
-			if (RE_RegisterModels_LevelLoadEnd(qtrue))
+			if (re.RegisterModels_LevelLoadEnd(qtrue))
 			{
 				gbMemFreeupOccured = qtrue;
 				continue;
@@ -441,7 +440,7 @@ static int Zone_FreeBlock(zoneHeader_t *pMemory)
 		}
 		
 		//debugging double frees
-		pMemory->iMagic = 'FREE';
+		pMemory->iMagic = INT_ID('F','R','E','E');
 		free (pMemory);
 
 		
@@ -461,11 +460,11 @@ static int Zone_FreeBlock(zoneHeader_t *pMemory)
 
 // stats-query function to to see if it's our malloc
 // returns block size if so
-qboolean Z_IsFromZone(void *pvAddress, memtag_t eTag)
+qboolean Z_IsFromZone(const void *pvAddress, memtag_t eTag)
 {
-	zoneHeader_t *pMemory = ((zoneHeader_t *)pvAddress) - 1;
+	const zoneHeader_t *pMemory = ((const zoneHeader_t *)pvAddress) - 1;
 #if 1	//debugging double free
-	if (pMemory->iMagic == 'FREE')
+	if (pMemory->iMagic == INT_ID('F','R','E','E'))
 	{
 		Com_Printf("Z_IsFromZone(%x): Ptr has been freed already!(%9s)\n",pvAddress,pvAddress);
 		return qfalse;
@@ -543,7 +542,7 @@ int Z_Free(void *pvAddress)
 	zoneHeader_t *pMemory = ((zoneHeader_t *)pvAddress) - 1;
 
 #if 1	//debugging double free
-	if (pMemory->iMagic == 'FREE')
+	if (pMemory->iMagic == INT_ID('F','R','E','E'))
 	{
 		Com_Error(ERR_FATAL, "Z_Free(%s): Block already-freed, or not allocated through Z_Malloc!",pvAddress);
 		return -1;
@@ -944,14 +943,14 @@ Touch all known used data to make sure it is paged in
 ===============
 */
 void Com_TouchMemory( void ) {
-	int		start, end;
+	//int		start, end;
 	int		i, j;
 	int		sum;	
 	int		totalTouched;
 
 	Z_Validate();
 
-	start = Sys_Milliseconds();
+	//start = Sys_Milliseconds();
 
 	sum = 0;
 	totalTouched=0;
@@ -968,7 +967,7 @@ void Com_TouchMemory( void ) {
 		pMemory = pMemory->pNext;
 	}
 
-	end = Sys_Milliseconds();
+	//end = Sys_Milliseconds();
 
 	//Com_Printf( "Com_TouchMemory: %i bytes, %i msec\n", totalTouched, end - start );
 }

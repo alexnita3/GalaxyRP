@@ -29,11 +29,7 @@ This file is part of Jedi Academy.
 #include "hitlocs.h"
 #include "bset.h"
 
-#define	FOFS(x) ((int)&(((gentity_t *)0)->x))
-
-#ifdef _XBOX
-#define MAX_NPC_WATER_UPDATE_PER_FRAME	2	// maxmum number of NPCs that will get updated water infromation per frame
-#endif
+#define	FOFS(x) offsetof(gentity_t, x)
 
 typedef enum //# taskID_e
 {
@@ -624,7 +620,7 @@ Ghoul2 Insert End
 
 	union
 	{
-		char	*roff;			// the roff file to use, if there is one
+		char      *roff;                  // the roff file to use, if there is one
 		char	*fxFile;		// name of the external effect file
 	};
 

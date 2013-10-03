@@ -1,6 +1,3 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 // tr_light.c
 
 #include "tr_local.h"
@@ -40,7 +37,6 @@ R_DlightBmodel
 Determine which dynamic lights may effect this bmodel
 =============
 */
-#ifndef VV_LIGHTING
 void R_DlightBmodel( bmodel_t *bmodel, bool NoLight )
 { //rwwRMG - modified args
 	int			i, j;
@@ -90,7 +86,6 @@ void R_DlightBmodel( bmodel_t *bmodel, bool NoLight )
 		}
 	}
 }
-#endif
 
 
 /*
@@ -113,11 +108,7 @@ R_SetupEntityLightingGrid
 
 =================
 */
-#ifdef VV_LIGHTING
-void R_SetupEntityLightingGrid( trRefEntity_t *ent) {
-#else
 static void R_SetupEntityLightingGrid( trRefEntity_t *ent ) {
-#endif
 	vec3_t			lightOrigin;
 	int				pos[3];
 	int				i, j;
@@ -288,7 +279,6 @@ by the Calc_* functions
 =================
 */
 void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
-#ifndef VV_LIGHTING
 	int				i;
 	dlight_t		*dl;
 	float			power;
@@ -386,9 +376,9 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	}
 
 	// save out the byte packet version
-	((byte *)&ent->ambientLightInt)[0] = myftol( ent->ambientLight[0] );
-	((byte *)&ent->ambientLightInt)[1] = myftol( ent->ambientLight[1] );
-	((byte *)&ent->ambientLightInt)[2] = myftol( ent->ambientLight[2] );
+	((byte *)&ent->ambientLightInt)[0] = Q_ftol( ent->ambientLight[0] );
+	((byte *)&ent->ambientLightInt)[1] = Q_ftol( ent->ambientLight[1] );
+	((byte *)&ent->ambientLightInt)[2] = Q_ftol( ent->ambientLight[2] );
 	((byte *)&ent->ambientLightInt)[3] = 0xff;
 	
 	// transform the direction to local space
@@ -396,7 +386,6 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	ent->lightDir[0] = DotProduct( lightDir, ent->e.axis[0] );
 	ent->lightDir[1] = DotProduct( lightDir, ent->e.axis[1] );
 	ent->lightDir[2] = DotProduct( lightDir, ent->e.axis[2] );
-#endif // VV_LIGHTING
 }
 
 /*

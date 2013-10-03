@@ -22,11 +22,7 @@ This file is part of Jedi Academy.
 #include "qfiles.h"
 
 qboolean CM_DeleteCachedMap(qboolean bGuaranteedOkToDelete);
-#ifdef _XBOX
-void		CM_LoadMap( const char *name, qboolean clientload, int *checksum);
-#else
 void		CM_LoadMap( const char *name, qboolean clientload, int *checksum, qboolean subBSP);
-#endif
 void		CM_ClearMap( void );
 int			CM_TotalMapContents();
 
@@ -55,11 +51,7 @@ void		CM_TransformedBoxTrace( trace_t *results, const vec3_t start, const vec3_t
 						  clipHandle_t model, int brushmask,
 						  const vec3_t origin, const vec3_t angles);
 
-#ifdef _XBOX
-const byte	*CM_ClusterPVS (int cluster);
-#else
 byte		*CM_ClusterPVS (int cluster);
-#endif
 
 int			CM_PointLeafnum( const vec3_t p );
 

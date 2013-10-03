@@ -363,7 +363,7 @@ extern void (APIENTRYP qglGetCombinerInputParameterivNV) (GLenum stage,GLenum po
 extern void (APIENTRYP qglGetCombinerOutputParameterfvNV) (GLenum stage,GLenum portion,GLenum pname,GLfloat *params);
 extern void (APIENTRYP qglGetCombinerOutputParameterivNV) (GLenum stage,GLenum portion,GLenum pname,GLint *params);
 extern void (APIENTRYP qglGetFinalCombinerInputParameterfvNV) (GLenum variable,GLenum pname,GLfloat *params);
-extern void (APIENTRYP qglGetFinalCombinerInputParameterivNV) (GLenum variable,GLenum pname,GLfloat *params);
+extern void (APIENTRYP qglGetFinalCombinerInputParameterivNV) (GLenum variable,GLenum pname,GLint *params);
 
 extern PFNGLPROGRAMSTRINGARBPROC qglProgramStringARB;
 extern PFNGLBINDPROGRAMARBPROC qglBindProgramARB;
@@ -392,8 +392,6 @@ extern void ( APIENTRY * qglPointParameterfvEXT)( GLenum param, GLfloat *value )
 
 extern void ( APIENTRY * qglTexImage3DEXT) (GLenum, GLint, GLenum, GLsizei, GLsizei, GLsizei, GLint, GLenum, GLenum, const GLvoid *);
 extern void ( APIENTRY * qglTexSubImage3DEXT) (GLenum, GLint, GLint, GLint, GLint, GLsizei, GLsizei, GLsizei, GLenum, GLenum, const GLvoid *);
-
-#define GL_TEXTURE_RECTANGLE_EXT GL_TEXTURE_RECTANGLE_ARB
 
 #define GL_ACTIVE_TEXTURE_ARB               0x84E0
 #define GL_CLIENT_ACTIVE_TEXTURE_ARB        0x84E1

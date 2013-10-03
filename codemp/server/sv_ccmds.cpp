@@ -3,6 +3,8 @@
 
 #include "server.h"
 #include "qcommon/stringed_ingame.h"
+#include "server/sv_gameapi.h"
+#include "qcommon/game_version.h"
 
 /*
 ===============================================================================
@@ -15,12 +17,6 @@ These commands can only be entered from stdin or by a remote operator datagram
 
 const char *SV_GetStringEdString(char *refSection, char *refName)
 {
-	/*
-	static char text[1024]={0};
-	trap_SP_GetStringTextString(va("%s_%s", refSection, refName), text, sizeof(text));
-	return text;
-	*/
-
 	//Well, it would've been lovely doing it the above way, but it would mean mixing
 	//languages for the client depending on what the server is. So we'll mark this as
 	//a stringed reference with @@@ and send the refname to the client, and when it goes
@@ -175,7 +171,7 @@ static void SV_Map_f( void ) {
 	Cvar_Get ("g_gametype", "0", CVAR_SERVERINFO | CVAR_LATCH );
 
 	cmd = Cmd_Argv(0);
-	if ( !Q_stricmp( cmd, "devmap" ) ) {
+	if ( !Q_stricmpn( cmd, "devmap", 6 ) ) {
 		cheat = qtrue;
 		killBots = qtrue;
 	} else {
@@ -291,11 +287,11 @@ static void SV_MapRestart_f( void ) {
 	sv.state = SS_LOADING;
 	sv.restarting = qtrue;
 
-	SV_RestartGameProgs();
+	SV_RestartGame();
 
 	// run a few frames to allow everything to settle
 	for ( i = 0 ;i < 3 ; i++ ) {
-		VM_Call( gvm, GAME_RUN_FRAME, sv.time );
+		GVM_RunFrame( sv.time );
 		sv.time += 100;
 		svs.time += 100;
 	}
@@ -322,7 +318,7 @@ static void SV_MapRestart_f( void ) {
 		SV_AddServerCommand( client, "map_restart\n" );
 
 		// connect the client again, without the firstTime flag
-		denied = (char *)VM_ExplicitArgPtr( gvm, VM_Call( gvm, GAME_CLIENT_CONNECT, i, qfalse, isBot ) );
+		denied = GVM_ClientConnect( i, qfalse, isBot );
 		if ( denied ) {
 			// this generally shouldn't happen, because the client
 			// was connected before the level change
@@ -343,7 +339,7 @@ static void SV_MapRestart_f( void ) {
 	}	
 
 	// run another frame to allow things to look at all the players
-	VM_Call( gvm, GAME_RUN_FRAME, sv.time );
+	GVM_RunFrame( sv.time );
 	sv.time += 100;
 	svs.time += 100;
 }
@@ -561,7 +557,7 @@ SV_Status_f
 */
 static void SV_Status_f( void ) 
 {
-	int				i;
+	int				i, humans, bots;
 	client_t		*cl;
 	playerState_t	*ps;
 	const char		*s;
@@ -586,7 +582,41 @@ static void SV_Status_f( void )
 		}
 	}
 
-	Com_Printf ("map: %s\n", sv_mapname->string );
+	humans = bots = 0;
+	for ( i = 0 ; i < sv_maxclients->integer ; i++ ) {
+		if ( svs.clients[i].state >= CS_CONNECTED ) {
+			if ( svs.clients[i].netchan.remoteAddress.type != NA_BOT ) {
+				humans++;
+			}
+			else {
+				bots++;
+			}
+		}
+	}
+
+#if defined(_WIN32)
+#define STATUS_OS "Windows"
+#elif defined(__linux__)
+#define STATUS_OS "Linux"
+#elif defined(MACOS_X)
+#define STATUS_OS "OSX"
+#else
+#define STATUS_OS "Unknown"
+#endif
+
+	const char *ded_table[] = 
+	{
+		"listen",
+		"lan dedicated",
+		"public dedicated",
+	};
+
+	Com_Printf ("hostname: %s^7\n", sv_hostname->string );
+	Com_Printf ("version : %s %i\n", VERSION_STRING_DOTTED, PROTOCOL_VERSION );
+	Com_Printf ("game    : %s\n", FS_GetCurrentGameDir() );
+	Com_Printf ("udp/ip  : %s:%i os(%s) type(%s)\n", Cvar_VariableString("net_ip"), Cvar_VariableIntegerValue("net_port"), STATUS_OS, ded_table[com_dedicated->integer]);
+	Com_Printf ("map     : %s gametype(%i)\n", sv_mapname->string, sv_gametype->integer );
+	Com_Printf ("players : %i humans, %i bots (%i max)\n", humans, bots, sv_maxclients->integer - sv_privateClients->integer);
 
 	Com_Printf ("num score ping name            lastmsg address               qport rate\n");
 	Com_Printf ("--- ----- ---- --------------- ------- --------------------- ----- -----\n");
@@ -644,14 +674,16 @@ static void SV_Status_f( void )
 	Com_Printf ("\n");
 }
 
+char	*SV_ExpandNewlines( char *in );
+#define SVSAY_PREFIX "Server^7\x19: "
+
 /*
 ==================
 SV_ConSay_f
 ==================
 */
 static void SV_ConSay_f(void) {
-	char	*p;
-	char	text[1024];
+	char	text[MAX_SAY_TEXT] = {0};
 
 	if( !com_dedicated->integer ) {
 		Com_Printf( "Server is not dedicated.\n" );
@@ -668,97 +700,76 @@ static void SV_ConSay_f(void) {
 		return;
 	}
 
-	strcpy (text, "Server^7\x19: ");
-	p = Cmd_Args();
+	Cmd_ArgsBuffer( text, sizeof(text) );
 
-	if ( *p == '"' ) {
-		p++;
-		p[strlen(p)-1] = 0;
-	}
-
-	strcat(text, p);
-
-	SV_SendServerCommand(NULL, "chat \"%s\n\"", text);
+	Com_Printf ("broadcast: chat \""SVSAY_PREFIX"%s\\n\"\n", SV_ExpandNewlines((char *)text) );
+	SV_SendServerCommand(NULL, "chat \""SVSAY_PREFIX"%s\"\n", text);
 }
 
-static const char *forceToggleNamePrints[] = 
-{
-	"HEAL",//FP_HEAL
-	"JUMP",//FP_LEVITATION
-	"SPEED",//FP_SPEED
-	"PUSH",//FP_PUSH
-	"PULL",//FP_PULL
-	"MINDTRICK",//FP_TELEPTAHY
-	"GRIP",//FP_GRIP
-	"LIGHTNING",//FP_LIGHTNING
-	"DARK RAGE",//FP_RAGE
-	"PROTECT",//FP_PROTECT
-	"ABSORB",//FP_ABSORB
-	"TEAM HEAL",//FP_TEAM_HEAL
-	"TEAM REPLENISH",//FP_TEAM_FORCE
-	"DRAIN",//FP_DRAIN
-	"SEEING",//FP_SEE
-	"SABER OFFENSE",//FP_SABER_OFFENSE
-	"SABER DEFENSE",//FP_SABER_DEFENSE
-	"SABER THROW",//FP_SABERTHROW
-	NULL
+const char *forceToggleNamePrints[NUM_FORCE_POWERS] = {
+	"HEAL",
+	"JUMP",
+	"SPEED",
+	"PUSH",
+	"PULL",
+	"MINDTRICK",
+	"GRIP",
+	"LIGHTNING",
+	"DARK RAGE",
+	"PROTECT",
+	"ABSORB",
+	"TEAM HEAL",
+	"TEAM REPLENISH",
+	"DRAIN",
+	"SEEING",
+	"SABER OFFENSE",
+	"SABER DEFENSE",
+	"SABER THROW",
 };
 
-/*
-==================
-SV_ForceToggle_f
-==================
-*/
-void SV_ForceToggle_f(void)
-{
-	int i = 0;
-	int fpDisabled = Cvar_VariableValue("g_forcePowerDisable");
-	int targetPower = 0;
-	const char *powerDisabled = "Enabled";
+static void SV_ForceToggle_f( void ) {
+	int bits = Cvar_VariableIntegerValue("g_forcePowerDisable");
+	int i, val;
+	char *s;
+	const char *enablestrings[] =
+	{
+		"Disabled",
+		"Enabled"
+	};
 
-	if ( Cmd_Argc () < 2 )
-	{ //no argument supplied, spit out a list of force powers and their numbers
-		while (i < NUM_FORCE_POWERS)
-		{
-			if (fpDisabled & (1 << i))
-			{
-				powerDisabled = "Disabled";
-			}
-			else
-			{
-				powerDisabled = "Enabled";
-			}
+	// make sure server is running
+	if( !com_sv_running->integer ) {
+		Com_Printf( "Server is not running.\n" );
+		return;
+	}
 
-			Com_Printf(va("%i - %s - Status: %s\n", i, forceToggleNamePrints[i], powerDisabled));
-			i++;
+	if ( Cmd_Argc() != 2 ) {
+		for(i = 0; i < NUM_FORCE_POWERS; i++ ) {
+			Com_Printf ("%i - %s - Status: %s\n", i, forceToggleNamePrints[i], enablestrings[!(bits & (1<<i))]);
 		}
-
-		Com_Printf("Example usage: forcetoggle 3\n(toggles PUSH)\n");
+		Com_Printf ("Example usage: forcetoggle 3(toggles PUSH)\n");
 		return;
 	}
 
-	targetPower = atoi(Cmd_Argv(1));
+	s = Cmd_Argv(1);
 
-	if (targetPower < 0 || targetPower >= NUM_FORCE_POWERS)
-	{
-		Com_Printf("Specified a power that does not exist.\nExample usage: forcetoggle 3\n(toggles PUSH)\n");
-		return;
+	if( Q_isanumber( s ) ) {
+		val = atoi(s);
+		if( val >= 0 && val < NUM_FORCE_POWERS) {
+			bits ^= (1 << val);
+			Cvar_SetValue("g_forcePowerDisable", bits);
+			Com_Printf ("%s has been %s.\n", forceToggleNamePrints[val], (bits & (1<<val)) ? "disabled" : "enabled");
+		}
+		else {
+			Com_Printf ("Specified a power that does not exist.\nExample usage: forcetoggle 3\n(toggles PUSH)\n");
+		}
 	}
-
-	if (fpDisabled & (1 << targetPower))
-	{
-		powerDisabled = "enabled";
-		fpDisabled &= ~(1 << targetPower);
+	else {
+		for(i = 0; i < NUM_FORCE_POWERS; i++ ) {
+			Com_Printf ("%i - %s - Status: %s\n", i, forceToggleNamePrints[i], enablestrings[!(bits & (1<<i))]);
+		}
+		Com_Printf ("Specified a power that does not exist.\nExample usage: forcetoggle 3\n(toggles PUSH)\n");
 	}
-	else
-	{
-		powerDisabled = "disabled";
-		fpDisabled |= (1 << targetPower);
-	}
-
-	Cvar_SetValue("g_forcePowerDisable", fpDisabled);
-
-	Com_Printf("%s has been %s.\n", forceToggleNamePrints[targetPower], powerDisabled);
 }
 
 /*
@@ -780,7 +791,7 @@ Examine the serverinfo string
 ===========
 */
 static void SV_Serverinfo_f( void ) {
-// make sure server is running
+	// make sure server is running
 	if ( !com_sv_running->integer ) {
 		Com_Printf( "Server is not running.\n" );
 		return;
@@ -798,7 +809,7 @@ Examine or change the serverinfo string
 ===========
 */
 static void SV_Systeminfo_f( void ) {
-// make sure server is running
+	// make sure server is running
 	if ( !com_sv_running->integer ) {
 		Com_Printf( "Server is not running.\n" );
 		return;
@@ -852,6 +863,16 @@ static void SV_KillServer_f( void ) {
 
 /*
 ==================
+SV_CompleteMapName
+==================
+*/
+static void SV_CompleteMapName( char *args, int argNum ) {
+	if ( argNum == 2 )
+		Field_CompleteFilename( "maps", "bsp", qtrue, qfalse );
+}
+
+/*
+==================
 SV_AddOperatorCommands
 ==================
 */
@@ -876,17 +897,16 @@ void SV_AddOperatorCommands( void ) {
 	Cmd_AddCommand ("map_restart", SV_MapRestart_f);
 	Cmd_AddCommand ("sectorlist", SV_SectorList_f);
 	Cmd_AddCommand ("map", SV_Map_f);
+	Cmd_SetCommandCompletionFunc( "map", SV_CompleteMapName );
 	Cmd_AddCommand ("devmap", SV_Map_f);
-	Cmd_AddCommand ("spmap", SV_Map_f);
-	Cmd_AddCommand ("spdevmap", SV_Map_f);
+	Cmd_SetCommandCompletionFunc( "devmap", SV_CompleteMapName );
 //	Cmd_AddCommand ("devmapbsp", SV_Map_f);	// not used in MP codebase, no server BSP_cacheing
 	Cmd_AddCommand ("devmapmdl", SV_Map_f);
+	Cmd_SetCommandCompletionFunc( "devmapmdl", SV_CompleteMapName );
 	Cmd_AddCommand ("devmapall", SV_Map_f);
+	Cmd_SetCommandCompletionFunc( "devmapall", SV_CompleteMapName );
 	Cmd_AddCommand ("killserver", SV_KillServer_f);
-//	if( com_dedicated->integer ) 
-	{
-		Cmd_AddCommand ("svsay", SV_ConSay_f);
-	}
+	Cmd_AddCommand ("svsay", SV_ConSay_f);
 
 	Cmd_AddCommand ("forcetoggle", SV_ForceToggle_f);
 }

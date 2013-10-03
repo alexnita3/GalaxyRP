@@ -433,14 +433,14 @@ if desired.
 */
 void ClientUserinfoChanged( int clientNum ) {
 	gentity_t *ent;
-	char	*s;
+	const char	*s;
 	char	headModel[MAX_QPATH];
 	char	torsoModel[MAX_QPATH];
 	char	legsModel[MAX_QPATH];
 	char	sound[MAX_QPATH];
 	char	oldname[MAX_STRING_CHARS];
 	gclient_t	*client;
-	char	*sex;
+	const char	*sex;
 	char	userinfo[MAX_INFO_STRING];
 
 	ent = g_entities + clientNum;
@@ -703,7 +703,10 @@ static void Player_RestoreFromPrevLevel(gentity_t *ent, SavedGameJustLoaded_e eS
 
 		if (strlen(s))	// actually this would be safe anyway because of the way sscanf() works, but this is clearer
 		{//				|general info				  |-force powers |-saber 1										   |-saber 2										  |-general saber
-			sscanf( s, "%i %i %i %i %i %i %i %f %f %f %i %i %i %i %i %s %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %s %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i", 
+			unsigned int saber1BladeColor[8];
+			unsigned int saber2BladeColor[8];
+
+			sscanf( s, "%i %i %i %i %i %i %i %f %f %f %i %i %i %i %i %s %i %i %i %i %i %i %i %i %u %u %u %u %u %u %u %u %s %i %i %i %i %i %i %i %i %u %u %u %u %u %u %u %u %i %i %i %i", 
 								&client->ps.stats[STAT_HEALTH],
 								&client->ps.stats[STAT_ARMOR],
 								&client->ps.stats[STAT_WEAPONS],
@@ -721,7 +724,7 @@ static void Player_RestoreFromPrevLevel(gentity_t *ent, SavedGameJustLoaded_e eS
 								&client->ps.forcePowerRegenRate,
 								&client->ps.forcePowerRegenAmount,
 								//saber 1 data
-								&saber0Name,
+								saber0Name,
 								&client->ps.saber[0].blade[0].active,
 								&client->ps.saber[0].blade[1].active,
 								&client->ps.saber[0].blade[2].active,
@@ -730,16 +733,16 @@ static void Player_RestoreFromPrevLevel(gentity_t *ent, SavedGameJustLoaded_e eS
 								&client->ps.saber[0].blade[5].active,
 								&client->ps.saber[0].blade[6].active,
 								&client->ps.saber[0].blade[7].active,
-								&client->ps.saber[0].blade[0].color,
-								&client->ps.saber[0].blade[1].color,
-								&client->ps.saber[0].blade[2].color,
-								&client->ps.saber[0].blade[3].color,
-								&client->ps.saber[0].blade[4].color,
-								&client->ps.saber[0].blade[5].color,
-								&client->ps.saber[0].blade[6].color,
-								&client->ps.saber[0].blade[7].color,
+								&saber1BladeColor[0],
+								&saber1BladeColor[1],
+								&saber1BladeColor[2],
+								&saber1BladeColor[3],
+								&saber1BladeColor[4],
+								&saber1BladeColor[5],
+								&saber1BladeColor[6],
+								&saber1BladeColor[7],
 								//saber 2 data
-								&saber1Name,
+								saber1Name,
 								&client->ps.saber[1].blade[0].active,
 								&client->ps.saber[1].blade[1].active,
 								&client->ps.saber[1].blade[2].active,
@@ -748,20 +751,26 @@ static void Player_RestoreFromPrevLevel(gentity_t *ent, SavedGameJustLoaded_e eS
 								&client->ps.saber[1].blade[5].active,
 								&client->ps.saber[1].blade[6].active,
 								&client->ps.saber[1].blade[7].active,
-								&client->ps.saber[1].blade[0].color,
-								&client->ps.saber[1].blade[1].color,
-								&client->ps.saber[1].blade[2].color,
-								&client->ps.saber[1].blade[3].color,
-								&client->ps.saber[1].blade[4].color,
-								&client->ps.saber[1].blade[5].color,
-								&client->ps.saber[1].blade[6].color,
-								&client->ps.saber[1].blade[7].color,
+								&saber2BladeColor[0],
+								&saber2BladeColor[1],
+								&saber2BladeColor[2],
+								&saber2BladeColor[3],
+								&saber2BladeColor[4],
+								&saber2BladeColor[5],
+								&saber2BladeColor[6],
+								&saber2BladeColor[7],
 								//general saber data
 								&client->ps.saberStylesKnown,
 								&client->ps.saberAnimLevel,
 								&client->ps.saberLockEnemy,
 								&client->ps.saberLockTime
 					);
+			for (int j = 0; j < 8; j++)
+			{
+				client->ps.saber[0].blade[j].color = (saber_colors_t)saber1BladeColor[j];
+				client->ps.saber[1].blade[j].color = (saber_colors_t)saber2BladeColor[j];
+			}
+
 			ent->health = client->ps.stats[STAT_HEALTH];
 
 			if(ent->client->ps.saber[0].name && gi.bIsFromZone(ent->client->ps.saber[0].name, TAG_G_ALLOC)) {
@@ -898,6 +907,10 @@ static void G_SetSkin( gentity_t *ent )
 	{
 		Com_sprintf( skinName, sizeof( skinName ), "models/players/%s/|%s|%s|%s", g_char_model->string, g_char_skin_head->string, "torso_g1", "lower_e1" );
 	}
+	else if(Q_stricmp(g_char_skin_head->string, "model_default") == 0 && Q_stricmp(g_char_skin_torso->string, "model_default") == 0 && Q_stricmp(g_char_skin_legs->string, "model_default") == 0)
+	{
+		Com_sprintf( skinName, sizeof( skinName ), "models/players/%s/model_default.skin", g_char_model->string );
+	}
 	else
 	{
 		Com_sprintf( skinName, sizeof( skinName ), "models/players/%s/|%s|%s|%s", g_char_model->string, g_char_skin_head->string, g_char_skin_torso->string, g_char_skin_legs->string );
@@ -985,7 +998,7 @@ qboolean G_ClassHasBadBones( int NPC_class )
 	return qfalse;
 }
 
-char *AxesNames[] = 
+const char *AxesNames[] = 
 {
 	"ORIGIN",//ORIGIN, 
 	"POSITIVE_X",//POSITIVE_X,
@@ -1045,7 +1058,7 @@ void G_NextTestAxes( void )
 	}
 }
 
-void G_BoneOrientationsForClass( int NPC_class, char *boneName, Eorientations *oUp, Eorientations *oRt, Eorientations *oFwd )
+void G_BoneOrientationsForClass( int NPC_class, const char *boneName, Eorientations *oUp, Eorientations *oRt, Eorientations *oFwd )
 {
 	//defaults
 	*oUp = POSITIVE_X;
@@ -1156,37 +1169,35 @@ qboolean G_SetG2PlayerModelInfo( gentity_t *ent, const char *modelName, const ch
 		if ( surfOff && surfOff[0] )
 		{
 			p = surfOff;
+			COM_BeginParseSession();
 			while ( 1 ) 
 			{
-				COM_BeginParseSession();
 				token = COM_ParseExt( &p, qtrue );
 				if ( !token[0] ) 
 				{//reached end of list
-					COM_EndParseSession();
 					break;
 				}
 				//turn off this surf
 				gi.G2API_SetSurfaceOnOff( &ent->ghoul2[ent->playerModel], token, 0x00000002/*G2SURFACEFLAG_OFF*/ );
-				COM_EndParseSession();
+				
 			}
-
+			COM_EndParseSession();
 		}
 		if ( surfOn && surfOn[0] )
 		{
 			p = surfOn;
+			COM_BeginParseSession();
 			while ( 1 )
 			{
-				COM_BeginParseSession();
 				token = COM_ParseExt( &p, qtrue );
 				if ( !token[0] ) 
 				{//reached end of list
-					COM_EndParseSession();
 					break;
 				}
 				//turn on this surf
 				gi.G2API_SetSurfaceOnOff( &ent->ghoul2[ent->playerModel], token, 0 );
-				COM_EndParseSession();
 			}
+			COM_EndParseSession();
 		}
 		if ( ent->client->NPC_class == CLASS_IMPERIAL && ent->message )
 		{//carrying a key, turn on the key sleeve surface (assuming we have one)
@@ -1251,14 +1262,14 @@ qboolean G_SetG2PlayerModelInfo( gentity_t *ent, const char *modelName, const ch
 				// Setup the Exhausts.
 				for ( int i = 0; i < MAX_VEHICLE_EXHAUSTS; i++ )
 				{
-					_snprintf( strTemp, 128, "*exhaust%d", i + 1 );
+					Com_sprintf( strTemp, 128, "*exhaust%d", i + 1 );
 					ent->m_pVehicle->m_iExhaustTag[i] = gi.G2API_AddBolt( &ent->ghoul2[ent->playerModel], strTemp );
 				}
 
 				// Setup the Muzzles.
 				for ( int i = 0; i < MAX_VEHICLE_MUZZLES; i++ )
 				{
-					_snprintf( strTemp, 128, "*muzzle%d", i + 1 );
+					Com_sprintf( strTemp, 128, "*muzzle%d", i + 1 );
 					ent->m_pVehicle->m_iMuzzleTag[i] = gi.G2API_AddBolt( &ent->ghoul2[ent->playerModel], strTemp );
 				}
 			}
@@ -1796,12 +1807,12 @@ void G_SetG2PlayerModel( gentity_t * const ent, const char *modelName, const cha
 		// This will register the model and other assets.
 		Vehicle_t *pVeh = ent->m_pVehicle;
 		pVeh->m_pVehicleInfo->RegisterAssets( pVeh );
-		ent->playerModel = gi.G2API_InitGhoul2Model( ent->ghoul2, va("models/players/%s/model.glm", modelName), pVeh->m_pVehicleInfo->modelIndex, G_SkinIndex( skinName ), NULL, 0, 0 );
+		ent->playerModel = gi.G2API_InitGhoul2Model( ent->ghoul2, va("models/players/%s/model.glm", modelName), pVeh->m_pVehicleInfo->modelIndex, G_SkinIndex( skinName ), NULL_HANDLE, 0, 0 );
 	}
 	else
 	{
 		//NOTE: it still loads the default skin's tga's because they're referenced in the .glm.
-		ent->playerModel = gi.G2API_InitGhoul2Model( ent->ghoul2, va("models/players/%s/model.glm", modelName), G_ModelIndex( va("models/players/%s/model.glm", modelName) ), G_SkinIndex( skinName ), NULL, 0, 0 );
+		ent->playerModel = gi.G2API_InitGhoul2Model( ent->ghoul2, va("models/players/%s/model.glm", modelName), G_ModelIndex( va("models/players/%s/model.glm", modelName) ), G_SkinIndex( skinName ), NULL_HANDLE, 0, 0 );
 	}
 	if (ent->playerModel == -1)
 	{//try the stormtrooper as a default
@@ -1810,7 +1821,7 @@ void G_SetG2PlayerModel( gentity_t * const ent, const char *modelName, const cha
 		Com_sprintf( skinName, sizeof( skinName ), "models/players/%s/model_default.skin", modelName );
 		skin = gi.RE_RegisterSkin( skinName );
 		assert(skin);
-		ent->playerModel = gi.G2API_InitGhoul2Model( ent->ghoul2, va("models/players/%s/model.glm", modelName), G_ModelIndex( va("models/players/%s/model.glm", modelName) ), NULL, NULL, 0, 0 );
+		ent->playerModel = gi.G2API_InitGhoul2Model( ent->ghoul2, va("models/players/%s/model.glm", modelName), G_ModelIndex( va("models/players/%s/model.glm", modelName) ), NULL_HANDLE, NULL_HANDLE, 0, 0 );
 	}
 	if (ent->playerModel == -1)
 	{//very bad thing here!
@@ -1971,7 +1982,11 @@ void G_InitPlayerFromCvars( gentity_t *ent )
 	if( ent->NPC_type && gi.bIsFromZone(ent->NPC_type, TAG_G_ALLOC) ) {
 		gi.Free(ent->NPC_type);
 	}
-	ent->NPC_type = "player";//default for now
+
+	// Bad casting I know, but NPC_type can also come the memory manager,
+	// and you can't free a const-pointer later on. This seemed like the
+	// better options.
+	ent->NPC_type = (char *)"player";//default for now
 	if( ent->client->clientInfo.customBasicSoundDir && gi.bIsFromZone(ent->client->clientInfo.customBasicSoundDir, TAG_G_ALLOC) ) {
 		gi.Free(ent->client->clientInfo.customBasicSoundDir);
 	}
@@ -2187,8 +2202,7 @@ qboolean ClientSpawn(gentity_t *ent, SavedGameJustLoaded_e eSavedGameJustLoaded 
 		{
 			// FIXME: game doesn't like it when you pass ent->NPC_type into this func. Insert all kinds of noises here --eez
 			char bleh[1024];
-			strncpy(bleh, ent->NPC_type, strlen(ent->NPC_type));
-			bleh[strlen(ent->NPC_type)] = '\0';
+			Q_strncpyz(bleh, ent->NPC_type, sizeof(bleh));
 
 			G_ChangePlayerModel( ent, bleh );
 		}
@@ -2251,7 +2265,7 @@ qboolean ClientSpawn(gentity_t *ent, SavedGameJustLoaded_e eSavedGameJustLoaded 
 		ent->m_iIcarusID = IIcarusInterface::ICARUS_INVALID;
 		if ( !ent->NPC_type )
 		{
-			ent->NPC_type = "player";
+			ent->NPC_type = (char *)"player";
 		}
 		ent->classname = "player";
 		ent->targetname = ent->script_targetname = "player";

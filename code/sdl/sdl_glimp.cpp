@@ -1,18 +1,16 @@
 #include <SDL.h>
-#include "../game/q_shared.h"
+#include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
-#include "../renderer/tr_local.h"
+#include "../rd-vanilla/tr_local.h"
 #include "sdl_qgl.h"
 #include "../sys/sys_local.h"
 
-static SDL_Window *window = NULL;
+//static SDL_Window *window = NULL;
 
 static float displayAspect;
 cvar_t *r_allowSoftwareGL; // Don't abort out if a hardware visual can't be obtained
 cvar_t *r_allowResize; // make window resizable
-cvar_t *r_centerWindow;
 cvar_t *r_sdlDriver;
-cvar_t *r_noborder;
 
 typedef enum
 {
@@ -25,20 +23,7 @@ typedef enum
 } rserr_t;
 
 static SDL_Window *screen = NULL;
-static SDL_DisplayMode *videoInfo = NULL;
-
-/* Just hack it for now. */
-#ifdef MACOS_X
-#include <OpenGL/OpenGL.h>
-typedef CGLContextObj QGLContext;
-#define GLimp_GetCurrentContext() CGLGetCurrentContext()
-#define GLimp_SetCurrentContext(ctx) CGLSetCurrentContext(ctx)
-#else
-typedef void *QGLContext;
-#define GLimp_GetCurrentContext() (NULL)
-#define GLimp_SetCurrentContext(ctx)
-#endif
-static QGLContext opengl_context;
+static SDL_GLContext opengl_context;
 
 bool g_bTextureRectangleHack = false;
 
@@ -62,7 +47,7 @@ void (APIENTRYP qglGetCombinerInputParameterivNV) (GLenum stage,GLenum portion,G
 void (APIENTRYP qglGetCombinerOutputParameterfvNV) (GLenum stage,GLenum portion,GLenum pname,GLfloat *params);
 void (APIENTRYP qglGetCombinerOutputParameterivNV) (GLenum stage,GLenum portion,GLenum pname,GLint *params);
 void (APIENTRYP qglGetFinalCombinerInputParameterfvNV) (GLenum variable,GLenum pname,GLfloat *params);
-void (APIENTRYP qglGetFinalCombinerInputParameterivNV) (GLenum variable,GLenum pname,GLfloat *params);
+void (APIENTRYP qglGetFinalCombinerInputParameterivNV) (GLenum variable,GLenum pname,GLint *params);
 
 PFNGLPROGRAMSTRINGARBPROC qglProgramStringARB = NULL;
 PFNGLBINDPROGRAMARBPROC qglBindProgramARB = NULL;
@@ -93,38 +78,21 @@ void ( APIENTRY * qglPointParameterfvEXT)( GLenum param, GLfloat *value );
 void ( * qglLockArraysEXT)( int, int);
 void ( * qglUnlockArraysEXT) ( void );
 
-void		GLimp_EndFrame( void )
+/*
+===============
+GLimp_Minimize
+
+Minimize the game so that user is back at the desktop
+===============
+*/
+void GLimp_Minimize(void)
 {
-  SDL_GL_SwapWindow(screen);
+	SDL_MinimizeWindow( screen );
 }
 
-/*
-* Find the first occurrence of find in s.
-*/
-// bk001130 - from cvs1.17 (mkv), const
-// bk001130 - made first argument const
-static const char *Q_stristr( const char *s, const char *find)
+void GLimp_EndFrame( void )
 {
-register char c, sc;
-register size_t len;
-
-	if ((c = *find++) != 0) {
-		if (c >= 'a' && c <= 'z') {
-			c -= ('a' - 'A');
-		}
-		len = strlen(find);
-		do {
-			do {
-				if ((sc = *s++) == 0)
-					return NULL;
-				if (sc >= 'a' && sc <= 'z') {
-					sc -= ('a' - 'A');
-				}
-			} while (sc != c);
-		} while (Q_stricmpn(s, find, (int)len) != 0);
-		s--;
-	}
-	return s;
+	SDL_GL_SwapWindow(screen);
 }
 
 /*
@@ -158,7 +126,7 @@ static int GLimp_CompareModes( const void *a, const void *b )
 GLimp_DetectAvailableModes
 ===============
 */
-static void GLimp_DetectAvailableModes(void)
+static bool GLimp_DetectAvailableModes(void)
 {
 	int i;
 	char buf[ MAX_STRING_CHARS ] = { 0 };
@@ -170,11 +138,12 @@ static void GLimp_DetectAvailableModes(void)
 
 	if( SDL_GetWindowDisplayMode( screen, &windowMode ) < 0 )
 	{
-		Com_Printf( "Couldn't get window display mode, no resolutions detected\n" );
-		return;
+		Com_Printf( "Couldn't get window display mode, no resolutions detected (%s).\n", SDL_GetError() );
+		return false;
 	}
 
-	for( i = 0; i < SDL_GetNumDisplayModes( display ); i++ )
+	int numDisplayModes = SDL_GetNumDisplayModes( display );
+	for( i = 0; i < numDisplayModes; i++ )
 	{
 		SDL_DisplayMode mode;
 
@@ -184,7 +153,7 @@ static void GLimp_DetectAvailableModes(void)
 		if( !mode.w || !mode.h )
 		{
 			Com_Printf( "Display supports any resolution\n" );
-			return;
+			return true;
 		}
 
 		if( windowMode.format != mode.format )
@@ -212,8 +181,10 @@ static void GLimp_DetectAvailableModes(void)
 	{
 		buf[ strlen( buf ) - 1 ] = 0;
 		Com_Printf( "Available modes: '%s'\n", buf );
-		Cvar_Set( "r_availableModes", buf );
+		ri.Cvar_Set( "r_availableModes", buf );
 	}
+
+	return true;
 }
 
 /*
@@ -221,14 +192,14 @@ static void GLimp_DetectAvailableModes(void)
 GLimp_SetMode
 ===============
 */
-static int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
+static rserr_t GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 {
 	const char *glstring;
 	int perChannelColorBits;
 	int colorBits, depthBits, stencilBits;
-	int samples;
+	//int samples;
 	int i = 0;
-	SDL_Surface *icon = NULL;
+	//SDL_Surface *icon = NULL;
 	Uint32 flags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
 	SDL_DisplayMode desktopMode;
 	int display = 0;
@@ -236,7 +207,7 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 
 	Com_Printf( "Initializing OpenGL display\n");
 
-	if ( r_allowResize->integer )
+	if ( r_allowResize->integer && !fullscreen )
 		flags |= SDL_WINDOW_RESIZABLE;
 
 	/*icon = SDL_CreateRGBSurfaceFrom(
@@ -440,7 +411,7 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 			SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 );
 
 		if( ( screen = SDL_CreateWindow( CLIENT_WINDOW_TITLE, x, y,
-				glConfig.vidWidth, glConfig.vidHeight, flags ) ) == 0 )
+				glConfig.vidWidth, glConfig.vidHeight, flags ) ) == NULL )
 		{
 			Com_DPrintf( "SDL_CreateWindow failed: %s\n", SDL_GetError( ) );
 			continue;
@@ -459,7 +430,7 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 
 			mode.w = glConfig.vidWidth;
 			mode.h = glConfig.vidHeight;
-			mode.refresh_rate = glConfig.displayFrequency = Cvar_VariableIntegerValue( "r_displayRefresh" );
+			mode.refresh_rate = glConfig.displayFrequency = ri.Cvar_VariableIntegerValue( "r_displayRefresh" );
 			mode.driverdata = NULL;
 
 			if( SDL_SetWindowDisplayMode( screen, &mode ) < 0 )
@@ -470,7 +441,7 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 		}
 
 		SDL_SetWindowTitle( screen, CLIENT_WINDOW_TITLE );
-		SDL_SetWindowIcon( screen, icon );
+		//SDL_SetWindowIcon( screen, icon );
 
 		if( ( opengl_context = SDL_GL_CreateContext( screen ) ) == NULL )
 		{
@@ -497,7 +468,10 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 
 	/*SDL_FreeSurface( icon );*/
 
-	GLimp_DetectAvailableModes();
+	if (!GLimp_DetectAvailableModes())
+	{
+		return RSERR_UNKNOWN;
+	}
 
 	glstring = (char *) qglGetString (GL_RENDERER);
 	Com_Printf( "GL_RENDERER: %s\n", glstring );
@@ -732,7 +706,7 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 #endif
 
 		// FIXME: Product name
-		cvar_t *com_productName = Cvar_Get("com_productName", "OpenJK" /* PRODUCT_NAME */, CVAR_ROM);
+		cvar_t *com_productName = ri.Cvar_Get("com_productName", "OpenJK" /* PRODUCT_NAME */, CVAR_ROM);
 		//SDL_SetWindowTitle(com_productName->string, com_productName->string);
 		SDL_ShowCursor(0);
 
@@ -778,12 +752,11 @@ GLimp_StartDriverAndSetMode
 */
 static qboolean GLimp_StartDriverAndSetMode(int mode, qboolean fullscreen, qboolean noborder)
 {
-	int i;
 	rserr_t err;
 
 	if (!SDL_WasInit(SDL_INIT_VIDEO))
 	{
-		char *driverName;
+		const char *driverName;
 
 		if (SDL_Init(SDL_INIT_VIDEO) == -1)
 		{
@@ -803,13 +776,13 @@ static qboolean GLimp_StartDriverAndSetMode(int mode, qboolean fullscreen, qbool
 		// TODO: Prompt the user to choose a specific video driver.
 		driverName = SDL_GetVideoDriver( 0 );
 		Com_Printf( "SDL using driver \"%s\"\n", driverName );
-		Cvar_Set( "r_sdlDriver", driverName );
+		ri.Cvar_Set( "r_sdlDriver", driverName );
 	}
 
-	if (fullscreen && Cvar_VariableIntegerValue( "in_nograb" ) )
+	if (fullscreen && ri.Cvar_VariableIntegerValue( "in_nograb" ) )
 	{
 		Com_Printf( "Fullscreen not allowed with in_nograb 1\n");
-		Cvar_Set( "r_fullscreen", "0" );
+		ri.Cvar_Set( "r_fullscreen", "0" );
 		r_fullscreen->modified = qfalse;
 		fullscreen = qfalse;
 	}
@@ -823,6 +796,9 @@ static qboolean GLimp_StartDriverAndSetMode(int mode, qboolean fullscreen, qbool
 			return qfalse;
 		case RSERR_INVALID_MODE:
 			Com_Printf( "...WARNING: could not set the given mode (%d)\n", mode );
+			return qfalse;
+		case RSERR_UNKNOWN:
+			Com_Printf( "...ERROR: no display modes could be found.\n" );
 			return qfalse;
 		default:
 			break;
@@ -850,15 +826,6 @@ SDL_SetGamma(SDL_Window *win, float red, float green, float blue)
         SDL_CalculateGammaRamp(blue, blue_ramp);
     }
     return SDL_SetWindowGammaRamp(win, red_ramp, green_ramp, blue_ramp);
-}
-
-static qboolean GLimp_HaveExtension(const char *ext)
-{
-	const char *ptr = Q_stristr( glConfig.extensions_string, ext );
-	if (ptr == NULL)
-		return qfalse;
-	ptr += strlen(ext);
-	return (qboolean)(((*ptr == ' ') || (*ptr == '\0')));  // verify it's complete string.
 }
 
 static void GLW_InitTextureCompression( void )
@@ -981,7 +948,7 @@ static void GLimp_InitExtensions( void )
 	{
 		Com_Printf ("*** IGNORING OPENGL EXTENSIONS ***\n" );
 		g_bDynamicGlowSupported = false;
-		Cvar_Set( "r_DynamicGlow","0" );
+		ri.Cvar_Set( "r_DynamicGlow","0" );
 		return;
 	}
 
@@ -1026,16 +993,16 @@ static void GLimp_InitExtensions( void )
 		{
 			Com_Printf ("...ignoring GL_EXT_texture_filter_anisotropic\n" );
 		}
-		Cvar_Set( "r_ext_texture_filter_anisotropic_avail", va("%f",glConfig.maxTextureFilterAnisotropy) );
+		ri.Cvar_SetValue( "r_ext_texture_filter_anisotropic_avail", glConfig.maxTextureFilterAnisotropy );
 		if ( r_ext_texture_filter_anisotropic->value > glConfig.maxTextureFilterAnisotropy )
 		{
-			Cvar_Set( "r_ext_texture_filter_anisotropic", va("%f",glConfig.maxTextureFilterAnisotropy) );
+			ri.Cvar_SetValue( "r_ext_texture_filter_anisotropic_avail", glConfig.maxTextureFilterAnisotropy );
 		}
 	}
 	else
 	{
 		Com_Printf ("...GL_EXT_texture_filter_anisotropic not found\n" );
-		Cvar_Set( "r_ext_texture_filter_anisotropic_avail", "0" );
+		ri.Cvar_Set( "r_ext_texture_filter_anisotropic_avail", "0" );
 	}
 
 	// GL_EXT_clamp_to_edge
@@ -1118,7 +1085,7 @@ static void GLimp_InitExtensions( void )
 
 	if ( strstr( glConfig.extensions_string, "GL_EXT_point_parameters" ) )
 	{
-		if ( r_ext_compiled_vertex_array->integer || 1)
+		if ( r_ext_compiled_vertex_array->integer )
 		{
 			Com_Printf ("...using GL_EXT_point_parameters\n" );
 			qglPointParameterfEXT = ( void ( APIENTRY * )( GLenum, GLfloat) ) SDL_GL_GetProcAddress( "glPointParameterfEXT" );
@@ -1180,19 +1147,19 @@ static void GLimp_InitExtensions( void )
 			// NOTE: VV guys will _definetly_ not be able to use regcoms. Pixel Shaders are just as good though :-)
 			// NOTE: Also, this is an nVidia specific extension (of course), so fragment shaders would serve the same purpose
 			// if we needed some kind of fragment/pixel manipulation support.
-			qglCombinerParameterfvNV = SDL_GL_GetProcAddress( "glCombinerParameterfvNV" );
-			qglCombinerParameterivNV = SDL_GL_GetProcAddress( "glCombinerParameterivNV" );
-			qglCombinerParameterfNV = SDL_GL_GetProcAddress( "glCombinerParameterfNV" );
-			qglCombinerParameteriNV = SDL_GL_GetProcAddress( "glCombinerParameteriNV" );
-			qglCombinerInputNV = SDL_GL_GetProcAddress( "glCombinerInputNV" );
-			qglCombinerOutputNV = SDL_GL_GetProcAddress( "glCombinerOutputNV" );
-			qglFinalCombinerInputNV = SDL_GL_GetProcAddress( "glFinalCombinerInputNV" );
-			qglGetCombinerInputParameterfvNV	= SDL_GL_GetProcAddress( "glGetCombinerInputParameterfvNV" );
-			qglGetCombinerInputParameterivNV	= SDL_GL_GetProcAddress( "glGetCombinerInputParameterivNV" );
-			qglGetCombinerOutputParameterfvNV = SDL_GL_GetProcAddress( "glGetCombinerOutputParameterfvNV" );
-			qglGetCombinerOutputParameterivNV = SDL_GL_GetProcAddress( "glGetCombinerOutputParameterivNV" );
-			qglGetFinalCombinerInputParameterfvNV = SDL_GL_GetProcAddress( "glGetFinalCombinerInputParameterfvNV" );
-			qglGetFinalCombinerInputParameterivNV = SDL_GL_GetProcAddress( "glGetFinalCombinerInputParameterivNV" );
+			qglCombinerParameterfvNV = (PFNGLCOMBINERPARAMETERFVNV)SDL_GL_GetProcAddress( "glCombinerParameterfvNV" );
+			qglCombinerParameterivNV = (PFNGLCOMBINERPARAMETERIVNV)SDL_GL_GetProcAddress( "glCombinerParameterivNV" );
+			qglCombinerParameterfNV = (PFNGLCOMBINERPARAMETERFNV)SDL_GL_GetProcAddress( "glCombinerParameterfNV" );
+			qglCombinerParameteriNV = (PFNGLCOMBINERPARAMETERINV)SDL_GL_GetProcAddress( "glCombinerParameteriNV" );
+			qglCombinerInputNV = (PFNGLCOMBINERINPUTNV)SDL_GL_GetProcAddress( "glCombinerInputNV" );
+			qglCombinerOutputNV = (PFNGLCOMBINEROUTPUTNV)SDL_GL_GetProcAddress( "glCombinerOutputNV" );
+			qglFinalCombinerInputNV = (PFNGLFINALCOMBINERINPUTNV)SDL_GL_GetProcAddress( "glFinalCombinerInputNV" );
+			qglGetCombinerInputParameterfvNV	= (PFNGLGETCOMBINERINPUTPARAMETERFVNV)SDL_GL_GetProcAddress( "glGetCombinerInputParameterfvNV" );
+			qglGetCombinerInputParameterivNV	= (PFNGLGETCOMBINERINPUTPARAMETERIVNV)SDL_GL_GetProcAddress( "glGetCombinerInputParameterivNV" );
+			qglGetCombinerOutputParameterfvNV = (PFNGLGETCOMBINEROUTPUTPARAMETERFVNV)SDL_GL_GetProcAddress( "glGetCombinerOutputParameterfvNV" );
+			qglGetCombinerOutputParameterivNV = (PFNGLGETCOMBINEROUTPUTPARAMETERIVNV)SDL_GL_GetProcAddress( "glGetCombinerOutputParameterivNV" );
+			qglGetFinalCombinerInputParameterfvNV = (PFNGLGETFINALCOMBINERINPUTPARAMETERFVNV)SDL_GL_GetProcAddress( "glGetFinalCombinerInputParameterfvNV" );
+			qglGetFinalCombinerInputParameterivNV = (PFNGLGETFINALCOMBINERINPUTPARAMETERIVNV)SDL_GL_GetProcAddress( "glGetFinalCombinerInputParameterivNV" );
 
 			// Validate the functions we need.
 			if ( !qglCombinerParameterfvNV || !qglCombinerParameterivNV || !qglCombinerParameterfNV || !qglCombinerParameteriNV || !qglCombinerInputNV ||
@@ -1287,8 +1254,8 @@ static void GLimp_InitExtensions( void )
 
 	// Figure out which texture rectangle extension to use.
 	bool bTexRectSupported = false;
-	if ( strnicmp( glConfig.vendor_string, "ATI Technologies",16 )==0
-		&& strnicmp( glConfig.version_string, "1.3.3",5 )==0
+	if ( Q_stricmpn( glConfig.vendor_string, "ATI Technologies",16 )==0
+		&& Q_stricmpn( glConfig.version_string, "1.3.3",5 )==0
 		&& glConfig.version_string[5] < '9' ) //1.3.34 and 1.3.37 and 1.3.38 are broken for sure, 1.3.39 is not
 	{
 		g_bTextureRectangleHack = true;
@@ -1303,7 +1270,8 @@ static void GLimp_InitExtensions( void )
 	// Find out how many general combiners they have.
 	#define GL_MAX_GENERAL_COMBINERS_NV       0x854D
 	GLint iNumGeneralCombiners = 0;
-	qglGetIntegerv( GL_MAX_GENERAL_COMBINERS_NV, &iNumGeneralCombiners );
+	if(bNVRegisterCombiners)
+		qglGetIntegerv( GL_MAX_GENERAL_COMBINERS_NV, &iNumGeneralCombiners );
 
 	// Only allow dynamic glows/flares if they have the hardware
 	if ( bTexRectSupported && bARBVertexProgram /*whee && bHasRenderTexture*/ && qglActiveTextureARB && glConfig.maxActiveTextures >= 4 &&
@@ -1311,34 +1279,32 @@ static void GLimp_InitExtensions( void )
 	{
 		g_bDynamicGlowSupported = true;
 		// this would overwrite any achived setting gwg
-		// Cvar_Set( "r_DynamicGlow", "1" );
+		// ri.Cvar_Set( "r_DynamicGlow", "1" );
 	}
 	else
 	{
 		g_bDynamicGlowSupported = false;
-		Cvar_Set( "r_DynamicGlow","0" );
+		ri.Cvar_Set( "r_DynamicGlow","0" );
 	}
 }
 
 void 		GLimp_Init( void )
 {
-	Cvar_Get( "r_restartOnResize", "1", CVAR_ARCHIVE );
-	Cvar_Get( "r_resizeDelay", "1000", CVAR_ARCHIVE );
-	r_allowSoftwareGL = Cvar_Get( "r_allowSoftwareGL", "0", CVAR_LATCH );
-	r_sdlDriver = Cvar_Get( "r_sdlDriver", "", CVAR_ROM );
-	r_allowResize = Cvar_Get( "r_allowResize", "0", CVAR_ARCHIVE );
-	r_centerWindow = Cvar_Get( "r_centerWindow", "0", CVAR_ARCHIVE );
-	r_noborder = Cvar_Get( "r_noborder", "0", CVAR_ARCHIVE );
+	ri.Cvar_Get( "r_restartOnResize", "1", CVAR_ARCHIVE );
+	ri.Cvar_Get( "r_resizeDelay", "1000", CVAR_ARCHIVE );
+	r_allowSoftwareGL = ri.Cvar_Get( "r_allowSoftwareGL", "0", CVAR_LATCH );
+	r_sdlDriver = ri.Cvar_Get( "r_sdlDriver", "", CVAR_ROM );
+	r_allowResize = ri.Cvar_Get( "r_allowResize", "0", CVAR_ARCHIVE );
 
-	/*	if( Cvar_VariableIntegerValue( "com_abnormalExit" ) )
+	/*	if( ri.Cvar_VariableIntegerValue( "com_abnormalExit" ) )
 	{
-		Cvar_Set( "r_mode", va( "%d", R_MODE_FALLBACK ) );
-		Cvar_Set( "r_picmap", "1" );
-		Cvar_Set( "r_texturebits", "0" );
-		Cvar_Set( "r_textureMode", "GL_LINEAR_MIPMAP_NEAREST" );
-		Cvar_Set( "r_fullscreen", "0" );
-		Cvar_Set( "r_centerWindow", "0" );
-		Cvar_Set( "com_abnormalExit", "0" );
+		ri.Cvar_Set( "r_mode", va( "%d", R_MODE_FALLBACK ) );
+		ri.Cvar_Set( "r_picmap", "1" );
+		ri.Cvar_Set( "r_texturebits", "0" );
+		ri.Cvar_Set( "r_textureMode", "GL_LINEAR_MIPMAP_NEAREST" );
+		ri.Cvar_Set( "r_fullscreen", "0" );
+		ri.Cvar_Set( "r_centerWindow", "0" );
+		ri.Cvar_Set( "com_abnormalExit", "0" );
 		}*/
 
 	Sys_SetEnv( "SDL_VIDEO_CENTERED", r_centerWindow->integer ? "1" : "" );
@@ -1386,9 +1352,9 @@ success:
 
 	// get our config strings
     glConfig.vendor_string = (const char *) qglGetString (GL_VENDOR);
-    glConfig.renderer_string = (const char *) qglGetString (GL_RENDERER);
-    glConfig.version_string = (const char *) qglGetString (GL_VERSION);
-    glConfig.extensions_string = (const char *) qglGetString (GL_EXTENSIONS);
+	glConfig.renderer_string = (const char *) qglGetString (GL_RENDERER);
+	glConfig.version_string = (const char *) qglGetString (GL_VERSION);
+	glConfig.extensions_string = (const char *) qglGetString (GL_EXTENSIONS);
 
 	// OpenGL driver constants
 	qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
@@ -1401,10 +1367,10 @@ success:
 	// initialize extensions
 	GLimp_InitExtensions( );
 
-	Cvar_Get( "r_availableModes", "", CVAR_ROM );
+	ri.Cvar_Get( "r_availableModes", "", CVAR_ROM );
 
 	// This depends on SDL_INIT_VIDEO, hence having it here
-	IN_Init( screen );
+	ri.IN_Init( screen );
 }
 
 /*
@@ -1414,7 +1380,7 @@ GLimp_Shutdown
 */
 void 		GLimp_Shutdown( void )
 {
-	IN_Shutdown();
+	ri.IN_Shutdown();
 
 	SDL_QuitSubSystem( SDL_INIT_VIDEO );
 
@@ -1426,7 +1392,7 @@ void		GLimp_EnableLogging( qboolean enable )
 {
 }
 
-void 		GLimp_LogComment( char *comment )
+void 		GLimp_LogComment( const char *comment )
 {
 }
 

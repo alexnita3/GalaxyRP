@@ -10,7 +10,7 @@
 //
 // msg.c
 //
-typedef struct {
+typedef struct msg_s {
 	qboolean	allowoverflow;	// if false, do a Com_Error
 	qboolean	overflowed;		// set to true if the buffer size failed (with allowoverflow set)
 	qboolean	oob;			// set to true if the buffer size failed (with allowoverflow set)
@@ -115,7 +115,7 @@ typedef enum {
 	NS_SERVER
 } netsrc_t;
 
-typedef struct {
+typedef struct netadr_s {
 	netadrtype_t	type;
 
 	byte	ip[4];
@@ -155,7 +155,7 @@ void		NET_Sleep(int msec);
 Netchan handles packet fragmentation and out of order / duplicate suppression
 */
 
-typedef struct {
+typedef struct netchan_s {
 	netsrc_t	sock;
 
 	int			dropped;			// between last packet and previous
@@ -250,13 +250,30 @@ VIRTUAL MACHINE
 ==============================================================
 */
 
-typedef struct vm_s vm_t;
+typedef enum vmSlots_e {
+	VM_GAME=0,
+	VM_CGAME,
+	VM_UI,
+	MAX_VM
+} vmSlots_t;
 
-typedef enum {
-	VMI_NATIVE,
-	VMI_BYTECODE,
-	VMI_COMPILED
-} vmInterpret_t;
+typedef struct vm_s {
+	vmSlots_t	slot; // VM_GAME, VM_CGAME, VM_UI
+    char		name[MAX_QPATH];
+	void		*dllHandle;
+	qboolean	isLegacy; // uses the legacy syscall/vm_call api, is set by VM_CreateLegacy
+
+	// fill the import/export tables
+	void *		(*GetModuleAPI)( int apiVersion, ... );
+
+	// legacy stuff
+	struct {
+		intptr_t	(QDECL *main)( int callNum, ... );		// module vmMain
+		intptr_t	(QDECL *syscall)( intptr_t *parms );	// engine syscall handler
+	} legacy;
+} vm_t;
+
+extern vm_t *currentVM;
 
 typedef enum {
 	TRAP_MEMSET = 100,
@@ -279,33 +296,20 @@ typedef enum {
 	TRAP_ASIN
 } sharedTraps_t;
 
-void	VM_Init( void );
-vm_t	*VM_Create( const char *module, intptr_t (*systemCalls)(intptr_t *), 
-				   vmInterpret_t interpret );
-// module should be bare: "cgame", not "cgame.dll" or "vm/cgame.qvm"
+vm_t			*VM_CreateLegacy( vmSlots_t vmSlot, intptr_t (*systemCalls)(intptr_t *) );
+vm_t			*VM_Create( vmSlots_t vmSlot );
+void			 VM_Free( vm_t *vm );
+void			 VM_Clear(void);
+vm_t			*VM_Restart( vm_t *vm );
+intptr_t QDECL	 VM_Call( vm_t *vm, int callNum, ... );
+void			 VM_Shifted_Alloc( void **ptr, int size );
+void			 VM_Shifted_Free( void **ptr );
+void			*VM_ArgPtr( intptr_t intValue );
+void			*VM_ExplicitArgPtr( vm_t *vm, intptr_t intValue );
+float			_vmf( intptr_t x );
 
-void	VM_Free( vm_t *vm );
-void	VM_Clear(void);
-vm_t	*VM_Restart( vm_t *vm );
-
-intptr_t		QDECL VM_Call( vm_t *vm, int callNum, ... );
-
-void	VM_Debug( int level );
-
-void	VM_Shifted_Alloc(void **ptr, int size);
-void	VM_Shifted_Free(void **ptr);
-
-void	*VM_ArgPtr( intptr_t intValue );
-void	*VM_ExplicitArgPtr( vm_t *vm, intptr_t intValue );
-
-#define	VMA(x) VM_ArgPtr(args[x])
-static ID_INLINE float _vmf(intptr_t x)
-{
-	floatint_t fi;
-	fi.i = (int) x;
-	return fi.f;
-}
-#define	VMF(x)	_vmf(args[x])
+#define	VMA(x) VM_ArgPtr( args[x] )
+#define	VMF(x) _vmf( args[x] )
 
 /*
 ==============================================================
@@ -363,9 +367,13 @@ void	Cmd_AddCommand( const char *cmd_name, xcommand_t function );
 // as a clc_clientCommand instead of executed locally
 
 void	Cmd_RemoveCommand( const char *cmd_name );
+typedef void (*completionFunc_t)( char *args, int argNum );
 
 void	Cmd_CommandCompletion( callbackFunc_t callback );
 // callback with each valid string
+void Cmd_SetCommandCompletionFunc( const char *command, completionFunc_t complete );
+void Cmd_CompleteArgument( const char *command, char *args, int argNum );
+void Cmd_CompleteCfgName( char *args, int argNum );
 
 int		Cmd_Argc (void);
 char	*Cmd_Argv (int arg);
@@ -373,6 +381,7 @@ void	Cmd_ArgvBuffer( int arg, char *buffer, int bufferLength );
 char	*Cmd_Args (void);
 char	*Cmd_ArgsFrom( int arg );
 void	Cmd_ArgsBuffer( char *buffer, int bufferLength );
+void	Cmd_ArgsFromBuffer( int arg, char *buffer, int bufferLength );
 char	*Cmd_Cmd (void);
 void	Cmd_Args_Sanitize( void );
 // The functions that execute commands get their parameters with these
@@ -441,9 +450,6 @@ cvar_t	*Cvar_Set2Safe( const char *var_name, const char *value, qboolean force )
 // same as Cvar_Set, but allows more control over setting of cvar
 // sometimes we set variables from an untrusted source: fail if flags & CVAR_PROTECTED
 
-void Cvar_SetLatched( const char *var_name, const char *value);
-// don't set the cvar immediately
-
 void	Cvar_SetValue( const char *var_name, float value );
 void	Cvar_SetValueSafe( const char *var_name, float value );
 // expands value to a string and calls Cvar_Set/Cvar_SetSafe
@@ -493,6 +499,8 @@ void Cvar_CheckRange( cvar_t *cv, float minVal, float maxVal, qboolean shouldBeI
 void	Cvar_Restart(qboolean unsetVM);
 void	Cvar_Restart_f( void );
 
+void Cvar_CompleteCvarName( char *args, int argNum );
+
 extern	int			cvar_modifiedFlags;
 // whenever a cvar is modifed, its flags will be OR'd into this, so
 // a single check can determine if any CVAR_USERINFO, CVAR_SERVERINFO,
@@ -515,7 +523,7 @@ issues.
 #define FS_GENERAL_REF	0x01
 #define FS_UI_REF		0x02
 #define FS_CGAME_REF	0x04
-#define FS_QAGAME_REF	0x08
+#define FS_GAME_REF		0x08
 // number of id paks that will never be autodownloaded from base
 #define NUM_ID_PAKS		9
 
@@ -610,6 +618,14 @@ int		FS_FTell( fileHandle_t f );
 
 void	FS_Flush( fileHandle_t f );
 
+void	FS_FilenameCompletion( const char *dir, const char *ext, qboolean stripExt, void(*callback)( const char *s ), qboolean allowNonPureFilesOnDisk );
+
+const char *FS_GetCurrentGameDir(bool emptybase=false);
+
+#ifdef MACOS_X
+bool FS_LoadMachOBundle( const char *name );
+#endif
+
 void 	QDECL FS_Printf( fileHandle_t f, const char *fmt, ... );
 // like fprintf
 
@@ -649,6 +665,32 @@ qboolean FS_idPak( char *pak, char *base );
 qboolean FS_ComparePaks( char *neededpaks, int len, qboolean dlstring );
 void FS_Rename( const char *from, const char *to );
 
+
+/*
+==============================================================
+
+Edit fields and command line history/completion
+
+==============================================================
+*/
+
+#define CONSOLE_PROMPT_CHAR ']'
+#define	MAX_EDIT_LINE		256
+#define COMMAND_HISTORY		32
+
+typedef struct field_s {
+	int		cursor;
+	int		scroll;
+	int		widthInChars;
+	char	buffer[MAX_EDIT_LINE];
+} field_t;
+
+void Field_Clear( field_t *edit );
+void Field_AutoComplete( field_t *edit );
+void Field_CompleteKeyname( void );
+void Field_CompleteFilename( const char *dir, const char *ext, qboolean stripExt, qboolean allowNonPureFilesOnDisk );
+void Field_CompleteCommand( char *cmd, qboolean doCommands, qboolean doCvars );
+
 /*
 ==============================================================
 
@@ -668,11 +710,12 @@ void		Com_EndRedirect( void );
 void 		QDECL Com_Printf( const char *fmt, ... );
 void 		QDECL Com_DPrintf( const char *fmt, ... );
 void		QDECL Com_OPrintf( const char *fmt, ...); // Outputs to the VC / Windows Debug window (only in debug compile)
-void 		QDECL Com_Error( int code, const char *fmt, ... );
+void 		QDECL Com_Error( int code, const char *fmt, ... ) __attribute__((noreturn));
 void 		Com_Quit_f( void );
 int			Com_EventLoop( void );
 int			Com_Milliseconds( void );	// will be journaled properly
 unsigned	Com_BlockChecksum( const void *buffer, int length );
+char		*Com_MD5File(const char *filename, int length, const char *prefix, int prefix_len);
 int      Com_HashKey(char *string, int maxlen);
 int			Com_Filter(char *filter, char *name, int casesensitive);
 int			Com_FilterPath(char *filter, char *name, int casesensitive);
@@ -686,7 +729,6 @@ void		Com_StartupVariable( const char *match );
 
 
 extern	cvar_t	*com_developer;
-extern	cvar_t	*com_vmdebug;
 extern	cvar_t	*com_dedicated;
 extern	cvar_t	*com_speeds;
 extern	cvar_t	*com_timescale;
@@ -708,6 +750,10 @@ extern	cvar_t	*com_G2Report;
 #endif
 
 extern	cvar_t	*com_RMG;
+
+#ifdef _DEBUG
+extern	cvar_t	*vm_legacy;
+#endif
 
 // both client and server must agree to pause
 extern	cvar_t	*cl_paused;
@@ -868,14 +914,17 @@ void	CL_ForwardCommandToServer( const char *string );
 // things like godmode, noclip, etc, are commands directed to the server,
 // so when they are typed in at the console, they will need to be forwarded.
 
-void CL_ShutdownAll( qboolean shutdownRef );
+void CL_ShutdownAll( qboolean shutdownRef, qboolean delayFreeVM );
 // shutdown all the client stuff
 
-void CL_FlushMemory( void );
+void CL_FlushMemory( qboolean delayFlushVM );
 // dump all memory on an error
 
 void CL_StartHunkUsers( void );
 // start all the client stuff using the hunk
+
+void Key_KeynameCompletion ( void(*callback)( const char *s ) );
+// for keyname autocompletion
 
 void Key_WriteBindings( fileHandle_t f );
 // for writing the config files
@@ -933,7 +982,7 @@ typedef enum {
 	SE_PACKET	// evPtr is a netadr_t followed by data bytes to evPtrLength
 } sysEventType_t;
 
-typedef struct {
+typedef struct sysEvent_s {
 	int				evTime;
 	sysEventType_t	evType;
 	int				evValue, evValue2;
@@ -955,17 +1004,9 @@ void	Sys_Init (void);
 
 // general development dll loading for virtual machine testing
 void	* QDECL Sys_LoadDll(const char *name, qboolean useSystemLib);
-void	* QDECL Sys_LoadGameDll( const char *name, intptr_t (QDECL **entryPoint)(int, ...), intptr_t (QDECL *systemcalls)(intptr_t, ...) );
+void	* QDECL Sys_LoadLegacyGameDll( const char *name, intptr_t (QDECL **vmMain)(int, ...), intptr_t (QDECL *systemcalls)(intptr_t, ...) );
+void	* QDECL Sys_LoadGameDll( const char *name, void *(QDECL **moduleAPI)(int, ...) );
 void	Sys_UnloadDll( void *dllHandle );
-
-void	Sys_UnloadGame( void );
-void	*Sys_GetGameAPI( void *parms );
-
-void	Sys_UnloadCGame( void );
-void	*Sys_GetCGameAPI( void );
-
-void	Sys_UnloadUI( void );
-void	*Sys_GetUIAPI( void );
 
 //bot libraries
 void	Sys_UnloadBotLib( void );
@@ -973,7 +1014,7 @@ void	*Sys_GetBotLibAPI( void *parms );
 
 char	*Sys_GetCurrentUser( void );
 
-void	QDECL Sys_Error( const char *error, ...);
+void	QDECL Sys_Error( const char *error, ...) __attribute__((noreturn));
 void	Sys_Quit (void);
 char	*Sys_GetClipboardData( void );	// note that this isn't journaled...
 
@@ -985,12 +1026,9 @@ int		Sys_Milliseconds (bool baseTime = false);
 int		Sys_Milliseconds2(void);
 void 	Sys_SetEnv(const char *name, const char *value);
 
-#ifndef _WIN32
 extern "C" void	Sys_SnapVector( float *v );
 
-#else
-void	Sys_SnapVector( float *v );
-#endif
+qboolean Sys_RandomBytes( byte *string, int len );
 
 // the system console is shown when a dedicated server is running
 void	Sys_DisplaySystemConsole( qboolean show );
@@ -1017,9 +1055,16 @@ void	Sys_SetDefaultCDPath(const char *path);
 char	*Sys_DefaultCDPath(void);
 void	Sys_SetDefaultInstallPath(const char *path);
 char	*Sys_DefaultInstallPath(void);
-void     Sys_SetDefaultHomePath(const char *path);
+
+#ifdef MACOS_X
+char    *Sys_DefaultAppPath(void);
+#endif
+
 char	*Sys_DefaultHomePath(void);
-char	*Sys_DefaultBasePath(void);
+const char *Sys_Dirname( char *path );
+const char *Sys_Basename( char *path );
+
+bool Sys_PathCmp( const char *path1, const char *path2 );
 
 char **Sys_ListFiles( const char *directory, const char *extension, char *filter, int *numfiles, qboolean wantsubs );
 void	Sys_FreeFileList( char **fileList );
@@ -1048,7 +1093,7 @@ typedef struct nodetype {
 
 #define HMAX 256 /* Maximum symbol */
 
-typedef struct {
+typedef struct huff_s {
 	int			blocNode;
 	int			blocPtrs;
 
@@ -1062,7 +1107,7 @@ typedef struct {
 	node_t*		nodePtrs[768];
 } huff_t;
 
-typedef struct {
+typedef struct huffman_s {
 	huff_t		compressor;
 	huff_t		decompressor;
 } huffman_t;

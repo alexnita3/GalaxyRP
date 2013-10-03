@@ -32,7 +32,7 @@ This file is part of Jedi Academy.
 
 #define ICARUS_VALIDATE(a) if ( a == false ) return TASK_FAILED;
 
-#define STL_ITERATE( a, b )		for ( a = b.begin(); a != b.end(); a++ )
+#define STL_ITERATE( a, b )		for ( a = b.begin(); a != b.end(); ++a )
 #define STL_INSERT( a, b )		a.insert( a.end(), b );
 
 /*
@@ -944,7 +944,7 @@ CallbackCommand
 
 int	CTaskManager::CallbackCommand( CTask *task, int returnCode, CIcarus* icarus )
 {
-	if ( m_owner->Callback( this, task->GetBlock(), returnCode, icarus ) == CSequencer::SEQ_OK, icarus )
+	if ( m_owner->Callback( this, task->GetBlock(), returnCode, icarus ) == CSequencer::SEQ_OK )
 		return Go(icarus);
 
 	assert(0);
@@ -1678,7 +1678,7 @@ void CTaskManager::Save()
 	CTaskGroup	*taskGroup;
 	const char	*name;
 	CBlock		*block;
-	DWORD		timeStamp;
+	unsigned int		timeStamp;
 	bool		completed;
 	int			id, numCommands;
 	int			numWritten;
@@ -1796,7 +1796,7 @@ void CTaskManager::Save()
 		name = ((*tmi).first).c_str();
 		
 		//Make sure this is a valid string
-		assert( ( name != NULL ) && ( name[0] != NULL ) );
+		assert( ( name != NULL ) && ( name[0] != '\0' ) );
 
 		int length = strlen( name ) + 1;
 
@@ -1830,7 +1830,7 @@ void CTaskManager::Load( CIcarus* icarus )
 	CTaskGroup		*taskGroup;
 	CBlock			*block;
 	CTask			*task;
-	DWORD			timeStamp;
+	unsigned int			timeStamp;
 	bool			completed;
 	void			*bData;
 	int				id, numTasks, numMembers;

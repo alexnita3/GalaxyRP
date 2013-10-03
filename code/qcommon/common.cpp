@@ -18,19 +18,14 @@ This file is part of Jedi Academy.
 
 // common.c -- misc functions used in client and server
 
-#include "../game/q_shared.h"
+#include "q_shared.h"
 #include "qcommon.h"
-#include "../qcommon/sstring.h"	// to get Gil's string class, because MS's doesn't compile properly in here
+#include "sstring.h"	// to get Gil's string class, because MS's doesn't compile properly in here
 #include "stv_version.h"
 
-#ifdef _XBOX
-#include "../win32/win_file.h"
-#include "../ui/ui_splash.h"
-#endif
-
-#ifndef FINAL_BUILD
-#include "platform.h"
-#endif
+// Because renderer.
+#include "../renderer/tr_public.h"
+extern refexport_t re;
 
 #define	MAXPRINTMSG	4096
 
@@ -39,13 +34,11 @@ This file is part of Jedi Academy.
 int		com_argc;
 char	*com_argv[MAX_NUM_ARGVS+1];
 
-#ifndef _XBOX
 static fileHandle_t	logfile;
 static fileHandle_t	speedslog;
 static fileHandle_t	camerafile;
 fileHandle_t	com_journalFile;
 fileHandle_t	com_journalDataFile;		// config files are written here
-#endif
 
 cvar_t	*com_viewlog;
 cvar_t	*com_speeds;
@@ -60,13 +53,17 @@ cvar_t	*com_showtrace;
 cvar_t	*com_terrainPhysics;
 cvar_t	*com_version;
 cvar_t	*com_buildScript;	// for automated data building scripts
+cvar_t	*com_bootlogo;
 cvar_t	*cl_paused;
 cvar_t	*sv_paused;
 cvar_t	*com_skippingcin;
 cvar_t	*com_speedslog;		// 1 = buffer log, 2 = flush after each print
+cvar_t  *com_homepath;
 
+#ifndef __NO_JK2
 // Support for JK2 binaries --eez
 cvar_t	*com_jk2;			// searches for jk2gamex86.dll instead of jagamex86.dll
+#endif
 
 #ifdef G2_PERFORMANCE_ANALYSIS
 cvar_t	*com_G2Report;
@@ -86,10 +83,10 @@ int			com_frameTime;
 int			com_frameMsec;
 int			com_frameNumber = 0;
 
-qboolean	com_errorEntered;
+qboolean	com_errorEntered = qfalse;
 qboolean	com_fullyInitialized = qfalse;
 
-char	com_errorMessage[MAXPRINTMSG];
+char	com_errorMessage[MAXPRINTMSG] = {0};
 
 void Com_WriteConfig_f( void );
 //JLF
@@ -97,7 +94,6 @@ void Com_WriteConfig_f( void );
 
 //============================================================================
 
-#ifndef _XBOX
 static char	*rd_buffer;
 static int	rd_buffersize;
 static void	(*rd_flush)( char *buffer );
@@ -123,10 +119,9 @@ void Com_EndRedirect (void)
 	rd_buffersize = 0;
 	rd_flush = NULL;
 }
-#ifndef FINAL_BUILD
+#if !defined(FINAL_BUILD) && defined(_WIN32)
 #define OUTPUT_TO_BUILD_WINDOW
 #endif
-#endif	//not xbox
 
 /*
 =============
@@ -143,11 +138,11 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 	char		msg[MAXPRINTMSG];
 
 	va_start (argptr,fmt);
-	vsprintf_s (msg,fmt,argptr);
+	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
 	va_end (argptr);
 
 	if ( rd_buffer ) {
-		if ((strlen (msg) + strlen(rd_buffer)) > (rd_buffersize - 1)) {
+		if ((strlen (msg) + strlen(rd_buffer)) > (unsigned)(rd_buffersize - 1)) {
 			rd_flush(rd_buffer);
 			*rd_buffer = 0;
 		}
@@ -197,7 +192,7 @@ void QDECL Com_DPrintf( const char *fmt, ...) {
 	}
 
 	va_start (argptr,fmt);
-	vsprintf_s (msg,fmt,argptr);
+	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
 	va_end (argptr);
 	
 	Com_Printf ("%s", msg);
@@ -205,7 +200,6 @@ void QDECL Com_DPrintf( const char *fmt, ...) {
 
 void Com_WriteCam ( const char *text )
 {
-#ifndef _XBOX
 	static	char	mapname[MAX_QPATH];
 	// camerafile
 	if ( !camerafile ) 
@@ -223,12 +217,10 @@ void Com_WriteCam ( const char *text )
 	}
 
 	Com_Printf( "%s\n", mapname );
-#endif
 }
 
 void Com_FlushCamFile()
 {
-#ifndef _XBOX
 	if (!camerafile)
 	{
 		// nothing to flush, right?
@@ -243,7 +235,6 @@ void Com_FlushCamFile()
 	extern	cvar_t	*sv_mapname;
 	Com_sprintf( flushedMapname, MAX_QPATH, "maps/%s_cam.map", sv_mapname->string );
 	Com_Printf("flushed all cams to %s\n", flushedMapname);
-#endif
 }
 
 /*
@@ -262,17 +253,6 @@ void SG_Shutdown();
 void QDECL Com_Error( int code, const char *fmt, ... ) {
 	va_list		argptr;
 
-#if defined(_WIN32) && defined(_DEBUG)
-	if ( code != ERR_DISCONNECT ) {
-//		if (com_noErrorInterrupt && !com_noErrorInterrupt->integer) 
-		{
-			__asm {
-				int 0x03
-			}
-		}
-	}
-#endif
-
 	// when we are running automated scripts, make sure we
 	// know if anything failed
 	if ( com_buildScript && com_buildScript->integer ) {
@@ -289,7 +269,7 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 //	SCR_UnprecacheScreenshot();
 
 	va_start (argptr,fmt);
-	vsprintf_s (com_errorMessage,fmt,argptr);
+	Q_vsnprintf (com_errorMessage, sizeof(com_errorMessage), fmt, argptr);
 	va_end (argptr);	
 
 	if ( code != ERR_DISCONNECT ) {
@@ -299,7 +279,7 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 
 	SG_Shutdown();				// close any file pointers
 	if ( code == ERR_DISCONNECT ) {
-		SV_Shutdown("Disconnect");
+		SV_Shutdown("Disconnect", qtrue);
 		CL_Disconnect();
 		CL_FlushMemory();
 		CL_StartHunkUsers();
@@ -309,7 +289,7 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 		// If loading/saving caused the crash/error - delete the temp file
 		SG_WipeSavegame("current");	// delete file
 
-		SV_Shutdown (va("Server crashed: %s\n",  com_errorMessage));
+		SV_Shutdown (va("Server crashed: %s\n",  com_errorMessage), qtrue);
 		CL_Disconnect();
 		CL_FlushMemory();
 		CL_StartHunkUsers();
@@ -318,7 +298,7 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 		throw ("DROPPED\n");
 	} else {
 		CL_Shutdown ();
-		SV_Shutdown (va(S_COLOR_RED"Server fatal crashed: %s\n", com_errorMessage));
+		SV_Shutdown (va(S_COLOR_RED"Server fatal crashed: %s\n", com_errorMessage), qtrue);
 	}
 
 	Com_Shutdown ();
@@ -376,13 +356,17 @@ Break it up into multiple console lines
 ==================
 */
 void Com_ParseCommandLine( char *commandLine ) {
+	int inq = 0;
 	com_consoleLines[0] = commandLine;
 	com_numConsoleLines = 1;
 
 	while ( *commandLine ) {
+		if (*commandLine == '"') {
+			inq = !inq;
+		}
 		// look for a + seperating character
 		// if commandLine came from a file, we might have real line seperators
-		if ( *commandLine == '+' || *commandLine == '\n' ) {
+		if ( (*commandLine == '+' && !inq) || *commandLine == '\n'  || *commandLine == '\r' ) {
 			if ( com_numConsoleLines == MAX_CONSOLE_LINES ) {
 				return;
 			}
@@ -430,22 +414,22 @@ be after execing the config and default.
 ===============
 */
 void Com_StartupVariable( const char *match ) {
-	int		i;
 	char	*s;
-	cvar_t	*cv;
 
-	for (i=0 ; i < com_numConsoleLines ; i++) {
+	for (int i=0 ; i < com_numConsoleLines ; i++) {
 		Cmd_TokenizeString( com_consoleLines[i] );
 		if ( strcmp( Cmd_Argv(0), "set" ) ) {
 			continue;
 		}
 
 		s = Cmd_Argv(1);
-		if ( !match || !Q_stricmp( s, match ) ) {
-			Cvar_Set( s, Cmd_Argv(2) );
-			cv = Cvar_Get( s, "", 0 );
-			cv->flags |= CVAR_USER_CREATED;
-//			com_consoleLines[i] = 0;
+
+		if(!match || !strcmp(s, match))
+		{
+			if((unsigned)Cvar_Flags(s) == CVAR_NONEXISTENT)
+				Cvar_Get(s, Cmd_Argv(2), CVAR_USER_CREATED);
+			else
+				Cvar_Set2(s, Cmd_Argv(2), qfalse);
 		}
 	}
 }
@@ -535,7 +519,7 @@ void Info_Print( const char *s ) {
 Com_StringContains
 ============
 */
-char *Com_StringContains(char *str1, char *str2, int casesensitive) {
+const char *Com_StringContains(const char *str1, const char *str2, int casesensitive) {
 	int len, i, j;
 
 	len = strlen(str1) - strlen(str2);
@@ -564,27 +548,23 @@ char *Com_StringContains(char *str1, char *str2, int casesensitive) {
 Com_Filter
 ============
 */
-int Com_Filter(char *filter, char *name, int casesensitive) {
+int Com_Filter(const char *filter, const char *name, int casesensitive) {
 	char buf[MAX_TOKEN_CHARS];
-	char *ptr;
-	int i;
+	const char *ptr;
+	int i, found;
 
 	while(*filter) {
 		if (*filter == '*') {
 			filter++;
 			for (i = 0; *filter; i++) {
-				if (*filter == '*' || *filter == '?') {
-					break;
-				}
+				if (*filter == '*' || *filter == '?') break;
 				buf[i] = *filter;
 				filter++;
 			}
 			buf[i] = '\0';
 			if (strlen(buf)) {
 				ptr = Com_StringContains(name, buf, casesensitive);
-				if (!ptr) {
-					return qfalse;
-				}
+				if (!ptr) return qfalse;
 				name = ptr + strlen(buf);
 			}
 		}
@@ -592,22 +572,86 @@ int Com_Filter(char *filter, char *name, int casesensitive) {
 			filter++;
 			name++;
 		}
-		else {
-			if (casesensitive) {
-				if (*filter != *name) {
-					return qfalse;
+		else if (*filter == '[' && *(filter+1) == '[') {
+			filter++;
+		}
+		else if (*filter == '[') {
+			filter++;
+			found = qfalse;
+			while(*filter && !found) {
+				if (*filter == ']' && *(filter+1) != ']') break;
+				if (*(filter+1) == '-' && *(filter+2) && (*(filter+2) != ']' || *(filter+3) == ']')) {
+					if (casesensitive) {
+						if (*name >= *filter && *name <= *(filter+2)) found = qtrue;
+					}
+					else {
+						if (toupper(*name) >= toupper(*filter) &&
+							toupper(*name) <= toupper(*(filter+2))) found = qtrue;
+					}
+					filter += 3;
+				}
+				else {
+					if (casesensitive) {
+						if (*filter == *name) found = qtrue;
+					}
+					else {
+						if (toupper(*filter) == toupper(*name)) found = qtrue;
+					}
+					filter++;
 				}
 			}
+			if (!found) return qfalse;
+			while(*filter) {
+				if (*filter == ']' && *(filter+1) != ']') break;
+				filter++;
+			}
+			filter++;
+			name++;
+		}
+		else {
+			if (casesensitive) {
+				if (*filter != *name) return qfalse;
+			}
 			else {
-				if (toupper(*filter) != toupper(*name)) {
-					return qfalse;
-				}
+				if (toupper(*filter) != toupper(*name)) return qfalse;
 			}
 			filter++;
 			name++;
 		}
 	}
 	return qtrue;
+}
+
+/*
+============
+Com_FilterPath
+============
+*/
+int Com_FilterPath(const char *filter, const char *name, int casesensitive)
+{
+	int i;
+	char new_filter[MAX_QPATH];
+	char new_name[MAX_QPATH];
+
+	for (i = 0; i < MAX_QPATH-1 && filter[i]; i++) {
+		if ( filter[i] == '\\' || filter[i] == ':' ) {
+			new_filter[i] = '/';
+		}
+		else {
+			new_filter[i] = filter[i];
+		}
+	}
+	new_filter[i] = '\0';
+	for (i = 0; i < MAX_QPATH-1 && name[i]; i++) {
+		if ( name[i] == '\\' || name[i] == ':' ) {
+			new_name[i] = '/';
+		}
+		else {
+			new_name[i] = name[i];
+		}
+	}
+	new_name[i] = '\0';
+	return Com_Filter(new_filter, new_name, casesensitive);
 }
 
 
@@ -671,11 +715,11 @@ void Hunk_Clear( void )
 	Z_TagFree(TAG_HUNKALLOC);
 	Z_TagFree(TAG_HUNKMISCMODELS);
 
-	extern void CIN_CloseAllVideos();
-				CIN_CloseAllVideos();
+extern void CIN_CloseAllVideos();
+	CIN_CloseAllVideos();
 
-	extern void R_ClearStuffToStopGhoul2CrashingThings(void);
-				R_ClearStuffToStopGhoul2CrashingThings();
+	if(re.R_ClearStuffToStopGhoul2CrashingThings)
+		re.R_ClearStuffToStopGhoul2CrashingThings();
 }
 
 
@@ -846,7 +890,7 @@ int Com_EventLoop( void ) {
 			// the event buffers are only large enough to hold the
 			// exact payload, but channel messages need to be large
 			// enough to hold fragment reassembly
-			if ( (unsigned)buf.cursize > buf.maxsize ) {
+			if ( (unsigned)buf.cursize > (unsigned)buf.maxsize ) {
 				Com_Printf("Com_EventLoop: oversize packet\n");
 				continue;
 			}
@@ -943,7 +987,28 @@ A way to force a bus error for development reasons
 =================
 */
 static void Com_Crash_f( void ) {
-	* ( int * ) 0 = 0x12345678;
+	* ( volatile int * ) 0 = 0x12345678;
+}
+
+/*
+==================
+Com_ExecuteCfg
+==================
+*/
+
+void Com_ExecuteCfg(void)
+{
+	Cbuf_ExecuteText(EXEC_NOW, "exec default.cfg\n");
+	Cbuf_Execute(); // Always execute after exec to prevent text buffer overflowing
+
+	if(!Com_SafeMode())
+	{
+		// skip the q3config.cfg and autoexec.cfg if "safe" is on the command line
+		Cbuf_ExecuteText(EXEC_NOW, "exec " Q3CONFIG_NAME "\n");
+		Cbuf_Execute();
+		Cbuf_ExecuteText(EXEC_NOW, "exec autoexec_sp.cfg\n");
+		Cbuf_Execute();
+	}
 }
 
 /*
@@ -952,13 +1017,14 @@ Com_Init
 =================
 */
 extern void Com_InitZoneMemory();
-extern void R_InitWorldEffects();
 void Com_Init( char *commandLine ) {
 	char	*s;
 
 	Com_Printf( "%s %s %s\n", Q3_VERSION, CPUSTRING, __DATE__ );
 
 	try {
+		Cvar_Init ();
+
 		// prepare enough of the subsystems to handle
 		// cvar and command buffer management
 		Com_ParseCommandLine( commandLine );
@@ -969,29 +1035,24 @@ void Com_Init( char *commandLine ) {
 		Com_InitZoneMemory();
 
 		Cmd_Init ();
-		Cvar_Init ();
 
-		// get the commandline cvars set
+		// override anything from the config files with command line args
 		Com_StartupVariable( NULL );
 
+#ifndef __NO_JK2
+		Com_StartupVariable( "com_jk2" );
 		com_jk2 = Cvar_Get( "com_jk2", "0", CVAR_INIT );
+#endif
 
 		// done early so bind command exists
 		CL_InitKeyCommands();
 
+		com_homepath = Cvar_Get("com_homepath", "", CVAR_INIT);
+
 		FS_InitFilesystem ();	//uses z_malloc
-		R_InitWorldEffects();   // this doesn't do much but I want to be sure certain variables are intialized.
+		//re.R_InitWorldEffects();   // this doesn't do much but I want to be sure certain variables are intialized.
 		
-		Cbuf_AddText ("exec default.cfg\n");
-
-		// skip the openjk_sp.cfg if "safe" is on the command line
-		if ( !Com_SafeMode() ) {
-			Cbuf_AddText ("exec "Q3CONFIG_NAME"\n");
-		}
-
-		Cbuf_AddText ("exec autoexec.cfg\n");
-		
-		Cbuf_Execute ();
+		Com_ExecuteCfg();
 
 		// override anything from the config files with command line args
 		Com_StartupVariable( NULL );
@@ -1032,6 +1093,8 @@ void Com_Init( char *commandLine ) {
 		com_cl_running = Cvar_Get ("cl_running", "0", CVAR_ROM);
 		com_skippingcin = Cvar_Get ("skippingCinematic", "0", CVAR_ROM);
 		com_buildScript = Cvar_Get( "com_buildScript", "0", 0 );
+
+		com_bootlogo = Cvar_Get( "com_bootlogo", "1", CVAR_ARCHIVE);
 		
 		if ( com_developer && com_developer->integer ) {
 			Cmd_AddCommand ("error", Com_Error_f);
@@ -1046,10 +1109,14 @@ void Com_Init( char *commandLine ) {
 		if(com_jk2 && com_jk2->integer)
 		{
 			JK2SP_Init();
+			Com_Printf("Running Jedi Outcast Mode\n");
 		}
 		else
 #endif
-		SE_Init();	// Initialize StringEd
+		{
+			SE_Init();	// Initialize StringEd
+			Com_Printf("Running Jedi Academy Mode\n");
+		}
 	
 		Sys_Init();	// this also detects CPU type, so I can now do this CPU check below...
 
@@ -1059,13 +1126,6 @@ void Com_Init( char *commandLine ) {
 		
 		CL_Init();
 
-#ifdef _XBOX
-		// Experiment. Sound memory never gets freed, move it earlier. This
-		// will also let us play movies sooner, if we need to.
-		extern void CL_StartSound(void);
-		CL_StartSound();
-#endif
-
 		Sys_ShowConsole( com_viewlog->integer, qfalse );
 		
 		// set com_frameTime so that if a map is started on the
@@ -1074,21 +1134,13 @@ void Com_Init( char *commandLine ) {
 		com_frameTime = Com_Milliseconds();
 
 		// add + commands from command line
-//#ifndef _XBOX
 		if ( !Com_AddStartupCommands() ) {
-//#ifdef NDEBUG
 			// if the user didn't give any commands, run default action
-//			if ( !com_dedicated->integer ) 
+			if ( com_bootlogo->integer )
 			{
 				Cbuf_AddText ("cinematic openinglogos\n");
-//				if( !com_introPlayed->integer ) {
-//					Cvar_Set( com_introPlayed->name, "1" );
-//					Cvar_Set( "nextmap", "cinematic intro" );
-//				}
 			}
-//#endif	
 		}
-//#endif
 		com_fullyInitialized = qtrue;
 		Com_Printf ("--- Common Initialization Complete ---\n");
 
@@ -1121,7 +1173,7 @@ void Com_WriteConfigToFile( const char *filename ) {
 		return;
 	}
 
-	FS_Printf (f, "// generated by OpenJK, do not modify\n");
+	FS_Printf (f, "// generated by OpenJK SP, do not modify\n");
 	Key_WriteBindings (f);
 	Cvar_WriteVariables (f);
 	FS_FCloseFile( f );
@@ -1168,6 +1220,13 @@ void Com_WriteConfig_f( void ) {
 
 	Q_strncpyz( filename, Cmd_Argv(1), sizeof( filename ) );
 	COM_DefaultExtension( filename, sizeof( filename ), ".cfg" );
+
+	if(!COM_CompareExtension(filename, ".cfg"))
+	{
+		Com_Printf( "Com_WriteConfig_f: Only the \".cfg\" extension is supported by this command!\n" );
+		return;
+	}
+
 	Com_Printf( "Writing %s.\n", filename );
 	Com_WriteConfigToFile( filename );
 }
@@ -1244,7 +1303,11 @@ void G2Time_ResetTimers(void);
 void G2Time_ReportTimers(void);
 #endif
 
+void Sys_UnloadGamePending();
+
+#ifdef _MSC_VER
 #pragma warning (disable: 4701)	//local may have been used without init (timing info vars)
+#endif
 void Com_Frame( void ) {
 try 
 {
@@ -1253,7 +1316,6 @@ try
 	static int	lastTime;
 
 	// write config file if anything changed
-#ifndef _XBOX
 	Com_WriteConfiguration(); 
 
 	// if "viewlog" has been modified, show or hide the log console
@@ -1261,7 +1323,6 @@ try
 		Sys_ShowConsole( com_viewlog->integer, qfalse );
 		com_viewlog->modified = qfalse;
 	}
-#endif
 
 	//
 	// main event loop
@@ -1305,19 +1366,8 @@ try
 	//
 	// client system
 	//
-#ifdef _XBOX
-//	extern void G_DemoFrame();
-
-//	G_DemoFrame();
-	extern bool TestDemoTimer();
-	extern void PlayDemo();
-	if ( TestDemoTimer())
-	{
-		PlayDemo();
-	}
 
 
-#endif
 //	if ( !com_dedicated->integer ) 
 	{
 		//
@@ -1362,7 +1412,6 @@ try
 		Com_Printf("fr:%i all:%3i sv:%3i ev:%3i cl:%3i gm:%3i tr:%3i pvs:%3i rf:%3i bk:%3i\n", 
 					com_frameNumber, all, sv, ev, cl, time_game, timeInTrace, timeInPVSCheck, time_frontend, time_backend);
 
-#ifndef _XBOX
 		// speedslog
 		if ( com_speedslog && com_speedslog->integer )
 		{
@@ -1398,7 +1447,6 @@ try
 				bComma=true;
 			}
 		}
-#endif
 
 		timeInTrace = timeInPVSCheck = 0;
 	}
@@ -1427,6 +1475,7 @@ try
 	com_frameNumber++;
 }//try
 	catch (const char* reason) {
+		Sys_UnloadGamePending();
 		Com_Printf (reason);
 		return;			// an ERR_DROP was thrown
 	}
@@ -1434,14 +1483,16 @@ try
 #ifdef G2_PERFORMANCE_ANALYSIS
 	if (com_G2Report && com_G2Report->integer)
 	{
-		G2Time_ReportTimers();
+		re.G2Time_ReportTimers();
 	}
 
-	G2Time_ResetTimers();
+	re.G2Time_ResetTimers();
 #endif
 }
 
+#ifdef _MSC_VER
 #pragma warning (default: 4701)	//local may have been used without init
+#endif
 
 /*
 =================
@@ -1486,6 +1537,280 @@ void Com_Shutdown (void) {
 
 	extern void Netchan_Shutdown();
 	Netchan_Shutdown();
+}
+
+/*
+==================
+Field_Clear
+==================
+*/
+void Field_Clear( field_t *edit ) {
+	edit->buffer[0] = 0;
+	edit->cursor = 0;
+	edit->scroll = 0;
+}
+
+/*
+=============================================================================
+
+CONSOLE LINE EDITING
+
+==============================================================================
+*/
+
+static const char *completionString;
+static char shortestMatch[MAX_TOKEN_CHARS];
+static int	matchCount;
+// field we are working on, passed to Field_AutoComplete(&g_consoleCommand for instance)
+static field_t *completionField;
+
+/*
+===============
+FindMatches
+
+===============
+*/
+static void FindMatches( const char *s ) {
+	int		i;
+
+	if ( Q_stricmpn( s, completionString, strlen( completionString ) ) ) {
+		return;
+	}
+	matchCount++;
+	if ( matchCount == 1 ) {
+		Q_strncpyz( shortestMatch, s, sizeof( shortestMatch ) );
+		return;
+	}
+
+	// cut shortestMatch to the amount common with s
+	for ( i = 0 ; s[i] ; i++ ) {
+		if ( tolower(shortestMatch[i]) != tolower(s[i]) ) {
+			shortestMatch[i] = 0;
+			break;
+		}
+	}
+	if (!s[i])
+	{
+		shortestMatch[i] = 0;
+	}
+}
+
+/*
+===============
+PrintMatches
+
+===============
+*/
+static void PrintMatches( const char *s ) {
+	if ( !Q_stricmpn( s, shortestMatch, strlen( shortestMatch ) ) ) {
+		Com_Printf( S_COLOR_GREY"Cmd  "S_COLOR_WHITE"%s\n", s );
+	}
+}
+
+/*
+===============
+PrintArgMatches
+
+===============
+*/
+#if 0
+// This is here for if ever commands with other argument completion
+static void PrintArgMatches( const char *s ) {
+	if ( !Q_stricmpn( s, shortestMatch, strlen( shortestMatch ) ) ) {
+		Com_Printf( S_COLOR_WHITE"  %s\n", s );
+	}
+}
+#endif
+
+/*
+===============
+PrintKeyMatches
+
+===============
+*/
+static void PrintKeyMatches( const char *s ) {
+	if ( !Q_stricmpn( s, shortestMatch, strlen( shortestMatch ) ) ) {
+		Com_Printf( S_COLOR_GREY"Key  "S_COLOR_WHITE"%s\n", s );
+	}
+}
+
+/*
+===============
+PrintFileMatches
+
+===============
+*/
+static void PrintFileMatches( const char *s ) {
+	if ( !Q_stricmpn( s, shortestMatch, strlen( shortestMatch ) ) ) {
+		Com_Printf( S_COLOR_GREY"File "S_COLOR_WHITE"%s\n", s );
+	}
+}
+
+/*
+===============
+PrintCvarMatches
+
+===============
+*/
+static void PrintCvarMatches( const char *s ) {
+	char value[TRUNCATE_LENGTH] = {0};
+
+	if ( !Q_stricmpn( s, shortestMatch, (int)strlen( shortestMatch ) ) ) {
+		Com_TruncateLongString( value, Cvar_VariableString( s ) );
+		Com_Printf( S_COLOR_GREY"Cvar "S_COLOR_WHITE"%s = "S_COLOR_GREY"\""S_COLOR_WHITE"%s"S_COLOR_GREY"\""S_COLOR_WHITE"\n", s, value );
+	}
+}
+
+/*
+===============
+Field_FindFirstSeparator
+===============
+*/
+static char *Field_FindFirstSeparator( char *s ) {
+	for ( size_t i=0; i<strlen( s ); i++ ) {
+		if ( s[i] == ';' )
+			return &s[ i ];
+	}
+
+	return NULL;
+}
+
+/*
+===============
+Field_Complete
+===============
+*/
+static qboolean Field_Complete( void ) {
+	int completionOffset;
+
+	if ( matchCount == 0 )
+		return qtrue;
+
+	completionOffset = strlen( completionField->buffer ) - strlen( completionString );
+
+	Q_strncpyz( &completionField->buffer[completionOffset], shortestMatch, sizeof( completionField->buffer ) - completionOffset );
+
+	completionField->cursor = strlen( completionField->buffer );
+
+	if ( matchCount == 1 ) {
+		Q_strcat( completionField->buffer, sizeof( completionField->buffer ), " " );
+		completionField->cursor++;
+		return qtrue;
+	}
+
+	Com_Printf( "%c%s\n", CONSOLE_PROMPT_CHAR, completionField->buffer );
+
+	return qfalse;
+}
+
+/*
+===============
+Field_CompleteKeyname
+===============
+*/
+void Field_CompleteKeyname( void )
+{
+	matchCount = 0;
+	shortestMatch[ 0 ] = 0;
+
+	Key_KeynameCompletion( FindMatches );
+
+	if( !Field_Complete( ) )
+		Key_KeynameCompletion( PrintKeyMatches );
+}
+
+/*
+===============
+Field_CompleteFilename
+===============
+*/
+void Field_CompleteFilename( const char *dir, const char *ext, qboolean stripExt, qboolean allowNonPureFilesOnDisk )
+{
+	matchCount = 0;
+	shortestMatch[ 0 ] = 0;
+
+	FS_FilenameCompletion( dir, ext, stripExt, FindMatches, allowNonPureFilesOnDisk );
+
+	if ( !Field_Complete() )
+		FS_FilenameCompletion( dir, ext, stripExt, PrintFileMatches, allowNonPureFilesOnDisk );
+}
+
+/*
+===============
+Field_CompleteCommand
+===============
+*/
+void Field_CompleteCommand( char *cmd, qboolean doCommands, qboolean doCvars )
+{
+	int completionArgument = 0;
+
+	// Skip leading whitespace and quotes
+	cmd = Com_SkipCharset( cmd, " \"" );
+
+	Cmd_TokenizeStringIgnoreQuotes( cmd );
+	completionArgument = Cmd_Argc();
+
+	// If there is trailing whitespace on the cmd
+	if ( *(cmd + strlen( cmd )-1) == ' ' ) {
+		completionString = "";
+		completionArgument++;
+	}
+	else
+		completionString = Cmd_Argv( completionArgument - 1 );
+
+	if ( completionArgument > 1 ) {
+		const char *baseCmd = Cmd_Argv( 0 );
+		char *p;
+
+		if ( baseCmd[0] == '\\' || baseCmd[0] == '/' )
+			baseCmd++;
+
+		if( ( p = Field_FindFirstSeparator( cmd ) ) )
+			Field_CompleteCommand( p + 1, qtrue, qtrue ); // Compound command
+		else
+			Cmd_CompleteArgument( baseCmd, cmd, completionArgument ); 
+	}
+	else {
+		if ( completionString[0] == '\\' || completionString[0] == '/' )
+			completionString++;
+
+		matchCount = 0;
+		shortestMatch[ 0 ] = 0;
+
+		if ( strlen( completionString ) == 0 )
+			return;
+
+		if ( doCommands )
+			Cmd_CommandCompletion( FindMatches );
+
+		if ( doCvars )
+			Cvar_CommandCompletion( FindMatches );
+
+		if ( !Field_Complete() ) {
+			// run through again, printing matches
+			if ( doCommands )
+				Cmd_CommandCompletion( PrintMatches );
+
+			if ( doCvars )
+				Cvar_CommandCompletion( PrintCvarMatches );
+		}
+	}
+}
+
+/*
+===============
+Field_AutoComplete
+
+Perform Tab expansion
+===============
+*/
+void Field_AutoComplete( field_t *field ) {
+	if ( !field || !field->buffer[0] )
+		return;
+
+	completionField = field;
+
+	Field_CompleteCommand( completionField->buffer, qtrue, qtrue );
 }
 
 /*

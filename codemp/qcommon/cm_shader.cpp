@@ -42,6 +42,7 @@ void CM_CreateShaderTextHash(void)
 	CCMShaderText		*shader;
 
 	p = shaderText;
+	COM_BeginParseSession ("CM_CreateShaderTextHash");
 	// look for label
 	while (p) 
 	{
@@ -219,7 +220,7 @@ surfaceparm <name>
 
 typedef struct 
 {
-	char	*name;
+	const char	*name;
 	int		clearSolid, surfaceFlags, contents;
 } infoParm_t;
 
@@ -377,6 +378,7 @@ static void CM_ParseShader( CCMShader *shader, const char **text )
 {
 	char	*token;
 
+	COM_BeginParseSession ("CM_ParseShader");
 	token = COM_ParseExt( text, qtrue );
 	if ( token[0] != '{' )
 	{

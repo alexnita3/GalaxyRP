@@ -200,7 +200,7 @@ copied out.
 */
 qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 	int			sequence;
-	int			qport;
+	//int			qport;
 	int			fragmentStart, fragmentLength;
 	qboolean	fragmented;
 
@@ -218,7 +218,7 @@ qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 
 	// read the qport if we are a server
 	if ( chan->sock == NS_SERVER ) {
-		qport = MSG_ReadShort( msg );
+		/*qport = */MSG_ReadShort( msg );
 	}
 
 	// read the fragment information
@@ -309,7 +309,7 @@ qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 
 		// copy the fragment to the fragment buffer
 		if ( fragmentLength < 0 || msg->readcount + fragmentLength > msg->cursize ||
-			chan->fragmentLength + fragmentLength > sizeof( chan->fragmentBuffer ) ) {
+			chan->fragmentLength + fragmentLength > (int)sizeof( chan->fragmentBuffer ) ) {
 			if ( showdrop->integer || showpackets->integer ) {
 				Com_Printf ("%s:illegal fragment length\n"
 				, NET_AdrToString (chan->remoteAddress ) );
@@ -462,12 +462,12 @@ LOOPBACK BUFFERS FOR LOCAL PLAYER
 // gamestate of maximum size
 #define	MAX_LOOPBACK	16
 
-typedef struct {
+typedef struct loopmsg_s {
 	byte	data[MAX_PACKETLEN];
 	int		datalen;
 } loopmsg_t;
 
-typedef struct {
+typedef struct loopback_s {
 	loopmsg_t	msgs[MAX_LOOPBACK];
 	int			get, send;
 } loopback_t;
