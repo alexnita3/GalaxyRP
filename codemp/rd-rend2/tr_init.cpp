@@ -1242,7 +1242,7 @@ void R_Register( void )
 	r_floatLightmap = ri->Cvar_Get( "r_floatLightmap", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_postProcess = ri->Cvar_Get( "r_postProcess", "1", CVAR_ARCHIVE );
 
-	r_motionblur = ri->Cvar_Get( "r_motionblur", "0", CVAR_ARCHIVE );
+	r_motionblur = ri->Cvar_Get( "r_motionblur", "0", CVAR_ARCHIVE | CVAR_LATCH );
 
 	r_toneMap = ri->Cvar_Get( "r_toneMap", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_forceToneMap = ri->Cvar_Get( "r_forceToneMap", "0", CVAR_CHEAT );
