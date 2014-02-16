@@ -2878,6 +2878,11 @@ void R_CreateBuiltinImages( void ) {
 			tr.hdrDepthImage = R_CreateImage("*hdrDepth", NULL, width, height, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, GL_INTENSITY32F_ARB);
 		}
 
+		if (r_motionblur->integer)
+		{
+			tr.motionBlurImage = R_CreateImage("*motionBlur", NULL, width / 2, height / 2, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, GL_RGBA8);
+		}
+
 		if (r_shadows->integer == 4)
 		{
 			for( x = 0; x < MAX_DRAWN_PSHADOWS; x++)

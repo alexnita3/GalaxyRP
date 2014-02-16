@@ -569,6 +569,16 @@ void FBO_Init(void)
 		R_CheckFBO(tr.screenSsaoFbo);
 	}
 
+	if (r_motionblur->integer)
+	{
+		tr.motionBlurFbo = FBO_Create("_motionBlur", tr.motionBlurImage->width, tr.motionBlurImage->height);
+		FBO_Bind(tr.motionBlurFbo);
+
+		FBO_AttachTextureImage(tr.motionBlurImage, 0);
+
+		R_CheckFBO(tr.motionBlurFbo);
+	}
+
 	if (tr.renderCubeImage != NULL)
 	{
 		tr.renderCubeFbo = FBO_Create("_renderCubeFbo", tr.renderCubeImage->width, tr.renderCubeImage->height);

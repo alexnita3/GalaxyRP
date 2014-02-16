@@ -40,6 +40,8 @@ extern const char *fallbackShader_generic_vp;
 extern const char *fallbackShader_generic_fp;
 extern const char *fallbackShader_lightall_vp;
 extern const char *fallbackShader_lightall_fp;
+extern const char *fallbackShader_motionblur_fp;
+extern const char *fallbackShader_motionblur_vp;
 extern const char *fallbackShader_pshadow_vp;
 extern const char *fallbackShader_pshadow_fp;
 extern const char *fallbackShader_shadowfill_vp;
@@ -122,6 +124,7 @@ static uniformInfo_t uniformsInfo[] =
 
 	{ "u_ModelMatrix",               GLSL_MAT16, 1 },
 	{ "u_ModelViewProjectionMatrix", GLSL_MAT16, 1 },
+	{ "u_ModelViewProjectionMatrixInverse", GLSL_MAT16, 1 },
 
 	{ "u_Time",         GLSL_FLOAT, 1 },
 	{ "u_VertexLerp"  , GLSL_FLOAT, 1 },
@@ -1382,6 +1385,25 @@ void GLSL_InitGPUShaders(void)
 	numEtcShaders++;
 
 
+	attribs = ATTR_POSITION | ATTR_TEXCOORD;
+	extradefines[0] = '\0';
+
+	if (!GLSL_InitGPUShader(&tr.motionBlurShader, "motionblur", attribs, qtrue, extradefines, qtrue, fallbackShader_motionblur_vp, fallbackShader_motionblur_fp))
+	{
+		ri->Error(ERR_FATAL, "Could not load motionblur shader!");
+	}
+
+	GLSL_InitUniforms(&tr.motionBlurShader);
+
+	qglUseProgramObjectARB(tr.motionBlurShader.program);
+	GLSL_SetUniformInt(&tr.motionBlurShader, UNIFORM_SCREENDEPTHMAP, TB_COLORMAP);
+	qglUseProgramObjectARB(0);
+
+	GLSL_FinishGPUShader(&tr.motionBlurShader);
+
+	numEtcShaders++;
+
+
 	for (i = 0; i < 2; i++)
 	{
 		attribs = ATTR_POSITION | ATTR_TEXCOORD;
@@ -1487,6 +1509,7 @@ void GLSL_ShutdownGPUShaders(void)
 
 	GLSL_DeleteGPUShader(&tr.shadowmaskShader);
 	GLSL_DeleteGPUShader(&tr.ssaoShader);
+	GLSL_DeleteGPUShader(&tr.motionBlurShader);
 
 	for ( i = 0; i < 2; i++)
 		GLSL_DeleteGPUShader(&tr.depthBlurShader[i]);

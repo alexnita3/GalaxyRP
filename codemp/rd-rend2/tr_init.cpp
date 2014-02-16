@@ -121,6 +121,8 @@ cvar_t  *r_forceToneMapMin;
 cvar_t  *r_forceToneMapAvg;
 cvar_t  *r_forceToneMapMax;
 
+cvar_t	*r_motionblur;
+
 cvar_t  *r_autoExposure;
 cvar_t  *r_forceAutoExposure;
 cvar_t  *r_forceAutoExposureMin;
@@ -1239,6 +1241,8 @@ void R_Register( void )
 	r_hdr = ri->Cvar_Get( "r_hdr", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_floatLightmap = ri->Cvar_Get( "r_floatLightmap", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_postProcess = ri->Cvar_Get( "r_postProcess", "1", CVAR_ARCHIVE );
+
+	r_motionblur = ri->Cvar_Get( "r_motionblur", "0", CVAR_ARCHIVE );
 
 	r_toneMap = ri->Cvar_Get( "r_toneMap", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_forceToneMap = ri->Cvar_Get( "r_forceToneMap", "0", CVAR_CHEAT );

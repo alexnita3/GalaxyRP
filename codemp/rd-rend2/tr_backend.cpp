@@ -1465,6 +1465,41 @@ const void	*RB_DrawSurfs( const void *data ) {
 			RB_InstantQuad2(quadVerts, texCoords); //, color, shaderProgram, invTexRes);
 		}
 
+		if(r_motionblur->integer) {
+			vec4_t quadVerts[4];
+			vec2_t texCoords[4];
+			matrix_t projectionMatrix;
+			matrix_t invProjectionMatrix;
+			static matrix_t previousMatrix = {0};
+
+			VectorSet4(quadVerts[0], -1,  1, 0, 1);
+			VectorSet4(quadVerts[1],  1,  1, 0, 1);
+			VectorSet4(quadVerts[2],  1, -1, 0, 1);
+			VectorSet4(quadVerts[3], -1, -1, 0, 1);
+
+			texCoords[0][0] = 0; texCoords[0][1] = 1;
+			texCoords[1][0] = 1; texCoords[1][1] = 1;
+			texCoords[2][0] = 1; texCoords[2][1] = 0;
+			texCoords[3][0] = 0; texCoords[3][1] = 0;
+
+			FBO_Bind(tr.motionBlurFbo);
+			
+			qglViewport(0, 0, tr.motionBlurFbo->width, tr.motionBlurFbo->height);
+			qglScissor(0, 0, tr.motionBlurFbo->width, tr.motionBlurFbo->height);
+
+			GLSL_BindProgram(&tr.motionBlurShader);
+
+			Matrix16Copy(glState.modelviewProjection, projectionMatrix);
+			Matrix16SimpleInverse(projectionMatrix, invProjectionMatrix);
+
+			GLSL_SetUniformMatrix16(&tr.motionBlurShader, UNIFORM_MODELVIEWPROJECTIONMATRIXINVERSE, invProjectionMatrix);
+			GLSL_SetUniformMatrix16(&tr.motionBlurShader, UNIFORM_MODELVIEWPROJECTIONMATRIX, previousMatrix); // FIXME: bad
+
+			RB_InstantQuad2(quadVerts, texCoords);
+
+			Matrix16Copy(invProjectionMatrix, previousMatrix);
+		}
+
 		// reset viewport and scissor
 		FBO_Bind(oldFbo);
 		SetViewportAndScissor();
@@ -1852,6 +1887,19 @@ const void *RB_PostProcess(const void *data)
 		srcBox[3] = -srcBox[3];
 
 		FBO_Blit(tr.screenSsaoFbo, srcBox, NULL, srcFbo, dstBox, NULL, NULL, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO);
+	}
+
+	if (r_motionblur->integer)
+	{
+		srcBox[0] = backEnd.viewParms.viewportX		* tr.motionBlurImage->width	/ (float)glConfig.vidWidth;
+		srcBox[1] = backEnd.viewParms.viewportY		* tr.motionBlurImage->height / (float)glConfig.vidHeight;
+		srcBox[2] = backEnd.viewParms.viewportWidth * tr.motionBlurImage->width / (float)glConfig.vidWidth;
+		srcBox[3] = backEnd.viewParms.viewportHeight * tr.motionBlurImage->height / (float)glConfig.vidHeight;
+
+		srcBox[1] = tr.motionBlurImage->height - srcBox[1];
+		srcBox[3] = -srcBox[3];
+
+		FBO_Blit(tr.motionBlurFbo, srcBox, NULL, srcFbo, dstBox, NULL, NULL, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO);
 	}
 
 	srcBox[0] = backEnd.viewParms.viewportX;

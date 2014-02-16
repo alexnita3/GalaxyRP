@@ -166,6 +166,8 @@ extern cvar_t  *r_srgb;
 extern cvar_t  *r_depthPrepass;
 extern cvar_t  *r_ssao;
 
+extern cvar_t  *r_motionblur;
+
 extern cvar_t  *r_normalMapping;
 extern cvar_t  *r_specularMapping;
 extern cvar_t  *r_deluxeMapping;
@@ -1071,6 +1073,7 @@ typedef enum
 
 	UNIFORM_MODELMATRIX,
 	UNIFORM_MODELVIEWPROJECTIONMATRIX,
+	UNIFORM_MODELVIEWPROJECTIONMATRIXINVERSE,
 
 	UNIFORM_TIME,
 	UNIFORM_VERTEXLERP,
@@ -1996,6 +1999,7 @@ typedef struct trGlobals_s {
 	image_t                 *screenSsaoImage;
 	image_t					*hdrDepthImage;
 	image_t                 *renderCubeImage;
+	image_t					*motionBlurImage;
 	
 	image_t					*textureDepthImage;
 
@@ -2013,6 +2017,7 @@ typedef struct trGlobals_s {
 	FBO_t					*screenSsaoFbo;
 	FBO_t					*hdrDepthFbo;
 	FBO_t                   *renderCubeFbo;
+	FBO_t					*motionBlurFbo;
 
 	shader_t				*defaultShader;
 	shader_t				*shadowShader;
@@ -2059,6 +2064,7 @@ typedef struct trGlobals_s {
 	shaderProgram_t ssaoShader;
 	shaderProgram_t depthBlurShader[2];
 	shaderProgram_t testcubeShader;
+	shaderProgram_t	motionBlurShader;
 
 
 	// -----------------------------------------
