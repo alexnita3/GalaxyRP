@@ -11,9 +11,6 @@ uniform vec3   u_ViewUp;
 varying vec2   var_ScreenTex;
 varying vec3   var_ViewDir;
 
-varying vec4	vPosition;
-varying vec4	vPrevPosition;
-
 void main()
 {
 	gl_Position = attr_Position;
@@ -21,7 +18,4 @@ void main()
 	
 	vec2 screenCoords = gl_Position.xy / gl_Position.w;
 	var_ViewDir = u_ViewForward + u_ViewLeft * -screenCoords.x + u_ViewUp * screenCoords.y;
-	
-	vPosition = u_ModelViewProjectionMatrixInverse * gl_Vertex;
-	vPrevPosition = u_ModelViewProjectionMatrix * gl_Vertex;
 }

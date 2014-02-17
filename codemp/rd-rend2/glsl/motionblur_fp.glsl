@@ -7,7 +7,6 @@ uniform vec3   u_ViewOrigin;
 varying vec3   var_ViewDir;
 
 varying vec2   var_ScreenTex;
-varying vec4	
 
 float getLinearDepth(sampler2D depthMap, const vec2 tex, const float zFarDivZNear)
 {
@@ -28,20 +27,24 @@ void main(void)
 	float 		zFar = u_ViewInfo.y;
 	float 		zNear = zFar / u_ViewInfo.x;
 	float 		zFarDivZNear = u_ViewInfo.x;
-	float 		sampleZ = zFar * getLinearDepth(u_ScreenDepthMap, var_ScreenTex, zFarDivZNear);
-	//sampleZ = (sampleZ-zNear)/(zFar-zNear);
+	float 		sampleZ = zFar *  getLinearDepth(u_ScreenDepthMap, var_ScreenTex, zFarDivZNear);
 	float		rawSampleZ = getRawPosition(u_ScreenDepthMap, var_ScreenTex);
+	//rawSampleZ = 1.0 - rawSampleZ;
 	
 	vec4 worldPos = vec4(u_ViewOrigin + var_ViewDir * sampleZ, 1.0);
-	
 	// the viewport position at this pixel in the range -1 to 1.
-	vec4 currentPos = vec4(var_ScreenTex.x * 2 - 1, (1 - var_ScreenTex.y) * 2 - 1, rawSampleZ, 1);;
+	vec4 currentPos = vec4(var_ScreenTex.x * 2 - 1, (1 - var_ScreenTex.y) * 2 - 1, rawSampleZ, 1);
 	// Use the world position, and transform by the previous view-projection matrix.
 	vec4 previousPos = u_ModelViewProjectionMatrix * worldPos;
+	previousPos.y = 1-previousPos.y;
 	// Convert to nonhomogeneous points [-1,1] by dividing by w.
 	previousPos = previousPos / vec4(previousPos.w);
+	// some voodoo here
+	//previousPos.y = 1.0 - previousPos.y;
+	
 	// Use this frame's position and last frame's to compute the pixel velocity.
 	vec2 velocity = vec2(currentPos.xy - previousPos.xy)/2.0;
+	//velocity = (velocity + 1.0 ) / 2.0;
 	
 	vec2 forwardPosition = var_ScreenTex + velocity;
 	for(int i = 1; i < 5; ++i, forwardPosition += velocity)  
@@ -49,10 +52,16 @@ void main(void)
 		// Sample the color buffer along the velocity vector.  
 		vec4 currentColor = texture2D(u_TextureMap, forwardPosition);  
 		// Add the current color to our color sum.  
+		currentColor.w = 1.0;
 		color += currentColor;  
+		gl_FragColor += currentColor;
 	}  
 	
-	//gl_FragColor = color;
-	gl_FragColor = vec4(velocity.x, velocity.y, 0, 1.0);
+	gl_FragColor /= 5;
+	//gl_FragColor = vec4(color.xyz/5, 1.0);
+	//gl_FragColor = vec4(velocity.x, velocity.y, 0.5, 1.0);
+	//gl_FragColor = vec4(sampleZ, sampleZ, sampleZ, 1.0);
 	//gl_FragColor = vec4(worldPos/32.0, 1.0);
+	//gl_FragColor = previousPos;
+	//gl_FragColor = currentPos;
 }

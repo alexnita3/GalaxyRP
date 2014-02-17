@@ -1487,6 +1487,7 @@ const void	*RB_DrawSurfs( const void *data ) {
 
 			GLSL_BindProgram(&tr.motionBlurShader);
 
+			GL_BindToTMU(tr.renderDepthImage, TB_COLORMAP);
 			{
 				vec4_t viewInfo;
 				vec3_t viewVector;
@@ -1515,7 +1516,7 @@ const void	*RB_DrawSurfs( const void *data ) {
 
 			RB_InstantQuad2(quadVerts, texCoords);
 
-			Matrix16Copy(glState.modelview, previousMatrix);
+			Matrix16Copy(glState.modelviewProjection, previousMatrix);
 		}
 
 		// reset viewport and scissor
@@ -1917,7 +1918,7 @@ const void *RB_PostProcess(const void *data)
 		//srcBox[1] = tr.motionBlurImage->height - srcBox[1];
 		//srcBox[3] = -srcBox[3];
 
-		FBO_Blit(tr.motionBlurFbo, srcBox, NULL, srcFbo, dstBox, NULL, NULL, /*GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO*/ 0);
+		FBO_Blit(tr.motionBlurFbo, srcBox, NULL, srcFbo, dstBox, NULL, NULL, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE);
 	}
 
 	srcBox[0] = backEnd.viewParms.viewportX;
