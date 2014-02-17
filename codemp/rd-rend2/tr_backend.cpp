@@ -1326,10 +1326,10 @@ const void	*RB_DrawSurfs( const void *data ) {
 			texCoords[2][0] = box[2]; texCoords[2][1] = box[1];
 			texCoords[3][0] = box[0]; texCoords[3][1] = box[1];
 
-			box[0] = -1.0f;
-			box[1] = -1.0f;
-			box[2] =  1.0f;
-			box[3] =  1.0f;
+			box[0] = 1.0f;
+			box[1] = 1.0f;
+			box[2] = -1.0f;
+			box[3] = -1.0f;
 
 			VectorSet4(quadVerts[0], box[0], box[3], 0, 1);
 			VectorSet4(quadVerts[1], box[2], box[3], 0, 1);
@@ -1468,8 +1468,6 @@ const void	*RB_DrawSurfs( const void *data ) {
 		if(r_motionblur->integer) {
 			vec4_t quadVerts[4];
 			vec2_t texCoords[4];
-			matrix_t projectionMatrix;
-			matrix_t invProjectionMatrix;
 			static matrix_t previousMatrix = {0};
 
 			VectorSet4(quadVerts[0], -1,  1, 0, 1);
@@ -1489,26 +1487,35 @@ const void	*RB_DrawSurfs( const void *data ) {
 
 			GLSL_BindProgram(&tr.motionBlurShader);
 
-			Matrix16Copy(glState.modelviewProjection, projectionMatrix);
-			Matrix16SimpleInverse(projectionMatrix, invProjectionMatrix);
-
 			{
 				vec4_t viewInfo;
+				vec3_t viewVector;
 
 				float zmax = backEnd.viewParms.zFar;
+				float ymax = zmax * tan(backEnd.viewParms.fovY * M_PI / 360.0f);
+				float xmax = zmax * tan(backEnd.viewParms.fovX * M_PI / 360.0f);
+
 				float zmin = r_znear->value;
+
+				VectorScale(backEnd.refdef.viewaxis[0], zmax, viewVector);
+				GLSL_SetUniformVec3(&tr.motionBlurShader, UNIFORM_VIEWFORWARD, viewVector);
+				VectorScale(backEnd.refdef.viewaxis[1], xmax, viewVector);
+				GLSL_SetUniformVec3(&tr.motionBlurShader, UNIFORM_VIEWLEFT,    viewVector);
+				VectorScale(backEnd.refdef.viewaxis[2], ymax, viewVector);
+				GLSL_SetUniformVec3(&tr.motionBlurShader, UNIFORM_VIEWUP,      viewVector);
 
 				VectorSet4(viewInfo, zmax / zmin, zmax, 0.0, 0.0);
 
 				GLSL_SetUniformVec4(&tr.motionBlurShader, UNIFORM_VIEWINFO, viewInfo);
 			}
 
-			GLSL_SetUniformMatrix16(&tr.motionBlurShader, UNIFORM_MODELVIEWPROJECTIONMATRIXINVERSE, invProjectionMatrix);
+			GLSL_SetUniformVec3(&tr.motionBlurShader, UNIFORM_VIEWORIGIN, backEnd.viewParms.ori.origin);
+			GLSL_SetUniformMatrix16(&tr.motionBlurShader, UNIFORM_MODELVIEWPROJECTIONMATRIXINVERSE, glState.modelviewProjection);
 			GLSL_SetUniformMatrix16(&tr.motionBlurShader, UNIFORM_MODELVIEWPROJECTIONMATRIX, previousMatrix); // FIXME: bad
 
 			RB_InstantQuad2(quadVerts, texCoords);
 
-			Matrix16Copy(invProjectionMatrix, previousMatrix);
+			Matrix16Copy(glState.modelview, previousMatrix);
 		}
 
 		// reset viewport and scissor
@@ -1907,10 +1914,10 @@ const void *RB_PostProcess(const void *data)
 		srcBox[2] = backEnd.viewParms.viewportWidth * tr.motionBlurImage->width / (float)glConfig.vidWidth;
 		srcBox[3] = backEnd.viewParms.viewportHeight * tr.motionBlurImage->height / (float)glConfig.vidHeight;
 
-		srcBox[1] = tr.motionBlurImage->height - srcBox[1];
-		srcBox[3] = -srcBox[3];
+		//srcBox[1] = tr.motionBlurImage->height - srcBox[1];
+		//srcBox[3] = -srcBox[3];
 
-		FBO_Blit(tr.motionBlurFbo, srcBox, NULL, srcFbo, dstBox, NULL, NULL, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO);
+		FBO_Blit(tr.motionBlurFbo, srcBox, NULL, srcFbo, dstBox, NULL, NULL, /*GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO*/ 0);
 	}
 
 	srcBox[0] = backEnd.viewParms.viewportX;
