@@ -1492,6 +1492,17 @@ const void	*RB_DrawSurfs( const void *data ) {
 			Matrix16Copy(glState.modelviewProjection, projectionMatrix);
 			Matrix16SimpleInverse(projectionMatrix, invProjectionMatrix);
 
+			{
+				vec4_t viewInfo;
+
+				float zmax = backEnd.viewParms.zFar;
+				float zmin = r_znear->value;
+
+				VectorSet4(viewInfo, zmax / zmin, zmax, 0.0, 0.0);
+
+				GLSL_SetUniformVec4(&tr.motionBlurShader, UNIFORM_VIEWINFO, viewInfo);
+			}
+
 			GLSL_SetUniformMatrix16(&tr.motionBlurShader, UNIFORM_MODELVIEWPROJECTIONMATRIXINVERSE, invProjectionMatrix);
 			GLSL_SetUniformMatrix16(&tr.motionBlurShader, UNIFORM_MODELVIEWPROJECTIONMATRIX, previousMatrix); // FIXME: bad
 
