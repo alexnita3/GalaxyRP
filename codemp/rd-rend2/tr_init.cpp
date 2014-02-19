@@ -122,6 +122,9 @@ cvar_t  *r_forceToneMapAvg;
 cvar_t  *r_forceToneMapMax;
 
 cvar_t	*r_motionblur;
+cvar_t	*r_motionblurSamples;
+cvar_t	*r_motionblurVelocityScale;
+cvar_t	*r_motionblurDepthThreshold;
 
 cvar_t  *r_autoExposure;
 cvar_t  *r_forceAutoExposure;
@@ -1243,6 +1246,9 @@ void R_Register( void )
 	r_postProcess = ri->Cvar_Get( "r_postProcess", "1", CVAR_ARCHIVE );
 
 	r_motionblur = ri->Cvar_Get( "r_motionblur", "0", CVAR_ARCHIVE | CVAR_LATCH );
+	r_motionblurSamples = ri->Cvar_Get( "r_motionblurSamples", "10", CVAR_ARCHIVE );
+	r_motionblurVelocityScale = ri->Cvar_Get( "r_motionblurVelocityScale", "1.0", CVAR_ARCHIVE );
+	r_motionblurDepthThreshold = ri->Cvar_Get( "r_motionblurDepthThreshold", "2.0", CVAR_ARCHIVE );
 
 	r_toneMap = ri->Cvar_Get( "r_toneMap", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_forceToneMap = ri->Cvar_Get( "r_forceToneMap", "0", CVAR_CHEAT );

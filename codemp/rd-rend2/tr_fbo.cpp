@@ -576,7 +576,16 @@ void FBO_Init(void)
 
 		FBO_AttachTextureImage(tr.motionBlurImage, 0);
 
+		R_AttachFBOTextureDepth(tr.renderDepthImage->texnum);
+
 		R_CheckFBO(tr.motionBlurFbo);
+
+		tr.motionBlurScreenFbo = FBO_Create("_motionBlurS", tr.motionBlurScreenImage->width, tr.motionBlurScreenImage->height);
+		FBO_Bind(tr.motionBlurScreenFbo);
+
+		FBO_AttachTextureImage(tr.motionBlurScreenImage, 0);
+
+		R_CheckFBO(tr.motionBlurScreenFbo);
 	}
 
 	if (tr.renderCubeImage != NULL)

@@ -2881,6 +2881,7 @@ void R_CreateBuiltinImages( void ) {
 		if (r_motionblur->integer)
 		{
 			tr.motionBlurImage = R_CreateImage("*motionBlur", NULL, width, height, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, GL_RGBA8);
+			tr.motionBlurScreenImage = R_CreateImage("*motionBlurS", NULL, width, height, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, GL_RGBA8);
 		}
 
 		if (r_shadows->integer == 4)

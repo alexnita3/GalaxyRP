@@ -167,6 +167,9 @@ extern cvar_t  *r_depthPrepass;
 extern cvar_t  *r_ssao;
 
 extern cvar_t  *r_motionblur;
+extern cvar_t	*r_motionblurSamples;
+extern cvar_t	*r_motionblurVelocityScale;
+extern cvar_t	*r_motionblurDepthThreshold;
 
 extern cvar_t  *r_normalMapping;
 extern cvar_t  *r_specularMapping;
@@ -1097,6 +1100,14 @@ typedef enum
 
 	UNIFORM_BONE_MATRICES,
 
+	// Generic uniforms that can be used for a variety of different reasons --eez
+	UNIFORM_USERINT1,
+	UNIFORM_USERINT2,
+	UNIFORM_USERINT3,
+	UNIFORM_USERFLOAT1,
+	UNIFORM_USERFLOAT2,
+	UNIFORM_USERFLOAT3,
+
 	UNIFORM_COUNT
 } uniform_t;
 
@@ -2000,6 +2011,7 @@ typedef struct trGlobals_s {
 	image_t					*hdrDepthImage;
 	image_t                 *renderCubeImage;
 	image_t					*motionBlurImage;
+	image_t					*motionBlurScreenImage;
 	
 	image_t					*textureDepthImage;
 
@@ -2018,6 +2030,7 @@ typedef struct trGlobals_s {
 	FBO_t					*hdrDepthFbo;
 	FBO_t                   *renderCubeFbo;
 	FBO_t					*motionBlurFbo;
+	FBO_t					*motionBlurScreenFbo;
 
 	shader_t				*defaultShader;
 	shader_t				*shadowShader;
@@ -2520,6 +2533,7 @@ struct shaderCommands_s
 
 	// JA specific
 	bool		fading;
+	matrix_t	previousModelViewProjectionMatrix; // I have good reasons for this, I swear --eez
 };
 
 #ifdef _WIN32

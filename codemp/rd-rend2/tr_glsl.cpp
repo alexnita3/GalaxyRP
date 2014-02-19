@@ -147,6 +147,13 @@ static uniformInfo_t uniformsInfo[] =
 	{ "u_PrimaryLightRadius",  GLSL_FLOAT, 1 },
 
 	{ "u_BoneMatrices",			GLSL_MAT16, 80 },
+
+	{ "u_UserInt1",				GLSL_INT, 1 },
+	{ "u_UserInt2",				GLSL_INT, 1 },
+	{ "u_UserInt3",				GLSL_INT, 1 },
+	{ "u_UserFloat1",			GLSL_FLOAT, 1 },
+	{ "u_UserFloat2",			GLSL_FLOAT, 1 },
+	{ "u_UserFloat3",			GLSL_FLOAT, 1 },
 };
 
 
@@ -1396,7 +1403,8 @@ void GLSL_InitGPUShaders(void)
 	GLSL_InitUniforms(&tr.motionBlurShader);
 
 	qglUseProgramObjectARB(tr.motionBlurShader.program);
-	GLSL_SetUniformInt(&tr.motionBlurShader, UNIFORM_SCREENDEPTHMAP, TB_COLORMAP);
+	GLSL_SetUniformInt(&tr.motionBlurShader, UNIFORM_SCREENIMAGEMAP, TB_DIFFUSEMAP);
+	GLSL_SetUniformInt(&tr.motionBlurShader, UNIFORM_SCREENDEPTHMAP, TB_LIGHTMAP);
 	qglUseProgramObjectARB(0);
 
 	GLSL_FinishGPUShader(&tr.motionBlurShader);

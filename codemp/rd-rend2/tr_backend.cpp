@@ -1244,6 +1244,14 @@ const void *RB_RotatePic2 ( const void *data )
 	return (const void *)(cmd + 1);
 }
 
+// HACK
+void RB_CaptureScreenImage(void)
+{
+	GL_SelectTexture(0);
+	GL_Bind( tr.motionBlurScreenImage );
+
+	qglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, backEnd.refdef.x, backEnd.refdef.y, backEnd.refdef.width, backEnd.refdef.height, 0);
+}
 
 /*
 =============
@@ -1401,7 +1409,6 @@ const void	*RB_DrawSurfs( const void *data ) {
 			GLSL_BindProgram(&tr.ssaoShader);
 
 			GL_BindToTMU(tr.hdrDepthImage, TB_COLORMAP);
-
 			{
 				vec4_t viewInfo;
 
@@ -1465,7 +1472,7 @@ const void	*RB_DrawSurfs( const void *data ) {
 			RB_InstantQuad2(quadVerts, texCoords); //, color, shaderProgram, invTexRes);
 		}
 
-		if(r_motionblur->integer) {
+		if(r_motionblur->integer == 1) {
 			vec4_t quadVerts[4];
 			vec2_t texCoords[4];
 			static matrix_t previousMatrix = {0};
@@ -1480,6 +1487,8 @@ const void	*RB_DrawSurfs( const void *data ) {
 			texCoords[2][0] = 1; texCoords[2][1] = 0;
 			texCoords[3][0] = 0; texCoords[3][1] = 0;
 
+			GL_State( GLS_DEPTHTEST_DISABLE );
+
 			FBO_Bind(tr.motionBlurFbo);
 			
 			qglViewport(0, 0, tr.motionBlurFbo->width, tr.motionBlurFbo->height);
@@ -1487,7 +1496,8 @@ const void	*RB_DrawSurfs( const void *data ) {
 
 			GLSL_BindProgram(&tr.motionBlurShader);
 
-			GL_BindToTMU(tr.renderDepthImage, TB_COLORMAP);
+			GL_BindToTMU(tr.motionBlurScreenImage, TB_COLORMAP);
+			GL_BindToTMU(tr.renderDepthImage, TB_LIGHTMAP); // here is where the swap occurs
 			{
 				vec4_t viewInfo;
 				vec3_t viewVector;
@@ -1510,9 +1520,14 @@ const void	*RB_DrawSurfs( const void *data ) {
 				GLSL_SetUniformVec4(&tr.motionBlurShader, UNIFORM_VIEWINFO, viewInfo);
 			}
 
+			GLSL_SetUniformInt(&tr.motionBlurShader, UNIFORM_USERINT1, r_motionblur->integer);
+			GLSL_SetUniformInt(&tr.motionBlurShader, UNIFORM_USERINT2, r_motionblurSamples->integer);
+			GLSL_SetUniformFloat(&tr.motionBlurShader, UNIFORM_USERFLOAT1, r_motionblurVelocityScale->value);
+			GLSL_SetUniformFloat(&tr.motionBlurShader, UNIFORM_USERFLOAT2, r_motionblurDepthThreshold->value);
+
 			GLSL_SetUniformVec3(&tr.motionBlurShader, UNIFORM_VIEWORIGIN, backEnd.viewParms.ori.origin);
+			GLSL_SetUniformMatrix16(&tr.motionBlurShader, UNIFORM_MODELVIEWPROJECTIONMATRIX, previousMatrix);
 			GLSL_SetUniformMatrix16(&tr.motionBlurShader, UNIFORM_MODELVIEWPROJECTIONMATRIXINVERSE, glState.modelviewProjection);
-			GLSL_SetUniformMatrix16(&tr.motionBlurShader, UNIFORM_MODELVIEWPROJECTIONMATRIX, previousMatrix); // FIXME: bad
 
 			RB_InstantQuad2(quadVerts, texCoords);
 
@@ -1908,17 +1923,16 @@ const void *RB_PostProcess(const void *data)
 		FBO_Blit(tr.screenSsaoFbo, srcBox, NULL, srcFbo, dstBox, NULL, NULL, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO);
 	}
 
-	if (r_motionblur->integer)
+	if (r_motionblur->integer == 1)
 	{
 		srcBox[0] = backEnd.viewParms.viewportX		* tr.motionBlurImage->width	/ (float)glConfig.vidWidth;
 		srcBox[1] = backEnd.viewParms.viewportY		* tr.motionBlurImage->height / (float)glConfig.vidHeight;
 		srcBox[2] = backEnd.viewParms.viewportWidth * tr.motionBlurImage->width / (float)glConfig.vidWidth;
 		srcBox[3] = backEnd.viewParms.viewportHeight * tr.motionBlurImage->height / (float)glConfig.vidHeight;
 
-		//srcBox[1] = tr.motionBlurImage->height - srcBox[1];
-		//srcBox[3] = -srcBox[3];
-
-		FBO_Blit(tr.motionBlurFbo, srcBox, NULL, srcFbo, dstBox, NULL, NULL, GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE);
+		//FBO_BlitFromTexture(tr.motionBlurImage, srcBox, NULL, srcFbo, dstBox, NULL, NULL, 0);
+		RB_CaptureScreenImage();
+		FBO_Blit(tr.motionBlurFbo, srcBox, NULL, srcFbo, dstBox, NULL, NULL, /*GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO*/ 0);
 	}
 
 	srcBox[0] = backEnd.viewParms.viewportX;

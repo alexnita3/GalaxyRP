@@ -1,67 +1,82 @@
-uniform mat4 u_ModelViewProjectionMatrix;
-uniform sampler2D u_TextureMap;
-uniform vec4   u_ViewInfo; // zfar / znear, zfar
-uniform sampler2D u_ScreenDepthMap;
-uniform vec3   u_ViewOrigin;
+uniform sampler2D	u_ScreenImageMap;
+uniform sampler2D	u_ScreenDepthMap;
 
-varying vec3   var_ViewDir;
+uniform mat4		u_ModelViewProjectionMatrix;	// previous MVP
+uniform vec4		u_ViewInfo;					// zfar / znear, zfar
+uniform vec3		u_ViewOrigin;
 
-varying vec2   var_ScreenTex;
+uniform int			u_UserInt1;						// r_motionblur
+uniform int			u_UserInt2;						// r_motionblurnumsamples
+uniform float		u_UserFloat1;					// r_motionblurVelocityScale
+uniform float		u_UserFloat2;					// r_motionblurDepthThreshold
+
+varying vec3		var_ViewDir;
+varying vec2		var_ScreenTex;
+
+// Only used by r_motionblur 2
+varying vec4		var_VertPosition;
+varying vec4		var_PrevVertPosition;
 
 float getLinearDepth(sampler2D depthMap, const vec2 tex, const float zFarDivZNear)
 {
 		float sampleZDivW = texture2D(depthMap, tex).r;
 		return 1.0 / mix(zFarDivZNear, 1.0, sampleZDivW);
 }
-
-float getRawPosition(sampler2D depthMap, const vec2 tex)
-{
-	float sampleZDivW = texture2D(depthMap, tex).r;
-	return sampleZDivW * 2.0 - 1.0;
-}
  
 void main(void)
 {
-	vec4 		color = texture2D(u_TextureMap, var_ScreenTex);
-	vec4 		depthColor = texture2D(u_ScreenDepthMap, var_ScreenTex);
-	float 		zFar = u_ViewInfo.y;
-	float 		zNear = zFar / u_ViewInfo.x;
-	float 		zFarDivZNear = u_ViewInfo.x;
-	float 		sampleZ = zFar *  getLinearDepth(u_ScreenDepthMap, var_ScreenTex, zFarDivZNear);
-	float		rawSampleZ = getRawPosition(u_ScreenDepthMap, var_ScreenTex);
-	//rawSampleZ = 1.0 - rawSampleZ;
+	if(u_UserInt1 == 1) {
+		vec4 		color			=	texture2D(u_ScreenImageMap, var_ScreenTex);
+		vec4 		depthColor		=	texture2D(u_ScreenDepthMap, var_ScreenTex);
+		float 		zFar			=	u_ViewInfo.y;
+		float 		zNear			=	zFar / u_ViewInfo.x;
+		float 		zFarDivZNear	=	u_ViewInfo.x;
+		float		linearDepth		=	getLinearDepth(u_ScreenDepthMap, var_ScreenTex, zFarDivZNear);
+		float 		sampleZ			=	zFar *  linearDepth;
 	
-	vec4 worldPos = vec4(u_ViewOrigin + var_ViewDir * sampleZ, 1.0);
-	// the viewport position at this pixel in the range -1 to 1.
-	vec4 currentPos = vec4(var_ScreenTex.x * 2 - 1, (1 - var_ScreenTex.y) * 2 - 1, rawSampleZ, 1);
-	// Use the world position, and transform by the previous view-projection matrix.
-	vec4 previousPos = u_ModelViewProjectionMatrix * worldPos;
-	previousPos.y = 1-previousPos.y;
-	// Convert to nonhomogeneous points [-1,1] by dividing by w.
-	previousPos = previousPos / vec4(previousPos.w);
-	// some voodoo here
-	//previousPos.y = 1.0 - previousPos.y;
+		vec4		worldPos		=	vec4(u_ViewOrigin + var_ViewDir * sampleZ, 1.0);
+
+		// the viewport position at this pixel in the range -1 to 1.
+		vec2		currentPos		=	var_ScreenTex * 2.0 - vec2 (1.0);
+
+		// Use the world position, and transform by the previous view-projection matrix.
+		vec4		previousPos		=	u_ModelViewProjectionMatrix * worldPos;
+
+
+		// Convert to nonhomogeneous points [-1,1] by dividing by w.
+		previousPos = previousPos / vec4(previousPos.w);
+		// Use this frame's position and last frame's to compute the pixel velocity.
+		vec2 velocity = vec2(currentPos.xy - previousPos.xy)/2.0;
+		if(linearDepth < u_UserFloat2) {
+			// Don't blur the viewmodel.
+			velocity = 0.0;
+		}
+
+		int nSamples = u_UserInt2;
+		vec2 forwardPosition = var_ScreenTex;
+
+		// The velocity vector gets divided by the number of samples, that way the sample count doesn't affect blur length
+		velocity /= (nSamples/2.0);
+		velocity *= u_UserFloat1;
+
+		// Loop through each sample, blurring along the way.
+		for(int i = 1; i < nSamples; ++i, forwardPosition -= velocity)  
+		{  
+			// Sample the color buffer along the velocity vector.
+			vec4 currentColor = texture2D(u_ScreenImageMap, forwardPosition);  
+			// Add the current color to our color sum.  
+			currentColor.w = 1.0;
+			color += currentColor;
+		}  
 	
-	// Use this frame's position and last frame's to compute the pixel velocity.
-	vec2 velocity = vec2(currentPos.xy - previousPos.xy)/2.0;
-	//velocity = (velocity + 1.0 ) / 2.0;
-	
-	vec2 forwardPosition = var_ScreenTex + velocity;
-	for(int i = 1; i < 5; ++i, forwardPosition += velocity)  
-	{  
-		// Sample the color buffer along the velocity vector.  
-		vec4 currentColor = texture2D(u_TextureMap, forwardPosition);  
-		// Add the current color to our color sum.  
-		currentColor.w = 1.0;
-		color += currentColor;  
-		gl_FragColor += currentColor;
-	}  
-	
-	gl_FragColor /= 5;
-	//gl_FragColor = vec4(color.xyz/5, 1.0);
-	//gl_FragColor = vec4(velocity.x, velocity.y, 0.5, 1.0);
-	//gl_FragColor = vec4(sampleZ, sampleZ, sampleZ, 1.0);
-	//gl_FragColor = vec4(worldPos/32.0, 1.0);
-	//gl_FragColor = previousPos;
-	//gl_FragColor = currentPos;
+		gl_FragColor = color/nSamples;
+	}
+	else {
+		// Let's just render a velocity map for now
+		vec2 extrapolatedCurPos = (var_VertPosition.xy / var_VertPosition.w) * 0.5 + 0.5;
+		vec2 extrapolatedPrevPos = (var_PrevVertPosition.xy / var_PrevVertPosition.w) * 0.5 + 0.5;
+		vec2 vertVelocity = extrapolatedCurPos - extrapolatedPrevPos;
+
+		gl_FragColor = vec4(vertVelocity.x, vertVelocity.y, 0.5, 1.0);
+	}
 }
