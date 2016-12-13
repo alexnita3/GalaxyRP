@@ -6763,6 +6763,7 @@ extern void set_max_health(gentity_t *ent);
 extern void set_max_shield(gentity_t *ent);
 extern gentity_t *load_effect(int x,int y,int z, int spawnflags, char *fxFile);
 
+extern void WP_DisruptorAltFire(gentity_t *ent);
 extern void G_Kill( gentity_t *ent );
 
 void G_RunFrame( int levelTime ) {
@@ -8978,7 +8979,14 @@ void G_RunFrame( int levelTime ) {
 					ent->client->pers.monk_unique_timer = level.time + 200;
 				}
 				else if (ent->client->pers.rpg_class == 5)
-				{
+				{ // zyk: Stealth Attacker abilities
+					if (ent->client->pers.player_statuses & (1 << 23) && ent->client->pers.monk_unique_timer < level.time)
+					{ // zyk: Aimed Shot ability. Fires the full charged sniper shot
+						WP_DisruptorAltFire(ent);
+
+						ent->client->pers.monk_unique_timer = level.time + 2000;
+					}
+
 					if (ent->client->pers.thermal_vision == qtrue && ent->client->ps.zoomMode == 0)
 					{ // zyk: if the stealth attacker stops using sniper scope, stop the Thermal Detector
 						ent->client->pers.thermal_vision = qfalse;

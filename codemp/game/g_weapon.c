@@ -739,6 +739,41 @@ void WP_DisruptorAltFire( gentity_t *ent )
 
 	//VectorCopy( muzzle, muzzle2 ); // making a backup copy
 
+	if (ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 5 && ent->client->pers.player_statuses & (1 << 23))
+	{ // zyk: Stealth Attacker Aimed Shot ability
+		if (ent->client->pers.unique_skill_user_id > -1)
+		{ // zyk: if we have a target, shoot at him
+			gentity_t *target_ent = &g_entities[ent->client->pers.unique_skill_user_id];
+			vec3_t zyk_dir;
+
+			// zyk: make it a full charged shot
+			ent->client->ps.weaponChargeTime = level.time - 2000;
+
+			VectorCopy(ent->client->ps.origin, muzzle);
+			muzzle[2] += 18;
+
+			VectorSubtract(target_ent->client->ps.origin, muzzle, zyk_dir);
+			VectorNormalize(zyk_dir);
+
+			VectorCopy(zyk_dir, forward);
+		}
+		else
+		{ // zyk if no target, shoot forward
+			vec3_t zyk_dir;
+
+			// zyk: make it a full charged shot
+			ent->client->ps.weaponChargeTime = level.time - 2000;
+
+			VectorCopy(ent->client->ps.origin, muzzle);
+			muzzle[2] += 18;
+
+			AngleVectors(ent->client->ps.viewangles, zyk_dir, NULL, NULL);
+			VectorNormalize(zyk_dir);
+
+			VectorCopy(zyk_dir, forward);
+		}
+	}
+
 	if (ent->client)
 	{
 		VectorCopy( ent->client->ps.origin, start );

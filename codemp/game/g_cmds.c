@@ -10085,7 +10085,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 5)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Stealth Attacker\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Stealth Attacker gets Aimed Shot, in which he aims with the disruptor rifle and fires a charged shot with 100 per cent accuracy. Spends 30 power cell ammo\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 6)
 			{
@@ -15570,8 +15570,60 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 			}
 			else if (ent->client->pers.rpg_class == 5)
-			{ // zyk: Stealth Attacker
+			{ // zyk: Stealth Attacker Aimed Shot
+				if (ent->client->ps.ammo[AMMO_POWERCELL] >= 30 && ent->client->ps.weapon == WP_DISRUPTOR)
+				{
+					int i = 0;
+					int min_dist = 900;
+					gentity_t *chosen_ent = NULL;
 
+					ent->client->ps.ammo[AMMO_POWERCELL] -= 30;
+
+					for (i = 0; i < level.num_entities; i++)
+					{
+						gentity_t *player_ent = &g_entities[i];
+
+						if (player_ent && player_ent->client && ent != player_ent && player_ent->health > 0 &&
+							zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue)
+						{
+							int player_dist = Distance(ent->client->ps.origin, player_ent->client->ps.origin);
+
+							if (player_dist < min_dist)
+							{
+								min_dist = player_dist;
+
+								chosen_ent = player_ent;
+							}
+						}
+					}
+
+					if (chosen_ent)
+					{ // zyk: if we have a target, shoot a rocket at him
+						ent->client->pers.unique_skill_user_id = chosen_ent->s.number;
+					}
+					else
+					{
+						ent->client->pers.unique_skill_user_id = -1;
+					}
+
+					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+					ent->client->ps.forceDodgeAnim = TORSO_WEAPONREADY4;
+					ent->client->ps.forceHandExtendTime = level.time + 1000;
+
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1000;
+
+					ent->client->pers.monk_unique_timer = level.time + 500;
+
+					ent->client->pers.player_statuses |= (1 << 23);
+
+					rpg_skill_counter(ent, 200);
+
+					ent->client->pers.unique_skill_timer = level.time + 45000;
+				}
+				else
+				{
+					trap->SendServerCommand(ent->s.number, "chat \"^3Unique Ability: ^7needs 30 power cell ammo and disruptor rifle to use it\"");
+				}
 			}
 			else if (ent->client->pers.rpg_class == 6)
 			{ // zyk: Duelist Super Throw

@@ -757,6 +757,9 @@ typedef struct clientPersistant_s {
 	// zyk: Monk Spin Kick ability interval between hits. Also used by Monk Meditation Drain ability as interval between hits
 	int monk_unique_timer;
 
+	// zyk: used by Aimed Shot ability
+	int unique_skill_user_id;
+
 	// zyk: stun baton 3/3 timer. This entity has less run speed during this time
 	int stun_baton_less_speed_timer;
 
