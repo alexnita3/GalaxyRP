@@ -110,7 +110,7 @@ qboolean G_CanBeEnemy( gentity_t *self, gentity_t *enemy )
 		return qfalse;
 
 	// zyk: cannot grab people in private duels
-	if (!enemy->NPC && enemy->client->ps.duelInProgress == qtrue)
+	if (!enemy->NPC && self->client->ps.duelInProgress == qfalse && enemy->client->ps.duelInProgress == qtrue)
 	{
 		return qfalse;
 	}
