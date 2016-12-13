@@ -4899,18 +4899,18 @@ void zyk_vertical_dfa_effect(gentity_t *ent)
 
 	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2] - 20));
 
-	new_ent->s.modelindex = G_EffectIndex("repeater/concussion");
+	new_ent->s.modelindex = G_EffectIndex("ships/proton_impact");
 
 	zyk_spawn_entity(new_ent);
 
-	new_ent->splashDamage = 100;
+	new_ent->splashDamage = 150;
 
-	new_ent->splashRadius = 100;
+	new_ent->splashRadius = 600;
 
 	new_ent->nextthink = level.time + 900;
 
 	level.special_power_effects[new_ent->s.number] = ent->s.number;
-	level.special_power_effects_timer[new_ent->s.number] = level.time + 1550;
+	level.special_power_effects_timer[new_ent->s.number] = level.time + 1300;
 }
 
 void zyk_bomb_model_think(gentity_t *ent)

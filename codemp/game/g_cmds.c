@@ -10046,7 +10046,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 6)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 2: ^7used with /unique command. You can only have one Unique Ability at a time. Duelist gets Vertical DFA, which makes him jump and hit the enemy with the saber, with a very high damage. Spends 50 force\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 2: ^7used with /unique command. You can only have one Unique Ability at a time. Duelist gets Vertical DFA, which makes him jump and hit the ground with the saber, with high damage, and creating a powerful shockwave that damages enemies. Spends 50 force\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 7)
 			{

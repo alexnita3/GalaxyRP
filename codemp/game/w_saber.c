@@ -4338,15 +4338,15 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 				dmg = 0;
 		}
 
-		// zyk: Duelist Unique Upgrades. Heavily increases saber damage
+		// zyk: Duelist Unique Abilities. Heavily increases saber damage
 		if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 6 && 
 			self->client->ps.powerups[PW_NEUTRALFLAG] > level.time)
 		{
 			if (self->client->ps.torsoAnim == BOTH_PULL_IMPALE_STAB) // zyk: Impale Stab
 				dmg = 80;
 			else if (self->client->ps.torsoAnim == BOTH_FORCELEAP2_T__B_) // zyk: Vertical DFA
-				dmg = 80;
-			else if (self->client->ps.torsoAnim == BOTH_ALORA_SPIN_THROW) // zyk: Vertical DFA
+				dmg = 40;
+			else if (self->client->ps.torsoAnim == BOTH_ALORA_SPIN_THROW) // zyk: Super Throw
 				dmg = 80;
 		}
 
