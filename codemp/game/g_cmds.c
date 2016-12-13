@@ -10065,7 +10065,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		{
 			if (ent->client->pers.rpg_class == 0)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Free Warrior gets Multi Beam, which fires three spread super beams with less damage than the Super Beam ability. Spends 100 force and 40 mp\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Free Warrior gets Multi Beam, which fires three spread super beams with less damage than the Super Beam ability. Spends 120 force and 40 mp\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 1)
 			{
@@ -15470,9 +15470,9 @@ void Cmd_Unique_f(gentity_t *ent) {
 		{
 			if (ent->client->pers.rpg_class == 0)
 			{ // zyk: Free Warrior Multi Beam
-				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 2) && ent->client->pers.magic_power >= 40)
+				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer * 0.6) && ent->client->pers.magic_power >= 40)
 				{
-					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 2);
+					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer * 0.6);
 					ent->client->pers.magic_power -= 40;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
@@ -15495,7 +15495,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 				else
 				{
-					trap->SendServerCommand(ent->s.number, va("chat \"^3Unique Ability: ^7needs %d force and 40 mp to use it\"", (zyk_max_force_power.integer / 2)));
+					trap->SendServerCommand(ent->s.number, va("chat \"^3Unique Ability: ^7needs %d force and 40 mp to use it\"", (zyk_max_force_power.integer * 0.6)));
 				}
 			}
 			else if (ent->client->pers.rpg_class == 1)
