@@ -744,7 +744,7 @@ void WP_DisruptorAltFire( gentity_t *ent )
 		if (ent->client->pers.unique_skill_user_id > -1)
 		{ // zyk: if we have a target, shoot at him
 			gentity_t *target_ent = &g_entities[ent->client->pers.unique_skill_user_id];
-			vec3_t zyk_dir;
+			vec3_t zyk_dir, zyk_enemy_origin;
 
 			// zyk: make it a full charged shot
 			ent->client->ps.weaponChargeTime = level.time - 2000;
@@ -752,7 +752,13 @@ void WP_DisruptorAltFire( gentity_t *ent )
 			VectorCopy(ent->client->ps.origin, muzzle);
 			muzzle[2] += 18;
 
-			VectorSubtract(target_ent->client->ps.origin, muzzle, zyk_dir);
+			VectorCopy(target_ent->client->ps.origin, zyk_enemy_origin);
+			if (target_ent->client->ps.pm_flags & PMF_DUCKED) // zyk: crouched
+			{
+				zyk_enemy_origin[2] -= 24;
+			}
+
+			VectorSubtract(zyk_enemy_origin, muzzle, zyk_dir);
 			VectorNormalize(zyk_dir);
 
 			VectorCopy(zyk_dir, forward);
