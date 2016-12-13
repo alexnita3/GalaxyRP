@@ -10101,7 +10101,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 9)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Force Tank\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Force Tank gets Force Attraction, which damages and pulls enemies towards the user. Spends 50 force\n\n\"");
 			}
 		}
 		else if (i == 56)
@@ -15680,8 +15680,61 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 			}
 			else if (ent->client->pers.rpg_class == 9)
-			{ // zyk: Force Tank
+			{ // zyk: Force Tank Force Attraction
+				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 4))
+				{
+					int i = 0;
+					int push_scale = 700;
 
+					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
+
+					for (i = 0; i < level.num_entities; i++)
+					{
+						gentity_t *player_ent = &g_entities[i];
+
+						if (player_ent && player_ent->client && ent != player_ent &&
+							zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue &&
+							Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 300)
+						{
+							vec3_t dir;
+
+							VectorSubtract(ent->client->ps.origin, player_ent->client->ps.origin, dir);
+							VectorNormalize(dir);
+
+							player_ent->client->ps.velocity[0] = dir[0] * push_scale;
+							player_ent->client->ps.velocity[1] = dir[1] * push_scale;
+							player_ent->client->ps.velocity[2] = 250;
+
+							player_ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
+							player_ent->client->ps.forceHandExtendTime = level.time + 1000;
+							player_ent->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
+							player_ent->client->ps.quickerGetup = qtrue;
+
+							G_Damage(player_ent, ent, ent, NULL, NULL, 20, 0, MOD_UNKNOWN);
+						}
+					}
+
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+
+					ent->client->pers.player_statuses |= (1 << 23);
+
+					G_Sound(ent, CHAN_BODY, G_SoundIndex("sound/weapons/force/pull.wav"));
+					if (ent->client->ps.forceHandExtend == HANDEXTEND_NONE)
+					{
+						ent->client->ps.forceHandExtend = HANDEXTEND_FORCEPULL;
+						ent->client->ps.forceHandExtendTime = level.time + 400;
+					}
+					ent->client->ps.powerups[PW_DISINT_4] = ent->client->ps.forceHandExtendTime + 200;
+					ent->client->ps.powerups[PW_PULL] = ent->client->ps.powerups[PW_DISINT_4];
+
+					rpg_skill_counter(ent, 200);
+
+					ent->client->pers.unique_skill_timer = level.time + 50000;
+				}
+				else
+				{
+					trap->SendServerCommand(ent->s.number, va("chat \"^3Unique Ability: ^7needs %d force to use it\"", (zyk_max_force_power.integer / 4)));
+				}
 			}
 		}
 		else
