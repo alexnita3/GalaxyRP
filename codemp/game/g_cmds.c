@@ -10065,7 +10065,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		{
 			if (ent->client->pers.rpg_class == 0)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Free Warrior gets Knockdown Area, which will knockdown everyone near him. Spends 50 force and 10 mp\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Free Warrior gets Multi Beam, which fires three spread super beams with less damage than the Super Beam ability. Spends 100 force and 40 mp\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 1)
 			{
@@ -14819,7 +14819,7 @@ extern void zyk_WP_FireRocket(gentity_t *ent);
 extern gentity_t *zyk_WP_FireThermalDetonator(gentity_t *ent);
 extern void zyk_add_bomb_model(gentity_t *ent);
 extern void elemental_attack(gentity_t *ent);
-extern void zyk_super_beam(gentity_t *ent);
+extern void zyk_super_beam(gentity_t *ent, int angle_yaw);
 extern void force_scream(gentity_t *ent);
 extern void zyk_force_storm(gentity_t *ent);
 extern qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *target);
@@ -15174,7 +15174,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
 					ent->client->ps.forceHandExtendTime = level.time + 2000;
 
-					zyk_super_beam(ent);
+					zyk_super_beam(ent, ent->client->ps.viewangles[1]);
 
 					send_rpg_events(2000);
 
@@ -15469,39 +15469,23 @@ void Cmd_Unique_f(gentity_t *ent) {
 		if (ent->client->pers.unique_skill_timer < level.time)
 		{
 			if (ent->client->pers.rpg_class == 0)
-			{ // zyk: Free Warrior Knockdown Area
-				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 4) && ent->client->pers.magic_power >= 10)
+			{ // zyk: Free Warrior Multi Beam
+				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 2) && ent->client->pers.magic_power >= 40)
 				{
-					int i = 0;
+					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 2);
+					ent->client->pers.magic_power -= 40;
 
-					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
-					ent->client->pers.magic_power -= 10;
-
-					for (i = 0; i < level.num_entities; i++)
-					{
-						gentity_t *player_ent = &g_entities[i];
-
-						if (player_ent && player_ent->client && ent != player_ent &&
-							zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue &&
-							Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 300)
-						{
-							player_ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-							player_ent->client->ps.forceHandExtendTime = level.time + 1500;
-							player_ent->client->ps.velocity[2] += 150;
-							player_ent->client->ps.forceDodgeAnim = 0;
-							player_ent->client->ps.quickerGetup = qtrue;
-
-							G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/woosh6.mp3"));
-						}
-					}
-
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
+					zyk_super_beam(ent, ent->client->ps.viewangles[1]);
+					zyk_super_beam(ent, ent->client->ps.viewangles[1] + Q_irand(10, 20));
+					zyk_super_beam(ent, ent->client->ps.viewangles[1] + (-1 * Q_irand(10, 20)));
+
 					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 					ent->client->ps.forceDodgeAnim = BOTH_FORCE_2HANDEDLIGHTNING_HOLD;
-					ent->client->ps.forceHandExtendTime = level.time + 1000;
+					ent->client->ps.forceHandExtendTime = level.time + 2000;
 
 					send_rpg_events(2000);
 
@@ -15511,7 +15495,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 				else
 				{
-					trap->SendServerCommand(ent->s.number, va("chat \"^3Unique Ability: ^7needs %d force and 10 mp to use it\"", (zyk_max_force_power.integer / 4)));
+					trap->SendServerCommand(ent->s.number, va("chat \"^3Unique Ability: ^7needs %d force and 40 mp to use it\"", (zyk_max_force_power.integer / 2)));
 				}
 			}
 			else if (ent->client->pers.rpg_class == 1)

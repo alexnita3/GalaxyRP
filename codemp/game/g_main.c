@@ -5017,10 +5017,9 @@ void elemental_attack(gentity_t *ent)
 }
 
 // zyk: Super Beam ability
-void zyk_super_beam(gentity_t *ent)
+void zyk_super_beam(gentity_t *ent, int angle_yaw)
 {
 	gentity_t *new_ent = G_Spawn();
-	int angle_yaw = ent->client->ps.viewangles[1];
 
 	if (angle_yaw == 0)
 		angle_yaw = 1;
@@ -5030,7 +5029,15 @@ void zyk_super_beam(gentity_t *ent)
 	zyk_set_entity_field(new_ent, "targetname", "zyk_super_beam");
 
 	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->client->ps.origin[0], (int)ent->client->ps.origin[1], ((int)ent->client->ps.origin[2] + ent->client->ps.viewheight)));
-	zyk_set_entity_field(new_ent, "angles", va("%d %d 0", (int)ent->client->ps.viewangles[0], angle_yaw));
+	
+	if (ent->client->pers.player_statuses & (1 << 23)) // zyk: Multi Beam
+	{
+		zyk_set_entity_field(new_ent, "angles", va("%d %d 0", Q_irand(-15, 15), angle_yaw));
+	}
+	else
+	{
+		zyk_set_entity_field(new_ent, "angles", va("%d %d 0", (int)ent->client->ps.viewangles[0], angle_yaw));
+	}
 
 	new_ent->s.modelindex = G_EffectIndex("env/hevil_bolt");
 

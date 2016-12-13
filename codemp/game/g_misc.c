@@ -2841,8 +2841,8 @@ void fx_runner_think( gentity_t *ent )
 		tto[1] = tfrom[1] + fwd[1] * radius;
 		tto[2] = tfrom[2] + fwd[2] * radius;
 
-		VectorSet(shot_mins, -20, -20, -20);
-		VectorSet(shot_maxs, 20, 20, 20);
+		VectorSet(shot_mins, -25, -25, -25);
+		VectorSet(shot_maxs, 25, 25, 25);
 
 		trap->Trace(&tr, tfrom, shot_mins, shot_maxs, tto, user_ent->s.number, MASK_PLAYERSOLID, qfalse, 0, 0);
 
@@ -2855,7 +2855,10 @@ void fx_runner_think( gentity_t *ent )
 		if (player_ent && player_ent->client && user_ent && user_ent->client && user_ent != player_ent &&
 			zyk_is_ally(user_ent, player_ent) == qfalse)
 		{ // zyk: if the enemy is hit by the super beam, damage him
-			G_Damage(player_ent, user_ent, user_ent, NULL, player_ent->client->ps.origin, 40, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
+			if (user_ent->client->pers.player_statuses & (1 << 23)) // zyk: Multi Beam does less damage
+				G_Damage(player_ent, user_ent, user_ent, NULL, player_ent->client->ps.origin, 30, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
+			else
+				G_Damage(player_ent, user_ent, user_ent, NULL, player_ent->client->ps.origin, 42, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
 		}
 
 		ent->nextthink = level.time + 100;
