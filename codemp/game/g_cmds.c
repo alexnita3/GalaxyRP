@@ -15608,13 +15608,13 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 					ent->client->ps.forceDodgeAnim = TORSO_WEAPONREADY4;
-					ent->client->ps.forceHandExtendTime = level.time + 1000;
+					ent->client->ps.forceHandExtendTime = level.time + 1500;
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1000;
-
-					ent->client->pers.monk_unique_timer = level.time + 500;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1500;
 
 					ent->client->pers.player_statuses |= (1 << 23);
+
+					ent->client->pers.monk_unique_timer = level.time + 750;
 
 					rpg_skill_counter(ent, 200);
 
