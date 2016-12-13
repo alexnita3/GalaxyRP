@@ -5032,7 +5032,7 @@ void zyk_super_beam(gentity_t *ent, int angle_yaw)
 	
 	if (ent->client->pers.player_statuses & (1 << 23)) // zyk: Multi Beam
 	{
-		zyk_set_entity_field(new_ent, "angles", va("%d %d 0", Q_irand(-15, 15), angle_yaw));
+		zyk_set_entity_field(new_ent, "angles", va("%d %d 0", (int)ent->client->ps.viewangles[0] + Q_irand(-7, 7), angle_yaw));
 	}
 	else
 	{

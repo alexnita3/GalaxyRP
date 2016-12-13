@@ -15480,8 +15480,8 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.player_statuses |= (1 << 23);
 
 					zyk_super_beam(ent, ent->client->ps.viewangles[1]);
-					zyk_super_beam(ent, ent->client->ps.viewangles[1] + Q_irand(10, 20));
-					zyk_super_beam(ent, ent->client->ps.viewangles[1] + (-1 * Q_irand(10, 20)));
+					zyk_super_beam(ent, ent->client->ps.viewangles[1] + Q_irand(5, 9));
+					zyk_super_beam(ent, ent->client->ps.viewangles[1] + (-1 * Q_irand(5, 9)));
 
 					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 					ent->client->ps.forceDodgeAnim = BOTH_FORCE_2HANDEDLIGHTNING_HOLD;
