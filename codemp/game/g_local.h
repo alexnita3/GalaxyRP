@@ -676,6 +676,7 @@ typedef struct clientPersistant_s {
 	// 21 - Unique Ability 1
 	// 22 - Unique Ability 2
 	// 23 - Unique Ability 3
+	// 24 - hit by Ice Bomb
 	int player_statuses;
 
 	// zyk: amount of times player must be hit by poison

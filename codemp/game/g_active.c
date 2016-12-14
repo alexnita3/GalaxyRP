@@ -839,6 +839,11 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 			client->pers.player_statuses &= ~(1 << 23);
 		}
 	}
+	
+	if (client->pers.player_statuses & (1 << 24) && client->pers.stun_baton_less_speed_timer < level.time)
+	{ // zyk: remove the Ice Bomb hit flag
+		client->pers.player_statuses &= ~(1 << 24);
+	}
 
 	while ( client->timeResidual >= 1000 )
 	{

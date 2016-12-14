@@ -10981,6 +10981,10 @@ void PmoveSingle (pmove_t *pmove) {
 	{ // zyk: Force Tank Force Scream ability does not allow him to move
 		stiffenedUp = qtrue;
 	}
+	else if (player_ent->client->pers.player_statuses & (1 << 24))
+	{ // zyk: hit by Ice Bomb
+		stiffenedUp = qtrue;
+	}
 #endif
 
 	if (stiffenedUp)

@@ -10073,7 +10073,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 2)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Bounty Hunter\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Bounty Hunter gets Ice Bomb, which places a bomb in the map, which is detonated by using /unique again. The bomb then spills ice on the ground, making enemies stuck in it. Spends 1 det pack and 10 power cell ammo\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 3)
 			{
@@ -14824,6 +14824,7 @@ extern void force_scream(gentity_t *ent);
 extern void zyk_force_storm(gentity_t *ent);
 extern qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *target);
 extern void zyk_vertical_dfa_effect(gentity_t *ent);
+extern void zyk_ice_bomb(gentity_t *ent);
 void Cmd_Unique_f(gentity_t *ent) {
 	if (ent->client->pers.secrets_found & (1 << 2))
 	{ // zyk: Unique Ability 1
@@ -15466,6 +15467,15 @@ void Cmd_Unique_f(gentity_t *ent) {
 			return;
 		}
 
+		if (ent->client->pers.rpg_class == 2 && ent->client->pers.player_statuses & (1 << 23) && ent->client->pers.poison_dart_hit_counter == 1)
+		{
+			ent->client->pers.poison_dart_hit_counter = 2;
+
+			G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/cloth1.mp3"));
+
+			return;
+		}
+
 		if (ent->client->pers.unique_skill_timer < level.time)
 		{
 			if (ent->client->pers.rpg_class == 0)
@@ -15524,8 +15534,32 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 			}
 			else if (ent->client->pers.rpg_class == 2)
-			{ // zyk: Bounty Hunter
+			{ // zyk: Bounty Hunter Ice Bomb
+				if (ent->client->ps.groundEntityNum == ENTITYNUM_NONE)
+				{
+					trap->SendServerCommand(ent->s.number, "chat \"^3Unique Ability: ^7you must be on the ground to use it\"");
+				}
+				else if (ent->client->ps.ammo[AMMO_POWERCELL] >= 10 && ent->client->ps.ammo[AMMO_DETPACK] >= 1)
+				{
+					ent->client->ps.ammo[AMMO_POWERCELL] -= 10;
+					ent->client->ps.ammo[AMMO_DETPACK] -= 1;
 
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
+
+					ent->client->pers.player_statuses |= (1 << 23);
+
+					ent->client->pers.poison_dart_hit_counter = 1;
+
+					zyk_ice_bomb(ent);
+
+					rpg_skill_counter(ent, 200);
+
+					ent->client->pers.unique_skill_timer = level.time + 35000;
+				}
+				else
+				{
+					trap->SendServerCommand(ent->s.number, "chat \"^3Unique Ability: ^7needs 1 det pack ammo and 10 power cell ammo to use it\"");
+				}
 			}
 			else if (ent->client->pers.rpg_class == 3)
 			{ // zyk: Armored Soldier Faster E11. Improves E11 Blaster Rifle alt fire rate

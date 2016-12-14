@@ -4429,7 +4429,7 @@ qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *targe
 			((attacker->client->pers.guardian_mode == 12 || attacker->client->pers.guardian_mode == 13) && target->NPC &&
 				(Q_stricmp(target->NPC_type, "guardian_of_universe") || Q_stricmp(target->NPC_type, "quest_reborn") ||
 					Q_stricmp(target->NPC_type, "quest_reborn_blue") || Q_stricmp(target->NPC_type, "quest_reborn_red") ||
-					Q_stricmp(target->NPC_type, "quest_reborn_boss"))
+					Q_stricmp(target->NPC_type, "quest_reborn_boss") || Q_stricmp(target->NPC_type, "quest_mage"))
 				)
 				))
 		{ // zyk: target cannot be attacker ally and cannot be using Immunity Power. Also, non-quest players cannot hit quest players and his allies or bosses and vice-versa
@@ -4472,7 +4472,7 @@ qboolean zyk_special_power_can_hit_target(gentity_t *attacker, gentity_t *target
 				  ((attacker->client->pers.guardian_mode == 12 || attacker->client->pers.guardian_mode == 13) && target->NPC && 
 					(Q_stricmp(target->NPC_type, "guardian_of_universe") || Q_stricmp(target->NPC_type, "quest_reborn") || 
 					Q_stricmp(target->NPC_type, "quest_reborn_blue") || Q_stricmp(target->NPC_type, "quest_reborn_red") || 
-					Q_stricmp(target->NPC_type, "quest_reborn_boss"))
+					Q_stricmp(target->NPC_type, "quest_reborn_boss") || Q_stricmp(target->NPC_type, "quest_mage"))
 				  )
 				))
 			{ // zyk: target cannot be attacker ally and cannot be using Immunity Power. Also, non-quest players cannot hit quest players and his allies or bosses and vice-versa
@@ -4949,6 +4949,125 @@ void zyk_add_bomb_model(gentity_t *ent)
 	new_ent->parent = ent;
 	new_ent->think = zyk_bomb_model_think;
 	new_ent->nextthink = level.time + 1000;
+
+	zyk_spawn_entity(new_ent);
+
+	ent->wait = level.time + 5000;
+
+	G_Sound(new_ent, CHAN_AUTO, G_SoundIndex("sound/effects/cloth1.mp3"));
+}
+
+void zyk_ice_bomb_ice_think(gentity_t *ent)
+{
+	ent->nextthink = level.time + 100;
+
+	if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.rpg_class == 2 && 
+		ent->parent->client->pers.poison_dart_hit_counter == 3)
+	{ // zyk: keeps hitting enemies until time out
+		if (ent->wait < level.time)
+		{
+			ent->think = G_FreeEntity;
+		}
+		else
+		{
+			int i = 0;
+
+			for (i = 0; i < level.num_entities; i++)
+			{
+				gentity_t *player_ent = &g_entities[i];
+
+				if (player_ent && player_ent->client && player_ent->health > 0 &&
+					(ent->parent->client->pers.guardian_mode == player_ent->client->pers.guardian_mode ||
+					   ((ent->parent->client->pers.guardian_mode == 12 || ent->parent->client->pers.guardian_mode == 13) && player_ent->NPC &&
+						(Q_stricmp(player_ent->NPC_type, "guardian_of_universe") || Q_stricmp(player_ent->NPC_type, "quest_reborn") ||
+							Q_stricmp(player_ent->NPC_type, "quest_reborn_blue") || Q_stricmp(player_ent->NPC_type, "quest_reborn_red") ||
+							Q_stricmp(player_ent->NPC_type, "quest_reborn_boss") || Q_stricmp(player_ent->NPC_type, "quest_mage"))
+						)
+					) && 
+					zyk_can_hit_target(ent->parent, player_ent) == qtrue &&
+					(i > MAX_CLIENTS || 
+					 (player_ent->client->pers.connected == CON_CONNECTED && player_ent->client->sess.sessionTeam != TEAM_SPECTATOR &&
+					  player_ent->client->ps.duelInProgress == qfalse)
+					) &&
+					Distance(ent->s.origin, player_ent->client->ps.origin) < 90 && 
+					!(player_ent->client->pers.player_statuses & (1 << 24)))
+				{ // zyk: hit by the ice, make him trapped in the ice
+					player_ent->client->pers.stun_baton_less_speed_timer = ent->wait;
+
+					player_ent->client->pers.player_statuses |= (1 << 24);
+
+					G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/glass_tumble3.wav"));
+				}
+			}
+		}
+	}
+}
+
+void zyk_spawn_ice_bomb_ice(gentity_t *ent, int x_offset, int y_offset)
+{
+	gentity_t *new_ent = G_Spawn();
+
+	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+	zyk_set_entity_field(new_ent, "spawnflags", "0");
+	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0] + x_offset, (int)ent->r.currentOrigin[1] + y_offset, (int)ent->r.currentOrigin[2]));
+
+	zyk_set_entity_field(new_ent, "angles", "-89 0 0");
+
+	zyk_set_entity_field(new_ent, "model", "models/map_objects/rift/crystal_wall.md3");
+
+	zyk_set_entity_field(new_ent, "targetname", "zyk_ice_bomb_ice");
+
+	new_ent->parent = ent->parent;
+	new_ent->think = zyk_ice_bomb_ice_think;
+	new_ent->nextthink = level.time + 100;
+
+	zyk_spawn_entity(new_ent);
+
+	// zyk: ice duration
+	new_ent->wait = level.time + 3500;
+}
+
+void zyk_ice_bomb_think(gentity_t *ent)
+{
+	ent->nextthink = level.time + 100;
+
+	if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.rpg_class == 2 && 
+		(ent->parent->client->pers.poison_dart_hit_counter == 2 || ent->parent->client->ps.powerups[PW_NEUTRALFLAG] < level.time))
+	{ // zyk: Bounty Hunter detonated the bomb or unique duration run out. Explodes the bomb
+		ent->parent->client->pers.poison_dart_hit_counter = 3;
+
+		zyk_spawn_ice_bomb_ice(ent, 0, 0);
+		zyk_spawn_ice_bomb_ice(ent, 0, -80);
+		zyk_spawn_ice_bomb_ice(ent, 0, 80);
+		zyk_spawn_ice_bomb_ice(ent, -80, 0);
+		zyk_spawn_ice_bomb_ice(ent, -80, -80);
+		zyk_spawn_ice_bomb_ice(ent, -80, 80);
+		zyk_spawn_ice_bomb_ice(ent, 80, 0);
+		zyk_spawn_ice_bomb_ice(ent, 80, -80);
+		zyk_spawn_ice_bomb_ice(ent, 80, 80);
+
+		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/glass_tumble3.wav"));
+
+		ent->think = G_FreeEntity;
+	}
+}
+
+// zyk: Bounty Hunter Ice Bomb
+void zyk_ice_bomb(gentity_t *ent)
+{
+	gentity_t *new_ent = G_Spawn();
+
+	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+	zyk_set_entity_field(new_ent, "spawnflags", "0");
+	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2] - 22));
+
+	zyk_set_entity_field(new_ent, "model", "models/map_objects/imperial/cargo_sm.md3");
+
+	zyk_set_entity_field(new_ent, "targetname", "zyk_ice_bomb");
+
+	new_ent->parent = ent;
+	new_ent->think = zyk_ice_bomb_think;
+	new_ent->nextthink = level.time + 100;
 
 	zyk_spawn_entity(new_ent);
 
