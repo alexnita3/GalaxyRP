@@ -10093,7 +10093,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 7)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Force Gunner\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Force Gunner gets Item Generation, which creates holdable items through the user of force and magic. Spends 50 force and 10 mp\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 8)
 			{
@@ -14825,6 +14825,7 @@ extern void zyk_force_storm(gentity_t *ent);
 extern qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *target);
 extern void zyk_vertical_dfa_effect(gentity_t *ent);
 extern void zyk_ice_bomb(gentity_t *ent);
+extern void zyk_item_generation(gentity_t *ent);
 void Cmd_Unique_f(gentity_t *ent) {
 	if (ent->client->pers.secrets_found & (1 << 2))
 	{ // zyk: Unique Ability 1
@@ -15683,8 +15684,28 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 			}
 			else if (ent->client->pers.rpg_class == 7)
-			{ // zyk: Force Gunner
+			{ // zyk: Force Gunner Item Generation
+				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 4) && ent->client->pers.magic_power >= 10)
+				{
+					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
+					ent->client->pers.magic_power -= 10;
 
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+
+					ent->client->pers.player_statuses |= (1 << 23);
+
+					zyk_item_generation(ent);
+
+					send_rpg_events(2000);
+
+					rpg_skill_counter(ent, 200);
+
+					ent->client->pers.unique_skill_timer = level.time + 40000;
+				}
+				else
+				{
+					trap->SendServerCommand(ent->s.number, va("chat \"^3Unique Ability: ^7needs %d force and 10 mp to use it\"", (zyk_max_force_power.integer / 4)));
+				}
 			}
 			else if (ent->client->pers.rpg_class == 8)
 			{ // zyk: Magic Master Healing Improvement

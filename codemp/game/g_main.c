@@ -5221,6 +5221,24 @@ void force_scream(gentity_t *ent)
 	G_Sound(ent, CHAN_VOICE, G_SoundIndex("sound/chars/howler/howl.mp3"));
 }
 
+// zyk: Item Generation ability
+void zyk_item_generation(gentity_t *ent)
+{
+	zyk_quest_effect_spawn(ent, ent, "zyk_effect_item_generation", "0", "force/rage2", 0, 0, 0, 800);
+
+	ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+	ent->client->ps.forceDodgeAnim = BOTH_FORCEHEAL_QUICK;
+	ent->client->ps.forceHandExtendTime = level.time + 1000;
+
+	ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_BINOCULARS);
+	ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN);
+	ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SEEKER);
+	ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_MEDPAC_BIG);
+	ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SHIELD);
+
+	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
+}
+
 // zyk: Healing Water
 void healing_water(gentity_t *ent, int heal_amount)
 {
