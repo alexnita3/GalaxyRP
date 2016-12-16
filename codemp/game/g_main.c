@@ -4611,33 +4611,6 @@ void reverse_wind(gentity_t *ent, int distance, int duration)
 	}
 }
 
-// zyk: Enemy Weakening
-void enemy_nerf(gentity_t *ent, int distance)
-{
-	int i = 0;
-	int targets_hit = 0;
-	int duration = 7000;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		duration += 2000;
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			player_ent->client->pers.quest_target7_timer = level.time + duration;
-			player_ent->client->pers.quest_power_status |= (1 << 21);
-
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/woosh10.mp3"));
-		}
-	}
-}
-
 // zyk: Poison Mushrooms
 void poison_mushrooms(gentity_t *ent, int min_distance, int max_distance)
 {
@@ -4885,6 +4858,35 @@ void zyk_quest_effect_spawn(gentity_t *ent, gentity_t *target_ent, char *targetn
 
 		level.special_power_effects[new_ent->s.number] = ent->s.number;
 		level.special_power_effects_timer[new_ent->s.number] = level.time + duration;
+	}
+}
+
+// zyk: Enemy Weakening
+void enemy_nerf(gentity_t *ent, int distance)
+{
+	int i = 0;
+	int targets_hit = 0;
+	int duration = 7000;
+
+	// zyk: Universe Power
+	if (ent->client->pers.quest_power_status & (1 << 13))
+	{
+		duration += 2000;
+	}
+
+	for (i = 0; i < level.num_entities; i++)
+	{
+		gentity_t *player_ent = &g_entities[i];
+
+		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
+		{
+			player_ent->client->pers.quest_target7_timer = level.time + duration;
+			player_ent->client->pers.quest_power_status |= (1 << 21);
+
+			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_enemy_nerf", "0", "force/kothos_beam", 0, 0, 0, 1000);
+
+			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/woosh10.mp3"));
+		}
 	}
 }
 

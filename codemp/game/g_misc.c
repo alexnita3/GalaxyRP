@@ -3016,6 +3016,11 @@ void fx_runner_link( gentity_t *ent )
 			ent->s.modelindex2 = FX_STATE_CONTINUOUS;
 			ent->nextthink = level.time + 100; // wait a small bit, then start working
 		}
+		else if (Q_stricmp(ent->targetname, "zyk_quest_effect_enemy_nerf") == 0)
+		{ // zyk: starts the enemy weakening effect right now
+			ent->s.modelindex2 = FX_STATE_CONTINUOUS;
+			ent->nextthink = level.time + 100; // wait a small bit, then start working
+		}
 		else if (Q_stricmp(ent->targetname, "zyk_quest_effect_rockfall") == 0)
 		{ // zyk: Rockfall power. Starts the effect imediately but damages a bit later
 			ent->s.modelindex2 = FX_STATE_CONTINUOUS;
@@ -3095,7 +3100,7 @@ void SP_fx_runner( gentity_t *ent )
 
 	// zyk: no need to wait 400 ms with these effects
 	if (Q_stricmp(ent->targetname, "zyk_super_beam") == 0 || Q_stricmp(ent->targetname, "zyk_force_storm") == 0 || 
-		Q_stricmp(ent->targetname, "zyk_effect_item_generation") == 0)
+		Q_stricmp(ent->targetname, "zyk_effect_item_generation") == 0 || Q_stricmp(ent->targetname, "zyk_quest_effect_enemy_nerf") == 0)
 	{
 		ent->nextthink = level.time;
 	}
