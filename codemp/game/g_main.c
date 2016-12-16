@@ -4996,6 +4996,8 @@ void zyk_ice_bomb_ice_think(gentity_t *ent)
 
 					player_ent->client->pers.player_statuses |= (1 << 24);
 
+					G_Damage(player_ent, ent->parent, ent->parent, NULL, NULL, 20, 0, MOD_UNKNOWN);
+
 					G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/glass_tumble3.wav"));
 				}
 			}
