@@ -2856,9 +2856,9 @@ void fx_runner_think( gentity_t *ent )
 			zyk_is_ally(user_ent, player_ent) == qfalse)
 		{ // zyk: if the enemy is hit by the super beam, damage him
 			if (user_ent->client->pers.player_statuses & (1 << 23)) // zyk: Multi Beam does less damage
-				G_Damage(player_ent, user_ent, user_ent, NULL, player_ent->client->ps.origin, 21, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
+				G_Damage(player_ent, user_ent, user_ent, NULL, player_ent->client->ps.origin, 17, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
 			else
-				G_Damage(player_ent, user_ent, user_ent, NULL, player_ent->client->ps.origin, 42, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
+				G_Damage(player_ent, user_ent, user_ent, NULL, player_ent->client->ps.origin, 40, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
 		}
 
 		ent->nextthink = level.time + 100;
