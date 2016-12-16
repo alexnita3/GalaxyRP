@@ -5179,7 +5179,7 @@ void zyk_force_storm(gentity_t *ent)
 {
 	int i = 0;
 
-	zyk_quest_effect_spawn(ent, ent, "zyk_force_storm", "4", "env/huge_lightning", 0, 25, 125, 3000);
+	zyk_quest_effect_spawn(ent, ent, "zyk_force_storm", "4", "env/huge_lightning", 0, 20, 120, 3000);
 
 	for (i = 0; i < level.num_entities; i++)
 	{
@@ -5187,9 +5187,9 @@ void zyk_force_storm(gentity_t *ent)
 
 		if (player_ent && player_ent->client && ent != player_ent &&
 			zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue &&
-			Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 350)
+			Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 380)
 		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_force_storm", "4", "env/huge_lightning", 0, 25, 125, 3000);
+			zyk_quest_effect_spawn(ent, player_ent, "zyk_force_storm", "4", "env/huge_lightning", 0, 20, 120, 3000);
 
 			// zyk: decrease enemy movement speed
 			player_ent->client->pers.stun_baton_less_speed_timer = level.time + 2500;
