@@ -4866,12 +4866,12 @@ void enemy_nerf(gentity_t *ent, int distance)
 {
 	int i = 0;
 	int targets_hit = 0;
-	int duration = 7000;
+	int duration = 8000;
 
 	// zyk: Universe Power
 	if (ent->client->pers.quest_power_status & (1 << 13))
 	{
-		duration += 2000;
+		duration += 4000;
 	}
 
 	for (i = 0; i < level.num_entities; i++)

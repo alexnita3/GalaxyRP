@@ -4413,9 +4413,9 @@ qboolean TryGrapple(gentity_t *ent)
 						enemy_nerf(ent, 400);
 						ent->client->pers.magic_power -= (int)ceil((zyk_enemy_nerf_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (16000 * ((4.0 - ent->client->pers.skill_levels[55]) / 4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (12000 * ((4.0 - ent->client->pers.skill_levels[55]) / 4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 16000;
+							ent->client->pers.quest_power_usage_timer = level.time + 12000;
 						trap->SendServerCommand(ent->s.number, va("chat \"%s^7: ^7Enemy Weakening!\"", ent->client->pers.netname));
 					}
 					else if (use_this_power == MAGIC_ICE_BLOCK && zyk_enable_ice_block.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_ice_block_mp_cost.integer * universe_mp_cost_factor)))
