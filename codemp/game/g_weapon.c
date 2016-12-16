@@ -4449,6 +4449,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				 ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && 
 				 !(ent->client->pers.player_statuses & (1 << 21)) && 
 				 !(ent->client->pers.player_statuses & (1 << 22)) && 
+				 !(ent->client->pers.player_statuses & (1 << 23)) &&
 				 ent->client->ps.ammo[AMMO_METAL_BOLTS] > 0)
 		{ // zyk: Bounty Hunter Unique Skill, fire poison darts
 			vec3_t		fwd, dir, origin;
