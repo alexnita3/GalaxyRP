@@ -5347,18 +5347,6 @@ void initialize_rpg_skills(gentity_t *ent)
 		// zyk: setting rpg control attributes
 		ent->client->pers.thermal_vision = qfalse;
 
-		if (ent->client->pers.rpg_class != 8 || magic_master_has_this_power(ent, ent->client->sess.selected_special_power) == qfalse || 
-			magic_master_has_this_power(ent, ent->client->sess.selected_left_special_power) == qfalse || 
-			magic_master_has_this_power(ent, ent->client->sess.selected_right_special_power) == qfalse || 
-			ent->client->sess.magic_fist_selection < 0 || 
-			ent->client->sess.magic_fist_selection > 4)
-		{ // zyk: this will allow Magic Master selected powers to persist between respawns and to prevent exploits when logging in another account
-			ent->client->sess.selected_special_power = MAGIC_INNER_AREA_DAMAGE;
-			ent->client->sess.selected_left_special_power = MAGIC_INNER_AREA_DAMAGE;
-			ent->client->sess.selected_right_special_power = MAGIC_INNER_AREA_DAMAGE;
-			ent->client->sess.magic_fist_selection = 0;
-		}
-
 		ent->client->pers.quest_power_status = 0;
 
 		ent->client->pers.magic_power = zyk_max_magic_power(ent);
@@ -10888,7 +10876,15 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 
 		ent->client->pers.credits = 100;
 
+		ent->client->sess.selected_special_power = MAGIC_INNER_AREA_DAMAGE;
+		ent->client->sess.selected_left_special_power = MAGIC_INNER_AREA_DAMAGE;
+		ent->client->sess.selected_right_special_power = MAGIC_INNER_AREA_DAMAGE;
+		ent->client->sess.magic_fist_selection = 0;
+		ent->client->sess.magic_master_disabled_powers = 0;
+
 		save_account(ent);
+
+		zyk_save_magic_master_config(ent);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Your entire account is reset.\n\"" );
 
@@ -10933,7 +10929,15 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 
 		ent->client->pers.credits = 100;
 
+		ent->client->sess.selected_special_power = MAGIC_INNER_AREA_DAMAGE;
+		ent->client->sess.selected_left_special_power = MAGIC_INNER_AREA_DAMAGE;
+		ent->client->sess.selected_right_special_power = MAGIC_INNER_AREA_DAMAGE;
+		ent->client->sess.magic_fist_selection = 0;
+		ent->client->sess.magic_master_disabled_powers = 0;
+
 		save_account(ent);
+
+		zyk_save_magic_master_config(ent);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Your levels are reset.\n\"" );
 
