@@ -6370,7 +6370,7 @@ int zyk_number_of_enabled_magic_powers(gentity_t *ent)
 
 	for (i = MAGIC_INNER_AREA_DAMAGE; i < MAX_MAGIC_POWERS; i++)
 	{
-		if (!(ent->client->sess.magic_master_disabled_powers & (1 << i)))
+		if (!(ent->client->sess.magic_master_disabled_powers & (1 << i)) && magic_master_has_this_power(ent, i) == qtrue)
 		{
 			number_of_enabled_powers++;
 		}

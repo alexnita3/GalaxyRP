@@ -3877,6 +3877,11 @@ qboolean TryGrapple(gentity_t *ent)
 					{ // zyk: Special Power Left direction
 						use_this_power = ent->client->sess.selected_left_special_power;
 					}
+
+					if (ent->client->sess.magic_master_disabled_powers & (1 << use_this_power))
+					{ // zyk: if the magic power is disabled, do not use it
+						use_this_power = -1;
+					}
 				}
 				else
 				{
