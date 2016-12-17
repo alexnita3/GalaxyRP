@@ -5153,9 +5153,49 @@ void zyk_super_beam(gentity_t *ent, int angle_yaw)
 
 	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->client->ps.origin[0], (int)ent->client->ps.origin[1], ((int)ent->client->ps.origin[2] + ent->client->ps.viewheight)));
 	
-	if (ent->client->pers.player_statuses & (1 << 23)) // zyk: Multi Beam
+	if (ent->client->pers.player_statuses & (1 << 23)) // zyk: Aimed Beam
 	{
-		zyk_set_entity_field(new_ent, "angles", va("%d %d 0", (int)ent->client->ps.viewangles[0] + Q_irand(-5, 5), angle_yaw));
+		int i = 0;
+		int min_dist = 1000;
+		gentity_t *chosen_ent = NULL;
+
+		for (i = 0; i < level.num_entities; i++)
+		{
+			gentity_t *player_ent = &g_entities[i];
+
+			if (player_ent && player_ent->client && ent != player_ent && player_ent->health > 0 &&
+				zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue)
+			{
+				int player_dist = Distance(ent->client->ps.origin, player_ent->client->ps.origin);
+
+				if (player_dist < min_dist)
+				{
+					min_dist = player_dist;
+
+					chosen_ent = player_ent;
+				}
+			}
+		}
+
+		if (chosen_ent)
+		{ // zyk: found target
+			vec3_t target_angles;
+			vec3_t zyk_forward;
+
+			VectorSubtract(chosen_ent->client->ps.origin, ent->client->ps.origin, zyk_forward);
+
+			vectoangles(zyk_forward, target_angles);
+			if ((int)target_angles[1] == 0)
+			{
+				target_angles[1] = 1;
+			}
+
+			zyk_set_entity_field(new_ent, "angles", va("%d %d %d", (int)target_angles[0], (int)target_angles[1], (int)target_angles[2]));
+		}
+		else
+		{
+			zyk_set_entity_field(new_ent, "angles", va("%d %d 0", (int)ent->client->ps.viewangles[0], angle_yaw));
+		}
 	}
 	else
 	{
