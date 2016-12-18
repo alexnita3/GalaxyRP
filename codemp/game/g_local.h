@@ -44,7 +44,7 @@ extern vec3_t gPainPoint;
 //==================================================================
 
 // the "gameversion" client command will print this plus compile date
-#define	GAMEVERSION	"Zyk OpenJK Mod v3.47"
+#define	GAMEVERSION	"Zyk OpenJK Mod v3.48"
 
 #define SECURITY_LOG "security.log"
 
@@ -559,7 +559,7 @@ typedef enum {
 	MAGIC_INNER_AREA_DAMAGE,
 	MAGIC_HEALING_WATER,
 	MAGIC_WATER_SPLASH,
-	MAGIC_ACID_WATER,
+	MAGIC_WATER_ATTACK,
 	MAGIC_EARTHQUAKE,
 	MAGIC_ROCKFALL,
 	MAGIC_SHIFTING_SAND,

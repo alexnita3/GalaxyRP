@@ -5337,8 +5337,8 @@ void sleeping_flowers(gentity_t *ent, int stun_time, int distance)
 	}
 }
 
-// zyk: Acid Water
-void acid_water(gentity_t *ent, int distance, int damage)
+// zyk: Water Attack
+void water_attack(gentity_t *ent, int distance, int damage)
 {
 	int i = 0;
 	int targets_hit = 0;
@@ -5355,7 +5355,7 @@ void acid_water(gentity_t *ent, int distance, int damage)
 
 		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
 		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_acid", "4", "env/acid_splash", 200, damage, 40, 9000);
+			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_acid", "4", "env/water_impact", 200, damage, 40, 9000);
 		}
 	}
 }
@@ -6085,7 +6085,7 @@ qboolean magic_master_has_this_power(gentity_t *ent, int selected_power)
 	{
 		return qfalse;
 	}
-	else if (selected_power == MAGIC_ACID_WATER && !(ent->client->pers.defeated_guardians & (1 << 4)) &&
+	else if (selected_power == MAGIC_WATER_ATTACK && !(ent->client->pers.defeated_guardians & (1 << 4)) &&
 		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
 	{
 		return qfalse;
@@ -6248,9 +6248,9 @@ void zyk_print_special_power(gentity_t *ent, int selected_power, char direction)
 	{
 		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^4Water Splash        ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
 	}
-	else if (selected_power == MAGIC_ACID_WATER)
+	else if (selected_power == MAGIC_WATER_ATTACK)
 	{
-		trap->SendServerCommand(ent->s.number, va("chat \"^1%c ^4Acid Water           ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
+		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^4Water Attack        ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
 	}
 	else if (selected_power == MAGIC_EARTHQUAKE)
 	{
@@ -11687,8 +11687,8 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
-						acid_water(ent, 600, 55);
-						trap->SendServerCommand(-1, "chat \"^4Guardian of Water: ^7Acid Water!\"");
+						water_attack(ent, 1500, 55);
+						trap->SendServerCommand(-1, "chat \"^4Guardian of Water: ^7Water Attack!\"");
 						ent->client->pers.light_quest_timer = level.time + 10000;
 					}
 				}
@@ -12134,8 +12134,8 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 10)
 						{
-							acid_water(ent, 1000, 55);
-							trap->SendServerCommand(-1, va("chat \"^1Guardian of Chaos: ^7Acid Water!\""));
+							water_attack(ent, 1600, 55);
+							trap->SendServerCommand(-1, va("chat \"^1Guardian of Chaos: ^7Water Attack!\""));
 							ent->client->pers.hunter_quest_messages++;
 						}
 						else if (ent->client->pers.hunter_quest_messages == 11)
@@ -12400,7 +12400,7 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (random_magic == 18)
 				{
-					acid_water(ent, 500, 55);
+					water_attack(ent, 500, 55);
 				}
 				else if (random_magic == 19)
 				{
