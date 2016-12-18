@@ -5524,17 +5524,18 @@ void tree_of_life(gentity_t *ent)
 	zyk_quest_effect_spawn(ent, ent, "zyk_tree_of_life", "1", "models/map_objects/yavin/tree10_b.md3", 0, 0, 0, 4000);
 }
 
-// zyk: Magic Drain
-void magic_drain(gentity_t *ent, int distance)
+// zyk: Magic Disable
+extern void display_yellow_bar(gentity_t *ent, int duration);
+void magic_disable(gentity_t *ent, int distance)
 {
 	int i = 0;
 	int targets_hit = 0;
-	int mp_amount = 25;
+	int duration = 6000;
 
 	// zyk: Universe Power
 	if (ent->client->pers.quest_power_status & (1 << 13))
 	{
-		mp_amount += 15;
+		duration += 2000;
 	}
 
 	for (i = 0; i < level.num_entities; i++)
@@ -5543,48 +5544,22 @@ void magic_drain(gentity_t *ent, int distance)
 
 		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
 		{
-			if (i < MAX_CLIENTS && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.magic_power >= mp_amount)
-			{ // zyk: rpg player, drain his mp
-				player_ent->client->pers.magic_power -= mp_amount;
+			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_magic_disable", "0", "env/small_electricity2", 0, 0, 0, 1500);
 
-				if ((ent->health + mp_amount) < ent->client->ps.stats[STAT_MAX_HEALTH])
-					ent->health += mp_amount;
-				else
-					ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
+			if (i < MAX_CLIENTS)
+			{ // zyk: player hit by this power
+				player_ent->client->pers.quest_power_usage_timer = level.time + duration;
 
-				send_rpg_events(2000);
-
-				G_Sound(ent, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav"));
+				display_yellow_bar(player_ent, (player_ent->client->pers.quest_power_usage_timer - level.time));
 			}
-			else if (player_ent->NPC && player_ent->client->pers.guardian_mode > 0)
-			{ // zyk: bosses always have mp
-				if ((ent->health + mp_amount) < ent->client->ps.stats[STAT_MAX_HEALTH])
-					ent->health += mp_amount;
-				else
-					ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
-
-				G_Sound(ent, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav"));
+			else
+			{ // zyk: npc or boss dont get affected that much
+				player_ent->client->pers.light_quest_timer += (duration/2);
+				player_ent->client->pers.guardian_timer += (duration/2);
+				player_ent->client->pers.universe_quest_timer += (duration/2);
 			}
-			else if (player_ent->NPC && Q_stricmp(player_ent->NPC_type, "quest_mage") == 0)
-			{ // zyk: quest_mage always have mp
-				if ((ent->health + mp_amount) < ent->client->ps.stats[STAT_MAX_HEALTH])
-					ent->health += mp_amount;
-				else
-					ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
 
-				G_Sound(ent, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav"));
-			}
-			else if (player_ent->client->ps.fd.forcePower >= mp_amount)
-			{ // zyk: enemy has enough force to be drained
-				player_ent->client->ps.fd.forcePower -= mp_amount;
-
-				if ((ent->health + mp_amount) < ent->client->ps.stats[STAT_MAX_HEALTH])
-					ent->health += mp_amount;
-				else
-					ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
-
-				G_Sound(ent, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav"));
-			}
+			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/woosh10.mp3"));
 		}
 	}
 }
@@ -6130,7 +6105,7 @@ qboolean magic_master_has_this_power(gentity_t *ent, int selected_power)
 	{
 		return qfalse;
 	}
-	else if (selected_power == MAGIC_MAGIC_DRAIN && !(ent->client->pers.defeated_guardians & (1 << 7)) &&
+	else if (selected_power == MAGIC_MAGIC_DISABLE && !(ent->client->pers.defeated_guardians & (1 << 7)) &&
 		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
 	{
 		return qfalse;
@@ -6284,9 +6259,9 @@ void zyk_print_special_power(gentity_t *ent, int selected_power, char direction)
 	{
 		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^5Dome of Damage      ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
 	}
-	else if (selected_power == MAGIC_MAGIC_DRAIN)
+	else if (selected_power == MAGIC_MAGIC_DISABLE)
 	{
-		trap->SendServerCommand(ent->s.number, va("chat \"^1%c ^5Magic Drain          ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
+		trap->SendServerCommand(ent->s.number, va("chat \"^1%c ^5Magic Disable          ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
 	}
 	else if (selected_power == MAGIC_ULTRA_SPEED)
 	{
@@ -11762,9 +11737,9 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
-						magic_drain(ent, 800);
+						magic_disable(ent, 500);
 						ent->client->pers.light_quest_timer = level.time + 14000;
-						trap->SendServerCommand(-1, "chat \"^5Guardian of Intelligence: ^7Magic Drain!\"");
+						trap->SendServerCommand(-1, "chat \"^5Guardian of Intelligence: ^7Magic Disable!\"");
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 5)
@@ -12176,8 +12151,8 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 17)
 						{
-							magic_drain(ent, 2200);
-							trap->SendServerCommand(-1, va("chat \"^1Guardian of Chaos: ^7Magic Drain!\""));
+							magic_disable(ent, 2200);
+							trap->SendServerCommand(-1, va("chat \"^1Guardian of Chaos: ^7Magic Disable!\""));
 							ent->client->pers.hunter_quest_messages++;
 						}
 						else if (ent->client->pers.hunter_quest_messages == 18)
@@ -12412,7 +12387,7 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (random_magic == 21)
 				{
-					magic_drain(ent, 400);
+					magic_disable(ent, 450);
 				}
 				else if (random_magic == 22)
 				{

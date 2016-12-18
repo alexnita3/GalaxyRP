@@ -3804,7 +3804,7 @@ extern void flame_burst(gentity_t *ent, int duration);
 extern void water_attack(gentity_t *ent, int distance, int damage);
 extern void shifting_sand(gentity_t *ent, int distance);
 extern void tree_of_life(gentity_t *ent);
-extern void magic_drain(gentity_t *ent, int distance);
+extern void magic_disable(gentity_t *ent, int distance);
 extern void fast_and_slow(gentity_t *ent, int distance, int duration);
 extern void flaming_area(gentity_t *ent, int damage);
 extern void reverse_wind(gentity_t *ent, int distance, int duration);
@@ -4020,8 +4020,8 @@ qboolean TryGrapple(gentity_t *ent)
 						}
 						else if (ent->client->pers.rpg_class == 6 && (ent->client->pers.defeated_guardians & (1 << 7) ||
 							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
-						{ // zyk: Magic Drain
-							use_this_power = MAGIC_MAGIC_DRAIN;
+						{ // zyk: Magic Disable
+							use_this_power = MAGIC_MAGIC_DISABLE;
 						}
 						else if (ent->client->pers.rpg_class == 7 && (ent->client->pers.defeated_guardians & (1 << 8) ||
 							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
@@ -4369,16 +4369,16 @@ qboolean TryGrapple(gentity_t *ent)
 							ent->client->pers.quest_power_usage_timer = level.time + 20000;
 						trap->SendServerCommand(ent->s.number, va("chat \"%s^7: ^7Tree of Life!\"", ent->client->pers.netname));
 					}
-					else if (use_this_power == MAGIC_MAGIC_DRAIN && zyk_enable_magic_drain.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_magic_drain_mp_cost.integer * universe_mp_cost_factor)))
+					else if (use_this_power == MAGIC_MAGIC_DISABLE && zyk_enable_magic_drain.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_magic_drain_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						magic_drain(ent, 400);
+						magic_disable(ent, 450);
 						ent->client->pers.magic_power -= (int)ceil((zyk_magic_drain_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (18000 * ((4.0 - ent->client->pers.skill_levels[55]) / 4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (42000 * ((4.0 - ent->client->pers.skill_levels[55]) / 4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 18000;
-						trap->SendServerCommand(ent->s.number, va("chat \"%s^7: ^7Magic Drain!\"", ent->client->pers.netname));
+							ent->client->pers.quest_power_usage_timer = level.time + 24000;
+						trap->SendServerCommand(ent->s.number, va("chat \"%s^7: ^7Magic Disable!\"", ent->client->pers.netname));
 					}
 					else if (use_this_power == MAGIC_FAST_AND_SLOW && zyk_enable_fast_and_slow.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_fast_and_slow_mp_cost.integer * universe_mp_cost_factor)))
 					{
@@ -9656,7 +9656,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					else if (ent->client->pers.rpg_class == 5)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Healing Water: ^7instantly recovers some hp. Attack with D + special melee to use this power. MP cost: %d\n^3Water Splash: ^7damages enemies, draining their hp and healing you. Attack with A + special melee to use this power. MP cost: %d\n^3Water Attack: ^7attacks enemies nearby with water, with high damage. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_healing_water_mp_cost.integer, zyk_water_splash_mp_cost.integer, zyk_acid_water_mp_cost.integer) );
 					else if (ent->client->pers.rpg_class == 6)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Magic Shield: ^7creates a shield that makes you take very little dmage from enemies for a short time. Also protects from Push, Pull and Grip force powers. Attack with D + special melee to use this power. MP cost: %d\n^3Dome of Damage: ^7an energy dome appears at enemies, damaging anyone inside the dome. Attack with A + special melee to use this power. MP cost: %d\n^3Magic Drain: ^7drains mp from enemies to restore health. If enemy has not enough mp, drains force. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_magic_shield_mp_cost.integer, zyk_dome_of_damage_mp_cost.integer, zyk_magic_drain_mp_cost.integer) );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Magic Shield: ^7creates a shield that makes you take very little dmage from enemies for a short time. Also protects from Push, Pull and Grip force powers. Attack with D + special melee to use this power. MP cost: %d\n^3Dome of Damage: ^7an energy dome appears at enemies, damaging anyone inside the dome. Attack with A + special melee to use this power. MP cost: %d\n^3Magic Disable: ^7makes enemies unable to use magic powers for some seconds. Not so effective against magic using npcs, like bosses. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_magic_shield_mp_cost.integer, zyk_dome_of_damage_mp_cost.integer, zyk_magic_drain_mp_cost.integer) );
 					else if (ent->client->pers.rpg_class == 7)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Ultra Speed: ^7increases your run speed. Attack with D + special melee to use this power. MP cost: %d\n^3Slow Motion: ^7decreases the run speed of enemies nearby. Attack with A + special melee to use this power. MP cost: %d\n^3Fast and Slow: ^7increases your speed and decreases enemies speed, with less duration than the other two magic powers. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_ultra_speed_mp_cost.integer, zyk_slow_motion_mp_cost.integer, zyk_fast_and_slow_mp_cost.integer) );
 					else if (ent->client->pers.rpg_class == 8)
@@ -15834,14 +15834,14 @@ void Cmd_Magic_f( gentity_t *ent ) {
 
 	if (trap->Argc() == 1)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"\n 0 - Inner Area Damage - %s^7\n 1 - Healing Water - %s^7\n 2 - Water Splash - %s^7\n 3 - Water Attack - %s^7\n 4 - Earthquake - %s^7\n 5 - Rockfall - %s^7\n 6 - Shifting Sand - %s^7\n 7 - Sleeping Flowers - %s^7\n 8 - Poison Mushrooms - %s^7\n 9 - Tree of Life - %s^7\n10 - Magic Shield - %s^7\n11 - Dome of Damage - %s^7\n12 - Magic Drain - %s^7\n13 - Ultra Speed - %s^7\n14 - Slow Motion - %s^7\n15 - Fast and Slow - %s^7\n16 - Flame Burst - %s^7\n17 - Ultra Flame - %s^7\n18 - Flaming Area - %s^7\n19 - Blowing Wind - %s^7\n20 - Hurricane - %s^7\n21 - Reverse Wind - %s^7\n22 - Ultra Resistance - %s^7\n23 - Ultra Strength - %s^7\n24 - Enemy Weakening - %s^7\n25 - Ice Stalagmite - %s^7\n26 - Ice Boulder - %s^7\n27 - Ice Block - %s^7\n28 - Healing Area - %s^7\n29 - Magic Explosion - %s^7\n30 - Lightning Dome - %s^7\n\"", 
+		trap->SendServerCommand( ent-g_entities, va("print \"\n 0 - Inner Area Damage - %s^7\n 1 - Healing Water - %s^7\n 2 - Water Splash - %s^7\n 3 - Water Attack - %s^7\n 4 - Earthquake - %s^7\n 5 - Rockfall - %s^7\n 6 - Shifting Sand - %s^7\n 7 - Sleeping Flowers - %s^7\n 8 - Poison Mushrooms - %s^7\n 9 - Tree of Life - %s^7\n10 - Magic Shield - %s^7\n11 - Dome of Damage - %s^7\n12 - Magic Disable - %s^7\n13 - Ultra Speed - %s^7\n14 - Slow Motion - %s^7\n15 - Fast and Slow - %s^7\n16 - Flame Burst - %s^7\n17 - Ultra Flame - %s^7\n18 - Flaming Area - %s^7\n19 - Blowing Wind - %s^7\n20 - Hurricane - %s^7\n21 - Reverse Wind - %s^7\n22 - Ultra Resistance - %s^7\n23 - Ultra Strength - %s^7\n24 - Enemy Weakening - %s^7\n25 - Ice Stalagmite - %s^7\n26 - Ice Boulder - %s^7\n27 - Ice Block - %s^7\n28 - Healing Area - %s^7\n29 - Magic Explosion - %s^7\n30 - Lightning Dome - %s^7\n\"", 
 			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_INNER_AREA_DAMAGE)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_HEALING_WATER)) ? "^2yes" : "^1no",
 			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_WATER_SPLASH)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_WATER_ATTACK)) ? "^2yes" : "^1no",
 			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_EARTHQUAKE)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ROCKFALL)) ? "^2yes" : "^1no",
 			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SHIFTING_SAND)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SLEEPING_FLOWERS)) ? "^2yes" : "^1no",
 			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_POISON_MUSHROOMS)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_TREE_OF_LIFE)) ? "^2yes" : "^1no",
 			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_SHIELD)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_DOME_OF_DAMAGE)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_DRAIN)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_SPEED)) ? "^2yes" : "^1no",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_DISABLE)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_SPEED)) ? "^2yes" : "^1no",
 			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SLOW_MOTION)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_FAST_AND_SLOW)) ? "^2yes" : "^1no",
 			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_FLAME_BURST)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_FLAME)) ? "^2yes" : "^1no",
 			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_FLAMING_AREA)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_BLOWING_WIND)) ? "^2yes" : "^1no",
