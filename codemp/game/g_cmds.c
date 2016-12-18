@@ -3810,6 +3810,7 @@ extern void flaming_area(gentity_t *ent, int damage);
 extern void reverse_wind(gentity_t *ent, int distance, int duration);
 extern void enemy_nerf(gentity_t *ent, int distance);
 extern void ice_block(gentity_t *ent, int duration);
+extern qboolean magic_master_has_this_power(gentity_t *ent, int selected_power);
 qboolean TryGrapple(gentity_t *ent)
 {
 	if (ent->client->ps.weaponTime > 0)
@@ -3878,8 +3879,8 @@ qboolean TryGrapple(gentity_t *ent)
 						use_this_power = ent->client->sess.selected_left_special_power;
 					}
 
-					if (ent->client->sess.magic_master_disabled_powers & (1 << use_this_power))
-					{ // zyk: if the magic power is disabled, do not use it
+					if (magic_master_has_this_power(ent, use_this_power) == qfalse)
+					{ // zyk: if the magic power is not enabled or player does not have it, do not use it
 						use_this_power = -1;
 					}
 				}
@@ -5153,7 +5154,6 @@ int number_of_crystals(gentity_t *ent)
 }
 
 // zyk: initialize RPG skills of this player
-extern qboolean magic_master_has_this_power(gentity_t *ent, int selected_power);
 void initialize_rpg_skills(gentity_t *ent)
 {
 	if (ent->client->sess.amrpgmode == 2)
