@@ -6646,9 +6646,9 @@ void quest_power_events(gentity_t *ent)
 
 						gentity_t *this_enemy = &g_entities[ent->client->pers.quest_power_user4_id];
 
-						origin[0] = this_enemy->client->ps.origin[0] + (Q_irand(100, 150) * random_x);
-						origin[1] = this_enemy->client->ps.origin[1] + (Q_irand(100, 150) * random_y);
-						origin[2] = this_enemy->client->ps.origin[2] + Q_irand(20, 100);
+						origin[0] = this_enemy->client->ps.origin[0] + (Q_irand(70, 100) * random_x);
+						origin[1] = this_enemy->client->ps.origin[1] + (Q_irand(70, 100) * random_y);
+						origin[2] = this_enemy->client->ps.origin[2] + Q_irand(40, 100);
 
 						zyk_TeleportPlayer(ent, origin, ent->client->ps.viewangles);
 
@@ -12379,7 +12379,7 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (random_magic == 19)
 				{
-					shifting_sand(ent, 800);
+					shifting_sand(ent, 900);
 				}
 				else if (random_magic == 20)
 				{
