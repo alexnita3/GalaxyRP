@@ -10086,7 +10086,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 7)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Force Gunner gets Item Generation, which creates holdable items through the user of force and magic. Spends 50 force and 10 mp\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Force Gunner gets Item Generation, which creates holdable items through the use of force and magic. Spends 50 force and 10 mp\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 8)
 			{
@@ -15213,7 +15213,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 						if (player_ent && player_ent->client && ent != player_ent && 
 							zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue &&
-							Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 300)
+							Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 320)
 						{
 							vec3_t dir;
 
@@ -15756,7 +15756,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 						if (player_ent && player_ent->client && ent != player_ent &&
 							zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue &&
-							Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 300)
+							Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 320)
 						{
 							vec3_t dir;
 
