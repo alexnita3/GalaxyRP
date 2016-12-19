@@ -15894,7 +15894,12 @@ void Cmd_DuelTournament_f(gentity_t *ent) {
 		return;
 	}
 
-	if (level.duel_players[ent->s.number] == -1)
+	if (level.duel_players[ent->s.number] == -1 && level.duel_tournament_mode > 1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot join the duel tournament now\n\"");
+		return;
+	}
+	else if (level.duel_players[ent->s.number] == -1)
 	{ // zyk: join the tournament
 		if (level.duelists_quantity == 0)
 		{ // zyk: first duelist joined. Put the globe model in the duel arena and set its origin point
@@ -15923,15 +15928,24 @@ void Cmd_DuelTournament_f(gentity_t *ent) {
 	}
 	else
 	{ // zyk: leave the tournament
-		level.duel_players[ent->s.number] = -1;
-		level.duelists_quantity--;
+		if (level.duel_tournament_mode == 3 && (level.duelist_1_id == ent->s.number || level.duelist_2_id == ent->s.number))
+		{ // zyk: if trying to leave while in duel, make him lose
+			ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
 
-		if (level.duelists_quantity == 0)
-		{ // zyk: everyone left the tournament. End it
-			duel_tournament_end();
+			player_die(ent, ent, ent, 100000, MOD_SUICIDE);
 		}
+		else
+		{
+			level.duel_players[ent->s.number] = -1;
+			level.duelists_quantity--;
 
-		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left the tournament!\n\"", ent->client->pers.netname));
+			if (level.duelists_quantity == 0)
+			{ // zyk: everyone left the tournament. End it
+				duel_tournament_end();
+			}
+
+			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left the tournament!\n\"", ent->client->pers.netname));
+		}
 	}
 }
 

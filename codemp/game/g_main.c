@@ -7304,23 +7304,26 @@ void G_RunFrame( int levelTime ) {
 
 			if (zyk_random == 1)
 			{ // zyk: put the duelists along the x axis
-				VectorSet(zyk_origin, level.duel_tournament_origin[0] - 200, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
+				VectorSet(zyk_origin, level.duel_tournament_origin[0] - 120, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
 				zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
 
-				VectorSet(zyk_origin, level.duel_tournament_origin[0] + 200, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
+				VectorSet(zyk_origin, level.duel_tournament_origin[0] + 120, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
 				zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
 			}
 			else
 			{ // zyk: put the duelists along the y axis
-				VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 200, level.duel_tournament_origin[2]);
+				VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 120, level.duel_tournament_origin[2]);
 				zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
 
-				VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 200, level.duel_tournament_origin[2]);
+				VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 120, level.duel_tournament_origin[2]);
 				zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
 			}
 
 			// zyk: remove weapons and force powers. Leave only the saber
 			duel_tournament_prepare(duelist_1, duelist_2);
+
+			// zyk: setting the max time players can duel
+			level.duel_tournament_timer = level.time + 300000;
 
 			level.duel_tournament_mode = 3;
 
@@ -7346,7 +7349,7 @@ void G_RunFrame( int levelTime ) {
 	{ // zyk: Duel tournament can begin
 		level.duel_tournament_mode = 2;
 		level.duel_tournament_timer = level.time + 3000;
-		trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7The duels will begin!\"");
+		trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7The duel will begin!\"");
 	}
 
 	// zyk: Guardian of Map abilities
@@ -9158,6 +9161,34 @@ void G_RunFrame( int levelTime ) {
 					ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
 
 					player_die(ent, ent, ent, 100000, MOD_SUICIDE);
+				}
+				else if (level.duel_tournament_timer < level.time)
+				{ // zyk: duel time run out
+					gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
+					gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
+
+					if (duelist_1->health > duelist_2->health || duelist_1->client->ps.stats[STAT_ARMOR] > duelist_2->client->ps.stats[STAT_ARMOR])
+					{
+						duelist_2->client->ps.stats[STAT_HEALTH] = duelist_2->health = -999;
+
+						player_die(duelist_2, duelist_2, duelist_2, 100000, MOD_SUICIDE);
+					}
+					else if (duelist_2->health > duelist_1->health || duelist_2->client->ps.stats[STAT_ARMOR] > duelist_1->client->ps.stats[STAT_ARMOR])
+					{
+						duelist_1->client->ps.stats[STAT_HEALTH] = duelist_1->health = -999;
+
+						player_die(duelist_1, duelist_1, duelist_1, 100000, MOD_SUICIDE);
+					}
+					else
+					{ // zyk: tie the duel
+						duelist_1->client->ps.stats[STAT_HEALTH] = duelist_1->health = -999;
+						duelist_2->client->ps.stats[STAT_HEALTH] = duelist_2->health = -999;
+
+						player_die(duelist_1, duelist_1, duelist_1, 100000, MOD_SUICIDE);
+						player_die(duelist_2, duelist_2, duelist_2, 100000, MOD_SUICIDE);
+					}
+
+					trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Time is up!\"");
 				}
 			}
 
