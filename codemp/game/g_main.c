@@ -7238,6 +7238,7 @@ void G_RunFrame( int levelTime ) {
 	{ // zyk: search for duelists and put them in the arena
 		int zyk_it = 0;
 		int number_of_winners = 0; // zyk: number of players who won their matches
+		qboolean is_in_boss = qfalse;
 
 		for (zyk_it = 0; zyk_it < MAX_CLIENTS; zyk_it++)
 		{
@@ -7246,6 +7247,11 @@ void G_RunFrame( int levelTime ) {
 			if (this_duelist && this_duelist->client && this_duelist->client->pers.connected == CON_CONNECTED &&
 				this_duelist->client->sess.sessionTeam != TEAM_SPECTATOR)
 			{
+				if (this_duelist->client->sess.amrpgmode == 2 && this_duelist->client->pers.guardian_mode > 0)
+				{
+					is_in_boss = qtrue;
+				}
+
 				if (level.duel_players[zyk_it] > -1 && level.duel_players[zyk_it] < 1)
 				{ // zyk: this player can be a duelist
 					if (level.duelist_1_id == -1)
@@ -7284,7 +7290,12 @@ void G_RunFrame( int levelTime ) {
 			level.duel_tournament_timer = level.time + 3000;
 		}
 		
-		if (level.duelist_1_id != -1 && level.duelist_2_id != -1)
+		if (is_in_boss == qtrue)
+		{
+			level.duel_tournament_timer = level.time + 15000;
+			trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Waiting for the quest player to finish boss battle!\"");
+		}
+		else if (level.duelist_1_id != -1 && level.duelist_2_id != -1)
 		{ // zyk: found the duelists
 			int zyk_random = Q_irand(0, 1);
 			vec3_t zyk_origin;
@@ -7312,6 +7323,10 @@ void G_RunFrame( int levelTime ) {
 			duel_tournament_prepare(duelist_1, duelist_2);
 
 			level.duel_tournament_mode = 3;
+
+			// zyk: killing all npcs and vehicles
+			zyk_NPC_Kill_f("all");
+
 			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7x %s\"", duelist_1->client->pers.netname, duelist_2->client->pers.netname));
 		}
 		else if (level.duelist_1_id != -1 && level.duelists_quantity == 1)

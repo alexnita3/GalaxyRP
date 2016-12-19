@@ -15886,6 +15886,7 @@ void Cmd_Magic_f( gentity_t *ent ) {
 Cmd_DuelTournament_f
 ==================
 */
+extern void duel_tournament_end();
 void Cmd_DuelTournament_f(gentity_t *ent) {
 	if (ent->client->sess.amrpgmode == 2)
 	{
@@ -15918,14 +15919,19 @@ void Cmd_DuelTournament_f(gentity_t *ent) {
 		level.duel_players[ent->s.number] = 0;
 		level.duelists_quantity++;
 
-		trap->SendServerCommand(ent->s.number, va("chat \"^3Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
+		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
 	}
 	else
 	{ // zyk: leave the tournament
 		level.duel_players[ent->s.number] = -1;
 		level.duelists_quantity--;
 
-		trap->SendServerCommand(ent->s.number, va("chat \"^3Duel Tournament: ^7%s ^7left the tournament!\n\"", ent->client->pers.netname));
+		if (level.duelists_quantity == 0)
+		{ // zyk: everyone left the tournament. End it
+			duel_tournament_end();
+		}
+
+		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left the tournament!\n\"", ent->client->pers.netname));
 	}
 }
 
