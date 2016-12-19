@@ -7302,6 +7302,9 @@ void G_RunFrame( int levelTime ) {
 			gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
 			gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
 
+			// zyk: remove weapons and force powers. Leave only the saber
+			duel_tournament_prepare(duelist_1, duelist_2);
+
 			if (zyk_random == 1)
 			{ // zyk: put the duelists along the x axis
 				VectorSet(zyk_origin, level.duel_tournament_origin[0] - 120, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
@@ -7318,9 +7321,6 @@ void G_RunFrame( int levelTime ) {
 				VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 120, level.duel_tournament_origin[2]);
 				zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
 			}
-
-			// zyk: remove weapons and force powers. Leave only the saber
-			duel_tournament_prepare(duelist_1, duelist_2);
 
 			// zyk: setting the max time players can duel
 			level.duel_tournament_timer = level.time + 300000;
