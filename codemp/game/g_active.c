@@ -2859,6 +2859,32 @@ void ClientThink_real( gentity_t *ent ) {
 			}
 			else
 			{ //it was a draw, because we both managed to die in the same frame
+				if (level.duel_tournament_mode == 3)
+				{
+					gentity_t *duelist_loser = NULL;
+					gentity_t *duelist_winner = NULL;
+
+					if (ent->s.number == level.duelist_1_id)
+					{
+						duelist_winner = ent;
+						duelist_loser = &g_entities[level.duelist_2_id];
+					}
+					else if (ent->s.number == level.duelist_2_id)
+					{
+						duelist_winner = ent;
+						duelist_loser = &g_entities[level.duelist_1_id];
+					}
+
+					if (duelist_winner && duelist_loser)
+					{ // zyk: tied. Do not give score to anyone
+						level.duelist_1_id = -1;
+						level.duelist_2_id = -1;
+
+						level.duel_tournament_mode = 2;
+						level.duel_tournament_timer = level.time + 3000;
+					}
+				}
+
 				trap->SendServerCommand( -1, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "PLDUELTIE")) );
 			}
 		}
