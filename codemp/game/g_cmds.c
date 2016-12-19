@@ -15904,7 +15904,7 @@ void Cmd_DuelTournament_f(gentity_t *ent) {
 			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2]));
 			zyk_set_entity_field(new_ent, "model", "models/map_objects/vjun/globe.md3");
 			zyk_set_entity_field(new_ent, "targetname", "zyk_duel_globe");
-			zyk_set_entity_field(new_ent, "zykmodelscale", "600");
+			zyk_set_entity_field(new_ent, "zykmodelscale", "700");
 
 			zyk_spawn_entity(new_ent);
 
