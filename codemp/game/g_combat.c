@@ -2150,39 +2150,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	if ( !attacker )
 		return;
 
-	// zyk: Duel Tournament. A duelist was defeated, gives score to the winner and remove the loser from tournament if he lost
-	if (level.duel_tournament_mode == 3)
-	{
-		gentity_t *duelist_loser = NULL;
-		gentity_t *duelist_winner = NULL;
-
-		if (self->s.number == level.duelist_1_id)
-		{
-			duelist_loser = self;
-			duelist_winner = &g_entities[level.duelist_2_id];
-		}
-		else if (self->s.number == level.duelist_2_id)
-		{
-			duelist_loser = self;
-			duelist_winner = &g_entities[level.duelist_1_id];
-		}
-
-		if (duelist_loser && duelist_winner)
-		{ // zyk: give score to the winner and remove the loser from the tournament
-			level.duel_players[duelist_winner->s.number]++;
-			level.duel_players[duelist_loser->s.number] = -1;
-
-			level.duelists_quantity--;
-
-			level.duelist_1_id = -1;
-			level.duelist_2_id = -1;
-
-			level.duel_tournament_mode = 2;
-			level.duel_tournament_timer = level.time + 3000;
-			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7defeated %s ^7- ^1%d^7/^2%d^7\"", duelist_winner->client->pers.netname, duelist_loser->client->pers.netname, duelist_winner->health, duelist_winner->client->ps.stats[STAT_ARMOR]));
-		}
-	}
-
 	// zyk: remove any quest_power status from this player
 	self->client->pers.quest_power_status = 0;
 	self->client->pers.player_statuses &= ~(1 << 20);

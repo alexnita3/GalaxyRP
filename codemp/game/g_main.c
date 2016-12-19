@@ -6949,46 +6949,74 @@ void duel_tournament_end()
 
 
 // zyk: prepare duelist for duel
-void duel_tournament_prepare(gentity_t *ent)
+void duel_tournament_prepare(gentity_t *ent, gentity_t *challenged)
 {
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PUSH);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PULL);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SPEED);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SEE);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SABERTHROW);
-	ent->client->ps.fd.forcePowerLevel[FP_SABERTHROW] = FORCE_LEVEL_0;
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_ABSORB);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_HEAL);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PROTECT);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TELEPATHY);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_HEAL);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_LIGHTNING);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_GRIP);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_DRAIN);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_RAGE);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_FORCE);
+	ent->client->ps.duelInProgress = qtrue;
+	challenged->client->ps.duelInProgress = qtrue;
 
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_MELEE);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_STUN_BATON);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_PISTOL);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BLASTER);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DISRUPTOR);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BOWCASTER);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_REPEATER);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DEMP2);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_FLECHETTE);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_ROCKET_LAUNCHER);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_CONCUSSION);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_OLD);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_THERMAL);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_TRIP_MINE);
-	ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DET_PACK);
-
-	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
-	ent->client->ps.weapon = WP_SABER;
-
+	// zyk: reset hp and shield of both players
 	ent->health = 100;
 	ent->client->ps.stats[STAT_ARMOR] = 100;
+
+	challenged->health = 100;
+	challenged->client->ps.stats[STAT_ARMOR] = 100;
+
+	// zyk: disable jetpack of both players
+	Jetpack_Off(ent);
+	Jetpack_Off(challenged);
+
+	ent->client->ps.duelTime = level.time + 2000;
+	challenged->client->ps.duelTime = level.time + 2000;
+
+	G_AddEvent(ent, EV_PRIVATE_DUEL, 1);
+	G_AddEvent(challenged, EV_PRIVATE_DUEL, 1);
+
+	//Holster their sabers now, until the duel starts (then they'll get auto-turned on to look cool)
+
+	if (!ent->client->ps.saberHolstered)
+	{
+		if (ent->client->saber[0].soundOff)
+		{
+			G_Sound(ent, CHAN_AUTO, ent->client->saber[0].soundOff);
+		}
+		if (ent->client->saber[1].soundOff &&
+			ent->client->saber[1].model[0])
+		{
+			G_Sound(ent, CHAN_AUTO, ent->client->saber[1].soundOff);
+		}
+		ent->client->ps.weaponTime = 400;
+		ent->client->ps.saberHolstered = 2;
+	}
+	if (!challenged->client->ps.saberHolstered)
+	{
+		if (challenged->client->saber[0].soundOff)
+		{
+			G_Sound(challenged, CHAN_AUTO, challenged->client->saber[0].soundOff);
+		}
+		if (challenged->client->saber[1].soundOff &&
+			challenged->client->saber[1].model[0])
+		{
+			G_Sound(challenged, CHAN_AUTO, challenged->client->saber[1].soundOff);
+		}
+		challenged->client->ps.weaponTime = 400;
+		challenged->client->ps.saberHolstered = 2;
+	}
+
+	ent->client->ps.fd.privateDuelTime = 0; //reset the timer in case this player just got out of a duel. He should still be able to accept the challenge.
+
+	ent->client->ps.forceHandExtend = HANDEXTEND_DUELCHALLENGE;
+	ent->client->ps.forceHandExtendTime = level.time + 1000;
+
+	ent->client->ps.duelIndex = challenged->s.number;
+	ent->client->ps.duelTime = level.time + 5000;
+
+	challenged->client->ps.fd.privateDuelTime = 0; //reset the timer in case this player just got out of a duel. He should still be able to accept the challenge.
+
+	challenged->client->ps.forceHandExtend = HANDEXTEND_DUELCHALLENGE;
+	challenged->client->ps.forceHandExtendTime = level.time + 1000;
+
+	challenged->client->ps.duelIndex = ent->s.number;
+	challenged->client->ps.duelTime = level.time + 5000;
 }
 
 /*
@@ -7281,8 +7309,7 @@ void G_RunFrame( int levelTime ) {
 			}
 
 			// zyk: remove weapons and force powers. Leave only the saber
-			duel_tournament_prepare(duelist_1);
-			duel_tournament_prepare(duelist_2);
+			duel_tournament_prepare(duelist_1, duelist_2);
 
 			level.duel_tournament_mode = 3;
 			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7x %s\"", duelist_1->client->pers.netname, duelist_2->client->pers.netname));

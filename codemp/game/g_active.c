@@ -2823,6 +2823,38 @@ void ClientThink_real( gentity_t *ent ) {
 			// zyk: now announce in console
 			if (ent->health > 0 && ent->client->ps.stats[STAT_HEALTH] > 0)
 			{
+				// zyk: Duel Tournament. A duelist was defeated, gives score to the winner and remove the loser from tournament if he lost
+				if (level.duel_tournament_mode == 3)
+				{
+					gentity_t *duelist_loser = NULL;
+					gentity_t *duelist_winner = NULL;
+
+					if (ent->s.number == level.duelist_1_id)
+					{
+						duelist_winner = ent;
+						duelist_loser = &g_entities[level.duelist_2_id];
+					}
+					else if (ent->s.number == level.duelist_2_id)
+					{
+						duelist_winner = ent;
+						duelist_loser = &g_entities[level.duelist_1_id];
+					}
+
+					if (duelist_winner && duelist_loser)
+					{ // zyk: give score to the winner and remove the loser from the tournament
+						level.duel_players[duelist_winner->s.number]++;
+						level.duel_players[duelist_loser->s.number] = -1;
+
+						level.duelists_quantity--;
+
+						level.duelist_1_id = -1;
+						level.duelist_2_id = -1;
+
+						level.duel_tournament_mode = 2;
+						level.duel_tournament_timer = level.time + 3000;
+					}
+				}
+
 				trap->SendServerCommand( -1, va("print \"%s ^7%s %s^7, ending with ^1%d^7/^2%d^7!\n\"", ent->client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLDUELWINNER"), duelAgainst->client->pers.netname, old_health, old_shield) );
 			}
 			else
