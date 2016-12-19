@@ -15882,6 +15882,44 @@ void Cmd_Magic_f( gentity_t *ent ) {
 }
 
 /*
+==================
+Cmd_DuelTournament_f
+==================
+*/
+void Cmd_DuelTournament_f(gentity_t *ent) {
+	if (ent->client->sess.amrpgmode == 2)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"You cannot be in RPG Mode to play the Duel Tournament.\n\"");
+		return;
+	}
+
+	if (level.duelists_quantity == 0)
+	{ // zyk: first duelist joined. Put the globe model in the duel arena and set its origin point
+		gentity_t *new_ent = G_Spawn();
+
+		zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+		zyk_set_entity_field(new_ent, "spawnflags", "0");
+		zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2]));
+		zyk_set_entity_field(new_ent, "model", "models/map_objects/vjun/globe.md3");
+		zyk_set_entity_field(new_ent, "targetname", "zyk_duel_globe");
+		zyk_set_entity_field(new_ent, "zykmodelscale", "600");
+
+		zyk_spawn_entity(new_ent);
+
+		level.duel_tournament_model_id = new_ent->s.number;
+	
+		VectorCopy(ent->client->ps.origin, level.duel_tournament_origin);
+	}
+
+	level.duel_tournament_mode = 1;
+	level.duel_tournament_timer = level.time + 15000;
+	level.duel_players[ent->s.number] = 0;
+	level.duelists_quantity++;
+
+	trap->SendServerCommand(ent->s.number, va("chat \"^3Duel Tournament: ^7%s ^7joined!\n\"", ent->client->pers.netname));
+}
+
+/*
 =================
 ClientCommand
 =================
@@ -15932,6 +15970,7 @@ command_t commands[] = {
 	{ "down",				Cmd_DownSkill_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "drop",				Cmd_Drop_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "duelteam",			Cmd_DuelTeam_f,				CMD_NOINTERMISSION },
+	{ "dueltournament",		Cmd_DuelTournament_f,		CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "emote",				Cmd_Emote_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "entadd",				Cmd_EntAdd_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "entdeletefile",		Cmd_EntDeleteFile_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },

@@ -1523,6 +1523,16 @@ typedef struct level_locals_s {
 	int race_countdown; // zyk: used to print each of the countdown messages
 	int race_last_player_position; // zyk: after race starts, sets the position of the last player who crossed the finish line
 
+	// zyk: Duel Tournament
+	int duel_tournament_mode; // zyk: sets 1 when someone joined and 2 when countdown starts and 3 when tournament begins. Default 0
+	int duelists_quantity; // zyk: number of players in the duel tournament. Default 0
+	int duel_tournament_timer; // zyk: timer of duel tournament events. Default 0
+	int duel_players[MAX_CLIENTS]; // zyk: has the score of the player in each match. Default -1
+	vec3_t duel_tournament_origin; // zyk: origin of the duel tournament arena, which has the globe around it. Used to validate position of players. If a duelist leaves the arena, he loses
+	int duelist_1_id; // zyk: id of the first duelist
+	int duelist_2_id; // zyk: id of the second duelist
+	int duel_tournament_model_id; // zyk: model id of the globe
+
 	// zyk: the player id who is the target in Bounty Quest. Default 0
 	int bounty_quest_target_id;
 

@@ -2690,6 +2690,13 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	// zyk: cooldown time between unique skills and unique abilities
 	client->pers.unique_skill_timer = 0;
 
+	// zyk: duelist went to spec. Reset him from duels
+	if (level.duel_players[ent->s.number] > -1)
+	{
+		level.duel_players[ent->s.number] = -1;
+		level.duelists_quantity--;
+	}
+
 	// zyk: sending events to client game
 	client->pers.send_event_timer = level.time + 3000;
 	client->pers.send_event_interval = level.time + 100;
@@ -4160,6 +4167,13 @@ void ClientDisconnect( int clientNum ) {
 	// zyk: removing ignored players
 	level.ignored_players[ent->s.number][0] = 0;
 	level.ignored_players[ent->s.number][1] = 0;
+
+	// zyk: duelist disconnected. Reset him from duels
+	if (level.duel_players[ent->s.number] > -1)
+	{
+		level.duel_players[ent->s.number] = -1;
+		level.duelists_quantity--;
+	}
 
 	// zyk: cleaning ally ids of other players who have this player as ally
 	for (i = 0; i < level.maxclients; i++)
