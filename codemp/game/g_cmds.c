@@ -15883,11 +15883,11 @@ void Cmd_Magic_f( gentity_t *ent ) {
 
 /*
 ==================
-Cmd_DuelTournament_f
+Cmd_DuelMode_f
 ==================
 */
 extern void duel_tournament_end();
-void Cmd_DuelTournament_f(gentity_t *ent) {
+void Cmd_DuelMode_f(gentity_t *ent) {
 	if (ent->client->sess.amrpgmode == 2)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"You cannot be in RPG Mode to play the Duel Tournament.\n\"");
@@ -15999,8 +15999,8 @@ command_t commands[] = {
 	{ "debugBMove_Up",		Cmd_BotMoveUp_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "down",				Cmd_DownSkill_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "drop",				Cmd_Drop_f,					CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "duelmode",			Cmd_DuelMode_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "duelteam",			Cmd_DuelTeam_f,				CMD_NOINTERMISSION },
-	{ "dueltournament",		Cmd_DuelTournament_f,		CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "emote",				Cmd_Emote_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "entadd",				Cmd_EntAdd_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "entdeletefile",		Cmd_EntDeleteFile_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
