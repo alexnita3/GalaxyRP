@@ -15907,7 +15907,7 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 
 			zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
 			zyk_set_entity_field(new_ent, "spawnflags", "0");
-			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2] - 22));
+			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2]));
 			zyk_set_entity_field(new_ent, "model", "models/map_objects/vjun/globe.md3");
 			zyk_set_entity_field(new_ent, "targetname", "zyk_duel_globe");
 			zyk_set_entity_field(new_ent, "zykmodelscale", "800");
