@@ -15901,30 +15901,38 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 	}
 	else if (level.duel_players[ent->s.number] == -1)
 	{ // zyk: join the tournament
-		if (level.duelists_quantity == 0)
-		{ // zyk: first duelist joined. Put the globe model in the duel arena and set its origin point
-			gentity_t *new_ent = G_Spawn();
-
-			zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-			zyk_set_entity_field(new_ent, "spawnflags", "0");
-			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2]));
-			zyk_set_entity_field(new_ent, "model", "models/map_objects/vjun/globe.md3");
-			zyk_set_entity_field(new_ent, "targetname", "zyk_duel_globe");
-			zyk_set_entity_field(new_ent, "zykmodelscale", "800");
-
-			zyk_spawn_entity(new_ent);
-
-			level.duel_tournament_model_id = new_ent->s.number;
-
-			VectorCopy(new_ent->s.origin, level.duel_tournament_origin);
+		if (level.duelists_quantity == MAX_DUELISTS)
+		{
+			trap->SendServerCommand(ent->s.number, va("print \"There are already %d duelists in tournament\n\"", MAX_DUELISTS));
+			return;
 		}
+		else
+		{
+			if (level.duelists_quantity == 0)
+			{ // zyk: first duelist joined. Put the globe model in the duel arena and set its origin point
+				gentity_t *new_ent = G_Spawn();
 
-		level.duel_tournament_mode = 1;
-		level.duel_tournament_timer = level.time + 15000;
-		level.duel_players[ent->s.number] = 0;
-		level.duelists_quantity++;
+				zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+				zyk_set_entity_field(new_ent, "spawnflags", "0");
+				zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2]));
+				zyk_set_entity_field(new_ent, "model", "models/map_objects/vjun/globe.md3");
+				zyk_set_entity_field(new_ent, "targetname", "zyk_duel_globe");
+				zyk_set_entity_field(new_ent, "zykmodelscale", "800");
 
-		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
+				zyk_spawn_entity(new_ent);
+
+				level.duel_tournament_model_id = new_ent->s.number;
+
+				VectorCopy(new_ent->s.origin, level.duel_tournament_origin);
+			}
+
+			level.duel_tournament_mode = 1;
+			level.duel_tournament_timer = level.time + 15000;
+			level.duel_players[ent->s.number] = 0;
+			level.duelists_quantity++;
+
+			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
+		}
 	}
 	else
 	{ // zyk: leave the tournament

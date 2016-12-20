@@ -2841,17 +2841,14 @@ void ClientThink_real( gentity_t *ent ) {
 					}
 
 					if (duelist_winner && duelist_loser)
-					{ // zyk: give score to the winner and remove the loser from the tournament
-						level.duel_players[duelist_winner->s.number]++;
-						level.duel_players[duelist_loser->s.number] = -1;
+					{ // zyk: give score to the winner
+						level.duel_players[duelist_winner->s.number] += 3;
 
-						level.duelists_quantity--;
+						level.duel_tournament_timer = level.time + 5000;
+						level.duel_tournament_mode = 2;
 
 						level.duelist_1_id = -1;
 						level.duelist_2_id = -1;
-
-						level.duel_tournament_mode = 2;
-						level.duel_tournament_timer = level.time + 3000;
 					}
 				}
 
@@ -2876,12 +2873,15 @@ void ClientThink_real( gentity_t *ent ) {
 					}
 
 					if (duelist_winner && duelist_loser)
-					{ // zyk: tied. Do not give score to anyone
+					{ // zyk: tied
+						level.duel_players[duelist_winner->s.number] += 1;
+						level.duel_players[duelist_loser->s.number] += 1;
+
+						level.duel_tournament_timer = level.time + 5000;
+						level.duel_tournament_mode = 2;
+
 						level.duelist_1_id = -1;
 						level.duelist_2_id = -1;
-
-						level.duel_tournament_mode = 2;
-						level.duel_tournament_timer = level.time + 3000;
 					}
 				}
 

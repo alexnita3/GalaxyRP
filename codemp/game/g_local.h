@@ -1383,6 +1383,12 @@ typedef struct {
 // zyk: Max racers in the map
 #define MAX_RACERS 16
 
+// zyk: Max duelists in tournament
+#define MAX_DUELISTS 16
+
+// zyk: max matches a tournament may have
+#define MAX_DUEL_MATCHES 120
+
 typedef struct level_locals_s {
 	struct gclient_s	*clients;		// [maxclients]
 
@@ -1527,11 +1533,16 @@ typedef struct level_locals_s {
 	int duel_tournament_mode; // zyk: sets 1 when someone joined and 2 when countdown starts and 3 when tournament begins. Default 0
 	int duelists_quantity; // zyk: number of players in the duel tournament. Default 0
 	int duel_tournament_timer; // zyk: timer of duel tournament events. Default 0
-	int duel_players[MAX_CLIENTS]; // zyk: has the score of the player in each match. Default -1
+	int duel_players[MAX_CLIENTS]; // zyk: has the score each player in the tournament. Default -1
+	int duel_tournament_model_id; // zyk: model id of the globe
 	vec3_t duel_tournament_origin; // zyk: origin of the duel tournament arena, which has the globe around it. Used to validate position of players. If a duelist leaves the arena, he loses
 	int duelist_1_id; // zyk: id of the first duelist
 	int duelist_2_id; // zyk: id of the second duelist
-	int duel_tournament_model_id; // zyk: model id of the globe
+	int duel_matches[MAX_DUEL_MATCHES][2]; // zyk: the table with all the matches between the duelists, with their ids
+	int duel_round; // zyk: used to get the duels in a way the same player is not got several times in a row
+	int duel_offset; // zyk: used to get the duels in a way the same player is not got several times in a row
+	int duel_matches_quantity; // zyk: quantity of matches in this tournament
+	int duel_matches_done; // zyk: how many matches were already done
 
 	// zyk: the player id who is the target in Bounty Quest. Default 0
 	int bounty_quest_target_id;
