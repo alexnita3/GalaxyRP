@@ -15958,6 +15958,36 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 }
 
 /*
+==================
+Cmd_DuelTable_f
+==================
+*/
+void Cmd_DuelTable_f(gentity_t *ent) {
+	int i = 0;
+	char content[1024];
+
+	if (level.duel_tournament_mode == 0)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"There is no duel tournament now\n\"");
+		return;
+	}
+
+	strcpy(content, "\n");
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		if (level.duel_players[i] != -1)
+		{ // zyk: a player in the duel tournament
+			gentity_t *player_ent = &g_entities[i];
+
+			strcpy(content, va("%s%s: %d\n", content, player_ent->client->pers.netname, level.duel_players[i]));
+		}
+	}
+
+	trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", content));
+}
+
+/*
 =================
 ClientCommand
 =================
@@ -16008,6 +16038,7 @@ command_t commands[] = {
 	{ "down",				Cmd_DownSkill_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "drop",				Cmd_Drop_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "duelmode",			Cmd_DuelMode_f,				CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "dueltable",			Cmd_DuelTable_f,			CMD_NOINTERMISSION },
 	{ "duelteam",			Cmd_DuelTeam_f,				CMD_NOINTERMISSION },
 	{ "emote",				Cmd_Emote_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "entadd",				Cmd_EntAdd_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
