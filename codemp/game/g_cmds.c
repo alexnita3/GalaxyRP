@@ -13885,6 +13885,15 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[13],va("^3 %d ^7- Players: ^1no\n",ADM_PLAYERS));
 	}
 
+	if ((ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
+	{
+		strcpy(message_content[14], va("^3 %d ^7- DuelArena: ^2yes\n", ADM_DUELARENA));
+	}
+	else
+	{
+		strcpy(message_content[14], va("^3 %d ^7- DuelArena: ^1no\n", ADM_DUELARENA));
+	}
+
 	for (i = 0; i < ADM_NUM_CMDS; i++)
 	{
 		sprintf(message,"%s%s",message,message_content[i]);
@@ -13966,6 +13975,10 @@ void Cmd_AdminList_f( gentity_t *ent ) {
 		else if (command_number == ADM_PLAYERS)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\nUse ^3/players ^7to see info about the players. Use ^3/players <player name or ID> ^7to see RPG info of a player. Use ^3/players <player name or ID> ^7and a third argument (^3force,weapons,other,ammo,items^7) to see skill levels of the player\n\n\"" );
+		}
+		else if (command_number == ADM_DUELARENA)
+		{
+			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/duelarena ^7to set or unset the Duel Tournament arena in this map. The arena is saved automatically\n\n\"");
 		}
 	}
 	else
@@ -15894,6 +15907,12 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 		return;
 	}
 
+	if (level.duel_arena_loaded == qfalse)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"There is no duel arena in this map\n\"");
+		return;
+	}
+
 	if (level.duel_players[ent->s.number] == -1 && level.duel_tournament_mode > 1)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Cannot join the duel tournament now\n\"");
@@ -15914,7 +15933,7 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 
 				zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
 				zyk_set_entity_field(new_ent, "spawnflags", "0");
-				zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2]));
+				zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)level.duel_tournament_origin[0], (int)level.duel_tournament_origin[1], (int)level.duel_tournament_origin[2]));
 				zyk_set_entity_field(new_ent, "model", "models/map_objects/vjun/globe.md3");
 				zyk_set_entity_field(new_ent, "targetname", "zyk_duel_globe");
 				zyk_set_entity_field(new_ent, "zykmodelscale", "800");
@@ -15922,8 +15941,6 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 				zyk_spawn_entity(new_ent);
 
 				level.duel_tournament_model_id = new_ent->s.number;
-
-				VectorCopy(new_ent->s.origin, level.duel_tournament_origin);
 			}
 
 			level.duel_tournament_mode = 1;
@@ -15988,6 +16005,63 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 }
 
 /*
+==================
+Cmd_DuelArena_f
+==================
+*/
+void Cmd_DuelArena_f(gentity_t *ent) {
+	FILE *duel_arena_file;
+	char content[1024];
+	char zyk_info[MAX_INFO_STRING] = { 0 };
+	char zyk_mapname[128] = { 0 };
+
+	// zyk: getting the map name
+	trap->GetServerinfo(zyk_info, sizeof(zyk_info));
+	Q_strncpyz(zyk_mapname, Info_ValueForKey(zyk_info, "mapname"), sizeof(zyk_mapname));
+
+	strcpy(content, "");
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
+	{ // zyk: admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	// zyk: creating directory of the duel arena files
+	system("mkdir duelarena");
+
+	duel_arena_file = fopen(va("duelarena/%s/origin.txt", zyk_mapname), "r");
+	if (duel_arena_file == NULL)
+	{ // zyk: arena file does not exist yet, create one
+		VectorCopy(ent->client->ps.origin, level.duel_tournament_origin);
+
+#if defined(__linux__)
+		system(va("mkdir -p duelarena/%s", zyk_mapname));
+#else
+		system(va("mkdir \"duelarena/%s\"", zyk_mapname));
+#endif
+
+		duel_arena_file = fopen(va("duelarena/%s/origin.txt", zyk_mapname), "w");
+		fprintf(duel_arena_file, "%d\n%d\n%d\n", (int)level.duel_tournament_origin[0], (int)level.duel_tournament_origin[1], (int)level.duel_tournament_origin[2]);
+		fclose(duel_arena_file);
+
+		level.duel_arena_loaded = qtrue;
+
+		trap->SendServerCommand(ent - g_entities, va("print \"Added duel arena at %d %d %d\n\"", (int)level.duel_tournament_origin[0], (int)level.duel_tournament_origin[1], (int)level.duel_tournament_origin[2]));
+	}
+	else
+	{ // zyk: arena file already exists, remove it
+		fclose(duel_arena_file);
+
+		remove(va("duelarena/%s/origin.txt", zyk_mapname));
+
+		level.duel_arena_loaded = qfalse;
+
+		trap->SendServerCommand(ent - g_entities, va("print \"Removed duel arena of this map\n\""));
+	}
+}
+
+/*
 =================
 ClientCommand
 =================
@@ -16037,6 +16111,7 @@ command_t commands[] = {
 	{ "debugBMove_Up",		Cmd_BotMoveUp_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "down",				Cmd_DownSkill_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "drop",				Cmd_Drop_f,					CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "duelarena",			Cmd_DuelArena_f,			CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "duelmode",			Cmd_DuelMode_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "dueltable",			Cmd_DuelTable_f,			CMD_NOINTERMISSION },
 	{ "duelteam",			Cmd_DuelTeam_f,				CMD_NOINTERMISSION },

@@ -336,6 +336,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	char zyk_mapname[128] = {0};
 	FILE *zyk_entities_file = NULL;
 	FILE *zyk_remap_file = NULL;
+	FILE *zyk_duel_arena_file = NULL;
 
 	//Init RMG to 0, it will be autoset to 1 if there is terrain on the level.
 	trap->Cvar_Set("RMG", "0");
@@ -699,6 +700,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	level.duelist_1_id = -1;
 	level.duelist_2_id = -1;
 	level.duel_tournament_model_id = -1;
+	level.duel_arena_loaded = qfalse;
 
 	level.last_spawned_entity = NULL;
 
@@ -1633,6 +1635,28 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		fclose(zyk_remap_file);
 
 		trap->SetConfigstring(CS_SHADERSTATE, BuildShaderStateConfig());
+	}
+
+	// zyk: loading duel arena, if this map has one
+	zyk_duel_arena_file = fopen(va("duelarena/%s/origin.txt", zyk_mapname), "r");
+	if (zyk_duel_arena_file != NULL)
+	{
+		char duel_arena_content[16];
+
+		strcpy(duel_arena_content, "");
+
+		fscanf(zyk_duel_arena_file, "%s", duel_arena_content);
+		level.duel_tournament_origin[0] = atoi(duel_arena_content);
+
+		fscanf(zyk_duel_arena_file, "%s", duel_arena_content);
+		level.duel_tournament_origin[1] = atoi(duel_arena_content);
+
+		fscanf(zyk_duel_arena_file, "%s", duel_arena_content);
+		level.duel_tournament_origin[2] = atoi(duel_arena_content);
+
+		fclose(zyk_duel_arena_file);
+
+		level.duel_arena_loaded = qtrue;
 	}
 }
 
