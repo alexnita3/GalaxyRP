@@ -15980,7 +15980,7 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 		{ // zyk: a player in the duel tournament
 			gentity_t *player_ent = &g_entities[i];
 
-			strcpy(content, va("%s%s: %d\n", content, player_ent->client->pers.netname, level.duel_players[i]));
+			strcpy(content, va("%s%s^7: %d\n", content, player_ent->client->pers.netname, level.duel_players[i]));
 		}
 	}
 
