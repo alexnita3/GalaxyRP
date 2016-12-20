@@ -7020,7 +7020,7 @@ void duel_tournament_prepare(gentity_t *ent, gentity_t *challenged)
 	ent->client->ps.forceHandExtendTime = level.time + 1000;
 
 	ent->client->ps.duelIndex = challenged->s.number;
-	ent->client->ps.duelTime = level.time + 5000;
+	ent->client->ps.duelTime = level.time + 3000;
 
 	challenged->client->ps.fd.privateDuelTime = 0; //reset the timer in case this player just got out of a duel. He should still be able to accept the challenge.
 
@@ -7028,7 +7028,7 @@ void duel_tournament_prepare(gentity_t *ent, gentity_t *challenged)
 	challenged->client->ps.forceHandExtendTime = level.time + 1000;
 
 	challenged->client->ps.duelIndex = ent->s.number;
-	challenged->client->ps.duelTime = level.time + 5000;
+	challenged->client->ps.duelTime = level.time + 3000;
 }
 
 // zyk: generates the table with all the tournament matches
@@ -7313,7 +7313,41 @@ void G_RunFrame( int levelTime ) {
 	}
 
 	// zyk: Duel Tournament
-	if (level.duel_tournament_mode == 2 && level.duel_tournament_timer < level.time)
+	if (level.duel_tournament_mode == 3 && level.duel_tournament_timer < level.time)
+	{
+		int zyk_random = Q_irand(0, 1);
+		vec3_t zyk_origin;
+		gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
+		gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
+
+		if (zyk_random == 1)
+		{ // zyk: put the duelists along the x axis
+			VectorSet(zyk_origin, level.duel_tournament_origin[0] - 120, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
+			zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
+
+			VectorSet(zyk_origin, level.duel_tournament_origin[0] + 120, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
+			zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
+		}
+		else
+		{ // zyk: put the duelists along the y axis
+			VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 120, level.duel_tournament_origin[2]);
+			zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
+
+			VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 120, level.duel_tournament_origin[2]);
+			zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
+		}
+
+		// zyk: set both duelists in private duel
+		duel_tournament_prepare(duelist_1, duelist_2);
+
+		// zyk: setting the max time players can duel
+		level.duel_tournament_timer = level.time + 180000;
+		level.duel_tournament_mode = 4;
+
+		// zyk: killing all npcs and vehicles
+		zyk_NPC_Kill_f("all");
+	}
+	else if (level.duel_tournament_mode == 2 && level.duel_tournament_timer < level.time)
 	{ // zyk: search for duelists and put them in the arena
 		int zyk_it = 0;
 		qboolean is_in_boss = qfalse;
@@ -7406,38 +7440,11 @@ void G_RunFrame( int levelTime ) {
 		}
 		else if (level.duelist_1_id != -1 && level.duelist_2_id != -1)
 		{ // zyk: found the duelists
-			int zyk_random = Q_irand(0, 1);
-			vec3_t zyk_origin;
 			gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
 			gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
 
-			if (zyk_random == 1)
-			{ // zyk: put the duelists along the x axis
-				VectorSet(zyk_origin, level.duel_tournament_origin[0] - 120, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
-				zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
-
-				VectorSet(zyk_origin, level.duel_tournament_origin[0] + 120, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
-				zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
-			}
-			else
-			{ // zyk: put the duelists along the y axis
-				VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 120, level.duel_tournament_origin[2]);
-				zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
-
-				VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 120, level.duel_tournament_origin[2]);
-				zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
-			}
-
-			// zyk: set both duelists in private duel
-			duel_tournament_prepare(duelist_1, duelist_2);
-
-			// zyk: setting the max time players can duel
-			level.duel_tournament_timer = level.time + 180000;
-
+			level.duel_tournament_timer = level.time + 3000;
 			level.duel_tournament_mode = 3;
-
-			// zyk: killing all npcs and vehicles
-			zyk_NPC_Kill_f("all");
 
 			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7x %s\"", duelist_1->client->pers.netname, duelist_2->client->pers.netname));
 		}
@@ -9264,7 +9271,7 @@ void G_RunFrame( int levelTime ) {
 			}
 
 			// zyk: Duel Tournament. Do not let anyone enter or anyone leave the globe arena
-			if (level.duel_tournament_mode == 3)
+			if (level.duel_tournament_mode == 4)
 			{
 				if ((ent->s.number == level.duelist_1_id || ent->s.number == level.duelist_2_id) && 
 					Distance(ent->client->ps.origin, level.duel_tournament_origin) > 520 && 

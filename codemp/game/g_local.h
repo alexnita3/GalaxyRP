@@ -1530,7 +1530,7 @@ typedef struct level_locals_s {
 	int race_last_player_position; // zyk: after race starts, sets the position of the last player who crossed the finish line
 
 	// zyk: Duel Tournament
-	int duel_tournament_mode; // zyk: sets 1 when someone joined and 2 when countdown starts and 3 when tournament begins. Default 0
+	int duel_tournament_mode; // zyk: sets 1 when someone joined, 2 to choose the duelists, 3 to announce the duelists and 4 when duel begins. Default 0
 	int duelists_quantity; // zyk: number of players in the duel tournament. Default 0
 	int duel_tournament_timer; // zyk: timer of duel tournament events. Default 0
 	int duel_players[MAX_CLIENTS]; // zyk: has the score each player in the tournament. Default -1

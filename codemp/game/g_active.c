@@ -2824,7 +2824,7 @@ void ClientThink_real( gentity_t *ent ) {
 			if (ent->health > 0 && ent->client->ps.stats[STAT_HEALTH] > 0)
 			{
 				// zyk: Duel Tournament. A duelist was defeated, gives score to the winner and remove the loser from tournament if he lost
-				if (level.duel_tournament_mode == 3)
+				if (level.duel_tournament_mode == 4)
 				{
 					gentity_t *duelist_loser = NULL;
 					gentity_t *duelist_winner = NULL;
@@ -2856,7 +2856,7 @@ void ClientThink_real( gentity_t *ent ) {
 			}
 			else
 			{ //it was a draw, because we both managed to die in the same frame
-				if (level.duel_tournament_mode == 3)
+				if (level.duel_tournament_mode == 4)
 				{
 					gentity_t *duelist_loser = NULL;
 					gentity_t *duelist_winner = NULL;

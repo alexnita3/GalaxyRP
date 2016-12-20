@@ -15936,7 +15936,7 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 	}
 	else
 	{ // zyk: leave the tournament
-		if (level.duel_tournament_mode == 3 && (level.duelist_1_id == ent->s.number || level.duelist_2_id == ent->s.number))
+		if (level.duel_tournament_mode == 4 && (level.duelist_1_id == ent->s.number || level.duelist_2_id == ent->s.number))
 		{ // zyk: if trying to leave while in duel, make him lose
 			ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
 
