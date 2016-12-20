@@ -7453,13 +7453,21 @@ void G_RunFrame( int levelTime ) {
 		}
 	}
 	else if (level.duel_tournament_mode == 1 && level.duel_tournament_timer < level.time)
-	{ // zyk: Duel tournament can begin
-		level.duel_tournament_mode = 2;
-		level.duel_tournament_timer = level.time + 3000;
+	{ // zyk: Duel tournament can begin if there are at least 2 players
+		if (level.duelists_quantity > 1)
+		{
+			level.duel_tournament_mode = 2;
+			level.duel_tournament_timer = level.time + 3000;
 
-		duel_tournament_generate_match_table();
+			duel_tournament_generate_match_table();
 
-		trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7The tournament will begin!\"");
+			trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7The tournament will begin!\"");
+		}
+		else
+		{
+			duel_tournament_end();
+			trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Not enough duelists. Tournament is over!\"");
+		}
 	}
 
 	// zyk: Guardian of Map abilities
