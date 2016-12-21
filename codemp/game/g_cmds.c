@@ -15989,7 +15989,8 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 		return;
 	}
 
-	strcpy(content, "\n");
+	// zyk: put the number of matches
+	strcpy(content, va("\nTotal Matches: %d\nPlayed Matches: %d\n\n", level.duel_matches_quantity, level.duel_matches_done));
 
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
