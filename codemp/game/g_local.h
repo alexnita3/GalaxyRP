@@ -1535,6 +1535,7 @@ typedef struct level_locals_s {
 	int duelists_quantity; // zyk: number of players in the duel tournament. Default 0
 	int duel_tournament_timer; // zyk: timer of duel tournament events. Default 0
 	int duel_players[MAX_CLIENTS]; // zyk: has the score each player in the tournament. Default -1
+	int duel_players_hp[MAX_CLIENTS]; // zyk: used as a untie criteria. If the tournament ends with players tied at score, the sum of remaining hp in all duels is used to untie
 	int duel_tournament_model_id; // zyk: model id of the globe
 	qboolean duel_arena_loaded; // zyk: tests if the arena is loaded on this map
 	vec3_t duel_tournament_origin; // zyk: origin of the duel tournament arena, which has the globe around it. Used to validate position of players. If a duelist leaves the arena, he loses

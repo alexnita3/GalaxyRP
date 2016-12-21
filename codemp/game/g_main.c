@@ -7109,19 +7109,26 @@ void duel_tournament_winner()
 
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
-		if (level.duel_players[i] != -1 && level.duel_players[i] > max_score)
-		{ // zyk: player is in tournament and his score is higher than max_score, so for now he is the max score
-			max_score = level.duel_players[i];
-			ent = &g_entities[i];
+		if (level.duel_players[i] != -1)
+		{
+			if (level.duel_players[i] > max_score)
+			{ // zyk: player is in tournament and his score is higher than max_score, so for now he is the max score
+				max_score = level.duel_players[i];
+				ent = &g_entities[i];
+			}
+			else if (level.duel_players[i] == max_score && ent && level.duel_players_hp[i] > level.duel_players_hp[ent->s.number])
+			{ // zyk: this guy has the same score as the max score guy. Test the remaining hp of all duels to untie
+				ent = &g_entities[i];
+			}
 		}
 	}
 
 	if (ent)
 	{ // zyk: found a winner
 		// zyk: gives prize to the winner
-		ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 30000;
-		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 30000;
-		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 30000;
+		ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 40000;
+		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 40000;
+		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 40000;
 
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Winner is: %s^7\"", ent->client->pers.netname));
 	}

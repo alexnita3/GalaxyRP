@@ -2843,6 +2843,7 @@ void ClientThink_real( gentity_t *ent ) {
 					if (duelist_winner && duelist_loser)
 					{ // zyk: give score to the winner
 						level.duel_players[duelist_winner->s.number] += 3;
+						level.duel_players_hp[duelist_winner->s.number] += (old_health + old_shield);
 
 						level.duel_tournament_timer = level.time + 3000;
 						level.duel_tournament_mode = 2;

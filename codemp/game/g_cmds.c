@@ -15946,6 +15946,8 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 			level.duel_tournament_mode = 1;
 			level.duel_tournament_timer = level.time + 12000;
 			level.duel_players[ent->s.number] = 0;
+			level.duel_players_hp[ent->s.number] = 0;
+			
 			level.duelists_quantity++;
 
 			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
@@ -15990,7 +15992,7 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 	}
 
 	// zyk: put the number of matches
-	strcpy(content, va("\nTotal Matches: %d\nPlayed Matches: %d\n\n", level.duel_matches_quantity, level.duel_matches_done));
+	strcpy(content, va("\n^7Total Matches: %d\nPlayed Matches: %d\n\n", level.duel_matches_quantity, level.duel_matches_done));
 
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
@@ -15998,7 +16000,7 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 		{ // zyk: a player in the duel tournament
 			gentity_t *player_ent = &g_entities[i];
 
-			strcpy(content, va("%s%s^7: %d\n", content, player_ent->client->pers.netname, level.duel_players[i]));
+			strcpy(content, va("%s^7%s^7: ^3%d   ^1%d\n", content, player_ent->client->pers.netname, level.duel_players[i], level.duel_players_hp[i]));
 		}
 	}
 
