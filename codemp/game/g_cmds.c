@@ -15944,7 +15944,7 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 			}
 
 			level.duel_tournament_mode = 1;
-			level.duel_tournament_timer = level.time + 15000;
+			level.duel_tournament_timer = level.time + 12000;
 			level.duel_players[ent->s.number] = 0;
 			level.duelists_quantity++;
 

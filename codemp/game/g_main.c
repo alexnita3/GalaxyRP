@@ -7120,6 +7120,49 @@ void duel_tournament_winner()
 	{
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Winner is: %s^7\"", ent->client->pers.netname));
 	}
+	else
+	{
+		trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7No one is winner\"");
+	}
+}
+
+// zyk: validates if these players are valid duelists
+qboolean duel_tournament_validate_duelists(gentity_t *first_duelist, gentity_t *second_duelist)
+{
+	if (first_duelist && first_duelist->client && first_duelist->client->pers.connected == CON_CONNECTED &&
+		first_duelist->client->sess.sessionTeam != TEAM_SPECTATOR && second_duelist && second_duelist->client &&
+		second_duelist->client->pers.connected == CON_CONNECTED &&
+		second_duelist->client->sess.sessionTeam != TEAM_SPECTATOR && level.duel_players[first_duelist->s.number] != -1 &&
+		level.duel_players[second_duelist->s.number] != -1)
+	{ // zyk: both players are still in the tournament
+		level.duelist_1_id = first_duelist->s.number;
+		level.duelist_2_id = second_duelist->s.number;
+		return qtrue;
+	}
+	else if (first_duelist && first_duelist->client && first_duelist->client->pers.connected == CON_CONNECTED &&
+		first_duelist->client->sess.sessionTeam != TEAM_SPECTATOR &&
+		level.duel_players[first_duelist->s.number] != -1)
+	{
+		level.duel_players[first_duelist->s.number] += 3;
+		level.duel_tournament_timer = level.time + 3000;
+		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left tournament, %s ^7wins!\"", second_duelist->client->pers.netname, first_duelist->client->pers.netname));
+	}
+	else if (second_duelist && second_duelist->client &&
+		second_duelist->client->pers.connected == CON_CONNECTED &&
+		second_duelist->client->sess.sessionTeam != TEAM_SPECTATOR &&
+		level.duel_players[second_duelist->s.number] != -1)
+	{
+		level.duel_players[second_duelist->s.number] += 3;
+		level.duel_tournament_timer = level.time + 3000;
+		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left tournament, %s ^7wins!\"", first_duelist->client->pers.netname, second_duelist->client->pers.netname));
+	}
+	else
+	{
+		level.duel_tournament_timer = level.time + 3000;
+		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7and %s ^7left tournament!\"", first_duelist->client->pers.netname, second_duelist->client->pers.netname));
+	}
+
+	return qfalse;
 }
 
 /*
@@ -7344,32 +7387,54 @@ void G_RunFrame( int levelTime ) {
 		gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
 		gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
 
-		if (zyk_random == 1)
-		{ // zyk: put the duelists along the x axis
-			VectorSet(zyk_origin, level.duel_tournament_origin[0] - 120, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
-			zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
+		if (duel_tournament_validate_duelists(duelist_1, duelist_2) == qtrue)
+		{
+			// zyk: respawning duelists that are still lying dead
+			if (duelist_1->health < 1)
+			{
+				ClientRespawn(duelist_1);
+			}
+			// zyk: respawning duelists that are still lying dead
+			if (duelist_2->health < 1)
+			{
+				ClientRespawn(duelist_2);
+			}
 
-			VectorSet(zyk_origin, level.duel_tournament_origin[0] + 120, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
-			zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
+			if (zyk_random == 1)
+			{ // zyk: put the duelists along the x axis
+				VectorSet(zyk_origin, level.duel_tournament_origin[0] - 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
+				zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
+
+				VectorSet(zyk_origin, level.duel_tournament_origin[0] + 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
+				zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
+			}
+			else
+			{ // zyk: put the duelists along the y axis
+				VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
+				zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
+
+				VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
+				zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
+			}
+
+			// zyk: set both duelists in private duel
+			duel_tournament_prepare(duelist_1, duelist_2);
+
+			// zyk: setting the max time players can duel
+			level.duel_tournament_timer = level.time + 180000;
+			level.duel_tournament_mode = 4;
+
+			// zyk: killing all npcs and vehicles
+			zyk_NPC_Kill_f("all");
 		}
 		else
-		{ // zyk: put the duelists along the y axis
-			VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 120, level.duel_tournament_origin[2]);
-			zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
+		{ // zyk: duelists are no longer valid, get a new match
+			level.duelist_1_id = -1;
+			level.duelist_2_id = -1;
 
-			VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 120, level.duel_tournament_origin[2]);
-			zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
+			level.duel_tournament_mode = 2;
+			level.duel_tournament_timer = level.time + 3000;
 		}
-
-		// zyk: set both duelists in private duel
-		duel_tournament_prepare(duelist_1, duelist_2);
-
-		// zyk: setting the max time players can duel
-		level.duel_tournament_timer = level.time + 180000;
-		level.duel_tournament_mode = 4;
-
-		// zyk: killing all npcs and vehicles
-		zyk_NPC_Kill_f("all");
 	}
 	else if (level.duel_tournament_mode == 2 && level.duel_tournament_timer < level.time)
 	{ // zyk: search for duelists and put them in the arena
@@ -7380,14 +7445,6 @@ void G_RunFrame( int levelTime ) {
 		for (zyk_it = 0; zyk_it < MAX_CLIENTS; zyk_it++)
 		{
 			gentity_t *this_ent = &g_entities[zyk_it];
-
-			// zyk: respawning duelists that are still lying dead
-			if (this_ent && this_ent->client && this_ent->client->pers.connected == CON_CONNECTED &&
-				this_ent->client->sess.sessionTeam != TEAM_SPECTATOR && this_ent->health < 1 && 
-				level.duel_players[this_ent->s.number] != -1)
-			{
-				ClientRespawn(this_ent);
-			}
 
 			if (this_ent && this_ent->client && this_ent->client->pers.connected == CON_CONNECTED &&
 				this_ent->client->sess.sessionTeam != TEAM_SPECTATOR && this_ent->client->sess.amrpgmode == 2 && 
@@ -7411,37 +7468,7 @@ void G_RunFrame( int levelTime ) {
 					// zyk: count this match
 					level.duel_matches_done++;
 
-					if (first_duelist && first_duelist->client && first_duelist->client->pers.connected == CON_CONNECTED &&
-						first_duelist->client->sess.sessionTeam != TEAM_SPECTATOR && second_duelist && second_duelist->client &&
-						second_duelist->client->pers.connected == CON_CONNECTED &&
-						second_duelist->client->sess.sessionTeam != TEAM_SPECTATOR && level.duel_players[first_duelist->s.number] != -1 &&
-						level.duel_players[second_duelist->s.number] != -1)
-					{ // zyk: both players are still in the tournament
-						level.duelist_1_id = first_duelist->s.number;
-						level.duelist_2_id = second_duelist->s.number;
-					}
-					else if (first_duelist && first_duelist->client && first_duelist->client->pers.connected == CON_CONNECTED &&
-						first_duelist->client->sess.sessionTeam != TEAM_SPECTATOR && 
-						level.duel_players[first_duelist->s.number] != -1)
-					{
-						level.duel_players[first_duelist->s.number] += 3;
-						level.duel_tournament_timer = level.time + 3000;
-						trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left tournament, %s ^7wins!\"", second_duelist->client->pers.netname, first_duelist->client->pers.netname));
-					}
-					else if (second_duelist && second_duelist->client &&
-						second_duelist->client->pers.connected == CON_CONNECTED && 
-						second_duelist->client->sess.sessionTeam != TEAM_SPECTATOR && 
-						level.duel_players[second_duelist->s.number] != -1)
-					{
-						level.duel_players[second_duelist->s.number] += 3;
-						
-						trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left tournament, %s ^7wins!\"", first_duelist->client->pers.netname, second_duelist->client->pers.netname));
-					}
-					else
-					{
-						level.duel_tournament_timer = level.time + 3000;
-						trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7and %s ^7left tournament!\"", first_duelist->client->pers.netname, second_duelist->client->pers.netname));
-					}
+					duel_tournament_validate_duelists(first_duelist, second_duelist);
 
 					// zyk: match was found so mark it with -1 to avoid getting the same match again
 					level.duel_matches[zyk_it][0] = -1;
