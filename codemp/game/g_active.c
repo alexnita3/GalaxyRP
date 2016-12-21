@@ -2849,6 +2849,8 @@ void ClientThink_real( gentity_t *ent ) {
 
 						level.duelist_1_id = -1;
 						level.duelist_2_id = -1;
+
+						trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7defeated %s^7\"", duelist_winner->client->pers.netname, duelist_loser->client->pers.netname));
 					}
 				}
 
@@ -2882,6 +2884,8 @@ void ClientThink_real( gentity_t *ent ) {
 
 						level.duelist_1_id = -1;
 						level.duelist_2_id = -1;
+
+						trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7and %s^7 tied\"", duelist_winner->client->pers.netname, duelist_loser->client->pers.netname));
 					}
 				}
 

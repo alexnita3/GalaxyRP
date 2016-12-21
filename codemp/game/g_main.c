@@ -7117,7 +7117,12 @@ void duel_tournament_winner()
 	}
 
 	if (ent)
-	{
+	{ // zyk: found a winner
+		// zyk: gives prize to the winner
+		ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 30000;
+		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 30000;
+		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 30000;
+
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Winner is: %s^7\"", ent->client->pers.netname));
 	}
 	else
@@ -9357,7 +9362,7 @@ void G_RunFrame( int levelTime ) {
 
 						player_die(duelist_1, duelist_1, duelist_1, 100000, MOD_SUICIDE);
 					}
-					else
+					else if (duelist_1->health > 0 || duelist_2->health > 0)
 					{ // zyk: tie the duel
 						duelist_1->client->ps.stats[STAT_HEALTH] = duelist_1->health = -999;
 						duelist_2->client->ps.stats[STAT_HEALTH] = duelist_2->health = -999;
