@@ -9361,6 +9361,8 @@ void G_RunFrame( int levelTime ) {
 					gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
 					gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
 
+					level.duel_tournament_timer = level.time + 1000;
+
 					if (duelist_1->health > duelist_2->health || duelist_1->client->ps.stats[STAT_ARMOR] > duelist_2->client->ps.stats[STAT_ARMOR])
 					{
 						duelist_2->client->ps.stats[STAT_HEALTH] = duelist_2->health = -999;
