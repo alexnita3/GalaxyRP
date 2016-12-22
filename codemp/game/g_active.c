@@ -2751,6 +2751,10 @@ void ClientThink_real( gentity_t *ent ) {
 				G_AddEvent(ent, EV_PRIVATE_DUEL, 2);
 
 				ent->client->ps.duelTime = 0;
+
+				// zyk: this will guarantee that the player has full health at start of the duel
+				ent->health = 100;
+				ent->client->ps.stats[STAT_ARMOR] = 100;
 			}
 
 			if (duelAgainst
@@ -2774,6 +2778,10 @@ void ClientThink_real( gentity_t *ent ) {
 				G_AddEvent(duelAgainst, EV_PRIVATE_DUEL, 2);
 
 				duelAgainst->client->ps.duelTime = 0;
+
+				// zyk: this will guarantee that the player has full health at start of the duel
+				duelAgainst->health = 100;
+				duelAgainst->client->ps.stats[STAT_ARMOR] = 100;
 			}
 		}
 		else
