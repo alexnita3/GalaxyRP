@@ -3858,6 +3858,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 	qboolean saberTraceDone = qfalse;
 	qboolean otherUnblockable = qfalse;
 	qboolean tryDeflectAgain = qfalse;
+	qboolean zyk_duelist_unique = qfalse;
 
 	gentity_t *otherOwner;
 
@@ -3871,7 +3872,32 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 	//Add the standard radius into the box size
 	saberBoxSize += (self->client->saber[rSaberNum].blade[rBladeNum].radius*0.5f);
 
-	if (self->client->ps.weaponTime <= 0)
+	// zyk: Duelist Unique Abilities. Heavily increases saber damage
+	if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 6 &&
+		self->client->ps.powerups[PW_NEUTRALFLAG] > level.time)
+	{
+		if (self->client->ps.torsoAnim == BOTH_PULL_IMPALE_STAB) // zyk: Impale Stab
+			zyk_duelist_unique = qtrue;
+		else if (self->client->ps.torsoAnim == BOTH_FORCELEAP2_T__B_) // zyk: Vertical DFA
+			zyk_duelist_unique = qtrue;
+		else if (self->client->ps.torsoAnim == BOTH_ALORA_SPIN_THROW) // zyk: Super Throw
+			zyk_duelist_unique = qtrue;
+	}
+
+	if (zyk_duelist_unique == qtrue)
+	{ // zyk: Duelist unique abilities must do a better trace
+		if (d_saberSPStyleDamage.integer)
+		{//SP-size saber damage traces
+			VectorSet(saberTrMins, -2, -2, -2);
+			VectorSet(saberTrMaxs, 2, 2, 2);
+		}
+		else
+		{
+			VectorSet(saberTrMins, -saberBoxSize * 3, -saberBoxSize * 3, -saberBoxSize * 3);
+			VectorSet(saberTrMaxs, saberBoxSize * 3, saberBoxSize * 3, saberBoxSize * 3);
+		}
+	}
+	else if (self->client->ps.weaponTime <= 0)
 	{ //if not doing any attacks or anything, just use point traces.
 		VectorClear(saberTrMins);
 		VectorClear(saberTrMaxs);
@@ -4347,7 +4373,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 			else if (self->client->ps.torsoAnim == BOTH_FORCELEAP2_T__B_) // zyk: Vertical DFA
 				dmg = 40;
 			else if (self->client->ps.torsoAnim == BOTH_ALORA_SPIN_THROW) // zyk: Super Throw
-				dmg = 84;
+				dmg = 86;
 		}
 
 		idleDamage = qtrue;
