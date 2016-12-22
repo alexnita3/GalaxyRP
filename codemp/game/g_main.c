@@ -696,6 +696,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	// zyk: initializing Duel Tournament variables
 	level.duel_tournament_mode = 0;
 	level.duelists_quantity = 0;
+	level.duel_matches_quantity = 0;
+	level.duel_matches_done = 0;
 	level.duel_tournament_timer = 0;
 	level.duelist_1_id = -1;
 	level.duelist_2_id = -1;
@@ -6979,6 +6981,8 @@ void duel_tournament_end()
 
 	level.duel_tournament_mode = 0;
 	level.duelists_quantity = 0;
+	level.duel_matches_quantity = 0;
+	level.duel_matches_done = 0;
 	level.duelist_1_id = -1;
 	level.duelist_2_id = -1;
 }
