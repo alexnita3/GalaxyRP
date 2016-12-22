@@ -12271,7 +12271,7 @@ void G_RunFrame( int levelTime ) {
 					if (ent->client->pers.universe_quest_timer < level.time)
 					{
 						flaming_area(ent, 30);
-						ent->client->pers.universe_quest_timer = level.time + 16000;
+						ent->client->pers.universe_quest_timer = level.time + 19000;
 						trap->SendServerCommand(-1, "chat \"^1Guardian of Fire: ^7Flaming Area!\"");
 					}
 				}
