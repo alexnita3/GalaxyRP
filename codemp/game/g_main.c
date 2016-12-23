@@ -12126,14 +12126,14 @@ void G_RunFrame( int levelTime ) {
 							trap->SendServerCommand( -1, "chat \"^4Guardian of Water: ^7Water Splash!\"");
 						}
 
-						ent->client->pers.guardian_timer = level.time + 12000;
+						ent->client->pers.guardian_timer = level.time + 14000;
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
-						water_attack(ent, 1500, 55);
+						water_attack(ent, 2500, 55);
 						trap->SendServerCommand(-1, "chat \"^4Guardian of Water: ^7Water Attack!\"");
-						ent->client->pers.light_quest_timer = level.time + 10000;
+						ent->client->pers.light_quest_timer = level.time + 11000;
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 2)
@@ -12173,7 +12173,7 @@ void G_RunFrame( int levelTime ) {
 						{
 							poison_mushrooms(ent,100,3000);
 							trap->SendServerCommand( -1, va("chat \"^2Guardian of Forest: ^7Poison Mushrooms!\""));
-							ent->client->pers.guardian_timer = level.time + 11000;
+							ent->client->pers.guardian_timer = level.time + 12000;
 						}
 					}
 
