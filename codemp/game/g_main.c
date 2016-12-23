@@ -12265,7 +12265,7 @@ void G_RunFrame( int levelTime ) {
 					{
 						ultra_flame(ent,4000,55);
 						trap->SendServerCommand( -1, "chat \"^1Guardian of Fire: ^7Ultra Flame!\"");
-						ent->client->pers.light_quest_timer = level.time + 14000;
+						ent->client->pers.light_quest_timer = level.time + 16000;
 					}
 
 					if (ent->client->pers.universe_quest_timer < level.time)
