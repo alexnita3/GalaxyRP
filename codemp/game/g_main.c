@@ -5888,7 +5888,7 @@ void ultra_flame(gentity_t *ent, int distance, int damage)
 
 		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
 		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_flame", "4", "env/flame_jet", 200, damage, 35, 25000);
+			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_flame", "4", "env/flame_jet", 200, damage, 35, 20000);
 		}
 	}
 }
