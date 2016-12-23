@@ -1525,6 +1525,7 @@ typedef struct level_locals_s {
 
 	// zyk: Race Mode
 	int race_mode; // zyk: sets 1 when someone joined the race and 2 when countdown starts and 3 when race starts. Default 0
+	int race_map; // zyk: the map where this race is being done
 	int race_start_timer; // zyk: timer to determine the time to start the race if race_mode is 1
 	int race_countdown_timer; // zyk: shows the countdown on the players screens
 	int race_countdown; // zyk: used to print each of the countdown messages
