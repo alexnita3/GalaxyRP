@@ -9473,7 +9473,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (level.race_map == 2)
 					{ // zyk: t3_stamp map
-						if ((int)ent->client->ps.origin[0] > -6417 && (int)ent->client->ps.origin[0] < -5712 && (int)ent->client->ps.origin[1] > -200 && (int)ent->client->ps.origin[1] < 209 && (int)ent->client->ps.origin[2] < -150)
+						if ((int)ent->client->ps.origin[1] > -200 && (int)ent->client->ps.origin[2] < -170)
 						{ // zyk: player reached the finish line
 							level.race_last_player_position++;
 							ent->client->pers.race_position = 0;
@@ -9514,14 +9514,14 @@ void G_RunFrame( int levelTime ) {
 						}
 					}
 				}
-				else if (level.race_map == 1 && ((int)ent->client->ps.origin[0] < -4536 || (int)ent->client->ps.origin[0] > -2322 || (int)ent->client->ps.origin[1] < -22283 || (int)ent->client->ps.origin[1] > -18520))
+				else if (level.race_map == 1 && (int)ent->client->ps.origin[0] < -4536)
 				{ // zyk: player cant start racing before the countdown timer
 					ent->client->pers.race_position = 0;
 					trap->SendServerCommand(-1, va("chat \"^3Race System: ^7%s ^7lost for trying to race before it starts!\n\"", ent->client->pers.netname));
 
 					try_finishing_race();
 				}
-				else if (level.race_map == 2 && ((int)ent->client->ps.origin[1] < 1230))
+				else if (level.race_map == 2 && (int)ent->client->ps.origin[1] < 1230)
 				{ // zyk: player cant start racing before the countdown timer
 					ent->client->pers.race_position = 0;
 					trap->SendServerCommand(-1, va("chat \"^3Race System: ^7%s ^7lost for trying to race before it starts!\n\"", ent->client->pers.netname));
