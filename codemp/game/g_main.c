@@ -12411,7 +12411,7 @@ void G_RunFrame( int levelTime ) {
 					{
 						magic_explosion(ent, 320, 160, 900);
 						trap->SendServerCommand(-1, "chat \"^1Guardian of Darkness: ^7Magic Explosion!\"");
-						ent->client->pers.guardian_timer = level.time + 14000;
+						ent->client->pers.guardian_timer = level.time + 16000;
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
