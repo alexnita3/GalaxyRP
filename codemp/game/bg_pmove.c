@@ -8080,7 +8080,7 @@ static void PM_Weapon( void )
 			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.rpg_class == 3 &&
 				player_ent->client->pers.player_statuses & (1 << 23) && pm->ps->weapon == WP_BLASTER)
 			{
-				addTime -= 30;
+				addTime -= 40;
 			}
 #endif
 		}
