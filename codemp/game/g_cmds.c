@@ -3559,7 +3559,6 @@ void Cmd_EngageDuel_f(gentity_t *ent)
 
 	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.guardian_mode > 0)
 	{ // zyk: cannot accept duel during boss battles
-		trap->SendServerCommand( ent->s.number, "chat \"^3Duel System: ^7cannot duel during a boss battle!\"");
 		return;
 	}
 
