@@ -12409,15 +12409,15 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.guardian_timer < level.time)
 					{
-						inner_area_damage(ent,400,90);
-						trap->SendServerCommand( -1, "chat \"^1Guardian of Darkness: ^7Inner Area Damage!\"");
+						magic_explosion(ent, 320, 160, 900);
+						trap->SendServerCommand(-1, "chat \"^1Guardian of Darkness: ^7Magic Explosion!\"");
 						ent->client->pers.guardian_timer = level.time + 14000;
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
-						magic_explosion(ent, 320, 160, 900);
-						trap->SendServerCommand(-1, "chat \"^1Guardian of Darkness: ^7Magic Explosion!\"");
+						earthquake(ent, 2000, 300, 1000);
+						trap->SendServerCommand(-1, "chat \"^1Guardian of Darkness: ^7Earthquake!\"");
 						ent->client->pers.light_quest_timer = level.time + 17000;
 					}
 				}
