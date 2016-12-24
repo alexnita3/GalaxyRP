@@ -3521,7 +3521,7 @@ void ClientThink_real( gentity_t *ent ) {
 					}
 				}
 
-				if (pmove.cmd.generic_cmd == GENCMD_SABERATTACKCYCLE && ent->client->ps.weapon == WP_MELEE)
+				if (pmove.cmd.generic_cmd == GENCMD_ENGAGE_DUEL)
 				{ // zyk: Unique Skill, used by RPG classes
 					if (ent->client->pers.unique_skill_timer < level.time && ent->client->pers.skill_levels[38] > 0)
 					{
@@ -3897,7 +3897,7 @@ void ClientThink_real( gentity_t *ent ) {
 					zyk_show_right_magic_master_powers(ent, qfalse);
 					zyk_save_magic_master_config(ent);
 				}
-				else if (pmove.cmd.generic_cmd == GENCMD_ENGAGE_DUEL && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
+				else if (pmove.cmd.generic_cmd == GENCMD_SABERATTACKCYCLE && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
 				{ // zyk: Magic Master Fist attacks
 					if (ent->client->sess.magic_fist_selection < 4 && ent->client->sess.magic_fist_selection < ent->client->pers.skill_levels[55])
 						ent->client->sess.magic_fist_selection++;
