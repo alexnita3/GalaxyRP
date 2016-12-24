@@ -12476,20 +12476,6 @@ void Cmd_RaceMode_f( gentity_t *ent ) {
 				return;
 			}
 
-			for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
-			{ // zyk: removing all entities except the spawnpoints
-				gentity_t *removed_ent = &g_entities[i];
-
-				if (removed_ent && Q_stricmp(removed_ent->classname, "func_breakable") == 0 && removed_ent->s.number >= 471 && removed_ent->s.number <= 472)
-				{
-					GlobalUse(removed_ent, removed_ent, removed_ent);
-				}
-				else if (removed_ent && Q_stricmp(removed_ent->classname, "info_player_deathmatch") != 0)
-				{
-					G_FreeEntity(removed_ent);
-				}
-			}
-
 			origin[0] = (1020 - ((swoop_number % 4) * 90));
 			origin[1] = (1370 + ((swoop_number % 4) * 90));
 			origin[2] = 97;
@@ -12501,6 +12487,20 @@ void Cmd_RaceMode_f( gentity_t *ent ) {
 			if (level.race_mode == 0)
 			{ // zyk: if this is the first player entering the race, clean the old race swoops left in the map
 				int k = 0;
+
+				for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
+				{ // zyk: removing all entities except the spawnpoints
+					gentity_t *removed_ent = &g_entities[i];
+
+					if (removed_ent && Q_stricmp(removed_ent->classname, "func_breakable") == 0 && removed_ent->s.number >= 471 && removed_ent->s.number <= 472)
+					{
+						GlobalUse(removed_ent, removed_ent, removed_ent);
+					}
+					else if (removed_ent && Q_stricmp(removed_ent->classname, "info_player_deathmatch") != 0)
+					{
+						G_FreeEntity(removed_ent);
+					}
+				}
 
 				for (k = 0; k < MAX_RACERS; k++)
 				{
