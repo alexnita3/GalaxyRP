@@ -12390,6 +12390,13 @@ void G_RunFrame( int levelTime ) {
 						trap->SendServerCommand( -1, "chat \"^5Guardian of Light: ^7Lightning Dome!\"");
 						ent->client->pers.guardian_timer = level.time + 14000;
 					}
+
+					if (ent->client->pers.light_quest_timer < level.time)
+					{
+						water_attack(ent, 4000, 55);
+						trap->SendServerCommand(-1, "chat \"^5Guardian of Light: ^7Water Attack!\"");
+						ent->client->pers.light_quest_timer = level.time + 17000;
+					}
 				}
 				else if (ent->client->pers.guardian_mode == 9)
 				{ // zyk: Guardian of Darkness
@@ -12406,6 +12413,13 @@ void G_RunFrame( int levelTime ) {
 						trap->SendServerCommand( -1, "chat \"^1Guardian of Darkness: ^7Inner Area Damage!\"");
 						ent->client->pers.guardian_timer = level.time + 14000;
 					}
+
+					if (ent->client->pers.light_quest_timer < level.time)
+					{
+						magic_explosion(ent, 320, 160, 900);
+						trap->SendServerCommand(-1, "chat \"^1Guardian of Darkness: ^7Magic Explosion!\"");
+						ent->client->pers.light_quest_timer = level.time + 17000;
+					}
 				}
 				else if (ent->client->pers.guardian_mode == 10)
 				{ // zyk: Guardian of Eternity
@@ -12421,6 +12435,13 @@ void G_RunFrame( int levelTime ) {
 						healing_area(ent,2,5000);
 						trap->SendServerCommand( -1, "chat \"^3Guardian of Eternity: ^7Healing Area!\"");
 						ent->client->pers.guardian_timer = level.time + 14000;
+					}
+
+					if (ent->client->pers.light_quest_timer < level.time)
+					{
+						magic_shield(ent, 6000);
+						trap->SendServerCommand(-1, "chat \"^3Guardian of Eternity: ^7Magic Shield!\"");
+						ent->client->pers.light_quest_timer = level.time + 17000;
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 11)
