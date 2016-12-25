@@ -9681,7 +9681,10 @@ void G_RunFrame( int levelTime ) {
 				{ // zyk: Stealth Attacker abilities
 					if (ent->client->pers.player_statuses & (1 << 23) && ent->client->pers.monk_unique_timer < level.time)
 					{ // zyk: Aimed Shot ability. Fires the full charged sniper shot
-						WP_DisruptorAltFire(ent);
+						if (ent->health > 0)
+						{
+							WP_DisruptorAltFire(ent);
+						}
 
 						ent->client->pers.monk_unique_timer = level.time + 2000;
 					}

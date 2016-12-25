@@ -15765,7 +15765,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					}
 
 					if (chosen_ent)
-					{ // zyk: if we have a target, shoot a rocket at him
+					{ // zyk: if we have a target, shoot at him
 						ent->client->pers.unique_skill_user_id = chosen_ent->s.number;
 					}
 					else
