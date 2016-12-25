@@ -12444,8 +12444,9 @@ void Cmd_RaceMode_f( gentity_t *ent ) {
 		}
 		else if (Q_stricmp(zyk_mapname, "t3_stamp") == 0)
 		{
-			level.race_map = 2;
 			int i = 0;
+
+			level.race_map = 2;
 
 			// zyk: initializing array of occupied_positions
 			for (j = 0; j < MAX_CLIENTS; j++)
@@ -12477,7 +12478,7 @@ void Cmd_RaceMode_f( gentity_t *ent ) {
 			}
 
 			origin[0] = (1020 - ((swoop_number % 4) * 90));
-			origin[1] = (1370 + ((swoop_number % 4) * 90));
+			origin[1] = (1370 + ((swoop_number/4) * 90));
 			origin[2] = 97;
 
 			yaw[0] = 0.0f;
