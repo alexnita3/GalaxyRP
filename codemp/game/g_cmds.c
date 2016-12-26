@@ -16088,7 +16088,11 @@ Cmd_DuelTable_f
 */
 void Cmd_DuelTable_f(gentity_t *ent) {
 	int i = 0;
+	int j = 0;
+	int chosen_player_id = -1;
+	int array_length = 0;
 	char content[1024];
+	int sorted_players[MAX_DUELISTS]; // zyk: used to show score of players by ordering from the highest score to lowest
 
 	if (level.duel_tournament_mode == 0)
 	{
@@ -16100,13 +16104,37 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 	strcpy(content, va("\n^7Total Matches: %d\nPlayed Matches: %d\n\n", level.duel_matches_quantity, level.duel_matches_done));
 
 	for (i = 0; i < MAX_CLIENTS; i++)
-	{
+	{ // zyk: adding players to sorted_players and calculating the array length
 		if (level.duel_players[i] != -1)
-		{ // zyk: a player in the duel tournament
-			gentity_t *player_ent = &g_entities[i];
-
-			strcpy(content, va("%s^7%s^7: ^3%d   ^1%d\n", content, player_ent->client->pers.netname, level.duel_players[i], level.duel_players_hp[i]));
+		{
+			sorted_players[array_length] = i;
+			array_length++;
 		}
+	}
+
+	for (i = 0; i < array_length; i++)
+	{ // zyk: sorting sorted_players array
+		for (j = 1; j < array_length; j++)
+		{
+			if ((level.duel_players[sorted_players[j]] > level.duel_players[sorted_players[j - 1]]) || 
+				(level.duel_players[sorted_players[j]] == level.duel_players[sorted_players[j - 1]] &&
+				 level.duel_players_hp[sorted_players[j]] > level.duel_players_hp[sorted_players[j - 1]]) || 
+				(level.duel_players[sorted_players[j]] == level.duel_players[sorted_players[j - 1]] &&
+				 level.duel_players_hp[sorted_players[j]] == level.duel_players_hp[sorted_players[j - 1]] &&
+				 sorted_players[j] < sorted_players[j - 1]))
+			{ // zyk: score of j is higher than j - 1, or remaining hp and shield of j higher than j - 1, or player id of j lower than j - 1
+				chosen_player_id = sorted_players[j - 1];
+				sorted_players[j - 1] = sorted_players[j];
+				sorted_players[j] = chosen_player_id;
+			}
+		}
+	}
+
+	for (i = 0; i < array_length; i++)
+	{
+		gentity_t *player_ent = &g_entities[sorted_players[i]];
+
+		strcpy(content, va("%s^7%s^7: ^3%d   ^1%d\n", content, player_ent->client->pers.netname, level.duel_players[player_ent->s.number], level.duel_players_hp[player_ent->s.number]));
 	}
 
 	trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", content));
