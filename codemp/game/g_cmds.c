@@ -12538,7 +12538,8 @@ void Cmd_RaceMode_f( gentity_t *ent ) {
 
 				this_ent = NPC_SpawnType(ent, "tauntaun", NULL, qtrue);
 				if (this_ent)
-				{ // zyk: setting the vehicle id
+				{ // zyk: setting the vehicle id and increasing tauntaun hp
+					this_ent->health *= 5;
 					level.race_mode_vehicle[swoop_number] = this_ent->s.number;
 				}
 
