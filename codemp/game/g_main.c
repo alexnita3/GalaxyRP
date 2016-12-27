@@ -7160,7 +7160,6 @@ qboolean duel_tournament_validate_duelists(gentity_t *first_duelist, gentity_t *
 		level.duel_players[first_duelist->s.number] != -1)
 	{
 		level.duel_players[first_duelist->s.number] += 3;
-		level.duel_tournament_timer = level.time + 3000;
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left tournament, %s ^7wins!\"", second_duelist->client->pers.netname, first_duelist->client->pers.netname));
 	}
 	else if (second_duelist && second_duelist->client &&
@@ -7169,12 +7168,10 @@ qboolean duel_tournament_validate_duelists(gentity_t *first_duelist, gentity_t *
 		level.duel_players[second_duelist->s.number] != -1)
 	{
 		level.duel_players[second_duelist->s.number] += 3;
-		level.duel_tournament_timer = level.time + 3000;
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left tournament, %s ^7wins!\"", first_duelist->client->pers.netname, second_duelist->client->pers.netname));
 	}
 	else
 	{
-		level.duel_tournament_timer = level.time + 3000;
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7and %s ^7left tournament!\"", first_duelist->client->pers.netname, second_duelist->client->pers.netname));
 	}
 
@@ -7209,7 +7206,7 @@ extern qboolean light_quest_defeated_guardians(gentity_t *ent);
 extern void set_max_health(gentity_t *ent);
 extern void set_max_shield(gentity_t *ent);
 extern gentity_t *load_effect(int x,int y,int z, int spawnflags, char *fxFile);
-
+extern void duel_show_table(gentity_t *ent);
 extern void WP_DisruptorAltFire(gentity_t *ent);
 extern void G_Kill( gentity_t *ent );
 
@@ -7396,7 +7393,13 @@ void G_RunFrame( int levelTime ) {
 	}
 
 	// zyk: Duel Tournament
-	if (level.duel_tournament_mode == 3 && level.duel_tournament_timer < level.time)
+	if (level.duel_tournament_mode == 5 && level.duel_tournament_timer < level.time)
+	{ // zyk: show score table
+		duel_show_table(NULL);
+		level.duel_tournament_timer = level.time + 1500;
+		level.duel_tournament_mode = 2;
+	}
+	else if (level.duel_tournament_mode == 3 && level.duel_tournament_timer < level.time)
 	{
 		int zyk_random = Q_irand(0, 1);
 		vec3_t zyk_origin;
@@ -7448,8 +7451,8 @@ void G_RunFrame( int levelTime ) {
 			level.duelist_1_id = -1;
 			level.duelist_2_id = -1;
 
-			level.duel_tournament_mode = 2;
-			level.duel_tournament_timer = level.time + 3000;
+			level.duel_tournament_mode = 5;
+			level.duel_tournament_timer = level.time + 1500;
 		}
 	}
 	else if (level.duel_tournament_mode == 2 && level.duel_tournament_timer < level.time)
@@ -7484,7 +7487,11 @@ void G_RunFrame( int levelTime ) {
 					// zyk: count this match
 					level.duel_matches_done++;
 
-					duel_tournament_validate_duelists(first_duelist, second_duelist);
+					if (duel_tournament_validate_duelists(first_duelist, second_duelist) == qfalse)
+					{ // zyk: if not valid, show score table
+						level.duel_tournament_mode = 5;
+						level.duel_tournament_timer = level.time + 1500;
+					}
 
 					// zyk: match was found so mark it with -1 to avoid getting the same match again
 					level.duel_matches[zyk_it][0] = -1;
@@ -7515,7 +7522,7 @@ void G_RunFrame( int levelTime ) {
 
 			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7x %s\"", duelist_1->client->pers.netname, duelist_2->client->pers.netname));
 		}
-		else if (level.duel_matches_quantity == level.duel_matches_done)
+		else if (level.duel_matches_quantity == level.duel_matches_done && level.duel_tournament_mode == 2)
 		{ // zyk: all matches were done. Determine the tournament winner
 			duel_tournament_winner();
 			duel_tournament_end();

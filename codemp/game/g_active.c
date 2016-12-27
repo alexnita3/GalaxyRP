@@ -2853,8 +2853,8 @@ void ClientThink_real( gentity_t *ent ) {
 						level.duel_players[duelist_winner->s.number] += 3;
 						level.duel_players_hp[duelist_winner->s.number] += (old_health + old_shield);
 
-						level.duel_tournament_timer = level.time + 3000;
-						level.duel_tournament_mode = 2;
+						level.duel_tournament_timer = level.time + 1500;
+						level.duel_tournament_mode = 5;
 
 						level.duelist_1_id = -1;
 						level.duelist_2_id = -1;
@@ -2888,8 +2888,8 @@ void ClientThink_real( gentity_t *ent ) {
 						level.duel_players[duelist_winner->s.number] += 1;
 						level.duel_players[duelist_loser->s.number] += 1;
 
-						level.duel_tournament_timer = level.time + 3000;
-						level.duel_tournament_mode = 2;
+						level.duel_tournament_timer = level.time + 1500;
+						level.duel_tournament_mode = 5;
 
 						level.duelist_1_id = -1;
 						level.duelist_2_id = -1;
