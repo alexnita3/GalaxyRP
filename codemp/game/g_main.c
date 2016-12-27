@@ -7131,6 +7131,11 @@ void duel_tournament_winner()
 	if (ent)
 	{ // zyk: found a winner
 		// zyk: gives prize to the winner
+		if (ent->health < 1)
+		{ // zyk: if he is dead, respawn him so he can receive his prize
+			ClientRespawn(ent);
+		}
+
 		ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 40000;
 		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 40000;
 		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 40000;
