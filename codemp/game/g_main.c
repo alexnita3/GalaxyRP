@@ -7065,9 +7065,8 @@ void duel_tournament_generate_match_table()
 	int i = 0;
 	int last_opponent_id = -1;
 	int number_of_filled_positions = 0;
+	int max_filled_positions = level.duelists_quantity - 1;
 
-	level.duel_round = 0;
-	level.duel_offset = level.duelists_quantity - 1;
 	level.duel_matches_quantity = 0;
 	level.duel_matches_done = 0;
 
@@ -7081,7 +7080,7 @@ void duel_tournament_generate_match_table()
 
 			for (j = 0; j < MAX_DUEL_MATCHES; j++)
 			{
-				if (number_of_filled_positions >= level.duel_offset)
+				if (number_of_filled_positions >= max_filled_positions)
 				{
 					number_of_filled_positions = 0;
 					break;
@@ -7102,6 +7101,8 @@ void duel_tournament_generate_match_table()
 			}
 		}
 	}
+
+	level.duel_remaining_matches = level.duel_matches_quantity;
 }
 
 // zyk: determines who is the tournament winner
@@ -7459,7 +7460,6 @@ void G_RunFrame( int levelTime ) {
 	{ // zyk: search for duelists and put them in the arena
 		int zyk_it = 0;
 		qboolean is_in_boss = qfalse;
-		qboolean found_match = qfalse;
 
 		for (zyk_it = 0; zyk_it < MAX_CLIENTS; zyk_it++)
 		{
@@ -7473,38 +7473,32 @@ void G_RunFrame( int levelTime ) {
 			}
 		}
 
-		if (is_in_boss == qfalse)
-		{
-			for (zyk_it = level.duel_round; zyk_it < MAX_DUEL_MATCHES; zyk_it += level.duel_offset)
-			{
-				if (level.duel_matches[zyk_it][0] != -1 && level.duel_matches[zyk_it][1] != -1)
-				{
-					gentity_t *first_duelist = &g_entities[level.duel_matches[zyk_it][0]];
-					gentity_t *second_duelist = &g_entities[level.duel_matches[zyk_it][1]];
+		if (is_in_boss == qfalse && level.duel_remaining_matches > 0)
+		{ // zyk: if there are still matches to be chosen, try to choose now
+			int duel_chosen_index = Q_irand(0, (level.duel_remaining_matches - 1));
 
-					found_match = qtrue;
+			gentity_t *first_duelist = &g_entities[level.duel_matches[duel_chosen_index][0]];
+			gentity_t *second_duelist = &g_entities[level.duel_matches[duel_chosen_index][1]];
 
-					// zyk: count this match
-					level.duel_matches_done++;
+			// zyk: count this match
+			level.duel_matches_done++;
 
-					if (duel_tournament_validate_duelists(first_duelist, second_duelist) == qfalse)
-					{ // zyk: if not valid, show score table
-						level.duel_tournament_mode = 5;
-						level.duel_tournament_timer = level.time + 1500;
-					}
-
-					// zyk: match was found so mark it with -1 to avoid getting the same match again
-					level.duel_matches[zyk_it][0] = -1;
-					level.duel_matches[zyk_it][1] = -1;
-
-					break;
-				}
+			if (duel_tournament_validate_duelists(first_duelist, second_duelist) == qfalse)
+			{ // zyk: if not valid, show score table
+				level.duel_tournament_mode = 5;
+				level.duel_tournament_timer = level.time + 1500;
 			}
-		}
 
-		if (is_in_boss == qfalse && found_match == qfalse)
-		{ // zyk: found all matches of this round, go to next round
-			level.duel_round++;
+			for (zyk_it = (duel_chosen_index + 1); zyk_it < level.duel_remaining_matches; zyk_it++)
+			{ // zyk: updating the match table to move all duels after the duel_chosen_index one index lower
+				level.duel_matches[zyk_it - 1][0] = level.duel_matches[zyk_it][0];
+				level.duel_matches[zyk_it - 1][1] = level.duel_matches[zyk_it][1];
+
+				level.duel_matches[zyk_it][0] = -1;
+				level.duel_matches[zyk_it][1] = -1;
+			}
+
+			level.duel_remaining_matches--;
 		}
 		
 		if (is_in_boss == qtrue)

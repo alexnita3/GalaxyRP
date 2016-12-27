@@ -1543,8 +1543,7 @@ typedef struct level_locals_s {
 	int duelist_1_id; // zyk: id of the first duelist
 	int duelist_2_id; // zyk: id of the second duelist
 	int duel_matches[MAX_DUEL_MATCHES][2]; // zyk: the table with all the matches between the duelists, with their ids
-	int duel_round; // zyk: used to get the duels in a way the same player is not got several times in a row
-	int duel_offset; // zyk: used to get the duels in a way the same player is not got several times in a row
+	int duel_remaining_matches; // zyk: remaining matches of this tournament. Used to randomize the duel match choosing
 	int duel_matches_quantity; // zyk: quantity of matches in this tournament
 	int duel_matches_done; // zyk: how many matches were already done
 
