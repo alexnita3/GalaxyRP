@@ -7470,6 +7470,7 @@ void G_RunFrame( int levelTime ) {
 				this_ent->client->pers.guardian_mode > 0)
 			{ // zyk: validating if there is someone fighting a quest boss
 				is_in_boss = qtrue;
+				break;
 			}
 		}
 
@@ -7493,9 +7494,6 @@ void G_RunFrame( int levelTime ) {
 			{ // zyk: updating the match table to move all duels after the duel_chosen_index one index lower
 				level.duel_matches[zyk_it - 1][0] = level.duel_matches[zyk_it][0];
 				level.duel_matches[zyk_it - 1][1] = level.duel_matches[zyk_it][1];
-
-				level.duel_matches[zyk_it][0] = -1;
-				level.duel_matches[zyk_it][1] = -1;
 			}
 
 			level.duel_remaining_matches--;
