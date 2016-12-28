@@ -10064,7 +10064,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		{
 			if (ent->client->pers.rpg_class == 0)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Free Warrior gets Aimed Beam, which fires a super beam at the closest target but with less damage than the Super Beam ability. Spends 100 force and 40 mp\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Free Warrior gets Flee to Safety, which sets an area in the map to where the player will be transported to after using /unique again. Spends 50 force and 20 mp\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 1)
 			{
@@ -15603,7 +15603,27 @@ void Cmd_Unique_f(gentity_t *ent) {
 			return;
 		}
 
-		if (ent->client->pers.rpg_class == 2 && ent->client->pers.player_statuses & (1 << 23) && ent->client->pers.poison_dart_hit_counter == 1)
+		if (ent->client->pers.rpg_class == 0 && ent->client->pers.player_statuses & (1 << 23))
+		{ // zyk: Free Warrior used Flee to Safety already, find the place to be transported to
+			int i = 0;
+
+			for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
+			{
+				gentity_t *effect_ent = &g_entities[i];
+
+				if (effect_ent && effect_ent->parent == ent && Q_stricmp(effect_ent->targetname, "zyk_flee_to_safety") == 0)
+				{
+					// zyk: transport the player to the effect place
+					zyk_TeleportPlayer(ent, effect_ent->s.origin, ent->client->ps.viewangles);
+
+					// zyk: set timers to finish the unique and clear the effect entity
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = 0;
+					level.special_power_effects_timer[effect_ent->s.number] = level.time + 500;
+					return;
+				}
+			}
+		}
+		else if (ent->client->pers.rpg_class == 2 && ent->client->pers.player_statuses & (1 << 23) && ent->client->pers.poison_dart_hit_counter == 1)
 		{
 			ent->client->pers.poison_dart_hit_counter = 2;
 
@@ -15615,21 +15635,36 @@ void Cmd_Unique_f(gentity_t *ent) {
 		if (ent->client->pers.unique_skill_timer < level.time)
 		{
 			if (ent->client->pers.rpg_class == 0)
-			{ // zyk: Free Warrior Aimed Beam
-				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 2) && ent->client->pers.magic_power >= 40)
+			{ // zyk: Free Warrior Flee to Safety
+				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 4) && ent->client->pers.magic_power >= 20)
 				{
-					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 2);
-					ent->client->pers.magic_power -= 40;
+					gentity_t *new_ent = G_Spawn();
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
+					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
+					ent->client->pers.magic_power -= 20;
+
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 45000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
-
-					zyk_super_beam(ent, ent->client->ps.viewangles[1]);
 
 					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 					ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
 					ent->client->ps.forceHandExtendTime = level.time + 2000;
+
+					zyk_set_entity_field(new_ent, "classname", "fx_runner");
+					zyk_set_entity_field(new_ent, "spawnflags", "0");
+					zyk_set_entity_field(new_ent, "targetname", "zyk_flee_to_safety");
+
+					zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->client->ps.origin[0], (int)ent->client->ps.origin[1], (int)ent->client->ps.origin[2]));
+
+					new_ent->s.modelindex = G_EffectIndex("env/btend");
+
+					new_ent->parent = ent;
+
+					zyk_spawn_entity(new_ent);
+
+					level.special_power_effects[new_ent->s.number] = ent->s.number;
+					level.special_power_effects_timer[new_ent->s.number] = level.time + 45000;
 
 					send_rpg_events(2000);
 
@@ -15639,7 +15674,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 				else
 				{
-					trap->SendServerCommand(ent->s.number, va("chat \"^3Unique Ability: ^7needs %d force and 40 mp to use it\"", (zyk_max_force_power.integer / 2)));
+					trap->SendServerCommand(ent->s.number, va("chat \"^3Unique Ability: ^7needs %d force and 20 mp to use it\"", (zyk_max_force_power.integer / 4)));
 				}
 			}
 			else if (ent->client->pers.rpg_class == 1)
