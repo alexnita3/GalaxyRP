@@ -5107,10 +5107,10 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		}
 	}
 
-	if (targ && targ->client && targ->client->sess.amrpgmode == 2 && 
-		targ->client->pers.can_play_quest == 1 && targ->client->pers.universe_quest_counter & (1 << 29))
+	if (targ && targ->client && targ->client->sess.amrpgmode == 2 && targ->client->pers.can_play_quest == 1 && 
+		targ->client->pers.universe_quest_counter & (1 << 29) && targ->client->pers.guardian_mode == 0)
 	{ // zyk: Challenge Mode increases damage taken from anything
-		damage = (int)ceil(damage*1.1);
+		damage = (int)ceil(damage*1.15);
 	}
 
 	if (targ && targ->client && (targ->NPC || targ->client->sess.amrpgmode == 2) && targ->client->pers.quest_power_status & (1 << 16))
