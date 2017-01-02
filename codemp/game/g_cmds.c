@@ -420,6 +420,18 @@ void Cmd_Give_f( gentity_t *ent )
 		return;
 	}
 
+	if (g_entities[client_id].client->ps.duelInProgress == qtrue)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Cannot give stuff to players in private duels\n\"");
+		return;
+	}
+
+	if (client_id < MAX_CLIENTS && level.sniper_players[client_id] != -1)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Cannot give stuff to players in Sniper Battle\n\"");
+		return;
+	}
+
 	if (ent != &g_entities[client_id] && g_entities[client_id].client->sess.amrpgmode > 0 && g_entities[client_id].client->pers.bitvalue & (1 << ADM_ADMPROTECT) && !(g_entities[client_id].client->pers.player_settings & (1 << 13)))
 	{
 		trap->SendServerCommand( ent-g_entities, va("print \"Target player is adminprotected\n\"") );
@@ -16299,6 +16311,41 @@ void Cmd_DuelArena_f(gentity_t *ent) {
 }
 
 /*
+==================
+Cmd_SniperMode_f
+==================
+*/
+void Cmd_SniperMode_f(gentity_t *ent) {
+	if (ent->client->sess.amrpgmode == 2)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"You cannot be in RPG Mode to play the Sniper Battle.\n\"");
+		return;
+	}
+
+	if (level.duel_tournament_mode > 1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot join the duel tournament now\n\"");
+		return;
+	}
+
+	if (level.sniper_players[ent->s.number] == -1)
+	{ // zyk: join the sniper tournament
+		level.sniper_players[ent->s.number] = 0;
+		level.sniper_mode = 1;
+		level.sniper_mode_timer = level.time + 12000;
+		level.sniper_mode_quantity++;
+
+		trap->SendServerCommand(-1, va("chat \"^3Sniper Battle: ^7%s ^7joined the battle!\n\"", ent->client->pers.netname));
+	}
+	else
+	{
+		level.sniper_players[ent->s.number] = -1;
+		level.sniper_mode_quantity--;
+		trap->SendServerCommand(-1, va("chat \"^3Sniper Battle: ^7%s ^7left the battle!\n\"", ent->client->pers.netname));
+	}
+}
+
+/*
 =================
 ClientCommand
 =================
@@ -16415,6 +16462,7 @@ command_t commands[] = {
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
 	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "snipermode",			Cmd_SniperMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "stuff",				Cmd_Stuff_f,				CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "team",				Cmd_Team_f,					CMD_NOINTERMISSION },
 //	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },

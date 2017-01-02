@@ -704,6 +704,10 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	level.duel_tournament_model_id = -1;
 	level.duel_arena_loaded = qfalse;
 
+	// zyk: initializing Sniper Battle variables
+	level.sniper_mode = 0;
+	level.sniper_mode_quantity = 0;
+
 	level.last_spawned_entity = NULL;
 
 	level.ent_origin_set = qfalse;
@@ -718,6 +722,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		for (zyk_iterator = 0; zyk_iterator < MAX_CLIENTS; zyk_iterator++)
 		{ // zyk: initializing duelist scores
 			level.duel_players[zyk_iterator] = -1;
+			level.sniper_players[zyk_iterator] = -1;
 		}
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_DUEL_MATCHES; zyk_iterator++)
@@ -4433,6 +4438,12 @@ qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 		{
 			return qfalse;
 		}
+
+		if ((level.sniper_players[attacker->s.number] != -1 && level.sniper_players[target->s.number] == -1) || 
+			(level.sniper_players[attacker->s.number] == -1 && level.sniper_players[target->s.number] != -1))
+		{ // zyk: players outside sniper battle cannot hit ones in it and vice-versa
+			return qfalse;
+		}
 	}
 
 	return qtrue;
@@ -7145,6 +7156,93 @@ qboolean duel_tournament_validate_duelists(gentity_t *first_duelist, gentity_t *
 	return qfalse;
 }
 
+// zyk: finishes the Sniper Battle
+void sniper_battle_end()
+{
+	int i = 0;
+
+	level.sniper_mode = 0;
+	level.sniper_mode_quantity = 0;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		level.sniper_players[i] = -1;
+	}
+}
+
+// zyk: sets the sniper gun with full ammo for players and remove everything else from them
+void sniper_battle_prepare()
+{
+	int i = 0;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		gentity_t *ent = &g_entities[i];
+
+		if (level.sniper_players[i] != -1)
+		{ // zyk: a player in the Sniper Battle. Gives disruptor with full ammo and a jetpack
+			ent->client->ps.stats[STAT_WEAPONS] = 0;
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_MELEE) | (1 << WP_DISRUPTOR);
+			ent->client->ps.weapon = WP_MELEE;
+
+			ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
+
+			ent->health = 100;
+			ent->client->ps.stats[STAT_ARMOR] = 100;
+
+			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] = (1 << HI_JETPACK);
+			ent->client->ps.stats[STAT_HOLDABLE_ITEM] = 0;
+
+			ent->client->ps.jetpackFuel = 100;
+			ent->client->pers.jetpack_fuel = MAX_JETPACK_FUEL;
+			
+			// zyk: cannot use any force powers
+			ent->client->ps.fd.forceDeactivateAll = 1;
+			ent->client->ps.fd.forcePower = 0;
+			ent->client->ps.fd.forcePowerMax = 0;
+		}
+	}
+}
+
+// zyk: shows the winner of the Sniper Battle
+void sniper_battle_winner()
+{
+	int i = 0;
+	gentity_t *ent = NULL;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		if (level.sniper_players[i] != -1)
+		{
+			ent = &g_entities[i];
+			break;
+		}
+	}
+
+	if (ent)
+	{
+		ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
+
+		ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 20000;
+		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 20000;
+		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 20000;
+
+		ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER) | (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
+		ent->client->ps.ammo[AMMO_BLASTER] = zyk_max_blaster_pack_ammo.integer;
+		ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
+		ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
+		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN) | (1 << HI_SEEKER) | (1 << HI_MEDPAC_BIG);
+
+		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
+
+		trap->SendServerCommand(-1, va("chat \"^3Sniper Battle: ^7%s ^7is the winner with %d score!\"", ent->client->pers.netname, level.sniper_players[ent->s.number]));
+	}
+	else
+	{
+		trap->SendServerCommand(-1, "chat \"^3Sniper Battle: ^7No one is the winner!\"");
+	}
+}
+
 /*
 ================
 G_RunFrame
@@ -7356,6 +7454,36 @@ void G_RunFrame( int levelTime ) {
 		{
 			level.race_mode = 3;
 			trap->SendServerCommand( -1, "cp \"^2Go!\"");
+		}
+	}
+
+	// zyk: Sniper Battle
+	if (level.sniper_mode == 2)
+	{
+		if (level.sniper_mode_timer < level.time)
+		{
+			sniper_battle_end();
+			trap->SendServerCommand(-1, "chat \"^3Sniper Battle: ^7Time is up! No winner!\"");
+		}
+		else if (level.sniper_mode_quantity == 1)
+		{
+			sniper_battle_winner();
+			sniper_battle_end();
+		}
+	}
+	else if (level.sniper_mode == 1 && level.sniper_mode_timer < level.time)
+	{
+		if (level.sniper_mode_quantity > 1)
+		{ // zyk: if at least 2 players joined in it, start the battle
+			sniper_battle_prepare();
+			level.sniper_mode = 2;
+			level.sniper_mode_timer = level.time + 600000;
+			trap->SendServerCommand(-1, "chat \"^3Sniper Battle: ^7the battle has begun! The battle will have a max of 10 minutes!\"");
+		}
+		else
+		{ // zyk: finish the battle
+			sniper_battle_end();
+			trap->SendServerCommand(-1, "chat \"^3Sniper Battle: ^7Not enough players. Sniper Battle is over!\"");
 		}
 	}
 

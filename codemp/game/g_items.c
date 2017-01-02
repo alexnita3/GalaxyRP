@@ -2707,6 +2707,10 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	{ // zyk: players with all force powers given by admin cannot pickup some things
 		return;
 	}
+	else if (level.sniper_mode == 2 && other->s.number < MAX_CLIENTS && level.sniper_players[other->s.number] != -1)
+	{ // zyk: players in Sniper Battle cannot grab anything
+		return;
+	}
 
 	if (ent->item->giType == IT_POWERUP &&
 		(ent->item->giTag == PW_FORCE_ENLIGHTENED_LIGHT || ent->item->giTag == PW_FORCE_ENLIGHTENED_DARK))

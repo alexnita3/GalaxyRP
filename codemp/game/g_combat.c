@@ -2183,6 +2183,20 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		try_finishing_race();
 	}
 
+	// zyk: player died in Sniper Battle
+	if (self->s.number < MAX_CLIENTS && level.sniper_players[self->s.number] != -1)
+	{
+		trap->SendServerCommand(-1, va("chat \"^3Sniper Battle: ^7%s ^7died in Sniper Battle!\n\"", self->client->pers.netname));
+		level.sniper_players[self->s.number] = -1;
+		level.sniper_mode_quantity--;
+
+		if (level.sniper_mode == 2 && attacker && attacker->client && attacker->s.number < MAX_CLIENTS && 
+			level.sniper_players[attacker->s.number] != -1)
+		{ // zyk: adding score to the attacker
+			level.sniper_players[attacker->s.number]++;
+		}
+	}
+
 	// zyk: if player dies being mind controlled or controlling someone, stop mind control
 	if (self->client->pers.being_mind_controlled > -1)
 	{
