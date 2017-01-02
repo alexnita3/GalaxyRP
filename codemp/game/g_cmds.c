@@ -11790,6 +11790,7 @@ void load_config(gentity_t *ent)
 	char content[32];
 	int value = 0;
 	int i = 0;
+	int unique_ability_flag = 0;
 
 	strcpy(content,"");
 	client = ent->client;
@@ -11834,6 +11835,28 @@ void load_config(gentity_t *ent)
 					value--;
 				}
 			}
+
+			if (fscanf(config_file, "%s", content) != EOF)
+			{
+				unique_ability_flag = atoi(content);
+			}
+
+			// zyk: loading Unique Ability bought for this class
+			client->pers.secrets_found &= ~(1 << 2);
+			client->pers.secrets_found &= ~(1 << 3);
+			client->pers.secrets_found &= ~(1 << 4);
+			if (unique_ability_flag == 2)
+			{
+				client->pers.secrets_found |= (1 << 2);
+			}
+			else if (unique_ability_flag == 3)
+			{
+				client->pers.secrets_found |= (1 << 3);
+			}
+			else if (unique_ability_flag == 4)
+			{
+				client->pers.secrets_found |= (1 << 4);
+			}
 		}
 
 		fclose(config_file);
@@ -11844,6 +11867,8 @@ void save_config(gentity_t *ent)
 {
 	FILE *config_file = NULL;
 	gclient_t *client;
+	int unique_ability_flag = 0;
+
 	client = ent->client;
 
 	system("mkdir configs");
@@ -11871,7 +11896,21 @@ void save_config(gentity_t *ent)
 
 	if (config_file != NULL)
 	{
-		fprintf(config_file,"%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
+		// zyk: saving Unique Ability bought for this class
+		if (client->pers.secrets_found & (1 << 2))
+		{
+			unique_ability_flag = 2;
+		}
+		else if (client->pers.secrets_found & (1 << 3))
+		{
+			unique_ability_flag = 3;
+		}
+		else if (client->pers.secrets_found & (1 << 4))
+		{
+			unique_ability_flag = 4;
+		}
+
+		fprintf(config_file,"%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
 		client->pers.level,client->pers.skill_levels[0],client->pers.skill_levels[1],client->pers.skill_levels[2]
 			,client->pers.skill_levels[3],client->pers.skill_levels[4],client->pers.skill_levels[5],client->pers.skill_levels[6],client->pers.skill_levels[7],client->pers.skill_levels[8]
 			,client->pers.skill_levels[9],client->pers.skill_levels[10],client->pers.skill_levels[11],client->pers.skill_levels[12],client->pers.skill_levels[13],client->pers.skill_levels[14]
@@ -11879,7 +11918,7 @@ void save_config(gentity_t *ent)
 			,client->pers.skill_levels[23],client->pers.skill_levels[24],client->pers.skill_levels[25],client->pers.skill_levels[26],client->pers.skill_levels[27],client->pers.skill_levels[28],client->pers.skill_levels[29],client->pers.skill_levels[30],client->pers.skill_levels[31]
 			,client->pers.skill_levels[32],client->pers.skill_levels[33],client->pers.skill_levels[34],client->pers.skill_levels[35],client->pers.skill_levels[36],client->pers.skill_levels[37],client->pers.skill_levels[38],client->pers.skill_levels[39],client->pers.skill_levels[40],client->pers.skill_levels[41]
 			,client->pers.skill_levels[42],client->pers.skill_levels[43],client->pers.skill_levels[44],client->pers.skill_levels[45],client->pers.skill_levels[46],client->pers.skill_levels[47],client->pers.skill_levels[48],client->pers.skill_levels[49]
-			,client->pers.skill_levels[50],client->pers.skill_levels[51],client->pers.skill_levels[52],client->pers.skill_levels[53],client->pers.skill_levels[54],client->pers.skill_levels[55]);
+			,client->pers.skill_levels[50],client->pers.skill_levels[51],client->pers.skill_levels[52],client->pers.skill_levels[53],client->pers.skill_levels[54],client->pers.skill_levels[55],unique_ability_flag);
 		
 		fclose(config_file);
 	}
