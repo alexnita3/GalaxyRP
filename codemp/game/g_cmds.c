@@ -15606,22 +15606,37 @@ void Cmd_Unique_f(gentity_t *ent) {
 		if (ent->client->pers.rpg_class == 0 && ent->client->pers.player_statuses & (1 << 23))
 		{ // zyk: Free Warrior used Flee to Safety already, find the place to be transported to
 			int i = 0;
+			gentity_t *effect_ent = NULL;
 
 			for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
 			{
-				gentity_t *effect_ent = &g_entities[i];
+				effect_ent = &g_entities[i];
 
 				if (effect_ent && effect_ent->parent == ent && Q_stricmp(effect_ent->targetname, "zyk_flee_to_safety") == 0)
-				{
-					// zyk: transport the player to the effect place
-					zyk_TeleportPlayer(ent, effect_ent->s.origin, ent->client->ps.viewangles);
+				{ // zyk: found the effect entity
+					break;
+				}
+			}
 
-					// zyk: set timers to finish the unique and clear the effect entity
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = 0;
-					level.special_power_effects_timer[effect_ent->s.number] = level.time + 500;
+			for (i = 0; i < level.num_entities; i++)
+			{
+				gentity_t *player_ent = &g_entities[i];
+
+				if (player_ent && player_ent->client && player_ent->health > 0 && 
+					Distance(effect_ent->s.origin, player_ent->client->ps.origin) < 50)
+				{ // zyk: do not teleport if there is someone near the tele point
+					trap->SendServerCommand(ent->s.number, "chat \"^3Unique Ability: ^7someone near target point\"");
 					return;
 				}
 			}
+
+			// zyk: transport the player to the effect place
+			zyk_TeleportPlayer(ent, effect_ent->s.origin, ent->client->ps.viewangles);
+
+			// zyk: set timers to finish the unique and clear the effect entity
+			ent->client->ps.powerups[PW_NEUTRALFLAG] = 0;
+			level.special_power_effects_timer[effect_ent->s.number] = level.time + 500;
+			return;
 		}
 		else if (ent->client->pers.rpg_class == 2 && ent->client->pers.player_statuses & (1 << 23) && ent->client->pers.poison_dart_hit_counter == 1)
 		{
@@ -15643,7 +15658,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 					ent->client->pers.magic_power -= 20;
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 45000;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 42000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
@@ -15664,7 +15679,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					zyk_spawn_entity(new_ent);
 
 					level.special_power_effects[new_ent->s.number] = ent->s.number;
-					level.special_power_effects_timer[new_ent->s.number] = level.time + 45000;
+					level.special_power_effects_timer[new_ent->s.number] = level.time + 42000;
 
 					send_rpg_events(2000);
 
