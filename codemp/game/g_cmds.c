@@ -5792,6 +5792,19 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 			}
 		}
 
+		// zyk: cannot login if player is in Duel Tournament or Sniper Battle
+		if (level.duel_tournament_mode > 0 && level.duel_players[ent->s.number] != -1)
+		{
+			trap->SendServerCommand(ent->s.number, "print \"Cannot login while in a Duel Tournament\n\"");
+			return;
+		}
+
+		if (level.sniper_mode > 0 && level.sniper_players[ent->s.number] != -1)
+		{
+			trap->SendServerCommand(ent->s.number, "print \"Cannot login while in a Sniper Battle\n\"");
+			return;
+		}
+
 		// zyk: validating login
 		account_file = fopen(va("accounts/%s.txt",arg1),"r");
 		if (account_file == NULL)
@@ -6357,6 +6370,12 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 1 && ent->client->pers.mind_controlled1_id != -1)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"You cant logout while using Mind Control on someone.\n\"" );
+		return;
+	}
+
+	if (level.sniper_mode > 0 && level.sniper_players[ent->s.number] != -1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot logout while in a Sniper Battle\n\"");
 		return;
 	}
 
@@ -12166,6 +12185,19 @@ Cmd_PlayerMode_f
 ==================
 */
 void Cmd_PlayerMode_f( gentity_t *ent ) {
+	// zyk: cannot login if player is in Duel Tournament or Sniper Battle
+	if (level.duel_tournament_mode > 0 && level.duel_players[ent->s.number] != -1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot change account mode while in a Duel Tournament\n\"");
+		return;
+	}
+
+	if (level.sniper_mode > 0 && level.sniper_players[ent->s.number] != -1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot change account mode while in a Sniper Battle\n\"");
+		return;
+	}
+
 	load_account(ent, qtrue);
 	save_account(ent);
 
