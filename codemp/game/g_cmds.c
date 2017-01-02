@@ -16378,6 +16378,36 @@ void Cmd_SniperMode_f(gentity_t *ent) {
 }
 
 /*
+==================
+Cmd_SniperTable_f
+==================
+*/
+void Cmd_SniperTable_f(gentity_t *ent) {
+	int i = 0;
+	char content[1024];
+
+	strcpy(content, "\nSniper Battle Players\n\n");
+
+	if (level.sniper_mode == 0)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"There is no Sniper Battle now\n\"");
+		return;
+	}
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		if (level.sniper_players[i] != -1)
+		{ // zyk: a player in Sniper Battle
+			gentity_t *player_ent = &g_entities[i];
+
+			strcpy(content, va("%s^7%s   ^3%d\n", content, player_ent->client->pers.netname, level.sniper_players[i]));
+		}
+	}
+
+	trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", content));
+}
+
+/*
 =================
 ClientCommand
 =================
@@ -16495,6 +16525,7 @@ command_t commands[] = {
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
 	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "snipermode",			Cmd_SniperMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "snipertable",		Cmd_SniperTable_f,			CMD_NOINTERMISSION },
 	{ "stuff",				Cmd_Stuff_f,				CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "team",				Cmd_Team_f,					CMD_NOINTERMISSION },
 //	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },

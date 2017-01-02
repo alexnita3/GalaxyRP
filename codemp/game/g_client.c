@@ -4175,6 +4175,13 @@ void ClientDisconnect( int clientNum ) {
 		level.duelists_quantity--;
 	}
 
+	// zyk: sniper battle player disconnected
+	if (level.sniper_players[ent->s.number] > -1)
+	{
+		level.sniper_players[ent->s.number] = -1;
+		level.sniper_mode_quantity--;
+	}
+
 	// zyk: cleaning ally ids of other players who have this player as ally
 	for (i = 0; i < level.maxclients; i++)
 	{
