@@ -2184,14 +2184,13 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	}
 
 	// zyk: player died in Sniper Battle
-	if (self->s.number < MAX_CLIENTS && level.sniper_players[self->s.number] != -1)
+	if (level.sniper_mode == 2 && self->s.number < MAX_CLIENTS && level.sniper_players[self->s.number] != -1)
 	{
 		trap->SendServerCommand(-1, va("chat \"^3Sniper Battle: ^7%s ^7died in Sniper Battle!\n\"", self->client->pers.netname));
 		level.sniper_players[self->s.number] = -1;
 		level.sniper_mode_quantity--;
 
-		if (level.sniper_mode == 2 && attacker && attacker->client && attacker->s.number < MAX_CLIENTS && 
-			level.sniper_players[attacker->s.number] != -1)
+		if (attacker && attacker->client && attacker->s.number < MAX_CLIENTS && level.sniper_players[attacker->s.number] != -1)
 		{ // zyk: adding score to the attacker
 			level.sniper_players[attacker->s.number]++;
 		}

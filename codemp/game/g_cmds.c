@@ -16354,14 +16354,13 @@ void Cmd_SniperMode_f(gentity_t *ent) {
 		return;
 	}
 
-	if (level.duel_tournament_mode > 1)
+	if (level.sniper_players[ent->s.number] == -1 && level.sniper_mode > 1)
 	{
-		trap->SendServerCommand(ent->s.number, "print \"Cannot join the duel tournament now\n\"");
+		trap->SendServerCommand(ent->s.number, "print \"Cannot join the Sniper Battle now\n\"");
 		return;
 	}
-
-	if (level.sniper_players[ent->s.number] == -1)
-	{ // zyk: join the sniper tournament
+	else if (level.sniper_players[ent->s.number] == -1)
+	{ // zyk: join the sniper battle
 		level.sniper_players[ent->s.number] = 0;
 		level.sniper_mode = 1;
 		level.sniper_mode_timer = level.time + 12000;

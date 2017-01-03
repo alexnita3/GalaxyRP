@@ -7181,6 +7181,11 @@ void sniper_battle_prepare()
 
 		if (level.sniper_players[i] != -1)
 		{ // zyk: a player in the Sniper Battle. Gives disruptor with full ammo and a jetpack
+			if (ent->health < 1)
+			{ // zyk: respawn him if he is dead
+				ClientRespawn(ent);
+			}
+
 			ent->client->ps.stats[STAT_WEAPONS] = 0;
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_MELEE) | (1 << WP_DISRUPTOR);
 			ent->client->ps.weapon = WP_MELEE;

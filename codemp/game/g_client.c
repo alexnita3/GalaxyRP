@@ -2697,6 +2697,13 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 		level.duelists_quantity--;
 	}
 
+	// zyk: sniper battle player went to spec
+	if (level.sniper_players[ent->s.number] > -1)
+	{
+		level.sniper_players[ent->s.number] = -1;
+		level.sniper_mode_quantity--;
+	}
+
 	// zyk: sending events to client game
 	client->pers.send_event_timer = level.time + 3000;
 	client->pers.send_event_interval = level.time + 100;
