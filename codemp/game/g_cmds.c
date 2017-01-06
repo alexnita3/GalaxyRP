@@ -16152,6 +16152,12 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 		return;
 	}
 
+	if (level.sniper_mode > 0 && level.sniper_players[ent->s.number] != -1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"You are already in a Sniper Battle\n\"");
+		return;
+	}
+
 	if (level.duel_players[ent->s.number] == -1 && level.duel_tournament_mode > 1)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Cannot join the duel tournament now\n\"");
@@ -16351,6 +16357,12 @@ void Cmd_SniperMode_f(gentity_t *ent) {
 	if (ent->client->sess.amrpgmode == 2)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"You cannot be in RPG Mode to play the Sniper Battle.\n\"");
+		return;
+	}
+
+	if (level.duel_tournament_mode > 0 && level.duel_players[ent->s.number] != -1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"You are already in a Duel Tournament\n\"");
 		return;
 	}
 
