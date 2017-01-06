@@ -11067,7 +11067,7 @@ void Cmd_Teleport_f( gentity_t *ent )
 			}
 
 			VectorCopy(g_entities[client_id].client->ps.origin,target_origin);
-			target_origin[2] = target_origin[2] + 120;
+			target_origin[2] = target_origin[2] + 100;
 
 			zyk_TeleportPlayer(ent,target_origin,g_entities[client_id].client->ps.viewangles);
 		}
@@ -11121,7 +11121,7 @@ void Cmd_Teleport_f( gentity_t *ent )
 		}
 
 		VectorCopy(g_entities[client2_id].client->ps.origin,target_origin);
-		target_origin[2] = target_origin[2] + 120;
+		target_origin[2] = target_origin[2] + 100;
 
 		zyk_TeleportPlayer(&g_entities[client1_id],target_origin,g_entities[client2_id].client->ps.viewangles);
 	}
