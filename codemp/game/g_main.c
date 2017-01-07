@@ -7172,6 +7172,8 @@ void sniper_battle_end()
 
 			WP_InitForcePowers(ent);
 
+			ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
+
 			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0)
 				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
 
