@@ -7166,6 +7166,18 @@ void sniper_battle_end()
 
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
+		if (level.sniper_players[i] != -1)
+		{ // zyk: restoring default guns and force powers to this player
+			gentity_t *ent = &g_entities[i];
+
+			WP_InitForcePowers(ent);
+
+			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0)
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
+
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
+		}
+
 		level.sniper_players[i] = -1;
 	}
 }
@@ -7202,6 +7214,7 @@ void sniper_battle_prepare()
 			ent->client->pers.jetpack_fuel = MAX_JETPACK_FUEL;
 			
 			// zyk: cannot use any force powers
+			ent->client->ps.fd.forcePowerLevel[FP_LEVITATION] = FORCE_LEVEL_1;
 			ent->client->ps.fd.forceDeactivateAll = 1;
 			ent->client->ps.fd.forcePower = 0;
 			ent->client->ps.fd.forcePowerMax = 0;
