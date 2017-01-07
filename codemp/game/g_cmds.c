@@ -6389,6 +6389,9 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 	// zyk: saving the not logged player mode in session
 	ent->client->sess.amrpgmode = 0;
 
+	// zyk: removing the gun deflection flag
+	ent->flags &= ~FL_SHIELDED;
+
 	// zyk: if this player was playing a quest, find a new one to play quests in this map
 	if (ent->client->pers.can_play_quest == 1)
 	{
@@ -12208,6 +12211,10 @@ void Cmd_PlayerMode_f( gentity_t *ent ) {
 			level.bounty_quest_choose_target = qtrue;
 			level.bounty_quest_target_id++;
 		}
+
+		// zyk: removing the gun deflection flag
+		ent->flags &= ~FL_SHIELDED;
+
 		trap->SendServerCommand( ent-g_entities, "print \"^7You are now in ^2Admin-Only mode^7.\n\"" );
 	}
 	else
