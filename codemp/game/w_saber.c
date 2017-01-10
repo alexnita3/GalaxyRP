@@ -4373,7 +4373,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 			else if (self->client->ps.torsoAnim == BOTH_FORCELEAP2_T__B_) // zyk: Vertical DFA
 				dmg = 40;
 			else if (self->client->ps.torsoAnim == BOTH_ALORA_SPIN_THROW) // zyk: Super Throw
-				dmg = 86;
+				dmg = 90;
 		}
 
 		idleDamage = qtrue;
