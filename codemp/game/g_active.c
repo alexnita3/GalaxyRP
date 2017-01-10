@@ -3679,7 +3679,7 @@ void ClientThink_real( gentity_t *ent ) {
 									{
 										int player_distance = (int)Distance(ent->client->ps.origin,player_ent->client->ps.origin);
 
-										if (player_distance < 300)
+										if (player_distance < 320)
 										{
 											int found = 0;
 
