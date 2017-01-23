@@ -7670,24 +7670,30 @@ void G_RunFrame( int levelTime ) {
 			{
 				if (npc_ent->client->pers.hunter_quest_messages == 0)
 				{
-					lightning_dome(npc_ent,90);
-					trap->SendServerCommand( -1, "chat \"^3Guardian of Map: ^7Lightning Dome!\"");
+					inner_area_damage(npc_ent, 400, 100);
+					trap->SendServerCommand(-1, "chat \"^3Guardian of Map: ^7Inner Area Damage!\"");
 					npc_ent->client->pers.hunter_quest_messages++;
 				}
 				else if (npc_ent->client->pers.hunter_quest_messages == 1)
 				{
-					inner_area_damage(npc_ent,400,120);
-					trap->SendServerCommand( -1, "chat \"^3Guardian of Map: ^7Inner Area Damage!\"");
+					healing_area(npc_ent, 5, 5000);
+					trap->SendServerCommand(-1, "chat \"^3Guardian of Map: ^7Healing Area!\"");
 					npc_ent->client->pers.hunter_quest_messages++;
 				}
 				else if (npc_ent->client->pers.hunter_quest_messages == 2)
 				{
-					healing_area(npc_ent,5,10000);
-					trap->SendServerCommand( -1, "chat \"^3Guardian of Map: ^7Healing Area!\"");
+					magic_explosion(npc_ent, 320, 160, 900);
+					trap->SendServerCommand(-1, "chat \"^3Guardian of Map: ^7Magic Explosion!\"");
+					npc_ent->client->pers.hunter_quest_messages++;
+				}
+				else if (npc_ent->client->pers.hunter_quest_messages == 3)
+				{
+					lightning_dome(npc_ent, 90);
+					trap->SendServerCommand(-1, "chat \"^3Guardian of Map: ^7Lightning Dome!\"");
 					npc_ent->client->pers.hunter_quest_messages = 0;
 				}
 
-				npc_ent->client->pers.hunter_quest_timer = level.time + Q_irand(5000,10000);
+				npc_ent->client->pers.hunter_quest_timer = level.time + Q_irand(6000, 9000);
 			}
 		}
 	}
