@@ -4001,7 +4001,7 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 						return;
 					}
 
-					tr_ent->client->pers.stun_baton_less_speed_timer = level.time + 2000;
+					tr_ent->client->pers.stun_baton_less_speed_timer = level.time + 1500;
 				}
 			}
 		}
