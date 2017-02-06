@@ -5018,7 +5018,7 @@ void CG_DrawUniqueSkillTimer(void)
 	float y = CGUNIQUEBAR_Y;
 	float percent = ((float)(cg.unique_cooldown_timer-cg.time)/(float)cg.unique_duration) * CGUNIQUEBAR_H;
 
-	if (cg.unique_cooldown_timer < cg.time || cg.snap->ps.stats[STAT_HEALTH] < 1)
+	if (cg.unique_cooldown_timer < cg.time)
 	{
 		cg.unique_cooldown_timer = 0;
 		cg.unique_duration = 0;
@@ -7331,7 +7331,7 @@ void CG_DrawImmunityPower(void)
 	float y = RPG_BAR_Y;
 	float scaled_duration = (((cg.immunity_power_duration - cg.time) * 1.0)/25000) * 100.0;
 
-	if (scaled_duration < 0.0)
+	if (scaled_duration < 0.0 || cg.snap->ps.stats[STAT_HEALTH] < 1)
 	{
 		cg.immunity_power_duration = 0;
 		return;
@@ -7368,7 +7368,7 @@ void CG_DrawUltraStrength(void)
 	float y = RPG_BAR_Y;
 	float scaled_duration = (((cg.ultra_strength_duration - cg.time) * 1.0)/30000) * 100.0;
 
-	if (scaled_duration < 0.0)
+	if (scaled_duration < 0.0 || cg.snap->ps.stats[STAT_HEALTH] < 1)
 	{
 		cg.ultra_strength_duration = 0;
 		return;
@@ -7405,7 +7405,7 @@ void CG_DrawUltraResistance(void)
 	float y = RPG_BAR_Y;
 	float scaled_duration = (((cg.ultra_resistance_duration - cg.time) * 1.0)/30000) * 100.0;
 
-	if (scaled_duration < 0.0)
+	if (scaled_duration < 0.0 || cg.snap->ps.stats[STAT_HEALTH] < 1)
 	{
 		cg.ultra_resistance_duration = 0;
 		return;
