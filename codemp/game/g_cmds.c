@@ -16382,7 +16382,7 @@ void Cmd_SniperMode_f(gentity_t *ent) {
 	{ // zyk: join the sniper battle
 		level.sniper_players[ent->s.number] = 0;
 		level.sniper_mode = 1;
-		level.sniper_mode_timer = level.time + 12000;
+		level.sniper_mode_timer = level.time + zyk_sniper_battle_time_to_start.integer;
 		level.sniper_mode_quantity++;
 
 		trap->SendServerCommand(-1, va("chat \"^3Sniper Battle: ^7%s ^7joined the battle!\n\"", ent->client->pers.netname));
