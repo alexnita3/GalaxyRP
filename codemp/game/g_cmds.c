@@ -12741,6 +12741,11 @@ Cmd_Jetpack_f
 ==================
 */
 void Cmd_Jetpack_f( gentity_t *ent ) {
+	if (level.melee_mode > 1 && level.melee_players[ent->s.number] != -1)
+	{ // zyk: cannot get jetpack in Melee Battle
+		return;
+	}
+
 	if (!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_JETPACK)) && zyk_allow_jetpack_command.integer && 
 		(ent->client->sess.amrpgmode < 2 || ent->client->pers.skill_levels[34] > 0) && 
 		(level.gametype != GT_SIEGE || zyk_allow_jetpack_in_siege.integer) && level.gametype != GT_JEDIMASTER && 
@@ -16165,6 +16170,12 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 		return;
 	}
 
+	if (level.melee_mode > 0 && level.melee_players[ent->s.number] != -1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"You are already in a Melee Battle\n\"");
+		return;
+	}
+
 	if (level.duel_players[ent->s.number] == -1 && level.duel_tournament_mode > 1)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Cannot join the duel tournament now\n\"");
@@ -16373,6 +16384,12 @@ void Cmd_SniperMode_f(gentity_t *ent) {
 		return;
 	}
 
+	if (level.melee_mode > 0 && level.melee_players[ent->s.number] != -1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"You are already in a Melee Battle\n\"");
+		return;
+	}
+
 	if (level.sniper_players[ent->s.number] == -1 && level.sniper_mode > 1)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Cannot join the Sniper Battle now\n\"");
@@ -16423,6 +16440,140 @@ void Cmd_SniperTable_f(gentity_t *ent) {
 	}
 
 	trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", content));
+}
+
+/*
+==================
+Cmd_MeleeMode_f
+==================
+*/
+extern void melee_battle_end();
+void Cmd_MeleeMode_f(gentity_t *ent) {
+	if (ent->client->sess.amrpgmode == 2)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"You cannot be in RPG Mode to play the Melee Battle.\n\"");
+		return;
+	}
+
+	if (level.melee_arena_loaded == qfalse)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"There is no melee arena in this map\n\"");
+		return;
+	}
+
+	if (level.duel_tournament_mode > 0 && level.duel_players[ent->s.number] != -1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"You are already in a Duel Tournament\n\"");
+		return;
+	}
+
+	if (level.sniper_mode > 0 && level.sniper_players[ent->s.number] != -1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"You are already in a Sniper Battle\n\"");
+		return;
+	}
+
+	if (level.melee_players[ent->s.number] == -1 && level.melee_mode > 1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot join the Melee Battle now\n\"");
+		return;
+	}
+	else if (level.melee_players[ent->s.number] == -1)
+	{ // zyk: join the melee battle
+		if (level.melee_mode_quantity == 0)
+		{ // zyk: first player joined. Put the model in the melee arena and set its origin point
+			gentity_t *new_ent = G_Spawn();
+
+			zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+			zyk_set_entity_field(new_ent, "spawnflags", "65537");
+			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)level.melee_mode_origin[0], (int)level.melee_mode_origin[1], (int)level.melee_mode_origin[2]));
+			zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+			zyk_set_entity_field(new_ent, "targetname", "zyk_melee_catwalk");
+			zyk_set_entity_field(new_ent, "zykmodelscale", "400");
+			zyk_set_entity_field(new_ent, "mins", "-256 -256 -32");
+			zyk_set_entity_field(new_ent, "maxs", "256 256 32");
+
+			zyk_spawn_entity(new_ent);
+
+			level.melee_model_id = new_ent->s.number;
+		}
+
+		level.melee_players[ent->s.number] = 0;
+		level.melee_mode = 1;
+		level.melee_mode_timer = level.time + 12000;
+		level.melee_mode_quantity++;
+
+		trap->SendServerCommand(-1, va("chat \"^3Melee Battle: ^7%s ^7joined the battle!\n\"", ent->client->pers.netname));
+	}
+	else
+	{
+		level.melee_players[ent->s.number] = -1;
+		level.melee_mode_quantity--;
+
+		if (level.melee_mode_quantity == 0)
+		{ // zyk: everyone left the battle. Remove the catwalk
+			melee_battle_end();
+		}
+
+		trap->SendServerCommand(-1, va("chat \"^3Melee Battle: ^7%s ^7left the battle!\n\"", ent->client->pers.netname));
+	}
+}
+
+/*
+==================
+Cmd_MeleeArena_f
+==================
+*/
+void Cmd_MeleeArena_f(gentity_t *ent) {
+	FILE *duel_arena_file;
+	char content[1024];
+	char zyk_info[MAX_INFO_STRING] = { 0 };
+	char zyk_mapname[128] = { 0 };
+
+	// zyk: getting the map name
+	trap->GetServerinfo(zyk_info, sizeof(zyk_info));
+	Q_strncpyz(zyk_mapname, Info_ValueForKey(zyk_info, "mapname"), sizeof(zyk_mapname));
+
+	strcpy(content, "");
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
+	{ // zyk: admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	// zyk: creating directory of the duel arena files
+	system("mkdir meleearena");
+
+	duel_arena_file = fopen(va("meleearena/%s/origin.txt", zyk_mapname), "r");
+	if (duel_arena_file == NULL)
+	{ // zyk: arena file does not exist yet, create one
+		VectorCopy(ent->client->ps.origin, level.melee_mode_origin);
+
+#if defined(__linux__)
+		system(va("mkdir -p meleearena/%s", zyk_mapname));
+#else
+		system(va("mkdir \"meleearena/%s\"", zyk_mapname));
+#endif
+
+		duel_arena_file = fopen(va("meleearena/%s/origin.txt", zyk_mapname), "w");
+		fprintf(duel_arena_file, "%d\n%d\n%d\n", (int)level.melee_mode_origin[0], (int)level.melee_mode_origin[1], (int)level.melee_mode_origin[2]);
+		fclose(duel_arena_file);
+
+		level.melee_arena_loaded = qtrue;
+
+		trap->SendServerCommand(ent - g_entities, va("print \"Added melee arena at %d %d %d\n\"", (int)level.melee_mode_origin[0], (int)level.melee_mode_origin[1], (int)level.melee_mode_origin[2]));
+	}
+	else
+	{ // zyk: arena file already exists, remove it
+		fclose(duel_arena_file);
+
+		remove(va("meleearena/%s/origin.txt", zyk_mapname));
+
+		level.melee_arena_loaded = qfalse;
+
+		trap->SendServerCommand(ent - g_entities, va("print \"Removed melee arena of this map\n\""));
+	}
 }
 
 /*
@@ -16511,6 +16662,8 @@ command_t commands[] = {
 	{ "logout",				Cmd_LogoutAccount_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "magic",				Cmd_Magic_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "maplist",			Cmd_MapList_f,				CMD_NOINTERMISSION },
+	{ "meleearena",			Cmd_MeleeArena_f,			CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "meleemode",			Cmd_MeleeMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "new",				Cmd_NewAccount_f,			CMD_NOINTERMISSION },
 	{ "news",				Cmd_News_f,					CMD_NOINTERMISSION },
 	{ "noclip",				Cmd_Noclip_f,				CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },

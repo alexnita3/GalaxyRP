@@ -337,6 +337,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	FILE *zyk_entities_file = NULL;
 	FILE *zyk_remap_file = NULL;
 	FILE *zyk_duel_arena_file = NULL;
+	FILE *zyk_melee_arena_file = NULL;
 
 	//Init RMG to 0, it will be autoset to 1 if there is terrain on the level.
 	trap->Cvar_Set("RMG", "0");
@@ -708,6 +709,13 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	level.sniper_mode = 0;
 	level.sniper_mode_quantity = 0;
 
+	// zyk: initializing Melee Battle variables
+	level.melee_mode = 0;
+	level.melee_model_id = -1;
+	level.melee_mode_timer = 0;
+	level.melee_mode_quantity = 0;
+	level.melee_arena_loaded = qfalse;
+
 	level.last_spawned_entity = NULL;
 
 	level.ent_origin_set = qfalse;
@@ -723,6 +731,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		{ // zyk: initializing duelist scores
 			level.duel_players[zyk_iterator] = -1;
 			level.sniper_players[zyk_iterator] = -1;
+			level.melee_players[zyk_iterator] = -1;
 		}
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_DUEL_MATCHES; zyk_iterator++)
@@ -1664,6 +1673,28 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		fclose(zyk_duel_arena_file);
 
 		level.duel_arena_loaded = qtrue;
+	}
+
+	// zyk: loading melee arena, if this map has one
+	zyk_melee_arena_file = fopen(va("meleearena/%s/origin.txt", zyk_mapname), "r");
+	if (zyk_melee_arena_file != NULL)
+	{
+		char melee_arena_content[16];
+
+		strcpy(melee_arena_content, "");
+
+		fscanf(zyk_melee_arena_file, "%s", melee_arena_content);
+		level.melee_mode_origin[0] = atoi(melee_arena_content);
+
+		fscanf(zyk_melee_arena_file, "%s", melee_arena_content);
+		level.melee_mode_origin[1] = atoi(melee_arena_content);
+
+		fscanf(zyk_melee_arena_file, "%s", melee_arena_content);
+		level.melee_mode_origin[2] = atoi(melee_arena_content);
+
+		fclose(zyk_melee_arena_file);
+
+		level.melee_arena_loaded = qtrue;
 	}
 }
 
@@ -7255,11 +7286,131 @@ void sniper_battle_winner()
 
 		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
 
-		trap->SendServerCommand(-1, va("chat \"^3Sniper Battle: ^7%s ^7is the winner with %d score!\"", ent->client->pers.netname, level.sniper_players[ent->s.number]));
+		trap->SendServerCommand(-1, va("chat \"^3Sniper Battle: ^7%s ^7is the winner! Kills: %d\"", ent->client->pers.netname, level.sniper_players[ent->s.number]));
 	}
 	else
 	{
 		trap->SendServerCommand(-1, "chat \"^3Sniper Battle: ^7No one is the winner!\"");
+	}
+}
+
+// zyk: finishes the melee battle
+void melee_battle_end()
+{
+	int i = 0;
+
+	level.melee_mode = 0;
+	level.melee_mode_quantity = 0;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		if (level.melee_players[i] != -1)
+		{ // zyk: restoring default guns and force powers to this player
+			gentity_t *ent = &g_entities[i];
+
+			WP_InitForcePowers(ent);
+
+			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0)
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
+
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
+		}
+
+		level.melee_players[i] = -1;
+	}
+
+	if (level.melee_model_id != -1)
+	{
+		G_FreeEntity(&g_entities[level.melee_model_id]);
+		level.melee_model_id = -1;
+	}
+}
+
+// zyk: prepares players to fight in Melee Battle
+void melee_battle_prepare()
+{
+	int i = 0;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		gentity_t *ent = &g_entities[i];
+
+		if (level.melee_players[i] != -1)
+		{ // zyk: a player in the Melee Battle
+			vec3_t origin;
+
+			if (ent->health < 1)
+			{ // zyk: respawn him if he is dead
+				ClientRespawn(ent);
+			}
+
+			ent->client->ps.stats[STAT_WEAPONS] = 0;
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_MELEE);
+			ent->client->ps.weapon = WP_MELEE;
+
+			ent->health = 100;
+			ent->client->ps.stats[STAT_ARMOR] = 100;
+
+			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] = (1 << HI_BINOCULARS);
+			ent->client->ps.stats[STAT_HOLDABLE_ITEM] = 0;
+
+			// zyk: cannot use any force powers, except Jump
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PUSH);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PULL);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SPEED);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SEE);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_ABSORB);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_HEAL);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PROTECT);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TELEPATHY);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_HEAL);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_LIGHTNING);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_GRIP);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_DRAIN);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_RAGE);
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_FORCE);
+
+			VectorSet(origin, level.melee_mode_origin[0] - 120 + ((i % 6) * 45), level.melee_mode_origin[1] - 120 + ((i/6) * 45), level.melee_mode_origin[2] + 50);
+
+			zyk_TeleportPlayer(ent, origin, ent->client->ps.viewangles);
+		}
+	}
+}
+
+// zyk: shows the winner of the Melee Battle
+void melee_battle_winner()
+{
+	int i = 0;
+	gentity_t *ent = NULL;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		if (level.melee_players[i] != -1)
+		{
+			ent = &g_entities[i];
+			break;
+		}
+	}
+
+	if (ent)
+	{
+		ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 20000;
+		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 20000;
+		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 20000;
+
+		ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER) | (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
+		ent->client->ps.ammo[AMMO_BLASTER] = zyk_max_blaster_pack_ammo.integer;
+		ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
+		ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
+		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN) | (1 << HI_SEEKER) | (1 << HI_MEDPAC_BIG);
+
+		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
+
+		trap->SendServerCommand(-1, va("chat \"^3Melee Battle: ^7%s ^7is the winner! Kills: %d\"", ent->client->pers.netname, level.melee_players[ent->s.number]));
+	}
+	else
+	{
+		trap->SendServerCommand(-1, "chat \"^3Melee Battle: ^7No one is the winner!\"");
 	}
 }
 
@@ -7474,6 +7625,36 @@ void G_RunFrame( int levelTime ) {
 		{
 			level.race_mode = 3;
 			trap->SendServerCommand( -1, "cp \"^2Go!\"");
+		}
+	}
+
+	// zyk: Melee Battle
+	if (level.melee_mode == 2)
+	{
+		if (level.melee_mode_timer < level.time)
+		{
+			melee_battle_end();
+			trap->SendServerCommand(-1, "chat \"^3Melee Battle: ^7Time is up! No winner!\"");
+		}
+		else if (level.melee_mode_quantity == 1)
+		{
+			melee_battle_winner();
+			melee_battle_end();
+		}
+	}
+	else if (level.melee_mode == 1 && level.melee_mode_timer < level.time)
+	{
+		if (level.melee_mode_quantity > 1)
+		{ // zyk: if at least 2 players joined in it, start the battle
+			melee_battle_prepare();
+			level.melee_mode = 2;
+			level.melee_mode_timer = level.time + 600000;
+			trap->SendServerCommand(-1, "chat \"^3Melee Battle: ^7the battle has begun! The battle will have a max of 10 minutes!\"");
+		}
+		else
+		{ // zyk: finish the battle
+			melee_battle_end();
+			trap->SendServerCommand(-1, "chat \"^3Melee Battle: ^7Not enough players. Melee Battle is over!\"");
 		}
 	}
 
@@ -9505,6 +9686,13 @@ void G_RunFrame( int levelTime ) {
 
 					trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Time is up!\"");
 				}
+			}
+
+			if (level.melee_mode == 2 && ent->client->ps.origin[2] < level.melee_mode_origin[2])
+			{ // zyk: validating if player fell of the catwalk
+				ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
+
+				player_die(ent, ent, ent, 100000, MOD_SUICIDE);
 			}
 
 			if (ent->client->pers.race_position > 0)

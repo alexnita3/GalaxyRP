@@ -2704,6 +2704,13 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 		level.sniper_mode_quantity--;
 	}
 
+	// zyk: melee battle player went to spec
+	if (level.melee_players[ent->s.number] > -1)
+	{
+		level.melee_players[ent->s.number] = -1;
+		level.melee_mode_quantity--;
+	}
+
 	// zyk: sending events to client game
 	client->pers.send_event_timer = level.time + 3000;
 	client->pers.send_event_interval = level.time + 100;
@@ -4187,6 +4194,13 @@ void ClientDisconnect( int clientNum ) {
 	{
 		level.sniper_players[ent->s.number] = -1;
 		level.sniper_mode_quantity--;
+	}
+
+	// zyk: melee battle player disconnected
+	if (level.melee_players[ent->s.number] > -1)
+	{
+		level.melee_players[ent->s.number] = -1;
+		level.melee_mode_quantity--;
 	}
 
 	// zyk: cleaning ally ids of other players who have this player as ally

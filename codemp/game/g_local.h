@@ -1553,6 +1553,15 @@ typedef struct level_locals_s {
 	int sniper_mode_timer; // zyk: timer used in Sniper Battle
 	int sniper_mode_quantity; // zyk: amount of players who joined the Sniper Battle
 
+	// zyk: Melee Battle
+	int melee_mode; // zyk: Default 0. Sets 1 when someone joins, and 2 after battle begins
+	int melee_players[MAX_CLIENTS]; // zyk: default -1, when a player joins, sets 0. It is the amount of enemies defeated in Melee Battle
+	int melee_mode_timer; // zyk: timer used in Melee Battle
+	int melee_mode_quantity; // zyk: amount of players who joined the Melee Battle
+	int melee_model_id; // zyk: model id of the catwalk
+	qboolean melee_arena_loaded; // zyk: tests if the arena is loaded on this map
+	vec3_t melee_mode_origin; // zyk: origin of the melee mode arena, which has the catwalk
+
 	// zyk: the player id who is the target in Bounty Quest. Default 0
 	int bounty_quest_target_id;
 
