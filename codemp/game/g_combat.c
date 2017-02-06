@@ -5195,9 +5195,10 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		else if (targ->client->pers.rpg_class == 0) // zyk: Free Warrior damage resistance
 		{
 			// zyk: Free Warrior Mimic Damage ability. Deals half of the damage taken back to the enemy
-			if (targ->client->ps.powerups[PW_NEUTRALFLAG] > level.time && targ->client->pers.player_statuses & (1 << 21))
+			if (attacker && attacker != targ && targ->client->ps.powerups[PW_NEUTRALFLAG] > level.time && 
+				targ->client->pers.player_statuses & (1 << 21))
 			{
-				G_Damage(attacker, targ, targ, NULL, NULL, (int)ceil(damage * (0.5)), 0, MOD_UNKNOWN);
+				G_Damage(attacker, targ, targ, NULL, NULL, (int)ceil(damage * 0.5), 0, MOD_UNKNOWN);
 			}
 
 			damage = (int)ceil(damage * (1.0 - (0.03 * targ->client->pers.skill_levels[55])));
