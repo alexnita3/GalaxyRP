@@ -3010,7 +3010,8 @@ void ForceTelepathy(gentity_t *self)
 				tricked_entity->s.NPC_class != CLASS_VEHICLE && tricked_entity->client->pers.being_mind_controlled == -1 && 
 				self->client->pers.being_mind_controlled == -1 && 
 				((tricked_entity->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[11] > tricked_entity->client->pers.skill_levels[4]) || 
-				(tricked_entity->client->sess.amrpgmode != 2 && self->client->pers.skill_levels[11] > tricked_entity->client->ps.fd.forcePowerLevel[FP_SEE])) && tricked_entity->health > 0)
+				(tricked_entity->client->sess.amrpgmode != 2 && self->client->pers.skill_levels[11] > tricked_entity->client->ps.fd.forcePowerLevel[FP_SEE])) && tricked_entity->health > 0 && 
+				self->client->ps.hasLookTarget && self->client->ps.lookTarget == tricked_entity->s.number)
 			{
 				if (self->client->pers.mind_controlled1_id == -1)
 				{
@@ -3113,7 +3114,7 @@ void ForceTelepathy(gentity_t *self)
 					ent->client->pers.being_mind_controlled == -1 && self->client->pers.being_mind_controlled == -1 && 
 					((ent->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[11] > ent->client->pers.skill_levels[4]) || 
 					(ent->client->sess.amrpgmode != 2 && self->client->pers.skill_levels[11] > ent->client->ps.fd.forcePowerLevel[FP_SEE])) && 
-					ent->health > 0)
+					ent->health > 0 && self->client->ps.hasLookTarget && self->client->ps.lookTarget == ent->s.number)
 				{
 					if (self->client->pers.mind_controlled1_id == -1)
 					{
