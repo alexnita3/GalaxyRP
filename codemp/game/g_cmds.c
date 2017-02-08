@@ -9830,7 +9830,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		}
 		else if (i == 8)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Stealth Attacker Upgrade: ^7Stealth Attacker will be invulnerable to electric attacks and will have 20 per cent more damage in his starting weapons. Protects from stun baton 3/3 speed decrease and also from losing guns to force pull. Adds the thermal detector in his disruptor scope. Makes him invisible to the Bounty Hunter Upgrade Radar\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^3Stealth Attacker Upgrade: ^7Stealth Attacker will be invulnerable to electric attacks and will have 20 per cent more damage in his starting weapons. Protects from stun baton speed decrease and also from losing guns to force pull. Adds the thermal detector in his disruptor scope. Makes him invisible to the Bounty Hunter Upgrade Radar\n\n\"");
 		}
 		else if (i == 9)
 		{
@@ -9914,7 +9914,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		}
 		else if (i == 29)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Bounty Hunter Upgrade: ^7increases Bounty Hunter health resistance to damage by 5 per cent and shield resistance by 5 per cent. Seeker Drone lasts 20 seconds more, has fast shooting rate and more damage. Sentry Gun has more damage and range. Allows placing more sentry guns and recovering them by pressing Use key on each one. Allows recovering force fields by pressing Use key on them. Allows buying and selling from seller remotely, so no need to call him. Gives the Thermal Vision, used with Binoculars. Gives the Radar Upgrade (requires Zyk OpenJK Client installed)\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^3Bounty Hunter Upgrade: ^7increases Bounty Hunter health resistance to damage by 5 per cent and shield resistance by 5 per cent. Seeker Drone lasts 20 seconds more, has fast shooting rate and more damage. Sentry Gun has more damage and range. Allows placing more sentry guns and recovering them by pressing Use key on each one. Allows recovering force fields by pressing Use key on them. Allows buying and selling from seller remotely, so no need to call him. Gives the Thermal Vision, used with Binoculars. Gives the Radar (requires Zyk OpenJK Client installed)\n\n\"");
 		}
 		else if (i == 30)
 		{
@@ -9978,7 +9978,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		}
 		else if (i == 45)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Force Gunner Upgrade: ^7increases run speed by 20 per cent. Force power regens 2x faster. Unique Skill uses some force power to restore 25 shield\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^3Force Gunner Upgrade: ^7increases run speed by 20 per cent. Force power regens 2x faster. Unique Skill will restore 25 shield\n\n\"");
 		}
 		else if (i == 46)
 		{

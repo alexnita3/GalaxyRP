@@ -6881,7 +6881,7 @@ void universe_quest_artifacts_checker(gentity_t *ent)
 {
 	if (number_of_artifacts(ent) == 8)
 	{ // zyk: after collecting all artifacts, go to next objective
-		trap->SendServerCommand( -1, va("chat \"%s^7: I have all artifacts! Now I must go to ^3yavin1b ^7to know about the mysterious voice I heard when I begun this quest.\"", ent->client->pers.netname));
+		trap->SendServerCommand( -1, va("chat \"%s^7: I have all artifacts! Now I must go to ^3yavin1b ^7to know about that mysterious voice\"", ent->client->pers.netname));
 
 		if (ent->client->pers.universe_quest_counter & (1 << 29))
 		{ // zyk: if player is in Challenge Mode, do not remove this bit value
