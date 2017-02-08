@@ -7629,7 +7629,11 @@ void G_RunFrame( int levelTime ) {
 	}
 
 	// zyk: Melee Battle
-	if (level.melee_mode == 2)
+	if (level.melee_mode == 3 && level.melee_mode_timer < level.time)
+	{
+		melee_battle_end();
+	}
+	else if (level.melee_mode == 2)
 	{
 		if (level.melee_mode_timer < level.time)
 		{
@@ -7639,7 +7643,10 @@ void G_RunFrame( int levelTime ) {
 		else if (level.melee_mode_quantity == 1)
 		{
 			melee_battle_winner();
-			melee_battle_end();
+
+			// zyk: wait some time before ending the melee battle so the winner can escape the platform
+			level.melee_mode_timer = level.time + 3000;
+			level.melee_mode = 3;
 		}
 	}
 	else if (level.melee_mode == 1 && level.melee_mode_timer < level.time)
