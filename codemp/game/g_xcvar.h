@@ -232,6 +232,7 @@ XCVAR_DEF( zyk_health_respawn_time,	"30",				NULL,				CVAR_ARCHIVE|CVAR_NORESTAR
 XCVAR_DEF( zyk_holdable_item_respawn_time,	"60",		NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_allow_quests,	"1",					NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_allow_mini_quests,	"1",				NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
+XCVAR_DEF( zyk_allow_mini_games,	"1",				NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_magic_fist_mp_cost,	"1",				NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_inner_area_mp_cost,	"2",				NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_healing_area_mp_cost,	"5",			NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )

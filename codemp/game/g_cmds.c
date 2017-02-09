@@ -12404,6 +12404,12 @@ Cmd_RaceMode_f
 ==================
 */
 void Cmd_RaceMode_f( gentity_t *ent ) {
+	if (zyk_allow_mini_games.integer != 1)
+	{
+		trap->SendServerCommand(ent->s.number, va("chat \"^3Race System: ^7this mode is not allowed in this server\n\""));
+		return;
+	}
+
 	if (ent->client->pers.race_position == 0)
 	{
 		int j = 0, swoop_number = -1;
@@ -16152,6 +16158,12 @@ Cmd_DuelMode_f
 */
 extern void duel_tournament_end();
 void Cmd_DuelMode_f(gentity_t *ent) {
+	if (zyk_allow_mini_games.integer != 1)
+	{
+		trap->SendServerCommand(ent->s.number, va("chat \"^3Duel Tournament: ^7this mode is not allowed in this server\n\""));
+		return;
+	}
+
 	if (ent->client->sess.amrpgmode == 2)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"You cannot be in RPG Mode to play the Duel Tournament.\n\"");
@@ -16372,6 +16384,12 @@ Cmd_SniperMode_f
 ==================
 */
 void Cmd_SniperMode_f(gentity_t *ent) {
+	if (zyk_allow_mini_games.integer != 1)
+	{
+		trap->SendServerCommand(ent->s.number, va("chat \"^3Sniper Battle: ^7this mode is not allowed in this server\n\""));
+		return;
+	}
+
 	if (ent->client->sess.amrpgmode == 2)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"You cannot be in RPG Mode to play the Sniper Battle.\n\"");
@@ -16449,6 +16467,12 @@ Cmd_MeleeMode_f
 */
 extern void melee_battle_end();
 void Cmd_MeleeMode_f(gentity_t *ent) {
+	if (zyk_allow_mini_games.integer != 1)
+	{
+		trap->SendServerCommand(ent->s.number, va("chat \"^3Melee Battle: ^7this mode is not allowed in this server\n\""));
+		return;
+	}
+
 	if (ent->client->sess.amrpgmode == 2)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"You cannot be in RPG Mode to play the Melee Battle.\n\"");
