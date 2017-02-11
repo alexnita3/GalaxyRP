@@ -3281,7 +3281,7 @@ void SP_CreateWeather( gentity_t *ent )
 		G_EffectIndex(va("*%s", ent->message));
 }
 
-/* zyk: regens many things
+/* zyk: zyk_regen_unit regens many things
 spawnflags:
 1 -  regens health
 2 -  regens shield
@@ -3376,6 +3376,116 @@ void SP_ZykRegenUnit( gentity_t *ent)
 	G_SetOrigin( ent, ent->s.origin );
 
 	trap->LinkEntity( (sharedEntity_t *)ent );
+}
+
+/* zyk: zyk_mini_game_joiner, allows a player to join a mini-game by going inside the bounding box
+spawnflags:
+1 -  Sniper Battle
+2 -  Racing Mode
+4 -  Melee Battle
+8 -  Duel Tournament
+64 - must press Use key
+
+"wait" amount of time between the entity frames, in which it verifies if a player is standing in the bounding box
+"mins" bounding box
+"maxs" bounding box
+*/
+extern void Cmd_SniperMode_f(gentity_t *ent);
+extern void Cmd_RaceMode_f(gentity_t *ent);
+extern void Cmd_MeleeMode_f(gentity_t *ent);
+extern void Cmd_DuelMode_f(gentity_t *ent);
+void zyk_mini_gamer_joiner_do(gentity_t *ent, gentity_t *player_ent, gentity_t *the_player_ent)
+{
+	if (ent->spawnflags & 1)
+	{
+		Cmd_SniperMode_f(player_ent);
+	}
+
+	if (ent->spawnflags & 2)
+	{
+		Cmd_RaceMode_f(player_ent);
+	}
+
+	if (ent->spawnflags & 4)
+	{
+		Cmd_MeleeMode_f(player_ent);
+	}
+
+	if (ent->spawnflags & 8)
+	{
+		Cmd_DuelMode_f(player_ent);
+	}
+}
+
+void zyk_mini_game_joiner_think(gentity_t *ent)
+{
+	gentity_t *player_ent = NULL;
+	int entity_ids[MAX_GENTITIES];
+	int numListedEntities = 0;
+	int i = 0;
+	vec3_t mins, maxs;
+
+	if (ent->spawnflags & 64) // zyk: if it is an useable entity, wait will be this value
+		ent->wait = 100;
+
+	VectorSet(mins, ent->s.origin[0] + ent->r.mins[0], ent->s.origin[1] + ent->r.mins[1], ent->s.origin[2] + ent->r.mins[2]);
+	VectorSet(maxs, ent->s.origin[0] + ent->r.maxs[0], ent->s.origin[1] + ent->r.maxs[1], ent->s.origin[2] + ent->r.maxs[2]);
+
+	numListedEntities = trap->EntitiesInBox(mins, maxs, entity_ids, MAX_GENTITIES);
+
+	i = 0;
+	while (i < numListedEntities)
+	{
+		player_ent = &g_entities[entity_ids[i]];
+
+		if (player_ent && player_ent->client && player_ent->s.number < MAX_CLIENTS && player_ent->health > 0)
+		{ // zyk: must be a player that is alive
+			if (!(ent->spawnflags & 64))
+			{
+				zyk_mini_gamer_joiner_do(ent, player_ent, player_ent);
+			}
+			else if (player_ent->client->pers.cmd.buttons & BUTTON_USE)
+			{
+				zyk_mini_gamer_joiner_do(ent, player_ent, player_ent);
+
+				if (player_ent->client->ps.torsoAnim == BOTH_BUTTON_HOLD ||
+					player_ent->client->ps.torsoAnim == BOTH_CONSOLE1)
+				{ //extend the time
+					player_ent->client->ps.torsoTimer = 500;
+				}
+				else
+				{
+					G_SetAnim(player_ent, NULL, SETANIM_TORSO, BOTH_BUTTON_HOLD, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
+				}
+				player_ent->client->ps.weaponTime = player_ent->client->ps.torsoTimer;
+
+				ent->wait = 1000;
+			}
+		}
+
+		i++;
+	}
+
+	ent->nextthink = level.time + ent->wait;
+}
+
+void SP_ZykMiniGameJoiner(gentity_t *ent)
+{
+	ent->think = zyk_mini_game_joiner_think;
+
+	if (ent->spawnflags & 64)
+	{ // zyk: if it is an useable entity, wait will be this value
+		ent->wait = 100;
+	}
+
+	ent->nextthink = level.time + ent->wait;
+
+	ent->s.eType = ET_GENERAL;
+
+	// Save our position and link us up!
+	G_SetOrigin(ent, ent->s.origin);
+
+	trap->LinkEntity((sharedEntity_t *)ent);
 }
 
 qboolean gEscaping = qfalse;
