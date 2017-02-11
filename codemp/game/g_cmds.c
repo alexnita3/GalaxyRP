@@ -13746,7 +13746,7 @@ void Cmd_EntList_f( gentity_t *ent ) {
 
 	if ( trap->Argc() < 2)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"You must specify a page number greater than 0, or an entity classname. Example: ^3/entlist 5^7 or ^3/entlist info_player_deathmatch^7\n\"") );
+		trap->SendServerCommand( ent-g_entities, va("print \"You must specify a page number greater than 0. Example: ^3/entlist 5^7. You can also search for classname, targetname and target that matches at least part of it. Example: ^3/entlist info_player_deathmatch^7\n\"") );
 		return;
 	}
 
@@ -13765,14 +13765,17 @@ void Cmd_EntList_f( gentity_t *ent ) {
 		}
 	}
 	else
-	{ // zyk: search by classname
+	{ // zyk: search by classname, targetname or target
 		int found_entities = 0;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
 			target_ent = &g_entities[i];
 
-			if (target_ent && Q_stricmp(target_ent->classname, arg1) == 0)
+			if (target_ent && 
+				((target_ent->classname && strstr(target_ent->classname, G_NewString(arg1))) ||
+				 (target_ent->targetname && strstr(target_ent->targetname, G_NewString(arg1))) ||
+				 (target_ent->target && strstr(target_ent->target, G_NewString(arg1)))))
 			{
 				sprintf(message,"%s\n%d - %s - %s - %s",message,i,target_ent->classname,target_ent->targetname,target_ent->target);
 				found_entities++;
