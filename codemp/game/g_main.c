@@ -12732,14 +12732,14 @@ void G_RunFrame( int levelTime ) {
 					{
 						lightning_dome(ent,90);
 						trap->SendServerCommand( -1, "chat \"^5Guardian of Light: ^7Lightning Dome!\"");
-						ent->client->pers.guardian_timer = level.time + 14000;
+						ent->client->pers.guardian_timer = level.time + 15000;
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
 						water_attack(ent, 4000, 55);
 						trap->SendServerCommand(-1, "chat \"^5Guardian of Light: ^7Water Attack!\"");
-						ent->client->pers.light_quest_timer = level.time + 17000;
+						ent->client->pers.light_quest_timer = level.time + 19000;
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 9)
@@ -12785,7 +12785,7 @@ void G_RunFrame( int levelTime ) {
 					{
 						magic_shield(ent, 6000);
 						trap->SendServerCommand(-1, "chat \"^3Guardian of Eternity: ^7Magic Shield!\"");
-						ent->client->pers.light_quest_timer = level.time + 17000;
+						ent->client->pers.light_quest_timer = level.time + 18000;
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 11)
@@ -12807,7 +12807,7 @@ void G_RunFrame( int levelTime ) {
 					if (ent->client->pers.universe_quest_timer < level.time)
 					{
 						enemy_nerf(ent, 1000);
-						ent->client->pers.universe_quest_timer = level.time + 11000;
+						ent->client->pers.universe_quest_timer = level.time + 12000;
 						trap->SendServerCommand(-1, "chat \"^3Guardian of Resistance: ^7Enemy Weakening!\"");
 					}
 				}
@@ -12855,14 +12855,14 @@ void G_RunFrame( int levelTime ) {
 						ultra_drain(ent,450,55,8000);
 						trap->SendServerCommand( -1, "chat \"^1Master of Evil: ^7Ultra Drain!\"");
 
-						ent->client->pers.guardian_timer = level.time + 25000;
+						ent->client->pers.guardian_timer = level.time + 27000;
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
 						ultra_flame(ent, 4000, 55);
 						trap->SendServerCommand(-1, "chat \"^1Master of Evil: ^7Ultra Flame!\"");
-						ent->client->pers.light_quest_timer = level.time + 29000;
+						ent->client->pers.light_quest_timer = level.time + 30000;
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 13)
@@ -12916,7 +12916,7 @@ void G_RunFrame( int levelTime ) {
 					{
 						magic_explosion(ent,320,170,900);
 						trap->SendServerCommand( -1, "chat \"^2Guardian of Universe: ^7Magic Explosion!\"");
-						ent->client->pers.light_quest_timer = level.time + 15000;
+						ent->client->pers.light_quest_timer = level.time + 16000;
 					}
 
 					if (ent->client->pers.universe_quest_timer < level.time)
@@ -13145,7 +13145,7 @@ void G_RunFrame( int levelTime ) {
 							ent->client->pers.hunter_quest_messages = 0;
 						}
 
-						ent->client->pers.guardian_timer = level.time + (ent->health/2) + 3000;
+						ent->client->pers.guardian_timer = level.time + (ent->health/2) + 3500;
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
@@ -13179,7 +13179,7 @@ void G_RunFrame( int levelTime ) {
 							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Universe Power!\"");
 						}
 
-						ent->client->pers.light_quest_timer = level.time + 25000;
+						ent->client->pers.light_quest_timer = level.time + 27000;
 					}
 				}
 			}
