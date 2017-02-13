@@ -1754,7 +1754,8 @@ EnergyShieldStationSettings
 */
 void EnergyShieldStationSettings(gentity_t *ent)
 {
-	G_SpawnInt( "count", "200", &ent->count );
+	if (!(ent->spawnflags & 65536)) // zyk: allows setting count value
+		G_SpawnInt( "count", "200", &ent->count );
 
 	G_SpawnInt("chargerate", "0", &ent->genericValue5);
 
