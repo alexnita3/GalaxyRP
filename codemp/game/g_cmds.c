@@ -13880,8 +13880,7 @@ void Cmd_EntRemove_f( gentity_t *ent ) {
 			target_ent = &g_entities[i];
 			if ((target_ent-g_entities) >= entity_id && (target_ent-g_entities) <= entity_id2)
 			{
-				if (Q_stricmp( target_ent->classname, "info_player_deathmatch") != 0)
-					G_FreeEntity( target_ent );
+				G_FreeEntity( target_ent );
 			}
 		}
 
