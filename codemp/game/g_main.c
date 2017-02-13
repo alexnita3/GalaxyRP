@@ -8576,6 +8576,12 @@ void G_RunFrame( int levelTime ) {
 
 						new_ent->NPC_type = zyk_get_file_value(this_file);
 
+						zyk_set_entity_field(new_ent, "count", zyk_get_file_value(this_file));
+
+						zyk_set_entity_field(new_ent, "delay", zyk_get_file_value(this_file));
+
+						zyk_set_entity_field(new_ent, "wait", zyk_get_file_value(this_file));
+
 						zyk_spawn_entity(new_ent);
 					}
 					else if (strncmp(content, "weapon_", 7) == 0 || strncmp(content, "ammo_", 5) == 0 || 

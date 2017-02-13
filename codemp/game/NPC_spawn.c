@@ -2064,10 +2064,14 @@ void SP_NPC_spawner( gentity_t *self)
 	}
 	else
 	{
-		self->wait *= 1000;//1 = 1 msec, 1000 = 1 sec
+		if (!(self->spawnflags & 65536)) // zyk: dont multiply if has this flag
+			self->wait *= 1000;//1 = 1 msec, 1000 = 1 sec
 	}
 
-	self->delay *= 1000;//1 = 1 msec, 1000 = 1 sec
+	if (!(self->spawnflags & 65536)) // zyk: dont multiply if has this flag
+		self->delay *= 1000;//1 = 1 msec, 1000 = 1 sec
+
+	self->spawnflags |= 65536;
 
 	G_SpawnInt( "showhealth", "0", &t );
 	if (t)
