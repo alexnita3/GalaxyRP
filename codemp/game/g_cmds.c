@@ -13702,8 +13702,10 @@ Cmd_EntNear_f
 */
 void Cmd_EntNear_f( gentity_t *ent ) {
 	int i = 0;
+	int distance = 200;
 	int found_entities = 0;
 	char message[1024];
+	char arg1[MAX_STRING_CHARS];
 	gentity_t *this_ent = NULL;
 
 	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
@@ -13714,10 +13716,17 @@ void Cmd_EntNear_f( gentity_t *ent ) {
 
 	strcpy(message,"");
 
-	for (i = 0; i < level.num_entities; i++)
+	if (trap->Argc() > 1)
+	{
+		trap->Argv(1, arg1, sizeof(arg1));
+
+		distance = atoi(arg1);
+	}
+
+	for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
 	{
 		this_ent = &g_entities[i];
-		if (this_ent && ent != this_ent && (int)Distance(ent->client->ps.origin, this_ent->r.currentOrigin) < 200)
+		if (this_ent && ent != this_ent && (int)Distance(ent->client->ps.origin, this_ent->r.currentOrigin) < distance)
 		{
 			strcpy(message,va("%s\n%d - %s",message,i,this_ent->classname));
 			found_entities++;
@@ -14586,7 +14595,7 @@ void Cmd_EntitySystem_f( gentity_t *ent ) {
 		return;
 	}
 
-	trap->SendServerCommand( ent-g_entities, va("print \"\n^3/entadd <classname> <spawnflags> <key value key value ... etc>: ^7adds a new entity in the map\n^3/entedit <entity id> [key value key value ... etc]: ^7shows entity info or edits the entity fields\n^3/entnear: ^7lists entities in distance less than 200\n^3/entlist <page number>: ^7lists all entities\n^3/entorigin: ^7sets entity origin of this point to be used for new entities\n^3/entundo: ^7removes last added entity\n^3/entsave <filename>: ^7saves entities into a file. Use ^3default ^7name to make it load with the map\n^3/entload <filename>: ^7loads entities from a file\n^3/entremove <entity id>: ^7removes the entity from the map\n^3/entdeletefile <filename>: ^7removes a file created by /entsave\n^3/remap <shader> <new shader>: ^7remaps shaders in map\n^3/remapsave <file name>: ^7saves remaps in a file. Use ^3default ^7name to make file load with the map\n^3/remapload <file name>: ^7loads remapped shaders from file\n^3/remapdeletefile <file name>: ^7deletes a remap file\n\n\"") );
+	trap->SendServerCommand( ent-g_entities, va("print \"\n^3/entadd <classname> <spawnflags> <key value key value ... etc>: ^7adds a new entity in the map\n^3/entedit <entity id> [key value key value ... etc]: ^7shows entity info or edits the entity fields\n^3/entnear: ^7lists entities in less than 200 map units or distance passed as argument\n^3/entlist <page number>: ^7lists all entities\n^3/entorigin: ^7sets this point as origin for new entities\n^3/entundo: ^7removes last added entity\n^3/entsave <filename>: ^7saves entities into a file. Use ^3default ^7name to make it load with the map\n^3/entload <filename>: ^7loads entities from a file\n^3/entremove <entity id>: ^7removes the entity from the map\n^3/entdeletefile <filename>: ^7removes a file created by /entsave\n^3/remap <shader> <new shader>: ^7remaps shaders in map\n^3/remapsave <file name>: ^7saves remaps in a file. Use ^3default ^7name to make file load with the map\n^3/remapload <file name>: ^7loads remapped shaders from file\n^3/remapdeletefile <file name>: ^7deletes a remap file\n\n\"") );
 }
 
 /*
