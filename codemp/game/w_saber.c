@@ -62,6 +62,9 @@ float RandFloat( float min, float max ) {
 #elif defined(__GCC__)
 	if ( g_randFix.integer == 1 )
 		randMax = RAND_MAX;
+#else // zyk: added this to fix on Linux for now. Sometimes, even using GCC, it does not execute the condition above
+	if (g_randFix.integer == 1)
+		randMax = RAND_MAX;
 #endif
 	return ((randActual * (max - min)) / randMax) + min;
 }
