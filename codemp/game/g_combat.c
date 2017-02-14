@@ -2842,6 +2842,11 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 			attacker->client->pers.score_modifier = 1;
 		}
 
+		if (self->NPC && self->client->pers.credits_modifier > 0)
+		{ // zyk: npc with a custom amount of credits set
+			attacker->client->pers.credits_modifier = self->client->pers.credits_modifier;
+		}
+
 		if (level.guardian_quest > 0 && self->NPC && self->s.number == level.guardian_quest)
 		{ // zyk: if player defeated the map guardian npc
 			attacker->client->pers.score_modifier = 2;
