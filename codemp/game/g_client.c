@@ -3938,7 +3938,7 @@ void ClientSpawn(gentity_t *ent) {
 			// zyk: show screen message if the player did not see it yet
 			if (level.read_screen_message[ent->s.number] == qfalse && Q_stricmp(zyk_screen_message.string, "") != 0)
 			{
-				if (ent->client->sess.amrpgmode == 0 || !(ent->client->pers.player_settings & (1 << 16)))
+				if (ent->client->sess.amrpgmode == 0 || !(ent->client->pers.player_settings & (1 << 9)))
 				{ // zyk: logged players can disable the screen message if they want to
 					level.read_screen_message[ent->s.number] = qtrue;
 					level.screen_message_timer[ent->s.number] = level.time + zyk_screen_message_timer.integer;

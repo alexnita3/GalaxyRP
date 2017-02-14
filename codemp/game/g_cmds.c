@@ -4649,26 +4649,7 @@ void zyk_load_common_settings(gentity_t *ent)
 		
 	zyk_jetpack(ent);
 
-	// zyk: loading the saber style based in the player settings
-	if (ent->client->saber[0].model[0] && ent->client->saber[1].model[0])
-	{ // zyk: Duals
-		ent->client->ps.fd.saberAnimLevelBase = ent->client->ps.fd.saberAnimLevel = ent->client->ps.fd.saberDrawAnimLevel = SS_DUAL;
-				
-		if (ent->client->pers.player_settings & (1 << 9) && ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_SABER))
-		{
-			ent->client->ps.saberHolstered = 1;
-		}
-	}
-	else if (ent->client->saber[0].saberFlags&SFL_TWO_HANDED)
-	{ // zyk: Staff
-		ent->client->ps.fd.saberAnimLevel = ent->client->ps.fd.saberDrawAnimLevel = SS_STAFF;
-
-		if (ent->client->pers.player_settings & (1 << 10) && ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_SABER))
-		{
-			ent->client->ps.saberHolstered = 1;
-		}
-	}
-	else
+	if (!(ent->client->saber[0].model[0] && ent->client->saber[1].model[0]) && !(ent->client->saber[0].saberFlags&SFL_TWO_HANDED))
 	{ // zyk: Single Saber
 		ent->client->ps.fd.saberAnimLevelBase = ent->client->ps.fd.saberAnimLevel = ent->client->ps.fd.saberDrawAnimLevel = ent->client->sess.saberLevel = ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE];
 
@@ -7406,7 +7387,7 @@ char *zyk_get_settings_values(gentity_t *ent)
 
 	strcpy(content,"");
 
-	for (i = 0; i < 17; i++)
+	for (i = 0; i < 16; i++)
 	{ // zyk: settings values
 		if (i != 8 && i != 14 && i != 15)
 		{
@@ -7475,6 +7456,9 @@ char *zyk_get_settings_values(gentity_t *ent)
 		}
 	}
 
+	// zyk: for compability with older versions, keeping a 0 value here
+	strcpy(content, va("%sON-", content));
+
 	return G_NewString(content);
 }
 
@@ -7534,16 +7518,6 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 
 		strcpy(content,va("%s%d-%d-%d-%d-%d-%d-",content,ent->client->pers.secrets_found,ent->client->pers.defeated_guardians,ent->client->pers.hunter_quest_progress,
 			ent->client->pers.eternity_quest_progress,ent->client->pers.universe_quest_progress,universe_quest_counter_value));
-
-		// zyk: new setting added
-		if (!(ent->client->pers.player_settings & (1 << 17)))
-		{
-			strcpy(content,va("%sON-",content));
-		}
-		else
-		{
-			strcpy(content,va("%sOFF-",content));
-		}
 
 		trap->SendServerCommand( ent-g_entities, va("zykmod \"%d/%d-%d/%d-%d-%d/%d-%d/%d-%d-%s-%s\"",ent->client->pers.level,MAX_RPG_LEVEL,ent->client->pers.level_up_score,ent->client->pers.level,ent->client->pers.skillpoints,ent->client->pers.skill_counter,zyk_max_skill_counter.integer,ent->client->pers.magic_power,zyk_max_magic_power(ent),ent->client->pers.credits,zyk_rpg_class(ent),content));
 	}
@@ -11504,20 +11478,20 @@ void Cmd_Settings_f( gentity_t *ent ) {
 
 		if (ent->client->pers.player_settings & (1 << 9))
 		{
-			sprintf(message,"%s\n^3 9 - Starting Dual Sabers Style - ^1OFF", message);
+			sprintf(message,"%s\n^3 9 - Allow Screen Message - ^1OFF", message);
 		}
 		else
 		{
-			sprintf(message,"%s\n^3 9 - Starting Dual Sabers Style - ^2ON", message);
+			sprintf(message,"%s\n^3 9 - Allow Screen Message - ^2ON", message);
 		}
 
 		if (ent->client->pers.player_settings & (1 << 10))
 		{
-			sprintf(message,"%s\n^310 - Starting Staff Style - ^1OFF", message);
+			sprintf(message,"%s\n^310 - Use healing force only at allied players - ^1OFF", message);
 		}
 		else
 		{
-			sprintf(message,"%s\n^310 - Starting Staff Style - ^2ON", message);
+			sprintf(message,"%s\n^310 - Use healing force only at allied players - ^2ON", message);
 		}
 
 		if (ent->client->pers.player_settings & (1 << 11))
@@ -11573,24 +11547,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			sprintf(message,"%s\n^315 - Difficulty ^2Normal", message);
 		}
 
-		if (ent->client->pers.player_settings & (1 << 16))
-		{
-			sprintf(message,"%s\n^316 - Allow Screen Message ^1OFF", message);
-		}
-		else
-		{
-			sprintf(message,"%s\n^316 - Allow Screen Message ^2ON", message);
-		}
-
-		if (ent->client->pers.player_settings & (1 << 17))
-		{
-			sprintf(message,"%s\n^317 - Use healing force only at allied players ^1OFF", message);
-		}
-		else
-		{
-			sprintf(message,"%s\n^317 - Use healing force only at allied players ^2ON", message);
-		}
-
 		trap->SendServerCommand( ent-g_entities, va("print \"%s\n\n^7Choose a setting above and use ^3/settings <number> ^7to turn it ^2ON ^7or ^1OFF^7\n\"", message) );
 	}
 	else
@@ -11602,7 +11558,7 @@ void Cmd_Settings_f( gentity_t *ent ) {
 		trap->Argv(1, arg1, sizeof( arg1 ));
 		value = atoi(arg1);
 
-		if (value < 0 || value > 17)
+		if (value < 0 || value > 15)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"Invalid settings value.\n\"" );
 			return;
@@ -11772,11 +11728,11 @@ void Cmd_Settings_f( gentity_t *ent ) {
 		}
 		else if (value == 9)
 		{
-			trap->SendServerCommand( ent-g_entities, va("print \"Starting Dual Sabers Style %s\n\"", new_status) );
+			trap->SendServerCommand( ent-g_entities, va("print \"Allow Screen Message %s\n\"", new_status) );
 		}
 		else if (value == 10)
 		{
-			trap->SendServerCommand( ent-g_entities, va("print \"Starting Staff Style %s\n\"", new_status) );
+			trap->SendServerCommand( ent-g_entities, va("print \"Use healing force only at allied players %s\n\"", new_status) );
 		}
 		else if (value == 11)
 		{
@@ -11798,14 +11754,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 		else if (value == 15)
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Difficulty %s\n\"", new_status) );
-		}
-		else if (value == 16)
-		{
-			trap->SendServerCommand( ent-g_entities, va("print \"Allow Screen Message %s\n\"", new_status) );
-		}
-		else if (value == 17)
-		{
-			trap->SendServerCommand( ent-g_entities, va("print \"Use healing force only at allied players %s\n\"", new_status) );
 		}
 
 		if (value == 0 && ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->sess.amrpgmode == 2)

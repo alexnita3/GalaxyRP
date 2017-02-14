@@ -1751,7 +1751,8 @@ static void CG_ZykMod( void )
 		{
 			int setting_value = j-63;
 
-			trap->Cvar_Set(va("ui_zyk_setting_%d_value", setting_value), va("%s",value));
+			if (setting_value != 16) // zyk: for compability with older versions, keeping the 16 value but not using it
+				trap->Cvar_Set(va("ui_zyk_setting_%d_value", setting_value), va("%s",value));
 		}
 		else if (j < 81)
 		{ // zyk: receive the Upgrades bought from the seller
@@ -2263,10 +2264,6 @@ static void CG_ZykMod( void )
 			{
 				trap->Cvar_Set("ui_zyk_universe_text3",va("Crystals: ^3%d", amount_of_stuff));
 			}
-		}
-		else if (j == 86)
-		{ // zyk: new setting added
-			trap->Cvar_Set("ui_zyk_setting_17_value", va("%s",value));
 		}
 
 		j++;
