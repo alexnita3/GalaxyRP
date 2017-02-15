@@ -15402,7 +15402,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 				ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 				ent->client->ps.forceDodgeAnim = BOTH_FORCELIGHTNING_START;
-				ent->client->ps.forceHandExtendTime = level.time + 1000;
+				ent->client->ps.forceHandExtendTime = level.time + 500;
 
 				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/weapons/bryar/alt_fire.mp3"));
 			}
