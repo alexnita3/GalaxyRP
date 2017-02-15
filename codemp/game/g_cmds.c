@@ -13086,6 +13086,30 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 		{ // zyk: if origin was not passed and the ent origin was set, use it
 			zyk_set_entity_field(new_ent, "origin", va("%f %f %f", level.ent_origin[0], level.ent_origin[1], level.ent_origin[2]));
 		}
+		else if (has_origin_set == qfalse)
+		{ // zyk: origin field was not passed, so spawn entity where player is aiming at
+			trace_t		tr;
+			vec3_t		tfrom, tto, fwd;
+			vec3_t		shot_mins, shot_maxs;
+			int radius = 32768;
+
+			VectorSet(tfrom, ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2] + 35);
+
+			AngleVectors(ent->client->ps.viewangles, fwd, NULL, NULL);
+			tto[0] = tfrom[0] + fwd[0] * radius;
+			tto[1] = tfrom[1] + fwd[1] * radius;
+			tto[2] = tfrom[2] + fwd[2] * radius;
+
+			VectorSet(shot_mins, -5, -5, -5);
+			VectorSet(shot_maxs, 5, 5, 5);
+
+			trap->Trace(&tr, tfrom, shot_mins, shot_maxs, tto, ent->s.number, CONTENTS_SOLID, qfalse, 0, 0);
+
+			if (tr.fraction != 1.0)
+			{ // zyk: hit something
+				zyk_set_entity_field(new_ent, "origin", va("%f %f %f", tr.endpos[0], tr.endpos[1], tr.endpos[2]));
+			}
+		}
 
 		zyk_spawn_entity(new_ent);
 
