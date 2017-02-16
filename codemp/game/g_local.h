@@ -1385,10 +1385,10 @@ typedef struct {
 #define MAX_RACERS 16
 
 // zyk: Max duelists in tournament
-#define MAX_DUELISTS 16
+#define MAX_DUELISTS 32
 
 // zyk: max matches a tournament may have
-#define MAX_DUEL_MATCHES 120
+#define MAX_DUEL_MATCHES 496
 
 typedef struct level_locals_s {
 	struct gclient_s	*clients;		// [maxclients]

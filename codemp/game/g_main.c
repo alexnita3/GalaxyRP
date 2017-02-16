@@ -7066,7 +7066,7 @@ void duel_tournament_generate_match_table()
 	int i = 0;
 	int last_opponent_id = -1;
 	int number_of_filled_positions = 0;
-	int max_filled_positions = level.duelists_quantity - 1;
+	int max_filled_positions = level.duelists_quantity - 1; // zyk: used to fill the player in current iteraction in the table. It will always be the number of duelists minus one
 
 	level.duel_matches_quantity = 0;
 	level.duel_matches_done = 0;
