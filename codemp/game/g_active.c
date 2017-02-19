@@ -2856,6 +2856,9 @@ void ClientThink_real( gentity_t *ent ) {
 						level.duel_tournament_timer = level.time + 1500;
 						level.duel_tournament_mode = 5;
 
+						// zyk: setting the winner of this match
+						level.duel_matches[level.duel_matches_done - 1][2] = duelist_winner->s.number;
+
 						level.duelist_1_id = -1;
 						level.duelist_2_id = -1;
 
@@ -2890,6 +2893,9 @@ void ClientThink_real( gentity_t *ent ) {
 
 						level.duel_tournament_timer = level.time + 1500;
 						level.duel_tournament_mode = 5;
+
+						// zyk: setting this match as a tie
+						level.duel_matches[level.duel_matches_done - 1][2] = -2;
 
 						level.duelist_1_id = -1;
 						level.duelist_2_id = -1;

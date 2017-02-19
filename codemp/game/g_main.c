@@ -738,6 +738,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		{ // zyk: initializing duel matches
 			level.duel_matches[zyk_iterator][0] = -1;
 			level.duel_matches[zyk_iterator][1] = -1;
+			level.duel_matches[zyk_iterator][2] = -1;
 		}
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_RACERS; zyk_iterator++)
@@ -6972,6 +6973,7 @@ void duel_tournament_end()
 	{
 		level.duel_matches[i][0] = -1;
 		level.duel_matches[i][1] = -1;
+		level.duel_matches[i][2] = -1;
 	}
 
 	if (level.duel_tournament_model_id != -1)
@@ -7067,9 +7069,17 @@ void duel_tournament_generate_match_table()
 	int last_opponent_id = -1;
 	int number_of_filled_positions = 0;
 	int max_filled_positions = level.duelists_quantity - 1; // zyk: used to fill the player in current iteraction in the table. It will always be the number of duelists minus one
+	int temp_matches[MAX_DUEL_MATCHES][2];
+	int temp_remaining_matches = 0;
 
 	level.duel_matches_quantity = 0;
 	level.duel_matches_done = 0;
+
+	for (i = 0; i < MAX_DUEL_MATCHES; i++)
+	{ // zyk: initializing temporary array of matches
+		temp_matches[i][0] = -1;
+		temp_matches[i][1] = -1;
+	}
 
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
@@ -7087,15 +7097,15 @@ void duel_tournament_generate_match_table()
 					break;
 				}
 
-				if (level.duel_matches[j][0] == -1)
+				if (temp_matches[j][0] == -1)
 				{
-					level.duel_matches[j][0] = i;
+					temp_matches[j][0] = i;
 					number_of_filled_positions++;
 				}
-				else if (level.duel_matches[j][1] == -1 && last_opponent_id != level.duel_matches[j][0])
+				else if (temp_matches[j][1] == -1 && last_opponent_id != temp_matches[j][0])
 				{
-					last_opponent_id = level.duel_matches[j][0];
-					level.duel_matches[j][1] = i;
+					last_opponent_id = temp_matches[j][0];
+					temp_matches[j][1] = i;
 					number_of_filled_positions++;
 					level.duel_matches_quantity++;
 				}
@@ -7104,6 +7114,26 @@ void duel_tournament_generate_match_table()
 	}
 
 	level.duel_remaining_matches = level.duel_matches_quantity;
+	temp_remaining_matches = level.duel_matches_quantity;
+
+	// zyk: generating the ramdomized array with the matches of the tournament
+	for (i = 0; i < level.duel_matches_quantity; i++)
+	{
+		int duel_chosen_index = Q_irand(0, (temp_remaining_matches - 1));
+		int j = 0;
+
+		level.duel_matches[i][0] = temp_matches[duel_chosen_index][0];
+		level.duel_matches[i][1] = temp_matches[duel_chosen_index][1];
+		level.duel_matches[i][2] = -1;
+
+		for (j = (duel_chosen_index + 1); j < temp_remaining_matches; j++)
+		{ // zyk: updating the match table to move all duels after the duel_chosen_index one index lower
+			temp_matches[j - 1][0] = temp_matches[j][0];
+			temp_matches[j - 1][1] = temp_matches[j][1];
+		}
+
+		temp_remaining_matches--;
+	}
 }
 
 // zyk: determines who is the tournament winner
@@ -7175,6 +7205,9 @@ qboolean duel_tournament_validate_duelists(gentity_t *first_duelist, gentity_t *
 		level.duel_players[first_duelist->s.number] != -1)
 	{
 		level.duel_players[first_duelist->s.number] += 3;
+
+		level.duel_matches[level.duel_matches_done - 1][2] = first_duelist->s.number;
+
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left tournament, %s ^7wins!\"", second_duelist->client->pers.netname, first_duelist->client->pers.netname));
 	}
 	else if (second_duelist && second_duelist->client &&
@@ -7183,10 +7216,15 @@ qboolean duel_tournament_validate_duelists(gentity_t *first_duelist, gentity_t *
 		level.duel_players[second_duelist->s.number] != -1)
 	{
 		level.duel_players[second_duelist->s.number] += 3;
+
+		level.duel_matches[level.duel_matches_done - 1][2] = second_duelist->s.number;
+
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left tournament, %s ^7wins!\"", first_duelist->client->pers.netname, second_duelist->client->pers.netname));
 	}
 	else
 	{
+		level.duel_matches[level.duel_matches_done - 1][2] = -2;
+
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7and %s ^7left tournament!\"", first_duelist->client->pers.netname, second_duelist->client->pers.netname));
 	}
 
@@ -7784,10 +7822,8 @@ void G_RunFrame( int levelTime ) {
 
 		if (is_in_boss == qfalse && level.duel_remaining_matches > 0)
 		{ // zyk: if there are still matches to be chosen, try to choose now
-			int duel_chosen_index = Q_irand(0, (level.duel_remaining_matches - 1));
-
-			gentity_t *first_duelist = &g_entities[level.duel_matches[duel_chosen_index][0]];
-			gentity_t *second_duelist = &g_entities[level.duel_matches[duel_chosen_index][1]];
+			gentity_t *first_duelist = &g_entities[level.duel_matches[level.duel_matches_done][0]];
+			gentity_t *second_duelist = &g_entities[level.duel_matches[level.duel_matches_done][1]];
 
 			// zyk: count this match
 			level.duel_matches_done++;
@@ -7796,12 +7832,6 @@ void G_RunFrame( int levelTime ) {
 			{ // zyk: if not valid, show score table
 				level.duel_tournament_mode = 5;
 				level.duel_tournament_timer = level.time + 1500;
-			}
-
-			for (zyk_it = (duel_chosen_index + 1); zyk_it < level.duel_remaining_matches; zyk_it++)
-			{ // zyk: updating the match table to move all duels after the duel_chosen_index one index lower
-				level.duel_matches[zyk_it - 1][0] = level.duel_matches[zyk_it][0];
-				level.duel_matches[zyk_it - 1][1] = level.duel_matches[zyk_it][1];
 			}
 
 			level.duel_remaining_matches--;
@@ -7837,8 +7867,8 @@ void G_RunFrame( int levelTime ) {
 	{ // zyk: Duel tournament can begin if there are at least 2 players
 		if (level.duelists_quantity > 1)
 		{
-			level.duel_tournament_mode = 2;
-			level.duel_tournament_timer = level.time + 3000;
+			level.duel_tournament_mode = 5;
+			level.duel_tournament_timer = level.time + 1500;
 
 			duel_tournament_generate_match_table();
 

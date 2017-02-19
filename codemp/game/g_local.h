@@ -1542,7 +1542,7 @@ typedef struct level_locals_s {
 	vec3_t duel_tournament_origin; // zyk: origin of the duel tournament arena, which has the globe around it. Used to validate position of players. If a duelist leaves the arena, he loses
 	int duelist_1_id; // zyk: id of the first duelist
 	int duelist_2_id; // zyk: id of the second duelist
-	int duel_matches[MAX_DUEL_MATCHES][2]; // zyk: the table with all the matches between the duelists, with their ids
+	int duel_matches[MAX_DUEL_MATCHES][3]; // zyk: the table with all the matches between the duelists, with their ids and the winner id in the third position (or a -2 value, in case of tie)
 	int duel_remaining_matches; // zyk: remaining matches of this tournament. Used to randomize the duel match choosing
 	int duel_matches_quantity; // zyk: quantity of matches in this tournament
 	int duel_matches_done; // zyk: how many matches were already done
