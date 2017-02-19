@@ -1200,6 +1200,13 @@ void G_KillBox (gentity_t *ent) {
 			continue;
 		}
 
+		// zyk: if the player is in duel tournament and target is also in it, and they will fight now, do not telefrag
+		if ((ent->s.number == level.duelist_1_id && hit->s.number == level.duelist_2_id) || 
+			(hit->s.number == level.duelist_1_id && ent->s.number == level.duelist_2_id))
+		{
+			continue;
+		}
+
 		// nail it
 		G_Damage ( hit, ent, ent, NULL, NULL,
 			100000, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
