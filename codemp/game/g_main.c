@@ -7287,6 +7287,12 @@ void sniper_battle_prepare()
 			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] = (1 << HI_JETPACK);
 			ent->client->ps.stats[STAT_HOLDABLE_ITEM] = 0;
 
+			// zyk: removing the seeker drone in case if is activated
+			if (ent->client->ps.droneExistTime > (level.time + 5000))
+			{
+				ent->client->ps.droneExistTime = level.time + 5000;
+			}
+
 			ent->client->ps.jetpackFuel = 100;
 			ent->client->pers.jetpack_fuel = MAX_JETPACK_FUEL;
 			
@@ -7397,6 +7403,12 @@ void melee_battle_prepare()
 
 			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] = (1 << HI_BINOCULARS);
 			ent->client->ps.stats[STAT_HOLDABLE_ITEM] = 0;
+
+			// zyk: removing the seeker drone in case if is activated
+			if (ent->client->ps.droneExistTime > (level.time + 5000))
+			{
+				ent->client->ps.droneExistTime = level.time + 5000;
+			}
 
 			// zyk: cannot use any force powers, except Jump
 			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PUSH);
