@@ -13724,14 +13724,17 @@ Cmd_EntNear_f
 void Cmd_EntNear_f( gentity_t *ent ) {
 	int i = 0;
 	int distance = 200;
+	int numListedEntities = 0;
 	int found_entities = 0;
+	int entityList[MAX_GENTITIES];
+	vec3_t mins, maxs, center;
 	char message[1024];
 	char arg1[MAX_STRING_CHARS];
 	gentity_t *this_ent = NULL;
 
 	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
 	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+		trap->SendServerCommand( ent->s.number, "print \"You don't have this admin command.\n\"" );
 		return;
 	}
 
@@ -13744,12 +13747,23 @@ void Cmd_EntNear_f( gentity_t *ent ) {
 		distance = atoi(arg1);
 	}
 
-	for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
+	VectorCopy(ent->client->ps.origin, center);
+
+	for (i = 0; i < 3; i++)
 	{
-		this_ent = &g_entities[i];
-		if (this_ent && ent != this_ent && (int)Distance(ent->client->ps.origin, this_ent->r.currentOrigin) < distance)
+		mins[i] = center[i] - distance;
+		maxs[i] = center[i] + distance;
+	}
+
+	numListedEntities = trap->EntitiesInBox(mins, maxs, entityList, MAX_GENTITIES);
+
+	for (i = 0; i < numListedEntities; i++)
+	{
+		this_ent = &g_entities[entityList[i]];
+
+		if (this_ent && ent != this_ent && this_ent->s.number >= (MAX_CLIENTS + BODY_QUEUE_SIZE))
 		{
-			strcpy(message,va("%s\n%d - %s",message,i,this_ent->classname));
+			strcpy(message,va("%s\n%d - %s",message, this_ent->s.number,this_ent->classname));
 			found_entities++;
 		}
 
@@ -13758,7 +13772,38 @@ void Cmd_EntNear_f( gentity_t *ent ) {
 			break;
 	}
 
-	trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"",message) );
+	if (found_entities < 14)
+	{
+		// zyk: if there are still enough room to list, use old method to get some entities not listed with EntitiesInBox
+		for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
+		{
+			int j = 0;
+			qboolean already_found = qfalse;
+
+			this_ent = &g_entities[i];
+
+			for (j = 0; j < numListedEntities; j++)
+			{
+				if (entityList[j] == i)
+				{ // zyk: this entity was already listed
+					already_found = qtrue;
+					break;
+				}
+			}
+
+			if (this_ent && ent != this_ent && already_found == qfalse && (int)Distance(ent->client->ps.origin, this_ent->s.origin) < distance)
+			{
+				strcpy(message, va("%s\n%d - %s", message, this_ent->s.number, this_ent->classname));
+				found_entities++;
+			}
+
+			// zyk: max entities to list
+			if (found_entities == 14)
+				break;
+		}
+	}
+
+	trap->SendServerCommand( ent->s.number, va("print \"%s\n\"",message) );
 }
 
 /*
