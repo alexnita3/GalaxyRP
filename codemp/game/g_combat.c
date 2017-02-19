@@ -2190,6 +2190,11 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		level.sniper_players[self->s.number] = -1;
 		level.sniper_mode_quantity--;
 
+		// zyk: resetting his force powers
+		self->client->ps.fd.forceDeactivateAll = 0;
+
+		WP_InitForcePowers(self);
+
 		if (attacker && attacker->client && attacker->s.number < MAX_CLIENTS && level.sniper_players[attacker->s.number] != -1)
 		{ // zyk: adding score to the attacker
 			level.sniper_players[attacker->s.number]++;
@@ -2202,6 +2207,9 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		trap->SendServerCommand(-1, va("chat \"^3Melee Battle: ^7%s ^7died in Melee Battle!\n\"", self->client->pers.netname));
 		level.melee_players[self->s.number] = -1;
 		level.melee_mode_quantity--;
+
+		// zyk: resetting his force powers
+		WP_InitForcePowers(self);
 
 		if (attacker && attacker->client && attacker->s.number < MAX_CLIENTS && level.melee_players[attacker->s.number] != -1)
 		{ // zyk: adding score to the attacker

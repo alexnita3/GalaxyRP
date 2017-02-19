@@ -7245,6 +7245,8 @@ void sniper_battle_end()
 		{ // zyk: restoring default guns and force powers to this player
 			gentity_t *ent = &g_entities[i];
 
+			ent->client->ps.fd.forceDeactivateAll = 0;
+
 			WP_InitForcePowers(ent);
 
 			ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
