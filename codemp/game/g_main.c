@@ -1533,7 +1533,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "rebel_obj_2_doors") == 0)
 			{
-				G_FreeEntity( ent );
+				fix_sp_func_door(ent);
 			}
 			if (Q_stricmp( ent->targetname, "shield") == 0)
 			{
