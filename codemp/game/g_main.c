@@ -1409,6 +1409,53 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		zyk_create_info_player_deathmatch(1208,445,89,179);
 		zyk_create_info_player_deathmatch(1208,510,89,179);
 	}
+	else if (Q_stricmp(zyk_mapname, "taspir1") == 0)
+	{
+		int i = 0;
+		gentity_t *ent;
+
+		level.quest_map = 25;
+
+		for (i = 0; i < level.num_entities; i++)
+		{
+			ent = &g_entities[i];
+			if (Q_stricmp(ent->targetname, "t278") == 0)
+			{
+				G_FreeEntity(ent);
+			}
+			if (Q_stricmp(ent->targetname, "bldg2_ext_door") == 0)
+			{
+				fix_sp_func_door(ent);
+			}
+			if (Q_stricmp(ent->targetname, "end_level") == 0)
+			{
+				G_FreeEntity(ent);
+			}
+		}
+		zyk_create_info_player_deathmatch(-1609, -1792, 649, 112);
+		zyk_create_info_player_deathmatch(-1791, -1838, 649, 90);
+	}
+	else if (Q_stricmp(zyk_mapname, "taspir2") == 0)
+	{
+		int i = 0;
+		gentity_t *ent;
+
+		for (i = 0; i < level.num_entities; i++)
+		{
+			ent = &g_entities[i];
+			if (Q_stricmp(ent->targetname, "force_field") == 0)
+			{
+				G_FreeEntity(ent);
+			}
+			if (Q_stricmp(ent->targetname, "kill_toggle") == 0)
+			{
+				G_FreeEntity(ent);
+			}
+		}
+
+		zyk_create_info_player_deathmatch(286, -2859, 345, 92);
+		zyk_create_info_player_deathmatch(190, -2834, 345, 90);
+	}
 	else if (Q_stricmp(zyk_mapname, "kor1") == 0)
 	{
 		int i = 0;
@@ -1425,10 +1472,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			{ // zyk: remove the map change entity
 				G_FreeEntity( ent );
 			}
-			if (Q_stricmp( ent->classname, "func_static") == 0 && (int)ent->s.origin[0] == 1456 && (int)ent->s.origin[1] == -32 && (int)ent->s.origin[2] == -3560)
-			{ // zyk: remove the last door entity
-				G_FreeEntity( ent );
-			}
 		}
 		zyk_create_info_player_deathmatch(190,632,-1006,-89);
 		zyk_create_info_player_deathmatch(-249,952,-934,-89);
@@ -1437,53 +1480,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	{
 		zyk_create_info_player_deathmatch(2977,3137,-2526,0);
 		zyk_create_info_player_deathmatch(3072,2992,-2526,0);
-	}
-	else if (Q_stricmp(zyk_mapname, "taspir1") == 0)
-	{
-		int i = 0;
-		gentity_t *ent;
-
-		level.quest_map = 25;
-
-		for (i = 0; i < level.num_entities; i++)
-		{
-			ent = &g_entities[i];
-			if (Q_stricmp( ent->targetname, "t278") == 0)
-			{
-				G_FreeEntity( ent );
-			}
-			if (Q_stricmp( ent->targetname, "bldg2_ext_door") == 0)
-			{
-				fix_sp_func_door( ent );
-			}
-			if (Q_stricmp( ent->targetname, "end_level") == 0)
-			{
-				G_FreeEntity( ent );
-			}
-		}
-		zyk_create_info_player_deathmatch(-1609,-1792,649,112);
-		zyk_create_info_player_deathmatch(-1791,-1838,649,90);
-	}
-	else if (Q_stricmp(zyk_mapname, "taspir2") == 0)
-	{
-		int i = 0;
-		gentity_t *ent;
-
-		for (i = 0; i < level.num_entities; i++)
-		{
-			ent = &g_entities[i];
-			if (Q_stricmp( ent->targetname, "force_field") == 0)
-			{
-				G_FreeEntity( ent );
-			}
-			if (Q_stricmp( ent->targetname, "kill_toggle") == 0)
-			{
-				G_FreeEntity( ent );
-			}
-		}
-
-		zyk_create_info_player_deathmatch(286,-2859,345,92);
-		zyk_create_info_player_deathmatch(190,-2834,345,90);
 	}
 	else if (Q_stricmp(zyk_mapname, "mp/duel5") == 0 && g_gametype.integer == GT_FFA)
 	{
