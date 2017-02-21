@@ -6879,59 +6879,75 @@ void first_second_act_objective(gentity_t *ent)
 void zyk_spawn_catwalk_prison(int x, int y, int z, int pitch, int yaw)
 {
 	gentity_t *door_ent = &g_entities[109];
+	qboolean door_catwalk_ok = qfalse;
+	qboolean prison_key_ok = qfalse;
+	gentity_t *new_ent = NULL;
+	int i = 0;
 
 	if (door_ent && Q_stricmp(door_ent->classname, "func_static") == 0)
 	{ // zyk: removes the map last door
 		G_FreeEntity(door_ent);
 	}
 
-	gentity_t *new_ent = G_Spawn();
+	for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
+	{
+		door_ent = &g_entities[i];
 
-	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-	zyk_set_entity_field(new_ent, "spawnflags", "65537");
-	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", x, y, z));
+		if (door_ent && Q_stricmp(door_ent->targetname, "zyk_sage_prison") == 0)
+		{
+			door_catwalk_ok = qtrue;
+		}
 
-	zyk_set_entity_field(new_ent, "angles", va("%d %d 0", pitch, yaw));
+		if (door_ent && door_ent->spawnflags & 131072)
+		{
+			prison_key_ok = qtrue;
+		}
+	}
 
-	zyk_set_entity_field(new_ent, "mins", "-8 -64 -64");
-	zyk_set_entity_field(new_ent, "maxs", "8 64 64");
+	// zyk: spawning the catwalk door
+	if (door_catwalk_ok == qfalse)
+	{
+		new_ent = G_Spawn();
 
-	zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+		zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+		zyk_set_entity_field(new_ent, "spawnflags", "65537");
+		zyk_set_entity_field(new_ent, "origin", va("%d %d %d", x, y, z));
 
-	zyk_set_entity_field(new_ent, "targetname", "zyk_sage_prison");
+		zyk_set_entity_field(new_ent, "angles", va("%d %d 0", pitch, yaw));
 
-	zyk_spawn_entity(new_ent);
+		zyk_set_entity_field(new_ent, "mins", "-8 -64 -64");
+		zyk_set_entity_field(new_ent, "maxs", "8 64 64");
+
+		zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+		zyk_set_entity_field(new_ent, "targetname", "zyk_sage_prison");
+
+		zyk_spawn_entity(new_ent);
+	}
 
 	// zyk: spawning the key
-	new_ent = G_Spawn();
+	if (prison_key_ok == qfalse)
+	{
+		new_ent = G_Spawn();
 
-	zyk_set_entity_field(new_ent, "classname", "weapon_stun_baton");
-	zyk_set_entity_field(new_ent, "spawnflags", "131072");
-	zyk_set_entity_field(new_ent, "origin", "-2149 5087 -2759");
+		zyk_set_entity_field(new_ent, "classname", "weapon_stun_baton");
+		zyk_set_entity_field(new_ent, "spawnflags", "131072");
+		zyk_set_entity_field(new_ent, "origin", "-2149 5087 -2759");
 
-	zyk_spawn_entity(new_ent);
+		zyk_spawn_entity(new_ent);
+	}
 }
 
 // zyk: spawns reborns in first Universe Quest mission
 void zyk_spawn_quest_reborns()
 {
-	Zyk_NPC_SpawnType("quest_reborn", -2205, 5008, -2758, 179);
-	Zyk_NPC_SpawnType("quest_reborn", -2205, 5175, -2758, 179);
-	Zyk_NPC_SpawnType("quest_reborn", -2255, 5008, -2758, 179);
-	Zyk_NPC_SpawnType("quest_reborn", -2255, 5175, -2758, 179);
-	Zyk_NPC_SpawnType("quest_reborn_blue", -2305, 5008, -2758, 179);
-	Zyk_NPC_SpawnType("quest_reborn_blue", -2305, -68, -2758, 179);
-	Zyk_NPC_SpawnType("quest_reborn_blue", -2355, 5008, -2758, 179);
-	Zyk_NPC_SpawnType("quest_reborn_blue", -2355, 5175, -2758, 179);
-
-	Zyk_NPC_SpawnType("quest_reborn", -4590, 5008, -2758, -90);
-	Zyk_NPC_SpawnType("quest_reborn", -4490, 5008, -2758, -90);
-
-	Zyk_NPC_SpawnType("quest_reborn_blue", -4525, 5048, -2758, 179);
+	Zyk_NPC_SpawnType("quest_reborn_blue", -2205, 5008, -2758, 179);
+	Zyk_NPC_SpawnType("quest_reborn_blue", -2205, 5175, -2758, 179);
+	Zyk_NPC_SpawnType("quest_reborn_blue", -2255, 5008, -2758, 179);
+	Zyk_NPC_SpawnType("quest_reborn_blue", -2255, 5175, -2758, 179);
 
 	Zyk_NPC_SpawnType("quest_reborn", -3204, 2630, -2982, -90);
 	Zyk_NPC_SpawnType("quest_reborn", -3311, 2630, -2982, -90);
-
 	Zyk_NPC_SpawnType("quest_reborn_blue", -3080, 2687, -2965, -90);
 
 	Zyk_NPC_SpawnType("quest_reborn", -2569, 1316, -2246, -90);
@@ -6939,6 +6955,67 @@ void zyk_spawn_quest_reborns()
 	Zyk_NPC_SpawnType("quest_reborn", -2669, 1316, -2246, -90);
 
 	Zyk_NPC_SpawnType("quest_reborn_blue", -4545, 3162, -2758, -90);
+	Zyk_NPC_SpawnType("quest_reborn", -4590, 3162, -2758, -90);
+	Zyk_NPC_SpawnType("quest_reborn", -4490, 3162, -2758, -90);
+
+	Zyk_NPC_SpawnType("quest_reborn_blue", 1700, -10, -3130, 179);
+	Zyk_NPC_SpawnType("quest_reborn_blue", 1700, -50, -3130, 179);
+}
+
+// zyk: if for some reason a sage was not spawned, try to spawn him now
+void zyk_validate_sages(gentity_t *ent)
+{
+	int i = 0;
+	qboolean sage_of_light_ok = qfalse;
+	qboolean sage_of_darkness_ok = qfalse;
+	qboolean sage_of_eternity_ok = qfalse;
+	gentity_t *npc_ent = NULL;
+
+	for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
+	{
+		npc_ent = &g_entities[i];
+
+		if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "sage_of_light") == 0)
+		{
+			sage_of_light_ok = qtrue;
+		}
+		else if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "sage_of_darkness") == 0)
+		{
+			sage_of_darkness_ok = qtrue;
+		}
+		else if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "sage_of_eternity") == 0)
+		{
+			sage_of_eternity_ok = qtrue;
+		}
+	}
+
+	if (sage_of_light_ok == qfalse)
+	{
+		npc_ent = Zyk_NPC_SpawnType("sage_of_light", 2750, -115, -3806, 179);
+
+		if (npc_ent)
+		{ // zyk: sets the player id who must protect this sage
+			npc_ent->client->pers.universe_quest_objective_control = ent - g_entities;
+		}
+	}
+	if (sage_of_darkness_ok == qfalse)
+	{
+		npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", 2750, -39, -3806, 179);
+
+		if (npc_ent)
+		{ // zyk: sets the player id who must protect this sage
+			npc_ent->client->pers.universe_quest_objective_control = ent - g_entities;
+		}
+	}
+	if (sage_of_eternity_ok == qfalse)
+	{
+		npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", 2750, 39, -3806, 179);
+
+		if (npc_ent)
+		{ // zyk: sets the player id who must protect this sage
+			npc_ent->client->pers.universe_quest_objective_control = ent - g_entities;
+		}
+	}
 }
 
 // zyk: checks if the player has already all artifacts
@@ -10505,28 +10582,27 @@ void G_RunFrame( int levelTime ) {
 
 							if (ent->client->pers.universe_quest_messages == 0)
 							{
-								trap->SendServerCommand( ent->s.number, "chat \"^2Mysterious Voice^7: Go, hero... save the Guardian Sages... they need your help...\"");
-								npc_ent = Zyk_NPC_SpawnType("sage_of_light", 2750, -115, -3806, 179);
-
 								zyk_spawn_catwalk_prison(1803, -33, -3135, 90, 0);
+								trap->SendServerCommand( ent->s.number, "chat \"^2Mysterious Voice^7: Go, hero... save the Guardian Sages... they need your help...\"");
 							}
 							else if (ent->client->pers.universe_quest_messages == 1)
 							{
+								zyk_validate_sages(ent);
 								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: This voice...\"", ent->client->pers.netname));
-								npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", 2750, -39, -3806, 179);
 							}
 							else if (ent->client->pers.universe_quest_messages == 2)
 							{
+								zyk_spawn_quest_reborns();
 								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I don't understand... maybe I should do as it says...\"", ent->client->pers.netname));
-								npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", 2750, 39, -3806, 179);
 							}
 							else if (ent->client->pers.universe_quest_messages == 3)
 							{
+								zyk_spawn_catwalk_prison(1803, -33, -3135, 90, 0);
 								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I hope they are able to tell me about this strange voice.\"", ent->client->pers.netname));
-								zyk_spawn_quest_reborns();
 							}
 							else if (ent->client->pers.universe_quest_messages == 7)
 							{
+								zyk_validate_sages(ent);
 								trap->SendServerCommand( ent->s.number, "chat \"^5Sage of Light: ^7Thank you for freeing us, hero!\"");
 							}
 							else if (ent->client->pers.universe_quest_messages == 8)
@@ -10566,7 +10642,7 @@ void G_RunFrame( int levelTime ) {
 							{
 								if (npc_ent && Q_stricmp(npc_ent->NPC_type, "quest_reborn") != 0 && 
 									Q_stricmp(npc_ent->NPC_type, "quest_reborn_blue") != 0)
-								{ // zyk: sets the player id who must kill this quest reborn, or protect this sage
+								{ // zyk: sets the player id who must kill this quest reborn
 									npc_ent->client->pers.universe_quest_objective_control = ent-g_entities;
 								}
 
@@ -10658,7 +10734,7 @@ void G_RunFrame( int levelTime ) {
 							else if (ent->client->pers.universe_quest_messages == 22)
 								trap->SendServerCommand( ent->s.number, va("chat \"^3Sage of Eternity: ^7He then...fought us...and we couldn't stand against his power.\""));
 							else if (ent->client->pers.universe_quest_messages == 23)
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Sage of Eternity: ^7We we imprisoned by him, and he got the guardian amulets.\""));
+								trap->SendServerCommand( ent->s.number, va("chat \"^3Sage of Eternity: ^7We were imprisoned by him, and he got the guardian amulets.\""));
 							else if (ent->client->pers.universe_quest_messages == 24)
 								trap->SendServerCommand( ent->s.number, va("chat \"^3Sage of Eternity: ^7With his new power, he sealed the Guardian of Universe!\""));
 							else if (ent->client->pers.universe_quest_messages == 25)

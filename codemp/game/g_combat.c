@@ -2279,9 +2279,10 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 				the_old_player->client->pers.universe_quest_messages = 65;
 			}
 		}
-		else if ((Q_stricmp( self->NPC_type, "sage_of_light" ) == 0 || Q_stricmp( self->NPC_type, "sage_of_darkness" ) == 0 || Q_stricmp( self->NPC_type, "sage_of_eternity" ) == 0) && 
-				 the_old_player->client->sess.amrpgmode == 2 && the_old_player->client->pers.universe_quest_progress == 0 && level.quest_map == 9 && 
-				 the_old_player->client->pers.universe_quest_messages != 12) // zyk: if its a Sage, player fails the objective
+		else if ((Q_stricmp( self->NPC_type, "sage_of_light" ) == 0 || Q_stricmp( self->NPC_type, "sage_of_darkness" ) == 0 || 
+				 Q_stricmp( self->NPC_type, "sage_of_eternity" ) == 0) && the_old_player->client->sess.amrpgmode == 2 && 
+				 the_old_player->client->pers.universe_quest_progress == 0 && level.quest_map == 9 && 
+				 the_old_player->client->pers.universe_quest_messages != 14) // zyk: if its a Sage, player fails the objective
 		{
 			trap->SendServerCommand( the_old_player->s.number, va("chat \"%s^7: Oh no! One of the sages is dead! I failed to protect them...\"", the_old_player->client->pers.netname));
 
@@ -2291,15 +2292,15 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			zyk_NPC_Kill_f("all");
 		}
 		else if (the_old_player->client->sess.amrpgmode == 2 && the_old_player->client->pers.universe_quest_objective_control != -1 && 
-				 the_old_player->client->pers.universe_quest_progress == 0 && level.quest_map == 9 && the_old_player->client->pers.universe_quest_messages != 12)
+				 the_old_player->client->pers.universe_quest_progress == 0 && level.quest_map == 9 && 
+				 the_old_player->client->pers.universe_quest_messages != 14 && 
+				 (the_old_player->client->pers.universe_quest_objective_control > 1 || Q_stricmp(self->NPC_type, "quest_reborn_boss") == 0))
 		{
-			if (the_old_player->client->pers.universe_quest_objective_control > 1 || Q_stricmp( self->NPC_type, "quest_reborn_boss" ) == 0)
-			{
-				the_old_player->client->pers.universe_quest_objective_control--;
-				if (the_old_player->client->pers.universe_quest_objective_control == 0)
-				{ // zyk: all quest reborn npcs were defeated. The player then completed the first Universe Quest objective
-					the_old_player->client->pers.universe_quest_messages = 12;
-				}
+			the_old_player->client->pers.universe_quest_objective_control--;
+
+			if (the_old_player->client->pers.universe_quest_objective_control == 0)
+			{ // zyk: all quest reborn npcs were defeated. The player then completed the first Universe Quest objective
+				the_old_player->client->pers.universe_quest_messages = 12;
 			}
 		}
 		else if ((Q_stricmp( self->NPC_type, "sage_of_light" ) == 0 || Q_stricmp( self->NPC_type, "sage_of_darkness" ) == 0 || Q_stricmp( self->NPC_type, "sage_of_eternity" ) == 0) && the_old_player->client->sess.amrpgmode == 2 && the_old_player->client->pers.universe_quest_progress == 1 && level.quest_map == 9)
