@@ -2286,7 +2286,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			trap->SendServerCommand( the_old_player->s.number, va("chat \"%s^7: Oh no! One of the sages is dead! I failed to protect them...\"", the_old_player->client->pers.netname));
 
 			// zyk: if player fails the first Universe Quest objective, pass the turn to another player
-			the_old_player->client->pers.universe_quest_messages = 12;
+			the_old_player->client->pers.universe_quest_messages = 14;
 			the_old_player->client->pers.universe_quest_timer = level.time + 3000;
 			zyk_NPC_Kill_f("all");
 		}
@@ -2298,7 +2298,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 				the_old_player->client->pers.universe_quest_objective_control--;
 				if (the_old_player->client->pers.universe_quest_objective_control == 0)
 				{ // zyk: all quest reborn npcs were defeated. The player then completed the first Universe Quest objective
-					the_old_player->client->pers.universe_quest_messages = 10;
+					the_old_player->client->pers.universe_quest_messages = 12;
 				}
 			}
 		}

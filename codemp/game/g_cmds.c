@@ -6072,7 +6072,8 @@ void choose_new_player(gentity_t *next_player)
 			{
 				G_FreeEntity(&g_entities[j]);
 			}
-			else if (&g_entities[j] && (Q_stricmp(g_entities[j].targetname, "zyk_quest_models") == 0 || Q_stricmp(g_entities[j].targetname, "zyk_quest_artifact") == 0))
+			else if (&g_entities[j] && (Q_stricmp(g_entities[j].targetname, "zyk_quest_models") == 0 || Q_stricmp(g_entities[j].targetname, "zyk_quest_artifact") == 0 || 
+					 Q_stricmp(g_entities[j].targetname, "zyk_sage_prison") == 0 || g_entities[j].spawnflags & 131072))
 			{ // zyk: cleans the models/effects/items spawned in quests
 				G_FreeEntity(&g_entities[j]);
 			}
@@ -6109,8 +6110,8 @@ void choose_new_player(gentity_t *next_player)
 
 		if (level.quest_map == 9 && next_player->client->pers.universe_quest_progress == 0) 
 		{ // zyk: first Universe Quest objective
-			next_player->client->pers.universe_quest_objective_control = 12; // zyk: player must kill quest reborn npcs to complete the first objective
-			next_player->client->pers.light_quest_messages = 14; // zyk: amount of quest reborns that will be spawned
+			next_player->client->pers.universe_quest_objective_control = 8; // zyk: player must kill quest reborn npcs to complete the first objective
+			next_player->client->pers.light_quest_messages = 9;
 		}
 		else if (level.quest_map == 9 && next_player->client->pers.universe_quest_progress == 1)
 		{ // zyk: second Universe Quest objective
@@ -6198,7 +6199,7 @@ void choose_new_player(gentity_t *next_player)
 			}
 			else if (level.quest_map == 9 && !(next_player->client->pers.hunter_quest_progress & (1 << 12)))
 			{
-				load_note_model(992,992,626);
+				load_note_model(-1963,2633,-3005);
 			}
 		}
 
@@ -9359,9 +9360,9 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 							strcpy(dark_quest_message, va("%s\n^7Note ^3in the sand worm desert - ^1no",dark_quest_message));
 
 						if (ent->client->pers.hunter_quest_progress & (1 << 12))
-							strcpy(dark_quest_message, va("%s\n^7Note ^3in the sanctuary of the sages - ^2yes",dark_quest_message));
+							strcpy(dark_quest_message, va("%s\n^7Note ^3in the sith tombs - ^2yes",dark_quest_message));
 						else
-							strcpy(dark_quest_message, va("%s\n^7Note ^3in the sanctuary of the sages - ^1no",dark_quest_message));
+							strcpy(dark_quest_message, va("%s\n^7Note ^3in the sith tombs - ^1no",dark_quest_message));
 					}
 				}
 				else
@@ -9402,9 +9403,9 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				if (ent->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
 				{
 					if (ent->client->pers.universe_quest_progress == 0)
-						strcpy(universe_message, va("^3\n1. The Hero's Quest Begins\n\n^7Defeat the reborn attack at ^3mp/duel6 ^7to save the Guardian Sages. Quest reborns remaining: ^3%d^7.",ent->client->pers.universe_quest_objective_control));
+						strcpy(universe_message, "^3\n1. The Hero's Quest Begins\n\n^7Go to ^3kor1 ^7to save the Guardian Sages.");
 					else if (ent->client->pers.universe_quest_progress == 1)
-						strcpy(universe_message, "^3\n2. The Rise of an Evil Force\n\n^7Talk to the sages at ^3mp/duel6 ^7to know more about your quest.");
+						strcpy(universe_message, "^3\n2. The Rise of an Evil Force\n\n^7Talk to the sages at ^3kor1 ^7to know more about your quest.");
 					else if (ent->client->pers.universe_quest_progress == 2)
 						strcpy(universe_message, va("^3\n3. The Life-Force Artifacts\n\n^7Find the 8 artifacts in SP maps. One of them is with the sages at ^3yavin1b^7.\nCollected artifacts: ^3%d^7",number_of_artifacts(ent)));
 					else if (ent->client->pers.universe_quest_progress == 3)

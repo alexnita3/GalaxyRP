@@ -2643,6 +2643,21 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	// zyk: Some RPG classes cant pickup some items
 	if (other->client->sess.amrpgmode == 2)
 	{
+		if (ent->spawnflags & 131072)
+		{
+			if (other->client->pers.can_play_quest == 1 && other->client->pers.universe_quest_messages < 6)
+			{ // zyk: player got the key to the prison door in first Universe Quest mission
+				other->client->pers.universe_quest_messages = 6;
+
+				trap->SendServerCommand(other->s.number, va("chat \"%s^7: This is the key!\"", other->client->pers.netname));
+
+				ent->think = G_FreeEntity;
+				ent->nextthink = level.time;
+			}
+
+			return;
+		}
+
 		if (other->client->pers.rpg_class == 1 && ((ent->item->giType == IT_WEAPON && ent->item->giTag != WP_STUN_BATON) || ent->item->giType == IT_AMMO || 
 			ent->item->giType == IT_HOLDABLE))
 		{
