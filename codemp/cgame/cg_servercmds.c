@@ -2032,9 +2032,9 @@ static void CG_ZykMod( void )
 						trap->Cvar_Set("ui_zyk_dark_text10", "in the sand worm desert - ^1no");
 
 					if (dark_quest_progress & (1 << 12))
-						trap->Cvar_Set("ui_zyk_dark_text11", "in the sanctuary of the sages - ^2yes");
+						trap->Cvar_Set("ui_zyk_dark_text11", "in the sith tombs - ^2yes");
 					else
-						trap->Cvar_Set("ui_zyk_dark_text11", "in the sanctuary of the sages - ^1no");
+						trap->Cvar_Set("ui_zyk_dark_text11", "in the sith tombs - ^1no");
 				}
 			}
 			else
@@ -2103,15 +2103,15 @@ static void CG_ZykMod( void )
 				if (universe_quest_progress == 0)
 				{
 					trap->Cvar_Set("ui_zyk_universe_chapter","^31. The Hero's Quest Begins");
-					trap->Cvar_Set("ui_zyk_universe_text","Defeat the reborn attack at ^3mp/duel6");
-					trap->Cvar_Set("ui_zyk_universe_text2","to save the Guardian Sages");
+					trap->Cvar_Set("ui_zyk_universe_text","Go to ^3kor1 ^7to save the Guardian Sages");
+					trap->Cvar_Set("ui_zyk_universe_text2","");
 					trap->Cvar_Set("ui_zyk_universe_text3","");
 					trap->Cvar_Set("ui_zyk_universe_text4","");
 				}
 				else if (universe_quest_progress == 1)
 				{
 					trap->Cvar_Set("ui_zyk_universe_chapter","^32. The Rise of an Evil Force");
-					trap->Cvar_Set("ui_zyk_universe_text","Talk to the sages at ^3mp/duel6");
+					trap->Cvar_Set("ui_zyk_universe_text","Talk to the sages at ^3kor1");
 					trap->Cvar_Set("ui_zyk_universe_text2","to know more about your quest");
 					trap->Cvar_Set("ui_zyk_universe_text3","");
 					trap->Cvar_Set("ui_zyk_universe_text4","");
