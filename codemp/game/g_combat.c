@@ -5797,7 +5797,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		{
 			// zyk: if player is Bounty Hunter and has the Bounty Hunter Upgrade, absorbs more damage
 			if (targ->client->pers.rpg_class == 2 && targ->client->pers.secrets_found & (1 << 1))
-				bounty_hunter_shield_resistance = 0.05;
+				bounty_hunter_shield_resistance = 0.08;
 
 			scaled_damage = (int)ceil(take * (1.0 - bounty_hunter_shield_resistance - (0.1 * targ->client->pers.skill_levels[31])));
 		}
@@ -6239,7 +6239,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 			// zyk: if player is a Bounty Hunter and has the Bounty Hunter Upgrade, absorbs some damage taken
 			if (targ->client->pers.rpg_class == 2 && targ->client->pers.secrets_found & (1 << 1))
-				bonus_resistance = 0.05;
+				bonus_resistance = 0.08;
 
 			take = (int)ceil(take * (1.0 - bonus_resistance - (0.1 * targ->client->pers.skill_levels[32])));
 		}
