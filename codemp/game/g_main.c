@@ -10610,10 +10610,10 @@ void G_RunFrame( int levelTime ) {
 							else if (ent->client->pers.universe_quest_messages == 9)
 								trap->SendServerCommand( ent->s.number, "chat \"^3Sage of Eternity: ^7Hero, help us fight them!\"");
 							else if (ent->client->pers.universe_quest_messages == 10)
-							{
+							{ // zyk: battle against the red reborns
 								if (ent->client->pers.light_quest_messages > 1)
 								{
-									npc_ent = Zyk_NPC_SpawnType("quest_reborn_red", 2467, -68, -3800, 0);
+									npc_ent = Zyk_NPC_SpawnType("quest_reborn_red", 2467, -318 + (50 * ent->client->pers.light_quest_messages), -3800, 0);
 									ent->client->pers.light_quest_messages--;
 								}
 								else if (ent->client->pers.light_quest_messages == 1 && ent->client->pers.universe_quest_objective_control == 1)
