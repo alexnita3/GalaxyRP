@@ -4353,7 +4353,7 @@ void spawn_boss(gentity_t *ent,int x,int y,int z,int yaw,char *boss_name,int gx,
 	int i = 0;
 	float boss_bonus_hp = 0;
 
-	// zyk: exploding trip mines and detpacks near the boss to prevent 1-hit-kill exploits
+	// zyk: removing trip mines and detpacks near the boss to prevent 1-hit-kill exploits
 	if ((guardian_mode >= 1 && guardian_mode <= 7) || guardian_mode == 11 || guardian_mode >= 14)
 		VectorSet(boss_spawn_point, gx, gy, gz);
 	else
@@ -4408,7 +4408,7 @@ void spawn_boss(gentity_t *ent,int x,int y,int z,int yaw,char *boss_name,int gx,
 
 	if (ent->client->pers.universe_quest_counter & (1 << 29))
 	{ // zyk: Challenge Mode increases boss hp more
-		boss_bonus_hp = 0.8 * (1 + zyk_number_of_allies(ent, qtrue));
+		boss_bonus_hp = 0.9 * (1 + zyk_number_of_allies(ent, qtrue));
 	}
 	else
 	{
