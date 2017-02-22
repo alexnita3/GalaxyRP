@@ -4052,7 +4052,7 @@ qboolean TryGrapple(gentity_t *ent)
 					if (zyk_enable_ultra_drain.integer == 1 && ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.magic_power >= zyk_ultra_drain_mp_cost.integer)
 					{ // zyk: Ultra Drain
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
-						ultra_drain(ent,450,55,8000);
+						ultra_drain(ent,450,50,8000);
 						ent->client->pers.magic_power -= zyk_ultra_drain_mp_cost.integer;
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (24000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
@@ -4066,9 +4066,9 @@ qboolean TryGrapple(gentity_t *ent)
 						immunity_power(ent,25000);
 						ent->client->pers.magic_power -= zyk_immunity_power_mp_cost.integer;
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (22000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (23000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 22000;
+							ent->client->pers.quest_power_usage_timer = level.time + 23000;
 
 						ent->client->pers.player_statuses |= (1 << 15);
 
@@ -4080,9 +4080,9 @@ qboolean TryGrapple(gentity_t *ent)
 						chaos_power(ent,400,80);
 						ent->client->pers.magic_power -= zyk_chaos_power_mp_cost.integer;
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (25000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (26000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 25000;
+							ent->client->pers.quest_power_usage_timer = level.time + 26000;
 						trap->SendServerCommand( ent->s.number, va("chat \"%s^7: ^7Chaos Power!\"", ent->client->pers.netname));
 					}
 					else if (zyk_enable_time_power.integer == 1 && ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.magic_power >= zyk_time_power_mp_cost.integer)
@@ -4339,7 +4339,7 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (use_this_power == MAGIC_LIGHTNING_DOME && zyk_enable_lightning_dome.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_lightning_dome_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						lightning_dome(ent,90);
+						lightning_dome(ent,86);
 						ent->client->pers.magic_power -= (int)ceil((zyk_lightning_dome_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (32000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
