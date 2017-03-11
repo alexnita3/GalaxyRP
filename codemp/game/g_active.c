@@ -3904,36 +3904,49 @@ void ClientThink_real( gentity_t *ent ) {
 					zyk_show_right_magic_master_powers(ent, qfalse);
 					zyk_save_magic_master_config(ent);
 				}
-				else if (pmove.cmd.generic_cmd == GENCMD_SABERATTACKCYCLE && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master Fist attacks
-					if (ent->client->sess.magic_fist_selection < 4 && ent->client->sess.magic_fist_selection < ent->client->pers.skill_levels[55])
-						ent->client->sess.magic_fist_selection++;
-					else if (ent->client->sess.magic_fist_selection == 4)
-						ent->client->sess.magic_fist_selection = 0;
-					else
-						ent->client->sess.magic_fist_selection = 4;
+				else if (pmove.cmd.generic_cmd == GENCMD_SABERATTACKCYCLE)
+				{ 
+					if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) && 
+						ent->client->ps.droneExistTime >= (level.time + 5000))
+					{ // zyk: Bounty Hunter Upgrade allows getting seeker drone back with saber style key
+						ent->client->ps.droneExistTime = 0;
+						ent->client->ps.eFlags &= ~EF_SEEKERDRONE;
+						ent->client->ps.genericEnemyIndex = -1;
+						ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SEEKER);
 
-					zyk_save_magic_master_config(ent);
+						G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/weapons/w_pkup.wav"));
+					}
+					else if (ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
+					{ // zyk: Magic Master Fist attacks
+						if (ent->client->sess.magic_fist_selection < 4 && ent->client->sess.magic_fist_selection < ent->client->pers.skill_levels[55])
+							ent->client->sess.magic_fist_selection++;
+						else if (ent->client->sess.magic_fist_selection == 4)
+							ent->client->sess.magic_fist_selection = 0;
+						else
+							ent->client->sess.magic_fist_selection = 4;
 
-					if (ent->client->sess.magic_fist_selection == 0)
-					{
-						trap->SendServerCommand( ent->s.number, va("chat \"^7Normal Bolt       ^3MP: ^7%d\"",ent->client->pers.magic_power));
-					}
-					else if (ent->client->sess.magic_fist_selection == 1)
-					{
-						trap->SendServerCommand( ent->s.number, va("chat \"^7Electric Bolt     ^3MP: ^7%d\"",ent->client->pers.magic_power));
-					}
-					else if (ent->client->sess.magic_fist_selection == 2)
-					{
-						trap->SendServerCommand( ent->s.number, va("chat \"^7Instant-Hit Bolt  ^3MP: ^7%d\"",ent->client->pers.magic_power));
-					}
-					else if (ent->client->sess.magic_fist_selection == 3)
-					{
-						trap->SendServerCommand( ent->s.number, va("chat \"^7Ultra Bolt        ^3MP: ^7%d\"",ent->client->pers.magic_power));
-					}
-					else
-					{
-						trap->SendServerCommand( ent->s.number, va("chat \"^7None              ^3MP: ^7%d\"",ent->client->pers.magic_power));
+						zyk_save_magic_master_config(ent);
+
+						if (ent->client->sess.magic_fist_selection == 0)
+						{
+							trap->SendServerCommand(ent->s.number, va("chat \"^7Normal Bolt       ^3MP: ^7%d\"", ent->client->pers.magic_power));
+						}
+						else if (ent->client->sess.magic_fist_selection == 1)
+						{
+							trap->SendServerCommand(ent->s.number, va("chat \"^7Electric Bolt     ^3MP: ^7%d\"", ent->client->pers.magic_power));
+						}
+						else if (ent->client->sess.magic_fist_selection == 2)
+						{
+							trap->SendServerCommand(ent->s.number, va("chat \"^7Instant-Hit Bolt  ^3MP: ^7%d\"", ent->client->pers.magic_power));
+						}
+						else if (ent->client->sess.magic_fist_selection == 3)
+						{
+							trap->SendServerCommand(ent->s.number, va("chat \"^7Ultra Bolt        ^3MP: ^7%d\"", ent->client->pers.magic_power));
+						}
+						else
+						{
+							trap->SendServerCommand(ent->s.number, va("chat \"^7None              ^3MP: ^7%d\"", ent->client->pers.magic_power));
+						}
 					}
 				}
 			}
