@@ -591,9 +591,6 @@ typedef enum {
 	MAX_MAGIC_POWERS
 } zyk_magic_t;
 
-// zyk: number of lines in the player account file
-#define NUMBER_OF_LINES 71
-
 // zyk: number of Light Quest guardians to be defeated 
 #define NUMBER_OF_GUARDIANS 10
 
