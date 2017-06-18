@@ -13404,7 +13404,7 @@ void G_RunFrame( int levelTime ) {
 					}
 				}
 			}
-			else if (ent->health > 0 && Q_stricmp(ent->NPC_type, "quest_mage") == 0 && ent->client->pers.guardian_timer < level.time)
+			else if (ent->health > 0 && Q_stricmp(ent->NPC_type, "quest_mage") == 0 && ent->enemy && ent->client->pers.guardian_timer < level.time)
 			{ // zyk: powers used by the quest_mage npc
 				int random_magic = Q_irand(0, 26);
 
