@@ -9917,7 +9917,7 @@ void G_RunFrame( int levelTime ) {
 				}
 			}
 
-			if (level.melee_mode == 2 && ent->client->ps.origin[2] < level.melee_mode_origin[2])
+			if (level.melee_mode == 2 && level.melee_players[ent->s.number] != -1 && ent->client->ps.origin[2] < level.melee_mode_origin[2])
 			{ // zyk: validating if player fell of the catwalk
 				ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
 
