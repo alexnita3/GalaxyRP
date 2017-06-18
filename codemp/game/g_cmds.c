@@ -14268,7 +14268,7 @@ void Cmd_AdminList_f( gentity_t *ent ) {
 		}
 		else if (command_number == ADM_DUELARENA)
 		{
-			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/duelarena ^7to set or unset the Duel Tournament arena in this map. The arena is saved automatically\n\n\"");
+			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/duelarena ^7to set or unset the Duel Tournament arena in this map. The arena is saved automatically. Also, use ^3/duelpause ^7to pause the tournament and use it again to resume it\n\n\"");
 		}
 	}
 	else
@@ -16585,6 +16585,36 @@ void Cmd_DuelArena_f(gentity_t *ent) {
 
 /*
 ==================
+Cmd_DuelPause_f
+==================
+*/
+void Cmd_DuelPause_f(gentity_t *ent) {
+	if (!(ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
+	{ // zyk: admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	if (level.duel_tournament_mode == 0)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"^3Duel Tournament: ^7There is no duel tournament now\n\"");
+		return;
+	}
+
+	if (level.duel_tournament_paused == qfalse)
+	{ // zyk: pauses the tournament
+		level.duel_tournament_paused = qtrue;
+		trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7pausing the tournament\"");
+	}
+	else
+	{ // zyk: resumes the tournament
+		level.duel_tournament_paused = qfalse;
+		trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7resuming the tournament\"");
+	}
+}
+
+/*
+==================
 Cmd_SniperMode_f
 ==================
 */
@@ -16857,6 +16887,7 @@ command_t commands[] = {
 	{ "drop",				Cmd_Drop_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "duelarena",			Cmd_DuelArena_f,			CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "duelmode",			Cmd_DuelMode_f,				CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "duelpause",			Cmd_DuelPause_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "dueltable",			Cmd_DuelTable_f,			CMD_NOINTERMISSION },
 	{ "duelteam",			Cmd_DuelTeam_f,				CMD_NOINTERMISSION },
 	{ "emote",				Cmd_Emote_f,				CMD_ALIVE|CMD_NOINTERMISSION },

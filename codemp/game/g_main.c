@@ -696,6 +696,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 	// zyk: initializing Duel Tournament variables
 	level.duel_tournament_mode = 0;
+	level.duel_tournament_paused = qfalse;
 	level.duelists_quantity = 0;
 	level.duel_matches_quantity = 0;
 	level.duel_matches_done = 0;
@@ -7892,144 +7893,147 @@ void G_RunFrame( int levelTime ) {
 	}
 
 	// zyk: Duel Tournament
-	if (level.duel_tournament_mode == 5 && level.duel_tournament_timer < level.time)
-	{ // zyk: show score table
-		duel_show_table(NULL);
-		level.duel_tournament_timer = level.time + 1500;
-		level.duel_tournament_mode = 2;
-	}
-	else if (level.duel_tournament_mode == 3 && level.duel_tournament_timer < level.time)
+	if (level.duel_tournament_paused == qfalse)
 	{
-		int zyk_random = Q_irand(0, 1);
-		vec3_t zyk_origin;
-		gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
-		gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
-
-		if (duel_tournament_validate_duelists(duelist_1, duelist_2) == qtrue)
-		{
-			// zyk: respawning duelists that are still lying dead
-			if (duelist_1->health < 1)
-			{
-				ClientRespawn(duelist_1);
-			}
-			// zyk: respawning duelists that are still lying dead
-			if (duelist_2->health < 1)
-			{
-				ClientRespawn(duelist_2);
-			}
-
-			if (zyk_random == 1)
-			{ // zyk: put the duelists along the x axis
-				VectorSet(zyk_origin, level.duel_tournament_origin[0] - 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
-				zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
-
-				VectorSet(zyk_origin, level.duel_tournament_origin[0] + 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
-				zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
-			}
-			else
-			{ // zyk: put the duelists along the y axis
-				VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
-				zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
-
-				VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
-				zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
-			}
-
-			// zyk: set both duelists in private duel
-			duel_tournament_prepare(duelist_1, duelist_2);
-
-			// zyk: setting the max time players can duel
-			level.duel_tournament_timer = level.time + 180000;
-			level.duel_tournament_mode = 4;
-
-			// zyk: killing all npcs and vehicles
-			zyk_NPC_Kill_f("all");
-		}
-		else
-		{ // zyk: duelists are no longer valid, get a new match
-			level.duelist_1_id = -1;
-			level.duelist_2_id = -1;
-
-			level.duel_tournament_mode = 5;
+		if (level.duel_tournament_mode == 5 && level.duel_tournament_timer < level.time)
+		{ // zyk: show score table
+			duel_show_table(NULL);
 			level.duel_tournament_timer = level.time + 1500;
+			level.duel_tournament_mode = 2;
 		}
-	}
-	else if (level.duel_tournament_mode == 2 && level.duel_tournament_timer < level.time)
-	{ // zyk: search for duelists and put them in the arena
-		int zyk_it = 0;
-		qboolean is_in_boss = qfalse;
-
-		for (zyk_it = 0; zyk_it < MAX_CLIENTS; zyk_it++)
+		else if (level.duel_tournament_mode == 3 && level.duel_tournament_timer < level.time)
 		{
-			gentity_t *this_ent = &g_entities[zyk_it];
-
-			if (this_ent && this_ent->client && this_ent->client->pers.connected == CON_CONNECTED &&
-				this_ent->client->sess.sessionTeam != TEAM_SPECTATOR && this_ent->client->sess.amrpgmode == 2 && 
-				this_ent->client->pers.guardian_mode > 0)
-			{ // zyk: validating if there is someone fighting a quest boss
-				is_in_boss = qtrue;
-				break;
-			}
-		}
-
-		if (is_in_boss == qfalse && level.duel_remaining_matches > 0)
-		{ // zyk: if there are still matches to be chosen, try to choose now
-			gentity_t *first_duelist = &g_entities[level.duel_matches[level.duel_matches_done][0]];
-			gentity_t *second_duelist = &g_entities[level.duel_matches[level.duel_matches_done][1]];
-
-			// zyk: count this match
-			level.duel_matches_done++;
-
-			if (duel_tournament_validate_duelists(first_duelist, second_duelist) == qfalse)
-			{ // zyk: if not valid, show score table
-				level.duel_tournament_mode = 5;
-				level.duel_tournament_timer = level.time + 1500;
-			}
-
-			level.duel_remaining_matches--;
-		}
-		
-		if (is_in_boss == qtrue)
-		{
-			level.duel_tournament_timer = level.time + 15000;
-			trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Waiting for the quest player to finish boss battle!\"");
-		}
-		else if (level.duelist_1_id != -1 && level.duelist_2_id != -1)
-		{ // zyk: found the duelists
+			int zyk_random = Q_irand(0, 1);
+			vec3_t zyk_origin;
 			gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
 			gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
 
-			level.duel_tournament_timer = level.time + 3000;
-			level.duel_tournament_mode = 3;
+			if (duel_tournament_validate_duelists(duelist_1, duelist_2) == qtrue)
+			{
+				// zyk: respawning duelists that are still lying dead
+				if (duelist_1->health < 1)
+				{
+					ClientRespawn(duelist_1);
+				}
+				// zyk: respawning duelists that are still lying dead
+				if (duelist_2->health < 1)
+				{
+					ClientRespawn(duelist_2);
+				}
 
-			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7x %s\"", duelist_1->client->pers.netname, duelist_2->client->pers.netname));
-		}
-		else if (level.duel_matches_quantity == level.duel_matches_done && level.duel_tournament_mode == 2)
-		{ // zyk: all matches were done. Determine the tournament winner
-			duel_tournament_winner();
-			duel_tournament_end();
-		}
-		else if (level.duelists_quantity == 0)
-		{
-			duel_tournament_end();
-			trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7There are no duelists anymore. Tournament is over!\"");
-		}
-	}
-	else if (level.duel_tournament_mode == 1 && level.duel_tournament_timer < level.time)
-	{ // zyk: Duel tournament can begin if there are at least 2 players
-		if (level.duelists_quantity > 1)
-		{
-			level.duel_tournament_mode = 5;
-			level.duel_tournament_timer = level.time + 1500;
+				if (zyk_random == 1)
+				{ // zyk: put the duelists along the x axis
+					VectorSet(zyk_origin, level.duel_tournament_origin[0] - 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
+					zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
 
-			duel_tournament_generate_match_table();
+					VectorSet(zyk_origin, level.duel_tournament_origin[0] + 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
+					zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
+				}
+				else
+				{ // zyk: put the duelists along the y axis
+					VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
+					zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
 
-			trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7The tournament will begin!\"");
+					VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
+					zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
+				}
+
+				// zyk: set both duelists in private duel
+				duel_tournament_prepare(duelist_1, duelist_2);
+
+				// zyk: setting the max time players can duel
+				level.duel_tournament_timer = level.time + 180000;
+				level.duel_tournament_mode = 4;
+
+				// zyk: killing all npcs and vehicles
+				zyk_NPC_Kill_f("all");
+			}
+			else
+			{ // zyk: duelists are no longer valid, get a new match
+				level.duelist_1_id = -1;
+				level.duelist_2_id = -1;
+
+				level.duel_tournament_mode = 5;
+				level.duel_tournament_timer = level.time + 1500;
+			}
 		}
-		else
-		{
-			duel_tournament_end();
-			trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Not enough duelists. Tournament is over!\"");
+		else if (level.duel_tournament_mode == 2 && level.duel_tournament_timer < level.time)
+		{ // zyk: search for duelists and put them in the arena
+			int zyk_it = 0;
+			qboolean is_in_boss = qfalse;
+
+			for (zyk_it = 0; zyk_it < MAX_CLIENTS; zyk_it++)
+			{
+				gentity_t *this_ent = &g_entities[zyk_it];
+
+				if (this_ent && this_ent->client && this_ent->client->pers.connected == CON_CONNECTED &&
+					this_ent->client->sess.sessionTeam != TEAM_SPECTATOR && this_ent->client->sess.amrpgmode == 2 &&
+					this_ent->client->pers.guardian_mode > 0)
+				{ // zyk: validating if there is someone fighting a quest boss
+					is_in_boss = qtrue;
+					break;
+				}
+			}
+
+			if (is_in_boss == qfalse && level.duel_remaining_matches > 0)
+			{ // zyk: if there are still matches to be chosen, try to choose now
+				gentity_t *first_duelist = &g_entities[level.duel_matches[level.duel_matches_done][0]];
+				gentity_t *second_duelist = &g_entities[level.duel_matches[level.duel_matches_done][1]];
+
+				// zyk: count this match
+				level.duel_matches_done++;
+
+				if (duel_tournament_validate_duelists(first_duelist, second_duelist) == qfalse)
+				{ // zyk: if not valid, show score table
+					level.duel_tournament_mode = 5;
+					level.duel_tournament_timer = level.time + 1500;
+				}
+
+				level.duel_remaining_matches--;
+			}
+
+			if (is_in_boss == qtrue)
+			{
+				level.duel_tournament_timer = level.time + 15000;
+				trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Waiting for the quest player to finish boss battle!\"");
+			}
+			else if (level.duelist_1_id != -1 && level.duelist_2_id != -1)
+			{ // zyk: found the duelists
+				gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
+				gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
+
+				level.duel_tournament_timer = level.time + 3000;
+				level.duel_tournament_mode = 3;
+
+				trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7x %s\"", duelist_1->client->pers.netname, duelist_2->client->pers.netname));
+			}
+			else if (level.duel_matches_quantity == level.duel_matches_done && level.duel_tournament_mode == 2)
+			{ // zyk: all matches were done. Determine the tournament winner
+				duel_tournament_winner();
+				duel_tournament_end();
+			}
+			else if (level.duelists_quantity == 0)
+			{
+				duel_tournament_end();
+				trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7There are no duelists anymore. Tournament is over!\"");
+			}
+		}
+		else if (level.duel_tournament_mode == 1 && level.duel_tournament_timer < level.time)
+		{ // zyk: Duel tournament can begin if there are at least 2 players
+			if (level.duelists_quantity > 1)
+			{
+				level.duel_tournament_mode = 5;
+				level.duel_tournament_timer = level.time + 1500;
+
+				duel_tournament_generate_match_table();
+
+				trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7The tournament will begin!\"");
+			}
+			else
+			{
+				duel_tournament_end();
+				trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Not enough duelists. Tournament is over!\"");
+			}
 		}
 	}
 
