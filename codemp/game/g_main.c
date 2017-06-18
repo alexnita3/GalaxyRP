@@ -5404,7 +5404,7 @@ void water_attack(gentity_t *ent, int distance, int damage)
 // zyk Shifting Sand
 void shifting_sand(gentity_t *ent, int distance)
 {
-	int time_to_teleport = 2000;
+	int time_to_teleport = 1800;
 	int i = 0;
 	int targets_hit = 0;
 	int min_distance = distance;
@@ -5414,7 +5414,8 @@ void shifting_sand(gentity_t *ent, int distance)
 	// zyk: Universe Power
 	if (ent->client->pers.quest_power_status & (1 << 13))
 	{
-		time_to_teleport = 1000;
+		distance *= 1.5;
+		min_distance = distance;
 	}
 
 	for (i = 0; i < level.num_entities; i++)
@@ -13485,7 +13486,7 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (random_magic == 19)
 				{
-					shifting_sand(ent, 900);
+					shifting_sand(ent, 1000);
 				}
 				else if (random_magic == 20)
 				{
