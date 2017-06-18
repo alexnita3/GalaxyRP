@@ -10183,6 +10183,7 @@ void G_RunFrame( int levelTime ) {
 								G_Sound(ent, CHAN_AUTO, G_SoundIndex(va("sound/weapons/melee/punch%d", Q_irand(1, 4))));
 							}
 							else if (ent->client->pers.player_statuses & (1 << 23) && 
+									 ent->health > 0 && 
 									 Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 300)
 							{ // zyk: Meditation Drain
 								int heal_amount = 8;
