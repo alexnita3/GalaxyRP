@@ -70,11 +70,6 @@ qboolean	in_mlooking;
 
 extern cvar_t	*in_joystick;
 
-#ifndef NO_XINPUT
-void IN_UnloadXInput ( void );
-#endif
-
-
 static void IN_UseGivenForce(void)
 {
 	const char *c = Cmd_Argv(1);
@@ -88,9 +83,12 @@ static void IN_UseGivenForce(void)
 	}
 
 	switch(forceNum) {
+#ifndef JK2_MODE
 	case FP_DRAIN:
 		genCmdNum = GENCMD_FORCE_DRAIN;
 		break;
+#endif // !JK2_MODE
+
 	case FP_PUSH:
 		genCmdNum = GENCMD_FORCE_THROW;
 		break;
@@ -109,6 +107,8 @@ static void IN_UseGivenForce(void)
 	case FP_LIGHTNING:
 		genCmdNum = GENCMD_FORCE_LIGHTNING;
 		break;
+
+#ifndef JK2_MODE
 	case FP_RAGE:
 		genCmdNum = GENCMD_FORCE_RAGE;
 		break;
@@ -121,6 +121,8 @@ static void IN_UseGivenForce(void)
 	case FP_SEE:
 		genCmdNum = GENCMD_FORCE_SEEING;
 		break;
+#endif // !JK2_MODE
+
 	case FP_HEAL:
 		genCmdNum = GENCMD_FORCE_HEAL;
 		break;

@@ -279,6 +279,7 @@ void SV_Startup( void ) {
 		// we don't need nearly as many when playing locally
 		svs.numSnapshotEntities = sv_maxclients->integer * 4 * MAX_SNAPSHOT_ENTITIES;
 	}
+	SV_ChallengeInit();
 	svs.initialized = qtrue;
 
 	// Don't respect sv_killserver unless a server is actually running
@@ -951,6 +952,14 @@ void SV_Init (void) {
 	Cvar_CheckRange( sv_privateClients, 0, MAX_CLIENTS, qtrue );
 	sv_hostname = Cvar_Get ("sv_hostname", "*Jedi*", CVAR_SERVERINFO | CVAR_ARCHIVE, "The name of the server that is displayed in the serverlist" );
 	sv_maxclients = Cvar_Get ("sv_maxclients", "8", CVAR_SERVERINFO | CVAR_LATCH, "Max. connected clients" );
+	
+	
+	//cvar_t	*sv_ratePolicy;		// 1-2
+	//cvar_t	*sv_clientRate;
+	sv_ratePolicy = Cvar_Get( "sv_ratePolicy", "1", CVAR_ARCHIVE, "Determines which policy of enforcement is used for client's \"rate\" cvar" );
+	Cvar_CheckRange(sv_ratePolicy, 1, 2, qtrue);
+	sv_clientRate = Cvar_Get( "sv_clientRate", "50000", CVAR_ARCHIVE);
+	sv_minRate = Cvar_Get ("sv_minRate", "0", CVAR_ARCHIVE | CVAR_SERVERINFO, "Min bandwidth rate allowed on server. Use 0 for unlimited." );
 	sv_maxRate = Cvar_Get ("sv_maxRate", "0", CVAR_ARCHIVE | CVAR_SERVERINFO, "Max bandwidth rate allowed on server. Use 0 for unlimited." );
 	sv_minPing = Cvar_Get ("sv_minPing", "0", CVAR_ARCHIVE | CVAR_SERVERINFO );
 	sv_maxPing = Cvar_Get ("sv_maxPing", "0", CVAR_ARCHIVE | CVAR_SERVERINFO );
@@ -971,6 +980,8 @@ void SV_Init (void) {
 	sv_privatePassword = Cvar_Get ("sv_privatePassword", "", CVAR_TEMP );
 	sv_snapsMin = Cvar_Get ("sv_snapsMin", "10", CVAR_ARCHIVE ); // 1 <=> sv_snapsMax
 	sv_snapsMax = Cvar_Get ("sv_snapsMax", "40", CVAR_ARCHIVE ); // sv_snapsMin <=> sv_fps
+	sv_snapsPolicy = Cvar_Get ("sv_snapsPolicy", "1", CVAR_ARCHIVE, "Determines which policy of enforcement is used for client's \"snaps\" cvar");
+	Cvar_CheckRange(sv_snapsPolicy, 0, 2, qtrue);
 	sv_fps = Cvar_Get ("sv_fps", "40", CVAR_SERVERINFO, "Server frames per second" );
 	sv_timeout = Cvar_Get ("sv_timeout", "200", CVAR_TEMP );
 	sv_zombietime = Cvar_Get ("sv_zombietime", "2", CVAR_TEMP );
@@ -1073,6 +1084,7 @@ void SV_Shutdown( char *finalmsg )
 
 	SV_RemoveOperatorCommands();
 	SV_MasterShutdown();
+	SV_ChallengeShutdown();
 	SV_ShutdownGameProgs();
 	svs.gameStarted = qfalse;
 /*

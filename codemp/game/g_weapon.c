@@ -534,13 +534,13 @@ static void WP_FireBlaster( gentity_t *ent, qboolean altFire )
 		// add some slop to the alt-fire direction
 		if (ent && ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[20] == 2)
 		{ // zyk: E11 2/2 in RPG Mode is more accurate
-			angs[PITCH] += crandom() * (BLASTER_SPREAD/2.0);
-			angs[YAW]       += crandom() * (BLASTER_SPREAD/2.0);
+			angs[PITCH] += Q_flrand(-1.0f, 1.0f) * (BLASTER_SPREAD/2.0);
+			angs[YAW]       += Q_flrand(-1.0f, 1.0f) * (BLASTER_SPREAD/2.0);
 		}
 		else
 		{
-			angs[PITCH] += crandom() * BLASTER_SPREAD;
-			angs[YAW]       += crandom() * BLASTER_SPREAD;
+			angs[PITCH] += Q_flrand(-1.0f, 1.0f) * BLASTER_SPREAD;
+			angs[YAW]       += Q_flrand(-1.0f, 1.0f) * BLASTER_SPREAD;
 		}
 	}
 
@@ -1142,12 +1142,12 @@ static void WP_BowcasterMainFire( gentity_t *ent )
 	for (i = 0; i < count; i++ )
 	{
 		// create a range of different velocities
-		vel = zyk_bowcaster_velocity.integer * ( crandom() * BOWCASTER_VEL_RANGE + 1.0f );
+		vel = zyk_bowcaster_velocity.integer * ( Q_flrand(-1.0f, 1.0f) * BOWCASTER_VEL_RANGE + 1.0f );
 
 		vectoangles( forward, angs );
 
 		// add some slop to the alt-fire direction
-		angs[PITCH] += crandom() * bowcaster_spread * 0.2f;
+		angs[PITCH] += Q_flrand(-1.0f, 1.0f) * bowcaster_spread * 0.2f;
 		angs[YAW]	+= ((i+0.5f) * bowcaster_spread - count * 0.5f * bowcaster_spread );
 
 		AngleVectors( angs, dir, NULL, NULL );
@@ -1279,13 +1279,13 @@ static void WP_FireRepeater( gentity_t *ent, qboolean altFire )
 		// add some slop to the alt-fire direction
 		if (ent && ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[23] == 2)
 		{ // zyk: Repeater 2/2 in RPG Mode is more accurate
-			angs[PITCH] += crandom() * (REPEATER_SPREAD/2);
-			angs[YAW]	+= crandom() * (REPEATER_SPREAD/2);
+			angs[PITCH] += Q_flrand(-1.0f, 1.0f) * (REPEATER_SPREAD/2);
+			angs[YAW]	+= Q_flrand(-1.0f, 1.0f) * (REPEATER_SPREAD/2);
 		}
 		else
 		{
-			angs[PITCH] += crandom() * REPEATER_SPREAD;
-			angs[YAW]	+= crandom() * REPEATER_SPREAD;
+			angs[PITCH] += Q_flrand(-1.0f, 1.0f) * REPEATER_SPREAD;
+			angs[YAW]	+= Q_flrand(-1.0f, 1.0f) * REPEATER_SPREAD;
 		}
 
 		AngleVectors( angs, dir, NULL, NULL );
@@ -1798,13 +1798,13 @@ static void WP_FlechetteMainFire( gentity_t *ent )
 		{ //do nothing on the first shot, it will hit the crosshairs
 			if (ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[25] == 2)
 			{ // zyk: Flechette 2/2 has less spread
-				angs[PITCH] += crandom() * FLECHETTE_SPREAD * 0.5;
-				angs[YAW]	+= crandom() * FLECHETTE_SPREAD * 0.5;
+				angs[PITCH] += Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD * 0.5;
+				angs[YAW]	+= Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD * 0.5;
 			}
 			else
 			{
-				angs[PITCH] += crandom() * FLECHETTE_SPREAD;
-				angs[YAW]	+= crandom() * FLECHETTE_SPREAD;
+				angs[PITCH] += Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD;
+				angs[YAW]	+= Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD;
 			}
 		}
 
@@ -1924,8 +1924,8 @@ void WP_flechette_alt_blow( gentity_t *ent )
 static void WP_CreateFlechetteBouncyThing( vec3_t start, vec3_t fwd, gentity_t *self )
 //------------------------------------------------------------------------------
 {
-	// zyk: gentity_t	*missile = CreateMissile( start, fwd, 700 + random() * 700, 1500 + random() * 2000, self, qtrue );
-	gentity_t	*missile = CreateMissile( start, fwd, zyk_flechette_alt_velocity.integer, 1500 + random() * 2000, self, qtrue );
+	// zyk: gentity_t	*missile = CreateMissile( start, fwd, 700 + Q_flrand(0.0f, 1.0f) * 700, 1500 + Q_flrand(0.0f, 1.0f) * 2000, self, qtrue );
+	gentity_t	*missile = CreateMissile( start, fwd, zyk_flechette_alt_velocity.integer, 1500 + Q_flrand(0.0f, 1.0f) * 2000, self, qtrue );
 
 	missile->think = WP_flechette_alt_blow;
 
@@ -1979,8 +1979,8 @@ static void WP_FlechetteAltFire( gentity_t *self )
 	{
 		VectorCopy( angs, dir );
 
-		dir[PITCH] -= random() * 4 + 8; // make it fly upwards
-		dir[YAW] += crandom() * 2;
+		dir[PITCH] -= Q_flrand(0.0f, 1.0f) * 4 + 8; // make it fly upwards
+		dir[YAW] += Q_flrand(-1.0f, 1.0f) * 2;
 		AngleVectors( dir, fwd, NULL, NULL );
 
 		WP_CreateFlechetteBouncyThing( start, fwd, self );
@@ -2143,7 +2143,7 @@ void rocketThink( gentity_t *ent )
 		// add crazy drunkenness
 		for (i = 0; i < 3; i++ )
 		{
-			newdir[i] += crandom() * ent->random * 0.25f;
+			newdir[i] += Q_flrand(-1.0f, 1.0f) * ent->random * 0.25f;
 		}
 
 		// decay the randomness
@@ -3393,7 +3393,7 @@ void BlowDetpacks(gentity_t *ent)
 			{
 				VectorCopy( found->r.currentOrigin, found->s.origin );
 				found->think = DetPackBlow;
-				found->nextthink = level.time + 100 + random() * 200;
+				found->nextthink = level.time + 100 + Q_flrand(0.0f, 1.0f) * 200;
 				G_Sound( found, CHAN_BODY, G_SoundIndex("sound/weapons/detpack/warning.wav") );
 			}
 		}
@@ -4065,7 +4065,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				{
 					if (number_of_shots > 1)
 					{ // zyk: Spread Electric Bolts code to make them spread
-						VectorSet(dir, ent->client->ps.viewangles[0] + crandom() * 3.0, ent->client->ps.viewangles[1] + crandom() * 3.0, 0);
+						VectorSet(dir, ent->client->ps.viewangles[0] + Q_flrand(-1.0f, 1.0f) * 3.0, ent->client->ps.viewangles[1] + Q_flrand(-1.0f, 1.0f) * 3.0, 0);
 					}
 					else
 					{
@@ -4133,7 +4133,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				{
 					if (number_of_shots > 1)
 					{ // zyk: Spread Electric Bolts code to make them spread
-						VectorSet(dir, ent->client->ps.viewangles[0] + crandom() * 3.0, ent->client->ps.viewangles[1] + crandom() * 3.0, 0);
+						VectorSet(dir, ent->client->ps.viewangles[0] + Q_flrand(-1.0f, 1.0f) * 3.0, ent->client->ps.viewangles[1] + Q_flrand(-1.0f, 1.0f) * 3.0, 0);
 					}
 					else
 					{

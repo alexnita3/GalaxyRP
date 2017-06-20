@@ -1267,6 +1267,7 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 	//unz_s			*zfi;
 	//void			*temp;
 	int				l;
+	bool			isUserConfig = false;
 
 	hash = 0;
 
@@ -1300,6 +1301,8 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 		return -1;
 	}
 
+	isUserConfig = !Q_stricmp( filename, "autoexec.cfg" ) || !Q_stricmp( filename, Q3CONFIG_CFG );
+
 	//
 	// search through the path, one element at a time
 	//
@@ -1327,6 +1330,11 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 			if ( search->pack && search->pack->hashTable[hash] ) {
 				// disregard if it doesn't match one of the allowed pure pak files
 				if ( !FS_PakIsPure(search->pack) ) {
+					continue;
+				}
+
+				// autoexec.cfg and openjk.cfg can only be loaded outside of pk3 files.
+				if ( isUserConfig ) {
 					continue;
 				}
 
@@ -1470,7 +1478,7 @@ long FS_FOpenFileRead( const char *filename, fileHandle_t *file, qboolean unique
 					!FS_IsExt( filename, ".game", l ) &&		// menu files
 					!FS_IsExt( filename, ".dat", l ) &&		// for journal files
 					!FS_IsDemoExt( filename, l ) ) {			// demos
-					fs_fakeChkSum = random();
+					fs_fakeChkSum = Q_flrand(0.0f, 1.0f);
 				}
 #ifdef _WIN32
 				// if running with fs_copyfiles 2, and search path == local, then we need to fail to open

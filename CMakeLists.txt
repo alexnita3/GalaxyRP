@@ -50,6 +50,9 @@ option(BuildJK2SPRdVanilla "Whether to create projects for the jk2 sp renderer (
 
 option(BuildTests "Whether to build automatic unit tests (requires Boost)" OFF)
 
+Include(CMakeDependentOption)
+CMAKE_DEPENDENT_OPTION(BuildSymbolServer "Build WIP Windows Symbol Server (experimental and unused)" OFF "NOT WIN32 OR NOT MSVC" OFF)
+
 # Configure the use of bundled libraries.  By default, we assume the user is on
 # a platform that does not require any bundling.
 #
@@ -72,6 +75,10 @@ endif()
 
 if(APPLE)
   set(UseInternalJPEGDefault ON)
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "BSD")
+  add_definitions(-DIOAPI_NO_64)
 endif()
 
 option(UseInternalOpenAL "If set, use bundled OpenAL."  ${UseInternalOpenALDefault})
@@ -269,7 +276,8 @@ elseif (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") OR ("${CMAKE_C_COMPILER_ID}" S
 		endif()
 	elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-writable-strings")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-write-strings")
+		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-writable-strings")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-comment")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-invalid-offsetof")
 	endif()
@@ -298,11 +306,26 @@ if(BuildPortableVersion)
 	set(SharedDefines ${SharedDefines} "_PORTABLE_VERSION")
 endif()
 
+# https://reproducible-builds.org/specs/source-date-epoch/
+if (NOT ("$ENV{SOURCE_DATE_EPOCH}" STREQUAL ""))
+	execute_process(COMMAND "date"
+		"--date=@$ENV{SOURCE_DATE_EPOCH}" "+%b %_d %Y"
+		OUTPUT_VARIABLE source_date
+		ERROR_QUIET
+		OUTPUT_STRIP_TRAILING_WHITESPACE)
+	set(SharedDefines ${SharedDefines} "SOURCE_DATE=\"${source_date}\"")
+endif()
 
 
 
 # Files shared across all projects
 set(SharedCommonFiles
+	"${SharedDir}/qcommon/q_color.h"
+	"${SharedDir}/qcommon/q_color.c"
+	"${SharedDir}/qcommon/q_math.h"
+	"${SharedDir}/qcommon/q_math.c"
+	"${SharedDir}/qcommon/q_string.h"
+	"${SharedDir}/qcommon/q_string.c"
 	"${SharedDir}/qcommon/q_platform.h"
 	)
 set(SharedCommonSafeFiles
@@ -342,7 +365,7 @@ if(BuildJK2SPGame)
 endif()
 add_subdirectory(${MPDir})
 # Windows Symbol Server tools
-if(WIN32 AND MSVC)
+if(BuildSymbolServer)
 	add_subdirectory("tools/WinSymbol")
 endif()
 if(BuildTests)

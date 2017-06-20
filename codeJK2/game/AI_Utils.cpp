@@ -101,8 +101,8 @@ int AI_ClosestGroupEntityNumToPoint( AIGroupInfo_t &group, vec3_t point )
 	int	markerWP = WAYPOINT_NONE;
 	int	cost, bestCost = Q3_INFINITE;
 	int	closest = ENTITYNUM_NONE;
-	
-	if ( &group == NULL || group.numGroup <= 0 )
+
+	if ( group.numGroup <= 0 )
 	{
 		return ENTITYNUM_NONE;
 	}
@@ -956,7 +956,7 @@ qboolean AI_RefreshGroup( AIGroupInfo_t *group )
 	//mark this group as not having been run this frame
 	group->processed = qfalse;
 
-	return (group->numGroup>0);
+	return (qboolean)(group->numGroup > 0);
 }
 
 void AI_UpdateGroups( void )
