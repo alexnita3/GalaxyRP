@@ -10550,6 +10550,7 @@ void Cmd_Buy_f( gentity_t *ent ) {
 Cmd_Sell_f
 ==================
 */
+extern void Jedi_Decloak(gentity_t *self);
 void Cmd_Sell_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int value = 0;
@@ -10756,6 +10757,11 @@ void Cmd_Sell_f( gentity_t *ent ) {
 	else if (value == 42 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK))
 	{
 		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_CLOAK);
+
+		// zyk: if cloaked, removes it
+		if (ent->client->ps.powerups[PW_CLOAKED])
+			Jedi_Decloak(ent);
+
 		sold = 1;
 	}
 	else if (value == 43 && ent->client->ps.powerups[PW_FORCE_BOON])
