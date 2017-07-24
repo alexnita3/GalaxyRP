@@ -5615,7 +5615,15 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 	strcpy(ent->client->pers.password, arg2);
 
 	// zyk: setting the values to be saved in the account file
-	ent->client->sess.amrpgmode = 2;
+	if (zyk_allow_rpg_mode.integer == 0)
+	{
+		ent->client->sess.amrpgmode = 1;
+	}
+	else
+	{
+		ent->client->sess.amrpgmode = 2;
+	}
+
 	ent->client->pers.player_settings = 0;
 	ent->client->pers.bitvalue = 0;
 	ent->client->pers.level_up_score = 0;
@@ -5638,7 +5646,14 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 
 	save_account(ent);
 
-	initialize_rpg_skills(ent);
+	if (ent->client->sess.amrpgmode == 2)
+	{
+		initialize_rpg_skills(ent);
+	}
+	else
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Account created successfully in ^2Admin-Only ^7Mode\n\"");
+	}
 }
 
 // zyk: loads Magic Master class config (selected magic powers, selected bolt type, allowed magic powers)
@@ -12122,7 +12137,7 @@ void Cmd_PlayerMode_f( gentity_t *ent ) {
 	{
 		ent->client->sess.amrpgmode = 1;
 	}
-	else
+	else if (zyk_allow_rpg_mode.integer > 0)
 	{
 		ent->client->sess.amrpgmode = 2;
 
