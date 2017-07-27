@@ -3874,11 +3874,13 @@ float CG_DrawRadar ( float y )
 				if ((cgs.gametype < GT_TEAM && !(cg.zyk_rpg_stuff[cent->currentState.number] & (1 << 2))) || 
 					(cgs.gametype >= GT_TEAM && cg.rpg_stuff & (1 << 0) && cl->team != local->team))
 				{
-					VectorCopy ( g_color_table[ColorIndex(COLOR_RED)], teamColor );
-					teamColor[3] = 1.0f;
+					VectorCopy ( g_color_table[ColorIndex(COLOR_RED)], color);
+					color[3] = 1.0f;
 				}
-
-				VectorCopy4 ( teamColor, color );
+				else
+				{
+					VectorCopy4(teamColor, color);
+				}
 
 				arrowBaseScale = 16.0f;
 				zScale = 1.0f;
