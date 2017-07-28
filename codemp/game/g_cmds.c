@@ -9461,7 +9461,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 			}
 			else if (Q_stricmp( arg1, "commands" ) == 0)
 			{
-				trap->SendServerCommand( ent-g_entities, "print \"\n^2RPG Mode commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account.\n^3/playermode: ^7switches between ^2Admin-Only Mode ^7and ^2RPG Mode^7.\n^3/up [skill number]: ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n^3/down [skill number]: ^7downgrades a skill.\n^3/resetaccount: ^7resets account stuff of the player.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [command number]: ^7gives the player an admin command.\n^3/admindown [player id or name] [command number]: ^7removes an admin command from a player.\n^3/settings: ^7turn on or off player settings.\n^3/callseller: ^7calls the jawa seller.\n^3/creditgive [player id or name] [amount]: ^7gives credits to a player.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/logout: ^7logs out the account.\n\n\"" );
+				trap->SendServerCommand( ent-g_entities, "print \"\n^2RPG Mode commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account.\n^3/playermode: ^7switches between ^2Admin-Only Mode ^7and ^2RPG Mode^7.\n^3/up [skill number]: ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n^3/down [skill number]: ^7downgrades a skill.\n^3/resetaccount: ^7resets account stuff of the player.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [command number]: ^7gives the player an admin command.\n^3/admindown [player id or name] [command number]: ^7removes an admin command from a player.\n^3/settings: ^7turn on or off player settings.\n^3/callseller: ^7calls the jawa seller.\n^3/creditgive [player id or name] [amount]: ^7gives credits to a player.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/tutorial: ^7shows all info about the mod.\n^3/logout: ^7logs out the account.\n\n\"" );
 			}
 			else if (Q_stricmp( arg1, "classes" ) == 0)
 			{
@@ -9469,7 +9469,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 			}
 			else if (Q_stricmp( arg1, "info" ) == 0)
 			{
-				trap->SendServerCommand( ent-g_entities, va("print \"\n^3%s\n\n^7To get levels in RPG Mode, defeat players or npcs. The levels also give skillpoints, which can be used to get skills. To see the list of skills and other commands, use ^3/list rpg^7. You can upgrade skills by using ^3/up <skill number>^7. Try also playing the quests, which can give you magic powers. You can see quest commands with ^3/list quests^7\n\n\"", GAMEVERSION));
+				trap->SendServerCommand( ent-g_entities, va("print \"\n^3%s\n\n^7To get levels in RPG Mode, defeat players or npcs. The levels also give skillpoints, which can be used to get skills. To see the list of skills and other commands, use ^3/list rpg^7. You can upgrade skills by using ^3/up <skill number>^7. Try also playing the quests, which can give you magic powers. You can see quest commands with ^3/list quests^7. Also, use ^3/tutorial ^7to show every info you need\n\n\"", GAMEVERSION));
 			}
 			else if (Q_stricmp( arg1, "stuff" ) == 0)
 			{
@@ -9667,7 +9667,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 	}
 	else if (ent->client->sess.amrpgmode == 1)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"\n^2Admin-Only Mode commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account of the player.\n^3/playermode: ^7switches between the ^2Admin-Only Mode ^7and the ^2RPG Mode^7.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [admin command number]: ^7gives the player a new admin command.\n^3/admindown [player id or name] [admin command number]: ^7removes an admin command from the player.\n^3/settings: ^7turn on or off player settings.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/logout: ^7logs out the account.\n\n\"" );
+		trap->SendServerCommand( ent-g_entities, "print \"\n^2Admin-Only Mode commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account of the player.\n^3/playermode: ^7switches between the ^2Admin-Only Mode ^7and the ^2RPG Mode^7.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [admin command number]: ^7gives the player a new admin command.\n^3/admindown [player id or name] [admin command number]: ^7removes an admin command from the player.\n^3/settings: ^7turn on or off player settings.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/tutorial: ^7shows all info about the mod.\n^3/logout: ^7logs out the account.\n\n\"" );
 	}
 	else
 	{

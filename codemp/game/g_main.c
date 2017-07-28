@@ -10188,73 +10188,77 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (ent->client->pers.tutorial_step == 23)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7To see info about skills, use ^2/list <skillnumber>\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7With Magic Master class, you can enable or disable magic powers with ^2/magic^7\"");
 				}
 				else if (ent->client->pers.tutorial_step == 24)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Each class has unique abilities, which can be bought as upgrades from the jawa seller\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7To see info about skills, use ^2/list <skillnumber>\"");
 				}
 				else if (ent->client->pers.tutorial_step == 25)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7You cannot have all three of them, only one, so choose wisely!\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Each class has unique abilities, which can be bought as upgrades from the jawa seller\"");
 				}
 				else if (ent->client->pers.tutorial_step == 26)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7To use it, bind the command ^2/unique ^7to a key and press it. Example: ^2/bind h unique^7\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7You cannot have all three of them, only one, so choose wisely!\"");
 				}
 				else if (ent->client->pers.tutorial_step == 27)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7You can add allies with ^2/allyadd <player name or ID>^7. He will not take any damage from you\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7To use it, bind the command ^2/unique ^7to a key and press it. Example: ^2/bind h unique^7\"");
 				}
 				else if (ent->client->pers.tutorial_step == 28)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Allies can also help you during quest boss battles. They can heal you and damage the boss too\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7You can add allies with ^2/allyadd <player name or ID>^7. He will not take any damage from you\"");
 				}
 				else if (ent->client->pers.tutorial_step == 29)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/allylist ^7to see your allies and who added you as ally\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Allies can also help you during quest boss battles. They can heal you and damage the boss too\"");
 				}
 				else if (ent->client->pers.tutorial_step == 30)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/allyremove <player name or ID>^7 to remove an ally\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/allylist ^7to see your allies and who added you as ally\"");
 				}
 				else if (ent->client->pers.tutorial_step == 31)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7There are four mini-games: Duel Tournament, Racing Mode (allows RPG players), Sniper Battle and Melee Battle\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/allyremove <player name or ID>^7 to remove an ally\"");
 				}
 				else if (ent->client->pers.tutorial_step == 32)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/racemode ^7to join a race. It can only be done in some maps\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7There are four mini-games: Duel Tournament, Racing Mode (allows RPG players), Sniper Battle and Melee Battle\"");
 				}
 				else if (ent->client->pers.tutorial_step == 33)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/snipermode ^7to join Sniper Battle. Use ^2/snipertable ^7to see the players still in it\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/racemode ^7to join a race. It can only be done in some maps\"");
 				}
 				else if (ent->client->pers.tutorial_step == 34)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/meleemode ^7to join Melee Battle\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/snipermode ^7to join Sniper Battle. Use ^2/snipertable ^7to see the players still in it\"");
 				}
 				else if (ent->client->pers.tutorial_step == 35)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/duelmode ^7to join Duel Tournament. Use ^2/dueltable <pagenumber> ^7to see the scores and matches\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/meleemode ^7to join Melee Battle\"");
 				}
 				else if (ent->client->pers.tutorial_step == 36)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7All these mini-games give prizes! :)\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/duelmode ^7to join Duel Tournament. Use ^2/dueltable <pagenumber> ^7to see the scores and matches\"");
 				}
 				else if (ent->client->pers.tutorial_step == 37)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/settings ^7to change account settings\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7All these mini-games give prizes! :)\"");
 				}
 				else if (ent->client->pers.tutorial_step == 38)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/playermode ^7to change account mode between Admin-Only and RPG\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/settings ^7to change account settings\"");
 				}
 				else if (ent->client->pers.tutorial_step == 39)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7In Admin-Only you are a normal player, but you can use admin commands (if you have any) and ^2/settings^7\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/playermode ^7to change account mode between Admin-Only and RPG\"");
 				}
 				else if (ent->client->pers.tutorial_step == 40)
+				{
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7In Admin-Only you are a normal player, but you can use admin commands (if you have any) and ^2/settings^7\"");
+				}
+				else if (ent->client->pers.tutorial_step == 41)
 				{
 					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Enjoy the mod! :)\"");
 
