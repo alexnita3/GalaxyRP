@@ -13867,7 +13867,7 @@ void Cmd_EntList_f( gentity_t *ent ) {
 			if (i >= ((page_number - 1) * 10) && i < (page_number * 10))
 			{ // zyk: this command lists 10 entities per page
 				target_ent = &g_entities[i];
-				sprintf(message,"%s\n%d - %s - %s - %s",message,(target_ent-g_entities),target_ent->classname,target_ent->targetname,target_ent->target);
+				sprintf(message,"%s\n%d - %s - %s - %s",message,i,target_ent->classname,target_ent->targetname,target_ent->target);
 			}
 		}
 	}
