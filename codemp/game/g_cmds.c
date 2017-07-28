@@ -237,6 +237,12 @@ void Cmd_Emote_f( gentity_t *ent )
 		return;
 	}
 
+	if (zyk_allow_emotes.integer != 1 && ent->client->ps.duelInProgress == qtrue)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Cannot use emotes in private duel\n\"");
+		return;
+	}
+
 	if ( trap->Argc () < 2 ) {
 		trap->SendServerCommand( ent-g_entities, va("print \"Usage: emote <anim id between 0 and %d>\n\"",MAX_ANIMATIONS-1) );
 		return;
