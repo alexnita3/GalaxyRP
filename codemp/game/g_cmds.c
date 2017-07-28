@@ -9165,7 +9165,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 
 			strcpy(rpg_class,zyk_rpg_class(ent));
 
-			trap->SendServerCommand(ent-g_entities, va("print \"\n^2Account: ^7%s\n\n^3Level: ^7%d/%d\n^3Level Up Score: ^7%d/%d\n^3Skill Points: ^7%d\n^3Skill Counter: ^7%d/%d\n^3Magic Power: ^7%d/%d\n^3Credits: ^7%d\n^3RPG Class: ^7%s\n\n^7Use ^2/list rpg ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->pers.level, MAX_RPG_LEVEL, ent->client->pers.level_up_score, ent->client->pers.level, ent->client->pers.skillpoints, ent->client->pers.skill_counter, zyk_max_skill_counter.integer, ent->client->pers.magic_power, zyk_max_magic_power(ent), ent->client->pers.credits, rpg_class));
+			trap->SendServerCommand(ent-g_entities, va("print \"\n^2Account: ^7%s\n\n^3Level: ^7%d/%d\n^3Level Up Score: ^7%d/%d\n^3Skill Points: ^7%d\n^3Skill Counter: ^7%d/%d\n^3Magic Points: ^7%d/%d\n^3Credits: ^7%d\n^3RPG Class: ^7%s\n\n^7Use ^2/list rpg ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->pers.level, MAX_RPG_LEVEL, ent->client->pers.level_up_score, ent->client->pers.level, ent->client->pers.skillpoints, ent->client->pers.skill_counter, zyk_max_skill_counter.integer, ent->client->pers.magic_power, zyk_max_magic_power(ent), ent->client->pers.credits, rpg_class));
 		}
 		else if (trap->Argc() == 2)
 		{
@@ -17012,7 +17012,7 @@ command_t commands[] = {
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
 	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "skip",				Cmd_Skip_f,					CMD_RPG | CMD_NOINTERMISSION },
+	{ "skip",				Cmd_Skip_f,					CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "snipermode",			Cmd_SniperMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "snipertable",		Cmd_SniperTable_f,			CMD_NOINTERMISSION },
 	{ "stuff",				Cmd_Stuff_f,				CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
@@ -17023,7 +17023,7 @@ command_t commands[] = {
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
 	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "tutorial",			Cmd_Tutorial_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "up",					Cmd_UpSkill_f,				CMD_RPG|CMD_NOINTERMISSION },
