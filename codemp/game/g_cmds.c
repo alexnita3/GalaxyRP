@@ -11251,7 +11251,7 @@ Cmd_AllyAdd_f
 void Cmd_AllyAdd_f( gentity_t *ent ) {
 	if (trap->Argc() == 1)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"Use ^3/allyadd <player name or id> ^7to add an ally.\n\"") );
+		trap->SendServerCommand(ent->s.number, va("print \"Use ^3/allyadd <player name or id> ^7to add an ally.\n\"") );
 	}
 	else
 	{
@@ -11260,8 +11260,13 @@ void Cmd_AllyAdd_f( gentity_t *ent ) {
 
 		if (ent->client->sess.amrpgmode == 2 && ent->client->pers.guardian_mode > 0)
 		{
-			trap->SendServerCommand( ent-g_entities, va("print \"You cannot add allies during a boss battle.\n\"") );
+			trap->SendServerCommand(ent->s.number, va("print \"You cannot add allies during a boss battle.\n\"") );
 			return;
+		}
+
+		if (level.duel_tournament_mode > 0 && level.duel_players[ent->s.number] != -1)
+		{ // zyk: cant add allies while in Duel Tournament
+			trap->SendServerCommand(ent->s.number, va("print \"You cannot add allies while in a Duel Tournament.\n\""));
 		}
 
 		trap->Argv(1, arg1, sizeof( arg1 ));
@@ -11274,13 +11279,13 @@ void Cmd_AllyAdd_f( gentity_t *ent ) {
 
 		if (client_id == (ent-g_entities))
 		{ // zyk: player cant add himself as ally
-			trap->SendServerCommand( ent-g_entities, va("print \"You cannot add yourself as ally\n\"") );
+			trap->SendServerCommand(ent->s.number, va("print \"You cannot add yourself as ally\n\"") );
 			return; 
 		}
 
 		if (zyk_is_ally(ent,&g_entities[client_id]) == qtrue)
 		{
-			trap->SendServerCommand( ent-g_entities, va("print \"You already have this ally.\n\"") );
+			trap->SendServerCommand(ent->s.number, va("print \"You already have this ally.\n\"") );
 			return;
 		}
 
@@ -11297,7 +11302,7 @@ void Cmd_AllyAdd_f( gentity_t *ent ) {
 		// zyk: sending event to update radar at client-side
 		G_AddEvent(ent, EV_USE_ITEM14, client_id);
 
-		trap->SendServerCommand( ent-g_entities, va("print \"Added ally %s^7\n\"", g_entities[client_id].client->pers.netname) );
+		trap->SendServerCommand(ent->s.number, va("print \"Added ally %s^7\n\"", g_entities[client_id].client->pers.netname) );
 		trap->SendServerCommand( client_id, va("print \"%s^7 added you as ally\n\"", ent->client->pers.netname) );
 	}
 }
@@ -16333,6 +16338,10 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 			level.duel_players_hp[ent->s.number] = 0;
 			
 			level.duelists_quantity++;
+
+			// zyk: removing allies from this player
+			ent->client->sess.ally1 = 0;
+			ent->client->sess.ally2 = 0;
 
 			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
 		}
