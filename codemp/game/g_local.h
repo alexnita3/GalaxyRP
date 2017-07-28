@@ -675,6 +675,7 @@ typedef struct clientPersistant_s {
 	// 22 - Unique Ability 2
 	// 23 - Unique Ability 3
 	// 24 - hit by Ice Bomb
+	// 25 - RPG Mode tutorial
 	int player_statuses;
 
 	// zyk: amount of times player must be hit by poison
@@ -821,7 +822,10 @@ typedef struct clientPersistant_s {
 	int credits_modifier; // zyk: sets the amount of extra credits a player can get by killing rpg players or some npcs
 	int credits; // zyk: the amount of credits (RPG Mode currency) this player has now
 
-	int print_products_timer; // zyk: used to prevent the spam of chat messages of the seller in console
+	int seller_timer; // zyk: used to prevent the spam of chat messages of the seller in console
+
+	int tutorial_step; // zyk: sets the current tutorial step, to display the correct message to hthe player
+	int tutorial_timer; // zyk: used by the tutorial to set the interval between messages
 
 	// zyk: Race Mode. Sets the initial position of this racer which is calculated in racemode command. Default 0. If greater than 0, player joined a race
 	int race_position;

@@ -5289,7 +5289,7 @@ void initialize_rpg_skills(gentity_t *ent)
 
 		ent->client->pers.magic_power = zyk_max_magic_power(ent);
 
-		ent->client->pers.print_products_timer = 0;
+		ent->client->pers.seller_timer = 0;
 
 		ent->client->pers.monk_unique_timer = 0;
 
@@ -5649,6 +5649,11 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 	if (ent->client->sess.amrpgmode == 2)
 	{
 		initialize_rpg_skills(ent);
+
+		// zyk: starting the tutorial, to help players use the RPG Mode features
+		ent->client->pers.tutorial_step = 0;
+		ent->client->pers.tutorial_timer = 0;
+		ent->client->pers.player_statuses |= (1 << 25);
 	}
 	else
 	{
@@ -9456,7 +9461,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 			}
 			else if (Q_stricmp( arg1, "commands" ) == 0)
 			{
-				trap->SendServerCommand( ent-g_entities, "print \"\n^2RPG Mode commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account.\n^3/playermode: ^7switches between ^2Admin-Only Mode ^7and ^2RPG Mode^7.\n^3/up [skill number]: ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n^3/down [skill number]: ^7downgrades a skill.\n^3/resetaccount: ^7resets account stuff of the player.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [command number]: ^7gives the player an admin command.\n^3/admindown [player id or name] [command number]: ^7removes an admin command from a player.\n^3/settings: ^7turn on or off player settings.\n^3/callseller: ^7calls the jawa seller.\n^3/creditgive [player id or name] [amount]: ^7gives credits to a player.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/entitysystem: ^7shows Entity System commands.\n^3/logout: ^7logs out the account.\n\n\"" );
+				trap->SendServerCommand( ent-g_entities, "print \"\n^2RPG Mode commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account.\n^3/playermode: ^7switches between ^2Admin-Only Mode ^7and ^2RPG Mode^7.\n^3/up [skill number]: ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n^3/down [skill number]: ^7downgrades a skill.\n^3/resetaccount: ^7resets account stuff of the player.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [command number]: ^7gives the player an admin command.\n^3/admindown [player id or name] [command number]: ^7removes an admin command from a player.\n^3/settings: ^7turn on or off player settings.\n^3/callseller: ^7calls the jawa seller.\n^3/creditgive [player id or name] [amount]: ^7gives credits to a player.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/logout: ^7logs out the account.\n\n\"" );
 			}
 			else if (Q_stricmp( arg1, "classes" ) == 0)
 			{
@@ -9662,7 +9667,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 	}
 	else if (ent->client->sess.amrpgmode == 1)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"\n^2Admin-Only Mode commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account of the player.\n^3/playermode: ^7switches between the ^2Admin-Only Mode ^7and the ^2RPG Mode^7.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [admin command number]: ^7gives the player a new admin command.\n^3/admindown [player id or name] [admin command number]: ^7removes an admin command from the player.\n^3/settings: ^7turn on or off player settings.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/entitysystem: ^7shows Entity System commands.\n^3/logout: ^7logs out the account.\n\n\"" );
+		trap->SendServerCommand( ent-g_entities, "print \"\n^2Admin-Only Mode commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account of the player.\n^3/playermode: ^7switches between the ^2Admin-Only Mode ^7and the ^2RPG Mode^7.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [admin command number]: ^7gives the player a new admin command.\n^3/admindown [player id or name] [admin command number]: ^7removes an admin command from the player.\n^3/settings: ^7turn on or off player settings.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/logout: ^7logs out the account.\n\n\"" );
 	}
 	else
 	{
@@ -16857,6 +16862,27 @@ void Cmd_MeleeArena_f(gentity_t *ent) {
 }
 
 /*
+==================
+Cmd_Tutorial_f
+==================
+*/
+void Cmd_Tutorial_f(gentity_t *ent) {
+	ent->client->pers.tutorial_step = 0;
+	ent->client->pers.tutorial_timer = 0;
+	ent->client->pers.player_statuses |= (1 << 25);
+}
+
+/*
+==================
+Cmd_Skip_f
+==================
+*/
+void Cmd_Skip_f(gentity_t *ent) {
+	ent->client->pers.player_statuses &= ~(1 << 25);
+	trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Skipped\"");
+}
+
+/*
 =================
 ClientCommand
 =================
@@ -16977,6 +17003,7 @@ command_t commands[] = {
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
 	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "skip",				Cmd_Skip_f,					CMD_RPG | CMD_NOINTERMISSION },
 	{ "snipermode",			Cmd_SniperMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "snipertable",		Cmd_SniperTable_f,			CMD_NOINTERMISSION },
 	{ "stuff",				Cmd_Stuff_f,				CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
@@ -16987,6 +17014,7 @@ command_t commands[] = {
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
 	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "tutorial",			Cmd_Tutorial_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "up",					Cmd_UpSkill_f,				CMD_RPG|CMD_NOINTERMISSION },

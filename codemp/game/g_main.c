@@ -10247,6 +10247,130 @@ void G_RunFrame( int levelTime ) {
 					}
 				}
 
+				// zyk: tutorial, which teaches the player the RPG Mode features
+				if (ent->client->pers.player_statuses & (1 << 25) && ent->client->pers.tutorial_timer < level.time)
+				{
+					if (ent->client->pers.tutorial_step == 0)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Welcome to the RPG Mode tutorial! :)\"");
+					}
+					else if (ent->client->pers.tutorial_step == 1)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7You can skip it by using ^2/skip ^7command or play it again by using ^2/tutorial^7\"");
+					}
+					else if (ent->client->pers.tutorial_step == 2)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7At first, you will see you have nothing: no force, no weapons, no holdable items, no magic\"");
+					}
+					else if (ent->client->pers.tutorial_step == 3)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7You must defeat players or enemy npcs to get levels\"");
+					}
+					else if (ent->client->pers.tutorial_step == 4)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Defeating them will increase your max HP, shield, mp (magic) and will give you skillpoints\"");
+					}
+					else if (ent->client->pers.tutorial_step == 5)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7You can use skillpoints to get force, force powers, weapons, holdable items, and more!\"");
+					}
+					else if (ent->client->pers.tutorial_step == 6)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7To do so, first use ^2/list^7. This command will show general info about you\"");
+					}
+					else if (ent->client->pers.tutorial_step == 7)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Now, use ^2/list rpg ^7to see other commands you can use. The five first commands show your skills\"");
+					}
+					else if (ent->client->pers.tutorial_step == 8)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7To upgrade a skill (which uses a skillpoint), use ^2/up <skillnumber>^7. Example: /up 31\"");
+					}
+					else if (ent->client->pers.tutorial_step == 9)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7That command will upgrade the max shield you can have, and use a skillpoint\"");
+					}
+					else if (ent->client->pers.tutorial_step == 10)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7The skill 56 - Improvements (found in ^2/list other^7) has different features for each RPG class\"");
+					}
+					else if (ent->client->pers.tutorial_step == 11)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7To change your RPG class, first use ^2/list classes^7, then choose a class by using ^2/rpgclass <classnumber>\"");
+					}
+					else if (ent->client->pers.tutorial_step == 12)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Each class has strengths and weaknesses, and the class change costs 20 credits\"");
+					}
+					else if (ent->client->pers.tutorial_step == 13)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7To buy or sell weapons, ammo, items and upgrades, first call the jawa seller with ^2/callseller^7\"");
+					}
+					else if (ent->client->pers.tutorial_step == 14)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Press the Use key to talk to him, he will say what you have to do! :)\"");
+					}
+					else if (ent->client->pers.tutorial_step == 15)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Weapons, ammo and items bought from the seller are not permanent, but upgrades are! :D\"");
+					}
+					else if (ent->client->pers.tutorial_step == 16)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7You can get credits to buy stuff by defeating players or enemy npcs, or by selling stuff\"");
+					}
+					else if (ent->client->pers.tutorial_step == 17)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Players can give credits to other players by using ^2/creditgive <player name or ID> <amount>^7\"");
+					}
+					else if (ent->client->pers.tutorial_step == 18)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7As you can see in ^2/list^7, you can have Magic! Magic powers are learned by playing quests\"");
+					}
+					else if (ent->client->pers.tutorial_step == 19)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Magic powers consume MP (magic points), so keep an eye in the current amount you have\"");
+					}
+					else if (ent->client->pers.tutorial_step == 20)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7To play quests, use ^2/list quests ^7and use the command for the specific quest you want to play\"");
+					}
+					else if (ent->client->pers.tutorial_step == 21)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Quests are played in specific maps. To see which ones, use ^2/maplist ^7\"");
+					}
+					else if (ent->client->pers.tutorial_step == 22)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7To use magic powers, use the movement keys (usually W, A, S, D) and melee kata (usually pressing both mouse buttons)\"");
+					}
+					else if (ent->client->pers.tutorial_step == 23)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7To see info about skills, use ^2/list <skillnumber>\"");
+					}
+					else if (ent->client->pers.tutorial_step == 24)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Each class have unique abilities, which can be bought as upgrades from the jawa seller\"");
+					}
+					else if (ent->client->pers.tutorial_step == 25)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7You cannot have all three of them, only one, so choose wisely!\"");
+					}
+					else if (ent->client->pers.tutorial_step == 26)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7To use it, bind the command ^2/unique ^7to a key and press it. Example: ^2/bind h unique^7\"");
+					}
+					else if (ent->client->pers.tutorial_step == 27)
+					{
+						trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Enjoy the mod! :)\"");
+
+						// zyk: last message. Ends the tutorial
+						ent->client->pers.player_statuses &= ~(1 << 25);
+					}
+
+					// zyk: interval between messages
+					ent->client->pers.tutorial_step++;
+					ent->client->pers.tutorial_timer = level.time + 5000;
+				}
+
 				if (level.quest_map > 0 && ent->client->ps.duelInProgress == qfalse && ent->health > 0)
 				{ // zyk: control the quest events which happen in the quest maps, if player can play quests now, is alive and is not in a private duel
 					// zyk: fixing exploit in boss battles. If player is in a vehicle, kill the player

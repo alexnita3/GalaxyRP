@@ -1745,10 +1745,10 @@ void TryUse( gentity_t *ent )
 		}
 	}
 
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.print_products_timer < level.time && target && target->client && target->NPC && target->health > 0 && Q_stricmp( target->NPC_type, "jawa_seller" ) == 0)
+	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.seller_timer < level.time && target && target->client && target->NPC && target->health > 0 && Q_stricmp( target->NPC_type, "jawa_seller" ) == 0)
 	{ // zyk: player talked to jawa_seller
 		trap->SendServerCommand( ent-g_entities, va("chat \"^3Jawa Seller: ^7%s^7, use the ^3/stuff ^7command to see stuff to buy or sell! :)\"", ent->client->pers.netname));
-		ent->client->pers.print_products_timer = level.time + 1000;
+		ent->client->pers.seller_timer = level.time + 1000;
 		return;
 	}
 	else if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) &&
