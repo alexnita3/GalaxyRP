@@ -16898,6 +16898,79 @@ void Cmd_Skip_f(gentity_t *ent) {
 }
 
 /*
+==================
+Cmd_DuelBoard_f
+==================
+*/
+void Cmd_DuelBoard_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+	int page = 1; // zyk: page the user wants to see
+	char file_content[MAX_STRING_CHARS];
+	char content[64];
+	int i = 0;
+	int results_per_page = zyk_list_cmds_results_per_page.integer; // zyk: number of results per page
+	FILE *leaderboard_file;
+
+	if (trap->Argc() < 2)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Use ^3/duelboard <page number> ^7to see the Duel Tournament Leaderboard, which shows the winners and their number of tournaments won\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	if (level.duel_leaderboard_step > 0)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Leaderboard is being generated. Please wait some seconds\n\"");
+		return;
+	}
+
+	strcpy(file_content, "");
+	strcpy(content, "");
+
+	page = atoi(arg1);
+
+	if (page == 0)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Invalid page number\n\"");
+		return;
+	}
+
+	leaderboard_file = fopen("leaderboard.txt", "r");
+	if (leaderboard_file != NULL)
+	{
+		while (i < (results_per_page * (page - 1)))
+		{ // zyk: reads the file until it reaches the position corresponding to the page number
+			fscanf(leaderboard_file, "%s", content);
+			fscanf(leaderboard_file, "%s", content);
+			fscanf(leaderboard_file, "%s", content);
+			i++;
+		}
+
+		while (i < (results_per_page * page) && fscanf(leaderboard_file, "%s", content) != EOF)
+		{
+			// zyk: player name
+			fscanf(leaderboard_file, "%s", content);
+			strcpy(file_content, va("%s%s     ", file_content, content));
+
+			// zyk: number of tournaments won
+			fscanf(leaderboard_file, "%s", content);
+			strcpy(file_content, va("%s^3%s^7\n", file_content, content));
+
+			i++;
+		}
+
+		fclose(leaderboard_file);
+		trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\"", file_content));
+	}
+	else
+	{
+		trap->SendServerCommand(ent->s.number, "print \"No leaderboard yet\n\"");
+		return;
+	}
+}
+
+/*
 =================
 ClientCommand
 =================
@@ -16948,6 +17021,7 @@ command_t commands[] = {
 	{ "down",				Cmd_DownSkill_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "drop",				Cmd_Drop_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "duelarena",			Cmd_DuelArena_f,			CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "duelboard",			Cmd_DuelBoard_f,			CMD_NOINTERMISSION },
 	{ "duelmode",			Cmd_DuelMode_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "duelpause",			Cmd_DuelPause_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "dueltable",			Cmd_DuelTable_f,			CMD_NOINTERMISSION },

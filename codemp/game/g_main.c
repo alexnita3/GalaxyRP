@@ -705,6 +705,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	level.duelist_2_id = -1;
 	level.duel_tournament_model_id = -1;
 	level.duel_arena_loaded = qfalse;
+	level.duel_leaderboard_step = 0;
 
 	// zyk: initializing Sniper Battle variables
 	level.sniper_mode = 0;
@@ -7316,6 +7317,15 @@ void duel_tournament_winner()
 		ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
 		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN) | (1 << HI_SEEKER) | (1 << HI_MEDPAC_BIG);
 
+		// zyk: calculating the new leaderboard if this winner is logged in his account
+		if (ent->client->sess.amrpgmode > 0)
+		{
+			level.duel_leaderboard_timer = level.time + 500;
+			strcpy(level.duel_leaderboard_acc, ent->client->sess.filename);
+			strcpy(level.duel_leaderboard_name, ent->client->pers.netname);
+			level.duel_leaderboard_step = 1;
+		}
+		
 		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
 
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Winner is: %s^7\"", ent->client->pers.netname));
@@ -8034,6 +8044,170 @@ void G_RunFrame( int levelTime ) {
 				duel_tournament_end();
 				trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Not enough duelists. Tournament is over!\"");
 			}
+		}
+	}
+
+	// zyk: Duel Tournament Leaderboard is calculated here
+	if (level.duel_leaderboard_step > 0 && level.duel_leaderboard_timer < level.time)
+	{
+		if (level.duel_leaderboard_step == 1)
+		{
+			FILE *leaderboard_file = fopen("leaderboard.txt", "r");
+
+			if (leaderboard_file != NULL)
+			{ 
+				char content[64];
+				qboolean found_acc = qfalse;
+				int j = 0;
+
+				strcpy(content, "");
+
+				while (found_acc == qfalse && fscanf(leaderboard_file, "%s", content) != EOF)
+				{
+					if (Q_stricmp(G_NewString(content), G_NewString(level.duel_leaderboard_acc)) == 0)
+					{
+						found_acc = qtrue;
+						fscanf(leaderboard_file, "%s", content); // zyk: reads player name
+						fscanf(leaderboard_file, "%s", content); // zyk: reads score
+
+						level.duel_leaderboard_score = atoi(content) + 1; // zyk: sets the new number of tourmanemt victories of this winner
+						level.duel_leaderboard_step = 3;
+						level.duel_leaderboard_timer = level.time + 500;
+						level.duel_leaderboard_index = j; // zyk: current line in the file where this winner is
+					}
+					else
+					{
+						fscanf(leaderboard_file, "%s", content); // zyk: reads player name
+						fscanf(leaderboard_file, "%s", content); // zyk: reads score
+					}
+
+					j++;
+				}
+
+				fclose(leaderboard_file);
+
+				if (found_acc == qfalse)
+				{ // zyk: did not find the player, saves him at the end of the file
+					level.duel_leaderboard_step = 2;
+					level.duel_leaderboard_timer = level.time + 500;
+				}
+			}
+			else
+			{ // zyk: if file does not exist, create it with this player in it
+				level.duel_leaderboard_step = 2;
+				level.duel_leaderboard_timer = level.time + 500;
+			}
+		}
+		else if (level.duel_leaderboard_step == 2)
+		{ // zyk: add the player to the end of the file with 1 tournament win
+			FILE *leaderboard_file = fopen("leaderboard.txt", "a");
+			fprintf(leaderboard_file, "%s\n%s\n1\n", level.duel_leaderboard_acc, level.duel_leaderboard_name);
+			fclose(leaderboard_file);
+
+			level.duel_leaderboard_step = 0; // zyk: stop creating the leaderboard
+		}
+		else if (level.duel_leaderboard_step == 3)
+		{ // zyk: determines the line where this winner must be put in the file
+			if (level.duel_leaderboard_index == 0)
+			{ // zyk: already the first place, go straight to next step
+				level.duel_leaderboard_step = 4;
+				level.duel_leaderboard_timer = level.time + 500;
+			}
+			else
+			{
+				int j = 0;
+				int this_score = 0;
+				char content[64];				
+				FILE *leaderboard_file = fopen("leaderboard.txt", "r");
+
+				strcpy(content, "");
+
+				for (j = 0; j < level.duel_leaderboard_index; j++)
+				{
+					fscanf(leaderboard_file, "%s", content); // zyk: acc name
+					fscanf(leaderboard_file, "%s", content); // zyk: player name
+					fscanf(leaderboard_file, "%s", content); // zyk: score
+
+					this_score = atoi(content);
+					if (level.duel_leaderboard_score > this_score)
+					{ // zyk: winner score is greater than this one, this will be the new index
+						level.duel_leaderboard_index = j;
+						break;
+					}
+				}
+
+				fclose(leaderboard_file);
+
+				level.duel_leaderboard_step = 4;
+				level.duel_leaderboard_timer = level.time + 500;
+			}
+		}
+		else if (level.duel_leaderboard_step == 4)
+		{ // zyk: saving the new leaderboard file with the updated score of the winner
+			FILE *leaderboard_file = fopen("leaderboard.txt", "r");
+			FILE *new_leaderboard_file = fopen("new_leaderboard.txt", "w");
+			int j = 0;
+			char content[64];
+			qboolean found = qfalse;
+
+			strcpy(content, "");
+
+			// zyk: saving players before the winner
+			for (j = 0; j < level.duel_leaderboard_index; j++)
+			{
+				// zyk: saving acc name
+				fscanf(leaderboard_file, "%s", content);
+				fprintf(new_leaderboard_file, "%s\n", content);
+
+				// zyk: saving player name
+				fscanf(leaderboard_file, "%s", content);
+				fprintf(new_leaderboard_file, "%s\n", content);
+
+				// zyk: saving score
+				fscanf(leaderboard_file, "%s", content);
+				fprintf(new_leaderboard_file, "%s\n", content);
+			}
+
+			// zyk: saving the winner
+			fprintf(new_leaderboard_file, "%s\n%s\n%d\n", level.duel_leaderboard_acc, level.duel_leaderboard_name, level.duel_leaderboard_score);
+
+			// zyk: saving the other players, except the old line of the winner
+			while (fscanf(leaderboard_file, "%s", content) != EOF)
+			{
+				if (Q_stricmp(content, level.duel_leaderboard_acc) != 0)
+				{
+					fprintf(new_leaderboard_file, "%s\n", content);
+
+					// zyk: saving player name
+					fscanf(leaderboard_file, "%s", content);
+					fprintf(new_leaderboard_file, "%s\n", content);
+
+					// zyk: saving score
+					fscanf(leaderboard_file, "%s", content);
+					fprintf(new_leaderboard_file, "%s\n", content);
+				}
+				else
+				{
+					fscanf(leaderboard_file, "%s", content);
+					fscanf(leaderboard_file, "%s", content);
+				}
+			}
+
+			fclose(leaderboard_file);
+			fclose(new_leaderboard_file);
+
+			level.duel_leaderboard_step = 5;
+			level.duel_leaderboard_timer = level.time + 500;
+		}
+		else if (level.duel_leaderboard_step == 5)
+		{ // zyk: renaming new file to leaderboard.txt
+#if defined(__linux__)
+			system("mv -f new_leaderboard.txt leaderboard.txt");
+#else
+			system("MOVE /Y new_leaderboard.txt leaderboard.txt");
+#endif
+
+			level.duel_leaderboard_step = 0; // zyk: stop creating the leaderboard
 		}
 	}
 
@@ -10244,21 +10418,25 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (ent->client->pers.tutorial_step == 37)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7All these mini-games give prizes! :)\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/duelboard <pagenumber> ^7for the Duel Tournament leaderboard, with the champions and their number of tournaments won\"");
 				}
 				else if (ent->client->pers.tutorial_step == 38)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/settings ^7to change account settings\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7All these mini-games give prizes! :)\"");
 				}
 				else if (ent->client->pers.tutorial_step == 39)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/playermode ^7to change account mode between Admin-Only and RPG\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/settings ^7to change account settings\"");
 				}
 				else if (ent->client->pers.tutorial_step == 40)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7In Admin-Only you are a normal player, but you can use admin commands (if you have any) and ^2/settings^7\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Use ^2/playermode ^7to change account mode between Admin-Only and RPG\"");
 				}
 				else if (ent->client->pers.tutorial_step == 41)
+				{
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7In Admin-Only you are a normal player, but you can use admin commands (if you have any) and ^2/settings^7\"");
+				}
+				else if (ent->client->pers.tutorial_step == 42)
 				{
 					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Enjoy the mod! :)\"");
 

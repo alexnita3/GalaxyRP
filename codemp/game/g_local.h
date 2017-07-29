@@ -1548,6 +1548,12 @@ typedef struct level_locals_s {
 	int duel_remaining_matches; // zyk: remaining matches of this tournament. Used to randomize the duel match choosing
 	int duel_matches_quantity; // zyk: quantity of matches in this tournament
 	int duel_matches_done; // zyk: how many matches were already done
+	int duel_leaderboard_step; // zyk: used to calculate the leaderboard position of the current duel tournament winner
+	int duel_leaderboard_timer; // zyk: timer used when calculating the leaderboard
+	int duel_leaderboard_score; // zyk: number of tournaments won by the current winner
+	char duel_leaderboard_acc[32]; // zyk: account of the current winner
+	char duel_leaderboard_name[36]; // zyk: current name of the current winner
+	int duel_leaderboard_index; // zyk: index of the line in the leaderboard file in which the current winner must be inserted (winners are sorted by the number of tournament wins in the file)
 
 	// zyk: Sniper Battle
 	int sniper_mode; // zyk: Default 0. Sets 1 when someone joins, and 2 after battle begins
