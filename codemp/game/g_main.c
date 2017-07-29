@@ -10446,7 +10446,7 @@ void G_RunFrame( int levelTime ) {
 
 				// zyk: interval between messages
 				ent->client->pers.tutorial_step++;
-				ent->client->pers.tutorial_timer = level.time + 5000;
+				ent->client->pers.tutorial_timer = level.time + 6000;
 			}
 
 			if (ent->client->sess.amrpgmode == 2 && ent->client->sess.sessionTeam != TEAM_SPECTATOR)
