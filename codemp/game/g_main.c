@@ -8062,13 +8062,24 @@ void G_RunFrame( int levelTime ) {
 
 				strcpy(content, "");
 
-				while (found_acc == qfalse && fscanf(leaderboard_file, "%s", content) != EOF)
+				while (found_acc == qfalse && fgets(content, sizeof(content), leaderboard_file) != NULL)
 				{
+					if (content[strlen(content) - 1] == '\n')
+						content[strlen(content) - 1] = '\0';
+
 					if (Q_stricmp(G_NewString(content), G_NewString(level.duel_leaderboard_acc)) == 0)
 					{
 						found_acc = qtrue;
-						fscanf(leaderboard_file, "%s", content); // zyk: reads player name
-						fscanf(leaderboard_file, "%s", content); // zyk: reads score
+
+						// zyk: reads player name
+						fgets(content, sizeof(content), leaderboard_file);
+						if (content[strlen(content) - 1] == '\n')
+							content[strlen(content) - 1] = '\0';
+
+						// zyk: reads score
+						fgets(content, sizeof(content), leaderboard_file);
+						if (content[strlen(content) - 1] == '\n')
+							content[strlen(content) - 1] = '\0';
 
 						level.duel_leaderboard_score = atoi(content) + 1; // zyk: sets the new number of tourmanemt victories of this winner
 						level.duel_leaderboard_step = 3;
@@ -8077,8 +8088,15 @@ void G_RunFrame( int levelTime ) {
 					}
 					else
 					{
-						fscanf(leaderboard_file, "%s", content); // zyk: reads player name
-						fscanf(leaderboard_file, "%s", content); // zyk: reads score
+						// zyk: reads player name
+						fgets(content, sizeof(content), leaderboard_file);
+						if (content[strlen(content) - 1] == '\n')
+							content[strlen(content) - 1] = '\0';
+
+						// zyk: reads score
+						fgets(content, sizeof(content), leaderboard_file);
+						if (content[strlen(content) - 1] == '\n')
+							content[strlen(content) - 1] = '\0';
 					}
 
 					j++;
@@ -8124,9 +8142,20 @@ void G_RunFrame( int levelTime ) {
 
 				for (j = 0; j < level.duel_leaderboard_index; j++)
 				{
-					fscanf(leaderboard_file, "%s", content); // zyk: acc name
-					fscanf(leaderboard_file, "%s", content); // zyk: player name
-					fscanf(leaderboard_file, "%s", content); // zyk: score
+					// zyk: reads acc name
+					fgets(content, sizeof(content), leaderboard_file);
+					if (content[strlen(content) - 1] == '\n')
+						content[strlen(content) - 1] = '\0';
+
+					// zyk: reads player name
+					fgets(content, sizeof(content), leaderboard_file);
+					if (content[strlen(content) - 1] == '\n')
+						content[strlen(content) - 1] = '\0';
+
+					// zyk: reads score
+					fgets(content, sizeof(content), leaderboard_file);
+					if (content[strlen(content) - 1] == '\n')
+						content[strlen(content) - 1] = '\0';
 
 					this_score = atoi(content);
 					if (level.duel_leaderboard_score > this_score)
@@ -8148,7 +8177,6 @@ void G_RunFrame( int levelTime ) {
 			FILE *new_leaderboard_file = fopen("new_leaderboard.txt", "w");
 			int j = 0;
 			char content[64];
-			qboolean found = qfalse;
 
 			strcpy(content, "");
 
@@ -8156,15 +8184,21 @@ void G_RunFrame( int levelTime ) {
 			for (j = 0; j < level.duel_leaderboard_index; j++)
 			{
 				// zyk: saving acc name
-				fscanf(leaderboard_file, "%s", content);
+				fgets(content, sizeof(content), leaderboard_file);
+				if (content[strlen(content) - 1] == '\n')
+					content[strlen(content) - 1] = '\0';
 				fprintf(new_leaderboard_file, "%s\n", content);
 
 				// zyk: saving player name
-				fscanf(leaderboard_file, "%s", content);
+				fgets(content, sizeof(content), leaderboard_file);
+				if (content[strlen(content) - 1] == '\n')
+					content[strlen(content) - 1] = '\0';
 				fprintf(new_leaderboard_file, "%s\n", content);
 
 				// zyk: saving score
-				fscanf(leaderboard_file, "%s", content);
+				fgets(content, sizeof(content), leaderboard_file);
+				if (content[strlen(content) - 1] == '\n')
+					content[strlen(content) - 1] = '\0';
 				fprintf(new_leaderboard_file, "%s\n", content);
 			}
 
@@ -8172,24 +8206,36 @@ void G_RunFrame( int levelTime ) {
 			fprintf(new_leaderboard_file, "%s\n%s\n%d\n", level.duel_leaderboard_acc, level.duel_leaderboard_name, level.duel_leaderboard_score);
 
 			// zyk: saving the other players, except the old line of the winner
-			while (fscanf(leaderboard_file, "%s", content) != EOF)
+			while (fgets(content, sizeof(content), leaderboard_file) != NULL)
 			{
+				if (content[strlen(content) - 1] == '\n')
+					content[strlen(content) - 1] = '\0';
+
 				if (Q_stricmp(content, level.duel_leaderboard_acc) != 0)
 				{
 					fprintf(new_leaderboard_file, "%s\n", content);
 
 					// zyk: saving player name
-					fscanf(leaderboard_file, "%s", content);
+					fgets(content, sizeof(content), leaderboard_file);
+					if (content[strlen(content) - 1] == '\n')
+						content[strlen(content) - 1] = '\0';
 					fprintf(new_leaderboard_file, "%s\n", content);
 
 					// zyk: saving score
-					fscanf(leaderboard_file, "%s", content);
+					fgets(content, sizeof(content), leaderboard_file);
+					if (content[strlen(content) - 1] == '\n')
+						content[strlen(content) - 1] = '\0';
 					fprintf(new_leaderboard_file, "%s\n", content);
 				}
 				else
 				{
-					fscanf(leaderboard_file, "%s", content);
-					fscanf(leaderboard_file, "%s", content);
+					fgets(content, sizeof(content), leaderboard_file);
+					if (content[strlen(content) - 1] == '\n')
+						content[strlen(content) - 1] = '\0';
+
+					fgets(content, sizeof(content), leaderboard_file);
+					if (content[strlen(content) - 1] == '\n')
+						content[strlen(content) - 1] = '\0';
 				}
 			}
 

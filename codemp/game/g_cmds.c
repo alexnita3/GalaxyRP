@@ -16941,20 +16941,33 @@ void Cmd_DuelBoard_f(gentity_t *ent) {
 	{
 		while (i < (results_per_page * (page - 1)))
 		{ // zyk: reads the file until it reaches the position corresponding to the page number
-			fscanf(leaderboard_file, "%s", content);
-			fscanf(leaderboard_file, "%s", content);
-			fscanf(leaderboard_file, "%s", content);
+			fgets(content, sizeof(content), leaderboard_file);
+			if (content[strlen(content) - 1] == '\n')
+				content[strlen(content) - 1] = '\0';
+			fgets(content, sizeof(content), leaderboard_file);
+			if (content[strlen(content) - 1] == '\n')
+				content[strlen(content) - 1] = '\0';
+			fgets(content, sizeof(content), leaderboard_file);
+			if (content[strlen(content) - 1] == '\n')
+				content[strlen(content) - 1] = '\0';
 			i++;
 		}
 
-		while (i < (results_per_page * page) && fscanf(leaderboard_file, "%s", content) != EOF)
+		while (i < (results_per_page * page) && fgets(content, sizeof(content), leaderboard_file) != NULL)
 		{
+			if (content[strlen(content) - 1] == '\n')
+				content[strlen(content) - 1] = '\0';
+
 			// zyk: player name
-			fscanf(leaderboard_file, "%s", content);
+			fgets(content, sizeof(content), leaderboard_file);
+			if (content[strlen(content) - 1] == '\n')
+				content[strlen(content) - 1] = '\0';
 			strcpy(file_content, va("%s%s     ", file_content, content));
 
 			// zyk: number of tournaments won
-			fscanf(leaderboard_file, "%s", content);
+			fgets(content, sizeof(content), leaderboard_file);
+			if (content[strlen(content) - 1] == '\n')
+				content[strlen(content) - 1] = '\0';
 			strcpy(file_content, va("%s^3%s^7\n", file_content, content));
 
 			i++;
