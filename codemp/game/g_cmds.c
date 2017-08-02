@@ -16899,6 +16899,31 @@ void Cmd_Skip_f(gentity_t *ent) {
 
 /*
 ==================
+Cmd_ZykSound_f
+==================
+*/
+void Cmd_ZykSound_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+
+	if (zyk_allow_zyksound_command.integer < 1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"This command is not allowed in this server\n\"");
+		return;
+	}
+
+	if (trap->Argc() < 2)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Use ^3/zyksound <sound file path> ^7to play any sound file\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	G_Sound(ent, CHAN_AUTO, G_SoundIndex(G_NewString(arg1)));
+}
+
+/*
+==================
 Cmd_DuelBoard_f
 ==================
 */
@@ -17125,6 +17150,7 @@ command_t commands[] = {
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
 	{ "zykmod",				Cmd_ZykMod_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "zyksound",			Cmd_ZykSound_f,				CMD_NOINTERMISSION },
 };
 static const size_t numCommands = ARRAY_LEN( commands );
 

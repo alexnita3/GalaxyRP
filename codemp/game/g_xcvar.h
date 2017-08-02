@@ -353,6 +353,7 @@ XCVAR_DEF( zyk_max_special_power_targets,	"16",		NULL,				CVAR_ARCHIVE|CVAR_NORE
 XCVAR_DEF( zyk_scale_siege_damage,		"0.7",			NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_allow_stun_baton_upgrade,		"1",	NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_allow_emotes,					"1",	NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
+XCVAR_DEF( zyk_allow_zyksound_command, "0",				NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_allow_saber_command,		"2",			NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_duel_tournament_time_to_start, "12000",  NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_sniper_battle_time_to_start, "12000",	NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
