@@ -44,7 +44,7 @@ extern vec3_t gPainPoint;
 //==================================================================
 
 // the "gameversion" client command will print this plus compile date
-#define	GAMEVERSION	"Zyk OpenJK Mod v3.57"
+#define	GAMEVERSION	"Zyk OpenJK Mod v3.58"
 
 #define SECURITY_LOG "security.log"
 
@@ -963,6 +963,9 @@ typedef struct clientPersistant_s {
 	int quest_target5_timer;
 	int quest_target6_timer;
 	int quest_target7_timer;
+
+	// zyk: quest powers debounce timer, for example, like Wind powers
+	int quest_debounce1_timer;
 
 	// zyk: player ids which are hitting the target player
 	int quest_power_user1_id;

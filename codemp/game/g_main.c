@@ -4649,6 +4649,8 @@ void blowing_wind(gentity_t *ent, int distance, int duration)
 		distance += 200;
 	}
 
+	ent->client->pers.quest_debounce1_timer = 0;
+
 	for ( i = 0; i < level.num_entities; i++)
 	{
 		gentity_t *player_ent = &g_entities[i];
@@ -4680,6 +4682,8 @@ void reverse_wind(gentity_t *ent, int distance, int duration)
 	{
 		distance += 200;
 	}
+
+	ent->client->pers.quest_debounce1_timer = 0;
 
 	for (i = 0; i < level.num_entities; i++)
 	{
@@ -5954,6 +5958,8 @@ void hurricane(gentity_t *ent, int distance, int duration)
 		duration += 1000;
 	}
 
+	ent->client->pers.quest_debounce1_timer = 0;
+
 	for ( i = 0; i < level.num_entities; i++)
 	{
 		gentity_t *player_ent = &g_entities[i];
@@ -6568,22 +6574,27 @@ void quest_power_events(gentity_t *ent)
 					static vec3_t forward;
 					vec3_t blow_dir, dir;
 
-					VectorSet(blow_dir,-70,ent->client->pers.quest_power_hit_counter,0);
+					if (ent->client->pers.quest_debounce1_timer < level.time)
+					{
+						ent->client->pers.quest_debounce1_timer = level.time + 50;
 
-					AngleVectors(blow_dir, forward, NULL, NULL );
+						VectorSet(blow_dir, -70, ent->client->pers.quest_power_hit_counter, 0);
 
-					VectorNormalize(forward);
+						AngleVectors(blow_dir, forward, NULL, NULL);
 
-					if (ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
-						VectorScale(forward,50.0,dir);
-					else
-						VectorScale(forward,25.0,dir);
+						VectorNormalize(forward);
 
-					VectorAdd(ent->client->ps.velocity, dir, ent->client->ps.velocity);
+						if (ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
+							VectorScale(forward, 105.0, dir);
+						else
+							VectorScale(forward, 55.0, dir);
 
-					ent->client->pers.quest_power_hit_counter += 4;
-					if (ent->client->pers.quest_power_hit_counter >= 180)
-						ent->client->pers.quest_power_hit_counter = -179;
+						VectorAdd(ent->client->ps.velocity, dir, ent->client->ps.velocity);
+
+						ent->client->pers.quest_power_hit_counter += 4;
+						if (ent->client->pers.quest_power_hit_counter >= 180)
+							ent->client->pers.quest_power_hit_counter = -179;
+					}
 				}
 				else
 				{
@@ -6620,21 +6631,26 @@ void quest_power_events(gentity_t *ent)
 				{
 					gentity_t *blowing_wind_user = &g_entities[ent->client->pers.quest_power_user3_id];
 
-					if (blowing_wind_user && blowing_wind_user->client)
+					if (ent->client->pers.quest_debounce1_timer < level.time)
 					{
-						static vec3_t forward;
-						vec3_t dir;
+						ent->client->pers.quest_debounce1_timer = level.time + 50;
 
-						AngleVectors( blowing_wind_user->client->ps.viewangles, forward, NULL, NULL );
+						if (blowing_wind_user && blowing_wind_user->client)
+						{
+							static vec3_t forward;
+							vec3_t dir;
 
-						VectorNormalize(forward);
+							AngleVectors(blowing_wind_user->client->ps.viewangles, forward, NULL, NULL);
 
-						if (ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
-							VectorScale(forward,90.0,dir);
-						else
-							VectorScale(forward,25.0,dir);
+							VectorNormalize(forward);
 
-						VectorAdd(ent->client->ps.velocity, dir, ent->client->ps.velocity);
+							if (ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
+								VectorScale(forward, 215.0, dir);
+							else
+								VectorScale(forward, 40.0, dir);
+
+							VectorAdd(ent->client->ps.velocity, dir, ent->client->ps.velocity);
+						}
 					}
 				}
 				else
@@ -6764,19 +6780,24 @@ void quest_power_events(gentity_t *ent)
 				{
 					gentity_t *reverse_wind_user = &g_entities[ent->client->pers.quest_power_user3_id];
 
-					if (reverse_wind_user && reverse_wind_user->client)
+					if (ent->client->pers.quest_debounce1_timer < level.time)
 					{
-						vec3_t dir, forward;
+						ent->client->pers.quest_debounce1_timer = level.time + 50;
 
-						VectorSubtract(reverse_wind_user->client->ps.origin, ent->client->ps.origin, forward);
-						VectorNormalize(forward);
+						if (reverse_wind_user && reverse_wind_user->client)
+						{
+							vec3_t dir, forward;
 
-						if (ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
-							VectorScale(forward, 90.0, dir);
-						else
-							VectorScale(forward, 25.0, dir);
+							VectorSubtract(reverse_wind_user->client->ps.origin, ent->client->ps.origin, forward);
+							VectorNormalize(forward);
 
-						VectorAdd(ent->client->ps.velocity, dir, ent->client->ps.velocity);
+							if (ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
+								VectorScale(forward, 215.0, dir);
+							else
+								VectorScale(forward, 46.0, dir);
+
+							VectorAdd(ent->client->ps.velocity, dir, ent->client->ps.velocity);
+						}
 					}
 				}
 				else
