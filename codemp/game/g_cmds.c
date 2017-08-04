@@ -16919,7 +16919,7 @@ void Cmd_ZykSound_f(gentity_t *ent) {
 
 	trap->Argv(1, arg1, sizeof(arg1));
 
-	G_Sound(ent, CHAN_AUTO, G_SoundIndex(G_NewString(arg1)));
+	G_Sound(ent, CHAN_VOICE, G_SoundIndex(G_NewString(arg1)));
 }
 
 /*
