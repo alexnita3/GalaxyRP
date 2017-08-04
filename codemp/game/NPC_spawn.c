@@ -4747,6 +4747,11 @@ void NPC_Kill_f( void )
 				found = 1;
 			}
 
+			if (Q_stricmp(player->NPC_type, "quest_mage") == 0)
+			{
+				found = 1;
+			}
+
 			if (Q_stricmp( player->NPC_type, "quest_jawa" ) == 0)
 			{
 				found = 1;
