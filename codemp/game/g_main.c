@@ -13939,7 +13939,7 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (random_magic == 25)
 				{
-					enemy_nerf(ent, 400);
+					enemy_nerf(ent, 450);
 				}
 				else if (random_magic == 26)
 				{
