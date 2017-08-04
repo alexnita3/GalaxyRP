@@ -3793,7 +3793,7 @@ int zyk_max_magic_power(gentity_t *ent)
 }
 
 extern void poison_mushrooms(gentity_t *ent, int min_distance, int max_distance);
-extern void inner_area_damage(gentity_t *ent, int distance, int damage);
+extern void magic_sense(gentity_t *ent, int duration);
 extern void healing_water(gentity_t *ent, int heal_amount);
 extern void earthquake(gentity_t *ent, int stun_time, int strength, int distance);
 extern void blowing_wind(gentity_t *ent, int distance, int duration);
@@ -4103,18 +4103,20 @@ qboolean TryGrapple(gentity_t *ent)
 						trap->SendServerCommand( ent->s.number, va("chat \"%s^7: ^7Time Power!\"", ent->client->pers.netname));
 					}
 				}
-				else if (use_this_power >= MAGIC_INNER_AREA_DAMAGE)
+				else if (use_this_power >= MAGIC_MAGIC_SENSE)
 				{ // zyk: Magic Power
-					if (use_this_power == MAGIC_INNER_AREA_DAMAGE && zyk_enable_inner_area.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_inner_area_mp_cost.integer * universe_mp_cost_factor)))
+					if (use_this_power == MAGIC_MAGIC_SENSE && zyk_enable_magic_sense.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_magic_sense_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						inner_area_damage(ent,400,80);
-						ent->client->pers.magic_power -= (int)ceil((zyk_inner_area_mp_cost.integer * universe_mp_cost_factor));
+						magic_sense(ent,2000);
+						ent->client->pers.magic_power -= (int)ceil((zyk_magic_sense_mp_cost.integer * universe_mp_cost_factor));
+
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (12000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (16000 - (ent->client->pers.skill_levels[55] * 4000));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 12000;
-						trap->SendServerCommand( ent->s.number, va("chat \"%s^7: ^7Inner Area Damage!\"", ent->client->pers.netname));
+							ent->client->pers.quest_power_usage_timer = level.time + 16000;
+
+						trap->SendServerCommand( ent->s.number, va("chat \"%s^7: ^7Magic Sense!\"", ent->client->pers.netname));
 					}
 					else if (use_this_power == MAGIC_ULTRA_STRENGTH && zyk_enable_ultra_strength.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_ultra_strength_mp_cost.integer * universe_mp_cost_factor)))
 					{
@@ -5703,9 +5705,9 @@ void zyk_load_magic_master_config(gentity_t *ent)
 		{ // zyk: if the file does not exist yet, load default Magic Master config
 			ent->client->sess.magic_fist_selection = 0;
 			ent->client->sess.magic_master_disabled_powers = 0;
-			ent->client->sess.selected_special_power = MAGIC_INNER_AREA_DAMAGE;
-			ent->client->sess.selected_left_special_power = MAGIC_INNER_AREA_DAMAGE;
-			ent->client->sess.selected_right_special_power = MAGIC_INNER_AREA_DAMAGE;
+			ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
+			ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
+			ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
 		}
 	}
 }
@@ -9563,7 +9565,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					if (i == 38)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Team Shield Heal: ^7recovers 3 shield at level 1, 6 shield at level 2 and 9 shield at level 3 to players near you. To use it, when near players, use Team Heal force power. It will heal their shield after they have full HP\n\"") );
 					if (i == 39)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Unique Skill: ^7Used by pressing Engage Duel key\nFree Warrior: recovers some hp, shield and mp\nForce User: creates a force shield around the player that greatly reduces damage and protects against force powers\nBounty Hunter: allows firing poison darts with melee by spending metal bolts ammo\nArmored Soldier: spends power cell ammo to increase auto-shield-heal rate\nMonk: increases auto-healing rate and disables enemy Grip\nStealth Attacker: spends power cell ammo to increase disruptor firerate and make it destroy saber-only damage objects\nDuelist: recovers some MP and disables jetpack, cloak, speed and force regen of enemies nearby\nForce Gunner: disarms enemies nearby\nMagic Master: increases magic bolts, Inner Area Damage, Lightning Dome, Magic Explosion and Healing Area damage. Healing Area heals more\nForce Tank: increases resistance to damage for some seconds\n\"") );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Unique Skill: ^7Used by pressing Engage Duel key\nFree Warrior: recovers some hp, shield and mp\nForce User: creates a force shield around the player that greatly reduces damage and protects against force powers\nBounty Hunter: allows firing poison darts with melee by spending metal bolts ammo\nArmored Soldier: spends power cell ammo to increase auto-shield-heal rate\nMonk: increases auto-healing rate and disables enemy Grip\nStealth Attacker: spends power cell ammo to increase disruptor firerate and make it destroy saber-only damage objects\nDuelist: recovers some MP and disables jetpack, cloak, speed and force regen of enemies nearby\nForce Gunner: disarms enemies nearby\nMagic Master: increases magic bolts, Lightning Dome, Magic Explosion and Healing Area damage. Increases Magic Sense duration. Healing Area heals more\nForce Tank: increases resistance to damage for some seconds\n\"") );
 					if (i == 40)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Blaster Pack: ^7used as ammo for Blaster Pistol, Bryar Pistol and E11 Blaster Rifle. You can carry up to %d ammo\n\"",zyk_max_blaster_pack_ammo.integer) );
 					if (i == 41)
@@ -9656,7 +9658,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					else if (ent->client->pers.rpg_class == 7)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Ultra Speed: ^7increases your run speed. Attack with D + special melee to use this power. MP cost: %d\n^3Slow Motion: ^7decreases the run speed of enemies nearby. Attack with A + special melee to use this power. MP cost: %d\n^3Fast and Slow: ^7increases your speed and decreases enemies speed, with less duration than the other two magic powers. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_ultra_speed_mp_cost.integer, zyk_slow_motion_mp_cost.integer, zyk_fast_and_slow_mp_cost.integer) );
 					else if (ent->client->pers.rpg_class == 8)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Inner Area Damage: ^7damages everyone near you. MP cost: %d\n^3Healing Area: ^7creates an energy area that heals you and your allies and damage enemies. MP cost: %d\n^3Lightning Dome: ^7creates a dome that does lightning damage. MP cost: %d\n^3Magic Explosion: ^7creates a short explosion that does a lot of damage. MP cost: %d\n\nThis class can use any of the Light Quest special powers. Use A, W or D and melee kata to use a power. You can set each of A, W and D powers with the force power keys (usually the F3, F4, F5, F6, F7 and F8 keys)\n\"", zyk_inner_area_mp_cost.integer, zyk_healing_area_mp_cost.integer, zyk_lightning_dome_mp_cost.integer, zyk_magic_explosion_mp_cost.integer) );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Magic Sense: ^7similar to Force Sense and Sense Health skills, but with less duration. Benefits from Sense skill level and Improvements skill level. MP cost: %d\n^3Healing Area: ^7creates an energy area that heals you and your allies and damage enemies. MP cost: %d\n^3Lightning Dome: ^7creates a dome that does lightning damage. MP cost: %d\n^3Magic Explosion: ^7creates an explosion that does a lot of damage. MP cost: %d\n\nThis class can use any of the Light Quest special powers. Use A, W or D and melee kata to use a power. You can set each of A, W and D powers with the force power keys (usually the F3, F4, F5, F6, F7 and F8 keys)\n\"", zyk_magic_sense_mp_cost.integer, zyk_healing_area_mp_cost.integer, zyk_lightning_dome_mp_cost.integer, zyk_magic_explosion_mp_cost.integer) );
 					else if (ent->client->pers.rpg_class == 9)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Ice Boulder: ^7creates a boulder that damages and traps enemies nearby for some seconds. Attack with D + special melee to use this power. MP cost: %d\n^3Ice Stalagmite: ^7greatly damages enemies nearby with a stalagmite. Attack with A + special melee to use this power. MP cost: %d\n^3Ice Block: ^7creates a block of ice around you, protecting you from attacks and increasing your resistance to damage. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_ice_boulder_mp_cost.integer, zyk_ice_stalagmite_mp_cost.integer, zyk_ice_block_mp_cost.integer) );
 				}
@@ -10890,9 +10892,9 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 
 		ent->client->pers.credits = 100;
 
-		ent->client->sess.selected_special_power = MAGIC_INNER_AREA_DAMAGE;
-		ent->client->sess.selected_left_special_power = MAGIC_INNER_AREA_DAMAGE;
-		ent->client->sess.selected_right_special_power = MAGIC_INNER_AREA_DAMAGE;
+		ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
+		ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
+		ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
 		ent->client->sess.magic_fist_selection = 0;
 		ent->client->sess.magic_master_disabled_powers = 0;
 
@@ -10943,9 +10945,9 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 
 		ent->client->pers.credits = 100;
 
-		ent->client->sess.selected_special_power = MAGIC_INNER_AREA_DAMAGE;
-		ent->client->sess.selected_left_special_power = MAGIC_INNER_AREA_DAMAGE;
-		ent->client->sess.selected_right_special_power = MAGIC_INNER_AREA_DAMAGE;
+		ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
+		ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
+		ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
 		ent->client->sess.magic_fist_selection = 0;
 		ent->client->sess.magic_master_disabled_powers = 0;
 
@@ -16224,8 +16226,8 @@ void Cmd_Magic_f( gentity_t *ent ) {
 
 	if (trap->Argc() == 1)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"\n 0 - Inner Area Damage - %s^7\n 1 - Healing Water - %s^7\n 2 - Water Splash - %s^7\n 3 - Water Attack - %s^7\n 4 - Earthquake - %s^7\n 5 - Rockfall - %s^7\n 6 - Shifting Sand - %s^7\n 7 - Sleeping Flowers - %s^7\n 8 - Poison Mushrooms - %s^7\n 9 - Tree of Life - %s^7\n10 - Magic Shield - %s^7\n11 - Dome of Damage - %s^7\n12 - Magic Disable - %s^7\n13 - Ultra Speed - %s^7\n14 - Slow Motion - %s^7\n15 - Fast and Slow - %s^7\n16 - Flame Burst - %s^7\n17 - Ultra Flame - %s^7\n18 - Flaming Area - %s^7\n19 - Blowing Wind - %s^7\n20 - Hurricane - %s^7\n21 - Reverse Wind - %s^7\n22 - Ultra Resistance - %s^7\n23 - Ultra Strength - %s^7\n24 - Enemy Weakening - %s^7\n25 - Ice Stalagmite - %s^7\n26 - Ice Boulder - %s^7\n27 - Ice Block - %s^7\n28 - Healing Area - %s^7\n29 - Magic Explosion - %s^7\n30 - Lightning Dome - %s^7\n\"", 
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_INNER_AREA_DAMAGE)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_HEALING_WATER)) ? "^2yes" : "^1no",
+		trap->SendServerCommand( ent-g_entities, va("print \"\n 0 - Magic Sense - %s^7\n 1 - Healing Water - %s^7\n 2 - Water Splash - %s^7\n 3 - Water Attack - %s^7\n 4 - Earthquake - %s^7\n 5 - Rockfall - %s^7\n 6 - Shifting Sand - %s^7\n 7 - Sleeping Flowers - %s^7\n 8 - Poison Mushrooms - %s^7\n 9 - Tree of Life - %s^7\n10 - Magic Shield - %s^7\n11 - Dome of Damage - %s^7\n12 - Magic Disable - %s^7\n13 - Ultra Speed - %s^7\n14 - Slow Motion - %s^7\n15 - Fast and Slow - %s^7\n16 - Flame Burst - %s^7\n17 - Ultra Flame - %s^7\n18 - Flaming Area - %s^7\n19 - Blowing Wind - %s^7\n20 - Hurricane - %s^7\n21 - Reverse Wind - %s^7\n22 - Ultra Resistance - %s^7\n23 - Ultra Strength - %s^7\n24 - Enemy Weakening - %s^7\n25 - Ice Stalagmite - %s^7\n26 - Ice Boulder - %s^7\n27 - Ice Block - %s^7\n28 - Healing Area - %s^7\n29 - Magic Explosion - %s^7\n30 - Lightning Dome - %s^7\n\"", 
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_SENSE)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_HEALING_WATER)) ? "^2yes" : "^1no",
 			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_WATER_SPLASH)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_WATER_ATTACK)) ? "^2yes" : "^1no",
 			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_EARTHQUAKE)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ROCKFALL)) ? "^2yes" : "^1no",
 			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SHIFTING_SAND)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SLEEPING_FLOWERS)) ? "^2yes" : "^1no",
@@ -16250,7 +16252,7 @@ void Cmd_Magic_f( gentity_t *ent ) {
 
 		magic_power = atoi(arg1);
 
-		if (magic_power < MAGIC_INNER_AREA_DAMAGE || magic_power >= MAX_MAGIC_POWERS)
+		if (magic_power < MAGIC_MAGIC_SENSE || magic_power >= MAX_MAGIC_POWERS)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"Invalid magic power.\n\"" );
 			return;

@@ -281,9 +281,9 @@ void G_InitSessionData( gclient_t *client, char *userinfo, qboolean isBot ) {
 
 	sess->magic_fist_selection = 0;
 	sess->magic_master_disabled_powers = 0;
-	sess->selected_special_power = MAGIC_INNER_AREA_DAMAGE;
-	sess->selected_left_special_power = MAGIC_INNER_AREA_DAMAGE;
-	sess->selected_right_special_power = MAGIC_INNER_AREA_DAMAGE;
+	sess->selected_special_power = MAGIC_MAGIC_SENSE;
+	sess->selected_left_special_power = MAGIC_MAGIC_SENSE;
+	sess->selected_right_special_power = MAGIC_MAGIC_SENSE;
 
 	// zyk: initializing ally attributes
 	sess->ally1 = 0;

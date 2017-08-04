@@ -480,7 +480,7 @@ typedef struct clientSession_s {
 	char filename[32]; // zyk: player account filename
 
 	// zyk: current power selected by Magic Master to use
-	// 1 - Inner Area Damage
+	// 1 - Magic Sense
 	// 2 - Healing Water
 	// 3 - Water Splash
 	// 4 - Earthquake
@@ -557,7 +557,7 @@ typedef enum {
 
 // zyk: magic powers values
 typedef enum {
-	MAGIC_INNER_AREA_DAMAGE,
+	MAGIC_MAGIC_SENSE,
 	MAGIC_HEALING_WATER,
 	MAGIC_WATER_SPLASH,
 	MAGIC_WATER_ATTACK,

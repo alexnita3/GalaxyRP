@@ -4779,34 +4779,33 @@ void chaos_power(gentity_t *ent, int distance, int first_damage)
 	}
 }
 
-// zyk: Inner Area Damage
-void inner_area_damage(gentity_t *ent, int distance, int damage)
+// zyk: Magic Sense
+void magic_sense(gentity_t *ent, int duration)
 {
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
 	if (ent->client->pers.quest_power_status & (1 << 13))
-		damage += 10;
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qtrue, &targets_hit) == qtrue)
-		{
-			if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && 
-				ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(ent->client->pers.player_statuses & (1 << 21)) && 
-				!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
-			{ // zyk: Magic Master Unique Skill increases damage
-				G_Damage(player_ent,ent,ent,NULL,NULL,damage * 2,0,MOD_UNKNOWN);
-			}
-			else
-			{
-				G_Damage(player_ent,ent,ent,NULL,NULL,damage,0,MOD_UNKNOWN);
-			}
-		}
+	{ // zyk: Universe Power
+		duration += 1000;
 	}
+
+	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 &&
+		ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
+		!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
+	{ // zyk: Magic Master Unique Skill
+		duration += 1000;
+	}
+
+	// zyk: Magic Sense gets more duration based on Sense skill level
+	duration += (ent->client->pers.skill_levels[4] * 1000);
+
+	// zyk: Magic Sense gets more duration based on Improvements skill level
+	duration += (ent->client->pers.skill_levels[55] * 1000);
+
+	ent->client->ps.forceAllowDeactivateTime = level.time + duration;
+	ent->client->ps.fd.forcePowerLevel[FP_SEE] = ent->client->pers.skill_levels[4];
+	ent->client->ps.fd.forcePowersActive |= (1 << FP_SEE);
+	ent->client->ps.fd.forcePowerDuration[FP_SEE] = level.time + duration;
+
+	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/weapons/force/see.wav"));
 }
 
 // zyk: Lightning Dome
@@ -6247,7 +6246,7 @@ qboolean magic_master_has_this_power(gentity_t *ent, int selected_power)
 	{
 		return qfalse;
 	}
-	else if (selected_power < MAGIC_INNER_AREA_DAMAGE || selected_power >= MAX_MAGIC_POWERS)
+	else if (selected_power < MAGIC_MAGIC_SENSE || selected_power >= MAX_MAGIC_POWERS)
 	{ // zyk: if, for some reason, there is an invalid selected power value, does not allow it
 		return qfalse;
 	}
@@ -6261,9 +6260,9 @@ qboolean magic_master_has_this_power(gentity_t *ent, int selected_power)
 
 void zyk_print_special_power(gentity_t *ent, int selected_power, char direction)
 {
-	if (selected_power == MAGIC_INNER_AREA_DAMAGE)
+	if (selected_power == MAGIC_MAGIC_SENSE)
 	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^7Inner Area Damage   ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
+		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^7Magic Sense   ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
 	}
 	else if (selected_power == MAGIC_HEALING_WATER)
 	{
@@ -6393,7 +6392,7 @@ int zyk_number_of_enabled_magic_powers(gentity_t *ent)
 	int i = 0;
 	int number_of_enabled_powers = 0;
 
-	for (i = MAGIC_INNER_AREA_DAMAGE; i < MAX_MAGIC_POWERS; i++)
+	for (i = MAGIC_MAGIC_SENSE; i < MAX_MAGIC_POWERS; i++)
 	{
 		if (!(ent->client->sess.magic_master_disabled_powers & (1 << i)) && magic_master_has_this_power(ent, i) == qtrue)
 		{
@@ -6417,7 +6416,7 @@ void zyk_show_magic_master_powers(gentity_t *ent, qboolean next_power)
 		{
 			ent->client->sess.selected_special_power++;
 			if (ent->client->sess.selected_special_power >= MAX_MAGIC_POWERS)
-				ent->client->sess.selected_special_power = MAGIC_INNER_AREA_DAMAGE;
+				ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
 		} while (magic_master_has_this_power(ent, ent->client->sess.selected_special_power) == qfalse);
 	}
 	else
@@ -6425,7 +6424,7 @@ void zyk_show_magic_master_powers(gentity_t *ent, qboolean next_power)
 		do
 		{
 			ent->client->sess.selected_special_power--;
-			if (ent->client->sess.selected_special_power < MAGIC_INNER_AREA_DAMAGE)
+			if (ent->client->sess.selected_special_power < MAGIC_MAGIC_SENSE)
 				ent->client->sess.selected_special_power = MAX_MAGIC_POWERS - 1;
 		} while (magic_master_has_this_power(ent, ent->client->sess.selected_special_power) == qfalse);
 	}
@@ -6446,7 +6445,7 @@ void zyk_show_left_magic_master_powers(gentity_t *ent, qboolean next_power)
 		{
 			ent->client->sess.selected_left_special_power++;
 			if (ent->client->sess.selected_left_special_power >= MAX_MAGIC_POWERS)
-				ent->client->sess.selected_left_special_power = MAGIC_INNER_AREA_DAMAGE;
+				ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
 		} while (magic_master_has_this_power(ent, ent->client->sess.selected_left_special_power) == qfalse);
 	}
 	else
@@ -6454,7 +6453,7 @@ void zyk_show_left_magic_master_powers(gentity_t *ent, qboolean next_power)
 		do
 		{
 			ent->client->sess.selected_left_special_power--;
-			if (ent->client->sess.selected_left_special_power < MAGIC_INNER_AREA_DAMAGE)
+			if (ent->client->sess.selected_left_special_power < MAGIC_MAGIC_SENSE)
 				ent->client->sess.selected_left_special_power = MAX_MAGIC_POWERS - 1;
 		} while (magic_master_has_this_power(ent, ent->client->sess.selected_left_special_power) == qfalse);
 	}
@@ -6475,7 +6474,7 @@ void zyk_show_right_magic_master_powers(gentity_t *ent, qboolean next_power)
 		{
 			ent->client->sess.selected_right_special_power++;
 			if (ent->client->sess.selected_right_special_power >= MAX_MAGIC_POWERS)
-				ent->client->sess.selected_right_special_power = MAGIC_INNER_AREA_DAMAGE;
+				ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
 		} while (magic_master_has_this_power(ent, ent->client->sess.selected_right_special_power) == qfalse);
 	}
 	else
@@ -6483,7 +6482,7 @@ void zyk_show_right_magic_master_powers(gentity_t *ent, qboolean next_power)
 		do
 		{
 			ent->client->sess.selected_right_special_power--;
-			if (ent->client->sess.selected_right_special_power < MAGIC_INNER_AREA_DAMAGE)
+			if (ent->client->sess.selected_right_special_power < MAGIC_MAGIC_SENSE)
 				ent->client->sess.selected_right_special_power = MAX_MAGIC_POWERS - 1;
 		} while (magic_master_has_this_power(ent, ent->client->sess.selected_right_special_power) == qfalse);
 	}
@@ -8291,23 +8290,17 @@ void G_RunFrame( int levelTime ) {
 			{
 				if (npc_ent->client->pers.hunter_quest_messages == 0)
 				{
-					inner_area_damage(npc_ent, 400, 100);
-					trap->SendServerCommand(-1, "chat \"^3Guardian of Map: ^7Inner Area Damage!\"");
-					npc_ent->client->pers.hunter_quest_messages++;
-				}
-				else if (npc_ent->client->pers.hunter_quest_messages == 1)
-				{
 					healing_area(npc_ent, 5, 5000);
 					trap->SendServerCommand(-1, "chat \"^3Guardian of Map: ^7Healing Area!\"");
 					npc_ent->client->pers.hunter_quest_messages++;
 				}
-				else if (npc_ent->client->pers.hunter_quest_messages == 2)
+				else if (npc_ent->client->pers.hunter_quest_messages == 1)
 				{
 					magic_explosion(npc_ent, 320, 160, 900);
 					trap->SendServerCommand(-1, "chat \"^3Guardian of Map: ^7Magic Explosion!\"");
 					npc_ent->client->pers.hunter_quest_messages++;
 				}
-				else if (npc_ent->client->pers.hunter_quest_messages == 3)
+				else if (npc_ent->client->pers.hunter_quest_messages == 2)
 				{
 					lightning_dome(npc_ent, 86);
 					trap->SendServerCommand(-1, "chat \"^3Guardian of Map: ^7Lightning Dome!\"");
