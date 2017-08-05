@@ -5297,8 +5297,6 @@ void initialize_rpg_skills(gentity_t *ent)
 
 		ent->client->pers.magic_power = zyk_max_magic_power(ent);
 
-		ent->client->pers.seller_timer = 0;
-
 		ent->client->pers.monk_unique_timer = 0;
 
 		ent->client->pers.credits_modifier = 0;
@@ -9713,11 +9711,12 @@ void Cmd_CallSeller_f( gentity_t *ent ) {
 		{
 			npc_ent->client->pers.seller_invoked_by_id = ent->s.number;
 			npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-			trap->SendServerCommand( ent-g_entities, "chat \"^3Jawa Seller: ^7Hello, friend! I have some products to sell.\"");
+
+			trap->SendServerCommand( ent->s.number, "chat \"^3Jawa Seller: ^7Hello, friend! I have some products to sell.\"");
 		}
 		else
 		{
-			trap->SendServerCommand( ent-g_entities, va("chat \"%s: ^7The seller couldn't come...\"", ent->client->pers.netname));
+			trap->SendServerCommand( ent->s.number, va("chat \"%s: ^7The seller couldn't come...\"", ent->client->pers.netname));
 		}
 	}
 	else
@@ -9726,7 +9725,7 @@ void Cmd_CallSeller_f( gentity_t *ent ) {
 
 		G_FreeEntity(npc_ent);
 
-		trap->SendServerCommand( ent-g_entities, "chat \"^3Jawa Seller: ^7See you later, friend!\"");
+		trap->SendServerCommand( ent->s.number, "chat \"^3Jawa Seller: ^7See you later, friend!\"");
 	}
 }
 
