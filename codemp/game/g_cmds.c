@@ -1927,8 +1927,8 @@ static void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, cons
 	}
 
 	// zyk: if player is ignored, then he cant say anything to the target player
-	if ((ent->s.number < 30 && level.ignored_players[other->s.number][0] & (1 << ent->s.number)) || 
-		(ent->s.number >= 30 && level.ignored_players[other->s.number][1] & (1 << (ent->s.number - 30))))
+	if ((ent->s.number < 31 && level.ignored_players[other->s.number][0] & (1 << ent->s.number)) || 
+		(ent->s.number >= 31 && level.ignored_players[other->s.number][1] & (1 << (ent->s.number - 31))))
 	{
 		return;
 	}
@@ -14986,26 +14986,55 @@ void Cmd_Ignore_f( gentity_t *ent ) {
 
 	player = &g_entities[client_id];
 
-	if (client_id < 30 && !(level.ignored_players[ent->s.number][0] & (1 << client_id)))
+	if (client_id < 31 && !(level.ignored_players[ent->s.number][0] & (1 << client_id)))
 	{
 		level.ignored_players[ent->s.number][0] |= (1 << client_id);
 		trap->SendServerCommand( ent-g_entities, va("print \"Ignored player %s^7\n\"", player->client->pers.netname) );
 	}
-	else if (client_id >= 30 && !(level.ignored_players[ent->s.number][1] & (1 << (client_id - 30))))
+	else if (client_id >= 31 && !(level.ignored_players[ent->s.number][1] & (1 << (client_id - 31))))
 	{
-		level.ignored_players[ent->s.number][1] |= (1 << (client_id - 30));
+		level.ignored_players[ent->s.number][1] |= (1 << (client_id - 31));
 		trap->SendServerCommand( ent-g_entities, va("print \"Ignored player %s^7\n\"", player->client->pers.netname) );
 	}
-	else if (client_id < 30 && level.ignored_players[ent->s.number][0] & (1 << client_id))
+	else if (client_id < 31 && level.ignored_players[ent->s.number][0] & (1 << client_id))
 	{
 		level.ignored_players[ent->s.number][0] &= ~(1 << client_id);
 		trap->SendServerCommand( ent-g_entities, va("print \"No longer ignore player %s^7\n\"", player->client->pers.netname) );
 	}
-	else if (client_id >= 30 && level.ignored_players[ent->s.number][1] & (1 << (client_id - 30)))
+	else if (client_id >= 31 && level.ignored_players[ent->s.number][1] & (1 << (client_id - 31)))
 	{
-		level.ignored_players[ent->s.number][1] &= ~(1 << (client_id - 30));
+		level.ignored_players[ent->s.number][1] &= ~(1 << (client_id - 31));
 		trap->SendServerCommand( ent-g_entities, va("print \"No longer ignore player %s^7\n\"", player->client->pers.netname) );
 	}
+}
+
+/*
+==================
+Cmd_IgnoreList_f
+==================
+*/
+void Cmd_IgnoreList_f(gentity_t *ent) {
+	int i = 0;
+	char ignored_players[MAX_STRING_CHARS];
+	gentity_t *player = NULL;
+
+	strcpy(ignored_players, "");
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		if (i < 31 && level.ignored_players[ent->s.number][0] & (1 << i))
+		{
+			player = &g_entities[i];
+			strcpy(ignored_players, va("%s%s^7\n", ignored_players, player->client->pers.netname));
+		}
+		else if (i >= 31 && level.ignored_players[ent->s.number][1] & (1 << (i - 31)))
+		{
+			player = &g_entities[i];
+			strcpy(ignored_players, va("%s%s^7\n", ignored_players, player->client->pers.netname));
+		}
+	}
+
+	trap->SendServerCommand(ent->s.number, va("print \"%s^7\n\"", ignored_players));
 }
 
 /*
@@ -17086,6 +17115,7 @@ command_t commands[] = {
 	{ "god",				Cmd_God_f,					CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "guardianquest",		Cmd_GuardianQuest_f,		CMD_ALIVE|CMD_RPG|CMD_NOINTERMISSION },
 	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
+	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
 	{ "jetpack",			Cmd_Jetpack_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "kill",				Cmd_Kill_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "killother",			Cmd_KillOther_f,			CMD_CHEAT|CMD_NOINTERMISSION },
