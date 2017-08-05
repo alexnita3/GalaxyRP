@@ -7477,9 +7477,21 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 	if (ent->client->sess.amrpgmode == 2)
 	{
 		int i = 0;
+		int quest_player_id = MAX_CLIENTS;
 		char content[1024];
 
 		strcpy(content,"");
+
+		for (i = 0; i < level.maxclients; i++)
+		{
+			gentity_t *player_ent = &g_entities[i];
+
+			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.can_play_quest == 1)
+			{ // zyk: found the quest player
+				quest_player_id = i;
+				break;
+			}
+		}
 
 		for (i = 0; i < NUMBER_OF_SKILLS; i++)
 		{
@@ -7514,8 +7526,8 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 			universe_quest_counter_value = number_of_crystals(ent);
 		}
 
-		strcpy(content,va("%s%d-%d-%d-%d-%d-%d-",content,ent->client->pers.secrets_found,ent->client->pers.defeated_guardians,ent->client->pers.hunter_quest_progress,
-			ent->client->pers.eternity_quest_progress,ent->client->pers.universe_quest_progress,universe_quest_counter_value));
+		strcpy(content,va("%s%d-%d-%d-%d-%d-%d-%d-",content,ent->client->pers.secrets_found,ent->client->pers.defeated_guardians,ent->client->pers.hunter_quest_progress,
+			ent->client->pers.eternity_quest_progress,ent->client->pers.universe_quest_progress,universe_quest_counter_value,quest_player_id));
 
 		trap->SendServerCommand( ent-g_entities, va("zykmod \"%d/%d-%d/%d-%d-%d/%d-%d/%d-%d-%s-%s\"",ent->client->pers.level,MAX_RPG_LEVEL,ent->client->pers.level_up_score,ent->client->pers.level,ent->client->pers.skillpoints,ent->client->pers.skill_counter,zyk_max_skill_counter.integer,ent->client->pers.magic_power,zyk_max_magic_power(ent),ent->client->pers.credits,zyk_rpg_class(ent),content));
 	}
@@ -7528,10 +7540,15 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 
 		for (i = 0; i < 69; i++)
 		{
-			if (i != 63)
-				strcpy(content, va("%s0-", content));
-			else
+			if (i == 63)
+			{
 				strcpy(content, va("%s%s", content, zyk_get_settings_values(ent)));
+			}
+			else
+			{
+				strcpy(content, va("%s0-", content));
+			}
+				
 		}
 
 		trap->SendServerCommand( ent-g_entities, va("zykmod \"%s\"", content));

@@ -1629,7 +1629,7 @@ static void CG_ZykMod( void )
 
 	trap->Cmd_Argv( 1, arg, sizeof( arg ) );
 
-	while (j < 87)
+	while (j < 88)
 	{ // zyk: parsing info from the server and setting the respective cvars
 		k = 0;
 
@@ -2263,6 +2263,19 @@ static void CG_ZykMod( void )
 			else if (universe_quest_progress == 9)
 			{
 				trap->Cvar_Set("ui_zyk_universe_text3",va("Crystals: ^3%d", amount_of_stuff));
+			}
+		}
+		else if (j == 86)
+		{ // zyk: quest player
+			int quest_player_id = atoi(value);
+
+			if (quest_player_id < MAX_CLIENTS)
+			{
+				trap->Cvar_Set("ui_zyk_quest_player", va("Quest Player - %s", cgs.clientinfo[quest_player_id].name));
+			}
+			else
+			{
+				trap->Cvar_Set("ui_zyk_quest_player", "Quest Player - ");
 			}
 		}
 
