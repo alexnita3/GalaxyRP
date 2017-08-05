@@ -6320,6 +6320,15 @@ void try_finishing_race()
 		{ // zyk: no one is racing, so finish the race
 			level.race_mode = 0;
 
+			for (j = MAX_CLIENTS; j < level.num_entities; j++)
+			{
+				this_ent = &g_entities[j];
+				if (this_ent && Q_stricmp(this_ent->targetname, "zyk_race_line") == 0)
+				{ // zyk: removes this start or finish line
+					G_FreeEntity(this_ent);
+				}
+			}
+
 			trap->SendServerCommand( -1, va("chat \"^3Race System: ^7The race is over!\""));
 		}
 	}
@@ -12472,8 +12481,49 @@ void Cmd_RaceMode_f( gentity_t *ent ) {
 			yaw[2] = 0.0f;
 
 			if (level.race_mode == 0)
-			{ // zyk: if this is the first player entering the race, clean the old race swoops left in the map
+			{ // zyk: if this is the first player entering the race, clean the old race swoops left in the map and place start and finish lines
 				int k = 0;
+				gentity_t *new_ent_line = G_Spawn();
+
+				// zyk: starting line
+				zyk_set_entity_field(new_ent_line, "classname", "fx_runner");
+				zyk_set_entity_field(new_ent_line, "targetname", "zyk_race_line");
+				new_ent_line->s.modelindex = G_EffectIndex("mp/crystalbeamred");
+				zyk_set_entity_field(new_ent_line, "origin", "-4568 -20820 1494");
+				zyk_set_entity_field(new_ent_line, "angles", "0 90 0");
+
+				zyk_spawn_entity(new_ent_line);
+
+				new_ent_line = G_Spawn();
+
+				zyk_set_entity_field(new_ent_line, "classname", "fx_runner");
+				zyk_set_entity_field(new_ent_line, "targetname", "zyk_race_line");
+				new_ent_line->s.modelindex = G_EffectIndex("mp/crystalbeamred");
+				zyk_set_entity_field(new_ent_line, "origin", "-4568 -18720 1494");
+				zyk_set_entity_field(new_ent_line, "angles", "0 -90 0");
+
+				zyk_spawn_entity(new_ent_line);
+
+				// zyk: finish line
+				new_ent_line = G_Spawn();
+
+				zyk_set_entity_field(new_ent_line, "classname", "fx_runner");
+				zyk_set_entity_field(new_ent_line, "targetname", "zyk_race_line");
+				new_ent_line->s.modelindex = G_EffectIndex("mp/crystalbeamred");
+				zyk_set_entity_field(new_ent_line, "origin", "4750 -9989 1520");
+				zyk_set_entity_field(new_ent_line, "angles", "0 179 0");
+
+				zyk_spawn_entity(new_ent_line);
+
+				new_ent_line = G_Spawn();
+
+				zyk_set_entity_field(new_ent_line, "classname", "fx_runner");
+				zyk_set_entity_field(new_ent_line, "targetname", "zyk_race_line");
+				new_ent_line->s.modelindex = G_EffectIndex("mp/crystalbeamred");
+				zyk_set_entity_field(new_ent_line, "origin", "3225 -9962 1520");
+				zyk_set_entity_field(new_ent_line, "angles", "0 -1 0");
+
+				zyk_spawn_entity(new_ent_line);
 
 				for (k = 0; k < MAX_RACERS; k++)
 				{
@@ -12569,6 +12619,7 @@ void Cmd_RaceMode_f( gentity_t *ent ) {
 			if (level.race_mode == 0)
 			{ // zyk: if this is the first player entering the race, clean the old race swoops left in the map
 				int k = 0;
+				gentity_t *new_ent_line = NULL;
 
 				for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
 				{ // zyk: removing all entities except the spawnpoints
@@ -12597,6 +12648,48 @@ void Cmd_RaceMode_f( gentity_t *ent ) {
 						level.race_mode_vehicle[k] = -1;
 					}
 				}
+
+				// zyk: starting line
+				new_ent_line = G_Spawn();
+
+				zyk_set_entity_field(new_ent_line, "classname", "fx_runner");
+				zyk_set_entity_field(new_ent_line, "targetname", "zyk_race_line");
+				new_ent_line->s.modelindex = G_EffectIndex("mp/crystalbeamred");
+				zyk_set_entity_field(new_ent_line, "origin", "660 1198 88");
+				zyk_set_entity_field(new_ent_line, "angles", "0 1 0");
+
+				zyk_spawn_entity(new_ent_line);
+
+				new_ent_line = G_Spawn();
+
+				zyk_set_entity_field(new_ent_line, "classname", "fx_runner");
+				zyk_set_entity_field(new_ent_line, "targetname", "zyk_race_line");
+				new_ent_line->s.modelindex = G_EffectIndex("mp/crystalbeamred");
+				zyk_set_entity_field(new_ent_line, "origin", "1070 1198 88");
+				zyk_set_entity_field(new_ent_line, "angles", "0 179 0");
+
+				zyk_spawn_entity(new_ent_line);
+
+				// zyk: finish line
+				new_ent_line = G_Spawn();
+
+				zyk_set_entity_field(new_ent_line, "classname", "fx_runner");
+				zyk_set_entity_field(new_ent_line, "targetname", "zyk_race_line");
+				new_ent_line->s.modelindex = G_EffectIndex("mp/crystalbeamred");
+				zyk_set_entity_field(new_ent_line, "origin", "-6425 -168 -263");
+				zyk_set_entity_field(new_ent_line, "angles", "0 -1 0");
+
+				zyk_spawn_entity(new_ent_line);
+
+				new_ent_line = G_Spawn();
+
+				zyk_set_entity_field(new_ent_line, "classname", "fx_runner");
+				zyk_set_entity_field(new_ent_line, "targetname", "zyk_race_line");
+				new_ent_line->s.modelindex = G_EffectIndex("mp/crystalbeamred");
+				zyk_set_entity_field(new_ent_line, "origin", "-5700 -180 -263");
+				zyk_set_entity_field(new_ent_line, "angles", "0 179 0");
+
+				zyk_spawn_entity(new_ent_line);
 			}
 
 			if (swoop_number < MAX_RACERS)

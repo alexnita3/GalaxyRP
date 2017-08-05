@@ -10177,7 +10177,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (level.race_map == 1)
 					{ // zyk: t2_trip map
-						if ((int)ent->client->ps.origin[0] > 3085 && (int)ent->client->ps.origin[0] < 5264 && (int)ent->client->ps.origin[1] > -11136 && (int)ent->client->ps.origin[1] < -9229)
+						if ((int)ent->client->ps.origin[0] > 3200 && (int)ent->client->ps.origin[0] < 4770 && (int)ent->client->ps.origin[1] > -11136 && (int)ent->client->ps.origin[1] < -9978)
 						{ // zyk: player reached the finish line
 							level.race_last_player_position++;
 							ent->client->pers.race_position = 0;
@@ -10248,7 +10248,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (level.race_map == 2)
 					{ // zyk: t3_stamp map
-						if ((int)ent->client->ps.origin[1] > -200 && (int)ent->client->ps.origin[2] < -170)
+						if ((int)ent->client->ps.origin[1] > -174 && (int)ent->client->ps.origin[2] < -170)
 						{ // zyk: player reached the finish line
 							level.race_last_player_position++;
 							ent->client->pers.race_position = 0;
