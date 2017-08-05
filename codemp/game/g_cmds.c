@@ -4108,7 +4108,7 @@ qboolean TryGrapple(gentity_t *ent)
 					if (use_this_power == MAGIC_MAGIC_SENSE && zyk_enable_magic_sense.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_magic_sense_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						magic_sense(ent,2000);
+						magic_sense(ent,3000);
 						ent->client->pers.magic_power -= (int)ceil((zyk_magic_sense_mp_cost.integer * universe_mp_cost_factor));
 
 						if (ent->client->pers.rpg_class == 8)
