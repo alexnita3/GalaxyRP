@@ -2834,6 +2834,12 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 		{ // zyk: RPG Mode player score and credits
 			attacker->client->pers.credits_modifier = self->client->pers.level;
 			attacker->client->pers.score_modifier = self->client->pers.level / 50;
+
+			if (self->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
+			{
+				attacker->client->pers.score_modifier += 1;
+				attacker->client->pers.credits_modifier += 20;
+			}
 		}
 		else if (self->NPC && self->client->NPC_class == CLASS_VEHICLE)
 		{ // zyk: vehicles will not give any score or credits
@@ -2842,13 +2848,19 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 		}
 		else if (self->NPC && self->client->pers.guardian_invoked_by_id != -1)
 		{ // zyk: guardians give more score and credits
-			attacker->client->pers.credits_modifier = 290;
-			attacker->client->pers.score_modifier = 4;
+			attacker->client->pers.credits_modifier = 490;
+			attacker->client->pers.score_modifier = 6;
 		}
 		else if (self->NPC && self->client->ps.fd.forcePowerMax > 0 && self->client->ps.stats[STAT_WEAPONS] & (1 << WP_SABER))
 		{ // zyk: force-user saber npcs give more score and credits
 			attacker->client->pers.credits_modifier = 10;
 			attacker->client->pers.score_modifier = 1;
+		}
+
+		if (self->NPC && self->client->ps.stats[STAT_MAX_HEALTH] >= 500 && self->client->pers.guardian_invoked_by_id == -1)
+		{ // zyk: npcs with more than 500 hp gives more score
+			attacker->client->pers.score_modifier += 1;
+			attacker->client->pers.credits_modifier += 20;
 		}
 
 		if (self->NPC && self->client->pers.credits_modifier > 0)
