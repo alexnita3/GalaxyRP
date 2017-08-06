@@ -1126,7 +1126,60 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			{ // zyk: remove the map change entity
 				G_FreeEntity( ent );
 			}
+			if (Q_stricmp(ent->targetname, "ractoroomdoor") == 0)
+			{ // zyk: remove office door
+				G_FreeEntity(ent);
+			}
+			if (i == 142)
+			{ // zyk: remove the elevator
+				G_FreeEntity(ent);
+			}
+			if (i == 166)
+			{ // zyk: remove the elevator button
+				G_FreeEntity(ent);
+			}
 		}
+
+		// zyk: adding new elevator and buttons that work properly
+		ent = G_Spawn();
+
+		zyk_set_entity_field(ent, "classname", "func_plat");
+		zyk_set_entity_field(ent, "spawnflags", "81920");
+		zyk_set_entity_field(ent, "targetname", "zyk_lift_1");
+		zyk_set_entity_field(ent, "message", "8");
+		zyk_set_entity_field(ent, "random", "1280");
+		zyk_set_entity_field(ent, "speed", "200");
+		zyk_set_entity_field(ent, "model", "*38");
+		zyk_set_entity_field(ent, "origin", "2848 2144 700");
+		zyk_set_entity_field(ent, "soundSet", "platform");
+
+		zyk_spawn_entity(ent);
+
+		ent = G_Spawn();
+
+		zyk_set_entity_field(ent, "classname", "trigger_multiple");
+		zyk_set_entity_field(ent, "spawnflags", "65540");
+		zyk_set_entity_field(ent, "target", "zyk_lift_1");
+		zyk_set_entity_field(ent, "origin", "2664 2000 728");
+		zyk_set_entity_field(ent, "mins", "-32 -32 -32");
+		zyk_set_entity_field(ent, "maxs", "32 32 32");
+		zyk_set_entity_field(ent, "wait", "1");
+		zyk_set_entity_field(ent, "delay", "2");
+
+		zyk_spawn_entity(ent);
+
+		ent = G_Spawn();
+
+		zyk_set_entity_field(ent, "classname", "trigger_multiple");
+		zyk_set_entity_field(ent, "spawnflags", "65540");
+		zyk_set_entity_field(ent, "target", "zyk_lift_1");
+		zyk_set_entity_field(ent, "origin", "2577 2023 -551");
+		zyk_set_entity_field(ent, "mins", "-32 -32 -32");
+		zyk_set_entity_field(ent, "maxs", "32 32 32");
+		zyk_set_entity_field(ent, "wait", "1");
+		zyk_set_entity_field(ent, "delay", "2");
+
+		zyk_spawn_entity(ent);
 
 		zyk_create_info_player_deathmatch(1974,-1983,-550,90);
 		zyk_create_info_player_deathmatch(1779,-1983,-550,90);
