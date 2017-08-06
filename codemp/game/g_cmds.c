@@ -9763,7 +9763,7 @@ Cmd_Stuff_f
 void Cmd_Stuff_f( gentity_t *ent ) {
 	if (trap->Argc() == 1)
 	{ // zyk: shows the categories of stuff
-		trap->SendServerCommand( ent-g_entities, "print \"\n^7Use ^2/stuff <category> ^7to buy or sell stuff\nThe Category may be ^3ammo^7, ^3items^7, ^3weapons ^7or ^3upgrades\n^7Use ^3/stuff <number> ^7to see info about the item\n\n^7Use ^2/buy <number> ^7to buy or ^2/sell <number> ^7to sell\n\n\"");
+		trap->SendServerCommand( ent-g_entities, "print \"\n^7Use ^2/stuff <category> ^7to buy or sell stuff\nThe Category may be ^3ammo^7, ^3items^7, ^3misc^7, ^3weapons ^7or ^3upgrades\n^7Use ^3/stuff <number> ^7to see info about the item\n\n^7Use ^2/buy <number> ^7to buy or ^2/sell <number> ^7to sell\nStuff bought from ^3upgrades ^7category are permanent\n\n\"");
 		return;
 	}
 	else
@@ -9780,7 +9780,11 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		}
 		else if (Q_stricmp(arg1, "items" ) == 0)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^39 - Shield Booster: ^7Buy: 150 - Sell: ^1no\n^310 - Sentry Gun: ^7Buy: 170 - Sell: 60\n^311 - Seeker Drone: ^7Buy: 180 - Sell: 65\n^312 - Big Bacta: ^7Buy: 200 - Sell: 70\n^313 - Force Field: ^7Buy: 300 - Sell: 80\n^314 - Ysalamiri: ^7Buy: 200 - Sell: 50\n^331 - Jetpack Fuel: ^7Buy: 200 - Sell: ^1no\n^334 - Bacta Canister: ^7Buy: 100 - Sell: 20\n^335 - E-Web: ^7Buy: 150 - Sell: 30\n^338 - Binoculars: ^7Buy: 10 - Sell: 5\n^341 - Jetpack: ^7Buy: 50 - Sell: ^1no\n^342 - Cloak Item: ^7Buy: 50 - Sell: 20\n^343 - Force Boon: ^7Buy: 200 - Sell: 50\n^344 - Magic Potion: ^7Buy: 50 - Sell: ^1no\n^349 - Saber Armor: ^7Buy: 2000 - Sell: ^1no\n^350 - Gun Armor: ^7Buy: 2000 - Sell: ^1no\n^351 - Healing Crystal: ^7Buy: 2000 - Sell: ^1no\n^352 - Energy Crystal: ^7Buy: 2000 - Sell: ^1no\n^356 - Book of Riddles: ^7Buy: 100000 - Sell: ^1no^7\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^39 - Shield Booster: ^7Buy: 150 - Sell: ^1no\n^310 - Sentry Gun: ^7Buy: 170 - Sell: 60\n^311 - Seeker Drone: ^7Buy: 180 - Sell: 65\n^312 - Big Bacta: ^7Buy: 200 - Sell: 70\n^313 - Force Field: ^7Buy: 300 - Sell: 80\n^334 - Bacta Canister: ^7Buy: 100 - Sell: 20\n^335 - E-Web: ^7Buy: 150 - Sell: 30\n^338 - Binoculars: ^7Buy: 10 - Sell: 5\n^341 - Jetpack: ^7Buy: 50 - Sell: ^1no\n^342 - Cloak Item: ^7Buy: 50 - Sell: 20\n\n\"");
+		}
+		else if (Q_stricmp(arg1, "misc") == 0)
+		{
+			trap->SendServerCommand(ent - g_entities, "print \"\n^314 - Ysalamiri: ^7Buy: 200 - Sell: 50\n^331 - Jetpack Fuel: ^7Buy: 200 - Sell: ^1no\n^343 - Force Boon: ^7Buy: 200 - Sell: 50\n^344 - Magic Potion: ^7Buy: 50 - Sell: ^1no\n^349 - Saber Armor: ^7Buy: 2000 - Sell: ^1no\n^350 - Gun Armor: ^7Buy: 2000 - Sell: ^1no\n^351 - Healing Crystal: ^7Buy: 2000 - Sell: ^1no\n^352 - Energy Crystal: ^7Buy: 2000 - Sell: ^1no\n^356 - Book of Riddles: ^7Buy: 100000 - Sell: ^1no^7\n\n\"");
 		}
 		else if (Q_stricmp(arg1, "weapons" ) == 0)
 		{
