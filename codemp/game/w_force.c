@@ -5521,6 +5521,66 @@ qboolean G_SpecialRollGetup(gentity_t *self)
 
 extern char *zyk_rpg_class(gentity_t *ent);
 extern int zyk_max_magic_power(gentity_t *ent);
+void sense_health_info(gentity_t *self, gentity_t *target)
+{
+	int client_health = target->client->ps.stats[STAT_HEALTH];
+	int client_armor = target->client->ps.stats[STAT_ARMOR];
+	int client_max_armor = target->client->ps.stats[STAT_MAX_HEALTH];
+	char client_name[64];
+	int magic_power = 0;
+	int max_magic_power = 0;
+	char player_type[32];
+	int skill_number = 35; // zyk: used to see if the Sense Health should be based on skill 36 or skill 56, which in the skill_levels array will be in indexes 35 and 55
+
+	strcpy(player_type, "Normal Player"); // zyk: by default, consider the target as player that is not logged in his account
+
+	if (target->NPC)
+	{
+		strcpy(client_name, target->NPC_type);
+	}
+	else
+	{
+		strcpy(client_name, target->client->pers.netname);
+	}
+
+	if (self->client->pers.rpg_class == 8)
+	{ // zyk: Magic Master using Magic Sense, so the info displayed is based on Improvements skill
+		skill_number = 55;
+	}
+	
+	if (self->client->pers.skill_levels[skill_number] == 1)
+	{
+		trap->SendServerCommand(self->s.number, va("cp \"^1%d\n\"", client_health));
+	}
+	else if (self->client->pers.skill_levels[skill_number] == 2)
+	{
+		trap->SendServerCommand(self->s.number, va("cp \"%s\n\n^1%d^3/^2%d\n\"", client_name, client_health, client_armor));
+	}
+	else if (self->client->pers.skill_levels[skill_number] == 3)
+	{
+		if (target->NPC)
+		{
+			strcpy(player_type, "NPC");
+		}
+		else if (target->client->sess.amrpgmode == 1)
+		{
+			strcpy(player_type, "Admin-Only Player");
+		}
+		else if (target->client->sess.amrpgmode == 2)
+		{
+			strcpy(player_type, zyk_rpg_class(target));
+
+			// zyk: calculating the max armor of this player
+			client_max_armor = target->client->pers.max_rpg_shield;
+
+			magic_power = target->client->pers.magic_power;
+			max_magic_power = zyk_max_magic_power(target);
+		}
+
+		trap->SendServerCommand(self->s.number, va("cp \"%s\n^1%d^3/^1%d  ^2%d^3/^2%d\n^5%d^3/^5%d  ^7%d^3/^7%d\n^7%s\n\"", client_name, client_health, target->client->ps.stats[STAT_MAX_HEALTH], client_armor, client_max_armor, target->client->ps.fd.forcePower, target->client->ps.fd.forcePowerMax, magic_power, max_magic_power, player_type));
+	}
+}
+
 void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 {
 	int			i, holo, holoregen;
@@ -5959,115 +6019,11 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 				self->client->ps.fd.forcePowerDuration[i] = 0;
 			}
 			// zyk: using Sense Health skill of RPG Mode
-			else if (i == FP_SEE && self->client->sess.amrpgmode == 2 && (self->client->pers.skill_levels[35] > 0 || self->client->pers.rpg_class == 8) && self->client->ps.fd.forcePowersActive & ( 1 << FP_SEE ) && self->client->pers.sense_health_timer < level.time)
+			else if (i == FP_SEE && self->client->sess.amrpgmode == 2 && (self->client->pers.skill_levels[35] > 0 || self->client->pers.rpg_class == 8) && 
+					 self->client->ps.fd.forcePowersActive & ( 1 << FP_SEE ) && self->client->pers.sense_health_timer < level.time && self->client->ps.hasLookTarget)
 			{
-				if (self->client->ps.hasLookTarget)
-				{
-					int client_id = self->client->ps.lookTarget; // zyk: if you are looking at someone (player or npc), this will be the client_id
-					if (g_entities[client_id].NPC) // zyk: if the entity is an NPC, then we dont show the shields, because NPCs dont have shields
-					{
-						int client_health = g_entities[client_id].health; // zyk: npcs use this attribute as health
-						char *client_name = g_entities[client_id].NPC_type;
-
-						if (self->client->pers.rpg_class == 8)
-						{ // zyk: Magic Master using Magic Sense, improves it based on Improvements skill
-							if (self->client->pers.skill_levels[55] == 1)
-							{
-								trap->SendServerCommand(self - g_entities, va("cp \"^1%d\n\"", client_health));
-							}
-							else if (self->client->pers.skill_levels[55] == 2)
-							{
-								trap->SendServerCommand(self - g_entities, va("cp \"%s\n\n^7Health: ^1%d^3/^20\n\"", client_name, client_health));
-							}
-							else if (self->client->pers.skill_levels[55] == 3)
-							{
-								trap->SendServerCommand(self - g_entities, va("cp \"%s\n^7Health: ^1%d^3/^1%d\nShield: ^20^3/^20\n^7Force: ^5%d^3/^5%d\n^7MP: 0/0\n^7Type: NPC\n\"", client_name, client_health, g_entities[client_id].client->ps.stats[STAT_MAX_HEALTH], g_entities[client_id].client->ps.fd.forcePower, g_entities[client_id].client->ps.fd.forcePowerMax));
-							}
-						}
-						else if (self->client->pers.skill_levels[35] == 1)
-						{
-							trap->SendServerCommand(self - g_entities, va("cp \"^1%d\n\"", client_health));
-						}
-						else if (self->client->pers.skill_levels[35] == 2)
-						{
-							trap->SendServerCommand(self - g_entities, va("cp \"%s\n\n^7Health: ^1%d^3/^20\n\"", client_name, client_health));
-						}
-						else if (self->client->pers.skill_levels[35] == 3)
-						{
-							trap->SendServerCommand(self - g_entities, va("cp \"%s\n^7Health: ^1%d^3/^1%d\nShield: ^20^3/^20\n^7Force: ^5%d^3/^5%d\n^7MP: 0/0\n^7Type: NPC\n\"", client_name, client_health, g_entities[client_id].client->ps.stats[STAT_MAX_HEALTH], g_entities[client_id].client->ps.fd.forcePower, g_entities[client_id].client->ps.fd.forcePowerMax));
-						}
-					}
-					else if (g_entities[client_id].client)
-					{
-						int client_health = g_entities[client_id].client->ps.stats[STAT_HEALTH];
-						int client_armor = g_entities[client_id].client->ps.stats[STAT_ARMOR];
-						int client_max_armor = g_entities[client_id].client->ps.stats[STAT_MAX_HEALTH];
-						char *client_name = g_entities[client_id].client->pers.netname;
-						int magic_power = 0;
-						int max_magic_power = 0;
-						char player_type[32];
-
-						strcpy(player_type, "Normal Player");
-
-						if (self->client->pers.rpg_class == 8)
-						{ // zyk: Magic Master using Magic Sense, improves it based on Improvements skill
-							if (self->client->pers.skill_levels[55] == 1)
-							{
-								trap->SendServerCommand(self - g_entities, va("cp \"^1%d\n\"", client_health));
-							}
-							else if (self->client->pers.skill_levels[55] == 2)
-							{
-								trap->SendServerCommand(self - g_entities, va("cp \"%s\n\n^7Health: ^1%d^3/^2%d\n\"", client_name, client_health, client_armor));
-							}
-							else if (self->client->pers.skill_levels[55] == 3)
-							{
-								if (g_entities[client_id].client->sess.amrpgmode == 0)
-									strcpy(player_type, "Normal Player");
-								else if (g_entities[client_id].client->sess.amrpgmode == 1)
-									strcpy(player_type, "Admin-Only Player");
-								else if (g_entities[client_id].client->sess.amrpgmode == 2)
-								{
-									strcpy(player_type, zyk_rpg_class(&g_entities[client_id]));
-
-									// zyk: calculating the max armor of this player
-									client_max_armor = g_entities[client_id].client->pers.max_rpg_shield;
-
-									magic_power = g_entities[client_id].client->pers.magic_power;
-									max_magic_power = zyk_max_magic_power(&g_entities[client_id]);
-								}
-
-								trap->SendServerCommand(self - g_entities, va("cp \"%s\n^7Health: ^1%d^3/^1%d\nShield: ^2%d^3/^2%d\n^7Force: ^5%d^3/^5%d\n^7MP: %d/%d\n^7Type: %s\n\"", client_name, client_health, g_entities[client_id].client->ps.stats[STAT_MAX_HEALTH], client_armor, client_max_armor, g_entities[client_id].client->ps.fd.forcePower, g_entities[client_id].client->ps.fd.forcePowerMax, magic_power, max_magic_power, player_type));
-							}
-						}
-						else if (self->client->pers.skill_levels[35] == 1)
-						{
-							trap->SendServerCommand(self - g_entities, va("cp \"^1%d\n\"", client_health));
-						}
-						else if (self->client->pers.skill_levels[35] == 2)
-						{
-							trap->SendServerCommand(self - g_entities, va("cp \"%s\n\n^7Health: ^1%d^3/^2%d\n\"", client_name, client_health, client_armor));
-						}
-						else if (self->client->pers.skill_levels[35] == 3)
-						{
-							if (g_entities[client_id].client->sess.amrpgmode == 0)
-								strcpy(player_type, "Normal Player");
-							else if (g_entities[client_id].client->sess.amrpgmode == 1)
-								strcpy(player_type, "Admin-Only Player");
-							else if (g_entities[client_id].client->sess.amrpgmode == 2)
-							{
-								strcpy(player_type, zyk_rpg_class(&g_entities[client_id]));
-
-								// zyk: calculating the max armor of this player
-								client_max_armor = g_entities[client_id].client->pers.max_rpg_shield;
-
-								magic_power = g_entities[client_id].client->pers.magic_power;
-								max_magic_power = zyk_max_magic_power(&g_entities[client_id]);
-							}
-
-							trap->SendServerCommand(self - g_entities, va("cp \"%s\n^7Health: ^1%d^3/^1%d\nShield: ^2%d^3/^2%d\n^7Force: ^5%d^3/^5%d\n^7MP: %d/%d\n^7Type: %s\n\"", client_name, client_health, g_entities[client_id].client->ps.stats[STAT_MAX_HEALTH], client_armor, client_max_armor, g_entities[client_id].client->ps.fd.forcePower, g_entities[client_id].client->ps.fd.forcePowerMax, magic_power, max_magic_power, player_type));
-						}
-					}
-				}
+				// zyk: if you are looking at someone (player or npc), this will be the client id
+				sense_health_info(self, &g_entities[self->client->ps.lookTarget]);
 
 				self->client->pers.sense_health_timer = level.time + 1000; // zyk: show health each second
 			}
