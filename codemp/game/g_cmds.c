@@ -6208,7 +6208,7 @@ void choose_new_player(gentity_t *next_player)
 			}
 			else if (level.quest_map == 7 && !(next_player->client->pers.defeated_guardians & (1 << 7)))
 			{ // zyk: Guardian of Intelligence
-				load_effect(2500,2140,-551,0,"env/btend");
+				load_effect(1920, 2068, 720,0,"env/btend");
 			}
 			else if (level.quest_map == 20 && !(next_player->client->pers.defeated_guardians & (1 << 8)))
 			{ // zyk: Guardian of Agility

@@ -10961,7 +10961,7 @@ void G_RunFrame( int levelTime ) {
 					{
 						zyk_try_get_dark_quest_note(ent, 10);
 
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 7)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > 2400 && (int) ent->client->ps.origin[0] < 2600 && (int) ent->client->ps.origin[1] > 2040 && (int) ent->client->ps.origin[1] < 2240 && (int) ent->client->ps.origin[2] == -551)
+						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 7)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > 1820 && (int) ent->client->ps.origin[0] < 2020 && (int) ent->client->ps.origin[1] > 1968 && (int) ent->client->ps.origin[1] < 2168 && (int) ent->client->ps.origin[2] == 728)
 						{
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
