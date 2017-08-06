@@ -4984,9 +4984,9 @@ void rpg_score(gentity_t *ent, qboolean admin_rp_mode)
 	{
 		ent->client->pers.level_up_score += (1 + ent->client->pers.score_modifier); // zyk: add score to the RPG mode score
 
-		if (ent->client->pers.level_up_score >= ent->client->pers.level)
+		if (ent->client->pers.level_up_score >= (ent->client->pers.level * zyk_level_up_score_factor.integer))
 		{ // zyk: player got a new level
-			ent->client->pers.level_up_score -= ent->client->pers.level;
+			ent->client->pers.level_up_score -= (ent->client->pers.level * zyk_level_up_score_factor.integer);
 			ent->client->pers.level++;
 
 			if (ent->client->pers.level % 10 == 0) // zyk: every level divisible by 10 the player will get bonus skillpoints
@@ -7529,7 +7529,7 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 		strcpy(content,va("%s%d-%d-%d-%d-%d-%d-%d-",content,ent->client->pers.secrets_found,ent->client->pers.defeated_guardians,ent->client->pers.hunter_quest_progress,
 			ent->client->pers.eternity_quest_progress,ent->client->pers.universe_quest_progress,universe_quest_counter_value,quest_player_id));
 
-		trap->SendServerCommand( ent-g_entities, va("zykmod \"%d/%d-%d/%d-%d-%d/%d-%d/%d-%d-%s-%s\"",ent->client->pers.level,MAX_RPG_LEVEL,ent->client->pers.level_up_score,ent->client->pers.level,ent->client->pers.skillpoints,ent->client->pers.skill_counter,zyk_max_skill_counter.integer,ent->client->pers.magic_power,zyk_max_magic_power(ent),ent->client->pers.credits,zyk_rpg_class(ent),content));
+		trap->SendServerCommand( ent->s.number, va("zykmod \"%d/%d-%d/%d-%d-%d/%d-%d/%d-%d-%s-%s\"",ent->client->pers.level,MAX_RPG_LEVEL,ent->client->pers.level_up_score,(ent->client->pers.level * zyk_level_up_score_factor.integer),ent->client->pers.skillpoints,ent->client->pers.skill_counter,zyk_max_skill_counter.integer,ent->client->pers.magic_power,zyk_max_magic_power(ent),ent->client->pers.credits,zyk_rpg_class(ent),content));
 	}
 	else if (ent->client->sess.amrpgmode == 1)
 	{ // zyk: just sends the player settings
@@ -9197,7 +9197,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 
 			strcpy(rpg_class,zyk_rpg_class(ent));
 
-			trap->SendServerCommand(ent-g_entities, va("print \"\n^2Account: ^7%s\n\n^3Level: ^7%d/%d\n^3Level Up Score: ^7%d/%d\n^3Skill Points: ^7%d\n^3Skill Counter: ^7%d/%d\n^3Magic Points: ^7%d/%d\n^3Credits: ^7%d\n^3RPG Class: ^7%s\n\n^7Use ^2/list rpg ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->pers.level, MAX_RPG_LEVEL, ent->client->pers.level_up_score, ent->client->pers.level, ent->client->pers.skillpoints, ent->client->pers.skill_counter, zyk_max_skill_counter.integer, ent->client->pers.magic_power, zyk_max_magic_power(ent), ent->client->pers.credits, rpg_class));
+			trap->SendServerCommand(ent-g_entities, va("print \"\n^2Account: ^7%s\n\n^3Level: ^7%d/%d\n^3Level Up Score: ^7%d/%d\n^3Skill Points: ^7%d\n^3Skill Counter: ^7%d/%d\n^3Magic Points: ^7%d/%d\n^3Credits: ^7%d\n^3RPG Class: ^7%s\n\n^7Use ^2/list rpg ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->pers.level, MAX_RPG_LEVEL, ent->client->pers.level_up_score, (ent->client->pers.level * zyk_level_up_score_factor.integer), ent->client->pers.skillpoints, ent->client->pers.skill_counter, zyk_max_skill_counter.integer, ent->client->pers.magic_power, zyk_max_magic_power(ent), ent->client->pers.credits, rpg_class));
 		}
 		else if (trap->Argc() == 2)
 		{
