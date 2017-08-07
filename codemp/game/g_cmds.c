@@ -17026,7 +17026,19 @@ Cmd_Tutorial_f
 ==================
 */
 void Cmd_Tutorial_f(gentity_t *ent) {
-	ent->client->pers.tutorial_step = 0;
+	char arg1[MAX_STRING_CHARS];
+
+	if (trap->Argc() < 2)
+	{
+		ent->client->pers.tutorial_step = 0;
+	}
+	else
+	{
+		trap->Argv(1, arg1, sizeof(arg1));
+
+		ent->client->pers.tutorial_step = atoi(arg1);
+	}
+
 	ent->client->pers.tutorial_timer = 0;
 	ent->client->pers.player_statuses |= (1 << 25);
 }
