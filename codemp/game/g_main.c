@@ -9057,6 +9057,8 @@ void G_RunFrame( int levelTime ) {
 
 						zyk_set_entity_field(new_ent, "wait", zyk_get_file_value(this_file));
 
+						zyk_set_entity_field(new_ent, "health", zyk_get_file_value(this_file));
+
 						zyk_spawn_entity(new_ent);
 					}
 					else if (strncmp(content, "weapon_", 7) == 0 || strncmp(content, "ammo_", 5) == 0 || 
