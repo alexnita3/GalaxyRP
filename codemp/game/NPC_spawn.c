@@ -1365,7 +1365,7 @@ extern void G_CreateAnimalNPC( Vehicle_t **pVeh, const char *strAnimalType );
 extern void G_CreateSpeederNPC( Vehicle_t **pVeh, const char *strType );
 extern void G_CreateWalkerNPC( Vehicle_t **pVeh, const char *strAnimalType );
 extern void G_CreateFighterNPC( Vehicle_t **pVeh, const char *strType );
-
+extern void zyk_spawn_entity(gentity_t *ent);
 gentity_t *NPC_Spawn_Do( gentity_t *ent )
 {
 	gentity_t	*newent = NULL;
@@ -1750,9 +1750,18 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 		{//last guy should fire this target when he dies
 			newent->target = ent->closetarget;
 		}
-		ent->targetname = NULL;
-		//why not remove me...?  Because of all the string pointers?  Just do G_NewStrings?
-		G_FreeEntity( ent );//bye!
+		
+		if (ent->spawnflags & 4096 && ent->targetname)
+		{ // zyk: if it has this spawnflag, allow spawning the same npc again
+			zyk_spawn_entity(ent);
+		}
+		else
+		{ 
+			ent->targetname = NULL;
+
+			//why not remove me...?  Because of all the string pointers?  Just do G_NewStrings?
+			G_FreeEntity(ent);//bye!
+		}
 	}
 
 finish:
