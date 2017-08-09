@@ -148,6 +148,12 @@ void ShieldThink(gentity_t *self)
 		self->health -= SHIELD_HEALTH_DEC;
 	}
 	self->nextthink = level.time + 1000;
+
+	if (level.duel_tournament_mode > 0 && Distance(self->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+	{ // zyk: cannot place it inside a  Duel Tornament arena, in this case, remove it
+		self->health = 0;
+	}
+
 	if (self->health <= 0)
 	{
 		ShieldRemove(self);
@@ -443,6 +449,12 @@ qboolean PlaceShield(gentity_t *playerent)
 		// drop to floor
 		VectorSet( dest, pos[0], pos[1], pos[2] - 4096 );
 		trap->Trace( &tr, pos, mins, maxs, dest, playerent->s.number, MASK_SOLID, qfalse, 0, 0 );
+
+		if (level.duel_tournament_mode > 0 && Distance(tr.endpos, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+		{ // zyk: cannot place it inside a  Duel Tornament arena
+			return qfalse;
+		}
+
 		if ( !tr.startsolid && !tr.allsolid )
 		{
 			// got enough room so place the portable shield
