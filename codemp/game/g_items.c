@@ -885,7 +885,7 @@ void pas_think( gentity_t *ent )
 	}
 
 	if (level.duel_tournament_mode == 4 && Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
-	{ // zyk: cannot place it inside a  Duel Tornament arena, in this case, remove it
+	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
 		G_Sound(ent, CHAN_BODY, G_SoundIndex("sound/chars/turret/shutdown.wav"));
 		ent->s.bolt2 = ENTITYNUM_NONE;
 		ent->s.fireflag = 2;
