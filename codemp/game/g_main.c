@@ -10164,7 +10164,7 @@ void G_RunFrame( int levelTime ) {
 			if (level.duel_tournament_mode == 4)
 			{
 				if ((ent->s.number == level.duelist_1_id || ent->s.number == level.duelist_2_id) && 
-					Distance(ent->client->ps.origin, level.duel_tournament_origin) > (65 * zyk_duel_tournament_arena_scale.value / 100.0) &&
+					Distance(ent->client->ps.origin, level.duel_tournament_origin) > (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0) &&
 					ent->health > 0)
 				{ // zyk: duelists cannot leave the arena
 					ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
@@ -10172,7 +10172,7 @@ void G_RunFrame( int levelTime ) {
 					player_die(ent, ent, ent, 100000, MOD_SUICIDE);
 				}
 				else if (ent->s.number != level.duelist_1_id && ent->s.number != level.duelist_2_id &&
-					Distance(ent->client->ps.origin, level.duel_tournament_origin) < (65 * zyk_duel_tournament_arena_scale.value / 100.0) &&
+					Distance(ent->client->ps.origin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0) &&
 					ent->health > 0)
 				{ // zyk: other players cannot enter the arena
 					ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;

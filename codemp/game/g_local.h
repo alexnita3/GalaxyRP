@@ -622,6 +622,9 @@ typedef enum {
 // zyk: quantity of items at the jawa seller
 #define NUMBER_OF_SELLER_ITEMS 56
 
+// zyk: default size of the globe model used as the Duel Tournament arena
+#define DUEL_TOURNAMENT_ARENA_SIZE 65
+
 // client data that stays across multiple respawns, but is cleared
 // on each level change or team change at ClientBegin()
 typedef struct clientPersistant_s {
