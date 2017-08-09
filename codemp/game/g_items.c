@@ -110,7 +110,7 @@ int adjustRespawnTime(float preRespawnTime, int itemType, int itemTag)
 #define SHIELD_HALFTHICKNESS		4
 #define SHIELD_PLACEDIST			64
 
-#define SHIELD_SIEGE_HEALTH			1000
+#define SHIELD_SIEGE_HEALTH			2000
 #define SHIELD_SIEGE_HEALTH_DEC		1	// still 25 seconds. zyk: changed to 1	
 
 static qhandle_t	shieldLoopSound=0;
