@@ -4079,15 +4079,6 @@ void ClientDisconnect( int clientNum ) {
 		return;
 	}
 
-	// zyk: duelist disconnecting in the middle of a Duel Tournament match. First he must die to give score to the other duelist
-	if (level.duel_tournament_mode == 4 && (ent->s.number == level.duelist_1_id || ent->s.number == level.duelist_2_id))
-	{
-		ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
-
-		player_die(ent, ent, ent, 100000, MOD_SUICIDE);
-		return;
-	}
-
 	i = 0;
 
 	while (i < NUM_FORCE_POWERS)
