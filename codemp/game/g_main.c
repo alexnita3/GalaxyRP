@@ -8017,7 +8017,7 @@ void G_RunFrame( int levelTime ) {
 		else if (level.duel_tournament_mode == 3 && level.duel_tournament_timer < level.time)
 		{
 			int zyk_random = Q_irand(0, 1);
-			vec3_t zyk_origin;
+			vec3_t zyk_origin, zyk_angles;
 			gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
 			gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
 
@@ -8036,19 +8036,23 @@ void G_RunFrame( int levelTime ) {
 
 				if (zyk_random == 1)
 				{ // zyk: put the duelists along the x axis
+					VectorSet(zyk_angles, 0, 0, 0);
 					VectorSet(zyk_origin, level.duel_tournament_origin[0] - 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
-					zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
+					zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
 
+					VectorSet(zyk_angles, 0, 179, 0);
 					VectorSet(zyk_origin, level.duel_tournament_origin[0] + 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
-					zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
+					zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
 				}
 				else
 				{ // zyk: put the duelists along the y axis
+					VectorSet(zyk_angles, 0, 90, 0);
 					VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
-					zyk_TeleportPlayer(duelist_1, zyk_origin, duelist_1->client->ps.viewangles);
+					zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
 
+					VectorSet(zyk_angles, 0, -90, 0);
 					VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
-					zyk_TeleportPlayer(duelist_2, zyk_origin, duelist_2->client->ps.viewangles);
+					zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
 				}
 
 				// zyk: set both duelists in private duel
