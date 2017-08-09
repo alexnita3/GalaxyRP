@@ -7273,6 +7273,10 @@ void duel_tournament_prepare(gentity_t *ent, gentity_t *challenged)
 
 	challenged->client->ps.duelIndex = ent->s.number;
 	challenged->client->ps.duelTime = level.time + 3000;
+
+	// zyk: making them stop any movement
+	VectorSet(ent->client->ps.velocity, 0, 0, 0);
+	VectorSet(challenged->client->ps.velocity, 0, 0, 0);
 }
 
 // zyk: generates the table with all the tournament matches
