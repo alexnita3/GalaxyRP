@@ -8021,7 +8021,7 @@ void G_RunFrame( int levelTime ) {
 			level.duel_tournament_mode = 2;
 		}
 		else if (level.duel_tournament_mode == 4)
-		{ // zyk: if a duelist disconnects, give score to the other duelist
+		{ // zyk: if a duelist disconnects or goes to spectator mode, give score to the other duelist
 			gentity_t *other_duelist = NULL;
 
 			if (level.duelist_1_id != -1 && g_entities[level.duelist_1_id].client->pers.connected == CON_DISCONNECTED)
@@ -8029,6 +8029,14 @@ void G_RunFrame( int levelTime ) {
 				other_duelist = &g_entities[level.duelist_2_id];
 			}
 			else if (level.duelist_2_id != -1 && g_entities[level.duelist_2_id].client->pers.connected == CON_DISCONNECTED)
+			{
+				other_duelist = &g_entities[level.duelist_1_id];
+			}
+			else if (level.duelist_1_id != -1 && g_entities[level.duelist_1_id].client->sess.sessionTeam == TEAM_SPECTATOR)
+			{
+				other_duelist = &g_entities[level.duelist_2_id];
+			}
+			else if (level.duelist_2_id != -1 && g_entities[level.duelist_2_id].client->sess.sessionTeam == TEAM_SPECTATOR)
 			{
 				other_duelist = &g_entities[level.duelist_1_id];
 			}
@@ -10228,7 +10236,7 @@ void G_RunFrame( int levelTime ) {
 			}
 
 			// zyk: Duel Tournament. Do not let anyone enter or anyone leave the globe arena
-			if (level.duel_tournament_mode == 4)
+			if (level.duel_tournament_mode == 4 && level.duel_tournament_paused == qfalse)
 			{
 				if ((ent->s.number == level.duelist_1_id || ent->s.number == level.duelist_2_id) && 
 					Distance(ent->client->ps.origin, level.duel_tournament_origin) > (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0) &&
