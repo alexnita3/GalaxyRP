@@ -5655,16 +5655,16 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 	if (ent->client->sess.amrpgmode == 2)
 	{
 		initialize_rpg_skills(ent);
-
-		// zyk: starting the tutorial, to help players use the RPG Mode features
-		ent->client->pers.tutorial_step = 0;
-		ent->client->pers.tutorial_timer = 0;
-		ent->client->pers.player_statuses |= (1 << 25);
 	}
 	else
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Account created successfully in ^2Admin-Only ^7Mode\n\"");
 	}
+
+	// zyk: starting the tutorial, to help players use the mod features
+	ent->client->pers.tutorial_step = 0;
+	ent->client->pers.tutorial_timer = level.time + 1000;
+	ent->client->pers.player_statuses |= (1 << 25);
 }
 
 // zyk: loads Magic Master class config (selected magic powers, selected bolt type, allowed magic powers)
