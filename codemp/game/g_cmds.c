@@ -16518,26 +16518,21 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
 		}
 	}
-	else
+	else if (level.duel_tournament_mode == 1)
 	{ // zyk: leave the tournament
-		if (level.duel_tournament_mode == 4 && (level.duelist_1_id == ent->s.number || level.duelist_2_id == ent->s.number))
-		{ // zyk: if trying to leave while in duel, make him lose
-			ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
+		level.duel_players[ent->s.number] = -1;
+		level.duelists_quantity--;
 
-			player_die(ent, ent, ent, 100000, MOD_SUICIDE);
+		if (level.duelists_quantity == 0)
+		{ // zyk: everyone left the tournament. End it
+			duel_tournament_end();
 		}
-		else
-		{
-			level.duel_players[ent->s.number] = -1;
-			level.duelists_quantity--;
 
-			if (level.duelists_quantity == 0)
-			{ // zyk: everyone left the tournament. End it
-				duel_tournament_end();
-			}
-
-			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left the tournament!\n\"", ent->client->pers.netname));
-		}
+		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left the tournament!\n\"", ent->client->pers.netname));
+	}
+	else
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot leave the duel tournament after it started\n\"");
 	}
 }
 
