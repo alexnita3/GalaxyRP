@@ -7375,6 +7375,7 @@ void duel_tournament_winner()
 {
 	gentity_t *ent = NULL;
 	int max_score = -1;
+	int credits = 2000;
 	int i = 0;
 
 	for (i = 0; i < MAX_CLIENTS; i++)
@@ -7403,7 +7404,7 @@ void duel_tournament_winner()
 
 		if (ent->client->sess.amrpgmode == 2)
 		{ // zyk: gives credits as prize to rpg player
-			add_credits(ent, 2000);
+			add_credits(ent, credits);
 			save_account(ent);
 		}
 		else
@@ -7430,7 +7431,14 @@ void duel_tournament_winner()
 		
 		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
 
-		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Winner is: %s^7\"", ent->client->pers.netname));
+		if (ent->client->sess.amrpgmode == 2)
+		{
+			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Winner is: %s^7. Prize: %d credits\"", ent->client->pers.netname, credits));
+		}
+		else
+		{
+			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Winner is: %s^7. Prize: force power-ups, some guns and items\"", ent->client->pers.netname));
+		}
 	}
 	else
 	{

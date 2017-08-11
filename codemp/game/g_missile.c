@@ -959,7 +959,8 @@ void G_RunMissile( gentity_t *ent ) {
 		}
 	}
 
-	if (level.duel_tournament_mode == 4 && Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+	if (level.duel_tournament_mode == 4 && level.duel_tournament_modality == 0 && 
+		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
 	{
 		G_FreeEntity(ent);
 		return;

@@ -2840,7 +2840,8 @@ void proxMineThink(gentity_t *ent)
 
 	ent->nextthink = level.time + 100; // zyk: added some miliseconds to prevent slowdown
 
-	if (level.duel_tournament_mode == 4 && Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+	if (level.duel_tournament_mode == 4 && level.duel_tournament_modality == 0 && 
+		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
 	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
 		ent->nextthink = level.time + 50;
 		ent->think = laserTrapExplode;
@@ -2917,7 +2918,8 @@ void laserTrapThink ( gentity_t *ent )
 
 	ent->s.time = -1; //let all clients know to draw a beam from this guy
 
-	if (level.duel_tournament_mode == 4 && Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+	if (level.duel_tournament_mode == 4 && level.duel_tournament_modality == 0 && 
+		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
 	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
 		ent->touch = 0;
 		ent->nextthink = level.time + LT_DELAY_TIME;
@@ -3007,7 +3009,8 @@ void TrapThink(gentity_t *ent)
 { //laser trap think
 	ent->nextthink = level.time + 50;
 
-	if (level.duel_tournament_mode == 4 && Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+	if (level.duel_tournament_mode == 4 && level.duel_tournament_modality == 0 && 
+		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
 	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
 		ent->touch = 0;
 		ent->think = laserTrapExplode;

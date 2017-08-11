@@ -111,7 +111,8 @@ void G_RunObject( gentity_t *ent )
 
 	ent->nextthink = level.time + FRAMETIME;
 
-	if (level.duel_tournament_mode == 4 && Q_stricmp(ent->classname, "detpack") == 0 && Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+	if (level.duel_tournament_mode == 4 && level.duel_tournament_modality == 0 && Q_stricmp(ent->classname, "detpack") == 0 && 
+		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
 	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
 		ent->nextthink = level.time;
 		ent->think = G_FreeEntity;
