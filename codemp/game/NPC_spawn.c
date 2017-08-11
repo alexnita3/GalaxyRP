@@ -4932,12 +4932,6 @@ void Cmd_NPC_f( gentity_t *ent )
 		}
 	}
 
-	if (level.duel_tournament_mode == 4)
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"NPC command not allowed while players are dueling in the tournament.\n\"");
-		return;
-	}
-
 	trap->Argv( 1, cmd, 1024 );
 
 	if ( !cmd[0] )

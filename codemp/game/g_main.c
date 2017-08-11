@@ -8089,9 +8089,6 @@ void G_RunFrame( int levelTime ) {
 				// zyk: setting the max time players can duel
 				level.duel_tournament_timer = level.time + 180000;
 				level.duel_tournament_mode = 4;
-
-				// zyk: killing all npcs and vehicles
-				zyk_NPC_Kill_f("all");
 			}
 			else
 			{ // zyk: duelists are no longer valid, get a new match
@@ -13265,6 +13262,18 @@ void G_RunFrame( int levelTime ) {
 			if (ent->client->pers.universe_quest_artifact_holder_id != -1 && ent->health > 0 && ent->client->ps.powerups[PW_FORCE_BOON] < (level.time + 1000))
 			{ // zyk: artifact holder npcs. Keep their artifact (force boon) active
 				ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 1000;
+			}
+
+			// zyk: npcs cannot enter the Duel Tournament arena
+			if (level.duel_tournament_mode == 4 && 
+				Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+			{
+				ent->health = 0;
+				ent->client->ps.stats[STAT_HEALTH] = 0;
+				if (ent->die)
+				{
+					ent->die(ent, ent, ent, 100, MOD_UNKNOWN);
+				}
 			}
 
 			// zyk: quest guardians special abilities
