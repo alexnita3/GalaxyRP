@@ -149,8 +149,15 @@ void ShieldThink(gentity_t *self)
 	}
 	self->nextthink = level.time + 1000;
 
-	if (level.duel_tournament_mode > 0 && Distance(self->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
-	{ // zyk: cannot place it inside a  Duel Tornament arena, in this case, remove it
+	if (level.duel_tournament_mode > 0 && level.duel_tournament_modality == 0 && 
+		Distance(self->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
+		self->health = 0;
+	}
+
+	if (level.duel_tournament_mode > 0 && level.duel_tournament_mode < 4 && level.duel_tournament_modality == 1 &&
+		Distance(self->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+	{ // zyk: force field in RPG tournament must be destroyed between matches
 		self->health = 0;
 	}
 
@@ -450,8 +457,15 @@ qboolean PlaceShield(gentity_t *playerent)
 		VectorSet( dest, pos[0], pos[1], pos[2] - 4096 );
 		trap->Trace( &tr, pos, mins, maxs, dest, playerent->s.number, MASK_SOLID, qfalse, 0, 0 );
 
-		if (level.duel_tournament_mode > 0 && Distance(tr.endpos, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
-		{ // zyk: cannot place it inside a  Duel Tornament arena
+		if (level.duel_tournament_mode > 0 && level.duel_tournament_modality == 0 && 
+			Distance(tr.endpos, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+		{ // zyk: cannot place it inside a Duel Tornament arena
+			return qfalse;
+		}
+
+		if (level.duel_tournament_mode > 0 && level.duel_tournament_mode < 4 && level.duel_tournament_modality == 1 &&
+			Distance(tr.endpos, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+		{ // zyk: cannot place it inside a RPG Tornament arena between matches
 			return qfalse;
 		}
 
@@ -884,7 +898,20 @@ void pas_think( gentity_t *ent )
 		return;
 	}
 
-	if (level.duel_tournament_mode == 4 && Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+	if (level.duel_tournament_mode == 4 && level.duel_tournament_modality == 0 && 
+		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
+		G_Sound(ent, CHAN_BODY, G_SoundIndex("sound/chars/turret/shutdown.wav"));
+		ent->s.bolt2 = ENTITYNUM_NONE;
+		ent->s.fireflag = 2;
+
+		ent->think = sentryExpire;
+		ent->nextthink = level.time + FRAMETIME;
+		return;
+	}
+
+	if (level.duel_tournament_mode > 0 && level.duel_tournament_mode < 4 && level.duel_tournament_modality == 1 &&
+		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
 	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
 		G_Sound(ent, CHAN_BODY, G_SoundIndex("sound/chars/turret/shutdown.wav"));
 		ent->s.bolt2 = ENTITYNUM_NONE;
