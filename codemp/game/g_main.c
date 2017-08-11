@@ -4531,6 +4531,14 @@ qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 		{ // zyk: players outside melee battle cannot hit ones in it and vice-versa
 			return qfalse;
 		}
+
+		if (level.duel_tournament_mode == 4 && 
+			(((level.duelist_1_id == attacker->s.number || level.duelist_2_id == attacker->s.number) && level.duelist_1_id != target->s.number && level.duelist_2_id != target->s.number) ||
+			 ((level.duelist_1_id == target->s.number || level.duelist_2_id == target->s.number) && level.duelist_1_id != attacker->s.number && level.duelist_2_id != attacker->s.number)
+			))
+		{ // zyk: Duel Tournament, players cannot hit the ones duelling right now
+			return qfalse;
+		}
 	}
 
 	return qtrue;
@@ -7207,72 +7215,80 @@ void duel_tournament_end()
 // zyk: prepare duelist for duel
 void duel_tournament_prepare(gentity_t *ent, gentity_t *challenged)
 {
-	ent->client->ps.duelInProgress = qtrue;
-	challenged->client->ps.duelInProgress = qtrue;
-
-	// zyk: reset hp and shield of both players
-	ent->health = 100;
-	ent->client->ps.stats[STAT_ARMOR] = 100;
-
-	challenged->health = 100;
-	challenged->client->ps.stats[STAT_ARMOR] = 100;
-
 	// zyk: disable jetpack of both players
 	Jetpack_Off(ent);
 	Jetpack_Off(challenged);
 
-	ent->client->ps.duelTime = level.time + 2000;
-	challenged->client->ps.duelTime = level.time + 2000;
+	if (level.duel_tournament_modality == 0)
+	{ // zyk: non-rpg tournament
+		ent->client->ps.duelInProgress = qtrue;
+		challenged->client->ps.duelInProgress = qtrue;
 
-	G_AddEvent(ent, EV_PRIVATE_DUEL, 1);
-	G_AddEvent(challenged, EV_PRIVATE_DUEL, 1);
+		// zyk: reset hp and shield of both players
+		ent->health = 100;
+		ent->client->ps.stats[STAT_ARMOR] = 100;
 
-	//Holster their sabers now, until the duel starts (then they'll get auto-turned on to look cool)
+		challenged->health = 100;
+		challenged->client->ps.stats[STAT_ARMOR] = 100;
 
-	if (!ent->client->ps.saberHolstered)
-	{
-		if (ent->client->saber[0].soundOff)
+		ent->client->ps.duelTime = level.time + 2000;
+		challenged->client->ps.duelTime = level.time + 2000;
+
+		G_AddEvent(ent, EV_PRIVATE_DUEL, 1);
+		G_AddEvent(challenged, EV_PRIVATE_DUEL, 1);
+
+		//Holster their sabers now, until the duel starts (then they'll get auto-turned on to look cool)
+
+		if (!ent->client->ps.saberHolstered)
 		{
-			G_Sound(ent, CHAN_AUTO, ent->client->saber[0].soundOff);
+			if (ent->client->saber[0].soundOff)
+			{
+				G_Sound(ent, CHAN_AUTO, ent->client->saber[0].soundOff);
+			}
+			if (ent->client->saber[1].soundOff &&
+				ent->client->saber[1].model[0])
+			{
+				G_Sound(ent, CHAN_AUTO, ent->client->saber[1].soundOff);
+			}
+			ent->client->ps.weaponTime = 400;
+			ent->client->ps.saberHolstered = 2;
 		}
-		if (ent->client->saber[1].soundOff &&
-			ent->client->saber[1].model[0])
+		if (!challenged->client->ps.saberHolstered)
 		{
-			G_Sound(ent, CHAN_AUTO, ent->client->saber[1].soundOff);
+			if (challenged->client->saber[0].soundOff)
+			{
+				G_Sound(challenged, CHAN_AUTO, challenged->client->saber[0].soundOff);
+			}
+			if (challenged->client->saber[1].soundOff &&
+				challenged->client->saber[1].model[0])
+			{
+				G_Sound(challenged, CHAN_AUTO, challenged->client->saber[1].soundOff);
+			}
+			challenged->client->ps.weaponTime = 400;
+			challenged->client->ps.saberHolstered = 2;
 		}
-		ent->client->ps.weaponTime = 400;
-		ent->client->ps.saberHolstered = 2;
+
+		ent->client->ps.fd.privateDuelTime = 0; //reset the timer in case this player just got out of a duel. He should still be able to accept the challenge.
+
+		ent->client->ps.forceHandExtend = HANDEXTEND_DUELCHALLENGE;
+		ent->client->ps.forceHandExtendTime = level.time + 1000;
+
+		ent->client->ps.duelIndex = challenged->s.number;
+		ent->client->ps.duelTime = level.time + 3000;
+
+		challenged->client->ps.fd.privateDuelTime = 0; //reset the timer in case this player just got out of a duel. He should still be able to accept the challenge.
+
+		challenged->client->ps.forceHandExtend = HANDEXTEND_DUELCHALLENGE;
+		challenged->client->ps.forceHandExtendTime = level.time + 1000;
+
+		challenged->client->ps.duelIndex = ent->s.number;
+		challenged->client->ps.duelTime = level.time + 3000;
 	}
-	if (!challenged->client->ps.saberHolstered)
-	{
-		if (challenged->client->saber[0].soundOff)
-		{
-			G_Sound(challenged, CHAN_AUTO, challenged->client->saber[0].soundOff);
-		}
-		if (challenged->client->saber[1].soundOff &&
-			challenged->client->saber[1].model[0])
-		{
-			G_Sound(challenged, CHAN_AUTO, challenged->client->saber[1].soundOff);
-		}
-		challenged->client->ps.weaponTime = 400;
-		challenged->client->ps.saberHolstered = 2;
+	else if (level.duel_tournament_modality == 1)
+	{ // zyk: rpg tournament
+		initialize_rpg_skills(ent);
+		initialize_rpg_skills(challenged);
 	}
-
-	ent->client->ps.fd.privateDuelTime = 0; //reset the timer in case this player just got out of a duel. He should still be able to accept the challenge.
-
-	ent->client->ps.forceHandExtend = HANDEXTEND_DUELCHALLENGE;
-	ent->client->ps.forceHandExtendTime = level.time + 1000;
-
-	ent->client->ps.duelIndex = challenged->s.number;
-	ent->client->ps.duelTime = level.time + 3000;
-
-	challenged->client->ps.fd.privateDuelTime = 0; //reset the timer in case this player just got out of a duel. He should still be able to accept the challenge.
-
-	challenged->client->ps.forceHandExtend = HANDEXTEND_DUELCHALLENGE;
-	challenged->client->ps.forceHandExtendTime = level.time + 1000;
-
-	challenged->client->ps.duelIndex = ent->s.number;
-	challenged->client->ps.duelTime = level.time + 3000;
 
 	// zyk: making them stop any movement
 	VectorSet(ent->client->ps.velocity, 0, 0, 0);
@@ -7354,6 +7370,7 @@ void duel_tournament_generate_match_table()
 }
 
 // zyk: determines who is the tournament winner
+extern void add_credits(gentity_t *ent, int credits);
 void duel_tournament_winner()
 {
 	gentity_t *ent = NULL;
@@ -7384,15 +7401,23 @@ void duel_tournament_winner()
 			ClientRespawn(ent);
 		}
 
-		ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 40000;
-		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 40000;
-		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 40000;
+		if (ent->client->sess.amrpgmode == 2)
+		{ // zyk: gives credits as prize to rpg player
+			add_credits(ent, 2000);
+			save_account(ent);
+		}
+		else
+		{
+			ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 40000;
+			ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 40000;
+			ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 40000;
 
-		ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
-		ent->client->ps.ammo[AMMO_BLASTER] = zyk_max_blaster_pack_ammo.integer;
-		ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
-		ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN) | (1 << HI_SEEKER) | (1 << HI_MEDPAC_BIG);
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
+			ent->client->ps.ammo[AMMO_BLASTER] = zyk_max_blaster_pack_ammo.integer;
+			ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
+			ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
+			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN) | (1 << HI_SEEKER) | (1 << HI_MEDPAC_BIG);
+		}
 
 		// zyk: calculating the new leaderboard if this winner is logged in his account
 		if (ent->client->sess.amrpgmode > 0)
@@ -7716,7 +7741,6 @@ qboolean G_PointInBounds( vec3_t point, vec3_t mins, vec3_t maxs );
 int g_siegeRespawnCheck = 0;
 void SetMoverState( gentity_t *ent, moverState_t moverState, int time );
 
-extern void add_credits(gentity_t *ent, int credits);
 extern void remove_credits(gentity_t *ent, int credits);
 extern void try_finishing_race();
 extern gentity_t *load_crystal_model(int x,int y,int z, int yaw, int crystal_number);

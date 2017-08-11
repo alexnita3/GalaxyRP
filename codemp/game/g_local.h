@@ -1538,6 +1538,7 @@ typedef struct level_locals_s {
 
 	// zyk: Duel Tournament
 	int duel_tournament_mode; // zyk: sets 1 when someone joined, 2 to choose the duelists, 3 to announce the duelists, 4 when duel begins and 5 to show score. Default 0
+	int duel_tournament_modality; // zyk: chooses which madolity of tournament to play, if a rpg or non-rpg one
 	qboolean duel_tournament_paused; // zyk: when an admin uses /duelpause, sets qtrue. If it is already paused, sets qfalse. Default qfalse
 	int duelists_quantity; // zyk: number of players in the duel tournament. Default 0
 	int duel_tournament_timer; // zyk: timer of duel tournament events. Default 0

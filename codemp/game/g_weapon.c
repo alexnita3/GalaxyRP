@@ -3722,6 +3722,11 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 								break;
 							}
 
+							if (zyk_can_hit_target(ent, traceEnt) == qfalse)
+							{ // zyk: cannot hit this target
+								break;
+							}
+
 							//if ( G_HasKnockdownAnims( traceEnt ) )
 							if (!noKnockBack && !traceEnt->localAnimIndex && traceEnt->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN &&
 								BG_KnockDownable(&traceEnt->client->ps)) //just check for humanoids..
@@ -3877,7 +3882,6 @@ static void WP_FireConcussion( gentity_t *ent )
 //---------------------------------------------------------
 // FireStunBaton
 //---------------------------------------------------------
-extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
 void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 {
 	gentity_t	*tr_ent;
@@ -4345,6 +4349,11 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 
 									if (traceEnt->client->ps.duelInProgress == qtrue)
 									{ // zyk: players in private duels cannot be knocked down
+										break;
+									}
+
+									if (zyk_can_hit_target(ent, traceEnt) == qfalse)
+									{ // zyk: cannot hit this target
 										break;
 									}
 

@@ -3575,8 +3575,8 @@ void Cmd_EngageDuel_f(gentity_t *ent)
 		return;
 	}
 
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.guardian_mode > 0)
-	{ // zyk: cannot accept duel during boss battles
+	if (ent->client->sess.amrpgmode == 2)
+	{ // zyk: cannot accept duel in RPG Mode
 		return;
 	}
 
@@ -16428,12 +16428,6 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 		return;
 	}
 
-	if (ent->client->sess.amrpgmode == 2)
-	{
-		trap->SendServerCommand(ent->s.number, "print \"You cannot be in RPG Mode to play the Duel Tournament.\n\"");
-		return;
-	}
-
 	if (level.duel_arena_loaded == qfalse)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"There is no duel arena in this map\n\"");
@@ -16449,6 +16443,18 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 	if (level.melee_mode > 0 && level.melee_players[ent->s.number] != -1)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"You are already in a Melee Battle\n\"");
+		return;
+	}
+
+	if (level.duelists_quantity > 0 && level.duel_tournament_modality == 0 && ent->client->sess.amrpgmode == 2)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"This tournament is for non-rpg players\n\"");
+		return;
+	}
+
+	if (level.duelists_quantity > 0 && level.duel_tournament_modality == 1 && ent->client->sess.amrpgmode < 2)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"This tournament is for rpg players\n\"");
 		return;
 	}
 
@@ -16480,6 +16486,16 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 				zyk_spawn_entity(new_ent);
 
 				level.duel_tournament_model_id = new_ent->s.number;
+
+				// zyk: sets the modality of tournament based on the first player joined
+				if (ent->client->sess.amrpgmode == 2)
+				{
+					level.duel_tournament_modality = 1;
+				}
+				else
+				{
+					level.duel_tournament_modality = 0;
+				}
 			}
 
 			level.duel_tournament_mode = 1;
