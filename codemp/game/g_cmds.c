@@ -6352,6 +6352,12 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 		return;
 	}
 
+	if (level.duel_tournament_mode > 0 && level.duel_players[ent->s.number] != -1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot logout while in a Duel Tournament\n\"");
+		return;
+	}
+
 	if (level.sniper_mode > 0 && level.sniper_players[ent->s.number] != -1)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Cannot logout while in a Sniper Battle\n\"");
@@ -12167,7 +12173,7 @@ Cmd_PlayerMode_f
 ==================
 */
 void Cmd_PlayerMode_f( gentity_t *ent ) {
-	// zyk: cannot login if player is in Duel Tournament or Sniper Battle
+	// zyk: cannot change mode if player is in Duel Tournament or Sniper Battle
 	if (level.duel_tournament_mode > 0 && level.duel_players[ent->s.number] != -1)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Cannot change account mode while in a Duel Tournament\n\"");
