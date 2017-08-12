@@ -16453,15 +16453,9 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 		return;
 	}
 
-	if (level.duelists_quantity > 0 && level.duel_tournament_modality == 0 && ent->client->sess.amrpgmode == 2)
+	if (ent->client->sess.amrpgmode == 2)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"This tournament is for non-rpg players\n\"");
-		return;
-	}
-
-	if (level.duelists_quantity > 0 && level.duel_tournament_modality == 1 && ent->client->sess.amrpgmode < 2)
-	{
-		trap->SendServerCommand(ent->s.number, "print \"This tournament is for rpg players\n\"");
 		return;
 	}
 
@@ -16493,16 +16487,6 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 				zyk_spawn_entity(new_ent);
 
 				level.duel_tournament_model_id = new_ent->s.number;
-
-				// zyk: sets the modality of tournament based on the first player joined
-				if (ent->client->sess.amrpgmode == 2)
-				{
-					level.duel_tournament_modality = 1;
-				}
-				else
-				{
-					level.duel_tournament_modality = 0;
-				}
 			}
 
 			level.duel_tournament_mode = 1;
@@ -16516,14 +16500,7 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 			ent->client->sess.ally1 = 0;
 			ent->client->sess.ally2 = 0;
 
-			if (level.duel_tournament_modality == 1)
-			{
-				trap->SendServerCommand(-1, va("chat \"^3RPG Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
-			}
-			else
-			{
-				trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
-			}
+			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
 		}
 	}
 	else if (level.duel_tournament_mode == 1)

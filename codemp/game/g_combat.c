@@ -2217,41 +2217,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		}
 	}
 
-	// zyk:  RPG Duel Tournament. A duelist was defeated, gives score to the winner and remove the loser from tournament if he lost
-	if (level.duel_tournament_mode == 4 && level.duel_tournament_modality == 1)
-	{
-		gentity_t *duelist_loser = NULL;
-		gentity_t *duelist_winner = NULL;
-
-		if (self->s.number == level.duelist_1_id)
-		{
-			duelist_winner = &g_entities[level.duelist_2_id];
-			duelist_loser = self;
-		}
-		else if (self->s.number == level.duelist_2_id)
-		{
-			duelist_winner = &g_entities[level.duelist_1_id];
-			duelist_loser = self;
-		}
-
-		if (duelist_winner && duelist_loser)
-		{ // zyk: give score to the winner
-			level.duel_players[duelist_winner->s.number] += 3;
-			level.duel_players_hp[duelist_winner->s.number] += (duelist_winner->health + duelist_winner->client->ps.stats[STAT_ARMOR]);
-
-			level.duel_tournament_timer = level.time + 1500;
-			level.duel_tournament_mode = 5;
-
-			// zyk: setting the winner of this match
-			level.duel_matches[level.duel_matches_done - 1][2] = duelist_winner->s.number;
-
-			level.duelist_1_id = -1;
-			level.duelist_2_id = -1;
-
-			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7defeated %s^7\"", duelist_winner->client->pers.netname, duelist_loser->client->pers.netname));
-		}
-	}
-
 	// zyk: if player dies being mind controlled or controlling someone, stop mind control
 	if (self->client->pers.being_mind_controlled > -1)
 	{
