@@ -10833,6 +10833,15 @@ void G_RunFrame( int levelTime ) {
 					if (ent->client->pers.guardian_mode > 0 && ent->client->ps.m_iVehicleNum > 0)
 						G_Kill( ent );
 
+					if (ent->client->pers.can_play_quest == 1 && ent->client->pers.quest_afk_timer < level.time)
+					{ // zyk: player afk in quest for this amount of time
+						ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
+
+						player_die(ent, ent, ent, 100000, MOD_SUICIDE);
+
+						trap->SendServerCommand(-1, va("chat \"^3Quest System: ^7%s ^7afk for 5 minutes.\"", ent->client->pers.netname));
+					}
+
 					if (level.quest_map == 1)
 					{
 						zyk_try_get_dark_quest_note(ent, 4);

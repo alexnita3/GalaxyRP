@@ -625,6 +625,9 @@ typedef enum {
 // zyk: default size of the globe model used as the Duel Tournament arena
 #define DUEL_TOURNAMENT_ARENA_SIZE 64
 
+// zyk: time in miliseconds in which the player can be afk during a quest
+#define QUEST_AFK_TIME 300000
+
 // client data that stays across multiple respawns, but is cleared
 // on each level change or team change at ClientBegin()
 typedef struct clientPersistant_s {
@@ -681,6 +684,9 @@ typedef struct clientPersistant_s {
 	// 25 - RPG Mode tutorial
 	// 26 - Using nofight command
 	int player_statuses;
+
+	// zyk: time in which quest player is afk during a quest
+	int quest_afk_timer;
 
 	// zyk: amount of times player must be hit by poison
 	// zyk: also used by Wrist Shot ability

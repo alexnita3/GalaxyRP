@@ -6232,6 +6232,7 @@ void choose_new_player(gentity_t *next_player)
 			}
 		}
 
+		next_player->client->pers.quest_afk_timer = level.time + QUEST_AFK_TIME;
 		next_player->client->pers.can_play_quest = 1;
 
 		do_scale(next_player, 100);
