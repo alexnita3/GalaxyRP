@@ -4532,14 +4532,6 @@ qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 			return qfalse;
 		}
 
-		if (level.duel_tournament_mode == 4 && 
-			(((level.duelist_1_id == attacker->s.number || level.duelist_2_id == attacker->s.number) && level.duelist_1_id != target->s.number && level.duelist_2_id != target->s.number) ||
-			 ((level.duelist_1_id == target->s.number || level.duelist_2_id == target->s.number) && level.duelist_1_id != attacker->s.number && level.duelist_2_id != attacker->s.number)
-			))
-		{ // zyk: Duel Tournament, players cannot hit the ones duelling right now
-			return qfalse;
-		}
-
 		if (attacker->client->pers.player_statuses & (1 << 26) && attacker != target)
 		{ // zyk: used nofight command, cannot hit anyone
 			gentity_t *plum;
@@ -8187,7 +8179,7 @@ void G_RunFrame( int levelTime ) {
 
 				duel_tournament_generate_match_table();
 
-				trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7The tournament will begin!\"");
+				trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7The tournament begins!\"");
 			}
 			else
 			{
@@ -10238,7 +10230,7 @@ void G_RunFrame( int levelTime ) {
 			}
 
 			// zyk: Duel Tournament. Do not let anyone enter or anyone leave the globe arena
-			if (level.duel_tournament_mode == 4 && level.duel_tournament_paused == qfalse)
+			if (level.duel_tournament_mode == 4)
 			{
 				if ((ent->s.number == level.duelist_1_id || ent->s.number == level.duelist_2_id) && 
 					Distance(ent->client->ps.origin, level.duel_tournament_origin) > (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0) &&
@@ -10248,7 +10240,7 @@ void G_RunFrame( int levelTime ) {
 
 					player_die(ent, ent, ent, 100000, MOD_SUICIDE);
 				}
-				else if (ent->s.number != level.duelist_1_id && ent->s.number != level.duelist_2_id &&
+				else if (ent->s.number != level.duelist_1_id && ent->s.number != level.duelist_2_id && ent->client->sess.sessionTeam != TEAM_SPECTATOR && 
 					Distance(ent->client->ps.origin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0) &&
 					ent->health > 0)
 				{ // zyk: other players cannot enter the arena
