@@ -4999,6 +4999,14 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	if (zyk_can_hit_target(attacker, targ) == qfalse)
 		return;
 
+	// zyk: Duel Tournament is paused, duelists cannot damage each other in this moment
+	if (level.duel_tournament_mode == 4 && level.duel_tournament_paused == qtrue && attacker && targ && attacker != targ && 
+		(attacker->s.number == level.duelist_1_id || attacker->s.number == level.duelist_2_id) && 
+		(targ->s.number == level.duelist_1_id || targ->s.number == level.duelist_2_id))
+	{
+		return;
+	}
+
 	// zyk: target has chat protection
 	if (targ && targ->client && !targ->NPC && targ->client->pers.player_statuses & (1 << 5))
 		return;
