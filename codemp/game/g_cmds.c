@@ -16515,7 +16515,14 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 			ent->client->sess.ally1 = 0;
 			ent->client->sess.ally2 = 0;
 
-			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
+			if (level.duel_tournament_modality == 1)
+			{
+				trap->SendServerCommand(-1, va("chat \"^3RPG Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
+			}
+			else
+			{
+				trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7joined the tournament!\n\"", ent->client->pers.netname));
+			}
 		}
 	}
 	else if (level.duel_tournament_mode == 1)
