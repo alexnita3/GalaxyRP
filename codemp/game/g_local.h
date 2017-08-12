@@ -679,6 +679,7 @@ typedef struct clientPersistant_s {
 	// 23 - Unique Ability 3
 	// 24 - hit by Ice Bomb
 	// 25 - RPG Mode tutorial
+	// 26 - Using nofight command
 	int player_statuses;
 
 	// zyk: amount of times player must be hit by poison

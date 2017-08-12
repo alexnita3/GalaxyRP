@@ -17079,6 +17079,31 @@ void Cmd_Skip_f(gentity_t *ent) {
 
 /*
 ==================
+Cmd_NoFight_f
+==================
+*/
+void Cmd_NoFight_f(gentity_t *ent) {
+	if (ent->client->sess.sessionTeam == TEAM_SPECTATOR)
+	{
+		if (ent->client->pers.player_statuses & (1 << 26))
+		{
+			ent->client->pers.player_statuses &= ~(1 << 26);
+			trap->SendServerCommand(ent->s.number, "print \"Deactivated\n\"");
+		}
+		else
+		{
+			ent->client->pers.player_statuses |= (1 << 26);
+			trap->SendServerCommand(ent->s.number, "print \"Activated\n\"");
+		}
+	}
+	else
+	{
+		trap->SendServerCommand(ent->s.number, "print \"This command must be used as spectator\n\"");
+	}
+}
+
+/*
+==================
 Cmd_ZykSound_f
 ==================
 */
@@ -17283,6 +17308,7 @@ command_t commands[] = {
 	{ "new",				Cmd_NewAccount_f,			CMD_NOINTERMISSION },
 	{ "news",				Cmd_News_f,					CMD_NOINTERMISSION },
 	{ "noclip",				Cmd_Noclip_f,				CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "nofight",			Cmd_NoFight_f,				CMD_NOINTERMISSION },
 	{ "notarget",			Cmd_Notarget_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "npc",				Cmd_NPC_f,					CMD_LOGGEDIN },
 	{ "npclist",			Cmd_NpcList_f,				CMD_NOINTERMISSION },
