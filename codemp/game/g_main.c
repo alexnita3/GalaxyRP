@@ -8006,6 +8006,45 @@ void G_RunFrame( int levelTime ) {
 	}
 
 	// zyk: Duel Tournament
+	if (level.duel_tournament_mode == 4)
+	{ // zyk: if a duelist disconnects or goes to spectator mode, give score to the other duelist
+		gentity_t *other_duelist = NULL;
+
+		if (level.duelist_1_id != -1 && g_entities[level.duelist_1_id].client->pers.connected == CON_DISCONNECTED)
+		{
+			other_duelist = &g_entities[level.duelist_2_id];
+		}
+		else if (level.duelist_2_id != -1 && g_entities[level.duelist_2_id].client->pers.connected == CON_DISCONNECTED)
+		{
+			other_duelist = &g_entities[level.duelist_1_id];
+		}
+		else if (level.duelist_1_id != -1 && g_entities[level.duelist_1_id].client->sess.sessionTeam == TEAM_SPECTATOR)
+		{
+			other_duelist = &g_entities[level.duelist_2_id];
+		}
+		else if (level.duelist_2_id != -1 && g_entities[level.duelist_2_id].client->sess.sessionTeam == TEAM_SPECTATOR)
+		{
+			other_duelist = &g_entities[level.duelist_1_id];
+		}
+
+		if (other_duelist)
+		{
+			level.duel_players[other_duelist->s.number] += 3;
+			level.duel_players_hp[other_duelist->s.number] += (other_duelist->health + other_duelist->client->ps.stats[STAT_ARMOR]);
+
+			level.duel_tournament_timer = level.time + 1500;
+			level.duel_tournament_mode = 5;
+
+			// zyk: setting the winner of this match
+			level.duel_matches[level.duel_matches_done - 1][2] = other_duelist->s.number;
+
+			level.duelist_1_id = -1;
+			level.duelist_2_id = -1;
+
+			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7wins\"", other_duelist->client->pers.netname));
+		}
+	}
+
 	if (level.duel_tournament_paused == qfalse)
 	{
 		if (level.duel_tournament_mode == 5 && level.duel_tournament_timer < level.time)
@@ -8013,44 +8052,6 @@ void G_RunFrame( int levelTime ) {
 			duel_show_table(NULL);
 			level.duel_tournament_timer = level.time + 1500;
 			level.duel_tournament_mode = 2;
-		}
-		else if (level.duel_tournament_mode == 4)
-		{ // zyk: if a duelist disconnects or goes to spectator mode, give score to the other duelist
-			gentity_t *other_duelist = NULL;
-
-			if (level.duelist_1_id != -1 && g_entities[level.duelist_1_id].client->pers.connected == CON_DISCONNECTED)
-			{
-				other_duelist = &g_entities[level.duelist_2_id];
-			}
-			else if (level.duelist_2_id != -1 && g_entities[level.duelist_2_id].client->pers.connected == CON_DISCONNECTED)
-			{
-				other_duelist = &g_entities[level.duelist_1_id];
-			}
-			else if (level.duelist_1_id != -1 && g_entities[level.duelist_1_id].client->sess.sessionTeam == TEAM_SPECTATOR)
-			{
-				other_duelist = &g_entities[level.duelist_2_id];
-			}
-			else if (level.duelist_2_id != -1 && g_entities[level.duelist_2_id].client->sess.sessionTeam == TEAM_SPECTATOR)
-			{
-				other_duelist = &g_entities[level.duelist_1_id];
-			}
-
-			if (other_duelist)
-			{
-				level.duel_players[other_duelist->s.number] += 3;
-				level.duel_players_hp[other_duelist->s.number] += (other_duelist->health + other_duelist->client->ps.stats[STAT_ARMOR]);
-
-				level.duel_tournament_timer = level.time + 1500;
-				level.duel_tournament_mode = 5;
-
-				// zyk: setting the winner of this match
-				level.duel_matches[level.duel_matches_done - 1][2] = other_duelist->s.number;
-
-				level.duelist_1_id = -1;
-				level.duelist_2_id = -1;
-
-				trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7wins\"", other_duelist->client->pers.netname));
-			}
 		}
 		else if (level.duel_tournament_mode == 3 && level.duel_tournament_timer < level.time)
 		{
