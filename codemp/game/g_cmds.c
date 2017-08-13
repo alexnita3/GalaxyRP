@@ -12149,7 +12149,8 @@ void Cmd_BountyQuest_f( gentity_t *ent ) {
 		{
 			this_ent = &g_entities[level.bounty_quest_target_id];
 
-			if (this_ent && this_ent->client && this_ent->client->sess.amrpgmode == 2 && this_ent->health > 0 && this_ent->client->sess.sessionTeam != TEAM_SPECTATOR)
+			if (this_ent && this_ent->client && this_ent->client->sess.amrpgmode == 2 && this_ent->health > 0 && this_ent->client->sess.sessionTeam != TEAM_SPECTATOR && 
+				!(this_ent->client->pers.player_statuses & (1 << 26)))
 			{
 				level.bounty_quest_choose_target = qfalse;
 				trap->SendServerCommand( -1, va("chat \"^3Bounty Quest: ^7A reward of ^3%d ^7credits will be given to who kills %s^7\n\"", (this_ent->client->pers.level*15), this_ent->client->pers.netname) );
@@ -12432,6 +12433,12 @@ void Cmd_RaceMode_f( gentity_t *ent ) {
 		return;
 	}
 
+	if (ent->client->pers.player_statuses & (1 << 26))
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot join race while being in nofight mode\n\"");
+		return;
+	}
+
 	if (ent->client->pers.race_position == 0)
 	{
 		int j = 0, swoop_number = -1;
@@ -12443,13 +12450,13 @@ void Cmd_RaceMode_f( gentity_t *ent ) {
 
 		if (level.gametype == GT_CTF)
 		{
-			trap->SendServerCommand(ent - g_entities, "print \"Races are not allowed in CTF.\n\"");
+			trap->SendServerCommand(ent->s.number, "print \"Races are not allowed in CTF.\n\"");
 			return;
 		}
 
 		if (level.race_mode > 1)
 		{
-			trap->SendServerCommand(ent - g_entities, "print \"Race has already started. Try again at the next race!\n\"");
+			trap->SendServerCommand(ent->s.number, "print \"Race has already started. Try again at the next race!\n\"");
 			return;
 		}
 
@@ -12458,7 +12465,7 @@ void Cmd_RaceMode_f( gentity_t *ent ) {
 			this_ent = &g_entities[j];
 			if (this_ent && this_ent->client && this_ent->inuse && this_ent->health > 0 && this_ent->client->sess.amrpgmode == 2 && this_ent->client->pers.guardian_mode > 0)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"You can't start a race while someone is in a Guardian Battle!\n\"");
+				trap->SendServerCommand(ent->s.number, "print \"You can't start a race while someone is in a Guardian Battle!\n\"");
 				return;
 			}
 		}
@@ -16459,6 +16466,12 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 		return;
 	}
 
+	if (ent->client->pers.player_statuses & (1 << 26))
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot join tournament while being in nofight mode\n\"");
+		return;
+	}
+
 	if (level.duel_players[ent->s.number] == -1 && level.duel_tournament_mode > 1)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Cannot join the duel tournament now\n\"");
@@ -16830,6 +16843,12 @@ void Cmd_SniperMode_f(gentity_t *ent) {
 		return;
 	}
 
+	if (ent->client->pers.player_statuses & (1 << 26))
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot join sniper battle while being in nofight mode\n\"");
+		return;
+	}
+
 	if (level.sniper_players[ent->s.number] == -1 && level.sniper_mode > 1)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Cannot join the Sniper Battle now\n\"");
@@ -16916,6 +16935,12 @@ void Cmd_MeleeMode_f(gentity_t *ent) {
 	if (level.sniper_mode > 0 && level.sniper_players[ent->s.number] != -1)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"You are already in a Sniper Battle\n\"");
+		return;
+	}
+
+	if (ent->client->pers.player_statuses & (1 << 26))
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot join melee battle while being in nofight mode\n\"");
 		return;
 	}
 
