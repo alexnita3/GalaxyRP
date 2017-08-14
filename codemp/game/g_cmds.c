@@ -12046,7 +12046,7 @@ extern void zyk_start_boss_battle_music(gentity_t *ent);
 extern gentity_t *Zyk_NPC_SpawnType( char *npc_type, int x, int y, int z, int yaw );
 void Cmd_GuardianQuest_f( gentity_t *ent ) {
 
-	if (zyk_allow_mini_quests.integer != 1)
+	if (zyk_allow_guardian_quest.integer != 1)
 	{
 		trap->SendServerCommand( ent-g_entities, va("chat \"^3Guardian Quest: ^7this quest is not allowed in this server\n\"") );
 		return;
@@ -12133,7 +12133,7 @@ Cmd_BountyQuest_f
 void Cmd_BountyQuest_f( gentity_t *ent ) {
 	gentity_t *this_ent = NULL;
 
-	if (zyk_allow_mini_quests.integer != 1)
+	if (zyk_allow_bounty_quest.integer != 1)
 	{
 		trap->SendServerCommand( ent-g_entities, va("chat \"^3Bounty Quest: ^7this quest is not allowed in this server\n\"") );
 		return;
@@ -12439,7 +12439,7 @@ Cmd_RaceMode_f
 ==================
 */
 void Cmd_RaceMode_f( gentity_t *ent ) {
-	if (zyk_allow_mini_games.integer != 1)
+	if (zyk_allow_race_mode.integer != 1)
 	{
 		trap->SendServerCommand(ent->s.number, va("chat \"^3Race System: ^7this mode is not allowed in this server\n\""));
 		return;
@@ -16448,7 +16448,7 @@ Cmd_DuelMode_f
 */
 extern void duel_tournament_end();
 void Cmd_DuelMode_f(gentity_t *ent) {
-	if (zyk_allow_mini_games.integer != 1)
+	if (zyk_allow_duel_tournament.integer != 1)
 	{
 		trap->SendServerCommand(ent->s.number, va("chat \"^3Duel Tournament: ^7this mode is not allowed in this server\n\""));
 		return;
@@ -16831,7 +16831,7 @@ Cmd_SniperMode_f
 ==================
 */
 void Cmd_SniperMode_f(gentity_t *ent) {
-	if (zyk_allow_mini_games.integer != 1)
+	if (zyk_allow_sniper_battle.integer != 1)
 	{
 		trap->SendServerCommand(ent->s.number, va("chat \"^3Sniper Battle: ^7this mode is not allowed in this server\n\""));
 		return;
@@ -16920,7 +16920,7 @@ Cmd_MeleeMode_f
 */
 extern void melee_battle_end();
 void Cmd_MeleeMode_f(gentity_t *ent) {
-	if (zyk_allow_mini_games.integer != 1)
+	if (zyk_allow_melee_battle.integer != 1)
 	{
 		trap->SendServerCommand(ent->s.number, va("chat \"^3Melee Battle: ^7this mode is not allowed in this server\n\""));
 		return;
@@ -17065,7 +17065,7 @@ Cmd_RpgLmsMode_f
 ==================
 */
 void Cmd_RpgLmsMode_f(gentity_t *ent) {
-	if (zyk_allow_mini_games.integer != 1)
+	if (zyk_allow_rpg_lms.integer != 1)
 	{
 		trap->SendServerCommand(ent->s.number, va("chat \"^3RPG LMS: ^7this mode is not allowed in this server\n\""));
 		return;
