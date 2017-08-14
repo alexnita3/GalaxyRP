@@ -610,6 +610,7 @@ void pas_fire( gentity_t *ent )
 
 #define TURRET_RADIUS 800
 
+extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
 //-----------------------------------------------------
 static qboolean pas_find_enemies( gentity_t *self )
 //-----------------------------------------------------
@@ -677,7 +678,13 @@ static qboolean pas_find_enemies( gentity_t *self )
 		}
 
 		// zyk: dont attack allies
-		if (self->parent && zyk_is_ally(self->parent,target) == qtrue)
+		if (self->parent && zyk_is_ally(self->parent, target) == qtrue)
+		{
+			continue;
+		}
+
+		// zyk: cant hit in this case
+		if (self->parent && zyk_can_hit_target(self->parent, target) == qfalse)
 		{
 			continue;
 		}
