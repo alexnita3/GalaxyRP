@@ -10627,7 +10627,11 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (ent->client->pers.tutorial_step == 43)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 43: ^7Enjoy the mod! :)\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 43: ^7Use ^2/nofight ^7as spectator. You will not receive damage from players but will also not be able to damage them^7\"");
+				}
+				else if (ent->client->pers.tutorial_step == 44)
+				{
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 44: ^7Enjoy the mod! :)\"");
 				}
 				else
 				{
