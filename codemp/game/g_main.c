@@ -4525,21 +4525,20 @@ qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 			return qfalse;
 		}
 
-		if ((level.sniper_players[attacker->s.number] != -1 && level.sniper_players[target->s.number] == -1) || 
-			(level.sniper_players[attacker->s.number] == -1 && level.sniper_players[target->s.number] != -1))
+		if (level.sniper_mode > 1 && ((level.sniper_players[attacker->s.number] != -1 && level.sniper_players[target->s.number] == -1) || 
+			(level.sniper_players[attacker->s.number] == -1 && level.sniper_players[target->s.number] != -1)))
 		{ // zyk: players outside sniper battle cannot hit ones in it and vice-versa
 			return qfalse;
 		}
 
-		if ((level.melee_players[attacker->s.number] != -1 && level.melee_players[target->s.number] == -1) ||
-			(level.melee_players[attacker->s.number] == -1 && level.melee_players[target->s.number] != -1))
+		if (level.melee_mode > 1 && ((level.melee_players[attacker->s.number] != -1 && level.melee_players[target->s.number] == -1) ||
+			(level.melee_players[attacker->s.number] == -1 && level.melee_players[target->s.number] != -1)))
 		{ // zyk: players outside melee battle cannot hit ones in it and vice-versa
 			return qfalse;
 		}
 
-
-		if ((level.rpg_lms_players[attacker->s.number] != -1 && level.rpg_lms_players[target->s.number] == -1) ||
-			(level.rpg_lms_players[attacker->s.number] == -1 && level.rpg_lms_players[target->s.number] != -1))
+		if (level.rpg_lms_mode > 1 && ((level.rpg_lms_players[attacker->s.number] != -1 && level.rpg_lms_players[target->s.number] == -1) ||
+			(level.rpg_lms_players[attacker->s.number] == -1 && level.rpg_lms_players[target->s.number] != -1)))
 		{ // zyk: players outside rpg lms cannot hit ones in it and vice-versa
 			return qfalse;
 		}
