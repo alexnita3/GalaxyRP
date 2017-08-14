@@ -2201,6 +2201,19 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		}
 	}
 
+	// zyk: player died in RPG LMS
+	if (level.rpg_lms_mode == 2 && self->s.number < MAX_CLIENTS && level.rpg_lms_players[self->s.number] != -1)
+	{
+		trap->SendServerCommand(-1, va("chat \"^3RPG LMS: ^7%s ^7died in RPG LMS!\n\"", self->client->pers.netname));
+		level.rpg_lms_players[self->s.number] = -1;
+		level.rpg_lms_quantity--;
+
+		if (attacker && attacker->client && attacker->s.number < MAX_CLIENTS && level.rpg_lms_players[attacker->s.number] != -1)
+		{ // zyk: adding score to the attacker
+			level.rpg_lms_players[attacker->s.number]++;
+		}
+	}
+
 	// zyk: player died in Melee Battle
 	if (level.melee_mode == 2 && self->s.number < MAX_CLIENTS && level.melee_players[self->s.number] != -1)
 	{

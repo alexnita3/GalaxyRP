@@ -1581,6 +1581,12 @@ typedef struct level_locals_s {
 	qboolean melee_arena_loaded; // zyk: tests if the arena is loaded on this map
 	vec3_t melee_mode_origin; // zyk: origin of the melee mode arena, which has the catwalk
 
+	// zyk: RPG LMS
+	int rpg_lms_mode;
+	int rpg_lms_players[MAX_CLIENTS];
+	int rpg_lms_timer;
+	int rpg_lms_quantity;
+
 	// zyk: the player id who is the target in Bounty Quest. Default 0
 	int bounty_quest_target_id;
 

@@ -12188,6 +12188,18 @@ void Cmd_PlayerMode_f( gentity_t *ent ) {
 		return;
 	}
 
+	if (level.melee_mode > 0 && level.melee_players[ent->s.number] != -1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot change account mode while in a Melee Battle\n\"");
+		return;
+	}
+
+	if (level.rpg_lms_mode > 0 && level.rpg_lms_players[ent->s.number] != -1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot change account mode while in a RPG LMS Battle\n\"");
+		return;
+	}
+
 	if (ent->client->sess.amrpgmode == 2)
 	{
 		ent->client->sess.amrpgmode = 1;
@@ -17049,6 +17061,82 @@ void Cmd_MeleeArena_f(gentity_t *ent) {
 
 /*
 ==================
+Cmd_RpgLmsMode_f
+==================
+*/
+void Cmd_RpgLmsMode_f(gentity_t *ent) {
+	if (zyk_allow_mini_games.integer != 1)
+	{
+		trap->SendServerCommand(ent->s.number, va("chat \"^3RPG LMS: ^7this mode is not allowed in this server\n\""));
+		return;
+	}
+
+	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.guardian_mode > 0)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot play RPG LMS while in boss battles\n\"");
+		return;
+	}
+
+	if (ent->client->pers.player_statuses & (1 << 26))
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot join RPG LMS while being in nofight mode\n\"");
+		return;
+	}
+
+	if (level.rpg_lms_players[ent->s.number] == -1 && level.rpg_lms_mode > 1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot join the RPG LMS now\n\"");
+		return;
+	}
+	else if (level.rpg_lms_players[ent->s.number] == -1)
+	{ // zyk: join the rpg lms battle
+		level.rpg_lms_players[ent->s.number] = 0;
+		level.rpg_lms_mode = 1;
+		level.rpg_lms_timer = level.time + 15000;
+		level.rpg_lms_quantity++;
+
+		trap->SendServerCommand(-1, va("chat \"^3RPG LMS: ^7%s ^7joined the battle!\n\"", ent->client->pers.netname));
+	}
+	else
+	{
+		level.rpg_lms_players[ent->s.number] = -1;
+		level.rpg_lms_quantity--;
+		trap->SendServerCommand(-1, va("chat \"^3RPG LMS: ^7%s ^7left the battle!\n\"", ent->client->pers.netname));
+	}
+}
+
+/*
+==================
+Cmd_RpgLmsTable_f
+==================
+*/
+void Cmd_RpgLmsTable_f(gentity_t *ent) {
+	int i = 0;
+	char content[1024];
+
+	strcpy(content, "\nRPG LMS Players\n\n");
+
+	if (level.rpg_lms_mode == 0)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"There is no RPG LMS now\n\"");
+		return;
+	}
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		if (level.rpg_lms_players[i] != -1)
+		{ // zyk: a player in RPG LMS Battle
+			gentity_t *player_ent = &g_entities[i];
+
+			strcpy(content, va("%s^7%s   ^3%d\n", content, player_ent->client->pers.netname, level.rpg_lms_players[i]));
+		}
+	}
+
+	trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", content));
+}
+
+/*
+==================
 Cmd_Tutorial_f
 ==================
 */
@@ -17327,6 +17415,8 @@ command_t commands[] = {
 	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "resetaccount",		Cmd_ResetAccount_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "rpgclass",			Cmd_RpgClass_f,				CMD_RPG|CMD_NOINTERMISSION },
+	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "rpglmstable",		Cmd_RpgLmsTable_f,			CMD_NOINTERMISSION },
 	{ "rpmode",				Cmd_RpMode_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "rpmodeclass",		Cmd_RpModeClass_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "rpmodedown",			Cmd_RpModeDown_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },

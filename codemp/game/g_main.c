@@ -718,6 +718,10 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	level.melee_mode_quantity = 0;
 	level.melee_arena_loaded = qfalse;
 
+	// zyk: initializing RPG LMS variables
+	level.rpg_lms_mode = 0;
+	level.rpg_lms_quantity = 0;
+
 	level.last_spawned_entity = NULL;
 
 	level.ent_origin_set = qfalse;
@@ -734,6 +738,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			level.duel_players[zyk_iterator] = -1;
 			level.sniper_players[zyk_iterator] = -1;
 			level.melee_players[zyk_iterator] = -1;
+			level.rpg_lms_players[zyk_iterator] = -1;
 		}
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_DUEL_MATCHES; zyk_iterator++)
@@ -4532,6 +4537,13 @@ qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 			return qfalse;
 		}
 
+
+		if ((level.rpg_lms_players[attacker->s.number] != -1 && level.rpg_lms_players[target->s.number] == -1) ||
+			(level.rpg_lms_players[attacker->s.number] == -1 && level.rpg_lms_players[target->s.number] != -1))
+		{ // zyk: players outside rpg lms cannot hit ones in it and vice-versa
+			return qfalse;
+		}
+
 		if (attacker->client->pers.player_statuses & (1 << 26) && attacker != target)
 		{ // zyk: used nofight command, cannot hit anyone
 			gentity_t *plum;
@@ -7599,6 +7611,75 @@ void sniper_battle_winner()
 	}
 }
 
+// zyk: finishes the RPG LMS
+void rpg_lms_end()
+{
+	int i = 0;
+
+	level.rpg_lms_mode = 0;
+	level.rpg_lms_quantity = 0;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		level.rpg_lms_players[i] = -1;
+	}
+}
+
+// zyk: prepares the rpg players for the battle
+void rpg_lms_prepare()
+{
+	int i = 0;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		gentity_t *ent = &g_entities[i];
+
+		if (level.rpg_lms_players[i] != -1)
+		{ // zyk: a player in the RPG LMS
+			if (ent->health < 1)
+			{ // zyk: respawn him if he is dead
+				ClientRespawn(ent);
+			}
+			else
+			{
+				initialize_rpg_skills(ent);
+			}
+		}
+	}
+}
+
+// zyk: shows the winner of the RPG LMS
+void rpg_lms_winner()
+{
+	int i = 0;
+	int credits = 1000;
+	gentity_t *ent = NULL;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		if (level.rpg_lms_players[i] != -1)
+		{
+			ent = &g_entities[i];
+			break;
+		}
+	}
+
+	if (ent)
+	{
+		add_credits(ent, credits);
+
+		save_account(ent);
+
+		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
+
+		trap->SendServerCommand(-1, va("chat \"^3RPG LMS: ^7%s ^7is the winner! prize: %d credits! Kills: %d\"", ent->client->pers.netname, credits, level.rpg_lms_players[ent->s.number]));
+	}
+	else
+	{
+		trap->SendServerCommand(-1, "chat \"^3RPG LMS: ^7No one is the winner!\"");
+	}
+}
+
 // zyk: finishes the melee battle
 void melee_battle_end()
 {
@@ -8002,6 +8083,36 @@ void G_RunFrame( int levelTime ) {
 		{ // zyk: finish the battle
 			sniper_battle_end();
 			trap->SendServerCommand(-1, "chat \"^3Sniper Battle: ^7Not enough players. Sniper Battle is over!\"");
+		}
+	}
+
+	// zyk: RPG LMS
+	if (level.rpg_lms_mode == 2)
+	{
+		if (level.rpg_lms_timer < level.time)
+		{
+			rpg_lms_end();
+			trap->SendServerCommand(-1, "chat \"^3RPG LMS: ^7Time is up! No winner!\"");
+		}
+		else if (level.rpg_lms_quantity == 1)
+		{
+			rpg_lms_winner();
+			rpg_lms_end();
+		}
+	}
+	else if (level.rpg_lms_mode == 1 && level.rpg_lms_timer < level.time)
+	{
+		if (level.rpg_lms_quantity > 1)
+		{ // zyk: if at least 2 players joined in it, start the battle
+			rpg_lms_prepare();
+			level.rpg_lms_mode = 2;
+			level.rpg_lms_timer = level.time + 600000;
+			trap->SendServerCommand(-1, "chat \"^3RPG LMS: ^7the battle has begun! The battle will have a max of 10 minutes!\"");
+		}
+		else
+		{ // zyk: finish the battle
+			rpg_lms_end();
+			trap->SendServerCommand(-1, "chat \"^3RPG LMS: ^7Not enough players. RPG LMS is over!\"");
 		}
 	}
 
@@ -10587,7 +10698,7 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (ent->client->pers.tutorial_step == 33)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 33: ^7There are four mini-games: Duel Tournament, Racing Mode (allows RPG players), Sniper Battle and Melee Battle\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 33: ^7There are four mini-games: Duel Tournament, Racing Mode, RPG LMS, Sniper Battle and Melee Battle\"");
 				}
 				else if (ent->client->pers.tutorial_step == 34)
 				{
@@ -10611,27 +10722,31 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (ent->client->pers.tutorial_step == 39)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 39: ^7All these mini-games give prizes! :)\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 39: ^7Use ^2/rpglmsmode ^7to join RPG Last Man Standing. Use ^2/rpglmstable ^7to see which players joined in it\"");
 				}
 				else if (ent->client->pers.tutorial_step == 40)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 40: ^7Use ^2/settings ^7to change account settings\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 40: ^7All these mini-games give prizes! :)\"");
 				}
 				else if (ent->client->pers.tutorial_step == 41)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 41: ^7Use ^2/playermode ^7to change account mode between Admin-Only and RPG\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 41: ^7Use ^2/settings ^7to change account settings\"");
 				}
 				else if (ent->client->pers.tutorial_step == 42)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 42: ^7In Admin-Only you are a normal player, but you can use admin commands (if you have any) and ^2/settings^7\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 42: ^7Use ^2/playermode ^7to change account mode between Admin-Only and RPG\"");
 				}
 				else if (ent->client->pers.tutorial_step == 43)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 43: ^7Use ^2/nofight ^7as spectator. You will not receive damage from players but will also not be able to damage them^7\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 43: ^7In Admin-Only you are a normal player, but you can use admin commands (if you have any) and ^2/settings^7\"");
 				}
 				else if (ent->client->pers.tutorial_step == 44)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 44: ^7Enjoy the mod! :)\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 44: ^7Use ^2/nofight ^7as spectator. You will not receive damage from players but will also not be able to damage them^7\"");
+				}
+				else if (ent->client->pers.tutorial_step == 45)
+				{
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 45: ^7Enjoy the mod! :)\"");
 				}
 				else
 				{
