@@ -4975,7 +4975,16 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	}
 
 	if (zyk_can_hit_target(attacker, targ) == qfalse)
+	{
 		return;
+	}
+
+	// zyk: if attacker has nofight, cannot damage sentries
+	if (attacker && attacker->client && !attacker->NPC && attacker->client->pers.player_statuses & (1 << 26) && targ && Q_stricmp(targ->classname, "sentryGun") == 0 && 
+		(!targ->parent || targ->parent != attacker))
+	{
+		return;
+	}
 
 	// zyk: target has chat protection
 	if (targ && targ->client && !targ->NPC && targ->client->pers.player_statuses & (1 << 5))

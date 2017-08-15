@@ -4545,27 +4545,11 @@ qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 
 		if (attacker->client->pers.player_statuses & (1 << 26) && attacker != target)
 		{ // zyk: used nofight command, cannot hit anyone
-			gentity_t *plum;
-
-			plum = G_TempEntity(attacker->client->ps.origin, EV_SCOREPLUM);
-			// only send this temp entity to a single client
-			//
-			plum->s.otherEntityNum = target->s.number;
-			plum->s.time = 1;
-
 			return qfalse;
 		}
 
 		if (target->client->pers.player_statuses & (1 << 26) && attacker != target)
 		{ // zyk: used nofight command, cannot be hit by anyone
-			gentity_t *plum;
-
-			plum = G_TempEntity(target->client->ps.origin, EV_SCOREPLUM);
-			// only send this temp entity to a single client
-			//
-			plum->s.otherEntityNum = attacker->s.number;
-			plum->s.time = 1;
-
 			return qfalse;
 		}
 	}

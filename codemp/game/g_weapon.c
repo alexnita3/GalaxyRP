@@ -701,7 +701,7 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 	}
 }
 
-
+extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
 qboolean G_CanDisruptify(gentity_t *ent)
 {
 	if (!ent || !ent->inuse || !ent->client || ent->s.eType != ET_NPC ||
@@ -2804,7 +2804,7 @@ void touchLaserTrap( gentity_t *ent, gentity_t *other, trace_t *trace )
 		if ( ent->activator != other )
 		{
 			// zyk: allies dont activate proximity mine
-			if (ent->activator && ent->activator->client && zyk_is_ally(ent->activator,other) == qfalse)
+			if (ent->activator && ent->activator->client && zyk_is_ally(ent->activator,other) == qfalse && zyk_can_hit_target(ent->activator, other) == qtrue)
 			{
 				if (!(other->client) || other->client->noclip == qfalse)
 				{ // zyk: noclipped players will not activate mine
@@ -2876,7 +2876,7 @@ void proxMineThink(gentity_t *ent)
 				{
 					if (owner && owner->client)
 					{ // zyk: allies dont activate proximity mine
-						if (zyk_is_ally(owner,cl) == qfalse)
+						if (zyk_is_ally(owner,cl) == qfalse && zyk_can_hit_target(owner,cl) == qtrue)
 						{
 							if (cl->client->noclip == qfalse)
 							{ // zyk: noclipped players will not activate mine
@@ -3540,7 +3540,6 @@ void WP_DropDetPack( gentity_t *ent, qboolean alt_fire )
 	}
 }
 
-extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
 static void WP_FireConcussionAlt( gentity_t *ent )
 {//a rail-gun-like beam
 	int			damage = zyk_concussion_alt_damage.integer, skip, traces = DISRUPTOR_ALT_TRACES;
