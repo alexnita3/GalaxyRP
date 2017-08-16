@@ -4552,6 +4552,11 @@ qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 		{ // zyk: used nofight command, cannot be hit by anyone
 			return qfalse;
 		}
+
+		if (attacker->client->noclip == qtrue || target->client->noclip == qtrue)
+		{ // zyk: noclip does not allow hitting
+			return qfalse;
+		}
 	}
 
 	return qtrue;
