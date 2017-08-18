@@ -7240,6 +7240,13 @@ void duel_tournament_prepare(gentity_t *ent, gentity_t *challenged)
 	ent->client->ps.duelInProgress = qtrue;
 	challenged->client->ps.duelInProgress = qtrue;
 
+	// zyk: setting Immunity Power briefly so every status power on the duelists are cancelled before the duel between them
+	ent->client->pers.quest_power_status |= (1 << 0);
+	ent->client->pers.quest_power1_timer = level.time + 2000;
+
+	challenged->client->pers.quest_power_status |= (1 << 0);
+	challenged->client->pers.quest_power1_timer = level.time + 2000;
+
 	// zyk: reset hp and shield of both players
 	ent->health = 100;
 	ent->client->ps.stats[STAT_ARMOR] = 100;
