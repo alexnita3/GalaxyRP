@@ -5523,16 +5523,25 @@ extern char *zyk_rpg_class(gentity_t *ent);
 extern int zyk_max_magic_power(gentity_t *ent);
 void sense_health_info(gentity_t *self, gentity_t *target)
 {
-	int client_health = target->client->ps.stats[STAT_HEALTH];
-	int client_armor = target->client->ps.stats[STAT_ARMOR];
-	int client_max_armor = target->client->ps.stats[STAT_MAX_HEALTH];
+	int client_health = 0;
+	int client_armor = 0;
+	int client_max_armor = 0;
 	char client_name[64];
 	int magic_power = 0;
 	int max_magic_power = 0;
 	char player_type[32];
 	int skill_number = 35; // zyk: used to see if the Sense Health should be based on skill 36 or skill 56, which in the skill_levels array will be in indexes 35 and 55
 
+	if (!target || !target->client)
+	{ // zyk: for some reason, this guy has no client structure. Happens to quest_ragnos npc
+		return;
+	}
+
 	strcpy(player_type, "Normal Player"); // zyk: by default, consider the target as player that is not logged in his account
+
+	client_health = target->client->ps.stats[STAT_HEALTH];
+	client_armor = target->client->ps.stats[STAT_ARMOR];
+	client_max_armor = target->client->ps.stats[STAT_MAX_HEALTH];
 
 	if (target->NPC)
 	{
