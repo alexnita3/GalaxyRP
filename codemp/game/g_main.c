@@ -8161,44 +8161,55 @@ void G_RunFrame( int levelTime ) {
 
 			if (duel_tournament_validate_duelists(duelist_1, duelist_2) == qtrue)
 			{
+				qboolean zyk_has_respawned = qfalse;
+
 				// zyk: respawning duelists that are still lying dead
 				if (duelist_1->health < 1)
 				{
 					ClientRespawn(duelist_1);
+					zyk_has_respawned = qtrue;
 				}
 				// zyk: respawning duelists that are still lying dead
 				if (duelist_2->health < 1)
 				{
 					ClientRespawn(duelist_2);
+					zyk_has_respawned = qtrue;
 				}
 
-				if (zyk_random == 1)
-				{ // zyk: put the duelists along the x axis
-					VectorSet(zyk_angles, 0, 0, 0);
-					VectorSet(zyk_origin, level.duel_tournament_origin[0] - 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
-					zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
+				if (zyk_has_respawned == qfalse)
+				{
+					if (zyk_random == 1)
+					{ // zyk: put the duelists along the x axis
+						VectorSet(zyk_angles, 0, 0, 0);
+						VectorSet(zyk_origin, level.duel_tournament_origin[0] - 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
+						zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
 
-					VectorSet(zyk_angles, 0, 179, 0);
-					VectorSet(zyk_origin, level.duel_tournament_origin[0] + 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
-					zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
+						VectorSet(zyk_angles, 0, 179, 0);
+						VectorSet(zyk_origin, level.duel_tournament_origin[0] + 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
+						zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
+					}
+					else
+					{ // zyk: put the duelists along the y axis
+						VectorSet(zyk_angles, 0, 90, 0);
+						VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
+						zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
+
+						VectorSet(zyk_angles, 0, -90, 0);
+						VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
+						zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
+					}
+
+					// zyk: set both duelists in private duel
+					duel_tournament_prepare(duelist_1, duelist_2);
+
+					// zyk: setting the max time players can duel
+					level.duel_tournament_timer = level.time + 180000;
+					level.duel_tournament_mode = 4;
 				}
 				else
-				{ // zyk: put the duelists along the y axis
-					VectorSet(zyk_angles, 0, 90, 0);
-					VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
-					zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
-
-					VectorSet(zyk_angles, 0, -90, 0);
-					VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
-					zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
+				{ // zyk: must wait a bit more to guarantee the player is fully respawned before teleporting him to arena
+					level.duel_tournament_timer = level.time + 500;
 				}
-
-				// zyk: set both duelists in private duel
-				duel_tournament_prepare(duelist_1, duelist_2);
-
-				// zyk: setting the max time players can duel
-				level.duel_tournament_timer = level.time + 180000;
-				level.duel_tournament_mode = 4;
 			}
 			else
 			{ // zyk: duelists are no longer valid, get a new match
