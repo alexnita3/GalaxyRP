@@ -2500,8 +2500,8 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		self->client->pers.player_statuses &= ~(1 << 11);
 
 		// zyk: player has the Resurrection Power. Uses mp. Not allowed in CTF gametype
-		if (self->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && !(self->client->pers.player_settings & (1 << 7)) && 
-			g_gametype.integer != GT_CTF && !(self->client->ps.eFlags2 & EF2_HELD_BY_MONSTER) && 
+		if (self->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && self->client->pers.universe_quest_counter & (1 << 0) &&
+			!(self->client->pers.player_settings & (1 << 7)) && g_gametype.integer != GT_CTF && !(self->client->ps.eFlags2 & EF2_HELD_BY_MONSTER) && 
 			self->client->pers.magic_power >= 5 && zyk_enable_resurrection_power.integer == 1)
 		{
 			self->client->pers.magic_power -= 5;
@@ -5176,7 +5176,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	if (targ && targ->client && targ->NPC)
 	{
 		if (targ->client->pers.universe_quest_messages == -2000)
-		{ // zyk: npcs spawned in the Universe Quest last mission. They cannot be killed
+		{ // zyk: special npcs spawned in the Universe Quest that cannot be killed
 			return;
 		}
 	}

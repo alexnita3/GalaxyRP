@@ -601,7 +601,7 @@ typedef enum {
 #define NUMBER_OF_ETERNITY_QUEST_OBJECTIVES 11
 
 // zyk: number of Universe Quest objectives
-#define NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES 15
+#define NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES 22
 
 // zyk: number of RPG Mode skills
 #define NUMBER_OF_SKILLS 56

@@ -6027,8 +6027,14 @@ void choose_new_player(gentity_t *next_player)
 			found = 1;
 		else if (level.quest_map == 9 && (next_player->client->pers.universe_quest_progress < 2 || (next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 12)))))
 			found = 1;
-		else if (level.quest_map == 10 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 6))) || light_quest_defeated_guardians(next_player) == qtrue || dark_quest_collected_notes(next_player) == qtrue || next_player->client->pers.eternity_quest_progress < NUMBER_OF_ETERNITY_QUEST_OBJECTIVES || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 8)))))
+		else if (level.quest_map == 10 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 6))) || 
+				 light_quest_defeated_guardians(next_player) == qtrue || dark_quest_collected_notes(next_player) == qtrue || 
+				 next_player->client->pers.eternity_quest_progress < NUMBER_OF_ETERNITY_QUEST_OBJECTIVES || 
+				(next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 8))) || 
+				(next_player->client->pers.universe_quest_progress == 15 && next_player->client->pers.universe_quest_counter & (1 << 0))))
+		{
 			found = 1;
+		}
 		else if (level.quest_map == 11 && next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 9)))
 			found = 1;
 		else if (level.quest_map == 12 && (next_player->client->pers.universe_quest_progress == 7 || (next_player->client->pers.universe_quest_progress == 8 && !(next_player->client->pers.universe_quest_counter & (1 << 1)))))
@@ -9467,7 +9473,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					}
 					else if (ent->client->pers.universe_quest_progress == 12)
 					{
-						strcpy(universe_message, "^3\n13. The Final Revelation\n\n^7Listen to the revelation that will be decisive to the fate of the Universe.");
+						strcpy(universe_message, "^3\n13. Unpleasant Revelation\n\n^7Listen to the revelation that will be decisive to the fate of the Universe.");
 					}
 					else if (ent->client->pers.universe_quest_progress == 13)
 					{
@@ -9476,9 +9482,23 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					else if (ent->client->pers.universe_quest_progress == 14)
 					{
 						if (zyk_number_of_completed_quests(ent) == 3)
-							strcpy(universe_message, "^3\n15. The Fate of the Universe\n\n^7Go to the Sacred Dimension in ^3t2_trip^7 to fight the ^1Guardian of Chaos^7 and finish the quest.");
+							strcpy(universe_message, "^3\n15. The Fate of the Universe\n\n^7Go to the Sacred Dimension in ^3t2_trip^7 to fight the ^1Guardian of Chaos^7.");
 						else
 							strcpy(universe_message, "^3\nRequirements\n\n^7Complete Light, Dark and Eternity quests.");
+					}
+					else if (ent->client->pers.universe_quest_progress == 15)
+					{
+						if (ent->client->pers.universe_quest_counter & (1 << 0))
+							strcpy(universe_message, "^3\n16. The Ancient Threat\n\n^7Sage of Universe telepathically asks you to talk to the sages at the waterfall in ^3yavin2^7.");
+						else
+							strcpy(universe_message, "^3\nNew missions coming soon!");
+					}
+					else if (ent->client->pers.universe_quest_progress == 16)
+					{
+						if (ent->client->pers.universe_quest_counter & (1 << 0))
+							strcpy(universe_message, "^3\n17. War at the City\n\n^7Go to ^3mp/siege_desert^7 and save the citizens from the mages");
+						else
+							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
 				}
 				else
