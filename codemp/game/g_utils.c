@@ -1820,11 +1820,6 @@ void TryUse( gentity_t *ent )
 			ent->client->pers.universe_quest_messages = 9;
 			return;
 		}
-		else if (target && target->client && target->NPC && target->client->pers.universe_quest_objective_control != -1 && ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_progress == 1 && ent->client->pers.universe_quest_messages == 3 && ent->client->pers.universe_quest_objective_control == 2 && level.quest_map == 9)
-		{ // zyk: Second Universe Quest objective. If touched one of the sages, set the universe_quest_messages to 4 to continue the quest
-			ent->client->pers.universe_quest_messages = 4;
-			return;
-		}
 		else if (target && target->client && target->NPC && target->client->pers.universe_quest_objective_control != -1 && ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_progress == 2 && level.quest_map == 1 && ent->client->pers.universe_quest_objective_control == 3)
 		{ // zyk: Third objective of Universe Quest
 			if (target->client->pers.universe_quest_objective_control == 0)

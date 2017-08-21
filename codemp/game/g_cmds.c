@@ -6058,7 +6058,7 @@ void choose_new_player(gentity_t *next_player)
 			found = 1;
 		else if (level.quest_map == 20 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 8))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 7)))))
 			found = 1;
-		else if (level.quest_map == 24 && next_player->client->pers.universe_quest_progress == 5)
+		else if (level.quest_map == 24 && (next_player->client->pers.universe_quest_progress == 5 || (next_player->client->pers.universe_quest_progress == 16 && next_player->client->pers.universe_quest_counter & (1 << 0))))
 			found = 1;
 		else if (level.quest_map == 25 && next_player->client->pers.universe_quest_progress == 6)
 			found = 1;
@@ -9503,7 +9503,14 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					else if (ent->client->pers.universe_quest_progress == 16)
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							strcpy(universe_message, "^3\n17. War at the City\n\n^7Go to ^3mp/siege_desert^7 and save the citizens from the mages");
+							strcpy(universe_message, "^3\n17. War at the City\n\n^7Go to ^3mp/siege_desert^7 and defeat all mages with the help from some citizens.");
+						else
+							strcpy(universe_message, "^3\nNew missions coming soon!");
+					}
+					else if (ent->client->pers.universe_quest_progress == 17)
+					{
+						if (ent->client->pers.universe_quest_counter & (1 << 0))
+							strcpy(universe_message, "^3\n18. The Terrible Truth\n\n^7Talk to the sages inside the mayor's house in ^3mp/siege_desert^7.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}

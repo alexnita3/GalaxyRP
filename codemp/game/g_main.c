@@ -11379,6 +11379,19 @@ void G_RunFrame( int levelTime ) {
 						else if (ent->client->pers.universe_quest_progress == 1 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_timer < level.time && ent->client->pers.universe_quest_objective_control > -1)
 						{ // zyk: second Universe Quest mission
 							gentity_t *npc_ent = NULL;
+
+							if (ent->client->pers.universe_quest_messages == 3)
+							{ // zyk: starts conversation when player gets near the sages
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, 2750, -39, -3806);
+
+								if (Distance(ent->client->ps.origin, zyk_quest_point) < 300)
+								{
+									ent->client->pers.universe_quest_messages = 4;
+								}
+							}
+
 							if (ent->client->pers.universe_quest_messages == 0)
 								npc_ent = Zyk_NPC_SpawnType("sage_of_light", 2750, -115, -3806, 179);
 							else if (ent->client->pers.universe_quest_messages == 1)
@@ -11459,8 +11472,8 @@ void G_RunFrame( int levelTime ) {
 							}
 
 							if (npc_ent)
-							{ // zyk: the sage cant die or the player fails
-								npc_ent->client->pers.universe_quest_objective_control = ent-g_entities;
+							{ // zyk: sages cannot be killed
+								npc_ent->client->pers.universe_quest_objective_control = -2000;
 							}
 
 							if (ent->client->pers.universe_quest_messages < 3)
@@ -11468,7 +11481,7 @@ void G_RunFrame( int levelTime ) {
 								ent->client->pers.universe_quest_messages++;
 								ent->client->pers.universe_quest_timer = level.time + 1000;
 							}
-							else if (ent->client->pers.universe_quest_messages >= 4)
+							else if (ent->client->pers.universe_quest_messages > 3)
 							{ // zyk: universe_quest_messages will be 4 or higher when player reaches and press USE key on one of the sages
 								ent->client->pers.universe_quest_messages++;
 								ent->client->pers.universe_quest_timer = level.time + 4500;
@@ -11727,12 +11740,16 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 25)
 									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: So he just called you, but he cannot fight for us\""));
 								else if (ent->client->pers.universe_quest_messages == 26)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Please help us, %s^7. We must get the city back from the mages!\"", ent->client->pers.netname));
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Please help us, %s^7. You must get the city back from the mages!\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 27)
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I will help! Let's go there.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 28)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Thank you %s^7. Let's go to ^3mp/siege_desert^7 and save the city!\"", ent->client->pers.netname));
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Thank you %s^7. Go to ^3mp/siege_desert^7 and save the city!\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 29)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Unfortunately, we have no chance to beat the mages, so you will fight alone\""));
+								else if (ent->client->pers.universe_quest_messages == 30)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Do not worry! You have done much already. Leave this to me.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 31)
 								{
 									ent->client->pers.universe_quest_progress = 16;
 
@@ -13149,9 +13166,9 @@ void G_RunFrame( int levelTime ) {
 						}
 					}
 					else if (level.quest_map == 24)
-					{ // zyk: amulets objective of Universe Quest in mp/siege_desert
+					{
 						if (ent->client->pers.universe_quest_progress == 5 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_objective_control != -1 && ent->client->pers.universe_quest_timer < level.time)
-						{
+						{ // zyk: amulets objective of Universe Quest in mp/siege_desert
 							gentity_t *npc_ent = NULL;
 							if (ent->client->pers.universe_quest_messages == 0)
 								npc_ent = Zyk_NPC_SpawnType("quest_jawa",9102,2508,-358,-179);
@@ -13368,6 +13385,186 @@ void G_RunFrame( int levelTime ) {
 							else
 							{
 								ent->client->pers.universe_quest_timer = level.time + 1000;
+							}
+						}
+
+						if (ent->client->pers.universe_quest_progress == 16 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 0))
+						{ // zyk: War at the City mission in Sages Sequel
+							gentity_t *npc_ent = NULL;
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								if (ent->client->pers.universe_quest_messages == 0)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 9102, 2508, -358, -179);
+								else if (ent->client->pers.universe_quest_messages == 1)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 9290, 2236, -486, -84);
+								else if (ent->client->pers.universe_quest_messages == 2)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 10520, 1236, -486, -174);
+								else if (ent->client->pers.universe_quest_messages == 3)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 11673, 751, -486, 175);
+								else if (ent->client->pers.universe_quest_messages == 4)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 12570, -860, -486, 177);
+								else if (ent->client->pers.universe_quest_messages == 5)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 11540, -1677, -486, 179);
+								else if (ent->client->pers.universe_quest_messages == 6)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 11277, -2915, -486, 179);
+								else if (ent->client->pers.universe_quest_messages == 7)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 10386, -3408, -486, 2);
+								else if (ent->client->pers.universe_quest_messages == 8)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 9906, -2373, -487, 2);
+								else if (ent->client->pers.universe_quest_messages == 9)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 9097, -919, -486, -176);
+								else if (ent->client->pers.universe_quest_messages == 10)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 6732, -1208, -486, -174);
+								else if (ent->client->pers.universe_quest_messages == 11)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 6802, -654, -486, -60);
+								else if (ent->client->pers.universe_quest_messages == 12)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 5734, -2395, -486, 92);
+								else if (ent->client->pers.universe_quest_messages == 13)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 4594, -1727, -486, 173);
+								else if (ent->client->pers.universe_quest_messages == 14)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2505, -1616, -486, 170);
+								else if (ent->client->pers.universe_quest_messages == 15)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 3298, -564, -486, -86);
+								else if (ent->client->pers.universe_quest_messages == 16)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 3532, 231, -486, -8);
+								else if (ent->client->pers.universe_quest_messages == 17)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 1832, -1103, -486, 6);
+								else if (ent->client->pers.universe_quest_messages == 18)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 1727, -480, -486, 7);
+								else if (ent->client->pers.universe_quest_messages == 19)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2653, 1014, -486, 0);
+								else if (ent->client->pers.universe_quest_messages == 20)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 4346, -1209, -486, -177);
+								else if (ent->client->pers.universe_quest_messages == 21)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2372, -2413, -486, 90);
+								else if (ent->client->pers.universe_quest_messages == 22)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -5549, -841, 57, 178);
+								else if (ent->client->pers.universe_quest_messages == 23)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -6035, -2285, -486, -179);
+								else if (ent->client->pers.universe_quest_messages == 24)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -7149, -2482, -486, 176);
+								else if (ent->client->pers.universe_quest_messages == 25)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -7304, -1155, -486, -177);
+								else if (ent->client->pers.universe_quest_messages == 26)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -8071, -381, -486, -1);
+								else if (ent->client->pers.universe_quest_messages == 27)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -9596, -1116, -486, 1);
+								else if (ent->client->pers.universe_quest_messages == 28)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -9762, -191, -486, 5);
+								else if (ent->client->pers.universe_quest_messages == 29)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -11311, -638, 9, -1);
+								else if (ent->client->pers.universe_quest_messages == 30)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -11437, -662, -486, 179);
+								else if (ent->client->pers.universe_quest_messages == 31)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -9344, 837, -66, 90);
+								else if (ent->client->pers.universe_quest_messages == 32)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -7710, -1665, -358, 178);
+								else if (ent->client->pers.universe_quest_messages == 33)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -8724, -1275, -486, 176);
+								else if (ent->client->pers.universe_quest_messages == 34)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -12810, 325, -422, -90);
+								else if (ent->client->pers.universe_quest_messages == 35)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 10350, -357, -486, 179);
+								else if (ent->client->pers.universe_quest_messages == 36)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 5935, -1304, -486, 125);
+								else if (ent->client->pers.universe_quest_messages == 37)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 4516, -679, -486, -144);
+								else if (ent->client->pers.universe_quest_messages == 38)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -6327, -1071, -486, -179);
+								else if (ent->client->pers.universe_quest_messages == 39)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -8120, 781, -486, -96);
+								else if (ent->client->pers.universe_quest_messages == 40)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -8171, -381, -486, -179);
+								}
+								else if (ent->client->pers.universe_quest_messages == 41)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 12173, -225, -486, -179);
+								}
+								else if (ent->client->pers.universe_quest_messages == 42)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 12173, -137, -486, -179);
+								}
+								else if (ent->client->pers.universe_quest_messages == 43)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Citizen: ^7For my city!\""));
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12173, -41, -486, -179);
+								}
+								else if (ent->client->pers.universe_quest_messages == 44)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", -7710, -1665, -358, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 45)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", -11361, -638, 29, 50);
+								}
+								else if (ent->client->pers.universe_quest_messages == 46)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 2555, -1616, -476, 170);
+								}
+								else if (ent->client->pers.universe_quest_messages == 47)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12173, -600, -348, -179);
+								}
+								else if (ent->client->pers.universe_quest_messages == 48)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12173, -500, -456, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 49)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", -7760, -1665, -348, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 50)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12023, -600, -348, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 51)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12073, -600, -348, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 52)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12223, -600, -348, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 53)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12373, -600, -348, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 54)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", -7760, -1725, -348, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 55)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", -7304, -1155, -486, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 100)
+								{
+									ent->client->pers.universe_quest_progress = 17;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+
+								if (ent->client->pers.universe_quest_messages < 56 && npc_ent)
+								{ // zyk: tests npc_ent so if for some reason the npc dont get spawned, the server tries to spawn it again
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 100;
+
+									if (npc_ent)
+										npc_ent->client->pers.universe_quest_objective_control = ent->s.number; // zyk: flag to set this npc as a mage or sage in this map
+
+									if (npc_ent && ent->client->pers.universe_quest_messages > 42)
+									{ // zyk: giving guns to quest_jawa citizens
+										npc_ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER);
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages < 56)
+								{
+									ent->client->pers.universe_quest_timer = level.time + 500;
+								}
 							}
 						}
 					}
