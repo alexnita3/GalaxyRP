@@ -16387,22 +16387,22 @@ void Cmd_Magic_f( gentity_t *ent ) {
 	if (trap->Argc() == 1)
 	{
 		trap->SendServerCommand( ent-g_entities, va("print \"\n 0 - Magic Sense - %s^7\n 1 - ^4Healing Water - %s^7      2 - ^4Water Splash - %s^7      3 - ^4Water Attack - %s^7\n 4 - ^3Earthquake - %s^7         5 - ^3Rockfall - %s^7          6 - ^3Shifting Sand - %s^7\n 7 - ^2Sleeping Flowers - %s^7   8 - ^2Poison Mushrooms - %s^7  9 - ^2Tree of Life - %s^7\n10 - ^5Magic Shield - %s^7      11 - ^5Dome of Damage - %s^7   12 - ^5Magic Disable - %s^7\n13 - ^6Ultra Speed - %s^7       14 - ^6Slow Motion - %s^7      15 - ^6Fast and Slow - %s^7\n16 - ^1Flame Burst - %s^7       17 - ^1Ultra Flame - %s^7      18 - ^1Flaming Area - %s^7\n19 - Blowing Wind - %s^7      20 - Hurricane - %s^7        21 - Reverse Wind - %s^7\n22 - ^3Ultra Resistance - %s^7  23 - ^3Ultra Strength - %s^7   24 - ^3Enemy Weakening - %s^7\n25 - ^5Ice Stalagmite - %s^7    26 - ^5Ice Boulder - %s^7      27 - ^5Ice Block - %s^7\n28 - Healing Area - %s^7      29 - Magic Explosion - %s^7  30 - Lightning Dome - %s^7\n\"", 
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_SENSE)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_HEALING_WATER)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_WATER_SPLASH)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_WATER_ATTACK)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_EARTHQUAKE)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ROCKFALL)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SHIFTING_SAND)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SLEEPING_FLOWERS)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_POISON_MUSHROOMS)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_TREE_OF_LIFE)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_SHIELD)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_DOME_OF_DAMAGE)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_DISABLE)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_SPEED)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SLOW_MOTION)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_FAST_AND_SLOW)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_FLAME_BURST)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_FLAME)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_FLAMING_AREA)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_BLOWING_WIND)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_HURRICANE)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_REVERSE_WIND)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_RESISTANCE)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_STRENGTH)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ENEMY_WEAKENING)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ICE_STALAGMITE)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ICE_BOULDER)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ICE_BLOCK)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_HEALING_AREA)) ? "^2yes" : "^1no", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_EXPLOSION)) ? "^2yes" : "^1no",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_LIGHTNING_DOME)) ? "^2yes" : "^1no") );
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_SENSE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_HEALING_WATER)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_WATER_SPLASH)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_WATER_ATTACK)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_EARTHQUAKE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ROCKFALL)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SHIFTING_SAND)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SLEEPING_FLOWERS)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_POISON_MUSHROOMS)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_TREE_OF_LIFE)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_SHIELD)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_DOME_OF_DAMAGE)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_DISABLE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_SPEED)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SLOW_MOTION)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_FAST_AND_SLOW)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_FLAME_BURST)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_FLAME)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_FLAMING_AREA)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_BLOWING_WIND)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_HURRICANE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_REVERSE_WIND)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_RESISTANCE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_STRENGTH)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ENEMY_WEAKENING)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ICE_STALAGMITE)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ICE_BOULDER)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ICE_BLOCK)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_HEALING_AREA)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_EXPLOSION)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_LIGHTNING_DOME)) ? "^2yes" : "^1no ") );
 	}
 	else
 	{
