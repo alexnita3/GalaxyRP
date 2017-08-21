@@ -13567,6 +13567,138 @@ void G_RunFrame( int levelTime ) {
 								}
 							}
 						}
+						else if (ent->client->pers.universe_quest_progress == 17 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 0))
+						{
+							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 6)
+							{
+								gentity_t *npc_ent = NULL;
+
+								if (ent->client->pers.hunter_quest_messages == 1)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_light", -7867, -1484, -358, -90);
+									if (npc_ent)
+									{
+										npc_ent->client->pers.universe_quest_messages = -2000;
+									}
+								}
+								else if (ent->client->pers.hunter_quest_messages == 2)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -7746, -1782, -358, 90);
+									if (npc_ent)
+									{
+										npc_ent->client->pers.universe_quest_messages = -2000;
+									}
+								}
+								else if (ent->client->pers.hunter_quest_messages == 3)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", -7867, -1759, -358, 90);
+									if (npc_ent)
+									{
+										npc_ent->client->pers.universe_quest_messages = -2000;
+									}
+								}
+								else if (ent->client->pers.hunter_quest_messages == 4)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_jawa", -7710, -1665, -358, 179);
+									if (npc_ent)
+									{ // zyk: Samir, the mayor
+										npc_ent->client->pers.universe_quest_messages = -2000;
+									}
+								}
+								else if (ent->client->pers.hunter_quest_messages == 5)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -7775, -1492, -358, -90);
+									if (npc_ent)
+									{
+										npc_ent->client->pers.universe_quest_messages = -2000;
+									}
+								}
+
+								ent->client->pers.hunter_quest_messages++;
+								ent->client->pers.hunter_quest_timer = level.time + 1000;
+							}
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, -7710, -1665, -358);
+
+								if (ent->client->pers.universe_quest_messages == 0 && ent->client->pers.hunter_quest_messages == 6 && Distance(ent->client->ps.origin, zyk_quest_point) < 200)
+								{
+									ent->client->pers.universe_quest_messages++;
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Sage of Universe. You also came.\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 1)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: %s^7! before i did not want to interfere, but times are different now\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 2)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Samir^7: Many citizens died in this battle. But most of them fleed before it\""));
+								else if (ent->client->pers.universe_quest_messages == 3)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Samir^7: Thank you so much for saving our city, %s^7!\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 4)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Hero, forgive us for not helping before. We are no match for the mages\""));
+								else if (ent->client->pers.universe_quest_messages == 5)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Soon you will be, my apprentices. But before the final battle, I must say some important things.\""));
+								else if (ent->client->pers.universe_quest_messages == 6)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: %s^7, please listen carefully to what I will say.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 7)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: The leader of the Brotherhood of Mages is called Ymir. He is a powerful mage\""));
+								else if (ent->client->pers.universe_quest_messages == 8)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: And your past is linked to him. He was responsible for most of your suffering\""));
+								else if (ent->client->pers.universe_quest_messages == 9)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: When you were a very young child, your parents, Tyr and Freya, became the leaders of the mages\""));
+								else if (ent->client->pers.universe_quest_messages == 10)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Differently from the former ones, they made the mages go to a good path\""));
+								else if (ent->client->pers.universe_quest_messages == 11)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Ymir always wanted to be the leader, so he gattered some mages\""));
+								else if (ent->client->pers.universe_quest_messages == 12)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: and an internal war started. It was a balanced war at first\""));
+								else if (ent->client->pers.universe_quest_messages == 13)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: But then Ymir got more supporters. Tyr and Freya were outnumbered\""));
+								else if (ent->client->pers.universe_quest_messages == 14)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Seeing that they would not win the final battle, they asked me to take care of you\""));
+								else if (ent->client->pers.universe_quest_messages == 15)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Ymir killed your parents himself, and became the new leader of the mages\""));
+								else if (ent->client->pers.universe_quest_messages == 16)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: I took you to a new family, and now I see you became a strong fighter\""));
+								else if (ent->client->pers.universe_quest_messages == 17)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Sorry for not saying this before\""));
+								else if (ent->client->pers.universe_quest_messages == 18)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I...I don't know what to say...\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 19)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Ymir wanted to take the city to attract me and the other sages to kill us and get the Amulet of Time\""));
+								else if (ent->client->pers.universe_quest_messages == 20)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: I did not knew any of that. What a difficult path your life took, hero...\""));
+								else if (ent->client->pers.universe_quest_messages == 21)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: You must be strong, because now it is the time to attack their new base and defeat Ymir\""));
+								else if (ent->client->pers.universe_quest_messages == 22)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: their new base is in t3_bounty. Find Ymir and defeat him.\""));
+								else if (ent->client->pers.universe_quest_messages == 23)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I am ready. He will pay for all the suffering he caused.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 24)
+									trap->SendServerCommand(ent->s.number, va("chat \"^5Sage of Light^7: So let's not waste any more time. Let's go.\""));
+								else if (ent->client->pers.universe_quest_messages == 25)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: we will find the strength to help you, hero!\""));
+								else if (ent->client->pers.universe_quest_messages == 26)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Yes. We will find a way to help you\""));
+								else if (ent->client->pers.universe_quest_messages == 27)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thanks. Now we must destroy Ymir\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 28)
+								{
+									ent->client->pers.universe_quest_progress = 18;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+
+								if (ent->client->pers.universe_quest_messages > 0)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+							}
+						}
 					}
 					else if (level.quest_map == 25)
 					{ // zyk: seventh objective of Universe Quest
