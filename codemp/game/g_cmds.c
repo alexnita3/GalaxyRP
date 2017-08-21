@@ -5659,6 +5659,7 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 	ent->client->pers.universe_quest_counter = 0;
 	ent->client->pers.credits = 100;
 	ent->client->pers.rpg_class = 0;
+	ent->client->sess.magic_master_disabled_powers = 0;
 
 	save_account(ent);
 
