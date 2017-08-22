@@ -5530,7 +5530,7 @@ void sense_health_info(gentity_t *self, gentity_t *target)
 	int magic_power = 0;
 	int max_magic_power = 0;
 	char player_type[32];
-	int skill_number = 35; // zyk: used to see if the Sense Health should be based on skill 36 or skill 56, which in the skill_levels array will be in indexes 35 and 55
+	int skill_number = 35; // zyk: skill index of Sense Health skill
 
 	if (!target || !target->client)
 	{ // zyk: for some reason, this guy has no client structure. Happens to quest_ragnos npc
@@ -5550,11 +5550,6 @@ void sense_health_info(gentity_t *self, gentity_t *target)
 	else
 	{
 		strcpy(client_name, target->client->pers.netname);
-	}
-
-	if (self->client->pers.rpg_class == 8)
-	{ // zyk: Magic Master using Magic Sense, so the info displayed is based on Improvements skill
-		skill_number = 55;
 	}
 	
 	if (self->client->pers.skill_levels[skill_number] == 1)
