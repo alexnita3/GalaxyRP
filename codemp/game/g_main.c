@@ -15205,11 +15205,11 @@ void G_RunFrame( int levelTime ) {
 							ice_block(ent, 3500);
 						}
 
-						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 12000);
+						ent->client->pers.guardian_timer = level.time + Q_irand(6000, 10000);
 
 						if (ent->spawnflags & 131072)
 						{ // zyk: boss is stronger now
-							ent->client->pers.guardian_timer -= 5000;
+							ent->client->pers.guardian_timer -= 4000;
 						}
 					}
 
