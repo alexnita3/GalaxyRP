@@ -2528,6 +2528,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 				// zyk: wrath of the remaining boss makes him stronger
 				old_boss->spawnflags |= 131072;
+				old_boss->client->pers.quest_power_status |= (1 << 13);
 
 				still_has_boss = qtrue;
 			}

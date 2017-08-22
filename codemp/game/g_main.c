@@ -15209,7 +15209,7 @@ void G_RunFrame( int levelTime ) {
 
 						if (ent->spawnflags & 131072)
 						{ // zyk: boss is stronger now
-							ent->client->pers.guardian_timer -= 4000;
+							ent->client->pers.guardian_timer -= 5000;
 						}
 					}
 
@@ -15276,7 +15276,7 @@ void G_RunFrame( int levelTime ) {
 
 						if (ent->spawnflags & 131072)
 						{ // zyk: boss is stronger now
-							ent->client->pers.guardian_timer -= 2000;
+							ent->client->pers.guardian_timer -= 3000;
 						}
 					}
 
