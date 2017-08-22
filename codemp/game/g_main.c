@@ -5290,6 +5290,7 @@ void elemental_attack(gentity_t *ent)
 	int i = 0;
 	int targets_hit = 0;
 	int min_distance = 100;
+	int damage = 30;
 
 	for (i = 0; i < level.num_entities; i++)
 	{
@@ -5301,10 +5302,10 @@ void elemental_attack(gentity_t *ent)
 			zyk_spawn_ice_element(ent, player_ent);
 
 			// zyk: second element, Fire
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_elemental_fire", "4", "env/flame_jet", 1000, 40, 35, 2500);
+			zyk_quest_effect_spawn(ent, player_ent, "zyk_elemental_fire", "4", "env/flame_jet", 1000, damage, 35, 2500);
 
 			// zyk: third element, Earth
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_elemental_earth", "4", "env/rock_smash", 2500, 40, 35, 4000);
+			zyk_quest_effect_spawn(ent, player_ent, "zyk_elemental_earth", "4", "env/rock_smash", 2500, damage, 35, 4000);
 
 			// zyk: fourth element, Wind
 			player_ent->client->pers.quest_power_status |= (1 << 5);
@@ -11672,8 +11673,8 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 6)
 								{ // zyk: sage of universe heals the hero during the battle
-									ent->health += 40;
-									ent->client->ps.stats[STAT_ARMOR] += 40;
+									ent->health += 50;
+									ent->client->ps.stats[STAT_ARMOR] += 50;
 
 									if (ent->health > ent->client->pers.max_rpg_health)
 										ent->health = ent->client->pers.max_rpg_health;
@@ -11711,7 +11712,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 6)
 								{
-									ent->client->pers.universe_quest_timer = level.time + 20000;
+									ent->client->pers.universe_quest_timer = level.time + 18000;
 								}
 							}
 						}
@@ -15209,7 +15210,7 @@ void G_RunFrame( int levelTime ) {
 
 						if (ent->spawnflags & 131072)
 						{ // zyk: boss is stronger now
-							ent->client->pers.guardian_timer -= 4000;
+							ent->client->pers.guardian_timer -= 2000;
 						}
 					}
 
@@ -15217,8 +15218,8 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: using Crystal of Magic
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
 
-						ent->health += 400;
-						ent->client->ps.stats[STAT_ARMOR] += 400;
+						ent->health += 500;
+						ent->client->ps.stats[STAT_ARMOR] += 500;
 
 						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
 							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
@@ -15231,7 +15232,14 @@ void G_RunFrame( int levelTime ) {
 						else
 							ent->client->NPC_class = CLASS_REBORN;
 
-						ent->client->pers.light_quest_timer = level.time + Q_irand(7000, 12000);
+						if (ent->spawnflags & 131072)
+						{ // zyk: boss is stronger now
+							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+
+							elemental_attack(ent);
+						}
+
+						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 12000);
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 15 && Q_stricmp(ent->NPC_type, "thor_boss") == 0)
@@ -15284,8 +15292,8 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: using Crystal of Magic
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
 
-						ent->health += 400;
-						ent->client->ps.stats[STAT_ARMOR] += 400;
+						ent->health += 500;
+						ent->client->ps.stats[STAT_ARMOR] += 500;
 
 						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
 							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
@@ -15298,7 +15306,18 @@ void G_RunFrame( int levelTime ) {
 						else
 							ent->client->NPC_class = CLASS_REBORN;
 
-						ent->client->pers.light_quest_timer = level.time + Q_irand(7000, 12000);
+						if (ent->spawnflags & 131072)
+						{ // zyk: boss is stronger now
+							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
+
+							ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+							ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
+							ent->client->ps.forceHandExtendTime = level.time + 2000;
+
+							zyk_super_beam(ent, ent->client->ps.viewangles[1]);
+						}
+
+						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 12000);
 					}
 				}
 			}

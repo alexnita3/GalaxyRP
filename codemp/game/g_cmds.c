@@ -16009,7 +16009,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					send_rpg_events(2000);
 
-					ent->client->pers.quest_power_usage_timer = level.time + 20000;
+					ent->client->pers.quest_power_usage_timer = level.time + 10000;
 
 					display_yellow_bar(ent, (ent->client->pers.quest_power_usage_timer - level.time));
 
