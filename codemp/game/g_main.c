@@ -5317,6 +5317,35 @@ void elemental_attack(gentity_t *ent)
 	}
 }
 
+// zyk: No Attack ability
+void zyk_no_attack(gentity_t *ent)
+{
+	int i = 0;
+
+	for (i = 0; i < level.num_entities; i++)
+	{
+		gentity_t *player_ent = &g_entities[i];
+
+		if (player_ent && player_ent->client && ent != player_ent &&
+			zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue &&
+			Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 300)
+		{
+			G_Damage(player_ent, ent, ent, NULL, NULL, 15, 0, MOD_UNKNOWN);
+
+			player_ent->client->ps.weaponTime = 3000;
+			player_ent->client->ps.electrifyTime = level.time + 3000;
+
+			if (player_ent->client->ps.weaponstate == WEAPON_CHARGING ||
+				player_ent->client->ps.weaponstate == WEAPON_CHARGING_ALT)
+			{
+				player_ent->client->ps.weaponstate = WEAPON_READY;
+			}
+		}
+	}
+
+	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/hologram_off.mp3"));
+}
+
 // zyk: Super Beam ability
 void zyk_super_beam(gentity_t *ent, int angle_yaw)
 {
@@ -15218,8 +15247,8 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: using Crystal of Magic
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
 
-						ent->health += 500;
-						ent->client->ps.stats[STAT_ARMOR] += 500;
+						ent->health += 400;
+						ent->client->ps.stats[STAT_ARMOR] += 400;
 
 						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
 							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
@@ -15232,14 +15261,25 @@ void G_RunFrame( int levelTime ) {
 						else
 							ent->client->NPC_class = CLASS_REBORN;
 
+						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 12000);
+
 						if (ent->spawnflags & 131072)
 						{ // zyk: boss is stronger now
-							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+							int random_unique = Q_irand(0, 1);
 
-							elemental_attack(ent);
+							if (random_unique == 0)
+							{
+								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+
+								elemental_attack(ent);
+							}
+							else
+							{
+								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+
+								zyk_no_attack(ent);
+							}
 						}
-
-						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 12000);
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 15 && Q_stricmp(ent->NPC_type, "thor_boss") == 0)
@@ -15292,8 +15332,8 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: using Crystal of Magic
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
 
-						ent->health += 500;
-						ent->client->ps.stats[STAT_ARMOR] += 500;
+						ent->health += 400;
+						ent->client->ps.stats[STAT_ARMOR] += 400;
 
 						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
 							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
@@ -15306,6 +15346,8 @@ void G_RunFrame( int levelTime ) {
 						else
 							ent->client->NPC_class = CLASS_REBORN;
 
+						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 12000);
+
 						if (ent->spawnflags & 131072)
 						{ // zyk: boss is stronger now
 							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
@@ -15315,9 +15357,9 @@ void G_RunFrame( int levelTime ) {
 							ent->client->ps.forceHandExtendTime = level.time + 2000;
 
 							zyk_super_beam(ent, ent->client->ps.viewangles[1]);
-						}
 
-						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 12000);
+							ent->client->pers.light_quest_timer -= 1000;
+						}
 					}
 				}
 			}

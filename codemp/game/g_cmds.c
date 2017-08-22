@@ -15408,6 +15408,7 @@ extern void zyk_WP_FireRocket(gentity_t *ent);
 extern gentity_t *zyk_WP_FireThermalDetonator(gentity_t *ent);
 extern void zyk_add_bomb_model(gentity_t *ent);
 extern void elemental_attack(gentity_t *ent);
+extern void zyk_no_attack(gentity_t *ent);
 extern void zyk_super_beam(gentity_t *ent, int angle_yaw);
 extern void force_scream(gentity_t *ent);
 extern void zyk_force_storm(gentity_t *ent);
@@ -15957,32 +15958,9 @@ void Cmd_Unique_f(gentity_t *ent) {
 			{ // zyk: Force Gunner No Attack
 				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 4))
 				{
-					int i = 0;
-
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 
-					for (i = 0; i < level.num_entities; i++)
-					{
-						gentity_t *player_ent = &g_entities[i];
-
-						if (player_ent && player_ent->client && ent != player_ent && 
-							zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue &&
-							Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 300)
-						{
-							G_Damage(player_ent, ent, ent, NULL, NULL, 15, 0, MOD_UNKNOWN);
-
-							player_ent->client->ps.weaponTime = 3000;
-							player_ent->client->ps.electrifyTime = level.time + 3000;
-
-							if (player_ent->client->ps.weaponstate == WEAPON_CHARGING ||
-								player_ent->client->ps.weaponstate == WEAPON_CHARGING_ALT)
-							{
-								player_ent->client->ps.weaponstate = WEAPON_READY;
-							}
-						}
-					}
-
-					G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/hologram_off.mp3"));
+					zyk_no_attack(ent);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
 
