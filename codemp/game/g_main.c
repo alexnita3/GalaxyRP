@@ -11169,6 +11169,307 @@ void G_RunFrame( int levelTime ) {
 								ent->client->pers.universe_quest_timer = level.time + 5000;
 							}
 						}
+
+						if (ent->client->pers.universe_quest_progress == 18 && ent->client->pers.can_play_quest == 1 && 
+							ent->client->pers.universe_quest_counter & (1 << 0))
+						{
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								gentity_t *npc_ent = NULL;
+
+								if (ent->client->pers.universe_quest_messages == 0)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -3263, 1330, 73, -90);
+								else if (ent->client->pers.universe_quest_messages == 1)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -3139, 1330, 73, -90);
+								else if (ent->client->pers.universe_quest_messages == 2)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4367, 1019, 73, 90);
+								else if (ent->client->pers.universe_quest_messages == 3)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4304, 1019, 73, 90);
+								else if (ent->client->pers.universe_quest_messages == 4)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4930, 1359, 57, -90);
+								else if (ent->client->pers.universe_quest_messages == 5)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4930, 1235, 73, 90);
+								else if (ent->client->pers.universe_quest_messages == 6)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -6697, 699, -38, 0);
+								else if (ent->client->pers.universe_quest_messages == 7)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -6697, 461, -38, 0);
+								else if (ent->client->pers.universe_quest_messages == 8)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -5160, 473, 25, -45);
+								else if (ent->client->pers.universe_quest_messages == 9)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -5236, 473, 25, -45);
+								else if (ent->client->pers.universe_quest_messages == 10)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -1193, -216, 37, 179);
+								else if (ent->client->pers.universe_quest_messages == 11)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -1193, -98, 37, 179);
+								else if (ent->client->pers.universe_quest_messages == 12)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2018, -526, 37, 90);
+								else if (ent->client->pers.universe_quest_messages == 13)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2121, -526, 37, 90);
+								else if (ent->client->pers.universe_quest_messages == 14)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 534, -513, 345, 90);
+								else if (ent->client->pers.universe_quest_messages == 15)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 651, -513, 345, 90);
+								else if (ent->client->pers.universe_quest_messages == 16)
+									npc_ent = Zyk_NPC_SpawnType("ymir_boss", -4193, 771, 401, 135);
+								else if (ent->client->pers.universe_quest_messages == 17)
+								{
+									vec3_t zyk_quest_point;
+
+									VectorSet(zyk_quest_point, -4193, 771, 401);
+
+									if (Distance(ent->client->ps.origin, zyk_quest_point) < 70)
+									{
+										int j = 0;
+
+										for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
+										{
+											npc_ent = &g_entities[j];
+
+											if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "quest_mage") == 0 && npc_ent->die)
+											{
+												npc_ent->health = 0;
+												npc_ent->client->ps.stats[STAT_HEALTH] = 0;
+												if (npc_ent->die)
+												{
+													npc_ent->die(npc_ent, npc_ent, npc_ent, 100, MOD_UNKNOWN);
+												}
+											}
+											else if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "ymir_boss") == 0)
+											{ // zyk: placing him in his original spot
+												vec3_t npc_origin, npc_angles;
+
+												VectorSet(npc_origin, -4193, 771, 401);
+												VectorSet(npc_angles, 0, 135, 0);
+
+												zyk_TeleportPlayer(npc_ent, npc_origin, npc_angles);
+											}
+										}
+
+										ent->client->pers.universe_quest_messages = 18;
+									}
+								}
+
+								if (ent->client->pers.universe_quest_messages == 18)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_light", -4328, 750, 401, 45);
+								}
+								else if (ent->client->pers.universe_quest_messages == 19)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", -4338, 705, 401, 45);
+								}
+								else if (ent->client->pers.universe_quest_messages == 20)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -4279, 646, 401, 45);
+								}
+								else if (ent->client->pers.universe_quest_messages == 21)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -4207, 631, 401, 45);
+								}
+								else if (ent->client->pers.universe_quest_messages == 22)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -4038, 807, 401, -135);
+								}
+								else if (ent->client->pers.universe_quest_messages == 23)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -4070, 843, 401, -135);
+								}
+								else if (ent->client->pers.universe_quest_messages == 24)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -4116, 881, 401, -135);
+								}
+								else if (ent->client->pers.universe_quest_messages == 25)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -4174, 920, 401, -135);
+								}
+
+								if (ent->client->pers.universe_quest_messages == 26)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: So %s^7, you finally arrived.\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 27)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Ymir! You will pay now for all the suffering you caused!\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 28)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: No %s^7, I don't think so.\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 29)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4185, 856, 451, -135);
+								else if (ent->client->pers.universe_quest_messages == 30)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4144, 804, 451, -135);
+								else if (ent->client->pers.universe_quest_messages == 31)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4103, 777, 451, -135);
+								else if (ent->client->pers.universe_quest_messages == 32)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4277, 757, 451, 45);
+								else if (ent->client->pers.universe_quest_messages == 33)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4236, 719, 451, 45);
+								else if (ent->client->pers.universe_quest_messages == 34)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4195, 685, 451, 45);
+								else if (ent->client->pers.universe_quest_messages == 35)
+									npc_ent = Zyk_NPC_SpawnType("thor_boss", -4300, 860, 451, -45);
+								else if (ent->client->pers.universe_quest_messages == 36)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I am surrounded.\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 37)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Ymir, my father, I finally got the legendary Crystal of Magic!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 38)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: Good, my son! Now we will be unbeatable!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 39)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: So that is Thor's real form, and Ymir is his father...\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 40)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: We will finally destroy the hero and his helpers!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 41)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -4122, 703, 451, 135);
+
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Not so fast.\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 42)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: I can't believe it! Ok, so you guys want it the hard way...\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 43)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Father, I have a better idea.\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 44)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Come with me to the arena, We need the Crystal of Magic power!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 45)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: Yes my son! Let's use its power to destroy them all!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 46)
+								{
+									int j = 0;
+
+									for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
+									{
+										npc_ent = &g_entities[j];
+
+										if (npc_ent && npc_ent->NPC && (Q_stricmp(npc_ent->NPC_type, "ymir_boss") == 0 || Q_stricmp(npc_ent->NPC_type, "thor_boss") == 0))
+										{
+											vec3_t npc_origin, npc_angles;
+
+											VectorSet(npc_origin, -5871, 1440, 150);
+											VectorSet(npc_angles, 0, 0, 0);
+
+											zyk_TeleportPlayer(npc_ent, npc_origin, npc_angles);
+										}
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 47)
+								{
+									ent->client->pers.universe_quest_progress = 19;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+
+								if (ent->client->pers.universe_quest_messages < 16 && npc_ent)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 100;
+								}
+								else if (ent->client->pers.universe_quest_messages == 16 && npc_ent)
+								{ // zyk: try to spawn Ymir again if npc_ent is NULL
+									npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
+
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									npc_ent->client->pers.universe_quest_messages = -2000;
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 100;
+								}
+								else if (ent->client->pers.universe_quest_messages > 17 && ent->client->pers.universe_quest_messages < 26 && npc_ent)
+								{
+									npc_ent->client->pers.universe_quest_messages = -2000;
+
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 500;
+								}
+								else if (ent->client->pers.universe_quest_messages > 25 && ent->client->pers.universe_quest_messages < 29)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+								else if (ent->client->pers.universe_quest_messages > 28 && ent->client->pers.universe_quest_messages < 35 && npc_ent)
+								{
+									npc_ent->client->pers.universe_quest_messages = -2000;
+
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 200;
+								}
+								else if (ent->client->pers.universe_quest_messages == 35 && npc_ent)
+								{ // zyk: try to spawn Thor again if npc_ent is NULL
+									npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
+
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									npc_ent->client->pers.universe_quest_messages = -2000;
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 100;
+								}
+								else if (ent->client->pers.universe_quest_messages > 35 && ent->client->pers.universe_quest_messages < 41)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+								else if (ent->client->pers.universe_quest_messages == 41 && npc_ent)
+								{ // zyk: try to spawn sage of universe again if npc_ent is NULL
+									int j = 0;
+
+									npc_ent->client->pers.universe_quest_messages = -2000;
+
+									ultra_drain(npc_ent, 450, 50, 8000);
+
+									for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
+									{
+										npc_ent = &g_entities[j];
+
+										if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "quest_mage") == 0 && npc_ent->die)
+										{
+											npc_ent->health = 0;
+											npc_ent->client->ps.stats[STAT_HEALTH] = 0;
+											if (npc_ent->die)
+											{
+												npc_ent->die(npc_ent, npc_ent, npc_ent, 100, MOD_UNKNOWN);
+											}
+										}
+									}
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+								else if (ent->client->pers.universe_quest_messages > 41 && ent->client->pers.universe_quest_messages < 47)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+							}
+						}
 					}
 					else if (level.quest_map == 7)
 					{
