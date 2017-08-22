@@ -9527,7 +9527,14 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					else if (ent->client->pers.universe_quest_progress == 18)
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							strcpy(universe_message, "^3\n19. To Settle the Score\n\n^7go to ^3t3_bounty^7 and find Ymir.");
+							strcpy(universe_message, "^3\n19. To Settle the Score\n\n^7Go to ^3t3_bounty^7 and find Ymir.");
+						else
+							strcpy(universe_message, "^3\nNew missions coming soon!");
+					}
+					else if (ent->client->pers.universe_quest_progress == 19)
+					{
+						if (ent->client->pers.universe_quest_counter & (1 << 0))
+							strcpy(universe_message, "^3\n20. The Crystal of Magic\n\n^7Go to ^3t3_bounty^7 and talk to the sages and guardians where Ymir was");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}

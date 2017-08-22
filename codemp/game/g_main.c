@@ -11470,6 +11470,117 @@ void G_RunFrame( int levelTime ) {
 								}
 							}
 						}
+						else if (ent->client->pers.universe_quest_progress == 19 && ent->client->pers.can_play_quest == 1 &&
+								ent->client->pers.universe_quest_counter & (1 << 0))
+						{ // zyk: Universe Quest Sages Sequel, The Crystal of Magic mission
+							gentity_t *npc_ent = NULL;
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, -4193, 771, 401);
+
+								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 70)
+								{
+									ent->client->pers.universe_quest_messages++;
+								}
+								else if (ent->client->pers.universe_quest_messages == 1)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_light", -4328, 750, 401, 45);
+								}
+								else if (ent->client->pers.universe_quest_messages == 2)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", -4338, 705, 401, 45);
+								}
+								else if (ent->client->pers.universe_quest_messages == 3)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -4279, 646, 401, 45);
+								}
+								else if (ent->client->pers.universe_quest_messages == 4)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -4207, 631, 401, 45);
+								}
+								else if (ent->client->pers.universe_quest_messages == 5)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -4038, 807, 401, -135);
+								}
+								else if (ent->client->pers.universe_quest_messages == 6)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -4070, 843, 401, -135);
+								}
+								else if (ent->client->pers.universe_quest_messages == 7)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -4116, 881, 401, -135);
+								}
+								else if (ent->client->pers.universe_quest_messages == 8)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -4174, 920, 401, -135);
+								}
+								else if (ent->client->pers.universe_quest_messages == 9)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -4122, 703, 451, 135);
+								}
+								else if (ent->client->pers.universe_quest_messages == 10)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: We must chase them!\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 11)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Not yet. There are some things you must know\""));
+								else if (ent->client->pers.universe_quest_messages == 12)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: They posses the legendary Crystal of Magic\""));
+								else if (ent->client->pers.universe_quest_messages == 13)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: It will make them almost unbeatable\""));
+								else if (ent->client->pers.universe_quest_messages == 14)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Even with the Amulet of Time, it will be difficult to beat them\""));
+								else if (ent->client->pers.universe_quest_messages == 15)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: So that is why we did not heard of Thor until now...\""));
+								else if (ent->client->pers.universe_quest_messages == 16)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: What should we do?\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 17)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: You will have to fight them. But before attacking them directly...\""));
+								else if (ent->client->pers.universe_quest_messages == 18)
+									trap->SendServerCommand(ent->s.number, va("chat \"^5Sage of Light^7: Attack the Crystal of Magic first!\""));
+								else if (ent->client->pers.universe_quest_messages == 19)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: Yes! That is their source of power!\""));
+								else if (ent->client->pers.universe_quest_messages == 20)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Safe of Universe^7: Doing so will decrease their strength, making it easier to defeat them\""));
+								else if (ent->client->pers.universe_quest_messages == 21)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I understand. So it is time to finish this once and for all.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 22)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: After you defeat them, the Sages of Light, Darkness and Eternity will retrieve the Crystal...\""));
+								else if (ent->client->pers.universe_quest_messages == 23)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: And they will become the new leaders of the Brotherhood of Mages\""));
+								else if (ent->client->pers.universe_quest_messages == 24)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: This will end all of the bloodshed and we will finally have peace.\""));
+								else if (ent->client->pers.universe_quest_messages == 25)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Ok, so let's do it.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 26)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Remember, attack the crystal first before fighting them\""));
+								else if (ent->client->pers.universe_quest_messages == 27)
+								{
+									ent->client->pers.universe_quest_progress = 20;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+
+								if (ent->client->pers.universe_quest_messages > 0 && npc_ent)
+								{
+									npc_ent->client->pers.universe_quest_messages = -2000;
+
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 500;
+								}
+								else if (ent->client->pers.universe_quest_messages > 9 && ent->client->pers.universe_quest_messages < 27)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+							}
+						}
 					}
 					else if (level.quest_map == 7)
 					{
@@ -12007,7 +12118,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 8)
 									trap->SendServerCommand(ent->s.number, va("chat \"^5Sage of Light^7: %s^7, do you remember those mages you fought before to get the artifacts?\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 9)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes. I also fought them when fighting the Master of Evil\"", ent->client->pers.netname));
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes. I also fought them when fighting Thor\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 10)
 									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: These mages are the origin of all trouble and...the origin of us!\""));
 								else if (ent->client->pers.universe_quest_messages == 11)
@@ -12015,9 +12126,9 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 12)
 									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: In very distant times, the Guardian of Time was chosen to be the True Guardian.\""));
 								else if (ent->client->pers.universe_quest_messages == 13)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Then, the Brotherhood of Mages was created by her to have magicians protect the sacred crystals\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Then, the Brotherhood of Mages was created by her to have magicians protect the Crystal of Magic\""));
 								else if (ent->client->pers.universe_quest_messages == 14)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: But they got so much power from the crystals...they wanted more\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: But they got so much power from it...they wanted more\""));
 								else if (ent->client->pers.universe_quest_messages == 15)
 									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: Guardian of Chaos was part of the Brotherhood and wanted to overthrow Guardian of Time\""));
 								else if (ent->client->pers.universe_quest_messages == 16)
