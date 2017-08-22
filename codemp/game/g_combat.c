@@ -2156,7 +2156,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	self->client->pers.player_statuses &= ~(1 << 20);
 
 	// zyk: resetting boss battle music to default one if needed
-	if (self->client->pers.guardian_invoked_by_id != -1)
+	if (self->client->pers.guardian_invoked_by_id != -1 && self->client->pers.guardian_mode != 15)
 	{
 		level.boss_battle_music_reset_timer = level.time + 1000;
 	}
@@ -2503,6 +2503,44 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		quest_player->client->pers.universe_quest_timer = level.time + 8000;
 		quest_player->client->pers.guardian_mode = 0;
 		G_Sound(self, CHAN_VOICE, G_SoundIndex("sound/chars/ragnos/misc/death3.mp3"));
+	}
+	else if (quest_player && quest_player->client->pers.guardian_mode == 15)
+	{ // zyk: defeated either Ymir or Thor
+		int j = 0;
+		qboolean still_has_boss = qfalse;
+
+		G_Sound(self, CHAN_VOICE, G_SoundIndex("sound/chars/ragnos/misc/death3.mp3"));
+
+		for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
+		{
+			gentity_t *old_boss = &g_entities[j];
+
+			if (old_boss && old_boss->NPC && old_boss->health > 0 && old_boss->client && old_boss->client->pers.guardian_mode == 15)
+			{
+				if (Q_stricmp(old_boss->NPC_type, "ymir_boss") == 0)
+				{
+					trap->SendServerCommand(quest_player->s.number, va("chat \"Ymir: My son! You will pay!\""));
+				}
+				else
+				{
+					trap->SendServerCommand(quest_player->s.number, va("chat \"^1Thor: ^7Father! Nooooo! Die hero!\""));
+				}
+
+				// zyk: wrath of the remaining boss makes him stronger
+				old_boss->spawnflags |= 131072;
+
+				still_has_boss = qtrue;
+			}
+		}
+
+		if (still_has_boss == qfalse)
+		{
+			level.boss_battle_music_reset_timer = level.time + 1000;
+
+			quest_player->client->pers.universe_quest_messages = 7;
+			quest_player->client->pers.universe_quest_timer = level.time + 5000;
+			quest_player->client->pers.guardian_mode = 0;
+		}
 	}
 	
 	if (self->client->sess.amrpgmode == 2)

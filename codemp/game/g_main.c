@@ -4489,6 +4489,11 @@ void spawn_boss(gentity_t *ent,int x,int y,int z,int yaw,char *boss_name,int gx,
 		npc_ent->client->pers.universe_quest_timer = level.time + 11000;
 		npc_ent->client->pers.guardian_mode = guardian_mode;
 
+		if (guardian_mode == 15)
+		{ // zyk: Ymir and Thor can have shield
+			npc_ent->client->ps.stats[STAT_ARMOR] = npc_ent->health;
+		}
+
 		if (ent->client->pers.universe_quest_counter & (1 << 29))
 		{ // zyk: if quest player is in Challenge Mode, bosses always use the improved version of powers (Universe Power)
 			npc_ent->client->pers.quest_power_status |= (1 << 13);
@@ -11536,13 +11541,13 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 16)
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: What should we do?\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 17)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: You will have to fight them. But before attacking them directly...\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: You will have to fight them\""));
 								else if (ent->client->pers.universe_quest_messages == 18)
-									trap->SendServerCommand(ent->s.number, va("chat \"^5Sage of Light^7: Attack the Crystal of Magic first!\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^5Sage of Light^7: Be careful, they will use the Crystal of Magic to make them stronger!\""));
 								else if (ent->client->pers.universe_quest_messages == 19)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: Yes! That is their source of power!\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: Yes! You must keep damaging them fast!\""));
 								else if (ent->client->pers.universe_quest_messages == 20)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Safe of Universe^7: Doing so will decrease their strength, making it easier to defeat them\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Safe of Universe^7: I will help you as I can during the battle\""));
 								else if (ent->client->pers.universe_quest_messages == 21)
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I understand. So it is time to finish this once and for all.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 22)
@@ -11554,7 +11559,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 25)
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Ok, so let's do it.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 26)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Remember, attack the crystal first before fighting them\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Remember, they planned all this, so they will be prepared\""));
 								else if (ent->client->pers.universe_quest_messages == 27)
 								{
 									ent->client->pers.universe_quest_progress = 20;
@@ -11578,6 +11583,135 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+							}
+						}
+						else if (ent->client->pers.universe_quest_progress == 20 && ent->client->pers.can_play_quest == 1 &&
+							ent->client->pers.universe_quest_counter & (1 << 0))
+						{ // zyk: Universe Quest Sages Sequel, boss battle
+							gentity_t *npc_ent = NULL;
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, -5849, 1438, 57);
+
+								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 200)
+								{
+									ent->client->pers.universe_quest_messages++;
+								}
+								else if (ent->client->pers.universe_quest_messages == 1)
+								{
+									npc_ent = Zyk_NPC_SpawnType("ymir_boss", -5849, 1638, 57, -90);
+								}
+								else if (ent->client->pers.universe_quest_messages == 2)
+								{
+									npc_ent = Zyk_NPC_SpawnType("thor_boss", -5849, 1238, 57, 90);
+								}
+								else if (ent->client->pers.universe_quest_messages == 3)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: I killed your parents...and now, I will kill you!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 4)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: It is time for my revenge!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 5)
+								{
+									int j = 0;
+
+									gentity_t *new_ent = G_Spawn();
+
+									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+									zyk_set_entity_field(new_ent, "spawnflags", "65537");
+									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -5467, 1438, 70));
+
+									zyk_set_entity_field(new_ent, "angles", va("%d %d 0", 90, 0));
+
+									zyk_set_entity_field(new_ent, "mins", "-8 -64 -64");
+									zyk_set_entity_field(new_ent, "maxs", "8 64 64");
+
+									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+
+									zyk_spawn_entity(new_ent);
+
+									new_ent = G_Spawn();
+
+									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+									zyk_set_entity_field(new_ent, "spawnflags", "65537");
+									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -6248, 1438, 70));
+
+									zyk_set_entity_field(new_ent, "angles", va("%d %d 0", 90, 0));
+
+									zyk_set_entity_field(new_ent, "mins", "-8 -64 -64");
+									zyk_set_entity_field(new_ent, "maxs", "8 64 64");
+
+									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+
+									zyk_spawn_entity(new_ent);
+
+									for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
+									{
+										npc_ent = &g_entities[j];
+
+										if (npc_ent && npc_ent->NPC)
+										{
+											G_FreeEntity(npc_ent);
+										}
+									}
+
+									npc_ent = NULL;
+
+									spawn_boss(ent, -5849, 1438, 57, 179, "ymir_boss", -5849, 1638, 57, -90, 15);
+									spawn_boss(ent, -5849, 1438, 57, 179, "thor_boss", -5849, 1238, 57, 90, 15);
+								}
+								else if (ent->client->pers.universe_quest_messages == 6)
+								{ // zyk: sage of universe heals the hero during the battle
+									ent->health += 40;
+									ent->client->ps.stats[STAT_ARMOR] += 40;
+
+									if (ent->health > ent->client->pers.max_rpg_health)
+										ent->health = ent->client->pers.max_rpg_health;
+
+									if (ent->client->ps.stats[STAT_ARMOR] > ent->client->pers.max_rpg_shield)
+										ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
+
+									G_Sound(ent, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav"));
+
+									trap->SendServerCommand(-1, "chat \"^2Sage of Universe: ^7Hero, I will use Amulet of Time to restore some hp and shield to you!\"");
+								}
+								else if (ent->client->pers.universe_quest_messages == 7)
+								{ // zyk: Hero defeated both bosses
+									ent->client->pers.universe_quest_progress = 21;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+
+								if (ent->client->pers.universe_quest_messages > 0 && npc_ent)
+								{
+									npc_ent->client->pers.universe_quest_messages = -2000;
+
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 500;
+								}
+								else if (ent->client->pers.universe_quest_messages > 2 && ent->client->pers.universe_quest_messages < 6)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+								else if (ent->client->pers.universe_quest_messages == 6)
+								{
+									ent->client->pers.universe_quest_timer = level.time + 20000;
 								}
 							}
 						}
@@ -14951,6 +15085,220 @@ void G_RunFrame( int levelTime ) {
 						}
 
 						ent->client->pers.light_quest_timer = level.time + 27000;
+					}
+				}
+				else if (ent->client->pers.guardian_mode == 15 && Q_stricmp(ent->NPC_type, "ymir_boss") == 0)
+				{ // zyk: Ymir
+				  // zyk: adding jetpack to this boss
+					ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
+
+					if (ent->client->pers.guardian_timer < level.time)
+					{
+						int random_magic = Q_irand(0, 26);
+
+						if (random_magic == 0)
+						{
+							ultra_strength(ent, 30000);
+						}
+						else if (random_magic == 1)
+						{
+							poison_mushrooms(ent, 100, 600);
+						}
+						else if (random_magic == 2)
+						{
+							water_splash(ent, 400, 15);
+						}
+						else if (random_magic == 3)
+						{
+							ultra_flame(ent, 500, 50);
+						}
+						else if (random_magic == 4)
+						{
+							rock_fall(ent, 500, 55);
+						}
+						else if (random_magic == 5)
+						{
+							dome_of_damage(ent, 500, 35);
+						}
+						else if (random_magic == 6)
+						{
+							hurricane(ent, 600, 5000);
+						}
+						else if (random_magic == 7)
+						{
+							slow_motion(ent, 400, 15000);
+						}
+						else if (random_magic == 8)
+						{
+							ultra_resistance(ent, 30000);
+						}
+						else if (random_magic == 9)
+						{
+							sleeping_flowers(ent, 2500, 350);
+						}
+						else if (random_magic == 10)
+						{
+							healing_water(ent, 120);
+						}
+						else if (random_magic == 11)
+						{
+							flame_burst(ent, 5000);
+						}
+						else if (random_magic == 12)
+						{
+							earthquake(ent, 2000, 300, 500);
+						}
+						else if (random_magic == 13)
+						{
+							magic_shield(ent, 6000);
+						}
+						else if (random_magic == 14)
+						{
+							blowing_wind(ent, 700, 5000);
+						}
+						else if (random_magic == 15)
+						{
+							ultra_speed(ent, 15000);
+						}
+						else if (random_magic == 16)
+						{
+							ice_stalagmite(ent, 500, 160);
+						}
+						else if (random_magic == 17)
+						{
+							ice_boulder(ent, 380, 70);
+						}
+						else if (random_magic == 18)
+						{
+							water_attack(ent, 500, 55);
+						}
+						else if (random_magic == 19)
+						{
+							shifting_sand(ent, 1000);
+						}
+						else if (random_magic == 20)
+						{
+							tree_of_life(ent);
+						}
+						else if (random_magic == 21)
+						{
+							magic_disable(ent, 450);
+						}
+						else if (random_magic == 22)
+						{
+							fast_and_slow(ent, 400, 6000);
+						}
+						else if (random_magic == 23)
+						{
+							flaming_area(ent, 30);
+						}
+						else if (random_magic == 24)
+						{
+							reverse_wind(ent, 700, 5000);
+						}
+						else if (random_magic == 25)
+						{
+							enemy_nerf(ent, 450);
+						}
+						else if (random_magic == 26)
+						{
+							ice_block(ent, 3500);
+						}
+
+						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 12000);
+
+						if (ent->spawnflags & 131072)
+						{ // zyk: boss is stronger now
+							ent->client->pers.guardian_timer -= 4000;
+						}
+					}
+
+					if (ent->client->pers.light_quest_timer < level.time)
+					{ // zyk: using Crystal of Magic
+						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
+
+						ent->health += 400;
+						ent->client->ps.stats[STAT_ARMOR] += 400;
+
+						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
+							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
+
+						if (ent->client->ps.stats[STAT_ARMOR] > ent->client->ps.stats[STAT_MAX_HEALTH])
+							ent->client->ps.stats[STAT_ARMOR] = ent->client->ps.stats[STAT_MAX_HEALTH];
+
+						if (ent->client->NPC_class == CLASS_REBORN)
+							ent->client->NPC_class = CLASS_BOBAFETT;
+						else
+							ent->client->NPC_class = CLASS_REBORN;
+
+						ent->client->pers.light_quest_timer = level.time + Q_irand(7000, 12000);
+					}
+				}
+				else if (ent->client->pers.guardian_mode == 15 && Q_stricmp(ent->NPC_type, "thor_boss") == 0)
+				{ // zyk: Thor
+				  // zyk: adding jetpack to this boss
+					ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
+
+					if (ent->client->pers.guardian_timer < level.time)
+					{
+						int random_magic = Q_irand(0, 6);
+
+						if (random_magic == 0)
+						{
+							ultra_drain(ent, 450, 50, 8000);
+						}
+						else if (random_magic == 1)
+						{
+							immunity_power(ent, 20000);
+						}
+						else if (random_magic == 2)
+						{
+							chaos_power(ent, 400, 160);
+						}
+						else if (random_magic == 3)
+						{
+							time_power(ent, 400, 4000);
+						}
+						else if (random_magic == 4)
+						{
+							healing_area(ent, 2, 5000);
+						}
+						else if (random_magic == 5)
+						{
+							magic_explosion(ent, 320, 160, 900);
+						}
+						else if (random_magic == 6)
+						{
+							lightning_dome(ent, 86);
+						}
+
+						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 12000);
+
+						if (ent->spawnflags & 131072)
+						{ // zyk: boss is stronger now
+							ent->client->pers.guardian_timer -= 2000;
+						}
+					}
+
+					if (ent->client->pers.light_quest_timer < level.time)
+					{ // zyk: using Crystal of Magic
+						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
+
+						ent->health += 400;
+						ent->client->ps.stats[STAT_ARMOR] += 400;
+
+						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
+							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
+
+						if (ent->client->ps.stats[STAT_ARMOR] > ent->client->ps.stats[STAT_MAX_HEALTH])
+							ent->client->ps.stats[STAT_ARMOR] = ent->client->ps.stats[STAT_MAX_HEALTH];
+
+						if (ent->client->NPC_class == CLASS_REBORN)
+							ent->client->NPC_class = CLASS_BOBAFETT;
+						else
+							ent->client->NPC_class = CLASS_REBORN;
+
+						ent->client->pers.light_quest_timer = level.time + Q_irand(7000, 12000);
 					}
 				}
 			}

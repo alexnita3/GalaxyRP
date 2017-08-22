@@ -1015,7 +1015,7 @@ typedef struct clientPersistant_s {
 	// 12 - Master of Evil
 	// 13 - Guardian of Universe
 	// 14 - Guardian of Chaos
-	// 15 - Unused
+	// 15 - Ymir and Thor
 	// 16 - Guardian of Ice
 	int guardian_mode; 
 

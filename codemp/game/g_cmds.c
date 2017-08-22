@@ -9538,6 +9538,20 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
+					else if (ent->client->pers.universe_quest_progress == 20)
+					{
+						if (ent->client->pers.universe_quest_counter & (1 << 0))
+							strcpy(universe_message, "^3\n21. Wrath of the Mages\n\n^7Go to ^3t3_bounty^7 and defeat Ymir and Thor in water arena");
+						else
+							strcpy(universe_message, "^3\nNew missions coming soon!");
+					}
+					else if (ent->client->pers.universe_quest_progress == 21)
+					{
+						if (ent->client->pers.universe_quest_counter & (1 << 0))
+							strcpy(universe_message, "^3\n22. End of the Nightmare\n\n^7Go to ^3t3_bounty^7 and talk to the sages and guardians in water arena");
+						else
+							strcpy(universe_message, "^3\nNew missions coming soon!");
+					}
 				}
 				else
 				{
