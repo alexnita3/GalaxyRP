@@ -11745,6 +11745,123 @@ void G_RunFrame( int levelTime ) {
 								}
 							}
 						}
+						else if (ent->client->pers.universe_quest_progress == 21 && ent->client->pers.can_play_quest == 1 &&
+							ent->client->pers.universe_quest_counter & (1 << 0))
+						{ // zyk: Universe Quest Sages Sequel, final mission
+							gentity_t *npc_ent = NULL;
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, -5849, 1438, 57);
+
+								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 100)
+								{
+									ent->client->pers.universe_quest_messages++;
+								}
+								else if (ent->client->pers.universe_quest_messages == 1)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_light", -6049, 1638, 57, -90);
+								}
+								else if (ent->client->pers.universe_quest_messages == 2)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", -5949, 1638, 57, -90);
+								}
+								else if (ent->client->pers.universe_quest_messages == 3)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -5849, 1638, 57, -90);
+								}
+								else if (ent->client->pers.universe_quest_messages == 4)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -5749, 1638, 57, -90);
+								}
+								else if (ent->client->pers.universe_quest_messages == 5)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -6049, 1238, 57, 90);
+								}
+								else if (ent->client->pers.universe_quest_messages == 6)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -5949, 1238, 57, 90);
+								}
+								else if (ent->client->pers.universe_quest_messages == 7)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -5849, 1238, 57, 90);
+								}
+								else if (ent->client->pers.universe_quest_messages == 8)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -5749, 1238, 57, 90);
+								}
+								else if (ent->client->pers.universe_quest_messages == 9)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -6049, 1438, 57, 0);
+								}
+								else if (ent->client->pers.universe_quest_messages == 10)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: It is done. The threat is gone.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 11)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Well done, %s^7.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 12)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Safe of Universe^7: Sages, you will know posses the Crystal of Magic.\""));
+								else if (ent->client->pers.universe_quest_messages == 13)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Safe of Universe^7: Also, sages, you will become the new leaders of the mages.\""));
+								else if (ent->client->pers.universe_quest_messages == 14)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: We will unite the guardians, the sages and the mages...\""));
+								else if (ent->client->pers.universe_quest_messages == 15)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Into the new Brotherhood of Peace.\""));
+								else if (ent->client->pers.universe_quest_messages == 16)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: This is a new prosperous age! We will guarantee peace from now on!\""));
+								else if (ent->client->pers.universe_quest_messages == 17)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Thank you for all your efforts, %s^7.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 18)
+									trap->SendServerCommand(ent->s.number, va("chat \"^5Sage of Light^7: Yes! now we will no longer have to worry about big threats!\""));
+								else if (ent->client->pers.universe_quest_messages == 19)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: Now the bad guys are really gone!\""));
+								else if (ent->client->pers.universe_quest_messages == 20)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: We have a big responsibility ahead, but we will do well.\""));
+								else if (ent->client->pers.universe_quest_messages == 21)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I will make sure my wisdom will be helpful for the brotherhood.\""));
+								else if (ent->client->pers.universe_quest_messages == 22)
+									trap->SendServerCommand(ent->s.number, va("chat \"^5Guardian of Light^7: Count on me too!\""));
+								else if (ent->client->pers.universe_quest_messages == 23)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Guardian of Darkness^7: My might will be helpful too!\""));
+								else if (ent->client->pers.universe_quest_messages == 24)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Guardian of Eternity^7: My wisdom will also help.\""));
+								else if (ent->client->pers.universe_quest_messages == 25)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Sage of Universe, now give the hero my old power.\""));
+								else if (ent->client->pers.universe_quest_messages == 26)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: That's right. %s^7, receive the ^2Resurrection Power^7!\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 27)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you, Sage of Universe.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 28)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Remember to always use your powers for good.\""));
+								else if (ent->client->pers.universe_quest_messages == 29)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Now we must get going. We have a lot of work to do.\""));
+								else if (ent->client->pers.universe_quest_messages == 30)
+								{
+									ent->client->pers.universe_quest_progress = 22;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+
+								if (ent->client->pers.universe_quest_messages > 0 && npc_ent)
+								{
+									npc_ent->client->pers.universe_quest_messages = -2000;
+
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 500;
+								}
+								else if (ent->client->pers.universe_quest_messages > 9 && ent->client->pers.universe_quest_messages < 30)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+							}
+						}
 					}
 					else if (level.quest_map == 7)
 					{
@@ -13463,7 +13580,7 @@ void G_RunFrame( int levelTime ) {
 									else if (ent->client->pers.universe_quest_counter & (1 << 1))
 										trap->SendServerCommand( ent->s.number, "chat \"^2Guardian of Universe: ^7I have become the True Guardian. With this power, the guardians will keep balance to the Universe.\"");
 									else if (ent->client->pers.universe_quest_counter & (1 << 2))
-										trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7I am the True Guardian! With this power I can now be unstopable!\"");
+										trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7I am the True Guardian! With this power I can now be unstoppable!\"");
 									else if (ent->client->pers.universe_quest_counter & (1 << 3))
 										trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7Once again, I am the True Guardian. This time, the Universe will truly be in balance.\"");
 								}

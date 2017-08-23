@@ -4822,8 +4822,6 @@ void load_account(gentity_t *ent)
 		// zyk: loading Universe Quest Progress value
 		fscanf(account_file,"%s",content);
 		ent->client->pers.universe_quest_progress = atoi(content);
-		if (ent->client->pers.universe_quest_progress > NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
-			ent->client->pers.universe_quest_progress = NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES;
 
 		// zyk: loading Universe Quest Counter value
 		fscanf(account_file,"%s",content);
@@ -5111,6 +5109,13 @@ void initialize_rpg_skills(gentity_t *ent)
 	{
 		if (validate_rpg_class(ent) == qfalse)
 			return;
+
+		// zyk: Challenge Mode player who changed to Normal after finishing old Universe Quest with 15 missions. Reset his settings to Challenge
+		if (ent->client->pers.universe_quest_progress == 15 && !(ent->client->pers.player_settings & (1 << 15)) && 
+			ent->client->pers.universe_quest_counter & (1 << 29))
+		{
+			ent->client->pers.player_settings |= (1 << 15);
+		}
 
 		// zyk: loading Jump value
 		if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_LEVITATION)) && ent->client->pers.skill_levels[0] > 0)
@@ -9548,7 +9553,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					else if (ent->client->pers.universe_quest_progress == 21)
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							strcpy(universe_message, "^3\n22. End of the Nightmare\n\n^7Go to ^3t3_bounty^7 and talk to the sages and guardians in water arena");
+							strcpy(universe_message, "^3\n22. A New Prosperous Age\n\n^7Go to ^3t3_bounty^7 and talk to the sages and guardians in water arena");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
