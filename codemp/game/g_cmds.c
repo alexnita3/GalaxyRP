@@ -6055,8 +6055,12 @@ void choose_new_player(gentity_t *next_player)
 		}
 		else if (level.quest_map == 11 && next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 9)))
 			found = 1;
-		else if (level.quest_map == 12 && (next_player->client->pers.universe_quest_progress == 7 || (next_player->client->pers.universe_quest_progress == 8 && !(next_player->client->pers.universe_quest_counter & (1 << 1)))))
+		else if (level.quest_map == 12 && (next_player->client->pers.universe_quest_progress == 7 ||
+				(next_player->client->pers.universe_quest_progress == 8 && !(next_player->client->pers.universe_quest_counter & (1 << 1))) || 
+				(next_player->client->pers.universe_quest_progress == 15 && next_player->client->pers.universe_quest_counter & (1 << 1))))
+		{
 			found = 1;
+		}
 		else if (level.quest_map == 13 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 5))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 5)))))
 			found = 1;
 		else if (level.quest_map == 14 && next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 11)))
@@ -9512,13 +9516,15 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
 							strcpy(universe_message, "^3\n16. The Ancient Threat\n\n^7Sage of Universe telepathically asks you to talk to the sages at the waterfall in ^3yavin2^7.");
+						else if (ent->client->pers.universe_quest_counter & (1 << 1))
+							strcpy(universe_message, "^3\n16. A Smart Move\n\n^7Guardian of Universe telepathically asks you to talk to the guardians at the central area in ^3mp/siege_korriban^7.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
 					else if (ent->client->pers.universe_quest_progress == 16)
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							strcpy(universe_message, "^3\n17. War at the City\n\n^7Go to ^3mp/siege_desert^7 and defeat all mages with the help from some citizens.");
+							strcpy(universe_message, "^3\n17. Save the City!\n\n^7Go to ^3mp/siege_desert^7 and defeat all mages with the help from some citizens.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
