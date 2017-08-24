@@ -9546,6 +9546,8 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
 							strcpy(universe_message, "^3\n19. To Settle the Score\n\n^7Go to ^3t3_bounty^7 and find Ymir.");
+						else if (ent->client->pers.universe_quest_counter & (1 << 1))
+							strcpy(universe_message, "^3\n19. A Hard Test\n\n^7Go to ^3mp/siege_korriban^7 and win the battle.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
