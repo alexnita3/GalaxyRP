@@ -6058,7 +6058,9 @@ void choose_new_player(gentity_t *next_player)
 			found = 1;
 		else if (level.quest_map == 12 && (next_player->client->pers.universe_quest_progress == 7 ||
 				(next_player->client->pers.universe_quest_progress == 8 && !(next_player->client->pers.universe_quest_counter & (1 << 1))) || 
-				(next_player->client->pers.universe_quest_progress == 15 && next_player->client->pers.universe_quest_counter & (1 << 1))))
+				(next_player->client->pers.universe_quest_progress == 15 && next_player->client->pers.universe_quest_counter & (1 << 1)) || 
+				(next_player->client->pers.universe_quest_progress >= 17 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && 
+				 next_player->client->pers.universe_quest_counter & (1 << 1))))
 		{
 			found = 1;
 		}
@@ -9535,6 +9537,8 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
 							strcpy(universe_message, "^3\n18. The Terrible Truth\n\n^7Talk to the sages inside the mayor's house in ^3mp/siege_desert^7.");
+						else if (ent->client->pers.universe_quest_counter & (1 << 1))
+							strcpy(universe_message, "^3\n18. The Guardian Trials\n\n^7Go to ^3mp/siege_korriban^7 and talk to the guardians.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
