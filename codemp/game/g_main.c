@@ -13008,7 +13008,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.universe_quest_progress == 19 && ent->client->pers.can_play_quest == 1 &&
 							ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_counter & (1 << 1))
-						{ // zyk: Universe Quest, trials mission of Guardians Sequel
+						{ // zyk: Universe Quest, great moment mission of Guardians Sequel
 							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 5)
 							{
 								gentity_t *npc_ent = NULL;
@@ -13141,6 +13141,78 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 7)
 								{
 									ent->client->pers.universe_quest_progress = 21;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+							}
+						}
+						else if (ent->client->pers.universe_quest_progress == 21 && ent->client->pers.can_play_quest == 1 &&
+							ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_counter & (1 << 1))
+						{ // zyk: Universe Quest, final mission of Guardians Sequel
+							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 5)
+							{
+								gentity_t *npc_ent = NULL;
+
+								if (ent->client->pers.hunter_quest_messages == 0)
+									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -4270, 4684, -6, 45);
+								else if (ent->client->pers.hunter_quest_messages == 1)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -4270, 5084, -6, -45);
+								else if (ent->client->pers.hunter_quest_messages == 2)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -3870, 4684, -6, 135);
+								else if (ent->client->pers.hunter_quest_messages == 3)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -3870, 5084, -6, -135);
+								else if (ent->client->pers.hunter_quest_messages == 4)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -4270, 4884, -6, 0);
+
+								if (npc_ent)
+								{
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									npc_ent->client->pers.universe_quest_messages = -2000;
+								}
+
+								ent->client->pers.hunter_quest_messages++;
+								ent->client->pers.hunter_quest_timer = level.time + 1000;
+							}
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, -4070, 4884, -6);
+
+								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 5 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+
+								if (ent->client->pers.universe_quest_messages == 1)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Well done, %s^7. You beat the Challenge!\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 2)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: From now on, you will be known as the Guardian of Peace.\""));
+								else if (ent->client->pers.universe_quest_messages == 3)
+									trap->SendServerCommand(ent->s.number, va("chat \"^5Guardian of Light^7: Welcome to our group, hero!\""));
+								else if (ent->client->pers.universe_quest_messages == 4)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Guardian of Darkness^7: I knew you would be strong enough!\""));
+								else if (ent->client->pers.universe_quest_messages == 5)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Guardian of Eternity^7: Your parents would be proud of what you have become.\""));
+								else if (ent->client->pers.universe_quest_messages == 6)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Well done, hero. I know you will be a good guardian.\""));
+								else if (ent->client->pers.universe_quest_messages == 7)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: %s^7. The sages will now be guided by all of us.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 8)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes. I am prepared to fulfill my duty as the Guardian of Peace\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 9)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Excellent! We will guide the sages and mages to a glorious future.\""));
+								else if (ent->client->pers.universe_quest_messages == 10)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: And we will bring peace everywhere.\""));
+								else if (ent->client->pers.universe_quest_messages == 11)
+								{
+									ent->client->pers.universe_quest_progress = 22;
 
 									save_account(ent);
 
