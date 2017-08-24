@@ -12900,12 +12900,18 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.universe_quest_timer < level.time)
 							{
 								vec3_t zyk_quest_point;
-								int amount_of_bosses_in_map = 2;
+								int amount_of_bosses_in_map = 1;
 
 								VectorSet(zyk_quest_point, -4070, 4884, -6);
 
+								if (ent->client->pers.universe_quest_counter & (1 << 29))
+								{ // zyk: Challenge Mode requires fighting more than one at once
+									amount_of_bosses_in_map = 2;
+								}
+
 								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 200)
 								{
+									ent->client->pers.hunter_quest_messages = 0;
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
@@ -12916,7 +12922,7 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
 
-								if (ent->client->pers.universe_quest_messages == 1)
+								if (ent->client->pers.universe_quest_messages == 1 && ent->client->pers.hunter_quest_messages < amount_of_bosses_in_map)
 								{ // zyk: closing the passage from where the player came so he cannot exit the trials room
 									gentity_t *new_ent = G_Spawn();
 

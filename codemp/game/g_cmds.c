@@ -9538,7 +9538,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
 							strcpy(universe_message, "^3\n18. The Terrible Truth\n\n^7Talk to the sages inside the mayor's house in ^3mp/siege_desert^7.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							strcpy(universe_message, "^3\n18. The Guardian Trials\n\n^7Go to ^3mp/siege_korriban^7 and talk to the guardians.");
+							strcpy(universe_message, "^3\n18. The Hero's Destiny\n\n^7Go to ^3mp/siege_korriban^7 and talk to the guardians in the blue crystal room.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
@@ -9547,7 +9547,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
 							strcpy(universe_message, "^3\n19. To Settle the Score\n\n^7Go to ^3t3_bounty^7 and find Ymir.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							strcpy(universe_message, "^3\n19. A Hard Test\n\n^7Go to ^3mp/siege_korriban^7 and win the battle.");
+							strcpy(universe_message, "^3\n19. The Guardian Trials\n\n^7Go to ^3mp/siege_korriban^7 and win the Guardian Trials battle.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
