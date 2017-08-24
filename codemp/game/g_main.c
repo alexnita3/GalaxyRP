@@ -13006,6 +13006,76 @@ void G_RunFrame( int levelTime ) {
 								}
 							}
 						}
+						else if (ent->client->pers.universe_quest_progress == 19 && ent->client->pers.can_play_quest == 1 &&
+							ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_counter & (1 << 1))
+						{ // zyk: Universe Quest, trials mission of Guardians Sequel
+							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 5)
+							{
+								gentity_t *npc_ent = NULL;
+
+								if (ent->client->pers.hunter_quest_messages == 0)
+									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -4270, 4684, -6, 45);
+								else if (ent->client->pers.hunter_quest_messages == 1)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -4270, 5084, -6, -45);
+								else if (ent->client->pers.hunter_quest_messages == 2)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -3870, 4684, -6, 135);
+								else if (ent->client->pers.hunter_quest_messages == 3)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -3870, 5084, -6, -135);
+								else if (ent->client->pers.hunter_quest_messages == 4)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -4270, 4884, -6, 0);
+
+								if (npc_ent)
+								{
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									npc_ent->client->pers.universe_quest_messages = -2000;
+								}
+
+								ent->client->pers.hunter_quest_messages++;
+								ent->client->pers.hunter_quest_timer = level.time + 1000;
+							}
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, -4070, 4884, -6);
+
+								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 5 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+
+								if (ent->client->pers.universe_quest_messages == 1)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I win the battle!\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 2)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Well done, %s^7. Now, the great moment has become.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 3)
+									trap->SendServerCommand(ent->s.number, va("chat \"^5Guardian of Light^7: You will fight against... us!\""));
+								else if (ent->client->pers.universe_quest_messages == 4)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Guardian of Darkness^7: This is the final challenge!\""));
+								else if (ent->client->pers.universe_quest_messages == 5)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Guardian of Eternity^7: If you win, you will become the Guardian of Peace.\""));
+								else if (ent->client->pers.universe_quest_messages == 6)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I will not fight this battle, I don't like this kind of test.\""));
+								else if (ent->client->pers.universe_quest_messages == 7)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: But I respect their decision, and I believe in your strength, %s^7.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 8)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I understand. I am prepared for this final test.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 9)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: The final challenge will begin!\""));
+								else if (ent->client->pers.universe_quest_messages == 10)
+								{
+									ent->client->pers.universe_quest_progress = 20;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+							}
+						}
 
 						// zyk: Guardian of Universe battle
 						if (ent->client->pers.universe_quest_progress == 7 && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_timer < level.time)

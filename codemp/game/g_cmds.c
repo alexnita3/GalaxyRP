@@ -9555,6 +9555,8 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
 							strcpy(universe_message, "^3\n20. The Crystal of Magic\n\n^7Go to ^3t3_bounty^7 and talk to the sages and guardians where Ymir was");
+						else if (ent->client->pers.universe_quest_counter & (1 << 1))
+							strcpy(universe_message, "^3\n20. The Great Moment\n\n^7Go to ^3mp/siege_korriban^7 and talk to the guardians in the blue crystal room.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
