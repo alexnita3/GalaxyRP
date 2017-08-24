@@ -6035,7 +6035,8 @@ void choose_new_player(gentity_t *next_player)
 			(next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 9))) ||
 			(next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 6))) ||
 			(next_player->client->pers.universe_quest_progress >= 18 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && 
-			 next_player->client->pers.universe_quest_counter & (1 << 0))))
+			 next_player->client->pers.universe_quest_counter & (1 << 0)) || 
+			(next_player->client->pers.universe_quest_progress == 16 && next_player->client->pers.universe_quest_counter & (1 << 1))))
 		{
 			found = 1;
 		}
@@ -9525,6 +9526,8 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
 							strcpy(universe_message, "^3\n17. Save the City!\n\n^7Go to ^3mp/siege_desert^7 and defeat all mages with the help from some citizens.");
+						else if (ent->client->pers.universe_quest_counter & (1 << 1))
+							strcpy(universe_message, "^3\n17. The Confrontation\n\n^7Go to ^3t3_bounty^7 and defeat Ymir and Thor.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}

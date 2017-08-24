@@ -2256,9 +2256,61 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		}
 	}
 
-	// zyk: artifact holder of Universe Quest, set the player universe_quest_artifact_holder_id to -2 so he can get the artifact when he touches the force boon item
-	if (self->client->pers.universe_quest_artifact_holder_id != -1 && self->NPC)
-	{
+	if (self->client->pers.universe_quest_messages == -10000 && self->NPC)
+	{ // zyk: Ymir or Thor defeated
+		int j = 0;
+		qboolean still_has_boss = qfalse;
+		quest_player = &g_entities[self->client->pers.universe_quest_objective_control];
+
+		if (Q_stricmp(self->NPC_type, "guardian_of_universe") == 0)
+		{ // zyk: failed mission
+			trap->SendServerCommand(quest_player->s.number, va("chat \"%s: No! Guardian of Universe... now it is all lost...\"", quest_player->client->pers.netname));
+
+			quest_get_new_player(quest_player);
+		}
+		else
+		{
+			for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
+			{
+				gentity_t *old_boss = &g_entities[j];
+
+				if (old_boss && old_boss->NPC && old_boss->health > 0 && old_boss->client && old_boss->client->pers.universe_quest_messages == -10000 && 
+					Q_stricmp(old_boss->NPC_type, "guardian_of_universe") != 0)
+				{
+					if (Q_stricmp(old_boss->NPC_type, "ymir_boss") == 0)
+					{
+						trap->SendServerCommand(quest_player->s.number, va("chat \"Ymir: My son! How dare you kill him!\""));
+					}
+					else
+					{
+						trap->SendServerCommand(quest_player->s.number, va("chat \"^1Thor: ^7Father! Hero, you will regret this!\""));
+					}
+
+					still_has_boss = qtrue;
+				}
+			}
+
+			if (still_has_boss == qfalse)
+			{
+				for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
+				{
+					gentity_t *old_npc = &g_entities[j];
+
+					if (old_npc && old_npc->NPC && old_npc->health > 0 && old_npc->client && Q_stricmp(old_npc->NPC_type, "quest_mage") == 0 && old_npc->die)
+					{ // zyk: killing the remaining mages
+						old_npc->health = 0;
+						old_npc->client->ps.stats[STAT_HEALTH] = 0;
+						old_npc->die(old_npc, old_npc, old_npc, 100, MOD_UNKNOWN);
+					}
+				}
+
+				quest_player->client->pers.universe_quest_messages = 6;
+				quest_player->client->pers.universe_quest_timer = level.time + 3000;
+			}
+		}
+	}
+	else if (self->client->pers.universe_quest_artifact_holder_id != -1 && self->NPC)
+	{ // zyk: artifact holder of Universe Quest, set the player universe_quest_artifact_holder_id to -2 so he can get the artifact when he touches the force boon item
 		if (Q_stricmp( self->NPC_type, "quest_ragnos" ) == 0) // zyk: quest_ragnos npc has a different way to get the artifact
 		{
 			gentity_t *player_ent = &g_entities[self->client->pers.universe_quest_artifact_holder_id];
