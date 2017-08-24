@@ -9564,6 +9564,8 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
 							strcpy(universe_message, "^3\n21. Wrath of the Mages\n\n^7Go to ^3t3_bounty^7 and defeat Ymir and Thor in water arena");
+						else if (ent->client->pers.universe_quest_counter & (1 << 1))
+							strcpy(universe_message, "^3\n21. The Final Challenge\n\n^7Go to ^3mp/siege_korriban^7 and win the battle.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
