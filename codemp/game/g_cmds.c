@@ -9531,7 +9531,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
 							strcpy(universe_message, "^3\n16. Guardians Sequel: A Smart Move\n\n^7Guardian of Universe telepathically asks you to talk to the guardians at the central area in ^3mp/siege_korriban^7.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
-							strcpy(universe_message, "^3\n16. Thor Sequel: The Strongest Survives\n\n^7Thor (Master of Evil) telepathically asks you to go to ^3t3_bounty^7.");
+							strcpy(universe_message, "^3\n16. Thor Sequel: The Betrayal\n\n^7Thor (Master of Evil) telepathically asks you to go to ^3t3_bounty^7.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
@@ -9542,7 +9542,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
 							strcpy(universe_message, "^3\n17. Guardians Sequel: The Confrontation\n\n^7Go to ^3t3_bounty^7 and defeat Ymir and Thor.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
-							strcpy(universe_message, "^3\n17. Thor Sequel: The New Leader\n\n^7Defeat Ymir in ^3t3_bounty^7 water arena.");
+							strcpy(universe_message, "^3\n17. Thor Sequel: Survival of the Strongest\n\n^7Defeat Ymir in ^3t3_bounty^7 water arena.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
@@ -9552,7 +9552,9 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 							strcpy(universe_message, "^3\n18. Sages Sequel: The Terrible Truth\n\n^7Talk to the sages inside the mayor's house in ^3mp/siege_desert^7.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
 							strcpy(universe_message, "^3\n18. Guardians Sequel: The Hero's Destiny\n\n^7Go to ^3mp/siege_korriban^7 and talk to the guardians in the blue crystal room.");
-						else
+						else if (ent->client->pers.universe_quest_counter & (1 << 2))
+							strcpy(universe_message, "^3\n18. Thor Sequel: The New Leader\n\n^7Talk to Thor in ^3t3_bounty^7 water arena.");
+						else if (ent->client->pers.universe_quest_counter & (1 << 3))
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
 					else if (ent->client->pers.universe_quest_progress == 18)

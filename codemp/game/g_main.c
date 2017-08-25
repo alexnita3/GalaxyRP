@@ -12007,7 +12007,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.universe_quest_progress == 15 && ent->client->pers.can_play_quest == 1 &&
 							ent->client->pers.universe_quest_counter & (1 << 2))
-						{ // zyk: Universe Quest, The Strongest Survives mission in Thor Sequel
+						{ // zyk: Universe Quest, first mission in Thor Sequel
 							if (ent->client->pers.universe_quest_timer < level.time)
 							{
 								gentity_t *npc_ent = NULL;
@@ -12248,6 +12248,84 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 3000;
+								}
+							}
+						}
+						else if (ent->client->pers.universe_quest_progress == 17 && ent->client->pers.can_play_quest == 1 &&
+								 ent->client->pers.universe_quest_counter & (1 << 2))
+						{ // zyk: Universe Quest, The New Leader mission of Thor Sequel
+							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 1)
+							{
+								gentity_t *npc_ent = NULL;
+
+								if (ent->client->pers.hunter_quest_messages == 0)
+									npc_ent = Zyk_NPC_SpawnType("thor_boss", -5849, 1438, 57, 0);
+
+								if (npc_ent)
+								{
+									npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
+
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									npc_ent->client->pers.universe_quest_messages = -2000;
+								}
+
+								ent->client->pers.hunter_quest_messages++;
+								ent->client->pers.hunter_quest_timer = level.time + 1000;
+							}
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, -5849, 1438, 57);
+
+								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 1 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+
+								if (ent->client->pers.universe_quest_messages == 1)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: It is done, my master.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 2)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Excellent! You are indeed very powerful.\""));
+								else if (ent->client->pers.universe_quest_messages == 3)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Now you are the new leader of the Brotherhood of Mages.\""));
+								else if (ent->client->pers.universe_quest_messages == 4)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you, master.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 5)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Now prepare yourself. I have a big task for you.\""));
+								else if (ent->client->pers.universe_quest_messages == 6)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Guardian of Time knew the location of a legendary item called the Crystal of Magic.\""));
+								else if (ent->client->pers.universe_quest_messages == 7)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: I was about to go get it, but she got it first. We have to retrive it.\""));
+								else if (ent->client->pers.universe_quest_messages == 8)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: The sages and guardians will help her. They are preparing a resistance in the City of the Merchants.\""));
+								else if (ent->client->pers.universe_quest_messages == 9)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: The citizens will be part of the Brotherhood of Guardian Sages, and will fight against us.\""));
+								else if (ent->client->pers.universe_quest_messages == 10)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: You will lead the legions of mages and destroy them all!\""));
+								else if (ent->client->pers.universe_quest_messages == 11)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Leave no survivors, even the sages and guardians. Only Guardian of Time will be left.\""));
+								else if (ent->client->pers.universe_quest_messages == 12)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Those bastards, liers... they all must die, master.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 13)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Yes. Conquer the city. When the time comes, you will face Guardian of Time.\""));
+								else if (ent->client->pers.universe_quest_messages == 14)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Defeat her so I can get the Crystal of Magic. Then your task will be done.\""));
+								else if (ent->client->pers.universe_quest_messages == 15)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: It shall be done, master. They will be destroyed.\""));
+								else if (ent->client->pers.universe_quest_messages == 16)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: The Brotherhood of Mages will finally conquer everything!\""));
+								else if (ent->client->pers.universe_quest_messages == 17)
+								{
+									ent->client->pers.universe_quest_progress = 18;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
 								}
 							}
 						}
