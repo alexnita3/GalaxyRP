@@ -1814,12 +1814,6 @@ void TryUse( gentity_t *ent )
 				return;
 			}
 		}
-		else if (target && target->client && target->NPC && Q_stricmp( target->NPC_type, "guardian_of_universe" ) == 0 && 
-				 ent->client->pers.universe_quest_progress == 8 && level.quest_map == 12 && ent->client->pers.universe_quest_messages == 8)
-		{
-			ent->client->pers.universe_quest_messages = 9;
-			return;
-		}
 		else if (target && target->client && target->NPC && target->client->pers.universe_quest_objective_control != -1 && ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_progress == 2 && level.quest_map == 1 && ent->client->pers.universe_quest_objective_control == 3)
 		{ // zyk: Third objective of Universe Quest
 			if (target->client->pers.universe_quest_objective_control == 0)

@@ -12644,92 +12644,102 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (level.quest_map == 12)
 					{
-						if (ent->client->pers.universe_quest_progress == 8 && ent->client->pers.can_play_quest == 1 && !(ent->client->pers.universe_quest_counter & (1 << 1)) && ent->client->pers.universe_quest_timer < level.time)
+						if (ent->client->pers.universe_quest_progress == 8 && ent->client->pers.can_play_quest == 1 && !(ent->client->pers.universe_quest_counter & (1 << 1)))
 						{ // zyk: Revelations mission of Universe Quest
-							gentity_t *npc_ent = NULL;
-
-							if (ent->client->pers.universe_quest_messages == 0)
-								npc_ent = Zyk_NPC_SpawnType("sage_of_light",-1082,4337,505,45);
-							else if (ent->client->pers.universe_quest_messages == 1)
-								npc_ent = Zyk_NPC_SpawnType("sage_of_darkness",-912,4503,505,-135);
-							else if (ent->client->pers.universe_quest_messages == 2)
-								npc_ent = Zyk_NPC_SpawnType("sage_of_eternity",-892,4340,505,135);
-							else if (ent->client->pers.universe_quest_messages == 3)
-								npc_ent = Zyk_NPC_SpawnType("sage_of_universe",-1091,4520,505,-45);
-							else if (ent->client->pers.universe_quest_messages == 4)
-								npc_ent = Zyk_NPC_SpawnType("guardian_boss_9",-1112,4418,505,0);
-							else if (ent->client->pers.universe_quest_messages == 5)
-								npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness",-882,4418,505,179);
-							else if (ent->client->pers.universe_quest_messages == 6)
-								npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity",-993,4273,505,90);
-							else if (ent->client->pers.universe_quest_messages == 7)
-								npc_ent = Zyk_NPC_SpawnType("guardian_of_universe",-988,4543,505,-90);
-
-							if (npc_ent)
+							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 8)
 							{
-								npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-								npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+								gentity_t *npc_ent = NULL;
+
+								if (ent->client->pers.hunter_quest_messages == 0)
+									npc_ent = Zyk_NPC_SpawnType("sage_of_light", -1082, 4337, 505, 45);
+								else if (ent->client->pers.hunter_quest_messages == 1)
+									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", -912, 4503, 505, -135);
+								else if (ent->client->pers.hunter_quest_messages == 2)
+									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -892, 4340, 505, 135);
+								else if (ent->client->pers.hunter_quest_messages == 3)
+									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -1091, 4520, 505, -45);
+								else if (ent->client->pers.hunter_quest_messages == 4)
+									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -1112, 4418, 505, 0);
+								else if (ent->client->pers.hunter_quest_messages == 5)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -882, 4418, 505, 179);
+								else if (ent->client->pers.hunter_quest_messages == 6)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -993, 4273, 505, 90);
+								else if (ent->client->pers.hunter_quest_messages == 7)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -988, 4543, 505, -90);
+
+								if (npc_ent)
+								{
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									npc_ent->client->pers.universe_quest_messages = -2000;
+								}
+
+								ent->client->pers.hunter_quest_messages++;
+								ent->client->pers.hunter_quest_timer = level.time + 1000;
 							}
 
-							if (ent->client->pers.universe_quest_messages == 9)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe^7: Welcome, %s.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 10)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: Guardians. Sages. I had a strange vision.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 11)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: It is about a place which I believe it is the sacred t2_trip obelisk.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 12)
-								trap->SendServerCommand( ent->s.number, va("chat \"^5Guardian of Light^7: Interesting. The place you are talking about...\""));
-							else if (ent->client->pers.universe_quest_messages == 13)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Guardian of Darkness^7: Is the Guardian of Time seal place!\""));
-							else if (ent->client->pers.universe_quest_messages == 14)
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Guardian of Eternity^7: Then the time has come!\""));
-							else if (ent->client->pers.universe_quest_messages == 15)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: Please tell me everything about it.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 16)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe^7: There is an old prophecy called the Prophecy of Time.\""));
-							else if (ent->client->pers.universe_quest_messages == 17)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe^7: It says the legendary hero will face...\""));
-							else if (ent->client->pers.universe_quest_messages == 18)
-								trap->SendServerCommand( ent->s.number, va("chat \"^5Sage of Light^7: The most powerful being ever.\""));
-							else if (ent->client->pers.universe_quest_messages == 19)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Sage of Darkness^7: He is sealed in a place called the Sacred Dimension...\""));
-							else if (ent->client->pers.universe_quest_messages == 20)
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Sage of Eternity^7: The only way to defeat him is going there.\""));
-							else if (ent->client->pers.universe_quest_messages == 21)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe^7: But be aware that the Master of Evil is back.\""));
-							else if (ent->client->pers.universe_quest_messages == 22)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe^7: He used my Resurrection Power to come back.\""));
-							else if (ent->client->pers.universe_quest_messages == 23)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: So I did not defeat him at all.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 24)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe^7: He is trying to find the sacred crystals.\""));
-							else if (ent->client->pers.universe_quest_messages == 25)
-								trap->SendServerCommand( ent->s.number, va("chat \"^5Guardian of Light^7: these three crystals are the keys to open the gate to the Sacred Dimension.\""));
-							else if (ent->client->pers.universe_quest_messages == 26)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Guardian of Darkness^7: He wants to have all of the guardian powers.\""));
-							else if (ent->client->pers.universe_quest_messages == 27)
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Guardian of Eternity^7: You must find the crystals before him.\""));
-							else if (ent->client->pers.universe_quest_messages == 28)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I will find the crystals. Thank you for the information.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 29)
+							if (ent->client->pers.universe_quest_timer < level.time)
 							{
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe^7: Now go hero. Do not give up.\""));
+								vec3_t zyk_quest_point;
 
-								ent->client->pers.universe_quest_counter |= (1 << 1);
-								first_second_act_objective(ent);
-								save_account(ent);
-								quest_get_new_player(ent);
-							}
+								VectorSet(zyk_quest_point, -988, 4418, 525);
 
-							if (ent->client->pers.universe_quest_messages < 8)
-							{
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 1200;
-							}
-							else if (ent->client->pers.universe_quest_messages > 8)
-							{
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 5000;
+								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 8 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+
+								if (ent->client->pers.universe_quest_messages == 1)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Welcome, %s.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 2)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Guardians. Sages. I had a strange vision.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 3)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: It is about a place which I believe it is the sacred t2_trip obelisk.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 4)
+									trap->SendServerCommand(ent->s.number, va("chat \"^5Guardian of Light^7: Interesting. The place you are talking about...\""));
+								else if (ent->client->pers.universe_quest_messages == 5)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Guardian of Darkness^7: Is the Guardian of Time seal place!\""));
+								else if (ent->client->pers.universe_quest_messages == 6)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Guardian of Eternity^7: Then the time has come!\""));
+								else if (ent->client->pers.universe_quest_messages == 7)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Please tell me everything about it.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 8)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: There is an old prophecy called the Prophecy of Time.\""));
+								else if (ent->client->pers.universe_quest_messages == 9)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: It says the legendary hero will face...\""));
+								else if (ent->client->pers.universe_quest_messages == 10)
+									trap->SendServerCommand(ent->s.number, va("chat \"^5Sage of Light^7: The most powerful being ever.\""));
+								else if (ent->client->pers.universe_quest_messages == 11)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: He is sealed in a place called the Sacred Dimension...\""));
+								else if (ent->client->pers.universe_quest_messages == 12)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: The only way to defeat him is going there.\""));
+								else if (ent->client->pers.universe_quest_messages == 13)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: But be aware that the Master of Evil is back.\""));
+								else if (ent->client->pers.universe_quest_messages == 14)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: He used my Resurrection Power to come back.\""));
+								else if (ent->client->pers.universe_quest_messages == 15)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: So I did not defeat him at all.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 16)
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: He is trying to find the sacred crystals.\""));
+								else if (ent->client->pers.universe_quest_messages == 17)
+									trap->SendServerCommand(ent->s.number, va("chat \"^5Guardian of Light^7: these three crystals are the keys to open the gate to the Sacred Dimension.\""));
+								else if (ent->client->pers.universe_quest_messages == 18)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Guardian of Darkness^7: He wants to have all of the guardian powers.\""));
+								else if (ent->client->pers.universe_quest_messages == 19)
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Guardian of Eternity^7: You must find the crystals before him.\""));
+								else if (ent->client->pers.universe_quest_messages == 20)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I will find the crystals. Thank you for the information.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 21)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Now go hero. Do not give up.\""));
+
+									ent->client->pers.universe_quest_counter |= (1 << 1);
+									first_second_act_objective(ent);
+									save_account(ent);
+									quest_get_new_player(ent);
+								}
 							}
 						}
 
