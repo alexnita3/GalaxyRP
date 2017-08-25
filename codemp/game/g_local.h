@@ -729,18 +729,16 @@ typedef struct clientPersistant_s {
 	// 2 - Dark Power
 	// 3 - Eternity Power
 	// 4 - Universe Power
-	// 5 - Resurrection skill
+	// 5 - Unused
 	// 6 - Allow Force Powers from allies
-	// 7 - Use Movers with Stun Baton - Ability to GlobalUse ET_MOVER entities with stun baton if player has the stun baton upgrade
-	// Starting Saber Style - When player doesnt have any of the flags below, saber starts Off
-	// 9 - Starting Dual Saber Style
-	// 10 - Starting Staff Style
+	// 7 - Unused
+	// 9 - Allow Screen Message
+	// 10 - Use healing force only at allied players
 	// 11 - Start With Saber
 	// 12 - Jetpack
 	// 13 - Admin Protect
 	// 14 - Boss Battle Music
 	// 15 - Difficulty
-	// 16 - Allow Screen Message
 	// 26 - Saber Starts with Single Yellow/Dual style
 	// 27 - Saber Starts with Single Red/Dual/Staff style
 	// 28 - Saber Starts with Desann/Dual/Staff style

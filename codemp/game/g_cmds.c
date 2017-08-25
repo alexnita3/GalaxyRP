@@ -11590,15 +11590,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			sprintf(message,"%s\n^3 6 - Allow Force Powers from allies - ^2ON", message);
 		}
 
-		if (ent->client->pers.player_settings & (1 << 7))
-		{
-			sprintf(message,"%s\n^3 7 - Resurrection Power - ^1OFF", message);
-		}
-		else
-		{
-			sprintf(message,"%s\n^3 7 - Resurrection Power - ^2ON", message);
-		}
-
 		// zyk: Saber Style flags
 		if (ent->client->pers.player_settings & (1 << 26))
 			sprintf(message,"%s\n^3 8 - Starting Single Saber Style - ^3Yellow", message);
