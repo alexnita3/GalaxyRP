@@ -4461,6 +4461,14 @@ qboolean TryGrapple(gentity_t *ent)
 					}
 				}
 
+				if (ent->client->pers.universe_quest_progress = NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 0))
+				{ // zyk: Final Power of Sages Sequel. Decreases cooldown time of magic powers
+					if (ent->client->pers.rpg_class == 8)
+						ent->client->pers.quest_power_usage_timer -= 1000;
+					else
+						ent->client->pers.quest_power_usage_timer -= 4000;
+				}
+
 				display_yellow_bar(ent,(ent->client->pers.quest_power_usage_timer - level.time));
 			}
 			else
