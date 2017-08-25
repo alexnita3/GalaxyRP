@@ -4461,7 +4461,7 @@ qboolean TryGrapple(gentity_t *ent)
 					}
 				}
 
-				if (ent->client->pers.universe_quest_progress = NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 0))
+				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 0))
 				{ // zyk: Final Power of Sages Sequel. Decreases cooldown time of magic powers
 					if (ent->client->pers.rpg_class == 8)
 						ent->client->pers.quest_power_usage_timer -= 1000;
@@ -9541,7 +9541,9 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 							strcpy(universe_message, "^3\n17. Sages Sequel: Save the City!\n\n^7Go to ^3mp/siege_desert^7 and defeat all mages with the help from some citizens.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
 							strcpy(universe_message, "^3\n17. Guardians Sequel: The Confrontation\n\n^7Go to ^3t3_bounty^7 and defeat Ymir and Thor.");
-						else
+						else if (ent->client->pers.universe_quest_counter & (1 << 2))
+							strcpy(universe_message, "^3\n17. Thor Sequel: The New Leader\n\n^7Defeat Ymir in ^3t3_bounty^7 water arena.");
+						else if (ent->client->pers.universe_quest_counter & (1 << 3))
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
 					else if (ent->client->pers.universe_quest_progress == 17)

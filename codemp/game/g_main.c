@@ -12007,7 +12007,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.universe_quest_progress == 15 && ent->client->pers.can_play_quest == 1 &&
 							ent->client->pers.universe_quest_counter & (1 << 2))
-						{ // zyk: Universe Quest, The Strongest Survives mission
+						{ // zyk: Universe Quest, The Strongest Survives mission in Thor Sequel
 							if (ent->client->pers.universe_quest_timer < level.time)
 							{
 								gentity_t *npc_ent = NULL;
@@ -12160,6 +12160,94 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+							}
+						}
+						else if (ent->client->pers.universe_quest_progress == 16 && ent->client->pers.can_play_quest == 1 &&
+							ent->client->pers.universe_quest_counter & (1 << 2))
+						{ // zyk: Universe Quest Thor Sequel, Ymir boss battle
+							gentity_t *npc_ent = NULL;
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, -5849, 1438, 57);
+
+								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 200)
+								{
+									ent->client->pers.universe_quest_messages++;
+								}
+								
+								if (ent->client->pers.universe_quest_messages == 1)
+								{
+									int j = 0;
+
+									gentity_t *new_ent = G_Spawn();
+
+									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+									zyk_set_entity_field(new_ent, "spawnflags", "65537");
+									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -5467, 1438, 70));
+
+									zyk_set_entity_field(new_ent, "angles", va("%d %d 0", 90, 0));
+
+									zyk_set_entity_field(new_ent, "mins", "-8 -64 -64");
+									zyk_set_entity_field(new_ent, "maxs", "8 64 64");
+
+									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+
+									zyk_spawn_entity(new_ent);
+
+									new_ent = G_Spawn();
+
+									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+									zyk_set_entity_field(new_ent, "spawnflags", "65537");
+									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -6248, 1438, 70));
+
+									zyk_set_entity_field(new_ent, "angles", va("%d %d 0", 90, 0));
+
+									zyk_set_entity_field(new_ent, "mins", "-8 -64 -64");
+									zyk_set_entity_field(new_ent, "maxs", "8 64 64");
+
+									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+
+									zyk_spawn_entity(new_ent);
+
+									for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
+									{
+										npc_ent = &g_entities[j];
+
+										if (npc_ent && npc_ent->NPC)
+										{
+											G_FreeEntity(npc_ent);
+										}
+									}
+
+									npc_ent = NULL;
+
+									spawn_boss(ent, -5849, 1438, 57, 179, "ymir_boss", -6049, 1438, 57, 0, 19);
+								}
+								else if (ent->client->pers.universe_quest_messages == 3)
+								{ // zyk: Hero defeated boss
+									zyk_NPC_Kill_f("all");
+								}
+								else if (ent->client->pers.universe_quest_messages == 4)
+								{
+									ent->client->pers.universe_quest_progress = 17;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+
+								if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 3)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 3000;
 								}
 							}
 						}
@@ -16300,6 +16388,154 @@ void G_RunFrame( int levelTime ) {
 
 							ent->client->pers.light_quest_timer -= 1000;
 						}
+					}
+				}
+				else if (ent->client->pers.guardian_mode == 19)
+				{ // zyk: Ymir
+					// zyk: adding jetpack to this boss
+					ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
+
+					if (ent->client->pers.guardian_timer < level.time)
+					{
+						int random_magic = Q_irand(0, 26);
+
+						if (random_magic == 0)
+						{
+							ultra_strength(ent, 30000);
+						}
+						else if (random_magic == 1)
+						{
+							poison_mushrooms(ent, 100, 600);
+						}
+						else if (random_magic == 2)
+						{
+							water_splash(ent, 400, 15);
+						}
+						else if (random_magic == 3)
+						{
+							ultra_flame(ent, 500, 50);
+						}
+						else if (random_magic == 4)
+						{
+							rock_fall(ent, 500, 55);
+						}
+						else if (random_magic == 5)
+						{
+							dome_of_damage(ent, 500, 35);
+						}
+						else if (random_magic == 6)
+						{
+							hurricane(ent, 600, 5000);
+						}
+						else if (random_magic == 7)
+						{
+							slow_motion(ent, 400, 15000);
+						}
+						else if (random_magic == 8)
+						{
+							ultra_resistance(ent, 30000);
+						}
+						else if (random_magic == 9)
+						{
+							sleeping_flowers(ent, 2500, 350);
+						}
+						else if (random_magic == 10)
+						{
+							healing_water(ent, 120);
+						}
+						else if (random_magic == 11)
+						{
+							flame_burst(ent, 5000);
+						}
+						else if (random_magic == 12)
+						{
+							earthquake(ent, 2000, 300, 500);
+						}
+						else if (random_magic == 13)
+						{
+							magic_shield(ent, 6000);
+						}
+						else if (random_magic == 14)
+						{
+							blowing_wind(ent, 700, 5000);
+						}
+						else if (random_magic == 15)
+						{
+							ultra_speed(ent, 15000);
+						}
+						else if (random_magic == 16)
+						{
+							ice_stalagmite(ent, 500, 160);
+						}
+						else if (random_magic == 17)
+						{
+							ice_boulder(ent, 380, 70);
+						}
+						else if (random_magic == 18)
+						{
+							water_attack(ent, 500, 55);
+						}
+						else if (random_magic == 19)
+						{
+							shifting_sand(ent, 1000);
+						}
+						else if (random_magic == 20)
+						{
+							tree_of_life(ent);
+						}
+						else if (random_magic == 21)
+						{
+							magic_disable(ent, 450);
+						}
+						else if (random_magic == 22)
+						{
+							fast_and_slow(ent, 400, 6000);
+						}
+						else if (random_magic == 23)
+						{
+							flaming_area(ent, 30);
+						}
+						else if (random_magic == 24)
+						{
+							reverse_wind(ent, 700, 5000);
+						}
+						else if (random_magic == 25)
+						{
+							enemy_nerf(ent, 450);
+						}
+						else if (random_magic == 26)
+						{
+							ice_block(ent, 3500);
+						}
+
+						ent->client->pers.guardian_timer = level.time + Q_irand(6000, 10000);
+					}
+
+					if (ent->client->pers.light_quest_timer < level.time)
+					{ // zyk: spawning mages to help
+						int random_unique = Q_irand(0, 1);
+
+						if (ent->client->NPC_class == CLASS_REBORN)
+							ent->client->NPC_class = CLASS_BOBAFETT;
+						else
+							ent->client->NPC_class = CLASS_REBORN;
+
+						if (random_unique == 0)
+						{
+							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+
+							elemental_attack(ent);
+						}
+						else
+						{
+							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+
+							zyk_no_attack(ent);
+						}
+
+						Zyk_NPC_SpawnType("quest_mage", -6049, 1438, 57, 0);
+
+						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 12000);
 					}
 				}
 			}
