@@ -15362,6 +15362,233 @@ void G_RunFrame( int levelTime ) {
 								}
 							}
 						}
+						else if (ent->client->pers.universe_quest_progress == 18 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 2))
+						{ // zyk: War at the City mission in Thor Sequel
+							gentity_t *npc_ent = NULL;
+
+							if (ent->client->pers.hunter_quest_timer < level.time)
+							{ // zyk: calls mages to help the player
+								if (ent->client->pers.hunter_quest_messages > 0)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", (int)ent->client->ps.origin[0], (int)ent->client->ps.origin[1], (int)ent->client->ps.origin[2], (int)ent->client->ps.viewangles[1]);
+									if (npc_ent)
+									{
+										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+									}
+
+									ent->client->pers.hunter_quest_messages = 0;
+
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor: ^7Here is a mage to help you conquer the city!\""));
+								}
+
+								ent->client->pers.hunter_quest_timer = level.time + 1000;
+							}
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								if (ent->client->pers.universe_quest_messages == 0)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 9102, 2508, -358, -179);
+								}
+								else if (ent->client->pers.universe_quest_messages == 1)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 9290, 2236, -486, -84);
+								else if (ent->client->pers.universe_quest_messages == 2)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 10520, 1236, -486, -174);
+								else if (ent->client->pers.universe_quest_messages == 3)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 11673, 751, -486, 175);
+								else if (ent->client->pers.universe_quest_messages == 4)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 12570, -860, -486, 177);
+								else if (ent->client->pers.universe_quest_messages == 5)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 11540, -1677, -486, 179);
+								else if (ent->client->pers.universe_quest_messages == 6)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 11277, -2915, -486, 179);
+								else if (ent->client->pers.universe_quest_messages == 7)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 10386, -3408, -486, 2);
+								else if (ent->client->pers.universe_quest_messages == 8)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 9906, -2373, -487, 2);
+								else if (ent->client->pers.universe_quest_messages == 9)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 9097, -919, -486, -176);
+								else if (ent->client->pers.universe_quest_messages == 10)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 6732, -1208, -486, -174);
+								else if (ent->client->pers.universe_quest_messages == 11)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 6802, -654, -486, -60);
+								else if (ent->client->pers.universe_quest_messages == 12)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 5734, -2395, -486, 92);
+								else if (ent->client->pers.universe_quest_messages == 13)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 4594, -1727, -486, 173);
+								else if (ent->client->pers.universe_quest_messages == 14)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 2505, -1616, -486, 170);
+								else if (ent->client->pers.universe_quest_messages == 15)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 3298, -564, -486, -86);
+								else if (ent->client->pers.universe_quest_messages == 16)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 3532, 231, -486, -8);
+								else if (ent->client->pers.universe_quest_messages == 17)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 1832, -1103, -486, 6);
+								else if (ent->client->pers.universe_quest_messages == 18)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 1727, -480, -486, 7);
+								else if (ent->client->pers.universe_quest_messages == 19)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 2653, 1014, -486, 0);
+								else if (ent->client->pers.universe_quest_messages == 20)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 4346, -1209, -486, -177);
+								else if (ent->client->pers.universe_quest_messages == 21)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", 2372, -2413, -486, 90);
+								else if (ent->client->pers.universe_quest_messages == 22)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -5549, -841, 57, 178);
+								else if (ent->client->pers.universe_quest_messages == 23)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -6035, -2285, -486, -179);
+								else if (ent->client->pers.universe_quest_messages == 24)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7149, -2482, -486, 176);
+								else if (ent->client->pers.universe_quest_messages == 25)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7304, -1155, -486, -177);
+								else if (ent->client->pers.universe_quest_messages == 26)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -8071, -381, -486, -1);
+								else if (ent->client->pers.universe_quest_messages == 27)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -9596, -1116, -486, 1);
+								else if (ent->client->pers.universe_quest_messages == 28)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -9762, -191, -486, 5);
+								else if (ent->client->pers.universe_quest_messages == 29)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -11311, -638, 9, -1);
+								else if (ent->client->pers.universe_quest_messages == 30)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -11437, -662, -486, 179);
+								else if (ent->client->pers.universe_quest_messages == 31)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -9344, 837, -66, 90);
+								else if (ent->client->pers.universe_quest_messages == 32)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7710, -1665, -358, 178);
+								else if (ent->client->pers.universe_quest_messages == 33)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -8724, -1275, -486, 176);
+								else if (ent->client->pers.universe_quest_messages == 34)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -12810, 325, -422, -90);
+								else if (ent->client->pers.universe_quest_messages == 35)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 10350, -357, -486, 179);
+								else if (ent->client->pers.universe_quest_messages == 36)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 5935, -1304, -486, 125);
+								else if (ent->client->pers.universe_quest_messages == 37)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 4516, -679, -486, -144);
+								else if (ent->client->pers.universe_quest_messages == 38)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -6327, -1071, -486, -179);
+								else if (ent->client->pers.universe_quest_messages == 39)
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -8120, 781, -486, -96);
+								else if (ent->client->pers.universe_quest_messages == 40)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -8171, -381, -486, -179);
+								}
+								else if (ent->client->pers.universe_quest_messages == 41)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 12173, -225, -486, -179);
+								}
+								else if (ent->client->pers.universe_quest_messages == 42)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 12173, -137, -486, -179);
+								}
+								else if (ent->client->pers.universe_quest_messages == 43)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 12173, -41, -486, -179);
+								}
+								else if (ent->client->pers.universe_quest_messages == 44)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7710, -1665, -358, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 45)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -11361, -638, 29, 50);
+								}
+								else if (ent->client->pers.universe_quest_messages == 46)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_light", 2555, -1616, -476, 170);
+								}
+								else if (ent->client->pers.universe_quest_messages == 47)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", 12173, -600, -348, -179);
+								}
+								else if (ent->client->pers.universe_quest_messages == 48)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", 12173, -500, -456, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 49)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -7760, -1665, -348, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 50)
+								{
+									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", 12023, -600, -348, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 51)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 12073, -600, -348, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 52)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 12223, -600, -348, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 53)
+								{
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", 12373, -600, -348, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 54)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7760, -1725, -348, 178);
+								}
+								else if (ent->client->pers.universe_quest_messages == 55)
+								{
+									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7304, -1155, -486, 178);
+									trap->SendServerCommand(ent->s.number, va("chat \"^3Citizen: ^7For my city!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 56)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor: ^7%s^7, the sages and guardians will fight side by side with the citizens.\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 57)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor: ^7Show no mercy. Leave no survivors.\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 58)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"%s: ^7As you wish, master.\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 100)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor: ^7You have done well! Meet me in the rancor arena.\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 101)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor: ^7We have some... discussion to make with the Guardian of Time.\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 102)
+								{
+									ent->client->pers.universe_quest_progress = 19;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+
+								if (ent->client->pers.universe_quest_messages < 56 && npc_ent)
+								{ // zyk: tests npc_ent so if for some reason the npc dont get spawned, the server tries to spawn it again
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 100;
+
+									npc_ent->client->pers.universe_quest_objective_control = ent->s.number; // zyk: flag to set this npc as a citizen in this map
+
+									npc_ent->client->playerTeam = NPCTEAM_ENEMY;
+									npc_ent->client->enemyTeam = NPCTEAM_PLAYER;
+								}
+								else if (ent->client->pers.universe_quest_messages < 56)
+								{
+									ent->client->pers.universe_quest_timer = level.time + 500;
+								}
+								else if (ent->client->pers.universe_quest_messages > 55 && ent->client->pers.universe_quest_messages < 59)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+								else if (ent->client->pers.universe_quest_messages >= 100 && ent->client->pers.universe_quest_messages < 102)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+							}
+						}
 					}
 					else if (level.quest_map == 25)
 					{ // zyk: seventh objective of Universe Quest

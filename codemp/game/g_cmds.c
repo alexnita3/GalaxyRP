@@ -6087,7 +6087,9 @@ void choose_new_player(gentity_t *next_player)
 			found = 1;
 		else if (level.quest_map == 24 && (next_player->client->pers.universe_quest_progress == 5 ||
 				(next_player->client->pers.universe_quest_progress == 16 && next_player->client->pers.universe_quest_counter & (1 << 0)) || 
-				(next_player->client->pers.universe_quest_progress == 17 && next_player->client->pers.universe_quest_counter & (1 << 0))))
+				(next_player->client->pers.universe_quest_progress == 17 && next_player->client->pers.universe_quest_counter & (1 << 0)) || 
+				(next_player->client->pers.universe_quest_progress >= 18 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && 
+				 next_player->client->pers.universe_quest_counter & (1 << 2))))
 		{
 			found = 1;
 		}
@@ -9563,7 +9565,9 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 							strcpy(universe_message, "^3\n19. Sages Sequel: To Settle the Score\n\n^7Go to ^3t3_bounty^7 and find Ymir.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
 							strcpy(universe_message, "^3\n19. Guardians Sequel: The Guardian Trials\n\n^7Go to ^3mp/siege_korriban^7 and win the Guardian Trials battle.");
-						else
+						else if (ent->client->pers.universe_quest_counter & (1 << 2))
+							strcpy(universe_message, "^3\n19. Thor Sequel: War at the City\n\n^7Defeat the citizens, sages and guardians in ^3mp/siege_desert^7.");
+						else if (ent->client->pers.universe_quest_counter & (1 << 3))
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
 					else if (ent->client->pers.universe_quest_progress == 19)

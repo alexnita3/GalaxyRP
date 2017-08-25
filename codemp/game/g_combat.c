@@ -2401,7 +2401,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			}
 		}
 		else if (the_old_player->client->pers.universe_quest_progress == 16 && the_old_player->client->pers.universe_quest_counter & (1 << 0))
-		{ // zyk: War at the City, mage was defeated by the player
+		{ // zyk: Save the City mission, mage was defeated by the player
 			if (Q_stricmp(self->NPC_type, "quest_mage") == 0)
 			{
 				int j = 0, mages_count = 0;
@@ -2424,6 +2424,41 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 					the_old_player->client->pers.universe_quest_messages = 100;
 					the_old_player->client->pers.universe_quest_timer = level.time + 3000;
 				}
+			}
+		}
+		else if (the_old_player->client->pers.universe_quest_progress == 18 && the_old_player->client->pers.universe_quest_counter & (1 << 2))
+		{ // zyk: War at the City mission, citizen or sage was defeated by the player
+			int j = 0, citizens_count = 0, key_enemies = 0;
+			gentity_t *npc_ent = NULL;
+
+			for (j = MAX_CLIENTS + BODY_QUEUE_SIZE; j < level.num_entities; j++)
+			{
+				gentity_t *mage_ent = &g_entities[j];
+
+				if (mage_ent && mage_ent->NPC && mage_ent->health > 0)
+				{
+					if (Q_stricmp(mage_ent->NPC_type, "quest_citizen_warrior") == 0)
+					{
+						citizens_count++;
+					}
+
+					if (strncmp(mage_ent->NPC_type, "sage_of", 7) == 0 || strncmp(mage_ent->NPC_type, "guardian_", 9) == 0)
+					{
+						key_enemies++;
+					}
+				}
+			}
+
+			if (citizens_count == 0 && key_enemies == 0)
+			{ // zyk: defeated all citizens
+				trap->SendServerCommand(the_old_player->s.number, va("chat \"%s: ^7The city is conquered!\"", the_old_player->client->pers.netname));
+
+				the_old_player->client->pers.universe_quest_messages = 100;
+				the_old_player->client->pers.universe_quest_timer = level.time + 3000;
+			}
+			else if (((citizens_count + key_enemies) % 5) == 0)
+			{ // zyk: killed some enemies
+				the_old_player->client->pers.hunter_quest_messages = 1;
 			}
 		}
 	}
