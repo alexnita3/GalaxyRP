@@ -8289,9 +8289,9 @@ void G_RunFrame( int levelTime ) {
 			}
 		}
 		else if (level.duel_tournament_mode == 1 && level.duel_tournament_timer < level.time)
-		{ // zyk: Duel tournament can begin if there are at least 2 players
-			if (level.duelists_quantity > 1)
-			{
+		{ // zyk: Duel tournament begins after validation on number of players
+			if (level.duelists_quantity > 1 && level.duelists_quantity >= zyk_duel_tournament_min_players.integer)
+			{ // zyk: must have a minimum of 2 players
 				level.duel_tournament_mode = 5;
 				level.duel_tournament_timer = level.time + 1500;
 
@@ -8302,7 +8302,7 @@ void G_RunFrame( int levelTime ) {
 			else
 			{
 				duel_tournament_end();
-				trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Not enough duelists. Tournament is over!\"");
+				trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Not enough duelists (minimum of %d). Tournament is over!\"", zyk_duel_tournament_min_players.integer));
 			}
 		}
 	}
