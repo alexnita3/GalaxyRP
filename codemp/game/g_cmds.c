@@ -6044,7 +6044,8 @@ void choose_new_player(gentity_t *next_player)
 			(next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 6))) ||
 			(next_player->client->pers.universe_quest_progress >= 18 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && 
 			 next_player->client->pers.universe_quest_counter & (1 << 0)) || 
-			(next_player->client->pers.universe_quest_progress == 16 && next_player->client->pers.universe_quest_counter & (1 << 1))))
+			(next_player->client->pers.universe_quest_progress == 16 && next_player->client->pers.universe_quest_counter & (1 << 1)) || 
+			(next_player->client->pers.universe_quest_progress >= 15 && next_player->client->pers.universe_quest_progress <= 17 && next_player->client->pers.universe_quest_counter & (1 << 2))))
 		{
 			found = 1;
 		}
@@ -9526,63 +9527,65 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					else if (ent->client->pers.universe_quest_progress == 15)
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							strcpy(universe_message, "^3\n16. The Ancient Threat\n\n^7Sage of Universe telepathically asks you to talk to the sages at the waterfall in ^3yavin2^7.");
+							strcpy(universe_message, "^3\n16. Sages Sequel: The Ancient Threat\n\n^7Sage of Universe telepathically asks you to talk to the sages at the waterfall in ^3yavin2^7.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							strcpy(universe_message, "^3\n16. A Smart Move\n\n^7Guardian of Universe telepathically asks you to talk to the guardians at the central area in ^3mp/siege_korriban^7.");
-						else
+							strcpy(universe_message, "^3\n16. Guardians Sequel: A Smart Move\n\n^7Guardian of Universe telepathically asks you to talk to the guardians at the central area in ^3mp/siege_korriban^7.");
+						else if (ent->client->pers.universe_quest_counter & (1 << 2))
+							strcpy(universe_message, "^3\n16. Thor Sequel: The Strongest Survives\n\n^7Thor (Master of Evil) telepathically asks you to go to ^3t3_bounty^7.");
+						else if (ent->client->pers.universe_quest_counter & (1 << 3))
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
 					else if (ent->client->pers.universe_quest_progress == 16)
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							strcpy(universe_message, "^3\n17. Save the City!\n\n^7Go to ^3mp/siege_desert^7 and defeat all mages with the help from some citizens.");
+							strcpy(universe_message, "^3\n17. Sages Sequel: Save the City!\n\n^7Go to ^3mp/siege_desert^7 and defeat all mages with the help from some citizens.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							strcpy(universe_message, "^3\n17. The Confrontation\n\n^7Go to ^3t3_bounty^7 and defeat Ymir and Thor.");
+							strcpy(universe_message, "^3\n17. Guardians Sequel: The Confrontation\n\n^7Go to ^3t3_bounty^7 and defeat Ymir and Thor.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
 					else if (ent->client->pers.universe_quest_progress == 17)
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							strcpy(universe_message, "^3\n18. The Terrible Truth\n\n^7Talk to the sages inside the mayor's house in ^3mp/siege_desert^7.");
+							strcpy(universe_message, "^3\n18. Sages Sequel: The Terrible Truth\n\n^7Talk to the sages inside the mayor's house in ^3mp/siege_desert^7.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							strcpy(universe_message, "^3\n18. The Hero's Destiny\n\n^7Go to ^3mp/siege_korriban^7 and talk to the guardians in the blue crystal room.");
+							strcpy(universe_message, "^3\n18. Guardians Sequel: The Hero's Destiny\n\n^7Go to ^3mp/siege_korriban^7 and talk to the guardians in the blue crystal room.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
 					else if (ent->client->pers.universe_quest_progress == 18)
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							strcpy(universe_message, "^3\n19. To Settle the Score\n\n^7Go to ^3t3_bounty^7 and find Ymir.");
+							strcpy(universe_message, "^3\n19. Sages Sequel: To Settle the Score\n\n^7Go to ^3t3_bounty^7 and find Ymir.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							strcpy(universe_message, "^3\n19. The Guardian Trials\n\n^7Go to ^3mp/siege_korriban^7 and win the Guardian Trials battle.");
+							strcpy(universe_message, "^3\n19. Guardians Sequel: The Guardian Trials\n\n^7Go to ^3mp/siege_korriban^7 and win the Guardian Trials battle.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
 					else if (ent->client->pers.universe_quest_progress == 19)
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							strcpy(universe_message, "^3\n20. The Crystal of Magic\n\n^7Go to ^3t3_bounty^7 and talk to the sages and guardians where Ymir was");
+							strcpy(universe_message, "^3\n20. Sages Sequel: The Crystal of Magic\n\n^7Go to ^3t3_bounty^7 and talk to the sages and guardians where Ymir was");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							strcpy(universe_message, "^3\n20. The Great Moment\n\n^7Go to ^3mp/siege_korriban^7 and talk to the guardians in the blue crystal room.");
+							strcpy(universe_message, "^3\n20. Guardians Sequel: The Great Moment\n\n^7Go to ^3mp/siege_korriban^7 and talk to the guardians in the blue crystal room.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
 					else if (ent->client->pers.universe_quest_progress == 20)
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							strcpy(universe_message, "^3\n21. Wrath of the Mages\n\n^7Go to ^3t3_bounty^7 and defeat Ymir and Thor in water arena");
+							strcpy(universe_message, "^3\n21. Sages Sequel: Wrath of the Mages\n\n^7Go to ^3t3_bounty^7 and defeat Ymir and Thor in water arena");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							strcpy(universe_message, "^3\n21. The Final Challenge\n\n^7Go to ^3mp/siege_korriban^7 and win the battle.");
+							strcpy(universe_message, "^3\n21. Guardians Sequel: The Final Challenge\n\n^7Go to ^3mp/siege_korriban^7 and win the battle.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
 					else if (ent->client->pers.universe_quest_progress == 21)
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							strcpy(universe_message, "^3\n22. A New Prosperous Age\n\n^7Go to ^3t3_bounty^7 and talk to the sages and guardians in water arena");
+							strcpy(universe_message, "^3\n22. Sages Sequel: A New Prosperous Age\n\n^7Go to ^3t3_bounty^7 and talk to the sages and guardians in water arena");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							strcpy(universe_message, "^3\n22. The Guardian of Peace\n\n^7Go to ^3mp/siege_korriban^7 and talk to the guardians in the blue crystal room.");
+							strcpy(universe_message, "^3\n22. Guardians Sequel: The Guardian of Peace\n\n^7Go to ^3mp/siege_korriban^7 and talk to the guardians in the blue crystal room.");
 						else
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}

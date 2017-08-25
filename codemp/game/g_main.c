@@ -11206,10 +11206,9 @@ void G_RunFrame( int levelTime ) {
 								ent->client->pers.universe_quest_timer = level.time + 5000;
 							}
 						}
-
-						if (ent->client->pers.universe_quest_progress == 18 && ent->client->pers.can_play_quest == 1 && 
-							ent->client->pers.universe_quest_counter & (1 << 0))
-						{
+						else if (ent->client->pers.universe_quest_progress == 18 && ent->client->pers.can_play_quest == 1 && 
+								 ent->client->pers.universe_quest_counter & (1 << 0))
+						{ // zyk: Universe Quest, Settle the Score mission
 							if (ent->client->pers.universe_quest_timer < level.time)
 							{
 								gentity_t *npc_ent = NULL;
@@ -11866,8 +11865,7 @@ void G_RunFrame( int levelTime ) {
 								}
 							}
 						}
-
-						if (ent->client->pers.universe_quest_progress == 16 && ent->client->pers.can_play_quest == 1 &&
+						else if (ent->client->pers.universe_quest_progress == 16 && ent->client->pers.can_play_quest == 1 &&
 							ent->client->pers.universe_quest_counter & (1 << 1))
 						{ // zyk: Universe Quest, Confrontation mission
 							if (ent->client->pers.universe_quest_timer < level.time)
@@ -12001,6 +11999,164 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
 								else if (ent->client->pers.universe_quest_messages > 5 && ent->client->pers.universe_quest_messages < 14)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+							}
+						}
+						else if (ent->client->pers.universe_quest_progress == 15 && ent->client->pers.can_play_quest == 1 &&
+							ent->client->pers.universe_quest_counter & (1 << 2))
+						{ // zyk: Universe Quest, The Strongest Survives mission
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								gentity_t *npc_ent = NULL;
+
+								if (ent->client->pers.universe_quest_messages == 0)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -3263, 1330, 73, -90);
+								else if (ent->client->pers.universe_quest_messages == 1)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -3139, 1330, 73, -90);
+								else if (ent->client->pers.universe_quest_messages == 2)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4367, 1019, 73, 90);
+								else if (ent->client->pers.universe_quest_messages == 3)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4304, 1019, 73, 90);
+								else if (ent->client->pers.universe_quest_messages == 4)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4930, 1359, 57, -90);
+								else if (ent->client->pers.universe_quest_messages == 5)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4930, 1235, 73, 90);
+								else if (ent->client->pers.universe_quest_messages == 6)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -6697, 699, -38, 0);
+								else if (ent->client->pers.universe_quest_messages == 7)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -6697, 461, -38, 0);
+								else if (ent->client->pers.universe_quest_messages == 8)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -5160, 473, 25, -45);
+								else if (ent->client->pers.universe_quest_messages == 9)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -5236, 473, 25, -45);
+								else if (ent->client->pers.universe_quest_messages == 10)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -1193, -216, 37, 179);
+								else if (ent->client->pers.universe_quest_messages == 11)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", -1193, -98, 37, 179);
+								else if (ent->client->pers.universe_quest_messages == 12)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2018, -526, 37, 90);
+								else if (ent->client->pers.universe_quest_messages == 13)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2121, -526, 37, 90);
+								else if (ent->client->pers.universe_quest_messages == 14)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 534, -513, 345, 90);
+								else if (ent->client->pers.universe_quest_messages == 15)
+									npc_ent = Zyk_NPC_SpawnType("quest_mage", 651, -513, 345, 90);
+								else if (ent->client->pers.universe_quest_messages == 16)
+									npc_ent = Zyk_NPC_SpawnType("ymir_boss", -5849, 1538, 57, -90);
+								else if (ent->client->pers.universe_quest_messages == 17)
+									npc_ent = Zyk_NPC_SpawnType("thor_boss", -5849, 1338, 57, 90);
+
+								if (npc_ent)
+								{
+									if (ent->client->pers.universe_quest_messages == 16 || ent->client->pers.universe_quest_messages == 17)
+									{
+										npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
+									}
+									else
+									{ // zyk: a mage. Set a value that will be used for the sentences spoken from him
+										npc_ent->client->pers.universe_quest_objective_control = Q_irand(0, 3);
+									}
+
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									npc_ent->client->pers.universe_quest_messages = -2000;
+								}
+								
+								if (ent->client->pers.universe_quest_messages == 23)
+								{
+									vec3_t zyk_quest_point;
+
+									VectorSet(zyk_quest_point, -5849, 1538, 57);
+
+									if (Distance(ent->client->ps.origin, zyk_quest_point) < 200)
+									{
+										ent->client->pers.universe_quest_messages = 24;
+									}
+								}
+
+								if (ent->client->pers.universe_quest_messages == 18)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: %s^7, you arrived in the right time.\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 19)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: What do you want from me, my master?\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 20)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Come to the water arena. I will meet my father Ymir there.\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 21)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: He is the leader of the Brotherhood of Mages, but he is weak! I want you to become the new leader.\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 22)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes, master.\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 24)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Father, I finally can say this now to you.\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 25)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: The mages don't deserve a weak leader such as you!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 26)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: How dare you betray me like this!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 27)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: What will you do? Kill me? Muahahahahahahahah! I am overpowered now!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 28)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: But it will not be me who will destroy you. %s^7! Come.\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 29)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes, master. So that is your real form.\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 30)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Yes. Now let's see if you are worthy to be the new leader of the mages!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 31)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: Do not try it, outsider. I killed your parents Tyr and Freya in the past. Surely I will destroy you.\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 32)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: What? What do you mean?!\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 33)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Yes, he killed your parents when you were a child. Now get your revenge and become the new leader of mages!\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 34)
+								{
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes, master! I will make him suffer!\"", ent->client->pers.netname));
+								}
+								else if (ent->client->pers.universe_quest_messages == 35)
+								{
+									ent->client->pers.universe_quest_progress = 16;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+
+								if (ent->client->pers.universe_quest_messages < 18 && npc_ent)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 100;
+								}
+								else if (ent->client->pers.universe_quest_messages >= 18 && ent->client->pers.universe_quest_messages != 23 && ent->client->pers.universe_quest_messages < 35)
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;

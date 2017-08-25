@@ -1846,6 +1846,30 @@ void TryUse( gentity_t *ent )
 			ent->client->pers.universe_quest_timer = level.time + 500;
 			return;
 		}
+		else if (ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_progress == 15 && ent->client->pers.universe_quest_counter & (1 << 2) && 
+				 ent->client->pers.universe_quest_messages < 24 && target && target->client && target->NPC && Q_stricmp(target->NPC_type, "quest_mage") == 0)
+		{ // zyk: talking to a mage
+			int j = target->client->pers.universe_quest_objective_control;
+
+			if (j == 0)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Mage: ^7Thor says you are stronger than Ymir himself!\"");
+			}
+			else if (j == 1)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Mage: ^7So you are the famous 'Hero'. You don't look so strong.\"");
+			}
+			else if (j == 2)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Mage: ^7In the Brotherhood of Mages, we always train to be stronger!\"");
+			}
+			else if (j == 3)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Mage: ^7Thor says you defeated the Guardian of Chaos! You should be our leader!\"");
+			}
+
+			return;
+		}
 		else if (target && target->client && target->NPC && Q_stricmp( target->NPC_type, "quest_jawa" ) == 0)
 		{
 			if (target->client->pers.universe_quest_objective_control == -10 && ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_messages >= 40)
