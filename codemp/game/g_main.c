@@ -8215,6 +8215,12 @@ void G_RunFrame( int levelTime ) {
 				}
 				else
 				{ // zyk: must wait a bit more to guarantee the player is fully respawned before teleporting him to arena
+					duelist_1->client->ps.eFlags |= EF_INVULNERABLE;
+					duelist_1->client->invulnerableTimer = level.time + 1000;
+
+					duelist_2->client->ps.eFlags |= EF_INVULNERABLE;
+					duelist_2->client->invulnerableTimer = level.time + 1000;
+
 					level.duel_tournament_timer = level.time + 500;
 				}
 			}
