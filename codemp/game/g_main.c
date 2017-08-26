@@ -15600,6 +15600,85 @@ void G_RunFrame( int levelTime ) {
 								}
 							}
 						}
+						else if (ent->client->pers.universe_quest_progress == 19 && ent->client->pers.can_play_quest == 1 &&
+							ent->client->pers.universe_quest_counter & (1 << 2))
+						{ // zyk: Universe Quest, The Path of Evil mission of Thor Sequel
+							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 3)
+							{
+								gentity_t *npc_ent = NULL;
+
+								if (ent->client->pers.hunter_quest_messages == 0)
+									zyk_NPC_Kill_f("all");
+								else if (ent->client->pers.hunter_quest_messages == 1)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -2000, -800, -470, 0);
+								else if (ent->client->pers.hunter_quest_messages == 2)
+									npc_ent = Zyk_NPC_SpawnType("thor_boss", -1900, -800, -470, 179);
+
+								if (npc_ent)
+								{
+									if (ent->client->pers.hunter_quest_messages == 2)
+										npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
+
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									npc_ent->client->pers.universe_quest_messages = -2000;
+								}
+
+								ent->client->pers.hunter_quest_messages++;
+								ent->client->pers.hunter_quest_timer = level.time + 1000;
+							}
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, -2000, -800, -470);
+
+								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 3 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+
+								if (ent->client->pers.universe_quest_messages == 1)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: We meet again, Guardian of Time. Give up your foolish resistance.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 2)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Now that's my apprentice. You are indeed a worthy leader of the Brotherhood of Mages!\""));
+								else if (ent->client->pers.universe_quest_messages == 3)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I can't believe what you have become. Stop this killing, it will just bring suffering.\""));
+								else if (ent->client->pers.universe_quest_messages == 4)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Liar! You and all the others used me! They paid the price for that!\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 5)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Thor is using you. Please, don't follow the path of evil.\""));
+								else if (ent->client->pers.universe_quest_messages == 6)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Enough! %s^7, our victory is near. Destroy her and you will complete your task.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 7)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Then, in the future, we will fulfill our destiny as rulers of the Universe!\""));
+								else if (ent->client->pers.universe_quest_messages == 8)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Do not trust him. He just uses you to get power for himself.\""));
+								else if (ent->client->pers.universe_quest_messages == 9)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: No! I can feel the power! That is the true meaning of things: the strong rule over the weak!\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 10)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: If you will not listen to reason, then I have no other choice but to stop you.\""));
+								else if (ent->client->pers.universe_quest_messages == 11)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Come then! We shall see who is the strongest!\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 12)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: You had potential...and you wasted it... by killing innocent people...\""));
+								else if (ent->client->pers.universe_quest_messages == 13)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Go! Kill her! Then the Crystal of Magic will be mine!\""));
+								else if (ent->client->pers.universe_quest_messages == 14)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I regret all of this... but I will do what I must.\""));
+								else if (ent->client->pers.universe_quest_messages == 15)
+								{
+									ent->client->pers.universe_quest_progress = 20;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+							}
+						}
 					}
 					else if (level.quest_map == 25)
 					{ // zyk: seventh objective of Universe Quest
