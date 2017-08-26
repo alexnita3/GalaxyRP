@@ -11839,7 +11839,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 27)
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you, Sage of Universe.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 28)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: It will decrease cooldown time of your magic powers.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: It will give regen of your mp by recovering 1 mp per second.\""));
 								else if (ent->client->pers.universe_quest_messages == 29)
 									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Remember to always use your powers for good.\""));
 								else if (ent->client->pers.universe_quest_messages == 30)

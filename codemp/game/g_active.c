@@ -929,9 +929,9 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 				}
 			}
 
-			if (client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && client->pers.universe_quest_counter & (1 << 29) &&
-				!(ent->client->pers.player_settings & (1 << 5)) && client->pers.magic_power < zyk_max_magic_power(ent))
-			{
+			if (client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && client->pers.universe_quest_counter & (1 << 0) &&
+				client->pers.magic_power < zyk_max_magic_power(ent))
+			{ // zyk: Final Power of Sages Sequel. Adds auto-healing of mp
 				client->pers.magic_power += 1;
 				send_rpg_events(1000);
 			}
