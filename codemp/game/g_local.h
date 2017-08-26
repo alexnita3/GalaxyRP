@@ -1018,6 +1018,7 @@ typedef struct clientPersistant_s {
 	// 17 - Guardian Trials Bosses
 	// 18 - Guardian Trials Final Bosses
 	// 19 - Ymir
+	// 20 - Guardian of Time
 	int guardian_mode; 
 
 	// zyk: used by the last guardians in quests for their special abilities

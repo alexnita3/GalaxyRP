@@ -4491,8 +4491,8 @@ void spawn_boss(gentity_t *ent,int x,int y,int z,int yaw,char *boss_name,int gx,
 		npc_ent->client->pers.universe_quest_timer = level.time + 11000;
 		npc_ent->client->pers.guardian_mode = guardian_mode;
 
-		if (guardian_mode == 15)
-		{ // zyk: Ymir and Thor can have shield
+		if (guardian_mode == 15 || guardian_mode == 20)
+		{ // zyk: Ymir and Thor can have shield. Guardian of Time too
 			npc_ent->client->ps.stats[STAT_ARMOR] = npc_ent->health;
 		}
 
@@ -15635,7 +15635,7 @@ void G_RunFrame( int levelTime ) {
 
 								VectorSet(zyk_quest_point, -2000, -800, -470);
 
-								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 3 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
+								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 3 && Distance(ent->client->ps.origin, zyk_quest_point) < 300))
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
@@ -15672,6 +15672,39 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 15)
 								{
 									ent->client->pers.universe_quest_progress = 20;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+							}
+						}
+						else if (ent->client->pers.universe_quest_progress == 20 && ent->client->pers.can_play_quest == 1 &&
+							ent->client->pers.universe_quest_counter & (1 << 2))
+						{ // zyk: Universe Quest Thor Sequel, Guardian of Time boss battle
+							gentity_t *npc_ent = NULL;
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, -2000, -800, -470);
+
+								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 300)
+								{
+									ent->client->pers.universe_quest_messages++;
+								}
+
+								if (ent->client->pers.universe_quest_messages == 1)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 3000;
+
+									spawn_boss(ent, -1900, -800, -470, 179, "guardian_of_time_boss", -2000, -800, -470, 0, 20);
+								}
+								else if (ent->client->pers.universe_quest_messages == 3)
+								{
+									ent->client->pers.universe_quest_progress = 21;
 
 									save_account(ent);
 
@@ -16931,6 +16964,54 @@ void G_RunFrame( int levelTime ) {
 						Zyk_NPC_SpawnType("quest_mage", -6049, 1438, 57, 0);
 
 						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 12000);
+					}
+				}
+				else if (ent->client->pers.guardian_mode == 20)
+				{ // zyk: Guardian of Time
+					if (ent->client->pers.guardian_timer < level.time)
+					{
+						int random_magic = Q_irand(0, 4);
+
+						if (random_magic == 0)
+						{
+							dome_of_damage(ent, 20000, 35);
+						}
+						else if (random_magic == 1)
+						{
+							shifting_sand(ent, 20000);
+						}
+						else if (random_magic == 2)
+						{
+							time_power(ent, 20000, 4000);
+						}
+						else if (random_magic == 3)
+						{
+							fast_and_slow(ent, 20000, 6000);
+						}
+						else if (random_magic == 4)
+						{
+							magic_disable(ent, 20000);
+						}
+
+						ent->client->pers.guardian_timer = level.time + Q_irand(4000, 8000);
+					}
+
+					if (ent->client->pers.light_quest_timer < level.time)
+					{ // zyk: using Crystal of Magic
+						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
+
+						// zyk: Universe Power
+						ent->client->pers.quest_power_status |= (1 << 13);
+
+						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
+
+						ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+						ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
+						ent->client->ps.forceHandExtendTime = level.time + 2000;
+
+						zyk_super_beam(ent, ent->client->ps.viewangles[1]);
+
+						ent->client->pers.light_quest_timer = level.time + ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 5000;
 					}
 				}
 			}
