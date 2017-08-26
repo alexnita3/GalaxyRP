@@ -15712,6 +15712,76 @@ void G_RunFrame( int levelTime ) {
 								}
 							}
 						}
+						else if (ent->client->pers.universe_quest_progress == 21 && ent->client->pers.can_play_quest == 1 &&
+							ent->client->pers.universe_quest_counter & (1 << 2))
+						{ // zyk: Universe Quest, final mission of Thor Sequel
+							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 2)
+							{
+								gentity_t *npc_ent = NULL;
+
+								if (ent->client->pers.hunter_quest_messages == 0)
+									zyk_NPC_Kill_f("all");
+								else if (ent->client->pers.hunter_quest_messages == 1)
+									npc_ent = Zyk_NPC_SpawnType("thor_boss", -1900, -800, -470, 179);
+
+								if (npc_ent)
+								{
+									npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
+
+									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
+									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
+
+									npc_ent->client->pers.universe_quest_messages = -2000;
+								}
+
+								ent->client->pers.hunter_quest_messages++;
+								ent->client->pers.hunter_quest_timer = level.time + 1000;
+							}
+
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, -1900, -800, -470);
+
+								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 2 && Distance(ent->client->ps.origin, zyk_quest_point) < 300))
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+
+								if (ent->client->pers.universe_quest_messages == 1)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: It is done, my master. Victory is ours!\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 2)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Muahahahahaha! Finally, after all this time, I have full power!\""));
+								else if (ent->client->pers.universe_quest_messages == 3)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: You will hire new mages for the Brotherhood of Mages.\""));
+								else if (ent->client->pers.universe_quest_messages == 4)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Soon, you will command vast legions of mages, and take over every world.\""));
+								else if (ent->client->pers.universe_quest_messages == 5)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: We will create a society where the strong rules over the weak.\""));
+								else if (ent->client->pers.universe_quest_messages == 6)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: With the Amulet of Time and Crystal of Magic, I will rule over everyone...as their god!\""));
+								else if (ent->client->pers.universe_quest_messages == 7)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Nothing shall stand in our way anymore.\""));
+								else if (ent->client->pers.universe_quest_messages == 8)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Now...receive this Final Power...^1Magic Boost^7!\""));
+								else if (ent->client->pers.universe_quest_messages == 9)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: It will make your unique skills and unique abilities have less cooldown time!\""));
+								else if (ent->client->pers.universe_quest_messages == 10)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you, master.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 11)
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Go! Command the mages to a glorious future!\""));
+								else if (ent->client->pers.universe_quest_messages == 12)
+								{
+									ent->client->pers.universe_quest_progress = 22;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+							}
+						}
 					}
 					else if (level.quest_map == 25)
 					{ // zyk: seventh objective of Universe Quest

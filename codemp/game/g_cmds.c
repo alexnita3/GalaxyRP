@@ -9599,7 +9599,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
 							strcpy(universe_message, "^3\n21. Guardians Sequel: The Final Challenge\n\n^7Go to ^3mp/siege_korriban^7 and win the battle.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
-							strcpy(universe_message, "^3\n21. Thor Sequel: Full Victory\n\n^7Defeat the Guardian of Time in the rancor arena in ^3mp/siege_desert^7.");
+							strcpy(universe_message, "^3\n21. Thor Sequel: Victory!\n\n^7Defeat the Guardian of Time in the rancor arena in ^3mp/siege_desert^7.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
@@ -9609,7 +9609,9 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 							strcpy(universe_message, "^3\n22. Sages Sequel: A New Prosperous Age\n\n^7Go to ^3t3_bounty^7 and talk to the sages and guardians in water arena");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
 							strcpy(universe_message, "^3\n22. Guardians Sequel: The Guardian of Peace\n\n^7Go to ^3mp/siege_korriban^7 and talk to the guardians in the blue crystal room.");
-						else
+						else if (ent->client->pers.universe_quest_counter & (1 << 2))
+							strcpy(universe_message, "^3\n22. Thor Sequel: Full Power\n\n^7Go to the rancor arena in ^3mp/siege_desert^7 and talk to Thor.");
+						else if (ent->client->pers.universe_quest_counter & (1 << 3))
 							strcpy(universe_message, "^3\nNew missions coming soon!");
 					}
 				}
