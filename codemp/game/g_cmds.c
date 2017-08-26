@@ -15448,6 +15448,17 @@ qboolean zyk_can_use_unique(gentity_t *ent)
 	return qtrue;
 }
 
+// zyk: Magic Boost, makes unique skill cooldown time lower
+void zyk_magic_boost(gentity_t *ent)
+{
+	// zyk: Magic Boost, makes unique skill cooldown time lower
+	if (ent->client->pers.unique_skill_timer > level.time && ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES &&
+		ent->client->pers.universe_quest_counter & (1 << 2))
+	{
+		ent->client->pers.unique_skill_timer -= ((ent->client->pers.unique_skill_timer - level.time) / 5);
+	}
+}
+
 /*
 ==================
 Cmd_Unique_f
@@ -15768,6 +15779,8 @@ void Cmd_Unique_f(gentity_t *ent) {
 					trap->SendServerCommand(ent->s.number, va("chat \"^3Unique Ability: ^7needs %d force to use it\"", (zyk_max_force_power.integer / 4)));
 				}
 			}
+
+			zyk_magic_boost(ent);
 		}
 		else
 		{
@@ -16074,6 +16087,8 @@ void Cmd_Unique_f(gentity_t *ent) {
 					trap->SendServerCommand(ent->s.number, va("chat \"^3Unique Ability: ^7needs %d force to use it\"", (zyk_max_force_power.integer / 4)));
 				}
 			}
+
+			zyk_magic_boost(ent);
 		}
 		else
 		{
@@ -16459,6 +16474,8 @@ void Cmd_Unique_f(gentity_t *ent) {
 					trap->SendServerCommand(ent->s.number, va("chat \"^3Unique Ability: ^7needs %d force to use it\"", (zyk_max_force_power.integer / 4)));
 				}
 			}
+
+			zyk_magic_boost(ent);
 		}
 		else
 		{
