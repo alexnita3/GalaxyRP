@@ -4069,6 +4069,7 @@ qboolean TryGrapple(gentity_t *ent)
 							ent->client->pers.quest_power_usage_timer = level.time + (24000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
 							ent->client->pers.quest_power_usage_timer = level.time + 24000;
+
 						trap->SendServerCommand( ent->s.number, va("chat \"%s^7: ^7Ultra Drain!\"", ent->client->pers.netname));
 					}
 					else if (zyk_enable_immunity_power.integer == 1 && ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.magic_power >= zyk_immunity_power_mp_cost.integer)
@@ -4094,6 +4095,7 @@ qboolean TryGrapple(gentity_t *ent)
 							ent->client->pers.quest_power_usage_timer = level.time + (26000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
 							ent->client->pers.quest_power_usage_timer = level.time + 26000;
+
 						trap->SendServerCommand( ent->s.number, va("chat \"%s^7: ^7Chaos Power!\"", ent->client->pers.netname));
 					}
 					else if (zyk_enable_time_power.integer == 1 && ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.magic_power >= zyk_time_power_mp_cost.integer)
@@ -4105,7 +4107,16 @@ qboolean TryGrapple(gentity_t *ent)
 							ent->client->pers.quest_power_usage_timer = level.time + (23000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
 							ent->client->pers.quest_power_usage_timer = level.time + 23000;
+
 						trap->SendServerCommand( ent->s.number, va("chat \"%s^7: ^7Time Power!\"", ent->client->pers.netname));
+					}
+
+					if (ent->client->pers.universe_quest_progress < 15)
+					{ // zyk: before beating Guardian of Chaos, Ultimate Power has longer cooldown
+						if (ent->client->pers.rpg_class == 8)
+							ent->client->pers.quest_power_usage_timer += 1000;
+						else
+							ent->client->pers.quest_power_usage_timer += 4000;
 					}
 				}
 				else if (use_this_power >= MAGIC_MAGIC_SENSE)

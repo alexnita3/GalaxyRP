@@ -14557,6 +14557,17 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 24)
 								{
 									if (ent->client->pers.universe_quest_counter & (1 << 0))
+										trap->SendServerCommand(ent->s.number, "chat \"^2Sage of Universe: ^7Your ^2Ultra Drain ^7will have less cooldown time.\"");
+									else if (ent->client->pers.universe_quest_counter & (1 << 1))
+										trap->SendServerCommand(ent->s.number, "chat \"^2Guardian of Universe: ^7Your ^3Immunity Power ^7will have less cooldown time.\"");
+									else if (ent->client->pers.universe_quest_counter & (1 << 2))
+										trap->SendServerCommand(ent->s.number, "chat \"^1Master of Evil: ^7Your ^1Chaos Power ^7will have less cooldown time.\"");
+									else if (ent->client->pers.universe_quest_counter & (1 << 3))
+										trap->SendServerCommand(ent->s.number, "chat \"^7Guardian of Time: ^7Your Time Power will have less cooldown time.\"");
+								}
+								else if (ent->client->pers.universe_quest_messages == 25)
+								{
+									if (ent->client->pers.universe_quest_counter & (1 << 0))
 										trap->SendServerCommand( ent->s.number, "chat \"^2Sage of Universe: ^7Go now and enjoy your life, my friend.\"");
 									else if (ent->client->pers.universe_quest_counter & (1 << 1))
 										trap->SendServerCommand( ent->s.number, "chat \"^2Guardian of Universe: ^7You have to go now hero. Be in peace.\"");
@@ -14565,7 +14576,7 @@ void G_RunFrame( int levelTime ) {
 									else if (ent->client->pers.universe_quest_counter & (1 << 3))
 										trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7It is time for you to go. I wish you well in your life.\"");
 								}
-								else if (ent->client->pers.universe_quest_messages == 25)
+								else if (ent->client->pers.universe_quest_messages == 26)
 								{ // zyk: enf of this mission
 									vec3_t origin;
 									vec3_t angles;
