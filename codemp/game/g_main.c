@@ -7843,6 +7843,32 @@ void melee_battle_winner()
 	}
 }
 
+void zyk_quest_item(char *item_path, int x, int y, int z)
+{
+	gentity_t *new_ent = G_Spawn();
+
+	if (!strstr(item_path, ".md3"))
+	{// zyk: effect
+		zyk_set_entity_field(new_ent, "classname", "fx_runner");
+		zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+		zyk_set_entity_field(new_ent, "origin", va("%d %d %d", x, y, z));
+
+		new_ent->s.modelindex = G_EffectIndex(item_path);
+
+		zyk_spawn_entity(new_ent);
+	}
+	else
+	{ // zyk: model
+		zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+		zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+		zyk_set_entity_field(new_ent, "origin", va("%d %d %d", x, y, z));
+
+		zyk_set_entity_field(new_ent, "model", item_path);
+
+		zyk_spawn_entity(new_ent);
+	}
+}
+
 /*
 ================
 G_RunFrame
@@ -12927,6 +12953,81 @@ void G_RunFrame( int levelTime ) {
 								}
 							}
 						}
+						else if (ent->client->pers.universe_quest_progress == 16 && ent->client->pers.can_play_quest == 1 &&
+								 ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_counter & (1 << 3))
+						{ // zyk: Universe Quest, second mission of Time Sequel
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								gentity_t *npc_ent = NULL;
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, -769, -2590, 70);
+
+								if (ent->client->pers.universe_quest_messages > 0 || Distance(ent->client->ps.origin, zyk_quest_point) < 100)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+
+								if (ent->client->pers.universe_quest_messages == 1)
+									zyk_quest_item("models/map_objects/mp/crystal_red.md3", -735, -2500, 56);
+								else if (ent->client->pers.universe_quest_messages == 2)
+									zyk_quest_item("models/map_objects/mp/crystal_green.md3", -735, -2530, 56);
+								else if (ent->client->pers.universe_quest_messages == 3)
+									zyk_quest_item("models/map_objects/mp/crystal_red.md3", -735, -2560, 56);
+								else if (ent->client->pers.universe_quest_messages == 4)
+									zyk_quest_item("models/map_objects/mp/crystal_blue.md3", -735, -2590, 56);
+								else if (ent->client->pers.universe_quest_messages == 5)
+									zyk_quest_item("models/map_objects/mp/crystal_green.md3", -735, -2620, 56);
+								else if (ent->client->pers.universe_quest_messages == 6)
+									zyk_quest_item("env/small_fire", -780, -2500, 56);
+								else if (ent->client->pers.universe_quest_messages == 7)
+									zyk_quest_item("env/small_fire_red", -780, -2530, 56);
+								else if (ent->client->pers.universe_quest_messages == 8)
+									zyk_quest_item("env/small_fire_green", -780, -2560, 56);
+								else if (ent->client->pers.universe_quest_messages == 9)
+									zyk_quest_item("env/small_fire", -780, -2590, 56);
+								else if (ent->client->pers.universe_quest_messages == 10)
+									zyk_quest_item("env/small_fire_blue", -780, -2620, 56);
+								else if (ent->client->pers.universe_quest_messages == 11)
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -700, -2590, 70, 179);
+								else if (ent->client->pers.universe_quest_messages == 12)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: %s^7, you found it!\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 13)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes, but what does this vision mean?\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 14)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I think it is some sort of order. Maybe you should remember it.\""));
+								else if (ent->client->pers.universe_quest_messages == 15)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I understand. I will memorize it.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 16)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: You better do so, because you will not have another chance to see it again.\""));
+								else if (ent->client->pers.universe_quest_messages == 17)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Now we must go to the Realm of Souls entrance.\""));
+								else if (ent->client->pers.universe_quest_messages == 18)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: 'The hero will stand in the buried deep sanctuary...'.\""));
+								else if (ent->client->pers.universe_quest_messages == 19)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: '...and he shall solve the puzzle and enter the Realm of Souls'\""));
+								else if (ent->client->pers.universe_quest_messages == 20)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: You must go to a place that is underground.\""));
+								else if (ent->client->pers.universe_quest_messages == 21)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I think I have a clue to where it is.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 22)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Let's go. We must hurry before it is too late.\""));
+								else if (ent->client->pers.universe_quest_messages == 23)
+								{
+									ent->client->pers.universe_quest_progress = 17;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+
+								if (npc_ent)
+								{
+									npc_ent->client->pers.universe_quest_messages = -2000;
+								}
+							}
+						}
 
 						if (ent->client->pers.universe_quest_artifact_holder_id == -3 && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_timer < level.time && ent->client->ps.powerups[PW_FORCE_BOON])
 						{ // zyk: player got the artifact, save it to his account
@@ -13656,11 +13757,11 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 20)
 									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Yes, %s^7. You must find a way to open the gate to the Realm of Souls.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 21)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: 'The Legendary Puzzle awaits the arrival of the hero...'\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: 'The Legendary Puzzle awaits the arrival of the hero'\""));
 								else if (ent->client->pers.universe_quest_messages == 22)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: '...the Well of truth, surrounded by the forest and the sacred monument...'\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: 'The Well of truth, surrounded by the forest and the sacred monument...'\""));
 								else if (ent->client->pers.universe_quest_messages == 23)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: '...it shall contain the answers to the Universe salvation'\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: '...shall contain the answers to the Universe salvation'\""));
 								else if (ent->client->pers.universe_quest_messages == 24)
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: So I would have to find this Well of Truth.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 25)
