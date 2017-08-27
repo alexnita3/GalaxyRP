@@ -4609,6 +4609,9 @@ void NPC_Spawn_f( gentity_t *ent )
 	if (Q_stricmp("guardian_of_time", npc_type) == 0)
 		return;
 
+	if (Q_stricmp("guardian_of_time_boss", npc_type) == 0)
+		return;
+
 	if (Q_stricmp("guardian_of_chaos", npc_type) == 0)
 		return;
 
@@ -4821,6 +4824,11 @@ void NPC_Kill_f( void )
 			}
 
 			if (Q_stricmp( player->NPC_type, "guardian_of_time" ) == 0)
+			{
+				found = 1;
+			}
+
+			if (Q_stricmp(player->NPC_type, "guardian_of_time_boss") == 0)
 			{
 				found = 1;
 			}

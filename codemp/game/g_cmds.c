@@ -6080,7 +6080,8 @@ void choose_new_player(gentity_t *next_player)
 				(next_player->client->pers.universe_quest_progress == 8 && !(next_player->client->pers.universe_quest_counter & (1 << 1))) || 
 				(next_player->client->pers.universe_quest_progress == 15 && next_player->client->pers.universe_quest_counter & (1 << 1)) || 
 				(next_player->client->pers.universe_quest_progress >= 17 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && 
-				 next_player->client->pers.universe_quest_counter & (1 << 1))))
+				 next_player->client->pers.universe_quest_counter & (1 << 1)) || 
+				(next_player->client->pers.universe_quest_progress == 15 && next_player->client->pers.universe_quest_counter & (1 << 3))))
 		{
 			found = 1;
 		}
@@ -9546,7 +9547,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
 							strcpy(universe_message, "^3\n16. Thor Sequel: The Betrayal\n\n^7Thor (Master of Evil) telepathically asks you to go to ^3t3_bounty^7.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
-							strcpy(universe_message, "^3\nNew missions coming soon!");
+							strcpy(universe_message, "^3\n16. Time Sequel: The Most Important Task\n\n^7Guardian of Time telepathically asks you to go to ^3mp/siege_korriban^7.");
 					}
 					else if (ent->client->pers.universe_quest_progress == 16)
 					{
