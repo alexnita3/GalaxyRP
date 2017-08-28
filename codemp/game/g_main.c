@@ -11185,12 +11185,12 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 1000;
 								}
-								else if (ent->client->pers.universe_quest_messages > 0 && ent->client->pers.universe_quest_messages < 6)
+								else if (ent->client->pers.universe_quest_messages > 0 && ent->client->pers.universe_quest_messages < 10)
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 1000;
 								}
-								else if (ent->client->pers.universe_quest_messages > 7)
+								else if (ent->client->pers.universe_quest_messages > 11)
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
@@ -11198,7 +11198,7 @@ void G_RunFrame( int levelTime ) {
 
 								if (ent->client->pers.universe_quest_messages == 1)
 								{
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2200, 3294, 952, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2200, 3374, 952, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11207,7 +11207,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 2)
 								{
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2200, 3562, 952, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2200, 3482, 952, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11216,7 +11216,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 3)
 								{
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 1945, 3294, 952, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2077, 3294, 952, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11225,7 +11225,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 4)
 								{ // zyk: yellow crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 1945, 3562, 952, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2077, 3562, 952, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11234,14 +11234,50 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 5)
 								{ // zyk: yellow crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 1945, 3562, 952, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2077, 3562, 952, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
 										crystal_ent->count = 3;
 									}
 								}
+								else if (ent->client->pers.universe_quest_messages == 6)
+								{ // zyk: cyan crystal
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 1945, 3374, 952, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 4;
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 7)
+								{ // zyk: cyan crystal
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 1945, 3374, 952, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 4;
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 8)
+								{ // zyk: purple crystal
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 1945, 3482, 952, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 5;
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 9)
+								{ // zyk: purple crystal
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 1945, 3482, 952, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 5;
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 11)
 								{ // zyk: tests if player solved the puzzle correctly and opens the gate
 									zyk_quest_item("env/btend", 2336, 3425, 947, "", "");
 									zyk_quest_item("env/huge_lightning", 2336, 3425, 952, "", "");
@@ -11252,27 +11288,27 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
-								else if (ent->client->pers.universe_quest_messages == 9)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", 2200, 3425, 952, 0);
-								else if (ent->client->pers.universe_quest_messages == 10)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: %s^7, you solved it!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 11)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: The gate opened. Let's get to the Realm of Souls.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 12)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I cannot go there. The True guardian cannot enter, only if the Soul of Sorrow allows.\""));
 								else if (ent->client->pers.universe_quest_messages == 13)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Only you will be able to enter. I will not be able to help you anymore.\""));
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", 2200, 3425, 952, 0);
 								else if (ent->client->pers.universe_quest_messages == 14)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: That makes things more difficult.\"", ent->client->pers.netname));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: %s^7, you solved it!\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 15)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: These are the rules. But I trust in your abilities, I am sure you will succeed.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: The gate opened. Let's get to the Realm of Souls.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 16)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Once inside, take extremely care. It is an unknown place even for me.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I cannot go there. The True guardian cannot enter, only if the Soul of Sorrow allows.\""));
 								else if (ent->client->pers.universe_quest_messages == 17)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Don't worry. I will not fail.\"", ent->client->pers.netname));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Only you will be able to enter. I will not be able to help you anymore.\""));
 								else if (ent->client->pers.universe_quest_messages == 18)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: The Universe fate is in your hands, hero. Please save us all!\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: That makes things more difficult.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 19)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: These are the rules. But I trust in your abilities, I am sure you will succeed.\""));
+								else if (ent->client->pers.universe_quest_messages == 20)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Once inside, take extremely care. It is an unknown place even for me.\""));
+								else if (ent->client->pers.universe_quest_messages == 21)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Don't worry. I will not fail.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 22)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: The Universe fate is in your hands, hero. Please save us all!\""));
+								else if (ent->client->pers.universe_quest_messages == 23)
 								{
 									ent->client->pers.universe_quest_progress = 18;
 
@@ -13093,9 +13129,14 @@ void G_RunFrame( int levelTime ) {
 								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 150)
 								{
 									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
+									ent->client->pers.universe_quest_timer = level.time + 2000;
 								}
-								else if (ent->client->pers.universe_quest_messages > 0 && ent->client->pers.universe_quest_messages < 28)
+								else if (ent->client->pers.universe_quest_messages > 0 && ent->client->pers.universe_quest_messages < 18)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 2000;
+								}
+								else if (ent->client->pers.universe_quest_messages > 17 && ent->client->pers.universe_quest_messages < 30)
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
@@ -13117,45 +13158,49 @@ void G_RunFrame( int levelTime ) {
 									zyk_quest_item("models/map_objects/mp/crystal_red.md3", -755, -2650, 60, "", "");
 								else if (ent->client->pers.universe_quest_messages == 8)
 									zyk_quest_item("models/map_objects/mp/crystal_blue.md3", -755, -2680, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 9)
-									zyk_quest_item("env/small_fire", -795, -2500, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 10)
-									zyk_quest_item("env/small_fire_red", -795, -2530, 60, "", "");
+								else if (ent->client->pers.universe_quest_messages == 9) // zyk: cyan crystal
+									zyk_quest_item("models/map_objects/mp/crystal_green.md3", -795, -2500, 60, "", "");
+								else if (ent->client->pers.universe_quest_messages == 10) // zyk: cyan crystal
+									zyk_quest_item("models/map_objects/mp/crystal_blue.md3", -795, -2500, 60, "", "");
 								else if (ent->client->pers.universe_quest_messages == 11)
-									zyk_quest_item("env/small_fire_blue", -795, -2560, 60, "", "");
+									zyk_quest_item("models/map_objects/mp/crystal_red.md3", -795, -2530, 60, "", "");
 								else if (ent->client->pers.universe_quest_messages == 12)
-									zyk_quest_item("env/small_fire_green", -795, -2590, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 13)
-									zyk_quest_item("env/small_fire", -795, -2620, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 14)
-									zyk_quest_item("env/small_fire_green", -795, -2650, 60, "", "");
+									zyk_quest_item("models/map_objects/mp/crystal_green.md3", -795, -2560, 60, "", "");
+								else if (ent->client->pers.universe_quest_messages == 13) // zyk: purple crystal
+									zyk_quest_item("models/map_objects/mp/crystal_red.md3", -795, -2590, 60, "", "");
+								else if (ent->client->pers.universe_quest_messages == 14) // zyk: purple crystal
+									zyk_quest_item("models/map_objects/mp/crystal_blue.md3", -795, -2590, 60, "", "");
 								else if (ent->client->pers.universe_quest_messages == 15)
-									zyk_quest_item("env/small_fire_blue", -795, -2680, 60, "", "");
+									zyk_quest_item("models/map_objects/mp/crystal_red.md3", -795, -2620, 60, "", "");
 								else if (ent->client->pers.universe_quest_messages == 16)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -700, -2590, 70, 179);
+									zyk_quest_item("models/map_objects/mp/crystal_green.md3", -795, -2650, 60, "", "");
 								else if (ent->client->pers.universe_quest_messages == 17)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: %s^7, you found it!\"", ent->client->pers.netname));
+									zyk_quest_item("models/map_objects/mp/crystal_blue.md3", -795, -2680, 60, "", "");
 								else if (ent->client->pers.universe_quest_messages == 18)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes, but what does this vision mean?\"", ent->client->pers.netname));
+									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -700, -2590, 70, 179);
 								else if (ent->client->pers.universe_quest_messages == 19)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I think it is some sort of order. Maybe you should remember it.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: %s^7, you found it!\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 20)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I understand. I will memorize it.\"", ent->client->pers.netname));
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes, but what does this vision mean?\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 21)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: You better do so, because you will not have another chance to see it again.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I think it is some sort of order. Maybe you should remember it.\""));
 								else if (ent->client->pers.universe_quest_messages == 22)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Now we must go to the Realm of Souls entrance.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I understand. I will memorize it.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 23)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: 'The hero shall stand in the buried deep sanctuary...'.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: You better do so, because you will not have another chance to see it again.\""));
 								else if (ent->client->pers.universe_quest_messages == 24)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: '...and solve the puzzle to enter the Realm of Souls'\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Now we must go to the Realm of Souls entrance.\""));
 								else if (ent->client->pers.universe_quest_messages == 25)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: You must go to a place that is underground.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: 'The hero shall stand in the buried deep sanctuary...'.\""));
 								else if (ent->client->pers.universe_quest_messages == 26)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I think I have a clue to where it is.\"", ent->client->pers.netname));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: '...and solve the puzzle to enter the Realm of Souls'\""));
 								else if (ent->client->pers.universe_quest_messages == 27)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Right. Approach me when you think you memorized the order.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: You must go to a place that is underground.\""));
 								else if (ent->client->pers.universe_quest_messages == 28)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I think I have a clue to where it is.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 29)
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Right. Approach me when you think you memorized the order.\""));
+								else if (ent->client->pers.universe_quest_messages == 30)
 								{
 									VectorSet(zyk_quest_point, -700, -2590, 70);
 
@@ -13167,7 +13212,7 @@ void G_RunFrame( int levelTime ) {
 										trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Let's go. We must hurry before it is too late.\""));
 									}
 								}
-								else if (ent->client->pers.universe_quest_messages == 29)
+								else if (ent->client->pers.universe_quest_messages == 31)
 								{
 									ent->client->pers.universe_quest_progress = 17;
 

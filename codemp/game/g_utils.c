@@ -1778,7 +1778,7 @@ void TryUse( gentity_t *ent )
 	else if (ent->client->sess.amrpgmode == 2 && ent->client->pers.can_play_quest == 1)
 	{
 		if (target && ent->client->pers.universe_quest_progress == 17 && ent->client->pers.universe_quest_counter & (1 << 3) && 
-			ent->client->pers.universe_quest_messages == 6 && Q_stricmp(target->targetname, "zyk_quest_models") == 0)
+			ent->client->pers.universe_quest_messages == 10 && Q_stricmp(target->targetname, "zyk_quest_models") == 0)
 		{ // zyk: player touched one of the crystals in Time Sequel puzzle
 			if ((ent->client->pers.hunter_quest_messages == 0 && target->count == 0) ||
 				(ent->client->pers.hunter_quest_messages == 1 && target->count == 1) ||
@@ -1786,15 +1786,22 @@ void TryUse( gentity_t *ent )
 				(ent->client->pers.hunter_quest_messages == 3 && target->count == 3) ||
 				(ent->client->pers.hunter_quest_messages == 4 && target->count == 1) ||
 				(ent->client->pers.hunter_quest_messages == 5 && target->count == 0) ||
-				(ent->client->pers.hunter_quest_messages == 6 && target->count == 2))
+				(ent->client->pers.hunter_quest_messages == 6 && target->count == 2) || 
+				(ent->client->pers.hunter_quest_messages == 7 && target->count == 4) || 
+				(ent->client->pers.hunter_quest_messages == 8 && target->count == 0) || 
+				(ent->client->pers.hunter_quest_messages == 9 && target->count == 1) || 
+				(ent->client->pers.hunter_quest_messages == 10 && target->count == 5) || 
+				(ent->client->pers.hunter_quest_messages == 11 && target->count == 0) || 
+				(ent->client->pers.hunter_quest_messages == 12 && target->count == 1) || 
+				(ent->client->pers.hunter_quest_messages == 13 && target->count == 2))
 			{ // zyk: player got it right
 				ent->client->pers.hunter_quest_messages++;
 
 				G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/interface/secret_area.mp3"));
 
-				if (ent->client->pers.hunter_quest_messages == 7)
+				if (ent->client->pers.hunter_quest_messages == 14)
 				{ // zyk: solved the puzzle
-					ent->client->pers.universe_quest_messages = 7;
+					ent->client->pers.universe_quest_messages = 11;
 					ent->client->pers.universe_quest_timer = level.time + 1000;
 				}
 			}
