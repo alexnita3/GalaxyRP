@@ -6118,7 +6118,19 @@ void choose_new_player(gentity_t *next_player)
 		int j = 0;
 		for (j = MAX_CLIENTS; j < level.num_entities; j++)
 		{
-			if (&g_entities[j] && g_entities[j].NPC && g_entities[j].health > 0 && (Q_stricmp(g_entities[j].NPC_type, "ymir_boss") == 0 || Q_stricmp(g_entities[j].NPC_type, "thor_boss") == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_ragnos" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_jawa" ) == 0 || Q_stricmp(g_entities[j].NPC_type, "quest_mage") == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_protocol_imp" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_sand_raider_green" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_sand_raider_brown" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_sand_raider_blue" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_sand_raider_red" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_reborn" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_reborn_blue" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_reborn_boss" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_reborn_red" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "sage_of_light" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "sage_of_darkness" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "sage_of_eternity" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "sage_of_universe" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_super_soldier" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "guardian_of_time" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "guardian_boss_9" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "guardian_of_darkness" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "guardian_of_eternity" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "guardian_of_universe" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "master_of_evil" ) == 0))
+			if (&g_entities[j] && g_entities[j].NPC && g_entities[j].health > 0 && (Q_stricmp(g_entities[j].NPC_type, "ymir_boss") == 0 || Q_stricmp(g_entities[j].NPC_type, "thor_boss") == 0 || 
+				Q_stricmp( g_entities[j].NPC_type, "quest_ragnos" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_jawa" ) == 0 || Q_stricmp(g_entities[j].NPC_type, "quest_mage") == 0 || 
+				Q_stricmp( g_entities[j].NPC_type, "quest_protocol_imp" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_sand_raider_green" ) == 0 || 
+				Q_stricmp( g_entities[j].NPC_type, "quest_sand_raider_brown" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_sand_raider_blue" ) == 0 || 
+				Q_stricmp( g_entities[j].NPC_type, "quest_sand_raider_red" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_reborn" ) == 0 || 
+				Q_stricmp( g_entities[j].NPC_type, "quest_reborn_blue" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_reborn_boss" ) == 0 || 
+				Q_stricmp( g_entities[j].NPC_type, "quest_reborn_red" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "sage_of_light" ) == 0 || 
+				Q_stricmp( g_entities[j].NPC_type, "sage_of_darkness" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "sage_of_eternity" ) == 0 || 
+				Q_stricmp( g_entities[j].NPC_type, "sage_of_universe" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "quest_super_soldier" ) == 0 || 
+				Q_stricmp( g_entities[j].NPC_type, "guardian_of_time" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "guardian_boss_9" ) == 0 || 
+				Q_stricmp( g_entities[j].NPC_type, "guardian_of_darkness" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "guardian_of_eternity" ) == 0 || 
+				Q_stricmp( g_entities[j].NPC_type, "guardian_of_universe" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "master_of_evil" ) == 0 || 
+				Q_stricmp(g_entities[j].NPC_type, "soul_of_sorrow") == 0))
 			{
 				G_FreeEntity(&g_entities[j]);
 			}
@@ -9595,7 +9607,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
 							strcpy(universe_message, "^3\n20. Thor Sequel: The Path of Evil\n\n^7Go to the rancor arena in ^3mp/siege_desert^7.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
-							strcpy(universe_message, "^3\nNew missions coming soon!");
+							strcpy(universe_message, "^3\n20. Time Sequel: The Soul of Sorrow\n\n^7Speak to the Soul of Sorrow in the Realm of Souls in ^3t3_rift^7.");
 					}
 					else if (ent->client->pers.universe_quest_progress == 20)
 					{

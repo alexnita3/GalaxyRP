@@ -4615,6 +4615,9 @@ void NPC_Spawn_f( gentity_t *ent )
 	if (Q_stricmp("guardian_of_chaos", npc_type) == 0)
 		return;
 
+	if (Q_stricmp("soul_of_sorrow", npc_type) == 0)
+		return;
+
 	if (Q_stricmp("thor_boss", npc_type) == 0)
 		return;
 
@@ -4834,6 +4837,11 @@ void NPC_Kill_f( void )
 			}
 
 			if (Q_stricmp( player->NPC_type, "guardian_of_chaos" ) == 0)
+			{
+				found = 1;
+			}
+
+			if (Q_stricmp(player->NPC_type, "soul_of_sorrow") == 0)
 			{
 				found = 1;
 			}
