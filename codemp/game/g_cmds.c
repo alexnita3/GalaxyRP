@@ -6046,7 +6046,10 @@ void choose_new_player(gentity_t *next_player)
 			found = 1;
 		else if (level.quest_map == 3 && next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 6)))
 			found = 1;
-		else if (level.quest_map == 4 && ((next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 7)))))
+		else if (level.quest_map == 4 && (
+			(next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 7))) || 
+			(next_player->client->pers.universe_quest_progress >= 17 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES &&
+			 next_player->client->pers.universe_quest_counter & (1 << 3))))
 			found = 1;
 		else if (level.quest_map == 5 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 12))) || (next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 8))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 9)))))
 			found = 1;
@@ -9570,7 +9573,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
 							strcpy(universe_message, "^3\n18. Thor Sequel: The New Leader\n\n^7Talk to Thor in ^3t3_bounty^7 water arena.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
-							strcpy(universe_message, "^3\nNew missions coming soon!");
+							strcpy(universe_message, "^3\n18. Time Sequel: The Legendary Puzzle\n\n^7'The hero shall stand in the buried deep sanctuary...and solve the puzzle to enter the Realm of Souls'.");
 					}
 					else if (ent->client->pers.universe_quest_progress == 18)
 					{

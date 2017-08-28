@@ -1777,7 +1777,42 @@ void TryUse( gentity_t *ent )
 	}
 	else if (ent->client->sess.amrpgmode == 2 && ent->client->pers.can_play_quest == 1)
 	{
-		if (target && target->client && target->NPC && ent->client->pers.universe_quest_progress == 13)
+		if (target && ent->client->pers.universe_quest_progress == 17 && ent->client->pers.universe_quest_counter & (1 << 3) && 
+			ent->client->pers.universe_quest_messages == 6 && Q_stricmp(target->targetname, "zyk_quest_models") == 0)
+		{ // zyk: player touched one of the crystals in Time Sequel puzzle
+			if ((ent->client->pers.hunter_quest_messages == 0 && target->count == 0) ||
+				(ent->client->pers.hunter_quest_messages == 1 && target->count == 1) ||
+				(ent->client->pers.hunter_quest_messages == 2 && target->count == 2) ||
+				(ent->client->pers.hunter_quest_messages == 3 && target->count == 3) ||
+				(ent->client->pers.hunter_quest_messages == 4 && target->count == 1) ||
+				(ent->client->pers.hunter_quest_messages == 5 && target->count == 0) ||
+				(ent->client->pers.hunter_quest_messages == 6 && target->count == 2))
+			{ // zyk: player got it right
+				ent->client->pers.hunter_quest_messages++;
+
+				G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/interface/secret_area.mp3"));
+
+				if (ent->client->pers.hunter_quest_messages == 7)
+				{ // zyk: solved the puzzle
+					ent->client->pers.universe_quest_messages = 7;
+					ent->client->pers.universe_quest_timer = level.time + 1000;
+				}
+			}
+			else
+			{ // zyk: player missed, reset the puzzle
+				ent->client->pers.hunter_quest_messages = 0;
+
+				G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/weapons/overchargeend.wav"));
+			}
+
+			// zyk: setting use anim
+			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			ent->client->ps.forceDodgeAnim = BOTH_BUTTON_HOLD;
+			ent->client->ps.forceHandExtendTime = level.time + 500;
+
+			return;
+		}
+		else if (target && target->client && target->NPC && ent->client->pers.universe_quest_progress == 13)
 		{ // zyk: player makes his choice near the end of the Universe Quest
 			if (ent->client->pers.universe_quest_messages != 28)
 				return;
