@@ -1820,7 +1820,7 @@ void TryUse( gentity_t *ent )
 			return;
 		}
 		else if (target && ent->client->pers.universe_quest_progress == 18 && ent->client->pers.universe_quest_counter & (1 << 3) &&
-			ent->client->pers.universe_quest_messages == 54 && Q_stricmp(target->targetname, "zyk_quest_models") == 0 && target->count > 0)
+			ent->client->pers.universe_quest_messages == 56 && Q_stricmp(target->targetname, "zyk_quest_models") == 0 && target->count > 0)
 		{ // zyk: player touched one of the crystals in another Time Sequel puzzle
 			if (level.quest_puzzle_order[ent->client->pers.hunter_quest_messages] == target->count)
 			{ // zyk: player got it right
@@ -1828,9 +1828,9 @@ void TryUse( gentity_t *ent )
 
 				G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/interface/secret_area.mp3"));
 
-				if (ent->client->pers.hunter_quest_messages == 7)
+				if (ent->client->pers.hunter_quest_messages == 9)
 				{ // zyk: solved the puzzle
-					ent->client->pers.universe_quest_messages = 55;
+					ent->client->pers.universe_quest_messages = 57;
 					ent->client->pers.universe_quest_timer = level.time + 1000;
 				}
 			}

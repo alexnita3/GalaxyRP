@@ -11377,7 +11377,7 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
-								else if (ent->client->pers.universe_quest_messages >= 37 && ent->client->pers.universe_quest_messages < 54)
+								else if (ent->client->pers.universe_quest_messages >= 37 && ent->client->pers.universe_quest_messages < 56)
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 2000;
@@ -11531,7 +11531,7 @@ void G_RunFrame( int levelTime ) {
 										crystal_ent->count = 6;
 									}
 								}
-								else if (ent->client->pers.universe_quest_messages > 46 && ent->client->pers.universe_quest_messages < 54)
+								else if (ent->client->pers.universe_quest_messages > 46 && ent->client->pers.universe_quest_messages < 56)
 								{
 									int chosen_quest_item = Q_irand(1, 6);
 									gentity_t *effect_ent = NULL;
@@ -11575,24 +11575,29 @@ void G_RunFrame( int levelTime ) {
 										G_Sound(effect_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tram_boost.mp3"));
 									}
 								}
-								else if (ent->client->pers.universe_quest_messages == 55)
+								else if (ent->client->pers.universe_quest_messages == 57)
 								{
 									gentity_t *effect_ent = zyk_quest_item("env/lbolt1", 2336, 3425, -9960, "", "");
 
 									if (effect_ent)
 									{
 										level.special_power_effects[effect_ent->s.number] = ent->s.number;
-										level.special_power_effects_timer[effect_ent->s.number] = level.time + 3000;
+										level.special_power_effects_timer[effect_ent->s.number] = level.time + 5000;
 
 										G_Sound(effect_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tram_boost.mp3"));
 									}
 
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 3000;
+								}
+								else if (ent->client->pers.universe_quest_messages == 58)
+								{
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Looks like I solved it!\"", ent->client->pers.netname));
 
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
-								else if (ent->client->pers.universe_quest_messages == 56)
+								else if (ent->client->pers.universe_quest_messages == 59)
 								{
 									ent->client->pers.universe_quest_progress = 19;
 
