@@ -2670,6 +2670,14 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 		trap->SendServerCommand(quest_player->s.number, va("chat \"Guardian of Time: ^7Now...all is lost...\""));
 	}
+	else if (quest_player && quest_player->client->pers.guardian_mode == 21)
+	{ // zyk: defeated the Soul of Sorrow
+		quest_player->client->pers.universe_quest_messages = 30;
+		quest_player->client->pers.universe_quest_timer = level.time + 3000;
+		quest_player->client->pers.guardian_mode = 0;
+
+		trap->SendServerCommand(quest_player->s.number, va("chat \"^0Soul of Sorrow: ^7Well done, hero...\""));
+	}
 	
 	if (self->client->sess.amrpgmode == 2)
 	{ 
@@ -5702,7 +5710,8 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	}
 
 	// zyk: these npcs will not have knockback
-	if (targ && targ->client && targ->NPC && (targ->client->pers.guardian_mode == 2 || targ->client->pers.guardian_mode == 3 || targ->client->pers.guardian_mode == 7 || targ->client->pers.guardian_mode == 11))
+	if (targ && targ->client && targ->NPC && (targ->client->pers.guardian_mode == 2 || targ->client->pers.guardian_mode == 3 || targ->client->pers.guardian_mode == 7 || 
+											  targ->client->pers.guardian_mode == 11 || targ->client->pers.guardian_mode == 21))
 		knockback = 0;
 
 	// figure momentum add, even if the damage won't be taken

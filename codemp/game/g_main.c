@@ -4491,8 +4491,8 @@ void spawn_boss(gentity_t *ent,int x,int y,int z,int yaw,char *boss_name,int gx,
 		npc_ent->client->pers.universe_quest_timer = level.time + 11000;
 		npc_ent->client->pers.guardian_mode = guardian_mode;
 
-		if (guardian_mode == 15 || guardian_mode == 20)
-		{ // zyk: Ymir and Thor can have shield. Guardian of Time too
+		if (guardian_mode == 15 || guardian_mode == 20 || guardian_mode == 21)
+		{ // zyk: Ymir and Thor, Guardian of Time and Soul of Sorrow can have shield
 			npc_ent->client->ps.stats[STAT_ARMOR] = npc_ent->health;
 		}
 
@@ -11612,8 +11612,7 @@ void G_RunFrame( int levelTime ) {
 								}
 							}
 						}
-						else if (ent->client->pers.universe_quest_progress == 19 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_counter & (1 << 3))
+						else if (ent->client->pers.universe_quest_progress == 19 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 3))
 						{ // zyk: Universe Quest, fifth mission of Time Sequel
 							if (ent->client->pers.universe_quest_timer < level.time)
 							{
@@ -11724,6 +11723,87 @@ void G_RunFrame( int levelTime ) {
 									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
 
 									npc_ent->client->pers.universe_quest_messages = -2000;
+								}
+							}
+						}
+						else if (ent->client->pers.universe_quest_progress == 20 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 3))
+						{ // zyk: Universe Quest, boss battle mission of Time Sequel
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, 2336, 3425, -10000);
+
+								if (ent->client->pers.universe_quest_messages == 26 && Distance(ent->client->ps.origin, zyk_quest_point) < 400)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+								else if (ent->client->pers.universe_quest_messages == 26 && (int)ent->client->ps.origin[2] < -5000)
+								{ // zyk: player passed the former mission and is falling
+									vec3_t origin;
+									vec3_t angles;
+
+									origin[0] = 2230.0f;
+									origin[1] = 3425.0f;
+									origin[2] = -9950.0f;
+									angles[0] = 0.0f;
+									angles[1] = 0.0f;
+									angles[2] = 0.0f;
+
+									// zyk: stopping the fall
+									VectorSet(ent->client->ps.velocity, 0, 0, 0);
+
+									zyk_TeleportPlayer(ent, origin, angles);
+								}
+								else if (ent->client->pers.universe_quest_messages > 26 && ent->client->pers.universe_quest_messages < 29)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+
+								if (ent->client->pers.universe_quest_messages < 25)
+								{
+									zyk_quest_item("models/map_objects/factory/catw2_b.md3", 2336 + 256 * (ent->client->pers.hunter_quest_messages - 2), 3425 + 256 * ((ent->client->pers.universe_quest_messages / 5) - 2), -10000, "-128 -128 -8", "128 128 8");
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 500;
+
+									ent->client->pers.hunter_quest_messages = (ent->client->pers.hunter_quest_messages + 1) % 5;
+
+									// zyk: remapping the catwalk models to have a glass texture
+									if (ent->client->pers.universe_quest_messages == 2)
+									{
+										zyk_remap_quest_item("textures/factory/cat_floor_b", "textures/factory/env_glass");
+										zyk_remap_quest_item("textures/factory/basic2_tiled_b", "textures/factory/env_glass");
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 25)
+								{ // zyk: opens the gate to the Realm of Souls
+									gentity_t *zyk_portal_ent;
+
+									zyk_quest_item("env/btend", 2336, 3425, 947, "", "");
+									zyk_quest_item("env/huge_lightning", 2336, 3425, 952, "", "");
+									zyk_portal_ent = zyk_quest_item("env/lbolt1", 2336, 3425, 952, "", "");
+
+									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/tractorbeam.mp3"));
+
+									level.chaos_portal_id = zyk_portal_ent->s.number;
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+								else if (ent->client->pers.universe_quest_messages == 28)
+								{
+									spawn_boss(ent, 2200, 3425, -9960, 0, "soul_of_sorrow", 2336, 3425, -9950, 179, 21);
+								}
+								else if (ent->client->pers.universe_quest_messages == 30)
+								{
+									ent->client->pers.universe_quest_progress = 21;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
 								}
 							}
 						}
@@ -17927,6 +18007,255 @@ void G_RunFrame( int levelTime ) {
 						zyk_super_beam(ent, ent->client->ps.viewangles[1]);
 
 						ent->client->pers.light_quest_timer = level.time + ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 5000;
+					}
+				}
+				else if (ent->client->pers.guardian_mode == 21)
+				{ // zyk: Soul of Sorrow
+					if ((int)ent->client->ps.origin[2] < -10200)
+					{ // zyk: bring him back if he falls
+						vec3_t origin;
+						vec3_t yaw;
+
+						origin[0] = 2336.0f;
+						origin[1] = 3425.0f;
+						origin[2] = -9950.0f;
+						yaw[0] = 0.0f;
+						yaw[1] = 179.0f;
+						yaw[2] = 0.0f;
+						zyk_TeleportPlayer(ent, origin, yaw);
+					}
+
+					if (ent->client->pers.guardian_timer < level.time)
+					{
+						int random_magic = Q_irand(0, 30);
+
+						if (random_magic == 0)
+						{
+							poison_mushrooms(ent, 100, 5000);
+						}
+						else if (random_magic == 1)
+						{
+							water_splash(ent, 5000, 15);
+						}
+						else if (random_magic == 2)
+						{
+							ultra_flame(ent, 5000, 50);
+						}
+						else if (random_magic == 3)
+						{
+							rock_fall(ent, 5000, 55);
+						}
+						else if (random_magic == 4)
+						{
+							dome_of_damage(ent, 5000, 35);
+						}
+						else if (random_magic == 5)
+						{
+							hurricane(ent, 5000, 2000);
+						}
+						else if (random_magic == 6)
+						{
+							slow_motion(ent, 5000, 15000);
+						}
+						else if (random_magic == 7)
+						{
+							sleeping_flowers(ent, 2500, 5000);
+						}
+						else if (random_magic == 8)
+						{
+							healing_water(ent, 120);
+						}
+						else if (random_magic == 9)
+						{
+							flame_burst(ent, 5000);
+						}
+						else if (random_magic == 10)
+						{
+							earthquake(ent, 2000, 300, 5000);
+						}
+						else if (random_magic == 11)
+						{
+							magic_shield(ent, 6000);
+						}
+						else if (random_magic == 12)
+						{
+							blowing_wind(ent, 5000, 2000);
+						}
+						else if (random_magic == 13)
+						{
+							ice_stalagmite(ent, 5000, 160);
+						}
+						else if (random_magic == 14)
+						{
+							ice_boulder(ent, 5000, 70);
+						}
+						else if (random_magic == 15)
+						{
+							water_attack(ent, 5000, 55);
+						}
+						else if (random_magic == 16)
+						{
+							shifting_sand(ent, 5000);
+						}
+						else if (random_magic == 17)
+						{
+							tree_of_life(ent);
+						}
+						else if (random_magic == 18)
+						{
+							magic_disable(ent, 5000);
+						}
+						else if (random_magic == 19)
+						{
+							fast_and_slow(ent, 5000, 6000);
+						}
+						else if (random_magic == 20)
+						{
+							flaming_area(ent, 30);
+						}
+						else if (random_magic == 21)
+						{
+							reverse_wind(ent, 5000, 2000);
+						}
+						else if (random_magic == 22)
+						{
+							enemy_nerf(ent, 5000);
+						}
+						else if (random_magic == 23)
+						{
+							ice_block(ent, 3500);
+						}
+						else if (random_magic == 24)
+						{
+							healing_area(ent, 2, 5000);
+						}
+						else if (random_magic == 25)
+						{
+							magic_explosion(ent, 320, 160, 900);
+						}
+						else if (random_magic == 26)
+						{
+							lightning_dome(ent, 86);
+						}
+						else if (random_magic == 27)
+						{
+							ultra_drain(ent, 450, 50, 8000);
+						}
+						else if (random_magic == 28)
+						{
+							immunity_power(ent, 20000);
+						}
+						else if (random_magic == 29)
+						{
+							chaos_power(ent, 5000, 160);
+						}
+						else if (random_magic == 30)
+						{
+							time_power(ent, 5000, 4000);
+						}
+
+						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 12000);
+					}
+
+					if (ent->client->pers.light_quest_timer < level.time)
+					{
+						int random_unique = Q_irand(0, 4);
+
+						if (ent->client->pers.light_quest_messages == 0)
+						{
+							ent->client->pers.light_quest_messages = 1;
+							ent->client->pers.quest_power_status |= (1 << 14);
+						}
+						else if (ent->client->pers.light_quest_messages == 1)
+						{
+							ent->client->pers.light_quest_messages = 2;
+							ent->client->pers.quest_power_status |= (1 << 15);
+						}
+						else if (ent->client->pers.light_quest_messages == 2)
+						{
+							ent->client->pers.light_quest_messages = 3;
+							ent->client->pers.quest_power_status |= (1 << 16);
+						}
+						else if (ent->client->pers.light_quest_messages == 3)
+						{
+							ent->client->pers.light_quest_messages = 4;
+							ent->client->pers.quest_power_status |= (1 << 13);
+						}
+
+						if (random_unique == 0)
+						{
+							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
+
+							ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+							ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
+							ent->client->ps.forceHandExtendTime = level.time + 2000;
+
+							zyk_super_beam(ent, ent->client->ps.viewangles[1]);
+						}
+						else if (random_unique == 1)
+						{
+							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+
+							elemental_attack(ent);
+						}
+						else if (random_unique == 2)
+						{
+							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+
+							zyk_no_attack(ent);
+						}
+
+						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 15000);
+					}
+
+					if (ent->client->pers.universe_quest_timer < level.time)
+					{ // zyk: destroys tiles from the background
+						int k = 0;
+						int tile_count = 0;
+						int zyk_chosen_tile = Q_irand(0, 23 - ent->client->pers.hunter_quest_messages);
+						vec3_t origin;
+						vec3_t yaw;
+
+						for (k = (MAX_CLIENTS + BODY_QUEUE_SIZE); k < level.num_entities; k++)
+						{
+							gentity_t *zyk_tile_ent = &g_entities[k];
+
+							if (zyk_tile_ent && Q_stricmp(zyk_tile_ent->targetname, "zyk_quest_models") == 0 && Q_stricmp(zyk_tile_ent->classname, "misc_model_breakable") == 0 && 
+								(int)zyk_tile_ent->s.origin[0] != 2336 && (int)zyk_tile_ent->s.origin[1] != 3425)
+							{ // zyk: do not drop the central tile
+								if (tile_count == zyk_chosen_tile)
+								{
+									gentity_t *effect_ent = zyk_quest_item("explosions/explosion1", zyk_tile_ent->s.origin[0], zyk_tile_ent->s.origin[1], -9960, "", "");
+
+									if (effect_ent)
+									{
+										level.special_power_effects[effect_ent->s.number] = ent->s.number;
+										level.special_power_effects_timer[effect_ent->s.number] = level.time + 1000;
+
+										G_FreeEntity(zyk_tile_ent);
+
+										G_Sound(effect_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tram_boost.mp3"));
+
+										ent->client->pers.hunter_quest_messages++;
+									}
+
+									break;
+								}
+
+								tile_count++;
+							}
+						}
+
+						// zyk: send him back to his original catwalk
+						origin[0] = 2336.0f;
+						origin[1] = 3425.0f;
+						origin[2] = -9950.0f;
+						yaw[0] = 0.0f;
+						yaw[1] = 179.0f;
+						yaw[2] = 0.0f;
+						zyk_TeleportPlayer(ent, origin, yaw);
+
+						ent->client->pers.universe_quest_timer = level.time + Q_irand(ent->health + 2000, ent->health + 7000);
 					}
 				}
 			}
