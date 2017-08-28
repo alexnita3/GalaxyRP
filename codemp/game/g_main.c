@@ -7870,12 +7870,26 @@ gentity_t *zyk_quest_item(char *item_path, int x, int y, int z, char *mins, char
 			zyk_set_entity_field(new_ent, "maxs", maxs);
 		}
 
+		if (z == -10000)
+		{ // zyk: catwalk in t3_rift quest missions. Must scale it
+			zyk_set_entity_field(new_ent, "zykmodelscale", "200");
+		}
+
 		zyk_set_entity_field(new_ent, "model", item_path);
 
 		zyk_spawn_entity(new_ent);
 	}
 
 	return new_ent;
+}
+
+// zyk: remaps quest items to the values passed as args
+void zyk_remap_quest_item(char *old_remap, char *new_remap)
+{
+	float f = level.time * 0.001;
+
+	AddRemap(old_remap, new_remap, f);
+	trap->SetConfigstring(CS_SHADERSTATE, BuildShaderStateConfig());
 }
 
 /*
@@ -11170,6 +11184,26 @@ void G_RunFrame( int levelTime ) {
 					{
 						zyk_try_get_dark_quest_note(ent, 7);
 
+						if (level.chaos_portal_id != -1)
+						{ // zyk: portal to the Realm of Souls
+							gentity_t *chaos_portal = &g_entities[level.chaos_portal_id];
+
+							if (chaos_portal && (int)Distance(chaos_portal->s.origin, ent->client->ps.origin) < 40)
+							{
+								vec3_t origin;
+								vec3_t angles;
+
+								origin[0] = 2230.0f;
+								origin[1] = 3425.0f;
+								origin[2] = -9950.0f;
+								angles[0] = 0.0f;
+								angles[1] = 0.0f;
+								angles[2] = 0.0f;
+
+								zyk_TeleportPlayer(ent, origin, angles);
+							}
+						}
+
 						if (ent->client->pers.universe_quest_progress == 17 && ent->client->pers.can_play_quest == 1 &&
 							ent->client->pers.universe_quest_counter & (1 << 3))
 						{ // zyk: Universe Quest, third mission of Time Sequel
@@ -11311,6 +11345,256 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 23)
 								{
 									ent->client->pers.universe_quest_progress = 18;
+
+									save_account(ent);
+
+									quest_get_new_player(ent);
+								}
+
+								if (npc_ent)
+								{
+									npc_ent->client->pers.universe_quest_messages = -2000;
+								}
+							}
+						}
+						else if (ent->client->pers.universe_quest_progress == 18 && ent->client->pers.can_play_quest == 1 &&
+							ent->client->pers.universe_quest_counter & (1 << 3))
+						{ // zyk: Universe Quest, fourth mission of Time Sequel
+							if (ent->client->pers.universe_quest_timer < level.time)
+							{
+								gentity_t *npc_ent = NULL;
+								vec3_t zyk_quest_point;
+
+								VectorSet(zyk_quest_point, 2336, 3425, -10000);
+
+								if (ent->client->pers.universe_quest_messages == 26 && Distance(ent->client->ps.origin, zyk_quest_point) < 400)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+								else if (ent->client->pers.universe_quest_messages > 26 && ent->client->pers.universe_quest_messages < 37)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+								else if (ent->client->pers.universe_quest_messages >= 37 && ent->client->pers.universe_quest_messages < 54)
+								{
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 2000;
+								}
+
+								if (ent->client->pers.universe_quest_messages < 25)
+								{
+									zyk_quest_item("models/map_objects/factory/catw2_b.md3", 2336 + 256 * (ent->client->pers.hunter_quest_messages - 2), 3425 + 256 * ((ent->client->pers.universe_quest_messages / 5) - 2), -10000, "-128 -128 -8", "128 128 8");
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 500;
+
+									ent->client->pers.hunter_quest_messages = (ent->client->pers.hunter_quest_messages + 1) % 5;
+
+									// zyk: remapping the catwalk models to have a glass texture
+									if (ent->client->pers.universe_quest_messages == 2)
+									{
+										zyk_remap_quest_item("textures/factory/cat_floor_b", "textures/factory/env_glass");
+										zyk_remap_quest_item("textures/factory/basic2_tiled_b", "textures/factory/env_glass");
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 25)
+								{ // zyk: opens the gate to the Realm of Souls
+									gentity_t *zyk_portal_ent;
+
+									zyk_quest_item("env/btend", 2336, 3425, 947, "", "");
+									zyk_quest_item("env/huge_lightning", 2336, 3425, 952, "", "");
+									zyk_portal_ent = zyk_quest_item("env/lbolt1", 2336, 3425, 952, "", "");
+
+									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/tractorbeam.mp3"));
+
+									level.chaos_portal_id = zyk_portal_ent->s.number;
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+								else if (ent->client->pers.universe_quest_messages == 28)
+									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2336, 3425, -9950, 179);
+								else if (ent->client->pers.universe_quest_messages == 29)
+									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: %s^7, we meet again.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 30)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Wait a second... you are that spooky voice that gave me the artifact.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 31)
+									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: Yes. Now I am back to the Realm of Souls. I will help you again.\""));
+								else if (ent->client->pers.universe_quest_messages == 32)
+									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: You must solve the puzzle for the Soul of Sorrow to appear.\""));
+								else if (ent->client->pers.universe_quest_messages == 33)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: How do I solve it?\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 34)
+									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: Pay close attention to the puzzle and you will find the answer.\""));
+								else if (ent->client->pers.universe_quest_messages == 35)
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: That did not help much.\"", ent->client->pers.netname));
+								else if (ent->client->pers.universe_quest_messages == 36)
+									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: It is the best I can do. Now solve the puzzle, if you want to save the Universe.\""));
+								else if (ent->client->pers.universe_quest_messages == 37)
+								{
+									int j = 0;
+
+									for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
+									{
+										npc_ent = &g_entities[j];
+
+										if (npc_ent && npc_ent->client && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "quest_ragnos") == 0)
+										{
+											G_FreeEntity(npc_ent);
+										}
+									}
+
+									npc_ent = NULL;
+
+									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: Goodbye, hero.\""));
+								}
+								else if (ent->client->pers.universe_quest_messages == 38)
+								{
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2236, 3355, -9960, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 1;
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 39)
+								{
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2236, 3495, -9960, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 2;
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 40)
+								{
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2336, 3255, -9960, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 3;
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 41)
+								{ // zyk: yellow crystal
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2336, 3595, -9960, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 4;
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 42)
+								{ // zyk: yellow crystal
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2336, 3595, -9960, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 4;
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 43)
+								{ // zyk: cyan crystal
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2436, 3355, -9960, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 5;
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 44)
+								{ // zyk: cyan crystal
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2436, 3355, -9960, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 5;
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 45)
+								{ // zyk: purple crystal
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2436, 3495, -9960, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 6;
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 46)
+								{ // zyk: purple crystal
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2436, 3495, -9960, "-16 -16 -16", "16 16 16");
+
+									if (crystal_ent)
+									{
+										crystal_ent->count = 6;
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages > 46 && ent->client->pers.universe_quest_messages < 54)
+								{
+									int chosen_quest_item = Q_irand(1, 6);
+									gentity_t *effect_ent = NULL;
+
+									if (chosen_quest_item == 1)
+									{
+										effect_ent = zyk_quest_item("env/btend", 2236, 3355, -9960, "", "");
+									}
+									else if (chosen_quest_item == 2)
+									{
+										effect_ent = zyk_quest_item("env/btend", 2236, 3495, -9960, "", "");
+									}
+									else if (chosen_quest_item == 3)
+									{
+										effect_ent = zyk_quest_item("env/btend", 2336, 3255, -9960, "", "");
+									}
+									else if (chosen_quest_item == 4)
+									{
+										effect_ent = zyk_quest_item("env/btend", 2336, 3595, -9960, "", "");
+									}
+									else if (chosen_quest_item == 5)
+									{
+										effect_ent = zyk_quest_item("env/btend", 2436, 3355, -9960, "", "");
+									}
+									else if (chosen_quest_item == 6)
+									{
+										effect_ent = zyk_quest_item("env/btend", 2436, 3495, -9960, "", "");
+									}
+
+									// zyk: setting to 0 because it will be used to solve the puzzle
+									ent->client->pers.hunter_quest_messages = 0;
+
+									// zyk: setting the chosen crystal in the puzzle order
+									level.quest_puzzle_order[ent->client->pers.universe_quest_messages - 47] = chosen_quest_item;
+
+									if (effect_ent)
+									{
+										level.special_power_effects[effect_ent->s.number] = ent->s.number;
+										level.special_power_effects_timer[effect_ent->s.number] = level.time + 2000;
+
+										G_Sound(effect_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tram_boost.mp3"));
+									}
+								}
+								else if (ent->client->pers.universe_quest_messages == 55)
+								{
+									gentity_t *effect_ent = zyk_quest_item("env/lbolt1", 2336, 3425, -9960, "", "");
+
+									if (effect_ent)
+									{
+										level.special_power_effects[effect_ent->s.number] = ent->s.number;
+										level.special_power_effects_timer[effect_ent->s.number] = level.time + 3000;
+
+										G_Sound(effect_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tram_boost.mp3"));
+									}
+
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Looks like I solved it!\"", ent->client->pers.netname));
+
+									ent->client->pers.universe_quest_messages++;
+									ent->client->pers.universe_quest_timer = level.time + 5000;
+								}
+								else if (ent->client->pers.universe_quest_messages == 56)
+								{
+									ent->client->pers.universe_quest_progress = 19;
 
 									save_account(ent);
 

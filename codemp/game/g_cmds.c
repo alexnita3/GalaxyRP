@@ -9584,7 +9584,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
 							strcpy(universe_message, "^3\n19. Thor Sequel: War at the City\n\n^7Defeat the citizens, sages and guardians in ^3mp/siege_desert^7.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
-							strcpy(universe_message, "^3\nNew missions coming soon!");
+							strcpy(universe_message, "^3\n19. Time Sequel: The Realm of Souls\n\n^7Go through the gate in ^3t3_rift^7 sanctuary, which leads to the Realm of Souls.");
 					}
 					else if (ent->client->pers.universe_quest_progress == 19)
 					{

@@ -1819,6 +1819,35 @@ void TryUse( gentity_t *ent )
 
 			return;
 		}
+		else if (target && ent->client->pers.universe_quest_progress == 18 && ent->client->pers.universe_quest_counter & (1 << 3) &&
+			ent->client->pers.universe_quest_messages == 54 && Q_stricmp(target->targetname, "zyk_quest_models") == 0 && target->count > 0)
+		{ // zyk: player touched one of the crystals in another Time Sequel puzzle
+			if (level.quest_puzzle_order[ent->client->pers.hunter_quest_messages] == target->count)
+			{ // zyk: player got it right
+				ent->client->pers.hunter_quest_messages++;
+
+				G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/interface/secret_area.mp3"));
+
+				if (ent->client->pers.hunter_quest_messages == 7)
+				{ // zyk: solved the puzzle
+					ent->client->pers.universe_quest_messages = 55;
+					ent->client->pers.universe_quest_timer = level.time + 1000;
+				}
+			}
+			else
+			{ // zyk: player missed, reset the puzzle
+				ent->client->pers.hunter_quest_messages = 0;
+
+				G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/weapons/overchargeend.wav"));
+			}
+
+			// zyk: setting use anim
+			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			ent->client->ps.forceDodgeAnim = BOTH_BUTTON_HOLD;
+			ent->client->ps.forceHandExtendTime = level.time + 500;
+
+			return;
+		}
 		else if (target && target->client && target->NPC && ent->client->pers.universe_quest_progress == 13)
 		{ // zyk: player makes his choice near the end of the Universe Quest
 			if (ent->client->pers.universe_quest_messages != 28)

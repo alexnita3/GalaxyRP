@@ -1613,6 +1613,9 @@ typedef struct level_locals_s {
 	// gets cleaned when the player arrives at it
 	int quest_effect_id;
 
+	// zyk: has the order of each quest item that must be used to solve a quest puzzle
+	int quest_puzzle_order[7];
+
 	// zyk: id of the portal effect entity at last universe quest mission, so players can go through the teleport
 	int chaos_portal_id;
 
