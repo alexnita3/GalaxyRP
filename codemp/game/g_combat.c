@@ -2672,7 +2672,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	}
 	else if (quest_player && quest_player->client->pers.guardian_mode == 21)
 	{ // zyk: defeated the Soul of Sorrow
-		quest_player->client->pers.universe_quest_messages = 30;
+		quest_player->client->pers.universe_quest_messages = 54;
 		quest_player->client->pers.universe_quest_timer = level.time + 3000;
 		quest_player->client->pers.guardian_mode = 0;
 

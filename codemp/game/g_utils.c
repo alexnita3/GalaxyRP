@@ -1820,7 +1820,7 @@ void TryUse( gentity_t *ent )
 			return;
 		}
 		else if (target && ent->client->pers.universe_quest_progress == 18 && ent->client->pers.universe_quest_counter & (1 << 3) &&
-			ent->client->pers.universe_quest_messages == 56 && Q_stricmp(target->targetname, "zyk_quest_models") == 0 && target->count > 0)
+			ent->client->pers.universe_quest_messages == 80 && Q_stricmp(target->targetname, "zyk_quest_models") == 0 && target->count > 0)
 		{ // zyk: player touched one of the crystals in another Time Sequel puzzle
 			if (level.quest_puzzle_order[ent->client->pers.hunter_quest_messages] == target->count)
 			{ // zyk: player got it right
@@ -1830,7 +1830,7 @@ void TryUse( gentity_t *ent )
 
 				if (ent->client->pers.hunter_quest_messages == 9)
 				{ // zyk: solved the puzzle
-					ent->client->pers.universe_quest_messages = 57;
+					ent->client->pers.universe_quest_messages = 81;
 					ent->client->pers.universe_quest_timer = level.time + 1000;
 				}
 			}
@@ -1918,7 +1918,7 @@ void TryUse( gentity_t *ent )
 			return;
 		}
 		else if (ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_progress == 18 && ent->client->pers.universe_quest_counter & (1 << 3) &&
-			ent->client->pers.universe_quest_messages > 36 && target && target->client && target->NPC && Q_stricmp(target->NPC_type, "quest_ragnos") == 0)
+			ent->client->pers.universe_quest_messages > 60 && target && target->client && target->NPC && Q_stricmp(target->NPC_type, "quest_ragnos") == 0)
 		{ // zyk: talking to a soul
 			int j = target->client->pers.universe_quest_objective_control;
 
@@ -1934,9 +1934,9 @@ void TryUse( gentity_t *ent )
 			{
 				trap->SendServerCommand(ent->s.number, "chat \"^3Bored Soul: ^7Solve this puzzle so I will be allowed to leave this boring place :/\"");
 			}
-			else if (j == -200000 && ent->client->pers.universe_quest_messages == 56)
+			else if (j == -200000 && ent->client->pers.universe_quest_messages == 80)
 			{
-				ent->client->pers.universe_quest_messages = 46;
+				ent->client->pers.universe_quest_messages = 70;
 				ent->client->pers.universe_quest_timer = level.time + 3000;
 
 				trap->SendServerCommand(ent->s.number, "chat \"^3Helper Soul: ^7The puzzle will restart.\"");
