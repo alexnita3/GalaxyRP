@@ -9629,7 +9629,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
 							strcpy(universe_message, "^3\n22. Thor Sequel: Full Power\n\n^7Go to the rancor arena in ^3mp/siege_desert^7 and talk to Thor.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
-							strcpy(universe_message, "^3\nNew missions coming soon!");
+							strcpy(universe_message, "^3\n22. Time Sequel: Salvation of the Universe\n\n^7Speak to the Soul of Sorrow in the Realm of Souls in ^3t3_rift^7.");
 					}
 				}
 				else
