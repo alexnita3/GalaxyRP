@@ -11166,7 +11166,7 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.universe_quest_messages > 3)
 								ent->client->pers.universe_quest_messages = 15;
 
-							ent->client->pers.universe_quest_timer = level.time + 2000;
+							ent->client->pers.universe_quest_timer = level.time + 1000;
 
 							if (change_player == 1)
 								quest_get_new_player(ent);
