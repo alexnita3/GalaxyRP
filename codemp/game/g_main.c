@@ -11367,7 +11367,12 @@ void G_RunFrame( int levelTime ) {
 
 								VectorSet(zyk_quest_point, 2336, 3425, -10000);
 
-								if (ent->client->pers.universe_quest_messages == 26 && Distance(ent->client->ps.origin, zyk_quest_point) < 400)
+								if (ent->client->pers.universe_quest_messages > 26 && Distance(ent->client->ps.origin, zyk_quest_point) > 2500)
+								{ // zyk: player cannot leave the arena
+									G_Kill(ent);
+								}
+
+								if (ent->client->pers.universe_quest_messages == 26 && Distance(ent->client->ps.origin, zyk_quest_point) < 500)
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
@@ -11388,7 +11393,7 @@ void G_RunFrame( int levelTime ) {
 									zyk_quest_item("models/map_objects/factory/catw2_b.md3", 2336 + 256 * (ent->client->pers.hunter_quest_messages - 2), 3425 + 256 * ((ent->client->pers.universe_quest_messages / 5) - 2), -10000, "-128 -128 -8", "128 128 8");
 
 									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
+									ent->client->pers.universe_quest_timer = level.time + 400;
 
 									ent->client->pers.hunter_quest_messages = (ent->client->pers.hunter_quest_messages + 1) % 5;
 
@@ -11412,7 +11417,7 @@ void G_RunFrame( int levelTime ) {
 									level.chaos_portal_id = zyk_portal_ent->s.number;
 
 									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
+									ent->client->pers.universe_quest_timer = level.time + 500;
 								}
 								else if (ent->client->pers.universe_quest_messages == 28)
 								{
@@ -11665,7 +11670,12 @@ void G_RunFrame( int levelTime ) {
 
 								VectorSet(zyk_quest_point, 2336, 3425, -10000);
 
-								if (ent->client->pers.universe_quest_messages == 26 && Distance(ent->client->ps.origin, zyk_quest_point) < 400)
+								if (ent->client->pers.universe_quest_messages > 26 && Distance(ent->client->ps.origin, zyk_quest_point) > 2500)
+								{ // zyk: player cannot leave the arena
+									G_Kill(ent);
+								}
+
+								if (ent->client->pers.universe_quest_messages == 26 && Distance(ent->client->ps.origin, zyk_quest_point) < 500)
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
@@ -11698,7 +11708,7 @@ void G_RunFrame( int levelTime ) {
 									zyk_quest_item("models/map_objects/factory/catw2_b.md3", 2336 + 256 * (ent->client->pers.hunter_quest_messages - 2), 3425 + 256 * ((ent->client->pers.universe_quest_messages / 5) - 2), -10000, "-128 -128 -8", "128 128 8");
 
 									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
+									ent->client->pers.universe_quest_timer = level.time + 400;
 
 									ent->client->pers.hunter_quest_messages = (ent->client->pers.hunter_quest_messages + 1) % 5;
 
@@ -11722,7 +11732,7 @@ void G_RunFrame( int levelTime ) {
 									level.chaos_portal_id = zyk_portal_ent->s.number;
 
 									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
+									ent->client->pers.universe_quest_timer = level.time + 500;
 								}
 								else if (ent->client->pers.universe_quest_messages == 28)
 									npc_ent = Zyk_NPC_SpawnType("soul_of_sorrow", 2336, 3425, -9950, 179);
@@ -11739,7 +11749,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 34)
 									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: The Universe has been destroyed and recreated some times, once it was full of evil and chaos.\""));
 								else if (ent->client->pers.universe_quest_messages == 35)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: But this time I decided to go out earlier and the progress of the legendary hero.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: But this time I decided to go out earlier and watch the progress of the legendary hero.\""));
 								else if (ent->client->pers.universe_quest_messages == 36)
 									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: You fought bravely, and chose wisely in the end, preventing evil forces to take over.\""));
 								else if (ent->client->pers.universe_quest_messages == 37)
@@ -11778,7 +11788,12 @@ void G_RunFrame( int levelTime ) {
 
 								VectorSet(zyk_quest_point, 2336, 3425, -10000);
 
-								if (ent->client->pers.universe_quest_messages == 26 && Distance(ent->client->ps.origin, zyk_quest_point) < 400)
+								if (ent->client->pers.universe_quest_messages > 26 && Distance(ent->client->ps.origin, zyk_quest_point) > 2500)
+								{ // zyk: player cannot leave the arena
+									G_Kill(ent);
+								}
+
+								if (ent->client->pers.universe_quest_messages == 26 && Distance(ent->client->ps.origin, zyk_quest_point) < 500)
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
@@ -11811,7 +11826,7 @@ void G_RunFrame( int levelTime ) {
 									zyk_quest_item("models/map_objects/factory/catw2_b.md3", 2336 + 256 * (ent->client->pers.hunter_quest_messages - 2), 3425 + 256 * ((ent->client->pers.universe_quest_messages / 5) - 2), -10000, "-128 -128 -8", "128 128 8");
 
 									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
+									ent->client->pers.universe_quest_timer = level.time + 400;
 
 									ent->client->pers.hunter_quest_messages = (ent->client->pers.hunter_quest_messages + 1) % 5;
 
@@ -11835,7 +11850,7 @@ void G_RunFrame( int levelTime ) {
 									level.chaos_portal_id = zyk_portal_ent->s.number;
 
 									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
+									ent->client->pers.universe_quest_timer = level.time + 500;
 								}
 								else if (ent->client->pers.universe_quest_messages == 28)
 								{
@@ -18082,7 +18097,7 @@ void G_RunFrame( int levelTime ) {
 
 						for (k = 0; k < number_of_powers; k++)
 						{
-							int random_magic = Q_irand(0, 29);
+							int random_magic = Q_irand(0, 27);
 
 							if (random_magic == 0)
 							{
@@ -18106,112 +18121,104 @@ void G_RunFrame( int levelTime ) {
 							}
 							else if (random_magic == 5)
 							{
-								hurricane(ent, 5000, 2000);
+								slow_motion(ent, 5000, 15000);
 							}
 							else if (random_magic == 6)
 							{
-								slow_motion(ent, 5000, 15000);
+								sleeping_flowers(ent, 2500, 5000);
 							}
 							else if (random_magic == 7)
 							{
-								sleeping_flowers(ent, 2500, 5000);
+								healing_water(ent, 120);
 							}
 							else if (random_magic == 8)
 							{
-								healing_water(ent, 120);
+								flame_burst(ent, 5000);
 							}
 							else if (random_magic == 9)
 							{
-								flame_burst(ent, 5000);
+								magic_shield(ent, 6000);
 							}
 							else if (random_magic == 10)
 							{
-								magic_shield(ent, 6000);
+								blowing_wind(ent, 5000, 1500);
 							}
 							else if (random_magic == 11)
 							{
-								blowing_wind(ent, 5000, 2000);
+								ice_stalagmite(ent, 5000, 160);
 							}
 							else if (random_magic == 12)
 							{
-								ice_stalagmite(ent, 5000, 160);
+								ice_boulder(ent, 5000, 70);
 							}
 							else if (random_magic == 13)
 							{
-								ice_boulder(ent, 5000, 70);
+								water_attack(ent, 5000, 55);
 							}
 							else if (random_magic == 14)
 							{
-								water_attack(ent, 5000, 55);
+								shifting_sand(ent, 5000);
 							}
 							else if (random_magic == 15)
 							{
-								shifting_sand(ent, 5000);
+								magic_disable(ent, 5000);
 							}
 							else if (random_magic == 16)
 							{
-								tree_of_life(ent);
+								fast_and_slow(ent, 5000, 6000);
 							}
 							else if (random_magic == 17)
 							{
-								magic_disable(ent, 5000);
+								flaming_area(ent, 30);
 							}
 							else if (random_magic == 18)
 							{
-								fast_and_slow(ent, 5000, 6000);
+								reverse_wind(ent, 5000, 1500);
 							}
 							else if (random_magic == 19)
 							{
-								flaming_area(ent, 30);
+								enemy_nerf(ent, 5000);
 							}
 							else if (random_magic == 20)
 							{
-								reverse_wind(ent, 5000, 2000);
+								ice_block(ent, 3500);
 							}
 							else if (random_magic == 21)
 							{
-								enemy_nerf(ent, 5000);
+								healing_area(ent, 2, 5000);
 							}
 							else if (random_magic == 22)
 							{
-								ice_block(ent, 3500);
+								magic_explosion(ent, 320, 160, 900);
 							}
 							else if (random_magic == 23)
 							{
-								healing_area(ent, 2, 5000);
+								lightning_dome(ent, 86);
 							}
 							else if (random_magic == 24)
 							{
-								magic_explosion(ent, 320, 160, 900);
+								ultra_drain(ent, 450, 50, 8000);
 							}
 							else if (random_magic == 25)
 							{
-								lightning_dome(ent, 86);
+								immunity_power(ent, 20000);
 							}
 							else if (random_magic == 26)
 							{
-								ultra_drain(ent, 450, 50, 8000);
+								chaos_power(ent, 5000, 120);
 							}
 							else if (random_magic == 27)
-							{
-								immunity_power(ent, 20000);
-							}
-							else if (random_magic == 28)
-							{
-								chaos_power(ent, 5000, 140);
-							}
-							else if (random_magic == 29)
 							{
 								time_power(ent, 5000, 4000);
 							}
 						}
 
-						ent->client->pers.guardian_timer = level.time + Q_irand(8000, 12000);
+						ent->client->pers.guardian_timer = level.time + Q_irand(10000, 12000);
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
-						int random_unique = Q_irand(0, 4);
+						int random_unique = Q_irand(0, 1);
 
 						if (ent->client->pers.light_quest_messages == 0)
 						{
@@ -18248,16 +18255,10 @@ void G_RunFrame( int levelTime ) {
 						{
 							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
 
-							elemental_attack(ent);
-						}
-						else if (random_unique == 2)
-						{
-							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-
 							zyk_no_attack(ent);
 						}
 
-						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 15000);
+						ent->client->pers.light_quest_timer = level.time + Q_irand(((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 3000, ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 5000);
 					}
 
 					if (ent->client->pers.universe_quest_timer < level.time)
@@ -18273,20 +18274,20 @@ void G_RunFrame( int levelTime ) {
 							gentity_t *zyk_tile_ent = &g_entities[k];
 
 							if (zyk_tile_ent && Q_stricmp(zyk_tile_ent->targetname, "zyk_quest_models") == 0 && Q_stricmp(zyk_tile_ent->classname, "misc_model_breakable") == 0 && 
-								(int)zyk_tile_ent->s.origin[0] != 2336 && (int)zyk_tile_ent->s.origin[1] != 3425)
+								((int)zyk_tile_ent->s.origin[0] != 2336 || (int)zyk_tile_ent->s.origin[1] != 3425))
 							{ // zyk: do not drop the central tile
 								if (tile_count == zyk_chosen_tile)
 								{
-									gentity_t *effect_ent = zyk_quest_item("explosions/hugeexplosion1", zyk_tile_ent->s.origin[0], zyk_tile_ent->s.origin[1], -9960, "", "");
+									gentity_t *effect_ent = zyk_quest_item("env/lbolt1", zyk_tile_ent->s.origin[0], zyk_tile_ent->s.origin[1], -9960, "", "");
 
 									if (effect_ent)
 									{
 										level.special_power_effects[effect_ent->s.number] = ent->s.number;
 										level.special_power_effects_timer[effect_ent->s.number] = level.time + 1000;
 
-										G_FreeEntity(zyk_tile_ent);
-
 										G_Sound(effect_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tram_boost.mp3"));
+
+										G_FreeEntity(zyk_tile_ent);
 
 										ent->client->pers.hunter_quest_messages++;
 									}
@@ -18307,7 +18308,7 @@ void G_RunFrame( int levelTime ) {
 						yaw[2] = 0.0f;
 						zyk_TeleportPlayer(ent, origin, yaw);
 
-						ent->client->pers.universe_quest_timer = level.time + Q_irand(ent->health + 2000, ent->health + 7000);
+						ent->client->pers.universe_quest_timer = level.time + Q_irand(((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 3000, ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 5000);
 					}
 				}
 			}
