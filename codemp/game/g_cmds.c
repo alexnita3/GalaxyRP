@@ -9562,7 +9562,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					else if (ent->client->pers.universe_quest_progress == 15)
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							strcpy(universe_message, "^3\n16. Sages Sequel: The Ancient Threat\n\n^7Sage of Universe telepathically asks you to talk to the sages at the waterfall in ^3yavin2^7.");
+							strcpy(universe_message, "^3\n16. Sages Sequel: The Ancient Threat\n\n^7Sage of Universe telepathically asks you to talk to the sages at the sacred monument in ^3yavin2^7.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
 							strcpy(universe_message, "^3\n16. Guardians Sequel: A Smart Move\n\n^7Guardian of Universe telepathically asks you to talk to the guardians at the central area in ^3mp/siege_korriban^7.");
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
