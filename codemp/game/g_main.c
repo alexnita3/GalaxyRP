@@ -7928,6 +7928,7 @@ extern void set_max_shield(gentity_t *ent);
 extern gentity_t *load_effect(int x,int y,int z, int spawnflags, char *fxFile);
 extern void duel_show_table(gentity_t *ent);
 extern void WP_DisruptorAltFire(gentity_t *ent);
+extern int zyk_max_magic_power(gentity_t *ent);
 extern void G_Kill( gentity_t *ent );
 
 void G_RunFrame( int levelTime ) {
@@ -12598,6 +12599,7 @@ void G_RunFrame( int levelTime ) {
 								{ // zyk: sage of universe heals the hero during the battle
 									ent->health += 50;
 									ent->client->ps.stats[STAT_ARMOR] += 50;
+									ent->client->pers.magic_power += 20;
 
 									if (ent->health > ent->client->pers.max_rpg_health)
 										ent->health = ent->client->pers.max_rpg_health;
@@ -12605,9 +12607,16 @@ void G_RunFrame( int levelTime ) {
 									if (ent->client->ps.stats[STAT_ARMOR] > ent->client->pers.max_rpg_shield)
 										ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
 
+									if (ent->client->pers.magic_power > zyk_max_magic_power(ent))
+									{
+										ent->client->pers.magic_power = zyk_max_magic_power(ent);
+									}
+
+									send_rpg_events(2000);
+
 									G_Sound(ent, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav"));
 
-									trap->SendServerCommand(-1, "chat \"^2Sage of Universe: ^7Hero, I will use Amulet of Time to restore some hp and shield to you!\"");
+									trap->SendServerCommand(-1, "chat \"^2Sage of Universe: ^7Hero, I will use Amulet of Time to restore some hp, shield and mp to you!\"");
 								}
 								else if (ent->client->pers.universe_quest_messages == 7)
 								{ // zyk: Hero defeated both bosses
@@ -12695,7 +12704,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 11)
 									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Well done, %s^7.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 12)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Safe of Universe^7: Sages, you will know posses the Crystal of Magic.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Safe of Universe^7: Sages, you will now possess the Crystal of Magic.\""));
 								else if (ent->client->pers.universe_quest_messages == 13)
 									trap->SendServerCommand(ent->s.number, va("chat \"^2Safe of Universe^7: Also, sages, you will become the new leaders of the mages.\""));
 								else if (ent->client->pers.universe_quest_messages == 14)
@@ -17916,7 +17925,7 @@ void G_RunFrame( int levelTime ) {
 
 						if (ent->spawnflags & 131072)
 						{ // zyk: boss is stronger now
-							ent->client->pers.guardian_timer -= 2000;
+							ent->client->pers.guardian_timer -= 1000;
 						}
 					}
 
@@ -17924,8 +17933,8 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: using Crystal of Magic
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
 
-						ent->health += 400;
-						ent->client->ps.stats[STAT_ARMOR] += 400;
+						ent->health += 200;
+						ent->client->ps.stats[STAT_ARMOR] += 200;
 
 						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
 							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
@@ -17938,7 +17947,7 @@ void G_RunFrame( int levelTime ) {
 						else
 							ent->client->NPC_class = CLASS_REBORN;
 
-						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 12000);
+						ent->client->pers.light_quest_timer = level.time + Q_irand(11000, 14000);
 
 						if (ent->spawnflags & 131072)
 						{ // zyk: boss is stronger now
@@ -18001,7 +18010,7 @@ void G_RunFrame( int levelTime ) {
 
 						if (ent->spawnflags & 131072)
 						{ // zyk: boss is stronger now
-							ent->client->pers.guardian_timer -= 3000;
+							ent->client->pers.guardian_timer -= 2000;
 						}
 					}
 
@@ -18009,8 +18018,8 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: using Crystal of Magic
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
 
-						ent->health += 400;
-						ent->client->ps.stats[STAT_ARMOR] += 400;
+						ent->health += 200;
+						ent->client->ps.stats[STAT_ARMOR] += 200;
 
 						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
 							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
