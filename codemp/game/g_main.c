@@ -14300,6 +14300,39 @@ void G_RunFrame( int levelTime ) {
 
 									zyk_spawn_entity(new_ent);
 
+									// zyk: adding catwalks to block the central lava
+									new_ent = G_Spawn();
+
+									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+									zyk_set_entity_field(new_ent, "spawnflags", "65537");
+									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -4470, 4628, -68));
+
+									zyk_set_entity_field(new_ent, "mins", "-256 -256 -16");
+									zyk_set_entity_field(new_ent, "maxs", "256 256 16");
+									zyk_set_entity_field(new_ent, "zykmodelscale", "400");
+
+									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+
+									zyk_spawn_entity(new_ent);
+
+									new_ent = G_Spawn();
+
+									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+									zyk_set_entity_field(new_ent, "spawnflags", "65537");
+									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -4470, 5140, -68));
+
+									zyk_set_entity_field(new_ent, "mins", "-256 -256 -16");
+									zyk_set_entity_field(new_ent, "maxs", "256 256 16");
+									zyk_set_entity_field(new_ent, "zykmodelscale", "400");
+
+									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+
+									zyk_spawn_entity(new_ent);
+
 									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_boss_1", -4270, 4884, 150, 0, 17);
 
 									// zyk: counts how many bosses defeated
@@ -14466,6 +14499,39 @@ void G_RunFrame( int levelTime ) {
 									zyk_set_entity_field(new_ent, "mins", "-24 -192 -192");
 									zyk_set_entity_field(new_ent, "maxs", "24 192 192");
 									zyk_set_entity_field(new_ent, "zykmodelscale", "300");
+
+									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+
+									zyk_spawn_entity(new_ent);
+
+									// zyk: adding catwalks to block the central lava
+									new_ent = G_Spawn();
+
+									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+									zyk_set_entity_field(new_ent, "spawnflags", "65537");
+									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -4470, 4628, -68));
+
+									zyk_set_entity_field(new_ent, "mins", "-256 -256 -16");
+									zyk_set_entity_field(new_ent, "maxs", "256 256 16");
+									zyk_set_entity_field(new_ent, "zykmodelscale", "400");
+
+									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+
+									zyk_spawn_entity(new_ent);
+
+									new_ent = G_Spawn();
+
+									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+									zyk_set_entity_field(new_ent, "spawnflags", "65537");
+									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -4470, 5140, -68));
+
+									zyk_set_entity_field(new_ent, "mins", "-256 -256 -16");
+									zyk_set_entity_field(new_ent, "maxs", "256 256 16");
+									zyk_set_entity_field(new_ent, "zykmodelscale", "400");
 
 									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
 

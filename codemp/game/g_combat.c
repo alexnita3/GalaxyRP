@@ -2405,7 +2405,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			if (Q_stricmp(self->NPC_type, "quest_mage") == 0)
 			{
 				int j = 0, mages_count = 0;
-				gentity_t *npc_ent = NULL;
 
 				for (j = MAX_CLIENTS + BODY_QUEUE_SIZE; j < level.num_entities; j++)
 				{
@@ -2429,7 +2428,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		else if (the_old_player->client->pers.universe_quest_progress == 18 && the_old_player->client->pers.universe_quest_counter & (1 << 2))
 		{ // zyk: War at the City mission, citizen or sage was defeated by the player
 			int j = 0, citizens_count = 0, key_enemies = 0;
-			gentity_t *npc_ent = NULL;
 
 			for (j = MAX_CLIENTS + BODY_QUEUE_SIZE; j < level.num_entities; j++)
 			{
@@ -5710,9 +5708,14 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	}
 
 	// zyk: these npcs will not have knockback
-	if (targ && targ->client && targ->NPC && (targ->client->pers.guardian_mode == 2 || targ->client->pers.guardian_mode == 3 || targ->client->pers.guardian_mode == 7 || 
-											  targ->client->pers.guardian_mode == 11 || targ->client->pers.guardian_mode == 21))
+	if (targ && targ->client && targ->NPC && (targ->client->pers.guardian_mode == 2 || (targ->client->pers.guardian_mode == 17 && Q_stricmp(targ->NPC_type, "guardian_boss_2") == 0) ||
+		targ->client->pers.guardian_mode == 3 || (targ->client->pers.guardian_mode == 17 && Q_stricmp(targ->NPC_type, "guardian_boss_3") == 0) ||
+		targ->client->pers.guardian_mode == 7 || (targ->client->pers.guardian_mode == 17 && Q_stricmp(targ->NPC_type, "guardian_boss_7") == 0) ||
+		targ->client->pers.guardian_mode == 11 || (targ->client->pers.guardian_mode == 17 && Q_stricmp(targ->NPC_type, "guardian_boss_8") == 0) ||
+		targ->client->pers.guardian_mode == 21))
+	{
 		knockback = 0;
+	}
 
 	// figure momentum add, even if the damage won't be taken
 	if ( knockback && targ->client ) {
