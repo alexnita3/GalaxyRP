@@ -11964,7 +11964,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 39)
 									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: So. Only one thing remains. Hero, receive this Final Power.\""));
 								else if (ent->client->pers.universe_quest_messages == 40)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: This is the ^0Multi Magic^7. It allows you to cast all your three normal magic at the same time.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: This is the ^0Magic Improvement^7. Universe Power will not increase the mp cost of magic powers.\""));
 								else if (ent->client->pers.universe_quest_messages == 41)
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 42)

@@ -4058,6 +4058,11 @@ qboolean TryGrapple(gentity_t *ent)
 					use_this_power = -1;
 				}
 
+				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 3))
+				{ // zyk: Magic Improvements. Decreases mp cost of Universe Power
+					universe_mp_cost_factor = 1.0;
+				}
+				
 				if (ent->client->pers.cmd.forwardmove < 0 && ent->client->pers.universe_quest_progress >= 14)
 				{ // zyk: Ultimate Power
 					if (zyk_enable_ultra_drain.integer == 1 && ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.magic_power >= zyk_ultra_drain_mp_cost.integer)
