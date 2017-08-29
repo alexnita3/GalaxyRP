@@ -13446,7 +13446,16 @@ void G_RunFrame( int levelTime ) {
 							}
 
 							if (ent->client->pers.universe_quest_messages == 0)
+							{
+								gentity_t *door_ent = &g_entities[109];
+
 								npc_ent = Zyk_NPC_SpawnType("sage_of_light", 2750, -115, -3806, 179);
+
+								if (door_ent && Q_stricmp(door_ent->classname, "func_static") == 0)
+								{ // zyk: removes the map last door
+									G_FreeEntity(door_ent);
+								}
+							}
 							else if (ent->client->pers.universe_quest_messages == 1)
 								npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", 2750, -39, -3806, 179);
 							else if (ent->client->pers.universe_quest_messages == 2)

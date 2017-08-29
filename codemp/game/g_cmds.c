@@ -17311,6 +17311,51 @@ void Cmd_Skip_f(gentity_t *ent) {
 
 /*
 ==================
+Cmd_QuestSkip_f
+==================
+*/
+void Cmd_QuestSkip_f(gentity_t *ent) {
+	if (ent->client->pers.can_play_quest == 1)
+	{
+		if (ent->client->pers.universe_quest_progress == 1 && ent->client->pers.universe_quest_messages > 4)
+		{
+			ent->client->pers.universe_quest_messages = 35;
+			ent->client->pers.universe_quest_timer = level.time;
+		}
+		else if (ent->client->pers.universe_quest_progress == 3 && ent->client->pers.universe_quest_messages > 0)
+		{
+			ent->client->pers.universe_quest_messages = 16;
+			ent->client->pers.universe_quest_timer = level.time;
+		}
+		else if (ent->client->pers.universe_quest_progress == 8 && ent->client->pers.universe_quest_messages > 1)
+		{
+			ent->client->pers.universe_quest_messages = 20;
+			ent->client->pers.universe_quest_timer = level.time;
+		}
+		else if (ent->client->pers.universe_quest_progress == 10 && ent->client->pers.universe_quest_messages > 1)
+		{
+			ent->client->pers.universe_quest_messages = 18;
+			ent->client->pers.universe_quest_timer = level.time;
+		}
+		else if (ent->client->pers.universe_quest_progress == 12 && ent->client->pers.universe_quest_messages > 1)
+		{
+			ent->client->pers.universe_quest_messages = 24;
+			ent->client->pers.universe_quest_timer = level.time;
+		}
+		else if (ent->client->pers.universe_quest_progress == 13 && ent->client->pers.universe_quest_messages > 1)
+		{
+			ent->client->pers.universe_quest_messages = 27;
+			ent->client->pers.universe_quest_timer = level.time;
+		}
+	}
+	else
+	{
+		trap->SendServerCommand(ent->s.number, "chat \"^3Quest System: ^7Must be in a quest to use this command\"");
+	}
+}
+
+/*
+==================
 Cmd_NoFight_f
 ==================
 */
@@ -17548,6 +17593,7 @@ command_t commands[] = {
 	{ "paralyze",			Cmd_Paralyze_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "playermode",			Cmd_PlayerMode_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "players",			Cmd_Players_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "questskip",			Cmd_QuestSkip_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "racemode",			Cmd_RaceMode_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "remap",				Cmd_Remap_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "remapdeletefile",	Cmd_RemapDeleteFile_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
