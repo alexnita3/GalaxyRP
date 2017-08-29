@@ -18027,134 +18027,142 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.guardian_timer < level.time)
 					{
-						int random_magic = Q_irand(0, 30);
+						int k = 0;
+						int use_multi_magic = Q_irand(0, 4);
+						int number_of_powers = 1;
 
-						if (random_magic == 0)
-						{
-							poison_mushrooms(ent, 100, 5000);
-						}
-						else if (random_magic == 1)
-						{
-							water_splash(ent, 5000, 15);
-						}
-						else if (random_magic == 2)
-						{
-							ultra_flame(ent, 5000, 50);
-						}
-						else if (random_magic == 3)
-						{
-							rock_fall(ent, 5000, 55);
-						}
-						else if (random_magic == 4)
-						{
-							dome_of_damage(ent, 5000, 35);
-						}
-						else if (random_magic == 5)
-						{
-							hurricane(ent, 5000, 2000);
-						}
-						else if (random_magic == 6)
-						{
-							slow_motion(ent, 5000, 15000);
-						}
-						else if (random_magic == 7)
-						{
-							sleeping_flowers(ent, 2500, 5000);
-						}
-						else if (random_magic == 8)
-						{
-							healing_water(ent, 120);
-						}
-						else if (random_magic == 9)
-						{
-							flame_burst(ent, 5000);
-						}
-						else if (random_magic == 10)
-						{
-							earthquake(ent, 2000, 300, 5000);
-						}
-						else if (random_magic == 11)
-						{
-							magic_shield(ent, 6000);
-						}
-						else if (random_magic == 12)
-						{
-							blowing_wind(ent, 5000, 2000);
-						}
-						else if (random_magic == 13)
-						{
-							ice_stalagmite(ent, 5000, 160);
-						}
-						else if (random_magic == 14)
-						{
-							ice_boulder(ent, 5000, 70);
-						}
-						else if (random_magic == 15)
-						{
-							water_attack(ent, 5000, 55);
-						}
-						else if (random_magic == 16)
-						{
-							shifting_sand(ent, 5000);
-						}
-						else if (random_magic == 17)
-						{
-							tree_of_life(ent);
-						}
-						else if (random_magic == 18)
-						{
-							magic_disable(ent, 5000);
-						}
-						else if (random_magic == 19)
-						{
-							fast_and_slow(ent, 5000, 6000);
-						}
-						else if (random_magic == 20)
-						{
-							flaming_area(ent, 30);
-						}
-						else if (random_magic == 21)
-						{
-							reverse_wind(ent, 5000, 2000);
-						}
-						else if (random_magic == 22)
-						{
-							enemy_nerf(ent, 5000);
-						}
-						else if (random_magic == 23)
-						{
-							ice_block(ent, 3500);
-						}
-						else if (random_magic == 24)
-						{
-							healing_area(ent, 2, 5000);
-						}
-						else if (random_magic == 25)
-						{
-							magic_explosion(ent, 320, 160, 900);
-						}
-						else if (random_magic == 26)
-						{
-							lightning_dome(ent, 86);
-						}
-						else if (random_magic == 27)
-						{
-							ultra_drain(ent, 450, 50, 8000);
-						}
-						else if (random_magic == 28)
-						{
-							immunity_power(ent, 20000);
-						}
-						else if (random_magic == 29)
-						{
-							chaos_power(ent, 5000, 160);
-						}
-						else if (random_magic == 30)
-						{
-							time_power(ent, 5000, 4000);
+						if (use_multi_magic == 0)
+						{ // zyk: Multi Magic
+							number_of_powers = 3;
 						}
 
-						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 12000);
+						for (k = 0; k < number_of_powers; k++)
+						{
+							int random_magic = Q_irand(0, 29);
+
+							if (random_magic == 0)
+							{
+								poison_mushrooms(ent, 100, 5000);
+							}
+							else if (random_magic == 1)
+							{
+								water_splash(ent, 5000, 15);
+							}
+							else if (random_magic == 2)
+							{
+								ultra_flame(ent, 5000, 50);
+							}
+							else if (random_magic == 3)
+							{
+								rock_fall(ent, 5000, 55);
+							}
+							else if (random_magic == 4)
+							{
+								dome_of_damage(ent, 5000, 35);
+							}
+							else if (random_magic == 5)
+							{
+								hurricane(ent, 5000, 2000);
+							}
+							else if (random_magic == 6)
+							{
+								slow_motion(ent, 5000, 15000);
+							}
+							else if (random_magic == 7)
+							{
+								sleeping_flowers(ent, 2500, 5000);
+							}
+							else if (random_magic == 8)
+							{
+								healing_water(ent, 120);
+							}
+							else if (random_magic == 9)
+							{
+								flame_burst(ent, 5000);
+							}
+							else if (random_magic == 10)
+							{
+								magic_shield(ent, 6000);
+							}
+							else if (random_magic == 11)
+							{
+								blowing_wind(ent, 5000, 2000);
+							}
+							else if (random_magic == 12)
+							{
+								ice_stalagmite(ent, 5000, 160);
+							}
+							else if (random_magic == 13)
+							{
+								ice_boulder(ent, 5000, 70);
+							}
+							else if (random_magic == 14)
+							{
+								water_attack(ent, 5000, 55);
+							}
+							else if (random_magic == 15)
+							{
+								shifting_sand(ent, 5000);
+							}
+							else if (random_magic == 16)
+							{
+								tree_of_life(ent);
+							}
+							else if (random_magic == 17)
+							{
+								magic_disable(ent, 5000);
+							}
+							else if (random_magic == 18)
+							{
+								fast_and_slow(ent, 5000, 6000);
+							}
+							else if (random_magic == 19)
+							{
+								flaming_area(ent, 30);
+							}
+							else if (random_magic == 20)
+							{
+								reverse_wind(ent, 5000, 2000);
+							}
+							else if (random_magic == 21)
+							{
+								enemy_nerf(ent, 5000);
+							}
+							else if (random_magic == 22)
+							{
+								ice_block(ent, 3500);
+							}
+							else if (random_magic == 23)
+							{
+								healing_area(ent, 2, 5000);
+							}
+							else if (random_magic == 24)
+							{
+								magic_explosion(ent, 320, 160, 900);
+							}
+							else if (random_magic == 25)
+							{
+								lightning_dome(ent, 86);
+							}
+							else if (random_magic == 26)
+							{
+								ultra_drain(ent, 450, 50, 8000);
+							}
+							else if (random_magic == 27)
+							{
+								immunity_power(ent, 20000);
+							}
+							else if (random_magic == 28)
+							{
+								chaos_power(ent, 5000, 140);
+							}
+							else if (random_magic == 29)
+							{
+								time_power(ent, 5000, 4000);
+							}
+						}
+
+						ent->client->pers.guardian_timer = level.time + Q_irand(8000, 12000);
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
@@ -18212,7 +18220,7 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: destroys tiles from the background
 						int k = 0;
 						int tile_count = 0;
-						int zyk_chosen_tile = Q_irand(0, 23 - ent->client->pers.hunter_quest_messages);
+						int zyk_chosen_tile = Q_irand(0, (23 - ent->client->pers.hunter_quest_messages));
 						vec3_t origin;
 						vec3_t yaw;
 
@@ -18225,7 +18233,7 @@ void G_RunFrame( int levelTime ) {
 							{ // zyk: do not drop the central tile
 								if (tile_count == zyk_chosen_tile)
 								{
-									gentity_t *effect_ent = zyk_quest_item("explosions/explosion1", zyk_tile_ent->s.origin[0], zyk_tile_ent->s.origin[1], -9960, "", "");
+									gentity_t *effect_ent = zyk_quest_item("explosions/hugeexplosion1", zyk_tile_ent->s.origin[0], zyk_tile_ent->s.origin[1], -9960, "", "");
 
 									if (effect_ent)
 									{
