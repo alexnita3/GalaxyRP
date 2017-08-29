@@ -9048,9 +9048,9 @@ void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 			sprintf(message_content[4],"%s^3!  ^5- Ultimate Power: ^1no\n",message_content[4]);
 
 		if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
-			sprintf(message_content[5],"%s^3r  ^4- Resurrection Power: ^2yes\n",message_content[5]);
+			sprintf(message_content[5],"%s^3r  ^4- Final Power: ^2yes\n",message_content[5]);
 		else
-			sprintf(message_content[5],"%s^3r  ^4- Resurrection Power: ^1no\n",message_content[5]);
+			sprintf(message_content[5],"%s^3r  ^4- Final Power: ^1no\n",message_content[5]);
 
 		if (ent->client->pers.rpg_class == 0 && (ent->client->pers.defeated_guardians & (1 << 11) || 
 			ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
@@ -9808,14 +9808,14 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				{
 					if (ent->client->pers.universe_quest_progress < 14)
 					{
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Ultimate Power: ^7You must finish the 14th mission of the ^2Universe Quest ^7to have this power\n\"") );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Ultimate Power: ^7You must finish the 14th mission of ^2Universe Quest ^7to have this power\n\"") );
 					}
 					else
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
 							trap->SendServerCommand( ent-g_entities, va("print \"^3Ultra Drain: ^7damages enemies in the area and recovers your hp. Attack with S + special melee to use this power\n\"") );
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							trap->SendServerCommand( ent-g_entities, va("print \"^3Immunity Power: ^7protects you from other special powers. Attack S + with special melee to use this power\n\"") );
+							trap->SendServerCommand( ent-g_entities, va("print \"^3Immunity Power: ^7protects you from other magic powers. Attack S + with special melee to use this power\n\"") );
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
 							trap->SendServerCommand( ent-g_entities, va("print \"^3Chaos Power: ^7causes high damage, electrifies the enemies and throws them in the ground. Attack with S + special melee to use this power\n\"") );
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
@@ -9824,7 +9824,21 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				}
 				else if (Q_stricmp( arg1, "r" ) == 0)
 				{
-					trap->SendServerCommand( ent-g_entities, va("print \"^4Resurrection Power: ^7Allows you to resurrect at the same spot after dying if you dont press anything. Will not work if your body is desintegrated. Finish the ^2Universe Quest ^7to have it\n\"") );
+					if (ent->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
+					{
+						trap->SendServerCommand(ent->s.number, va("print \"^3Final Power: ^7You must finish ^2Universe Quest ^7to have this power\n\""));
+					}
+					else
+					{
+						if (ent->client->pers.universe_quest_counter & (1 << 0))
+							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Regen: ^7regens 1 mp per second. Finish Universe Quest to have it\n\""));
+						else if (ent->client->pers.universe_quest_counter & (1 << 1))
+							trap->SendServerCommand(ent->s.number, va("print \"^3Resurrection Power: ^7if you die, resurrects you at the same spot after some seconds. Finish Universe Quest to have it\n\""));
+						else if (ent->client->pers.universe_quest_counter & (1 << 2))
+							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Boost: ^7decreases cooldown time of unique skill and unique abilities. Finish Universe Quest to have it\n\""));
+						else if (ent->client->pers.universe_quest_counter & (1 << 3))
+							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Improvement: ^7makes Universe Power have no additional mp cost. Finish Universe Quest to have it\n\""));
+					}
 				}
 				else if (Q_stricmp( arg1, "s" ) == 0)
 				{

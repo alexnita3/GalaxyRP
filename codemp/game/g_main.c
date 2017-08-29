@@ -12714,7 +12714,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 27)
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you, Sage of Universe.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 28)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: It will give regen of your mp by recovering 1 mp per second.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: ^3Magic Regen^7. It will regen your mp by recovering 1 mp per second.\""));
 								else if (ent->client->pers.universe_quest_messages == 29)
 									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Remember to always use your powers for good.\""));
 								else if (ent->client->pers.universe_quest_messages == 30)
@@ -14532,7 +14532,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 7)
 									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Now receive your ^2Final Power^7.\""));
 								else if (ent->client->pers.universe_quest_messages == 8)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: It will make you resurrect in the place where you die after some seconds.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: ^2Resurrection Power^7. It will resurrect you in the place where you die after some seconds.\""));
 								else if (ent->client->pers.universe_quest_messages == 9)
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you, Guardian of Universe.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 10)
