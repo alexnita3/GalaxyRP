@@ -5716,7 +5716,14 @@ void magic_disable(gentity_t *ent, int distance)
 
 			if (i < MAX_CLIENTS)
 			{ // zyk: player hit by this power
-				player_ent->client->pers.quest_power_usage_timer = level.time + duration;
+				if (player_ent->client->pers.quest_power_usage_timer < level.time)
+				{
+					player_ent->client->pers.quest_power_usage_timer = level.time + duration;
+				}
+				else
+				{ // zyk: already used a power, so increase the cooldown time
+					player_ent->client->pers.quest_power_usage_timer += duration;
+				}
 
 				display_yellow_bar(player_ent, (player_ent->client->pers.quest_power_usage_timer - level.time));
 			}
