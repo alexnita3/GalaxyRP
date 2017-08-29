@@ -612,6 +612,11 @@ int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forc
 		return 0;
 	}
 
+	if (other && other->client && other->NPC && other->client->pers.universe_quest_messages == -2000)
+	{ // zyk: special quest npcs that cannot be hit by force
+		return 0;
+	}
+
 	if (attacker && attacker->client && !BG_CanUseFPNow(level.gametype, &attacker->client->ps, level.time, forcePower))
 	{
 		return 0;

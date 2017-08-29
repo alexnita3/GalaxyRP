@@ -2128,6 +2128,7 @@ extern void try_finishing_race();
 extern void save_account(gentity_t *ent);
 extern void remove_credits(gentity_t *ent, int credits);
 extern void zyk_NPC_Kill_f( char *name );
+extern gentity_t *Zyk_NPC_SpawnType(char *npc_type, int x, int y, int z, int yaw);
 void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int meansOfDeath ) {
 	gentity_t	*ent;
 	int			anim;
@@ -2155,7 +2156,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	self->client->pers.player_statuses &= ~(1 << 20);
 
 	// zyk: resetting boss battle music to default one if needed
-	if (self->client->pers.guardian_invoked_by_id != -1)
+	if (self->client->pers.guardian_invoked_by_id != -1 && self->client->pers.guardian_mode != 15 && self->client->pers.guardian_mode != 17 && self->client->pers.guardian_mode != 18)
 	{
 		level.boss_battle_music_reset_timer = level.time + 1000;
 	}
@@ -2255,9 +2256,61 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		}
 	}
 
-	// zyk: artifact holder of Universe Quest, set the player universe_quest_artifact_holder_id to -2 so he can get the artifact when he touches the force boon item
-	if (self->client->pers.universe_quest_artifact_holder_id != -1 && self->NPC)
-	{
+	if (self->client->pers.universe_quest_messages == -10000 && self->NPC)
+	{ // zyk: Ymir or Thor defeated
+		int j = 0;
+		qboolean still_has_boss = qfalse;
+		quest_player = &g_entities[self->client->pers.universe_quest_objective_control];
+
+		if (Q_stricmp(self->NPC_type, "guardian_of_universe") == 0)
+		{ // zyk: failed mission
+			trap->SendServerCommand(quest_player->s.number, va("chat \"%s: No! Guardian of Universe... now it is all lost...\"", quest_player->client->pers.netname));
+
+			quest_get_new_player(quest_player);
+		}
+		else
+		{
+			for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
+			{
+				gentity_t *old_boss = &g_entities[j];
+
+				if (old_boss && old_boss->NPC && old_boss->health > 0 && old_boss->client && old_boss->client->pers.universe_quest_messages == -10000 && 
+					Q_stricmp(old_boss->NPC_type, "guardian_of_universe") != 0)
+				{
+					if (Q_stricmp(old_boss->NPC_type, "ymir_boss") == 0)
+					{
+						trap->SendServerCommand(quest_player->s.number, va("chat \"Ymir: My son! How dare you kill him!\""));
+					}
+					else
+					{
+						trap->SendServerCommand(quest_player->s.number, va("chat \"^1Thor: ^7Father! Hero, you will regret this!\""));
+					}
+
+					still_has_boss = qtrue;
+				}
+			}
+
+			if (still_has_boss == qfalse)
+			{
+				for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
+				{
+					gentity_t *old_npc = &g_entities[j];
+
+					if (old_npc && old_npc->NPC && old_npc->health > 0 && old_npc->client && Q_stricmp(old_npc->NPC_type, "quest_mage") == 0 && old_npc->die)
+					{ // zyk: killing the remaining mages
+						old_npc->health = 0;
+						old_npc->client->ps.stats[STAT_HEALTH] = 0;
+						old_npc->die(old_npc, old_npc, old_npc, 100, MOD_UNKNOWN);
+					}
+				}
+
+				quest_player->client->pers.universe_quest_messages = 6;
+				quest_player->client->pers.universe_quest_timer = level.time + 3000;
+			}
+		}
+	}
+	else if (self->client->pers.universe_quest_artifact_holder_id != -1 && self->NPC)
+	{ // zyk: artifact holder of Universe Quest, set the player universe_quest_artifact_holder_id to -2 so he can get the artifact when he touches the force boon item
 		if (Q_stricmp( self->NPC_type, "quest_ragnos" ) == 0) // zyk: quest_ragnos npc has a different way to get the artifact
 		{
 			gentity_t *player_ent = &g_entities[self->client->pers.universe_quest_artifact_holder_id];
@@ -2316,12 +2369,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 				the_old_player->client->pers.universe_quest_messages = 12;
 			}
 		}
-		else if ((Q_stricmp( self->NPC_type, "sage_of_light" ) == 0 || Q_stricmp( self->NPC_type, "sage_of_darkness" ) == 0 || Q_stricmp( self->NPC_type, "sage_of_eternity" ) == 0) && the_old_player->client->sess.amrpgmode == 2 && the_old_player->client->pers.universe_quest_progress == 1 && level.quest_map == 9)
-		{ // zyk: if sage dies, player fails the second objective
-			trap->SendServerCommand( the_old_player->s.number, va("chat \"%s^7: I cant believe it! Now it is all lost...\"", the_old_player->client->pers.netname));
-
-			quest_get_new_player(the_old_player);
-		}
 		else if (Q_stricmp( self->NPC_type, "sage_of_universe" ) == 0 && the_old_player->client->sess.amrpgmode == 2 && the_old_player->client->pers.universe_quest_objective_control == 5 && the_old_player->client->pers.universe_quest_progress == 4)
 		{ // zyk: Sage of Universe died in the fifth Universe Quest objective, pass turn to another player
 			trap->SendServerCommand( the_old_player->s.number, va("chat \"%s^7: It cannot be! The Sage of Universe is dead...\"", the_old_player->client->pers.netname));
@@ -2351,6 +2398,67 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 				trap->SendServerCommand( the_old_player->s.number, va("chat \"%s: ^7No! One of my allies died...\"", the_old_player->client->pers.netname));
 				the_old_player->client->pers.hunter_quest_timer = level.time + 3000;
 				the_old_player->client->pers.hunter_quest_messages = 50;
+			}
+		}
+		else if (the_old_player->client->pers.universe_quest_progress == 16 && the_old_player->client->pers.universe_quest_counter & (1 << 0))
+		{ // zyk: Save the City mission, mage was defeated by the player
+			if (Q_stricmp(self->NPC_type, "quest_mage") == 0)
+			{
+				int j = 0, mages_count = 0;
+				gentity_t *npc_ent = NULL;
+
+				for (j = MAX_CLIENTS + BODY_QUEUE_SIZE; j < level.num_entities; j++)
+				{
+					gentity_t *mage_ent = &g_entities[j];
+
+					if (mage_ent && mage_ent->NPC && mage_ent->health > 0 && Q_stricmp(mage_ent->NPC_type, "quest_mage") == 0)
+					{
+						mages_count++;
+					}
+				}
+
+				if (mages_count == 0)
+				{ // zyk: defeated all mages
+					trap->SendServerCommand(the_old_player->s.number, va("chat \"%s: ^7All mages are defeated!\"", the_old_player->client->pers.netname));
+
+					the_old_player->client->pers.universe_quest_messages = 100;
+					the_old_player->client->pers.universe_quest_timer = level.time + 3000;
+				}
+			}
+		}
+		else if (the_old_player->client->pers.universe_quest_progress == 18 && the_old_player->client->pers.universe_quest_counter & (1 << 2))
+		{ // zyk: War at the City mission, citizen or sage was defeated by the player
+			int j = 0, citizens_count = 0, key_enemies = 0;
+			gentity_t *npc_ent = NULL;
+
+			for (j = MAX_CLIENTS + BODY_QUEUE_SIZE; j < level.num_entities; j++)
+			{
+				gentity_t *mage_ent = &g_entities[j];
+
+				if (mage_ent && mage_ent->NPC && mage_ent->health > 0)
+				{
+					if (Q_stricmp(mage_ent->NPC_type, "quest_citizen_warrior") == 0)
+					{
+						citizens_count++;
+					}
+
+					if (strncmp(mage_ent->NPC_type, "sage_of", 7) == 0 || strncmp(mage_ent->NPC_type, "guardian_", 9) == 0)
+					{
+						key_enemies++;
+					}
+				}
+			}
+
+			if (citizens_count == 0 && key_enemies == 0)
+			{ // zyk: defeated all citizens
+				trap->SendServerCommand(the_old_player->s.number, va("chat \"%s: ^7The city is conquered!\"", the_old_player->client->pers.netname));
+
+				the_old_player->client->pers.universe_quest_messages = 100;
+				the_old_player->client->pers.universe_quest_timer = level.time + 3000;
+			}
+			else if (((citizens_count + key_enemies) % 5) == 0)
+			{ // zyk: killed some enemies
+				the_old_player->client->pers.hunter_quest_messages = 1;
 			}
 		}
 	}
@@ -2483,6 +2591,93 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		quest_player->client->pers.guardian_mode = 0;
 		G_Sound(self, CHAN_VOICE, G_SoundIndex("sound/chars/ragnos/misc/death3.mp3"));
 	}
+	else if (quest_player && quest_player->client->pers.guardian_mode == 15)
+	{ // zyk: defeated either Ymir or Thor
+		int j = 0;
+		qboolean still_has_boss = qfalse;
+
+		G_Sound(self, CHAN_VOICE, G_SoundIndex("sound/chars/ragnos/misc/death3.mp3"));
+
+		for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
+		{
+			gentity_t *old_boss = &g_entities[j];
+
+			if (old_boss && old_boss->NPC && old_boss->health > 0 && old_boss->client && old_boss->client->pers.guardian_mode == 15)
+			{
+				if (Q_stricmp(old_boss->NPC_type, "ymir_boss") == 0)
+				{
+					trap->SendServerCommand(quest_player->s.number, va("chat \"Ymir: My son! You will pay!\""));
+				}
+				else
+				{
+					trap->SendServerCommand(quest_player->s.number, va("chat \"^1Thor: ^7Father! Nooooo! Die hero!\""));
+				}
+
+				// zyk: wrath of the remaining boss makes him stronger
+				old_boss->spawnflags |= 131072;
+				old_boss->client->pers.quest_power_status |= (1 << 13);
+
+				still_has_boss = qtrue;
+			}
+		}
+
+		if (still_has_boss == qfalse)
+		{
+			level.boss_battle_music_reset_timer = level.time + 1000;
+
+			quest_player->client->pers.universe_quest_messages = 7;
+			quest_player->client->pers.universe_quest_timer = level.time + 5000;
+			quest_player->client->pers.guardian_mode = 0;
+		}
+	}
+	else if (quest_player && quest_player->client->pers.guardian_mode == 17)
+	{ // zyk: defeated a boss in Guardian Trials
+		quest_player->client->pers.light_quest_messages++;
+		quest_player->client->pers.hunter_quest_messages--;
+
+		if (quest_player->client->pers.light_quest_messages == 9)
+		{ // zyk: defeated all bosses
+			level.boss_battle_music_reset_timer = level.time + 1000;
+
+			quest_player->client->pers.universe_quest_messages = 11;
+			quest_player->client->pers.universe_quest_timer = level.time + 3000;
+		}
+	}
+	else if (quest_player && quest_player->client->pers.guardian_mode == 18)
+	{ // zyk: defeated a boss in The Final Challenge (Guardians Sequel)
+		quest_player->client->pers.light_quest_messages++;
+
+		if (quest_player->client->pers.light_quest_messages == 4)
+		{ // zyk: defeated all bosses
+			level.boss_battle_music_reset_timer = level.time + 1000;
+
+			quest_player->client->pers.universe_quest_messages = 6;
+			quest_player->client->pers.universe_quest_timer = level.time + 3000;
+		}
+	}
+	else if (quest_player && quest_player->client->pers.guardian_mode == 19)
+	{ // zyk: defeated Ymir
+		quest_player->client->pers.universe_quest_messages = 3;
+		quest_player->client->pers.universe_quest_timer = level.time + 2000;
+		quest_player->client->pers.guardian_mode = 0;
+		G_Sound(self, CHAN_VOICE, G_SoundIndex("sound/chars/ragnos/misc/death3.mp3"));
+	}
+	else if (quest_player && quest_player->client->pers.guardian_mode == 20)
+	{ // zyk: defeated the Guardian of Time
+		quest_player->client->pers.universe_quest_messages = 3;
+		quest_player->client->pers.universe_quest_timer = level.time + 3000;
+		quest_player->client->pers.guardian_mode = 0;
+
+		trap->SendServerCommand(quest_player->s.number, va("chat \"Guardian of Time: ^7Now...all is lost...\""));
+	}
+	else if (quest_player && quest_player->client->pers.guardian_mode == 21)
+	{ // zyk: defeated the Soul of Sorrow
+		quest_player->client->pers.universe_quest_messages = 54;
+		quest_player->client->pers.universe_quest_timer = level.time + 3000;
+		quest_player->client->pers.guardian_mode = 0;
+
+		trap->SendServerCommand(quest_player->s.number, va("chat \"^0Soul of Sorrow: ^7Well done, hero...\""));
+	}
 	
 	if (self->client->sess.amrpgmode == 2)
 	{ 
@@ -2500,13 +2695,13 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		self->client->pers.player_statuses &= ~(1 << 11);
 
 		// zyk: player has the Resurrection Power. Uses mp. Not allowed in CTF gametype
-		if (self->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && !(self->client->pers.player_settings & (1 << 7)) && 
+		if (self->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && self->client->pers.universe_quest_counter & (1 << 1) &&
 			g_gametype.integer != GT_CTF && !(self->client->ps.eFlags2 & EF2_HELD_BY_MONSTER) && 
 			self->client->pers.magic_power >= 5 && zyk_enable_resurrection_power.integer == 1)
 		{
 			self->client->pers.magic_power -= 5;
 			self->client->pers.quest_power_status |= (1 << 10);
-			self->client->pers.quest_power1_timer = level.time + 3000;
+			self->client->pers.quest_power1_timer = level.time + 2500;
 		}
 	}
 
@@ -5176,7 +5371,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	if (targ && targ->client && targ->NPC)
 	{
 		if (targ->client->pers.universe_quest_messages == -2000)
-		{ // zyk: npcs spawned in the Universe Quest last mission. They cannot be killed
+		{ // zyk: special npcs spawned in the Universe Quest that cannot be killed
 			return;
 		}
 	}
@@ -5515,7 +5710,8 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	}
 
 	// zyk: these npcs will not have knockback
-	if (targ && targ->client && targ->NPC && (targ->client->pers.guardian_mode == 2 || targ->client->pers.guardian_mode == 3 || targ->client->pers.guardian_mode == 7 || targ->client->pers.guardian_mode == 11))
+	if (targ && targ->client && targ->NPC && (targ->client->pers.guardian_mode == 2 || targ->client->pers.guardian_mode == 3 || targ->client->pers.guardian_mode == 7 || 
+											  targ->client->pers.guardian_mode == 11 || targ->client->pers.guardian_mode == 21))
 		knockback = 0;
 
 	// figure momentum add, even if the damage won't be taken

@@ -1777,7 +1777,78 @@ void TryUse( gentity_t *ent )
 	}
 	else if (ent->client->sess.amrpgmode == 2 && ent->client->pers.can_play_quest == 1)
 	{
-		if (target && target->client && target->NPC && ent->client->pers.universe_quest_progress == 13)
+		if (target && ent->client->pers.universe_quest_progress == 17 && ent->client->pers.universe_quest_counter & (1 << 3) && 
+			ent->client->pers.universe_quest_messages == 10 && Q_stricmp(target->targetname, "zyk_quest_models") == 0)
+		{ // zyk: player touched one of the crystals in Time Sequel puzzle
+			if ((ent->client->pers.hunter_quest_messages == 0 && target->count == 0) ||
+				(ent->client->pers.hunter_quest_messages == 1 && target->count == 1) ||
+				(ent->client->pers.hunter_quest_messages == 2 && target->count == 2) ||
+				(ent->client->pers.hunter_quest_messages == 3 && target->count == 3) ||
+				(ent->client->pers.hunter_quest_messages == 4 && target->count == 1) ||
+				(ent->client->pers.hunter_quest_messages == 5 && target->count == 0) ||
+				(ent->client->pers.hunter_quest_messages == 6 && target->count == 2) || 
+				(ent->client->pers.hunter_quest_messages == 7 && target->count == 4) || 
+				(ent->client->pers.hunter_quest_messages == 8 && target->count == 0) || 
+				(ent->client->pers.hunter_quest_messages == 9 && target->count == 1) || 
+				(ent->client->pers.hunter_quest_messages == 10 && target->count == 5) || 
+				(ent->client->pers.hunter_quest_messages == 11 && target->count == 0) || 
+				(ent->client->pers.hunter_quest_messages == 12 && target->count == 1) || 
+				(ent->client->pers.hunter_quest_messages == 13 && target->count == 2))
+			{ // zyk: player got it right
+				ent->client->pers.hunter_quest_messages++;
+
+				G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/interface/secret_area.mp3"));
+
+				if (ent->client->pers.hunter_quest_messages == 14)
+				{ // zyk: solved the puzzle
+					ent->client->pers.universe_quest_messages = 11;
+					ent->client->pers.universe_quest_timer = level.time + 1000;
+				}
+			}
+			else
+			{ // zyk: player missed, reset the puzzle
+				ent->client->pers.hunter_quest_messages = 0;
+
+				G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/weapons/overchargeend.wav"));
+			}
+
+			// zyk: setting use anim
+			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			ent->client->ps.forceDodgeAnim = BOTH_BUTTON_HOLD;
+			ent->client->ps.forceHandExtendTime = level.time + 500;
+
+			return;
+		}
+		else if (target && ent->client->pers.universe_quest_progress == 18 && ent->client->pers.universe_quest_counter & (1 << 3) &&
+			ent->client->pers.universe_quest_messages == 80 && Q_stricmp(target->targetname, "zyk_quest_models") == 0 && target->count > 0)
+		{ // zyk: player touched one of the crystals in another Time Sequel puzzle
+			if (level.quest_puzzle_order[ent->client->pers.hunter_quest_messages] == target->count)
+			{ // zyk: player got it right
+				ent->client->pers.hunter_quest_messages++;
+
+				G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/interface/secret_area.mp3"));
+
+				if (ent->client->pers.hunter_quest_messages == 9)
+				{ // zyk: solved the puzzle
+					ent->client->pers.universe_quest_messages = 81;
+					ent->client->pers.universe_quest_timer = level.time + 1000;
+				}
+			}
+			else
+			{ // zyk: player missed, reset the puzzle
+				ent->client->pers.hunter_quest_messages = 0;
+
+				G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/weapons/overchargeend.wav"));
+			}
+
+			// zyk: setting use anim
+			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			ent->client->ps.forceDodgeAnim = BOTH_BUTTON_HOLD;
+			ent->client->ps.forceHandExtendTime = level.time + 500;
+
+			return;
+		}
+		else if (target && target->client && target->NPC && ent->client->pers.universe_quest_progress == 13)
 		{ // zyk: player makes his choice near the end of the Universe Quest
 			if (ent->client->pers.universe_quest_messages != 28)
 				return;
@@ -1814,17 +1885,6 @@ void TryUse( gentity_t *ent )
 				return;
 			}
 		}
-		else if (target && target->client && target->NPC && Q_stricmp( target->NPC_type, "guardian_of_universe" ) == 0 && 
-				 ent->client->pers.universe_quest_progress == 8 && level.quest_map == 12 && ent->client->pers.universe_quest_messages == 8)
-		{
-			ent->client->pers.universe_quest_messages = 9;
-			return;
-		}
-		else if (target && target->client && target->NPC && target->client->pers.universe_quest_objective_control != -1 && ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_progress == 1 && ent->client->pers.universe_quest_messages == 3 && ent->client->pers.universe_quest_objective_control == 2 && level.quest_map == 9)
-		{ // zyk: Second Universe Quest objective. If touched one of the sages, set the universe_quest_messages to 4 to continue the quest
-			ent->client->pers.universe_quest_messages = 4;
-			return;
-		}
 		else if (target && target->client && target->NPC && target->client->pers.universe_quest_objective_control != -1 && ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_progress == 2 && level.quest_map == 1 && ent->client->pers.universe_quest_objective_control == 3)
 		{ // zyk: Third objective of Universe Quest
 			if (target->client->pers.universe_quest_objective_control == 0)
@@ -1855,6 +1915,57 @@ void TryUse( gentity_t *ent )
 		{ // zyk: player found the Sage of Universe
 			ent->client->pers.universe_quest_messages = 5;
 			ent->client->pers.universe_quest_timer = level.time + 500;
+			return;
+		}
+		else if (ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_progress == 18 && ent->client->pers.universe_quest_counter & (1 << 3) &&
+			ent->client->pers.universe_quest_messages > 60 && target && target->client && target->NPC && Q_stricmp(target->NPC_type, "quest_ragnos") == 0)
+		{ // zyk: talking to a soul
+			int j = target->client->pers.universe_quest_objective_control;
+
+			if (j == 0)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Happy Soul: ^7Oh! The legendary hero is finally here, I am sure you will solve this puzzle! :)\"");
+			}
+			else if (j == 1)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Motivating Soul: ^7Do not give up! The puzzle is hard, but is not impossible. It will be worthy the efforts.\"");
+			}
+			else if (j == 2)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Bored Soul: ^7Solve this puzzle so I will be allowed to leave this boring place :/\"");
+			}
+			else if (j == -200000 && ent->client->pers.universe_quest_messages == 80)
+			{
+				ent->client->pers.universe_quest_messages = 70;
+				ent->client->pers.universe_quest_timer = level.time + 3000;
+
+				trap->SendServerCommand(ent->s.number, "chat \"^3Helper Soul: ^7The puzzle will restart.\"");
+			}
+
+			return;
+		}
+		else if (ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_progress == 15 && ent->client->pers.universe_quest_counter & (1 << 2) && 
+				 ent->client->pers.universe_quest_messages < 24 && target && target->client && target->NPC && Q_stricmp(target->NPC_type, "quest_mage") == 0)
+		{ // zyk: talking to a mage
+			int j = target->client->pers.universe_quest_objective_control;
+
+			if (j == 0)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Mage: ^7Thor says you are stronger than Ymir himself!\"");
+			}
+			else if (j == 1)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Mage: ^7So you are the famous 'Hero'. You don't look so strong.\"");
+			}
+			else if (j == 2)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Mage: ^7In the Brotherhood of Mages, we always train to be stronger!\"");
+			}
+			else if (j == 3)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Mage: ^7Thor says you defeated the Guardian of Chaos! You should be our leader!\"");
+			}
+
 			return;
 		}
 		else if (target && target->client && target->NPC && Q_stricmp( target->NPC_type, "quest_jawa" ) == 0)

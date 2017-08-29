@@ -196,7 +196,7 @@ void Sentry_Fire (void)
 	G_PlayEffectID( G_EffectIndex("bryar/muzzle_flash"), muzzle, forward );
 
 	// zyk: added this condition for guardian of wind
-	if (NPCS.NPC->client->pers.guardian_mode == 7)
+	if (Q_stricmp(NPCS.NPC->NPC_type, "guardian_boss_7") == 0)
 	{
 		missile = CreateMissile( muzzle, forward, 5000, 10000, NPCS.NPC, qfalse );
 

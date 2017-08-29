@@ -509,13 +509,13 @@ void G_MissileImpact( gentity_t *ent, trace_t *trace ) {
 			this_npc = &g_entities[ent->r.ownerNum];
 
 		// zyk: Guardian of Wind can hit anyone with his blaster shots
-		if (this_npc && this_npc->client && this_npc->client->pers.guardian_mode == 7)
+		if (this_npc && this_npc->client && Q_stricmp(this_npc->NPC_type, "guardian_boss_7") == 0)
 		{
 			cannot_deflect = 1;
 		}
 
 		// zyk: Guardian of Ice can hit anyone with his bowcaster shots
-		if (this_npc && this_npc->client && this_npc->client->pers.guardian_mode == 16)
+		if (this_npc && this_npc->client && Q_stricmp(this_npc->NPC_type, "guardian_boss_10") == 0)
 		{
 			cannot_deflect = 1;
 		}

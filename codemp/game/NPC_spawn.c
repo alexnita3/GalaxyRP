@@ -4567,6 +4567,9 @@ void NPC_Spawn_f( gentity_t *ent )
 	if (Q_stricmp("quest_jawa", npc_type) == 0)
 		return;
 
+	if (Q_stricmp("quest_citizen_warrior", npc_type) == 0)
+		return;
+
 	if (Q_stricmp("quest_sand_raider_green", npc_type) == 0)
 		return;
 
@@ -4606,7 +4609,19 @@ void NPC_Spawn_f( gentity_t *ent )
 	if (Q_stricmp("guardian_of_time", npc_type) == 0)
 		return;
 
+	if (Q_stricmp("guardian_of_time_boss", npc_type) == 0)
+		return;
+
 	if (Q_stricmp("guardian_of_chaos", npc_type) == 0)
+		return;
+
+	if (Q_stricmp("soul_of_sorrow", npc_type) == 0)
+		return;
+
+	if (Q_stricmp("thor_boss", npc_type) == 0)
+		return;
+
+	if (Q_stricmp("ymir_boss", npc_type) == 0)
 		return;
 
 	if (Q_stricmp("jawa_seller", npc_type) == 0)
@@ -4766,6 +4781,11 @@ void NPC_Kill_f( void )
 				found = 1;
 			}
 
+			if (Q_stricmp(player->NPC_type, "quest_citizen_warrior") == 0)
+			{
+				found = 1;
+			}
+
 			if (Q_stricmp( player->NPC_type, "quest_protocol_imp" ) == 0)
 			{
 				found = 1;
@@ -4811,7 +4831,27 @@ void NPC_Kill_f( void )
 				found = 1;
 			}
 
+			if (Q_stricmp(player->NPC_type, "guardian_of_time_boss") == 0)
+			{
+				found = 1;
+			}
+
 			if (Q_stricmp( player->NPC_type, "guardian_of_chaos" ) == 0)
+			{
+				found = 1;
+			}
+
+			if (Q_stricmp(player->NPC_type, "soul_of_sorrow") == 0)
+			{
+				found = 1;
+			}
+
+			if (Q_stricmp(player->NPC_type, "thor_boss") == 0)
+			{
+				found = 1;
+			}
+
+			if (Q_stricmp(player->NPC_type, "ymir_boss") == 0)
 			{
 				found = 1;
 			}

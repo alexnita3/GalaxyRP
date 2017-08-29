@@ -601,7 +601,7 @@ typedef enum {
 #define NUMBER_OF_ETERNITY_QUEST_OBJECTIVES 11
 
 // zyk: number of Universe Quest objectives
-#define NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES 15
+#define NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES 22
 
 // zyk: number of RPG Mode skills
 #define NUMBER_OF_SKILLS 56
@@ -729,18 +729,16 @@ typedef struct clientPersistant_s {
 	// 2 - Dark Power
 	// 3 - Eternity Power
 	// 4 - Universe Power
-	// 5 - Resurrection skill
+	// 5 - Unused
 	// 6 - Allow Force Powers from allies
-	// 7 - Use Movers with Stun Baton - Ability to GlobalUse ET_MOVER entities with stun baton if player has the stun baton upgrade
-	// Starting Saber Style - When player doesnt have any of the flags below, saber starts Off
-	// 9 - Starting Dual Saber Style
-	// 10 - Starting Staff Style
+	// 7 - Unused
+	// 9 - Allow Screen Message
+	// 10 - Use healing force only at allied players
 	// 11 - Start With Saber
 	// 12 - Jetpack
 	// 13 - Admin Protect
 	// 14 - Boss Battle Music
 	// 15 - Difficulty
-	// 16 - Allow Screen Message
 	// 26 - Saber Starts with Single Yellow/Dual style
 	// 27 - Saber Starts with Single Red/Dual/Staff style
 	// 28 - Saber Starts with Desann/Dual/Staff style
@@ -1015,8 +1013,13 @@ typedef struct clientPersistant_s {
 	// 12 - Master of Evil
 	// 13 - Guardian of Universe
 	// 14 - Guardian of Chaos
-	// 15 - Unused
+	// 15 - Ymir and Thor
 	// 16 - Guardian of Ice
+	// 17 - Guardian Trials Bosses
+	// 18 - Guardian Trials Final Bosses
+	// 19 - Ymir
+	// 20 - Guardian of Time
+	// 21 - Soul of Sorrow
 	int guardian_mode; 
 
 	// zyk: used by the last guardians in quests for their special abilities
@@ -1610,6 +1613,9 @@ typedef struct level_locals_s {
 	// zyk: has the quest effect id of the fx_runner entity in the guardian area. Default -1.
 	// gets cleaned when the player arrives at it
 	int quest_effect_id;
+
+	// zyk: has the order of each quest item that must be used to solve a quest puzzle
+	int quest_puzzle_order[9];
 
 	// zyk: id of the portal effect entity at last universe quest mission, so players can go through the teleport
 	int chaos_portal_id;
