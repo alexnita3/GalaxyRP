@@ -13676,6 +13676,8 @@ void G_RunFrame( int levelTime ) {
 								{
 									npc_ent->client->pers.universe_quest_artifact_holder_id = ent-g_entities;
 									ent->client->pers.universe_quest_artifact_holder_id = npc_ent-g_entities;
+
+									npc_ent->client->pers.universe_quest_messages = -2000;
 								}
 							}
 							ent->client->pers.universe_quest_messages++;
