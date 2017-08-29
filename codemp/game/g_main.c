@@ -11415,44 +11415,88 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
 								else if (ent->client->pers.universe_quest_messages == 28)
+								{
 									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2336, 3425, -9950, 179);
+
+									if (npc_ent)
+									{
+										npc_ent->client->pers.universe_quest_objective_control = -200000;
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 29)
+								{
 									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: %s^7, we meet again.\"", ent->client->pers.netname));
+
+									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2073, 3140, -9950, 90);
+
+									if (npc_ent)
+									{
+										npc_ent->client->pers.universe_quest_objective_control = Q_irand(0, 2);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 30)
+								{
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Wait a second... you are that spooky voice that gave me the artifact.\"", ent->client->pers.netname));
+
+									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2600, 3600, -9950, -135);
+
+									if (npc_ent)
+									{
+										npc_ent->client->pers.universe_quest_objective_control = Q_irand(0, 2);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 31)
+								{
 									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: Yes. Now I am back to the Realm of Souls. I will help you again.\""));
+
+									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2700, 3425, -9950, 179);
+
+									if (npc_ent)
+									{
+										npc_ent->client->pers.universe_quest_objective_control = Q_irand(0, 2);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 32)
+								{
 									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: You must solve the puzzle for the Soul of Sorrow to appear.\""));
+
+									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 1900, 3800, -9950, 0);
+
+									if (npc_ent)
+									{
+										npc_ent->client->pers.universe_quest_objective_control = Q_irand(0, 2);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 33)
+								{
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: How do I solve it?\"", ent->client->pers.netname));
+
+									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2336, 4000, -9950, 179);
+
+									if (npc_ent)
+									{
+										npc_ent->client->pers.universe_quest_objective_control = Q_irand(0, 2);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 34)
+								{
 									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: Pay close attention to the puzzle and you will find the answer.\""));
+								}
 								else if (ent->client->pers.universe_quest_messages == 35)
+								{
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: That did not help much.\"", ent->client->pers.netname));
+								}
 								else if (ent->client->pers.universe_quest_messages == 36)
+								{
 									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: It is the best I can do. Now solve the puzzle, if you want to save the Universe.\""));
+								}
 								else if (ent->client->pers.universe_quest_messages == 37)
 								{
-									int j = 0;
-
-									for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
-									{
-										npc_ent = &g_entities[j];
-
-										if (npc_ent && npc_ent->client && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "quest_ragnos") == 0)
-										{
-											G_FreeEntity(npc_ent);
-										}
-									}
-
-									npc_ent = NULL;
-
-									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: Goodbye, hero.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: Talk to me if you want to restart the puzzle.\""));
 								}
 								else if (ent->client->pers.universe_quest_messages == 38)
 								{
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2236, 3355, -9960, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2236, 3365, -9960, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11461,7 +11505,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 39)
 								{
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2236, 3495, -9960, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2236, 3485, -9960, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11470,7 +11514,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 40)
 								{
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2336, 3255, -9960, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2336, 3265, -9960, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11479,7 +11523,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 41)
 								{ // zyk: yellow crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2336, 3595, -9960, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2336, 3585, -9960, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11488,7 +11532,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 42)
 								{ // zyk: yellow crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2336, 3595, -9960, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2336, 3585, -9960, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11497,7 +11541,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 43)
 								{ // zyk: cyan crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2436, 3355, -9960, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2436, 3365, -9960, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11506,7 +11550,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 44)
 								{ // zyk: cyan crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2436, 3355, -9960, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2436, 3365, -9960, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11515,7 +11559,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 45)
 								{ // zyk: purple crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2436, 3495, -9960, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2436, 3485, -9960, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11524,7 +11568,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 46)
 								{ // zyk: purple crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2436, 3495, -9960, "-16 -16 -16", "16 16 16");
+									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2436, 3485, -9960, "-16 -16 -16", "16 16 16");
 
 									if (crystal_ent)
 									{
@@ -11538,27 +11582,27 @@ void G_RunFrame( int levelTime ) {
 
 									if (chosen_quest_item == 1)
 									{
-										effect_ent = zyk_quest_item("env/btend", 2236, 3355, -9960, "", "");
+										effect_ent = zyk_quest_item("env/btend", 2236, 3365, -9960, "", "");
 									}
 									else if (chosen_quest_item == 2)
 									{
-										effect_ent = zyk_quest_item("env/btend", 2236, 3495, -9960, "", "");
+										effect_ent = zyk_quest_item("env/btend", 2236, 3485, -9960, "", "");
 									}
 									else if (chosen_quest_item == 3)
 									{
-										effect_ent = zyk_quest_item("env/btend", 2336, 3255, -9960, "", "");
+										effect_ent = zyk_quest_item("env/btend", 2336, 3265, -9960, "", "");
 									}
 									else if (chosen_quest_item == 4)
 									{
-										effect_ent = zyk_quest_item("env/btend", 2336, 3595, -9960, "", "");
+										effect_ent = zyk_quest_item("env/btend", 2336, 3585, -9960, "", "");
 									}
 									else if (chosen_quest_item == 5)
 									{
-										effect_ent = zyk_quest_item("env/btend", 2436, 3355, -9960, "", "");
+										effect_ent = zyk_quest_item("env/btend", 2436, 3365, -9960, "", "");
 									}
 									else if (chosen_quest_item == 6)
 									{
-										effect_ent = zyk_quest_item("env/btend", 2436, 3495, -9960, "", "");
+										effect_ent = zyk_quest_item("env/btend", 2436, 3485, -9960, "", "");
 									}
 
 									// zyk: setting to 0 because it will be used to solve the puzzle

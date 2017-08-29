@@ -1917,6 +1917,33 @@ void TryUse( gentity_t *ent )
 			ent->client->pers.universe_quest_timer = level.time + 500;
 			return;
 		}
+		else if (ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_progress == 18 && ent->client->pers.universe_quest_counter & (1 << 3) &&
+			ent->client->pers.universe_quest_messages > 36 && target && target->client && target->NPC && Q_stricmp(target->NPC_type, "quest_ragnos") == 0)
+		{ // zyk: talking to a soul
+			int j = target->client->pers.universe_quest_objective_control;
+
+			if (j == 0)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Happy Soul: ^7Oh! The legendary hero is finally here, I am sure you will solve this puzzle! :)\"");
+			}
+			else if (j == 1)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Motivating Soul: ^7Do not give up! The puzzle is hard, but is not impossible. It will be worthy the efforts.\"");
+			}
+			else if (j == 2)
+			{
+				trap->SendServerCommand(ent->s.number, "chat \"^3Bored Soul: ^7Solve this puzzle so I will be allowed to leave this boring place :/\"");
+			}
+			else if (j == -200000 && ent->client->pers.universe_quest_messages == 56)
+			{
+				ent->client->pers.universe_quest_messages = 46;
+				ent->client->pers.universe_quest_timer = level.time + 3000;
+
+				trap->SendServerCommand(ent->s.number, "chat \"^3Helper Soul: ^7The puzzle will restart.\"");
+			}
+
+			return;
+		}
 		else if (ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_progress == 15 && ent->client->pers.universe_quest_counter & (1 << 2) && 
 				 ent->client->pers.universe_quest_messages < 24 && target && target->client && target->NPC && Q_stricmp(target->NPC_type, "quest_mage") == 0)
 		{ // zyk: talking to a mage
