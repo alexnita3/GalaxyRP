@@ -13218,7 +13218,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 14)
 									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Defeat her so I can get the Crystal of Magic. Then your task will be done.\""));
 								else if (ent->client->pers.universe_quest_messages == 15)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: It shall be done, master. They will be destroyed.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: It shall be done, master. They will be destroyed.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 16)
 									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: The Brotherhood of Mages will finally conquer everything!\""));
 								else if (ent->client->pers.universe_quest_messages == 17)
@@ -16908,8 +16908,6 @@ void G_RunFrame( int levelTime ) {
 						else if (ent->client->pers.universe_quest_progress == 20 && ent->client->pers.can_play_quest == 1 &&
 							ent->client->pers.universe_quest_counter & (1 << 2))
 						{ // zyk: Universe Quest Thor Sequel, Guardian of Time boss battle
-							gentity_t *npc_ent = NULL;
-
 							if (ent->client->pers.universe_quest_timer < level.time)
 							{
 								vec3_t zyk_quest_point;
