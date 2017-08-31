@@ -4477,8 +4477,8 @@ qboolean TryGrapple(gentity_t *ent)
 					}
 				}
 
-				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 29))
-				{ // zyk: Reward for completing quests in Guardians Sequel. Decreases cooldown time of magic powers
+				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 1))
+				{ // zyk: Magic Boost, reward for completing quests in Guardians Sequel. Decreases cooldown time of magic powers
 					if (ent->client->pers.rpg_class == 8)
 						ent->client->pers.quest_power_usage_timer -= 500;
 					else
