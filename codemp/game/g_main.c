@@ -12616,7 +12616,7 @@ void G_RunFrame( int levelTime ) {
 
 									G_Sound(ent, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav"));
 
-									trap->SendServerCommand(-1, "chat \"^2Sage of Universe: ^7Hero, I will use Amulet of Time to restore some hp, shield and mp to you!\"");
+									trap->SendServerCommand(ent->s.number, "chat \"^2Sage of Universe: ^7Hero, I will use Amulet of Time to restore some hp, shield and mp to you!\"");
 								}
 								else if (ent->client->pers.universe_quest_messages == 7)
 								{ // zyk: Hero defeated both bosses
@@ -17542,10 +17542,7 @@ void G_RunFrame( int levelTime ) {
 
 						origin[0] = player_ent->client->ps.origin[0];
 						origin[1] = player_ent->client->ps.origin[1];
-						if (player_ent->client->ps.origin[2] > 200)
-							origin[2] = player_ent->client->ps.origin[2] - 100;
-						else
-							origin[2] = player_ent->client->ps.origin[2] + 200;
+						origin[2] = player_ent->client->ps.origin[2] + 200;
 
 						yaw[0] = 0.0f;
 						yaw[1] = -179.0f;
@@ -18287,7 +18284,7 @@ void G_RunFrame( int levelTime ) {
 							magic_disable(ent, 20000);
 						}
 
-						ent->client->pers.guardian_timer = level.time + Q_irand(4000, 8000);
+						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 10000);
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
@@ -18305,7 +18302,7 @@ void G_RunFrame( int levelTime ) {
 
 						zyk_super_beam(ent, ent->client->ps.viewangles[1]);
 
-						ent->client->pers.light_quest_timer = level.time + ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 5000;
+						ent->client->pers.light_quest_timer = level.time + ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 6000;
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 21)
@@ -18317,7 +18314,7 @@ void G_RunFrame( int levelTime ) {
 
 						origin[0] = 2336.0f;
 						origin[1] = 3425.0f;
-						origin[2] = -9950.0f;
+						origin[2] = -9800.0f;
 						yaw[0] = 0.0f;
 						yaw[1] = 179.0f;
 						yaw[2] = 0.0f;
@@ -18453,7 +18450,7 @@ void G_RunFrame( int levelTime ) {
 							}
 						}
 
-						ent->client->pers.guardian_timer = level.time + Q_irand(10000, 12000);
+						ent->client->pers.guardian_timer = level.time + Q_irand(9000, 11000);
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
@@ -18498,7 +18495,7 @@ void G_RunFrame( int levelTime ) {
 							zyk_no_attack(ent);
 						}
 
-						ent->client->pers.light_quest_timer = level.time + Q_irand(((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 3000, ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 5000);
+						ent->client->pers.light_quest_timer = level.time + Q_irand(((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 3000, ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 4000);
 					}
 
 					if (ent->client->pers.universe_quest_timer < level.time)
@@ -18542,13 +18539,13 @@ void G_RunFrame( int levelTime ) {
 						// zyk: send him back to his original catwalk
 						origin[0] = 2336.0f;
 						origin[1] = 3425.0f;
-						origin[2] = -9950.0f;
+						origin[2] = -9800.0f;
 						yaw[0] = 0.0f;
 						yaw[1] = 179.0f;
 						yaw[2] = 0.0f;
 						zyk_TeleportPlayer(ent, origin, yaw);
 
-						ent->client->pers.universe_quest_timer = level.time + Q_irand(((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 2000, ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 3000);
+						ent->client->pers.universe_quest_timer = level.time + Q_irand(((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 1000, ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 2000);
 					}
 				}
 			}

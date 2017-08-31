@@ -2264,7 +2264,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 		if (Q_stricmp(self->NPC_type, "guardian_of_universe") == 0)
 		{ // zyk: failed mission
-			trap->SendServerCommand(quest_player->s.number, va("chat \"%s: No! Guardian of Universe... now it is all lost...\"", quest_player->client->pers.netname));
+			trap->SendServerCommand(quest_player->s.number, va("chat \"%s^7: No! Guardian of Universe... now it is all lost...\"", quest_player->client->pers.netname));
 
 			quest_get_new_player(quest_player);
 		}
