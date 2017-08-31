@@ -7611,6 +7611,10 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 		{
 			universe_quest_counter_value = number_of_crystals(ent);
 		}
+		else if (ent->client->pers.universe_quest_progress > 14)
+		{
+			universe_quest_counter_value = ent->client->pers.universe_quest_counter;
+		}
 
 		strcpy(content,va("%s%d-%d-%d-%d-%d-%d-%d-",content,ent->client->pers.secrets_found,ent->client->pers.defeated_guardians,ent->client->pers.hunter_quest_progress,
 			ent->client->pers.eternity_quest_progress,ent->client->pers.universe_quest_progress,universe_quest_counter_value,quest_player_id));

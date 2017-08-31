@@ -2098,7 +2098,7 @@ static void CG_ZykMod( void )
 				trap->Cvar_Set("ui_zyk_resurrection_power","Final Power - no");
 
 			// zyk: setting the Universe Quest mission that the player must complete
-			if (universe_quest_progress < 15)
+			if (universe_quest_progress < 22)
 			{
 				if (universe_quest_progress == 0)
 				{
@@ -2238,31 +2238,277 @@ static void CG_ZykMod( void )
 		}
 		else if (j == 85)
 		{ // zyk: Universe Quest counter, has the amount of artifacts, amulets and crystals
-			int amount_of_stuff = atoi(value);
+			int universe_quest_counter = atoi(value);
 
 			if (universe_quest_progress == 2)
 			{
-				trap->Cvar_Set("ui_zyk_universe_text2",va("is with the sages at ^3yavin1b. ^7Artifacts: ^3%d", amount_of_stuff));
+				trap->Cvar_Set("ui_zyk_universe_text2",va("is with the sages at ^3yavin1b. ^7Artifacts: ^3%d", universe_quest_counter));
 			}
 			else if (universe_quest_progress == 5)
 			{
-				trap->Cvar_Set("ui_zyk_universe_text3",va("in ^3mp/siege_desert. ^7Amulets: ^3%d", amount_of_stuff));
+				trap->Cvar_Set("ui_zyk_universe_text3",va("in ^3mp/siege_desert. ^7Amulets: ^3%d", universe_quest_counter));
 			}
 			else if (universe_quest_progress == 8)
 			{
-				if (amount_of_stuff & (1 << 1))
+				if (universe_quest_counter & (1 << 1))
 					trap->Cvar_Set("ui_zyk_universe_text3", "^3Guardians/Sages at ^3mp/siege_korriban ^7- ^2yes");
 				else
 					trap->Cvar_Set("ui_zyk_universe_text3", "^3Guardians/Sages at ^3mp/siege_korriban ^7- ^1no");
 
-				if (amount_of_stuff & (1 << 2))
+				if (universe_quest_counter & (1 << 2))
 					trap->Cvar_Set("ui_zyk_universe_text4", "^3Sacred obelisk at ^3t2_trip ^7- ^2yes");
 				else
 					trap->Cvar_Set("ui_zyk_universe_text4", "^3Sacred obelisk at ^3t2_trip ^7- ^1no");
 			}
 			else if (universe_quest_progress == 9)
 			{
-				trap->Cvar_Set("ui_zyk_universe_text3",va("Crystals: ^3%d", amount_of_stuff));
+				trap->Cvar_Set("ui_zyk_universe_text3",va("Crystals: ^3%d", universe_quest_counter));
+			}
+			else if (universe_quest_progress == 15)
+			{
+				if (universe_quest_counter & (1 << 0))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^316. Sages Sequel: The Ancient Threat");
+					trap->Cvar_Set("ui_zyk_universe_text", "Sage of Universe telepathically asks you");
+					trap->Cvar_Set("ui_zyk_universe_text2", "to talk to the sages at the");
+					trap->Cvar_Set("ui_zyk_universe_text3", "sacred monument in ^3yavin2");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 1))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^316. Guardians Sequel: A Smart Move");
+					trap->Cvar_Set("ui_zyk_universe_text", "Guardian of Universe telepathically asks you");
+					trap->Cvar_Set("ui_zyk_universe_text2", "to talk to the guardians at the");
+					trap->Cvar_Set("ui_zyk_universe_text3", "central area in ^3mp/siege_korriban");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 2))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^316. Thor Sequel: The Betrayal");
+					trap->Cvar_Set("ui_zyk_universe_text", "Thor (Master of Evil) telepathically asks you");
+					trap->Cvar_Set("ui_zyk_universe_text2", "to go to ^3t3_bounty");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 3))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^316. Time Sequel: The Most Important Task");
+					trap->Cvar_Set("ui_zyk_universe_text", "Guardian of Time telepathically asks you");
+					trap->Cvar_Set("ui_zyk_universe_text2", "to go to ^3mp/siege_korriban");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+			}
+			else if (universe_quest_progress == 16)
+			{
+				if (universe_quest_counter & (1 << 0))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^317. Sages Sequel: Save the City!");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3mp/siege_desert^7 and defeat all mages");
+					trap->Cvar_Set("ui_zyk_universe_text2", "with the help from some citizens");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 1))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^317. Guardians Sequel: The Confrontation");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3t3_bounty^7 and defeat Ymir and Thor");
+					trap->Cvar_Set("ui_zyk_universe_text2", "");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 2))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^317. Thor Sequel: Survival of the Strongest");
+					trap->Cvar_Set("ui_zyk_universe_text", "Defeat Ymir in ^3t3_bounty^7 water arena");
+					trap->Cvar_Set("ui_zyk_universe_text2", "");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 3))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^317. Time Sequel: The Well of Truth");
+					trap->Cvar_Set("ui_zyk_universe_text", "'The Well of truth, surrounded by the forest and");
+					trap->Cvar_Set("ui_zyk_universe_text2", "the sacred monument...shall contain");
+					trap->Cvar_Set("ui_zyk_universe_text3", "the answers to the Universe salvation'");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+					
+			}
+			else if (universe_quest_progress == 17)
+			{
+				if (universe_quest_counter & (1 << 0))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^318. Sages Sequel: The Terrible Truth");
+					trap->Cvar_Set("ui_zyk_universe_text", "Talk to the sages inside the mayor's house");
+					trap->Cvar_Set("ui_zyk_universe_text2", "in ^3mp/siege_desert");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 1))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^318. Guardians Sequel: The Hero's Destiny");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3mp/siege_korriban^7 and talk to the");
+					trap->Cvar_Set("ui_zyk_universe_text2", "guardians in the blue crystal room");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 2))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^318. Thor Sequel: The New Leader");
+					trap->Cvar_Set("ui_zyk_universe_text", "Talk to Thor in ^3t3_bounty^7 water arena");
+					trap->Cvar_Set("ui_zyk_universe_text2", "");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 3))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^318. Time Sequel: The Legendary Puzzle");
+					trap->Cvar_Set("ui_zyk_universe_text", "'The hero shall stand in the buried deep sanctuary...");
+					trap->Cvar_Set("ui_zyk_universe_text2", "and solve the puzzle to enter the Realm of Souls'");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+			}
+			else if (universe_quest_progress == 18)
+			{
+				if (universe_quest_counter & (1 << 0))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^319. Sages Sequel: To Settle the Score");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3t3_bounty^7 and find Ymir");
+					trap->Cvar_Set("ui_zyk_universe_text2", "");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 1))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^319. Guardians Sequel: The Guardian Trials");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3mp/siege_korriban^7 and win the");
+					trap->Cvar_Set("ui_zyk_universe_text2", "Guardian Trials battle");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 2))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^319. Thor Sequel: War at the City");
+					trap->Cvar_Set("ui_zyk_universe_text", "Defeat the citizens, sages and guardians");
+					trap->Cvar_Set("ui_zyk_universe_text2", "in ^3mp/siege_desert");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 3))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^319. Time Sequel: The Realm of Souls");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go through the gate in ^3t3_rift^7 sanctuary");
+					trap->Cvar_Set("ui_zyk_universe_text2", "which leads to the Realm of Souls");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+			}
+			else if (universe_quest_progress == 19)
+			{
+				if (universe_quest_counter & (1 << 0))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^320. Sages Sequel: The Crystal of Magic");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3t3_bounty^7 and talk to the");
+					trap->Cvar_Set("ui_zyk_universe_text2", "sages and guardians where Ymir was");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 1))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^320. Guardians Sequel: The Great Moment");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3mp/siege_korriban^7 and talk to the");
+					trap->Cvar_Set("ui_zyk_universe_text2", "guardians in the blue crystal room");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 2))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^320. Thor Sequel: The Path of Evil");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to the rancor arena in ^3mp/siege_desert");
+					trap->Cvar_Set("ui_zyk_universe_text2", "");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 3))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^320. Time Sequel: The Soul of Sorrow");
+					trap->Cvar_Set("ui_zyk_universe_text", "Speak to the Soul of Sorrow in the");
+					trap->Cvar_Set("ui_zyk_universe_text2", "Realm of Souls in ^3t3_rift");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+			}
+			else if (universe_quest_progress == 20)
+			{
+				if (universe_quest_counter & (1 << 0))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^321. Sages Sequel: Wrath of the Mages");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3t3_bounty^7 and defeat");
+					trap->Cvar_Set("ui_zyk_universe_text2", "Ymir and Thor in water arena");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 1))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^321. Guardians Sequel: The Final Challenge");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3mp/siege_korriban^7 and");
+					trap->Cvar_Set("ui_zyk_universe_text2", "win the battle");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 2))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^321. Thor Sequel: Victory!");
+					trap->Cvar_Set("ui_zyk_universe_text", "Defeat the Guardian of Time in the");
+					trap->Cvar_Set("ui_zyk_universe_text2", "rancor arena in ^3mp/siege_desert");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 3))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^321. Time Sequel: The Hero's Test");
+					trap->Cvar_Set("ui_zyk_universe_text", "Defeat the Soul of Sorrow in the");
+					trap->Cvar_Set("ui_zyk_universe_text2", "Realm of Souls in ^3t3_rift");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+			}
+			else if (universe_quest_progress == 21)
+			{
+				if (universe_quest_counter & (1 << 0))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^322. Sages Sequel: A New Prosperous Age");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3t3_bounty^7 and talk to the");
+					trap->Cvar_Set("ui_zyk_universe_text2", "sages and guardians in water arena");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 1))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^322. Guardians Sequel: The Guardian of Peace");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3mp/siege_korriban^7 and talk to the");
+					trap->Cvar_Set("ui_zyk_universe_text2", "guardians in the blue crystal room");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 2))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^322. Thor Sequel: Full Power");
+					trap->Cvar_Set("ui_zyk_universe_text", "Go to the rancor arena in ^3mp/siege_desert^7 and");
+					trap->Cvar_Set("ui_zyk_universe_text2", "talk to Thor");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
+				else if (universe_quest_counter & (1 << 3))
+				{
+					trap->Cvar_Set("ui_zyk_universe_chapter", "^322. Time Sequel: Salvation of the Universe");
+					trap->Cvar_Set("ui_zyk_universe_text", "Speak to the Soul of Sorrow in the");
+					trap->Cvar_Set("ui_zyk_universe_text2", "Realm of Souls in ^3t3_rift");
+					trap->Cvar_Set("ui_zyk_universe_text3", "");
+					trap->Cvar_Set("ui_zyk_universe_text4", "");
+				}
 			}
 		}
 		else if (j == 86)
