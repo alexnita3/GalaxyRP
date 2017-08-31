@@ -14629,7 +14629,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 7)
 									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Now receive your ^2Final Power^7.\""));
 								else if (ent->client->pers.universe_quest_messages == 8)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: ^2Resurrection Power^7. It will resurrect you in the place where you die after some seconds.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: ^2Magic Boost^7. It will decrease cooldown time of your magic powers.\""));
 								else if (ent->client->pers.universe_quest_messages == 9)
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you, Guardian of Universe.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 10)
@@ -16989,7 +16989,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 7)
 									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Nothing shall stand in our way anymore.\""));
 								else if (ent->client->pers.universe_quest_messages == 8)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Now...receive this Final Power...^1Magic Boost^7!\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Now...receive this Final Power...^1Unique Boost^7!\""));
 								else if (ent->client->pers.universe_quest_messages == 9)
 									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: It will make your unique skills and unique abilities have less cooldown time!\""));
 								else if (ent->client->pers.universe_quest_messages == 10)

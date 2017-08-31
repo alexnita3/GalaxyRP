@@ -4478,11 +4478,11 @@ qboolean TryGrapple(gentity_t *ent)
 				}
 
 				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 29))
-				{ // zyk: Reward for completing quests in Challenge Mode. Decreases cooldown time of magic powers
+				{ // zyk: Reward for completing quests in Guardians Sequel. Decreases cooldown time of magic powers
 					if (ent->client->pers.rpg_class == 8)
-						ent->client->pers.quest_power_usage_timer -= 1000;
+						ent->client->pers.quest_power_usage_timer -= 500;
 					else
-						ent->client->pers.quest_power_usage_timer -= 4000;
+						ent->client->pers.quest_power_usage_timer -= 3000;
 				}
 
 				display_yellow_bar(ent,(ent->client->pers.quest_power_usage_timer - level.time));
@@ -9833,9 +9833,9 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
 							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Regen: ^7regens 1 mp per second. Finish Universe Quest to have it\n\""));
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Resurrection Power: ^7if you die, resurrects you at the same spot after some seconds. Finish Universe Quest to have it\n\""));
+							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Boost: ^7Decreases cooldown time of magic powers. Finish Universe Quest to have it\n\""));
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Boost: ^7decreases cooldown time of unique skill and unique abilities. Finish Universe Quest to have it\n\""));
+							trap->SendServerCommand(ent->s.number, va("print \"^3Unique Boost: ^7decreases cooldown time of unique skill and unique abilities. Finish Universe Quest to have it\n\""));
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
 							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Improvement: ^7makes Universe Power have no additional mp cost. Finish Universe Quest to have it\n\""));
 					}

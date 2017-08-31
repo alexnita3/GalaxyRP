@@ -2692,8 +2692,8 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		self->client->pers.player_statuses &= ~(1 << 10);
 		self->client->pers.player_statuses &= ~(1 << 11);
 
-		// zyk: player has the Resurrection Power. Uses mp. Not allowed in CTF gametype
-		if (self->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && self->client->pers.universe_quest_counter & (1 << 1) &&
+		// zyk: player has the Resurrection Power, after completing quests in Challenge Mode. Uses mp. Not allowed in CTF gametype
+		if (self->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && self->client->pers.universe_quest_counter & (1 << 29) &&
 			g_gametype.integer != GT_CTF && !(self->client->ps.eFlags2 & EF2_HELD_BY_MONSTER) && 
 			self->client->pers.magic_power >= 5 && zyk_enable_resurrection_power.integer == 1)
 		{
