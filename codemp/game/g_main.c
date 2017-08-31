@@ -11216,6 +11216,11 @@ void G_RunFrame( int levelTime ) {
 
 								zyk_TeleportPlayer(ent, origin, angles);
 							}
+
+							if ((ent->client->pers.can_play_quest == 0 || ent->client->pers.universe_quest_messages > 50) && (int)ent->client->ps.origin[2] < -11000)
+							{ // zyk: player cannot leave the arena
+								G_Kill(ent);
+							}
 						}
 
 						if (ent->client->pers.universe_quest_progress == 17 && ent->client->pers.can_play_quest == 1 &&
@@ -11380,11 +11385,6 @@ void G_RunFrame( int levelTime ) {
 								vec3_t zyk_quest_point;
 
 								VectorSet(zyk_quest_point, 2336, 3425, -10000);
-
-								if (ent->client->pers.universe_quest_messages > 50 && Distance(ent->client->ps.origin, zyk_quest_point) > 2500)
-								{ // zyk: player cannot leave the arena
-									G_Kill(ent);
-								}
 
 								if (ent->client->pers.universe_quest_messages == 50 && Distance(ent->client->ps.origin, zyk_quest_point) < 500)
 								{
@@ -11684,11 +11684,6 @@ void G_RunFrame( int levelTime ) {
 
 								VectorSet(zyk_quest_point, 2336, 3425, -10000);
 
-								if (ent->client->pers.universe_quest_messages > 50 && Distance(ent->client->ps.origin, zyk_quest_point) > 2500)
-								{ // zyk: player cannot leave the arena
-									G_Kill(ent);
-								}
-
 								if (ent->client->pers.universe_quest_messages == 50 && Distance(ent->client->ps.origin, zyk_quest_point) < 500)
 								{
 									ent->client->pers.universe_quest_messages++;
@@ -11802,11 +11797,6 @@ void G_RunFrame( int levelTime ) {
 
 								VectorSet(zyk_quest_point, 2336, 3425, -10000);
 
-								if (ent->client->pers.universe_quest_messages > 50 && Distance(ent->client->ps.origin, zyk_quest_point) > 2500)
-								{ // zyk: player cannot leave the arena
-									G_Kill(ent);
-								}
-
 								if (ent->client->pers.universe_quest_messages == 50 && Distance(ent->client->ps.origin, zyk_quest_point) < 500)
 								{
 									ent->client->pers.universe_quest_messages++;
@@ -11888,11 +11878,6 @@ void G_RunFrame( int levelTime ) {
 								vec3_t zyk_quest_point;
 
 								VectorSet(zyk_quest_point, 2336, 3425, -10000);
-
-								if (ent->client->pers.universe_quest_messages > 50 && Distance(ent->client->ps.origin, zyk_quest_point) > 2500)
-								{ // zyk: player cannot leave the arena
-									G_Kill(ent);
-								}
 
 								if (ent->client->pers.universe_quest_messages == 50 && Distance(ent->client->ps.origin, zyk_quest_point) < 500)
 								{

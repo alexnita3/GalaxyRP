@@ -2699,7 +2699,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		{
 			self->client->pers.magic_power -= 5;
 			self->client->pers.quest_power_status |= (1 << 10);
-			self->client->pers.quest_power1_timer = level.time + 2500;
+			self->client->pers.quest_power1_timer = level.time + 3000;
 		}
 	}
 
