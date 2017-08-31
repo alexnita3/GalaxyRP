@@ -6378,7 +6378,7 @@ qboolean magic_master_has_this_power(gentity_t *ent, int selected_power)
 	{ // zyk: if, for some reason, there is an invalid selected power value, does not allow it
 		return qfalse;
 	}
-	else if (ent->client->sess.magic_master_disabled_powers & (1 << selected_power))
+	else if (ent->client->sess.magic_disabled_powers & (1 << selected_power))
 	{ // zyk: this power was disabled by the player
 		return qfalse;
 	}
@@ -6522,7 +6522,7 @@ int zyk_number_of_enabled_magic_powers(gentity_t *ent)
 
 	for (i = MAGIC_MAGIC_SENSE; i < MAX_MAGIC_POWERS; i++)
 	{
-		if (!(ent->client->sess.magic_master_disabled_powers & (1 << i)) && magic_master_has_this_power(ent, i) == qtrue)
+		if (!(ent->client->sess.magic_disabled_powers & (1 << i)) && magic_master_has_this_power(ent, i) == qtrue)
 		{
 			number_of_enabled_powers++;
 		}

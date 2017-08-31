@@ -4053,17 +4053,18 @@ qboolean TryGrapple(gentity_t *ent)
 					}
 				}
 
-				if (ent->client->sess.magic_master_disabled_powers & (1 << use_this_power))
+				if (ent->client->sess.magic_disabled_powers & (1 << use_this_power))
 				{ // zyk: if the magic power is not enabled or player does not have it, do not use it
 					use_this_power = -1;
 				}
 
-				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 3))
-				{ // zyk: Magic Improvements. Decreases mp cost of Universe Power
+				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 3) && 
+					!(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
+				{ // zyk: Magic Improvement. Decreases mp cost of Universe Power
 					universe_mp_cost_factor = 1.0;
 				}
 				
-				if (ent->client->pers.cmd.forwardmove < 0 && ent->client->pers.universe_quest_progress >= 14)
+				if (ent->client->pers.cmd.forwardmove < 0 && ent->client->pers.universe_quest_progress >= 14 && !(ent->client->sess.magic_more_disabled_powers & (1 << 0)))
 				{ // zyk: Ultimate Power
 					if (zyk_enable_ultra_drain.integer == 1 && ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.magic_power >= zyk_ultra_drain_mp_cost.integer)
 					{ // zyk: Ultra Drain
@@ -4477,7 +4478,8 @@ qboolean TryGrapple(gentity_t *ent)
 					}
 				}
 
-				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 1))
+				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 1) && 
+					!(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
 				{ // zyk: Magic Boost, reward for completing quests in Guardians Sequel. Decreases cooldown time of magic powers
 					if (ent->client->pers.rpg_class == 8)
 						ent->client->pers.quest_power_usage_timer -= 500;
@@ -4871,7 +4873,11 @@ void load_account(gentity_t *ent)
 
 		// zyk: loading disabled magic powers
 		fscanf(account_file, "%s", content);
-		ent->client->sess.magic_master_disabled_powers = atoi(content);
+		ent->client->sess.magic_disabled_powers = atoi(content);
+
+		// zyk: loading more disabled magic powers
+		fscanf(account_file, "%s", content);
+		ent->client->sess.magic_more_disabled_powers = atoi(content);
 		
 		if (ent->client->sess.amrpgmode == 1)
 		{
@@ -4922,7 +4928,7 @@ void save_account(gentity_t *ent)
 
 			client = ent->client;
 			account_file = fopen(va("accounts/%s.txt",ent->client->sess.filename),"w");
-			fprintf(account_file,"%s\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
+			fprintf(account_file,"%s\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
 			client->pers.password,client->sess.amrpgmode,client->pers.player_settings,client->pers.bitvalue,client->pers.level_up_score,client->pers.level,client->pers.skillpoints,client->pers.skill_levels[0],client->pers.skill_levels[1],client->pers.skill_levels[2]
 			,client->pers.skill_levels[3],client->pers.skill_levels[4],client->pers.skill_levels[5],client->pers.skill_levels[6],client->pers.skill_levels[7],client->pers.skill_levels[8]
 			,client->pers.skill_levels[9],client->pers.skill_levels[10],client->pers.skill_levels[11],client->pers.skill_levels[12],client->pers.skill_levels[13],client->pers.skill_levels[14]
@@ -4932,7 +4938,7 @@ void save_account(gentity_t *ent)
 			,client->pers.skill_levels[42],client->pers.skill_levels[43],client->pers.skill_levels[44],client->pers.skill_levels[45],client->pers.skill_levels[46],client->pers.skill_levels[47],client->pers.skill_levels[48],client->pers.skill_levels[49]
 			,client->pers.skill_levels[50],client->pers.skill_levels[51],client->pers.skill_levels[52],client->pers.skill_levels[53],client->pers.skill_levels[54],client->pers.skill_levels[55],client->pers.defeated_guardians,client->pers.hunter_quest_progress
 			,client->pers.eternity_quest_progress,client->pers.secrets_found,client->pers.universe_quest_progress,client->pers.universe_quest_counter,client->pers.credits,client->pers.rpg_class
-			,client->sess.magic_master_disabled_powers);
+			,client->sess.magic_disabled_powers,client->sess.magic_more_disabled_powers);
 			fclose(account_file);
 		}
 	}
@@ -5688,7 +5694,8 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 	ent->client->pers.universe_quest_counter = 0;
 	ent->client->pers.credits = 100;
 	ent->client->pers.rpg_class = 0;
-	ent->client->sess.magic_master_disabled_powers = 0;
+	ent->client->sess.magic_disabled_powers = 0;
+	ent->client->sess.magic_more_disabled_powers = 0;
 
 	save_account(ent);
 
@@ -11106,7 +11113,8 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
 		ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
 		ent->client->sess.magic_fist_selection = 0;
-		ent->client->sess.magic_master_disabled_powers = 0;
+		ent->client->sess.magic_disabled_powers = 0;
+		ent->client->sess.magic_more_disabled_powers = 0;
 
 		save_account(ent);
 
@@ -11159,7 +11167,8 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
 		ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
 		ent->client->sess.magic_fist_selection = 0;
-		ent->client->sess.magic_master_disabled_powers = 0;
+		ent->client->sess.magic_disabled_powers = 0;
+		ent->client->sess.magic_more_disabled_powers = 0;
 
 		save_account(ent);
 
@@ -15488,12 +15497,11 @@ qboolean zyk_can_use_unique(gentity_t *ent)
 	return qtrue;
 }
 
-// zyk: Magic Boost, makes unique skill cooldown time lower
-void zyk_magic_boost(gentity_t *ent)
+// zyk: Unique Boost, makes unique skill cooldown time lower
+void zyk_unique_boost(gentity_t *ent)
 {
-	// zyk: Magic Boost, makes unique skill cooldown time lower
 	if (ent->client->pers.unique_skill_timer > level.time && ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES &&
-		ent->client->pers.universe_quest_counter & (1 << 2))
+		ent->client->pers.universe_quest_counter & (1 << 2) && !(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
 	{
 		ent->client->pers.unique_skill_timer -= ((ent->client->pers.unique_skill_timer - level.time) / 5);
 	}
@@ -15820,7 +15828,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 			}
 
-			zyk_magic_boost(ent);
+			zyk_unique_boost(ent);
 		}
 		else
 		{
@@ -16128,7 +16136,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 			}
 
-			zyk_magic_boost(ent);
+			zyk_unique_boost(ent);
 		}
 		else
 		{
@@ -16515,7 +16523,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 			}
 
-			zyk_magic_boost(ent);
+			zyk_unique_boost(ent);
 		}
 		else
 		{
@@ -16539,23 +16547,25 @@ void Cmd_Magic_f( gentity_t *ent ) {
 
 	if (trap->Argc() == 1)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"\n 0 - Magic Sense - %s^7\n 1 - ^4Healing Water - %s^7      2 - ^4Water Splash - %s^7      3 - ^4Water Attack - %s^7\n 4 - ^3Earthquake - %s^7         5 - ^3Rockfall - %s^7          6 - ^3Shifting Sand - %s^7\n 7 - ^2Sleeping Flowers - %s^7   8 - ^2Poison Mushrooms - %s^7  9 - ^2Tree of Life - %s^7\n10 - ^5Magic Shield - %s^7      11 - ^5Dome of Damage - %s^7   12 - ^5Magic Disable - %s^7\n13 - ^6Ultra Speed - %s^7       14 - ^6Slow Motion - %s^7      15 - ^6Fast and Slow - %s^7\n16 - ^1Flame Burst - %s^7       17 - ^1Ultra Flame - %s^7      18 - ^1Flaming Area - %s^7\n19 - Blowing Wind - %s^7      20 - Hurricane - %s^7        21 - Reverse Wind - %s^7\n22 - ^3Ultra Resistance - %s^7  23 - ^3Ultra Strength - %s^7   24 - ^3Enemy Weakening - %s^7\n25 - ^5Ice Stalagmite - %s^7    26 - ^5Ice Boulder - %s^7      27 - ^5Ice Block - %s^7\n28 - Healing Area - %s^7      29 - Magic Explosion - %s^7  30 - Lightning Dome - %s^7\n\"", 
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_SENSE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_HEALING_WATER)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_WATER_SPLASH)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_WATER_ATTACK)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_EARTHQUAKE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ROCKFALL)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SHIFTING_SAND)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SLEEPING_FLOWERS)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_POISON_MUSHROOMS)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_TREE_OF_LIFE)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_SHIELD)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_DOME_OF_DAMAGE)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_DISABLE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_SPEED)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_SLOW_MOTION)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_FAST_AND_SLOW)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_FLAME_BURST)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_FLAME)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_FLAMING_AREA)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_BLOWING_WIND)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_HURRICANE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_REVERSE_WIND)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_RESISTANCE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ULTRA_STRENGTH)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ENEMY_WEAKENING)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ICE_STALAGMITE)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ICE_BOULDER)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_ICE_BLOCK)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_HEALING_AREA)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_MAGIC_EXPLOSION)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_master_disabled_powers & (1 << MAGIC_LIGHTNING_DOME)) ? "^2yes" : "^1no ") );
+		trap->SendServerCommand( ent->s.number, va("print \" 0 Magic Sense - %s^7      31 Ultimate - %s^7        32 Final - %s^7\n 1 ^4Healing Water - %s^7     2 ^4Water Splash - %s^7     3 ^4Water Attack - %s^7\n 4 ^3Earthquake - %s^7        5 ^3Rockfall - %s^7         6 ^3Shifting Sand - %s^7\n 7 ^2Sleeping Flowers - %s^7  8 ^2Poison Mushrooms - %s^7 9 ^2Tree of Life - %s^7\n10 ^5Magic Shield - %s^7     11 ^5Dome of Damage - %s^7  12 ^5Magic Disable - %s^7\n13 ^6Ultra Speed - %s^7      14 ^6Slow Motion - %s^7     15 ^6Fast and Slow - %s^7\n16 ^1Flame Burst - %s^7      17 ^1Ultra Flame - %s^7     18 ^1Flaming Area - %s^7\n19 Blowing Wind - %s^7     20 Hurricane - %s^7       21 Reverse Wind - %s^7\n22 ^3Ultra Resistance - %s^7 23 ^3Ultra Strength - %s^7  24 ^3Enemy Weakening - %s^7\n25 ^5Ice Stalagmite - %s^7   26 ^5Ice Boulder - %s^7     27 ^5Ice Block - %s^7\n28 Healing Area - %s^7     29 Magic Explosion - %s^7 30 Lightning Dome - %s^7\n\"", 
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_MAGIC_SENSE)) ? "^2yes" : "^1no ", 
+			!(ent->client->sess.magic_more_disabled_powers & (1 << 0)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_more_disabled_powers & (1 << 1)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_HEALING_WATER)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_WATER_SPLASH)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_WATER_ATTACK)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_EARTHQUAKE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ROCKFALL)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_SHIFTING_SAND)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_SLEEPING_FLOWERS)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_POISON_MUSHROOMS)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_TREE_OF_LIFE)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_MAGIC_SHIELD)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_DOME_OF_DAMAGE)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_MAGIC_DISABLE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ULTRA_SPEED)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_SLOW_MOTION)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_FAST_AND_SLOW)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_FLAME_BURST)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ULTRA_FLAME)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_FLAMING_AREA)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_BLOWING_WIND)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_HURRICANE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_REVERSE_WIND)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ULTRA_RESISTANCE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ULTRA_STRENGTH)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ENEMY_WEAKENING)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ICE_STALAGMITE)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ICE_BOULDER)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ICE_BLOCK)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_HEALING_AREA)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_MAGIC_EXPLOSION)) ? "^2yes" : "^1no ",
+			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_LIGHTNING_DOME)) ? "^2yes" : "^1no ") );
 	}
 	else
 	{
@@ -16565,23 +16575,40 @@ void Cmd_Magic_f( gentity_t *ent ) {
 
 		magic_power = atoi(arg1);
 
-		if (magic_power < MAGIC_MAGIC_SENSE || magic_power >= MAX_MAGIC_POWERS)
+		if (magic_power < MAGIC_MAGIC_SENSE || magic_power >= (MAX_MAGIC_POWERS + 2))
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"Invalid magic power.\n\"" );
+			trap->SendServerCommand(ent->s.number, "print \"Invalid magic power.\n\"" );
 			return;
 		}
 
-		if (ent->client->sess.magic_master_disabled_powers & (1 << magic_power))
+		if (magic_power >= 31)
 		{
-			ent->client->sess.magic_master_disabled_powers &= ~(1 << magic_power);
+			magic_power -= 31;
+
+			if (ent->client->sess.magic_more_disabled_powers & (1 << magic_power))
+			{
+				ent->client->sess.magic_more_disabled_powers &= ~(1 << magic_power);
+				save_account(ent);
+				trap->SendServerCommand(ent->s.number, "print \"Enabled a magic power.\n\"");
+			}
+			else
+			{
+				ent->client->sess.magic_more_disabled_powers |= (1 << magic_power);
+				save_account(ent);
+				trap->SendServerCommand(ent->s.number, "print \"Disabled a magic power.\n\"");
+			}
+		}
+		else if (ent->client->sess.magic_disabled_powers & (1 << magic_power))
+		{
+			ent->client->sess.magic_disabled_powers &= ~(1 << magic_power);
 			save_account(ent);
-			trap->SendServerCommand( ent-g_entities, "print \"Enabled a magic power.\n\"" );
+			trap->SendServerCommand(ent->s.number, "print \"Enabled a magic power.\n\"" );
 		}
 		else
 		{
-			ent->client->sess.magic_master_disabled_powers |= (1 << magic_power);
+			ent->client->sess.magic_disabled_powers |= (1 << magic_power);
 			save_account(ent);
-			trap->SendServerCommand( ent-g_entities, "print \"Disabled a magic power.\n\"" );
+			trap->SendServerCommand(ent->s.number, "print \"Disabled a magic power.\n\"" );
 		}
 	}
 }
