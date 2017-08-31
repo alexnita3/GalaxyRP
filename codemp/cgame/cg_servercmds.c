@@ -1731,7 +1731,7 @@ static void CG_ZykMod( void )
 			else if (Q_stricmp(rpg_class, "Magic Master") == 0)
 			{
 				if ((skill_number > 0 && skill_number < 5) || (skill_number > 5 && skill_number < 19) || (skill_number > 19 && skill_number < 30) || 
-					skill_number == 34 || (skill_number > 35 && skill_number < 39) || (skill_number > 39 && skill_number < 48) || 
+					skill_number == 34 || (skill_number > 36 && skill_number < 39) || (skill_number > 39 && skill_number < 48) || 
 					(skill_number > 48 && skill_number < 56))
 					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), "");
 				else
@@ -2092,10 +2092,10 @@ static void CG_ZykMod( void )
 			else
 				trap->Cvar_Set("ui_zyk_ultimate_power","Ultimate Power - no");
 
-			if (universe_quest_progress == 15)
-				trap->Cvar_Set("ui_zyk_resurrection_power","Resurrection Power - yes");
+			if (universe_quest_progress == 22)
+				trap->Cvar_Set("ui_zyk_resurrection_power","Final Power - yes");
 			else
-				trap->Cvar_Set("ui_zyk_resurrection_power","Resurrection Power - no");
+				trap->Cvar_Set("ui_zyk_resurrection_power","Final Power - no");
 
 			// zyk: setting the Universe Quest mission that the player must complete
 			if (universe_quest_progress < 15)
