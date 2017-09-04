@@ -11118,6 +11118,12 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 
 		save_account(ent);
 
+#if defined(__linux__)
+		system(va("rm -f configs/%s_freewarrior.txt configs/%s_forceuser.txt configs/%s_bountyhunter.txt configs/%s_armoredsoldier.txt configs/%s_monk.txt configs/%s_stealthattacker.txt configs/%s_duelist.txt configs/%s_forcegunner.txt configs/%s_magicmaster.txt configs/%s_forcetank.txt", ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename));
+#else
+		system(va("DEL /F \"configs\\%s_freewarrior.txt\" \"configs\\%s_forceuser.txt\" \"configs\\%s_bountyhunter.txt\" \"configs\\%s_armoredsoldier.txt\" \"configs\\%s_monk.txt\" \"configs\\%s_stealthattacker.txt\" \"configs\\%s_duelist.txt\" \"configs\\%s_forcegunner.txt\" \"configs\\%s_magicmaster.txt\" \"configs\\%s_forcetank.txt\"", ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename));
+#endif
+
 		zyk_save_magic_master_config(ent);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Your entire account is reset.\n\"" );
@@ -11171,6 +11177,12 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		ent->client->sess.magic_more_disabled_powers = 0;
 
 		save_account(ent);
+
+#if defined(__linux__)
+		system(va("rm -f configs/%s_freewarrior.txt configs/%s_forceuser.txt configs/%s_bountyhunter.txt configs/%s_armoredsoldier.txt configs/%s_monk.txt configs/%s_stealthattacker.txt configs/%s_duelist.txt configs/%s_forcegunner.txt configs/%s_magicmaster.txt configs/%s_forcetank.txt", ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename));
+#else
+		system(va("DEL /F \"configs\\%s_freewarrior.txt\" \"configs\\%s_forceuser.txt\" \"configs\\%s_bountyhunter.txt\" \"configs\\%s_armoredsoldier.txt\" \"configs\\%s_monk.txt\" \"configs\\%s_stealthattacker.txt\" \"configs\\%s_duelist.txt\" \"configs\\%s_forcegunner.txt\" \"configs\\%s_magicmaster.txt\" \"configs\\%s_forcetank.txt\"", ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename));
+#endif
 
 		zyk_save_magic_master_config(ent);
 
