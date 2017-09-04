@@ -6688,6 +6688,7 @@ G_RadiusDamage
 ============
 */
 extern qboolean npcs_on_same_team(gentity_t *attacker, gentity_t *target);
+extern qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *target);
 qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, float radius,
 					 gentity_t *ignore, gentity_t *missile, int mod) {
 	float		points, dist;
@@ -6924,7 +6925,7 @@ qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, floa
 						}
 						else if (Q_stricmp(attacker->targetname, "zyk_effect_scream") == 0)
 						{ // zyk: it will also not knockback by Force Scream ability
-							if (ent->client && Q_irand(0, 3) == 0 && zyk_is_ally(quest_power_user, ent) == qfalse)
+							if (ent->client && Q_irand(0, 3) == 0 && zyk_unique_ability_can_hit_target(quest_power_user, ent) == qtrue)
 							{ // zyk: it has a chance of setting a stun anim on the target
 								ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 								ent->client->ps.forceDodgeAnim = BOTH_SONICPAIN_END;

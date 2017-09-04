@@ -4613,7 +4613,7 @@ qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *targe
 					Q_stricmp(target->NPC_type, "quest_reborn_boss") || Q_stricmp(target->NPC_type, "quest_mage"))
 				)
 				))
-		{ // zyk: target cannot be attacker ally and cannot be using Immunity Power. Also, non-quest players cannot hit quest players and his allies or bosses and vice-versa
+		{ // zyk: target cannot be attacker ally. Also, non-quest players cannot hit quest players and his allies or bosses and vice-versa
 			return qtrue;
 		}
 	}
