@@ -17373,6 +17373,11 @@ void Cmd_QuestSkip_f(gentity_t *ent) {
 			ent->client->pers.universe_quest_messages = 16;
 			ent->client->pers.universe_quest_timer = level.time;
 		}
+		else if (ent->client->pers.universe_quest_progress == 5 && number_of_amulets(ent) == 3 && ent->client->pers.universe_quest_messages > 205)
+		{
+			ent->client->pers.universe_quest_messages = 223;
+			ent->client->pers.universe_quest_timer = level.time;
+		}
 		else if (ent->client->pers.universe_quest_progress == 8 && ent->client->pers.universe_quest_messages > 1)
 		{
 			ent->client->pers.universe_quest_messages = 20;
