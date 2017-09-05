@@ -2395,7 +2395,7 @@ void ClientThink_real( gentity_t *ent ) {
 				{
 					Jetpack_Off(ent);
 				}
-				client->ps.pm_type = PM_FREEZE;
+
 				if ( client->ps.saberHolstered < 2 )
 				{
 					Cmd_ToggleSaber_f(ent);
@@ -2404,7 +2404,6 @@ void ClientThink_real( gentity_t *ent ) {
 			else if (client->pers.quest_power_status & (1 << 2) && client->pers.quest_target2_timer <= level.time)
 			{ // zyk: Time Power is over
 				client->pers.quest_power_status &= ~(1 << 2);
-				client->ps.pm_type = PM_NORMAL;
 			}
 
 			if (client->pers.player_statuses & (1 << 6))

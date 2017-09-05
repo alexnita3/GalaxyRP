@@ -4107,12 +4107,12 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (zyk_enable_time_power.integer == 1 && ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.magic_power >= zyk_time_power_mp_cost.integer)
 					{ // zyk: uses Time Power
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
-						time_power(ent,400,4000);
+						time_power(ent,400,3500);
 						ent->client->pers.magic_power -= zyk_time_power_mp_cost.integer;
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (23000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (24000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 23000;
+							ent->client->pers.quest_power_usage_timer = level.time + 24000;
 
 						trap->SendServerCommand( ent->s.number, va("chat \"%s^7: ^7Time Power!\"", ent->client->pers.netname));
 					}

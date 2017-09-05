@@ -11219,6 +11219,13 @@ void PmoveSingle (pmove_t *pmove) {
 		return;		// no movement at all
 	}
 
+#if defined( _GAME )
+	if (player_ent && player_ent->client && player_ent->client->pers.quest_power_status & (1 << 2))
+	{ // zyk: hit by Time Power
+		return;
+	}
+#endif
+
 	if ( pm->ps->pm_type == PM_INTERMISSION || pm->ps->pm_type == PM_SPINTERMISSION) {
 		return;		// no movement at all
 	}

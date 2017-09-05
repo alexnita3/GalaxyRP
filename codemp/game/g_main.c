@@ -5594,6 +5594,13 @@ void time_power(gentity_t *ent, int distance, int duration)
 			player_ent->client->pers.quest_power_status |= (1 << 2);
 			player_ent->client->pers.quest_target2_timer = level.time + duration;
 
+			if (player_ent->NPC)
+			{ // zyk: npc or boss must also not be able to use magic
+				player_ent->client->pers.light_quest_timer += duration;
+				player_ent->client->pers.guardian_timer += duration;
+				player_ent->client->pers.universe_quest_timer += duration;
+			}
+
 			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_time", "0", "misc/genrings", 0, 0, 0, duration);
 
 			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/electric_beam_lp.wav"));
@@ -17769,7 +17776,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 27)
 						{
-							time_power(ent,1600,4000);
+							time_power(ent,1600, 3500);
 							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Time Power!\"");
 							ent->client->pers.hunter_quest_messages++;
 						}
@@ -18042,7 +18049,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 3)
 						{
-							time_power(ent, 400, 4000);
+							time_power(ent, 400, 3500);
 						}
 						else if (random_magic == 4)
 						{
@@ -18263,7 +18270,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 2)
 						{
-							time_power(ent, 20000, 4000);
+							time_power(ent, 20000, 3500);
 						}
 						else if (random_magic == 3)
 						{
@@ -18423,7 +18430,7 @@ void G_RunFrame( int levelTime ) {
 							}
 							else if (random_magic == 20)
 							{
-								time_power(ent, 5000, 4000);
+								time_power(ent, 5000, 3500);
 							}
 							else if (random_magic == 21)
 							{
@@ -18789,7 +18796,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (random_magic == 3)
 					{
-						time_power(ent, 400, 4000);
+						time_power(ent, 400, 3500);
 					}
 					else if (random_magic == 4)
 					{
