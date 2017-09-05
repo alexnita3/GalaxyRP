@@ -4385,7 +4385,7 @@ int zyk_number_of_allies(gentity_t *ent, qboolean in_rpg_mode)
 	{
 		gentity_t *allied_player = &g_entities[i];
 
-		if (zyk_is_ally(ent,allied_player) == qtrue && (in_rpg_mode == qfalse || allied_player->client->sess.amrpgmode == 2))
+		if (zyk_is_ally(ent,allied_player) == qtrue && (in_rpg_mode == qfalse || (allied_player->client->sess.amrpgmode == 2 && allied_player->client->sess.sessionTeam != TEAM_SPECTATOR)))
 			number_of_allies++;
 	}
 
