@@ -17776,7 +17776,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 27)
 						{
-							time_power(ent,1600, 3500);
+							time_power(ent,1600, 3000);
 							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Time Power!\"");
 							ent->client->pers.hunter_quest_messages++;
 						}
@@ -18049,7 +18049,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 3)
 						{
-							time_power(ent, 400, 3500);
+							time_power(ent, 400, 3000);
 						}
 						else if (random_magic == 4)
 						{
@@ -18270,7 +18270,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 2)
 						{
-							time_power(ent, 20000, 3500);
+							time_power(ent, 20000, 3000);
 						}
 						else if (random_magic == 3)
 						{
@@ -18430,7 +18430,7 @@ void G_RunFrame( int levelTime ) {
 							}
 							else if (random_magic == 20)
 							{
-								time_power(ent, 5000, 3500);
+								time_power(ent, 5000, 3000);
 							}
 							else if (random_magic == 21)
 							{
@@ -18796,7 +18796,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (random_magic == 3)
 					{
-						time_power(ent, 400, 3500);
+						time_power(ent, 400, 3000);
 					}
 					else if (random_magic == 4)
 					{
