@@ -903,6 +903,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			{ // zyk: remove the map change entity
 				G_FreeEntity( ent );
 			}
+			if (i == 232 || i == 233)
+			{ // zyk: fixing the final door
+				ent->targetname = NULL;
+				zyk_spawn_entity(ent);
+			}
 		}
 
 		zyk_create_info_player_deathmatch(-1908,562,992,-90);
