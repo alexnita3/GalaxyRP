@@ -4164,7 +4164,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 			
 				for (i = 0; i < number_of_shots; i++)
 				{
-					int fist_damage = (int)ceil(zyk_magic_fist_damage.integer * (1.4 + (ent->client->pers.level * 1.0)/ 200.0));
+					int fist_damage = (int)ceil(zyk_magic_fist_damage.integer * (1.4 + ((ent->client->pers.level * 1.0)/ 200.0)));
 
 					if (number_of_shots > 1)
 					{ // zyk: Spread Bolts code to make them spread
@@ -4436,7 +4436,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 			{ // zyk: Ultra Bolt
 				gentity_t	*missile;
 				vec3_t origin, dir, zyk_forward;
-				int fist_damage = (int)ceil(zyk_magic_fist_damage.integer * (1.3 + (ent->client->pers.level * 1.0) / 200.0));
+				int fist_damage = (int)ceil(zyk_magic_fist_damage.integer * (1.3 + ((ent->client->pers.level * 1.0) / 200.0)));
 
 				if (ent->client->ps.pm_flags & PMF_DUCKED) // zyk: crouched
 					VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 12);

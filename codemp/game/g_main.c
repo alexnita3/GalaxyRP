@@ -4935,6 +4935,9 @@ void lightning_dome(gentity_t *ent, int damage)
 	missile->think = zyk_lightning_dome_detonate;
 	missile->nextthink = level.time;
 
+	// zyk: damage is level based
+	damage = (int)ceil(damage * (0.5 + ((ent->client->pers.level * 1.0) / 200.0)));
+
 	// zyk: Magic Master Unique Skill increases damage
 	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time &&
 		!(ent->client->pers.player_statuses & (1 << 21)) && !(ent->client->pers.player_statuses & (1 << 22)) && 
