@@ -4090,14 +4090,14 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 
 				if (ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 4) && 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && ent->client->pers.player_statuses & (1 << 21))
-				{ // zyk: Magic Master Unique Upgrade 1 increases number of electric bolt shots
+				{ // zyk: Magic Master Unique Ability 1 increases number of electric bolt shots
 					number_of_shots = 3;
 				}
 
 				for (i = 0; i < number_of_shots; i++)
 				{
 					if (number_of_shots > 1)
-					{ // zyk: Spread Electric Bolts code to make them spread
+					{ // zyk: Spread Bolts code to make them spread
 						VectorSet(dir, ent->client->ps.viewangles[0] + Q_flrand(-1.0f, 1.0f) * 3.0, ent->client->ps.viewangles[1] + Q_flrand(-1.0f, 1.0f) * 3.0, 0);
 					}
 					else
@@ -4158,14 +4158,16 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 
 				if (ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 8) && 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && ent->client->pers.player_statuses & (1 << 21))
-				{ // zyk: Magic Master Unique Upgrade 1 increases number of electric bolt shots
+				{ // zyk: Magic Master Unique Ability 1 increases number of electric bolt shots
 					number_of_shots = 3;
 				}
 			
 				for (i = 0; i < number_of_shots; i++)
 				{
+					int fist_damage = (int)ceil(zyk_magic_fist_damage.integer * (1.4 + (ent->client->pers.level * 1.0)/ 200.0));
+
 					if (number_of_shots > 1)
-					{ // zyk: Spread Electric Bolts code to make them spread
+					{ // zyk: Spread Bolts code to make them spread
 						VectorSet(dir, ent->client->ps.viewangles[0] + Q_flrand(-1.0f, 1.0f) * 3.0, ent->client->ps.viewangles[1] + Q_flrand(-1.0f, 1.0f) * 3.0, 0);
 					}
 					else
@@ -4188,12 +4190,10 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 					if (ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
 						!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
 					{ // zyk: Unique Skill increases damage
-						missile->damage = zyk_magic_fist_damage.integer * 3.8;
+						fist_damage *= 2;
 					}
-					else
-					{
-						missile->damage = zyk_magic_fist_damage.integer * 1.9;
-					}
+
+					missile->damage = fist_damage;
 
 					missile->dflags = DAMAGE_DEATH_KNOCKBACK;
 					missile->methodOfDeath = MOD_MELEE;
@@ -4436,7 +4436,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 			{ // zyk: Ultra Bolt
 				gentity_t	*missile;
 				vec3_t origin, dir, zyk_forward;
-				int damage = zyk_magic_fist_damage.integer * 1.8;
+				int fist_damage = (int)ceil(zyk_magic_fist_damage.integer * (1.3 + (ent->client->pers.level * 1.0) / 200.0));
 
 				if (ent->client->ps.pm_flags & PMF_DUCKED) // zyk: crouched
 					VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 12);
@@ -4462,17 +4462,17 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				if (ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
 					!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
 				{ // zyk: Unique Skill increases damage
-					damage *= 2;
+					fist_damage *= 2;
 				}
 
-				missile->damage = damage;
+				missile->damage = fist_damage;
 
 				missile->dflags = DAMAGE_EXTRA_KNOCKBACK;
 				missile->methodOfDeath = MOD_MELEE;
 				missile->splashMethodOfDeath = MOD_MELEE;
 				missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
 
-				missile->splashDamage = damage;
+				missile->splashDamage = fist_damage;
 
 				missile->splashRadius = CONC_SPLASH_RADIUS/2;
 
