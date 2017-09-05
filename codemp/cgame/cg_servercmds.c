@@ -2214,7 +2214,7 @@ static void CG_ZykMod( void )
 						trap->Cvar_Set("ui_zyk_universe_chapter","^315. The Fate of the Universe");
 						trap->Cvar_Set("ui_zyk_universe_text","Go to the Sacred Dimension in ^3t2_trip");
 						trap->Cvar_Set("ui_zyk_universe_text2","to fight the ^1Guardian of Chaos");
-						trap->Cvar_Set("ui_zyk_universe_text3","and finish the quest");
+						trap->Cvar_Set("ui_zyk_universe_text3","");
 						trap->Cvar_Set("ui_zyk_universe_text4","");
 					}
 					else
