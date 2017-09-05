@@ -6829,6 +6829,10 @@ qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, floa
 							{
 								heal_amount *= 2;
 								shield_amount *= 2;
+
+								// zyk: restores force too
+								if (ent->client->ps.fd.forcePower < ent->client->ps.fd.forcePowerMax)
+									ent->client->ps.fd.forcePower += 1;
 							}
 
 							if ((ent->health + heal_amount) < ent->client->ps.stats[STAT_MAX_HEALTH])
