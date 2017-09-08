@@ -3463,7 +3463,8 @@ void G_SpawnItem (gentity_t *ent, gitem_t *item) {
 
 	if (item->giType == IT_WEAPON &&
 		wDisable &&
-		(wDisable & (1 << item->giTag)))
+		(wDisable & (1 << item->giTag)) && 
+		!(ent->spawnflags & 131072)) //zyk: new condition. Do not apply this rule for special quest items
 	{
 		if (level.gametype != GT_JEDIMASTER)
 		{
