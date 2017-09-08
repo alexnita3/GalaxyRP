@@ -6807,7 +6807,8 @@ qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, floa
 					// zyk: if the power user and the target are allies (player or npc), or the target is the quest power user himself, heal him
 					if (quest_power_user && quest_power_user->client && ent && ent->client && ent->health > 0 && 
 						(level.special_power_effects[attacker->s.number] == ent->s.number || OnSameTeam(quest_power_user, ent) == qtrue || 
-						npcs_on_same_team(quest_power_user, ent) == qtrue || zyk_is_ally(quest_power_user,ent) == qtrue))
+						npcs_on_same_team(quest_power_user, ent) == qtrue || zyk_is_ally(quest_power_user,ent) == qtrue) && 
+						quest_power_user->client->pers.guardian_mode == ent->client->pers.guardian_mode)
 					{
 						if (quest_power_user->client->sess.amrpgmode == 2 && quest_power_user->client->pers.rpg_class == 8 && 
 							quest_power_user->client->ps.powerups[PW_NEUTRALFLAG] > level.time && 
