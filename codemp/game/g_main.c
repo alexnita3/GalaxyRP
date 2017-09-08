@@ -11365,7 +11365,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 16)
 									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I cannot go there. The True guardian cannot enter, only if the Soul of Sorrow allows.\""));
 								else if (ent->client->pers.universe_quest_messages == 17)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Only you will be able to enter. I will not be able to help you anymore.\""));
+									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Only you will be able to enter. I cannot help you anymore.\""));
 								else if (ent->client->pers.universe_quest_messages == 18)
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: That makes things more difficult.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 19)
@@ -11761,7 +11761,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 52)
 									npc_ent = Zyk_NPC_SpawnType("soul_of_sorrow", 2336, 3425, -9950, 179);
 								else if (ent->client->pers.universe_quest_messages == 53)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: %s^7, welcome to the Realm of Sorrow.\"", ent->client->pers.netname));
+									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: %s^7, welcome to the Realm of Souls.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 54)
 									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: So you are the Soul of Sorrow...I come here to...\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 55)
@@ -14747,7 +14747,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 23)
 									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: '...shall contain the answers to the Universe salvation'\""));
 								else if (ent->client->pers.universe_quest_messages == 24)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: So I would have to find this Well of Truth.\"", ent->client->pers.netname));
+									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: So I have to find this Well of Truth.\"", ent->client->pers.netname));
 								else if (ent->client->pers.universe_quest_messages == 25)
 									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I believe in you, hero. You will find it and give another chance to this Universe.\""));
 								else if (ent->client->pers.universe_quest_messages == 26)
