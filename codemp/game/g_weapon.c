@@ -1798,8 +1798,8 @@ static void WP_FlechetteMainFire( gentity_t *ent )
 		{ //do nothing on the first shot, it will hit the crosshairs
 			if (ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[25] == 2)
 			{ // zyk: Flechette 2/2 has less spread
-				angs[PITCH] += Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD * 0.5;
-				angs[YAW]	+= Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD * 0.5;
+				angs[PITCH] += Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD * 0.7;
+				angs[YAW]	+= Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD * 0.7;
 			}
 			else
 			{
