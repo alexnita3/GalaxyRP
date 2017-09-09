@@ -10789,7 +10789,7 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (ent->client->pers.tutorial_step == 24)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 24 : ^7With Magic Master class, you can enable or disable magic powers with ^2/magic^7\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 24 : ^7You can enable or disable magic powers with ^2/magic^7\"");
 				}
 				else if (ent->client->pers.tutorial_step == 25)
 				{
@@ -10825,7 +10825,7 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (ent->client->pers.tutorial_step == 33)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 33: ^7There are four mini-games: Duel Tournament, Racing Mode, RPG LMS, Sniper Battle and Melee Battle\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 33: ^7There are five mini-games: Duel Tournament, Racing Mode, RPG LMS, Sniper Battle and Melee Battle\"");
 				}
 				else if (ent->client->pers.tutorial_step == 34)
 				{
@@ -10869,11 +10869,15 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (ent->client->pers.tutorial_step == 44)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 44: ^7Use ^2/nofight ^7as spectator. You will not receive damage from players but will also not be able to damage them^7\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 44: ^7Use ^2/nofight ^7as spectator. You will not receive damage from players but will also not be able to damage them\"");
 				}
 				else if (ent->client->pers.tutorial_step == 45)
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 45: ^7Enjoy the mod! :)\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 45: ^7You can see specific parts of the tutorial by using ^2/tutorial <number>^7\"");
+				}
+				else if (ent->client->pers.tutorial_step == 46)
+				{
+					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 46: ^7Enjoy the mod! :)\"");
 				}
 				else
 				{
@@ -10883,7 +10887,7 @@ void G_RunFrame( int levelTime ) {
 
 				// zyk: interval between messages
 				ent->client->pers.tutorial_step++;
-				ent->client->pers.tutorial_timer = level.time + 6000;
+				ent->client->pers.tutorial_timer = level.time + 7000;
 			}
 
 			if (ent->client->sess.amrpgmode == 2 && ent->client->sess.sessionTeam != TEAM_SPECTATOR)
