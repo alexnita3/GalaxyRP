@@ -4643,8 +4643,8 @@ void set_max_shield(gentity_t *ent)
 void add_credits(gentity_t *ent, int credits)
 {
 	ent->client->pers.credits += credits;
-	if (ent->client->pers.credits > MAX_RPG_CREDITS)
-		ent->client->pers.credits = MAX_RPG_CREDITS;
+	if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
+		ent->client->pers.credits = zyk_max_rpg_credits.integer;
 }
 
 // zyk: removes credits from the player
@@ -4861,9 +4861,9 @@ void load_account(gentity_t *ent)
 		ent->client->pers.credits = atoi(content);
 
 		// zyk: validating credits
-		if (ent->client->pers.credits > MAX_RPG_CREDITS)
+		if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
 		{
-			ent->client->pers.credits = MAX_RPG_CREDITS;
+			ent->client->pers.credits = zyk_max_rpg_credits.integer;
 		}
 		else if (ent->client->pers.credits < 0)
 		{
