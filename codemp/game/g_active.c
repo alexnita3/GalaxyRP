@@ -2132,6 +2132,7 @@ extern void zyk_save_magic_master_config(gentity_t *ent);
 extern void zyk_unique_boost(gentity_t *ent);
 extern void TossClientWeapon(gentity_t *self, vec3_t direction, float speed);
 extern qboolean saberKnockOutOfHand(gentity_t *saberent, gentity_t *saberOwner, vec3_t velocity);
+extern qboolean zyk_can_use_unique(gentity_t *ent);
 void ClientThink_real( gentity_t *ent ) {
 	gclient_t	*client;
 	pmove_t		pmove;
@@ -2391,15 +2392,28 @@ void ClientThink_real( gentity_t *ent ) {
 
 			if (client->pers.quest_power_status & (1 << 2) && client->pers.quest_target2_timer > level.time)
 			{ // zyk: player hit by Time Power
-				if (ent->client->jetPackOn)
+				if (client->jetPackOn)
 				{
 					Jetpack_Off(ent);
 				}
 
 				if ( client->ps.saberHolstered < 2 )
 				{
-					Cmd_ToggleSaber_f(ent);
+					client->ps.saberHolstered = 2;
+					if (client->saber[0].soundOff)
+					{
+						G_Sound(ent, CHAN_AUTO, client->saber[0].soundOff);
+					}
+					if (client->saber[1].soundOff &&
+						client->saber[1].model[0])
+					{
+						G_Sound(ent, CHAN_AUTO, client->saber[1].soundOff);
+					}
+					//prevent anything from being done for 400ms after holster
+					client->ps.weaponTime = 400;
 				}
+
+				VectorSet(client->ps.velocity, 0, 0, 3);
 			}
 			else if (client->pers.quest_power_status & (1 << 2) && client->pers.quest_target2_timer <= level.time)
 			{ // zyk: Time Power is over
@@ -3537,7 +3551,7 @@ void ClientThink_real( gentity_t *ent ) {
 					}
 				}
 
-				if (pmove.cmd.generic_cmd == GENCMD_ENGAGE_DUEL)
+				if (pmove.cmd.generic_cmd == GENCMD_ENGAGE_DUEL && zyk_can_use_unique(ent) == qtrue)
 				{ // zyk: Unique Skill, used by each RPG class
 					if (ent->client->pers.unique_skill_timer < level.time && ent->client->pers.skill_levels[38] > 0)
 					{

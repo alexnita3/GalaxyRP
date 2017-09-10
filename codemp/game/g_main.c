@@ -5604,6 +5604,10 @@ void time_power(gentity_t *ent, int distance, int duration)
 				player_ent->client->pers.universe_quest_timer += duration;
 			}
 
+			player_ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			player_ent->client->ps.forceDodgeAnim = player_ent->client->ps.torsoAnim;
+			player_ent->client->ps.forceHandExtendTime = level.time + duration;
+
 			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_time", "0", "misc/genrings", 0, 0, 0, duration);
 
 			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/electric_beam_lp.wav"));
