@@ -5927,6 +5927,7 @@ qboolean dark_quest_collected_notes(gentity_t *ent)
 
 extern void zyk_set_entity_field(gentity_t *ent, char *key, char *value);
 extern void zyk_spawn_entity(gentity_t *ent);
+extern void zyk_main_spawn_entity(gentity_t *ent);
 
 // zyk: loads the datapad md3 model for the Dark Quest notes
 void load_note_model(int x,int y,int z)
@@ -13375,7 +13376,6 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 	char key[64];
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
-	char arg3[MAX_STRING_CHARS];
 	qboolean has_origin_set = qfalse; // zyk: if player do not pass an origin key, use the one set with /entorigin
 
 	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
@@ -13384,13 +13384,13 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 		return;
 	}
 
-	if ( number_of_args < 3)
+	if ( number_of_args < 2)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"You must specify at least the entity class and spawnflags. Ex: ^3/entadd info_player_deathmatch 0^7, which spawns a spawn point in the map with spawnflags 0\n\"") );
+		trap->SendServerCommand( ent-g_entities, va("print \"You must specify at least the entity class. Ex: ^3/entadd info_player_deathmatch^7, which spawns a spawn point in the map\n\"") );
 		return;
 	}
 
-	if ( number_of_args % 2 == 0)
+	if ( number_of_args % 2 != 0)
 	{
 		trap->SendServerCommand( ent-g_entities, va("print \"You must specify an even number of arguments after the spawnflags, because they are key/value pairs\n\"") );
 		return;
@@ -13405,18 +13405,16 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 	{
 		strcpy(key,"");
 
-		zyk_set_entity_field(new_ent,"classname",G_NewString(arg1));
+		// zyk: setting the entity classname
+		level.zyk_spawn_strings[new_ent->s.number][0] = "classname";
+		level.zyk_spawn_strings[new_ent->s.number][1] = G_NewString(arg1);
 
-		trap->Argv( 2, arg2, sizeof( arg2 ) );
-
-		zyk_set_entity_field(new_ent,"spawnflags",G_NewString(arg2));
-
-		for(i = 3; i < number_of_args; i++)
+		for(i = 2; i < number_of_args; i++)
 		{
-			if (i % 2 != 0)
+			if (i % 2 == 0)
 			{ // zyk: key
-				trap->Argv( i, arg3, sizeof( arg3 ) );
-				strcpy(key, G_NewString(arg3));
+				trap->Argv( i, arg2, sizeof( arg2 ) );
+				strcpy(key, G_NewString(arg2));
 
 				if (Q_stricmp(key, "origin") == 0)
 				{ // zyk: if origin was passed
@@ -13425,23 +13423,21 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 			}
 			else
 			{ // zyk: value
-				trap->Argv( i, arg3, sizeof( arg3 ) );
+				trap->Argv( i, arg2, sizeof( arg2 ) );
 
-				if (Q_stricmp (arg1, "fx_runner") == 0 && Q_stricmp (key, "fxfile") == 0)
-				{ // zyk: setting the modelindex of the fx_runner
-					new_ent->s.modelindex = G_EffectIndex( G_NewString(arg3) );
-					new_ent->message = G_NewString(arg3); // zyk: used by Entity System to save the effect fxFile, so the effect is loaded properly by entload command
-				}
-				else
-				{
-					zyk_set_entity_field(new_ent,G_NewString(key),G_NewString(arg3));
-				}
+				level.zyk_spawn_strings[new_ent->s.number][i - 1] = G_NewString(key);
+				level.zyk_spawn_strings[new_ent->s.number][i] = G_NewString(arg2);
 			}
 		}
 
+		level.zyk_spawn_strings_values_count[new_ent->s.number] = i;
+
 		if (has_origin_set == qfalse && level.ent_origin_set == qtrue)
 		{ // zyk: if origin was not passed and the ent origin was set, use it
-			zyk_set_entity_field(new_ent, "origin", va("%f %f %f", level.ent_origin[0], level.ent_origin[1], level.ent_origin[2]));
+			level.zyk_spawn_strings[new_ent->s.number][i] = "origin";
+			level.zyk_spawn_strings[new_ent->s.number][i + 1] = G_NewString(va("%f %f %f", level.ent_origin[0], level.ent_origin[1], level.ent_origin[2]));
+
+			level.zyk_spawn_strings_values_count[new_ent->s.number] += 2;
 		}
 		else if (has_origin_set == qfalse)
 		{ // zyk: origin field was not passed, so spawn entity where player is aiming at
@@ -13464,11 +13460,14 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 
 			if (tr.fraction != 1.0)
 			{ // zyk: hit something
-				zyk_set_entity_field(new_ent, "origin", va("%f %f %f", tr.endpos[0], tr.endpos[1], tr.endpos[2]));
+				level.zyk_spawn_strings[new_ent->s.number][i] = "origin";
+				level.zyk_spawn_strings[new_ent->s.number][i + 1] = G_NewString(va("%f %f %f", tr.endpos[0], tr.endpos[1], tr.endpos[2]));
+
+				level.zyk_spawn_strings_values_count[new_ent->s.number] += 2;
 			}
 		}
 
-		zyk_spawn_entity(new_ent);
+		zyk_main_spawn_entity(new_ent);
 
 		if (new_ent->s.number != 0)
 		{
