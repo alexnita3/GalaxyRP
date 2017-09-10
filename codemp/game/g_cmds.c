@@ -13526,7 +13526,27 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 		if (entity_id < MAX_CLIENTS)
 			trap->SendServerCommand( ent-g_entities, va("print \"^2Entity %d\n^3classname: ^7%s\n^3targetname: ^7%s\n^3target: ^7%s\n^3target2: ^7%s\n^3target3: ^7%s\n^3target4: ^7%s\n^3spawnflags: ^7%d\n^3count: ^70\n^3bouncecount: ^70\n^3fly_sound_debounce_time: ^70\n^3wait: ^7%f\n^3delay: ^7%d\n^3message: ^7%s\n^3model: ^7%s\n^3model2: ^7%s\n^3origin(x y z): ^7%d %d %d\n^3angles(x y z): ^7%d %d %d\n^3mins(x y z): ^7%d %d %d\n^3maxs(x y z): ^7%d %d %d\n^3soundSet: ^7%s\n^3material: ^7%d\n^3script_targetname: ^7(null)\n^3usescript: ^7(null)\n^3radius: ^70\n^3targetShaderName: ^7(null)\n^3targetShaderNewName: ^7(null)\n^3NPC_type: ^7(null)\n\"",this_ent->s.number,this_ent->classname,this_ent->targetname,this_ent->target,this_ent->target2,this_ent->target3,this_ent->target4,this_ent->spawnflags,this_ent->wait,this_ent->delay,this_ent->message,this_ent->model,this_ent->model2,(int)this_ent->client->ps.origin[0],(int)this_ent->client->ps.origin[1],(int)this_ent->client->ps.origin[2],(int)this_ent->client->ps.viewangles[0],(int)this_ent->client->ps.viewangles[1],(int)this_ent->client->ps.viewangles[2],(int)this_ent->r.mins[0],(int)this_ent->r.mins[1],(int)this_ent->r.mins[2],(int)this_ent->r.maxs[0],(int)this_ent->r.maxs[1],(int)this_ent->r.maxs[2],this_ent->soundSet,this_ent->material) );
 		else
-			trap->SendServerCommand( ent-g_entities, va("print \"^2Entity %d\n^3classname: ^7%s\n^3targetname: ^7%s\n^3target: ^7%s\n^3target2: ^7%s\n^3target3: ^7%s\n^3target4: ^7%s\n^3spawnflags: ^7%d\n^3count: ^7%d\n^3bouncecount: ^7%d\n^3fly_sound_debounce_time: ^7%d\n^3wait: ^7%f\n^3delay: ^7%d\n^3message: ^7%s\n^3model: ^7%s\n^3model2: ^7%s\n^3origin(x y z): ^7%d %d %d\n^3angles(x y z): ^7%d %d %d\n^3mins(x y z): ^7%d %d %d\n^3maxs(x y z): ^7%d %d %d\n^3soundSet: ^7%s\n^3material: ^7%d\n^3script_targetname: ^7%s\n^3usescript: ^7%s\n^3radius: ^7%f\n^3targetShaderName: ^7%s\n^3targetShaderNewName: ^7%s\n^3NPC_type: ^7%s\n\"",this_ent->s.number,this_ent->classname,this_ent->targetname,this_ent->target,this_ent->target2,this_ent->target3,this_ent->target4,this_ent->spawnflags,this_ent->count,this_ent->bounceCount,this_ent->fly_sound_debounce_time,this_ent->wait,this_ent->delay,this_ent->message,this_ent->model,this_ent->model2,(int)this_ent->s.origin[0],(int)this_ent->s.origin[1],(int)this_ent->s.origin[2],(int)this_ent->s.angles[0],(int)this_ent->s.angles[1],(int)this_ent->s.angles[2],(int)this_ent->r.mins[0],(int)this_ent->r.mins[1],(int)this_ent->r.mins[2],(int)this_ent->r.maxs[0],(int)this_ent->r.maxs[1],(int)this_ent->r.maxs[2],this_ent->soundSet,this_ent->material,this_ent->script_targetname,this_ent->behaviorSet[BSET_USE],this_ent->radius,this_ent->targetShaderName,this_ent->targetShaderNewName,this_ent->NPC_type) );
+		{
+			char content[1024];
+
+			strcpy(content, "");
+
+			if (this_ent->inuse)
+			{ 
+				while (i < level.zyk_spawn_strings_values_count[entity_id])
+				{
+					strcpy(content, va("%s^3%s: ^7%s\n", content, level.zyk_spawn_strings[this_ent->s.number][i], level.zyk_spawn_strings[this_ent->s.number][i + 1]));
+
+					i += 2;
+				}
+
+				trap->SendServerCommand(ent - g_entities, va("print \"Entity %d\n%s\"", entity_id, content));
+			}
+			else
+			{
+				trap->SendServerCommand(ent - g_entities, va("print \"Entity %d is not in use\n\"", entity_id));
+			}
+		}
 	}
 	else
 	{
@@ -13542,26 +13562,41 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 		{
 			if (i % 2 == 0)
 			{ // zyk: key
-				trap->Argv( i, arg2, sizeof( arg2 ) );
+				trap->Argv(i, arg2, sizeof(arg2));
 				strcpy(key, G_NewString(arg2));
 			}
 			else
 			{ // zyk: value
-				trap->Argv( i, arg2, sizeof( arg2 ) );
+				int j = 0;
+				qboolean found_key = qfalse;
 
-				if (Q_stricmp (this_ent->classname, "fx_runner") == 0 && Q_stricmp (key, "fxfile") == 0)
-				{ // zyk: setting the modelindex of the fx_runner
-					this_ent->s.modelindex = G_EffectIndex( G_NewString(arg2) );
-					this_ent->message = G_NewString(arg2); // zyk: used by Entity System to save the effect fxFile, so the effect is loaded properly by entload command
-				}
-				else
+				trap->Argv(i, arg2, sizeof(arg2));
+
+				// zyk: the key may be an existing one. If it is, update it. If not, add it to the spawn string array
+				while (j < level.zyk_spawn_strings_values_count[this_ent->s.number])
 				{
-					zyk_set_entity_field(this_ent,G_NewString(key),G_NewString(arg2));
+					if (Q_stricmp(level.zyk_spawn_strings[this_ent->s.number][j], G_NewString(key)) == 0)
+					{ // zyk: found it, update the existing key to the new value
+						level.zyk_spawn_strings[this_ent->s.number][j + 1] = G_NewString(arg2);
+						found_key = qtrue;
+						break;
+					}
+
+					j += 2;
+				}
+
+				if (found_key == qfalse)
+				{ // zyk: add a new key to the spawn string array
+					level.zyk_spawn_strings[this_ent->s.number][j] = G_NewString(key);
+					level.zyk_spawn_strings[this_ent->s.number][j + 1] = G_NewString(arg2);
+
+					// zyk: updating the spawn string count
+					level.zyk_spawn_strings_values_count[this_ent->s.number] += 2;
 				}
 			}
 		}
 
-		zyk_spawn_entity(this_ent);
+		zyk_main_spawn_entity(this_ent);
 
 		trap->SendServerCommand( ent-g_entities, va("print \"Entity %d edited\n\"", this_ent->s.number) );
 	}
