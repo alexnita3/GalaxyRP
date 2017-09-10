@@ -1077,6 +1077,89 @@ void zyk_spawn_entity(gentity_t *ent) {
 	}
 }
 
+// zyk: function to spawn entities used by entity system
+void zyk_main_spawn_entity(gentity_t *ent) {
+	int			i = 0;
+	int j = 0;
+	char		*s, *value, *gametypeName;
+	static char *gametypeNames[] = { "ffa", "holocron", "jedimaster", "duel", "powerduel", "single", "team", "siege", "ctf", "cty" };
+
+	while (j < level.zyk_spawn_strings_values_count[ent->s.number]) 
+	{
+		G_ParseField(level.zyk_spawn_strings[ent->s.number][j], level.zyk_spawn_strings[ent->s.number][j + 1], ent);
+		level.spawnVars[i][0] = G_NewString(level.zyk_spawn_strings[ent->s.number][j]);
+		level.spawnVars[i][1] = G_NewString(level.zyk_spawn_strings[ent->s.number][j + 1]);
+
+		i++;
+		j += 2;
+	}
+
+	level.numSpawnVars = level.zyk_spawn_strings_values_count[ent->s.number] / 2;
+
+	// check for "notsingle" flag
+	if (level.gametype == GT_SINGLE_PLAYER) {
+		G_SpawnInt("notsingle", "0", &i);
+		if (i) {
+			ADJUST_AREAPORTAL();
+			G_FreeEntity(ent);
+			return;
+		}
+	}
+	// check for "notteam" flag (GT_FFA, GT_DUEL, GT_SINGLE_PLAYER)
+	if (level.gametype >= GT_TEAM) {
+		G_SpawnInt("notteam", "0", &i);
+		if (i) {
+			ADJUST_AREAPORTAL();
+			G_FreeEntity(ent);
+			return;
+		}
+	}
+	else {
+		G_SpawnInt("notfree", "0", &i);
+		if (i) {
+			ADJUST_AREAPORTAL();
+			G_FreeEntity(ent);
+			return;
+		}
+	}
+
+	if (G_SpawnString("gametype", NULL, &value)) {
+		if (level.gametype >= GT_FFA && level.gametype < GT_MAX_GAME_TYPE) {
+			gametypeName = gametypeNames[level.gametype];
+
+			s = strstr(value, gametypeName);
+			if (!s) {
+				ADJUST_AREAPORTAL();
+				G_FreeEntity(ent);
+				return;
+			}
+		}
+	}
+
+	// move editor origin to pos
+	VectorCopy(ent->s.origin, ent->s.pos.trBase);
+	VectorCopy(ent->s.origin, ent->r.currentOrigin);
+
+	// if we didn't get a classname, don't bother spawning anything
+	if (!G_CallSpawn(ent)) {
+		G_FreeEntity(ent);
+	}
+
+	//Tag on the ICARUS scripting information only to valid recipients
+	if (trap->ICARUS_ValidEnt((sharedEntity_t *)ent))
+	{
+		trap->ICARUS_InitEnt((sharedEntity_t *)ent);
+
+		if (ent->classname && ent->classname[0])
+		{
+			if (Q_strncmp("NPC_", ent->classname, 4) != 0)
+			{//Not an NPC_spawner (rww - probably don't even care for MP, but whatever)
+				G_ActivateBehavior(ent, BSET_SPAWN);
+			}
+		}
+	}
+}
+
 /*
 ====================
 G_AddSpawnVarToken
