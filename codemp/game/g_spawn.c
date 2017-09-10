@@ -1052,6 +1052,9 @@ void zyk_set_entity_field(gentity_t *ent, char *key, char *value) {
 
 // zyk: spawns the entity
 void zyk_spawn_entity(gentity_t *ent) {
+	// zyk: setting these to 0 so manual entities spawned by this function (used in quests, fo example) are not bugged by the spawnvars used by the last effect spawned through new entity system
+	level.zyk_spawn_strings_values_count[ent->s.number] = 0;
+	level.numSpawnVars = 0;
 
 	// move editor origin to pos
 	VectorCopy( ent->s.origin, ent->s.pos.trBase );
