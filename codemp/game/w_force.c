@@ -5544,7 +5544,7 @@ void sense_health_info(gentity_t *self, gentity_t *target)
 
 	strcpy(player_type, "Normal Player"); // zyk: by default, consider the target as player that is not logged in his account
 
-	client_health = target->client->ps.stats[STAT_HEALTH];
+	client_health = target->health;
 	client_armor = target->client->ps.stats[STAT_ARMOR];
 	client_max_armor = target->client->ps.stats[STAT_MAX_HEALTH];
 
