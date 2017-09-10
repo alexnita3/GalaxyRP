@@ -703,6 +703,9 @@ void G_InitGentity( gentity_t *e ) {
 	e->r.ownerNum = ENTITYNUM_NONE;
 	e->s.modelGhoul2 = 0; //assume not
 
+	// zyk: setting default count
+	level.zyk_spawn_strings_values_count[e->s.number] = 0;
+
 	trap->ICARUS_FreeEnt( (sharedEntity_t *)e );	//ICARUS information must be added after this point
 }
 
@@ -954,6 +957,8 @@ void G_FreeEntity( gentity_t *ed ) {
 	{
 		level.chaos_portal_id = -1;
 	}
+
+	level.zyk_spawn_strings_values_count[ed->s.number] = 0;
 
 	trap->UnlinkEntity ((sharedEntity_t *)ed);		// unlink from world
 

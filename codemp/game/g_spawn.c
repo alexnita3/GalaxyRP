@@ -947,6 +947,7 @@ level.spawnVars[], then call the class specfic spawn function
 */
 void G_SpawnGEntityFromSpawnVars( qboolean inSubBSP ) {
 	int			i;
+	int j = 0; // zyk: counter to use in the zyk_spawn_strings array
 	gentity_t	*ent;
 	char		*s, *value, *gametypeName;
 	static char *gametypeNames[] = {"ffa", "holocron", "jedimaster", "duel", "powerduel", "single", "team", "siege", "ctf", "cty"};
@@ -955,8 +956,15 @@ void G_SpawnGEntityFromSpawnVars( qboolean inSubBSP ) {
 	ent = G_Spawn();
 
 	for ( i = 0 ; i < level.numSpawnVars ; i++ ) {
+		// zyk: saving the spawnstring in the spawn string array, so it can be used by entity system
+		level.zyk_spawn_strings[ent->s.number][j] = G_NewString(level.spawnVars[i][0]);
+		level.zyk_spawn_strings[ent->s.number][j + 1] = G_NewString(level.spawnVars[i][1]);
+		j += 2;
+
 		G_ParseField( level.spawnVars[i][0], level.spawnVars[i][1], ent );
 	}
+
+	level.zyk_spawn_strings_values_count[ent->s.number] = j;
 
 	// check for "notsingle" flag
 	if ( level.gametype == GT_SINGLE_PLAYER ) {

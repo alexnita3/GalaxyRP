@@ -13577,19 +13577,20 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 	int number_of_args = trap->Argc();
 	char arg1[MAX_STRING_CHARS];
 	int i = 0;
+	int j = 0;
 	char serverinfo[MAX_INFO_STRING] = {0};
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
 	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
 	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+		trap->SendServerCommand( ent->s.number, "print \"You don't have this admin command.\n\"" );
 		return;
 	}
 
 	if ( number_of_args < 2)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"You must specify a file name.\n\"") );
+		trap->SendServerCommand( ent->s.number, va("print \"You must specify a file name.\n\"") );
 		return;
 	}
 
@@ -13613,348 +13614,27 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 	{
 		gentity_t *this_ent = &g_entities[i];
 
-		if (this_ent)
-		{
-			if (strncmp(this_ent->classname, "info_player", 11) == 0 || Q_stricmp(this_ent->classname, "info_notnull") == 0 || 
-				Q_stricmp(this_ent->classname, "info_null") == 0 || Q_stricmp(this_ent->classname, "func_group") == 0 || 
-				strncmp(this_ent->classname, "team_", 5) == 0)
+		if (this_ent && this_ent->inuse)
+		{ // zyk: freed entities will not be saved
+			j = 0;
+
+			while (j < level.zyk_spawn_strings_values_count[this_ent->s.number])
 			{
-				fprintf(this_file,"%s\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n",
-					this_ent->classname,this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],
-					this_ent->s.angles[1],this_ent->s.angles[2],this_ent->spawnflags,this_ent->targetname,this_ent->target);
+				fprintf(this_file, "%s;%s;", level.zyk_spawn_strings[this_ent->s.number][j], level.zyk_spawn_strings[this_ent->s.number][j + 1]);
+
+				j += 2;
 			}
-			else if (Q_stricmp(this_ent->classname, "target_position") == 0)
-			{
-				fprintf(this_file,"target_position\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%s\n",(int)this_ent->s.origin[0],(int)this_ent->s.origin[1],
-					(int)this_ent->s.origin[2],(int)this_ent->s.angles[0],(int)this_ent->s.angles[1],(int)this_ent->s.angles[2],this_ent->spawnflags,
-					this_ent->targetname);
-			}
-			else if (Q_stricmp(this_ent->classname, "target_push") == 0)
-			{
-				fprintf(this_file,"target_push\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n",(int)this_ent->s.origin[0],(int)this_ent->s.origin[1],
-					(int)this_ent->s.origin[2],(int)this_ent->s.angles[0],(int)this_ent->s.angles[1],(int)this_ent->s.angles[2],this_ent->spawnflags,
-					this_ent->speed,this_ent->r.mins[0],this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],
-					this_ent->r.maxs[2],this_ent->targetname,this_ent->target);
-			}
-			else if (Q_stricmp(this_ent->classname, "trigger_push") == 0)
-			{
-				fprintf(this_file,"trigger_push\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n",(int)this_ent->s.origin[0],(int)this_ent->s.origin[1],
-					(int)this_ent->s.origin[2],(int)this_ent->s.angles[0],(int)this_ent->s.angles[1],(int)this_ent->s.angles[2],this_ent->spawnflags,
-					this_ent->speed,this_ent->r.mins[0],this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],
-					this_ent->r.maxs[2],this_ent->wait,this_ent->targetname,this_ent->target);
-			}
-			else if (Q_stricmp(this_ent->classname, "misc_bsp") == 0)
-			{
-				fprintf(this_file,"misc_bsp\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n",this_ent->s.origin[0],this_ent->s.origin[1],
-					this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],this_ent->spawnflags,
-					this_ent->message);
-			}
-			else if (Q_stricmp(this_ent->classname, "target_print") == 0)
-			{
-				fprintf(this_file,"target_print\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],
-					this_ent->s.angles[2],this_ent->spawnflags,this_ent->targetname,this_ent->message);
-			}
-			else if (Q_stricmp(this_ent->classname, "target_speaker") == 0)
-			{
-				fprintf(this_file,"target_speaker\n%d\n%d\n%d\n%d\n%s\n%s\n",(int)this_ent->s.origin[0],(int)this_ent->s.origin[1],
-					(int)this_ent->s.origin[2],this_ent->spawnflags,this_ent->targetname,this_ent->message);
-			}
-			else if (Q_stricmp(this_ent->classname, "target_play_music") == 0)
-			{
-				fprintf(this_file,"target_play_music\n%f\n%f\n%f\n%d\n%s\n%s\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->spawnflags,
-					this_ent->targetname,this_ent->message);
-			}
-			else if (Q_stricmp(this_ent->classname, "target_random") == 0)
-			{
-				fprintf(this_file,"target_random\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->spawnflags,
-					this_ent->targetname,this_ent->target,this_ent->target2);
-			}
-			else if (Q_stricmp(this_ent->classname, "target_relay") == 0)
-			{
-				fprintf(this_file,"target_relay\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%f\n%s\n%s\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->spawnflags,
-					this_ent->targetname,this_ent->target,this_ent->target2,this_ent->wait,this_ent->targetShaderName,this_ent->targetShaderNewName);
-			}
-			else if (Q_stricmp(this_ent->classname, "target_counter") == 0)
-			{
-				fprintf(this_file,"target_counter\n%d\n%s\n%s\n%s\n%d\n%d\n",
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->target2,this_ent->count,this_ent->bounceCount);
-			}
-			else if (Q_stricmp(this_ent->classname, "target_delay") == 0)
-			{
-				fprintf(this_file,"target_delay\n%d\n%s\n%s\n%s\n%f\n%f\n%s\n%s\n",
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->target2,this_ent->wait,this_ent->random,
-					this_ent->targetShaderName,this_ent->targetShaderNewName);
-			}
-			else if (Q_stricmp(this_ent->classname, "target_kill") == 0)
-			{
-				fprintf(this_file,"target_kill\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],
-					this_ent->s.angles[2],this_ent->spawnflags,this_ent->targetname);
-			}
-			else if (Q_stricmp(this_ent->classname, "light") == 0)
-			{
-				fprintf(this_file,"%s\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%d\n%d\n%d\n",
-					this_ent->classname,this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],
-					this_ent->s.angles[1],this_ent->s.angles[2],this_ent->spawnflags,this_ent->targetname,this_ent->count,
-					this_ent->bounceCount,this_ent->fly_sound_debounce_time);
-			}
-			else if (Q_stricmp(this_ent->classname, "trigger_hurt") == 0)
-			{
-				fprintf(this_file,"%s\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%d\n",
-					this_ent->classname,this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],
-					this_ent->s.angles[2],this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->r.mins[0],this_ent->r.mins[1],
-					this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],this_ent->wait,this_ent->model,
-					this_ent->damage);
-			}
-			else if (Q_stricmp(this_ent->classname, "trigger_multiple") == 0)
-			{
-				fprintf(this_file,"%s\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%f\n%d\n%d\n%s\n",
-					this_ent->classname,this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],
-					this_ent->s.angles[2],this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->target2,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],this_ent->wait,this_ent->model,
-					this_ent->speed,this_ent->delay,this_ent->genericValue7,this_ent->message);
-			}
-			else if (Q_stricmp(this_ent->classname, "trigger_teleport") == 0 || Q_stricmp(this_ent->classname, "trigger_once") == 0)
-			{
-				fprintf(this_file,"%s\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n",this_ent->classname,this_ent->s.origin[0],
-					this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],
-					this_ent->s.angles[2],this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->r.mins[0],this_ent->r.mins[1],
-					this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],this_ent->wait,this_ent->model);
-			}
-			else if (Q_stricmp(this_ent->classname, "trigger_always") == 0)
-			{
-				fprintf(this_file,"trigger_always\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%s\n%s\n%d\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->spawnflags,
-					this_ent->targetname,this_ent->target,this_ent->target2,
-					this_ent->targetShaderName,this_ent->targetShaderNewName,this_ent->count);
-			}
-			else if (Q_stricmp(this_ent->classname, "misc_model_breakable") == 0)
-			{
-				fprintf(this_file,"misc_model_breakable\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%s\n%d\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],
-					this_ent->s.angles[2],this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->r.mins[0],this_ent->r.mins[1],
-					this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],this_ent->model,
-					this_ent->script_targetname,this_ent->behaviorSet[BSET_USE],this_ent->s.iModelScale);
-			}
-			else if (Q_stricmp(this_ent->classname, "emplaced_gun") == 0)
-			{
-				fprintf(this_file,"emplaced_gun\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%s\n",(int)this_ent->s.origin[0],(int)this_ent->s.origin[1],
-					(int)this_ent->s.origin[2],(int)this_ent->s.angles[0],(int)this_ent->s.angles[1],(int)this_ent->s.angles[2],this_ent->spawnflags,
-					this_ent->targetname);
-			}
-			else if (Q_stricmp(this_ent->classname, "misc_turret") == 0 || Q_stricmp(this_ent->classname, "misc_turretG2") == 0)
-			{
-				fprintf(this_file,"%s\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%s\n%d\n%d\n%d\n%d\n%d\n%d\n",this_ent->classname,(int)this_ent->s.origin[0],(int)this_ent->s.origin[1],
-					(int)this_ent->s.origin[2],(int)this_ent->s.angles[0],(int)this_ent->s.angles[1],(int)this_ent->s.angles[2],this_ent->spawnflags,
-					this_ent->targetname,(int)this_ent->mass,this_ent->damage,this_ent->health,(int)this_ent->radius,this_ent->count,(int)this_ent->wait);
-			}
-			else if (Q_stricmp(this_ent->classname, "misc_ammo_floor_unit") == 0 || Q_stricmp(this_ent->classname, "misc_shield_floor_unit") == 0 || 
-					 Q_stricmp(this_ent->classname, "misc_model_health_power_converter") == 0 || 
-					 Q_stricmp(this_ent->classname, "misc_model_shield_power_converter") == 0)
-			{
-				fprintf(this_file,"%s\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%s\n%d\n",this_ent->classname,(int)this_ent->s.origin[0],(int)this_ent->s.origin[1],
-					(int)this_ent->s.origin[2],(int)this_ent->s.angles[0],(int)this_ent->s.angles[1],(int)this_ent->s.angles[2],this_ent->spawnflags,
-					this_ent->targetname,this_ent->count);
-			}
-			else if (Q_stricmp(this_ent->classname, "fx_runner") == 0)
-			{
-				fprintf(this_file,"fx_runner\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%s\n%s\n%s\n%s\n%d\n%d\n",(int)this_ent->s.origin[0],(int)this_ent->s.origin[1],
-					(int)this_ent->s.origin[2],(int)this_ent->s.angles[0],(int)this_ent->s.angles[1],(int)this_ent->s.angles[2],this_ent->spawnflags,
-					this_ent->targetname,this_ent->target,this_ent->message,this_ent->soundSet,this_ent->splashDamage,this_ent->splashRadius);
-			}
-			else if (Q_stricmp(this_ent->classname, "NPC_goal") != 0 && 
-					(strncmp(this_ent->classname, "NPC_", 4) == 0 || strncmp(this_ent->classname, "npc_", 4) == 0))
-			{ // zyk: do not save NPC_goal, the npc spawn already create it
-				fprintf(this_file,"%s\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%s\n%s\n%s\n%d\n%d\n%f\n%d\n",this_ent->classname,(int)this_ent->s.origin[0],(int)this_ent->s.origin[1],
-					(int)this_ent->s.origin[2],(int)this_ent->s.angles[0],(int)this_ent->s.angles[1],(int)this_ent->s.angles[2],this_ent->spawnflags,
-					this_ent->targetname,this_ent->target,this_ent->NPC_type,this_ent->count,this_ent->delay,this_ent->wait,this_ent->health);
-			}
-			else if ((strncmp(this_ent->classname, "weapon_", 7) == 0 || strncmp(this_ent->classname, "ammo_", 5) == 0 || 
-					strncmp(this_ent->classname, "item_", 5) == 0) && 
-					!(this_ent->flags & FL_DROPPED_ITEM) && !(this_ent->s.eFlags & EF_DROPPEDWEAPON))
-			{ // zyk: do not save dropped items and dropped weapons
-				fprintf(this_file,"%s\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%s\n%d\n%d\n",this_ent->classname,(int)this_ent->s.origin[0],(int)this_ent->s.origin[1],
-					(int)this_ent->s.origin[2],(int)this_ent->s.angles[0],(int)this_ent->s.angles[1],(int)this_ent->s.angles[2],this_ent->spawnflags,
-					this_ent->targetname,(int)this_ent->wait,this_ent->count);
-			}
-			else if (Q_stricmp(this_ent->classname, "fx_rain") == 0 || Q_stricmp(this_ent->classname, "fx_snow") == 0 ||
-					 Q_stricmp(this_ent->classname, "fx_spacedust") == 0)
-			{
-				fprintf(this_file,"%s\n%d\n%d\n",
-					this_ent->classname,this_ent->spawnflags,this_ent->count);
-			}
-			else if (Q_stricmp(this_ent->classname, "zyk_weather") == 0)
-			{
-				fprintf(this_file,"zyk_weather\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%s\n",this_ent->spawnflags,(int)this_ent->r.mins[0],(int)this_ent->r.mins[1],
-					(int)this_ent->r.mins[2],(int)this_ent->r.maxs[0],(int)this_ent->r.maxs[1],(int)this_ent->r.maxs[2],this_ent->message);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_door") == 0)
-			{
-				fprintf(this_file,"func_door\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%s\n%f\n%d\n%f\n%f\n%d\n%f\n%f\n%f\n%d\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->target2,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->model,this_ent->model2,this_ent->soundSet,this_ent->wait,this_ent->delay,this_ent->speed,this_ent->random,
-					this_ent->damage,this_ent->s.angles2[0],this_ent->s.angles2[1],this_ent->s.angles2[2],this_ent->s.iModelScale);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_breakable") == 0)
-			{
-				fprintf(this_file,"func_breakable\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%f\n%s\n%f\n%d\n%d\n%f\n%f\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->model,this_ent->model2,this_ent->mass,this_ent->message,this_ent->radius,this_ent->material,this_ent->health,
-					this_ent->s.angles2[0],this_ent->s.angles2[1],this_ent->s.angles2[2]);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_bobbing") == 0)
-			{
-				fprintf(this_file,"func_bobbing\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%d\n%d\n%f\n%s\n%f\n%f\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->target2,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->model,this_ent->model2,this_ent->s.pos.trTime,this_ent->damage,this_ent->speed,this_ent->message,
-					this_ent->s.angles2[0],this_ent->s.angles2[1],this_ent->s.angles2[2]);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_button") == 0)
-			{
-				fprintf(this_file,"func_button\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->model,this_ent->model2,this_ent->wait,this_ent->speed,this_ent->s.angles2[0],this_ent->s.angles2[1],this_ent->s.angles2[2]);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_static") == 0)
-			{
-				fprintf(this_file,"func_static\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%s\n%d\n%f\n%f\n%f\n%s\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->model,this_ent->model2,this_ent->message,this_ent->s.iModelScale,this_ent->s.angles2[0],
-					this_ent->s.angles2[1],this_ent->s.angles2[2],this_ent->script_targetname);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_glass") == 0)
-			{
-				fprintf(this_file,"func_glass\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%f\n%f\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->model,this_ent->model2,this_ent->s.angles2[0],this_ent->s.angles2[1],this_ent->s.angles2[2]);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_pendulum") == 0)
-			{
-				fprintf(this_file,"func_pendulum\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%f\n%d\n%s\n%f\n%f\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->target2,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->model,this_ent->model2,this_ent->s.apos.trDelta[2],this_ent->damage,this_ent->message,this_ent->s.angles2[0],
-					this_ent->s.angles2[1],this_ent->s.angles2[2]);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_plat") == 0)
-			{
-				fprintf(this_file,"func_plat\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%f\n%d\n%f\n%f\n%s\n%s\n%f\n%f\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->target2,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->model,this_ent->model2,this_ent->pos2[2] - this_ent->pos1[2],this_ent->damage,this_ent->speed,this_ent->wait,this_ent->message,
-					this_ent->soundSet,this_ent->s.angles2[0],this_ent->s.angles2[1],this_ent->s.angles2[2]);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_rotating") == 0)
-			{
-				fprintf(this_file,"func_rotating\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%d\n%f\n%d\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->model,this_ent->model2,this_ent->s.iModelScale,this_ent->speed,this_ent->material,this_ent->health,
-					this_ent->s.apos.trDelta[0],this_ent->s.apos.trDelta[1],this_ent->s.apos.trDelta[2],this_ent->s.angles2[0],
-					this_ent->s.angles2[1],this_ent->s.angles2[2]);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_timer") == 0)
-			{
-				fprintf(this_file,"func_timer\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%f\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->target2,
-					this_ent->random,this_ent->wait);
-			}
-			else if (Q_stricmp(this_ent->classname, "path_corner") == 0)
-			{
-				fprintf(this_file,"path_corner\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%f\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->target2,
-					this_ent->speed,this_ent->wait);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_train") == 0)
-			{
-				fprintf(this_file,"func_train\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%d\n%f\n%f\n%s\n%f\n%f\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->target2,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->model,this_ent->model2,this_ent->damage,this_ent->speed,this_ent->wait,this_ent->soundSet,
-					this_ent->s.angles2[0],this_ent->s.angles2[1],this_ent->s.angles2[2]);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_usable") == 0)
-			{
-				fprintf(this_file,"func_usable\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%d\n%f\n%f\n%f\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->target2,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->model,this_ent->model2,this_ent->health,this_ent->wait,this_ent->s.angles2[0],this_ent->s.angles2[1],this_ent->s.angles2[2]);
-			}
-			else if (Q_stricmp(this_ent->classname, "func_wall") == 0)
-			{
-				fprintf(this_file,"func_wall\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%f\n%f\n%f\n%f\n%f\n%f\n%s\n%s\n%f\n%f\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],this_ent->s.angles[1],this_ent->s.angles[2],
-					this_ent->spawnflags,this_ent->targetname,this_ent->target,this_ent->target2,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->model,this_ent->model2,this_ent->s.angles2[0],this_ent->s.angles2[1],this_ent->s.angles2[2]);
-			}
-			else if (Q_stricmp(this_ent->classname, "target_activate") == 0)
-			{
-				fprintf(this_file,"target_activate\n%f\n%f\n%f\n%d\n%s\n%s\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->spawnflags,this_ent->targetname,
-					this_ent->target);
-			}
-			else if (Q_stricmp(this_ent->classname, "target_deactivate") == 0)
-			{
-				fprintf(this_file,"target_activate\n%f\n%f\n%f\n%d\n%s\n%s\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->spawnflags,this_ent->targetname,
-					this_ent->target);
-			}
-			else if (Q_stricmp(this_ent->classname, "target_scriptrunner") == 0)
-			{
-				fprintf(this_file,"target_scriptrunner\n%f\n%f\n%f\n%d\n%s\n%s\n%s\n%d\n%d\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->spawnflags,this_ent->targetname,
-					this_ent->script_targetname,this_ent->behaviorSet[BSET_USE],this_ent->count,this_ent->delay,this_ent->wait);
-			}
-			else if (Q_stricmp(this_ent->classname, "zyk_regen_unit") == 0)
-			{
-				fprintf(this_file,"zyk_regen_unit\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%f\n",
-					this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->spawnflags,this_ent->r.mins[0],
-					this_ent->r.mins[1],this_ent->r.mins[2],this_ent->r.maxs[0],this_ent->r.maxs[1],this_ent->r.maxs[2],
-					this_ent->count,this_ent->wait);
-			}
-			else if (Q_stricmp(this_ent->classname, "zyk_mini_game_joiner") == 0)
-			{
-				fprintf(this_file, "zyk_mini_game_joiner\n%f\n%f\n%f\n%d\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n",
-					this_ent->s.origin[0], this_ent->s.origin[1], this_ent->s.origin[2], this_ent->spawnflags, this_ent->r.mins[0],
-					this_ent->r.mins[1], this_ent->r.mins[2], this_ent->r.maxs[0], this_ent->r.maxs[1], this_ent->r.maxs[2],
-					this_ent->wait);
-			}
-			else if (Q_stricmp(this_ent->classname, "misc_model_ammo_rack") == 0 || Q_stricmp(this_ent->classname, "misc_model_gun_rack") == 0)
-			{
-				fprintf(this_file,"%s\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n",
-					this_ent->classname,this_ent->s.origin[0],this_ent->s.origin[1],this_ent->s.origin[2],this_ent->s.angles[0],
-					this_ent->s.angles[1],this_ent->s.angles[2],this_ent->spawnflags);
+
+			if (j > 0)
+			{ // zyk: break line only if the entity had keys and values to save
+				fprintf(this_file, "\n");
 			}
 		}
 	}
 
 	fclose(this_file);
 
-	trap->SendServerCommand( ent-g_entities, va("print \"Entities saved in %s file\n\"", arg1) );
+	trap->SendServerCommand( ent->s.number, va("print \"Entities saved in %s file\n\"", arg1) );
 }
 
 /*

@@ -1677,6 +1677,12 @@ typedef struct level_locals_s {
 	qboolean ent_origin_set;
 	vec3_t ent_origin;
 
+	// zyk: used by Entity System to save and load spawnstring of entities
+	char *zyk_spawn_strings[ENTITYNUM_MAX_NORMAL][128];
+
+	// zyk: amount of keys and values stored in this entity
+	int zyk_spawn_strings_values_count[ENTITYNUM_MAX_NORMAL];
+
 	char		mapname[MAX_QPATH];
 	char		rawmapname[MAX_QPATH];
 } level_locals_t;
