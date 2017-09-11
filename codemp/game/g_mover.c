@@ -1663,7 +1663,7 @@ void SP_func_plat (gentity_t *ent) {
 		ent->s.modelindex = G_ModelIndex( ent->model );
 
 		// zyk: is a solid model
-		if (ent->spawnflags & 32768)
+		if (ent->spawnflags & 1024)
 			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
@@ -2281,7 +2281,7 @@ void SP_func_rotating (gentity_t *ent) {
 			ent->s.modelindex = G_ModelIndex( ent->model );
 
 			// zyk: is a solid model
-			if (ent->spawnflags & 32768)
+			if (ent->spawnflags & 1024)
 				ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 			// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
@@ -2298,10 +2298,7 @@ void SP_func_rotating (gentity_t *ent) {
 		trap->LinkEntity( (sharedEntity_t *)ent );
 	}
 
-	if (!(ent->spawnflags & 65536))
-	{
-		G_SpawnInt("model2scale", "0", &ent->s.iModelScale);
-	}
+	G_SpawnInt("model2scale", "0", &ent->s.iModelScale);
 
 	if (ent->s.iModelScale < 0)
 	{
@@ -2334,8 +2331,6 @@ void SP_func_rotating (gentity_t *ent) {
 			ent->s.apos.trDelta[1] = ent->speed;
 		}
 	}
-
-	ent->spawnflags |= 65536;
 
 	ent->s.apos.trType = TR_LINEAR;
 
@@ -2380,22 +2375,10 @@ void SP_func_bobbing (gentity_t *ent) {
 	float		height;
 	float		phase;
 
-	if (!(ent->spawnflags & 65536))
-	{
-		G_SpawnFloat( "speed", "4", &ent->speed );
-		G_SpawnFloat( "height", "32", &height );
-		G_SpawnInt( "dmg", "2", &ent->damage );
-		G_SpawnFloat( "phase", "0", &phase );
-
-		// zyk: used by entity system
-		ent->spawnflags |= 65536;
-		ent->message = G_NewString(va("%f",height));
-	}
-	else
-	{ // zyk: loading fields that are not real entity fields
-		phase = ((float)ent->s.pos.trTime) / (ent->speed * 1000);
-		height = atof(ent->message);
-	}
+	G_SpawnFloat( "speed", "4", &ent->speed );
+	G_SpawnFloat( "height", "32", &height );
+	G_SpawnInt( "dmg", "2", &ent->damage );
+	G_SpawnFloat( "phase", "0", &phase );
 
 	if (ent->model && strncmp(ent->model, "*", 1) == 0)
 		trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
@@ -2404,7 +2387,7 @@ void SP_func_bobbing (gentity_t *ent) {
 		ent->s.modelindex = G_ModelIndex( ent->model );
 
 		// zyk: is a solid model
-		if (ent->spawnflags & 32768)
+		if (ent->spawnflags & 1024)
 			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
