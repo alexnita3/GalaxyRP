@@ -113,18 +113,13 @@ void Use_Target_Delay( gentity_t *ent, gentity_t *other, gentity_t *activator ) 
 
 void SP_target_delay( gentity_t *ent ) {
 	// check delay for backwards compatability
-	if (!(ent->spawnflags & 65536))
-	{ // zyk: this will make it work properly with entity system
-		if ( !G_SpawnFloat( "delay", "0", &ent->wait ) ) {
-			G_SpawnFloat( "wait", "1", &ent->wait );
-		}
-
-		if ( !ent->wait ) {
-			ent->wait = 1;
-		}
+	if ( !G_SpawnFloat( "delay", "0", &ent->wait ) ) {
+		G_SpawnFloat( "wait", "1", &ent->wait );
 	}
 
-	ent->spawnflags |= 65536;
+	if ( !ent->wait ) {
+		ent->wait = 1;
+	}
 
 	ent->use = Use_Target_Delay;
 }
@@ -319,15 +314,8 @@ void SP_target_speaker( gentity_t *ent ) {
 	G_SpawnFloat( "wait", "0", &ent->wait );
 	G_SpawnFloat( "random", "0", &ent->random );
 
-	if ( ent->spawnflags & 65536 || G_SpawnString ( "soundSet", "", &s ) )
+	if ( G_SpawnString ( "soundSet", "", &s ) )
 	{	// this is a sound set
-		// zyk: for entadd to work. Using this spawnflag so we know message is the soundSet string
-		if (ent->spawnflags & 65536)
-			s = G_NewString(ent->message);
-
-		ent->spawnflags |= 65536;
-		ent->message = G_NewString(s);
-
 		ent->s.soundSetIndex = G_SoundSetIndex(s);
 		ent->s.eFlags = EF_PERMANENT;
 		VectorCopy( ent->s.origin, ent->s.pos.trBase );
@@ -335,23 +323,15 @@ void SP_target_speaker( gentity_t *ent ) {
 		return;
 	}
 
-	if (!(ent->spawnflags & 32768) && !G_SpawnString( "noise", "NOSOUND", &s ) ) {
+	if ( !G_SpawnString( "noise", "NOSOUND", &s ) ) {
 		trap->Error( ERR_DROP, "target_speaker without a noise key at %s", vtos( ent->s.origin ) );
 	}
-
-	// zyk: adding spawnflag to know this case when using the mod entity system
-	if (ent->spawnflags & 32768)
-		s = G_NewString(ent->message);
 
 	// force all client reletive sounds to be "activator" speakers that
 	// play on the entity that activates it
 	if ( s[0] == '*' ) {
 		ent->spawnflags |= 8;
 	}
-
-	// zyk: setting noise string so entadd can work
-	ent->spawnflags |= 32768;
-	ent->message = G_NewString(s);
 
 	Q_strncpyz( buffer, s, sizeof(buffer) );
 
@@ -926,17 +906,12 @@ void SP_target_scriptrunner( gentity_t *self )
 	}
 	*/
 
-	if (!(self->spawnflags & 65536))
-	{
-		// FIXME: this is a hack... because delay is read in as an int, so I'm bypassing that because it's too late in the project to change it and I want to be able to set less than a second delays
-		// no one should be setting a radius on a scriptrunner, if they are this would be bad, take this out for the next project
-		v = 0.0f;
-		G_SpawnFloat( "delay", "0", &v );
-		self->delay = v * 1000;//sec to ms
-		self->wait *= 1000;//sec to ms
-
-		self->spawnflags |= 65536;
-	}
+	// FIXME: this is a hack... because delay is read in as an int, so I'm bypassing that because it's too late in the project to change it and I want to be able to set less than a second delays
+	// no one should be setting a radius on a scriptrunner, if they are this would be bad, take this out for the next project
+	v = 0.0f;
+	G_SpawnFloat( "delay", "0", &v );
+	self->delay = v * 1000;//sec to ms
+	self->wait *= 1000;//sec to ms
 
 	G_SetOrigin( self, self->s.origin );
 	self->use = target_scriptrunner_use;
@@ -1036,12 +1011,10 @@ void SP_target_play_music( gentity_t *self )
 	char *s;
 
 	G_SetOrigin( self, self->s.origin );
-	if (!(self->spawnflags & 65536) && !G_SpawnString( "music", "", &s ))
+	if (!G_SpawnString( "music", "", &s ))
 	{
 		trap->Error( ERR_DROP, "target_play_music without a music key at %s", vtos( self->s.origin ) );
 	}
-
-	self->spawnflags |= 65536;
 
 	self->message = G_NewString(s);
 
