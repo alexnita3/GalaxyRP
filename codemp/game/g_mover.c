@@ -1432,26 +1432,16 @@ void SP_func_door (gentity_t *ent)
 		ent->wait = 2;
 
 	// default lip of 8 units
-	if (!(ent->spawnflags & 65536))
-	{
-		ent->wait *= 1000;
+	ent->wait *= 1000;
 
-		ent->delay *= 1000;
+	ent->delay *= 1000;
 
-		G_SpawnFloat( "lip", "8", &lip );
+	G_SpawnFloat( "lip", "8", &lip );
 
-		// default damage of 2 points
-		G_SpawnInt( "dmg", "2", &ent->damage );
+	// default damage of 2 points
+	G_SpawnInt( "dmg", "2", &ent->damage );
 
-		G_SpawnInt( "teamallow", "0", &ent->alliedTeam );
-
-		ent->spawnflags |= 65536;
-		ent->random = lip;
-	}
-	else
-	{
-		lip = ent->random;
-	}
+	G_SpawnInt( "teamallow", "0", &ent->alliedTeam );
 
 	if ( ent->damage < 0 )
 	{
@@ -1469,7 +1459,7 @@ void SP_func_door (gentity_t *ent)
 		ent->s.modelindex = G_ModelIndex( ent->model );
 
 		// zyk: is a solid model
-		if (ent->spawnflags & 32768)
+		if (ent->spawnflags & 1024)
 			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
