@@ -166,14 +166,9 @@ void SP_light( gentity_t *self ) {
 		return;
 	}
 
-	if (!(self->spawnflags & 65536))
-	{
-		G_SpawnInt( "style", "0", &self->count );
-		G_SpawnInt( "switch_style", "0", &self->bounceCount );
-		G_SpawnInt( "style_off", "0", &self->fly_sound_debounce_time );
-
-		self->spawnflags |= 65536;
-	}
+	G_SpawnInt( "style", "0", &self->count );
+	G_SpawnInt( "switch_style", "0", &self->bounceCount );
+	G_SpawnInt( "style_off", "0", &self->fly_sound_debounce_time );
 
 	G_SetOrigin( self, self->s.origin );
 	trap->LinkEntity( (sharedEntity_t *)self );
@@ -1085,11 +1080,7 @@ void SP_misc_bsp(gentity_t *ent)
 	ent->s.angles[0] = 0.0;
 	ent->s.angles[2] = 0.0;
 
-	// zyk: allows player to pass the bsp model name with entity system
-	if (ent->spawnflags & 65536)
-		out = G_NewString(ent->message);
-	else
-		G_SpawnString("bspmodel", "", &out);
+	G_SpawnString("bspmodel", "", &out);
 
 	ent->s.eFlags = EF_PERMANENT;
 
@@ -1754,8 +1745,7 @@ EnergyShieldStationSettings
 */
 void EnergyShieldStationSettings(gentity_t *ent)
 {
-	if (!(ent->spawnflags & 65536)) // zyk: allows setting count value
-		G_SpawnInt( "count", "200", &ent->count );
+	G_SpawnInt( "count", "200", &ent->count );
 
 	G_SpawnInt("chargerate", "0", &ent->genericValue5);
 
