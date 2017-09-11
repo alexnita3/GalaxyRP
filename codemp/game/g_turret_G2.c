@@ -1147,8 +1147,7 @@ void finish_spawning_turretG2( gentity_t *base )
 		base->count = 20000;
 	}
 
-	if (!(base->spawnflags & 65536)) // zyk: if passed this spawnflag, let player choose the shotspeed
-		G_SpawnFloat( "shotspeed", "0", &base->mass );
+	G_SpawnFloat( "shotspeed", "0", &base->mass );
 
 	if ( (base->spawnflags&SPF_TURRETG2_TURBO) )
 	{
