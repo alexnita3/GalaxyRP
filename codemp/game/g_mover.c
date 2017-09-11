@@ -1675,8 +1675,6 @@ void SP_func_plat (gentity_t *ent) {
 		height = (ent->r.maxs[2] - ent->r.mins[2]) - lip;
 	}
 
-	ent->spawnflags |= 65536;
-
 	// pos1 is the rest (bottom) position, pos2 is the top
 	VectorCopy( ent->s.origin, ent->pos2 );
 	VectorCopy( ent->pos2, ent->pos1 );
@@ -2078,7 +2076,7 @@ void SP_func_static( gentity_t *ent )
 		ent->s.modelindex = G_ModelIndex( ent->model );
 
 		// zyk: is a solid model
-		if (ent->spawnflags & 32768)
+		if (ent->spawnflags & 1024)
 			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
@@ -2113,20 +2111,9 @@ void SP_func_static( gentity_t *ent )
 		ent->s.bolt1 = 1;
 	}
 
-	if (!(ent->spawnflags & 65536))
-	{ // zyk: if this flag is set, no need to do this stuff
-		G_SpawnInt("model2scale", "0", &ent->s.iModelScale);
+	G_SpawnInt("model2scale", "0", &ent->s.iModelScale);
 
-		G_SpawnInt( "hyperspace", "0", &test );
-
-		ent->message = G_NewString(va("%d",test));
-
-		ent->spawnflags |= 65536;
-	}
-	else
-	{
-		test = atoi(ent->message);
-	}
+	G_SpawnInt( "hyperspace", "0", &test );
 
 	if (ent->s.iModelScale < 0)
 	{
@@ -2440,20 +2427,9 @@ void SP_func_pendulum(gentity_t *ent) {
 	float		phase;
 	float		speed;
 
-	if (!(ent->spawnflags & 65536))
-	{
-		G_SpawnFloat( "speed", "30", &speed );
-		G_SpawnInt( "dmg", "2", &ent->damage );
-		G_SpawnFloat( "phase", "0", &phase );
-
-		ent->spawnflags |= 65536;
-		ent->message = G_NewString(va("%f",phase));
-	}
-	else
-	{ // zyk: loading values that are not real entity fields
-		speed = ent->s.apos.trDelta[2];
-		phase = atof(ent->message);
-	}
+	G_SpawnFloat( "speed", "30", &speed );
+	G_SpawnInt( "dmg", "2", &ent->damage );
+	G_SpawnFloat( "phase", "0", &phase );
 
 	if (ent->model && strncmp(ent->model, "*", 1) == 0)
 		trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
@@ -2462,7 +2438,7 @@ void SP_func_pendulum(gentity_t *ent) {
 		ent->s.modelindex = G_ModelIndex( ent->model );
 
 		// zyk: is a solid model
-		if (ent->spawnflags & 32768)
+		if (ent->spawnflags & 1024)
 			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
@@ -2794,7 +2770,7 @@ static void InitBBrush ( gentity_t *ent )
 		ent->s.modelindex = G_ModelIndex( ent->model );
 
 		// zyk: is a solid model
-		if (ent->spawnflags & 32768)
+		if (ent->spawnflags & 1024)
 			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
@@ -2934,7 +2910,6 @@ void SP_func_breakable( gentity_t *self )
 	if (s && s[0])
 	{ //should we play a special death effect?
 		self->genericValue15 = G_EffectIndex(s);
-		self->message = G_NewString(s); // zyk: used to save it in entity file
 	}
 	else
 	{
@@ -2978,12 +2953,7 @@ void SP_func_breakable( gentity_t *self )
 	G_SoundIndex("sound/weapons/explosions/cargoexplode.wav");//precaching
 	G_SpawnFloat( "radius", "1", &self->radius ); // used to scale chunk code if desired by a designer
 
-	// zyk: allows passing material with entadd
-	if (!(self->spawnflags & 65536))
-	{
-		G_SpawnInt( "material", "0", (int*)&self->material );
-		self->spawnflags |= 65536;
-	}
+	G_SpawnInt( "material", "0", (int*)&self->material );
 
 	G_SpawnInt( "splashDamage", "0", &self->splashDamage );
 	G_SpawnInt( "splashRadius", "0", &self->splashRadius );
@@ -3377,7 +3347,7 @@ void SP_func_usable( gentity_t *self )
 		self->s.modelindex = G_ModelIndex( self->model );
 
 		// zyk: is a solid model
-		if (self->spawnflags & 32768)
+		if (self->spawnflags & 1024)
 			self->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
@@ -3390,12 +3360,7 @@ void SP_func_usable( gentity_t *self )
 	VectorCopy( self->s.origin, self->r.currentOrigin );
 	VectorCopy( self->s.origin, self->pos1 );
 
-	if (!(self->spawnflags & 65536))
-	{
-		G_SpawnInt("endframe", "0", &self->genericValue5);
-
-		self->spawnflags |= 65536;
-	}
+	G_SpawnInt("endframe", "0", &self->genericValue5);
 
 	if ( self->model2 && self->model2[0] )
 	{
