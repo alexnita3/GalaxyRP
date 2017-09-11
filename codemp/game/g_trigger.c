@@ -633,7 +633,7 @@ void SP_trigger_multiple( gentity_t *ent )
 {
 	char	*s;
 
-	// zyk: using message and the spawnflag 65536 to set the noise
+	// zyk: using message and this spawnflag to set the noise
 	if (!(ent->spawnflags & 65536))
 		ent->message = NULL;
 
@@ -664,8 +664,6 @@ void SP_trigger_multiple( gentity_t *ent )
 
 		G_SpawnInt("delay", "0", &ent->delay);
 	}
-
-	ent->spawnflags |= 65536;
 
 	if ( (ent->wait > 0) && (ent->random >= ent->wait) ) {
 		ent->random = ent->wait - FRAMETIME;
@@ -921,7 +919,7 @@ void SP_trigger_always (gentity_t *ent) {
 	// we must have some delay to make sure our use targets are present
 
 	// zyk: added a wait time so it will be possible to save it in entity file (before it gets removed)
-	if (ent->spawnflags & 65536)
+	if (ent->spawnflags & 1024)
 		ent->nextthink = level.time + ent->count;
 	else
 		ent->nextthink = level.time + 300;
@@ -1815,13 +1813,9 @@ void func_timer_use( gentity_t *self, gentity_t *other, gentity_t *activator ) {
 }
 
 void SP_func_timer( gentity_t *self ) {
-	if (!(self->spawnflags & 65536))
-	{ // zyk: added this spawnflags to allow setting these fields with entadd and entedit
-		G_SpawnFloat( "random", "1", &self->random);
-		G_SpawnFloat( "wait", "1", &self->wait );
 
-		self->spawnflags |= 65536;
-	}
+	G_SpawnFloat( "random", "1", &self->random);
+	G_SpawnFloat( "wait", "1", &self->wait );
 
 	self->use = func_timer_use;
 	self->think = func_timer_think;
