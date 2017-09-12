@@ -16386,7 +16386,7 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.guardian_timer < level.time)
 					{
-						int random_magic = Q_irand(0, 26);
+						int random_magic = Q_irand(0, 25);
 
 						if (random_magic == 0)
 						{
@@ -16466,33 +16466,29 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 19)
 						{
-							shifting_sand(ent, 1000);
+							tree_of_life(ent);
 						}
 						else if (random_magic == 20)
 						{
-							tree_of_life(ent);
+							magic_disable(ent, 450);
 						}
 						else if (random_magic == 21)
 						{
-							magic_disable(ent, 450);
+							fast_and_slow(ent, 400, 6000);
 						}
 						else if (random_magic == 22)
 						{
-							fast_and_slow(ent, 400, 6000);
+							flaming_area(ent, 30);
 						}
 						else if (random_magic == 23)
 						{
-							flaming_area(ent, 30);
+							reverse_wind(ent, 700, 5000);
 						}
 						else if (random_magic == 24)
 						{
-							reverse_wind(ent, 700, 5000);
-						}
-						else if (random_magic == 25)
-						{
 							enemy_nerf(ent, 450);
 						}
-						else if (random_magic == 26)
+						else if (random_magic == 25)
 						{
 							ice_block(ent, 3500);
 						}
@@ -16631,7 +16627,7 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.guardian_timer < level.time)
 					{
-						int random_magic = Q_irand(0, 26);
+						int random_magic = Q_irand(0, 25);
 
 						if (random_magic == 0)
 						{
@@ -16711,33 +16707,29 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 19)
 						{
-							shifting_sand(ent, 1000);
+							tree_of_life(ent);
 						}
 						else if (random_magic == 20)
 						{
-							tree_of_life(ent);
+							magic_disable(ent, 450);
 						}
 						else if (random_magic == 21)
 						{
-							magic_disable(ent, 450);
+							fast_and_slow(ent, 400, 6000);
 						}
 						else if (random_magic == 22)
 						{
-							fast_and_slow(ent, 400, 6000);
+							flaming_area(ent, 30);
 						}
 						else if (random_magic == 23)
 						{
-							flaming_area(ent, 30);
+							reverse_wind(ent, 700, 5000);
 						}
 						else if (random_magic == 24)
 						{
-							reverse_wind(ent, 700, 5000);
-						}
-						else if (random_magic == 25)
-						{
 							enemy_nerf(ent, 450);
 						}
-						else if (random_magic == 26)
+						else if (random_magic == 25)
 						{
 							ice_block(ent, 3500);
 						}
