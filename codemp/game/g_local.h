@@ -1400,9 +1400,6 @@ typedef struct {
 // zyk: Max racers in the map
 #define MAX_RACERS 16
 
-// zyk: Max duelists in tournament
-#define MAX_DUELISTS 32
-
 // zyk: max matches a tournament may have
 #define MAX_DUEL_MATCHES 496
 

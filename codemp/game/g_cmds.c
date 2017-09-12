@@ -16371,9 +16371,9 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 	}
 	else if (level.duel_players[ent->s.number] == -1)
 	{ // zyk: join the tournament
-		if (level.duelists_quantity == MAX_DUELISTS)
+		if (level.duelists_quantity == MAX_CLIENTS)
 		{
-			trap->SendServerCommand(ent->s.number, va("print \"There are already %d duelists in tournament\n\"", MAX_DUELISTS));
+			trap->SendServerCommand(ent->s.number, va("print \"There are already %d duelists in tournament\n\"", MAX_CLIENTS));
 			return;
 		}
 		else
@@ -16438,7 +16438,7 @@ void duel_show_table(gentity_t *ent)
 	int chosen_player_id = -1;
 	int array_length = 0;
 	char content[1024];
-	int sorted_players[MAX_DUELISTS]; // zyk: used to show score of players by ordering from the highest score to lowest
+	int sorted_players[MAX_CLIENTS]; // zyk: used to show score of players by ordering from the highest score to lowest
 	int show_table_id = -1;
 
 	if (ent)
