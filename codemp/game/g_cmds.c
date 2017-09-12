@@ -11510,6 +11510,7 @@ void Cmd_AllyAdd_f( gentity_t *ent ) {
 		if (level.duel_tournament_mode > 0 && level.duel_players[ent->s.number] != -1)
 		{ // zyk: cant add allies while in Duel Tournament
 			trap->SendServerCommand(ent->s.number, va("print \"You cannot add allies while in a Duel Tournament.\n\""));
+			return;
 		}
 
 		trap->Argv(1, arg1, sizeof( arg1 ));
@@ -11585,6 +11586,12 @@ void Cmd_AllyRemove_f( gentity_t *ent ) {
 	{
 		char arg1[MAX_STRING_CHARS];
 		int client_id = -1;
+
+		if (level.duel_tournament_mode > 0 && level.duel_players[ent->s.number] != -1)
+		{ // zyk: cant remove allies while in Duel Tournament
+			trap->SendServerCommand(ent->s.number, va("print \"You cannot remove allies while in a Duel Tournament.\n\""));
+			return;
+		}
 
 		trap->Argv(1, arg1, sizeof( arg1 ));
 		client_id = ClientNumberFromString( ent, arg1, qfalse ); 
