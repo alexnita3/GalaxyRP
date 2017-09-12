@@ -10662,7 +10662,7 @@ void G_RunFrame( int levelTime ) {
 
 									VectorSet(zyk_quest_point, -4193, 771, 401);
 
-									if (Distance(ent->client->ps.origin, zyk_quest_point) < 70)
+									if (Distance(ent->client->ps.origin, zyk_quest_point) < 80)
 									{
 										int j = 0;
 
@@ -10926,7 +10926,7 @@ void G_RunFrame( int levelTime ) {
 
 								VectorSet(zyk_quest_point, -4193, 771, 401);
 
-								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 70)
+								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 80)
 								{
 									ent->client->pers.universe_quest_messages++;
 								}
