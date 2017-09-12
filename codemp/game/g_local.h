@@ -980,6 +980,9 @@ typedef struct clientPersistant_s {
 	// zyk: sets the id of the effect of the magic used by this player
 	int quest_power_effect1_id;
 
+	// zyk: used by Time Power. Point where the player was hit by the power
+	vec3_t time_power_origin;
+
 	// zyk: magic power, required to use Special Powers
 	int magic_power;
 

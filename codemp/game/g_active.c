@@ -2392,6 +2392,23 @@ void ClientThink_real( gentity_t *ent ) {
 
 			if (client->pers.quest_power_status & (1 << 2) && client->pers.quest_target2_timer > level.time)
 			{ // zyk: player hit by Time Power
+				if (!ent->NPC)
+				{ // zyk: need this for players to avoid them falling down if hit midair
+					vec3_t dir, forward;
+
+					VectorSet(client->ps.velocity, 0, 0, 0);
+
+					VectorSubtract(client->pers.time_power_origin, client->ps.origin, forward);
+					VectorNormalize(forward);
+
+					if (client->ps.groundEntityNum != ENTITYNUM_NONE)
+						VectorScale(forward, 200.0, dir);
+					else
+						VectorScale(forward, 30.0, dir);
+
+					VectorAdd(client->ps.velocity, dir, client->ps.velocity);
+				}
+
 				if (client->jetPackOn)
 				{
 					Jetpack_Off(ent);
@@ -2412,8 +2429,6 @@ void ClientThink_real( gentity_t *ent ) {
 					//prevent anything from being done for 400ms after holster
 					client->ps.weaponTime = 400;
 				}
-
-				VectorSet(client->ps.velocity, 0, 0, 3);
 			}
 			else if (client->pers.quest_power_status & (1 << 2) && client->pers.quest_target2_timer <= level.time)
 			{ // zyk: Time Power is over
