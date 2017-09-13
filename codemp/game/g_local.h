@@ -681,6 +681,7 @@ typedef struct clientPersistant_s {
 	// 24 - hit by Ice Bomb
 	// 25 - RPG Mode tutorial
 	// 26 - Using nofight command
+	// 27 - Has just lost his duel in Duel Tournament
 	int player_statuses;
 
 	// zyk: time in which quest player is afk during a quest
@@ -1568,6 +1569,10 @@ typedef struct level_locals_s {
 	int duel_leaderboard_score; // zyk: number of tournaments won by the current winner
 	char duel_leaderboard_acc[32]; // zyk: account of the current winner
 	char duel_leaderboard_name[36]; // zyk: current name of the current winner
+	char duel_leaderboard_ally_acc[32]; // zyk: account of the current winner ally
+	char duel_leaderboard_ally_name[36]; // zyk: current name of the current winner ally
+	qboolean duel_leaderboard_add_ally; // zyk: if qtrue, will also add the ally to the leaderboard
+
 	int duel_leaderboard_index; // zyk: index of the line in the leaderboard file in which the current winner must be inserted (winners are sorted by the number of tournament wins in the file)
 	qboolean duel_ally_table[MAX_CLIENTS][MAX_CLIENTS]; // zyk: has the players who added another plater as ally
 

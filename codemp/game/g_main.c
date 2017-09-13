@@ -7398,6 +7398,8 @@ void duel_tournament_prepare(gentity_t *ent)
 	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_RAGE);
 	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_FORCE);
 
+	ent->client->pers.player_statuses &= ~(1 << 27);
+
 	// zyk: stop any movement
 	VectorSet(ent->client->ps.velocity, 0, 0, 0);
 }
@@ -7523,6 +7525,36 @@ void duel_tournament_generate_match_table()
 	}
 }
 
+// zyk: gives prize to the winner
+void duel_tournament_prize(gentity_t *ent)
+{
+	if (ent->health < 1)
+	{ // zyk: if he is dead, respawn him so he can receive his prize
+		ClientRespawn(ent);
+	}
+
+	ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 40000;
+	ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 40000;
+	ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 40000;
+
+	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
+	ent->client->ps.ammo[AMMO_BLASTER] = zyk_max_blaster_pack_ammo.integer;
+	ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
+	ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
+	ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN) | (1 << HI_SEEKER) | (1 << HI_MEDPAC_BIG);
+
+	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
+}
+
+void duel_tournament_generate_leaderboard(char *filename, char *netname)
+{
+	level.duel_leaderboard_add_ally = qfalse;
+	level.duel_leaderboard_timer = level.time + 500;
+	strcpy(level.duel_leaderboard_acc, filename);
+	strcpy(level.duel_leaderboard_name, netname);
+	level.duel_leaderboard_step = 1;
+}
+
 // zyk: determines who is the tournament winner
 extern void add_credits(gentity_t *ent, int credits);
 void duel_tournament_winner()
@@ -7549,32 +7581,35 @@ void duel_tournament_winner()
 
 	if (ent)
 	{ // zyk: found a winner
-		// zyk: gives prize to the winner
-		if (ent->health < 1)
-		{ // zyk: if he is dead, respawn him so he can receive his prize
-			ClientRespawn(ent);
+		gentity_t *ally = NULL;
+
+		for (i = 0; i < MAX_CLIENTS; i++)
+		{
+			if (ent->s.number != i && level.duel_ally_table[ent->s.number][i] == qtrue && level.duel_players[i] != -1)
+			{
+				ally = &g_entities[i];
+			}
 		}
 
-		ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 40000;
-		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 40000;
-		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 40000;
-
-		ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
-		ent->client->ps.ammo[AMMO_BLASTER] = zyk_max_blaster_pack_ammo.integer;
-		ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
-		ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN) | (1 << HI_SEEKER) | (1 << HI_MEDPAC_BIG);
+		duel_tournament_prize(ent);
 
 		// zyk: calculating the new leaderboard if this winner is logged in his account
 		if (ent->client->sess.amrpgmode > 0)
 		{
-			level.duel_leaderboard_timer = level.time + 500;
-			strcpy(level.duel_leaderboard_acc, ent->client->sess.filename);
-			strcpy(level.duel_leaderboard_name, ent->client->pers.netname);
-			level.duel_leaderboard_step = 1;
+			duel_tournament_generate_leaderboard(G_NewString(ent->client->sess.filename), G_NewString(ent->client->pers.netname));
 		}
-		
-		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
+
+		if (ally)
+		{
+			duel_tournament_prize(ally);
+
+			if (ally->client->sess.amrpgmode > 0)
+			{
+				level.duel_leaderboard_add_ally = qtrue;
+				strcpy(level.duel_leaderboard_ally_acc, ally->client->sess.filename);
+				strcpy(level.duel_leaderboard_ally_name, ally->client->pers.netname);
+			}
+		}
 
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Winner is: %s^7. Prize: force power-ups, some guns and items\"", ent->client->pers.netname));
 	}
@@ -7590,7 +7625,27 @@ void duel_tournament_give_score(gentity_t *ent, int score)
 
 	if (level.duel_tournament_mode == 4 && ent->health > 0)
 	{
-		level.duel_players_hp[ent->s.number] += (ent->health + ent->client->ps.stats[STAT_ARMOR]);
+		gentity_t *ally = NULL;
+
+		if (level.duelist_1_id == ent->s.number && level.duelist_1_ally_id != -1)
+		{
+			ally = &g_entities[level.duelist_1_ally_id];
+		}
+		else if (level.duelist_2_id == ent->s.number && level.duelist_2_ally_id != -1)
+		{
+			ally = &g_entities[level.duelist_2_ally_id];
+		}
+
+		if (ally)
+		{ // zyk: both players must have the same hp score
+			level.duel_players_hp[ent->s.number] += (ent->health + ent->client->ps.stats[STAT_ARMOR]);
+			level.duel_players_hp[ent->s.number] += (ally->health + ally->client->ps.stats[STAT_ARMOR]);
+			level.duel_players_hp[ally->s.number] = level.duel_players_hp[ent->s.number];
+		}
+		else
+		{ // zyk: does not have an ally to sum hp
+			level.duel_players_hp[ent->s.number] += (ent->health + ent->client->ps.stats[STAT_ARMOR]);
+		}
 	}
 }
 
@@ -7630,6 +7685,8 @@ void duel_tournament_tie(gentity_t *first_duelist, gentity_t *first_duelist_ally
 	{
 		duel_tournament_give_score(second_duelist_ally, 1);
 	}
+
+	level.duel_matches[level.duel_matches_done - 1][2] = -2;
 
 	trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Tie!\""));
 }
@@ -8425,7 +8482,7 @@ void G_RunFrame( int levelTime ) {
 
 	// zyk: Duel Tournament
 	if (level.duel_tournament_mode == 4)
-	{ // zyk: gives score to the winner
+	{ // zyk: validations during a duel
 		if (duel_tournament_validate_duelists() == qtrue)
 		{
 			gentity_t *first_duelist = &g_entities[level.duelist_1_id];
@@ -8443,16 +8500,16 @@ void G_RunFrame( int levelTime ) {
 				gentity_t *second_duelist_ally = &g_entities[level.duelist_2_ally_id];
 			}
 
-			if ((first_duelist->health > 0 || (first_duelist_ally && first_duelist_ally->health > 0)) && 
-				 second_duelist->health < 1 && (!second_duelist_ally || second_duelist_ally->health < 1))
+			if ((!(first_duelist->client->pers.player_statuses & (1 << 27)) || (first_duelist_ally && !(first_duelist_ally->client->pers.player_statuses & (1 << 27)))) &&
+				 second_duelist->client->pers.player_statuses & (1 << 27) && (!second_duelist_ally || second_duelist_ally->client->pers.player_statuses & (1 << 27)))
 			{ // zyk: first team wins
 				duel_tournament_victory(first_duelist, first_duelist_ally);
 
 				level.duel_tournament_mode = 5;
 				level.duel_tournament_timer = level.time + 1500;
 			}
-			else if ((second_duelist->health > 0 || (second_duelist_ally && second_duelist_ally->health > 0)) && 
-				first_duelist->health < 1 && (!first_duelist_ally || first_duelist_ally->health < 1))
+			else if ((!(second_duelist->client->pers.player_statuses & (1 << 27)) || (second_duelist_ally && !(second_duelist_ally->client->pers.player_statuses & (1 << 27)))) &&
+				first_duelist->client->pers.player_statuses & (1 << 27) && (!first_duelist_ally || first_duelist_ally->client->pers.player_statuses & (1 << 27)))
 			{ // zyk: second team wins
 				duel_tournament_victory(second_duelist, second_duelist_ally);
 
@@ -8461,15 +8518,25 @@ void G_RunFrame( int levelTime ) {
 			}
 			else if (level.duel_tournament_timer < level.time)
 			{ // zyk: duel timed out
-				int first_team_health = first_duelist->health + first_duelist->client->ps.stats[STAT_ARMOR];
-				int second_team_health = second_duelist->health + second_duelist->client->ps.stats[STAT_ARMOR];
+				int first_team_health = 0;
+				int second_team_health = 0;
 
-				if (first_duelist_ally)
+				if (!(first_duelist->client->pers.player_statuses & (1 << 27)))
+				{
+					first_team_health = first_duelist->health + first_duelist->client->ps.stats[STAT_ARMOR];
+				}
+
+				if (!(second_duelist->client->pers.player_statuses & (1 << 27)))
+				{
+					second_team_health = second_duelist->health + second_duelist->client->ps.stats[STAT_ARMOR];
+				}
+
+				if (first_duelist_ally && !(first_duelist_ally->client->pers.player_statuses & (1 << 27)))
 				{
 					first_team_health += (first_duelist_ally->health + first_duelist_ally->client->ps.stats[STAT_ARMOR]);
 				}
 
-				if (second_duelist_ally)
+				if (second_duelist_ally && !(second_duelist_ally->client->pers.player_statuses & (1 << 27)))
 				{
 					second_team_health += (second_duelist_ally->health + second_duelist_ally->client->ps.stats[STAT_ARMOR]);
 				}
@@ -8490,8 +8557,8 @@ void G_RunFrame( int levelTime ) {
 				level.duel_tournament_mode = 5;
 				level.duel_tournament_timer = level.time + 1500;
 			}
-			else if (first_duelist->health < 1 && (!first_duelist_ally || first_duelist_ally->health < 1) && 
-				second_duelist->health < 1 && (!second_duelist_ally || second_duelist_ally->health < 1))
+			else if (first_duelist->client->pers.player_statuses & (1 << 27) && (!first_duelist_ally || first_duelist_ally->client->pers.player_statuses & (1 << 27)) &&
+				second_duelist->client->pers.player_statuses & (1 << 27) && (!second_duelist_ally || second_duelist_ally->client->pers.player_statuses & (1 << 27)))
 			{ // zyk: tie when everyone dies at the same frame
 				duel_tournament_tie(first_duelist, first_duelist_ally, second_duelist, second_duelist_ally);
 
@@ -8841,6 +8908,11 @@ void G_RunFrame( int levelTime ) {
 			fclose(leaderboard_file);
 
 			level.duel_leaderboard_step = 0; // zyk: stop creating the leaderboard
+
+			if (level.duel_leaderboard_add_ally == qtrue)
+			{
+				duel_tournament_generate_leaderboard(G_NewString(level.duel_leaderboard_ally_acc), G_NewString(level.duel_leaderboard_ally_name));
+			}
 		}
 		else if (level.duel_leaderboard_step == 3)
 		{ // zyk: determines the line where this winner must be put in the file
@@ -8972,6 +9044,11 @@ void G_RunFrame( int levelTime ) {
 #endif
 
 			level.duel_leaderboard_step = 0; // zyk: stop creating the leaderboard
+
+			if (level.duel_leaderboard_add_ally == qtrue)
+			{
+				duel_tournament_generate_leaderboard(G_NewString(level.duel_leaderboard_ally_acc), G_NewString(level.duel_leaderboard_ally_name));
+			}
 		}
 	}
 
@@ -9315,6 +9392,7 @@ void G_RunFrame( int levelTime ) {
 			if (level.duel_tournament_mode == 4)
 			{
 				if ((ent->s.number == level.duelist_1_id || ent->s.number == level.duelist_2_id || ent->s.number == level.duelist_1_ally_id || ent->s.number == level.duelist_2_ally_id) &&
+					!(ent->client->pers.player_statuses & (1 << 27)) && // zyk: did not die in his duel yet
 					Distance(ent->client->ps.origin, level.duel_tournament_origin) > (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0) &&
 					ent->health > 0)
 				{ // zyk: duelists cannot leave the arena after duel begins
