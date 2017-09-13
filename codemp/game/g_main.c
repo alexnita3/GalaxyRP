@@ -7669,6 +7669,16 @@ void duel_tournament_tie(gentity_t *first_duelist, gentity_t *first_duelist_ally
 	trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Tie!\""));
 }
 
+qboolean duel_tournament_is_duelist(gentity_t *ent)
+{
+	if ((ent->s.number == level.duelist_1_id || ent->s.number == level.duelist_2_id || ent->s.number == level.duelist_1_ally_id || ent->s.number == level.duelist_2_ally_id))
+	{
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
 qboolean duel_tournament_valid_duelist(gentity_t *ent)
 {
 	if (ent && ent->client && ent->client->pers.connected == CON_CONNECTED &&
@@ -8470,12 +8480,12 @@ void G_RunFrame( int levelTime ) {
 
 			if (level.duelist_1_ally_id != -1)
 			{
-				gentity_t *first_duelist_ally = &g_entities[level.duelist_1_ally_id];
+				first_duelist_ally = &g_entities[level.duelist_1_ally_id];
 			}
 
 			if (level.duelist_2_ally_id != -1)
 			{
-				gentity_t *second_duelist_ally = &g_entities[level.duelist_2_ally_id];
+				second_duelist_ally = &g_entities[level.duelist_2_ally_id];
 			}
 
 			if ((!(first_duelist->client->pers.player_statuses & (1 << 27)) || (first_duelist_ally && !(first_duelist_ally->client->pers.player_statuses & (1 << 27)))) &&
@@ -8633,7 +8643,7 @@ void G_RunFrame( int levelTime ) {
 						zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
 
 						VectorSet(zyk_origin, level.duel_tournament_origin[0] + 50, level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
-						zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
+						zyk_TeleportPlayer(duelist_1_ally, zyk_origin, zyk_angles);
 					}
 					else
 					{
@@ -8649,7 +8659,7 @@ void G_RunFrame( int levelTime ) {
 						zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
 
 						VectorSet(zyk_origin, level.duel_tournament_origin[0] + 50, level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
-						zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
+						zyk_TeleportPlayer(duelist_2_ally, zyk_origin, zyk_angles);
 					}
 					else
 					{
@@ -9363,7 +9373,7 @@ void G_RunFrame( int levelTime ) {
 			// zyk: Duel Tournament. Do not let anyone enter or anyone leave the globe arena
 			if (level.duel_tournament_mode == 4)
 			{
-				if ((ent->s.number == level.duelist_1_id || ent->s.number == level.duelist_2_id || ent->s.number == level.duelist_1_ally_id || ent->s.number == level.duelist_2_ally_id) &&
+				if (duel_tournament_is_duelist(ent) == qtrue && 
 					!(ent->client->pers.player_statuses & (1 << 27)) && // zyk: did not die in his duel yet
 					Distance(ent->client->ps.origin, level.duel_tournament_origin) > (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0) &&
 					ent->health > 0)
@@ -9372,7 +9382,8 @@ void G_RunFrame( int levelTime ) {
 
 					player_die(ent, ent, ent, 100000, MOD_SUICIDE);
 				}
-				else if (ent->s.number != level.duelist_1_id && ent->s.number != level.duelist_2_id && ent->s.number != level.duelist_1_ally_id && ent->s.number != level.duelist_2_ally_id &&
+				else if ((duel_tournament_is_duelist(ent) == qfalse || 
+					(level.duel_players[ent->s.number] != -1 && ent->client->pers.player_statuses & (1 << 27))) && // zyk: not a duelist or died in his duel
 					ent->client->sess.sessionTeam != TEAM_SPECTATOR && 
 					Distance(ent->client->ps.origin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0) &&
 					ent->health > 0)
