@@ -16444,7 +16444,6 @@ void duel_show_table(gentity_t *ent)
 	int array_length = 0;
 	char content[1024];
 	int sorted_players[MAX_CLIENTS]; // zyk: used to show score of players by ordering from the highest score to lowest
-	int team_players[MAX_CLIENTS]; // zyk: used to show the player that is a teammate of another player in duel tournament
 	int show_table_id = -1;
 
 	if (ent)
@@ -16465,21 +16464,7 @@ void duel_show_table(gentity_t *ent)
 	{ // zyk: adding players to sorted_players and calculating the array length
 		if (level.duel_players[i] != -1)
 		{
-			qboolean has_ally = qfalse;
-
-			team_players[i] = -1;
-
-			for (j = 0; j < i; j++)
-			{
-				has_ally = level.duel_ally_table[j][i];
-
-				if (has_ally == qtrue)
-				{
-					team_players[j] = i;
-				}
-			}
-
-			if (has_ally == qfalse)
+			if (level.duel_allies[i] == -1 || (i < level.duel_allies[i] && level.duel_allies[level.duel_allies[i]] == i))
 			{ // zyk: do not sort the allies. Use the lower id to sort the score of a team
 				sorted_players[array_length] = i;
 				array_length++;
@@ -16510,9 +16495,9 @@ void duel_show_table(gentity_t *ent)
 		gentity_t *player_ent = &g_entities[sorted_players[i]];
 		char ally_name[36];
 
-		if (team_players[i] != -1)
+		if (level.duel_allies[sorted_players[i]] != -1)
 		{
-			strcpy(ally_name, va(" / %s", g_entities[team_players[i]].client->pers.netname));
+			strcpy(ally_name, va(" / %s", g_entities[level.duel_allies[sorted_players[i]]].client->pers.netname));
 		}
 		else
 		{

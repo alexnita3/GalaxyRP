@@ -1572,9 +1572,8 @@ typedef struct level_locals_s {
 	char duel_leaderboard_ally_acc[32]; // zyk: account of the current winner ally
 	char duel_leaderboard_ally_name[36]; // zyk: current name of the current winner ally
 	qboolean duel_leaderboard_add_ally; // zyk: if qtrue, will also add the ally to the leaderboard
-
 	int duel_leaderboard_index; // zyk: index of the line in the leaderboard file in which the current winner must be inserted (winners are sorted by the number of tournament wins in the file)
-	qboolean duel_ally_table[MAX_CLIENTS][MAX_CLIENTS]; // zyk: has the players who added another plater as ally
+	qboolean duel_allies[MAX_CLIENTS]; // zyk: has the players who added another player as ally
 
 	// zyk: Sniper Battle
 	int sniper_mode; // zyk: Default 0. Sets 1 when someone joins, and 2 after battle begins

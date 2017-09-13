@@ -738,18 +738,13 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_CLIENTS; zyk_iterator++)
 		{ // zyk: initializing duelist scores
-			int j = 0;
-
 			level.duel_players[zyk_iterator] = -1;
 			level.sniper_players[zyk_iterator] = -1;
 			level.melee_players[zyk_iterator] = -1;
 			level.rpg_lms_players[zyk_iterator] = -1;
 
 			// zyk: initializing ally table
-			for (j = 0; j < MAX_CLIENTS; j++)
-			{
-				level.duel_ally_table[zyk_iterator][j] = qfalse;
-			}
+			level.duel_allies[zyk_iterator] = -1;
 		}
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_DUEL_MATCHES; zyk_iterator++)
@@ -7300,12 +7295,7 @@ void duel_tournament_end()
 	// zyk: initializing ally table
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
-		int j = 0;
-
-		for (j = 0; j < MAX_CLIENTS; j++)
-		{
-			level.duel_ally_table[i][j] = qfalse;
-		}
+		level.duel_allies[i] = -1;
 	}
 
 	for (i = 0; i < MAX_DUEL_MATCHES; i++)
@@ -7412,26 +7402,24 @@ int duel_tournament_generate_teams()
 	int i = 0;
 	int number_of_teams = level.duelists_quantity;
 
+	// zyk: validating the teams
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
-		int j = 0;
+		if (level.duel_players[i] == -1 || (level.duel_allies[i] != -1 && (level.duel_allies[level.duel_allies[i]] != i || level.duel_players[level.duel_allies[i]] == -1)))
+		{ // zyk: this team is not valid. Remove the ally
+			level.duel_allies[i] = -1;
+		}
+	}
 
-		for (j = 0; j < MAX_CLIENTS; j++)
-		{
-			if (i < j && level.duel_ally_table[i][j] == qtrue && level.duel_ally_table[j][i] == qtrue && level.duel_players[i] != -1 && level.duel_players[j] != -1)
-			{ // zyk: both players added themselves as allies. The i < j condition is to prevent to set the team twice
-				zyk_add_ally(&g_entities[i], j);
-				zyk_add_ally(&g_entities[j], i);
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		if (level.duel_allies[i] != -1 && i < level.duel_allies[i] && level.duel_allies[level.duel_allies[i]] == i)
+		{ // zyk: both players added themselves as allies
+			zyk_add_ally(&g_entities[i], level.duel_allies[i]);
+			zyk_add_ally(&g_entities[level.duel_allies[i]], i);
 
-				// zyk: must count both as a single player (team)
-				number_of_teams--;
-
-				break;
-			}
-			else if (zyk_is_ally(&g_entities[i], &g_entities[j]) == qfalse)
-			{ // zyk: remove the ally in this case, because they did not both add each other as allies
-				level.duel_ally_table[i][j] = qfalse;
-			}
+			// zyk: must count both as a single player (team)
+			number_of_teams--;
 		}
 	}
 
@@ -7465,38 +7453,31 @@ void duel_tournament_generate_match_table()
 
 		if (level.duel_players[i] != -1)
 		{ // zyk: player joined the tournament
-			last_opponent_id = -1;
-
-			for (j = 0; j < MAX_DUEL_MATCHES; j++)
+			// zyk: calculates matches for alone players or for the teams by using the team leader, which is the lower id
+			if (level.duel_allies[i] == -1 || i < level.duel_allies[i])
 			{
-				int k = 0;
+				last_opponent_id = -1;
 
-				// zyk: if this guy has an player id that is lower than his id and is ally, it means that the matches for his team are already calculated
-				for (k = 0; k < i; k++)
+				for (j = 0; j < MAX_DUEL_MATCHES; j++)
 				{
-					if (level.duel_ally_table[i][k] == qtrue)
+					if (number_of_filled_positions >= max_filled_positions)
 					{
+						number_of_filled_positions = 0;
 						break;
 					}
-				}
 
-				if (number_of_filled_positions >= max_filled_positions)
-				{
-					number_of_filled_positions = 0;
-					break;
-				}
-
-				if (temp_matches[j][0] == -1)
-				{
-					temp_matches[j][0] = i;
-					number_of_filled_positions++;
-				}
-				else if (temp_matches[j][1] == -1 && last_opponent_id != temp_matches[j][0] && level.duel_ally_table[i][temp_matches[j][0]] == qfalse)
-				{ // zyk: will not the same opponent again (last_opponent_id) and will not add ally as opponent
-					last_opponent_id = temp_matches[j][0];
-					temp_matches[j][1] = i;
-					number_of_filled_positions++;
-					level.duel_matches_quantity++;
+					if (temp_matches[j][0] == -1)
+					{
+						temp_matches[j][0] = i;
+						number_of_filled_positions++;
+					}
+					else if (temp_matches[j][1] == -1 && last_opponent_id != temp_matches[j][0] && level.duel_allies[i] != temp_matches[j][0])
+					{ // zyk: will not the same opponent again (last_opponent_id) and will not add ally as opponent
+						last_opponent_id = temp_matches[j][0];
+						temp_matches[j][1] = i;
+						number_of_filled_positions++;
+						level.duel_matches_quantity++;
+					}
 				}
 			}
 		}
@@ -7583,12 +7564,9 @@ void duel_tournament_winner()
 	{ // zyk: found a winner
 		gentity_t *ally = NULL;
 
-		for (i = 0; i < MAX_CLIENTS; i++)
+		if (level.duel_allies[ent->s.number] != -1)
 		{
-			if (ent->s.number != i && level.duel_ally_table[ent->s.number][i] == qtrue && level.duel_players[i] != -1)
-			{
-				ally = &g_entities[i];
-			}
+			ally = &g_entities[level.duel_allies[ent->s.number]];
 		}
 
 		duel_tournament_prize(ent);
@@ -7717,12 +7695,12 @@ qboolean duel_tournament_validate_duelists()
 
 	if (level.duelist_1_ally_id != -1)
 	{
-		gentity_t *first_duelist_ally = &g_entities[level.duelist_1_ally_id];
+		first_duelist_ally = &g_entities[level.duelist_1_ally_id];
 	}
 
 	if (level.duelist_2_ally_id != -1)
 	{
-		gentity_t *second_duelist_ally = &g_entities[level.duelist_2_ally_id];
+		second_duelist_ally = &g_entities[level.duelist_2_ally_id];
 	}
 
 	first_valid = duel_tournament_valid_duelist(first_duelist);
@@ -7735,8 +7713,8 @@ qboolean duel_tournament_validate_duelists()
 	{
 		level.duel_matches[level.duel_matches_done - 1][0] = level.duelist_1_ally_id;
 
-		level.duel_ally_table[level.duelist_1_ally_id][level.duelist_1_id] = qfalse;
-		level.duel_ally_table[level.duelist_1_id][level.duelist_1_ally_id] = qfalse;
+		level.duel_allies[level.duelist_1_ally_id] = -1;
+		level.duel_allies[level.duelist_1_id] = -1;
 
 		level.duelist_1_id = level.duelist_1_ally_id;
 		level.duelist_1_ally_id = -1;
@@ -7749,8 +7727,8 @@ qboolean duel_tournament_validate_duelists()
 	{
 		level.duel_matches[level.duel_matches_done - 1][1] = level.duelist_2_ally_id;
 
-		level.duel_ally_table[level.duelist_2_ally_id][level.duelist_2_id] = qfalse;
-		level.duel_ally_table[level.duelist_2_id][level.duelist_2_ally_id] = qfalse;
+		level.duel_allies[level.duelist_2_ally_id] = -1;
+		level.duel_allies[level.duelist_2_id] = -1;
 
 		level.duelist_2_id = level.duelist_2_ally_id;
 		level.duelist_2_ally_id = -1;
@@ -7764,8 +7742,8 @@ qboolean duel_tournament_validate_duelists()
 	{
 		if (level.duelist_1_ally_id != -1)
 		{
-			level.duel_ally_table[level.duelist_1_ally_id][level.duelist_1_id] = qfalse;
-			level.duel_ally_table[level.duelist_1_id][level.duelist_1_ally_id] = qfalse;
+			level.duel_allies[level.duelist_1_ally_id] = -1;
+			level.duel_allies[level.duelist_1_id] = -1;
 		}
 
 		level.duelist_1_ally_id = -1;
@@ -7775,8 +7753,8 @@ qboolean duel_tournament_validate_duelists()
 	{
 		if (level.duelist_2_ally_id != -1)
 		{
-			level.duel_ally_table[level.duelist_2_ally_id][level.duelist_2_id] = qfalse;
-			level.duel_ally_table[level.duelist_2_id][level.duelist_2_ally_id] = qfalse;
+			level.duel_allies[level.duelist_2_ally_id] = -1;
+			level.duel_allies[level.duelist_2_id] = -1;
 		}
 
 		level.duelist_2_ally_id = -1;
@@ -8730,27 +8708,21 @@ void G_RunFrame( int levelTime ) {
 
 			if (is_in_boss == qfalse && level.duel_remaining_matches > 0)
 			{ // zyk: if there are still matches to be chosen, try to choose now
-				gentity_t *first_duelist = &g_entities[level.duel_matches[level.duel_matches_done][0]];
-				gentity_t *second_duelist = &g_entities[level.duel_matches[level.duel_matches_done][1]];
+				level.duelist_1_id = level.duel_matches[level.duel_matches_done][0];
+				level.duelist_2_id = level.duel_matches[level.duel_matches_done][1];
 
 				// zyk: count this match
 				level.duel_matches_done++;
 
-				level.duelist_1_id = first_duelist->s.number;
-				level.duelist_2_id = second_duelist->s.number;
-
 				// zyk: getting the duelist allies
-				for (zyk_it = 0; zyk_it < MAX_CLIENTS; zyk_it++)
+				if (level.duel_allies[level.duelist_1_id] != -1)
 				{
-					if (level.duelist_1_id != zyk_it && level.duel_ally_table[level.duelist_1_id][zyk_it] == qtrue)
-					{
-						level.duelist_1_ally_id = g_entities[zyk_it].s.number;
-					}
+					level.duelist_1_ally_id = level.duel_allies[level.duelist_1_id];
+				}
 
-					if (level.duelist_2_id != zyk_it && level.duel_ally_table[level.duelist_2_id][zyk_it] == qtrue)
-					{
-						level.duelist_2_ally_id = g_entities[zyk_it].s.number;
-					}
+				if (level.duel_allies[level.duelist_2_id] != -1)
+				{
+					level.duelist_2_ally_id = level.duel_allies[level.duelist_2_id];
 				}
 
 				if (duel_tournament_validate_duelists() == qfalse)

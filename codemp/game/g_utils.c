@@ -1753,26 +1753,15 @@ void TryUse( gentity_t *ent )
 	if (level.duel_tournament_mode == 1 && ent->client->sess.amrpgmode < 2 && target && target->client && target->client->sess.amrpgmode < 2 && target->s.number < MAX_CLIENTS && 
 		level.duel_players[ent->s.number] != -1 && level.duel_players[target->s.number] != -1)
 	{ // zyk: adding this plater as ally in Duel Tournament
-		int j = 0;
-
-		for (j = 0; j < MAX_CLIENTS; j++)
+		if (level.duel_allies[ent->s.number] != target->s.number)
 		{
-			if (ent->s.number != j && level.duel_ally_table[ent->s.number][j] == qtrue && target->s.number != j)
-			{ // zyk: cannot add more allies
-				trap->SendServerCommand(ent->s.number, va("chat \"^3Duel Tournament: ^7Cannot add more allies\""));
-				return;
-			}
-		}
-
-		if (level.duel_ally_table[ent->s.number][target->s.number] == qfalse)
-		{
-			level.duel_ally_table[ent->s.number][target->s.number] = qtrue;
+			level.duel_allies[ent->s.number] = target->s.number;
 			trap->SendServerCommand(ent->s.number, va("chat \"^3Duel Tournament: ^7Added %s ^7as ally\"", target->client->pers.netname));
 			return;
 		}
 		else
 		{
-			level.duel_ally_table[ent->s.number][target->s.number] = qfalse;
+			level.duel_allies[ent->s.number] = -1;
 			trap->SendServerCommand(ent->s.number, va("chat \"^3Duel Tournament: ^7%s ^7no longer ally\"", target->client->pers.netname));
 			return;
 		}
