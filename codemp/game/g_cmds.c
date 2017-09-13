@@ -11486,6 +11486,18 @@ void Cmd_AllyList_f( gentity_t *ent ) {
 	trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", message) );
 }
 
+void zyk_add_ally(gentity_t *ent, int client_id)
+{
+	if (client_id > 15)
+	{
+		ent->client->sess.ally2 |= (1 << (client_id - 16));
+	}
+	else
+	{
+		ent->client->sess.ally1 |= (1 << client_id);
+	}
+}
+
 /*
 ==================
 Cmd_AllyAdd_f
@@ -11534,14 +11546,7 @@ void Cmd_AllyAdd_f( gentity_t *ent ) {
 		}
 
 		// zyk: add this player as an ally
-		if (client_id > 15)
-		{
-			ent->client->sess.ally2 |= (1 << (client_id-16));
-		}
-		else
-		{
-			ent->client->sess.ally1 |= (1 << client_id);
-		}
+		zyk_add_ally(ent, client_id);
 
 		// zyk: sending event to update radar at client-side
 		G_AddEvent(ent, EV_USE_ITEM14, client_id);
@@ -16439,6 +16444,7 @@ void duel_show_table(gentity_t *ent)
 	int array_length = 0;
 	char content[1024];
 	int sorted_players[MAX_CLIENTS]; // zyk: used to show score of players by ordering from the highest score to lowest
+	int team_players[MAX_CLIENTS]; // zyk: used to show the player that is a teammate of another player in duel tournament
 	int show_table_id = -1;
 
 	if (ent)
@@ -16459,8 +16465,25 @@ void duel_show_table(gentity_t *ent)
 	{ // zyk: adding players to sorted_players and calculating the array length
 		if (level.duel_players[i] != -1)
 		{
-			sorted_players[array_length] = i;
-			array_length++;
+			qboolean has_ally = qfalse;
+
+			team_players[i] = -1;
+
+			for (j = 0; j < i; j++)
+			{
+				has_ally = level.duel_ally_table[j][i];
+
+				if (has_ally == qtrue)
+				{
+					team_players[j] = i;
+				}
+			}
+
+			if (has_ally == qfalse)
+			{ // zyk: do not sort the allies. Use the lower id to sort the score of a team
+				sorted_players[array_length] = i;
+				array_length++;
+			}
 		}
 	}
 
@@ -16485,8 +16508,18 @@ void duel_show_table(gentity_t *ent)
 	for (i = 0; i < array_length; i++)
 	{
 		gentity_t *player_ent = &g_entities[sorted_players[i]];
+		char ally_name[36];
 
-		strcpy(content, va("%s^7%s^7: ^3%d   ^1%d\n", content, player_ent->client->pers.netname, level.duel_players[player_ent->s.number], level.duel_players_hp[player_ent->s.number]));
+		if (team_players[i] != -1)
+		{
+			strcpy(ally_name, va(" / %s", g_entities[team_players[i]].client->pers.netname));
+		}
+		else
+		{
+			strcpy(ally_name, "");
+		}
+
+		strcpy(content, va("%s^7%s^7%s^7: ^3%d   ^1%d\n", content, player_ent->client->pers.netname, ally_name, level.duel_players[player_ent->s.number], level.duel_players_hp[player_ent->s.number]));
 	}
 
 	trap->SendServerCommand(show_table_id, va("print \"%s\n\"", content));

@@ -704,6 +704,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	level.duel_tournament_timer = 0;
 	level.duelist_1_id = -1;
 	level.duelist_2_id = -1;
+	level.duelist_1_ally_id = -1;
+	level.duelist_2_ally_id = -1;
 	level.duel_tournament_model_id = -1;
 	level.duel_arena_loaded = qfalse;
 	level.duel_leaderboard_step = 0;
@@ -736,10 +738,18 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_CLIENTS; zyk_iterator++)
 		{ // zyk: initializing duelist scores
+			int j = 0;
+
 			level.duel_players[zyk_iterator] = -1;
 			level.sniper_players[zyk_iterator] = -1;
 			level.melee_players[zyk_iterator] = -1;
 			level.rpg_lms_players[zyk_iterator] = -1;
+
+			// zyk: initializing ally table
+			for (j = 0; j < MAX_CLIENTS; j++)
+			{
+				level.duel_ally_table[zyk_iterator][j] = qfalse;
+			}
 		}
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_DUEL_MATCHES; zyk_iterator++)
@@ -4543,6 +4553,14 @@ qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 			return qfalse;
 		}
 
+		if (level.duel_tournament_mode == 4 && (level.duelist_1_id != attacker->s.number && level.duelist_1_ally_id != attacker->s.number && 
+												level.duelist_2_id != attacker->s.number && level.duelist_2_ally_id != attacker->s.number && 
+											   (level.duelist_1_id == target->s.number || level.duelist_1_ally_id == target->s.number ||
+												level.duelist_2_id == target->s.number || level.duelist_2_ally_id == target->s.number)))
+		{ // zyk: cannot hit duelists in Duel Tournament
+			return qfalse;
+		}
+
 		if (level.sniper_mode > 1 && ((level.sniper_players[attacker->s.number] != -1 && level.sniper_players[target->s.number] == -1) || 
 			(level.sniper_players[attacker->s.number] == -1 && level.sniper_players[target->s.number] != -1)))
 		{ // zyk: players outside sniper battle cannot hit ones in it and vice-versa
@@ -7279,6 +7297,17 @@ void duel_tournament_end()
 		level.duel_players[i] = -1;
 	}
 
+	// zyk: initializing ally table
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		int j = 0;
+
+		for (j = 0; j < MAX_CLIENTS; j++)
+		{
+			level.duel_ally_table[i][j] = qfalse;
+		}
+	}
+
 	for (i = 0; i < MAX_DUEL_MATCHES; i++)
 	{
 		level.duel_matches[i][0] = -1;
@@ -7298,89 +7327,108 @@ void duel_tournament_end()
 	level.duel_matches_done = 0;
 	level.duelist_1_id = -1;
 	level.duelist_2_id = -1;
+	level.duelist_1_ally_id = -1;
+	level.duelist_2_ally_id = -1;
 }
 
-
 // zyk: prepare duelist for duel
-void duel_tournament_prepare(gentity_t *ent, gentity_t *challenged)
+void duel_tournament_prepare(gentity_t *ent)
 {
-	// zyk: disable jetpack of both players
+	int i = 0;
+
+	for (i = WP_STUN_BATON; i < WP_NUM_WEAPONS; i++)
+	{
+		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << i);
+	}
+
+	ent->client->ps.ammo[AMMO_BLASTER] = 0;
+	ent->client->ps.ammo[AMMO_POWERCELL] = 0;
+	ent->client->ps.ammo[AMMO_METAL_BOLTS] = 0;
+	ent->client->ps.ammo[AMMO_ROCKETS] = 0;
+	ent->client->ps.ammo[AMMO_THERMAL] = 0;
+	ent->client->ps.ammo[AMMO_TRIPMINE] = 0;
+	ent->client->ps.ammo[AMMO_DETPACK] = 0;
+	ent->client->ps.stats[STAT_HOLDABLE_ITEMS] = (1 << HI_NONE);
+
+	ent->client->ps.droneExistTime = 0;
+
+	Jedi_Decloak(ent);
+
+	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
+	ent->client->ps.weapon = WP_SABER;
+	ent->s.weapon = WP_SABER;
+
+	// zyk: disable jetpack
 	Jetpack_Off(ent);
-	Jetpack_Off(challenged);
 
-	ent->client->ps.duelInProgress = qtrue;
-	challenged->client->ps.duelInProgress = qtrue;
-
-	// zyk: setting Immunity Power briefly so every status power on the duelists are cancelled before the duel between them
+	// zyk: setting Immunity Power so every status power on the duelist will be cancelled
 	ent->client->pers.quest_power_status |= (1 << 0);
-	ent->client->pers.quest_power1_timer = level.time + 2000;
+	ent->client->pers.quest_power1_timer = level.duel_tournament_timer;
 
-	challenged->client->pers.quest_power_status |= (1 << 0);
-	challenged->client->pers.quest_power1_timer = level.time + 2000;
-
-	// zyk: reset hp and shield of both players
+	// zyk: reset hp and shield of duelist
 	ent->health = 100;
 	ent->client->ps.stats[STAT_ARMOR] = 100;
 
-	challenged->health = 100;
-	challenged->client->ps.stats[STAT_ARMOR] = 100;
-
-	ent->client->ps.duelTime = level.time + 2000;
-	challenged->client->ps.duelTime = level.time + 2000;
-
-	G_AddEvent(ent, EV_PRIVATE_DUEL, 1);
-	G_AddEvent(challenged, EV_PRIVATE_DUEL, 1);
-
-	//Holster their sabers now, until the duel starts (then they'll get auto-turned on to look cool)
-
-	if (!ent->client->ps.saberHolstered)
+	if ((level.duelist_1_id == ent->s.number && level.duelist_1_ally_id != -1) || (level.duelist_2_id == ent->s.number && level.duelist_2_ally_id != -1) || 
+		level.duelist_1_ally_id == ent->s.number || level.duelist_2_ally_id == ent->s.number)
 	{
-		if (ent->client->saber[0].soundOff)
-		{
-			G_Sound(ent, CHAN_AUTO, ent->client->saber[0].soundOff);
-		}
-		if (ent->client->saber[1].soundOff &&
-			ent->client->saber[1].model[0])
-		{
-			G_Sound(ent, CHAN_AUTO, ent->client->saber[1].soundOff);
-		}
-		ent->client->ps.weaponTime = 400;
-		ent->client->ps.saberHolstered = 2;
-	}
-	if (!challenged->client->ps.saberHolstered)
-	{
-		if (challenged->client->saber[0].soundOff)
-		{
-			G_Sound(challenged, CHAN_AUTO, challenged->client->saber[0].soundOff);
-		}
-		if (challenged->client->saber[1].soundOff &&
-			challenged->client->saber[1].model[0])
-		{
-			G_Sound(challenged, CHAN_AUTO, challenged->client->saber[1].soundOff);
-		}
-		challenged->client->ps.weaponTime = 400;
-		challenged->client->ps.saberHolstered = 2;
+		ent->client->ps.stats[STAT_ARMOR] = 0;
 	}
 
-	ent->client->ps.fd.privateDuelTime = 0; //reset the timer in case this player just got out of a duel. He should still be able to accept the challenge.
+	// zyk: cannot use any force powers, except Jump
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PUSH);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PULL);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SPEED);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SEE);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_ABSORB);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_HEAL);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PROTECT);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TELEPATHY);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_HEAL);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_LIGHTNING);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_GRIP);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_DRAIN);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_RAGE);
+	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_FORCE);
 
-	ent->client->ps.forceHandExtend = HANDEXTEND_DUELCHALLENGE;
-	ent->client->ps.forceHandExtendTime = level.time + 1000;
-
-	ent->client->ps.duelIndex = challenged->s.number;
-	ent->client->ps.duelTime = level.time + 3000;
-
-	challenged->client->ps.fd.privateDuelTime = 0; //reset the timer in case this player just got out of a duel. He should still be able to accept the challenge.
-
-	challenged->client->ps.forceHandExtend = HANDEXTEND_DUELCHALLENGE;
-	challenged->client->ps.forceHandExtendTime = level.time + 1000;
-
-	challenged->client->ps.duelIndex = ent->s.number;
-	challenged->client->ps.duelTime = level.time + 3000;
-
-	// zyk: making them stop any movement
+	// zyk: stop any movement
 	VectorSet(ent->client->ps.velocity, 0, 0, 0);
-	VectorSet(challenged->client->ps.velocity, 0, 0, 0);
+}
+
+extern void zyk_add_ally(gentity_t *ent, int client_id);
+
+// zyk: generate the teams and validates them
+int duel_tournament_generate_teams()
+{
+	int i = 0;
+	int number_of_teams = level.duelists_quantity;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		int j = 0;
+
+		for (j = 0; j < MAX_CLIENTS; j++)
+		{
+			if (i < j && level.duel_ally_table[i][j] == qtrue && level.duel_ally_table[j][i] == qtrue && level.duel_players[i] != -1 && level.duel_players[j] != -1)
+			{ // zyk: both players added themselves as allies. The i < j condition is to prevent to set the team twice
+				zyk_add_ally(&g_entities[i], j);
+				zyk_add_ally(&g_entities[j], i);
+
+				// zyk: must count both as a single player (team)
+				number_of_teams--;
+
+				break;
+			}
+			else if (zyk_is_ally(&g_entities[i], &g_entities[j]) == qfalse)
+			{ // zyk: remove the ally in this case, because they did not both add each other as allies
+				level.duel_ally_table[i][j] = qfalse;
+			}
+		}
+	}
+
+	level.duel_number_of_teams = number_of_teams;
+
+	return number_of_teams;
 }
 
 // zyk: generates the table with all the tournament matches
@@ -7389,7 +7437,7 @@ void duel_tournament_generate_match_table()
 	int i = 0;
 	int last_opponent_id = -1;
 	int number_of_filled_positions = 0;
-	int max_filled_positions = level.duelists_quantity - 1; // zyk: used to fill the player in current iteraction in the table. It will always be the number of duelists minus one
+	int max_filled_positions = level.duel_number_of_teams - 1; // zyk: used to fill the player in current iteration in the table. It will always be the number of duelists (or teams) minus one
 	int temp_matches[MAX_DUEL_MATCHES][2];
 	int temp_remaining_matches = 0;
 
@@ -7412,6 +7460,17 @@ void duel_tournament_generate_match_table()
 
 			for (j = 0; j < MAX_DUEL_MATCHES; j++)
 			{
+				int k = 0;
+
+				// zyk: if this guy has an player id that is lower than his id and is ally, it means that the matches for his team are already calculated
+				for (k = 0; k < i; k++)
+				{
+					if (level.duel_ally_table[i][k] == qtrue)
+					{
+						break;
+					}
+				}
+
 				if (number_of_filled_positions >= max_filled_positions)
 				{
 					number_of_filled_positions = 0;
@@ -7423,8 +7482,8 @@ void duel_tournament_generate_match_table()
 					temp_matches[j][0] = i;
 					number_of_filled_positions++;
 				}
-				else if (temp_matches[j][1] == -1 && last_opponent_id != temp_matches[j][0])
-				{
+				else if (temp_matches[j][1] == -1 && last_opponent_id != temp_matches[j][0] && level.duel_ally_table[i][temp_matches[j][0]] == qfalse)
+				{ // zyk: will not the same opponent again (last_opponent_id) and will not add ally as opponent
 					last_opponent_id = temp_matches[j][0];
 					temp_matches[j][1] = i;
 					number_of_filled_positions++;
@@ -7518,46 +7577,150 @@ void duel_tournament_winner()
 	}
 }
 
-// zyk: validates if these players are valid duelists
-qboolean duel_tournament_validate_duelists(gentity_t *first_duelist, gentity_t *second_duelist)
+
+qboolean duel_tournament_valid_duelist(gentity_t *ent)
 {
-	if (first_duelist && first_duelist->client && first_duelist->client->pers.connected == CON_CONNECTED &&
-		first_duelist->client->sess.sessionTeam != TEAM_SPECTATOR && second_duelist && second_duelist->client &&
-		second_duelist->client->pers.connected == CON_CONNECTED &&
-		second_duelist->client->sess.sessionTeam != TEAM_SPECTATOR && level.duel_players[first_duelist->s.number] != -1 &&
-		level.duel_players[second_duelist->s.number] != -1)
-	{ // zyk: both players are still in the tournament
-		level.duelist_1_id = first_duelist->s.number;
-		level.duelist_2_id = second_duelist->s.number;
+	if (ent && ent->client && ent->client->pers.connected == CON_CONNECTED &&
+		ent->client->sess.sessionTeam != TEAM_SPECTATOR && level.duel_players[ent->s.number] != -1)
+	{ // zyk: valid player
 		return qtrue;
 	}
-	else if (first_duelist && first_duelist->client && first_duelist->client->pers.connected == CON_CONNECTED &&
-		first_duelist->client->sess.sessionTeam != TEAM_SPECTATOR &&
-		level.duel_players[first_duelist->s.number] != -1)
+
+	return qfalse;
+}
+
+// zyk: validates duelists in Duel Tournament
+qboolean duel_tournament_validate_duelists()
+{
+	gentity_t *first_duelist = &g_entities[level.duelist_1_id];
+	gentity_t *second_duelist = &g_entities[level.duelist_2_id];
+	gentity_t *first_duelist_ally = NULL;
+	gentity_t *second_duelist_ally = NULL;
+
+	qboolean first_valid = qfalse;
+	qboolean first_valid_ally = qfalse;
+	qboolean second_valid = qfalse;
+	qboolean second_valid_ally = qfalse;
+
+	if (level.duelist_1_ally_id != -1)
 	{
+		gentity_t *first_duelist_ally = &g_entities[level.duelist_1_ally_id];
+	}
+
+	if (level.duelist_2_ally_id != -1)
+	{
+		gentity_t *second_duelist_ally = &g_entities[level.duelist_2_ally_id];
+	}
+
+	first_valid = duel_tournament_valid_duelist(first_duelist);
+	first_valid_ally = duel_tournament_valid_duelist(first_duelist_ally);
+	second_valid = duel_tournament_valid_duelist(second_duelist);
+	second_valid_ally = duel_tournament_valid_duelist(second_duelist_ally);
+
+	// zyk: if the main team members (the ones saved in level.duel_matches) of each team are no longer valid, make the ally a main member
+	if (first_valid == qfalse && first_valid_ally == qtrue)
+	{
+		level.duel_matches[level.duel_matches_done - 1][0] = level.duelist_1_ally_id;
+
+		level.duel_ally_table[level.duelist_1_ally_id][level.duelist_1_id] = qfalse;
+		level.duel_ally_table[level.duelist_1_id][level.duelist_1_ally_id] = qfalse;
+
+		level.duelist_1_id = level.duelist_1_ally_id;
+		level.duelist_1_ally_id = -1;
+
+		first_duelist = &g_entities[level.duelist_1_id];
+		first_duelist_ally = NULL;
+	}
+
+	if (second_valid == qfalse && second_valid_ally == qtrue)
+	{
+		level.duel_matches[level.duel_matches_done - 1][1] = level.duelist_2_ally_id;
+
+		level.duel_ally_table[level.duelist_2_ally_id][level.duelist_2_id] = qfalse;
+		level.duel_ally_table[level.duelist_2_id][level.duelist_2_ally_id] = qfalse;
+
+		level.duelist_2_id = level.duelist_2_ally_id;
+		level.duelist_2_ally_id = -1;
+
+		second_duelist = &g_entities[level.duelist_2_id];
+		second_duelist_ally = NULL;
+	}
+
+	// zyk: in only main member is valid, removes ally (if he has one)
+	if (first_valid == qtrue && first_valid_ally == qfalse)
+	{
+		if (level.duelist_1_ally_id != -1)
+		{
+			level.duel_ally_table[level.duelist_1_ally_id][level.duelist_1_id] = qfalse;
+			level.duel_ally_table[level.duelist_1_id][level.duelist_1_ally_id] = qfalse;
+		}
+
+		level.duelist_1_ally_id = -1;
+	}
+
+	if (second_valid == qtrue && second_valid_ally == qfalse)
+	{
+		if (level.duelist_2_ally_id != -1)
+		{
+			level.duel_ally_table[level.duelist_2_ally_id][level.duelist_2_id] = qfalse;
+			level.duel_ally_table[level.duelist_2_id][level.duelist_2_ally_id] = qfalse;
+		}
+
+		level.duelist_2_ally_id = -1;
+	}
+
+	if ((first_valid == qtrue || first_valid_ally == qtrue) && (second_valid == qtrue || second_valid_ally == qtrue))
+	{ // zyk: valid situations. Match can be started
+		return qtrue;
+	}
+	
+	if ((first_valid == qtrue || first_valid_ally == qtrue) && second_valid == qfalse && second_valid_ally == qfalse)
+	{ // zyk: only first team valid. Gives score to it
+		char ally_name[36];
+
 		level.duel_players[first_duelist->s.number] += 3;
+
+		strcpy(ally_name, "");
+
+		if (first_duelist_ally)
+		{
+			level.duel_players[first_duelist_ally->s.number] += 3;
+			strcpy(ally_name, va("^7 / %s", first_duelist_ally->client->pers.netname));
+		}
 
 		level.duel_matches[level.duel_matches_done - 1][2] = first_duelist->s.number;
 
-		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left tournament, %s ^7wins!\"", second_duelist->client->pers.netname, first_duelist->client->pers.netname));
+		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s%s ^7wins!\"", first_duelist->client->pers.netname, ally_name));
 	}
-	else if (second_duelist && second_duelist->client &&
-		second_duelist->client->pers.connected == CON_CONNECTED &&
-		second_duelist->client->sess.sessionTeam != TEAM_SPECTATOR &&
-		level.duel_players[second_duelist->s.number] != -1)
-	{
+	else if ((second_valid == qtrue || second_valid_ally == qtrue) && first_valid == qfalse && first_valid_ally == qfalse)
+	{ // zyk: only second team valid. Gives score to it
+		char ally_name[36];
+
 		level.duel_players[second_duelist->s.number] += 3;
+
+		strcpy(ally_name, "");
+
+		if (second_duelist_ally)
+		{
+			level.duel_players[second_duelist_ally->s.number] += 3;
+			strcpy(ally_name, va("^7 / %s", second_duelist_ally->client->pers.netname));
+		}
 
 		level.duel_matches[level.duel_matches_done - 1][2] = second_duelist->s.number;
 
-		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7left tournament, %s ^7wins!\"", first_duelist->client->pers.netname, second_duelist->client->pers.netname));
+		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s%s ^7wins!\"", second_duelist->client->pers.netname, ally_name));
 	}
 	else
-	{
+	{ // zyk: both teams invalid
 		level.duel_matches[level.duel_matches_done - 1][2] = -2;
 
-		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7and %s ^7left tournament!\"", first_duelist->client->pers.netname, second_duelist->client->pers.netname));
+		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7no one wins the match!\""));
 	}
+
+	level.duelist_1_id = -1;
+	level.duelist_2_id = -1;
+	level.duelist_1_ally_id = -1;
+	level.duelist_2_ally_id = -1;
 
 	return qfalse;
 }
@@ -8282,56 +8445,102 @@ void G_RunFrame( int levelTime ) {
 		}
 		else if (level.duel_tournament_mode == 3 && level.duel_tournament_timer < level.time)
 		{
-			int zyk_random = Q_irand(0, 1);
-			vec3_t zyk_origin, zyk_angles;
-			gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
-			gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
-
-			if (duel_tournament_validate_duelists(duelist_1, duelist_2) == qtrue)
+			if (duel_tournament_validate_duelists() == qtrue)
 			{
+				vec3_t zyk_origin, zyk_angles;
+				gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
+				gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
+				gentity_t *duelist_1_ally = NULL;
+				gentity_t *duelist_2_ally = NULL;
 				qboolean zyk_has_respawned = qfalse;
 
-				// zyk: respawning duelists that are still lying dead
+				if (level.duelist_1_ally_id != -1)
+				{
+					duelist_1_ally = &g_entities[level.duelist_1_ally_id];
+				}
+
+				if (level.duelist_2_ally_id != -1)
+				{
+					duelist_2_ally = &g_entities[level.duelist_2_ally_id];
+				}
+
+				// zyk: respawning duelists that are still dead
 				if (duelist_1->health < 1)
 				{
 					ClientRespawn(duelist_1);
 					zyk_has_respawned = qtrue;
 				}
-				// zyk: respawning duelists that are still lying dead
+
 				if (duelist_2->health < 1)
 				{
 					ClientRespawn(duelist_2);
 					zyk_has_respawned = qtrue;
 				}
 
+				if (duelist_1_ally && duelist_1_ally->health < 1)
+				{
+					ClientRespawn(duelist_1_ally);
+					zyk_has_respawned = qtrue;
+				}
+
+				if (duelist_2_ally && duelist_2_ally->health < 1)
+				{
+					ClientRespawn(duelist_2_ally);
+					zyk_has_respawned = qtrue;
+				}
+
 				if (zyk_has_respawned == qfalse)
 				{
-					if (zyk_random == 1)
-					{ // zyk: put the duelists along the x axis
-						VectorSet(zyk_angles, 0, 0, 0);
-						VectorSet(zyk_origin, level.duel_tournament_origin[0] - 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
+					// zyk: setting the max time players can duel
+					level.duel_tournament_timer = level.time + 180000;
+
+					// zyk: prepare the duelists to start duel
+					duel_tournament_prepare(duelist_1);
+					duel_tournament_prepare(duelist_2);
+
+					if (duelist_1_ally)
+					{
+						duel_tournament_prepare(duelist_1_ally);
+					}
+
+					if (duelist_2_ally)
+					{
+						duel_tournament_prepare(duelist_2_ally);
+					}
+
+					// zyk: put the duelists along the y axis
+					VectorSet(zyk_angles, 0, 90, 0);
+
+					if (duelist_1_ally)
+					{
+						VectorSet(zyk_origin, level.duel_tournament_origin[0] - 50, level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
 						zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
 
-						VectorSet(zyk_angles, 0, 179, 0);
-						VectorSet(zyk_origin, level.duel_tournament_origin[0] + 125, level.duel_tournament_origin[1], level.duel_tournament_origin[2]);
+						VectorSet(zyk_origin, level.duel_tournament_origin[0] + 50, level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
+						zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
+					}
+					else
+					{
+						VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
+						zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
+					}
+
+					VectorSet(zyk_angles, 0, -90, 0);
+
+					if (duelist_2_ally)
+					{
+						VectorSet(zyk_origin, level.duel_tournament_origin[0] - 50, level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
+						zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
+
+						VectorSet(zyk_origin, level.duel_tournament_origin[0] + 50, level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
 						zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
 					}
 					else
-					{ // zyk: put the duelists along the y axis
-						VectorSet(zyk_angles, 0, 90, 0);
-						VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
-						zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
-
-						VectorSet(zyk_angles, 0, -90, 0);
+					{
 						VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
 						zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
 					}
 
-					// zyk: set both duelists in private duel
-					duel_tournament_prepare(duelist_1, duelist_2);
-
-					// zyk: setting the max time players can duel
-					level.duel_tournament_timer = level.time + 180000;
 					level.duel_tournament_mode = 4;
 				}
 				else
@@ -8342,14 +8551,23 @@ void G_RunFrame( int levelTime ) {
 					duelist_2->client->ps.eFlags |= EF_INVULNERABLE;
 					duelist_2->client->invulnerableTimer = level.time + 1000;
 
+					if (duelist_1_ally)
+					{
+						duelist_1_ally->client->ps.eFlags |= EF_INVULNERABLE;
+						duelist_1_ally->client->invulnerableTimer = level.time + 1000;
+					}
+
+					if (duelist_2_ally)
+					{
+						duelist_2_ally->client->ps.eFlags |= EF_INVULNERABLE;
+						duelist_2_ally->client->invulnerableTimer = level.time + 1000;
+					}
+
 					level.duel_tournament_timer = level.time + 500;
 				}
 			}
 			else
 			{ // zyk: duelists are no longer valid, get a new match
-				level.duelist_1_id = -1;
-				level.duelist_2_id = -1;
-
 				level.duel_tournament_mode = 5;
 				level.duel_tournament_timer = level.time + 1500;
 			}
@@ -8380,10 +8598,52 @@ void G_RunFrame( int levelTime ) {
 				// zyk: count this match
 				level.duel_matches_done++;
 
-				if (duel_tournament_validate_duelists(first_duelist, second_duelist) == qfalse)
+				level.duelist_1_id = first_duelist->s.number;
+				level.duelist_2_id = second_duelist->s.number;
+
+				// zyk: getting the duelist allies
+				for (zyk_it = 0; zyk_it < MAX_CLIENTS; zyk_it++)
+				{
+					if (level.duelist_1_id != zyk_it && level.duel_ally_table[level.duelist_1_id][zyk_it] == qtrue)
+					{
+						level.duelist_1_ally_id = g_entities[zyk_it].s.number;
+					}
+
+					if (level.duelist_2_id != zyk_it && level.duel_ally_table[level.duelist_2_id][zyk_it] == qtrue)
+					{
+						level.duelist_2_ally_id = g_entities[zyk_it].s.number;
+					}
+				}
+
+				if (duel_tournament_validate_duelists() == qfalse)
 				{ // zyk: if not valid, show score table
 					level.duel_tournament_mode = 5;
 					level.duel_tournament_timer = level.time + 1500;
+				}
+				else
+				{
+					gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
+					gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
+					char first_ally[36];
+					char second_ally[36];
+
+					strcpy(first_ally, "");
+					strcpy(second_ally, "");
+
+					if (level.duelist_1_ally_id != -1)
+					{
+						strcpy(first_ally, va("^7 / %s", g_entities[level.duelist_1_ally_id].client->pers.netname));
+					}
+
+					if (level.duelist_2_ally_id != -1)
+					{
+						strcpy(second_ally, va("^7 / %s", g_entities[level.duelist_2_ally_id].client->pers.netname));
+					}
+
+					level.duel_tournament_timer = level.time + 3000;
+					level.duel_tournament_mode = 3;
+
+					trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s%s ^7x %s%s\"", duelist_1->client->pers.netname, first_ally, duelist_2->client->pers.netname, second_ally));
 				}
 
 				level.duel_remaining_matches--;
@@ -8393,16 +8653,6 @@ void G_RunFrame( int levelTime ) {
 			{
 				level.duel_tournament_timer = level.time + 15000;
 				trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Waiting for the quest player to finish boss battle!\"");
-			}
-			else if (level.duelist_1_id != -1 && level.duelist_2_id != -1)
-			{ // zyk: found the duelists
-				gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
-				gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
-
-				level.duel_tournament_timer = level.time + 3000;
-				level.duel_tournament_mode = 3;
-
-				trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7x %s\"", duelist_1->client->pers.netname, duelist_2->client->pers.netname));
 			}
 			else if (level.duel_matches_quantity == level.duel_matches_done && level.duel_tournament_mode == 2)
 			{ // zyk: all matches were done. Determine the tournament winner
@@ -8419,12 +8669,22 @@ void G_RunFrame( int levelTime ) {
 		{ // zyk: Duel tournament begins after validation on number of players
 			if (level.duelists_quantity > 1 && level.duelists_quantity >= zyk_duel_tournament_min_players.integer)
 			{ // zyk: must have a minimum of 2 players
-				level.duel_tournament_mode = 5;
-				level.duel_tournament_timer = level.time + 1500;
+				int zyk_number_of_teams = duel_tournament_generate_teams();
 
-				duel_tournament_generate_match_table();
+				if (zyk_number_of_teams > 1 && zyk_number_of_teams >= zyk_duel_tournament_min_players.integer)
+				{
+					level.duel_tournament_mode = 5;
+					level.duel_tournament_timer = level.time + 1500;
 
-				trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7The tournament begins!\"");
+					duel_tournament_generate_match_table();
+
+					trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7The tournament begins!\"");
+				}
+				else
+				{
+					duel_tournament_end();
+					trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Not enough teams!\"");
+				}
 			}
 			else
 			{
