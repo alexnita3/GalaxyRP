@@ -2133,6 +2133,7 @@ extern void zyk_unique_boost(gentity_t *ent);
 extern void TossClientWeapon(gentity_t *self, vec3_t direction, float speed);
 extern qboolean saberKnockOutOfHand(gentity_t *saberent, gentity_t *saberOwner, vec3_t velocity);
 extern qboolean zyk_can_use_unique(gentity_t *ent);
+extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
 void ClientThink_real( gentity_t *ent ) {
 	gclient_t	*client;
 	pmove_t		pmove;
@@ -2869,79 +2870,10 @@ void ClientThink_real( gentity_t *ent ) {
 			// zyk: now announce in console
 			if (ent->health > 0 && ent->client->ps.stats[STAT_HEALTH] > 0)
 			{
-				// zyk: Duel Tournament. A duelist was defeated, gives score to the winner and remove the loser from tournament if he lost
-				if (level.duel_tournament_mode == 4)
-				{
-					gentity_t *duelist_loser = NULL;
-					gentity_t *duelist_winner = NULL;
-
-					if (ent->s.number == level.duelist_1_id)
-					{
-						duelist_winner = ent;
-						duelist_loser = &g_entities[level.duelist_2_id];
-					}
-					else if (ent->s.number == level.duelist_2_id)
-					{
-						duelist_winner = ent;
-						duelist_loser = &g_entities[level.duelist_1_id];
-					}
-
-					if (duelist_winner && duelist_loser)
-					{ // zyk: give score to the winner
-						level.duel_players[duelist_winner->s.number] += 3;
-						level.duel_players_hp[duelist_winner->s.number] += (old_health + old_shield);
-
-						level.duel_tournament_timer = level.time + 1500;
-						level.duel_tournament_mode = 5;
-
-						// zyk: setting the winner of this match
-						level.duel_matches[level.duel_matches_done - 1][2] = duelist_winner->s.number;
-
-						level.duelist_1_id = -1;
-						level.duelist_2_id = -1;
-
-						trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7defeated %s^7\"", duelist_winner->client->pers.netname, duelist_loser->client->pers.netname));
-					}
-				}
-
 				trap->SendServerCommand( -1, va("print \"%s ^7%s %s^7, ending with ^1%d^7/^2%d^7!\n\"", ent->client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLDUELWINNER"), duelAgainst->client->pers.netname, old_health, old_shield) );
 			}
 			else
 			{ //it was a draw, because we both managed to die in the same frame
-				if (level.duel_tournament_mode == 4)
-				{
-					gentity_t *duelist_loser = NULL;
-					gentity_t *duelist_winner = NULL;
-
-					if (ent->s.number == level.duelist_1_id)
-					{
-						duelist_winner = ent;
-						duelist_loser = &g_entities[level.duelist_2_id];
-					}
-					else if (ent->s.number == level.duelist_2_id)
-					{
-						duelist_winner = ent;
-						duelist_loser = &g_entities[level.duelist_1_id];
-					}
-
-					if (duelist_winner && duelist_loser)
-					{ // zyk: tied
-						level.duel_players[duelist_winner->s.number] += 1;
-						level.duel_players[duelist_loser->s.number] += 1;
-
-						level.duel_tournament_timer = level.time + 1500;
-						level.duel_tournament_mode = 5;
-
-						// zyk: setting this match as a tie
-						level.duel_matches[level.duel_matches_done - 1][2] = -2;
-
-						level.duelist_1_id = -1;
-						level.duelist_2_id = -1;
-
-						trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7and %s^7 tied\"", duelist_winner->client->pers.netname, duelist_loser->client->pers.netname));
-					}
-				}
-
 				trap->SendServerCommand( -1, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "PLDUELTIE")) );
 			}
 		}
@@ -2953,8 +2885,7 @@ void ClientThink_real( gentity_t *ent ) {
 			VectorSubtract(ent->client->ps.origin, duelAgainst->client->ps.origin, vSub);
 			subLen = VectorLength(vSub);
 
-			if (subLen >= zyk_duel_radius.integer && level.duelist_1_id != ent->s.number && level.duelist_2_id != ent->s.number && 
-				level.duelist_1_id != duelAgainst->s.number && level.duelist_2_id != duelAgainst->s.number)
+			if (subLen >= zyk_duel_radius.integer)
 			{
 				ent->client->ps.duelInProgress = 0;
 				duelAgainst->client->ps.duelInProgress = 0;
@@ -3734,6 +3665,11 @@ void ClientThink_real( gentity_t *ent ) {
 												found = 1;
 											}
 
+											if (player_it < level.maxclients && zyk_can_hit_target(ent, player_ent) == qfalse)
+											{
+												found = 1;
+											}
+
 											if (found == 0 && ent->client->pers.guardian_mode == player_ent->client->pers.guardian_mode)
 											{
 												if (!player_ent->NPC)
@@ -3820,6 +3756,11 @@ void ClientThink_real( gentity_t *ent ) {
 
 											// zyk: allies will not be hit by this power
 											if (zyk_it < level.maxclients && zyk_is_ally(ent,this_ent) == qtrue)
+											{
+												found = 1;
+											}
+
+											if (zyk_it < level.maxclients && zyk_can_hit_target(ent, this_ent) == qfalse)
 											{
 												found = 1;
 											}

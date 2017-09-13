@@ -2215,6 +2215,13 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		}
 	}
 
+	// zyk: player died in Duel Tournament
+	if (level.duel_tournament_mode == 4 && self->s.number < MAX_CLIENTS && level.duel_players[self->s.number] != -1)
+	{
+		// zyk: resetting his force powers
+		WP_InitForcePowers(self);
+	}
+
 	// zyk: player died in Melee Battle
 	if (level.melee_mode == 2 && self->s.number < MAX_CLIENTS && level.melee_players[self->s.number] != -1)
 	{
