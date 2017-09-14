@@ -16550,6 +16550,21 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 		{
 			gentity_t *first_duelist = &g_entities[level.duel_matches[i][0]];
 			gentity_t *second_duelist = &g_entities[level.duel_matches[i][1]];
+			char first_ally_name[36];
+			char second_ally_name[36];
+
+			strcpy(first_ally_name, "");
+			strcpy(second_ally_name, "");
+
+			if (first_duelist && level.duel_allies[first_duelist->s.number] != -1)
+			{
+				strcpy(first_ally_name, va("^7 / %s", g_entities[level.duel_allies[first_duelist->s.number]].client->pers.netname));
+			}
+
+			if (second_duelist && level.duel_allies[second_duelist->s.number] != -1)
+			{
+				strcpy(second_ally_name, va("^7 / %s", g_entities[level.duel_allies[second_duelist->s.number]].client->pers.netname));
+			}
 
 			if (first_duelist && first_duelist->client && first_duelist->client->pers.connected == CON_CONNECTED &&
 				first_duelist->client->sess.sessionTeam != TEAM_SPECTATOR && second_duelist && second_duelist->client &&
@@ -16559,19 +16574,19 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 			{ // zyk: both duelists still in tournament
 				if (level.duel_matches[i][2] == first_duelist->s.number)
 				{
-					strcpy(content, va("%s^7%s ^2Win ^3x ^1Lose ^7%s\n", content, first_duelist->client->pers.netname, second_duelist->client->pers.netname));
+					strcpy(content, va("%s^7%s%s ^2Win ^3x ^1Lose ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
 				}
 				else if (level.duel_matches[i][2] == second_duelist->s.number)
 				{
-					strcpy(content, va("%s^7%s ^1Lose ^3x ^2Win ^7%s\n", content, first_duelist->client->pers.netname, second_duelist->client->pers.netname));
+					strcpy(content, va("%s^7%s%s ^1Lose ^3x ^2Win ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
 				}
 				else if (level.duel_matches[i][2] == -2)
 				{
-					strcpy(content, va("%s^7%s ^3Tie x Tie ^7%s\n", content, first_duelist->client->pers.netname, second_duelist->client->pers.netname));
+					strcpy(content, va("%s^7%s%s ^3Tie x Tie ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
 				}
 				else
 				{ // zyk: not played it
-					strcpy(content, va("%s^7%s   ^3x   ^7%s\n", content, first_duelist->client->pers.netname, second_duelist->client->pers.netname));
+					strcpy(content, va("%s^7%s%s   ^3x   ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
 				}
 			}
 			else if (first_duelist && first_duelist->client && first_duelist->client->pers.connected == CON_CONNECTED &&
@@ -16580,19 +16595,19 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 			{ // zyk: second duelist left
 				if (level.duel_matches[i][2] == first_duelist->s.number)
 				{
-					strcpy(content, va("%s^7%s ^2Win ^3x ^1Lose ^3Left Tournament\n", content, first_duelist->client->pers.netname));
+					strcpy(content, va("%s^7%s%s ^2Win ^3x ^1Lose ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
 				}
 				else if (level.duel_matches[i][2] > -1)
 				{
-					strcpy(content, va("%s^7%s ^1Lose ^3x ^2Win ^3Left Tournament\n", content, first_duelist->client->pers.netname));
+					strcpy(content, va("%s^7%s%s ^1Lose ^3x ^2Win ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
 				}
 				else if (level.duel_matches[i][2] == -2)
 				{
-					strcpy(content, va("%s^7%s ^3Tie x Tie ^3Left Tournament\n", content, first_duelist->client->pers.netname));
+					strcpy(content, va("%s^7%s%s ^3Tie x Tie ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
 				}
 				else
 				{ // zyk: not played it
-					strcpy(content, va("%s^7%s   ^3x   ^3Left Tournament\n", content, first_duelist->client->pers.netname));
+					strcpy(content, va("%s^7%s%s   ^3x   ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
 				}
 			}
 			else if (second_duelist && second_duelist->client &&
@@ -16602,19 +16617,19 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 			{ // zyk: first duelist left
 				if (level.duel_matches[i][2] == second_duelist->s.number)
 				{
-					strcpy(content, va("%s^3Left Tournament ^1Lose ^3x ^2Win ^7%s\n", content, second_duelist->client->pers.netname));
+					strcpy(content, va("%s^3Left Tournament ^1Lose ^3x ^2Win ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
 				}
 				else if (level.duel_matches[i][2] > -1)
 				{
-					strcpy(content, va("%s^3Left Tournament ^2Win ^3x ^1Lose ^7%s\n", content, second_duelist->client->pers.netname));
+					strcpy(content, va("%s^3Left Tournament ^2Win ^3x ^1Lose ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
 				}
 				else if (level.duel_matches[i][2] == -2)
 				{
-					strcpy(content, va("%s^3Left Tournament ^3Tie x Tie ^7%s\n", content, second_duelist->client->pers.netname));
+					strcpy(content, va("%s^3Left Tournament ^3Tie x Tie ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
 				}
 				else
 				{ // zyk: not played it
-					strcpy(content, va("%s^3Left Tournament   ^3x   ^7%s\n", content, second_duelist->client->pers.netname));
+					strcpy(content, va("%s^3Left Tournament   ^3x   ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
 				}
 			}
 			else

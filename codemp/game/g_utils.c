@@ -1757,6 +1757,16 @@ void TryUse( gentity_t *ent )
 		{
 			level.duel_allies[ent->s.number] = target->s.number;
 			trap->SendServerCommand(ent->s.number, va("chat \"^3Duel Tournament: ^7Added %s ^7as ally\"", target->client->pers.netname));
+
+			if (level.duel_allies[target->s.number] == ent->s.number)
+			{ // zyk: established an alliance
+				trap->SendServerCommand(target->s.number, va("chat \"^3Duel Tournament: ^7Confirmed %s ^7as ally\"", ent->client->pers.netname));
+			}
+			else
+			{ // zyk: request for alliance
+				trap->SendServerCommand(target->s.number, va("chat \"^3Duel Tournament: ^7%s ^7requested you as ally\"", ent->client->pers.netname));
+			}
+
 			return;
 		}
 		else

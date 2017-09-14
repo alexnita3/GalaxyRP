@@ -7290,11 +7290,6 @@ void duel_tournament_end()
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
 		level.duel_players[i] = -1;
-	}
-
-	// zyk: initializing ally table
-	for (i = 0; i < MAX_CLIENTS; i++)
-	{
 		level.duel_allies[i] = -1;
 	}
 
@@ -7524,6 +7519,9 @@ void duel_tournament_prize(gentity_t *ent)
 	ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
 	ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN) | (1 << HI_SEEKER) | (1 << HI_MEDPAC_BIG);
 
+	ent->client->ps.jetpackFuel = 100;
+	ent->client->pers.jetpack_fuel = MAX_JETPACK_FUEL;
+
 	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
 }
 
@@ -7548,6 +7546,15 @@ void duel_tournament_winner()
 	{
 		if (level.duel_players[i] != -1)
 		{
+			// zyk: restoring jetpack fuel and force powers to players that were in Duel Tournament
+			if (g_entities[i].client)
+			{
+				g_entities[i].client->ps.jetpackFuel = 100;
+				g_entities[i].client->pers.jetpack_fuel = MAX_JETPACK_FUEL;
+
+				WP_InitForcePowers(&g_entities[i]);
+			}
+
 			if (level.duel_players[i] > max_score)
 			{ // zyk: player is in tournament and his score is higher than max_score, so for now he is the max score
 				max_score = level.duel_players[i];
@@ -7667,6 +7674,27 @@ void duel_tournament_tie(gentity_t *first_duelist, gentity_t *first_duelist_ally
 	level.duel_matches[level.duel_matches_done - 1][2] = -2;
 
 	trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Tie!\""));
+}
+
+void duel_tournament_protect_duelists(gentity_t *duelist_1, gentity_t *duelist_2, gentity_t *duelist_1_ally, gentity_t *duelist_2_ally)
+{
+	duelist_1->client->ps.eFlags |= EF_INVULNERABLE;
+	duelist_1->client->invulnerableTimer = level.time + 1000;
+
+	duelist_2->client->ps.eFlags |= EF_INVULNERABLE;
+	duelist_2->client->invulnerableTimer = level.time + 1000;
+
+	if (duelist_1_ally)
+	{
+		duelist_1_ally->client->ps.eFlags |= EF_INVULNERABLE;
+		duelist_1_ally->client->invulnerableTimer = level.time + 1000;
+	}
+
+	if (duelist_2_ally)
+	{
+		duelist_2_ally->client->ps.eFlags |= EF_INVULNERABLE;
+		duelist_2_ally->client->invulnerableTimer = level.time + 1000;
+	}
 }
 
 qboolean duel_tournament_is_duelist(gentity_t *ent)
@@ -7789,11 +7817,6 @@ qboolean duel_tournament_validate_duelists()
 
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7no one wins the match!\""));
 	}
-
-	level.duelist_1_id = -1;
-	level.duelist_2_id = -1;
-	level.duelist_1_ally_id = -1;
-	level.duelist_2_ally_id = -1;
 
 	return qfalse;
 }
@@ -8564,8 +8587,14 @@ void G_RunFrame( int levelTime ) {
 	if (level.duel_tournament_paused == qfalse)
 	{
 		if (level.duel_tournament_mode == 5 && level.duel_tournament_timer < level.time)
-		{ // zyk: show score table
+		{ // zyk: show score table and reset duelists
 			duel_show_table(NULL);
+
+			level.duelist_1_id = -1;
+			level.duelist_2_id = -1;
+			level.duelist_1_ally_id = -1;
+			level.duelist_2_ally_id = -1;
+
 			level.duel_tournament_timer = level.time + 1500;
 			level.duel_tournament_mode = 2;
 		}
@@ -8614,6 +8643,8 @@ void G_RunFrame( int levelTime ) {
 					ClientRespawn(duelist_2_ally);
 					zyk_has_respawned = qtrue;
 				}
+
+				duel_tournament_protect_duelists(duelist_1, duelist_2, duelist_1_ally, duelist_2_ally);
 
 				if (zyk_has_respawned == qfalse)
 				{
@@ -8671,24 +8702,6 @@ void G_RunFrame( int levelTime ) {
 				}
 				else
 				{ // zyk: must wait a bit more to guarantee the player is fully respawned before teleporting him to arena
-					duelist_1->client->ps.eFlags |= EF_INVULNERABLE;
-					duelist_1->client->invulnerableTimer = level.time + 1000;
-
-					duelist_2->client->ps.eFlags |= EF_INVULNERABLE;
-					duelist_2->client->invulnerableTimer = level.time + 1000;
-
-					if (duelist_1_ally)
-					{
-						duelist_1_ally->client->ps.eFlags |= EF_INVULNERABLE;
-						duelist_1_ally->client->invulnerableTimer = level.time + 1000;
-					}
-
-					if (duelist_2_ally)
-					{
-						duelist_2_ally->client->ps.eFlags |= EF_INVULNERABLE;
-						duelist_2_ally->client->invulnerableTimer = level.time + 1000;
-					}
-
 					level.duel_tournament_timer = level.time + 500;
 				}
 			}
@@ -8707,12 +8720,15 @@ void G_RunFrame( int levelTime ) {
 			{
 				gentity_t *this_ent = &g_entities[zyk_it];
 
+				// zyk: cleaning flag from player
+				if (this_ent && this_ent->client)
+					this_ent->client->pers.player_statuses &= ~(1 << 27);
+
 				if (this_ent && this_ent->client && this_ent->client->pers.connected == CON_CONNECTED &&
 					this_ent->client->sess.sessionTeam != TEAM_SPECTATOR && this_ent->client->sess.amrpgmode == 2 &&
 					this_ent->client->pers.guardian_mode > 0)
 				{ // zyk: validating if there is someone fighting a quest boss
 					is_in_boss = qtrue;
-					break;
 				}
 			}
 
@@ -8803,13 +8819,13 @@ void G_RunFrame( int levelTime ) {
 				else
 				{
 					duel_tournament_end();
-					trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Not enough teams!\"");
+					trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Not enough teams or single duelists (minimum of %d). Tournament is over!\"", zyk_duel_tournament_min_players.integer));
 				}
 			}
 			else
 			{
 				duel_tournament_end();
-				trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Not enough duelists (minimum of %d). Tournament is over!\"", zyk_duel_tournament_min_players.integer));
+				trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Not enough teams or single duelists (minimum of %d). Tournament is over!\"", zyk_duel_tournament_min_players.integer));
 			}
 		}
 	}
