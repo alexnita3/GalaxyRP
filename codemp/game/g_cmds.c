@@ -16591,7 +16591,18 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 				}
 				else
 				{ // zyk: not played it
-					strcpy(content, va("%s^7%s%s   ^3x   ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
+					char duel_time_remaining[32];
+					
+					if (level.duel_tournament_mode == 4 && i == (level.duel_matches_done - 1))
+					{ // zyk: this duel is the current one, show the time remaining in seconds
+						strcpy(duel_time_remaining, va("   ^3Time: ^7%d", (level.duel_tournament_timer - level.time) / 1000));
+					}
+					else
+					{
+						strcpy(duel_time_remaining, "");
+					}
+
+					strcpy(content, va("%s^7%s%s   ^3x   ^7%s%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name, duel_time_remaining));
 				}
 			}
 			else if (first_duelist && first_duelist->client && first_duelist->client->pers.connected == CON_CONNECTED &&
