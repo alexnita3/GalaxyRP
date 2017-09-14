@@ -5158,6 +5158,7 @@ vec3_t gPainPoint;
 
 extern void Jedi_Decloak( gentity_t *self );
 extern void Boba_FlyStop( gentity_t *self );
+extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
 void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t dir, vec3_t point, int damage, int dflags, int mod ) {
 	gclient_t	*client;
@@ -5179,6 +5180,12 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	}
 
 	if (zyk_can_hit_target(attacker, targ) == qfalse)
+	{
+		return;
+	}
+
+	// zyk: players in Duel Tournament cant be hit by anything outside it
+	if (level.duel_tournament_mode == 4 && attacker && targ && duel_tournament_is_duelist(attacker) == qfalse && duel_tournament_is_duelist(targ) == qtrue)
 	{
 		return;
 	}

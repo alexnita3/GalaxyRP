@@ -4531,6 +4531,17 @@ void spawn_boss(gentity_t *ent,int x,int y,int z,int yaw,char *boss_name,int gx,
 	ent->client->noclip = qfalse;
 }
 
+// zyk: tests if this player is one of the Duel Tournament duelists
+qboolean duel_tournament_is_duelist(gentity_t *ent)
+{
+	if ((ent->s.number == level.duelist_1_id || ent->s.number == level.duelist_2_id || ent->s.number == level.duelist_1_ally_id || ent->s.number == level.duelist_2_ally_id))
+	{
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
 // zyk: tests if the target player can be hit by the attacker gun/saber damage, force power or special power
 qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 {
@@ -4548,10 +4559,7 @@ qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 			return qfalse;
 		}
 
-		if (level.duel_tournament_mode == 4 && (level.duelist_1_id != attacker->s.number && level.duelist_1_ally_id != attacker->s.number && 
-												level.duelist_2_id != attacker->s.number && level.duelist_2_ally_id != attacker->s.number && 
-											   (level.duelist_1_id == target->s.number || level.duelist_1_ally_id == target->s.number ||
-												level.duelist_2_id == target->s.number || level.duelist_2_ally_id == target->s.number)))
+		if (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(attacker) != duel_tournament_is_duelist(target))
 		{ // zyk: cannot hit duelists in Duel Tournament
 			return qfalse;
 		}
@@ -7697,16 +7705,6 @@ void duel_tournament_protect_duelists(gentity_t *duelist_1, gentity_t *duelist_2
 	}
 }
 
-qboolean duel_tournament_is_duelist(gentity_t *ent)
-{
-	if ((ent->s.number == level.duelist_1_id || ent->s.number == level.duelist_2_id || ent->s.number == level.duelist_1_ally_id || ent->s.number == level.duelist_2_ally_id))
-	{
-		return qtrue;
-	}
-
-	return qfalse;
-}
-
 qboolean duel_tournament_valid_duelist(gentity_t *ent)
 {
 	if (ent && ent->client && ent->client->pers.connected == CON_CONNECTED &&
@@ -7741,6 +7739,36 @@ qboolean duel_tournament_validate_duelists()
 		second_duelist_ally = &g_entities[level.duelist_2_ally_id];
 	}
 
+	// zyk: removing duelists from private duels
+	if (first_duelist->client->ps.duelInProgress == qtrue)
+	{
+		first_duelist->client->ps.stats[STAT_HEALTH] = first_duelist->health = -999;
+
+		player_die(first_duelist, first_duelist, first_duelist, 100000, MOD_SUICIDE);
+	}
+
+	if (second_duelist->client->ps.duelInProgress == qtrue)
+	{
+		second_duelist->client->ps.stats[STAT_HEALTH] = second_duelist->health = -999;
+
+		player_die(second_duelist, second_duelist, second_duelist, 100000, MOD_SUICIDE);
+	}
+
+	if (first_duelist_ally && first_duelist_ally->client->ps.duelInProgress == qtrue)
+	{
+		first_duelist_ally->client->ps.stats[STAT_HEALTH] = first_duelist_ally->health = -999;
+
+		player_die(first_duelist_ally, first_duelist_ally, first_duelist_ally, 100000, MOD_SUICIDE);
+	}
+
+	if (second_duelist_ally && second_duelist_ally->client->ps.duelInProgress == qtrue)
+	{
+		second_duelist_ally->client->ps.stats[STAT_HEALTH] = second_duelist_ally->health = -999;
+
+		player_die(second_duelist_ally, second_duelist_ally, second_duelist_ally, 100000, MOD_SUICIDE);
+	}
+
+	// zyk: testing if duelists are still valid
 	first_valid = duel_tournament_valid_duelist(first_duelist);
 	first_valid_ally = duel_tournament_valid_duelist(first_duelist_ally);
 	second_valid = duel_tournament_valid_duelist(second_duelist);

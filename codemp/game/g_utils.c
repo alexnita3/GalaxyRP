@@ -1179,6 +1179,7 @@ Kills all entities that would touch the proposed new positioning
 of ent.  Ent should be unlinked before calling this!
 =================
 */
+extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 void G_KillBox (gentity_t *ent) {
 	int			i, num;
 	int			touch[MAX_GENTITIES];
@@ -1206,8 +1207,7 @@ void G_KillBox (gentity_t *ent) {
 		}
 
 		// zyk: if the player is in duel tournament and target is also in it, and they will fight now, do not telefrag
-		if ((ent->s.number == level.duelist_1_id && hit->s.number == level.duelist_2_id) || 
-			(hit->s.number == level.duelist_1_id && ent->s.number == level.duelist_2_id))
+		if (level.duel_tournament_mode > 1 && duel_tournament_is_duelist(ent) == qtrue && duel_tournament_is_duelist(hit) == qtrue)
 		{
 			continue;
 		}

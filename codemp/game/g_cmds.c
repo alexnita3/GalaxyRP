@@ -3580,6 +3580,11 @@ void Cmd_EngageDuel_f(gentity_t *ent)
 		return;
 	}
 
+	if (level.duel_tournament_mode > 1 && level.duel_players[ent->s.number] != -1)
+	{ // zyk: during a Duel Tournament, players cannot private duel
+		return;
+	}
+
 	//New: Don't let a player duel if he just did and hasn't waited 10 seconds yet (note: If someone challenges him, his duel timer will reset so he can accept)
 	/*if (ent->client->ps.fd.privateDuelTime > level.time)
 	{
