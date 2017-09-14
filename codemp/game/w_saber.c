@@ -3796,6 +3796,7 @@ void WP_SaberDoClash( gentity_t *self, int saberNum, int bladeNum )
 	}
 }
 
+extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 void WP_SaberBounceSound( gentity_t *ent, int saberNum, int bladeNum )
 {
 	int index = 1;
@@ -4359,7 +4360,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 			dmg = 0;
 
 		// zyk: tests if players in private duel should do touch damage
-		if (!self->NPC && self->client->ps.duelInProgress == qtrue)
+		if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
 		{
 			if (zyk_allow_duel_saber_touch_damage.integer > 0)
 				dmg = SABER_NONATTACK_DAMAGE;
@@ -4452,11 +4453,15 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 
 	if (dmg > SABER_NONATTACK_DAMAGE)
 	{
-		// zyk: cvar that sets the saber damage in private duels
-		if (!self->NPC && self->client->ps.duelInProgress == qtrue)
+		// zyk: cvar that sets the saber damage in private duels and Duel Tournament
+		if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
+		{
 			dmg *= zyk_duel_saberDamageScale.value;
+		}
 		else
+		{
 			dmg *= g_saberDamageScale.value;
+		}
 
 		//see if this specific saber has a damagescale
 		if ( !WP_SaberBladeUseSecondBladeStyle( &self->client->saber[rSaberNum], rBladeNum )
@@ -4635,7 +4640,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 		}
 
 		// zyk: this is the cvar to set saber blocks and parries time in miliseconds, in private duels
-		if (!self->NPC && self->client->ps.duelInProgress == qtrue)
+		if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
 			self->client->ps.saberIdleWound = level.time + zyk_duel_saberDmgDelay_Idle.integer;
 		else
 			self->client->ps.saberIdleWound = level.time + g_saberDmgDelay_Idle.integer;
@@ -4650,7 +4655,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 			if (dmg <= SABER_NONATTACK_DAMAGE)
 			{
 				// zyk: this is the cvar to set saber blocks and parries time in miliseconds, in private duels
-				if (!self->NPC && self->client->ps.duelInProgress == qtrue)
+				if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
 					self->client->ps.saberIdleWound = level.time + zyk_duel_saberDmgDelay_Idle.integer;
 				else
 					self->client->ps.saberIdleWound = level.time + g_saberDmgDelay_Idle.integer;
@@ -4879,7 +4884,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 		didHit = qtrue;
 
 		// zyk: this is the cvar to set saber blocks and parries time in miliseconds, in private duels
-		if (!self->NPC && self->client->ps.duelInProgress == qtrue)
+		if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
 			self->client->ps.saberIdleWound = level.time + zyk_duel_saberDmgDelay_Idle.integer;
 		else
 			self->client->ps.saberIdleWound = level.time + g_saberDmgDelay_Idle.integer;
@@ -4887,7 +4892,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 		if (dmg <= SABER_NONATTACK_DAMAGE)
 		{
 			// zyk: this is the cvar to set saber blocks and parries time in miliseconds, in private duels
-			if (!self->NPC && self->client->ps.duelInProgress == qtrue)
+			if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
 				self->client->ps.saberIdleWound = level.time + zyk_duel_saberDmgDelay_Idle.integer;
 			else
 				self->client->ps.saberIdleWound = level.time + g_saberDmgDelay_Idle.integer;
@@ -6762,7 +6767,7 @@ qboolean saberKnockOutOfHand(gentity_t *saberent, gentity_t *saberOwner, vec3_t 
 	saberent->parent = saberOwner;
 
 	// zyk: cvar that sets the saber damage in private duels
-	if (!saberOwner->NPC && saberOwner->client->ps.duelInProgress == qtrue)
+	if (!saberOwner->NPC && (saberOwner->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(saberOwner) == qtrue)))
 		saberent->damage = zyk_saber_throw_damage.integer * zyk_duel_saberDamageScale.value;
 	else
 		saberent->damage = zyk_saber_throw_damage.integer * g_saberDamageScale.value; // zyk: throw damage will also be scaled
@@ -8789,7 +8794,7 @@ nextStep:
 				saberent->think = saberFirstThrown;
 
 				// zyk: cvar that sets the saber damage in private duels
-				if (!self->NPC && self->client->ps.duelInProgress == qtrue)
+				if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
 					saberent->damage = zyk_saber_throw_damage.integer * zyk_duel_saberDamageScale.value;
 				else
 					saberent->damage = zyk_saber_throw_damage.integer * g_saberDamageScale.value; // zyk: throw damage will also be scaled
