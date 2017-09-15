@@ -7278,18 +7278,6 @@ void zyk_try_get_dark_quest_note(gentity_t *ent, int note_bitvalue)
 	}
 }
 
-// zyk: returns a value from the entity file
-char *zyk_get_file_value(FILE *this_file)
-{
-	char content[256];
-
-	fgets(content,sizeof(content),this_file);
-	if (content[strlen(content) - 1] == '\n')
-		content[strlen(content) - 1] = '\0';
-
-	return G_NewString(content);
-}
-
 // zyk: finished the duel tournament
 void duel_tournament_end()
 {
