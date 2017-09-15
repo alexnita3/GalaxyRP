@@ -7342,6 +7342,7 @@ void duel_tournament_prepare(gentity_t *ent)
 	ent->client->ps.ammo[AMMO_TRIPMINE] = 0;
 	ent->client->ps.ammo[AMMO_DETPACK] = 0;
 	ent->client->ps.stats[STAT_HOLDABLE_ITEMS] = (1 << HI_NONE);
+	ent->client->ps.stats[STAT_HOLDABLE_ITEM] = 0;
 
 	// zyk: removing the seeker drone in case if is activated
 	if (ent->client->ps.droneExistTime > (level.time + 5000))
@@ -7354,8 +7355,8 @@ void duel_tournament_prepare(gentity_t *ent)
 	// zyk: disable jetpack
 	Jetpack_Off(ent);
 
-	ent->client->ps.jetpackFuel = 0;
-	ent->client->pers.jetpack_fuel = 0;
+	ent->client->ps.jetpackFuel = 100;
+	ent->client->pers.jetpack_fuel = MAX_JETPACK_FUEL;
 
 	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
 	ent->client->ps.weapon = WP_SABER;

@@ -1368,7 +1368,7 @@ void Jetpack_On(gentity_t *ent)
 }
 
 extern void rpg_skill_counter(gentity_t *ent, int amount);
-
+extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 void ItemUse_Jetpack( gentity_t *ent )
 {
 	assert(ent && ent->client);
@@ -1397,8 +1397,8 @@ void ItemUse_Jetpack( gentity_t *ent )
 	{
 		Jetpack_Off(ent);
 	}
-	else if (ent->client->ps.duelInProgress == qfalse) // zyk: added this condition, cannot activate jetpack in private duel
-	{
+	else if (ent->client->ps.duelInProgress == qfalse && (level.duel_tournament_mode != 4 || duel_tournament_is_duelist(ent) == qfalse))
+	{ // zyk: added this condition, cannot activate jetpack in private duel or in a Duel Tournament match
 		Jetpack_On(ent);
 	}
 
@@ -2639,7 +2639,6 @@ Touch_Item
 extern void save_account(gentity_t *ent);
 extern void universe_quest_artifacts_checker(gentity_t *ent);
 extern void quest_get_new_player(gentity_t *ent);
-extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	int			respawn;
 	qboolean	predict;
