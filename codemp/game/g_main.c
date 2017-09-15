@@ -4502,8 +4502,8 @@ void spawn_boss(gentity_t *ent,int x,int y,int z,int yaw,char *boss_name,int gx,
 		npc_ent->client->pers.universe_quest_timer = level.time + 11000;
 		npc_ent->client->pers.guardian_mode = guardian_mode;
 
-		if (guardian_mode == 15 || guardian_mode == 20 || guardian_mode == 21)
-		{ // zyk: Ymir and Thor, Guardian of Time and Soul of Sorrow can have shield
+		if (guardian_mode == 15 || guardian_mode == 21)
+		{ // zyk: Ymir and Thor and Soul of Sorrow can have shield
 			npc_ent->client->ps.stats[STAT_ARMOR] = npc_ent->health;
 		}
 
