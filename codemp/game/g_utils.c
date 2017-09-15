@@ -1767,12 +1767,23 @@ void TryUse( gentity_t *ent )
 				trap->SendServerCommand(target->s.number, va("chat \"^3Duel Tournament: ^7%s ^7requested you as ally\"", ent->client->pers.netname));
 			}
 
+			// zyk: setting use anim
+			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			ent->client->ps.forceDodgeAnim = BOTH_BUTTON_HOLD;
+			ent->client->ps.forceHandExtendTime = level.time + 500;
+
 			return;
 		}
 		else
 		{
 			level.duel_allies[ent->s.number] = -1;
 			trap->SendServerCommand(ent->s.number, va("chat \"^3Duel Tournament: ^7%s ^7no longer ally\"", target->client->pers.netname));
+
+			// zyk: setting use anim
+			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			ent->client->ps.forceDodgeAnim = BOTH_BUTTON_HOLD;
+			ent->client->ps.forceHandExtendTime = level.time + 500;
+
 			return;
 		}
 	}
