@@ -1365,7 +1365,7 @@ extern void G_CreateAnimalNPC( Vehicle_t **pVeh, const char *strAnimalType );
 extern void G_CreateSpeederNPC( Vehicle_t **pVeh, const char *strType );
 extern void G_CreateWalkerNPC( Vehicle_t **pVeh, const char *strAnimalType );
 extern void G_CreateFighterNPC( Vehicle_t **pVeh, const char *strType );
-extern void zyk_spawn_entity(gentity_t *ent);
+extern void zyk_main_spawn_entity(gentity_t *ent);
 gentity_t *NPC_Spawn_Do( gentity_t *ent )
 {
 	gentity_t	*newent = NULL;
@@ -1753,7 +1753,7 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 		
 		if (ent->spawnflags & 4096 && ent->targetname)
 		{ // zyk: if it has this spawnflag, allow spawning the same npc again
-			zyk_spawn_entity(ent);
+			zyk_main_spawn_entity(ent);
 		}
 		else
 		{ 
