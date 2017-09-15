@@ -7578,6 +7578,7 @@ void duel_tournament_winner()
 	if (ent)
 	{ // zyk: found a winner
 		gentity_t *ally = NULL;
+		char winner_info[128];
 
 		if (level.duel_allies[ent->s.number] != -1)
 		{
@@ -7598,13 +7599,26 @@ void duel_tournament_winner()
 
 			if (ally->client->sess.amrpgmode > 0)
 			{
-				level.duel_leaderboard_add_ally = qtrue;
-				strcpy(level.duel_leaderboard_ally_acc, ally->client->sess.filename);
-				strcpy(level.duel_leaderboard_ally_name, ally->client->pers.netname);
+				if (ent->client->sess.amrpgmode > 0)
+				{
+					level.duel_leaderboard_add_ally = qtrue;
+					strcpy(level.duel_leaderboard_ally_acc, ally->client->sess.filename);
+					strcpy(level.duel_leaderboard_ally_name, ally->client->pers.netname);
+				}
+				else
+				{ // zyk: if only the ally is logged, generate only for the ally
+					duel_tournament_generate_leaderboard(G_NewString(ally->client->sess.filename), G_NewString(ally->client->pers.netname));
+				}
 			}
+
+			strcpy(winner_info, va("%s ^7/ %s", ent->client->pers.netname, ally->client->pers.netname));
+		}
+		else
+		{
+			strcpy(winner_info, ent->client->pers.netname);
 		}
 
-		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Winner is: %s^7. Prize: force power-ups, some guns and items\"", ent->client->pers.netname));
+		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Winner is: %s^7. Prize: force power-ups, some guns and items\"", winner_info));
 	}
 	else
 	{
