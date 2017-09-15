@@ -7628,30 +7628,29 @@ void duel_tournament_winner()
 
 void duel_tournament_give_score(gentity_t *ent, int score)
 {
-	level.duel_players[ent->s.number] += score;
+	gentity_t *ally = NULL;
 
-	if (level.duel_tournament_mode == 4 && ent->health > 0)
+	if (level.duel_allies[ent->s.number] != -1)
 	{
-		gentity_t *ally = NULL;
+		ally = &g_entities[level.duel_allies[ent->s.number]];
+	}
 
-		if (level.duel_allies[ent->s.number] != -1)
-		{
-			ally = &g_entities[level.duel_allies[ent->s.number]];
-		}
-
+	level.duel_players[ent->s.number] += score;
+	if (level.duel_tournament_mode == 4 && !(ent->client->pers.player_statuses & (1 << 27)))
+	{ // zyk: add hp score if he did not die in duel
 		level.duel_players_hp[ent->s.number] += (ent->health + ent->client->ps.stats[STAT_ARMOR]);
+	}
 
-		if (ally)
-		{ // zyk: both players must have the same score and the same hp score
-			level.duel_players[ally->s.number] = level.duel_players[ent->s.number];
+	if (ally)
+	{ // zyk: both players must have the same score and the same hp score
+		level.duel_players[ally->s.number] = level.duel_players[ent->s.number];
 
-			if (!(ally->client->pers.player_statuses & (1 << 27)))
-			{ // zyk: ally did not lose the duel
-				level.duel_players_hp[ent->s.number] += (ally->health + ally->client->ps.stats[STAT_ARMOR]);
-			}
-
-			level.duel_players_hp[ally->s.number] = level.duel_players_hp[ent->s.number];
+		if (level.duel_tournament_mode == 4 && !(ally->client->pers.player_statuses & (1 << 27)))
+		{ // zyk: add hp score if he did not die in duel
+			level.duel_players_hp[ent->s.number] += (ally->health + ally->client->ps.stats[STAT_ARMOR]);
 		}
+
+		level.duel_players_hp[ally->s.number] = level.duel_players_hp[ent->s.number];
 	}
 }
 

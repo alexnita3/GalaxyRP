@@ -2129,6 +2129,7 @@ extern void save_account(gentity_t *ent);
 extern void remove_credits(gentity_t *ent, int credits);
 extern void zyk_NPC_Kill_f( char *name );
 extern gentity_t *Zyk_NPC_SpawnType(char *npc_type, int x, int y, int z, int yaw);
+extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int meansOfDeath ) {
 	gentity_t	*ent;
 	int			anim;
@@ -2217,7 +2218,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 	// zyk: player died in Duel Tournament
 	if (level.duel_tournament_mode == 4 && self->s.number < MAX_CLIENTS && level.duel_players[self->s.number] != -1 && 
-		(self->s.number == level.duelist_1_id || self->s.number == level.duelist_2_id || self->s.number == level.duelist_1_ally_id || self->s.number == level.duelist_2_ally_id))
+		duel_tournament_is_duelist(self) == qtrue)
 	{
 		// zyk: lost the duel
 		self->client->pers.player_statuses |= (1 << 27);
@@ -5158,7 +5159,6 @@ vec3_t gPainPoint;
 
 extern void Jedi_Decloak( gentity_t *self );
 extern void Boba_FlyStop( gentity_t *self );
-extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
 void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t dir, vec3_t point, int damage, int dflags, int mod ) {
 	gclient_t	*client;
