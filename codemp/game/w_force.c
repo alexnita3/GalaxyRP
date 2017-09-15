@@ -2268,19 +2268,29 @@ void ForceDrainDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec3_t 
 					{ // zyk: Drain Shield skill. Enemy has no force. Damages him
 						G_Damage( traceEnt, self, self, NULL, impactPoint, (dmg/2), 0, MOD_FORCE_DARK );
 					}
-					else
+					else if (traceEnt->client->ps.fd.forcePower >= dmg)
 					{
 						traceEnt->client->ps.fd.forcePower -= (dmg);
 					}
+					else if (traceEnt->client->ps.fd.forcePower > 0)
+					{
+						dmg = traceEnt->client->ps.fd.forcePower;
+						traceEnt->client->ps.fd.forcePower -= (dmg);
+					}
+					else
+					{ // zyk: enemy has no force to consume
+						dmg = 0;
+					}
 				}
+
 				if (traceEnt->client->ps.fd.forcePower < 0)
 				{
 					traceEnt->client->ps.fd.forcePower = 0;
 				}
 
 				if (self->client->ps.stats[STAT_HEALTH] < self->client->ps.stats[STAT_MAX_HEALTH] &&
-					self->health > 0 && self->client->ps.stats[STAT_HEALTH] > 0)
-				{
+					self->health > 0 && self->client->ps.stats[STAT_HEALTH] > 0 && dmg > 0)
+				{ // zyk: only recover hp if dmg > 0, which means enemy had force to consume
 					self->health += dmg;
 					if (self->health > self->client->ps.stats[STAT_MAX_HEALTH])
 					{
