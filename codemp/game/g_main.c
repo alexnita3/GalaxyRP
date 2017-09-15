@@ -7634,24 +7634,23 @@ void duel_tournament_give_score(gentity_t *ent, int score)
 	{
 		gentity_t *ally = NULL;
 
-		if (level.duelist_1_id == ent->s.number && level.duelist_1_ally_id != -1)
+		if (level.duel_allies[ent->s.number] != -1)
 		{
-			ally = &g_entities[level.duelist_1_ally_id];
-		}
-		else if (level.duelist_2_id == ent->s.number && level.duelist_2_ally_id != -1)
-		{
-			ally = &g_entities[level.duelist_2_ally_id];
+			ally = &g_entities[level.duel_allies[ent->s.number]];
 		}
 
+		level.duel_players_hp[ent->s.number] += (ent->health + ent->client->ps.stats[STAT_ARMOR]);
+
 		if (ally)
-		{ // zyk: both players must have the same hp score
-			level.duel_players_hp[ent->s.number] += (ent->health + ent->client->ps.stats[STAT_ARMOR]);
-			level.duel_players_hp[ent->s.number] += (ally->health + ally->client->ps.stats[STAT_ARMOR]);
+		{ // zyk: both players must have the same score and the same hp score
+			level.duel_players[ally->s.number] = level.duel_players[ent->s.number];
+
+			if (!(ally->client->pers.player_statuses & (1 << 27)))
+			{ // zyk: ally did not lose the duel
+				level.duel_players_hp[ent->s.number] += (ally->health + ally->client->ps.stats[STAT_ARMOR]);
+			}
+
 			level.duel_players_hp[ally->s.number] = level.duel_players_hp[ent->s.number];
-		}
-		else
-		{ // zyk: does not have an ally to sum hp
-			level.duel_players_hp[ent->s.number] += (ent->health + ent->client->ps.stats[STAT_ARMOR]);
 		}
 	}
 }
@@ -7667,8 +7666,6 @@ void duel_tournament_victory(gentity_t *winner, gentity_t *winner_ally)
 
 	if (winner_ally)
 	{
-		duel_tournament_give_score(winner_ally, 3);
-
 		strcpy(ally_name, va("^7 / %s", winner_ally->client->pers.netname));
 	}
 
@@ -7678,20 +7675,10 @@ void duel_tournament_victory(gentity_t *winner, gentity_t *winner_ally)
 }
 
 // zyk: tied. Gives score to both teams
-void duel_tournament_tie(gentity_t *first_duelist, gentity_t *first_duelist_ally, gentity_t *second_duelist, gentity_t *second_duelist_ally)
+void duel_tournament_tie(gentity_t *first_duelist, gentity_t *second_duelist)
 {
 	duel_tournament_give_score(first_duelist, 1);
 	duel_tournament_give_score(second_duelist, 1);
-
-	if (first_duelist_ally)
-	{
-		duel_tournament_give_score(first_duelist_ally, 1);
-	}
-
-	if (second_duelist_ally)
-	{
-		duel_tournament_give_score(second_duelist_ally, 1);
-	}
 
 	level.duel_matches[level.duel_matches_done - 1][2] = -2;
 
@@ -8659,7 +8646,7 @@ void G_RunFrame( int levelTime ) {
 				}
 				else
 				{ // zyk: tie
-					duel_tournament_tie(first_duelist, first_duelist_ally, second_duelist, second_duelist_ally);
+					duel_tournament_tie(first_duelist, second_duelist);
 				}
 
 				level.duel_tournament_mode = 5;
@@ -8668,7 +8655,7 @@ void G_RunFrame( int levelTime ) {
 			else if (first_duelist->client->pers.player_statuses & (1 << 27) && (!first_duelist_ally || first_duelist_ally->client->pers.player_statuses & (1 << 27)) &&
 				second_duelist->client->pers.player_statuses & (1 << 27) && (!second_duelist_ally || second_duelist_ally->client->pers.player_statuses & (1 << 27)))
 			{ // zyk: tie when everyone dies at the same frame
-				duel_tournament_tie(first_duelist, first_duelist_ally, second_duelist, second_duelist_ally);
+				duel_tournament_tie(first_duelist, second_duelist);
 
 				level.duel_tournament_mode = 5;
 				level.duel_tournament_timer = level.time + 1500;
