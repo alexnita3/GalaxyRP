@@ -8208,6 +8208,61 @@ void zyk_remap_quest_item(char *old_remap, char *new_remap)
 	trap->SetConfigstring(CS_SHADERSTATE, BuildShaderStateConfig());
 }
 
+void zyk_trial_room_models()
+{
+	gentity_t *new_ent = G_Spawn();
+
+	// zyk: catwalk to block entrance
+	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+	zyk_set_entity_field(new_ent, "spawnflags", "65537");
+	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -3770, 4884, 120));
+
+	zyk_set_entity_field(new_ent, "angles", va("%d %d 0", 90, 0));
+
+	zyk_set_entity_field(new_ent, "mins", "-24 -192 -192");
+	zyk_set_entity_field(new_ent, "maxs", "24 192 192");
+	zyk_set_entity_field(new_ent, "zykmodelscale", "300");
+
+	zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+	zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+
+	zyk_spawn_entity(new_ent);
+
+	// zyk: adding catwalks to block the central lava
+	new_ent = G_Spawn();
+
+	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+	zyk_set_entity_field(new_ent, "spawnflags", "65537");
+	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -4470, 4628, -65));
+
+	zyk_set_entity_field(new_ent, "mins", "-256 -256 -32");
+	zyk_set_entity_field(new_ent, "maxs", "256 256 32");
+	zyk_set_entity_field(new_ent, "zykmodelscale", "400");
+
+	zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+	zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+
+	zyk_spawn_entity(new_ent);
+
+	new_ent = G_Spawn();
+
+	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+	zyk_set_entity_field(new_ent, "spawnflags", "65537");
+	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -4470, 5140, -65));
+
+	zyk_set_entity_field(new_ent, "mins", "-256 -256 -32");
+	zyk_set_entity_field(new_ent, "maxs", "256 256 32");
+	zyk_set_entity_field(new_ent, "zykmodelscale", "400");
+
+	zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+	zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
+
+	zyk_spawn_entity(new_ent);
+}
+
 /*
 ================
 G_RunFrame
@@ -13205,56 +13260,7 @@ void G_RunFrame( int levelTime ) {
 
 								if (ent->client->pers.universe_quest_messages == 1 && ent->client->pers.hunter_quest_messages < amount_of_bosses_in_map)
 								{ // zyk: closing the passage from where the player came so he cannot exit the trials room
-									gentity_t *new_ent = G_Spawn();
-
-									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-									zyk_set_entity_field(new_ent, "spawnflags", "65537");
-									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -3770, 4884, 120));
-
-									zyk_set_entity_field(new_ent, "angles", va("%d %d 0", 90, 0));
-
-									zyk_set_entity_field(new_ent, "mins", "-24 -192 -192");
-									zyk_set_entity_field(new_ent, "maxs", "24 192 192");
-									zyk_set_entity_field(new_ent, "zykmodelscale", "300");
-
-									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-									zyk_spawn_entity(new_ent);
-
-									// zyk: adding catwalks to block the central lava
-									new_ent = G_Spawn();
-
-									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-									zyk_set_entity_field(new_ent, "spawnflags", "65537");
-									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -4470, 4628, -68));
-
-									zyk_set_entity_field(new_ent, "mins", "-256 -256 -16");
-									zyk_set_entity_field(new_ent, "maxs", "256 256 16");
-									zyk_set_entity_field(new_ent, "zykmodelscale", "400");
-
-									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-									zyk_spawn_entity(new_ent);
-
-									new_ent = G_Spawn();
-
-									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-									zyk_set_entity_field(new_ent, "spawnflags", "65537");
-									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -4470, 5140, -68));
-
-									zyk_set_entity_field(new_ent, "mins", "-256 -256 -16");
-									zyk_set_entity_field(new_ent, "maxs", "256 256 16");
-									zyk_set_entity_field(new_ent, "zykmodelscale", "400");
-
-									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-									zyk_spawn_entity(new_ent);
+									zyk_trial_room_models();
 
 									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_boss_1", -4270, 4884, 150, 0, 17);
 
@@ -13411,56 +13417,7 @@ void G_RunFrame( int levelTime ) {
 
 								if (ent->client->pers.universe_quest_messages == 1)
 								{ // zyk: closing the passage from where the player came so he cannot exit the trials room
-									gentity_t *new_ent = G_Spawn();
-
-									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-									zyk_set_entity_field(new_ent, "spawnflags", "65537");
-									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -3770, 4884, 120));
-
-									zyk_set_entity_field(new_ent, "angles", va("%d %d 0", 90, 0));
-
-									zyk_set_entity_field(new_ent, "mins", "-24 -192 -192");
-									zyk_set_entity_field(new_ent, "maxs", "24 192 192");
-									zyk_set_entity_field(new_ent, "zykmodelscale", "300");
-
-									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-									zyk_spawn_entity(new_ent);
-
-									// zyk: adding catwalks to block the central lava
-									new_ent = G_Spawn();
-
-									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-									zyk_set_entity_field(new_ent, "spawnflags", "65537");
-									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -4470, 4628, -68));
-
-									zyk_set_entity_field(new_ent, "mins", "-256 -256 -16");
-									zyk_set_entity_field(new_ent, "maxs", "256 256 16");
-									zyk_set_entity_field(new_ent, "zykmodelscale", "400");
-
-									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-									zyk_spawn_entity(new_ent);
-
-									new_ent = G_Spawn();
-
-									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-									zyk_set_entity_field(new_ent, "spawnflags", "65537");
-									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -4470, 5140, -68));
-
-									zyk_set_entity_field(new_ent, "mins", "-256 -256 -16");
-									zyk_set_entity_field(new_ent, "maxs", "256 256 16");
-									zyk_set_entity_field(new_ent, "zykmodelscale", "400");
-
-									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-									zyk_spawn_entity(new_ent);
+									zyk_trial_room_models();
 
 									spawn_boss(ent, -3970, 4884, -5, 179, "guardian_of_universe", -4270, 4884, 150, 0, 18);
 
