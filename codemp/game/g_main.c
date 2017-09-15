@@ -7391,6 +7391,12 @@ void duel_tournament_prepare(gentity_t *ent)
 		}
 	}
 
+	// zyk: removing powerups
+	ent->client->ps.powerups[PW_FORCE_BOON] = 0;
+	ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = 0;
+	ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = 0;
+
+	// zyk: removing flag that is used to test if player died in a duel
 	ent->client->pers.player_statuses &= ~(1 << 27);
 
 	// zyk: stop any movement

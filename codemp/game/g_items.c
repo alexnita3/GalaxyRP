@@ -2639,6 +2639,7 @@ Touch_Item
 extern void save_account(gentity_t *ent);
 extern void universe_quest_artifacts_checker(gentity_t *ent);
 extern void quest_get_new_player(gentity_t *ent);
+extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	int			respawn;
 	qboolean	predict;
@@ -2757,6 +2758,10 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	}
 	else if (level.sniper_mode == 2 && other->s.number < MAX_CLIENTS && level.sniper_players[other->s.number] != -1)
 	{ // zyk: players in Sniper Battle cannot grab anything
+		return;
+	}
+	else if (level.duel_tournament_mode == 4 && other->s.number < MAX_CLIENTS && duel_tournament_is_duelist(other) == qtrue)
+	{ // zyk: duelists in Duel Tournament cannot grab anything
 		return;
 	}
 
