@@ -7626,6 +7626,36 @@ void duel_tournament_winner()
 	}
 }
 
+// zyk: returns the amount of hp and shield in a string, it is the total hp and shield of a team or single duelist in Duel Tournament
+char *duel_tournament_remaining_health(gentity_t *ent)
+{
+	char health_info[64];
+	gentity_t *ally = NULL;
+
+	if (level.duel_allies[ent->s.number] != -1)
+	{
+		ally = &g_entities[level.duel_allies[ent->s.number]];
+	}
+
+	strcpy(health_info, "");
+
+	if (level.duel_tournament_mode == 4)
+	{
+		if (!(ent->client->pers.player_statuses & (1 << 27)))
+		{ // zyk: show health if the player did not die in duel
+			strcpy(health_info, va("  %s^7: ^1%d^7/^2%d^7", ent->client->pers.netname, ent->health, ent->client->ps.stats[STAT_ARMOR]));
+		}
+
+		if (ally && !(ally->client->pers.player_statuses & (1 << 27)))
+		{ // zyk: show health if the ally did not die in duel
+			strcpy(health_info, va("%s  %s^7: ^1%d^7/^2%d^7", health_info, ally->client->pers.netname, ally->health, ally->client->ps.stats[STAT_ARMOR]));
+		}
+	}
+
+	return G_NewString(health_info);
+}
+
+// zyk: sums the score and hp score to a single duelist or to a team
 void duel_tournament_give_score(gentity_t *ent, int score)
 {
 	gentity_t *ally = NULL;
@@ -7670,7 +7700,7 @@ void duel_tournament_victory(gentity_t *winner, gentity_t *winner_ally)
 
 	level.duel_matches[level.duel_matches_done - 1][2] = winner->s.number;
 
-	trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s%s ^7wins!\"", winner->client->pers.netname, ally_name));
+	trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s%s ^7wins! %s\"", winner->client->pers.netname, ally_name, duel_tournament_remaining_health(winner)));
 }
 
 // zyk: tied. Gives score to both teams
@@ -7681,7 +7711,7 @@ void duel_tournament_tie(gentity_t *first_duelist, gentity_t *second_duelist)
 
 	level.duel_matches[level.duel_matches_done - 1][2] = -2;
 
-	trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Tie!\""));
+	trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Tie! %s %s\"", duel_tournament_remaining_health(first_duelist), duel_tournament_remaining_health(second_duelist)));
 }
 
 void duel_tournament_protect_duelists(gentity_t *duelist_1, gentity_t *duelist_2, gentity_t *duelist_1_ally, gentity_t *duelist_2_ally)
