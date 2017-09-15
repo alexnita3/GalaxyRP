@@ -5600,6 +5600,7 @@ void sense_health_info(gentity_t *self, gentity_t *target)
 	}
 }
 
+extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 {
 	int			i, holo, holoregen;
@@ -5815,7 +5816,8 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 	i = 0;
 
 	// zyk: added the rpg mode condition, because RPG Mode players cant get power ups
-	if (self->client->sess.amrpgmode < 2 && (self->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] || self->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK]))
+	if (self->client->sess.amrpgmode < 2 && duel_tournament_is_duelist(self) == qfalse && 
+		(self->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] || self->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK]))
 	{ //enlightenment
 		if (!self->client->ps.fd.forceUsingAdded)
 		{

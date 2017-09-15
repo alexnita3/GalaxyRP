@@ -7375,21 +7375,21 @@ void duel_tournament_prepare(gentity_t *ent)
 		ent->client->ps.stats[STAT_ARMOR] = 0;
 	}
 
-	// zyk: cannot use any force powers, except Jump
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PUSH);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PULL);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SPEED);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SEE);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_ABSORB);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_HEAL);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PROTECT);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TELEPATHY);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_HEAL);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_LIGHTNING);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_GRIP);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_DRAIN);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_RAGE);
-	ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_FORCE);
+	
+	for (i = 0; i < NUM_FORCE_POWERS; i++)
+	{
+		if (i != FP_LEVITATION && i != FP_SABER_OFFENSE && i != FP_SABER_DEFENSE)
+		{ // zyk: cannot use any force powers, except Jump, Saber Attack and Saber Defense
+			if ((ent->client->ps.fd.forcePowersActive & (1 << i)))
+			{//turn it off
+				WP_ForcePowerStop(ent, (forcePowers_t)i);
+			}
+
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << i);
+			ent->client->ps.fd.forcePowerLevel[i] = FORCE_LEVEL_0;
+			ent->client->ps.fd.forcePowerDuration[i] = 0;
+		}
+	}
 
 	ent->client->pers.player_statuses &= ~(1 << 27);
 
