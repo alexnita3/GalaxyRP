@@ -16469,8 +16469,8 @@ void duel_show_table(gentity_t *ent)
 	{ // zyk: adding players to sorted_players and calculating the array length
 		if (level.duel_players[i] != -1)
 		{
-			if (level.duel_allies[i] == -1 || (i < level.duel_allies[i] && level.duel_allies[level.duel_allies[i]] == i))
-			{ // zyk: do not sort the allies. Use the lower id to sort the score of a team
+			if (level.duel_allies[i] == -1 || i < level.duel_allies[i] || level.duel_allies[level.duel_allies[i]] != i)
+			{ // zyk: do not sort the allies. Use the lower id to sort the score of a team if both players add themselves as a team
 				sorted_players[array_length] = i;
 				array_length++;
 			}
@@ -16500,8 +16500,8 @@ void duel_show_table(gentity_t *ent)
 		gentity_t *player_ent = &g_entities[sorted_players[i]];
 		char ally_name[36];
 
-		if (level.duel_allies[sorted_players[i]] != -1)
-		{
+		if (level.duel_allies[sorted_players[i]] != -1 && level.duel_allies[level.duel_allies[sorted_players[i]]] == sorted_players[i])
+		{ // zyk: show ally if they both added each other as a team
 			strcpy(ally_name, va(" / %s", g_entities[level.duel_allies[sorted_players[i]]].client->pers.netname));
 		}
 		else
