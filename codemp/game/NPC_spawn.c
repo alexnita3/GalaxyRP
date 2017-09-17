@@ -1751,17 +1751,10 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 			newent->target = ent->closetarget;
 		}
 		
-		if (ent->spawnflags & 4096 && ent->targetname)
-		{ // zyk: if it has this spawnflag, allow spawning the same npc again
-			zyk_main_spawn_entity(ent);
-		}
-		else
-		{ 
-			ent->targetname = NULL;
+		ent->targetname = NULL;
 
-			//why not remove me...?  Because of all the string pointers?  Just do G_NewStrings?
-			G_FreeEntity(ent);//bye!
-		}
+		//why not remove me...?  Because of all the string pointers?  Just do G_NewStrings?
+		G_FreeEntity(ent);//bye!
 	}
 
 finish:
