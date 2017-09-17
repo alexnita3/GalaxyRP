@@ -7513,9 +7513,16 @@ void duel_tournament_prize(gentity_t *ent)
 	}
 
 	ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 40000;
-	ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 40000;
-	ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 40000;
 
+	if (ent->client->ps.fd.forceSide == FORCE_LIGHTSIDE)
+	{
+		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 40000;
+	}
+	else if (ent->client->ps.fd.forceSide == FORCE_DARKSIDE)
+	{
+		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 40000;
+	}
+	
 	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
 	ent->client->ps.ammo[AMMO_BLASTER] = zyk_max_blaster_pack_ammo.integer;
 	ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
