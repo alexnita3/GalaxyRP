@@ -7719,21 +7719,21 @@ void duel_tournament_tie(gentity_t *first_duelist, gentity_t *second_duelist)
 void duel_tournament_protect_duelists(gentity_t *duelist_1, gentity_t *duelist_2, gentity_t *duelist_1_ally, gentity_t *duelist_2_ally)
 {
 	duelist_1->client->ps.eFlags |= EF_INVULNERABLE;
-	duelist_1->client->invulnerableTimer = level.time + 1000;
+	duelist_1->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECTION_TIME;
 
 	duelist_2->client->ps.eFlags |= EF_INVULNERABLE;
-	duelist_2->client->invulnerableTimer = level.time + 1000;
+	duelist_2->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECTION_TIME;
 
 	if (duelist_1_ally)
 	{
 		duelist_1_ally->client->ps.eFlags |= EF_INVULNERABLE;
-		duelist_1_ally->client->invulnerableTimer = level.time + 1000;
+		duelist_1_ally->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECTION_TIME;
 	}
 
 	if (duelist_2_ally)
 	{
 		duelist_2_ally->client->ps.eFlags |= EF_INVULNERABLE;
-		duelist_2_ally->client->invulnerableTimer = level.time + 1000;
+		duelist_2_ally->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECTION_TIME;
 	}
 }
 
@@ -8764,7 +8764,7 @@ void G_RunFrame( int levelTime ) {
 				if (zyk_has_respawned == qfalse)
 				{
 					// zyk: setting the max time players can duel
-					level.duel_tournament_timer = level.time + 180000;
+					level.duel_tournament_timer = level.time + DUEL_TOURNAMENT_DUEL_TIME;
 
 					// zyk: prepare the duelists to start duel
 					duel_tournament_prepare(duelist_1);
