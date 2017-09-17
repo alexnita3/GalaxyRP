@@ -16084,7 +16084,7 @@ void G_RunFrame( int levelTime ) {
 
 						if (distance > 400)
 						{
-							healing_water(ent,200);
+							healing_water(ent, 120);
 							trap->SendServerCommand( -1, "chat \"^4Guardian of Water: ^7Healing Water!\"");
 						}
 						else
