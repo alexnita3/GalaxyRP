@@ -1684,7 +1684,7 @@ void SP_func_plat (gentity_t *ent) {
 
 	// touch function keeps the plat from returning while
 	// a live player is standing on it
-	if (!(ent->spawnflags & 16384))
+	if (!(ent->spawnflags & 4096)) // zyk: dont test for living player if this spawnflag is set
 		ent->touch = Touch_Plat;
 
 	ent->blocked = Blocked_Door;

@@ -1160,7 +1160,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		ent = G_Spawn();
 
 		zyk_set_entity_field(ent, "classname", "func_plat");
-		zyk_set_entity_field(ent, "spawnflags", "81920");
+		zyk_set_entity_field(ent, "spawnflags", "69632");
 		zyk_set_entity_field(ent, "targetname", "zyk_lift_1");
 		zyk_set_entity_field(ent, "message", "8");
 		zyk_set_entity_field(ent, "random", "1280");
