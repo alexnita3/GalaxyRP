@@ -1767,7 +1767,7 @@ void SP_func_button( gentity_t *ent ) {
 		ent->s.modelindex = G_ModelIndex( ent->model );
 
 		// zyk: is a solid model
-		if (ent->spawnflags & 32768)
+		if (ent->spawnflags & 1024)
 			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
@@ -2020,7 +2020,7 @@ void SP_func_train (gentity_t *self) {
 		self->s.modelindex = G_ModelIndex( self->model );
 
 		// zyk: is a solid model
-		if (self->spawnflags & 32768)
+		if (self->spawnflags & 1024)
 			self->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
@@ -3135,7 +3135,7 @@ void SP_func_glass( gentity_t *ent ) {
 		ent->s.modelindex = G_ModelIndex( ent->model );
 
 		// zyk: is a solid model
-		if (ent->spawnflags & 32768)
+		if (ent->spawnflags & 1024)
 			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
@@ -3192,7 +3192,7 @@ void func_wait_return_solid( gentity_t *self )
 			self->s.modelindex = G_ModelIndex( self->model );
 
 			// zyk: is a solid model
-			if (self->spawnflags & 32768)
+			if (self->spawnflags & 1024)
 				self->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 			// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
@@ -3477,7 +3477,7 @@ void SP_func_wall( gentity_t *ent )
 		ent->s.modelindex = G_ModelIndex( ent->model );
 
 		// zyk: is a solid model
-		if (ent->spawnflags & 32768)
+		if (ent->spawnflags & 1024)
 			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 
 		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
