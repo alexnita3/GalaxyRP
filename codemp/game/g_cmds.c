@@ -12465,169 +12465,61 @@ void Cmd_PlayerMode_f( gentity_t *ent ) {
 
 /*
 ==================
-Cmd_News_f
+Cmd_ZykFile_f
 ==================
 */
-void Cmd_News_f( gentity_t *ent ) {
+void Cmd_ZykFile_f(gentity_t *ent) {
 	int page = 1; // zyk: page the user wants to see
 	char arg1[MAX_STRING_CHARS];
-	char file_content[MAX_STRING_CHARS];
-	char content[512];
-	int i = 0;
-	int results_per_page = 8; // zyk: number of results per page
-	FILE *news_file;
-	strcpy(file_content,"");
-	strcpy(content,"");
-
-	if ( trap->Argc() < 2 )
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Use ^3/news <page number> ^7to see the results of this page\n\"" );
-		return;
-	}
-
-	trap->Argv(1, arg1, sizeof( arg1 ));
-	page = atoi(arg1);
-
-	if (page == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Invalid page number\n\"" );
-		return;
-	}
-
-	news_file = fopen("news.txt","r");
-	if (news_file != NULL)
-	{
-		while(i < (results_per_page * (page-1)))
-		{ // zyk: reads the file until it reaches the position corresponding to the page number
-			fgets(content,sizeof(content),news_file);
-			i++;
-		}
-
-		while(i < (results_per_page * page) && fgets(content,sizeof(content),news_file) != NULL)
-		{ // zyk: fgets returns NULL at EOF
-			strcpy(file_content,va("%s%s",file_content,content));
-			i++;
-		}
-
-		fclose(news_file);
-		trap->SendServerCommand(ent-g_entities, va("print \"\n%s\n\"",file_content));
-	}
-	else
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"The news file does not exist\n\"" );
-		return;
-	}
-}
-
-/*
-==================
-Cmd_NpcList_f
-==================
-*/
-void Cmd_NpcList_f( gentity_t *ent ) {
-	int page = 1; // zyk: page the user wants to see
-	char arg1[MAX_STRING_CHARS];
+	char arg2[MAX_STRING_CHARS];
 	char file_content[MAX_STRING_CHARS];
 	char content[512];
 	int i = 0;
 	int results_per_page = zyk_list_cmds_results_per_page.integer; // zyk: number of results per page
-	FILE *npc_list_file;
-	strcpy(file_content,"");
-	strcpy(content,"");
+	FILE *server_file = NULL;
+	strcpy(file_content, "");
+	strcpy(content, "");
 
-	if ( trap->Argc() < 2 )
+	if (trap->Argc() < 3)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Use ^3/npclist <page number> ^7to see the results of this page\n\"" );
+		trap->SendServerCommand(ent->s.number, "print \"Use ^3/zykfile <filename> <page number> ^7to see the results of this page. Example: /zykfile npclist 1\n\"");
 		return;
 	}
 
-	trap->Argv(1, arg1, sizeof( arg1 ));
-	page = atoi(arg1);
+	// zyk: filename
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	// zyk: page number
+	trap->Argv(2, arg2, sizeof(arg2));
+	page = atoi(arg2);
 
 	if (page == 0)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Invalid page number\n\"" );
+		trap->SendServerCommand(ent->s.number, "print \"Invalid page number\n\"");
 		return;
 	}
 
-	npc_list_file = fopen("npclist.txt","r");
-	if (npc_list_file != NULL)
+	server_file = fopen(va("%s.txt", arg1), "r");
+	if (server_file != NULL)
 	{
-		while(i < (results_per_page * (page-1)))
+		while (i < (results_per_page * (page - 1)))
 		{ // zyk: reads the file until it reaches the position corresponding to the page number
-			fgets(content,sizeof(content),npc_list_file);
+			fgets(content, sizeof(content), server_file);
 			i++;
 		}
 
-		while(i < (results_per_page * page) && fgets(content,sizeof(content),npc_list_file) != NULL)
+		while (i < (results_per_page * page) && fgets(content, sizeof(content), server_file) != NULL)
 		{ // zyk: fgets returns NULL at EOF
-			strcpy(file_content,va("%s%s",file_content,content));
+			strcpy(file_content, va("%s%s", file_content, content));
 			i++;
 		}
 
-		fclose(npc_list_file);
-		trap->SendServerCommand(ent-g_entities, va("print \"\n%s\n\"",file_content));
+		fclose(server_file);
+		trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\"", file_content));
 	}
 	else
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"The npclist file does not exist\n\"" );
-		return;
-	}
-}
-
-/*
-==================
-Cmd_VehicleList_f
-==================
-*/
-void Cmd_VehicleList_f( gentity_t *ent ) {
-	int page = 1; // zyk: page the user wants to see
-	char arg1[MAX_STRING_CHARS];
-	char file_content[MAX_STRING_CHARS];
-	char content[512];
-	int i = 0;
-	int results_per_page = zyk_list_cmds_results_per_page.integer; // zyk: number of results per page
-	FILE *vehicle_list_file;
-	strcpy(file_content,"");
-	strcpy(content,"");
-
-	if ( trap->Argc() < 2 )
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Use ^3/vehiclelist <page number> ^7to see the results of this page\n\"" );
-		return;
-	}
-
-	trap->Argv(1, arg1, sizeof( arg1 ));
-	page = atoi(arg1);
-
-	if (page == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Invalid page number\n\"" );
-		return;
-	}
-
-	vehicle_list_file = fopen("vehiclelist.txt","r");
-	if (vehicle_list_file != NULL)
-	{
-		while(i < (results_per_page * (page-1)))
-		{ // zyk: reads the file until it reaches the position corresponding to the page number
-			fgets(content,sizeof(content),vehicle_list_file);
-			i++;
-		}
-
-		while(i < (results_per_page * page) && fgets(content,sizeof(content),vehicle_list_file) != NULL)
-		{ // zyk: fgets returns NULL at EOF
-			strcpy(file_content,va("%s%s",file_content,content));
-			i++;
-		}
-
-		fclose(vehicle_list_file);
-		trap->SendServerCommand(ent-g_entities, va("print \"\n%s\n\"",file_content));
-	}
-	else
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"The vehiclelist file does not exist\n\"" );
-		return;
+		trap->SendServerCommand(ent->s.number, "print \"This file does not exist\n\"");
 	}
 }
 
@@ -17381,12 +17273,10 @@ command_t commands[] = {
 	{ "meleearena",			Cmd_MeleeArena_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "meleemode",			Cmd_MeleeMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "new",				Cmd_NewAccount_f,			CMD_NOINTERMISSION },
-	{ "news",				Cmd_News_f,					CMD_NOINTERMISSION },
 	{ "noclip",				Cmd_Noclip_f,				CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "nofight",			Cmd_NoFight_f,				CMD_NOINTERMISSION },
 	{ "notarget",			Cmd_Notarget_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "npc",				Cmd_NPC_f,					CMD_LOGGEDIN },
-	{ "npclist",			Cmd_NpcList_f,				CMD_NOINTERMISSION },
 	{ "order",				Cmd_Order_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "paralyze",			Cmd_Paralyze_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "playermode",			Cmd_PlayerMode_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
@@ -17431,10 +17321,10 @@ command_t commands[] = {
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "up",					Cmd_UpSkill_f,				CMD_RPG|CMD_NOINTERMISSION },
-	{ "vehiclelist",		Cmd_VehicleList_f,			CMD_NOINTERMISSION },
 	{ "voice_cmd",			Cmd_VoiceCommand_f,			CMD_NOINTERMISSION },
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
+	{ "zykfile",			Cmd_ZykFile_f,				CMD_NOINTERMISSION },
 	{ "zykmod",				Cmd_ZykMod_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "zyksound",			Cmd_ZykSound_f,				CMD_NOINTERMISSION },
 };
