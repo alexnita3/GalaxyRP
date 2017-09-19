@@ -7278,6 +7278,32 @@ void zyk_try_get_dark_quest_note(gentity_t *ent, int note_bitvalue)
 	}
 }
 
+// zyk: backup player force powers
+void player_backup_force(gentity_t *ent)
+{
+	int i = 0;
+
+	ent->client->pers.zyk_saved_force_powers = ent->client->ps.fd.forcePowersKnown;
+
+	for (i = 0; i < NUM_FORCE_POWERS; i++)
+	{
+		ent->client->pers.zyk_saved_force_power_levels[i] = ent->client->ps.fd.forcePowerLevel[i];
+	}
+}
+
+// zyk: restore player force powers
+void player_restore_force(gentity_t *ent)
+{
+	int i = 0;
+
+	ent->client->ps.fd.forcePowersKnown = ent->client->pers.zyk_saved_force_powers;
+
+	for (i = 0; i < NUM_FORCE_POWERS; i++)
+	{
+		ent->client->ps.fd.forcePowerLevel[i] = ent->client->pers.zyk_saved_force_power_levels[i];
+	}
+}
+
 // zyk: finished the duel tournament
 void duel_tournament_end()
 {
@@ -7364,7 +7390,8 @@ void duel_tournament_prepare(gentity_t *ent)
 		ent->client->ps.stats[STAT_ARMOR] = 0;
 	}
 
-	
+	player_backup_force(ent);
+
 	for (i = 0; i < NUM_FORCE_POWERS; i++)
 	{
 		if (i != FP_LEVITATION && i != FP_SABER_OFFENSE && i != FP_SABER_DEFENSE)
@@ -7556,15 +7583,6 @@ void duel_tournament_winner()
 	{
 		if (level.duel_players[i] != -1)
 		{
-			// zyk: restoring jetpack fuel and force powers to players that were in Duel Tournament
-			if (g_entities[i].client)
-			{
-				g_entities[i].client->ps.jetpackFuel = 100;
-				g_entities[i].client->pers.jetpack_fuel = MAX_JETPACK_FUEL;
-
-				WP_InitForcePowers(&g_entities[i]);
-			}
-
 			if (level.duel_players[i] > max_score)
 			{ // zyk: player is in tournament and his score is higher than max_score, so for now he is the max score
 				max_score = level.duel_players[i];
@@ -8704,6 +8722,26 @@ void G_RunFrame( int levelTime ) {
 		if (level.duel_tournament_mode == 5 && level.duel_tournament_timer < level.time)
 		{ // zyk: show score table and reset duelists
 			duel_show_table(NULL);
+
+			if (level.duelist_1_id != -1)
+			{
+				player_restore_force(&g_entities[level.duelist_1_id]);
+			}
+
+			if (level.duelist_2_id != -1)
+			{
+				player_restore_force(&g_entities[level.duelist_2_id]);
+			}
+
+			if (level.duelist_1_ally_id != -1)
+			{
+				player_restore_force(&g_entities[level.duelist_1_ally_id]);
+			}
+
+			if (level.duelist_2_ally_id != -1)
+			{
+				player_restore_force(&g_entities[level.duelist_2_ally_id]);
+			}
 
 			level.duelist_1_id = -1;
 			level.duelist_2_id = -1;

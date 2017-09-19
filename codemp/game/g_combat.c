@@ -2222,9 +2222,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	{
 		// zyk: lost the duel
 		self->client->pers.player_statuses |= (1 << 27);
-
-		// zyk: resetting his force powers
-		WP_InitForcePowers(self);
 	}
 
 	// zyk: player died in Melee Battle

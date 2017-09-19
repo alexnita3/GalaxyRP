@@ -690,6 +690,10 @@ typedef struct clientPersistant_s {
 	// 27 - Has just lost his duel in Duel Tournament
 	int player_statuses;
 
+	// zyk: used to backup player force powers before some event that does not allow them. They will be restored after event ends
+	int zyk_saved_force_powers;
+	int zyk_saved_force_power_levels[NUM_FORCE_POWERS];
+
 	// zyk: time in which quest player is afk during a quest
 	int quest_afk_timer;
 
