@@ -7631,7 +7631,7 @@ void duel_tournament_winner()
 // zyk: returns the amount of hp and shield in a string, it is the total hp and shield of a team or single duelist in Duel Tournament
 char *duel_tournament_remaining_health(gentity_t *ent)
 {
-	char health_info[64];
+	char health_info[128];
 	gentity_t *ally = NULL;
 
 	if (level.duel_allies[ent->s.number] != -1)
@@ -7645,12 +7645,12 @@ char *duel_tournament_remaining_health(gentity_t *ent)
 	{
 		if (!(ent->client->pers.player_statuses & (1 << 27)))
 		{ // zyk: show health if the player did not die in duel
-			strcpy(health_info, va(" %s^7: ^1%d^7/^2%d^7 ", ent->client->pers.netname, ent->health, ent->client->ps.stats[STAT_ARMOR]));
+			strcpy(health_info, va(" ^1%d^7/^2%d^7 ", ent->health, ent->client->ps.stats[STAT_ARMOR]));
 		}
 
 		if (ally && !(ally->client->pers.player_statuses & (1 << 27)))
 		{ // zyk: show health if the ally did not die in duel
-			strcpy(health_info, va("%s %s^7: ^1%d^7/^2%d^7", health_info, ally->client->pers.netname, ally->health, ally->client->ps.stats[STAT_ARMOR]));
+			strcpy(health_info, va("%s ^1%d^7/^2%d^7", health_info, ally->health, ally->client->ps.stats[STAT_ARMOR]));
 		}
 	}
 
