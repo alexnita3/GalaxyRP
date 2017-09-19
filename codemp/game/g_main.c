@@ -8785,15 +8785,15 @@ void G_RunFrame( int levelTime ) {
 
 					if (duelist_1_ally)
 					{
-						VectorSet(zyk_origin, level.duel_tournament_origin[0] - 50, level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
+						VectorSet(zyk_origin, level.duel_tournament_origin[0] - 50, level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2] + 1);
 						zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
 
-						VectorSet(zyk_origin, level.duel_tournament_origin[0] + 50, level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
+						VectorSet(zyk_origin, level.duel_tournament_origin[0] + 50, level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2] + 1);
 						zyk_TeleportPlayer(duelist_1_ally, zyk_origin, zyk_angles);
 					}
 					else
 					{
-						VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2]);
+						VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2] + 1);
 						zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
 					}
 
@@ -8801,15 +8801,15 @@ void G_RunFrame( int levelTime ) {
 
 					if (duelist_2_ally)
 					{
-						VectorSet(zyk_origin, level.duel_tournament_origin[0] - 50, level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
+						VectorSet(zyk_origin, level.duel_tournament_origin[0] - 50, level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2] + 1);
 						zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
 
-						VectorSet(zyk_origin, level.duel_tournament_origin[0] + 50, level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
+						VectorSet(zyk_origin, level.duel_tournament_origin[0] + 50, level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2] + 1);
 						zyk_TeleportPlayer(duelist_2_ally, zyk_origin, zyk_angles);
 					}
 					else
 					{
-						VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2]);
+						VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2] + 1);
 						zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
 					}
 
