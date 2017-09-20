@@ -1694,6 +1694,7 @@ typedef struct level_locals_s {
 	// zyk: these variables test if an origin is set in the map to set the origin of a new entity spawned with /entadd command
 	qboolean ent_origin_set;
 	vec3_t ent_origin;
+	vec3_t ent_angles;
 
 	// zyk: used by Entity System to save and load spawnstring of entities
 	char *zyk_spawn_strings[ENTITYNUM_MAX_NORMAL][128];

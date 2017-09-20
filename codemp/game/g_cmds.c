@@ -13221,10 +13221,19 @@ void Cmd_EntOrigin_f(gentity_t *ent) {
 		return;
 	}
 
-	VectorCopy(ent->client->ps.origin, level.ent_origin);
-	level.ent_origin_set = qtrue;
+	if (level.ent_origin_set == qfalse)
+	{
+		VectorCopy(ent->client->ps.origin, level.ent_origin);
+		VectorCopy(ent->client->ps.viewangles, level.ent_angles);
+		level.ent_origin_set = qtrue;
 
-	trap->SendServerCommand(ent->s.number, va("print \"Entity origin: %s\n\"", vtos(level.ent_origin)));
+		trap->SendServerCommand(ent->s.number, va("print \"Entity origin: (%f %f %f) angles: (%f %f %f)\n\"", level.ent_origin[0], level.ent_origin[1], level.ent_origin[2], level.ent_angles[0], level.ent_angles[1], level.ent_angles[2]));
+	}
+	else
+	{
+		level.ent_origin_set = qfalse;
+		trap->SendServerCommand(ent->s.number, "print \"Entity origin unset\n\"");
+	}
 }
 
 /*
@@ -13240,6 +13249,7 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
 	qboolean has_origin_set = qfalse; // zyk: if player do not pass an origin key, use the one set with /entorigin
+	qboolean has_angles_set = qfalse; // zyk: if player do not pass an angles key, use the one set with /entorigin
 
 	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
 	{ // zyk: admin command
@@ -13283,6 +13293,11 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 				{ // zyk: if origin was passed
 					has_origin_set = qtrue;
 				}
+
+				if (Q_stricmp(key, "angles") == 0)
+				{ // zyk: if angles was passed
+					has_angles_set = qtrue;
+				}
 			}
 			else
 			{ // zyk: value
@@ -13295,12 +13310,25 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 
 		level.zyk_spawn_strings_values_count[new_ent->s.number] = i;
 
-		if (has_origin_set == qfalse && level.ent_origin_set == qtrue)
-		{ // zyk: if origin was not passed and the ent origin was set, use it
-			level.zyk_spawn_strings[new_ent->s.number][i] = "origin";
-			level.zyk_spawn_strings[new_ent->s.number][i + 1] = G_NewString(va("%f %f %f", level.ent_origin[0], level.ent_origin[1], level.ent_origin[2]));
+		if (level.ent_origin_set == qtrue && (has_origin_set == qfalse || has_angles_set == qfalse))
+		{ // zyk: if origin or angles were not passed, use the origin or angles set with /entorigin
+			if (has_origin_set == qfalse)
+			{
+				level.zyk_spawn_strings[new_ent->s.number][i] = "origin";
+				level.zyk_spawn_strings[new_ent->s.number][i + 1] = G_NewString(va("%f %f %f", level.ent_origin[0], level.ent_origin[1], level.ent_origin[2]));
 
-			level.zyk_spawn_strings_values_count[new_ent->s.number] += 2;
+				i += 2;
+
+				level.zyk_spawn_strings_values_count[new_ent->s.number] += 2;
+			}
+
+			if (has_angles_set == qfalse)
+			{
+				level.zyk_spawn_strings[new_ent->s.number][i] = "angles";
+				level.zyk_spawn_strings[new_ent->s.number][i + 1] = G_NewString(va("%f %f %f", level.ent_angles[0], level.ent_angles[1], level.ent_angles[2]));
+
+				level.zyk_spawn_strings_values_count[new_ent->s.number] += 2;
+			}
 		}
 		else if (has_origin_set == qfalse)
 		{ // zyk: origin field was not passed, so spawn entity where player is aiming at
