@@ -405,10 +405,30 @@ void SP_misc_model_breakable( gentity_t *ent )
 		}
 	}
 
+	if (!ent->model)
+	{ // zyk: must have a model
+		Com_Printf(S_COLOR_RED"ERROR: misc_model_breakable at %s has no md3 model specified\n", vtos(ent->s.origin));
+
+		ent->think = G_FreeEntity;
+		ent->nextthink = level.time + FRAMETIME;
+
+		return;
+	}
+
+	len = strlen(ent->model) - 4;
+
+	if (ent->model[len] != '.') //we're expecting ".md3"
+	{ // zyk: if model is not md3, do not spawn the entity
+		Com_Printf(S_COLOR_RED"ERROR: misc_model_breakable at %s has no md3 path specified\n", vtos(ent->s.origin));
+
+		ent->think = G_FreeEntity;
+		ent->nextthink = level.time + FRAMETIME;
+
+		return;
+	}
+
 	misc_model_breakable_init( ent );
 
-	len = strlen( ent->model ) - 4;
-	assert(ent->model[len]=='.');//we're expecting ".md3"
 	strncpy( damageModel, ent->model, sizeof(damageModel) );
 	damageModel[len] = 0;	//chop extension
 	strncpy( chunkModel, damageModel, sizeof(chunkModel));
