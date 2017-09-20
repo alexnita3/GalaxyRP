@@ -2130,6 +2130,7 @@ extern void remove_credits(gentity_t *ent, int credits);
 extern void zyk_NPC_Kill_f( char *name );
 extern gentity_t *Zyk_NPC_SpawnType(char *npc_type, int x, int y, int z, int yaw);
 extern qboolean duel_tournament_is_duelist(gentity_t *ent);
+extern void player_restore_force(gentity_t *ent);
 void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int meansOfDeath ) {
 	gentity_t	*ent;
 	int			anim;
@@ -2220,6 +2221,9 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	if (level.duel_tournament_mode == 4 && self->s.number < MAX_CLIENTS && level.duel_players[self->s.number] != -1 && 
 		duel_tournament_is_duelist(self) == qtrue)
 	{
+		// zyk: restoring force to this player
+		player_restore_force(self);
+
 		// zyk: lost the duel
 		self->client->pers.player_statuses |= (1 << 27);
 	}

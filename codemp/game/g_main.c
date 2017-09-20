@@ -7296,12 +7296,19 @@ void player_restore_force(gentity_t *ent)
 {
 	int i = 0;
 
+	if (ent->client->pers.player_statuses & (1 << 27))
+	{ // zyk: do not restore force to players that died in a Duel Tournament duel, because the force was already restored
+		return;
+	}
+
 	ent->client->ps.fd.forcePowersKnown = ent->client->pers.zyk_saved_force_powers;
 
 	for (i = 0; i < NUM_FORCE_POWERS; i++)
 	{
 		ent->client->ps.fd.forcePowerLevel[i] = ent->client->pers.zyk_saved_force_power_levels[i];
 	}
+
+	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_MELEE);
 }
 
 // zyk: finished the duel tournament
@@ -7372,6 +7379,7 @@ void duel_tournament_prepare(gentity_t *ent)
 	ent->client->ps.jetpackFuel = 100;
 	ent->client->pers.jetpack_fuel = MAX_JETPACK_FUEL;
 
+	// zyk: giving saber to the duelist
 	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
 	ent->client->ps.weapon = WP_SABER;
 	ent->s.weapon = WP_SABER;
@@ -7550,7 +7558,7 @@ void duel_tournament_prize(gentity_t *ent)
 		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 40000;
 	}
 	
-	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
+	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL) | (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
 	ent->client->ps.ammo[AMMO_BLASTER] = zyk_max_blaster_pack_ammo.integer;
 	ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
 	ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
