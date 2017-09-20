@@ -913,7 +913,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			if (i == 232 || i == 233)
 			{ // zyk: fixing the final door
 				ent->targetname = NULL;
-				zyk_spawn_entity(ent);
+				zyk_main_set_entity_field(ent, "targetname", "zykremovekey");
+
+				zyk_main_spawn_entity(ent);
 			}
 		}
 
