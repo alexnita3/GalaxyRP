@@ -12473,7 +12473,7 @@ void Cmd_ZykFile_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
 	char file_content[MAX_STRING_CHARS];
-	char content[512];
+	char content[MAX_STRING_CHARS];
 	int i = 0;
 	int results_per_page = zyk_list_cmds_results_per_page.integer; // zyk: number of results per page
 	FILE *server_file = NULL;
@@ -12482,36 +12482,44 @@ void Cmd_ZykFile_f(gentity_t *ent) {
 
 	if (trap->Argc() < 3)
 	{
-		trap->SendServerCommand(ent->s.number, "print \"Use ^3/zykfile <filename> <page number> ^7to see the results of this page. Example: /zykfile npclist 1\n\"");
+		trap->SendServerCommand(ent->s.number, "print \"Use ^3/zykfile <filename> <page number> ^7to see the results of this page or a search string. Example: ^3/zykfile npclist 1 ^7or to do a search ^3/zykfile npclist reborn^7\n\"");
 		return;
 	}
 
 	// zyk: filename
 	trap->Argv(1, arg1, sizeof(arg1));
 
-	// zyk: page number
+	// zyk: page number or search string
 	trap->Argv(2, arg2, sizeof(arg2));
 	page = atoi(arg2);
-
-	if (page == 0)
-	{
-		trap->SendServerCommand(ent->s.number, "print \"Invalid page number\n\"");
-		return;
-	}
 
 	server_file = fopen(va("%s.txt", arg1), "r");
 	if (server_file != NULL)
 	{
-		while (i < (results_per_page * (page - 1)))
-		{ // zyk: reads the file until it reaches the position corresponding to the page number
-			fgets(content, sizeof(content), server_file);
-			i++;
-		}
+		if (page > 0)
+		{ // zyk: show results of this page
+			while (i < (results_per_page * (page - 1)))
+			{ // zyk: reads the file until it reaches the position corresponding to the page number
+				fgets(content, sizeof(content), server_file);
+				i++;
+			}
 
-		while (i < (results_per_page * page) && fgets(content, sizeof(content), server_file) != NULL)
-		{ // zyk: fgets returns NULL at EOF
-			strcpy(file_content, va("%s%s", file_content, content));
-			i++;
+			while (i < (results_per_page * page) && fgets(content, sizeof(content), server_file) != NULL)
+			{ // zyk: fgets returns NULL at EOF
+				strcpy(file_content, va("%s%s", file_content, content));
+				i++;
+			}
+		}
+		else
+		{ // zyk: search for the string
+			while (i < results_per_page && fgets(content, sizeof(content), server_file) != NULL)
+			{ // zyk: fgets returns NULL at EOF
+				if (strstr(G_NewString(content), G_NewString(arg2)))
+				{
+					strcpy(file_content, va("%s%s", file_content, content));
+					i++;
+				}
+			}
 		}
 
 		fclose(server_file);
