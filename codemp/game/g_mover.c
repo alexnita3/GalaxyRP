@@ -1638,20 +1638,10 @@ void SP_func_plat (gentity_t *ent) {
 
 	VectorClear (ent->s.angles);
 
-	if (!(ent->spawnflags & 65536))
-	{ // zyk: only use spawnstring if this flag is not set
-		G_SpawnFloat( "speed", "200", &ent->speed );
-		G_SpawnInt( "dmg", "2", &ent->damage );
-		G_SpawnFloat( "wait", "1", &ent->wait );
-		G_SpawnFloat( "lip", "8", &lip );
-		
-		ent->message = G_NewString(va("%f",lip));
-	}
-	else
-	{
-		height = ent->random;
-		lip = atof(ent->message);
-	}
+	G_SpawnFloat( "speed", "200", &ent->speed );
+	G_SpawnInt( "dmg", "2", &ent->damage );
+	G_SpawnFloat( "wait", "1", &ent->wait );
+	G_SpawnFloat( "lip", "8", &lip );
 
 	ent->wait = 1000;
 
@@ -1671,7 +1661,7 @@ void SP_func_plat (gentity_t *ent) {
 		VectorCopy( ent->s.angles2, ent->s.apos.trBase );
 	}
 
-	if ( !(ent->spawnflags & 65536) && !G_SpawnFloat( "height", "0", &height ) ) {
+	if (!G_SpawnFloat( "height", "0", &height ) ) {
 		height = (ent->r.maxs[2] - ent->r.mins[2]) - lip;
 	}
 

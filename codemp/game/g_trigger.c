@@ -633,37 +633,25 @@ void SP_trigger_multiple( gentity_t *ent )
 {
 	char	*s;
 
-	// zyk: using message and this spawnflag to set the noise
-	if (!(ent->spawnflags & 65536))
-		ent->message = NULL;
-
-	if (!(ent->spawnflags & 65536) && G_SpawnString( "noise", "", &s ) )
+	if (G_SpawnString( "noise", "", &s ) )
 	{
 		if (s && s[0])
 		{
 			ent->noise_index = G_SoundIndex(s);
-			ent->message = G_NewString(s);
 		}
 		else
 		{
 			ent->noise_index = 0;
 		}
 	}
-	else if (ent->spawnflags & 65536 && ent->message && ent->message[0])
-	{
-		ent->noise_index = G_SoundIndex(ent->message);
-	}
 
 	//For siege gametype
 	G_SpawnInt("siegetrig", "0", &ent->genericValue1);
 	G_SpawnInt("teambalance", "0", &ent->genericValue2);
 
-	if (!(ent->spawnflags & 65536))
-	{
-		G_SpawnInt("usetime", "0", &ent->genericValue7);
+	G_SpawnInt("usetime", "0", &ent->genericValue7);
 
-		G_SpawnInt("delay", "0", &ent->delay);
-	}
+	G_SpawnInt("delay", "0", &ent->delay);
 
 	if ( (ent->wait > 0) && (ent->random >= ent->wait) ) {
 		ent->random = ent->wait - FRAMETIME;
