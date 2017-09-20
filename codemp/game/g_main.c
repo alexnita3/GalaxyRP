@@ -162,6 +162,7 @@ void G_CacheMapname( const vmCvar_t *mapname )
 // zyk: this function spawns an info_player_deathmatch entity in the map
 extern void zyk_set_entity_field(gentity_t *ent, char *key, char *value);
 extern void zyk_spawn_entity(gentity_t *ent);
+extern void zyk_main_set_entity_field(gentity_t *ent, char *key, char *value);
 extern void zyk_main_spawn_entity(gentity_t *ent);
 void zyk_create_info_player_deathmatch(int x, int y, int z, int yaw)
 {

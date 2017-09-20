@@ -1029,7 +1029,7 @@ void G_SpawnGEntityFromSpawnVars( qboolean inSubBSP ) {
 	}
 }
 
-// zyk: set an entity field with a value
+// zyk: set an entity field with a value. Old function
 void zyk_set_entity_field(gentity_t *ent, char *key, char *value) {
 	if (Q_stricmp(value,"(null)") == 0)
 	{ // zyk: initializing correctly the fields with null value
@@ -1050,7 +1050,7 @@ void zyk_set_entity_field(gentity_t *ent, char *key, char *value) {
 	}
 }
 
-// zyk: spawns the entity
+// zyk: spawns the entity. Old function
 void zyk_spawn_entity(gentity_t *ent) {
 	// zyk: setting these to 0 so manual entities spawned by this function (used in quests, fo example) are not bugged by the spawnvars used by the last effect spawned through new entity system
 	level.zyk_spawn_strings_values_count[ent->s.number] = 0;
@@ -1078,6 +1078,53 @@ void zyk_spawn_entity(gentity_t *ent) {
 			}
 		}
 	}
+}
+
+// zyk: function to set an entity field used by Entity System
+void zyk_main_set_entity_field(gentity_t *ent, char *key, char *value)
+{
+	int i = 0;
+
+	// zyk: see if this key already exists to edit it. If not, add a new one
+	while (i < level.zyk_spawn_strings_values_count[ent->s.number])
+	{
+		if (Q_stricmp(level.zyk_spawn_strings[ent->s.number][i], key) == 0)
+		{ // zyk: found the key
+			if (Q_stricmp(value, "zykremovekey") == 0)
+			{ // zyk: remove the key
+				// zyk: starts from the next key
+				i += 2;
+
+				// zyk: moves all keys after this one 2 positions to remove the key
+				while (i < level.zyk_spawn_strings_values_count[ent->s.number])
+				{
+					level.zyk_spawn_strings[ent->s.number][i - 2] = G_NewString(level.zyk_spawn_strings[ent->s.number][i]);
+					level.zyk_spawn_strings[ent->s.number][i - 1] = G_NewString(level.zyk_spawn_strings[ent->s.number][i + 1]);
+
+					i += 2;
+				}
+
+				// zyk: decrease the counter
+				level.zyk_spawn_strings_values_count[ent->s.number] -= 2;
+			}
+			else
+			{ // zyk: edit the key
+				level.zyk_spawn_strings[ent->s.number][i] = G_NewString(key);
+				level.zyk_spawn_strings[ent->s.number][i + 1] = G_NewString(value);
+			}
+
+			return;
+		}
+
+		i += 2;
+	}
+
+	// zyk: a new key. Add it
+	level.zyk_spawn_strings[ent->s.number][i] = G_NewString(key);
+	level.zyk_spawn_strings[ent->s.number][i + 1] = G_NewString(value);
+
+	// zyk: increases the counter
+	level.zyk_spawn_strings_values_count[ent->s.number] += 2;
 }
 
 // zyk: function to spawn entities used by entity system

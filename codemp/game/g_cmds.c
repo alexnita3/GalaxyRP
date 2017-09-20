@@ -5932,6 +5932,7 @@ qboolean dark_quest_collected_notes(gentity_t *ent)
 
 extern void zyk_set_entity_field(gentity_t *ent, char *key, char *value);
 extern void zyk_spawn_entity(gentity_t *ent);
+extern void zyk_main_set_entity_field(gentity_t *ent, char *key, char *value);
 extern void zyk_main_spawn_entity(gentity_t *ent);
 
 // zyk: loads the datapad md3 model for the Dark Quest notes
@@ -13458,64 +13459,15 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 			}
 			else
 			{ // zyk: value
-				int j = 0;
-				qboolean found_key = qfalse;
-
 				trap->Argv(i, arg2, sizeof(arg2));
 
-				// zyk: the key may be an existing one. If it is, update it. If not, add it to the spawn string array
-				while (j < level.zyk_spawn_strings_values_count[this_ent->s.number])
-				{
-					if (Q_stricmp(level.zyk_spawn_strings[this_ent->s.number][j], G_NewString(key)) == 0)
-					{ // zyk: found it, update the existing key to the new value
-						if (Q_stricmp(arg2, "zykremovekey") == 0)
-						{ // zyk: removes the key from the spawn string array
-							// zyk: moves all keys after this one 2 positions to remove the key
-							j += 2;
-
-							if (j < level.zyk_spawn_strings_values_count[this_ent->s.number])
-							{
-								while (j < level.zyk_spawn_strings_values_count[this_ent->s.number])
-								{
-									level.zyk_spawn_strings[this_ent->s.number][j - 2] = level.zyk_spawn_strings[this_ent->s.number][j];
-									level.zyk_spawn_strings[this_ent->s.number][j - 1] = level.zyk_spawn_strings[this_ent->s.number][j + 1];
-
-									j += 2;
-								}
-
-								level.zyk_spawn_strings_values_count[this_ent->s.number] -= 2;
-							}
-							else
-							{ // zyk: the key is the last one. Just updates the new count
-								level.zyk_spawn_strings_values_count[this_ent->s.number] -= 2;
-							}
-						}
-						else
-						{ // zyk: updates to new value
-							level.zyk_spawn_strings[this_ent->s.number][j + 1] = G_NewString(arg2);
-						}
-						
-						found_key = qtrue;
-						break;
-					}
-
-					j += 2;
-				}
-
-				if (found_key == qfalse)
-				{ // zyk: add a new key to the spawn string array
-					level.zyk_spawn_strings[this_ent->s.number][j] = G_NewString(key);
-					level.zyk_spawn_strings[this_ent->s.number][j + 1] = G_NewString(arg2);
-
-					// zyk: updating the spawn string count
-					level.zyk_spawn_strings_values_count[this_ent->s.number] += 2;
-				}
+				zyk_main_set_entity_field(this_ent, G_NewString(key), G_NewString(arg2));
 			}
 		}
 
 		zyk_main_spawn_entity(this_ent);
 
-		trap->SendServerCommand( ent-g_entities, va("print \"Entity %d edited\n\"", this_ent->s.number) );
+		trap->SendServerCommand(ent-g_entities, va("print \"Entity %d edited\n\"", this_ent->s.number) );
 	}
 }
 
