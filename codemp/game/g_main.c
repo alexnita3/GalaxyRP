@@ -951,30 +951,21 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		for (i = 0; i < level.num_entities; i++)
 		{
 			ent = &g_entities[i];
-			if (Q_stricmp( ent->targetname, "door_trap") == 0)
-			{
-				fix_sp_func_door(ent);
+
+			if (Q_stricmp( ent->targetname, "door_trap") == 0 || Q_stricmp(ent->targetname, "lobbydoor1") == 0 || Q_stricmp(ent->targetname, "lobbydoor2") == 0 || 
+				Q_stricmp(ent->targetname, "t7708018") == 0 || Q_stricmp(ent->targetname, "t7708017") == 0)
+			{ // zyk: fixing these doors so they will not lock
+				ent->targetname = NULL;
+				zyk_main_set_entity_field(ent, "targetname", "zykremovekey");
+				zyk_main_set_entity_field(ent, "spawnflags", "0");
+				zyk_main_spawn_entity(ent);
 			}
-			if (Q_stricmp( ent->targetname, "lobbydoor1") == 0)
-			{
-				fix_sp_func_door(ent);
-			}
-			if (Q_stricmp( ent->targetname, "lobbydoor2") == 0)
-			{
-				fix_sp_func_door(ent);
-			}
-			if (Q_stricmp( ent->targetname, "t7708018") == 0)
-			{
-				fix_sp_func_door(ent);
-			}
-			if (Q_stricmp( ent->targetname, "t7708017") == 0)
-			{
-				fix_sp_func_door(ent);
-			}
-			if (Q_stricmp( ent->classname, "trigger_hurt") == 0 && i > 300)
+
+			if (i == 443)
 			{ // zyk: trigger_hurt at the spawn area
 				G_FreeEntity( ent );
 			}
+
 		}
 		zyk_create_info_player_deathmatch(-1563,-4241,4569,-157);
 		zyk_create_info_player_deathmatch(-1135,-4303,4569,179);
