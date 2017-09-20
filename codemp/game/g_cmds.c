@@ -14957,6 +14957,7 @@ void Cmd_IgnoreList_f(gentity_t *ent) {
 Cmd_Saber_f
 ==================
 */
+extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 extern qboolean G_SaberModelSetup(gentity_t *ent);
 void Cmd_Saber_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
@@ -14974,6 +14975,12 @@ void Cmd_Saber_f( gentity_t *ent ) {
 	if (zyk_allow_saber_command.integer > 1 && ent->client->ps.duelInProgress == qtrue)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"Cannot use this command in private duels.\n\"" );
+		return;
+	}
+
+	if (zyk_allow_saber_command.integer > 1 && level.duel_tournament_mode == 4 && duel_tournament_is_duelist(ent) == qtrue)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Cannot use this command while duelling in Duel Tournament.\n\"");
 		return;
 	}
 
