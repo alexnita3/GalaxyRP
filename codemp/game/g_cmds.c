@@ -13280,8 +13280,7 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 		strcpy(key,"");
 
 		// zyk: setting the entity classname
-		level.zyk_spawn_strings[new_ent->s.number][0] = "classname";
-		level.zyk_spawn_strings[new_ent->s.number][1] = G_NewString(arg1);
+		zyk_main_set_entity_field(new_ent, "classname", G_NewString(arg1));
 
 		for(i = 2; i < number_of_args; i++)
 		{
@@ -13304,31 +13303,20 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 			{ // zyk: value
 				trap->Argv( i, arg2, sizeof( arg2 ) );
 
-				level.zyk_spawn_strings[new_ent->s.number][i - 1] = G_NewString(key);
-				level.zyk_spawn_strings[new_ent->s.number][i] = G_NewString(arg2);
+				zyk_main_set_entity_field(new_ent, G_NewString(key), G_NewString(arg2));
 			}
 		}
-
-		level.zyk_spawn_strings_values_count[new_ent->s.number] = i;
 
 		if (level.ent_origin_set == qtrue && (has_origin_set == qfalse || has_angles_set == qfalse))
 		{ // zyk: if origin or angles were not passed, use the origin or angles set with /entorigin
 			if (has_origin_set == qfalse)
 			{
-				level.zyk_spawn_strings[new_ent->s.number][i] = "origin";
-				level.zyk_spawn_strings[new_ent->s.number][i + 1] = G_NewString(va("%f %f %f", level.ent_origin[0], level.ent_origin[1], level.ent_origin[2]));
-
-				i += 2;
-
-				level.zyk_spawn_strings_values_count[new_ent->s.number] += 2;
+				zyk_main_set_entity_field(new_ent, "origin", G_NewString(va("%f %f %f", level.ent_origin[0], level.ent_origin[1], level.ent_origin[2])));
 			}
 
 			if (has_angles_set == qfalse)
 			{
-				level.zyk_spawn_strings[new_ent->s.number][i] = "angles";
-				level.zyk_spawn_strings[new_ent->s.number][i + 1] = G_NewString(va("%f %f %f", level.ent_angles[0], level.ent_angles[1], level.ent_angles[2]));
-
-				level.zyk_spawn_strings_values_count[new_ent->s.number] += 2;
+				zyk_main_set_entity_field(new_ent, "angles", G_NewString(va("%f %f %f", level.ent_angles[0], level.ent_angles[1], level.ent_angles[2])));
 			}
 		}
 		else if (has_origin_set == qfalse)
@@ -13352,10 +13340,7 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 
 			if (tr.fraction != 1.0)
 			{ // zyk: hit something
-				level.zyk_spawn_strings[new_ent->s.number][i] = "origin";
-				level.zyk_spawn_strings[new_ent->s.number][i + 1] = G_NewString(va("%f %f %f", tr.endpos[0], tr.endpos[1], tr.endpos[2]));
-
-				level.zyk_spawn_strings_values_count[new_ent->s.number] += 2;
+				zyk_main_set_entity_field(new_ent, "origin", G_NewString(va("%f %f %f", tr.endpos[0], tr.endpos[1], tr.endpos[2])));
 			}
 		}
 
