@@ -5284,12 +5284,12 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			damage = (int)ceil(damage * (1.0 + (0.03 * attacker->client->pers.skill_levels[55])));
 		}
 		else if (attacker->client->pers.rpg_class == 1 && (mod == MOD_SABER || mod == MOD_FORCE_DARK))
-			damage = (int)ceil(damage * (1.05 + (0.05 * attacker->client->pers.skill_levels[55])));
+			damage = (int)ceil(damage * (1.0 + (0.05 * attacker->client->pers.skill_levels[55])));
 		else if (attacker->client->pers.rpg_class == 2 && mod != MOD_SABER && mod != MOD_MELEE && mod != MOD_FORCE_DARK)
 			damage = (int)ceil(damage * (1.05 + (0.05 * attacker->client->pers.skill_levels[55])));
 		else if (attacker->client->pers.rpg_class == 4 && mod == MOD_MELEE)
 		{
-			damage = damage * (1.0 + (attacker->client->pers.skill_levels[55]*0.8));
+			damage = damage * (1.0 + (attacker->client->pers.skill_levels[55]*0.6));
 			can_damage_heavy_things = qtrue;
 		}
 		else if (attacker->client->pers.rpg_class == 5 && (mod == MOD_STUN_BATON || mod == MOD_DISRUPTOR || mod == MOD_DISRUPTOR_SNIPER || 
@@ -5298,15 +5298,16 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 				 mod == MOD_CONC || mod == MOD_CONC_ALT || mod == MOD_DISRUPTOR_SPLASH))
 		{ // zyk: Stealth Attacker has more gun damage
 			float stealth_attacker_bonus_damage = 0.0;
+
 			// zyk: Stealth Attacker Upgrade increases damage
 			if (attacker->client->pers.secrets_found & (1 << 7))
 				stealth_attacker_bonus_damage = 0.2;
 
-			damage = (int)ceil(damage * (1.15 + (0.15 * attacker->client->pers.skill_levels[55]) + stealth_attacker_bonus_damage));
+			damage = (int)ceil(damage * (1.1 + (0.15 * attacker->client->pers.skill_levels[55]) + stealth_attacker_bonus_damage));
 		}
 		else if (attacker->client->pers.rpg_class == 6 && (mod == MOD_SABER || mod == MOD_MELEE))
 		{ // zyk: Duelist has higher damage in saber and melee
-			damage = (int)ceil(damage * (1.3 + (0.2 * attacker->client->pers.skill_levels[55])));
+			damage = (int)ceil(damage * (1.2 + (0.2 * attacker->client->pers.skill_levels[55])));
 		}
 		else if (attacker->client->pers.rpg_class == 7)
 		{ // zyk: Force Gunner bonus damage
@@ -5314,7 +5315,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		}
 		else if (attacker->client->pers.rpg_class == 8 && mod == MOD_MELEE)
 		{ // zyk: Magic Master bonus melee damage
-			damage = (int)ceil(damage * (1.2 + (0.1 * attacker->client->pers.skill_levels[55])));
+			damage = (int)ceil(damage * (1.0 + (0.1 * attacker->client->pers.skill_levels[55])));
 			if (inflictor && (inflictor->s.weapon == WP_BOWCASTER || inflictor->s.weapon == WP_DEMP2 || inflictor->s.weapon == WP_CONCUSSION))
 				can_damage_heavy_things = qtrue;
 		}
@@ -5322,22 +5323,22 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && attacker->client->pers.skill_levels[24] == 2 && (mod == MOD_DEMP2 || mod == MOD_DEMP2_ALT))
 	{ // zyk: DEMP2 2/2 in RPG Mode causes more damage
-		damage = damage * 1.25;
+		damage = (int)ceil(damage * 1.15);
 	}
 
 	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && attacker->client->pers.skill_levels[25] == 2 && (mod == MOD_FLECHETTE || mod == MOD_FLECHETTE_ALT_SPLASH))
 	{ // zyk: Flechette 2/2 in RPG Mode causes more damage
-		damage = damage * 1.25;
+		damage = (int)ceil(damage * 1.15);
 	}
 
 	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && attacker->client->pers.skill_levels[27] == 2 && (mod == MOD_CONC || mod == MOD_CONC_ALT))
 	{ // zyk: Concussion Rifle 2/2 in RPG Mode causes more damage
-		damage = damage * 1.25;
+		damage = (int)ceil(damage * 1.15);
 	}
 
 	if (attacker && attacker->client && (attacker->NPC || attacker->client->sess.amrpgmode == 2) && attacker->client->pers.quest_power_status & (1 << 15))
 	{ // zyk: Dark Power increases damage of every attack
-		damage = (int)ceil(damage*1.15);
+		damage = (int)ceil(damage*1.1);
 	}
 
 	if (attacker && attacker->client && attacker->client->pers.quest_power_status & (1 << 21))
@@ -5401,7 +5402,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 	if (targ && targ->client && (targ->NPC || targ->client->sess.amrpgmode == 2) && targ->client->pers.quest_power_status & (1 << 16))
 	{ // zyk: Eternity Power reduces damage of every attack
-		damage = (int)ceil(damage*0.85);
+		damage = (int)ceil(damage*0.9);
 	}
 
 	if (targ && targ->client && targ->client->pers.quest_power_status & (1 << 21))
