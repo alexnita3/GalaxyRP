@@ -5321,7 +5321,7 @@ void elemental_attack(gentity_t *ent)
 	int i = 0;
 	int targets_hit = 0;
 	int min_distance = 100;
-	int damage = 25;
+	int damage = 20;
 
 	for (i = 0; i < level.num_entities; i++)
 	{
@@ -16774,7 +16774,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 33)
 						{
-							chaos_power(ent,1600,150);
+							chaos_power(ent,1600,120);
 							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Chaos Power!\"");
 							ent->client->pers.hunter_quest_messages = 0;
 						}
@@ -16942,8 +16942,8 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: using Crystal of Magic
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
 
-						ent->health += 200;
-						ent->client->ps.stats[STAT_ARMOR] += 200;
+						ent->health += 150;
+						ent->client->ps.stats[STAT_ARMOR] += 150;
 
 						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
 							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
@@ -16996,7 +16996,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 2)
 						{
-							chaos_power(ent, 400, 140);
+							chaos_power(ent, 400, 100);
 						}
 						else if (random_magic == 3)
 						{
@@ -17027,8 +17027,8 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: using Crystal of Magic
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
 
-						ent->health += 200;
-						ent->client->ps.stats[STAT_ARMOR] += 200;
+						ent->health += 150;
+						ent->client->ps.stats[STAT_ARMOR] += 150;
 
 						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
 							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
@@ -17739,7 +17739,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (random_magic == 2)
 					{
-						chaos_power(ent, 400, 120);
+						chaos_power(ent, 400, 100);
 					}
 					else if (random_magic == 3)
 					{
