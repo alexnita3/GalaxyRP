@@ -6371,14 +6371,33 @@ static void UI_RunMenuScript(char **args)
 
 					trap->Cmd_ExecuteText( EXEC_APPEND, va("changepassword %s\n", zyk_password) );
 				}
-				else if (strstr(arg, "up"))
-				{ // zyk: up command. Comes with the skill number, for example: up 1
-					trap->Cmd_ExecuteText( EXEC_APPEND, va("%s\n", arg) );
+				else if (strstr(arg, "actionchange"))
+				{ // zyk: sets the action (upgrade or downgrade)
+					char zyk_action[512];
+
+					trap->Cvar_VariableStringBuffer("ui_zyk_action_value", zyk_action, sizeof(zyk_action));
+
+					if (Q_stricmp(zyk_action, "^2upgrade") == 0)
+						trap->Cvar_Set("ui_zyk_action_value", "^1downgrade");
+					else
+						trap->Cvar_Set("ui_zyk_action_value", "^2upgrade");
 				}
-				else if (strstr(arg, "down"))
-				{ // zyk: down command. Comes with the skill number, for example: down 1
-					trap->Cmd_ExecuteText( EXEC_APPEND, va("%s\n", arg) );
-				}
+			}
+		}
+		else if (Q_stricmp(name, "zykup") == 0)
+		{ // zyk: new ui script. Sends Zyk OpenJK Mod ui commands to server. This one is for upgrading or downgrading skills
+			const char *arg;
+
+			if (String_Parse(args, &arg))
+			{
+				char zyk_action[512];
+
+				trap->Cvar_VariableStringBuffer("ui_zyk_action_value", zyk_action, sizeof(zyk_action));
+
+				if (Q_stricmp(zyk_action, "^2upgrade") == 0)
+					trap->Cmd_ExecuteText( EXEC_APPEND, va("up %s\n", arg));
+				else
+					trap->Cmd_ExecuteText( EXEC_APPEND, va("down %s\n", arg));
 			}
 		}
 		else if (Q_stricmp(name, "setForce") == 0)

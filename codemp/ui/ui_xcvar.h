@@ -267,5 +267,6 @@ XCVAR_DEF( ui_zyk_dark_text11,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_eternity_text,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_eternity_text2,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_quest_player,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+XCVAR_DEF( ui_zyk_action_value,				"^2upgrade",			NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 
 #undef XCVAR_DEF
