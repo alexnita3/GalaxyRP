@@ -5278,18 +5278,21 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2)
 	{ // zyk: bonus damage of each RPG class
-
 		if (attacker->client->pers.rpg_class == 0)
-		{
+		{ // zyk: Free Warrior
 			damage = (int)ceil(damage * (1.0 + (0.03 * attacker->client->pers.skill_levels[55])));
 		}
 		else if (attacker->client->pers.rpg_class == 1 && (mod == MOD_SABER || mod == MOD_FORCE_DARK))
+		{ // zyk: Force User
 			damage = (int)ceil(damage * (1.0 + (0.05 * attacker->client->pers.skill_levels[55])));
+		}
 		else if (attacker->client->pers.rpg_class == 2 && mod != MOD_SABER && mod != MOD_MELEE && mod != MOD_FORCE_DARK)
-			damage = (int)ceil(damage * (1.05 + (0.05 * attacker->client->pers.skill_levels[55])));
+		{ // zyk: Bounty Hunter
+			damage = (int)ceil(damage * (1.0 + (0.05 * attacker->client->pers.skill_levels[55])));
+		}
 		else if (attacker->client->pers.rpg_class == 4 && mod == MOD_MELEE)
-		{
-			damage = damage * (1.0 + (attacker->client->pers.skill_levels[55]*0.6));
+		{ // zyk: Monk
+			damage = damage * (1.0 + (attacker->client->pers.skill_levels[55]*0.5));
 			can_damage_heavy_things = qtrue;
 		}
 		else if (attacker->client->pers.rpg_class == 5 && (mod == MOD_STUN_BATON || mod == MOD_DISRUPTOR || mod == MOD_DISRUPTOR_SNIPER || 
@@ -5303,7 +5306,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			if (attacker->client->pers.secrets_found & (1 << 7))
 				stealth_attacker_bonus_damage = 0.2;
 
-			damage = (int)ceil(damage * (1.1 + (0.15 * attacker->client->pers.skill_levels[55]) + stealth_attacker_bonus_damage));
+			damage = (int)ceil(damage * (1.05 + (0.15 * attacker->client->pers.skill_levels[55]) + stealth_attacker_bonus_damage));
 		}
 		else if (attacker->client->pers.rpg_class == 6 && (mod == MOD_SABER || mod == MOD_MELEE))
 		{ // zyk: Duelist has higher damage in saber and melee
@@ -5311,11 +5314,10 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		}
 		else if (attacker->client->pers.rpg_class == 7)
 		{ // zyk: Force Gunner bonus damage
-			damage = (int)ceil(damage * (1.0 + (0.08 * attacker->client->pers.skill_levels[55])));
+			damage = (int)ceil(damage * (1.0 + (0.07 * attacker->client->pers.skill_levels[55])));
 		}
 		else if (attacker->client->pers.rpg_class == 8 && mod == MOD_MELEE)
-		{ // zyk: Magic Master bonus melee damage
-			damage = (int)ceil(damage * (1.0 + (0.1 * attacker->client->pers.skill_levels[55])));
+		{ // zyk: Magic Master bolts can damage heavy things
 			if (inflictor && (inflictor->s.weapon == WP_BOWCASTER || inflictor->s.weapon == WP_DEMP2 || inflictor->s.weapon == WP_CONCUSSION))
 				can_damage_heavy_things = qtrue;
 		}
@@ -5486,12 +5488,12 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 			damage = (int)ceil(damage * (1 - (0.25 * targ->client->pers.skill_levels[55])));
 		}
-		else if (targ->client->pers.rpg_class == 7) // zyk: Force Gunner damage resistance
-		{
-			damage = (int)ceil(damage * (1.0 - (0.08 * targ->client->pers.skill_levels[55])));
+		else if (targ->client->pers.rpg_class == 7)
+		{ // zyk: Force Gunner damage resistance
+			damage = (int)ceil(damage * (1.0 - (0.07 * targ->client->pers.skill_levels[55])));
 		}
-		else if (targ->client->pers.rpg_class == 9) // zyk: Force Tank damage resistance
-		{			
+		else if (targ->client->pers.rpg_class == 9)
+		{ // zyk: Force Tank damage resistance
 			float force_tank_bonus_resistance = 0.0;
 
 			if (targ->client->pers.secrets_found & (1 << 19))
