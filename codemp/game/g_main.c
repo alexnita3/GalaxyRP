@@ -5321,7 +5321,7 @@ void elemental_attack(gentity_t *ent)
 	int i = 0;
 	int targets_hit = 0;
 	int min_distance = 100;
-	int damage = 30;
+	int damage = 25;
 
 	for (i = 0; i < level.num_entities; i++)
 	{
@@ -6672,13 +6672,13 @@ void quest_power_events(gentity_t *ent)
 			{ // zyk: Chaos Power
 				if (ent->client->pers.quest_power_hit_counter > 0 && ent->client->pers.quest_target1_timer < level.time)
 				{
-					G_Damage(ent,&g_entities[ent->client->pers.quest_power_user1_id],&g_entities[ent->client->pers.quest_power_user1_id],NULL,NULL,80,0,MOD_UNKNOWN);
+					G_Damage(ent,&g_entities[ent->client->pers.quest_power_user1_id],&g_entities[ent->client->pers.quest_power_user1_id],NULL,NULL, 70,0,MOD_UNKNOWN);
 					ent->client->pers.quest_power_hit_counter--;
 					ent->client->pers.quest_target1_timer = level.time + 1000;
 				}
 				else if (ent->client->pers.quest_power_hit_counter == 0 && ent->client->pers.quest_target1_timer < level.time)
 				{
-					G_Damage(ent,&g_entities[ent->client->pers.quest_power_user1_id],&g_entities[ent->client->pers.quest_power_user1_id],NULL,NULL,80,0,MOD_UNKNOWN);
+					G_Damage(ent,&g_entities[ent->client->pers.quest_power_user1_id],&g_entities[ent->client->pers.quest_power_user1_id],NULL,NULL, 70,0,MOD_UNKNOWN);
 
 					ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
 					ent->client->ps.forceHandExtendTime = level.time + 1500;
@@ -6712,9 +6712,9 @@ void quest_power_events(gentity_t *ent)
 
 						// zyk: Universe Power
 						if (poison_mushrooms_user->client->pers.quest_power_status & (1 << 13))
-							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,32,0,MOD_UNKNOWN);
+							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,25,0,MOD_UNKNOWN);
 						else
-							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,28,0,MOD_UNKNOWN);
+							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,20,0,MOD_UNKNOWN);
 					}
 
 					ent->client->pers.quest_power_hit_counter--;
@@ -7016,7 +7016,7 @@ void quest_power_events(gentity_t *ent)
 	}
 }
 
-// zyk: damages target player with posion hits
+// zyk: damages target player with poison hits
 void poison_dart_hits(gentity_t *ent)
 {
 	if (ent && ent->client && ent->health > 0 && ent->client->pers.player_statuses & (1 << 20) && ent->client->pers.poison_dart_hit_counter > 0 && 
@@ -7024,7 +7024,7 @@ void poison_dart_hits(gentity_t *ent)
 	{
 		gentity_t *poison_user = &g_entities[ent->client->pers.poison_dart_user_id];
 
-		G_Damage(ent,poison_user,poison_user,NULL,NULL,30,0,MOD_UNKNOWN);
+		G_Damage(ent,poison_user,poison_user,NULL,NULL,22,0,MOD_UNKNOWN);
 
 		ent->client->pers.poison_dart_hit_counter--;
 		ent->client->pers.poison_dart_hit_timer = level.time + 1000;
@@ -11423,7 +11423,7 @@ void G_RunFrame( int levelTime ) {
 
 									npc_ent->client->pers.universe_quest_messages = -2000;
 
-									ultra_drain(npc_ent, 450, 50, 8000);
+									ultra_drain(npc_ent, 450, 40, 8000);
 
 									for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
 									{
@@ -11874,7 +11874,7 @@ void G_RunFrame( int levelTime ) {
 
 										if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "guardian_of_universe") == 0 && npc_ent->client && npc_ent->client->pers.guardian_timer < level.time)
 										{
-											ultra_drain(npc_ent, 450, 50, 8000);
+											ultra_drain(npc_ent, 450, 40, 8000);
 
 											npc_ent->client->pers.guardian_timer = level.time + 15000;
 										}
@@ -16145,7 +16145,7 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
-						water_attack(ent, 2500, 55);
+						water_attack(ent, 2500, 50);
 						trap->SendServerCommand(-1, "chat \"^4Guardian of Water: ^7Water Attack!\"");
 						ent->client->pers.light_quest_timer = level.time + 11000;
 					}
@@ -16161,7 +16161,7 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
-						rock_fall(ent,2000,55);
+						rock_fall(ent,2000,48);
 						ent->client->pers.light_quest_timer = level.time + 10000;
 						trap->SendServerCommand( -1, "chat \"^3Guardian of Earth: ^7Rockfall!\"");
 					}
@@ -16179,7 +16179,7 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: uses sleeping flowers or poison mushrooms
 						if (Q_irand(0,3) != 0)
 						{
-							sleeping_flowers(ent,3000,1500);
+							sleeping_flowers(ent,2500,1500);
 							trap->SendServerCommand( -1, "chat \"^2Guardian of Forest: ^7Sleeping Flowers!\"");
 							ent->client->pers.guardian_timer = level.time + 12000;
 						}
@@ -16204,7 +16204,7 @@ void G_RunFrame( int levelTime ) {
 					{
 						if (ent->client->pers.light_quest_messages == 0)
 						{
-							dome_of_damage(ent,1700,40);
+							dome_of_damage(ent,1700,30);
 							ent->client->pers.light_quest_messages = 1;
 							trap->SendServerCommand( -1, "chat \"^5Guardian of Intelligence: ^7Dome of Damage!\"");
 						}
@@ -16277,14 +16277,14 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
-						ultra_flame(ent,4000,55);
+						ultra_flame(ent,4000,45);
 						trap->SendServerCommand( -1, "chat \"^1Guardian of Fire: ^7Ultra Flame!\"");
 						ent->client->pers.light_quest_timer = level.time + 16000;
 					}
 
 					if (ent->client->pers.universe_quest_timer < level.time)
 					{
-						flaming_area(ent, 30);
+						flaming_area(ent, 25);
 						ent->client->pers.universe_quest_timer = level.time + 19000;
 						trap->SendServerCommand(-1, "chat \"^1Guardian of Fire: ^7Flaming Area!\"");
 					}
@@ -16318,14 +16318,14 @@ void G_RunFrame( int levelTime ) {
 				{ // zyk: Guardian of Ice
 					if (ent->client->pers.guardian_timer < level.time)
 					{
-						ice_stalagmite(ent,500,160);
+						ice_stalagmite(ent,500,150);
 						ent->client->pers.guardian_timer = level.time + 16000;
 						trap->SendServerCommand( -1, "chat \"^5Guardian of Ice: ^7Ice Stalagmite!\"");
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
-						ice_boulder(ent,400,80);
+						ice_boulder(ent,400,60);
 						trap->SendServerCommand( -1, "chat \"^5Guardian of Ice: ^7Ice Boulder!\"");
 						ent->client->pers.light_quest_timer = level.time + 16000;
 					}
@@ -16348,14 +16348,14 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.guardian_timer < level.time)
 					{
-						lightning_dome(ent,86);
+						lightning_dome(ent,80);
 						trap->SendServerCommand( -1, "chat \"^5Guardian of Light: ^7Lightning Dome!\"");
 						ent->client->pers.guardian_timer = level.time + 15000;
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
-						water_attack(ent, 4000, 55);
+						water_attack(ent, 4000, 50);
 						trap->SendServerCommand(-1, "chat \"^5Guardian of Light: ^7Water Attack!\"");
 						ent->client->pers.light_quest_timer = level.time + 19000;
 					}
@@ -16371,7 +16371,7 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.guardian_timer < level.time)
 					{
-						magic_explosion(ent, 320, 160, 900);
+						magic_explosion(ent, 320, 150, 900);
 						trap->SendServerCommand(-1, "chat \"^1Guardian of Darkness: ^7Magic Explosion!\"");
 						ent->client->pers.guardian_timer = level.time + 17000;
 					}
@@ -16470,7 +16470,7 @@ void G_RunFrame( int levelTime ) {
 						if (!ent->client->ps.powerups[PW_CLOAKED])
 							Jedi_Cloak(ent);
 
-						ultra_drain(ent,450,50,8000);
+						ultra_drain(ent,450,40,8000);
 						trap->SendServerCommand( -1, "chat \"^1Master of Evil: ^7Ultra Drain!\"");
 
 						ent->client->pers.guardian_timer = level.time + 27000;
@@ -16516,7 +16516,7 @@ void G_RunFrame( int levelTime ) {
 
 						if (ent->client->pers.guardian_mode == 18 && Q_irand(0, 1) == 0)
 						{
-							ultra_drain(ent, 450, 50, 8000);
+							ultra_drain(ent, 450, 40, 8000);
 							trap->SendServerCommand(-1, "chat \"^2Guardian of Universe: ^7Ultra Drain!\"");
 						}
 						else
@@ -16548,7 +16548,7 @@ void G_RunFrame( int levelTime ) {
 							zyk_super_beam(ent, ent->client->ps.viewangles[1]);
 						}
 
-						magic_explosion(ent,320,170,900);
+						magic_explosion(ent,320,150,900);
 						trap->SendServerCommand( -1, "chat \"^2Guardian of Universe: ^7Magic Explosion!\"");
 						ent->client->pers.light_quest_timer = level.time + 16000;
 					}
@@ -16611,25 +16611,25 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 7)
 						{
-							ultra_drain(ent,450,50,8000);
+							ultra_drain(ent,450,40,8000);
 							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Ultra Drain!\""));
 							ent->client->pers.hunter_quest_messages++;
 						}
 						else if (ent->client->pers.hunter_quest_messages == 8)
 						{
-							ice_stalagmite(ent,2000,170);
+							ice_stalagmite(ent,2000,150);
 							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Ice Stalagmite!\""));
 							ent->client->pers.hunter_quest_messages++;
 						}
 						else if (ent->client->pers.hunter_quest_messages == 9)
 						{
-							ice_boulder(ent,1000,80);
+							ice_boulder(ent,1000,60);
 							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Ice Boulder!\""));
 							ent->client->pers.hunter_quest_messages++;
 						}
 						else if (ent->client->pers.hunter_quest_messages == 10)
 						{
-							water_attack(ent, 1600, 55);
+							water_attack(ent, 1600, 50);
 							trap->SendServerCommand(-1, va("chat \"^1Guardian of Chaos: ^7Water Attack!\""));
 							ent->client->pers.hunter_quest_messages++;
 						}
@@ -16659,13 +16659,13 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 15)
 						{
-							rock_fall(ent,1600,55);
+							rock_fall(ent,1600,48);
 							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Rockfall!\""));
 							ent->client->pers.hunter_quest_messages++;
 						}
 						else if (ent->client->pers.hunter_quest_messages == 16)
 						{
-							ultra_flame(ent,2200,50);
+							ultra_flame(ent,2200,45);
 							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Ultra Flame!\""));
 							ent->client->pers.hunter_quest_messages++;
 						}
@@ -16677,7 +16677,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 18)
 						{
-							dome_of_damage(ent,2000,35);
+							dome_of_damage(ent,2000,30);
 							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Dome of Damage!\""));
 							ent->client->pers.hunter_quest_messages++;
 						}
@@ -16701,7 +16701,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 22)
 						{
-							flaming_area(ent, 30);
+							flaming_area(ent, 25);
 							trap->SendServerCommand(-1, "chat \"^1Guardian of Chaos: ^7Flaming Area!\"");
 							ent->client->pers.hunter_quest_messages++;
 						}
@@ -16719,13 +16719,13 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 25)
 						{
-							lightning_dome(ent,90);
+							lightning_dome(ent,80);
 							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Lightning Dome!\"");
 							ent->client->pers.hunter_quest_messages++;
 						}
 						else if (ent->client->pers.hunter_quest_messages == 26)
 						{
-							earthquake(ent,2000,400,3000);
+							earthquake(ent,2000,300,3000);
 							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Earthquake!\"");
 							ent->client->pers.hunter_quest_messages++;
 						}
@@ -16737,7 +16737,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 28)
 						{
-							healing_area(ent,3,5000);
+							healing_area(ent,2,5000);
 							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Healing Area!\"");
 							ent->client->pers.hunter_quest_messages++;
 						}
@@ -16768,13 +16768,13 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 32)
 						{
-							magic_explosion(ent,320,170,900);
+							magic_explosion(ent,320,150,900);
 							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Magic Explosion!\""));
 							ent->client->pers.hunter_quest_messages++;
 						}
 						else if (ent->client->pers.hunter_quest_messages == 33)
 						{
-							chaos_power(ent,1600,250);
+							chaos_power(ent,1600,150);
 							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Chaos Power!\"");
 							ent->client->pers.hunter_quest_messages = 0;
 						}
@@ -16839,15 +16839,15 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 3)
 						{
-							ultra_flame(ent, 500, 50);
+							ultra_flame(ent, 500, 40);
 						}
 						else if (random_magic == 4)
 						{
-							rock_fall(ent, 500, 55);
+							rock_fall(ent, 500, 48);
 						}
 						else if (random_magic == 5)
 						{
-							dome_of_damage(ent, 500, 35);
+							dome_of_damage(ent, 500, 30);
 						}
 						else if (random_magic == 6)
 						{
@@ -16891,15 +16891,15 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 16)
 						{
-							ice_stalagmite(ent, 500, 160);
+							ice_stalagmite(ent, 500, 150);
 						}
 						else if (random_magic == 17)
 						{
-							ice_boulder(ent, 380, 70);
+							ice_boulder(ent, 380, 60);
 						}
 						else if (random_magic == 18)
 						{
-							water_attack(ent, 500, 55);
+							water_attack(ent, 500, 50);
 						}
 						else if (random_magic == 19)
 						{
@@ -16915,7 +16915,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 22)
 						{
-							flaming_area(ent, 30);
+							flaming_area(ent, 25);
 						}
 						else if (random_magic == 23)
 						{
@@ -16988,7 +16988,7 @@ void G_RunFrame( int levelTime ) {
 
 						if (random_magic == 0)
 						{
-							ultra_drain(ent, 450, 50, 8000);
+							ultra_drain(ent, 450, 40, 8000);
 						}
 						else if (random_magic == 1)
 						{
@@ -16996,7 +16996,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 2)
 						{
-							chaos_power(ent, 400, 160);
+							chaos_power(ent, 400, 140);
 						}
 						else if (random_magic == 3)
 						{
@@ -17008,11 +17008,11 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 5)
 						{
-							magic_explosion(ent, 320, 160, 900);
+							magic_explosion(ent, 320, 150, 900);
 						}
 						else if (random_magic == 6)
 						{
-							lightning_dome(ent, 86);
+							lightning_dome(ent, 80);
 						}
 
 						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 12000);
@@ -17080,15 +17080,15 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 3)
 						{
-							ultra_flame(ent, 500, 50);
+							ultra_flame(ent, 500, 45);
 						}
 						else if (random_magic == 4)
 						{
-							rock_fall(ent, 500, 55);
+							rock_fall(ent, 500, 48);
 						}
 						else if (random_magic == 5)
 						{
-							dome_of_damage(ent, 500, 35);
+							dome_of_damage(ent, 500, 30);
 						}
 						else if (random_magic == 6)
 						{
@@ -17132,15 +17132,15 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 16)
 						{
-							ice_stalagmite(ent, 500, 160);
+							ice_stalagmite(ent, 500, 150);
 						}
 						else if (random_magic == 17)
 						{
-							ice_boulder(ent, 380, 70);
+							ice_boulder(ent, 380, 60);
 						}
 						else if (random_magic == 18)
 						{
-							water_attack(ent, 500, 55);
+							water_attack(ent, 500, 50);
 						}
 						else if (random_magic == 19)
 						{
@@ -17156,7 +17156,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 22)
 						{
-							flaming_area(ent, 30);
+							flaming_area(ent, 25);
 						}
 						else if (random_magic == 23)
 						{
@@ -17209,7 +17209,7 @@ void G_RunFrame( int levelTime ) {
 
 						if (random_magic == 0)
 						{
-							dome_of_damage(ent, 20000, 35);
+							dome_of_damage(ent, 20000, 30);
 						}
 						else if (random_magic == 1)
 						{
@@ -17301,19 +17301,19 @@ void G_RunFrame( int levelTime ) {
 							}
 							else if (random_magic == 1)
 							{
-								lightning_dome(ent, 86);
+								lightning_dome(ent, 80);
 							}
 							else if (random_magic == 2)
 							{
-								ultra_drain(ent, 450, 50, 8000);
+								ultra_drain(ent, 450, 40, 8000);
 							}
 							else if (random_magic == 3)
 							{
-								magic_explosion(ent, 320, 160, 900);
+								magic_explosion(ent, 320, 150, 900);
 							}
 							else if (random_magic == 4)
 							{
-								flaming_area(ent, 30);
+								flaming_area(ent, 25);
 							}
 							else if (random_magic == 5)
 							{
@@ -17349,7 +17349,7 @@ void G_RunFrame( int levelTime ) {
 							}
 							else if (random_magic == 13)
 							{
-								water_attack(ent, 5000, 55);
+								water_attack(ent, 5000, 50);
 							}
 							else if (random_magic == 14)
 							{
@@ -17361,11 +17361,11 @@ void G_RunFrame( int levelTime ) {
 							}
 							else if (random_magic == 16)
 							{
-								chaos_power(ent, 5000, 120);
+								chaos_power(ent, 5000, 100);
 							}
 							else if (random_magic == 17)
 							{
-								dome_of_damage(ent, 5000, 35);
+								dome_of_damage(ent, 5000, 30);
 							}
 							else if (random_magic == 18)
 							{
@@ -17373,7 +17373,7 @@ void G_RunFrame( int levelTime ) {
 							}
 							else if (random_magic == 19)
 							{
-								ice_boulder(ent, 5000, 70);
+								ice_boulder(ent, 5000, 60);
 							}
 							else if (random_magic == 20)
 							{
@@ -17381,7 +17381,7 @@ void G_RunFrame( int levelTime ) {
 							}
 							else if (random_magic == 21)
 							{
-								ice_stalagmite(ent, 5000, 160);
+								ice_stalagmite(ent, 5000, 150);
 							}
 							else if (random_magic == 22)
 							{
@@ -17393,7 +17393,7 @@ void G_RunFrame( int levelTime ) {
 							}
 							else if (random_magic == 24)
 							{
-								ultra_flame(ent, 5000, 50);
+								ultra_flame(ent, 5000, 45);
 							}
 							else if (random_magic == 25)
 							{
@@ -17499,15 +17499,15 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (random_magic == 3)
 				{
-					ultra_flame(ent, 500, 50);
+					ultra_flame(ent, 500, 45);
 				}
 				else if (random_magic == 4)
 				{
-					rock_fall(ent, 500, 55);
+					rock_fall(ent, 500, 48);
 				}
 				else if (random_magic == 5)
 				{
-					dome_of_damage(ent, 500, 35);
+					dome_of_damage(ent, 500, 30);
 				}
 				else if (random_magic == 6)
 				{
@@ -17551,15 +17551,15 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (random_magic == 16)
 				{
-					ice_stalagmite(ent, 500, 160);
+					ice_stalagmite(ent, 500, 150);
 				}
 				else if (random_magic == 17)
 				{
-					ice_boulder(ent, 380, 70);
+					ice_boulder(ent, 380, 60);
 				}
 				else if (random_magic == 18)
 				{
-					water_attack(ent, 500, 55);
+					water_attack(ent, 500, 50);
 				}
 				else if (random_magic == 19)
 				{
@@ -17579,7 +17579,7 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (random_magic == 23)
 				{
-					flaming_area(ent, 30);
+					flaming_area(ent, 25);
 				}
 				else if (random_magic == 24)
 				{
@@ -17616,15 +17616,15 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (random_magic == 3)
 					{
-						ultra_flame(ent, 500, 50);
+						ultra_flame(ent, 500, 45);
 					}
 					else if (random_magic == 4)
 					{
-						rock_fall(ent, 500, 55);
+						rock_fall(ent, 500, 48);
 					}
 					else if (random_magic == 5)
 					{
-						dome_of_damage(ent, 500, 35);
+						dome_of_damage(ent, 500, 30);
 					}
 					else if (random_magic == 6)
 					{
@@ -17668,15 +17668,15 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (random_magic == 16)
 					{
-						ice_stalagmite(ent, 500, 160);
+						ice_stalagmite(ent, 500, 150);
 					}
 					else if (random_magic == 17)
 					{
-						ice_boulder(ent, 380, 70);
+						ice_boulder(ent, 380, 60);
 					}
 					else if (random_magic == 18)
 					{
-						water_attack(ent, 500, 55);
+						water_attack(ent, 500, 50);
 					}
 					else if (random_magic == 19)
 					{
@@ -17696,7 +17696,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (random_magic == 23)
 					{
-						flaming_area(ent, 30);
+						flaming_area(ent, 25);
 					}
 					else if (random_magic == 24)
 					{
@@ -17731,7 +17731,7 @@ void G_RunFrame( int levelTime ) {
 
 					if (random_magic == 0)
 					{
-						ultra_drain(ent, 450, 50, 8000);
+						ultra_drain(ent, 450, 40, 8000);
 					}
 					else if (random_magic == 1)
 					{
@@ -17739,7 +17739,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (random_magic == 2)
 					{
-						chaos_power(ent, 400, 160);
+						chaos_power(ent, 400, 120);
 					}
 					else if (random_magic == 3)
 					{
@@ -17751,11 +17751,11 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (random_magic == 5)
 					{
-						magic_explosion(ent, 320, 160, 900);
+						magic_explosion(ent, 320, 150, 900);
 					}
 					else if (random_magic == 6)
 					{
-						lightning_dome(ent, 86);
+						lightning_dome(ent, 80);
 					}
 
 					ent->client->pers.guardian_timer = level.time + Q_irand(7000, 12000);
