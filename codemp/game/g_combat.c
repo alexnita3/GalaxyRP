@@ -5325,17 +5325,17 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && attacker->client->pers.skill_levels[24] == 2 && (mod == MOD_DEMP2 || mod == MOD_DEMP2_ALT))
 	{ // zyk: DEMP2 2/2 in RPG Mode causes more damage
-		damage = (int)ceil(damage * 1.15);
+		damage = (int)ceil(damage * 1.12);
 	}
 
 	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && attacker->client->pers.skill_levels[25] == 2 && (mod == MOD_FLECHETTE || mod == MOD_FLECHETTE_ALT_SPLASH))
 	{ // zyk: Flechette 2/2 in RPG Mode causes more damage
-		damage = (int)ceil(damage * 1.15);
+		damage = (int)ceil(damage * 1.12);
 	}
 
 	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && attacker->client->pers.skill_levels[27] == 2 && (mod == MOD_CONC || mod == MOD_CONC_ALT))
 	{ // zyk: Concussion Rifle 2/2 in RPG Mode causes more damage
-		damage = (int)ceil(damage * 1.15);
+		damage = (int)ceil(damage * 1.12);
 	}
 
 	if (attacker && attacker->client && (attacker->NPC || attacker->client->sess.amrpgmode == 2) && attacker->client->pers.quest_power_status & (1 << 15))

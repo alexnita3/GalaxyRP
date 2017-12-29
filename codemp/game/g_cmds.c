@@ -9735,25 +9735,25 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					if (i == 19)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Stun Baton: ^7attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. Can fire the flame thrower when using alternate fire (does not work for Force User, Monk, Duelist or Magic Master). With Stun Baton Upgrade, it opens any door, even locked ones, and can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds\n\"", zyk_stun_baton_damage.integer));
 					if (i == 20)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Blaster Pistol: ^7the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The pistol shot does %d damage. The charged shot causes a lot more damage depending on how much it was charged. At level 2 causes 15 per cent more damage\n\"", zyk_blaster_pistol_damage.integer));
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Blaster Pistol: ^7the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The pistol shot does %d damage. The charged shot causes a lot more damage depending on how much it was charged\n\"", zyk_blaster_pistol_damage.integer));
 					if (i == 21)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3E11 Blaster Rifle: ^7the rifle used by the Storm Troopers. E11 shots do %d damage. Normal fire is a single shot, while the alternate fire is the rapid fire. At level 2 does 15 per cent more damage and has less spread\n\"", zyk_e11_blaster_rifle_damage.integer) );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3E11 Blaster Rifle: ^7the rifle used by the Storm Troopers. E11 shots do %d damage. Normal fire is a single shot, while the alternate fire is the rapid fire\n\"", zyk_e11_blaster_rifle_damage.integer) );
 					if (i == 22)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Disruptor: ^7the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged, causes %d damage. At level 2 causes 15 per cent more damage and has a better fire rate\n\"", zyk_disruptor_damage.integer, zyk_disruptor_alt_damage.integer) );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Disruptor: ^7the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged, causes %d damage\n\"", zyk_disruptor_damage.integer, zyk_disruptor_alt_damage.integer) );
 					if (i == 23)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Bowcaster: ^7the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once. At level 2, shoots up to 7 shots with less spread. Alternate fire fires a bouncing shot. At level 2 increases number of bounces. It causes %d damage. At level 2 causes 15 per cent more damage\n\"", zyk_bowcaster_damage.integer) );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Bowcaster: ^7the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once. It does %d damage\n\"", zyk_bowcaster_damage.integer) );
 					if (i == 24)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Repeater: ^7a powerful weapon with a rapid fire and a plasma bomb. Normal fire shoots the rapid fire, and causes %d damage. Alt fire fires the plasma bomb and causes %d damage. At level 2 causes 15 per cent more damage and alternate fire has faster firerate and is more accurate\n\"", zyk_repeater_damage.integer, zyk_repeater_alt_damage.integer) );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Repeater: ^7a powerful weapon with a rapid fire and a plasma bomb. Normal fire shoots the rapid fire, and does %d damage. Alt fire fires the plasma bomb and does %d damage\n\"", zyk_repeater_damage.integer, zyk_repeater_alt_damage.integer) );
 					if (i == 25)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3DEMP2: ^7a very powerful weapon against machine npc and some vehicles, causing more damage to them and stunning them. Normal fire causes %d damage and alt fire can be charged and causes %d damage. At level 2 causes 15 per cent more damage\n\"", zyk_demp2_damage.integer, zyk_demp2_alt_damage.integer) );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3DEMP2: ^7a very powerful weapon against machine npc and some vehicles, causing more damage to them and stunning them. Normal fire does %d damage and alt fire can be charged and does %d damage\n\"", zyk_demp2_damage.integer, zyk_demp2_alt_damage.integer) );
 					if (i == 26)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Flechette: ^7this weapon is similar to a shotgun. Normal fire causes %d damage. Alt fire shoots 2 bombs and causes %d damage. At level 2 causes 15 per cent more damage and normal fire has less spread\n\"", zyk_flechette_damage.integer, zyk_flechette_alt_damage.integer) );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Flechette: ^7this weapon is similar to a shotgun. Normal fire causes %d damage. Alt fire shoots 2 bombs and causes %d damage\n\"", zyk_flechette_damage.integer, zyk_flechette_alt_damage.integer) );
 					if (i == 27)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Rocket Launcher: ^7a powerful explosive weapon. Normal fire shoots a rocket causing %d damage. Alt fire shoots a homing missile. At level 2 causes 15 per cent more damage, destroys objects which could only be damaged by saber and move some force pushable/pullable objects\n\"", zyk_rocket_damage.integer) );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Rocket Launcher: ^7a powerful explosive weapon. Normal fire shoots a rocket causing %d damage. Alt fire shoots a homing missile\n\"", zyk_rocket_damage.integer) );
 					if (i == 28)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Concussion Rifle: ^7it shoots a powerful shot that has a big damage area. Alt fire shoots a ray similar to disruptor shots, but it can go through force fields and can throw the enemy on the ground. Normal fire causes %d damage and alt fire causes %d damage. At level 2 causes 15 per cent more damage, destroys objects which could only be damaged by saber and move some force pushable/pullable objects\n\"", zyk_concussion_damage.integer, zyk_concussion_alt_damage.integer) );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Concussion Rifle: ^7it shoots a powerful shot that has a big damage area. Alt fire shoots a ray similar to disruptor shots, but it can go through force fields and can throw the enemy on the ground. Normal fire does %d damage and alt fire does %d damage\n\"", zyk_concussion_damage.integer, zyk_concussion_alt_damage.integer) );
 					if (i == 29)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Bryar Pistol: ^7very similar to the blaster pistol, but this one has a better fire rate with normal shot. Causes %d damage. At level 2 causes 15 per cent more damage\n\"", zyk_blaster_pistol_damage.integer) );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Bryar Pistol: ^7very similar to the blaster pistol, but this one has a better fire rate with normal shot. Does %d damage\n\"", zyk_blaster_pistol_damage.integer) );
 					if (i == 30)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Melee: ^7allows you to attack with your fists and legs. You can punch, kick or do a special melee attack by holding both Attack and Alt Attack buttons (usually the mouse buttons). At level 0, melee attacks cause only half normal damage. Right hand punch causes %d normal damage, left hand punch causes %d normal damage and kick causes %d damage at level 1\n\"", zyk_melee_right_hand_damage.integer, zyk_melee_left_hand_damage.integer, zyk_melee_kick_damage.integer) );
 					if (i == 31)
@@ -10090,19 +10090,19 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		}
 		else if (i == 25)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Power Cell Weapons Upgrade: ^7increases damage and other features of weapons that use power cell ammo\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^3Power Cell Weapons Upgrade: ^7increases damage by 12 percent and other features of weapons that use power cell ammo\n\n\"");
 		}
 		else if (i == 26)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Blaster Pack Weapons Upgrade: ^7increases damage and other features of weapons that use blaster pack ammo\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^3Blaster Pack Weapons Upgrade: ^7increases damage by 12 percent and other features of weapons that use blaster pack ammo\n\n\"");
 		}
 		else if (i == 27)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Metal Bolts Weapons Upgrade: ^7increases damage and other features of weapons that use metal bolts ammo\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^3Metal Bolts Weapons Upgrade: ^7increases damage by 12 percent and other features of weapons that use metal bolts ammo. Concussion rifle can break saber-only damage objects and can move pushable/pullable objects\n\n\"");
 		}
 		else if (i == 28)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Rocket Upgrade: ^7increases damage of rocket launcher which uses rockets as ammo. Makes it damage saber-only damage objects in map\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^3Rocket Upgrade: ^7increases rocket launcher damage by 12 percent which uses rockets as ammo. Makes it damage saber-only damage objects and move pushable/pullable objects\n\n\"");
 		}
 		else if (i == 29)
 		{
