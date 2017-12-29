@@ -4077,7 +4077,7 @@ qboolean TryGrapple(gentity_t *ent)
 					if (zyk_enable_ultra_drain.integer == 1 && ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.magic_power >= zyk_ultra_drain_mp_cost.integer)
 					{ // zyk: Ultra Drain
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
-						ultra_drain(ent,450,40,8000);
+						ultra_drain(ent, 450, 35, 8000);
 						ent->client->pers.magic_power -= zyk_ultra_drain_mp_cost.integer;
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (24000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
@@ -4187,7 +4187,7 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (use_this_power == MAGIC_ULTRA_FLAME && zyk_enable_ultra_flame.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_ultra_flame_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						ultra_flame(ent,500,45);
+						ultra_flame(ent, 500, 40);
 						ent->client->pers.magic_power -= (int)ceil((zyk_ultra_flame_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (10000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
@@ -4198,7 +4198,7 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (use_this_power == MAGIC_ROCKFALL && zyk_enable_rockfall.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_rockfall_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						rock_fall(ent,500,48);
+						rock_fall(ent, 500, 45);
 						ent->client->pers.magic_power -= (int)ceil((zyk_rockfall_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (11000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
@@ -4209,7 +4209,7 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (use_this_power == MAGIC_DOME_OF_DAMAGE && zyk_enable_dome_of_damage.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_dome_of_damage_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						dome_of_damage(ent,500,30);
+						dome_of_damage(ent, 500, 28);
 						ent->client->pers.magic_power -= (int)ceil((zyk_dome_of_damage_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (16000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
@@ -4292,7 +4292,7 @@ qboolean TryGrapple(gentity_t *ent)
 						earthquake(ent,2000,300,500);
 						ent->client->pers.magic_power -= (int)ceil((zyk_earthquake_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (11000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (12000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
 							ent->client->pers.quest_power_usage_timer = level.time + 11000;
 						trap->SendServerCommand( ent->s.number, va("chat \"%s^7: ^7Earthquake!\"", ent->client->pers.netname));
@@ -4333,7 +4333,7 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (use_this_power == MAGIC_ICE_STALAGMITE && zyk_enable_ice_stalagmite.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_ice_stalagmite_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						ice_stalagmite(ent,500,150);
+						ice_stalagmite(ent, 500, 140);
 						ent->client->pers.magic_power -= (int)ceil((zyk_ice_stalagmite_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (20000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
@@ -4344,7 +4344,7 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (use_this_power == MAGIC_ICE_BOULDER && zyk_enable_ice_boulder.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_ice_boulder_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						ice_boulder(ent,380,60);
+						ice_boulder(ent, 380, 50);
 						ent->client->pers.magic_power -= (int)ceil((zyk_ice_boulder_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (20000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
@@ -4366,7 +4366,7 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (use_this_power == MAGIC_MAGIC_EXPLOSION && zyk_enable_magic_explosion.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_magic_explosion_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						magic_explosion(ent,320,150,900);
+						magic_explosion(ent,320,140,900);
 						ent->client->pers.magic_power -= (int)ceil((zyk_magic_explosion_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (28000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
@@ -4377,7 +4377,7 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (use_this_power == MAGIC_LIGHTNING_DOME && zyk_enable_lightning_dome.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_lightning_dome_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						lightning_dome(ent,80);
+						lightning_dome(ent, 70);
 						ent->client->pers.magic_power -= (int)ceil((zyk_lightning_dome_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (32000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
@@ -4388,7 +4388,7 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (use_this_power == MAGIC_WATER_ATTACK && zyk_enable_water_attack.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_water_attack_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						water_attack(ent, 500, 50);
+						water_attack(ent, 500, 45);
 						ent->client->pers.magic_power -= (int)ceil((zyk_water_attack_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (12000 * ((4.0 - ent->client->pers.skill_levels[55]) / 4.0));
@@ -15127,7 +15127,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 			ent->client->ps.powerups[PW_NEUTRALFLAG] = 0;
 
-			lightning_dome(ent, 50);
+			lightning_dome(ent, 45);
 
 			return;
 		}

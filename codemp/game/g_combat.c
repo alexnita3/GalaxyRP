@@ -5271,9 +5271,9 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	{ // zyk: Ultra Strength bonus damage
 		// zyk: Universe Power
 		if (attacker->client->pers.quest_power_status & (1 << 13))
-			damage = (int)ceil(damage * 1.15);
-		else
 			damage = (int)ceil(damage * 1.12);
+		else
+			damage = (int)ceil(damage * 1.08);
 	}
 
 	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2)
@@ -5425,9 +5425,9 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	{ // zyk: Ultra Resistance bonus resistance
 		// zyk: Universe Power
 		if (targ->client->pers.quest_power_status & (1 << 13))
-			damage = (int)ceil(damage * 0.85);
-		else
 			damage = (int)ceil(damage * 0.88);
+		else
+			damage = (int)ceil(damage * 0.92);
 	}
 
 	if (targ && targ->client && targ->client->sess.amrpgmode == 2)
