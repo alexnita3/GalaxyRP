@@ -1285,8 +1285,13 @@ void SV_ExecuteClientCommand( client_t *cl, const char *s, qboolean clientOK ) {
 		// pass unknown strings to the game
 		if (!u->name && sv.state == SS_GAME && (cl->state == CS_ACTIVE || cl->state == CS_PRIMED)) {
 			// strip \r \n and ;
-			if ( sv_filterCommands->integer )
-				Cmd_Args_Sanitize();
+			if ( sv_filterCommands->integer ) {
+				Cmd_Args_Sanitize( MAX_CVAR_VALUE_STRING, "\n\r", "  " );
+				if ( sv_filterCommands->integer == 2 ) {
+					// also strip ';' for callvote
+					Cmd_Args_Sanitize( MAX_CVAR_VALUE_STRING, ";", " " );
+				}
+			}
 			GVM_ClientCommand( cl - svs.clients );
 		}
 	}
@@ -1331,15 +1336,21 @@ static qboolean SV_ClientCommand( client_t *cl, msg_t *msg ) {
 	// normal to spam a lot of commands when downloading
 	if ( !com_cl_running->integer &&
 		cl->state >= CS_ACTIVE &&
-		sv_floodProtect->value > 0.0 && // zyk: changed this code so sv_floodProtect allows a time between 0 and 1 second. Old code: sv_floodProtect->integer && 
-		svs.time < cl->nextReliableTime ) {
-		// ignore any other text messages from this client but let them keep playing
-		// TTimo - moved the ignored verbose to the actual processing in SV_ExecuteClientCommand, only printing if the core doesn't intercept
-		clientOk = qfalse;
+		sv_floodProtect->integer )
+	{
+		const int floodTime = (sv_floodProtect->integer == 1) ? 1000 : sv_floodProtect->integer;
+		if ( svs.time < (cl->lastReliableTime + floodTime) ) {
+			// ignore any other text messages from this client but let them keep playing
+			// TTimo - moved the ignored verbose to the actual processing in SV_ExecuteClientCommand, only printing if the core doesn't intercept
+			clientOk = qfalse;
+		}
+		else {
+			cl->lastReliableTime = svs.time;
+		}
+		if ( sv_floodProtectSlow->integer ) {
+			cl->lastReliableTime = svs.time;
+		}
 	}
-
-	// don't allow another command for one second
-	cl->nextReliableTime = svs.time + (sv_floodProtect->value * 1000); // zyk: changed this code so sv_floodProtect allows a time between 0 and 1 second. Old code: cl->nextReliableTime = svs.time + 1000
 
 	SV_ExecuteClientCommand( cl, s, clientOk );
 
@@ -1419,9 +1430,14 @@ static void SV_UserMove( client_t *cl, msg_t *msg, qboolean delta ) {
 	for ( i = 0 ; i < cmdCount ; i++ ) {
 		cmd = &cmds[i];
 		MSG_ReadDeltaUsercmdKey( msg, key, oldcmd, cmd );
-		if ( sv_legacyFixForceSelect->integer && (cmd->forcesel == FP_LEVITATION || cmd->forcesel >= NUM_FORCE_POWERS) )
-		{
-			cmd->forcesel = 0xFFu;
+		if ( sv_legacyFixes->integer ) {
+			// block "charge jump" and other nonsense
+			if ( cmd->forcesel == FP_LEVITATION || cmd->forcesel >= NUM_FORCE_POWERS ) {
+				cmd->forcesel = 0xFFu;
+			}
+
+			// affects speed calculation
+			cmd->angles[ROLL] = 0;
 		}
 		oldcmd = cmd;
 	}

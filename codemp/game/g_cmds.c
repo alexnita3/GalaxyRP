@@ -3877,6 +3877,7 @@ qboolean TryGrapple(gentity_t *ent)
 			ent->client->ps.legsTimer = ent->client->ps.torsoTimer;
 		}
 		ent->client->ps.weaponTime = ent->client->ps.torsoTimer;
+		ent->client->dangerTime = level.time;
 		
 		if (ent->client->sess.amrpgmode == 2)
 		{ // zyk: if this is a RPG player, tests if he can use a magic power
