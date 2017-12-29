@@ -5113,7 +5113,7 @@ void zyk_vertical_dfa_effect(gentity_t *ent)
 
 	zyk_spawn_entity(new_ent);
 
-	new_ent->splashDamage = 150;
+	new_ent->splashDamage = 130;
 
 	new_ent->splashRadius = 600;
 
@@ -5130,7 +5130,7 @@ void zyk_bomb_model_think(gentity_t *ent)
 
 	if (ent->count == 0)
 	{ // zyk: explodes the bomb
-		zyk_quest_effect_spawn(ent->parent, ent, "zyk_timed_bomb_explosion", "4", "explosions/hugeexplosion1", 0, 530, 430, 800);
+		zyk_quest_effect_spawn(ent->parent, ent, "zyk_timed_bomb_explosion", "4", "explosions/hugeexplosion1", 0, 480, 430, 800);
 
 		ent->think = G_FreeEntity;
 		ent->nextthink = level.time + 500;
@@ -5447,7 +5447,7 @@ void zyk_force_storm(gentity_t *ent)
 // zyk: Force Scream ability
 void force_scream(gentity_t *ent)
 {
-	zyk_quest_effect_spawn(ent, ent, "zyk_effect_scream", "4", "howler/sonic", 0, 25, 300, 6000);
+	zyk_quest_effect_spawn(ent, ent, "zyk_effect_scream", "4", "howler/sonic", 0, 18, 300, 6000);
 
 	ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 	ent->client->ps.forceDodgeAnim = BOTH_FORCE_RAGE;
@@ -10012,7 +10012,7 @@ void G_RunFrame( int levelTime ) {
 								VectorSubtract(player_ent->client->ps.origin, ent->client->ps.origin, dir);
 								VectorNormalize(dir);
 
-								G_Damage(player_ent, ent, ent, NULL, NULL, 22, 0, MOD_MELEE);
+								G_Damage(player_ent, ent, ent, NULL, NULL, 25, 0, MOD_MELEE);
 
 								// zyk: removing emotes to prevent exploits
 								if (player_ent->client->pers.player_statuses & (1 << 1))

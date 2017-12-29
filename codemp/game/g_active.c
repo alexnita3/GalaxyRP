@@ -3503,9 +3503,9 @@ void ClientThink_real( gentity_t *ent ) {
 					{
 						if (ent->client->pers.rpg_class == 0)
 						{ // zyk: Free Warrior
-							if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer/2))
+							if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer/4))
 							{
-								ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/2);
+								ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/4);
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1000;
 
@@ -3535,7 +3535,7 @@ void ClientThink_real( gentity_t *ent ) {
 							}
 							else
 							{
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Unique Skill: ^7needs %d force to use it\"", (zyk_max_force_power.integer/2)));
+								trap->SendServerCommand( ent->s.number, va("chat \"^3Unique Skill: ^7needs %d force to use it\"", (zyk_max_force_power.integer/4)));
 							}
 						}
 						else if (ent->client->pers.rpg_class == 1)
