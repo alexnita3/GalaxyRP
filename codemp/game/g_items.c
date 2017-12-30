@@ -103,7 +103,7 @@ int adjustRespawnTime(float preRespawnTime, int itemType, int itemTag)
 }
 
 
-#define SHIELD_HEALTH				4000     // zyk: force field shield health changed from 250 to 4000
+#define SHIELD_HEALTH				3000     // zyk: force field shield health changed from 250 to 3000
 #define SHIELD_HEALTH_DEC			1		// 25 seconds zyk: changed from 10 to 1	
 #define MAX_SHIELD_HEIGHT			254
 #define MAX_SHIELD_HALFWIDTH		255
@@ -601,7 +601,7 @@ void pas_fire( gentity_t *ent )
 	// zyk: changed sentry gun shotspeed from 2300 to 2800
 	// zyk: Bounty Hunter Upgrade makes sentry gun have more damage
 	if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.rpg_class == 2 && ent->parent->client->pers.secrets_found & (1 << 1))
-		WP_FireTurretMissile(&g_entities[ent->genericValue3], myOrg, fwd, qfalse, 15, 2800, MOD_SENTRY, ent );
+		WP_FireTurretMissile(&g_entities[ent->genericValue3], myOrg, fwd, qfalse, 12, 2800, MOD_SENTRY, ent );
 	else
 		WP_FireTurretMissile(&g_entities[ent->genericValue3], myOrg, fwd, qfalse, 10, 2800, MOD_SENTRY, ent );
 
