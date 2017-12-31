@@ -5691,7 +5691,7 @@ void dome_of_damage(gentity_t *ent, int distance, int damage)
 	if (ent->client->pers.quest_power_status & (1 << 13))
 	{
 		distance += 100;
-		zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_dome", "4", "env/dome", 1200, damage, 290, 8000);
+		zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_dome", "4", "env/dome", 1000, damage, 290, 8000);
 	}
 
 	for (i = 0; i < level.num_entities; i++)
@@ -5700,7 +5700,7 @@ void dome_of_damage(gentity_t *ent, int distance, int damage)
 
 		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qtrue, &targets_hit) == qtrue)
 		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_dome", "4", "env/dome", 1200, damage, 290, 8000);
+			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_dome", "4", "env/dome", 1000, damage, 290, 8000);
 		}
 	}
 }
