@@ -16473,14 +16473,14 @@ void G_RunFrame( int levelTime ) {
 						ultra_drain(ent, 450, 35, 8000);
 						trap->SendServerCommand( -1, "chat \"^1Master of Evil: ^7Ultra Drain!\"");
 
-						ent->client->pers.guardian_timer = level.time + 27000;
+						ent->client->pers.guardian_timer = level.time + 29000;
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
 						ultra_flame(ent, 4000, 40);
 						trap->SendServerCommand(-1, "chat \"^1Master of Evil: ^7Ultra Flame!\"");
-						ent->client->pers.light_quest_timer = level.time + 30000;
+						ent->client->pers.light_quest_timer = level.time + 32000;
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 13 || (ent->client->pers.guardian_mode == 18 && Q_stricmp(ent->NPC_type, "guardian_of_universe") == 0))

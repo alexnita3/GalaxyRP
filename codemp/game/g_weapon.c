@@ -3740,7 +3740,9 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 								//cap it and stuff, base the strength and whether or not we can knockdown on the distance
 								//from the shooter to the target
 								VectorSubtract(traceEnt->client->ps.origin, ent->client->ps.origin, plPDif);
-								pStr = 500.0f-VectorLength(plPDif);
+
+								// zyk: default 500.0f. Decreased the default knockback value
+								pStr = 400.0f-VectorLength(plPDif);
 								if (pStr < 150.0f)
 								{
 									pStr = 150.0f;
