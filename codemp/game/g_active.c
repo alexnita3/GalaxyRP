@@ -3544,7 +3544,7 @@ void ClientThink_real( gentity_t *ent ) {
 							{
 								ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/4);
 
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 9000;
+								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 10000;
 
 								rpg_skill_counter(ent, 200);
 
