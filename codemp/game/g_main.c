@@ -13801,7 +13801,7 @@ void G_RunFrame( int levelTime ) {
 									trap->SendServerCommand( ent->s.number, va("chat \"^3Guardian of Earth: ^7I am the Guardian of Earth, %s^7! Try to defeat my strength and power!\"",ent->client->pers.netname));
 								else if (ent->client->pers.light_quest_messages == 1)
 								{
-									spawn_boss(ent,-2149,-4187,3645,90,"guardian_boss_2",-2149,-4037,3645,-90,2);
+									spawn_boss(ent,-2149,-4387,3645,90,"guardian_boss_2",-2149,-4037,3645,-90,2);
 								}
 								ent->client->pers.light_quest_messages++;
 								ent->client->pers.light_quest_timer = level.time + 3000;
