@@ -6381,6 +6381,17 @@ static void UI_RunMenuScript(char **args)
 					else
 						trap->Cvar_Set("ui_zyk_action_value", "^2upgrade");
 				}
+				else if (strstr(arg, "buyaction"))
+				{ // zyk: sets the action (upgrade or downgrade)
+					char zyk_action[512];
+
+					trap->Cvar_VariableStringBuffer("ui_zyk_buy_action_value", zyk_action, sizeof(zyk_action));
+
+					if (Q_stricmp(zyk_action, "^2buy") == 0)
+						trap->Cvar_Set("ui_zyk_buy_action_value", "^3sell");
+					else
+						trap->Cvar_Set("ui_zyk_buy_action_value", "^2buy");
+				}
 			}
 		}
 		else if (Q_stricmp(name, "zykup") == 0)
@@ -6397,6 +6408,22 @@ static void UI_RunMenuScript(char **args)
 					trap->Cmd_ExecuteText( EXEC_APPEND, va("up %s\n", arg));
 				else
 					trap->Cmd_ExecuteText( EXEC_APPEND, va("down %s\n", arg));
+			}
+		}
+		else if (Q_stricmp(name, "zykbuy") == 0)
+		{ // zyk: new ui script. Sends Zyk OpenJK Mod ui commands to server. This one is for buying and selling stuff
+			const char *arg;
+
+			if (String_Parse(args, &arg))
+			{
+				char zyk_action[512];
+
+				trap->Cvar_VariableStringBuffer("ui_zyk_buy_action_value", zyk_action, sizeof(zyk_action));
+
+				if (Q_stricmp(zyk_action, "^2buy") == 0)
+					trap->Cmd_ExecuteText(EXEC_APPEND, va("buy %s\n", arg));
+				else
+					trap->Cmd_ExecuteText(EXEC_APPEND, va("sell %s\n", arg));
 			}
 		}
 		else if (Q_stricmp(name, "setForce") == 0)
