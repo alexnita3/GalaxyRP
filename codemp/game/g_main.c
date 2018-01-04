@@ -6736,7 +6736,7 @@ void quest_power_events(gentity_t *ent)
 				if (ent->client->pers.quest_target4_timer > level.time)
 				{
 					static vec3_t forward;
-					vec3_t blow_dir, dir;
+					vec3_t blow_dir;
 
 					if (ent->client->pers.quest_debounce1_timer < level.time)
 					{
@@ -6748,16 +6748,11 @@ void quest_power_events(gentity_t *ent)
 
 						VectorNormalize(forward);
 
-						if (ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
-							VectorScale(forward, 105.0, dir);
-						else
-							VectorScale(forward, 55.0, dir);
+						VectorSet(ent->client->ps.velocity, forward[0] * 450.0, forward[1] * 450.0, forward[2] * 100.0);
 
-						VectorAdd(ent->client->ps.velocity, dir, ent->client->ps.velocity);
-
-						ent->client->pers.quest_power_hit_counter += 4;
+						ent->client->pers.quest_power_hit_counter += 8;
 						if (ent->client->pers.quest_power_hit_counter >= 180)
-							ent->client->pers.quest_power_hit_counter = -179;
+							ent->client->pers.quest_power_hit_counter -= 359;
 					}
 				}
 				else
