@@ -16774,7 +16774,7 @@ void G_RunFrame( int levelTime ) {
 							ent->client->pers.hunter_quest_messages = 0;
 						}
 
-						ent->client->pers.guardian_timer = level.time + (ent->health/2) + 4000;
+						ent->client->pers.guardian_timer = level.time + (ent->health/2) + 5000;
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
