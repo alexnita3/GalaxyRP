@@ -17166,7 +17166,7 @@ void G_RunFrame( int levelTime ) {
 							ice_block(ent, 3500);
 						}
 
-						ent->client->pers.guardian_timer = level.time + Q_irand(6000, 10000);
+						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 10000);
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
