@@ -16925,7 +16925,7 @@ void G_RunFrame( int levelTime ) {
 							ice_block(ent, 3500);
 						}
 
-						ent->client->pers.guardian_timer = level.time + Q_irand(6000, 10000);
+						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 10000);
 
 						if (ent->spawnflags & 131072)
 						{ // zyk: boss is stronger now
@@ -16937,8 +16937,8 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: using Crystal of Magic
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
 
-						ent->health += 150;
-						ent->client->ps.stats[STAT_ARMOR] += 150;
+						ent->health += 100;
+						ent->client->ps.stats[STAT_ARMOR] += 100;
 
 						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
 							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
@@ -17010,11 +17010,11 @@ void G_RunFrame( int levelTime ) {
 							lightning_dome(ent, 70);
 						}
 
-						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 12000);
+						ent->client->pers.guardian_timer = level.time + Q_irand(8000, 12000);
 
 						if (ent->spawnflags & 131072)
 						{ // zyk: boss is stronger now
-							ent->client->pers.guardian_timer -= 2000;
+							ent->client->pers.guardian_timer -= 1000;
 						}
 					}
 
@@ -17022,8 +17022,8 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: using Crystal of Magic
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
 
-						ent->health += 150;
-						ent->client->ps.stats[STAT_ARMOR] += 150;
+						ent->health += 100;
+						ent->client->ps.stats[STAT_ARMOR] += 100;
 
 						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
 							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
