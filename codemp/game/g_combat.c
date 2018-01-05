@@ -2125,7 +2125,7 @@ extern void saberReactivate(gentity_t *saberent, gentity_t *saberOwner);
 extern void saberBackToOwner(gentity_t *saberent);
 extern void quest_get_new_player(gentity_t *ent);
 extern void try_finishing_race();
-extern void save_account(gentity_t *ent);
+extern void save_account(gentity_t *ent, qboolean save_char_file);
 extern void remove_credits(gentity_t *ent, int credits);
 extern void zyk_NPC_Kill_f( char *name );
 extern gentity_t *Zyk_NPC_SpawnType(char *npc_type, int x, int y, int z, int yaw);
@@ -2543,7 +2543,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		quest_player->client->pers.guardian_mode = 0;
 		quest_player->client->pers.light_quest_messages = 0;
 
-		save_account(quest_player);
+		save_account(quest_player, qtrue);
 
 		quest_get_new_player(quest_player);
 	}
@@ -2552,7 +2552,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		quest_player->client->pers.guardian_mode = 0;
 		quest_player->client->pers.hunter_quest_progress = NUMBER_OF_OBJECTIVES;
 
-		save_account(quest_player);
+		save_account(quest_player, qtrue);
 
 		if (quest_player->client->pers.magic_power > 0)
 		{
@@ -2569,7 +2569,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		quest_player->client->pers.guardian_mode = 0;
 		quest_player->client->pers.eternity_quest_progress = NUMBER_OF_ETERNITY_QUEST_OBJECTIVES;
 
-		save_account(quest_player);
+		save_account(quest_player, qtrue);
 
 		if (quest_player->client->pers.magic_power > 0)
 		{

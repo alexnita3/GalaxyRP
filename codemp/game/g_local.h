@@ -479,6 +479,8 @@ typedef struct clientSession_s {
 	int	amrpgmode; // zyk: saved in session so the player account can be loaded again in map changes
 	char filename[32]; // zyk: player account filename
 
+	char rpgchar[32]; // zyk: file name of the RPG char
+
 	// zyk: current power selected by Magic Master to use
 	// 1 - Magic Sense
 	// 2 - Healing Water

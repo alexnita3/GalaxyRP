@@ -47,8 +47,10 @@ void G_WriteClientSessionData( gclient_t *client )
 {
 	char		s[MAX_CVAR_VALUE_STRING] = {0},
 				siegeClass[64] = {0}, IP[NET_ADDRSTRMAXLEN] = {0}, 
-				filename[32] = {0};
+				filename[32] = { 0 }, rpgchar[32] = { 0 }, 
+				zykstr[MAX_CVAR_VALUE_STRING] = { 0 };
 	const char	*var;
+	const char *zykvar;
 	int			i = 0;
 
 	// for the strings, replace ' ' with 1
@@ -103,6 +105,19 @@ void G_WriteClientSessionData( gclient_t *client )
 	var = va( "session%i", client - level.clients );
 
 	trap->Cvar_Set( var, s );
+
+	// zyk: new session cvar info
+	Q_strncpyz(rpgchar, client->sess.rpgchar, sizeof(rpgchar));
+	for (i = 0; rpgchar[i]; i++) {
+		if (rpgchar[i] == ' ')
+			rpgchar[i] = 1;
+	}
+
+	Q_strcat(zykstr, sizeof(zykstr), va("%s", rpgchar));
+
+	zykvar = va("zyksession%i", client - level.clients);
+
+	trap->Cvar_Set(zykvar, zykstr);
 }
 
 /*
@@ -114,8 +129,9 @@ Called on a reconnect
 */
 void G_ReadSessionData( gclient_t *client )
 {
-	char			s[MAX_CVAR_VALUE_STRING] = {0};
+	char			s[MAX_CVAR_VALUE_STRING] = {0}, zykstr[MAX_CVAR_VALUE_STRING] = { 0 };
 	const char		*var;
+	const char *zykvar;
 	int			i=0, tempSessionTeam=0, tempSpectatorState, tempTeamLeader;
 
 	var = va( "session%i", client - level.clients );
@@ -175,6 +191,21 @@ void G_ReadSessionData( gclient_t *client )
 	client->ps.fd.saberAnimLevel = client->sess.saberLevel;
 	client->ps.fd.saberDrawAnimLevel = client->sess.saberLevel;
 	client->ps.fd.forcePowerSelected = client->sess.selectedFP;
+
+	// zyk: new session cvar info
+	zykvar = va("zyksession%i", client - level.clients);
+	trap->Cvar_VariableStringBuffer(zykvar, zykstr, sizeof(zykstr));
+
+	sscanf(zykstr, "%s",
+		client->sess.rpgchar
+	);
+
+	// convert back to spaces from unused chars, as session data is written that way.
+	for (i = 0; client->sess.rpgchar[i]; i++)
+	{
+		if (client->sess.rpgchar[i] == 1)
+			client->sess.rpgchar[i] = ' ';
+	}
 }
 
 
@@ -280,6 +311,7 @@ void G_InitSessionData( gclient_t *client, char *userinfo, qboolean isBot ) {
 	// zyk: setting initial value of RPG mode session attributes
 	sess->amrpgmode = 0;
 	strcpy(sess->filename,"");
+	strcpy(sess->rpgchar, "");
 
 	sess->magic_fist_selection = 0;
 	sess->magic_disabled_powers = 0;

@@ -1746,7 +1746,7 @@ void Cmd_FollowPrev_f( gentity_t *ent ) {
 	Cmd_FollowCycle_f( ent, -1 );
 }
 
-extern void save_account(gentity_t *ent);
+extern void save_account(gentity_t *ent, qboolean save_char_file);
 extern void quest_get_new_player(gentity_t *ent);
 qboolean zyk_answer(gentity_t *ent, char *arg1)
 {
@@ -1760,7 +1760,7 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 			if (ent->client->pers.eternity_quest_progress == 0 && Q_stricmp( arg1, "key" ) == 0)
 			{
 				ent->client->pers.eternity_quest_progress = 1;
-				save_account(ent);
+				save_account(ent, qtrue);
 
 				quest_get_new_player(ent);
 
@@ -1770,7 +1770,7 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 			else if (ent->client->pers.eternity_quest_progress == 1 && Q_stricmp( arg1, "clock" ) == 0)
 			{
 				ent->client->pers.eternity_quest_progress = 2;
-				save_account(ent);
+				save_account(ent, qtrue);
 
 				quest_get_new_player(ent);
 
@@ -1780,7 +1780,7 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 			else if (ent->client->pers.eternity_quest_progress == 2 && Q_stricmp( arg1, "sword" ) == 0)
 			{
 				ent->client->pers.eternity_quest_progress = 3;
-				save_account(ent);
+				save_account(ent, qtrue);
 
 				quest_get_new_player(ent);
 
@@ -1790,7 +1790,7 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 			else if (ent->client->pers.eternity_quest_progress == 3 && Q_stricmp( arg1, "sun" ) == 0)
 			{
 				ent->client->pers.eternity_quest_progress = 4;
-				save_account(ent);
+				save_account(ent, qtrue);
 
 				quest_get_new_player(ent);
 
@@ -1800,7 +1800,7 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 			else if (ent->client->pers.eternity_quest_progress == 4 && Q_stricmp( arg1, "fire" ) == 0)
 			{
 				ent->client->pers.eternity_quest_progress = 5;
-				save_account(ent);
+				save_account(ent, qtrue);
 
 				quest_get_new_player(ent);
 
@@ -1810,7 +1810,7 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 			else if (ent->client->pers.eternity_quest_progress == 5 && Q_stricmp( arg1, "water" ) == 0)
 			{
 				ent->client->pers.eternity_quest_progress = 6;
-				save_account(ent);
+				save_account(ent, qtrue);
 
 				quest_get_new_player(ent);
 
@@ -1820,7 +1820,7 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 			else if (ent->client->pers.eternity_quest_progress == 6 && Q_stricmp( arg1, "time" ) == 0)
 			{
 				ent->client->pers.eternity_quest_progress = 7;
-				save_account(ent);
+				save_account(ent, qtrue);
 
 				quest_get_new_player(ent);
 
@@ -1830,7 +1830,7 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 			else if (ent->client->pers.eternity_quest_progress == 7 && Q_stricmp( arg1, "star" ) == 0)
 			{
 				ent->client->pers.eternity_quest_progress = 8;
-				save_account(ent);
+				save_account(ent, qtrue);
 
 				quest_get_new_player(ent);
 
@@ -1840,7 +1840,7 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 			else if (ent->client->pers.eternity_quest_progress == 8 && Q_stricmp( arg1, "nature" ) == 0)
 			{
 				ent->client->pers.eternity_quest_progress = 9;
-				save_account(ent);
+				save_account(ent, qtrue);
 
 				quest_get_new_player(ent);
 
@@ -1850,7 +1850,7 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 			else if (ent->client->pers.eternity_quest_progress == 9 && Q_stricmp( arg1, "love" ) == 0)
 			{
 				ent->client->pers.eternity_quest_progress = 10;
-				save_account(ent);
+				save_account(ent, qtrue);
 
 				quest_get_new_player(ent);
 
@@ -4765,10 +4765,6 @@ void load_account(gentity_t *ent)
 			ent->client->sess.amrpgmode = 1;
 		}
 
-		// zyk: initializing mind control attributes used in RPG mode
-		ent->client->pers.being_mind_controlled = -1;
-		ent->client->pers.mind_controlled1_id = -1;
-
 		// zyk: loading player_settings value
 		fscanf(account_file,"%s",content);
 		ent->client->pers.player_settings = atoi(content);
@@ -4777,143 +4773,158 @@ void load_account(gentity_t *ent)
 		fscanf(account_file,"%s",content);
 		ent->client->pers.bitvalue = atoi(content);
 
-		// zyk: loading level up score value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.level_up_score = atoi(content);
-
-		// zyk: loading Level value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.level = atoi(content);
-
-		// zyk: loading Skillpoints value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.skillpoints = atoi(content);
-
-		if (ent->client->pers.level > MAX_RPG_LEVEL)
-		{ // zyk: validating level
-			ent->client->pers.level = MAX_RPG_LEVEL;
-		}
-		else if (ent->client->pers.level < 1)
-		{
-			ent->client->pers.level = 1;
-		}
-
-		for (j = 1; j <= ent->client->pers.level; j++)
-		{
-			if ((j % 10) == 0)
-			{ // zyk: level divisible by 10 has more skillpoints
-				max_skillpoints += (1 + j/10);
-			}
-			else
-			{
-				max_skillpoints++;
-			}
-		}
-
-		validate_skillpoints = ent->client->pers.skillpoints;
-		// zyk: loading skill levels
-		for (i = 0; i < NUMBER_OF_SKILLS; i++)
-		{
-			fscanf(account_file,"%s",content);
-			ent->client->pers.skill_levels[i] = atoi(content);
-			validate_skillpoints += ent->client->pers.skill_levels[i];
-		}
-
-		// zyk: validating skillpoints
-		if (validate_skillpoints != max_skillpoints)
-		{
-			// zyk: if not valid, reset all skills and set the max skillpoints he can have in this level
-			for (i = 0; i < NUMBER_OF_SKILLS; i++)
-			{
-				ent->client->pers.skill_levels[i] = 0;
-			}
-
-			ent->client->pers.skillpoints = max_skillpoints;
-		}
-
-		// zyk: Other RPG attributes
-		// zyk: loading Light Quest Defeated Guardians number value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.defeated_guardians = atoi(content);
-
-		// zyk: compability with old mod versions, in which the players who completed the quest had a value of 9
-		if (ent->client->pers.defeated_guardians == 9)
-			ent->client->pers.defeated_guardians = NUMBER_OF_GUARDIANS;
-
-		// zyk: loading Dark Quest completed objectives value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.hunter_quest_progress = atoi(content);
-
-		// zyk: loading Eternity Quest progress value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.eternity_quest_progress = atoi(content);
-
-		// zyk: loading secrets found value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.secrets_found = atoi(content);
-
-		// zyk: loading Universe Quest Progress value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.universe_quest_progress = atoi(content);
-
-		// zyk: loading Universe Quest Counter value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.universe_quest_counter = atoi(content);
-
-		// zyk: loading credits value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.credits = atoi(content);
-
-		// zyk: validating credits
-		if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
-		{
-			ent->client->pers.credits = zyk_max_rpg_credits.integer;
-		}
-		else if (ent->client->pers.credits < 0)
-		{
-			ent->client->pers.credits = 0;
-		}
-
-		// zyk: loading RPG class
-		fscanf(account_file,"%s",content);
-		ent->client->pers.rpg_class = atoi(content);
-
-		// zyk: loading disabled magic powers
+		// zyk: loading the current char
 		fscanf(account_file, "%s", content);
-		ent->client->sess.magic_disabled_powers = atoi(content);
-
-		// zyk: loading more disabled magic powers
-		fscanf(account_file, "%s", content);
-		ent->client->sess.magic_more_disabled_powers = atoi(content);
-		
-		if (ent->client->sess.amrpgmode == 1)
-		{
-			ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
-
-			// zyk: setting default max hp and shield
-			ent->client->ps.stats[STAT_MAX_HEALTH] = 100;
-
-			if (ent->health > 100)
-				ent->health = 100;
-
-			if (ent->client->ps.stats[STAT_ARMOR] > 100)
-				ent->client->ps.stats[STAT_ARMOR] = 100;
-
-			// zyk: reset the force powers of this player
-			WP_InitForcePowers( ent );
-
-			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0 && 
-				level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE
-				)
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
-
-			if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
-
-			zyk_load_common_settings(ent);
-		}
+		strcpy(ent->client->sess.rpgchar, content);
 
 		fclose(account_file);
+
+		// zyk: loading the char file
+		account_file = fopen(va("accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
+		if (account_file != NULL)
+		{
+			// zyk: loading level up score value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.level_up_score = atoi(content);
+
+			// zyk: loading Level value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.level = atoi(content);
+
+			// zyk: loading Skillpoints value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.skillpoints = atoi(content);
+
+			if (ent->client->pers.level > MAX_RPG_LEVEL)
+			{ // zyk: validating level
+				ent->client->pers.level = MAX_RPG_LEVEL;
+			}
+			else if (ent->client->pers.level < 1)
+			{
+				ent->client->pers.level = 1;
+			}
+
+			for (j = 1; j <= ent->client->pers.level; j++)
+			{
+				if ((j % 10) == 0)
+				{ // zyk: level divisible by 10 has more skillpoints
+					max_skillpoints += (1 + j / 10);
+				}
+				else
+				{
+					max_skillpoints++;
+				}
+			}
+
+			validate_skillpoints = ent->client->pers.skillpoints;
+			// zyk: loading skill levels
+			for (i = 0; i < NUMBER_OF_SKILLS; i++)
+			{
+				fscanf(account_file, "%s", content);
+				ent->client->pers.skill_levels[i] = atoi(content);
+				validate_skillpoints += ent->client->pers.skill_levels[i];
+			}
+
+			// zyk: validating skillpoints
+			if (validate_skillpoints != max_skillpoints)
+			{
+				// zyk: if not valid, reset all skills and set the max skillpoints he can have in this level
+				for (i = 0; i < NUMBER_OF_SKILLS; i++)
+				{
+					ent->client->pers.skill_levels[i] = 0;
+				}
+
+				ent->client->pers.skillpoints = max_skillpoints;
+			}
+
+			// zyk: Other RPG attributes
+			// zyk: loading Light Quest Defeated Guardians number value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.defeated_guardians = atoi(content);
+
+			// zyk: compability with old mod versions, in which the players who completed the quest had a value of 9
+			if (ent->client->pers.defeated_guardians == 9)
+				ent->client->pers.defeated_guardians = NUMBER_OF_GUARDIANS;
+
+			// zyk: loading Dark Quest completed objectives value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.hunter_quest_progress = atoi(content);
+
+			// zyk: loading Eternity Quest progress value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.eternity_quest_progress = atoi(content);
+
+			// zyk: loading secrets found value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.secrets_found = atoi(content);
+
+			// zyk: loading Universe Quest Progress value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.universe_quest_progress = atoi(content);
+
+			// zyk: loading Universe Quest Counter value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.universe_quest_counter = atoi(content);
+
+			// zyk: loading credits value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.credits = atoi(content);
+
+			// zyk: validating credits
+			if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
+			{
+				ent->client->pers.credits = zyk_max_rpg_credits.integer;
+			}
+			else if (ent->client->pers.credits < 0)
+			{
+				ent->client->pers.credits = 0;
+			}
+
+			// zyk: loading RPG class
+			fscanf(account_file, "%s", content);
+			ent->client->pers.rpg_class = atoi(content);
+
+			// zyk: loading disabled magic powers
+			fscanf(account_file, "%s", content);
+			ent->client->sess.magic_disabled_powers = atoi(content);
+
+			// zyk: loading more disabled magic powers
+			fscanf(account_file, "%s", content);
+			ent->client->sess.magic_more_disabled_powers = atoi(content);
+
+			if (ent->client->sess.amrpgmode == 1)
+			{
+				ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
+
+				// zyk: setting default max hp and shield
+				ent->client->ps.stats[STAT_MAX_HEALTH] = 100;
+
+				if (ent->health > 100)
+					ent->health = 100;
+
+				if (ent->client->ps.stats[STAT_ARMOR] > 100)
+					ent->client->ps.stats[STAT_ARMOR] = 100;
+
+				// zyk: reset the force powers of this player
+				WP_InitForcePowers(ent);
+
+				if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0 &&
+					level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE
+					)
+					ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
+
+				if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
+					ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
+
+				zyk_load_common_settings(ent);
+			}
+
+			fclose(account_file);
+		}
+		else
+		{ // zyk: char file caould not be loaded
+			trap->SendServerCommand(ent - g_entities, "print \"Char file could not be loaded!\n\"");
+		}
 	}
 	else
 	{
@@ -4921,22 +4932,23 @@ void load_account(gentity_t *ent)
 	}
 }
 
-// zyk: saves info into the player account file
-void save_account(gentity_t *ent)
+// zyk: saves info into the player account file. If save_char_file is qtrue, this function must save the char file
+void save_account(gentity_t *ent, qboolean save_char_file)
 {
 	// zyk: used to prevent account save in map change time or before loading account after changing map
-	if (level.voteExecuteTime < level.time && ent->client->pers.connected == CON_CONNECTED)
-	{
-		if (ent->client->sess.amrpgmode == 1 || 
-			(ent->client->sess.amrpgmode == 2 && (zyk_rp_mode.integer != 1 || zyk_allow_saving_in_rp_mode.integer == 1)))
-		{ // zyk: players can only save things if server is not at RP Mode or if it is allowed in config
+	if (level.voteExecuteTime < level.time && ent->client->pers.connected == CON_CONNECTED && 
+		(ent->client->sess.amrpgmode == 1 || (ent->client->sess.amrpgmode == 2 && (zyk_rp_mode.integer != 1 || zyk_allow_saving_in_rp_mode.integer == 1)))
+		)
+	{ // zyk: players can only save things if server is not at RP Mode or if it is allowed in config
+		if (save_char_file == qtrue)
+		{  // zyk: save the RPG char
 			FILE *account_file;
 			gclient_t *client;
 
 			client = ent->client;
-			account_file = fopen(va("accounts/%s.txt",ent->client->sess.filename),"w");
-			fprintf(account_file,"%s\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
-			client->pers.password,client->sess.amrpgmode,client->pers.player_settings,client->pers.bitvalue,client->pers.level_up_score,client->pers.level,client->pers.skillpoints,client->pers.skill_levels[0],client->pers.skill_levels[1],client->pers.skill_levels[2]
+			account_file = fopen(va("accounts/%s_%s.txt",ent->client->sess.filename, ent->client->sess.rpgchar),"w");
+			fprintf(account_file,"%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
+			client->pers.level_up_score,client->pers.level,client->pers.skillpoints,client->pers.skill_levels[0],client->pers.skill_levels[1],client->pers.skill_levels[2]
 			,client->pers.skill_levels[3],client->pers.skill_levels[4],client->pers.skill_levels[5],client->pers.skill_levels[6],client->pers.skill_levels[7],client->pers.skill_levels[8]
 			,client->pers.skill_levels[9],client->pers.skill_levels[10],client->pers.skill_levels[11],client->pers.skill_levels[12],client->pers.skill_levels[13],client->pers.skill_levels[14]
 			,client->pers.skill_levels[15],client->pers.skill_levels[16],client->pers.skill_levels[17],client->pers.skill_levels[18],client->pers.skill_levels[19],client->pers.skill_levels[20],client->pers.skill_levels[21],client->pers.skill_levels[22]
@@ -4946,6 +4958,17 @@ void save_account(gentity_t *ent)
 			,client->pers.skill_levels[50],client->pers.skill_levels[51],client->pers.skill_levels[52],client->pers.skill_levels[53],client->pers.skill_levels[54],client->pers.skill_levels[55],client->pers.defeated_guardians,client->pers.hunter_quest_progress
 			,client->pers.eternity_quest_progress,client->pers.secrets_found,client->pers.universe_quest_progress,client->pers.universe_quest_counter,client->pers.credits,client->pers.rpg_class
 			,client->sess.magic_disabled_powers,client->sess.magic_more_disabled_powers);
+			fclose(account_file);
+		}
+		else
+		{ // zyk: save the main account file
+			FILE *account_file;
+			gclient_t *client;
+
+			client = ent->client;
+			account_file = fopen(va("accounts/%s.txt", ent->client->sess.filename), "w");
+			fprintf(account_file, "%s\n%d\n%d\n%d\n%s\n",
+				client->pers.password, client->sess.amrpgmode, client->pers.player_settings, client->pers.bitvalue, client->sess.rpgchar);
 			fclose(account_file);
 		}
 	}
@@ -5051,7 +5074,7 @@ void rpg_score(gentity_t *ent, qboolean admin_rp_mode)
 			send_message = 1;
 		}
 	}
-	save_account(ent); // zyk: saves new score and credits in the account file
+	save_account(ent, qtrue); // zyk: saves new score and credits in the account file
 
 	// zyk: cleaning the modifiers after they are applied
 	ent->client->pers.credits_modifier = 0;
@@ -5600,6 +5623,32 @@ void Cmd_DateTime_f( gentity_t *ent ) {
 	trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", ctime(&current_time)) ); 
 }
 
+// zyk: adds a new RPG char with default values
+void add_new_char(gentity_t *ent)
+{
+	int i = 0;
+
+	ent->client->pers.level_up_score = 0;
+	ent->client->pers.level = 1;
+	ent->client->pers.skillpoints = 1;
+
+	for (i = 0; i < NUMBER_OF_SKILLS; i++)
+	{
+		ent->client->pers.skill_levels[i] = 0;
+	}
+
+	ent->client->pers.defeated_guardians = 0;
+	ent->client->pers.hunter_quest_progress = 0;
+	ent->client->pers.eternity_quest_progress = 0;
+	ent->client->pers.secrets_found = 0;
+	ent->client->pers.universe_quest_progress = 0;
+	ent->client->pers.universe_quest_counter = 0;
+	ent->client->pers.credits = 100;
+	ent->client->pers.rpg_class = 0;
+	ent->client->sess.magic_disabled_powers = 0;
+	ent->client->sess.magic_more_disabled_powers = 0;
+}
+
 /*
 ==================
 Cmd_NewAccount_f
@@ -5684,27 +5733,14 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 
 	ent->client->pers.player_settings = 0;
 	ent->client->pers.bitvalue = 0;
-	ent->client->pers.level_up_score = 0;
-	ent->client->pers.level = 1;
-	ent->client->pers.skillpoints = 1;
 
-	for (i = 0; i < NUMBER_OF_SKILLS; i++)
-	{
-		ent->client->pers.skill_levels[i] = 0;
-	}
+	add_new_char(ent);
 
-	ent->client->pers.defeated_guardians = 0;
-	ent->client->pers.hunter_quest_progress = 0;
-	ent->client->pers.eternity_quest_progress = 0;
-	ent->client->pers.secrets_found = 0;
-	ent->client->pers.universe_quest_progress = 0;
-	ent->client->pers.universe_quest_counter = 0;
-	ent->client->pers.credits = 100;
-	ent->client->pers.rpg_class = 0;
-	ent->client->sess.magic_disabled_powers = 0;
-	ent->client->sess.magic_more_disabled_powers = 0;
+	// zyk: saving the default char
+	strcpy(ent->client->sess.rpgchar, arg1);
 
-	save_account(ent);
+	save_account(ent, qfalse);
+	save_account(ent, qtrue);
 
 	if (ent->client->sess.amrpgmode == 2)
 	{
@@ -5772,6 +5808,192 @@ void zyk_save_magic_master_config(gentity_t *ent)
 					ent->client->sess.selected_special_power, ent->client->sess.selected_left_special_power, ent->client->sess.selected_right_special_power);
 			fclose(config_file);
 		}
+	}
+}
+
+// zyk: loads the player account the old way
+void legacy_load_account(gentity_t *ent)
+{
+	FILE *account_file;
+	char content[128];
+
+	strcpy(content, "");
+	account_file = fopen(va("accounts/%s.txt", ent->client->sess.filename), "r");
+	if (account_file != NULL)
+	{
+		int i = 0;
+		// zyk: this variable will validate the skillpoints this player has
+		// if he has more than the max skillpoints defined, then server must remove the exceeding ones
+		int validate_skillpoints = 0;
+		int max_skillpoints = 0;
+		int j = 0;
+
+		// zyk: loading the account password
+		fscanf(account_file, "%s", content);
+		strcpy(ent->client->pers.password, content);
+
+		// zyk: loading the amrpgmode value
+		fscanf(account_file, "%s", content);
+		ent->client->sess.amrpgmode = atoi(content);
+
+		if ((zyk_allow_rpg_mode.integer == 0 || (zyk_allow_rpg_in_other_gametypes.integer == 0 && level.gametype != GT_FFA)) && ent->client->sess.amrpgmode == 2)
+		{ // zyk: RPG Mode not allowed. Change his account to Admin-Only Mode
+			ent->client->sess.amrpgmode = 1;
+		}
+		else if (level.gametype == GT_SIEGE || level.gametype == GT_JEDIMASTER)
+		{ // zyk: Siege and Jedi Master will never allow RPG Mode
+			ent->client->sess.amrpgmode = 1;
+		}
+
+		// zyk: loading player_settings value
+		fscanf(account_file, "%s", content);
+		ent->client->pers.player_settings = atoi(content);
+
+		// zyk: loading the admin command bit value
+		fscanf(account_file, "%s", content);
+		ent->client->pers.bitvalue = atoi(content);
+
+		// zyk: loading level up score value
+		fscanf(account_file, "%s", content);
+		ent->client->pers.level_up_score = atoi(content);
+
+		// zyk: loading Level value
+		fscanf(account_file, "%s", content);
+		ent->client->pers.level = atoi(content);
+
+		// zyk: loading Skillpoints value
+		fscanf(account_file, "%s", content);
+		ent->client->pers.skillpoints = atoi(content);
+
+		if (ent->client->pers.level > MAX_RPG_LEVEL)
+		{ // zyk: validating level
+			ent->client->pers.level = MAX_RPG_LEVEL;
+		}
+		else if (ent->client->pers.level < 1)
+		{
+			ent->client->pers.level = 1;
+		}
+
+		for (j = 1; j <= ent->client->pers.level; j++)
+		{
+			if ((j % 10) == 0)
+			{ // zyk: level divisible by 10 has more skillpoints
+				max_skillpoints += (1 + j / 10);
+			}
+			else
+			{
+				max_skillpoints++;
+			}
+		}
+
+		validate_skillpoints = ent->client->pers.skillpoints;
+		// zyk: loading skill levels
+		for (i = 0; i < NUMBER_OF_SKILLS; i++)
+		{
+			fscanf(account_file, "%s", content);
+			ent->client->pers.skill_levels[i] = atoi(content);
+			validate_skillpoints += ent->client->pers.skill_levels[i];
+		}
+
+		// zyk: validating skillpoints
+		if (validate_skillpoints != max_skillpoints)
+		{
+			// zyk: if not valid, reset all skills and set the max skillpoints he can have in this level
+			for (i = 0; i < NUMBER_OF_SKILLS; i++)
+			{
+				ent->client->pers.skill_levels[i] = 0;
+			}
+
+			ent->client->pers.skillpoints = max_skillpoints;
+		}
+
+		// zyk: Other RPG attributes
+		// zyk: loading Light Quest Defeated Guardians number value
+		fscanf(account_file, "%s", content);
+		ent->client->pers.defeated_guardians = atoi(content);
+
+		// zyk: compability with old mod versions, in which the players who completed the quest had a value of 9
+		if (ent->client->pers.defeated_guardians == 9)
+			ent->client->pers.defeated_guardians = NUMBER_OF_GUARDIANS;
+
+		// zyk: loading Dark Quest completed objectives value
+		fscanf(account_file, "%s", content);
+		ent->client->pers.hunter_quest_progress = atoi(content);
+
+		// zyk: loading Eternity Quest progress value
+		fscanf(account_file, "%s", content);
+		ent->client->pers.eternity_quest_progress = atoi(content);
+
+		// zyk: loading secrets found value
+		fscanf(account_file, "%s", content);
+		ent->client->pers.secrets_found = atoi(content);
+
+		// zyk: loading Universe Quest Progress value
+		fscanf(account_file, "%s", content);
+		ent->client->pers.universe_quest_progress = atoi(content);
+
+		// zyk: loading Universe Quest Counter value
+		fscanf(account_file, "%s", content);
+		ent->client->pers.universe_quest_counter = atoi(content);
+
+		// zyk: loading credits value
+		fscanf(account_file, "%s", content);
+		ent->client->pers.credits = atoi(content);
+
+		// zyk: validating credits
+		if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
+		{
+			ent->client->pers.credits = zyk_max_rpg_credits.integer;
+		}
+		else if (ent->client->pers.credits < 0)
+		{
+			ent->client->pers.credits = 0;
+		}
+
+		// zyk: loading RPG class
+		fscanf(account_file, "%s", content);
+		ent->client->pers.rpg_class = atoi(content);
+
+		// zyk: loading disabled magic powers
+		fscanf(account_file, "%s", content);
+		ent->client->sess.magic_disabled_powers = atoi(content);
+
+		// zyk: loading more disabled magic powers
+		fscanf(account_file, "%s", content);
+		ent->client->sess.magic_more_disabled_powers = atoi(content);
+
+		if (ent->client->sess.amrpgmode == 1)
+		{
+			ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
+
+			// zyk: setting default max hp and shield
+			ent->client->ps.stats[STAT_MAX_HEALTH] = 100;
+
+			if (ent->health > 100)
+				ent->health = 100;
+
+			if (ent->client->ps.stats[STAT_ARMOR] > 100)
+				ent->client->ps.stats[STAT_ARMOR] = 100;
+
+			// zyk: reset the force powers of this player
+			WP_InitForcePowers(ent);
+
+			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0 &&
+				level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE
+				)
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
+
+			if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
+
+			zyk_load_common_settings(ent);
+		}
+
+		fclose(account_file);
+	}
+	else
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"There is no account with this login or password.\n\"");
 	}
 }
 
@@ -5845,7 +6067,23 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 		strcpy(ent->client->sess.filename, arg1);
 		strcpy(ent->client->pers.password, arg2);
 
-		load_account(ent);
+		account_file = fopen(va("accounts/%s_%s.txt", arg1, arg1), "r");
+		if (account_file == NULL)
+		{ // zyk: old account. Use the legacy function to convert it to the Char system
+			legacy_load_account(ent);
+
+			// zyk: saving the default char
+			strcpy(ent->client->sess.rpgchar, arg1);
+
+			save_account(ent, qfalse);
+			save_account(ent, qtrue);
+		}
+		else
+		{
+			fclose(account_file);
+
+			load_account(ent);
+		}
 
 		if (ent->client->sess.amrpgmode == 1)
 			trap->SendServerCommand( ent-g_entities, "print \"^7Account loaded succesfully in ^2Admin-Only Mode^7. Use command ^3/list^7.\n\"" );
@@ -7834,7 +8072,7 @@ void do_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean update_all)
 			return;
 
 		// zyk: saving the account file with the upgraded skill
-		save_account(ent);
+		save_account(ent, qtrue);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Skill upgraded successfully.\n\"" );
 
@@ -7859,7 +8097,7 @@ void do_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean update_all)
 		}
 
 		// zyk: saving the account file with the upgraded skill
-		save_account(ent);
+		save_account(ent, qtrue);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Skills upgraded successfully.\n\"" );
 		Cmd_ZykMod_f(ent);
@@ -8791,7 +9029,7 @@ void do_downgrade_skill(gentity_t *ent, int downgrade_value)
 	}
 
 	// zyk: saving the account file with the downgraded skill
-	save_account(ent);
+	save_account(ent, qtrue);
 
 	trap->SendServerCommand( ent-g_entities, "print \"Skill downgraded successfully.\n\"" );
 
@@ -9289,9 +9527,9 @@ void zyk_list_stuff(gentity_t *ent, gentity_t *target_ent)
 	trap->SendServerCommand(target_ent - g_entities, va("print \"%s\n\"", stuff_message));
 }
 
-void list_rpg_info(gentity_t *ent)
+void list_rpg_info(gentity_t *ent, gentity_t *target_ent)
 { // zyk: lists general RPG info of this player
-	trap->SendServerCommand(ent->s.number, va("print \"\n^2Account: ^7%s\n\n^3Level: ^7%d/%d\n^3Level Up Score: ^7%d/%d\n^3Skill Points: ^7%d\n^3Skill Counter: ^7%d/%d\n^3Magic Points: ^7%d/%d\n^3Credits: ^7%d\n^3RPG Class: ^7%s\n\n^7Use ^2/list rpg ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->pers.level, MAX_RPG_LEVEL, ent->client->pers.level_up_score, (ent->client->pers.level * zyk_level_up_score_factor.integer), ent->client->pers.skillpoints, ent->client->pers.skill_counter, zyk_max_skill_counter.integer, ent->client->pers.magic_power, zyk_max_magic_power(ent), ent->client->pers.credits, zyk_rpg_class(ent)));
+	trap->SendServerCommand(target_ent->s.number, va("print \"\n^2Account: ^7%s\n^2Char: ^7%s\n\n^3Level: ^7%d/%d\n^3Level Up Score: ^7%d/%d\n^3Skill Points: ^7%d\n^3Skill Counter: ^7%d/%d\n^3Magic Points: ^7%d/%d\n^3Credits: ^7%d\n^3RPG Class: ^7%s\n\n^7Use ^2/list rpg ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->pers.level, MAX_RPG_LEVEL, ent->client->pers.level_up_score, (ent->client->pers.level * zyk_level_up_score_factor.integer), ent->client->pers.skillpoints, ent->client->pers.skill_counter, zyk_max_skill_counter.integer, ent->client->pers.magic_power, zyk_max_magic_power(ent), ent->client->pers.credits, zyk_rpg_class(ent)));
 }
 
 /*
@@ -9304,7 +9542,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 	{
 		if (trap->Argc() == 1)
 		{ // zyk: if player didnt pass arguments, lists general info
-			list_rpg_info(ent);
+			list_rpg_info(ent, ent);
 		}
 		else if (trap->Argc() == 2)
 		{
@@ -10787,7 +11025,7 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
 
 		ent->client->pers.credits -= item_costs[value-1];
-		save_account(ent);
+		save_account(ent, qtrue);
 
 		trap->SendServerCommand( ent-g_entities, va("chat \"^3Jawa Seller: ^7Thanks %s^7!\n\"",ent->client->pers.netname) );
 
@@ -11036,7 +11274,7 @@ void Cmd_Sell_f( gentity_t *ent ) {
 	if (sold == 1)
 	{
 		add_credits(ent,items_costs[value-1]);
-		save_account(ent);
+		save_account(ent, qtrue);
 		trap->SendServerCommand( ent-g_entities, va("chat \"^3Jawa Seller: ^7Thanks %s^7!\n\"",ent->client->pers.netname) );
 	}
 	else
@@ -11075,7 +11313,7 @@ void Cmd_ChangePassword_f( gentity_t *ent ) {
 	}
 
 	strcpy(ent->client->pers.password,arg1);
-	save_account(ent);
+	save_account(ent, qfalse);
 
 	trap->SendServerCommand( ent-g_entities, "print \"Your password was changed successfully.\n\"" );
 }
@@ -11111,7 +11349,10 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		ent->client->pers.eternity_quest_progress = 0;
 		ent->client->pers.universe_quest_progress = 0;
 		ent->client->pers.universe_quest_counter = 0;
-		ent->client->pers.player_settings = 0;
+
+		// zyk: Challenge Mode, must keep the flag
+		if (ent->client->pers.player_settings & (1 << 15))
+			ent->client->pers.universe_quest_counter |= (1 << 29);
 
 		ent->client->pers.level = 1;
 		ent->client->pers.level_up_score = 0;
@@ -11126,7 +11367,7 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		ent->client->sess.magic_disabled_powers = 0;
 		ent->client->sess.magic_more_disabled_powers = 0;
 
-		save_account(ent);
+		save_account(ent, qtrue);
 
 #if defined(__linux__)
 		system(va("rm -f configs/%s_freewarrior.txt configs/%s_forceuser.txt configs/%s_bountyhunter.txt configs/%s_armoredsoldier.txt configs/%s_monk.txt configs/%s_stealthattacker.txt configs/%s_duelist.txt configs/%s_forcegunner.txt configs/%s_magicmaster.txt configs/%s_forcetank.txt", ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename));
@@ -11151,10 +11392,11 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		ent->client->pers.universe_quest_progress = 0;
 		ent->client->pers.universe_quest_counter = 0;
 
-		// zyk: resetting Difficulty to Normal Mode
-		ent->client->pers.player_settings &= ~(1 << 15);
+		// zyk: Challenge Mode, must keep the flag
+		if (ent->client->pers.player_settings & (1 << 15))
+			ent->client->pers.universe_quest_counter |= (1 << 29);
 
-		save_account(ent);
+		save_account(ent, qtrue);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Your quests are reset.\n\"" );
 
@@ -11186,7 +11428,7 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		ent->client->sess.magic_disabled_powers = 0;
 		ent->client->sess.magic_more_disabled_powers = 0;
 
-		save_account(ent);
+		save_account(ent, qtrue);
 
 #if defined(__linux__)
 		system(va("rm -f configs/%s_freewarrior.txt configs/%s_forceuser.txt configs/%s_bountyhunter.txt configs/%s_armoredsoldier.txt configs/%s_monk.txt configs/%s_stealthattacker.txt configs/%s_duelist.txt configs/%s_forcegunner.txt configs/%s_magicmaster.txt configs/%s_forcetank.txt", ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename));
@@ -11442,10 +11684,10 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 	}
 
 	add_credits(&g_entities[client_id], value);
-	save_account(&g_entities[client_id]);
+	save_account(&g_entities[client_id], qtrue);
 
 	remove_credits(ent, value);
-	save_account(ent);
+	save_account(ent, qtrue);
 
 	trap->SendServerCommand( client_id, va("chat \"^3Credit System: ^7You got %d credits from %s\n\"", value, ent->client->pers.netname) );
 
@@ -11925,7 +12167,7 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			}
 		}
 
-		save_account(ent);	
+		save_account(ent, qfalse);
 
 		if (value == 0)
 		{
@@ -11991,6 +12233,7 @@ void Cmd_Settings_f( gentity_t *ent ) {
 		else if (value == 15)
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Difficulty %s\n\"", new_status) );
+			save_account(ent, qtrue);
 		}
 
 		if (value == 0 && ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->sess.amrpgmode == 2)
@@ -12197,7 +12440,7 @@ void do_change_class(gentity_t *ent, int value)
 
 	load_config(ent);
 
-	save_account(ent);
+	save_account(ent, qtrue);
 
 	trap->SendServerCommand( ent-g_entities, va("print \"You are now a %s\n\"", zyk_rpg_class(ent)) );
 
@@ -12412,7 +12655,7 @@ void Cmd_PlayerMode_f( gentity_t *ent ) {
 		ent->client->pers.player_statuses &= ~(1 << 13);
 	}
 
-	save_account(ent);
+	save_account(ent, qfalse);
 
 	if (ent->client->sess.amrpgmode == 1)
 	{
@@ -14290,7 +14533,7 @@ void Cmd_AdminUp_f( gentity_t *ent ) {
 			g_entities[client_id].client->pers.bitvalue |= (1 << bitvaluecommand);
 		}
 
-		save_account(&g_entities[client_id]);
+		save_account(&g_entities[client_id], qfalse);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Admin commands upgraded successfully.\n\"" );
 	}
@@ -14348,7 +14591,7 @@ void Cmd_AdminDown_f( gentity_t *ent ) {
 			g_entities[client_id].client->pers.bitvalue &= ~(1 << bitvaluecommand);
 		}
 
-		save_account(&g_entities[client_id]);
+		save_account(&g_entities[client_id], qfalse);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Admin commands upgraded successfully.\n\"" );
 	}
@@ -14820,7 +15063,7 @@ void Cmd_Players_f( gentity_t *ent ) {
 
 		if (number_of_args == 2)
 		{
-			list_rpg_info(player_ent);
+			list_rpg_info(player_ent, ent);
 		}
 		else
 		{
@@ -16176,26 +16419,26 @@ void Cmd_Magic_f( gentity_t *ent ) {
 			if (ent->client->sess.magic_more_disabled_powers & (1 << magic_power))
 			{
 				ent->client->sess.magic_more_disabled_powers &= ~(1 << magic_power);
-				save_account(ent);
+				save_account(ent, qtrue);
 				trap->SendServerCommand(ent->s.number, "print \"Enabled a magic power.\n\"");
 			}
 			else
 			{
 				ent->client->sess.magic_more_disabled_powers |= (1 << magic_power);
-				save_account(ent);
+				save_account(ent, qtrue);
 				trap->SendServerCommand(ent->s.number, "print \"Disabled a magic power.\n\"");
 			}
 		}
 		else if (ent->client->sess.magic_disabled_powers & (1 << magic_power))
 		{
 			ent->client->sess.magic_disabled_powers &= ~(1 << magic_power);
-			save_account(ent);
+			save_account(ent, qtrue);
 			trap->SendServerCommand(ent->s.number, "print \"Enabled a magic power.\n\"" );
 		}
 		else
 		{
 			ent->client->sess.magic_disabled_powers |= (1 << magic_power);
-			save_account(ent);
+			save_account(ent, qtrue);
 			trap->SendServerCommand(ent->s.number, "print \"Disabled a magic power.\n\"" );
 		}
 	}
@@ -17072,6 +17315,265 @@ void Cmd_ZykSound_f(gentity_t *ent) {
 	G_Sound(ent, CHAN_VOICE, G_SoundIndex(G_NewString(arg1)));
 }
 
+// zyk: quantity of chars this player has
+int zyk_char_count(gentity_t *ent)
+{
+	FILE *chars_file;
+	char content[32];
+	int i = 0;
+	int count = 0;
+
+#if defined(__linux__)
+	system(va("ls accounts/%s_ > accounts/chars_%d.txt", ent->client->sess.filename, ent->s.number));
+#else
+	system(va("cd accounts & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
+#endif
+
+	chars_file = fopen(va("accounts/chars_%d.txt", ent->s.number), "r");
+	if (chars_file != NULL)
+	{
+		i = fscanf(chars_file, "%s", content);
+		while (i != EOF)
+		{
+			if (Q_stricmp(content, va("chars_%d.txt", ent->s.number)) != 0)
+			{ // zyk: counting this char
+				count++;
+			}
+			i = fscanf(chars_file, "%s", content);
+		}
+		fclose(chars_file);
+	}
+
+	return count;
+}
+
+/*
+==================
+Cmd_RpgChar_f
+==================
+*/
+void Cmd_RpgChar_f(gentity_t *ent) {
+	int argc = trap->Argc();
+	FILE *chars_file;
+	char content[64];
+	char chars[MAX_STRING_CHARS];
+	int i = 0;
+
+	strcpy(content, "");
+	strcpy(chars, "");
+
+	if (argc == 1)
+	{ // zyk: lists the chars and commands
+#if defined(__linux__)
+		system(va("ls accounts/%s_* > accounts/chars_%d.txt", ent->client->sess.filename, ent->s.number));
+#else
+		system(va("cd accounts & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
+#endif
+
+		chars_file = fopen(va("accounts/chars_%d.txt", ent->s.number), "r");
+		if (chars_file != NULL)
+		{
+			i = fscanf(chars_file, "%s", content);
+			while (i != EOF)
+			{
+				if (Q_stricmp(content, va("chars_%d.txt", ent->s.number)) != 0)
+				{ // zyk: getting the char names
+					int j = strlen(ent->client->sess.filename) + 1, k = 0;
+
+					while (j < 64)
+					{
+						if (content[j] == '.' && content[j + 1] == 't' && content[j + 2] == 'x' && content[j + 3] == 't')
+						{
+							content[k] = '\0';
+							break;
+						}
+						else
+						{
+							content[k] = content[j];
+						}
+
+						j++;
+						k++;
+					}
+
+					strcpy(chars, va("%s^7%s\n", chars, content));
+				}
+				i = fscanf(chars_file, "%s", content);
+			}
+			fclose(chars_file);
+		}
+
+		trap->SendServerCommand(ent->s.number, va("print \"^2Chars\n\n^7%s\n^3/rpgchar new <charname>: ^7creates a new char\n^3/rpgchar use <charname>: ^7uses this char\n^3/rpgchar delete <charname>: ^7removes this char\n^3/rpgchar migrate <charname> <login> <password>: ^7moves char to account with this login and password\n\"", chars));
+	}
+	else
+	{
+		char arg1[MAX_STRING_CHARS];
+		char arg2[MAX_STRING_CHARS];
+		char arg3[MAX_STRING_CHARS];
+		char arg4[MAX_STRING_CHARS];
+
+		if (argc == 2)
+		{
+			trap->SendServerCommand(ent->s.number, "print \"This command requires at least one more argument\n\"");
+			return;
+		}
+
+		trap->Argv(1, arg1, sizeof(arg1));
+		trap->Argv(2, arg2, sizeof(arg2));
+
+		if (Q_stricmp(arg1, "new") == 0)
+		{
+			if (Q_stricmp(arg2, ent->client->sess.filename) == 0)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Cannot overwrite the default char\n\"");
+				return;
+			}
+
+			chars_file = fopen(va("accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
+			if (chars_file != NULL)
+			{
+				fclose(chars_file);
+				trap->SendServerCommand(ent->s.number, "print \"This char already exists\n\"");
+				return;
+			}
+
+			if (zyk_char_count(ent) >= 20)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Reached the max limit of chars\n\"");
+				return;
+			}
+
+			if (strlen(arg2) > 30)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Char name must have a maximum of 30 characters\n\"");
+				return;
+			}
+
+			add_new_char(ent);
+
+			// zyk: saving the current char
+			strcpy(ent->client->sess.rpgchar, arg2);
+
+			save_account(ent, qfalse);
+			save_account(ent, qtrue);
+
+			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7created!\n\"", ent->client->sess.rpgchar));
+
+			if (ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->sess.amrpgmode == 2)
+			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
+				G_Kill(ent);
+			}
+		}
+		else if (Q_stricmp(arg1, "use") == 0)
+		{
+			if (Q_stricmp(arg2, ent->client->sess.rpgchar) == 0)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"You are already using this char\n\"");
+				return;
+			}
+
+			chars_file = fopen(va("accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
+			if (chars_file == NULL)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"This char does not exist\n\"");
+				return;
+			}
+
+			fclose(chars_file);
+
+			// zyk: saving the current char
+			strcpy(ent->client->sess.rpgchar, arg2);
+
+			save_account(ent, qfalse);
+
+			load_account(ent);
+
+			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7loaded!\n\"", ent->client->sess.rpgchar));
+
+			if (ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->sess.amrpgmode == 2)
+			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
+				G_Kill(ent);
+			}
+		}
+		else if (Q_stricmp(arg1, "delete") == 0)
+		{
+			if (Q_stricmp(arg2, ent->client->sess.filename) == 0)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Cannot delete the default char\n\"");
+				return;
+			}
+
+			if (Q_stricmp(arg2, ent->client->sess.rpgchar) == 0)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Cannot remove the char you are using now. Change the char before deleting this one\n\"");
+				return;
+			}
+
+			chars_file = fopen(va("accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
+			if (chars_file == NULL)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"This char does not exist\n\"");
+				return;
+			}
+			fclose(chars_file);
+
+			remove(va("accounts/%s_%s.txt", ent->client->sess.filename, arg2));
+
+			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7deleted!\n\"", arg2));
+		}
+		else if (Q_stricmp(arg1, "migrate") == 0)
+		{
+			if (argc < 5)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"This command requires more arguments\n\"");
+				return;
+			}
+
+			trap->Argv(3, arg3, sizeof(arg3));
+			trap->Argv(4, arg4, sizeof(arg4));
+
+			chars_file = fopen(va("accounts/%s.txt", arg3), "r");
+			if (chars_file == NULL)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"This account does not exist\n\"");
+				return;
+			}
+
+			// zyk: getting the password
+			fscanf(chars_file, "%s", content);
+			fclose(chars_file);
+
+			if (strlen(content) != strlen(arg4) || Q_strncmp(content, arg4, strlen(content)) != 0)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"The password is incorrect\n\"");
+				return;
+			}
+
+			chars_file = fopen(va("accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
+			if (chars_file == NULL)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"This char does not exist\n\"");
+				return;
+			}
+			fclose(chars_file);
+
+			if (Q_stricmp(arg2, ent->client->sess.rpgchar) == 0)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Cannot migrate char you are using now\n\"");
+				return;
+			}
+
+#if defined(__linux__)
+			system(va("mv accounts/%s_%s.txt accounts/%s_%s.txt", ent->client->sess.filename, arg2, arg3, arg2));
+#else
+			system(va("MOVE accounts/%s_%s.txt accounts/%s_%s.txt", ent->client->sess.filename, arg2, arg3, arg2));
+#endif
+
+			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7moved!\n\"", arg2));
+		}
+	}
+}
+
 /*
 ==================
 Cmd_DuelBoard_f
@@ -17267,6 +17769,7 @@ command_t commands[] = {
 	{ "remapload",			Cmd_RemapLoad_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "resetaccount",		Cmd_ResetAccount_f,			CMD_RPG|CMD_NOINTERMISSION },
+	{ "rpgchar",			Cmd_RpgChar_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "rpgclass",			Cmd_RpgClass_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "rpglmstable",		Cmd_RpgLmsTable_f,			CMD_NOINTERMISSION },

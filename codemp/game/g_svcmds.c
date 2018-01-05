@@ -453,7 +453,7 @@ giveadmin <player>
 ===================
 */
 extern int ClientNumberFromString( gentity_t *to, const char *s, qboolean allowconnecting );
-extern void save_account(gentity_t *ent);
+extern void save_account(gentity_t *ent, qboolean save_char_file);
 void Svcmd_GiveAdmin_f ( void )
 {
 	int client_id = -1; 
@@ -476,7 +476,7 @@ void Svcmd_GiveAdmin_f ( void )
 	if (g_entities[client_id].client->sess.amrpgmode > 0)
 	{
 		g_entities[client_id].client->pers.bitvalue |= (1 << ADM_GIVEADM);
-		save_account(&g_entities[client_id]);
+		save_account(&g_entities[client_id], qfalse);
 		trap->Print("GiveAdmin saved successfully.\n");
 	}
 	else

@@ -1610,7 +1610,7 @@ Try and use an entity in the world, directly ahead of us
 extern void Touch_Button(gentity_t *ent, gentity_t *other, trace_t *trace );
 extern qboolean gSiegeRoundBegun;
 extern void quest_get_new_player(gentity_t *ent);
-extern void save_account(gentity_t *ent);
+extern void save_account(gentity_t *ent, qboolean save_char_file);
 extern void got_all_amulets(gentity_t *ent);
 extern void NPC_BSDefault( void );
 static vec3_t	playerMins = {-15, -15, DEFAULT_MINS_2};
@@ -2021,7 +2021,7 @@ void TryUse( gentity_t *ent )
 					// zyk: reset this value so the player can talk to the other quest_jawa npcs who got the other amulets
 					ent->client->pers.universe_quest_objective_control = -6;
 
-					save_account(ent);
+					save_account(ent, qtrue);
 					got_all_amulets(ent);
 				}
 				else if (!(ent->client->pers.universe_quest_counter & (1 << 2)) && ent->client->pers.universe_quest_objective_control == -6)
@@ -2083,7 +2083,7 @@ void TryUse( gentity_t *ent )
 					ent->client->pers.universe_quest_messages = 40;
 					ent->client->pers.universe_quest_counter |= (1 << 0);
 
-					save_account(ent);
+					save_account(ent, qtrue);
 					got_all_amulets(ent);
 				}
 				else if (ent->client->pers.universe_quest_messages == 103 && !(ent->client->pers.universe_quest_counter & (1 << 0)))
@@ -2130,7 +2130,7 @@ void TryUse( gentity_t *ent )
 					ent->client->pers.universe_quest_messages = 40;
 					ent->client->pers.universe_quest_counter |= (1 << 1);
 
-					save_account(ent);
+					save_account(ent, qtrue);
 					got_all_amulets(ent);
 				}
 				else

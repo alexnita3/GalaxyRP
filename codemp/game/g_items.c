@@ -2636,7 +2636,7 @@ qboolean CheckItemCanBePickedUpByNPC( gentity_t *item, gentity_t *pickerupper )
 Touch_Item
 ===============
 */
-extern void save_account(gentity_t *ent);
+extern void save_account(gentity_t *ent, qboolean save_char_file);
 extern void universe_quest_artifacts_checker(gentity_t *ent);
 extern void quest_get_new_player(gentity_t *ent);
 void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
@@ -2731,7 +2731,7 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 				trap->SendServerCommand( -1, va("chat \"%s^7: This is one of the artifacts!\"", other->client->pers.netname));
 				other->client->pers.universe_quest_counter |= (1 << other->client->pers.universe_quest_artifact_holder_id);
 				other->client->pers.universe_quest_artifact_holder_id = -1;
-				save_account(other);
+				save_account(other, qtrue);
 
 				universe_quest_artifacts_checker(other);
 

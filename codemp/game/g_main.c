@@ -7202,7 +7202,7 @@ void zyk_validate_sages(gentity_t *ent)
 }
 
 // zyk: checks if the player has already all artifacts
-extern void save_account(gentity_t *ent);
+extern void save_account(gentity_t *ent, qboolean save_char_file);
 extern int number_of_artifacts(gentity_t *ent);
 void universe_quest_artifacts_checker(gentity_t *ent)
 {
@@ -7223,7 +7223,7 @@ void universe_quest_artifacts_checker(gentity_t *ent)
 		ent->client->pers.universe_quest_objective_control = 4; // zyk: fourth Universe Quest objective
 		ent->client->pers.universe_quest_messages = 0;
 		
-		save_account(ent);
+		save_account(ent, qtrue);
 	}
 }
 
@@ -7243,12 +7243,12 @@ void universe_crystals_check(gentity_t *ent)
 		else
 			ent->client->pers.universe_quest_counter = 0;
 
-		save_account(ent);
+		save_account(ent, qtrue);
 		quest_get_new_player(ent);
 	}
 	else
 	{
-		save_account(ent);
+		save_account(ent, qtrue);
 	}
 }
 
@@ -7262,7 +7262,7 @@ void zyk_try_get_dark_quest_note(gentity_t *ent, int note_bitvalue)
 		trap->SendServerCommand( ent->s.number, "chat \"^3Quest System: ^7Found an ancient note.\"");
 		ent->client->pers.hunter_quest_progress |= (1 << note_bitvalue);
 		clean_note_model();
-		save_account(ent);
+		save_account(ent, qtrue);
 		quest_get_new_player(ent);
 	}
 }
@@ -8068,7 +8068,7 @@ void rpg_lms_winner()
 	{
 		add_credits(ent, credits);
 
-		save_account(ent);
+		save_account(ent, qtrue);
 
 		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
 
@@ -9591,7 +9591,7 @@ void G_RunFrame( int levelTime ) {
 								if (ent->client->sess.amrpgmode == 2)
 								{ // zyk: give him credits
 									add_credits(ent, 2000);
-									save_account(ent);
+									save_account(ent, qtrue);
 									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
 									trap->SendServerCommand(-1, va("chat \"^3Race System: ^7Winner: %s^7 - Prize: 2000 Credits!\"", ent->client->pers.netname));
 								}
@@ -9662,7 +9662,7 @@ void G_RunFrame( int levelTime ) {
 								if (ent->client->sess.amrpgmode == 2)
 								{ // zyk: give him credits
 									add_credits(ent, 500);
-									save_account(ent);
+									save_account(ent, qtrue);
 									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
 									trap->SendServerCommand(-1, va("chat \"^3Race System: ^7Winner: %s^7 - Prize: 500 Credits!\"", ent->client->pers.netname));
 								}
@@ -10173,7 +10173,7 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_counter = 0;
 								ent->client->pers.universe_quest_progress = 4;
 								clean_note_model();
-								save_account(ent);
+								save_account(ent, qtrue);
 								quest_get_new_player(ent);
 							}
 						}
@@ -10202,7 +10202,7 @@ void G_RunFrame( int levelTime ) {
 
 								trap->SendServerCommand( ent->s.number, va("chat \"^3Sage of Eternity: ^7Well done, %s^7. Now I can give you the artifact.\"",ent->client->pers.netname));
 								ent->client->pers.universe_quest_counter |= (1 << 1);
-								save_account(ent);
+								save_account(ent, qtrue);
 
 								universe_quest_artifacts_checker(ent);
 
@@ -10425,7 +10425,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 18;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -10724,7 +10724,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 19;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -10835,7 +10835,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 20;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -10924,7 +10924,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 21;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -11054,7 +11054,7 @@ void G_RunFrame( int levelTime ) {
 
 									ent->client->pers.universe_quest_progress = 22;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -11348,7 +11348,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 19;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -11534,7 +11534,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 20;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -11667,7 +11667,7 @@ void G_RunFrame( int levelTime ) {
 								{ // zyk: Hero defeated both bosses
 									ent->client->pers.universe_quest_progress = 21;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -11790,7 +11790,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 22;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -11911,7 +11911,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 17;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -12093,7 +12093,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 16;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -12186,7 +12186,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 17;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -12270,7 +12270,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 18;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -12353,7 +12353,7 @@ void G_RunFrame( int levelTime ) {
 								ent->client->pers.universe_quest_objective_control = -1;
 								ent->client->pers.universe_quest_messages = 0;
 
-								save_account(ent);
+								save_account(ent, qtrue);
 
 								quest_get_new_player(ent);
 							}
@@ -12427,7 +12427,7 @@ void G_RunFrame( int levelTime ) {
 							else if (ent->client->pers.universe_quest_messages == 13)
 							{
 								ent->client->pers.universe_quest_progress = 1;
-								save_account(ent);
+								save_account(ent, qtrue);
 								quest_get_new_player(ent);
 							}
 							else if (ent->client->pers.universe_quest_messages == 14)
@@ -12582,7 +12582,7 @@ void G_RunFrame( int levelTime ) {
 								
 								ent->client->pers.universe_quest_progress = 2;
 								
-								save_account(ent);
+								save_account(ent, qtrue);
 
 								quest_get_new_player(ent);
 							}
@@ -12874,7 +12874,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 16;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -12980,7 +12980,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 17;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -12996,7 +12996,7 @@ void G_RunFrame( int levelTime ) {
 						{ // zyk: player got the artifact, save it to his account
 							ent->client->pers.universe_quest_artifact_holder_id = -1;
 							ent->client->pers.universe_quest_counter |= (1 << 8);
-							save_account(ent);
+							save_account(ent, qtrue);
 
 							trap->SendServerCommand( ent->s.number, va("chat \"%s^7: Thanks for the artifact! :)\"", ent->client->pers.netname));
 
@@ -13128,7 +13128,7 @@ void G_RunFrame( int levelTime ) {
 
 									ent->client->pers.universe_quest_counter |= (1 << 1);
 									first_second_act_objective(ent);
-									save_account(ent);
+									save_account(ent, qtrue);
 									quest_get_new_player(ent);
 								}
 							}
@@ -13220,7 +13220,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 16;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -13292,7 +13292,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 18;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -13387,7 +13387,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 19;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -13457,7 +13457,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 20;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -13513,7 +13513,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 21;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -13591,7 +13591,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 22;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -13723,7 +13723,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 16;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -13772,7 +13772,7 @@ void G_RunFrame( int levelTime ) {
 								ent->client->pers.universe_quest_progress = 8;
 								ent->client->pers.universe_quest_messages = 0;
 
-								save_account(ent);
+								save_account(ent, qtrue);
 
 								ent->client->pers.quest_power_status |= (1 << 13);
 
@@ -13902,7 +13902,7 @@ void G_RunFrame( int levelTime ) {
 
 								ent->client->pers.universe_quest_counter |= (1 << 2);
 								first_second_act_objective(ent);
-								save_account(ent);
+								save_account(ent, qtrue);
 								quest_get_new_player(ent);
 							}
 
@@ -14069,7 +14069,7 @@ void G_RunFrame( int levelTime ) {
 								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I understand. I will meet you all there.\"", ent->client->pers.netname));
 
 								ent->client->pers.universe_quest_progress = 11;
-								save_account(ent);
+								save_account(ent, qtrue);
 								quest_get_new_player(ent);
 							}
 							
@@ -14227,7 +14227,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.hunter_quest_messages == 40)
 								{ // zyk: completed the mission
 									ent->client->pers.universe_quest_progress = 12;
-									save_account(ent);
+									save_account(ent, qtrue);
 									quest_get_new_player(ent);
 								}
 								else if (ent->client->pers.hunter_quest_messages == 50)
@@ -14292,7 +14292,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 25)
 								{
 									ent->client->pers.universe_quest_progress = 13;
-									save_account(ent);
+									save_account(ent, qtrue);
 									quest_get_new_player(ent);
 								}
 
@@ -14442,7 +14442,7 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 29)
 								{ // zyk: completed the mission
 									ent->client->pers.universe_quest_progress = 14;
-									save_account(ent);
+									save_account(ent, qtrue);
 									quest_get_new_player(ent);
 								}
 
@@ -14764,7 +14764,7 @@ void G_RunFrame( int levelTime ) {
 									zyk_TeleportPlayer(ent,origin,angles);
 
 									ent->client->pers.universe_quest_progress = 15;
-									save_account(ent);
+									save_account(ent, qtrue);
 									quest_get_new_player(ent);
 								}
 
@@ -15194,7 +15194,7 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_counter = 0;
 								ent->client->pers.universe_quest_objective_control = -1;
 
-								save_account(ent);
+								save_account(ent, qtrue);
 
 								quest_get_new_player(ent);
 							}
@@ -15390,7 +15390,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 17;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -15534,7 +15534,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 18;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -15742,7 +15742,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 19;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -15846,7 +15846,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 20;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -15877,7 +15877,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 21;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -15947,7 +15947,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_progress = 22;
 
-									save_account(ent);
+									save_account(ent, qtrue);
 
 									quest_get_new_player(ent);
 								}
@@ -16016,7 +16016,7 @@ void G_RunFrame( int levelTime ) {
 								else
 									ent->client->pers.universe_quest_counter = 0;
 
-								save_account(ent);
+								save_account(ent, qtrue);
 
 								quest_get_new_player(ent);
 							}
