@@ -4736,10 +4736,8 @@ void load_account(gentity_t *ent)
 {
 	FILE *account_file;
 	char content[128];
-	char file_content[1024];
 
 	strcpy(content,"");
-	strcpy(file_content,"");
 	account_file = fopen(va("accounts/%s.txt",ent->client->sess.filename),"r");
 	if (account_file != NULL)
 	{
@@ -9291,6 +9289,11 @@ void zyk_list_stuff(gentity_t *ent, gentity_t *target_ent)
 	trap->SendServerCommand(target_ent - g_entities, va("print \"%s\n\"", stuff_message));
 }
 
+void list_rpg_info(gentity_t *ent)
+{ // zyk: lists general RPG info of this player
+	trap->SendServerCommand(ent->s.number, va("print \"\n^2Account: ^7%s\n\n^3Level: ^7%d/%d\n^3Level Up Score: ^7%d/%d\n^3Skill Points: ^7%d\n^3Skill Counter: ^7%d/%d\n^3Magic Points: ^7%d/%d\n^3Credits: ^7%d\n^3RPG Class: ^7%s\n\n^7Use ^2/list rpg ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->pers.level, MAX_RPG_LEVEL, ent->client->pers.level_up_score, (ent->client->pers.level * zyk_level_up_score_factor.integer), ent->client->pers.skillpoints, ent->client->pers.skill_counter, zyk_max_skill_counter.integer, ent->client->pers.magic_power, zyk_max_magic_power(ent), ent->client->pers.credits, zyk_rpg_class(ent)));
+}
+
 /*
 ==================
 Cmd_ListAccount_f
@@ -9301,11 +9304,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 	{
 		if (trap->Argc() == 1)
 		{ // zyk: if player didnt pass arguments, lists general info
-			char rpg_class[32];
-
-			strcpy(rpg_class,zyk_rpg_class(ent));
-
-			trap->SendServerCommand(ent-g_entities, va("print \"\n^2Account: ^7%s\n\n^3Level: ^7%d/%d\n^3Level Up Score: ^7%d/%d\n^3Skill Points: ^7%d\n^3Skill Counter: ^7%d/%d\n^3Magic Points: ^7%d/%d\n^3Credits: ^7%d\n^3RPG Class: ^7%s\n\n^7Use ^2/list rpg ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->pers.level, MAX_RPG_LEVEL, ent->client->pers.level_up_score, (ent->client->pers.level * zyk_level_up_score_factor.integer), ent->client->pers.skillpoints, ent->client->pers.skill_counter, zyk_max_skill_counter.integer, ent->client->pers.magic_power, zyk_max_magic_power(ent), ent->client->pers.credits, rpg_class));
+			list_rpg_info(ent);
 		}
 		else if (trap->Argc() == 2)
 		{
@@ -14821,9 +14820,7 @@ void Cmd_Players_f( gentity_t *ent ) {
 
 		if (number_of_args == 2)
 		{
-			trap->SendServerCommand( ent-g_entities, va("print \"\n%s^3\n\nLevel: ^7%d\n^3Level Up Score: ^7%d\n^3Skill Points: ^7%d\n^3Credits: ^7%d\n^3Skill Counter: ^7%d\n^3Magic Power: ^7%d\n^3RPG Class: ^7%s\n\"", 
-				player_ent->client->pers.netname, player_ent->client->pers.level, player_ent->client->pers.level_up_score, player_ent->client->pers.skillpoints, 
-				player_ent->client->pers.credits, player_ent->client->pers.skill_counter, player_ent->client->pers.magic_power, zyk_rpg_class(player_ent)) );
+			list_rpg_info(player_ent);
 		}
 		else
 		{
