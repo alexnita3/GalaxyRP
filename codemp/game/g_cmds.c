@@ -5769,7 +5769,7 @@ void zyk_load_magic_master_config(gentity_t *ent)
 
 		system("mkdir configs");
 
-		config_file = fopen(va("configs/%s_magicmaster_config.txt", ent->client->sess.filename),"r");
+		config_file = fopen(va("configs/%s_%s_magicmaster_config.txt", ent->client->sess.filename, ent->client->sess.rpgchar),"r");
 		if (config_file != NULL)
 		{
 			fscanf(config_file,"%s",content);
@@ -5800,7 +5800,7 @@ void zyk_save_magic_master_config(gentity_t *ent)
 {
 	if (ent->client->pers.rpg_class == 8)
 	{
-		FILE *config_file = fopen(va("configs/%s_magicmaster_config.txt", ent->client->sess.filename),"w");
+		FILE *config_file = fopen(va("configs/%s_%s_magicmaster_config.txt", ent->client->sess.filename, ent->client->sess.rpgchar),"w");
 
 		if (config_file)
 		{
@@ -11370,9 +11370,9 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		save_account(ent, qtrue);
 
 #if defined(__linux__)
-		system(va("rm -f configs/%s_freewarrior.txt configs/%s_forceuser.txt configs/%s_bountyhunter.txt configs/%s_armoredsoldier.txt configs/%s_monk.txt configs/%s_stealthattacker.txt configs/%s_duelist.txt configs/%s_forcegunner.txt configs/%s_magicmaster.txt configs/%s_forcetank.txt", ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename));
+		system(va("rm -f configs/%s_%s_freewarrior.txt configs/%s_%s_forceuser.txt configs/%s_%s_bountyhunter.txt configs/%s_%s_armoredsoldier.txt configs/%s_%s_monk.txt configs/%s_%s_stealthattacker.txt configs/%s_%s_duelist.txt configs/%s_%s_forcegunner.txt configs/%s_%s_magicmaster.txt configs/%s_%s_forcetank.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar));
 #else
-		system(va("DEL /F \"configs\\%s_freewarrior.txt\" \"configs\\%s_forceuser.txt\" \"configs\\%s_bountyhunter.txt\" \"configs\\%s_armoredsoldier.txt\" \"configs\\%s_monk.txt\" \"configs\\%s_stealthattacker.txt\" \"configs\\%s_duelist.txt\" \"configs\\%s_forcegunner.txt\" \"configs\\%s_magicmaster.txt\" \"configs\\%s_forcetank.txt\"", ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename));
+		system(va("DEL /F \"configs\\%s_%s_freewarrior.txt\" \"configs\\%s_%s_forceuser.txt\" \"configs\\%s_%s_bountyhunter.txt\" \"configs\\%s_%s_armoredsoldier.txt\" \"configs\\%s_%s_monk.txt\" \"configs\\%s_%s_stealthattacker.txt\" \"configs\\%s_%s_duelist.txt\" \"configs\\%s_%s_forcegunner.txt\" \"configs\\%s_%s_magicmaster.txt\" \"configs\\%s_%s_forcetank.txt\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar));
 #endif
 
 		zyk_save_magic_master_config(ent);
@@ -11431,9 +11431,9 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		save_account(ent, qtrue);
 
 #if defined(__linux__)
-		system(va("rm -f configs/%s_freewarrior.txt configs/%s_forceuser.txt configs/%s_bountyhunter.txt configs/%s_armoredsoldier.txt configs/%s_monk.txt configs/%s_stealthattacker.txt configs/%s_duelist.txt configs/%s_forcegunner.txt configs/%s_magicmaster.txt configs/%s_forcetank.txt", ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename));
+		system(va("rm -f configs/%s_%s_freewarrior.txt configs/%s_%s_forceuser.txt configs/%s_%s_bountyhunter.txt configs/%s_%s_armoredsoldier.txt configs/%s_%s_monk.txt configs/%s_%s_stealthattacker.txt configs/%s_%s_duelist.txt configs/%s_%s_forcegunner.txt configs/%s_%s_magicmaster.txt configs/%s_%s_forcetank.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar));
 #else
-		system(va("DEL /F \"configs\\%s_freewarrior.txt\" \"configs\\%s_forceuser.txt\" \"configs\\%s_bountyhunter.txt\" \"configs\\%s_armoredsoldier.txt\" \"configs\\%s_monk.txt\" \"configs\\%s_stealthattacker.txt\" \"configs\\%s_duelist.txt\" \"configs\\%s_forcegunner.txt\" \"configs\\%s_magicmaster.txt\" \"configs\\%s_forcetank.txt\"", ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename, ent->client->sess.filename));
+		system(va("DEL /F \"configs\\%s_%s_freewarrior.txt\" \"configs\\%s_%s_forceuser.txt\" \"configs\\%s_%s_bountyhunter.txt\" \"configs\\%s_%s_armoredsoldier.txt\" \"configs\\%s_%s_monk.txt\" \"configs\\%s_%s_stealthattacker.txt\" \"configs\\%s_%s_duelist.txt\" \"configs\\%s_%s_forcegunner.txt\" \"configs\\%s_%s_magicmaster.txt\" \"configs\\%s_%s_forcetank.txt\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar));
 #endif
 
 		zyk_save_magic_master_config(ent);
@@ -12245,6 +12245,58 @@ void Cmd_Settings_f( gentity_t *ent ) {
 	}
 }
 
+char *zyk_config_filename(gclient_t *client)
+{
+	if (client->pers.rpg_class == 0)
+		return va("configs/%s_%s_freewarrior.txt", client->sess.filename, client->sess.rpgchar);
+	else if (client->pers.rpg_class == 1)
+		return va("configs/%s_%s_forceuser.txt", client->sess.filename, client->sess.rpgchar);
+	else if (client->pers.rpg_class == 2)
+		return va("configs/%s_%s_bountyhunter.txt", client->sess.filename, client->sess.rpgchar);
+	else if (client->pers.rpg_class == 3)
+		return va("configs/%s_%s_armoredsoldier.txt", client->sess.filename, client->sess.rpgchar);
+	else if (client->pers.rpg_class == 4)
+		return va("configs/%s_%s_monk.txt", client->sess.filename, client->sess.rpgchar);
+	else if (client->pers.rpg_class == 5)
+		return va("configs/%s_%s_stealthattacker.txt", client->sess.filename, client->sess.rpgchar);
+	else if (client->pers.rpg_class == 6)
+		return va("configs/%s_%s_duelist.txt", client->sess.filename, client->sess.rpgchar);
+	else if (client->pers.rpg_class == 7)
+		return va("configs/%s_%s_forcegunner.txt", client->sess.filename, client->sess.rpgchar);
+	else if (client->pers.rpg_class == 8)
+		return va("configs/%s_%s_magicmaster.txt", client->sess.filename, client->sess.rpgchar);
+	else if (client->pers.rpg_class == 9)
+		return va("configs/%s_%s_forcetank.txt", client->sess.filename, client->sess.rpgchar);
+	else
+		return "";
+}
+
+char *zyk_legacy_config_filename(gclient_t *client)
+{
+	if (client->pers.rpg_class == 0)
+		return va("configs/%s_freewarrior.txt", client->sess.filename);
+	else if (client->pers.rpg_class == 1)
+		return va("configs/%s_forceuser.txt", client->sess.filename);
+	else if (client->pers.rpg_class == 2)
+		return va("configs/%s_bountyhunter.txt", client->sess.filename);
+	else if (client->pers.rpg_class == 3)
+		return va("configs/%s_armoredsoldier.txt", client->sess.filename);
+	else if (client->pers.rpg_class == 4)
+		return va("configs/%s_monk.txt", client->sess.filename);
+	else if (client->pers.rpg_class == 5)
+		return va("configs/%s_stealthattacker.txt", client->sess.filename);
+	else if (client->pers.rpg_class == 6)
+		return va("configs/%s_duelist.txt", client->sess.filename);
+	else if (client->pers.rpg_class == 7)
+		return va("configs/%s_forcegunner.txt", client->sess.filename);
+	else if (client->pers.rpg_class == 8)
+		return va("configs/%s_magicmaster.txt", client->sess.filename);
+	else if (client->pers.rpg_class == 9)
+		return va("configs/%s_forcetank.txt", client->sess.filename);
+	else
+		return "";
+}
+
 void load_config(gentity_t *ent)
 {
 	FILE *config_file = NULL;
@@ -12257,26 +12309,12 @@ void load_config(gentity_t *ent)
 	strcpy(content,"");
 	client = ent->client;
 
-	if (client->pers.rpg_class == 0)
-		config_file = fopen(va("configs/%s_freewarrior.txt",client->sess.filename),"r");
-	else if (client->pers.rpg_class == 1)
-		config_file = fopen(va("configs/%s_forceuser.txt",client->sess.filename),"r");
-	else if (client->pers.rpg_class == 2)
-		config_file = fopen(va("configs/%s_bountyhunter.txt",client->sess.filename),"r");
-	else if (client->pers.rpg_class == 3)
-		config_file = fopen(va("configs/%s_armoredsoldier.txt",client->sess.filename),"r");
-	else if (client->pers.rpg_class == 4)
-		config_file = fopen(va("configs/%s_monk.txt",client->sess.filename),"r");
-	else if (client->pers.rpg_class == 5)
-		config_file = fopen(va("configs/%s_stealthattacker.txt",client->sess.filename),"r");
-	else if (client->pers.rpg_class == 6)
-		config_file = fopen(va("configs/%s_duelist.txt",client->sess.filename),"r");
-	else if (client->pers.rpg_class == 7)
-		config_file = fopen(va("configs/%s_forcegunner.txt",client->sess.filename),"r");
-	else if (client->pers.rpg_class == 8)
-		config_file = fopen(va("configs/%s_magicmaster.txt",client->sess.filename),"r");
-	else if (client->pers.rpg_class == 9)
-		config_file = fopen(va("configs/%s_forcetank.txt",client->sess.filename),"r");
+	config_file = fopen(zyk_config_filename(client),"r");
+
+	if (config_file == NULL)
+	{ // zyk: if did not find file, try getting the legacy version
+		config_file = fopen(zyk_legacy_config_filename(client), "r");
+	}
 
 	if (config_file != NULL)
 	{
@@ -12335,26 +12373,7 @@ void save_config(gentity_t *ent)
 
 	system("mkdir configs");
 
-	if (client->pers.rpg_class == 0)
-		config_file = fopen(va("configs/%s_freewarrior.txt",client->sess.filename),"w");
-	else if (client->pers.rpg_class == 1)
-		config_file = fopen(va("configs/%s_forceuser.txt",client->sess.filename),"w");
-	else if (client->pers.rpg_class == 2)
-		config_file = fopen(va("configs/%s_bountyhunter.txt",client->sess.filename),"w");
-	else if (client->pers.rpg_class == 3)
-		config_file = fopen(va("configs/%s_armoredsoldier.txt",client->sess.filename),"w");
-	else if (client->pers.rpg_class == 4)
-		config_file = fopen(va("configs/%s_monk.txt",client->sess.filename),"w");
-	else if (client->pers.rpg_class == 5)
-		config_file = fopen(va("configs/%s_stealthattacker.txt",client->sess.filename),"w");
-	else if (client->pers.rpg_class == 6)
-		config_file = fopen(va("configs/%s_duelist.txt",client->sess.filename),"w");
-	else if (client->pers.rpg_class == 7)
-		config_file = fopen(va("configs/%s_forcegunner.txt",client->sess.filename),"w");
-	else if (client->pers.rpg_class == 8)
-		config_file = fopen(va("configs/%s_magicmaster.txt",client->sess.filename),"w");
-	else if (client->pers.rpg_class == 9)
-		config_file = fopen(va("configs/%s_forcetank.txt",client->sess.filename),"w");
+	config_file = fopen(zyk_config_filename(client),"w");
 
 	if (config_file != NULL)
 	{
