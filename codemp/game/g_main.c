@@ -8310,6 +8310,48 @@ void zyk_trial_room_models()
 	zyk_spawn_entity(new_ent);
 }
 
+// zyk: shows a text message from the file based on the language set by the player
+void zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qboolean broadcast_message)
+{
+	char content[MAX_STRING_CHARS];
+	char language[128];
+	int client_id = -1;
+	FILE *text_file = NULL;
+
+	strcpy(content, "");
+
+	if (broadcast_message == qfalse)
+		client_id = ent->s.number;
+
+	if (ent->client->pers.player_settings & (1 << 5))
+	{
+		strcpy(language, "custom");
+	}
+	else
+	{
+		strcpy(language, "english");
+	}
+
+	text_file = fopen(va("textfiles/%s/%s.txt", language, filename), "r");
+	if (text_file)
+	{
+		fgets(content, sizeof(content), text_file);
+		if (content[strlen(content) - 1] == '\n')
+			content[strlen(content) - 1] = '\0';
+
+		fclose(text_file);
+	}
+	else
+	{
+		strcpy(content, "^1File could not be open!");
+	}
+
+	if (show_in_chat == qtrue)
+		trap->SendServerCommand(client_id, va("chat \"%s\n\"", content));
+	else
+		trap->SendServerCommand(client_id, va("print \"%s\n\"", content));
+}
+
 /*
 ================
 G_RunFrame
@@ -9732,198 +9774,13 @@ void G_RunFrame( int levelTime ) {
 			// zyk: tutorial, which teaches the player the RPG Mode features
 			if (ent->client->pers.player_statuses & (1 << 25) && ent->client->pers.tutorial_timer < level.time)
 			{
-				if (ent->client->pers.tutorial_step == 0)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 0: ^7Welcome to the Zyk OpenJK Mod tutorial! :)\"");
-				}
-				else if (ent->client->pers.tutorial_step == 1)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 1: ^7You can skip it by using ^2/skip ^7command or play it again by using ^2/tutorial^7\"");
-				}
-				else if (ent->client->pers.tutorial_step == 2)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 2: ^7At first, you will see you have nothing: no force, no weapons, no holdable items, no magic\"");
-				}
-				else if (ent->client->pers.tutorial_step == 3)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 3: ^7You must defeat players or enemy npcs to get levels\"");
-				}
-				else if (ent->client->pers.tutorial_step == 4)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 4: ^7Defeating them will increase your max HP, shield, mp (magic) and will give you skillpoints\"");
-				}
-				else if (ent->client->pers.tutorial_step == 5)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 5: ^7You can use skillpoints to get force, force powers, weapons, holdable items, and more!\"");
-				}
-				else if (ent->client->pers.tutorial_step == 6)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 6: ^7To do so, first use ^2/list^7. This command will show general info about you\"");
-				}
-				else if (ent->client->pers.tutorial_step == 7)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 7: ^7Now, use ^2/list rpg ^7to see other commands you can use. The five first commands show your skills\"");
-				}
-				else if (ent->client->pers.tutorial_step == 8)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 8: ^7To upgrade a skill (which uses a skillpoint), use ^2/up <skillnumber>^7. Example: /up 31\"");
-				}
-				else if (ent->client->pers.tutorial_step == 9)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 9: ^7That command will upgrade the max shield you can have, and use a skillpoint\"");
-				}
-				else if (ent->client->pers.tutorial_step == 10)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 10: ^7The skill 56 - Improvements (found in ^2/list other^7) has different features for each RPG class\"");
-				}
-				else if (ent->client->pers.tutorial_step == 11)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 11: ^7To change your RPG class, first use ^2/list classes^7, then choose a class by using ^2/rpgclass <classnumber>\"");
-				}
-				else if (ent->client->pers.tutorial_step == 12)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 12: ^7Each class has strengths and weaknesses, and the class change costs 20 credits\"");
-				}
-				else if (ent->client->pers.tutorial_step == 13)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 13: ^7To buy or sell weapons, ammo, items and upgrades, first call the jawa seller with ^2/callseller^7\"");
-				}
-				else if (ent->client->pers.tutorial_step == 14)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 14: ^7Press the Use key to talk to him, he will say what you have to do! :)\"");
-				}
-				else if (ent->client->pers.tutorial_step == 15)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 15: ^7Weapons, ammo and items bought from the seller are not permanent, but upgrades are! :D\"");
-				}
-				else if (ent->client->pers.tutorial_step == 16)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 16: ^7You can get credits to buy stuff by defeating players or enemy npcs, or by selling stuff\"");
-				}
-				else if (ent->client->pers.tutorial_step == 17)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 17: ^7Players can give credits to other players by using ^2/creditgive <player name or ID> <amount>^7\"");
-				}
-				else if (ent->client->pers.tutorial_step == 18)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 18: ^7As you can see in ^2/list^7, you can have Magic! Magic powers are learned by playing quests\"");
-				}
-				else if (ent->client->pers.tutorial_step == 19)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 19: ^7Magic powers consume MP (magic points), so keep an eye in the current amount you have\"");
-				}
-				else if (ent->client->pers.tutorial_step == 20)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 20: ^7To play quests, use ^2/list quests ^7and use the command for the specific quest you want to play\"");
-				}
-				else if (ent->client->pers.tutorial_step == 21)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 21: ^7Quests are played in specific maps. To see which ones, use ^2/maplist ^7\"");
-				}
-				else if (ent->client->pers.tutorial_step == 22)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 22: ^7Some of them are Single Player maps. You can ^2/callvote map <name> ^7to go to them, example ^2/callvote map yavin2^7\"");
-				}
-				else if (ent->client->pers.tutorial_step == 23)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 23: ^7To use magic powers, use the movement keys (usually W, A, S, D) and melee kata (usually pressing both mouse buttons)\"");
-				}
-				else if (ent->client->pers.tutorial_step == 24)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 24 : ^7You can enable or disable magic powers with ^2/magic^7\"");
-				}
-				else if (ent->client->pers.tutorial_step == 25)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 25: ^7To see info about skills, use ^2/list <skillnumber>\"");
-				}
-				else if (ent->client->pers.tutorial_step == 26)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 26: ^7Each class has unique abilities, which can be bought as upgrades from the jawa seller\"");
-				}
-				else if (ent->client->pers.tutorial_step == 27)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 27: ^7You cannot have all three of them, only one, so choose wisely!\"");
-				}
-				else if (ent->client->pers.tutorial_step == 28)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 28: ^7To use it, bind the command ^2/unique ^7to a key and press it. Example: ^2/bind h unique^7\"");
-				}
-				else if (ent->client->pers.tutorial_step == 29)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 29: ^7You can add allies with ^2/allyadd <player name or ID>^7. He will not take any damage from you\"");
-				}
-				else if (ent->client->pers.tutorial_step == 30)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 30: ^7Allies can also help you during quest boss battles. They can heal you and damage the boss too\"");
-				}
-				else if (ent->client->pers.tutorial_step == 31)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 31: ^7Use ^2/allylist ^7to see your allies and who added you as ally\"");
-				}
-				else if (ent->client->pers.tutorial_step == 32)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 32: ^7Use ^2/allyremove <player name or ID>^7 to remove an ally\"");
-				}
-				else if (ent->client->pers.tutorial_step == 33)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 33: ^7There are five mini-games: Duel Tournament, Racing Mode, RPG LMS, Sniper Battle and Melee Battle\"");
-				}
-				else if (ent->client->pers.tutorial_step == 34)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 34: ^7Use ^2/racemode ^7to join a race. It can only be done in some maps\"");
-				}
-				else if (ent->client->pers.tutorial_step == 35)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 35: ^7Use ^2/snipermode ^7to join Sniper Battle. Use ^2/snipertable ^7to see the players still in it\"");
-				}
-				else if (ent->client->pers.tutorial_step == 36)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 36: ^7Use ^2/meleemode ^7to join Melee Battle\"");
-				}
-				else if (ent->client->pers.tutorial_step == 37)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 37: ^7Use ^2/duelmode ^7to join Duel Tournament. Use ^2/dueltable <pagenumber> ^7to see the scores and matches\"");
-				}
-				else if (ent->client->pers.tutorial_step == 38)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 38: ^7Use ^2/duelboard <pagenumber> ^7for Duel Tournament leaderboard, with the champions and their number of tournaments won\"");
-				}
-				else if (ent->client->pers.tutorial_step == 39)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 39: ^7Use ^2/rpglmsmode ^7to join RPG Last Man Standing. Use ^2/rpglmstable ^7to see which players joined in it\"");
-				}
-				else if (ent->client->pers.tutorial_step == 40)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 40: ^7All these mini-games give prizes! :)\"");
-				}
-				else if (ent->client->pers.tutorial_step == 41)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 41: ^7Use ^2/settings ^7to change account settings\"");
-				}
-				else if (ent->client->pers.tutorial_step == 42)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 42: ^7Use ^2/playermode ^7to change account mode between Admin-Only and RPG\"");
-				}
-				else if (ent->client->pers.tutorial_step == 43)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 43: ^7In Admin-Only you are a normal player, but you can use admin commands (if you have any) and ^2/settings^7\"");
-				}
-				else if (ent->client->pers.tutorial_step == 44)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 44: ^7Use ^2/nofight ^7as spectator. You will not receive damage from players but will also not be able to damage them\"");
-				}
-				else if (ent->client->pers.tutorial_step == 45)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 45: ^7You can see specific parts of the tutorial by using ^2/tutorial <number>^7\"");
-				}
-				else if (ent->client->pers.tutorial_step == 46)
-				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial 46: ^7Enjoy the mod! :)\"");
+				if (ent->client->pers.tutorial_step > 47)
+				{ // zyk: after last message, tutorial ends
+					ent->client->pers.player_statuses &= ~(1 << 25);
 				}
 				else
 				{
-					// zyk: after last message, tutorial ends
-					ent->client->pers.player_statuses &= ~(1 << 25);
+					zyk_text_message(ent, va("tutorial/%d", ent->client->pers.tutorial_step), qtrue, qfalse);
 				}
 
 				// zyk: interval between messages

@@ -740,7 +740,7 @@ typedef struct clientPersistant_s {
 	// 2 - Dark Power
 	// 3 - Eternity Power
 	// 4 - Universe Power
-	// 5 - Unused
+	// 5 - Custom Language
 	// 6 - Allow Force Powers from allies
 	// 7 - Unused
 	// 9 - Allow Screen Message

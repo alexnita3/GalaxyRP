@@ -11934,6 +11934,15 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			sprintf(message,"%s\n^3 4 - Universe Power - ^2ON", message);
 		}
 
+		if (ent->client->pers.player_settings & (1 << 5))
+		{
+			sprintf(message, "%s\n^3 5 - Language - ^1Custom", message);
+		}
+		else
+		{
+			sprintf(message, "%s\n^3 5 - Language - ^3English", message);
+		}
+
 		if (ent->client->pers.player_settings & (1 << 6))
 		{
 			sprintf(message,"%s\n^3 6 - Allow Force Powers from allies - ^1OFF", message);
@@ -12072,7 +12081,10 @@ void Cmd_Settings_f( gentity_t *ent ) {
 					ent->client->pers.quest_power_status |= (1 << 13);
 				}
 
-				strcpy(new_status,"^2ON^7");
+				if (value == 5)
+					strcpy(new_status, "^3English^7");
+				else
+					strcpy(new_status,"^2ON^7");
 			}
 			else
 			{
@@ -12087,7 +12099,10 @@ void Cmd_Settings_f( gentity_t *ent ) {
 				else if (value == 4)
 					ent->client->pers.quest_power_status &= ~(1 << 13);
 
-				strcpy(new_status,"^1OFF^7");
+				if (value == 5)
+					strcpy(new_status, "^1Custom^7");
+				else
+					strcpy(new_status,"^1OFF^7");
 			}
 		}
 		else if (value == 14)
@@ -12191,7 +12206,7 @@ void Cmd_Settings_f( gentity_t *ent ) {
 		}
 		else if (value == 5)
 		{
-			trap->SendServerCommand( ent-g_entities, va("print \"Magic Powers %s\n\"", new_status) );
+			trap->SendServerCommand( ent-g_entities, va("print \"Language %s\n\"", new_status) );
 		}
 		else if (value == 6)
 		{
