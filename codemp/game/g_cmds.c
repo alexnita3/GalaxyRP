@@ -17576,6 +17576,12 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			}
 			fclose(chars_file);
 
+			if (Q_stricmp(arg2, ent->client->sess.filename) == 0)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Cannot migrate the default char\n\"");
+				return;
+			}
+
 			if (Q_stricmp(arg2, ent->client->sess.rpgchar) == 0)
 			{
 				trap->SendServerCommand(ent->s.number, "print \"Cannot migrate char you are using now\n\"");
