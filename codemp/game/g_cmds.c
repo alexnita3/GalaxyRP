@@ -17317,7 +17317,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 	if (argc == 1)
 	{ // zyk: lists the chars and commands
 #if defined(__linux__)
-		system(va("ls accounts/%s_* > accounts/chars_%d.txt", ent->client->sess.filename, ent->s.number));
+		system(va("cd accounts ; ls %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
 #else
 		system(va("cd accounts & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
 #endif
