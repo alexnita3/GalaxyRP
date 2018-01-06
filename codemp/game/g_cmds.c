@@ -1759,6 +1759,9 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 		{ // zyk: Eternity Quest
 			char *answers[11] = { "key", "clock", "sword", "sun", "fire", "water", "time", "star", "nature", "love", NULL };
 
+			// zyk: removing color chars which could not allow the correct answer
+			Q_StripColor(arg1);
+
 			if (Q_stricmp(arg1, answers[ent->client->pers.eternity_quest_progress]) == 0)
 			{
 				ent->client->pers.eternity_quest_progress++;
@@ -1777,6 +1780,9 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 		else if (level.quest_map == 24 && ent->client->pers.can_play_quest == 1 && 
 				 ent->client->pers.universe_quest_progress == 5 && ent->client->pers.universe_quest_messages == 101)
 		{ // zyk: amulets mission of Universe Quest
+		  // zyk: removing color chars which could not allow the correct answer
+			Q_StripColor(arg1);
+
 			if (Q_stricmp( arg1, "samir" ) == 0)
 			{
 				ent->client->pers.universe_quest_messages = 102;
