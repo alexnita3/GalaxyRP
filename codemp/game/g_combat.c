@@ -2577,7 +2577,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			quest_player->client->pers.quest_power_status |= (1 << 16);
 		}
 
-		trap->SendServerCommand( quest_player->s.number, "chat \"^3Guardian of Eternity: ^7Very well...you are a worthy warrior...you deserve my ^3Eternity Power^7!\"");
+		zyk_text_message(quest_player, "eternity/boss_defeated", qtrue, qfalse);
 
 		quest_get_new_player(quest_player);
 	}

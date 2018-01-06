@@ -8310,18 +8310,27 @@ void zyk_trial_room_models()
 	zyk_spawn_entity(new_ent);
 }
 
-// zyk: shows a text message from the file based on the language set by the player
-void zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qboolean broadcast_message)
+// zyk: shows a text message from the file based on the language set by the player. Can receive additional arguments to concat in the final string
+void zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qboolean broadcast_message, ... )
 {
+	va_list argptr;
 	char content[MAX_STRING_CHARS];
+	const char *file_content;
+	static char string[MAX_STRING_CHARS];
 	char language[128];
+	char console_cmd[64];
 	int client_id = -1;
 	FILE *text_file = NULL;
 
 	strcpy(content, "");
+	strcpy(string, "");
+	strcpy(console_cmd, "print");
 
 	if (broadcast_message == qfalse)
 		client_id = ent->s.number;
+
+	if (show_in_chat == qtrue)
+		strcpy(console_cmd, "chat");
 
 	if (ent->client->pers.player_settings & (1 << 5))
 	{
@@ -8346,10 +8355,13 @@ void zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qbo
 		strcpy(content, "^1File could not be open!");
 	}
 
-	if (show_in_chat == qtrue)
-		trap->SendServerCommand(client_id, va("chat \"%s\n\"", content));
-	else
-		trap->SendServerCommand(client_id, va("print \"%s\n\"", content));
+	file_content = va("%s", content);
+
+	va_start(argptr, broadcast_message);
+	Q_vsnprintf(string, sizeof(string), file_content, argptr);
+	va_end(argptr);
+
+	trap->SendServerCommand(client_id, va("%s \"%s\n\"", console_cmd, string));
 }
 
 /*
@@ -12525,63 +12537,24 @@ void G_RunFrame( int levelTime ) {
 						}
 
 						if (ent->client->pers.eternity_quest_progress < NUMBER_OF_ETERNITY_QUEST_OBJECTIVES && ent->client->pers.eternity_quest_timer < level.time && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -676 && (int) ent->client->ps.origin[0] < -296 && (int) ent->client->ps.origin[1] > 1283 && (int) ent->client->ps.origin[1] < 1663 && (int) ent->client->ps.origin[2] > 60 && (int) ent->client->ps.origin[2] < 120)
-						{
-							if (ent->client->pers.eternity_quest_progress == 0)
+						{ // zyk: Eternity Quest
+							if (ent->client->pers.eternity_quest_progress < (NUMBER_OF_ETERNITY_QUEST_OBJECTIVES - 1))
 							{
-								trap->SendServerCommand( ent->s.number, "chat \"^3Riddle of Earth: ^7It opens the locked ways, by a turn of itself... it reveals the passageways, or can be guarded on the shelf...\"");
-							}
-							else if (ent->client->pers.eternity_quest_progress == 1)
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^1Riddle of Fire: ^7It can measure time, when a tick is done... it's an useful item, and is also a nice one...\"");
-							}
-							else if (ent->client->pers.eternity_quest_progress == 2)
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^1Riddle of Darkness: ^7Its hit can hurt a person, with the power of the blade...it can kill and destroy, making someone's life fade...\"");
-							}
-							else if (ent->client->pers.eternity_quest_progress == 3)
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^4Riddle of Water: ^7Its size is immense, and having its energy is a must... it keeps life on Earth, on its power we can trust...\"");
-							}
-							else if (ent->client->pers.eternity_quest_progress == 4)
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^7Riddle of Wind: ^7One can feel warm, with the power of its energy... its power can also be evil, burning to ashes all the harmony...\"");
-							}
-							else if (ent->client->pers.eternity_quest_progress == 5)
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^5Riddle of Light: ^7It has a pure essence, it can create life... but it can also be furious, like a sharp cut of a knife...\"");
-							}
-							else if (ent->client->pers.eternity_quest_progress == 6)
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^6Riddle of Agility: ^7From the beginning of everything, to the end of everyone... it's there in all that exists, and from it escapes no one...\"");
-							}
-							else if (ent->client->pers.eternity_quest_progress == 7)
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^2Riddle of Forest: ^7It has a lot of energy, to sustain a celestial object... it has a shining light, with another of its kind it can connect...\"");
-							}		
-							else if (ent->client->pers.eternity_quest_progress == 8)
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^5Riddle of Intelligence: ^7It represents natural life, it's in animals and trees... in water and mountains, in these that someone sees...\"");
-							}
-							else if (ent->client->pers.eternity_quest_progress == 9)
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^3Riddle of Eternity: ^7The pure feeling of affection, even the evil ones can sustain... if one can feel and share, his life will not be in vain...\"");
+								zyk_text_message(ent, va("eternity/riddle_%d", ent->client->pers.eternity_quest_progress), qtrue, qfalse);
+
+								ent->client->pers.eternity_quest_timer = level.time + 30000;
 							}
 							else if (ent->client->pers.eternity_quest_progress == (NUMBER_OF_ETERNITY_QUEST_OBJECTIVES - 1))
 							{
 								if (ent->client->pers.eternity_quest_timer == 0)
 								{
-									trap->SendServerCommand( ent->s.number, "chat \"^3Guardian of Eternity: ^7You answered all my riddles. Now prove that you are worthy of my power.\"");
+									zyk_text_message(ent, "eternity/answered_all", qtrue, qfalse);
 									ent->client->pers.eternity_quest_timer = level.time + 3000;
 								}
 								else
 								{ // zyk: Guardian of Eternity battle
 									spawn_boss(ent,-994,2975,25,90,"guardian_of_eternity",0,0,0,0,10);
 								}
-							}
-
-							if (ent->client->pers.eternity_quest_progress < (NUMBER_OF_ETERNITY_QUEST_OBJECTIVES - 1))
-							{
-								ent->client->pers.eternity_quest_timer = level.time + 30000;
 							}
 						}
 
