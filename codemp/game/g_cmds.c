@@ -17526,6 +17526,20 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			}
 			fclose(chars_file);
 
+			chars_file = fopen(va("accounts/%s_%s.txt", arg3, arg2), "r");
+			if (chars_file)
+			{
+				fclose(chars_file);
+				trap->SendServerCommand(ent->s.number, "print \"Cannot overwrite existing char of that account\n\"");
+				return;
+			}
+
+			if (Q_stricmp(arg2, arg3) == 0)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Cannot overwrite the default char of that account\n\"");
+				return;
+			}
+
 			if (Q_stricmp(arg2, ent->client->sess.filename) == 0)
 			{
 				trap->SendServerCommand(ent->s.number, "print \"Cannot migrate the default char\n\"");
