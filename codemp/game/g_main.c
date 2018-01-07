@@ -9980,7 +9980,9 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
 								if (ent->client->pers.light_quest_messages == 0)
-									trap->SendServerCommand( ent->s.number, va("chat \"^4Guardian of Water: ^7I am the Guardian of Water, %s^7... You must now prove yourself...\"",ent->client->pers.netname));
+								{
+									zyk_text_message(ent, "light/guardian_of_water", qtrue, qfalse, ent->client->pers.netname);
+								}
 								else if (ent->client->pers.light_quest_messages == 1)
 								{
 									spawn_boss(ent,2062,4089,361,90,"guardian_boss_1",2062,4189,500,90,1);
@@ -10971,7 +10973,9 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
 								if (ent->client->pers.light_quest_messages == 0)
-									trap->SendServerCommand( ent->s.number, va("chat \"^5Guardian of Ice: ^7I am the Guardian of Ice, %s^7. I will freeze you!\"",ent->client->pers.netname));
+								{
+									zyk_text_message(ent, "light/guardian_of_ice", qtrue, qfalse, ent->client->pers.netname);
+								}
 								else if (ent->client->pers.light_quest_messages == 1)
 								{
 									spawn_boss(ent,-4652,11607,991,179,"guardian_boss_10",-5623,11598,991,0,16);
@@ -12155,7 +12159,9 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
 								if (ent->client->pers.light_quest_messages == 0)
-									trap->SendServerCommand( ent->s.number, va("chat \"^5Guardian of Intelligence: ^7I am the Guardian of Intelligence, %s^7. Face the power of my advanced mind.\"",ent->client->pers.netname));
+								{
+									zyk_text_message(ent, "light/guardian_of_intelligence", qtrue, qfalse, ent->client->pers.netname);
+								}
 								else if (ent->client->pers.light_quest_messages == 1)
 								{
 									spawn_boss(ent,1920,2068,729,-90,"guardian_boss_4",1920,982,729,90,4);
@@ -12485,12 +12491,10 @@ void G_RunFrame( int levelTime ) {
 						{
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
-								if (ent->client->pers.light_quest_messages == 0)
-									trap->SendServerCommand( ent->s.number, "chat \"^5Guardian of Light: ^7Well done, brave warrior!\"");
-								else if (ent->client->pers.light_quest_messages == 1)
-									trap->SendServerCommand( ent->s.number, "chat \"^5Guardian of Light: ^7Now I shall test your skills...\"");
-								else if (ent->client->pers.light_quest_messages == 2)
-									trap->SendServerCommand( ent->s.number, "chat \"^5Guardian of Light: ^7Defeat me and I will grant you the Light Power!\"");
+								if (ent->client->pers.light_quest_messages < 3)
+								{
+									zyk_text_message(ent, va("light/guardian_%d", ent->client->pers.light_quest_messages), qtrue, qfalse);
+								}
 								else if (ent->client->pers.light_quest_messages == 3)
 								{
 									spawn_boss(ent,-992,-1802,25,90,"guardian_boss_9",0,0,0,0,8);
@@ -12524,7 +12528,9 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
 								if (ent->client->pers.light_quest_messages == 0)
-									trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Forest: ^7I am the Guardian of Forest, %s^7! You cant overcome the power of trees!\"",ent->client->pers.netname));
+								{
+									zyk_text_message(ent, "light/guardian_of_forest", qtrue, qfalse, ent->client->pers.netname);
+								}
 								else if (ent->client->pers.light_quest_messages == 1)
 								{
 									spawn_boss(ent,119,4819,33,0,"guardian_boss_3",512,4829,62,179,3);
@@ -12851,7 +12857,9 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
 								if (ent->client->pers.light_quest_messages == 0)
-									trap->SendServerCommand( ent->s.number, va("chat \"^1Guardian of Fire: ^7I am the Guardian of Fire, %s^7! Now you will feel my fire burning!\"",ent->client->pers.netname));
+								{
+									zyk_text_message(ent, "light/guardian_of_fire", qtrue, qfalse, ent->client->pers.netname);
+								}
 								else if (ent->client->pers.light_quest_messages == 1)
 								{
 									spawn_boss(ent,0,5,-374,-90,"guardian_boss_6",0,-269,-374,90,6);
@@ -13621,7 +13629,9 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
 								if (ent->client->pers.light_quest_messages == 0)
-									trap->SendServerCommand( ent->s.number, va("chat \"^3Guardian of Earth: ^7I am the Guardian of Earth, %s^7! Try to defeat my strength and power!\"",ent->client->pers.netname));
+								{
+									zyk_text_message(ent, "light/guardian_of_earth", qtrue, qfalse, ent->client->pers.netname);
+								}
 								else if (ent->client->pers.light_quest_messages == 1)
 								{
 									spawn_boss(ent,-2149,-4387,3645,90,"guardian_boss_2",-2149,-4037,3645,-90,2);
@@ -13655,7 +13665,9 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
 								if (ent->client->pers.light_quest_messages == 0)
-									trap->SendServerCommand( ent->s.number, va("chat \"^3Guardian of Resistance: ^7I am the Guardian of Resistance, %s^7! Your attacks are powerless!\"",ent->client->pers.netname));
+								{
+									zyk_text_message(ent, "light/guardian_of_resistance", qtrue, qfalse, ent->client->pers.netname);
+								}
 								else if (ent->client->pers.light_quest_messages == 1)
 								{
 									spawn_boss(ent,0,1135,25,-90,"guardian_boss_8",0,905,25,90,11);
@@ -13672,7 +13684,9 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
 								if (ent->client->pers.light_quest_messages == 0)
-									trap->SendServerCommand( ent->s.number, va("chat \"^7Guardian of Wind: ^7I am the Guardian of Wind, %s^7! Try to reach me in the air if you can!\"",ent->client->pers.netname));
+								{
+									zyk_text_message(ent, "light/guardian_of_wind", qtrue, qfalse, ent->client->pers.netname);
+								}
 								else if (ent->client->pers.light_quest_messages == 1)
 								{
 									spawn_boss(ent,-156,-298,217,-90,"guardian_boss_7",-156,-584,300,90,7);
@@ -14806,7 +14820,9 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
 								if (ent->client->pers.light_quest_messages == 0)
-									trap->SendServerCommand( ent->s.number, va("chat \"^6Guardian of Agility: ^7I am the Guardian of Agility, %s^7! Im too fast for you, snail!\"",ent->client->pers.netname));
+								{
+									zyk_text_message(ent, "light/guardian_of_agility", qtrue, qfalse, ent->client->pers.netname);
+								}
 								else if (ent->client->pers.light_quest_messages == 1)
 								{
 									spawn_boss(ent,9773,-1779,-162,90,"guardian_boss_5",9773,-1199,-162,90,5);

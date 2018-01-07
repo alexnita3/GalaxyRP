@@ -2485,7 +2485,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 				quest_player->client->pers.quest_power_status |= (1 << 14);
 			}
 
-			trap->SendServerCommand( quest_player->s.number, "chat \"^5Guardian of Light: ^7Well done, brave warrior! Now I shall grant you the ^5Light Power^7!\"");
+			zyk_text_message(quest_player, "light/boss_defeated", qtrue, qfalse);
 		}
 		else
 		{
@@ -2504,39 +2504,39 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			// zyk: make the chat message for each guardian the player defeats
 			if (light_quest_bitvalue == 4)
 			{
-				trap->SendServerCommand( quest_player->s.number, "chat \"^4Guardian of Water: ^7Well done... continue your quest... if you seek the power of light...\"");
+				zyk_text_message(quest_player, "light/guardian_of_water_defeated", qtrue, qfalse);
 			}
 			else if (light_quest_bitvalue == 5)
 			{
-				trap->SendServerCommand( quest_player->s.number, "chat \"^3Guardian of Earth: ^7Incredible! you are indeed a strong warrior...\"");
+				zyk_text_message(quest_player, "light/guardian_of_earth_defeated", qtrue, qfalse);
 			}
 			else if (light_quest_bitvalue == 6)
 			{
-				trap->SendServerCommand( quest_player->s.number, "chat \"^2Guardian of Forest: ^7You just defeated the power of forest! Amazing!\"");
+				zyk_text_message(quest_player, "light/guardian_of_forest_defeated", qtrue, qfalse);
 			}
 			else if (light_quest_bitvalue == 7)
 			{
-				trap->SendServerCommand( quest_player->s.number, "chat \"^5Guardian of Intelligence: ^7You must be quite intelligent to beat me.\"");
+				zyk_text_message(quest_player, "light/guardian_of_intelligence_defeated", qtrue, qfalse);
 			}
 			else if (light_quest_bitvalue == 8)
 			{
-				trap->SendServerCommand( quest_player->s.number, "chat \"^6Guardian of Agility: ^7Wow! You are fast and strong, you deserve the victory!\"");
+				zyk_text_message(quest_player, "light/guardian_of_agility_defeated", qtrue, qfalse);
 			}
 			else if (light_quest_bitvalue == 9)
 			{
-				trap->SendServerCommand( quest_player->s.number, "chat \"^1Guardian of Fire: ^7I cant believe it, you defeated the power of fire!\"");
+				zyk_text_message(quest_player, "light/guardian_of_fire_defeated", qtrue, qfalse);
 			}
 			else if (light_quest_bitvalue == 10)
 			{
-				trap->SendServerCommand( quest_player->s.number, "chat \"^7Guardian of Wind: ^7You are indeed the chosen warrior... may the power of the wind guide you in your quest.\"");
+				zyk_text_message(quest_player, "light/guardian_of_wind_defeated", qtrue, qfalse);
 			}
 			else if (light_quest_bitvalue == 11)
 			{
-				trap->SendServerCommand( quest_player->s.number, "chat \"^3Guardian of Resistance: ^7You are a resistant and strong warrior.\"");
+				zyk_text_message(quest_player, "light/guardian_of_resistance_defeated", qtrue, qfalse);
 			}
 			else if (light_quest_bitvalue == 12)
 			{
-				trap->SendServerCommand( quest_player->s.number, "chat \"^5Guardian of Ice: ^7You are a very powerful warrior!\"");
+				zyk_text_message(quest_player, "light/guardian_of_ice_defeated", qtrue, qfalse);
 			}
 		}
 
