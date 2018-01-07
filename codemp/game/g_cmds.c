@@ -7620,7 +7620,7 @@ char *zyk_get_settings_values(gentity_t *ent)
 
 	for (i = 0; i < 16; i++)
 	{ // zyk: settings values
-		if (i != 8 && i != 14 && i != 15)
+		if (i != 5 && i != 8 && i != 14 && i != 15)
 		{
 			if (!(ent->client->pers.player_settings & (1 << i)))
 			{
@@ -7629,6 +7629,17 @@ char *zyk_get_settings_values(gentity_t *ent)
 			else
 			{
 				strcpy(content,va("%sOFF-",content));
+			}
+		}
+		else if (i == 5)
+		{
+			if (!(ent->client->pers.player_settings & (1 << i)))
+			{
+				strcpy(content, va("%sEnglish-", content));
+			}
+			else
+			{
+				strcpy(content, va("%sCustom-", content));
 			}
 		}
 		else if (i == 14)
