@@ -4784,6 +4784,16 @@ void load_account(gentity_t *ent)
 			fscanf(account_file, "%s", content);
 			ent->client->pers.universe_quest_counter = atoi(content);
 
+			// zyk: make sure Challenge Mode settings flag and counter flag are correct
+			if (ent->client->pers.universe_quest_counter & (1 << 29))
+			{
+				ent->client->pers.player_settings |= (1 << 15);
+			}
+			else
+			{
+				ent->client->pers.player_settings &= ~(1 << 15);
+			}
+
 			// zyk: loading credits value
 			fscanf(account_file, "%s", content);
 			ent->client->pers.credits = atoi(content);
@@ -5565,6 +5575,9 @@ void add_new_char(gentity_t *ent)
 	ent->client->pers.rpg_class = 0;
 	ent->client->sess.magic_disabled_powers = 0;
 	ent->client->sess.magic_more_disabled_powers = 0;
+
+	// zyk: if creating new char, remove Challenge Mode flag from old one
+	ent->client->pers.player_settings &= ~(1 << 15);
 }
 
 /*
@@ -12056,16 +12069,20 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			{ // zyk: player can only activate Challenge Mode if he did not complete any quest mission
 				ent->client->pers.player_settings |= (1 << value);
 				ent->client->pers.universe_quest_counter |= (1 << 29);
-				strcpy(new_status,"^1Challenge^7");
+			}
+			else if (ent->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
+			{ // zyk: setting Normal Mode removes the Challenge Mode flag. Cannot change after completing all quests
+				ent->client->pers.player_settings &= ~(1 << value);
+				ent->client->pers.universe_quest_counter &= ~(1 << 29);
+			}
+
+			if (ent->client->pers.player_settings & (1 << value))
+			{
+				strcpy(new_status, "^1Challenge^7");
 			}
 			else
-			{ // zyk: setting Normal Mode removes the Challenge Mode flag
-				ent->client->pers.player_settings &= ~(1 << value);
-
-				if (ent->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
-					ent->client->pers.universe_quest_counter &= ~(1 << 29);
-
-				strcpy(new_status,"^2Normal^7");
+			{
+				strcpy(new_status, "^2Normal^7");
 			}
 		}
 		else
