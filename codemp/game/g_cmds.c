@@ -4820,6 +4820,19 @@ void load_account(gentity_t *ent)
 			fscanf(account_file, "%s", content);
 			ent->client->sess.magic_more_disabled_powers = atoi(content);
 
+			// zyk: loading Magic Master first selection and selected powers
+			fscanf(account_file, "%s", content);
+			ent->client->sess.magic_fist_selection = atoi(content);
+
+			fscanf(account_file, "%s", content);
+			ent->client->sess.selected_special_power = atoi(content);
+
+			fscanf(account_file, "%s", content);
+			ent->client->sess.selected_left_special_power = atoi(content);
+
+			fscanf(account_file, "%s", content);
+			ent->client->sess.selected_right_special_power = atoi(content);
+
 			if (ent->client->sess.amrpgmode == 1)
 			{
 				ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
@@ -4875,7 +4888,7 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 
 			client = ent->client;
 			account_file = fopen(va("accounts/%s_%s.txt",ent->client->sess.filename, ent->client->sess.rpgchar),"w");
-			fprintf(account_file,"%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
+			fprintf(account_file,"%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
 			client->pers.level_up_score,client->pers.level,client->pers.skillpoints,client->pers.skill_levels[0],client->pers.skill_levels[1],client->pers.skill_levels[2]
 			,client->pers.skill_levels[3],client->pers.skill_levels[4],client->pers.skill_levels[5],client->pers.skill_levels[6],client->pers.skill_levels[7],client->pers.skill_levels[8]
 			,client->pers.skill_levels[9],client->pers.skill_levels[10],client->pers.skill_levels[11],client->pers.skill_levels[12],client->pers.skill_levels[13],client->pers.skill_levels[14]
@@ -4885,7 +4898,8 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 			,client->pers.skill_levels[42],client->pers.skill_levels[43],client->pers.skill_levels[44],client->pers.skill_levels[45],client->pers.skill_levels[46],client->pers.skill_levels[47],client->pers.skill_levels[48],client->pers.skill_levels[49]
 			,client->pers.skill_levels[50],client->pers.skill_levels[51],client->pers.skill_levels[52],client->pers.skill_levels[53],client->pers.skill_levels[54],client->pers.skill_levels[55],client->pers.defeated_guardians,client->pers.hunter_quest_progress
 			,client->pers.eternity_quest_progress,client->pers.secrets_found,client->pers.universe_quest_progress,client->pers.universe_quest_counter,client->pers.credits,client->pers.rpg_class
-			,client->sess.magic_disabled_powers,client->sess.magic_more_disabled_powers);
+			,client->sess.magic_disabled_powers,client->sess.magic_more_disabled_powers,client->sess.magic_fist_selection,client->sess.selected_special_power,client->sess.selected_left_special_power
+			,client->sess.selected_right_special_power);
 			fclose(account_file);
 		}
 		else
@@ -5575,6 +5589,10 @@ void add_new_char(gentity_t *ent)
 	ent->client->pers.rpg_class = 0;
 	ent->client->sess.magic_disabled_powers = 0;
 	ent->client->sess.magic_more_disabled_powers = 0;
+	ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
+	ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
+	ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
+	ent->client->sess.magic_fist_selection = 0;
 
 	// zyk: if creating new char, remove Challenge Mode flag from old one
 	ent->client->pers.player_settings &= ~(1 << 15);
@@ -5686,60 +5704,6 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 	ent->client->pers.tutorial_step = 0;
 	ent->client->pers.tutorial_timer = level.time + 1000;
 	ent->client->pers.player_statuses |= (1 << 25);
-}
-
-// zyk: loads Magic Master class config (selected magic powers, selected bolt type, allowed magic powers)
-void zyk_load_magic_master_config(gentity_t *ent)
-{
-	if (ent->client->pers.rpg_class == 8)
-	{
-		char content[16];
-		FILE *config_file = NULL;
-
-		strcpy(content,"");
-
-		system("mkdir configs");
-
-		config_file = fopen(va("configs/%s_%s_magicmaster_config.txt", ent->client->sess.filename, ent->client->sess.rpgchar),"r");
-		if (config_file != NULL)
-		{
-			fscanf(config_file,"%s",content);
-			ent->client->sess.magic_fist_selection = atoi(content);
-
-			fscanf(config_file,"%s",content);
-			ent->client->sess.selected_special_power = atoi(content);
-
-			fscanf(config_file,"%s",content);
-			ent->client->sess.selected_left_special_power = atoi(content);
-
-			fscanf(config_file,"%s",content);
-			ent->client->sess.selected_right_special_power = atoi(content);
-
-			fclose(config_file);
-		}
-		else
-		{ // zyk: if the file does not exist yet, load default Magic Master config
-			ent->client->sess.magic_fist_selection = 0;
-			ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
-			ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
-			ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
-		}
-	}
-}
-
-void zyk_save_magic_master_config(gentity_t *ent)
-{
-	if (ent->client->pers.rpg_class == 8)
-	{
-		FILE *config_file = fopen(va("configs/%s_%s_magicmaster_config.txt", ent->client->sess.filename, ent->client->sess.rpgchar),"w");
-
-		if (config_file)
-		{
-			fprintf(config_file, "%d\n%d\n%d\n%d\n", ent->client->sess.magic_fist_selection, 
-					ent->client->sess.selected_special_power, ent->client->sess.selected_left_special_power, ent->client->sess.selected_right_special_power);
-			fclose(config_file);
-		}
-	}
 }
 
 // zyk: loads the player account the old way
@@ -6020,8 +5984,6 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 			trap->SendServerCommand( ent-g_entities, "print \"^7Account loaded succesfully in ^2Admin-Only Mode^7. Use command ^3/list^7.\n\"" );
 		else if (ent->client->sess.amrpgmode == 2)
 		{
-			zyk_load_magic_master_config(ent);
-
 			initialize_rpg_skills(ent);
 			trap->SendServerCommand( ent-g_entities, "print \"^7Account loaded succesfully in ^2RPG Mode^7. Use command ^3/list^7.\n\"" );
 
@@ -11306,8 +11268,6 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		system(va("DEL /F \"configs\\%s_%s_freewarrior.txt\" \"configs\\%s_%s_forceuser.txt\" \"configs\\%s_%s_bountyhunter.txt\" \"configs\\%s_%s_armoredsoldier.txt\" \"configs\\%s_%s_monk.txt\" \"configs\\%s_%s_stealthattacker.txt\" \"configs\\%s_%s_duelist.txt\" \"configs\\%s_%s_forcegunner.txt\" \"configs\\%s_%s_magicmaster.txt\" \"configs\\%s_%s_forcetank.txt\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar));
 #endif
 
-		zyk_save_magic_master_config(ent);
-
 		trap->SendServerCommand( ent-g_entities, "print \"Your entire account is reset.\n\"" );
 
 		if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
@@ -11366,8 +11326,6 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 #else
 		system(va("DEL /F \"configs\\%s_%s_freewarrior.txt\" \"configs\\%s_%s_forceuser.txt\" \"configs\\%s_%s_bountyhunter.txt\" \"configs\\%s_%s_armoredsoldier.txt\" \"configs\\%s_%s_monk.txt\" \"configs\\%s_%s_stealthattacker.txt\" \"configs\\%s_%s_duelist.txt\" \"configs\\%s_%s_forcegunner.txt\" \"configs\\%s_%s_magicmaster.txt\" \"configs\\%s_%s_forcetank.txt\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar));
 #endif
-
-		zyk_save_magic_master_config(ent);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Your levels are reset.\n\"" );
 
@@ -12417,8 +12375,6 @@ void do_change_class(gentity_t *ent, int value)
 	{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
 		G_Kill(ent);
 	}
-
-	zyk_load_magic_master_config(ent);
 }
 
 /*
@@ -12665,8 +12621,6 @@ void Cmd_PlayerMode_f( gentity_t *ent ) {
 	}
 	else
 	{
-		zyk_load_magic_master_config(ent);
-
 		trap->SendServerCommand( ent-g_entities, "print \"^7You are now in ^2RPG mode^7.\n\"" );
 	}
 
