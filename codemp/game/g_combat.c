@@ -2560,7 +2560,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			quest_player->client->pers.quest_power_status |= (1 << 15);
 		}
 
-		trap->SendServerCommand( quest_player->s.number, "chat \"^1Guardian of Darkness: ^7Well done, mighty warrior... now I shall grant you the ^1Dark Power^7!\"");
+		zyk_text_message(quest_player, "dark/boss_defeated", qtrue, qfalse);
 
 		quest_get_new_player(quest_player);
 	}

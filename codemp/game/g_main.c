@@ -6262,6 +6262,60 @@ void clear_special_power_effect(gentity_t *ent)
 	}
 }
 
+// zyk: shows a text message from the file based on the language set by the player. Can receive additional arguments to concat in the final string
+void zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qboolean broadcast_message, ...)
+{
+	va_list argptr;
+	char content[MAX_STRING_CHARS];
+	const char *file_content;
+	static char string[MAX_STRING_CHARS];
+	char language[128];
+	char console_cmd[64];
+	int client_id = -1;
+	FILE *text_file = NULL;
+
+	strcpy(content, "");
+	strcpy(string, "");
+	strcpy(console_cmd, "print");
+
+	if (broadcast_message == qfalse)
+		client_id = ent->s.number;
+
+	if (show_in_chat == qtrue)
+		strcpy(console_cmd, "chat");
+
+	if (ent->client->pers.player_settings & (1 << 5))
+	{
+		strcpy(language, "custom");
+	}
+	else
+	{
+		strcpy(language, "english");
+	}
+
+	text_file = fopen(va("textfiles/%s/%s.txt", language, filename), "r");
+	if (text_file)
+	{
+		fgets(content, sizeof(content), text_file);
+		if (content[strlen(content) - 1] == '\n')
+			content[strlen(content) - 1] = '\0';
+
+		fclose(text_file);
+	}
+	else
+	{
+		strcpy(content, "^1File could not be open!");
+	}
+
+	file_content = va("%s", content);
+
+	va_start(argptr, broadcast_message);
+	Q_vsnprintf(string, sizeof(string), file_content, argptr);
+	va_end(argptr);
+
+	trap->SendServerCommand(client_id, va("%s \"%s\n\"", console_cmd, string));
+}
+
 qboolean magic_master_has_this_power(gentity_t *ent, int selected_power)
 {
 	if (selected_power == MAGIC_HEALING_WATER && !(ent->client->pers.defeated_guardians & (1 << 4)) &&
@@ -7259,7 +7313,7 @@ void zyk_try_get_dark_quest_note(gentity_t *ent, int note_bitvalue)
 		!(ent->client->pers.hunter_quest_progress & (1 << note_bitvalue)) && ent->client->pers.can_play_quest == 1 &&
 		level.quest_note_id != -1 && (int)Distance(ent->client->ps.origin, g_entities[level.quest_note_id].r.currentOrigin) < 40)
 	{
-		trap->SendServerCommand( ent->s.number, "chat \"^3Quest System: ^7Found an ancient note.\"");
+		zyk_text_message(ent, "dark/found_note", qtrue, qfalse);
 		ent->client->pers.hunter_quest_progress |= (1 << note_bitvalue);
 		clean_note_model();
 		save_account(ent, qtrue);
@@ -8308,60 +8362,6 @@ void zyk_trial_room_models()
 	zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
 
 	zyk_spawn_entity(new_ent);
-}
-
-// zyk: shows a text message from the file based on the language set by the player. Can receive additional arguments to concat in the final string
-void zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qboolean broadcast_message, ... )
-{
-	va_list argptr;
-	char content[MAX_STRING_CHARS];
-	const char *file_content;
-	static char string[MAX_STRING_CHARS];
-	char language[128];
-	char console_cmd[64];
-	int client_id = -1;
-	FILE *text_file = NULL;
-
-	strcpy(content, "");
-	strcpy(string, "");
-	strcpy(console_cmd, "print");
-
-	if (broadcast_message == qfalse)
-		client_id = ent->s.number;
-
-	if (show_in_chat == qtrue)
-		strcpy(console_cmd, "chat");
-
-	if (ent->client->pers.player_settings & (1 << 5))
-	{
-		strcpy(language, "custom");
-	}
-	else
-	{
-		strcpy(language, "english");
-	}
-
-	text_file = fopen(va("textfiles/%s/%s.txt", language, filename), "r");
-	if (text_file)
-	{
-		fgets(content, sizeof(content), text_file);
-		if (content[strlen(content) - 1] == '\n')
-			content[strlen(content) - 1] = '\0';
-
-		fclose(text_file);
-	}
-	else
-	{
-		strcpy(content, "^1File could not be open!");
-	}
-
-	file_content = va("%s", content);
-
-	va_start(argptr, broadcast_message);
-	Q_vsnprintf(string, sizeof(string), file_content, argptr);
-	va_end(argptr);
-
-	trap->SendServerCommand(client_id, va("%s \"%s\n\"", console_cmd, string));
 }
 
 /*
@@ -12506,12 +12506,10 @@ void G_RunFrame( int levelTime ) {
 						{
 							if (ent->client->pers.hunter_quest_timer < level.time)
 							{
-								if (ent->client->pers.hunter_quest_messages == 0)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Guardian of Darkness: ^7Excelent, mighty warrior...\"");
-								else if (ent->client->pers.hunter_quest_messages == 1)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Guardian of Darkness: ^7Now your might will be tested...\"");
-								else if (ent->client->pers.hunter_quest_messages == 2)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Guardian of Darkness: ^7Defeat me and I shall grant you the Dark Power...\"");
+								if (ent->client->pers.hunter_quest_messages < 3)
+								{
+									zyk_text_message(ent, va("dark/guardian_%d", ent->client->pers.hunter_quest_messages), qtrue, qfalse);
+								}
 								else if (ent->client->pers.hunter_quest_messages == 3)
 								{
 									spawn_boss(ent,-34,402,-231,90,"guardian_of_darkness",0,0,0,0,9);
