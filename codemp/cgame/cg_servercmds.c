@@ -1627,7 +1627,15 @@ static void CG_ZykChars(void)
 
 	while (arg[i] != '\0')
 	{
-		if (arg[i] == '<' && arg[i + 1] == 'z' && arg[i + 2] == 'y' && arg[i + 3] == 'k' && arg[i + 4] == '>')
+		if (arg[i] == '<' && arg[i + 1] == 'z' && arg[i + 2] == 'y' && arg[i + 3] == 'k' && arg[i + 4] == 'c' && arg[i + 5] == '>')
+		{ // zyk: current char
+			value[j] = '\0';
+			j = 0;
+			i += 5;
+
+			trap->Cvar_Set("ui_zyk_rpg_current_char", va("Using %s", value));
+		}
+		else if (arg[i] == '<' && arg[i + 1] == 'z' && arg[i + 2] == 'y' && arg[i + 3] == 'k' && arg[i + 4] == '>')
 		{ // zyk: got the separator, finish processing this char name
 			value[j] = '\0';
 			j = 0;
@@ -1642,6 +1650,13 @@ static void CG_ZykChars(void)
 			j++;
 			i++;
 		}
+	}
+
+	// zyk: cleaning cvars that will not render a charname
+	while (char_count < 20)
+	{
+		trap->Cvar_Set(va("ui_zyk_rpg_char_%d", char_count + 1), "");
+		char_count++;
 	}
 }
 

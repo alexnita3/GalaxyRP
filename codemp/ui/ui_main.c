@@ -6426,6 +6426,52 @@ static void UI_RunMenuScript(char **args)
 					trap->Cmd_ExecuteText(EXEC_APPEND, va("sell %s\n", arg));
 			}
 		}
+		else if (Q_stricmp(name, "zykcharuse") == 0)
+		{
+			const char *arg;
+
+			if (String_Parse(args, &arg))
+			{
+				char zyk_char[512];
+				int i = 0;
+				int zyk_size = 0;
+
+				trap->Cvar_VariableStringBuffer(va("ui_zyk_rpg_char_%s", arg), zyk_char, sizeof(zyk_char));
+
+				zyk_size = strlen(zyk_char);
+
+				while (i < zyk_size)
+				{
+					zyk_char[i] = zyk_char[i + 2];
+					i++;
+				}
+
+				trap->Cmd_ExecuteText(EXEC_APPEND, va("rpgchar use \"%s\"\n", zyk_char));
+			}
+		}
+		else if (Q_stricmp(name, "zykchardelete") == 0)
+		{
+			const char *arg;
+
+			if (String_Parse(args, &arg))
+			{
+				char zyk_char[512];
+				int i = 0;
+				int zyk_size = 0;
+
+				trap->Cvar_VariableStringBuffer(va("ui_zyk_rpg_char_%s", arg), zyk_char, sizeof(zyk_char));
+
+				zyk_size = strlen(zyk_char);
+
+				while (i < zyk_size)
+				{
+					zyk_char[i] = zyk_char[i + 2];
+					i++;
+				}
+
+				trap->Cmd_ExecuteText(EXEC_APPEND, va("rpgchar delete \"%s\"\n", zyk_char));
+			}
+		}
 		else if (Q_stricmp(name, "setForce") == 0)
 		{
 			const char *teamArg;

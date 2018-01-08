@@ -7867,7 +7867,7 @@ void Cmd_ZykChars_f(gentity_t *ent) {
 		return;
 	}
 
-	trap->SendServerCommand(ent->s.number, va("zykchars \"%s\"", zyk_get_rpg_chars(ent, "<zyk>")));
+	trap->SendServerCommand(ent->s.number, va("zykchars \"%s^7%s<zykc>\"", zyk_get_rpg_chars(ent, "<zyk>"), ent->client->sess.rpgchar));
 }
 
 qboolean validate_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show_message)
@@ -17434,7 +17434,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			chars_file = fopen(va("accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
 			if (chars_file == NULL)
 			{
-				trap->SendServerCommand(ent->s.number, "print \"This char does not exist\n\"");
+				trap->SendServerCommand(ent->s.number, va("print \"Char %s does not exist\n\"", arg2));
 				return;
 			}
 
@@ -17550,6 +17550,9 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7moved!\n\"", arg2));
 		}
+
+		// zyk: syncronize info to the client menu
+		Cmd_ZykChars_f(ent);
 	}
 }
 
