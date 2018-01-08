@@ -6472,6 +6472,14 @@ static void UI_RunMenuScript(char **args)
 				trap->Cmd_ExecuteText(EXEC_APPEND, va("rpgchar delete \"%s\"\n", zyk_char));
 			}
 		}
+		else if (Q_stricmp(name, "zykcharnew") == 0)
+		{
+			char zyk_char[512];
+
+			trap->Cvar_VariableStringBuffer("zykCharName", zyk_char, sizeof(zyk_char));
+
+			trap->Cmd_ExecuteText(EXEC_APPEND, va("rpgchar new \"%s\"\n", zyk_char));
+		}
 		else if (Q_stricmp(name, "setForce") == 0)
 		{
 			const char *teamArg;
