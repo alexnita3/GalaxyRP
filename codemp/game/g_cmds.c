@@ -5627,14 +5627,14 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 		return;
 	}
 
-	if (strlen(arg1) > 30)
+	if (strlen(arg1) > MAX_ACC_NAME_SIZE)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Login has a maximum of 30 characters.\n\"" ); 
+		trap->SendServerCommand( ent-g_entities, va("print \"Login has a maximum of %d characters.\n\"", MAX_ACC_NAME_SIZE) );
 		return;
 	}
-	if (strlen(arg2) > 30)
+	if (strlen(arg2) > MAX_ACC_NAME_SIZE)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Password has a maximum of 30 characters.\n\"" ); 
+		trap->SendServerCommand( ent-g_entities, va("print \"Password has a maximum of %d characters.\n\"", MAX_ACC_NAME_SIZE) );
 		return;
 	}
 
@@ -17320,7 +17320,7 @@ void Cmd_ZykSound_f(gentity_t *ent) {
 int zyk_char_count(gentity_t *ent)
 {
 	FILE *chars_file;
-	char content[32];
+	char content[64];
 	int i = 0;
 	int count = 0;
 
@@ -17362,7 +17362,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 	if (argc == 1)
 	{ // zyk: lists the chars and commands
-		trap->SendServerCommand(ent->s.number, va("print \"^2Chars\n\n^7%s\n^3/rpgchar new <charname>: ^7creates a new char\n^3/rpgchar use <charname>: ^7uses this char\n^3/rpgchar delete <charname>: ^7removes this char\n^3/rpgchar migrate <charname> <login> <password>: ^7moves char to account with this login and password\n\"", zyk_get_rpg_chars(ent, "\n")));
+		trap->SendServerCommand(ent->s.number, va("print \"^2Chars\n\n^7%s\n^3/rpgchar new <charname>: ^7creates a new char\n^3/rpgchar duplicate: ^7creates a copy of the current char in use\n^3/rpgchar use <charname>: ^7uses this char\n^3/rpgchar delete <charname>: ^7removes this char\n^3/rpgchar migrate <charname> <login> <password>: ^7moves char to account with this login and password\n\"", zyk_get_rpg_chars(ent, "\n")));
 	}
 	else
 	{
@@ -17371,14 +17371,18 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 		char arg3[MAX_STRING_CHARS];
 		char arg4[MAX_STRING_CHARS];
 
-		if (argc == 2)
+		trap->Argv(1, arg1, sizeof(arg1));
+
+		if (argc == 2 && Q_stricmp(arg1, "duplicate") != 0)
 		{
 			trap->SendServerCommand(ent->s.number, "print \"This command requires at least one more argument\n\"");
 			return;
 		}
 
-		trap->Argv(1, arg1, sizeof(arg1));
-		trap->Argv(2, arg2, sizeof(arg2));
+		if (Q_stricmp(arg1, "duplicate") != 0)
+		{
+			trap->Argv(2, arg2, sizeof(arg2));
+		}
 
 		if (Q_stricmp(arg1, "new") == 0)
 		{
@@ -17396,15 +17400,15 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				return;
 			}
 
-			if (zyk_char_count(ent) >= 15)
+			if (zyk_char_count(ent) >= MAX_RPG_CHARS)
 			{
 				trap->SendServerCommand(ent->s.number, "print \"Reached the max limit of chars\n\"");
 				return;
 			}
 
-			if (strlen(arg2) > 30)
+			if (strlen(arg2) > MAX_ACC_NAME_SIZE)
 			{
-				trap->SendServerCommand(ent->s.number, "print \"Char name must have a maximum of 30 characters\n\"");
+				trap->SendServerCommand(ent->s.number, va("print \"Char name must have a maximum of 30 characters\n\"", MAX_ACC_NAME_SIZE));
 				return;
 			}
 
@@ -17422,6 +17426,38 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
 				G_Kill(ent);
 			}
+		}
+		else if (Q_stricmp(arg1, "duplicate") == 0)
+		{
+			char new_char_name[32];
+
+			if (zyk_char_count(ent) >= MAX_RPG_CHARS)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Reached the max limit of chars\n\"");
+				return;
+			}
+
+			if (strlen(ent->client->sess.rpgchar) < MAX_ACC_NAME_SIZE - 4)
+			{
+				strcpy(new_char_name, va("dup_%s", ent->client->sess.rpgchar));
+			}
+			else
+			{ // zyk: cannot go over the max, so remove the last chars
+				strcpy(new_char_name, va("%s", ent->client->sess.rpgchar));
+
+				new_char_name[0] = 'd';
+				new_char_name[1] = 'u';
+				new_char_name[2] = 'p';
+				new_char_name[3] = '_';
+			}
+
+#if defined(__linux__)
+			system(va("cp accounts/%s_%s.txt accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, new_char_name));
+#else
+			system(va("cd accounts & COPY %s_%s.txt %s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, new_char_name));
+#endif
+
+			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7duplicated!\n\"", ent->client->sess.rpgchar));
 		}
 		else if (Q_stricmp(arg1, "use") == 0)
 		{

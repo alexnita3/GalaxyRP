@@ -615,6 +615,12 @@ typedef enum {
 // zyk: max level a player can be in RPG Mode
 #define MAX_RPG_LEVEL 100
 
+// zyk: max RPG chars an account can have
+#define MAX_RPG_CHARS 15
+
+// zyk: max characters an account or rpg char can have
+#define MAX_ACC_NAME_SIZE 30
+
 // zyk: max jetpack fuel the player can have
 #define MAX_JETPACK_FUEL 10000
 #define JETPACK_SCALE 100 // zyk: used to scale the MAX_JETPACK_FUEL to set the jetpackFuel attribute. Dividing MAX_JETPACK_FUEL per JETPACK_SCALE must result in 100
