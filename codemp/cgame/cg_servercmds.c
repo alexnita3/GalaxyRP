@@ -1653,7 +1653,7 @@ static void CG_ZykChars(void)
 	}
 
 	// zyk: cleaning cvars that will not render a charname
-	while (char_count < 20)
+	while (char_count < 15)
 	{
 		trap->Cvar_Set(va("ui_zyk_rpg_char_%d", char_count + 1), "");
 		char_count++;

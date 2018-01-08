@@ -284,11 +284,6 @@ XCVAR_DEF( ui_zyk_rpg_char_12,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_rpg_char_13,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_rpg_char_14,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_rpg_char_15,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_rpg_char_16,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_rpg_char_17,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_rpg_char_18,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_rpg_char_19,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_rpg_char_20,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_rpg_current_char,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 
 #undef XCVAR_DEF

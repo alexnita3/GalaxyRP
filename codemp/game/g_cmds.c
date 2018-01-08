@@ -17396,7 +17396,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				return;
 			}
 
-			if (zyk_char_count(ent) >= 20)
+			if (zyk_char_count(ent) >= 15)
 			{
 				trap->SendServerCommand(ent->s.number, "print \"Reached the max limit of chars\n\"");
 				return;
