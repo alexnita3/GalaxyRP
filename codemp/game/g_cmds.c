@@ -17451,6 +17451,14 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				new_char_name[3] = '_';
 			}
 
+			chars_file = fopen(va("accounts/%s_%s.txt", ent->client->sess.filename, new_char_name), "r");
+			if (chars_file != NULL)
+			{
+				fclose(chars_file);
+				trap->SendServerCommand(ent->s.number, "print \"Cannot overwrite existing duplicate\n\"");
+				return;
+			}
+
 #if defined(__linux__)
 			system(va("cp accounts/%s_%s.txt accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, new_char_name));
 #else
