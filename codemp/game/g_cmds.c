@@ -7803,6 +7803,73 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 	}
 }
 
+char *zyk_get_rpg_chars(gentity_t *ent, char *separator)
+{
+	FILE *chars_file;
+	char content[64];
+	char chars[MAX_STRING_CHARS];
+	int i = 0;
+
+	strcpy(content, "");
+	strcpy(chars, "");
+
+#if defined(__linux__)
+	system(va("cd accounts ; ls %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
+#else
+	system(va("cd accounts & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
+#endif
+
+	chars_file = fopen(va("accounts/chars_%d.txt", ent->s.number), "r");
+	if (chars_file != NULL)
+	{
+		i = fscanf(chars_file, "%s", content);
+		while (i != EOF)
+		{
+			if (Q_stricmp(content, va("chars_%d.txt", ent->s.number)) != 0)
+			{ // zyk: getting the char names
+				int j = strlen(ent->client->sess.filename) + 1, k = 0;
+
+				while (j < 64)
+				{
+					if (content[j] == '.' && content[j + 1] == 't' && content[j + 2] == 'x' && content[j + 3] == 't')
+					{
+						content[k] = '\0';
+						break;
+					}
+					else
+					{
+						content[k] = content[j];
+					}
+
+					j++;
+					k++;
+				}
+
+				strcpy(chars, va("%s^7%s%s", chars, content, separator));
+			}
+			i = fscanf(chars_file, "%s", content);
+		}
+		fclose(chars_file);
+	}
+
+	return G_NewString(chars);
+}
+
+/*
+==================
+Cmd_ZykChars_f
+==================
+*/
+void Cmd_ZykChars_f(gentity_t *ent) {
+	// zyk: sends info to the client-side menu if player has the client-side plugin
+	if (Q_stricmp(ent->client->pers.guid, "NOGUID") == 0)
+	{
+		return;
+	}
+
+	trap->SendServerCommand(ent->s.number, va("zykchars \"%s\"", zyk_get_rpg_chars(ent, "<zyk>")));
+}
+
 qboolean validate_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show_message)
 {
 	// zyk: validation on the upgrade level, which must be in the range of valid skills.
@@ -17290,54 +17357,12 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 	int argc = trap->Argc();
 	FILE *chars_file;
 	char content[64];
-	char chars[MAX_STRING_CHARS];
-	int i = 0;
 
 	strcpy(content, "");
-	strcpy(chars, "");
 
 	if (argc == 1)
 	{ // zyk: lists the chars and commands
-#if defined(__linux__)
-		system(va("cd accounts ; ls %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
-#else
-		system(va("cd accounts & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
-#endif
-
-		chars_file = fopen(va("accounts/chars_%d.txt", ent->s.number), "r");
-		if (chars_file != NULL)
-		{
-			i = fscanf(chars_file, "%s", content);
-			while (i != EOF)
-			{
-				if (Q_stricmp(content, va("chars_%d.txt", ent->s.number)) != 0)
-				{ // zyk: getting the char names
-					int j = strlen(ent->client->sess.filename) + 1, k = 0;
-
-					while (j < 64)
-					{
-						if (content[j] == '.' && content[j + 1] == 't' && content[j + 2] == 'x' && content[j + 3] == 't')
-						{
-							content[k] = '\0';
-							break;
-						}
-						else
-						{
-							content[k] = content[j];
-						}
-
-						j++;
-						k++;
-					}
-
-					strcpy(chars, va("%s^7%s\n", chars, content));
-				}
-				i = fscanf(chars_file, "%s", content);
-			}
-			fclose(chars_file);
-		}
-
-		trap->SendServerCommand(ent->s.number, va("print \"^2Chars\n\n^7%s\n^3/rpgchar new <charname>: ^7creates a new char\n^3/rpgchar use <charname>: ^7uses this char\n^3/rpgchar delete <charname>: ^7removes this char\n^3/rpgchar migrate <charname> <login> <password>: ^7moves char to account with this login and password\n\"", chars));
+		trap->SendServerCommand(ent->s.number, va("print \"^2Chars\n\n^7%s\n^3/rpgchar new <charname>: ^7creates a new char\n^3/rpgchar use <charname>: ^7uses this char\n^3/rpgchar delete <charname>: ^7removes this char\n^3/rpgchar migrate <charname> <login> <password>: ^7moves char to account with this login and password\n\"", zyk_get_rpg_chars(ent, "\n")));
 	}
 	else
 	{
@@ -17760,6 +17785,7 @@ command_t commands[] = {
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
 	{ "zykfile",			Cmd_ZykFile_f,				CMD_NOINTERMISSION },
+	{ "zykchars",			Cmd_ZykChars_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "zykmod",				Cmd_ZykMod_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "zyksound",			Cmd_ZykSound_f,				CMD_NOINTERMISSION },
 };
