@@ -2363,7 +2363,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 				 the_old_player->client->pers.universe_quest_progress == 0 && level.quest_map == 9 && 
 				 the_old_player->client->pers.universe_quest_messages != 14) // zyk: if its a Sage, player fails the objective
 		{
-			zyk_text_message(the_old_player, "universe/mission_0_fail", qtrue, qfalse, the_old_player->client->pers.netname);
+			zyk_text_message(the_old_player, "universe/mission_0/mission_0_fail", qtrue, qfalse, the_old_player->client->pers.netname);
 
 			// zyk: if player fails the first Universe Quest objective, pass the turn to another player
 			the_old_player->client->pers.universe_quest_messages = 14;
