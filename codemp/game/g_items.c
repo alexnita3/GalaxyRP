@@ -2682,7 +2682,7 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 			{ // zyk: player got the key to the prison door in first Universe Quest mission
 				other->client->pers.universe_quest_messages = 6;
 
-				trap->SendServerCommand(other->s.number, va("chat \"%s^7: This is the key!\"", other->client->pers.netname));
+				zyk_text_message(other, "universe/mission_0_key", qtrue, qfalse, other->client->pers.netname);
 
 				ent->think = G_FreeEntity;
 				ent->nextthink = level.time;

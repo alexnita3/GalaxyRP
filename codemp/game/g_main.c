@@ -12255,32 +12255,36 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.universe_quest_messages == 0)
 							{
 								zyk_spawn_catwalk_prison(1803, -33, -3135, 90, 0);
-								trap->SendServerCommand( ent->s.number, "chat \"^2Mysterious Voice^7: Go, hero... save the Guardian Sages... they need your help...\"");
+								zyk_text_message(ent, "universe/mission_0_0", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 1)
 							{
 								zyk_validate_sages(ent);
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: This voice...\"", ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_0_1", qtrue, qfalse, ent->client->pers.netname);
 							}
 							else if (ent->client->pers.universe_quest_messages == 2)
 							{
 								zyk_spawn_quest_reborns();
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I don't understand... maybe I should do as it says...\"", ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_0_2", qtrue, qfalse, ent->client->pers.netname);
 							}
 							else if (ent->client->pers.universe_quest_messages == 3)
 							{
 								zyk_spawn_catwalk_prison(1803, -33, -3135, 90, 0);
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I hope they are able to tell me about this strange voice.\"", ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_0_3", qtrue, qfalse, ent->client->pers.netname);
 							}
 							else if (ent->client->pers.universe_quest_messages == 7)
 							{
 								zyk_validate_sages(ent);
-								trap->SendServerCommand( ent->s.number, "chat \"^5Sage of Light: ^7Thank you for freeing us, hero!\"");
+								zyk_text_message(ent, "universe/mission_0_sage_0", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 8)
-								trap->SendServerCommand( ent->s.number, "chat \"^1Sage of Darkness: ^7Enemies coming!\"");
+							{
+								zyk_text_message(ent, "universe/mission_0_sage_1", qtrue, qfalse);
+							}
 							else if (ent->client->pers.universe_quest_messages == 9)
-								trap->SendServerCommand( ent->s.number, "chat \"^3Sage of Eternity: ^7Hero, help us fight them!\"");
+							{
+								zyk_text_message(ent, "universe/mission_0_sage_2", qtrue, qfalse);
+							}
 							else if (ent->client->pers.universe_quest_messages == 10)
 							{ // zyk: battle against the red reborns
 								if (ent->client->pers.light_quest_messages > 1)
@@ -12297,7 +12301,7 @@ void G_RunFrame( int levelTime ) {
 							}
 							else if (ent->client->pers.universe_quest_messages == 12)
 							{
-								trap->SendServerCommand( ent->s.number, "chat \"^3Sage of Eternity: ^7Thank you, brave warrior! You saved our lives.\"");
+								zyk_text_message(ent, "universe/mission_0_end", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 13)
 							{
@@ -12323,7 +12327,7 @@ void G_RunFrame( int levelTime ) {
 									(int)ent->client->ps.origin[1] < 200 && (int)ent->client->ps.origin[2] > -3200 &&
 									(int)ent->client->ps.origin[2] < -3100)
 								{ // zyk: player reached the prison gate, shows message
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: This is the prison door...I must find the key to open it\"", ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_0_prison_door", qtrue, qfalse, ent->client->pers.netname);
 									ent->client->pers.universe_quest_messages = 5;
 								}
 								else if (ent->client->pers.universe_quest_messages == 6 && (int)ent->client->ps.origin[0] > 1400 &&
