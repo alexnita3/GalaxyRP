@@ -1,0 +1,1 @@
+^3Tutorial 1: ^7You can skip it by using ^2/skip ^7command or play it again by using ^2/tutorial^7

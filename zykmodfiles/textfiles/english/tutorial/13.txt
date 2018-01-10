@@ -1,0 +1,1 @@
+^3Tutorial 13: ^7To buy or sell weapons, ammo, items and upgrades, first call the jawa seller with ^2/callseller^7

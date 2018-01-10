@@ -1,0 +1,1 @@
+^3Tutorial 39: ^7Use ^2/rpglmsmode ^7to join RPG Last Man Standing. Use ^2/rpglmstable ^7to see which players joined in it

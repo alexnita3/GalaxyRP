@@ -1,0 +1,1 @@
+^3Tutorial 44: ^7Use ^2/nofight ^7as spectator. You will not receive damage from players but will also not be able to damage them

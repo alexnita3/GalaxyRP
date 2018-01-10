@@ -1,0 +1,1 @@
+^3Tutorial 38: ^7Use ^2/duelboard <pagenumber> ^7for Duel Tournament leaderboard, with the champions and their number of tournaments won

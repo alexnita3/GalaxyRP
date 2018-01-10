@@ -1,0 +1,1 @@
+^3Tutorial 29: ^7You can add allies with ^2/allyadd <player name or ID>^7. He will not take any damage from you

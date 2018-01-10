@@ -1,0 +1,1 @@
+^3Tutorial 6: ^7To do so, first use ^2/list^7. This command will show general info about you

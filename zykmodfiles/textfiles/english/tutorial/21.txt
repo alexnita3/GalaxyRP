@@ -1,0 +1,1 @@
+^3Tutorial 21: ^7Quests are played in specific maps. To see which ones, use ^2/maplist ^7

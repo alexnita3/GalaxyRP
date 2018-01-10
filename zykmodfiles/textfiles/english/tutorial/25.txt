@@ -1,0 +1,1 @@
+^3Tutorial 25: ^7To see info about skills, use ^2/list <skillnumber>

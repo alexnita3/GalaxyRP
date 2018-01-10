@@ -1,0 +1,1 @@
+^3Tutorial 23: ^7To use magic powers, use the movement keys (usually W, A, S, D) and melee kata (usually pressing both mouse buttons)

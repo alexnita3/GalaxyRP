@@ -1,0 +1,1 @@
+^3Tutorial 20: ^7To play quests, use ^2/list quests ^7and use the command for the specific quest you want to play
