@@ -7262,7 +7262,7 @@ void universe_quest_artifacts_checker(gentity_t *ent)
 {
 	if (number_of_artifacts(ent) == 8)
 	{ // zyk: after collecting all artifacts, go to next objective
-		trap->SendServerCommand( -1, va("chat \"%s^7: I have all artifacts! Now I must go to ^3yavin1b ^7to know about that mysterious voice\"", ent->client->pers.netname));
+		zyk_text_message(ent, "universe/mission_2/mission_2_got_all_artifacts", qtrue, qtrue, ent->client->pers.netname);
 
 		if (ent->client->pers.universe_quest_counter & (1 << 29))
 		{ // zyk: if player is in Challenge Mode, do not remove this bit value
@@ -10057,7 +10057,9 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.universe_quest_messages == 0)
 							{
 								if (!(ent->client->pers.universe_quest_counter & (1 << 3)))
-									trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I sense the presence of an artifact here.\"", ent->client->pers.netname));
+								{
+									zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
+								}
 								
 								npc_ent = Zyk_NPC_SpawnType("sage_of_light",2780,4034,1583,0);
 							}
@@ -10066,12 +10068,12 @@ void G_RunFrame( int levelTime ) {
 							else if (ent->client->pers.universe_quest_messages == 2)
 								npc_ent = Zyk_NPC_SpawnType("sage_of_darkness",2780,3904,1583,0);
 							else if (ent->client->pers.universe_quest_messages == 6)
-								trap->SendServerCommand( ent->s.number, "chat \"^5Sage of Light: ^7Your quest is very difficult, but at the end you will see it was worthy the effort...\"");
+								zyk_text_message(ent, "universe/mission_2/mission_2_sage_of_light", qtrue, qfalse);
 							else if (ent->client->pers.universe_quest_messages == 8)
 							{
 								ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 3000;
 
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Sage of Eternity: ^7Well done, %s^7. Now I can give you the artifact.\"",ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_2/mission_2_sage_of_eternity", qtrue, qfalse, ent->client->pers.netname);
 								ent->client->pers.universe_quest_counter |= (1 << 1);
 								save_account(ent, qtrue);
 
@@ -10081,11 +10083,13 @@ void G_RunFrame( int levelTime ) {
 							}
 							else if (ent->client->pers.universe_quest_messages == 9)
 							{
-								trap->SendServerCommand( ent->s.number, "chat \"^3Sage of Eternity: ^7Never give up. The fate of the Universe depends upon you.\"");
+								zyk_text_message(ent, "universe/mission_2/mission_2_got_artifact_sage", qtrue, qfalse);
 								change_player = 1;
 							}
 							else if (ent->client->pers.universe_quest_messages == 12)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Sage of Darkness: ^7You are the legendary hero, %s^7! Go on and defeat the evil guys!\"",ent->client->pers.netname));
+							{
+								zyk_text_message(ent, "universe/mission_2/mission_2_sage_of_darkness", qtrue, qfalse, ent->client->pers.netname);
+							}
 							
 							if (npc_ent)
 							{
@@ -10950,7 +10954,8 @@ void G_RunFrame( int levelTime ) {
 							gentity_t *npc_ent = NULL;
 							if (ent->client->pers.universe_quest_messages == 0)
 							{
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I sense the presence of an artifact here.\"", ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
+
 								npc_ent = Zyk_NPC_SpawnType("quest_mage",724,5926,951,31);
 								if (npc_ent)
 								{
@@ -10995,7 +11000,7 @@ void G_RunFrame( int levelTime ) {
 							gentity_t *npc_ent = NULL;
 							if (ent->client->pers.universe_quest_messages == 0)
 							{
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I sense the presence of an artifact here.\"", ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
 								npc_ent = Zyk_NPC_SpawnType("quest_reborn_red",2120,-1744,39,90);
 							}
 							else if (ent->client->pers.universe_quest_messages == 1)
@@ -12521,19 +12526,13 @@ void G_RunFrame( int levelTime ) {
 						{
 							gentity_t *npc_ent = NULL;
 							if (ent->client->pers.universe_quest_messages == 0)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I sense the presence of an artifact here.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 1)
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Spooky voice^7: Indeed you do, %s^7...\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 2)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: What is going on here?\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 3)
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Spooky voice^7: I know you are the legendary hero...I defeated the protector of the artifact here, he was serving the Master of Evil...\""));
-							else if (ent->client->pers.universe_quest_messages == 4)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: Well... could you give me the artifact pls?\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 5)
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Spooky voice^7: Find me, %s^7, and I will give you the artifact you seek...\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 6)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I can't believe it... :/\"", ent->client->pers.netname));
+							{
+								zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
+							}
+							else if (ent->client->pers.universe_quest_messages > 0 && ent->client->pers.universe_quest_messages < 7)
+							{
+								zyk_text_message(ent, va("universe/mission_2/mission_2_artifact_guardian_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+							}
 							else if (ent->client->pers.universe_quest_messages == 7)
 							{
 								npc_ent = Zyk_NPC_SpawnType("quest_ragnos",-1462,1079,2062,0);
@@ -12551,7 +12550,7 @@ void G_RunFrame( int levelTime ) {
 
 						if (ent->client->pers.universe_quest_progress == 15 && ent->client->pers.can_play_quest == 1 && 
 							ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_counter & (1 << 0))
-						{
+						{ // zyk: first mission of Sages Sequel
 							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 4)
 							{
 								gentity_t *npc_ent = NULL;
@@ -12787,7 +12786,7 @@ void G_RunFrame( int levelTime ) {
 							ent->client->pers.universe_quest_counter |= (1 << 8);
 							save_account(ent, qtrue);
 
-							trap->SendServerCommand( ent->s.number, va("chat \"%s^7: Thanks for the artifact! :)\"", ent->client->pers.netname));
+							zyk_text_message(ent, "universe/mission_2/mission_2_artifact_guardian_end", qtrue, qfalse, ent->client->pers.netname);
 
 							universe_quest_artifacts_checker(ent);
 
@@ -12802,7 +12801,7 @@ void G_RunFrame( int levelTime ) {
 
 							ent->client->pers.universe_quest_artifact_holder_id = -3;
 
-							trap->SendServerCommand( ent->s.number, va("chat \"^3Spooky voice^7: Nicely done...now, hero %s^7, receive this artifact...\"",ent->client->pers.netname));
+							zyk_text_message(ent, "universe/mission_2/mission_2_artifact_guardian_found", qtrue, qfalse, ent->client->pers.netname);
 						}
 					}
 					else if (level.quest_map == 11)
@@ -13607,7 +13606,7 @@ void G_RunFrame( int levelTime ) {
 								npc_ent->client->pers.universe_quest_artifact_holder_id = ent-g_entities;
 								ent->client->pers.universe_quest_artifact_holder_id = 5;
 							}
-							trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I sense the presence of an artifact here.\"", ent->client->pers.netname));
+							zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
 						
 							ent->client->pers.universe_quest_messages++;
 							ent->client->pers.universe_quest_timer = level.time + 5000;
@@ -14737,7 +14736,7 @@ void G_RunFrame( int levelTime ) {
 							gentity_t *npc_ent = NULL;
 							if (ent->client->pers.universe_quest_messages == 0)
 							{
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I sense the presence of an artifact here.\"", ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
 								npc_ent = Zyk_NPC_SpawnType("quest_reborn",-3703,-3575,1121,90);
 							}
 							else if (ent->client->pers.universe_quest_messages == 1)
@@ -14793,7 +14792,7 @@ void G_RunFrame( int levelTime ) {
 							gentity_t *npc_ent = NULL;
 							if (ent->client->pers.universe_quest_messages == 0)
 							{
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I sense the presence of an artifact here.\"", ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
 								npc_ent = Zyk_NPC_SpawnType("quest_mage",8480,-1084,-90,90);
 								if (npc_ent)
 								{

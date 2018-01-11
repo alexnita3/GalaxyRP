@@ -2728,7 +2728,7 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 			if (other->client->pers.can_play_quest == 1 && other->client->pers.guardian_mode == 0 && 
 				other->client->pers.universe_quest_artifact_holder_id != -1)
 			{ // zyk: player got the artifact in Universe Quest
-				trap->SendServerCommand( -1, va("chat \"%s^7: This is one of the artifacts!\"", other->client->pers.netname));
+				zyk_text_message(other, "universe/mission_2/mission_2_got_artifact", qtrue, qfalse, other->client->pers.netname);
 				other->client->pers.universe_quest_counter |= (1 << other->client->pers.universe_quest_artifact_holder_id);
 				other->client->pers.universe_quest_artifact_holder_id = -1;
 				save_account(other, qtrue);
