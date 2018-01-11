@@ -1,1 +1,0 @@
-^3Tutorial 35: ^7Use ^2/snipermode ^7to join Sniper Battle. Use ^2/snipertable ^7to see the players still in it

@@ -1,1 +1,0 @@
-^3Tutorial 15: ^7Weapons, ammo and items bought from the seller are not permanent, but upgrades are! :D

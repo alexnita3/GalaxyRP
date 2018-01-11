@@ -1,1 +1,0 @@
-^3Tutorial 37: ^7Use ^2/duelmode ^7to join Duel Tournament. Use ^2/dueltable <pagenumber> ^7to see the scores and matches

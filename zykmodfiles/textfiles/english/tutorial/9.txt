@@ -1,1 +1,0 @@
-^3Tutorial 9: ^7That command will upgrade the max shield you can have, and use a skillpoint

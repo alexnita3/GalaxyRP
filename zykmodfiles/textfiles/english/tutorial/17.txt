@@ -1,1 +1,0 @@
-^3Tutorial 17: ^7Players can give credits to other players by using ^2/creditgive <player name or ID> <amount>^7

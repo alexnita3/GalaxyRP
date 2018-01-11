@@ -1,1 +1,0 @@
-^3Tutorial 45: ^7You can see specific parts of the tutorial by using ^2/tutorial <number>^7

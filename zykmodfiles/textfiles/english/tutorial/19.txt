@@ -1,1 +1,0 @@
-^3Tutorial 19: ^7Magic powers consume MP (magic points), so keep an eye in the current amount you have

@@ -1,1 +1,0 @@
-^3Tutorial 11: ^7To change your RPG class, first use ^2/list classes^7, then choose a class by using ^2/rpgclass <classnumber>

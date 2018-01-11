@@ -1,1 +1,0 @@
-^3Tutorial 24 : ^7You can enable or disable magic powers with ^2/magic^7

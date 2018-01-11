@@ -1,1 +1,0 @@
-^3Tutorial 32: ^7Use ^2/allyremove <player name or ID>^7 to remove an ally

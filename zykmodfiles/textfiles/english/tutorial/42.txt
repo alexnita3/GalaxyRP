@@ -1,1 +1,0 @@
-^3Tutorial 42: ^7Use ^2/playermode ^7to change account mode between Admin-Only and RPG

@@ -1,1 +1,0 @@
-^3Tutorial 22: ^7Some of them are Single Player maps. You can ^2/callvote map <name> ^7to go to them, example ^2/callvote map yavin2^7

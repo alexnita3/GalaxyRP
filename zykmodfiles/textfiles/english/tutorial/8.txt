@@ -1,1 +1,0 @@
-^3Tutorial 8: ^7To upgrade a skill (which uses a skillpoint), use ^2/up <skillnumber>^7. Example: /up 31

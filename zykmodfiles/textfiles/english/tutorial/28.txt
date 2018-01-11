@@ -1,1 +1,0 @@
-^3Tutorial 28: ^7To use it, bind the command ^2/unique ^7to a key and press it. Example: ^2/bind h unique^7

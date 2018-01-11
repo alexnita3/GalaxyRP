@@ -1,1 +1,0 @@
-^3Tutorial 46: ^7To manage chars in RPG, use ^2/rpgchar ^7command
