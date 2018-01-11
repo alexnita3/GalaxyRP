@@ -15699,25 +15699,20 @@ void G_RunFrame( int levelTime ) {
 							gentity_t *npc_ent = NULL;
 							if (ent->client->pers.universe_quest_messages == 0)
 							{
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: The time has come. I must defeat the Master of Evil to save the Guardian of Universe.\"", ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_6/mission_6_arrival", qtrue, qfalse, ent->client->pers.netname);
 								npc_ent = Zyk_NPC_SpawnType("quest_reborn_boss",1800,-2900,2785,90);
 							}
-							else if (ent->client->pers.universe_quest_messages == 2)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Master of Evil: ^7Nice one, %s^7! You finally reached me!\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 3)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s: ^7Master of Evil? You won't escape from me!\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 4)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Master of Evil: ^7You are wrong, %s^7. You won't escape from my power!\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 5)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Master of Evil: ^7I know you have got all amulets and artifacts. I can feel myself vulnerable again...\""));
-							else if (ent->client->pers.universe_quest_messages == 6)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Master of Evil: ^7But I am still the most powerful being in existence!\""));
-							else if (ent->client->pers.universe_quest_messages == 7)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Master of Evil: ^7You can't stop me, %s^7! I will rule the Universe!\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 8)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s: ^7We will see about that!\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 9)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Master of Evil: ^7Now, %s^7. Prepare yourself to die!\"", ent->client->pers.netname));
+							else if (ent->client->pers.universe_quest_messages >= 2 && ent->client->pers.universe_quest_messages <= 9)
+							{
+								if (ent->client->pers.universe_quest_messages == 5 || ent->client->pers.universe_quest_messages == 6)
+								{
+									zyk_text_message(ent, va("universe/mission_6/mission_6_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+								}
+								else
+								{
+									zyk_text_message(ent, va("universe/mission_6/mission_6_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+								}
+							}
 							else if (ent->client->pers.universe_quest_messages == 10)
 							{
 								spawn_boss(ent,2135,-2857,2620,-90,"master_of_evil",0,0,0,0,12);
@@ -15727,24 +15722,24 @@ void G_RunFrame( int levelTime ) {
 							else if (ent->client->pers.universe_quest_messages == 12)
 							{ // zyk: defeated Master of Evil
 								zyk_NPC_Kill_f("all"); // zyk: killing the guardian spawns
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Master of Evil: ^7It can't be! It's not possible! I... am... gone...\""));
+								zyk_text_message(ent, "universe/mission_6/mission_6_12", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 13)
 							{ // zyk: defeated Master of Evil
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe: ^7Greetings, hero. I am the Guardian of Universe.\""));
+								zyk_text_message(ent, "universe/mission_6/mission_6_13", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 14)
 							{ // zyk: defeated Master of Evil
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe: ^7You saved me, %s^7.\"", ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_6/mission_6_14", qtrue, qfalse, ent->client->pers.netname);
 							}
 							else if (ent->client->pers.universe_quest_messages == 15)
 							{ // zyk: defeated Master of Evil
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe: ^7Thanks to your efforts, the Universe will be in balance once again.\""));
+								zyk_text_message(ent, "universe/mission_6/mission_6_15", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 16)
 							{ // zyk: defeated Master of Evil
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe: ^7I will meet the other guardians in mp/siege_korriban. Farewell, %s^7.\"", ent->client->pers.netname));
-							
+								zyk_text_message(ent, "universe/mission_6/mission_6_16", qtrue, qfalse, ent->client->pers.netname);
+
 								ent->client->pers.universe_quest_progress = 7;
 								if (ent->client->pers.universe_quest_counter & (1 << 29))
 								{ // zyk: if player is in Challenge Mode, do not remove this bit value
