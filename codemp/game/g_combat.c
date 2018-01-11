@@ -2328,7 +2328,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		{
 			gentity_t *player_ent = &g_entities[self->client->pers.universe_quest_artifact_holder_id];
 
-			trap->SendServerCommand( player_ent->s.number, va("chat \"^3Spooky voice^7: I am going away, since I am not welcome here...\""));
+			zyk_text_message(player_ent, "universe/mission_2/mission_2_artifact_guardian_fail", qtrue, qfalse);
 			player_ent->client->pers.universe_quest_artifact_holder_id = -1;
 
 			// zyk: fixed bug in which a boss battle would kill this npc and pass quest turn

@@ -12156,7 +12156,7 @@ void G_RunFrame( int levelTime ) {
 					else if (level.quest_map == 8)
 					{
 						if (ent->client->pers.universe_quest_progress == 4 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_objective_control == 5 && ent->client->pers.universe_quest_timer < level.time)
-						{
+						{ // zyk: fifth mission of Universe Quest
 							gentity_t *npc_ent = NULL;
 							if (ent->client->pers.universe_quest_messages == 0)
 								Zyk_NPC_SpawnType("quest_reborn_red",785,-510,1177,-179);
@@ -12166,35 +12166,21 @@ void G_RunFrame( int levelTime ) {
 								Zyk_NPC_SpawnType("quest_reborn_boss",512,-315,1177,-90);
 							else if (ent->client->pers.universe_quest_messages == 3)
 								npc_ent = Zyk_NPC_SpawnType("sage_of_universe",507,-623,537,90);
-							else if (ent->client->pers.universe_quest_messages == 5)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe^7: Greetings, %s^7. I am the Sage of Universe.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 6)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I finally found you!\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 7)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe^7: Yes, %s^7. I must tell you some things.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 8)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe^7: I will give you the amulet of Universe, but I must ask you a favor.\""));
-							else if (ent->client->pers.universe_quest_messages == 9)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: Thanks! Now what I can do for you.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 10)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe^7: You must find the other three amulets in the ^3City of the Merchants^7.\""));
-							else if (ent->client->pers.universe_quest_messages == 11)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe^7: It is located at ^3mp/siege_desert^7. Now I will go to taspir1 to find the other sages.\""));
-							else if (ent->client->pers.universe_quest_messages == 12)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: Ok! But how did you know about the sages?\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 13)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe^7: %s^7...the mysterious voice at the beginning of your quest was mine.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 14)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: So you knew about me since the beginning!\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 15)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe^7: yes %s^7. We will explain everything after you find all amulets.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 16)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe^7: After you found them, go to taspir1. We will be waiting for you.\""));
-							else if (ent->client->pers.universe_quest_messages == 17)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe^7: Now go %s^7! I wish you luck on your quest.\"", ent->client->pers.netname));
+							else if (ent->client->pers.universe_quest_messages >= 5 && ent->client->pers.universe_quest_messages <= 17)
+							{
+								if (ent->client->pers.universe_quest_messages != 8 && ent->client->pers.universe_quest_messages != 10 && ent->client->pers.universe_quest_messages != 11 &&
+									ent->client->pers.universe_quest_messages != 16)
+								{
+									zyk_text_message(ent, va("universe/mission_4/mission_4_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+								}
+								else
+								{
+									zyk_text_message(ent, va("universe/mission_4/mission_4_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+								}
+							}
 							else if (ent->client->pers.universe_quest_messages == 18)
 							{
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: Thanks! Don't worry, I will find them in ^3mp/siege_desert ^7and meet you all in taspir1.\"", ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_4/mission_4_end", qtrue, qfalse, ent->client->pers.netname);
 
 								if (ent->client->pers.universe_quest_counter & (1 << 29))
 								{ // zyk: if player is in Challenge Mode, do not remove this bit value
