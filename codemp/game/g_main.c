@@ -13488,11 +13488,11 @@ void G_RunFrame( int levelTime ) {
 							if ((int) ent->client->ps.origin[0] > 2746 && (int) ent->client->ps.origin[0] < 3123 && (int) ent->client->ps.origin[1] > 4728 && (int) ent->client->ps.origin[1] < 4994 && (int) ent->client->ps.origin[2] == 24)
 							{
 								if (ent->client->pers.universe_quest_messages == 0)
-									trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe: ^7Welcome, legendary hero %s^7! You finally reached my challenge.\"",ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_7/mission_7_0", qtrue, qfalse, ent->client->pers.netname);
 								else if (ent->client->pers.universe_quest_messages == 1)
-									trap->SendServerCommand( ent->s.number, "chat \"^2Guardian of Universe: ^7This battle will grant you the Universe Power if you defeat me.\"");
+									zyk_text_message(ent, "universe/mission_7/mission_7_1", qtrue, qfalse);
 								else if (ent->client->pers.universe_quest_messages == 2)
-									trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe: ^7Get ready, %s^7!\"",ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_7/mission_7_2", qtrue, qfalse, ent->client->pers.netname);
 								else if (ent->client->pers.universe_quest_messages == 3)
 								{
 									spawn_boss(ent,2742,4863,25,0,"guardian_of_universe",0,0,0,0,13);
@@ -13508,19 +13508,19 @@ void G_RunFrame( int levelTime ) {
 							if (ent->client->pers.universe_quest_messages == 5)
 							{
 								zyk_NPC_Kill_f("all"); // zyk: killing the guardian spawns
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe: ^7Very well done, %s^7!\"",ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_7/mission_7_5", qtrue, qfalse, ent->client->pers.netname);
 							}
 							else if (ent->client->pers.universe_quest_messages == 6)
 							{
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe: ^7With your courage and hope, you defeated the Master of Evil and brought balance to the Universe once again.\""));
+								zyk_text_message(ent, "universe/mission_7/mission_7_6", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 7)
 							{
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe: ^7Now you will have the full strength of Universe Power.\""));
+								zyk_text_message(ent, "universe/mission_7/mission_7_7", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 8)
 							{
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Guardian of Universe: ^7Farewell... brave hero! May the power of the guardians guide you in your journey!\""));
+								zyk_text_message(ent, "universe/mission_7/mission_7_8", qtrue, qfalse);
 								
 								ent->client->pers.universe_quest_progress = 8;
 								ent->client->pers.universe_quest_messages = 0;
