@@ -2014,7 +2014,7 @@ void TryUse( gentity_t *ent )
 			{
 				if (ent->client->pers.universe_quest_messages == 65 && ent->client->pers.universe_quest_objective_control == 0 && !(ent->client->pers.universe_quest_counter & (1 << 2)))
 				{ // zyk: killed all raiders
-					trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7You must be indeed the hero of the legend that the sages told about! Here, accept the Amulet of Eternity as a reward.\"");
+					zyk_text_message(ent, "universe/mission_5/mission_5_citizen_0", qtrue, qfalse);
 					ent->client->pers.universe_quest_messages = 40;
 					ent->client->pers.universe_quest_counter |= (1 << 2);
 					
@@ -2026,60 +2026,62 @@ void TryUse( gentity_t *ent )
 				}
 				else if (!(ent->client->pers.universe_quest_counter & (1 << 2)) && ent->client->pers.universe_quest_objective_control == -6)
 				{
-					trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7The sand raiders are coming! Defeat them and I give you the Amulet of Eternity!\""); // eternity
+					zyk_text_message(ent, "universe/mission_5/mission_5_citizen_1", qtrue, qfalse);
 					ent->client->pers.universe_quest_objective_control = 4; // zyk: player must kill 4 sand raiders
 					ent->client->pers.universe_quest_messages = 60;
 				}
 				else if (!(ent->client->pers.universe_quest_counter & (1 << 2)))
 				{
-					trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Please defeat the sand raiders to save our city!\"");
+					zyk_text_message(ent, "universe/mission_5/mission_5_citizen_2", qtrue, qfalse);
 				}
 				else
-					trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Thank you for everything you have done for us, brave hero!\"");
+				{
+					zyk_text_message(ent, "universe/mission_5/mission_5_citizen_3", qtrue, qfalse);
+				}
 			}
 			else if (target->client->pers.universe_quest_objective_control == -20)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Hi, mister! Welcome to our city! ^^\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_4", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -30)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Leave me alone!\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_5", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -40)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7I cant talk now, sorry!\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_6", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -50)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Later, buddy.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_7", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -60)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7What are you doing here?\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_8", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -70)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Amulet of Light? Never heard of it.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_9", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -80)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Maybe the mayor of the city can help you.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_10", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -90)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7What the hell do you want from me? :/\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_11", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -100)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Hello, man :)\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_12", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -110)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7A bothering man you are... :|\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_13", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -120)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Get out of here! >:/\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_14", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -130)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Sorry, maybe some other time.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_15", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -140)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Hello, please feel free to explore our city :)\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_16", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -150)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7You can get some ammo in some places in the city\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_17", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -160)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Wanna trade?\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_18", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -170)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Welcome.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_19", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -180)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Who the hell you think you are to talk to me! Scram!\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_20", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -190)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Can we please talk later? :)\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_21", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -200)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7I dont have time now\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_22", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -210 && ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_messages >= 40 && ent->client->pers.universe_quest_progress == 5 && ent->client->pers.universe_quest_objective_control == -6)
 			{
 				if (ent->client->pers.universe_quest_messages == 102 && !(ent->client->pers.universe_quest_counter & (1 << 0)))
 				{
-					trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Amazing! You found out his name! Now I will give you the Amulet of Light!\"");
+					zyk_text_message(ent, "universe/mission_5/mission_5_citizen_23", qtrue, qfalse);
 					ent->client->pers.universe_quest_messages = 40;
 					ent->client->pers.universe_quest_counter |= (1 << 0);
 
@@ -2088,45 +2090,47 @@ void TryUse( gentity_t *ent )
 				}
 				else if (ent->client->pers.universe_quest_messages == 103 && !(ent->client->pers.universe_quest_counter & (1 << 0)))
 				{
-					trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Hehehe! Try again mister, the sages told me the true hero would succeed!\"");
+					zyk_text_message(ent, "universe/mission_5/mission_5_citizen_24", qtrue, qfalse);
 					ent->client->pers.universe_quest_messages = 40;
 				}
 				else if (!(ent->client->pers.universe_quest_counter & (1 << 0)))
 				{
-					trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Tell me the name of the mayor and I give you the Amulet of Light! (use chat and talk again to the citizen)\"");
+					zyk_text_message(ent, "universe/mission_5/mission_5_citizen_25", qtrue, qfalse);
 					ent->client->pers.universe_quest_messages = 101;
 				}
 				else
-					trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7I knew it! You are the legendary hero! ^^\"");
+				{
+					zyk_text_message(ent, "universe/mission_5/mission_5_citizen_26", qtrue, qfalse);
+				}
 			}
 			else if (target->client->pers.universe_quest_objective_control == -220)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7I dont want to talk. Kindly leave.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_27", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -230)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Oh man, I cant talk to you now.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_28", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -240)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Can you please get away from my sight? :|\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_29", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -250)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Beware, some people here dont have too much sense of humor. :p\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_30", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -260)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Who are you? Please leave me alone! :o\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_31", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -270)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Need some help? Well...I cant help. Sorry.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_32", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -280)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Amulet of Darkness! Ask the mayor, maybe he can help.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_33", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -290)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Hey!\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_34", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -300)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7I must watch the city from here to maintain security.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_35", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -310 && ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_messages >= 40 && ent->client->pers.universe_quest_progress == 5 && ent->client->pers.universe_quest_objective_control == -6)
 			{
 				if (ent->client->pers.universe_quest_messages != 51 && !(ent->client->pers.universe_quest_counter & (1 << 1)))
 				{
-					trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Please help me, my droid has become dangerous! Destroy it and I give you the Amulet of Darkness.\""); // darkness
+					zyk_text_message(ent, "universe/mission_5/mission_5_citizen_36", qtrue, qfalse);
 					ent->client->pers.universe_quest_messages = 50;
 				}
 				else if (!(ent->client->pers.universe_quest_counter & (1 << 1)))
 				{
-					trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Thank you! Now receive the Amulet of Darkness from me, hero!\"");
+					zyk_text_message(ent, "universe/mission_5/mission_5_citizen_37", qtrue, qfalse);
 					ent->client->pers.universe_quest_messages = 40;
 					ent->client->pers.universe_quest_counter |= (1 << 1);
 
@@ -2134,28 +2138,31 @@ void TryUse( gentity_t *ent )
 					got_all_amulets(ent);
 				}
 				else
-					trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7You must be the legendary hero the sages told me about! :D\"");
+				{
+					zyk_text_message(ent, "universe/mission_5/mission_5_citizen_38", qtrue, qfalse);
+				}
 			}
 			else if (target->client->pers.universe_quest_objective_control == -320)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Im so happy today. :D\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_39", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -330)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Samir: ^7I am Samir, the mayor of the city. Nice to meet you. Amulets ... I dont know anything about it, sorry.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_40", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -340)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Amulet of Eternity? What do you think I am, a jewel keeper?\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_41", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -360)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Amulets? What do you think I am? A rich guy? Jewelry is too expensive!\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_42", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -370)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7I heard that the guy in the Millenium Falcon area is having some problems with his droid.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_43", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -380)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Welcome. Please come often to our city, friend!\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_44", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -390)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Bye, i have some things to do now.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_45", qtrue, qfalse);
 			else if (target->client->pers.universe_quest_objective_control == -400)
-				trap->SendServerCommand( ent->s.number, "chat \"^3Citizen: ^7Hi.\"");
+				zyk_text_message(ent, "universe/mission_5/mission_5_citizen_46", qtrue, qfalse);
 
 			return;
 		}
-		else if (target && target->client && target->NPC && target->client->pers.universe_quest_objective_control == -205 && ent->client->sess.amrpgmode == 2 && ent->client->pers.universe_quest_progress == 5 && ent->client->pers.universe_quest_objective_control == -6 && ent->client->pers.universe_quest_messages == 204)
+		else if (target && target->client && target->NPC && target->client->pers.universe_quest_objective_control == -205 && ent->client->sess.amrpgmode == 2 && 
+				 ent->client->pers.universe_quest_progress == 5 && ent->client->pers.universe_quest_objective_control == -6 && ent->client->pers.universe_quest_messages == 204)
 		{ // zyk: player talks to a sage in mp/siege_desert
 			ent->client->pers.universe_quest_timer = level.time + 500;
 			ent->client->pers.universe_quest_messages = 205;

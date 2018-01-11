@@ -14861,22 +14861,22 @@ void G_RunFrame( int levelTime ) {
 							else if (ent->client->pers.universe_quest_messages == 60)
 							{
 								npc_ent = Zyk_NPC_SpawnType("quest_sand_raider_green",12173,-304,-486,-179);
-								trap->SendServerCommand( ent->s.number, "chat \"^2Green Sand Raider^7: We are the sand raiders tribe! Surrender or die!\"");
+								zyk_text_message(ent, "universe/mission_5/mission_5_raider_0", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 61)
 							{
 								npc_ent = Zyk_NPC_SpawnType("quest_sand_raider_brown",12173,-225,-486,-179);
-								trap->SendServerCommand( ent->s.number, "chat \"^3Brown Sand Raider^7: We will get the treasures of the city, and nothing can stop us!\"");
+								zyk_text_message(ent, "universe/mission_5/mission_5_raider_1", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 62)
 							{
 								npc_ent = Zyk_NPC_SpawnType("quest_sand_raider_blue",12173,-137,-486,-179);
-								trap->SendServerCommand( ent->s.number, "chat \"^4Blue Sand Raider^7: Anyone who resists will be dead so don't stand on our way!\"");
+								zyk_text_message(ent, "universe/mission_5/mission_5_raider_2", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 63)
 							{
 								npc_ent = Zyk_NPC_SpawnType("quest_sand_raider_red",12173,-41,-486,-179);
-								trap->SendServerCommand( ent->s.number, "chat \"^1Red Sand Raider^7: Ok, brothers! Let's strike!\"");
+								zyk_text_message(ent, "universe/mission_5/mission_5_raider_3", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 199)
 							{
@@ -14889,61 +14889,38 @@ void G_RunFrame( int levelTime ) {
 							else if (ent->client->pers.universe_quest_messages == 200)
 							{
 								npc_ent = Zyk_NPC_SpawnType("sage_of_light",-7867,-1484,-358,-90);
-								trap->SendServerCommand( ent->s.number, "chat \"^3Sage of Eternity: ^7Hero. Come quickly to the Mayor's house. We need to talk to you.\"");
+								zyk_text_message(ent, "universe/mission_5/mission_5_sage_0", qtrue, qfalse);
 							}
 							else if (ent->client->pers.universe_quest_messages == 201)
 							{
 								npc_ent = Zyk_NPC_SpawnType("sage_of_darkness",-7867,-1759,-358,90);
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: The sages! They are here! Something really serious must have happened in taspir1.\"", ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_5/mission_5_sage_1", qtrue, qfalse, ent->client->pers.netname);
 							}
 							else if (ent->client->pers.universe_quest_messages == 202)
 							{
 								npc_ent = Zyk_NPC_SpawnType("sage_of_eternity",-7746,-1782,-358,90);
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I will go to the mayor's house and find out.\"", ent->client->pers.netname));
+								zyk_text_message(ent, "universe/mission_5/mission_5_sage_2", qtrue, qfalse, ent->client->pers.netname);
 							}
 							else if (ent->client->pers.universe_quest_messages == 203)
 							{
 								npc_ent = Zyk_NPC_SpawnType("sage_of_universe",-7775,-1492,-358,-90);
 							}
-							else if (ent->client->pers.universe_quest_messages == 205)
-								trap->SendServerCommand( ent->s.number, va("chat \"^5Sage of Light: ^7Now, %s^7, we will reveal you everything.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 206)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Sage of Darkness: ^7%s^7, since the beginning we knew you were the chosen one.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 207)
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Sage of Eternity: ^7The guardians told us about the arrival of a hero here that would be able to save the Guardian of Universe.\""));
-							else if (ent->client->pers.universe_quest_messages == 208)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe: ^7It is your destiny.\""));
-							else if (ent->client->pers.universe_quest_messages == 209)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: It is more complicated than I thought.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 210)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Sage of Darkness: ^7Yes %s^7, but it is the truth.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 211)
-								trap->SendServerCommand( ent->s.number, va("chat \"^5Sage of Light: ^7If the hero fails to defeat the Master of Evil, the entire Universe is doomed!\""));
-							else if (ent->client->pers.universe_quest_messages == 212)
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Sage of Eternity: ^7But if the hero succeeds, then the Universe will be in balance once again.\""));
-							else if (ent->client->pers.universe_quest_messages == 213)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe: ^7%s^7, You must defeat the Master of Evil, or everything will be taken over by him!\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 214)
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Samir: ^7What a complicated story! But it looks like you don't have much choice!\""));
-							else if (ent->client->pers.universe_quest_messages == 215)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: I understand. But, sages, why did you all came back from taspir1? What happened there?\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 216)
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Sage of Eternity: ^7The Master of Evil felt our presence there and sent his soldiers to find us.\""));
-							else if (ent->client->pers.universe_quest_messages == 217)
-								trap->SendServerCommand( ent->s.number, va("chat \"^5Sage of Light: ^7We had to flee from there, but now he is aware of our quest to stop him.\""));
-							else if (ent->client->pers.universe_quest_messages == 218)
-								trap->SendServerCommand( ent->s.number, va("chat \"^1Sage of Darkness: ^7Then, we had the idea of searching for you here.\""));
-							else if (ent->client->pers.universe_quest_messages == 219)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe: ^7%s^7, you collected all artifacts and amulets. Well done.\"", ent->client->pers.netname));
-							else if (ent->client->pers.universe_quest_messages == 220)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe: ^7Now you must go to ^3taspir1 ^7and defeat the Master of Evil.\""));
-							else if (ent->client->pers.universe_quest_messages == 221)
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe: ^7The power of the amulets will merge all artifacts into his life force and make him vulnarable again.\""));
-							else if (ent->client->pers.universe_quest_messages == 222)
-								trap->SendServerCommand( ent->s.number, va("chat \"%s^7: Thanks for your help. Now I will go there to put an end to this.\"", ent->client->pers.netname));
+							else if (ent->client->pers.universe_quest_messages >= 205 && ent->client->pers.universe_quest_messages <= 222)
+							{
+								if (ent->client->pers.universe_quest_messages == 205 || ent->client->pers.universe_quest_messages == 206 || ent->client->pers.universe_quest_messages == 209 || 
+									ent->client->pers.universe_quest_messages == 210 || ent->client->pers.universe_quest_messages == 213 || ent->client->pers.universe_quest_messages == 215 || 
+									ent->client->pers.universe_quest_messages == 219 || ent->client->pers.universe_quest_messages == 222)
+								{
+									zyk_text_message(ent, va("universe/mission_5/mission_5_sage_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+								}
+								else
+								{
+									zyk_text_message(ent, va("universe/mission_5/mission_5_sage_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+								}
+							}
 							else if (ent->client->pers.universe_quest_messages == 223)
 							{
-								trap->SendServerCommand( ent->s.number, va("chat \"^2Sage of Universe: ^7You must be aware that his soldiers are there and you will need to fight them. Courage, hero!\""));
+								zyk_text_message(ent, "universe/mission_5/mission_5_sage_223", qtrue, qfalse);
 
 								ent->client->pers.universe_quest_progress = 6;
 								if (ent->client->pers.universe_quest_counter & (1 << 29))
