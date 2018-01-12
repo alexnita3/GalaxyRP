@@ -13709,7 +13709,7 @@ void G_RunFrame( int levelTime ) {
 									(int)Distance(ent->client->ps.origin,g_entities[level.quest_crystal_id[0]].r.currentOrigin) < 50)
 								{
 									ent->client->pers.universe_quest_counter |= (1 << 0);
-									trap->SendServerCommand( ent->s.number, "chat \"^3Quest System^7: Got the ^4Crystal of Destiny^7.\"");
+									zyk_text_message(ent, "universe/mission_9/mission_9_0", qtrue, qfalse);
 									clean_crystal_model(0);
 									universe_crystals_check(ent);
 								}
@@ -13717,7 +13717,7 @@ void G_RunFrame( int levelTime ) {
 									(int)Distance(ent->client->ps.origin,g_entities[level.quest_crystal_id[1]].r.currentOrigin) < 50)
 								{
 									ent->client->pers.universe_quest_counter |= (1 << 1);
-									trap->SendServerCommand( ent->s.number, "chat \"^3Quest System^7: Got the ^1Crystal of Truth^7.\"");
+									zyk_text_message(ent, "universe/mission_9/mission_9_1", qtrue, qfalse);
 									clean_crystal_model(1);
 									universe_crystals_check(ent);
 								}
@@ -13725,7 +13725,7 @@ void G_RunFrame( int levelTime ) {
 									(int)Distance(ent->client->ps.origin,g_entities[level.quest_crystal_id[2]].r.currentOrigin) < 50)
 								{
 									ent->client->pers.universe_quest_counter |= (1 << 2);
-									trap->SendServerCommand( ent->s.number, "chat \"^3Quest System^7: Got the ^2Crystal of Time^7.\"");
+									zyk_text_message(ent, "universe/mission_9/mission_9_2", qtrue, qfalse);
 									clean_crystal_model(2);
 									universe_crystals_check(ent);
 								}
