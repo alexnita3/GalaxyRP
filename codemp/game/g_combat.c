@@ -2431,7 +2431,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 				if (mages_count == 0)
 				{ // zyk: defeated all mages
-					trap->SendServerCommand(the_old_player->s.number, va("chat \"%s: ^7All mages are defeated!\"", the_old_player->client->pers.netname));
+					zyk_text_message(the_old_player, "universe/mission_16_sages/mission_16_sages_end", qtrue, qfalse, the_old_player->client->pers.netname);
 
 					the_old_player->client->pers.universe_quest_messages = 100;
 					the_old_player->client->pers.universe_quest_timer = level.time + 3000;

@@ -14799,7 +14799,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 43)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Citizen: ^7For my city!\""));
+									zyk_text_message(ent, "universe/mission_16_sages/mission_16_sages_citizen", qtrue, qfalse);
 									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12173, -41, -486, -179);
 								}
 								else if (ent->client->pers.universe_quest_messages == 44)
