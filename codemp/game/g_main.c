@@ -13769,12 +13769,12 @@ void G_RunFrame( int levelTime ) {
 								if (ent->client->pers.universe_quest_messages == 0)
 								{
 									npc_ent = Zyk_NPC_SpawnType("guardian_of_time",9869,11957,1593,-52);
-									trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7Hero, we must defeat all of the soldiers.\"");
+									zyk_text_message(ent, "universe/mission_11/mission_11_0", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 1)
 								{
 									npc_ent = Zyk_NPC_SpawnType("sage_of_universe",9800,11904,1593,-52);
-									trap->SendServerCommand( ent->s.number, "chat \"^2Sage of Universe: ^7You can count on us too.\"");
+									zyk_text_message(ent, "universe/mission_11/mission_11_1", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 2)
 									npc_ent = Zyk_NPC_SpawnType("sage_of_light",9744,11862,1593,-52);
@@ -13790,7 +13790,7 @@ void G_RunFrame( int levelTime ) {
 										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
 										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
 									}
-									trap->SendServerCommand( ent->s.number, "chat \"^2Guardian of Universe: ^7We will also help.\"");
+									zyk_text_message(ent, "universe/mission_11/mission_11_2", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 6)
 								{

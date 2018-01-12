@@ -2384,7 +2384,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		}
 		else if (Q_stricmp( self->NPC_type, "sage_of_universe" ) == 0 && the_old_player->client->sess.amrpgmode == 2 && the_old_player->client->pers.universe_quest_objective_control == 5 && the_old_player->client->pers.universe_quest_progress == 4)
 		{ // zyk: Sage of Universe died in the fifth Universe Quest objective, pass turn to another player
-			trap->SendServerCommand( the_old_player->s.number, va("chat \"%s^7: It cannot be! The Sage of Universe is dead...\"", the_old_player->client->pers.netname));
+			zyk_text_message(the_old_player, "universe/mission_4/mission_4_fail", qtrue, qfalse, the_old_player->client->pers.netname);
 
 			quest_get_new_player(the_old_player);
 		}
@@ -2396,19 +2396,19 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 				if (the_old_player->client->pers.universe_quest_objective_control == 0)
 				{ // zyk: player defeated all soldiers, so he completed the mission
-					trap->SendServerCommand( the_old_player->s.number, "chat \"^7Guardian of Time: ^7We defeated them all.\"");
+					zyk_text_message(the_old_player, "universe/mission_11/mission_11_end", qtrue, qfalse);
 					the_old_player->client->pers.hunter_quest_timer = level.time + 3000;
 					the_old_player->client->pers.hunter_quest_messages = 40;
 				}
 				else if (the_old_player->client->pers.universe_quest_objective_control == 10)
 				{ // zyk: after the player defeats some soldiers, Master of Evil will send more
 					the_old_player->client->pers.hunter_quest_messages = 12;
-					trap->SendServerCommand( the_old_player->s.number, "chat \"^7Guardian of Time: ^7More soldiers coming.\"");
+					zyk_text_message(the_old_player, "universe/mission_11/mission_11_more", qtrue, qfalse);
 				}
 			}
 			else
 			{
-				trap->SendServerCommand( the_old_player->s.number, va("chat \"%s: ^7No! One of my allies died...\"", the_old_player->client->pers.netname));
+				zyk_text_message(the_old_player, "universe/mission_11/mission_11_fail", qtrue, qfalse, the_old_player->client->pers.netname);
 				the_old_player->client->pers.hunter_quest_timer = level.time + 3000;
 				the_old_player->client->pers.hunter_quest_messages = 50;
 			}
