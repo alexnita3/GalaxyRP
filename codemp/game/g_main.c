@@ -14204,33 +14204,16 @@ void G_RunFrame( int levelTime ) {
 										ent->client->pers.universe_quest_messages = 10;
 									}
 								}
-								else if (ent->client->pers.universe_quest_messages == 11)
+								else if (ent->client->pers.universe_quest_messages >= 11 && ent->client->pers.universe_quest_messages <= 17)
 								{
-									trap->SendServerCommand( ent->s.number, "chat \"^1Guardian of Chaos: ^7So, the legendary hero is finally here.\"");
-								}
-								else if (ent->client->pers.universe_quest_messages == 12)
-								{
-									trap->SendServerCommand( ent->s.number, va("chat \"%s^7: ^7I'm here to defeat you and restore the balance to the Universe.\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 13)
-								{
-									trap->SendServerCommand( ent->s.number, "chat \"^1Guardian of Chaos: ^7The Guardian of Time could not defeat me. She was weak.\"");
-								}
-								else if (ent->client->pers.universe_quest_messages == 14)
-								{
-									trap->SendServerCommand( ent->s.number, "chat \"^1Guardian of Chaos: ^7In fact, you fell into my trap. I am finally free!\"");
-								}
-								else if (ent->client->pers.universe_quest_messages == 15)
-								{
-									trap->SendServerCommand( ent->s.number, "chat \"^1Guardian of Chaos: ^7The time of the Prophecy of Time has come. I have waited so much for this moment.\"");
-								}
-								else if (ent->client->pers.universe_quest_messages == 16)
-								{
-									trap->SendServerCommand( ent->s.number, "chat \"^1Guardian of Chaos: ^7I will be able to conquer the Universe! I will fill it with chaos, destruction and suffering!\"");
-								}
-								else if (ent->client->pers.universe_quest_messages == 17)
-								{
-									trap->SendServerCommand( ent->s.number, "chat \"^1Guardian of Chaos: ^7You cannot win this battle. You will meet your doom!\"");
+									if (ent->client->pers.universe_quest_messages == 12)
+									{
+										zyk_text_message(ent, va("universe/mission_14/mission_14_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_14/mission_14_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
 								}
 								else if (ent->client->pers.universe_quest_messages == 18)
 								{ // zyk: here starts the battle against the Guardian of Chaos
@@ -14286,62 +14269,18 @@ void G_RunFrame( int levelTime ) {
 										}
 									}
 
-									trap->SendServerCommand( ent->s.number, "chat \"^1Guardian of Chaos: ^7How is this possible! ... I cannot lose...\"");
+									zyk_text_message(ent, "universe/mission_14/mission_14_boss_defeated", qtrue, qfalse);
 								}
-								else if (ent->client->pers.universe_quest_messages == 21)
+								else if (ent->client->pers.universe_quest_messages >= 21 && ent->client->pers.universe_quest_messages <= 25)
 								{
 									if (ent->client->pers.universe_quest_counter & (1 << 0))
-										trap->SendServerCommand( ent->s.number, "chat \"^2Sage of Universe: ^7Amazing! You beat the Guardian of Chaos! Well done!\"");
+										zyk_text_message(ent, va("universe/mission_14/mission_14_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
 									else if (ent->client->pers.universe_quest_counter & (1 << 1))
-										trap->SendServerCommand( ent->s.number, "chat \"^2Guardian of Universe: ^7Thank you, hero! You defeated him!\"");
+										zyk_text_message(ent, va("universe/mission_14/mission_14_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
 									else if (ent->client->pers.universe_quest_counter & (1 << 2))
-										trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7Muahahahaha! That's really nice what you have done here!\"");
+										zyk_text_message(ent, va("universe/mission_14/mission_14_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
 									else if (ent->client->pers.universe_quest_counter & (1 << 3))
-										trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7Well done, hero. You finished what I started a long time ago.\"");
-								}
-								else if (ent->client->pers.universe_quest_messages == 22)
-								{
-									if (ent->client->pers.universe_quest_counter & (1 << 0))
-										trap->SendServerCommand( ent->s.number, "chat \"^2Sage of Universe: ^7I will now receive the full power of the Amulet of Time.\"");
-									else if (ent->client->pers.universe_quest_counter & (1 << 1))
-										trap->SendServerCommand( ent->s.number, "chat \"^2Guardian of Universe: ^7Now the Amulet of Time will have its full power.\"");
-									else if (ent->client->pers.universe_quest_counter & (1 << 2))
-										trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7Power! That's it! The Amulet of Time, fully powered, and it is all mine!\"");
-									else if (ent->client->pers.universe_quest_counter & (1 << 3))
-										trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7The Amulet of Time will again receive its full power.\"");
-								}
-								else if (ent->client->pers.universe_quest_messages == 23)
-								{
-									if (ent->client->pers.universe_quest_counter & (1 << 0))
-										trap->SendServerCommand( ent->s.number, "chat \"^2Sage of Universe: ^7I am the True Guardian now. We sages will keep balance to the Universe.\"");
-									else if (ent->client->pers.universe_quest_counter & (1 << 1))
-										trap->SendServerCommand( ent->s.number, "chat \"^2Guardian of Universe: ^7I have become the True Guardian. With this power, the guardians will keep balance to the Universe.\"");
-									else if (ent->client->pers.universe_quest_counter & (1 << 2))
-										trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7I am the True Guardian! With this power I can now be unstoppable!\"");
-									else if (ent->client->pers.universe_quest_counter & (1 << 3))
-										trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7Once again, I am the True Guardian. This time, the Universe will truly be in balance.\"");
-								}
-								else if (ent->client->pers.universe_quest_messages == 24)
-								{
-									if (ent->client->pers.universe_quest_counter & (1 << 0))
-										trap->SendServerCommand(ent->s.number, "chat \"^2Sage of Universe: ^7Your ^2Ultra Drain ^7will have less cooldown time.\"");
-									else if (ent->client->pers.universe_quest_counter & (1 << 1))
-										trap->SendServerCommand(ent->s.number, "chat \"^2Guardian of Universe: ^7Your ^3Immunity Power ^7will have less cooldown time.\"");
-									else if (ent->client->pers.universe_quest_counter & (1 << 2))
-										trap->SendServerCommand(ent->s.number, "chat \"^1Master of Evil: ^7Your ^1Chaos Power ^7will have less cooldown time.\"");
-									else if (ent->client->pers.universe_quest_counter & (1 << 3))
-										trap->SendServerCommand(ent->s.number, "chat \"^7Guardian of Time: ^7Your Time Power will have less cooldown time.\"");
-								}
-								else if (ent->client->pers.universe_quest_messages == 25)
-								{
-									if (ent->client->pers.universe_quest_counter & (1 << 0))
-										trap->SendServerCommand( ent->s.number, "chat \"^2Sage of Universe: ^7Go now and enjoy your life, my friend.\"");
-									else if (ent->client->pers.universe_quest_counter & (1 << 1))
-										trap->SendServerCommand( ent->s.number, "chat \"^2Guardian of Universe: ^7You have to go now hero. Be in peace.\"");
-									else if (ent->client->pers.universe_quest_counter & (1 << 2))
-										trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7Now go and conquer everything. Destroy all the weak!\"");
-									else if (ent->client->pers.universe_quest_counter & (1 << 3))
-										trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7It is time for you to go. I wish you well in your life.\"");
+										zyk_text_message(ent, va("universe/mission_14/mission_14_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 26)
 								{ // zyk: enf of this mission
@@ -14413,7 +14352,7 @@ void G_RunFrame( int levelTime ) {
 									if (ent->client->pers.universe_quest_counter & (1 << 3))
 									{
 										npc_ent = Zyk_NPC_SpawnType("guardian_of_time",12834,8500,1700,179);
-										trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7I will use the Amulet of Time and the Sacred Crystals to open the gate to the Sacred Dimension.\"");
+										zyk_text_message(ent, "universe/mission_14/mission_14_time", qtrue, qfalse);
 									}
 									else
 										npc_ent = Zyk_NPC_SpawnType("guardian_of_time",10894,8521,1700,0);
@@ -14426,7 +14365,7 @@ void G_RunFrame( int levelTime ) {
 									if (ent->client->pers.universe_quest_counter & (1 << 2))
 									{
 										npc_ent = Zyk_NPC_SpawnType("master_of_evil",12834,8500,1700,179);
-										trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7Master of Evil, use the Amulet of Time and the Sacred Crystals to open the gate to the Sacred Dimension.\"");
+										zyk_text_message(ent, "universe/mission_14/mission_14_thor", qtrue, qfalse);
 									}
 									else
 										npc_ent = Zyk_NPC_SpawnType("master_of_evil",11433,8499,1700,179);
@@ -14442,7 +14381,7 @@ void G_RunFrame( int levelTime ) {
 									if (ent->client->pers.universe_quest_counter & (1 << 1))
 									{
 										npc_ent = Zyk_NPC_SpawnType("guardian_of_universe",12834,8500,1700,179);
-										trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7Guardian of Universe, use the Amulet of Time and the Sacred Crystals to open the gate to the Sacred Dimension.\"");
+										zyk_text_message(ent, "universe/mission_14/mission_14_guardians", qtrue, qfalse);
 									}
 									else
 										npc_ent = Zyk_NPC_SpawnType("guardian_of_universe",10840,8627,1700,-90);
@@ -14488,7 +14427,7 @@ void G_RunFrame( int levelTime ) {
 									if (ent->client->pers.universe_quest_counter & (1 << 0))
 									{
 										npc_ent = Zyk_NPC_SpawnType("sage_of_universe",12834,8500,1700,179);
-										trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7Sage of Universe, use the Amulet of Time and the Sacred Crystals to open the gate to the Sacred Dimension.\"");
+										zyk_text_message(ent, "universe/mission_14/mission_14_sages", qtrue, qfalse);
 									}
 									else
 										npc_ent = Zyk_NPC_SpawnType("sage_of_universe",10840,8416,1700,90);
