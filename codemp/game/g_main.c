@@ -14029,60 +14029,10 @@ void G_RunFrame( int levelTime ) {
 						{ // zyk: Universe Quest, the choosing mission
 							if (ent->client->pers.universe_quest_timer < level.time && (int) ent->client->ps.origin[0] > 9758 && (int) ent->client->ps.origin[0] < 14000 && (int) ent->client->ps.origin[1] > 8160 && (int) ent->client->ps.origin[1] < 9097 && (int) ent->client->ps.origin[2] > 1450 && (int) ent->client->ps.origin[2] < 2190)
 							{
-								if (ent->client->pers.universe_quest_messages == 1)
-									trap->SendServerCommand( ent->s.number, "chat \"^2Sage of Universe: ^7Hero, you have to choose us.\"");
-								else if (ent->client->pers.universe_quest_messages == 2)
-									trap->SendServerCommand( ent->s.number, "chat \"^5Sage of Light: ^7the True Guardians must be people who listen to other opinions.\"");
-								else if (ent->client->pers.universe_quest_messages == 3)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Sage of Darkness: ^7We will be guardians who will keep balance to the Universe.\"");
-								else if (ent->client->pers.universe_quest_messages == 4)
-									trap->SendServerCommand( ent->s.number, "chat \"^3Sage of Eternity: ^7And by choosing us, we will give you a new power.\"");
-								else if (ent->client->pers.universe_quest_messages == 5)
-									trap->SendServerCommand( ent->s.number, "chat \"^2Sage of Universe: ^7It is the ^2Ultra Drain^7. Choose wisely, hero.\"");
-								else if (ent->client->pers.universe_quest_messages == 6)
-									trap->SendServerCommand( ent->s.number, "chat \"^2Guardian of Universe: ^7Hero, by choosing us...\"");
-								else if (ent->client->pers.universe_quest_messages == 7)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Guardian of Darkness: ^7We will use our wisdom and power to keep the balance in the Universe.\"");
-								else if (ent->client->pers.universe_quest_messages == 8)
-									trap->SendServerCommand( ent->s.number, "chat \"^3Guardian of Eternity: ^7We are old beings, we have much wisdom.\"");
-								else if (ent->client->pers.universe_quest_messages == 9)
-									trap->SendServerCommand( ent->s.number, "chat \"^5Guardian of Light: ^7If you choose us, we will give you the ^3Immunity Power^7.\"");
-								else if (ent->client->pers.universe_quest_messages == 10)
-									trap->SendServerCommand( ent->s.number, "chat \"^2Guardian of Universe: ^7This power protects you from other special powers.\"");
-								else if (ent->client->pers.universe_quest_messages == 11)
-									trap->SendServerCommand( ent->s.number, "chat \"^2Guardian of Universe: ^7Think about that when making your choice.\"");
-								else if (ent->client->pers.universe_quest_messages == 12)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7Don't be a fool, don't listen to these guys.\"");
-								else if (ent->client->pers.universe_quest_messages == 13)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7They used you just to get more power.\"");
-								else if (ent->client->pers.universe_quest_messages == 14)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7At least I am true in my ambitions.\"");
-								else if (ent->client->pers.universe_quest_messages == 15)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7Hero, only power matters in this life. The weak deserve to die!\"");
-								else if (ent->client->pers.universe_quest_messages == 16)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7There will never be peace in Universe.\"");
-								else if (ent->client->pers.universe_quest_messages == 17)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7Choose me and I will make you powerful.\"");
-								else if (ent->client->pers.universe_quest_messages == 18)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7I will give you the ^1Chaos Power^7. I read about it in the Prophecy of Time.\"");
-								else if (ent->client->pers.universe_quest_messages == 19)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7The Guardian of Chaos has it, and I will give it to you.\"");
-								else if (ent->client->pers.universe_quest_messages == 20)
-									trap->SendServerCommand( ent->s.number, "chat \"^1Master of Evil: ^7Choose me and you won't regret it.\"");
-								else if (ent->client->pers.universe_quest_messages == 21)
-									trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7Hero, listen to me.\"");
-								else if (ent->client->pers.universe_quest_messages == 22)
-									trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7I am one of the oldest beings in the Universe.\"");
-								else if (ent->client->pers.universe_quest_messages == 23)
-									trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7Only I have the wisdom to be the True Guardian.\"");
-								else if (ent->client->pers.universe_quest_messages == 24)
-									trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7Choose me, and I will give you the Time Power.\"");
-								else if (ent->client->pers.universe_quest_messages == 25)
-									trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7It will allow you to paralyze enemies for a short time.\"");
-								else if (ent->client->pers.universe_quest_messages == 26)
-									trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7Now, make your decision...\"");
-								else if (ent->client->pers.universe_quest_messages == 27)
-									trap->SendServerCommand( ent->s.number, "chat \"^7Guardian of Time: ^7Remember, after choosing someone, you cannot regret it.\"");
+								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 27)
+								{
+									zyk_text_message(ent, va("universe/mission_13/mission_13_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+								}
 								else if (ent->client->pers.universe_quest_messages == 29)
 								{ // zyk: completed the mission
 									ent->client->pers.universe_quest_progress = 14;
