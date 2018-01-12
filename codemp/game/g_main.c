@@ -12559,68 +12559,20 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
 
-								if (ent->client->pers.universe_quest_messages == 1)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Sages! The Sage of Universe asked me to come here. What is going on?\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 2)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: %s^7! We need your help! A big threat has come!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 3)
-									trap->SendServerCommand(ent->s.number, va("chat \"^5Sage of Light^7: This time we will tell every single thing we should have told you before\""));
-								else if (ent->client->pers.universe_quest_messages == 4)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: Although it may seem we used you or even lied to you in the past...\""));
-								else if (ent->client->pers.universe_quest_messages == 5)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: All the things involving the Sacred Dimension had a good reason\""));
-								else if (ent->client->pers.universe_quest_messages == 6)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: We kept many things from you to avoid more suffering in your life\""));
-								else if (ent->client->pers.universe_quest_messages == 7)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: What do you mean?! Tell me now! I want to know everything, no more secrets!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 8)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: looks like hiding info was not the best way to protect you, so we will tell you everything\""));
-								else if (ent->client->pers.universe_quest_messages == 9)
-									trap->SendServerCommand(ent->s.number, va("chat \"^5Sage of Light^7: %s^7, do you remember those mages you fought before to get the artifacts?\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 10)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes. I also fought them when fighting Thor\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 11)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: These mages are the origin of all trouble and...the origin of us!\""));
-								else if (ent->client->pers.universe_quest_messages == 12)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: What?! What do you mean by your origin?\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 13)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: In very distant times, the Guardian of Time was chosen to be the True Guardian.\""));
-								else if (ent->client->pers.universe_quest_messages == 14)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Then, the Brotherhood of Mages was created by her to have magicians protect the Crystal of Magic\""));
-								else if (ent->client->pers.universe_quest_messages == 15)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: But they got so much power from it...they wanted more\""));
-								else if (ent->client->pers.universe_quest_messages == 16)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: Guardian of Chaos was part of the Brotherhood and wanted to overthrow Guardian of Time\""));
-								else if (ent->client->pers.universe_quest_messages == 17)
-									trap->SendServerCommand(ent->s.number, va("chat \"^5Sage of Light^7: He succeeded in getting to the Sacred Dimension, but it was sealed by Guardian of Time\""));
-								else if (ent->client->pers.universe_quest_messages == 18)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Guardian of Chaos in that moment, helped by the mages, also sealed her in the obelisk\""));
-								else if (ent->client->pers.universe_quest_messages == 19)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: That brotherhood lasts until now. We were part of it, but then we realized the evil there...\""));
-								else if (ent->client->pers.universe_quest_messages == 20)
-									trap->SendServerCommand(ent->s.number, va("chat \"^5Sage of Light^7: The guardians taught us the path of good, and we created our own brotherhood!\""));
-								else if (ent->client->pers.universe_quest_messages == 21)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: But now, the mages attacked the City of the Merchants...our city\""));
-								else if (ent->client->pers.universe_quest_messages == 22)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: We were born and raised there in the past. But now it is taken by them\""));
-								else if (ent->client->pers.universe_quest_messages == 23)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: The Sage of Universe can no longer help, since he says he does not want to interfere\""));
-								else if (ent->client->pers.universe_quest_messages == 24)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Why? It makes no sense...\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 25)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: He says he cannot get tempted to go the same path as the mages went\""));
-								else if (ent->client->pers.universe_quest_messages == 26)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: So he just called you, but he cannot fight for us\""));
-								else if (ent->client->pers.universe_quest_messages == 27)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Please help us, %s^7. You must get the city back from the mages!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 28)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I will help! Let's go there.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 29)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Thank you %s^7. Go to ^3mp/siege_desert^7 and save the city!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 30)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: Unfortunately, we have no chance to beat the mages, so you will fight alone\""));
-								else if (ent->client->pers.universe_quest_messages == 31)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Do not worry! You have done much already. Leave this to me.\"", ent->client->pers.netname));
+								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 31)
+								{
+									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 2 || ent->client->pers.universe_quest_messages == 7 || 
+										ent->client->pers.universe_quest_messages == 9 || ent->client->pers.universe_quest_messages == 10 || ent->client->pers.universe_quest_messages == 12 || 
+										ent->client->pers.universe_quest_messages == 24 || ent->client->pers.universe_quest_messages == 27 || ent->client->pers.universe_quest_messages == 28 || 
+										ent->client->pers.universe_quest_messages == 29 || ent->client->pers.universe_quest_messages == 31)
+									{
+										zyk_text_message(ent, va("universe/mission_15_sages/mission_15_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_15_sages/mission_15_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 32)
 								{
 									ent->client->pers.universe_quest_progress = 16;
