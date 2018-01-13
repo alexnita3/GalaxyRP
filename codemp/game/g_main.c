@@ -11380,11 +11380,11 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 3)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: I killed your parents...and now, I will kill you!\""));
+									zyk_text_message(ent, "universe/mission_20_sages/mission_20_sages_ymir", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 4)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: It is time for my revenge!\""));
+									zyk_text_message(ent, "universe/mission_20_sages/mission_20_sages_thor", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 5)
 								{
@@ -11460,7 +11460,7 @@ void G_RunFrame( int levelTime ) {
 
 									G_Sound(ent, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav"));
 
-									trap->SendServerCommand(ent->s.number, "chat \"^2Sage of Universe: ^7Hero, I will use Amulet of Time to restore some hp, shield and mp to you!\"");
+									zyk_text_message(ent, "universe/mission_20_sages/mission_20_sages_sage", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 7)
 								{ // zyk: Hero defeated both bosses

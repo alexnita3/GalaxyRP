@@ -2617,11 +2617,11 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			{
 				if (Q_stricmp(old_boss->NPC_type, "ymir_boss") == 0)
 				{
-					trap->SendServerCommand(quest_player->s.number, va("chat \"Ymir: My son! You will pay!\""));
+					zyk_text_message(quest_player, "universe/mission_20_sages/mission_20_sages_thor_defeated", qtrue, qfalse);
 				}
 				else
 				{
-					trap->SendServerCommand(quest_player->s.number, va("chat \"^1Thor: ^7Father! Nooooo! Die hero!\""));
+					zyk_text_message(quest_player, "universe/mission_20_sages/mission_20_sages_ymir_defeated", qtrue, qfalse);
 				}
 
 				// zyk: wrath of the remaining boss makes him stronger
