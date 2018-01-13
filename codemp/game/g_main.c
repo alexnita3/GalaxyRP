@@ -11543,48 +11543,18 @@ void G_RunFrame( int levelTime ) {
 								{
 									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -6049, 1438, 57, 0);
 								}
-								else if (ent->client->pers.universe_quest_messages == 10)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: It is done. The threat is gone.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 11)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Well done, %s^7.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 12)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Sages, you will now possess the Crystal of Magic.\""));
-								else if (ent->client->pers.universe_quest_messages == 13)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Also, sages, you will become the new leaders of the mages.\""));
-								else if (ent->client->pers.universe_quest_messages == 14)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: We will unite the guardians, the sages and the mages...\""));
-								else if (ent->client->pers.universe_quest_messages == 15)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Into the new Brotherhood of Peace.\""));
-								else if (ent->client->pers.universe_quest_messages == 16)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: This is a new prosperous age! We will guarantee peace from now on!\""));
-								else if (ent->client->pers.universe_quest_messages == 17)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Thank you for all your efforts, %s^7.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 18)
-									trap->SendServerCommand(ent->s.number, va("chat \"^5Sage of Light^7: Yes! now we will no longer have to worry about big threats!\""));
-								else if (ent->client->pers.universe_quest_messages == 19)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Sage of Darkness^7: Now the bad guys are really gone!\""));
-								else if (ent->client->pers.universe_quest_messages == 20)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Sage of Eternity^7: We have a big responsibility ahead, but we will do well.\""));
-								else if (ent->client->pers.universe_quest_messages == 21)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I will make sure my wisdom will be helpful for the brotherhood.\""));
-								else if (ent->client->pers.universe_quest_messages == 22)
-									trap->SendServerCommand(ent->s.number, va("chat \"^5Guardian of Light^7: Count on me too!\""));
-								else if (ent->client->pers.universe_quest_messages == 23)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Guardian of Darkness^7: My might will be helpful too!\""));
-								else if (ent->client->pers.universe_quest_messages == 24)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Guardian of Eternity^7: My wisdom will also help.\""));
-								else if (ent->client->pers.universe_quest_messages == 25)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Sage of Universe, now give the hero my old power.\""));
-								else if (ent->client->pers.universe_quest_messages == 26)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: That's right. %s^7, receive your ^2Final Power^7!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 27)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you, Sage of Universe.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 28)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: ^3Magic Regen^7. It will regen your mp by recovering 1 mp per second.\""));
-								else if (ent->client->pers.universe_quest_messages == 29)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Remember to always use your powers for good.\""));
-								else if (ent->client->pers.universe_quest_messages == 30)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Now we must get going. We have a lot of work to do.\""));
+								else if (ent->client->pers.universe_quest_messages >= 10 && ent->client->pers.universe_quest_messages <= 30)
+								{
+									if (ent->client->pers.universe_quest_messages == 10 || ent->client->pers.universe_quest_messages == 11 || ent->client->pers.universe_quest_messages == 17 ||
+										ent->client->pers.universe_quest_messages == 26 || ent->client->pers.universe_quest_messages == 27)
+									{
+										zyk_text_message(ent, va("universe/mission_21_sages/mission_21_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_21_sages/mission_21_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 31)
 								{
 									ent->client->pers.universe_quest_progress = 22;
