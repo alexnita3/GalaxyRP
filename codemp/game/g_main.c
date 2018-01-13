@@ -11112,17 +11112,9 @@ void G_RunFrame( int levelTime ) {
 									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -4174, 920, 401, -135);
 								}
 
-								if (ent->client->pers.universe_quest_messages == 26)
+								if (ent->client->pers.universe_quest_messages >= 26 && ent->client->pers.universe_quest_messages <= 28)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: So %s^7, you finally arrived.\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 27)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Ymir! You will pay now for all the suffering you caused!\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 28)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: No %s^7, I don't think so.\"", ent->client->pers.netname));
+									zyk_text_message(ent, va("universe/mission_18_sages/mission_18_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
 								}
 								else if (ent->client->pers.universe_quest_messages == 29)
 									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4185, 856, 451, -135);
@@ -11138,47 +11130,21 @@ void G_RunFrame( int levelTime ) {
 									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4195, 685, 451, 45);
 								else if (ent->client->pers.universe_quest_messages == 35)
 									npc_ent = Zyk_NPC_SpawnType("thor_boss", -4300, 860, 451, -45);
-								else if (ent->client->pers.universe_quest_messages == 36)
+								else if (ent->client->pers.universe_quest_messages >= 36 && ent->client->pers.universe_quest_messages <= 45)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I am surrounded.\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 37)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Ymir, my father, I retrieved the Crystal of Magic!\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 38)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: Good, my son! Now we will be unbeatable!\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 39)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: So that is Thor's real form, and Ymir is his father...\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 40)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: We will finally destroy the hero and his helpers!\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 41)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -4122, 703, 451, 135);
+									if (ent->client->pers.universe_quest_messages == 41)
+									{
+										npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -4122, 703, 451, 135);
+									}
 
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Sage of Universe^7: Not so fast.\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 42)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: I can't believe it! Ok, so you guys want it the hard way...\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 43)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Father, I have a better idea.\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 44)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Come with me to the arena, We need the Crystal of Magic power!\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 45)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: Yes my son! Let's use its power to destroy them all!\""));
+									if (ent->client->pers.universe_quest_messages == 36 || ent->client->pers.universe_quest_messages == 39)
+									{
+										zyk_text_message(ent, va("universe/mission_18_sages/mission_18_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_18_sages/mission_18_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
 								}
 								else if (ent->client->pers.universe_quest_messages == 46)
 								{
