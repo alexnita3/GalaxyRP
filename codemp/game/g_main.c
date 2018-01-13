@@ -12914,7 +12914,7 @@ void G_RunFrame( int levelTime ) {
 								{
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 2000;
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I succeeded!\"", ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_18_guardians/mission_18_guardians_win", qtrue, qfalse, ent->client->pers.netname);
 								}
 								else if (ent->client->pers.universe_quest_messages == 12)
 								{
