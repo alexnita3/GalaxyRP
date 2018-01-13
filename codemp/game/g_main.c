@@ -12767,46 +12767,18 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
 								
-								if (ent->client->pers.universe_quest_messages == 1)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Guardians! Guardian of Universe asked me to come here. What is going on?\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 2)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Yes, %s^7! We will tell you some important info.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 3)
-									trap->SendServerCommand(ent->s.number, va("chat \"^5Guardian of Light^7: In the very past, a group called the Brotherhood of Mages was formed.\""));
-								else if (ent->client->pers.universe_quest_messages == 4)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: They had the Crystal of Magic, which granted much power to them.\""));
-								else if (ent->client->pers.universe_quest_messages == 5)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Guardian of Darkness^7: But they went to an evil path!\""));
-								else if (ent->client->pers.universe_quest_messages == 6)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Guardian of Eternity^7: But then, a couple of outsiders became the leaders of the mages...your parents...\""));
-								else if (ent->client->pers.universe_quest_messages == 7)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: What? My parents were part of the Brotherhood of Mages?\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 8)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Not only that, they made the mages go to a good path.\""));
-								else if (ent->client->pers.universe_quest_messages == 9)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: But Ymir, Thor's father, started a war against them and killed your parents\""));
-								else if (ent->client->pers.universe_quest_messages == 10)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: He became the new leader, and always tried to find the Crystal of Magic\""));
-								else if (ent->client->pers.universe_quest_messages == 11)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: With it, he wants to become all powerful.\""));
-								else if (ent->client->pers.universe_quest_messages == 12)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: He must pay for all he has done!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 13)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Do not seek for revenge. But... you will actually have a chance to fight him.\""));
-								else if (ent->client->pers.universe_quest_messages == 14)
-									trap->SendServerCommand(ent->s.number, va("chat \"^5Guardian of Light^7: We have a good plan to defeat him.\""));
-								else if (ent->client->pers.universe_quest_messages == 15)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Guardian of Darkness^7: Thor has reunited with his father right now. He has a clue to where the Crystal of Magic is!\""));
-								else if (ent->client->pers.universe_quest_messages == 16)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Guardian of Eternity^7: We cannot let that happen. So, you will strike them now.\""));
-								else if (ent->client->pers.universe_quest_messages == 17)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: I will fight them too. I will help you with my power.\""));
-								else if (ent->client->pers.universe_quest_messages == 18)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you. Where are they now?\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 19)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: They are in t3_bounty. Go there and find Ymir and Thor. I will appear to help defeat them.\""));
-								else if (ent->client->pers.universe_quest_messages == 20)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Ok. So let's go there and defeat them once and for all!\"", ent->client->pers.netname));
+								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 20)
+								{
+									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 2 || ent->client->pers.universe_quest_messages == 7 ||
+										ent->client->pers.universe_quest_messages == 12 || ent->client->pers.universe_quest_messages == 18 || ent->client->pers.universe_quest_messages == 20)
+									{
+										zyk_text_message(ent, va("universe/mission_15_guardians/mission_15_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_15_guardians/mission_15_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 21)
 								{
 									ent->client->pers.universe_quest_progress = 16;
