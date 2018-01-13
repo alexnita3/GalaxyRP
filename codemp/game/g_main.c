@@ -12810,26 +12810,17 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
 
-								if (ent->client->pers.universe_quest_messages == 1)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I am ready for the trials.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 2)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: %s^7. The trials will test if you are worthy of becoming one of us.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 3)
-									trap->SendServerCommand(ent->s.number, va("chat \"^5Guardian of Light^7: You will fight against the guardians that you fought before in my quest.\""));
-								else if (ent->client->pers.universe_quest_messages == 4)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Guardian of Darkness^7: But this time, they will attack you in groups.\""));
-								else if (ent->client->pers.universe_quest_messages == 5)
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Guardian of Eternity^7: This will not only test your mighty...but your strategies too.\""));
-								else if (ent->client->pers.universe_quest_messages == 6)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: The battles may look very hard at first, but using the best strategies will guarantee your victory.\""));
-								else if (ent->client->pers.universe_quest_messages == 7)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I understand. I am sure I will succeed.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 8)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: I hope so. Becoming a guardian is a big responsibility.\""));
-								else if (ent->client->pers.universe_quest_messages == 9)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: You will also guide the sages after you become one of us.\""));
-								else if (ent->client->pers.universe_quest_messages == 10)
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Now prepare yourself. The Guardian Trials will begin!\""));
+								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 10)
+								{
+									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 2 || ent->client->pers.universe_quest_messages == 7)
+									{
+										zyk_text_message(ent, va("universe/mission_17_guardians/mission_17_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_17_guardians/mission_17_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 11)
 								{
 									ent->client->pers.universe_quest_progress = 18;
