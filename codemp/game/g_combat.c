@@ -2277,7 +2277,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 		if (Q_stricmp(self->NPC_type, "guardian_of_universe") == 0)
 		{ // zyk: failed mission
-			trap->SendServerCommand(quest_player->s.number, va("chat \"%s^7: No! Guardian of Universe... now it is all lost...\"", quest_player->client->pers.netname));
+			zyk_text_message(quest_player, "universe/mission_16_guardians/mission_16_guardians_fail", qtrue, qfalse, quest_player->client->pers.netname);
 
 			quest_get_new_player(quest_player);
 		}
@@ -2292,11 +2292,11 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 				{
 					if (Q_stricmp(old_boss->NPC_type, "ymir_boss") == 0)
 					{
-						trap->SendServerCommand(quest_player->s.number, va("chat \"Ymir: My son! How dare you kill him!\""));
+						zyk_text_message(quest_player, "universe/mission_16_guardians/mission_16_guardians_ymir", qtrue, qfalse);
 					}
 					else
 					{
-						trap->SendServerCommand(quest_player->s.number, va("chat \"^1Thor: ^7Father! Hero, you will regret this!\""));
+						zyk_text_message(quest_player, "universe/mission_16_guardians/mission_16_guardians_thor", qtrue, qfalse);
 					}
 
 					still_has_boss = qtrue;

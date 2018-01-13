@@ -11619,12 +11619,12 @@ void G_RunFrame( int levelTime ) {
 
 								if (ent->client->pers.universe_quest_messages == 3)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: %s^7! I knew you would come... this time I will have my revenge.\"", ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_16_guardians/mission_16_guardians_3", qtrue, qfalse, ent->client->pers.netname);
 								}
 								else if (ent->client->pers.universe_quest_messages == 4)
 								{
 									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -5849, 1438, 57, 0);
-									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: So this is %s^7! Son, let's destroy him together!\"", ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_16_guardians/mission_16_guardians_4", qtrue, qfalse, ent->client->pers.netname);
 								}
 								else if (ent->client->pers.universe_quest_messages == 5)
 								{
@@ -11644,37 +11644,16 @@ void G_RunFrame( int levelTime ) {
 										}
 									}
 								}
-								else if (ent->client->pers.universe_quest_messages == 6)
+								else if (ent->client->pers.universe_quest_messages >= 6 && ent->client->pers.universe_quest_messages <= 13)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: It is done.\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 7)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Their menace is finally gone.\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 8)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: I will share the Crystal of Magic power with the other guardians.\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 9)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: The Brotherhood of Mages will now follow our guidance.\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 10)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Meet us in mp/siege_korriban, so you can go through the Guardian Trials.\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 11)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: They will prepare you to become a guardian too.\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 12)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: So I can become one of you! Yes, I will go there and go through the trials.\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 13)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^2Guardian of Universe^7: Be prepared, the trials will not be easy.\""));
+									if (ent->client->pers.universe_quest_messages == 6 || ent->client->pers.universe_quest_messages == 12)
+									{
+										zyk_text_message(ent, va("universe/mission_16_guardians/mission_16_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_16_guardians/mission_16_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
 								}
 								else if (ent->client->pers.universe_quest_messages == 14)
 								{
