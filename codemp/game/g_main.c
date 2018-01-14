@@ -14751,7 +14751,7 @@ void G_RunFrame( int levelTime ) {
 
 									ent->client->pers.hunter_quest_messages = 0;
 
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor: ^7Here is a mage to help you conquer the city!\""));
+									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_mage", qtrue, qfalse);
 								}
 
 								ent->client->pers.hunter_quest_timer = level.time + 1000;
@@ -14904,27 +14904,27 @@ void G_RunFrame( int levelTime ) {
 								else if (ent->client->pers.universe_quest_messages == 55)
 								{
 									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7304, -1155, -486, 178);
-									trap->SendServerCommand(ent->s.number, va("chat \"^3Citizen: ^7For my city!\""));
+									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_citizen", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 56)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor: ^7%s^7, the sages and guardians will fight side by side with the citizens.\"", ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_56", qtrue, qfalse, ent->client->pers.netname);
 								}
 								else if (ent->client->pers.universe_quest_messages == 57)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor: ^7Show no mercy. Leave no survivors.\""));
+									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_57", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 58)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s: ^7As you wish, master.\"", ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_58", qtrue, qfalse, ent->client->pers.netname);
 								}
 								else if (ent->client->pers.universe_quest_messages == 100)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor: ^7You have done well! Meet me in the rancor arena.\""));
+									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_100", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 101)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor: ^7We have some... discussion to make with the Guardian of Time.\""));
+									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_101", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 102)
 								{

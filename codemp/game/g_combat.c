@@ -2462,7 +2462,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 			if (citizens_count == 0 && key_enemies == 0)
 			{ // zyk: defeated all citizens
-				trap->SendServerCommand(the_old_player->s.number, va("chat \"%s: ^7The city is conquered!\"", the_old_player->client->pers.netname));
+				zyk_text_message(the_old_player, "universe/mission_18_thor/mission_18_thor_conquer", qtrue, qfalse, the_old_player->client->pers.netname);
 
 				the_old_player->client->pers.universe_quest_messages = 100;
 				the_old_player->client->pers.universe_quest_timer = level.time + 3000;
