@@ -2679,7 +2679,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		quest_player->client->pers.universe_quest_timer = level.time + 3000;
 		quest_player->client->pers.guardian_mode = 0;
 
-		trap->SendServerCommand(quest_player->s.number, va("chat \"Guardian of Time: ^7Now...all is lost...\""));
+		zyk_text_message(quest_player, "universe/mission_20_thor/mission_20_thor_boss_defeated", qtrue, qfalse);
 	}
 	else if (quest_player && quest_player->client->pers.guardian_mode == 21)
 	{ // zyk: defeated the Soul of Sorrow

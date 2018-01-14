@@ -15093,28 +15093,17 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
 
-								if (ent->client->pers.universe_quest_messages == 1)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: It is done, my master. Victory is ours!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 2)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Muahahahahaha! Finally, after all this time, I have full power!\""));
-								else if (ent->client->pers.universe_quest_messages == 3)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: You will hire new mages for the Brotherhood of Mages.\""));
-								else if (ent->client->pers.universe_quest_messages == 4)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Soon, you will command vast legions of mages, and take over every world.\""));
-								else if (ent->client->pers.universe_quest_messages == 5)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: We will create a society where the strong rules over the weak.\""));
-								else if (ent->client->pers.universe_quest_messages == 6)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: With the Amulet of Time and Crystal of Magic, I will rule over everyone...as their god!\""));
-								else if (ent->client->pers.universe_quest_messages == 7)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Nothing shall stand in our way anymore.\""));
-								else if (ent->client->pers.universe_quest_messages == 8)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Now...receive this Final Power...^1Unique Boost^7!\""));
-								else if (ent->client->pers.universe_quest_messages == 9)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: It will make your unique skills and unique abilities have less cooldown time!\""));
-								else if (ent->client->pers.universe_quest_messages == 10)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you, master.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 11)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Go! Command the mages to a glorious future!\""));
+								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 11)
+								{
+									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 10)
+									{
+										zyk_text_message(ent, va("universe/mission_21_thor/mission_21_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_21_thor/mission_21_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 12)
 								{
 									ent->client->pers.universe_quest_progress = 22;
