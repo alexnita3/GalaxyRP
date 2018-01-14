@@ -11773,69 +11773,18 @@ void G_RunFrame( int levelTime ) {
 									}
 								}
 
-								if (ent->client->pers.universe_quest_messages == 18)
+								if (ent->client->pers.universe_quest_messages >= 18 && ent->client->pers.universe_quest_messages != 23 && ent->client->pers.universe_quest_messages <= 34)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: %s^7, you arrived in the right time.\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 19)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: What do you want from me, my master?\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 20)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Come to the water arena. I will meet my father Ymir there.\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 21)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: He is the leader of the Brotherhood of Mages, but he is weak! I want you to become the new leader.\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 22)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes, master.\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 24)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Father, I finally can say this now to you.\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 25)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: The mages don't deserve a weak leader such as you!\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 26)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: How dare you betray me like this!\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 27)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: What will you do? Kill me? Muahahahahahahahah! I am overpowered now!\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 28)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: But it will not be me who will destroy you. %s^7! Come.\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 29)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes, master. So that is your real form.\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 30)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Yes. Now let's see if you are worthy to be the new leader of the mages!\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 31)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Ymir^7: Do not try it, outsider. I killed your parents Tyr and Freya in the past. Surely I will destroy you.\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 32)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: What? What do you mean?!\"", ent->client->pers.netname));
-								}
-								else if (ent->client->pers.universe_quest_messages == 33)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Yes, he killed your parents when you were a child. Now get your revenge and become the new leader of mages!\""));
-								}
-								else if (ent->client->pers.universe_quest_messages == 34)
-								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Yes, master! I will make him suffer!\"", ent->client->pers.netname));
+									if (ent->client->pers.universe_quest_messages == 18 || ent->client->pers.universe_quest_messages == 19 || ent->client->pers.universe_quest_messages == 22 || 
+										ent->client->pers.universe_quest_messages == 28 || ent->client->pers.universe_quest_messages == 29 || ent->client->pers.universe_quest_messages == 32 || 
+										ent->client->pers.universe_quest_messages == 34)
+									{
+										zyk_text_message(ent, va("universe/mission_15_thor/mission_15_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_15_thor/mission_15_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
 								}
 								else if (ent->client->pers.universe_quest_messages == 35)
 								{
