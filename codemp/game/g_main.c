@@ -15002,34 +15002,18 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
 
-								if (ent->client->pers.universe_quest_messages == 1)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: We meet again, Guardian of Time. Give up your foolish resistance.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 2)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Now that's my apprentice. You are indeed a worthy leader of the Brotherhood of Mages!\""));
-								else if (ent->client->pers.universe_quest_messages == 3)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I can't believe what you have become. Stop this killing, it will just bring suffering.\""));
-								else if (ent->client->pers.universe_quest_messages == 4)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Liar! You and all the others used me! They paid the price for that!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 5)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Thor is using you. Please, don't follow the path of evil.\""));
-								else if (ent->client->pers.universe_quest_messages == 6)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Enough! %s^7, our victory is near. Destroy her and you will complete your task.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 7)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Then, in the future, we will fulfill our destiny as rulers of the Universe!\""));
-								else if (ent->client->pers.universe_quest_messages == 8)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Do not trust him. He just uses you to get power for himself.\""));
-								else if (ent->client->pers.universe_quest_messages == 9)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: No! I can feel the power! That is the true meaning of things: the strong rule over the weak!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 10)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: If you will not listen to reason, then I have no other choice but to stop you.\""));
-								else if (ent->client->pers.universe_quest_messages == 11)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Come then! We shall see who is the strongest!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 12)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: You had potential...and you wasted it... by killing innocent people...\""));
-								else if (ent->client->pers.universe_quest_messages == 13)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Go! Kill her! Then the Crystal of Magic will be mine!\""));
-								else if (ent->client->pers.universe_quest_messages == 14)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I regret all of this... but I will do what I must.\""));
+								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 14)
+								{
+									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 4 || ent->client->pers.universe_quest_messages == 6 ||
+										ent->client->pers.universe_quest_messages == 9 || ent->client->pers.universe_quest_messages == 11)
+									{
+										zyk_text_message(ent, va("universe/mission_19_thor/mission_19_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_19_thor/mission_19_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 15)
 								{
 									ent->client->pers.universe_quest_progress = 20;
