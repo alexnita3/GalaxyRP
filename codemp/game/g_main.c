@@ -11931,38 +11931,18 @@ void G_RunFrame( int levelTime ) {
 									ent->client->pers.universe_quest_timer = level.time + 5000;
 								}
 
-								if (ent->client->pers.universe_quest_messages == 1)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: It is done, my master.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 2)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Excellent! You are indeed very powerful.\""));
-								else if (ent->client->pers.universe_quest_messages == 3)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Now you are the new leader of the Brotherhood of Mages.\""));
-								else if (ent->client->pers.universe_quest_messages == 4)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you, master.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 5)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Now prepare yourself. I have a big task for you.\""));
-								else if (ent->client->pers.universe_quest_messages == 6)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Guardian of Time knew the location of a legendary item called the Crystal of Magic.\""));
-								else if (ent->client->pers.universe_quest_messages == 7)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: I was about to go get it, but she got it first. We have to retrive it.\""));
-								else if (ent->client->pers.universe_quest_messages == 8)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: The sages and guardians will help her. They are preparing a resistance in the City of the Merchants.\""));
-								else if (ent->client->pers.universe_quest_messages == 9)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: The citizens will be part of the Brotherhood of Guardian Sages, and will fight against us.\""));
-								else if (ent->client->pers.universe_quest_messages == 10)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: You will lead the legions of mages and destroy them all!\""));
-								else if (ent->client->pers.universe_quest_messages == 11)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Leave no survivors, even the sages and guardians. Only Guardian of Time will be left.\""));
-								else if (ent->client->pers.universe_quest_messages == 12)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Those bastards, liers... they all must die, master.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 13)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Yes. Conquer the city. When the time comes, you will face Guardian of Time.\""));
-								else if (ent->client->pers.universe_quest_messages == 14)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: Defeat her so I can get the Crystal of Magic. Then your task will be done.\""));
-								else if (ent->client->pers.universe_quest_messages == 15)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: It shall be done, master. They will be destroyed.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 16)
-									trap->SendServerCommand(ent->s.number, va("chat \"^1Thor^7: The Brotherhood of Mages will finally conquer everything!\""));
+								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 16)
+								{
+									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 4 || ent->client->pers.universe_quest_messages == 12 ||
+										ent->client->pers.universe_quest_messages == 15)
+									{
+										zyk_text_message(ent, va("universe/mission_17_thor/mission_17_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_17_thor/mission_17_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 17)
 								{
 									ent->client->pers.universe_quest_progress = 18;
