@@ -10255,24 +10255,18 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 13)
 									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", 2200, 3425, 952, 0);
-								else if (ent->client->pers.universe_quest_messages == 14)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: %s^7, you solved it!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 15)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: The gate opened. Let's get to the Realm of Souls.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 16)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: I cannot go there. The True guardian cannot enter, only if the Soul of Sorrow allows.\""));
-								else if (ent->client->pers.universe_quest_messages == 17)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Only you will be able to enter. I cannot help you anymore.\""));
-								else if (ent->client->pers.universe_quest_messages == 18)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: That makes things more difficult.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 19)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: These are the rules. But I trust in your abilities, I am sure you will succeed.\""));
-								else if (ent->client->pers.universe_quest_messages == 20)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Once inside, take extremely care. It is an unknown place even for me.\""));
-								else if (ent->client->pers.universe_quest_messages == 21)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Don't worry. I will not fail.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 22)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: The Universe fate is in your hands, hero. Please save us all!\""));
+								else if (ent->client->pers.universe_quest_messages >= 14 && ent->client->pers.universe_quest_messages <= 22)
+								{
+									if (ent->client->pers.universe_quest_messages == 14 || ent->client->pers.universe_quest_messages == 15 || ent->client->pers.universe_quest_messages == 18 ||
+										ent->client->pers.universe_quest_messages == 21)
+									{
+										zyk_text_message(ent, va("universe/mission_17_time/mission_17_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_17_time/mission_17_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 23)
 								{
 									ent->client->pers.universe_quest_progress = 18;
