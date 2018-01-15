@@ -17457,6 +17457,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 			// zyk: saving the current char
 			strcpy(ent->client->sess.rpgchar, arg2);
+			save_account(ent, qfalse);
 
 			trap->SendServerCommand(ent->s.number, va("print \"Renamed to %s^7\n\"", ent->client->sess.rpgchar));
 		}
