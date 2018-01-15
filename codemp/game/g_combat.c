@@ -6317,7 +6317,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 				{
 					// DEMP2 does way more damage to these guys.
 					// zyk: Guardian of Wind takes less DEMP2 damage
-					if (client->pers.guardian_mode != 7)
+					if (!(client->pers.guardian_mode == 7 || (client->pers.guardian_mode == 17 && Q_stricmp(targ->NPC_type, "guardian_boss_7") == 0)))
 						take *= 4; // zyk: changed from 5 to 4
 				}
 				else
