@@ -10651,32 +10651,18 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 52)
 									npc_ent = Zyk_NPC_SpawnType("soul_of_sorrow", 2336, 3425, -9950, 179);
-								else if (ent->client->pers.universe_quest_messages == 53)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: %s^7, welcome to the Realm of Souls.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 54)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: So you are the Soul of Sorrow...I come here to...\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 55)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: I know the reason why you are here. We met before, don't you remember?\""));
-								else if (ent->client->pers.universe_quest_messages == 56)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Oh! The Helper Soul! So it was you all the time.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 57)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: As you know, in the end of times, I will open the gate of the Realm of Souls and destroy the Universe.\""));
-								else if (ent->client->pers.universe_quest_messages == 58)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: The Universe has been destroyed and recreated some times, once it was full of evil and chaos.\""));
-								else if (ent->client->pers.universe_quest_messages == 59)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: But this time I decided to go out earlier and watch the progress of the legendary hero.\""));
-								else if (ent->client->pers.universe_quest_messages == 60)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: You fought bravely, and chose wisely in the end, preventing evil forces to take over.\""));
-								else if (ent->client->pers.universe_quest_messages == 61)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: So I will give a chance to this Universe.\""));
-								else if (ent->client->pers.universe_quest_messages == 62)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: If you defeat me in battle, I will let the Universe continue to exist.\""));
-								else if (ent->client->pers.universe_quest_messages == 63)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: The supreme beings who created it will understand my reasons.\""));
-								else if (ent->client->pers.universe_quest_messages == 64)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you for giving a new chance to everything.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 65)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: Prepare yourself. Your final battle is about to begin!\""));
+								else if (ent->client->pers.universe_quest_messages >= 53 && ent->client->pers.universe_quest_messages <= 65)
+								{
+									if (ent->client->pers.universe_quest_messages == 53 || ent->client->pers.universe_quest_messages == 54 || ent->client->pers.universe_quest_messages == 56 ||
+										ent->client->pers.universe_quest_messages == 64)
+									{
+										zyk_text_message(ent, va("universe/mission_19_time/mission_19_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_19_time/mission_19_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 66)
 								{
 									ent->client->pers.universe_quest_progress = 20;

@@ -2687,7 +2687,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		quest_player->client->pers.universe_quest_timer = level.time + 3000;
 		quest_player->client->pers.guardian_mode = 0;
 
-		trap->SendServerCommand(quest_player->s.number, va("chat \"^0Soul of Sorrow: ^7Well done, hero...\""));
+		zyk_text_message(quest_player, "universe/mission_20_time/mission_20_time_boss_defeated", qtrue, qfalse);
 	}
 	
 	if (self->client->sess.amrpgmode == 2)
