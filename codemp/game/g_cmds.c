@@ -17362,7 +17362,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 	if (argc == 1)
 	{ // zyk: lists the chars and commands
-		trap->SendServerCommand(ent->s.number, va("print \"^2Chars\n\n^7%s\n^3/rpgchar new <charname>: ^7creates a new char\n^3/rpgchar duplicate: ^7creates a copy of the current char in use\n^3/rpgchar use <charname>: ^7uses this char\n^3/rpgchar delete <charname>: ^7removes this char\n^3/rpgchar migrate <charname> <login> <password>: ^7moves char to account with this login and password\n\"", zyk_get_rpg_chars(ent, "\n")));
+		trap->SendServerCommand(ent->s.number, va("print \"^2Chars\n\n^7%s\n^3/rpgchar new <charname>: ^7creates a new char\n^3/rpgchar rename <new name>: ^7renames current char\n^3/rpgchar duplicate: ^7creates a copy of the current char in use\n^3/rpgchar use <charname>: ^7uses this char\n^3/rpgchar delete <charname>: ^7removes this char\n^3/rpgchar migrate <charname> <login> <password>: ^7moves char to account with this login and password\n\"", zyk_get_rpg_chars(ent, "\n")));
 	}
 	else
 	{
@@ -17408,7 +17408,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 			if (strlen(arg2) > MAX_ACC_NAME_SIZE)
 			{
-				trap->SendServerCommand(ent->s.number, va("print \"Char name must have a maximum of 30 characters\n\"", MAX_ACC_NAME_SIZE));
+				trap->SendServerCommand(ent->s.number, va("print \"Char name must have a maximum of %d characters\n\"", MAX_ACC_NAME_SIZE));
 				return;
 			}
 
@@ -17426,6 +17426,39 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
 				G_Kill(ent);
 			}
+		}
+		else if (Q_stricmp(arg1, "rename") == 0)
+		{
+			if (Q_stricmp(ent->client->sess.rpgchar, ent->client->sess.filename) == 0)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Cannot rename the default char\n\"");
+				return;
+			}
+
+			chars_file = fopen(va("accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
+			if (chars_file != NULL)
+			{
+				fclose(chars_file);
+				trap->SendServerCommand(ent->s.number, "print \"This char already exists\n\"");
+				return;
+			}
+
+			if (strlen(arg2) > MAX_ACC_NAME_SIZE)
+			{
+				trap->SendServerCommand(ent->s.number, va("print \"Char name must have a maximum of %d characters\n\"", MAX_ACC_NAME_SIZE));
+				return;
+			}
+
+#if defined(__linux__)
+			system(va("mv accounts/%s_%s.txt accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
+#else
+			system(va("cd accounts & MOVE %s_%s.txt %s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
+#endif
+
+			// zyk: saving the current char
+			strcpy(ent->client->sess.rpgchar, arg2);
+
+			trap->SendServerCommand(ent->s.number, va("print \"Renamed to %s^7\n\"", ent->client->sess.rpgchar));
 		}
 		else if (Q_stricmp(arg1, "duplicate") == 0)
 		{
@@ -17589,7 +17622,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 #if defined(__linux__)
 			system(va("mv accounts/%s_%s.txt accounts/%s_%s.txt", ent->client->sess.filename, arg2, arg3, arg2));
 #else
-			system(va("MOVE accounts/%s_%s.txt accounts/%s_%s.txt", ent->client->sess.filename, arg2, arg3, arg2));
+			system(va("cd accounts & MOVE %s_%s.txt %s_%s.txt", ent->client->sess.filename, arg2, arg3, arg2));
 #endif
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7moved!\n\"", arg2));
