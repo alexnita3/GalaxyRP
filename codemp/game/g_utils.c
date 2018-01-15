@@ -1962,24 +1962,16 @@ void TryUse( gentity_t *ent )
 		{ // zyk: talking to a soul
 			int j = target->client->pers.universe_quest_objective_control;
 
-			if (j == 0)
-			{
-				trap->SendServerCommand(ent->s.number, "chat \"^3Happy Soul: ^7Oh! The legendary hero is finally here, I am sure you will solve this puzzle! :)\"");
-			}
-			else if (j == 1)
-			{
-				trap->SendServerCommand(ent->s.number, "chat \"^3Motivating Soul: ^7Do not give up! The puzzle is hard, but is not impossible. It will be worthy the efforts.\"");
-			}
-			else if (j == 2)
-			{
-				trap->SendServerCommand(ent->s.number, "chat \"^3Bored Soul: ^7Solve this puzzle so I will be allowed to leave this boring place :/\"");
-			}
-			else if (j == -200000 && ent->client->pers.universe_quest_messages == 80)
+			if (j == -200000 && ent->client->pers.universe_quest_messages == 80)
 			{
 				ent->client->pers.universe_quest_messages = 70;
 				ent->client->pers.universe_quest_timer = level.time + 3000;
 
-				trap->SendServerCommand(ent->s.number, "chat \"^3Helper Soul: ^7The puzzle will restart.\"");
+				zyk_text_message(ent, "universe/mission_18_time/mission_18_time_restart", qtrue, qfalse);
+			}
+			else
+			{
+				zyk_text_message(ent, va("universe/mission_18_time/mission_18_time_soul_%d", j), qtrue, qfalse);
 			}
 
 			return;
@@ -1989,22 +1981,7 @@ void TryUse( gentity_t *ent )
 		{ // zyk: talking to a mage
 			int j = target->client->pers.universe_quest_objective_control;
 
-			if (j == 0)
-			{
-				trap->SendServerCommand(ent->s.number, "chat \"^3Mage: ^7Thor says you are stronger than Ymir himself!\"");
-			}
-			else if (j == 1)
-			{
-				trap->SendServerCommand(ent->s.number, "chat \"^3Mage: ^7So you are the famous 'Hero'. You don't look so strong.\"");
-			}
-			else if (j == 2)
-			{
-				trap->SendServerCommand(ent->s.number, "chat \"^3Mage: ^7In the Brotherhood of Mages, we always train to be stronger!\"");
-			}
-			else if (j == 3)
-			{
-				trap->SendServerCommand(ent->s.number, "chat \"^3Mage: ^7Thor says you defeated the Guardian of Chaos! You should be our leader!\"");
-			}
+			zyk_text_message(ent, va("universe/mission_15_thor/mission_15_thor_mage_%d", j), qtrue, qfalse);
 
 			return;
 		}

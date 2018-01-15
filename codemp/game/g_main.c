@@ -10350,7 +10350,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 53)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: %s^7, we meet again.\"", ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_53", qtrue, qfalse, ent->client->pers.netname);
 
 									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2073, 3140, -9950, 90);
 
@@ -10361,7 +10361,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 54)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Wait a second... you are that spooky voice that gave me the artifact.\"", ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_54", qtrue, qfalse, ent->client->pers.netname);
 
 									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2600, 3600, -9950, -135);
 
@@ -10372,7 +10372,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 55)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: Yes. Now I am back to the Realm of Souls. I will help you again.\""));
+									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_55", qtrue, qfalse);
 
 									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2700, 3425, -9950, 179);
 
@@ -10383,7 +10383,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 56)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: You must solve the puzzle for the Soul of Sorrow to appear.\""));
+									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_56", qtrue, qfalse);
 
 									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 1900, 3800, -9950, 0);
 
@@ -10394,7 +10394,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 57)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: How do I solve it?\"", ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_57", qtrue, qfalse, ent->client->pers.netname);
 
 									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2336, 4000, -9950, 179);
 
@@ -10405,19 +10405,19 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 58)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: Pay close attention to the puzzle and you will find the answer.\""));
+									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_58", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 59)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: That did not help much.\"", ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_59", qtrue, qfalse, ent->client->pers.netname);
 								}
 								else if (ent->client->pers.universe_quest_messages == 60)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: It is the best I can do. Now solve the puzzle, if you want to save the Universe.\""));
+									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_60", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 61)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"Helper Soul^7: Talk to me if you want to restart the puzzle.\""));
+									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_61", qtrue, qfalse);
 								}
 								else if (ent->client->pers.universe_quest_messages == 62)
 								{
@@ -10561,7 +10561,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 82)
 								{
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Looks like I solved it!\"", ent->client->pers.netname));
+									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_82", qtrue, qfalse, ent->client->pers.netname);
 
 									ent->client->pers.universe_quest_messages++;
 									ent->client->pers.universe_quest_timer = level.time + 5000;
