@@ -10832,44 +10832,21 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 52)
 									npc_ent = Zyk_NPC_SpawnType("soul_of_sorrow", 2336, 3425, -9950, 179);
-								else if (ent->client->pers.universe_quest_messages == 53)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: %s^7, you are indeed a very powerful and wise hero.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 54)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you. So now the Universe will be saved?\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 55)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: Correct. The supreme beings agree to give it another chance.\""));
-								else if (ent->client->pers.universe_quest_messages == 56)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: So it is all over.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 57)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: I will allow the Guardian of Time to come here.\""));
 								else if (ent->client->pers.universe_quest_messages == 58)
 									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", 2136, 3425, -9950, 0);
-								else if (ent->client->pers.universe_quest_messages == 59)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Yes! You did it, %s!\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 60)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: Guardian of Time, you must make sure that no more evil forces try to take over.\""));
-								else if (ent->client->pers.universe_quest_messages == 61)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: If that happens, the supreme beings may want to consider recreating the Universe.\""));
-								else if (ent->client->pers.universe_quest_messages == 62)
-									trap->SendServerCommand(ent->s.number, va("chat \"Guardian of Time^7: Do not worry, I am more prepared now with the Amulet of Time and the Crystal of Magic.\""));
-								else if (ent->client->pers.universe_quest_messages == 63)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: So. Only one thing remains. Hero, receive this Final Power.\""));
-								else if (ent->client->pers.universe_quest_messages == 64)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: This is the ^0Magic Improvement^7. Universe Power will not increase the mp cost of magic powers.\""));
-								else if (ent->client->pers.universe_quest_messages == 65)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: Thank you.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 66)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: Now I must continue being in this place, in sorrow, for ages.\""));
-								else if (ent->client->pers.universe_quest_messages == 67)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: So that is why you are the Soul of Sorrow, your task is to always remain here, alone.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 68)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: Yes, the supreme beings gave me this task, I must fulfill it.\""));
-								else if (ent->client->pers.universe_quest_messages == 69)
-									trap->SendServerCommand(ent->s.number, va("chat \"%s^7: I hope someday they allow you to leave anytime you want.\"", ent->client->pers.netname));
-								else if (ent->client->pers.universe_quest_messages == 70)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: I don't think it will happen. But thank you anyway.\""));
-								else if (ent->client->pers.universe_quest_messages == 71)
-									trap->SendServerCommand(ent->s.number, va("chat \"^0Soul of Sorrow^7: Now you both must go. And remember to always follow the path of good.\""));
+								else if (ent->client->pers.universe_quest_messages >= 53 && ent->client->pers.universe_quest_messages != 58 && ent->client->pers.universe_quest_messages <= 71)
+								{
+									if (ent->client->pers.universe_quest_messages == 53 || ent->client->pers.universe_quest_messages == 54 || ent->client->pers.universe_quest_messages == 56 ||
+										ent->client->pers.universe_quest_messages == 59 || ent->client->pers.universe_quest_messages == 65 || ent->client->pers.universe_quest_messages == 67 || 
+										ent->client->pers.universe_quest_messages == 69)
+									{
+										zyk_text_message(ent, va("universe/mission_21_time/mission_21_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
+									}
+									else
+									{
+										zyk_text_message(ent, va("universe/mission_21_time/mission_21_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
+									}
+								}
 								else if (ent->client->pers.universe_quest_messages == 72)
 								{ // zyk: teleports the player outside the Realm of Souls
 									vec3_t origin;
