@@ -2840,7 +2840,7 @@ void fx_runner_think( gentity_t *ent )
 	if (Q_stricmp(ent->targetname, "zyk_super_beam") == 0)
 	{
 		gentity_t *user_ent = ent->parent;
-		gentity_t *player_ent = NULL;
+		gentity_t *target_ent = NULL;
 		trace_t		tr;
 		vec3_t		tfrom, tto, fwd;
 		vec3_t		shot_mins, shot_maxs;
@@ -2852,21 +2852,25 @@ void fx_runner_think( gentity_t *ent )
 		tto[1] = tfrom[1] + fwd[1] * radius;
 		tto[2] = tfrom[2] + fwd[2] * radius;
 
-		VectorSet(shot_mins, -25, -25, -25);
-		VectorSet(shot_maxs, 25, 25, 25);
+		VectorSet(shot_mins, -20, -20, -20);
+		VectorSet(shot_maxs, 20, 20, 20);
 
 		trap->Trace(&tr, tfrom, shot_mins, shot_maxs, tto, user_ent->s.number, MASK_PLAYERSOLID, qfalse, 0, 0);
 
 		if (tr.fraction != 1.0 &&
 			tr.entityNum != ENTITYNUM_NONE)
 		{ // zyk: actually hit something
-			player_ent = &g_entities[tr.entityNum];
+			target_ent = &g_entities[tr.entityNum];
 		}
 
-		if (player_ent && player_ent->client && user_ent && user_ent->client && user_ent != player_ent &&
-			zyk_is_ally(user_ent, player_ent) == qfalse)
+		if (target_ent && target_ent->client && user_ent && user_ent->client && user_ent != target_ent &&
+			zyk_is_ally(user_ent, target_ent) == qfalse)
 		{ // zyk: if the enemy is hit by the super beam, damage him
-			G_Damage(player_ent, user_ent, user_ent, NULL, player_ent->client->ps.origin, 28, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
+			G_Damage(target_ent, user_ent, user_ent, NULL, target_ent->client->ps.origin, 30, DAMAGE_NO_PROTECTION, MOD_CONC_ALT);
+		}
+		else if (target_ent && user_ent != target_ent && !target_ent->client && target_ent->health > 0 && target_ent->takedamage == qtrue)
+		{ // zyk: non-client damageable entity
+			G_Damage(target_ent, user_ent, user_ent, NULL, target_ent->client->ps.origin, 30, DAMAGE_NO_PROTECTION, MOD_CONC_ALT);
 		}
 
 		ent->nextthink = level.time + 100;

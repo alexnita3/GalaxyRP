@@ -10456,7 +10456,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		{
 			if (ent->client->pers.rpg_class == 0)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 2: ^7used with /unique command. You can only have one Unique Ability at a time. Free Warrior gets Super Beam, a powerful beam that highly damages enemies. Spends 100 force and 25 mp\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 2: ^7used with /unique command. You can only have one Unique Ability at a time. Free Warrior gets Super Beam, a powerful beam with high damage. Spends 100 force and 25 mp\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 1)
 			{
