@@ -10843,7 +10843,7 @@ void PmoveSingle (pmove_t *pmove) {
 			if ( pm->ps->legsTimer > 0 || pm->ps->torsoTimer > 0 )
 			{
 				stiffenedUp = qtrue;
-				PM_SetPMViewAngle(pm->ps, pm->ps->viewangles, &pm->cmd);
+				// PM_SetPMViewAngle(pm->ps, pm->ps->viewangles, &pm->cmd); // zyk: now it will allow meditate players to move
 				pm->cmd.rightmove = 0;
 				pm->cmd.upmove = 0;
 				pm->cmd.forwardmove = 0;
@@ -10855,7 +10855,7 @@ void PmoveSingle (pmove_t *pmove) {
 		&& pm->ps->legsTimer > 0 )
 	{
 		stiffenedUp = qtrue;
-		PM_SetPMViewAngle(pm->ps, pm->ps->viewangles, &pm->cmd);
+		// PM_SetPMViewAngle(pm->ps, pm->ps->viewangles, &pm->cmd); // zyk: now it will allow meditate players to move
         pm->cmd.rightmove = 0;
 		pm->cmd.upmove = 0;
 		pm->cmd.forwardmove = 0;
