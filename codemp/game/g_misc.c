@@ -3393,6 +3393,77 @@ void SP_ZykRegenUnit( gentity_t *ent)
 	trap->LinkEntity( (sharedEntity_t *)ent );
 }
 
+/* zyk: zyk_training_pole adds a model that will be used as a saber training pole
+spawnflags:
+1 - shows amount of damage done to this entity after time in miliseconds set in wait field
+
+"angles" rotate this entity
+"wait" amount of time to wait (in miliseconds) until showing a score plum with the count value
+*/
+void zyk_training_pole_damage(gentity_t *ent)
+{
+	gentity_t *plum;
+	gentity_t *player = NULL;
+	vec3_t plum_origin;
+	int i = 0;
+
+	if (ent->count > 0)
+	{ // zyk: shows damage, stored in count, done to the training pole
+		VectorSet(plum_origin, ent->s.origin[0], ent->s.origin[1], ent->s.origin[2] + DEFAULT_MAXS_2);
+
+		for (i = 0; i < level.maxclients; i++)
+		{
+			player = &g_entities[i];
+
+			if (player && player->client && player->client->pers.connected == CON_CONNECTED)
+			{
+				plum = G_TempEntity(plum_origin, EV_SCOREPLUM);
+
+				plum->s.otherEntityNum = player->s.number;
+				plum->s.time = ent->count;
+			}
+		}
+
+		ent->count = 0;
+
+		ent->nextthink = level.time + ent->wait;
+	}
+}
+
+void SP_ZykTrainingPole(gentity_t *ent)
+{
+	ent->think = zyk_regen_unit_think;
+	ent->nextthink = level.time + ent->wait;
+
+	ent->s.eType = ET_GENERAL;
+
+	// Save our position and link us up!
+	G_SetOrigin(ent, ent->s.origin);
+	G_SetAngles(ent, ent->s.angles);
+
+	ent->s.modelindex = G_ModelIndex("models/map_objects/rift/statue.md3");
+	ent->r.contents = CONTENTS_SOLID | CONTENTS_OPAQUE | CONTENTS_BODY | CONTENTS_MONSTERCLIP | CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
+	ent->health = 1;
+	ent->takedamage = qtrue;
+	VectorSet(ent->r.mins, -15, -15, DEFAULT_MINS_2);
+	VectorSet(ent->r.maxs, 15, 15, DEFAULT_MAXS_2);
+
+	// zyk: cannot be destroyed
+	ent->flags |= FL_UNDYING;
+
+	if (ent->wait < 100)
+	{ // zyk: adds a minimum of 100 miliseconds
+		ent->wait = 100;
+	}
+
+	ent->count = 0;
+	ent->think = zyk_training_pole_damage;
+	ent->nextthink = level.time + ent->wait;
+
+	trap->LinkEntity((sharedEntity_t *)ent);
+}
+
+
 /* zyk: zyk_mini_game_joiner, allows a player to join a mini-game by going inside the bounding box
 spawnflags:
 1 -  Sniper Battle

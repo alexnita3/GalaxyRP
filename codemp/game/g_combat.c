@@ -6501,6 +6501,14 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 		targ->health = targ->health - take;
 
+		// zyk: training pole. Adds the count and sets the wait to execute the think function
+		if (targ && (targ->spawnflags & 1) && Q_stricmp(targ->classname, "zyk_training_pole") == 0)
+		{
+			targ->count += take;
+			
+			targ->nextthink = level.time + targ->wait;
+		}
+
 		if ( (targ->flags&FL_UNDYING) )
 		{//take damage down to 1, but never die
 			if ( targ->health < 1 )

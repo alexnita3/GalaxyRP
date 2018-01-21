@@ -450,6 +450,7 @@ void SP_CreateWeather( gentity_t *ent ); // zyk: added this function
 void SP_ZykMiniGameJoiner(gentity_t *ent); // zyk: added this function
 
 void SP_ZykRegenUnit( gentity_t *self); // zyk: added this function
+void SP_ZykTrainingPole(gentity_t *self); // zyk: added this function
 
 void SP_point_combat( gentity_t *self );
 
@@ -741,6 +742,7 @@ spawn_t	spawns[] = {
 	{ "waypoint_small",						SP_waypoint_small },
 	{ "zyk_mini_game_joiner",				SP_ZykMiniGameJoiner }, // zyk: added this code
 	{ "zyk_regen_unit",						SP_ZykRegenUnit }, // zyk: added this code
+	{ "zyk_training_pole",					SP_ZykTrainingPole }, // zyk: added this code
 	{ "zyk_weather",						SP_CreateWeather }, // zyk: added this code
 };
 
