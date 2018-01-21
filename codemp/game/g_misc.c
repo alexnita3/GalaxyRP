@@ -3103,7 +3103,7 @@ void SP_fx_runner( gentity_t *ent )
 	}
 	else // zyk: now this message is shown here, but the entity is not removed
 	{
-		Com_Printf( S_COLOR_RED"ERROR: fx_runner %s at %s has no fxFile specified\n", ent->targetname, vtos(ent->s.origin) );
+		Com_Printf( S_COLOR_YELLOW"WARNING: fx_runner %s at %s has no fxFile specified\n", ent->targetname, vtos(ent->s.origin) );
 	}
 
 	// important info transmitted
