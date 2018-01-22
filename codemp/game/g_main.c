@@ -16268,7 +16268,7 @@ void G_RunFrame( int levelTime ) {
 							magic_disable(ent, 20000);
 						}
 
-						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 10000);
+						ent->client->pers.guardian_timer = level.time + Q_irand(8000, 11000);
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
@@ -16286,7 +16286,7 @@ void G_RunFrame( int levelTime ) {
 
 						zyk_super_beam(ent, ent->client->ps.viewangles[1]);
 
-						ent->client->pers.light_quest_timer = level.time + ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 6000;
+						ent->client->pers.light_quest_timer = level.time + ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 7000;
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 21)
@@ -16313,7 +16313,7 @@ void G_RunFrame( int levelTime ) {
 
 						if (use_multi_magic == 0)
 						{ // zyk: Multi Magic
-							number_of_powers = 3;
+							number_of_powers = 2;
 						}
 
 						for (k = 0; k < number_of_powers; k++)
