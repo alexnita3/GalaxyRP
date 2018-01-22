@@ -2870,7 +2870,7 @@ void fx_runner_think( gentity_t *ent )
 		}
 		else if (target_ent && user_ent != target_ent && !target_ent->client && target_ent->health > 0 && target_ent->takedamage == qtrue)
 		{ // zyk: non-client damageable entity
-			G_Damage(target_ent, user_ent, user_ent, NULL, target_ent->client->ps.origin, 30, DAMAGE_NO_PROTECTION, MOD_CONC_ALT);
+			G_Damage(target_ent, user_ent, user_ent, NULL, target_ent->r.currentOrigin, 30, DAMAGE_NO_PROTECTION, MOD_CONC_ALT);
 		}
 
 		ent->nextthink = level.time + 100;
