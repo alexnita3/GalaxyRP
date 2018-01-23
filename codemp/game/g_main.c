@@ -16238,7 +16238,7 @@ void G_RunFrame( int levelTime ) {
 
 						Zyk_NPC_SpawnType("quest_mage", -6049, 1438, 57, 0);
 
-						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 12000);
+						ent->client->pers.light_quest_timer = level.time + Q_irand(12000, 14000);
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 20)
