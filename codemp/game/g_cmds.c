@@ -9968,9 +9968,9 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					if (i == 31)
 						trap->SendServerCommand( ent-g_entities, "print \"^3Max Shield: ^7The max shield (armor) the player can have. Each level increases 20 per cent of max shield the player can have\n\"" );
 					if (i == 32)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Shield Strength: ^7Each level increases your shield resistance by 7 per cent\n\"" );
+						trap->SendServerCommand( ent-g_entities, "print \"^3Shield Strength: ^7Each level increases your shield resistance by 6 per cent\n\"" );
 					if (i == 33)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Health Strength: ^7Each level increases your health resistance by 7 per cent\n\"" );
+						trap->SendServerCommand( ent-g_entities, "print \"^3Health Strength: ^7Each level increases your health resistance by 6 per cent\n\"" );
 					if (i == 34)
 						trap->SendServerCommand( ent-g_entities, "print \"^3Drain Shield: ^7When using Drain force power, and your health is full, restores some shield. It also makes Drain suck hp/shield from the enemy to restore your hp/shield\n\"" );
 					if (i == 35)
