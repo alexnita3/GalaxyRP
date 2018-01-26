@@ -209,7 +209,7 @@ void Sentry_Fire (void)
 
 		NPCS.NPCInfo->burstCount++;
 		NPCS.NPC->attackDebounceTime = level.time + 150;
-		missile->damage = 90;
+		missile->damage = 80;
 	}
 	else
 	{
