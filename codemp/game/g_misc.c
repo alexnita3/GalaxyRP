@@ -3399,6 +3399,9 @@ spawnflags:
 
 "angles" rotate this entity
 "wait" amount of time to wait (in miliseconds) until showing a score plum with the count value
+"model" allows setting a md3 model. Sets the rift statue if no model passed
+"mins"
+"maxs"
 */
 void zyk_training_pole_damage(gentity_t *ent)
 {
@@ -3441,12 +3444,21 @@ void SP_ZykTrainingPole(gentity_t *ent)
 	G_SetOrigin(ent, ent->s.origin);
 	G_SetAngles(ent, ent->s.angles);
 
-	ent->s.modelindex = G_ModelIndex("models/map_objects/rift/statue.md3");
+	if (ent->model)
+	{
+		ent->s.modelindex = G_ModelIndex(ent->model);
+	}
+	else
+	{
+		ent->s.modelindex = G_ModelIndex("models/map_objects/rift/statue.md3");
+	}
+
 	ent->r.contents = CONTENTS_SOLID | CONTENTS_OPAQUE | CONTENTS_BODY | CONTENTS_MONSTERCLIP | CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
 	ent->health = 1;
 	ent->takedamage = qtrue;
-	VectorSet(ent->r.mins, -15, -15, DEFAULT_MINS_2);
-	VectorSet(ent->r.maxs, 15, 15, DEFAULT_MAXS_2);
+
+	G_SpawnVector("mins", va("-15 -15 %d", DEFAULT_MINS_2), ent->r.mins);
+	G_SpawnVector("maxs", va("15 15 %d", DEFAULT_MAXS_2), ent->r.maxs);
 
 	// zyk: cannot be destroyed
 	ent->flags |= FL_UNDYING;
