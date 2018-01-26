@@ -4193,10 +4193,12 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 					if (ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
 						!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
 					{ // zyk: Unique Skill increases damage
-						fist_damage *= 2;
+						missile->damage = fist_damage * 2;
 					}
-
-					missile->damage = fist_damage;
+					else
+					{
+						missile->damage = fist_damage;
+					}
 
 					missile->dflags = DAMAGE_DEATH_KNOCKBACK;
 					missile->methodOfDeath = MOD_MELEE;
