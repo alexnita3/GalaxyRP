@@ -1232,13 +1232,13 @@ void ItemUse_Sentry( gentity_t *ent )
 	// zyk: Bounty Hunter sentry gun has more HP and with the Upgrade, player can place more sentry guns
 	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 2)
 	{
-		sentry->health = 100 * (ent->client->pers.skill_levels[55] + 1);
+		sentry->health = 50 * (ent->client->pers.skill_levels[55] + 1);
 
 		// zyk: validating quantity of sentry guns that the Bounty Hunter can place
 		ent->client->pers.bounty_hunter_placed_sentries++;
 		ent->client->pers.bounty_hunter_sentries--;
 
-		if (ent->client->pers.bounty_hunter_placed_sentries < MAX_BOUNTY_HUNTER_SENTRIES)
+		if (ent->client->pers.secrets_found & (1 << 1) && ent->client->pers.bounty_hunter_placed_sentries < MAX_BOUNTY_HUNTER_SENTRIES)
 		{
 			ent->client->ps.fd.sentryDeployed = qfalse;
 		}
