@@ -5345,7 +5345,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 	if (attacker && attacker->client && attacker->client->pers.quest_power_status & (1 << 21))
 	{ // zyk: Enemy Weakening decreases damage
-		damage = (int)ceil(damage*0.9);
+		damage = (int)ceil(damage*0.92);
 	}
 
 	if (level.gametype == GT_SIEGE)
@@ -5409,7 +5409,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 	if (targ && targ->client && targ->client->pers.quest_power_status & (1 << 21))
 	{ // zyk: Enemy Weakening increases damage taken
-		damage = (int)ceil(damage*1.1);
+		damage = (int)ceil(damage*1.08);
 	}
 
 	if (targ && targ->client && (targ->NPC || targ->client->sess.amrpgmode == 2) && targ->client->pers.quest_power_status & (1 << 22))
