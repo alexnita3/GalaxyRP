@@ -1161,9 +1161,10 @@ static void WP_BowcasterMainFire( gentity_t *ent )
 		VectorScale( missile->r.maxs, -1, missile->r.mins );
 
 		if (ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[22] == 2)
-			damage = (int)ceil(damage * 1.12);
+			missile->damage = (int)ceil(damage * 1.12);
+		else
+			missile->damage = damage;
 
-		missile->damage = damage;
 		missile->dflags = DAMAGE_DEATH_KNOCKBACK;
 		missile->methodOfDeath = MOD_BOWCASTER;
 		missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
