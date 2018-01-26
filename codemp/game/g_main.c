@@ -15436,14 +15436,14 @@ void G_RunFrame( int levelTime ) {
 					{
 						healing_area(ent,2,5000);
 						trap->SendServerCommand( -1, "chat \"^3Guardian of Eternity: ^7Healing Area!\"");
-						ent->client->pers.guardian_timer = level.time + 14000;
+						ent->client->pers.guardian_timer = level.time + 15000;
 					}
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
 						magic_shield(ent, 6000);
 						trap->SendServerCommand(-1, "chat \"^3Guardian of Eternity: ^7Magic Shield!\"");
-						ent->client->pers.light_quest_timer = level.time + 18000;
+						ent->client->pers.light_quest_timer = level.time + 19000;
 					}
 				}
 				else if (ent->client->pers.guardian_mode == 11 || (ent->client->pers.guardian_mode == 17 && Q_stricmp(ent->NPC_type, "guardian_boss_8") == 0))
