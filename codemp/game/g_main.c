@@ -4475,7 +4475,7 @@ void spawn_boss(gentity_t *ent,int x,int y,int z,int yaw,char *boss_name,int gx,
 
 	if (ent->client->pers.universe_quest_counter & (1 << 29))
 	{ // zyk: Challenge Mode increases boss hp more
-		boss_bonus_hp = 1.2 * (1 + zyk_number_of_allies(ent, qtrue));
+		boss_bonus_hp = 1.1 * (1 + zyk_number_of_allies(ent, qtrue));
 	}
 	else
 	{

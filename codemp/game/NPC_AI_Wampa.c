@@ -211,7 +211,7 @@ void Wampa_Slash( int boltIndex, qboolean backhand )
 
 	// zyk: Guardian of Forest damage
 	if (Q_stricmp(NPCS.NPC->NPC_type, "guardian_boss_3") == 0)
-		damage *= 3;
+		damage *= 2;
 
 	numEnts = NPC_GetEntsNearBolt( radiusEntNums, radius, boltIndex, boltOrg );
 
