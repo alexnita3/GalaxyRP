@@ -4224,7 +4224,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				int skip, traces = DISRUPTOR_ALT_TRACES;
 				qboolean	render_impact = qtrue;
 				vec3_t		start, end;
-				vec3_t		muzzle2, dir;
+				vec3_t		origin, muzzle2, dir;
 				trace_t		tr;
 				gentity_t	*traceEnt, *tent;
 				float		shotRange = 8192.0f;
@@ -4238,9 +4238,14 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 					damage *= 2;
 				}
 
-				VectorCopy( muzzle, muzzle2 ); // making a backup copy
+				if (ent->client->ps.pm_flags & PMF_DUCKED) // zyk: crouched
+					VectorSet(origin, ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2] + 12);
+				else
+					VectorSet(origin, ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2] + 36);
 
-				VectorCopy( muzzle, start );
+				VectorCopy( origin, muzzle2 ); // making a backup copy
+
+				VectorCopy(origin, start );
 				WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );
 
 				skip = ent->s.number;
@@ -4420,14 +4425,14 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				}
 
 				// now go along the trail and make sight events
-				VectorSubtract( tr.endpos, muzzle, dir );
+				VectorSubtract( tr.endpos, origin, dir );
 
 				//let's pack all this junk into a single tempent, and send it off.
 				tent = G_TempEntity(tr.endpos, EV_CONC_ALT_IMPACT);
 				tent->s.eventParm = DirToByte(tr.plane.normal);
 				tent->s.owner = ent->s.number;
 				VectorCopy(dir, tent->s.angles);
-				VectorCopy(muzzle, tent->s.origin2);
+				VectorCopy(origin, tent->s.origin2);
 				VectorCopy(forward, tent->s.angles2);
 
 				rpg_skill_counter(ent, 30);
