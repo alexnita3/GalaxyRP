@@ -10785,7 +10785,10 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		}
 		else if (value == 14)
 		{
-			ent->client->ps.powerups[PW_YSALAMIRI] = level.time + 60000;
+			if (ent->client->ps.powerups[PW_YSALAMIRI] < level.time)
+				ent->client->ps.powerups[PW_YSALAMIRI] = level.time + 60000;
+			else
+				ent->client->ps.powerups[PW_YSALAMIRI] += 60000;
 		}
 		else if (value == 15)
 		{
@@ -10910,7 +10913,10 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		}
 		else if (value == 43)
 		{
-			ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 60000;
+			if (ent->client->ps.powerups[PW_FORCE_BOON] < level.time)
+				ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 60000;
+			else
+				ent->client->ps.powerups[PW_FORCE_BOON] += 60000;
 		}
 		else if (value == 44)
 		{
