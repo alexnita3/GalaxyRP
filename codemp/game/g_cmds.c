@@ -13900,10 +13900,9 @@ void Cmd_EntNear_f( gentity_t *ent ) {
 	int i = 0;
 	int distance = 200;
 	int numListedEntities = 0;
-	int found_entities = 0;
 	int entityList[MAX_GENTITIES];
 	vec3_t mins, maxs, center;
-	char message[1024];
+	char message[MAX_STRING_CHARS * 2];
 	char arg1[MAX_STRING_CHARS];
 	gentity_t *this_ent = NULL;
 
@@ -13936,49 +13935,54 @@ void Cmd_EntNear_f( gentity_t *ent ) {
 	{
 		this_ent = &g_entities[entityList[i]];
 
-		if (this_ent && ent != this_ent && this_ent->s.number >= (MAX_CLIENTS + BODY_QUEUE_SIZE))
+		if (this_ent && ent != this_ent && this_ent->s.number >= (MAX_CLIENTS + BODY_QUEUE_SIZE) && this_ent->inuse == qtrue)
 		{
 			strcpy(message,va("%s\n%d - %s",message, this_ent->s.number,this_ent->classname));
-			found_entities++;
 		}
 
-		// zyk: max entities to list
-		if (found_entities == 14)
-			break;
-	}
-
-	if (found_entities < 14)
-	{
-		// zyk: if there are still enough room to list, use old method to get some entities not listed with EntitiesInBox
-		for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
+		if (strlen(message) > (MAX_STRING_CHARS - 11))
 		{
-			int j = 0;
-			qboolean already_found = qfalse;
-
-			this_ent = &g_entities[i];
-
-			for (j = 0; j < numListedEntities; j++)
-			{
-				if (entityList[j] == i)
-				{ // zyk: this entity was already listed
-					already_found = qtrue;
-					break;
-				}
-			}
-
-			if (this_ent && ent != this_ent && already_found == qfalse && (int)Distance(ent->client->ps.origin, this_ent->s.origin) < distance)
-			{
-				strcpy(message, va("%s\n%d - %s", message, this_ent->s.number, this_ent->classname));
-				found_entities++;
-			}
-
-			// zyk: max entities to list
-			if (found_entities == 14)
-				break;
+			trap->SendServerCommand(ent->s.number, "print \"Too much info. Decrease the distance argument\n\"");
+			return;
 		}
 	}
 
-	trap->SendServerCommand( ent->s.number, va("print \"%s\n\"",message) );
+	// zyk: if there are still enough room to list, use old method to get some entities not listed with EntitiesInBox
+	for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
+	{
+		int j = 0;
+		qboolean already_found = qfalse;
+
+		this_ent = &g_entities[i];
+
+		for (j = 0; j < numListedEntities; j++)
+		{
+			if (entityList[j] == i)
+			{ // zyk: this entity was already listed
+				already_found = qtrue;
+				break;
+			}
+		}
+
+		if (this_ent && ent != this_ent && already_found == qfalse && this_ent->inuse == qtrue && (int)Distance(ent->client->ps.origin, this_ent->r.currentOrigin) < distance && this_ent->s.eType != ET_MOVER)
+		{ // zyk: do not list mover entities in this old method, they are listed with EntitiesInBox
+			strcpy(message, va("%s\n%d - %s", message, this_ent->s.number, this_ent->classname));
+		}
+
+		if (strlen(message) > (MAX_STRING_CHARS - 11))
+		{
+			trap->SendServerCommand(ent->s.number, "print \"Too much info. Decrease the distance argument\n\"");
+			return;
+		}
+	}
+
+	if (Q_stricmp(message, "") == 0)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"No entities found\n\"");
+		return;
+	}
+
+	trap->SendServerCommand( ent->s.number, va("print \"%s\n\"", message) );
 }
 
 /*
