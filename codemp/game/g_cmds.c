@@ -12723,7 +12723,7 @@ void Cmd_ZykFile_f(gentity_t *ent) {
 	int page = 1; // zyk: page the user wants to see
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
-	char file_content[MAX_STRING_CHARS];
+	char file_content[MAX_STRING_CHARS * 4];
 	char content[MAX_STRING_CHARS];
 	int i = 0;
 	int results_per_page = zyk_list_cmds_results_per_page.integer; // zyk: number of results per page
