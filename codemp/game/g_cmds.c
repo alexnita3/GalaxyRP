@@ -17161,31 +17161,62 @@ Cmd_Tutorial_f
 ==================
 */
 void Cmd_Tutorial_f(gentity_t *ent) {
+	int page = 1; // zyk: page the user wants to see
+	int i = 0;
+	int results_per_page = zyk_list_cmds_results_per_page.integer; // zyk: number of results per page
 	char arg1[MAX_STRING_CHARS];
+	char file_content[MAX_STRING_CHARS * 4];
+	char content[MAX_STRING_CHARS];
+	FILE *tutorial_file = NULL;
 
 	if (trap->Argc() < 2)
 	{
-		ent->client->pers.tutorial_step = 0;
+		trap->SendServerCommand(ent->s.number, "print \"You must pass a page number. Example: ^3/tutorial 1^7\n\"");
+		return;
+	}
+
+	strcpy(file_content, "");
+	strcpy(content, "");
+
+	trap->Argv(1, arg1, sizeof(arg1));
+	page = atoi(arg1);
+
+	tutorial_file = fopen("zykmod/tutorial.txt", "r");
+	if (tutorial_file != NULL)
+	{
+		if (page > 0)
+		{ // zyk: show results of this page
+			while (i < (results_per_page * (page - 1)))
+			{ // zyk: reads the file until it reaches the position corresponding to the page number
+				fgets(content, sizeof(content), tutorial_file);
+				i++;
+			}
+
+			while (i < (results_per_page * page) && fgets(content, sizeof(content), tutorial_file) != NULL)
+			{ // zyk: fgets returns NULL at EOF
+				strcpy(file_content, va("%s%s", file_content, content));
+				i++;
+			}
+		}
+		else
+		{ // zyk: search for the string
+			while (i < results_per_page && fgets(content, sizeof(content), tutorial_file) != NULL)
+			{ // zyk: fgets returns NULL at EOF
+				if (strstr(G_NewString(content), G_NewString(arg1)))
+				{
+					strcpy(file_content, va("%s%s", file_content, content));
+					i++;
+				}
+			}
+		}
+
+		fclose(tutorial_file);
+		trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\"", file_content));
 	}
 	else
 	{
-		trap->Argv(1, arg1, sizeof(arg1));
-
-		ent->client->pers.tutorial_step = atoi(arg1);
+		trap->SendServerCommand(ent->s.number, "print \"Tutorial file does not exist\n\"");
 	}
-
-	ent->client->pers.tutorial_timer = 0;
-	ent->client->pers.player_statuses |= (1 << 25);
-}
-
-/*
-==================
-Cmd_Skip_f
-==================
-*/
-void Cmd_Skip_f(gentity_t *ent) {
-	ent->client->pers.player_statuses &= ~(1 << 25);
-	trap->SendServerCommand(ent->s.number, "chat \"^3Tutorial: ^7Skipped\"");
 }
 
 /*
@@ -17834,7 +17865,6 @@ command_t commands[] = {
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
 	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "skip",				Cmd_Skip_f,					CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "snipermode",			Cmd_SniperMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "snipertable",		Cmd_SniperTable_f,			CMD_NOINTERMISSION },
 	{ "stuff",				Cmd_Stuff_f,				CMD_RPG|CMD_NOINTERMISSION },

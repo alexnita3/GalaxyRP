@@ -9782,7 +9782,7 @@ void G_RunFrame( int levelTime ) {
 			// zyk: tutorial, which teaches the player the RPG Mode features
 			if (ent->client->pers.player_statuses & (1 << 25) && ent->client->pers.tutorial_timer < level.time)
 			{
-				if (ent->client->pers.tutorial_step > 47)
+				if (ent->client->pers.tutorial_step > 1)
 				{ // zyk: after last message, tutorial ends
 					ent->client->pers.player_statuses &= ~(1 << 25);
 				}
