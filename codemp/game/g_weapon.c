@@ -1119,8 +1119,8 @@ static void WP_BowcasterMainFire( gentity_t *ent )
 		// zyk: Bowcaster 2/2 in RPG Mode can shoot more missiles
 		if (ent && ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[22] == 2)
 		{
-			if (count > 7)
-				count = 7;
+			if (count > 9)
+				count = 9;
 		}
 		else
 		{
