@@ -17311,7 +17311,7 @@ int zyk_char_count(gentity_t *ent)
 	int count = 0;
 
 #if defined(__linux__)
-	system(va("ls zykmod/accounts/%s_ > zykmod/accounts/chars_%d.txt", ent->client->sess.filename, ent->s.number));
+	system(va("cd zykmod/accounts ; ls %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
 #else
 	system(va("cd \"zykmod/accounts\" & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
 #endif
