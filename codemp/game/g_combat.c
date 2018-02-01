@@ -5116,12 +5116,6 @@ qboolean zyk_can_damage_saber_only_entities(gentity_t *attacker, gentity_t *infl
 		{ // zyk: Magic Master bolts, the Ultra Bolt
 			return qtrue;
 		}
-
-		if ((mod == MOD_DISRUPTOR || mod == MOD_DISRUPTOR_SNIPER || mod == MOD_DISRUPTOR_SPLASH) && attacker->client->pers.rpg_class == 5 && 
-			attacker->client->pers.skill_levels[38] > 0 && attacker->client->ps.powerups[PW_NEUTRALFLAG] > level.time)
-		{ // zyk: Stealth Attacker using disruptor and Unique Skill
-			return qtrue;
-		}
 	}
 
 	return qfalse;
