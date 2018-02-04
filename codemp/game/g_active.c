@@ -3203,6 +3203,27 @@ void ClientThink_real( gentity_t *ent ) {
 	}
 	else {
 		pmove.tracemask = MASK_PLAYERSOLID;
+
+		if (zyk_duel_no_collision.integer > 0)
+		{ // zyk: makes duelists not collide with other players
+			int j = 0, k = 0;
+
+			for (j = 0; j < level.maxclients; j++)
+			{
+				gentity_t *player_ent = &g_entities[j];
+
+				if (player_ent && player_ent->client && ent != player_ent && player_ent->client->pers.connected == CON_CONNECTED && player_ent->client->sess.sessionTeam != TEAM_SPECTATOR)
+				{
+					if ((ent->client->ps.duelInProgress == qtrue && ent->client->ps.duelIndex != player_ent->s.number || ent->client->ps.duelInProgress != player_ent->client->ps.duelInProgress) && 
+						(int)Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 75)
+					
+					{ // zyk: duelist colliding with someone outside this duel
+						pmove.tracemask = MASK_PLAYERSOLID & ~CONTENTS_BODY;
+						break;
+					}
+				}
+			}
+		}
 	}
 	pmove.trace = SV_PMTrace;
 	pmove.pointcontents = trap->PointContents;
