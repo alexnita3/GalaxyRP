@@ -8849,7 +8849,7 @@ void G_RunFrame( int levelTime ) {
 				if (zyk_has_respawned == qfalse)
 				{
 					// zyk: setting the max time players can duel
-					level.duel_tournament_timer = level.time + DUEL_TOURNAMENT_DUEL_TIME;
+					level.duel_tournament_timer = level.time + zyk_duel_tournament_duel_time.integer;
 
 					// zyk: prepare the duelists to start duel
 					duel_tournament_prepare(duelist_1);

@@ -631,9 +631,6 @@ typedef enum {
 // zyk: default size of the globe model used as the Duel Tournament arena
 #define DUEL_TOURNAMENT_ARENA_SIZE 64
 
-// zyk: duration of a Duel Tournament duel in miliseconds
-#define DUEL_TOURNAMENT_DUEL_TIME 180000
-
 // zyk: duration of the duelists protection in Duel Tournament
 #define DUEL_TOURNAMENT_PROTECTION_TIME 2000
 

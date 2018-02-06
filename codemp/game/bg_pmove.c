@@ -10982,7 +10982,7 @@ void PmoveSingle (pmove_t *pmove) {
 		stiffenedUp = qtrue;
 	}
 	else if (level.duel_tournament_mode == 4 && player_ent && player_ent->s.number < MAX_CLIENTS && duel_tournament_is_duelist(player_ent) == qtrue && 
-			 (level.duel_tournament_timer - level.time) > (DUEL_TOURNAMENT_DUEL_TIME - DUEL_TOURNAMENT_PROTECTION_TIME))
+			 (level.duel_tournament_timer - level.time) > (zyk_duel_tournament_duel_time.integer - DUEL_TOURNAMENT_PROTECTION_TIME))
 	{ // zyk: Duel Tournament duelist that has just been placed in arena. Wait some time before moving
 		stiffenedUp = qtrue;
 	}
