@@ -1988,16 +1988,21 @@ void G_SetTauntAnim( gentity_t *ent, int taunt )
 			{
 				anim = BOTH_MEDITATE;
 			}
-			if ( ent->client->ps.saberHolstered == 1
-				&& ent->client->saber[1].model[0] )
-			{//turn off second saber
-				G_Sound( ent, CHAN_WEAPON, ent->client->saber[1].soundOff );
+
+			if (ent->client->ps.weapon == WP_SABER)
+			{ // zyk: added this condition
+				if (ent->client->ps.saberHolstered == 1
+					&& ent->client->saber[1].model[0])
+				{//turn off second saber
+					G_Sound(ent, CHAN_WEAPON, ent->client->saber[1].soundOff);
+				}
+				else if (ent->client->ps.saberHolstered == 0)
+				{//turn off first
+					G_Sound(ent, CHAN_WEAPON, ent->client->saber[0].soundOff);
+				}
+				ent->client->ps.saberHolstered = 2;
 			}
-			else if ( ent->client->ps.saberHolstered == 0 )
-			{//turn off first
-				G_Sound( ent, CHAN_WEAPON, ent->client->saber[0].soundOff );
-			}
-			ent->client->ps.saberHolstered = 2;
+
 			break;
 		case TAUNT_FLOURISH:
 			if ( ent->client->ps.weapon == WP_SABER )
