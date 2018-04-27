@@ -14341,6 +14341,15 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[14], va("^3 %d ^7- DuelArena: ^1no\n", ADM_DUELARENA));
 	}
 
+	if ((ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
+	{
+		strcpy(message_content[15], va("^3 %d ^7- Custom Quest: ^2yes\n", ADM_CUSTOMQUEST));
+	}
+	else
+	{
+		strcpy(message_content[15], va("^3 %d ^7- Custom Quest: ^1no\n", ADM_CUSTOMQUEST));
+	}
+
 	for (i = 0; i < ADM_NUM_CMDS; i++)
 	{
 		strcpy(message,va("%s%s",message,message_content[i]));
@@ -14426,6 +14435,10 @@ void Cmd_AdminList_f( gentity_t *ent ) {
 		else if (command_number == ADM_DUELARENA)
 		{
 			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/duelarena ^7to set or unset the Duel Tournament arena in this map. The arena is saved automatically. Also, use ^3/duelpause ^7to pause the tournament and use it again to resume it\n\n\"");
+		}
+		else if (command_number == ADM_CUSTOMQUEST)
+		{
+			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/customquest ^7to see commands to manage Custom Quests\n\n\"");
 		}
 	}
 	else

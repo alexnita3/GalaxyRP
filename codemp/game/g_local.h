@@ -555,6 +555,7 @@ typedef enum {
 	ADM_SCALE,
 	ADM_PLAYERS,
 	ADM_DUELARENA,
+	ADM_CUSTOMQUEST,
 	ADM_NUM_CMDS
 } zyk_admin_t;
 
@@ -814,8 +815,8 @@ typedef struct clientPersistant_s {
 	// 2 - Unique Ability 1
 	// 3 - Unique Ability 2
 	// 4 - Unique Ability 3
-	// 5 - unused
-	// 6 - unused
+	// 5 - Advanced Blaster Pack
+	// 6 - Advanced Power Cell
 	// 7 - Stealth Attacker Upgrade
 	// 8 - Force Gunner Upgrade
 	// 9 - Impact Reducer
@@ -827,8 +828,11 @@ typedef struct clientPersistant_s {
 	// 15 - Stun Baton Upgrade
 	// 16 - Armored Soldier Upgrade
 	// 17 - Jetpack Upgrade
-	// 18 - unused
+	// 18 - Advanced Metal Bolts
 	// 19 - Force Tank Upgrade
+	// 20 - Advanced Explosives
+	// 21 - Advanced Close Combat Weapons
+	// 22 - Advanced Armor
 	int secrets_found;
 
 	// zyk: amount of sentries the Bounty Hunter starts with
