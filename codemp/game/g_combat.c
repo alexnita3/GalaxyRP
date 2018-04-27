@@ -3124,7 +3124,7 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 
 	if (level.guardian_quest > 0 && self->NPC && self->s.number == level.guardian_quest)
 	{ // zyk: map guardian npc defeated by a non-rpg player
-		trap->SendServerCommand(-1, va("chat \"^3Guardian Quest:^7Map Guardian not defeated by rpg player\n\""));
+		trap->SendServerCommand(-1, va("chat \"^3Guardian Quest: ^7Map Guardian not defeated by rpg player\n\""));
 		level.guardian_quest = 0;
 		level.boss_battle_music_reset_timer = level.time + 1000;
 	}

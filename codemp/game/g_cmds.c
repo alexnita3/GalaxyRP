@@ -12575,7 +12575,7 @@ void Cmd_GuardianQuest_f( gentity_t *ent ) {
 
 		zyk_start_boss_battle_music(ent);
 
-		trap->SendServerCommand( -1, va("chat \"The ^3Guardian Quest ^7is activated!\"") );
+		trap->SendServerCommand( -1, va("chat \"^3Guardian Quest: ^7The ^3Guardian Quest ^7is activated!\"") );
 	}
 	else
 	{
