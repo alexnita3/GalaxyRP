@@ -736,7 +736,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 	if (1)
 	{
+		FILE *quest_file = NULL;
+		char content[1024];
 		int zyk_iterator = 0;
+
+		strcpy(content, "");
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_CLIENTS; zyk_iterator++)
 		{ // zyk: initializing duelist scores
@@ -779,6 +783,99 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		for (zyk_iterator = 0; zyk_iterator < 3; zyk_iterator++)
 		{
 			level.quest_crystal_id[zyk_iterator] = -1;
+		}
+
+		for (zyk_iterator = 0; zyk_iterator < MAX_CUSTOM_QUESTS; zyk_iterator++)
+		{ // zyk: initializing custom quest values
+			level.zyk_custom_quest_mission_count[zyk_iterator] = -1;
+
+			quest_file = fopen(va("zykmod/customquests/%d.txt", zyk_iterator), "r");
+			if (quest_file)
+			{
+				// zyk: initializes amount of quest missions
+				level.zyk_custom_quest_mission_count[zyk_iterator] = 0;
+
+				// zyk: reading the first line, which contains the main quest fields
+				if (fgets(content, sizeof(content), quest_file) != NULL)
+				{
+					int j = 0;
+					int k = 0; // zyk: current spawn string position
+					char field[256];
+
+					if (content[strlen(content) - 1] == '\n')
+						content[strlen(content) - 1] = '\0';
+
+					while (content[k] != '\0')
+					{
+						int l = 0;
+
+						// zyk: getting the field
+						while (content[k] != ';')
+						{
+							field[l] = content[k];
+
+							l++;
+							k++;
+						}
+						field[l] = '\0';
+						k++;
+
+						level.zyk_custom_quest_main_fields[zyk_iterator][j] = G_NewString(field);
+
+						j++;
+					}
+				}
+
+				while (fgets(content, sizeof(content), quest_file) != NULL)
+				{
+					int j = 0; // zyk: the current key/value being used
+					int k = 0; // zyk: current spawn string position
+
+					if (content[strlen(content) - 1] == '\n')
+						content[strlen(content) - 1] = '\0';
+
+					while (content[k] != '\0')
+					{
+						int l = 0;
+						char zyk_key[256];
+						char zyk_value[256];
+
+						// zyk: getting the key
+						while (content[k] != ';')
+						{
+							zyk_key[l] = content[k];
+
+							l++;
+							k++;
+						}
+						zyk_key[l] = '\0';
+						k++;
+
+						// zyk: getting the value
+						l = 0;
+						while (content[k] != ';')
+						{
+							zyk_value[l] = content[k];
+
+							l++;
+							k++;
+						}
+						zyk_value[l] = '\0';
+						k++;
+
+						// zyk: copying the key and value to the fields array
+						level.zyk_custom_quest_missions[zyk_iterator][level.zyk_custom_quest_mission_count[zyk_iterator]][j] = G_NewString(zyk_key);
+						level.zyk_custom_quest_missions[zyk_iterator][level.zyk_custom_quest_mission_count[zyk_iterator]][j + 1] = G_NewString(zyk_value);
+
+						j += 2;
+					}
+
+					level.zyk_custom_quest_mission_values_count[zyk_iterator][level.zyk_custom_quest_mission_count[zyk_iterator]] = j;
+					level.zyk_custom_quest_mission_count[zyk_iterator]++;
+				}
+
+				fclose(quest_file);
+			}
 		}
 	}
 

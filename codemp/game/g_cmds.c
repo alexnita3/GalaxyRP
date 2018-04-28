@@ -17666,6 +17666,371 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 /*
 ==================
+Cmd_CustomQuest_f
+==================
+*/
+void save_quest_file(int quest_number)
+{
+	FILE *quest_file = NULL;
+	int i = 0;
+
+	zyk_create_dir("customquests");
+
+	quest_file = fopen(va("zykmod/customquests/%d.txt", quest_number), "w");
+	fprintf(quest_file, "%s;%s;%s;\n", level.zyk_custom_quest_main_fields[quest_number][0], level.zyk_custom_quest_main_fields[quest_number][1], level.zyk_custom_quest_main_fields[quest_number][2]);
+
+	for (i = 0; i < level.zyk_custom_quest_mission_count[quest_number]; i++)
+	{
+		int j = 0;
+
+		for (j = 0; j < level.zyk_custom_quest_mission_values_count[quest_number][i]; j += 2)
+		{
+			fprintf(quest_file, "%s;%s;", level.zyk_custom_quest_missions[quest_number][i][j], level.zyk_custom_quest_missions[quest_number][i][j + 1]);
+		}
+
+		if (j > 0)
+		{ // zyk: break line if the mission had at least one key/value pair to save
+			fprintf(quest_file, "\n");
+		}
+	}
+
+	fclose(quest_file);
+}
+
+void Cmd_CustomQuest_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+	char content[MAX_STRING_CHARS];
+	int i = 0;
+	int argc = trap->Argc();
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
+	{ // zyk: admin command
+		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	strcpy(content, "");
+
+	if (argc == 1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"\n^3/customquest quests: ^7visualize custom quests\n^3/customquest new: ^7creates a new quest\n^3/customquest delete <quest number>: ^7removes the quest\n^3/customquest change <quest number> <field> <value>: ^7changes value of the main quest fields\n^3/customquest edit <quest number> [mission number] [field] [value]: ^7sets the value to the field of this quest mission. Can also be used to see quest info or mission info\n\"");
+	}
+	else
+	{
+		FILE *quest_file = NULL;
+		char arg2[MAX_STRING_CHARS];
+		char arg3[MAX_STRING_CHARS];
+		char arg4[MAX_STRING_CHARS];
+		char arg5[MAX_STRING_CHARS];
+		int quest_number = -1;
+		int mission_number = -1;
+
+		trap->Argv(1, arg1, sizeof(arg1));
+
+		if (Q_stricmp(arg1, "quests") == 0)
+		{
+			for (i = 0; i < MAX_CUSTOM_QUESTS; i++)
+			{
+				if (level.zyk_custom_quest_mission_count[i] != -1)
+				{ // zyk: quest exists
+					strcpy(content, va("%s%d - %s (%s)\n", content, i, level.zyk_custom_quest_main_fields[i][0], level.zyk_custom_quest_main_fields[i][1]));
+				}
+			}
+
+			trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\"", content));
+		}
+		else if (Q_stricmp(arg1, "new") == 0)
+		{
+			for (i = 0; i < MAX_CUSTOM_QUESTS; i++)
+			{
+				if (level.zyk_custom_quest_mission_count[i] == -1)
+				{ // zyk: found an empty position for the new quest
+					level.zyk_custom_quest_mission_count[i] = 0;
+					quest_number = i;
+					break;
+				}
+			}
+
+			if (quest_number == -1)
+			{ // zyk: did not find an empty position for new quest
+				trap->SendServerCommand(ent->s.number, "print \"Cannot create new quests. Max amount of quests reached.\n\"");
+				return;
+			}
+
+			// zyk: setting default values of the quest main fields and saving in the quest file
+			level.zyk_custom_quest_main_fields[quest_number][0] = G_NewString(va("Quest %d", quest_number));
+			level.zyk_custom_quest_main_fields[quest_number][1] = G_NewString("off");
+			level.zyk_custom_quest_main_fields[quest_number][2] = G_NewString("0");
+			level.zyk_custom_quest_main_fields[quest_number][3] = G_NewString("");
+
+			save_quest_file(quest_number);
+
+			trap->SendServerCommand(ent->s.number, "print \"Quest created.\n\"");
+		}
+		else if (Q_stricmp(arg1, "delete") == 0)
+		{
+			if (argc == 2)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Must pass the quest number.\n\"");
+				return;
+			}
+
+			trap->Argv(2, arg2, sizeof(arg2));
+
+			quest_number = atoi(arg2);
+
+			if (quest_number < 0 || quest_number >= MAX_CUSTOM_QUESTS || level.zyk_custom_quest_mission_count[quest_number] == -1)
+			{ // zyk: this position is already empty, there is no quest to be removed in this position
+				trap->SendServerCommand(ent->s.number, "print \"This quest does not exist.\n\"");
+				return;
+			}
+
+			// zyk: now it will be an empty position
+			level.zyk_custom_quest_mission_count[quest_number] = -1;
+
+			zyk_create_dir("customquests");
+
+			quest_file = fopen(va("zykmod/customquests/%d.txt", quest_number), "r");
+			if (quest_file)
+			{
+				fclose(quest_file);
+
+				remove(va("zykmod/customquests/%d.txt", quest_number));
+
+				trap->SendServerCommand(ent->s.number, "print \"Quest removed.\n\"");
+			}
+			else
+			{
+				trap->SendServerCommand(ent->s.number, "print \"File does not exist\n\"");
+			}
+		}
+		else if (Q_stricmp(arg1, "change") == 0)
+		{
+			if (argc < 5)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Must pass the quest number, field and value.\n\"");
+				return;
+			}
+
+			trap->Argv(2, arg2, sizeof(arg2));
+			trap->Argv(3, arg3, sizeof(arg3));
+			trap->Argv(4, arg4, sizeof(arg4));
+
+			quest_number = atoi(arg2);
+
+			if (quest_number < 0 || quest_number >= MAX_CUSTOM_QUESTS || level.zyk_custom_quest_mission_count[quest_number] == -1)
+			{ // zyk: this position is already empty, there is no quest to be removed in this position
+				trap->SendServerCommand(ent->s.number, "print \"This quest does not exist.\n\"");
+				return;
+			}
+
+			// zyk: changing the main quest fields
+			if (Q_stricmp(arg3, "name") == 0)
+			{
+				level.zyk_custom_quest_main_fields[quest_number][0] = G_NewString(arg4);
+			}
+			else if (Q_stricmp(arg3, "active") == 0)
+			{
+				if (Q_stricmp(level.zyk_custom_quest_main_fields[quest_number][1], "on") == 0)
+				{
+					level.zyk_custom_quest_main_fields[quest_number][1] = G_NewString("off");
+				}
+				else
+				{
+					level.zyk_custom_quest_main_fields[quest_number][1] = G_NewString("on");
+				}
+			}
+			else if (Q_stricmp(arg3, "count") == 0)
+			{
+				level.zyk_custom_quest_main_fields[quest_number][2] = G_NewString(va("%d", atoi(arg4)));
+			}
+			else
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Invalid field.\n\"");
+				return;
+			}
+
+			// zyk: saving info in the quest file
+			save_quest_file(quest_number);
+
+			trap->SendServerCommand(ent->s.number, "print \"Changes saved.\n\"");
+		}
+		else if (Q_stricmp(arg1, "edit") == 0)
+		{
+			char *key;
+			char *value;
+
+			if (argc == 2)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Must pass at least the quest number\n\"");
+				return;
+			}
+			else if (argc == 3)
+			{ // zyk: quest info
+				trap->Argv(2, arg2, sizeof(arg2));
+
+				quest_number = atoi(arg2);
+
+				if (quest_number < 0 || quest_number >= MAX_CUSTOM_QUESTS || level.zyk_custom_quest_mission_count[quest_number] == -1)
+				{ // zyk: this position is already empty, there is no quest to be removed in this position
+					trap->SendServerCommand(ent->s.number, "print \"This quest does not exist.\n\"");
+					return;
+				}
+
+				trap->SendServerCommand(ent->s.number, va("print \"\n^3Name: ^7%s\n^3Status: ^7%s\n^3Number of missions: ^7%d\n^3Number of completed missions: ^7%s\n\"", level.zyk_custom_quest_main_fields[quest_number][0], level.zyk_custom_quest_main_fields[quest_number][1], level.zyk_custom_quest_mission_count[quest_number], level.zyk_custom_quest_main_fields[quest_number][2]));
+				return;
+			}
+			else if (argc == 4)
+			{ // zyk: mission info
+				trap->Argv(2, arg2, sizeof(arg2));
+				trap->Argv(3, arg3, sizeof(arg3));
+
+				quest_number = atoi(arg2);
+				mission_number = atoi(arg3);
+
+				if (quest_number < 0 || quest_number >= MAX_CUSTOM_QUESTS || level.zyk_custom_quest_mission_count[quest_number] == -1)
+				{ // zyk: this position is already empty, there is no quest to be removed in this position
+					trap->SendServerCommand(ent->s.number, "print \"This quest does not exist.\n\"");
+					return;
+				}
+
+				if (mission_number < 0 || mission_number >= MAX_CUSTOM_QUEST_MISSIONS || level.zyk_custom_quest_mission_count[quest_number] <= mission_number)
+				{ // zyk: mission number must be valid
+					trap->SendServerCommand(ent->s.number, "print \"This mission does not exist in this quest.\n\"");
+					return;
+				}
+
+				while (i < level.zyk_custom_quest_mission_values_count[quest_number][mission_number])
+				{
+					strcpy(content, va("%s^3%s: ^7%s\n", content, level.zyk_custom_quest_missions[quest_number][mission_number][i], level.zyk_custom_quest_missions[quest_number][mission_number][i + 1]));
+
+					i += 2;
+				}
+
+				trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\"", content));
+				return;
+			}
+			else if (argc < 6)
+			{
+				trap->SendServerCommand(ent->s.number, "print \"Must pass the quest number, mission number, field and value.\n\"");
+				return;
+			}
+
+			trap->Argv(2, arg2, sizeof(arg2));
+			trap->Argv(3, arg3, sizeof(arg3));
+			trap->Argv(4, arg4, sizeof(arg4));
+			trap->Argv(5, arg5, sizeof(arg5));
+
+			quest_number = atoi(arg2);
+			mission_number = atoi(arg3);
+
+			if (quest_number < 0 || quest_number >= MAX_CUSTOM_QUESTS || level.zyk_custom_quest_mission_count[quest_number] == -1)
+			{ // zyk: this position is already empty, there is no quest to be removed in this position
+				trap->SendServerCommand(ent->s.number, "print \"This quest does not exist.\n\"");
+				return;
+			}
+
+			if (mission_number < 0 || mission_number >= MAX_CUSTOM_QUEST_MISSIONS || mission_number > level.zyk_custom_quest_mission_count[quest_number])
+			{ // zyk: mission number must be valid
+				trap->SendServerCommand(ent->s.number, "print \"This mission does not exist in this quest.\n\"");
+				return;
+			}
+
+			key = G_NewString(arg4);
+			value = G_NewString(arg5);
+
+			// zyk: new mission
+			if (mission_number == level.zyk_custom_quest_mission_count[quest_number])
+			{
+				level.zyk_custom_quest_mission_values_count[quest_number][mission_number] = 0;
+				level.zyk_custom_quest_mission_count[quest_number]++;
+			}
+
+			if (Q_stricmp(key, "zykremovemission") == 0)
+			{
+				// zyk: mission must be removed in this case
+				for (i = mission_number; i < (level.zyk_custom_quest_mission_count[quest_number] - 1); i++)
+				{
+					int j = 0;
+
+					for (j = 0; j < level.zyk_custom_quest_mission_values_count[quest_number][i + 1]; j += 2)
+					{ // zyk: save all key/value pairs from next mission to this one, it will move all mission by one position
+						level.zyk_custom_quest_missions[quest_number][i][j] = G_NewString(level.zyk_custom_quest_missions[quest_number][i + 1][j]);
+						level.zyk_custom_quest_missions[quest_number][i][j + 1] = G_NewString(level.zyk_custom_quest_missions[quest_number][i + 1][j + 1]);
+					}
+
+					level.zyk_custom_quest_mission_values_count[quest_number][i] = level.zyk_custom_quest_mission_values_count[quest_number][i + 1];
+				}
+
+				level.zyk_custom_quest_mission_values_count[quest_number][i] = 0;
+				level.zyk_custom_quest_mission_count[quest_number]--;
+
+				// zyk: saving info in the quest file
+				save_quest_file(quest_number);
+
+				trap->SendServerCommand(ent->s.number, "print \"Mission removed.\n\"");
+				return;
+			}
+
+			// zyk: see if this key already exists to edit it. If not, add a new one
+			while (i < level.zyk_custom_quest_mission_values_count[quest_number][mission_number])
+			{
+				if (Q_stricmp(level.zyk_custom_quest_missions[quest_number][mission_number][i], key) == 0)
+				{ // zyk: found the key
+					if (Q_stricmp(value, "zykremovekey") == 0)
+					{ // zyk: remove the key
+					  // zyk: starts from the next key
+						i += 2;
+
+						// zyk: moves all keys after this one 2 positions to remove the key
+						while (i < level.zyk_custom_quest_mission_values_count[quest_number][mission_number])
+						{
+							level.zyk_custom_quest_missions[quest_number][mission_number][i - 2] = G_NewString(level.zyk_custom_quest_missions[quest_number][mission_number][i]);
+							level.zyk_custom_quest_missions[quest_number][mission_number][i - 1] = G_NewString(level.zyk_custom_quest_missions[quest_number][mission_number][i + 1]);
+
+							i += 2;
+						}
+
+						// zyk: decrease the counter
+						level.zyk_custom_quest_mission_values_count[quest_number][mission_number] -= 2;
+					}
+					else
+					{ // zyk: edit the key
+						level.zyk_custom_quest_missions[quest_number][mission_number][i] = G_NewString(key);
+						level.zyk_custom_quest_missions[quest_number][mission_number][i + 1] = G_NewString(value);
+					}
+
+					// zyk: saving info in the quest file
+					save_quest_file(quest_number);
+
+					trap->SendServerCommand(ent->s.number, "print \"Mission edited.\n\"");
+					return;
+				}
+
+				i += 2;
+			}
+
+			// zyk: a new key. Add it
+			level.zyk_custom_quest_missions[quest_number][mission_number][i] = G_NewString(key);
+			level.zyk_custom_quest_missions[quest_number][mission_number][i + 1] = G_NewString(value);
+
+			// zyk: increases the counter
+			level.zyk_custom_quest_mission_values_count[quest_number][mission_number] += 2;
+
+			// zyk: saving info in the quest file
+			save_quest_file(quest_number);
+
+			trap->SendServerCommand(ent->s.number, "print \"Mission edited.\n\"");
+		}
+		else
+		{
+			trap->SendServerCommand(ent->s.number, "print \"Invalid option.\n\"");
+		}
+	}
+}
+
+/*
+==================
 Cmd_DuelBoard_f
 ==================
 */
@@ -17792,6 +18157,7 @@ command_t commands[] = {
 	{ "changepassword",		Cmd_ChangePassword_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "clientprint",		Cmd_ClientPrint_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "creditgive",			Cmd_CreditGive_f,			CMD_RPG|CMD_NOINTERMISSION },
+	{ "customquest",		Cmd_CustomQuest_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "datetime",			Cmd_DateTime_f,				CMD_NOINTERMISSION },
 	{ "debugBMove_Back",	Cmd_BotMoveBack_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "debugBMove_Forward",	Cmd_BotMoveForward_f,		CMD_CHEAT|CMD_ALIVE },

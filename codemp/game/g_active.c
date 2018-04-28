@@ -3211,7 +3211,7 @@ void ClientThink_real( gentity_t *ent ) {
 
 		if (zyk_duel_no_collision.integer > 0)
 		{ // zyk: makes duelists not collide with other players
-			int j = 0, k = 0;
+			int j = 0;
 
 			for (j = 0; j < level.maxclients; j++)
 			{

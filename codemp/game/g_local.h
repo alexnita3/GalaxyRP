@@ -1423,6 +1423,15 @@ typedef struct {
 // zyk: max matches a tournament may have
 #define MAX_DUEL_MATCHES 496
 
+// zyk: max amount of custom quests
+#define MAX_CUSTOM_QUESTS 16
+
+// zyk: max missions a custom quest can have
+#define MAX_CUSTOM_QUEST_MISSIONS 64
+
+// zyk: max fields a custom quest mission can have
+#define MAX_CUSTOM_QUEST_FIELDS 256
+
 typedef struct level_locals_s {
 	struct gclient_s	*clients;		// [maxclients]
 
@@ -1710,6 +1719,18 @@ typedef struct level_locals_s {
 
 	// zyk: amount of keys and values stored in this entity
 	int zyk_spawn_strings_values_count[ENTITYNUM_MAX_NORMAL];
+
+	// zyk: Custom Quests, missions and fields
+	char *zyk_custom_quest_missions[MAX_CUSTOM_QUESTS][MAX_CUSTOM_QUEST_MISSIONS][MAX_CUSTOM_QUEST_FIELDS];
+
+	// zyk: amounf of keys and values stored for each mission of each quest
+	int zyk_custom_quest_mission_values_count[MAX_CUSTOM_QUESTS][MAX_CUSTOM_QUEST_MISSIONS];
+
+	// zyk: amount of missions of each custom quest
+	int zyk_custom_quest_mission_count[MAX_CUSTOM_QUESTS];
+
+	// zyk: custom quest main fields. It will saved in the first quest file line. Order of fields: name, active (value: on or off), count (integer value, number of completed missions)
+	char* zyk_custom_quest_main_fields[MAX_CUSTOM_QUESTS][4];
 
 	char		mapname[MAX_QPATH];
 	char		rawmapname[MAX_QPATH];
