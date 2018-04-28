@@ -1634,9 +1634,9 @@ void ForceGrip( gentity_t *self )
 		// zyk: Armored Soldier Upgrade has a chance of setting ysalamiri and resist the force power
 		if (g_entities[tr.entityNum].client && g_entities[tr.entityNum].client->sess.amrpgmode == 2 && 
 			g_entities[tr.entityNum].client->pers.rpg_class == 3 && g_entities[tr.entityNum].client->pers.secrets_found & (1 << 16) && 
-			g_entities[tr.entityNum].client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,1) == 0)
+			g_entities[tr.entityNum].client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,4) < 2)
 		{
-			g_entities[tr.entityNum].client->ps.powerups[PW_YSALAMIRI] = level.time + 2000;
+			g_entities[tr.entityNum].client->ps.powerups[PW_YSALAMIRI] = level.time + 1500;
 			return;
 		}
 
@@ -2007,9 +2007,9 @@ void ForceLightningDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec
 
 					// zyk: Armored Soldier Upgrade has a chance of setting ysalamiri and resist the force power
 					if (traceEnt->client->sess.amrpgmode == 2 && traceEnt->client->pers.rpg_class == 3 && 
-						traceEnt->client->pers.secrets_found & (1 << 16) && traceEnt->client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,9) == 0)
+						traceEnt->client->pers.secrets_found & (1 << 16) && traceEnt->client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,10) == 0)
 					{
-						traceEnt->client->ps.powerups[PW_YSALAMIRI] = level.time + 2000;
+						traceEnt->client->ps.powerups[PW_YSALAMIRI] = level.time + 1500;
 					}
 					else
 					{
@@ -2218,9 +2218,9 @@ void ForceDrainDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec3_t 
 			// zyk: Armored Soldier Upgrade has a chance of setting ysalamiri and resist the force power
 			if (traceEnt->client && traceEnt->client->sess.amrpgmode == 2 && traceEnt->client->pers.rpg_class == 3 &&
 				traceEnt->client->pers.secrets_found & (1 << 16) && traceEnt->client->ps.powerups[PW_YSALAMIRI] < level.time && 
-				Q_irand(0, 9) == 0)
+				Q_irand(0, 10) == 0)
 			{
-				traceEnt->client->ps.powerups[PW_YSALAMIRI] = level.time + 2000;
+				traceEnt->client->ps.powerups[PW_YSALAMIRI] = level.time + 1500;
 			}
 
 			if (ForcePowerUsableOn(self, traceEnt, FP_DRAIN))
@@ -3005,9 +3005,9 @@ void ForceTelepathy(gentity_t *self)
 			// zyk: Armored Soldier Upgrade has a chance of setting ysalamiri and resist the force power
 			if (tricked_entity && tricked_entity->client && tricked_entity->client->sess.amrpgmode == 2 && 
 				tricked_entity->client->pers.rpg_class == 3 && tricked_entity->client->pers.secrets_found & (1 << 16) && 
-				tricked_entity->client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,1) == 0)
+				tricked_entity->client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,4) < 2)
 			{
-				tricked_entity->client->ps.powerups[PW_YSALAMIRI] = level.time + 2000;
+				tricked_entity->client->ps.powerups[PW_YSALAMIRI] = level.time + 1500;
 				return;
 			}
 
@@ -3114,9 +3114,9 @@ void ForceTelepathy(gentity_t *self)
 				// zyk: Armored Soldier Upgrade has a chance of setting ysalamiri and resist the force power
 				if (ent && ent->client && ent->client->sess.amrpgmode == 2 && 
 					ent->client->pers.rpg_class == 3 && ent->client->pers.secrets_found & (1 << 16) && 
-					ent->client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,1) == 0)
+					ent->client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,4) < 2)
 				{
-					ent->client->ps.powerups[PW_YSALAMIRI] = level.time + 2000;
+					ent->client->ps.powerups[PW_YSALAMIRI] = level.time + 1500;
 					return;
 				}
 
@@ -3624,9 +3624,9 @@ void ForceThrow( gentity_t *self, qboolean pull )
 
 		// zyk: Armored Soldier Upgrade has a chance of setting ysalamiri and resist the force power
 		if (ent && ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 3 && 
-			ent->client->pers.secrets_found & (1 << 16) && ent->client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,2) == 0)
+			ent->client->pers.secrets_found & (1 << 16) && ent->client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,3) == 0)
 		{
-			ent->client->ps.powerups[PW_YSALAMIRI] = level.time + 2000;
+			ent->client->ps.powerups[PW_YSALAMIRI] = level.time + 1500;
 			continue;
 		}
 
