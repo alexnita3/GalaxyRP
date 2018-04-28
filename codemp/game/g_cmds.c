@@ -9922,11 +9922,11 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					if (i == 5)
 						trap->SendServerCommand( ent-g_entities, "print \"^3Sense: ^7allows you to see people through walls, invisible people or cloaked people and you can dodge disruptor shots. Represents your mind strength to resist Mind Control if your sense level is equal or higher than the enemy's mind trick level\n\"" );
 					if (i == 6)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Saber Attack: ^7gives you the saber. If you are using Single Saber, gives you the saber styles. If using duals or staff, increases saber damage, which is increased by 20 per cent for each level\n\"" );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Saber Attack: ^7gives you the saber. If you are using Single Saber, gives you the saber styles. If using duals or staff, increases saber damage, which is increased by 20 per cent for each level. This server has a saber damage scale of %.2f\n\"", g_saberDamageScale.value) );
 					if (i == 7)
 						trap->SendServerCommand( ent-g_entities, "print \"^3Saber Defense: ^7increases your ability to block, parry enemy saber attacks or enemy shots\n\"" );
 					if (i == 8)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Saber Throw: ^7throws your saber at enemy and gets it back. Each level increases max distance and saber throw speed\n\"" );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Saber Throw: ^7throws your saber at enemy and gets it back. Each level increases max distance and saber throw speed. Has %d damage\n\"", zyk_saber_throw_damage.integer) );
 					if (i == 9)
 						trap->SendServerCommand( ent-g_entities, "print \"^3Absorb: ^7allows you to absorb force power attacks done to you\n\"" );
 					if (i == 10)
