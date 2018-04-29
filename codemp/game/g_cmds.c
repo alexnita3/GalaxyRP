@@ -16693,15 +16693,15 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 			{ // zyk: both duelists still in tournament
 				if (level.duel_matches[i][2] == first_duelist->s.number)
 				{
-					strcpy(content, va("%s^7%s%s ^2Win ^3x ^1Lose ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
+					strcpy(content, va("%s^7%s%s ^2W ^3x ^1L ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
 				}
 				else if (level.duel_matches[i][2] == second_duelist->s.number)
 				{
-					strcpy(content, va("%s^7%s%s ^1Lose ^3x ^2Win ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
+					strcpy(content, va("%s^7%s%s ^1L ^3x ^2W ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
 				}
 				else if (level.duel_matches[i][2] == -2)
 				{
-					strcpy(content, va("%s^7%s%s ^3Tie x Tie ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
+					strcpy(content, va("%s^7%s%s ^3T x T ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
 				}
 				else
 				{ // zyk: not played it
@@ -16725,15 +16725,15 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 			{ // zyk: second duelist left
 				if (level.duel_matches[i][2] == first_duelist->s.number)
 				{
-					strcpy(content, va("%s^7%s%s ^2Win ^3x ^1Lose ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
+					strcpy(content, va("%s^7%s%s ^2W ^3x ^1L ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
 				}
 				else if (level.duel_matches[i][2] > -1)
 				{
-					strcpy(content, va("%s^7%s%s ^1Lose ^3x ^2Win ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
+					strcpy(content, va("%s^7%s%s ^1L ^3x ^2W ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
 				}
 				else if (level.duel_matches[i][2] == -2)
 				{
-					strcpy(content, va("%s^7%s%s ^3Tie x Tie ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
+					strcpy(content, va("%s^7%s%s ^3T x T ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
 				}
 				else
 				{ // zyk: not played it
@@ -16747,15 +16747,15 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 			{ // zyk: first duelist left
 				if (level.duel_matches[i][2] == second_duelist->s.number)
 				{
-					strcpy(content, va("%s^3Left Tournament ^1Lose ^3x ^2Win ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
+					strcpy(content, va("%s^3Left Tournament ^1L ^3x ^2W ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
 				}
 				else if (level.duel_matches[i][2] > -1)
 				{
-					strcpy(content, va("%s^3Left Tournament ^2Win ^3x ^1Lose ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
+					strcpy(content, va("%s^3Left Tournament ^2W ^3x ^1L ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
 				}
 				else if (level.duel_matches[i][2] == -2)
 				{
-					strcpy(content, va("%s^3Left Tournament ^3Tie x Tie ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
+					strcpy(content, va("%s^3Left Tournament ^3T x T ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
 				}
 				else
 				{ // zyk: not played it
@@ -16766,7 +16766,7 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 			{ // zyk: both duelists left
 				if (level.duel_matches[i][2] != -1)
 				{
-					strcpy(content, va("%s^3Left Tournament ^3Played x Played ^3Left Tournament\n", content));
+					strcpy(content, va("%s^3Left Tournament ^3P x P ^3Left Tournament\n", content));
 				}
 				else
 				{ // zyk: not played it
