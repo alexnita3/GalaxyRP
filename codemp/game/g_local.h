@@ -1729,6 +1729,9 @@ typedef struct level_locals_s {
 	// zyk: custom quest main fields. It will saved in the first quest file line. Order of fields: name, active (value: on or off), count (integer value, number of completed missions)
 	char* zyk_custom_quest_main_fields[MAX_CUSTOM_QUESTS][4];
 
+	// zyk: used to test if the current map is a custom quest one. Sets the custom quest id who will first be played in this map
+	int custom_quest_map;
+
 	char		mapname[MAX_QPATH];
 	char		rawmapname[MAX_QPATH];
 } level_locals_t;

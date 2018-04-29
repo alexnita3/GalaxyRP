@@ -17697,6 +17697,29 @@ void save_quest_file(int quest_number)
 	fclose(quest_file);
 }
 
+void load_custom_quest_mission(char *current_map)
+{
+	int i = 0, j = 0;
+	int current_mission = 0;
+
+	for (i = 0; i < MAX_CUSTOM_QUESTS; i++)
+	{
+		if (Q_stricmp(level.zyk_custom_quest_main_fields[i][1], "on") == 0)
+		{ // zyk: only set the custom quest map if this is an active quest
+			current_mission = atoi(G_NewString(level.zyk_custom_quest_main_fields[i][2]));
+
+			for (j = 0; j < level.zyk_custom_quest_mission_values_count[i][current_mission]; j += 2)
+			{
+				if (Q_stricmp(level.zyk_custom_quest_missions[i][current_mission][j], "map") == 0 && Q_stricmp(level.zyk_custom_quest_missions[i][current_mission][j + 1], current_map) == 0)
+				{ // zyk: current mission of this quest is in the current map
+					level.custom_quest_map = i;
+					return;
+				}
+			}
+		}
+	}
+}
+
 void Cmd_CustomQuest_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
 	char content[MAX_STRING_CHARS];
@@ -17836,8 +17859,17 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 					level.zyk_custom_quest_main_fields[quest_number][1] = G_NewString("off");
 				}
 				else
-				{
+				{ // zyk: activating the quest requires loading it
+					char zyk_info[MAX_INFO_STRING] = { 0 };
+					char zyk_mapname[128] = { 0 };
+
 					level.zyk_custom_quest_main_fields[quest_number][1] = G_NewString("on");
+
+					// zyk: getting the map name
+					trap->GetServerinfo(zyk_info, sizeof(zyk_info));
+					Q_strncpyz(zyk_mapname, Info_ValueForKey(zyk_info, "mapname"), sizeof(zyk_mapname));
+					
+					load_custom_quest_mission(G_NewString(zyk_mapname));
 				}
 			}
 			else if (Q_stricmp(arg3, "count") == 0)

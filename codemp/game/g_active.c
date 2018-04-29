@@ -3219,7 +3219,7 @@ void ClientThink_real( gentity_t *ent ) {
 
 				if (player_ent && player_ent->client && ent != player_ent && player_ent->client->pers.connected == CON_CONNECTED && player_ent->client->sess.sessionTeam != TEAM_SPECTATOR)
 				{
-					if ((ent->client->ps.duelInProgress == qtrue && ent->client->ps.duelIndex != player_ent->s.number || ent->client->ps.duelInProgress != player_ent->client->ps.duelInProgress) && 
+					if (((ent->client->ps.duelInProgress == qtrue && ent->client->ps.duelIndex != player_ent->s.number) || ent->client->ps.duelInProgress != player_ent->client->ps.duelInProgress) && 
 						(int)Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 75)
 					
 					{ // zyk: duelist colliding with someone outside this duel
