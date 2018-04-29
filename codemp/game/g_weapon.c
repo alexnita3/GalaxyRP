@@ -1790,23 +1790,21 @@ static void WP_FlechetteMainFire( gentity_t *ent )
 	vec3_t		fwd, angs;
 	gentity_t	*missile;
 	int i;
+	int zyk_number_of_shots = FLECHETTE_SHOTS;
 
-	for (i = 0; i < FLECHETTE_SHOTS; i++ )
+	if (ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[25] == 2)
+	{ // zyk: Flechette 2/2 has more shots
+		zyk_number_of_shots += 2;
+	}
+
+	for (i = 0; i < zyk_number_of_shots; i++ )
 	{
 		vectoangles( forward, angs );
 
 		if (i != 0)
 		{ //do nothing on the first shot, it will hit the crosshairs
-			if (ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[25] == 2)
-			{ // zyk: Flechette 2/2 has less spread
-				angs[PITCH] += Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD * 0.7;
-				angs[YAW]	+= Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD * 0.7;
-			}
-			else
-			{
-				angs[PITCH] += Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD;
-				angs[YAW]	+= Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD;
-			}
+			angs[PITCH] += Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD;
+			angs[YAW]	+= Q_flrand(-1.0f, 1.0f) * FLECHETTE_SPREAD;
 		}
 
 		AngleVectors( angs, fwd, NULL, NULL );
