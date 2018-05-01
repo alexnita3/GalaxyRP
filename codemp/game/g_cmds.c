@@ -17697,6 +17697,22 @@ void save_quest_file(int quest_number)
 	fclose(quest_file);
 }
 
+// zyk: gets a key value for Custom Quest
+char *zyk_get_mission_value(int custom_quest, int mission, char *key)
+{
+	int i = 0;
+
+	for (i = 0; i < level.zyk_custom_quest_mission_values_count[custom_quest][mission]; i += 2)
+	{
+		if (Q_stricmp(level.zyk_custom_quest_missions[custom_quest][mission][i], key) == 0)
+		{
+			return G_NewString(level.zyk_custom_quest_missions[custom_quest][mission][i + 1]);
+		}
+	}
+
+	return "";
+}
+
 void load_custom_quest_mission(char *current_map)
 {
 	int i = 0, j = 0;
@@ -17712,12 +17728,37 @@ void load_custom_quest_mission(char *current_map)
 			{
 				if (Q_stricmp(level.zyk_custom_quest_missions[i][current_mission][j], "map") == 0 && Q_stricmp(level.zyk_custom_quest_missions[i][current_mission][j + 1], current_map) == 0)
 				{ // zyk: current mission of this quest is in the current map
+					int radius = atoi(zyk_get_mission_value(i, current_mission, "radius"));
+					vec3_t vec;
+
+					if (radius <= 0)
+					{ // zyk: default radius
+						radius = 500;
+					}
+
+					level.zyk_quest_radius = radius;
+
+					if (sscanf(zyk_get_mission_value(i, current_mission, "origin"), "%f %f %f", &vec[0], &vec[1], &vec[2]) == 3)
+					{ // zyk: parsing origin point of this mission
+						VectorCopy(vec, level.zyk_quest_mission_origin);
+					}
+					else
+					{ // zyk: default origin
+						VectorSet(level.zyk_quest_mission_origin, 0, 0, 0);
+					}
+
+					level.zyk_custom_quest_timer = 0;
+					level.zyk_custom_quest_counter = 0;
 					level.custom_quest_map = i;
+					level.zyk_custom_quest_current_mission = current_mission;
 					return;
 				}
 			}
 		}
 	}
+
+	// zyk: reset value if did not find a mission for this map
+	level.custom_quest_map = -1;
 }
 
 void Cmd_CustomQuest_f(gentity_t *ent) {

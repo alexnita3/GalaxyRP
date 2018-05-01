@@ -1726,6 +1726,21 @@ typedef struct level_locals_s {
 	// zyk: amount of missions of each custom quest
 	int zyk_custom_quest_mission_count[MAX_CUSTOM_QUESTS];
 
+	// zyk: saves the current mission number of the quest loaded for the current map
+	int zyk_custom_quest_current_mission;
+
+	// zyk: custom quest timer
+	int zyk_custom_quest_timer;
+
+	// zyk: custom quest counter, used for keys that can have multiple values (text1, text2, etc)
+	int zyk_custom_quest_counter;
+
+	// zyk: origin point of the quest mission
+	vec3_t zyk_quest_mission_origin;
+
+	// zyk: radius from the quest mission origin point the player must be within for the mission to start
+	int zyk_quest_radius;
+
 	// zyk: custom quest main fields. It will saved in the first quest file line. Order of fields: name, active (value: on or off), count (integer value, number of completed missions)
 	char* zyk_custom_quest_main_fields[MAX_CUSTOM_QUESTS][4];
 

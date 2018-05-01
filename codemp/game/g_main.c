@@ -8462,6 +8462,8 @@ void zyk_trial_room_models()
 	zyk_spawn_entity(new_ent);
 }
 
+
+
 /*
 ================
 G_RunFrame
@@ -8493,6 +8495,8 @@ extern void duel_show_table(gentity_t *ent);
 extern void WP_DisruptorAltFire(gentity_t *ent);
 extern int zyk_max_magic_power(gentity_t *ent);
 extern void G_Kill( gentity_t *ent );
+extern void save_quest_file(int quest_number);
+extern char *zyk_get_mission_value(int custom_quest, int mission, char *key);
 
 void G_RunFrame( int levelTime ) {
 	int			i;
@@ -15192,9 +15196,53 @@ void G_RunFrame( int levelTime ) {
 					}
 				}
 
-				if (level.custom_quest_map > -1 && ent->client->ps.duelInProgress == qfalse && ent->health > 0)
+				if (level.custom_quest_map > -1 && level.zyk_custom_quest_timer < level.time && ent->client->ps.duelInProgress == qfalse && ent->health > 0 && 
+					Distance(ent->client->ps.origin, level.zyk_quest_mission_origin) < level.zyk_quest_radius)
 				{ // zyk: Custom Quest map
+					char *zyk_keys[32] = {"text", "", ""};
+					int j = 0;
+					qboolean still_has_keys = qfalse;
 
+					for (j = 0; j < 32; j++)
+					{ // zyk: testing each key and processing them when found in this mission
+						char *zyk_value = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("%s%d", zyk_keys[j], level.zyk_custom_quest_counter));
+
+						if (Q_stricmp(zyk_value, "") != 0)
+						{ // zyk: there is a value for this key
+							still_has_keys = qtrue;
+
+							if (Q_stricmp(zyk_keys[j], "text") == 0)
+							{ // zyk: a text message
+								int zyk_timer = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("texttimer%d", level.zyk_custom_quest_counter)));
+
+								if (zyk_timer <= 0)
+								{
+									zyk_timer = 5000;
+								}
+
+								trap->SendServerCommand(-1, va("chat \"%s\n\"", zyk_value));
+								level.zyk_custom_quest_timer = level.time + zyk_timer;
+								level.zyk_custom_quest_counter++;
+							}
+						}
+					}
+
+					// zyk: no more fields to test, pass the mission
+					if (still_has_keys == qfalse)
+					{
+						char zyk_info[MAX_INFO_STRING] = { 0 };
+						char zyk_mapname[128] = { 0 };
+
+						// zyk: getting the map name
+						trap->GetServerinfo(zyk_info, sizeof(zyk_info));
+						Q_strncpyz(zyk_mapname, Info_ValueForKey(zyk_info, "mapname"), sizeof(zyk_mapname));
+
+						level.zyk_custom_quest_main_fields[level.custom_quest_map][2] = G_NewString(va("%d", level.zyk_custom_quest_current_mission + 1));
+
+						save_quest_file(level.custom_quest_map);
+
+						load_custom_quest_mission(G_NewString(zyk_mapname));
+					}
 				}
 			}
 
