@@ -2131,7 +2131,7 @@ extern void zyk_NPC_Kill_f( char *name );
 extern gentity_t *Zyk_NPC_SpawnType(char *npc_type, int x, int y, int z, int yaw);
 extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 extern void player_restore_force(gentity_t *ent);
-extern void load_custom_quest_mission(char *current_map);
+extern void load_custom_quest_mission();
 void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int meansOfDeath ) {
 	gentity_t	*ent;
 	int			anim;
@@ -2186,6 +2186,9 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		{
 			level.zyk_quest_npc_count--;
 
+			// zyk: increasing the number of steps done in this mission
+			zyk_set_quest_field(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done", va("%d", atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done")) + 1));
+
 			if (level.zyk_quest_npc_count == 0)
 			{ // zyk: all enemy npcs defeated
 				level.zyk_hold_quest_mission = qfalse;
@@ -2197,14 +2200,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 			if (level.zyk_quest_ally_npc_count == 0)
 			{ // zyk: all enemy npcs defeated
-				char zyk_info[MAX_INFO_STRING] = { 0 };
-				char zyk_mapname[128] = { 0 };
-
-				// zyk: getting the map name
-				trap->GetServerinfo(zyk_info, sizeof(zyk_info));
-				Q_strncpyz(zyk_mapname, Info_ValueForKey(zyk_info, "mapname"), sizeof(zyk_mapname));
-
-				load_custom_quest_mission(G_NewString(zyk_mapname));
+				load_custom_quest_mission();
 
 				trap->SendServerCommand(-1, "chat \"^3Custom Quest: ^7Mission failed\n\"");
 			}

@@ -2700,6 +2700,9 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 				level.zyk_hold_quest_mission = qfalse;
 			}
 
+			// zyk: increasing the number of steps done in this mission
+			zyk_set_quest_field(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done", va("%d", atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done")) + 1));
+
 			ent->think = G_FreeEntity;
 			ent->nextthink = level.time;
 

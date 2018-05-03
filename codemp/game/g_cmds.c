@@ -9518,7 +9518,6 @@ void list_rpg_info(gentity_t *ent, gentity_t *target_ent)
 Cmd_ListAccount_f
 ==================
 */
-extern char *zyk_get_mission_value(int custom_quest, int mission, char *key);
 void Cmd_ListAccount_f( gentity_t *ent ) {
 	if (ent->client->sess.amrpgmode == 2)
 	{
@@ -17760,8 +17759,10 @@ char *zyk_get_mission_value(int custom_quest, int mission, char *key)
 // zyk: set the magic powers and unique abilities that this npc can use in custom quest
 void zyk_set_quest_npc_abilities(gentity_t *zyk_npc)
 {
-	int i = 0;
-	int total_of_abilities = MAX_MAGIC_POWERS + 11;
+	int j = 0;
+	int k = 0;
+	int zyk_power = 0;
+	char value[256];
 	char *zyk_magic = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcmagic%d", level.zyk_custom_quest_counter));
 
 	// zyk: magic powers
@@ -17798,51 +17799,55 @@ void zyk_set_quest_npc_abilities(gentity_t *zyk_npc)
 		zyk_npc->client->pers.universe_quest_messages = 9000;
 	}
 
-	for (i = 0; i < total_of_abilities; i++)
+	for (j = 0; j < 256; j++)
 	{
-		int j = 0;
-		int k = 0;
-		char value[256];
-
-		for (j = 0; j < 256; j++)
+		if (zyk_magic[j] == '\0')
 		{
-			if (zyk_magic[j] == '\0')
+			break;
+		}
+
+		if (zyk_magic[j] != ',')
+		{
+			value[k] = zyk_magic[j];
+			k++;
+		}
+		else
+		{
+			value[k] = '\0';
+			zyk_power = atoi(value);
+
+			if (zyk_power < MAX_MAGIC_POWERS)
 			{
-				break;
+				zyk_npc->client->sess.selected_left_special_power |= (1 << zyk_power);
+			}
+			else if (zyk_power < MAX_MAGIC_POWERS + 8)
+			{
+				zyk_npc->client->sess.selected_right_special_power |= (1 << (zyk_power - MAX_MAGIC_POWERS));
+			}
+			else if (zyk_power < MAX_MAGIC_POWERS + 11)
+			{
+				zyk_npc->client->sess.selected_special_power |= (1 << (zyk_power - MAX_MAGIC_POWERS - 8));
 			}
 
-			if (zyk_magic[j] != ',')
-			{
-				value[k] = zyk_magic[j];
-				k++;
-			}
-			else
-			{
-				value[k] = '\0';
-
-				if (i < MAX_MAGIC_POWERS)
-				{
-					zyk_npc->client->sess.selected_left_special_power |= (1 << atoi(value));
-				}
-				else if (i < MAX_MAGIC_POWERS + 8)
-				{
-					zyk_npc->client->sess.selected_right_special_power |= (1 << (atoi(value) - MAX_MAGIC_POWERS));
-				}
-				else if (i < total_of_abilities)
-				{
-					zyk_npc->client->sess.selected_special_power |= (1 << (atoi(value) - MAX_MAGIC_POWERS - 8));
-				}
-
-				k = 0;
-			}
+			k = 0;
 		}
 	}
 }
 
-void load_custom_quest_mission(char *current_map)
+void load_custom_quest_mission()
 {
 	int i = 0, j = 0;
 	int current_mission = 0;
+
+	for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
+	{
+		gentity_t *zyk_npc = &g_entities[i];
+
+		if (zyk_npc && zyk_npc->NPC && zyk_npc->client && zyk_npc->health > 0 && zyk_npc->client->pers.player_statuses & (1 << 28))
+		{ // zyk: kill any remaining quest npcs that may still be alive
+			G_FreeEntity(zyk_npc);
+		}
+	}
 
 	for (i = 0; i < MAX_CUSTOM_QUESTS; i++)
 	{
@@ -17850,10 +17855,12 @@ void load_custom_quest_mission(char *current_map)
 		{ // zyk: only set the custom quest map if this is an active quest
 			current_mission = atoi(G_NewString(level.zyk_custom_quest_main_fields[i][2]));
 
-			for (j = 0; j < level.zyk_custom_quest_mission_values_count[i][current_mission]; j += 2)
-			{
-				if (Q_stricmp(level.zyk_custom_quest_missions[i][current_mission][j], "map") == 0 && Q_stricmp(level.zyk_custom_quest_missions[i][current_mission][j + 1], current_map) == 0)
-				{ // zyk: current mission of this quest is in the current map
+			for (j = 0; j < level.zyk_custom_quest_mission_values_count[i][current_mission]/2; j++)
+			{ // zyk: goes through all keys of this mission to find the map keys
+				char *zyk_map = zyk_get_mission_value(i, current_mission, va("map%d", j));
+
+				if (Q_stricmp(level.zykmapname, zyk_map) == 0 && Q_stricmp(zyk_get_mission_value(i, current_mission, va("donemap%d", j)), "") == 0)
+				{ // zyk: current mission of this quest is in the current map and the mission is not done yet
 					int radius = atoi(zyk_get_mission_value(i, current_mission, "radius"));
 					vec3_t vec;
 					gentity_t *effect_ent = NULL;
@@ -18134,16 +18141,9 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 				}
 				else
 				{ // zyk: activating the quest requires loading it
-					char zyk_info[MAX_INFO_STRING] = { 0 };
-					char zyk_mapname[128] = { 0 };
-
 					level.zyk_custom_quest_main_fields[quest_number][1] = G_NewString("on");
-
-					// zyk: getting the map name
-					trap->GetServerinfo(zyk_info, sizeof(zyk_info));
-					Q_strncpyz(zyk_mapname, Info_ValueForKey(zyk_info, "mapname"), sizeof(zyk_mapname));
 					
-					load_custom_quest_mission(G_NewString(zyk_mapname));
+					load_custom_quest_mission();
 				}
 			}
 			else if (Q_stricmp(arg3, "count") == 0)

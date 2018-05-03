@@ -1428,7 +1428,7 @@ typedef struct {
 #define MAX_CUSTOM_QUEST_MISSIONS 64
 
 // zyk: max fields a custom quest mission can have
-#define MAX_CUSTOM_QUEST_FIELDS 256
+#define MAX_CUSTOM_QUEST_FIELDS 512
 
 typedef struct level_locals_s {
 	struct gclient_s	*clients;		// [maxclients]
@@ -1766,12 +1766,17 @@ typedef struct level_locals_s {
 	// zyk: used to test if the current map is a custom quest one. Sets the custom quest id who will first be played in this map
 	int custom_quest_map;
 
+	// zyk: current map name without the path from maps folder
+	char zykmapname[128];
+
 	char		mapname[MAX_QPATH];
 	char		rawmapname[MAX_QPATH];
 } level_locals_t;
 
 
 // zyk: functions used in a lot of places
+char *zyk_get_mission_value(int custom_quest, int mission, char *key);
+void zyk_set_quest_field(int quest_number, int mission_number, char *key, char *value);
 qboolean zyk_is_ally(gentity_t *ent, gentity_t *other);
 int zyk_number_of_allies(gentity_t *ent, qboolean in_rpg_mode);
 void send_rpg_events(int send_event_timer);
