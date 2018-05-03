@@ -9518,6 +9518,7 @@ void list_rpg_info(gentity_t *ent, gentity_t *target_ent)
 Cmd_ListAccount_f
 ==================
 */
+extern char *zyk_get_mission_value(int custom_quest, int mission, char *key);
 void Cmd_ListAccount_f( gentity_t *ent ) {
 	if (ent->client->sess.amrpgmode == 2)
 	{
@@ -9525,7 +9526,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 		{ // zyk: if player didnt pass arguments, lists general info
 			list_rpg_info(ent, ent);
 		}
-		else if (trap->Argc() == 2)
+		else
 		{
 			char message[1024];
 			char arg1[MAX_STRING_CHARS];
@@ -9569,7 +9570,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						}
 					}
 
-					trap->SendServerCommand(ent-g_entities, va("print \"\n^3RPG Mode Quests\n\n^2/list universe: ^7Universe Quest (Main Quest)\n\n^2/list light: ^7Light Quest\n^2/list dark: ^7Dark Quest\n^2/list eternity: ^7Eternity Quest\n\n^3/list bounty: ^7The Bounty Hunter quest\n^3/list guardian: ^7The Guardian Quest\n\n^3Quest Player: ^7%s\n^3Bounty Quest Target: ^7%s^7\n\n\"", quest_player, target_player));
+					trap->SendServerCommand(ent-g_entities, va("print \"\n^3RPG Mode Quests\n\n^2/list universe: ^7Universe Quest (Main Quest)\n\n^2/list light: ^7Light Quest\n^2/list dark: ^7Dark Quest\n^2/list eternity: ^7Eternity Quest\n\n^3/list bounty: ^7The Bounty Hunter quest\n^3/list guardian: ^7The Guardian Quest\n^3/list custom: ^7lists custom quests\n\n^3Quest Player: ^7%s\n^3Bounty Quest Target: ^7%s^7\n\n\"", quest_player, target_player));
 				}
 				else
 					trap->SendServerCommand(ent-g_entities, "print \"\n^3RPG Mode Quests\n\n^1Quests are not allowed in this server^7\n\n\"");
@@ -9894,6 +9895,53 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 			{
 				trap->SendServerCommand( ent-g_entities, va("print \"\n^3Guardian Quest\n^7Use ^3/guardianquest ^7so the server spawns the map guardian somewhere. If the player defeats it, he gets 3 experience points (Level Up Score) and 1000 credits.\n\n\"") );
 			}
+			else if (Q_stricmp(arg1, "custom") == 0)
+			{
+				int j = 0;
+				char content[MAX_STRING_CHARS];
+
+				strcpy(content, "");
+
+				if (trap->Argc() == 2)
+				{
+					for (j = 0; j < MAX_CUSTOM_QUESTS; j++)
+					{
+						if (level.zyk_custom_quest_mission_count[j] != -1 && Q_stricmp(level.zyk_custom_quest_main_fields[j][1], "on") == 0)
+						{ // zyk: an active custom quest
+							strcpy(content, va("%s%d - %s\n", content, j, level.zyk_custom_quest_main_fields[j][0]));
+						}
+					}
+
+					if (Q_stricmp(content, "") != 0)
+					{
+						trap->SendServerCommand(ent->s.number, va("print \"\n^3Custom Quests\n\n^7%s\n\n^7Use ^2/list custom <number> ^7to see the current mission of the quest\n\n\"", content));
+					}
+					else
+					{
+						trap->SendServerCommand(ent->s.number, "print \"\nThere are no active custom quests\n\n\"");
+					}
+				}
+				else
+				{
+					char arg2[MAX_STRING_CHARS];
+					int quest_number = -1;
+
+					trap->Argv(2, arg2, sizeof(arg2));
+
+					quest_number = atoi(arg2);
+
+					if (quest_number >= 0 && quest_number < MAX_CUSTOM_QUESTS && Q_stricmp(level.zyk_custom_quest_main_fields[quest_number][1], "on") == 0)
+					{
+						char *mission_description = zyk_get_mission_value(quest_number, atoi(level.zyk_custom_quest_main_fields[quest_number][2]), "description");
+
+						trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\n^7%s\n\n\"", level.zyk_custom_quest_main_fields[quest_number][0], mission_description));
+					}
+					else
+					{
+						trap->SendServerCommand(ent->s.number, "print \"\nInvalid quest number\n\n\"");
+					}
+				}
+			}
 			else if (Q_stricmp( arg1, "commands" ) == 0)
 			{
 				trap->SendServerCommand( ent-g_entities, "print \"\n^2RPG Mode commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account.\n^3/playermode: ^7switches between ^2Admin-Only Mode ^7and ^2RPG Mode^7.\n^3/up [skill number]: ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n^3/down [skill number]: ^7downgrades a skill.\n^3/resetaccount: ^7resets account stuff of the player.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [command number]: ^7gives the player an admin command.\n^3/admindown [player id or name] [command number]: ^7removes an admin command from a player.\n^3/settings: ^7turn on or off player settings.\n^3/callseller: ^7calls the jawa seller.\n^3/creditgive [player id or name] [amount]: ^7gives credits to a player.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/tutorial: ^7shows all info about the mod.\n^3/logout: ^7logs out the account.\n\n\"" );
@@ -10104,10 +10152,6 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					trap->SendServerCommand( ent-g_entities, "print \"Invalid skill number.\n\"" );
 				}
 			}
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"This command requires no option or just 1 option.\n\"" );
 		}
 	}
 	else if (ent->client->sess.amrpgmode == 1)
@@ -17841,17 +17885,20 @@ void load_custom_quest_mission(char *current_map)
 					}
 
 					// zyk: adding effect in custom quest origin
-					effect_ent = G_Spawn();
+					if (Q_stricmp(effect_path, "") != 0)
+					{
+						effect_ent = G_Spawn();
 
-					zyk_set_entity_field(effect_ent, "classname", "fx_runner");
-					zyk_set_entity_field(effect_ent, "spawnflags", "0");
-					zyk_set_entity_field(effect_ent, "origin", va("%f %f %f", level.zyk_quest_mission_origin[0], level.zyk_quest_mission_origin[1], level.zyk_quest_mission_origin[2]));
+						zyk_set_entity_field(effect_ent, "classname", "fx_runner");
+						zyk_set_entity_field(effect_ent, "spawnflags", "0");
+						zyk_set_entity_field(effect_ent, "origin", va("%f %f %f", level.zyk_quest_mission_origin[0], level.zyk_quest_mission_origin[1], level.zyk_quest_mission_origin[2]));
 
-					effect_ent->s.modelindex = G_EffectIndex(effect_path);
+						effect_ent->s.modelindex = G_EffectIndex(effect_path);
 
-					zyk_spawn_entity(effect_ent);
+						zyk_spawn_entity(effect_ent);
 
-					level.zyk_custom_quest_effect_id = effect_ent->s.number;
+						level.zyk_custom_quest_effect_id = effect_ent->s.number;
+					}
 
 					// zyk: setting default values for other control variables
 					level.zyk_hold_quest_mission = qfalse;
