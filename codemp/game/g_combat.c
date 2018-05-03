@@ -2207,6 +2207,21 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		}
 	}
 
+	// zyk: if someone dies by a custom quest npc and it has the recovery field, recover some of its health
+	if (attacker && attacker->client && attacker && attacker->NPC && attacker->client->pers.player_statuses & (1 << 28))
+	{
+		int zyk_npc_recovery = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "npcrecovery"));
+
+		if ((attacker->health + zyk_npc_recovery) < attacker->client->ps.stats[STAT_MAX_HEALTH])
+		{
+			attacker->health += zyk_npc_recovery;
+		}
+		else
+		{
+			attacker->health = attacker->client->ps.stats[STAT_MAX_HEALTH];
+		}
+	}
+
 	if (self->client->pers.race_position > 0) // zyk: if a player dies during a race, he loses the race
 	{
 		self->client->pers.race_position = 0;
