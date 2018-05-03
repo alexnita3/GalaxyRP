@@ -17779,10 +17779,6 @@ void zyk_set_quest_npc_abilities(gentity_t *zyk_npc)
 	zyk_npc->client->pers.hunter_quest_messages = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcsecondtimer%d", level.zyk_custom_quest_counter)));
 	zyk_npc->client->pers.universe_quest_messages = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcthirdtimer%d", level.zyk_custom_quest_counter)));
 
-	zyk_npc->client->pers.light_quest_timer = 0;
-	zyk_npc->client->pers.hunter_quest_timer = 0;
-	zyk_npc->client->pers.universe_quest_timer = 0;
-
 	// zyk: setting default values of these timers
 	if (zyk_npc->client->pers.light_quest_messages <= 0)
 	{
@@ -17798,6 +17794,10 @@ void zyk_set_quest_npc_abilities(gentity_t *zyk_npc)
 	{
 		zyk_npc->client->pers.universe_quest_messages = 9000;
 	}
+
+	zyk_npc->client->pers.light_quest_timer = level.time + zyk_npc->client->pers.light_quest_messages;
+	zyk_npc->client->pers.hunter_quest_timer = level.time + zyk_npc->client->pers.hunter_quest_messages;
+	zyk_npc->client->pers.universe_quest_timer = level.time + zyk_npc->client->pers.universe_quest_messages;
 
 	for (j = 0; j < 256; j++)
 	{

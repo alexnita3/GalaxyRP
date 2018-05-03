@@ -15459,7 +15459,7 @@ void G_RunFrame( int levelTime ) {
 			}
 
 			// zyk: abilities of custom quest npcs
-			if (ent->client->pers.player_statuses & (1 << 28) && ent->health > 0)
+			if (ent->client->pers.player_statuses & (1 << 28) && ent->enemy && ent->health > 0)
 			{
 				// zyk: magic powers
 				if (ent->client->pers.light_quest_timer < level.time)
