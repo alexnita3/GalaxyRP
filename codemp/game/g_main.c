@@ -8497,6 +8497,7 @@ extern int zyk_max_magic_power(gentity_t *ent);
 extern void G_Kill( gentity_t *ent );
 extern void save_quest_file(int quest_number);
 extern char *zyk_get_mission_value(int custom_quest, int mission, char *key);
+extern void zyk_set_quest_npc_abilities(gentity_t *zyk_npc);
 
 void G_RunFrame( int levelTime ) {
 	int			i;
@@ -15197,7 +15198,7 @@ void G_RunFrame( int levelTime ) {
 				}
 
 				if (level.custom_quest_map > -1 && level.zyk_custom_quest_timer < level.time && ent->client->ps.duelInProgress == qfalse && ent->health > 0 && 
-					Distance(ent->client->ps.origin, level.zyk_quest_mission_origin) < level.zyk_quest_radius)
+					(level.zyk_quest_test_origin == qfalse || Distance(ent->client->ps.origin, level.zyk_quest_mission_origin) < level.zyk_quest_radius))
 				{ // zyk: Custom Quest map
 					char *zyk_keys[32] = {"text", "npc", "item", ""};
 					int j = 0;
@@ -15247,12 +15248,21 @@ void G_RunFrame( int levelTime ) {
 
 									for (k = 0; k < npc_count; k++)
 									{
-										gentity_t *zyk_npc = Zyk_NPC_SpawnType(zyk_value, level.zyk_quest_mission_origin[0], level.zyk_quest_mission_origin[1], level.zyk_quest_mission_origin[2], npc_yaw);
+										gentity_t *zyk_npc = NULL;
+										vec3_t zyk_vec;
+
+										if (sscanf(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcorigin%d", level.zyk_custom_quest_counter)), "%f %f %f", &zyk_vec[0], &zyk_vec[1], &zyk_vec[2]) != 3)
+										{ // zyk: if there was not a valid npcorigin, use the mission origin instead
+											VectorCopy(level.zyk_quest_mission_origin, zyk_vec);
+										}
+
+										zyk_npc = Zyk_NPC_SpawnType(zyk_value, zyk_vec[0], zyk_vec[1], zyk_vec[2], npc_yaw);
 
 										if (zyk_npc)
 										{ 
 											int zyk_enemy = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcenemy%d", level.zyk_custom_quest_counter)));
-											int zyk_health = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npchealth%d", level.zyk_custom_quest_counter)));;
+											int zyk_ally = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcally%d", level.zyk_custom_quest_counter)));
+											int zyk_health = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npchealth%d", level.zyk_custom_quest_counter)));
 
 											zyk_npc->client->pers.player_statuses |= (1 << 28);
 
@@ -15269,11 +15279,24 @@ void G_RunFrame( int levelTime ) {
 												zyk_npc->client->enemyTeam = NPCTEAM_PLAYER;
 											}
 
+											if (zyk_ally > 0)
+											{ // zyk: force it to be ally
+												zyk_npc->client->playerTeam = NPCTEAM_PLAYER;
+												zyk_npc->client->enemyTeam = NPCTEAM_ENEMY;
+											}
+
 											if (zyk_npc->client->playerTeam == NPCTEAM_ENEMY)
 											{ // zyk: if enemy, must count this npc in the counter and hold mission until all enemies are defeated
 												level.zyk_hold_quest_mission = qtrue;
 												level.zyk_quest_npc_count++;
 											}
+
+											if (zyk_npc->client->playerTeam == NPCTEAM_PLAYER)
+											{ // zyk: if ally, must count this npc in the counter until mission ends
+												level.zyk_quest_ally_npc_count++;
+											}
+
+											zyk_set_quest_npc_abilities(zyk_npc);
 										}
 									}
 
@@ -15283,11 +15306,9 @@ void G_RunFrame( int levelTime ) {
 								else if (Q_stricmp(zyk_keys[j], "item") == 0)
 								{ // zyk: items to find
 									char *zyk_item_origin = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("itemorigin%d", level.zyk_custom_quest_counter));
-									gentity_t *new_ent = NULL;
+									gentity_t *new_ent = G_Spawn();
 
-									new_ent = G_Spawn();
-
-									zyk_set_entity_field(new_ent, "classname", "weapon_stun_baton");
+									zyk_set_entity_field(new_ent, "classname", G_NewString(zyk_value));
 									zyk_set_entity_field(new_ent, "spawnflags", "262144");
 									zyk_set_entity_field(new_ent, "origin", zyk_item_origin);
 
@@ -15331,6 +15352,8 @@ void G_RunFrame( int levelTime ) {
 						level.zyk_custom_quest_main_fields[level.custom_quest_map][2] = G_NewString(va("%d", level.zyk_custom_quest_current_mission + 1));
 
 						save_quest_file(level.custom_quest_map);
+
+						trap->SendServerCommand(-1, "chat \"^3Custom Quest: ^7Mission complete\n\"");
 
 						load_custom_quest_mission(G_NewString(zyk_mapname));
 					}
@@ -15398,6 +15421,209 @@ void G_RunFrame( int levelTime ) {
 				if (ent->die)
 				{
 					ent->die(ent, ent, ent, 100, MOD_UNKNOWN);
+				}
+			}
+
+			// zyk: abilities of custom quest npcs
+			if (ent->client->pers.player_statuses & (1 << 28) && ent->health > 0)
+			{
+				// zyk: magic powers
+				if (ent->client->pers.light_quest_timer < level.time)
+				{
+					int random_number = Q_irand(0, 29);
+
+					if (ent->client->sess.selected_left_special_power & (1 << MAGIC_HEALING_WATER) && random_number == 0)
+					{
+						healing_water(ent, 120);
+					}
+					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_WATER_SPLASH) && random_number == 1)
+					{
+						water_splash(ent, 400, 15);
+					}
+					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_WATER_ATTACK) && random_number == 2)
+					{
+						water_attack(ent, 500, 45);
+					}
+					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_EARTHQUAKE) && random_number == 3)
+					{
+						earthquake(ent, 2000, 300, 500);
+					}
+					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_ROCKFALL) && random_number == 4)
+					{
+						rock_fall(ent, 500, 45);
+					}
+					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_SHIFTING_SAND) && random_number == 5)
+					{
+						shifting_sand(ent, 1000);
+					}
+					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_SLEEPING_FLOWERS) && random_number == 6)
+					{
+						sleeping_flowers(ent, 2500, 350);
+					}
+					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_POISON_MUSHROOMS) && random_number == 7)
+					{
+						poison_mushrooms(ent, 100, 600);
+					}
+					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_TREE_OF_LIFE) && random_number == 8)
+					{
+						tree_of_life(ent);
+					}
+					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_MAGIC_SHIELD) && random_number == 9)
+					{
+						magic_shield(ent, 6000);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_DOME_OF_DAMAGE) && random_number == 10)
+					{
+						dome_of_damage(ent, 500, 28);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_MAGIC_DISABLE) && random_number == 11)
+					{
+						magic_disable(ent, 450);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ULTRA_SPEED) && random_number == 12)
+					{
+						ultra_speed(ent, 15000);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_SLOW_MOTION) && random_number == 13)
+					{
+						slow_motion(ent, 400, 15000);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_FAST_AND_SLOW) && random_number == 14)
+					{
+						fast_and_slow(ent, 400, 6000);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_FLAME_BURST) && random_number == 15)
+					{
+						flame_burst(ent, 5000);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ULTRA_FLAME) && random_number == 16)
+					{
+						ultra_flame(ent, 500, 40);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_FLAMING_AREA) && random_number == 17)
+					{
+						flaming_area(ent, 25);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_BLOWING_WIND) && random_number == 18)
+					{
+						blowing_wind(ent, 700, 5000);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_HURRICANE) && random_number == 19)
+					{
+						hurricane(ent, 600, 5000);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_REVERSE_WIND) && random_number == 20)
+					{
+						reverse_wind(ent, 700, 5000);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ULTRA_RESISTANCE) && random_number == 21)
+					{
+						ultra_resistance(ent, 30000);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ULTRA_STRENGTH) && random_number == 22)
+					{
+						ultra_strength(ent, 30000);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ENEMY_WEAKENING) && random_number == 23)
+					{
+						enemy_nerf(ent, 450);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ICE_STALAGMITE) && random_number == 24)
+					{
+						ice_stalagmite(ent, 500, 140);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ICE_BOULDER) && random_number == 25)
+					{
+						ice_boulder(ent, 380, 50);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ICE_BLOCK) && random_number == 26)
+					{
+						ice_block(ent, 3500);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_HEALING_AREA) && random_number == 27)
+					{
+						healing_area(ent, 2, 5000);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_MAGIC_EXPLOSION) && random_number == 28)
+					{
+						magic_explosion(ent, 320, 140, 900);
+					}
+					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_LIGHTNING_DOME) && random_number == 29)
+					{
+						lightning_dome(ent, 70);
+					}
+
+					ent->client->pers.light_quest_timer = level.time + ent->client->pers.light_quest_messages;
+				}
+
+				// zyk: ultimate magic and quest powers
+				if (ent->client->pers.hunter_quest_timer < level.time)
+				{
+					int random_number = Q_irand(0, 7);
+
+					if (ent->client->sess.selected_right_special_power  & (1 << 0) && random_number == 0)
+					{
+						ultra_drain(ent, 450, 35, 8000);
+					}
+					else if (ent->client->sess.selected_right_special_power  & (1 << 1) && random_number == 1)
+					{
+						immunity_power(ent, 20000);
+					}
+					else if (ent->client->sess.selected_right_special_power  & (1 << 2) && random_number == 2)
+					{
+						chaos_power(ent, 400, 70);
+					}
+					else if (ent->client->sess.selected_right_special_power  & (1 << 3) && random_number == 3)
+					{
+						time_power(ent, 400, 3000);
+					}
+					else if (ent->client->sess.selected_right_special_power  & (1 << 4) && random_number == 4)
+					{ // zyk: Light Power
+						ent->client->pers.quest_power_status |= (1 << 14);
+					}
+					else if (ent->client->sess.selected_right_special_power  & (1 << 5) && random_number == 5)
+					{ // zyk: Dark Power
+						ent->client->pers.quest_power_status |= (1 << 15);
+					}
+					else if (ent->client->sess.selected_right_special_power  & (1 << 6) && random_number == 6)
+					{ // zyk: Eternity Power
+						ent->client->pers.quest_power_status |= (1 << 16);
+					}
+					else if (ent->client->sess.selected_right_special_power  & (1 << 7) && random_number == 7)
+					{ // zyk: Universe Power
+						ent->client->pers.quest_power_status |= (1 << 13);
+					}
+
+					ent->client->pers.hunter_quest_timer = level.time + ent->client->pers.hunter_quest_messages;
+				}
+
+				// zyk: unique abilities
+				if (ent->client->pers.universe_quest_timer < level.time)
+				{
+					int random_number = Q_irand(0, 2);
+
+					if (ent->client->sess.selected_special_power & (1 << 0) && random_number == 0)
+					{
+						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
+
+						ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+						ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
+						ent->client->ps.forceHandExtendTime = level.time + 2000;
+
+						zyk_super_beam(ent, ent->client->ps.viewangles[1]);
+					}
+					else if (ent->client->sess.selected_special_power & (1 << 1) && random_number == 1)
+					{
+						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+						elemental_attack(ent);
+					}
+					else if (ent->client->sess.selected_special_power & (1 << 2) && random_number == 2)
+					{
+						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+						zyk_no_attack(ent);
+					}
+
+					ent->client->pers.universe_quest_timer = level.time + ent->client->pers.universe_quest_messages;
 				}
 			}
 

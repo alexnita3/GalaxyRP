@@ -1748,8 +1748,14 @@ typedef struct level_locals_s {
 	// zyk: amount of custom quest npcs still alive to be defeated
 	int zyk_quest_npc_count;
 
+	// zyk: amount of ally npcs
+	int zyk_quest_ally_npc_count;
+
 	// zyk: amount of items to get in the mission
 	int zyk_quest_item_count;
+
+	// zyk: if qfalse, any place in the map starts the quest mission
+	qboolean zyk_quest_test_origin;
 
 	// zyk: custom quest main fields. It will saved in the first quest file line. Order of fields: name, active (value: on or off), count (integer value, number of completed missions)
 	char* zyk_custom_quest_main_fields[MAX_CUSTOM_QUESTS][4];

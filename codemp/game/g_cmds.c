@@ -17713,6 +17713,88 @@ char *zyk_get_mission_value(int custom_quest, int mission, char *key)
 	return "";
 }
 
+// zyk: set the magic powers and unique abilities that this npc can use in custom quest
+void zyk_set_quest_npc_abilities(gentity_t *zyk_npc)
+{
+	int i = 0;
+	int total_of_abilities = MAX_MAGIC_POWERS + 11;
+	char *zyk_magic = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcmagic%d", level.zyk_custom_quest_counter));
+
+	// zyk: magic powers
+	zyk_npc->client->sess.selected_left_special_power = 0;
+
+	// zyk: ultimate magic powers and quest powers
+	zyk_npc->client->sess.selected_right_special_power = 0;
+
+	// zyk: unique abilities
+	zyk_npc->client->sess.selected_special_power = 0;
+
+	// zyk: setting the timers
+	zyk_npc->client->pers.light_quest_messages = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcfirsttimer%d", level.zyk_custom_quest_counter)));
+	zyk_npc->client->pers.hunter_quest_messages = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcsecondtimer%d", level.zyk_custom_quest_counter)));
+	zyk_npc->client->pers.universe_quest_messages = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcthirdtimer%d", level.zyk_custom_quest_counter)));
+
+	zyk_npc->client->pers.light_quest_timer = 0;
+	zyk_npc->client->pers.hunter_quest_timer = 0;
+	zyk_npc->client->pers.universe_quest_timer = 0;
+
+	// zyk: setting default values of these timers
+	if (zyk_npc->client->pers.light_quest_messages <= 0)
+	{
+		zyk_npc->client->pers.light_quest_messages = 5000;
+	}
+
+	if (zyk_npc->client->pers.hunter_quest_messages <= 0)
+	{
+		zyk_npc->client->pers.hunter_quest_messages = 7000;
+	}
+
+	if (zyk_npc->client->pers.universe_quest_messages <= 0)
+	{
+		zyk_npc->client->pers.universe_quest_messages = 9000;
+	}
+
+	for (i = 0; i < total_of_abilities; i++)
+	{
+		int j = 0;
+		int k = 0;
+		char value[256];
+
+		for (j = 0; j < 256; j++)
+		{
+			if (zyk_magic[j] == '\0')
+			{
+				break;
+			}
+
+			if (zyk_magic[j] != ',')
+			{
+				value[k] = zyk_magic[j];
+				k++;
+			}
+			else
+			{
+				value[k] = '\0';
+
+				if (i < MAX_MAGIC_POWERS)
+				{
+					zyk_npc->client->sess.selected_left_special_power |= (1 << atoi(value));
+				}
+				else if (i < MAX_MAGIC_POWERS + 8)
+				{
+					zyk_npc->client->sess.selected_right_special_power |= (1 << (atoi(value) - MAX_MAGIC_POWERS));
+				}
+				else if (i < total_of_abilities)
+				{
+					zyk_npc->client->sess.selected_special_power |= (1 << (atoi(value) - MAX_MAGIC_POWERS - 8));
+				}
+
+				k = 0;
+			}
+		}
+	}
+}
+
 void load_custom_quest_mission(char *current_map)
 {
 	int i = 0, j = 0;
@@ -17740,10 +17822,12 @@ void load_custom_quest_mission(char *current_map)
 
 					if (sscanf(zyk_get_mission_value(i, current_mission, "origin"), "%f %f %f", &vec[0], &vec[1], &vec[2]) == 3)
 					{ // zyk: parsing origin point of this mission
+						level.zyk_quest_test_origin = qtrue;
 						VectorCopy(vec, level.zyk_quest_mission_origin);
 					}
 					else
-					{ // zyk: default origin
+					{
+						level.zyk_quest_test_origin = qfalse;
 						VectorSet(level.zyk_quest_mission_origin, 0, 0, 0);
 					}
 
@@ -17751,6 +17835,7 @@ void load_custom_quest_mission(char *current_map)
 					level.zyk_custom_quest_timer = 0;
 					level.zyk_custom_quest_counter = 0;
 					level.zyk_quest_npc_count = 0;
+					level.zyk_quest_ally_npc_count = 0;
 					level.zyk_quest_item_count = 0;
 					level.custom_quest_map = i;
 					level.zyk_custom_quest_current_mission = current_mission;
