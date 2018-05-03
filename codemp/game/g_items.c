@@ -2693,6 +2693,9 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 
 		if (ent->spawnflags & 262144)
 		{ // zyk: custom quest item
+			// zyk: remove touch function to avoid getting it again
+			ent->touch = NULL;
+
 			level.zyk_quest_item_count--;
 
 			if (level.zyk_quest_item_count == 0)

@@ -15398,9 +15398,6 @@ void G_RunFrame( int levelTime ) {
 
 						save_quest_file(level.custom_quest_map);
 
-						// zyk: mission complete, reset this value and try to find another mission
-						level.custom_quest_map = -1;
-
 						load_custom_quest_mission();
 					}
 				}

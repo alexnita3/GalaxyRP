@@ -17841,13 +17841,28 @@ void load_custom_quest_mission()
 
 	for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
 	{
-		gentity_t *zyk_npc = &g_entities[i];
+		gentity_t *zyk_ent = &g_entities[i];
 
-		if (zyk_npc && zyk_npc->NPC && zyk_npc->client && zyk_npc->health > 0 && zyk_npc->client->pers.player_statuses & (1 << 28))
+		if (zyk_ent && zyk_ent->NPC && zyk_ent->client && zyk_ent->health > 0 && zyk_ent->client->pers.player_statuses & (1 << 28))
 		{ // zyk: kill any remaining quest npcs that may still be alive
-			G_FreeEntity(zyk_npc);
+			G_FreeEntity(zyk_ent);
+		}
+
+		if (zyk_ent && zyk_ent->item && zyk_ent->spawnflags & 262144)
+		{ // zyk: remove quest items
+			G_FreeEntity(zyk_ent);
 		}
 	}
+
+	if (level.zyk_custom_quest_effect_id != -1)
+	{
+		G_FreeEntity(&g_entities[level.zyk_custom_quest_effect_id]);
+
+		level.zyk_custom_quest_effect_id = -1;
+	}
+
+	// zyk: reset this value and try to find a mission
+	level.custom_quest_map = -1;
 
 	for (i = 0; i < MAX_CUSTOM_QUESTS; i++)
 	{
@@ -17865,13 +17880,6 @@ void load_custom_quest_mission()
 					vec3_t vec;
 					gentity_t *effect_ent = NULL;
 					char *effect_path = zyk_get_mission_value(i, current_mission, "effect");
-
-					if (level.zyk_custom_quest_effect_id != -1)
-					{
-						G_FreeEntity(&g_entities[level.zyk_custom_quest_effect_id]);
-
-						level.zyk_custom_quest_effect_id = -1;
-					}
 
 					if (radius <= 0)
 					{ // zyk: default radius
@@ -17921,9 +17929,6 @@ void load_custom_quest_mission()
 			}
 		}
 	}
-
-	// zyk: reset value if did not find a mission for this map
-	level.custom_quest_map = -1;
 }
 
 void zyk_set_quest_field(int quest_number, int mission_number, char *key, char *value)
@@ -18140,11 +18145,12 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 					level.zyk_custom_quest_main_fields[quest_number][1] = G_NewString("off");
 				}
 				else
-				{ // zyk: activating the quest requires loading it
+				{
 					level.zyk_custom_quest_main_fields[quest_number][1] = G_NewString("on");
-					
-					load_custom_quest_mission();
 				}
+
+				// zyk: loads the quests in this map
+				load_custom_quest_mission();
 			}
 			else if (Q_stricmp(arg3, "count") == 0)
 			{
