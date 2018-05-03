@@ -15357,7 +15357,14 @@ void G_RunFrame( int levelTime ) {
 						trap->GetServerinfo(zyk_info, sizeof(zyk_info));
 						Q_strncpyz(zyk_mapname, Info_ValueForKey(zyk_info, "mapname"), sizeof(zyk_mapname));
 
-						level.zyk_custom_quest_main_fields[level.custom_quest_map][2] = G_NewString(va("%d", level.zyk_custom_quest_current_mission + 1));
+						if ((level.zyk_custom_quest_current_mission + 1) >= level.zyk_custom_quest_mission_count[level.custom_quest_map])
+						{ // zyk: completed all missions, reset quest to the first mission
+							level.zyk_custom_quest_main_fields[level.custom_quest_map][2] = "0";
+						}
+						else
+						{
+							level.zyk_custom_quest_main_fields[level.custom_quest_map][2] = G_NewString(va("%d", level.zyk_custom_quest_current_mission + 1));
+						}
 
 						save_quest_file(level.custom_quest_map);
 
