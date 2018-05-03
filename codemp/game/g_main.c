@@ -15199,39 +15199,130 @@ void G_RunFrame( int levelTime ) {
 				if (level.custom_quest_map > -1 && level.zyk_custom_quest_timer < level.time && ent->client->ps.duelInProgress == qfalse && ent->health > 0 && 
 					Distance(ent->client->ps.origin, level.zyk_quest_mission_origin) < level.zyk_quest_radius)
 				{ // zyk: Custom Quest map
-					char *zyk_keys[32] = {"text", "", ""};
+					char *zyk_keys[32] = {"text", "npc", "item", ""};
 					int j = 0;
 					qboolean still_has_keys = qfalse;
 
 					for (j = 0; j < 32; j++)
 					{ // zyk: testing each key and processing them when found in this mission
-						char *zyk_value = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("%s%d", zyk_keys[j], level.zyk_custom_quest_counter));
+						char *zyk_value = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("%s", zyk_keys[j]));
 
-						if (Q_stricmp(zyk_value, "") != 0)
-						{ // zyk: there is a value for this key
-							still_has_keys = qtrue;
+						if (Q_stricmp(zyk_value, "") == 0)
+						{ // zyk: did not find the key directly, search for the dynamic keys
+							zyk_value = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("%s%d", zyk_keys[j], level.zyk_custom_quest_counter));
 
-							if (Q_stricmp(zyk_keys[j], "text") == 0)
-							{ // zyk: a text message
-								int zyk_timer = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("texttimer%d", level.zyk_custom_quest_counter)));
+							if (Q_stricmp(zyk_value, "") != 0)
+							{ // zyk: there is a value for this key
+								still_has_keys = qtrue;
 
-								if (zyk_timer <= 0)
-								{
-									zyk_timer = 5000;
+								if (Q_stricmp(zyk_keys[j], "text") == 0)
+								{ // zyk: a text message
+									int zyk_timer = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("texttimer%d", level.zyk_custom_quest_counter)));
+
+									if (zyk_timer <= 0)
+									{
+										zyk_timer = 5000;
+									}
+
+									trap->SendServerCommand(-1, va("chat \"%s\n\"", zyk_value));
+									level.zyk_custom_quest_timer = level.time + zyk_timer;
+									level.zyk_custom_quest_counter++;
 								}
+								else if (Q_stricmp(zyk_keys[j], "npc") == 0)
+								{ // zyk: npc battle
+									int zyk_timer = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npctimer%d", level.zyk_custom_quest_counter)));
+									int npc_count = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npccount%d", level.zyk_custom_quest_counter)));
+									int npc_yaw = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcyaw%d", level.zyk_custom_quest_counter)));
+									int k = 0;
 
-								trap->SendServerCommand(-1, va("chat \"%s\n\"", zyk_value));
-								level.zyk_custom_quest_timer = level.time + zyk_timer;
-								level.zyk_custom_quest_counter++;
+									if (zyk_timer <= 0)
+									{
+										zyk_timer = 1000;
+									}
+
+									if (npc_count <= 0)
+									{
+										npc_count = 1;
+									}
+
+									for (k = 0; k < npc_count; k++)
+									{
+										gentity_t *zyk_npc = Zyk_NPC_SpawnType(zyk_value, level.zyk_quest_mission_origin[0], level.zyk_quest_mission_origin[1], level.zyk_quest_mission_origin[2], npc_yaw);
+
+										if (zyk_npc)
+										{ 
+											int zyk_enemy = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcenemy%d", level.zyk_custom_quest_counter)));
+											int zyk_health = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npchealth%d", level.zyk_custom_quest_counter)));;
+
+											zyk_npc->client->pers.player_statuses |= (1 << 28);
+
+											if (zyk_health > 0)
+											{ // zyk: custom npc health
+												zyk_npc->NPC->stats.health = zyk_health;
+												zyk_npc->client->ps.stats[STAT_MAX_HEALTH] = zyk_health;
+												zyk_npc->health = zyk_health;
+											}
+
+											if (zyk_enemy > 0)
+											{ // zyk: force it to be enemy
+												zyk_npc->client->playerTeam = NPCTEAM_ENEMY;
+												zyk_npc->client->enemyTeam = NPCTEAM_PLAYER;
+											}
+
+											if (zyk_npc->client->playerTeam == NPCTEAM_ENEMY)
+											{ // zyk: if enemy, must count this npc in the counter and hold mission until all enemies are defeated
+												level.zyk_hold_quest_mission = qtrue;
+												level.zyk_quest_npc_count++;
+											}
+										}
+									}
+
+									level.zyk_custom_quest_timer = level.time + zyk_timer;
+									level.zyk_custom_quest_counter++;
+								}
+								else if (Q_stricmp(zyk_keys[j], "item") == 0)
+								{ // zyk: items to find
+									char *zyk_item_origin = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("itemorigin%d", level.zyk_custom_quest_counter));
+									gentity_t *new_ent = NULL;
+
+									new_ent = G_Spawn();
+
+									zyk_set_entity_field(new_ent, "classname", "weapon_stun_baton");
+									zyk_set_entity_field(new_ent, "spawnflags", "262144");
+									zyk_set_entity_field(new_ent, "origin", zyk_item_origin);
+
+									zyk_spawn_entity(new_ent);
+
+									level.zyk_quest_item_count++;
+
+									level.zyk_custom_quest_timer = level.time + 1000;
+									level.zyk_custom_quest_counter++;
+									level.zyk_hold_quest_mission = qtrue;
+								}
 							}
+						}
+						else
+						{ // zyk: found the key
+							still_has_keys = qtrue;
 						}
 					}
 
 					// zyk: no more fields to test, pass the mission
-					if (still_has_keys == qfalse)
+					if (still_has_keys == qfalse && level.zyk_hold_quest_mission == qfalse)
 					{
 						char zyk_info[MAX_INFO_STRING] = { 0 };
 						char zyk_mapname[128] = { 0 };
+						int k = 0;
+
+						for (k = (MAX_CLIENTS + BODY_QUEUE_SIZE); k < level.num_entities; k++)
+						{
+							gentity_t *zyk_npc = &g_entities[k];
+
+							if (zyk_npc && zyk_npc->NPC && zyk_npc->client && zyk_npc->client->pers.player_statuses & (1 << 28))
+							{
+								zyk_NPC_Kill_f(zyk_npc->NPC_type);
+							}
+						}
 
 						// zyk: getting the map name
 						trap->GetServerinfo(zyk_info, sizeof(zyk_info));

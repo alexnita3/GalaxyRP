@@ -17747,8 +17747,11 @@ void load_custom_quest_mission(char *current_map)
 						VectorSet(level.zyk_quest_mission_origin, 0, 0, 0);
 					}
 
+					level.zyk_hold_quest_mission = qfalse;
 					level.zyk_custom_quest_timer = 0;
 					level.zyk_custom_quest_counter = 0;
+					level.zyk_quest_npc_count = 0;
+					level.zyk_quest_item_count = 0;
 					level.custom_quest_map = i;
 					level.zyk_custom_quest_current_mission = current_mission;
 					return;
@@ -17759,6 +17762,81 @@ void load_custom_quest_mission(char *current_map)
 
 	// zyk: reset value if did not find a mission for this map
 	level.custom_quest_map = -1;
+}
+
+void zyk_set_quest_field(int quest_number, int mission_number, char *key, char *value)
+{
+	int i = 0;
+
+	// zyk: new mission
+	if (mission_number == level.zyk_custom_quest_mission_count[quest_number])
+	{
+		level.zyk_custom_quest_mission_values_count[quest_number][mission_number] = 0;
+		level.zyk_custom_quest_mission_count[quest_number]++;
+	}
+
+	if (Q_stricmp(key, "zykremovemission") == 0)
+	{
+		// zyk: mission must be removed in this case
+		for (i = mission_number; i < (level.zyk_custom_quest_mission_count[quest_number] - 1); i++)
+		{
+			int j = 0;
+
+			for (j = 0; j < level.zyk_custom_quest_mission_values_count[quest_number][i + 1]; j += 2)
+			{ // zyk: save all key/value pairs from next mission to this one, it will move all mission by one position
+				level.zyk_custom_quest_missions[quest_number][i][j] = G_NewString(level.zyk_custom_quest_missions[quest_number][i + 1][j]);
+				level.zyk_custom_quest_missions[quest_number][i][j + 1] = G_NewString(level.zyk_custom_quest_missions[quest_number][i + 1][j + 1]);
+			}
+
+			level.zyk_custom_quest_mission_values_count[quest_number][i] = level.zyk_custom_quest_mission_values_count[quest_number][i + 1];
+		}
+
+		level.zyk_custom_quest_mission_values_count[quest_number][i] = 0;
+		level.zyk_custom_quest_mission_count[quest_number]--;
+
+		return;
+	}
+
+	// zyk: see if this key already exists to edit it. If not, add a new one
+	while (i < level.zyk_custom_quest_mission_values_count[quest_number][mission_number])
+	{
+		if (Q_stricmp(level.zyk_custom_quest_missions[quest_number][mission_number][i], key) == 0)
+		{ // zyk: found the key
+			if (Q_stricmp(value, "zykremovekey") == 0)
+			{ // zyk: remove the key
+			  // zyk: starts from the next key
+				i += 2;
+
+				// zyk: moves all keys after this one 2 positions to remove the key
+				while (i < level.zyk_custom_quest_mission_values_count[quest_number][mission_number])
+				{
+					level.zyk_custom_quest_missions[quest_number][mission_number][i - 2] = G_NewString(level.zyk_custom_quest_missions[quest_number][mission_number][i]);
+					level.zyk_custom_quest_missions[quest_number][mission_number][i - 1] = G_NewString(level.zyk_custom_quest_missions[quest_number][mission_number][i + 1]);
+
+					i += 2;
+				}
+
+				// zyk: decrease the counter
+				level.zyk_custom_quest_mission_values_count[quest_number][mission_number] -= 2;
+			}
+			else
+			{ // zyk: edit the key
+				level.zyk_custom_quest_missions[quest_number][mission_number][i] = G_NewString(key);
+				level.zyk_custom_quest_missions[quest_number][mission_number][i + 1] = G_NewString(value);
+			}
+
+			return;
+		}
+
+		i += 2;
+	}
+
+	// zyk: a new key. Add it
+	level.zyk_custom_quest_missions[quest_number][mission_number][i] = G_NewString(key);
+	level.zyk_custom_quest_missions[quest_number][mission_number][i + 1] = G_NewString(value);
+
+	// zyk: increases the counter
+	level.zyk_custom_quest_mission_values_count[quest_number][mission_number] += 2;
 }
 
 void Cmd_CustomQuest_f(gentity_t *ent) {
@@ -17930,8 +18008,7 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 		}
 		else if (Q_stricmp(arg1, "edit") == 0)
 		{
-			char *key;
-			char *value;
+			int k = 0;
 
 			if (argc == 2)
 			{
@@ -17983,16 +18060,14 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 				trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\"", content));
 				return;
 			}
-			else if (argc < 6)
+			else if (argc > 4 && (argc % 2) != 0)
 			{
-				trap->SendServerCommand(ent->s.number, "print \"Must pass the quest number, mission number, field and value.\n\"");
+				trap->SendServerCommand(ent->s.number, "print \"Must pass an even number of arguments.\n\"");
 				return;
 			}
 
 			trap->Argv(2, arg2, sizeof(arg2));
 			trap->Argv(3, arg3, sizeof(arg3));
-			trap->Argv(4, arg4, sizeof(arg4));
-			trap->Argv(5, arg5, sizeof(arg5));
 
 			quest_number = atoi(arg2);
 			mission_number = atoi(arg3);
@@ -18009,86 +18084,13 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 				return;
 			}
 
-			key = G_NewString(arg4);
-			value = G_NewString(arg5);
-
-			// zyk: new mission
-			if (mission_number == level.zyk_custom_quest_mission_count[quest_number])
+			for (k = 4; k < argc; k += 2)
 			{
-				level.zyk_custom_quest_mission_values_count[quest_number][mission_number] = 0;
-				level.zyk_custom_quest_mission_count[quest_number]++;
+				trap->Argv(k, arg4, sizeof(arg4));
+				trap->Argv(k + 1, arg5, sizeof(arg5));
+
+				zyk_set_quest_field(quest_number, mission_number, G_NewString(arg4), G_NewString(arg5));
 			}
-
-			if (Q_stricmp(key, "zykremovemission") == 0)
-			{
-				// zyk: mission must be removed in this case
-				for (i = mission_number; i < (level.zyk_custom_quest_mission_count[quest_number] - 1); i++)
-				{
-					int j = 0;
-
-					for (j = 0; j < level.zyk_custom_quest_mission_values_count[quest_number][i + 1]; j += 2)
-					{ // zyk: save all key/value pairs from next mission to this one, it will move all mission by one position
-						level.zyk_custom_quest_missions[quest_number][i][j] = G_NewString(level.zyk_custom_quest_missions[quest_number][i + 1][j]);
-						level.zyk_custom_quest_missions[quest_number][i][j + 1] = G_NewString(level.zyk_custom_quest_missions[quest_number][i + 1][j + 1]);
-					}
-
-					level.zyk_custom_quest_mission_values_count[quest_number][i] = level.zyk_custom_quest_mission_values_count[quest_number][i + 1];
-				}
-
-				level.zyk_custom_quest_mission_values_count[quest_number][i] = 0;
-				level.zyk_custom_quest_mission_count[quest_number]--;
-
-				// zyk: saving info in the quest file
-				save_quest_file(quest_number);
-
-				trap->SendServerCommand(ent->s.number, "print \"Mission removed.\n\"");
-				return;
-			}
-
-			// zyk: see if this key already exists to edit it. If not, add a new one
-			while (i < level.zyk_custom_quest_mission_values_count[quest_number][mission_number])
-			{
-				if (Q_stricmp(level.zyk_custom_quest_missions[quest_number][mission_number][i], key) == 0)
-				{ // zyk: found the key
-					if (Q_stricmp(value, "zykremovekey") == 0)
-					{ // zyk: remove the key
-					  // zyk: starts from the next key
-						i += 2;
-
-						// zyk: moves all keys after this one 2 positions to remove the key
-						while (i < level.zyk_custom_quest_mission_values_count[quest_number][mission_number])
-						{
-							level.zyk_custom_quest_missions[quest_number][mission_number][i - 2] = G_NewString(level.zyk_custom_quest_missions[quest_number][mission_number][i]);
-							level.zyk_custom_quest_missions[quest_number][mission_number][i - 1] = G_NewString(level.zyk_custom_quest_missions[quest_number][mission_number][i + 1]);
-
-							i += 2;
-						}
-
-						// zyk: decrease the counter
-						level.zyk_custom_quest_mission_values_count[quest_number][mission_number] -= 2;
-					}
-					else
-					{ // zyk: edit the key
-						level.zyk_custom_quest_missions[quest_number][mission_number][i] = G_NewString(key);
-						level.zyk_custom_quest_missions[quest_number][mission_number][i + 1] = G_NewString(value);
-					}
-
-					// zyk: saving info in the quest file
-					save_quest_file(quest_number);
-
-					trap->SendServerCommand(ent->s.number, "print \"Mission edited.\n\"");
-					return;
-				}
-
-				i += 2;
-			}
-
-			// zyk: a new key. Add it
-			level.zyk_custom_quest_missions[quest_number][mission_number][i] = G_NewString(key);
-			level.zyk_custom_quest_missions[quest_number][mission_number][i + 1] = G_NewString(value);
-
-			// zyk: increases the counter
-			level.zyk_custom_quest_mission_values_count[quest_number][mission_number] += 2;
 
 			// zyk: saving info in the quest file
 			save_quest_file(quest_number);

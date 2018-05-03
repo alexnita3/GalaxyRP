@@ -694,6 +694,7 @@ typedef struct clientPersistant_s {
 	// 25 - RPG Mode tutorial
 	// 26 - Using nofight command
 	// 27 - Has just lost his duel in Duel Tournament
+	// 28 - Custom Quest npc
 	int player_statuses;
 
 	// zyk: used to backup player force powers before some event that does not allow them. They will be restored after event ends
@@ -1740,6 +1741,15 @@ typedef struct level_locals_s {
 
 	// zyk: radius from the quest mission origin point the player must be within for the mission to start
 	int zyk_quest_radius;
+
+	// zyk: do not pass the mission until a certain event has happened (e.g killing all quest npcs)
+	qboolean zyk_hold_quest_mission;
+
+	// zyk: amount of custom quest npcs still alive to be defeated
+	int zyk_quest_npc_count;
+
+	// zyk: amount of items to get in the mission
+	int zyk_quest_item_count;
 
 	// zyk: custom quest main fields. It will saved in the first quest file line. Order of fields: name, active (value: on or off), count (integer value, number of completed missions)
 	char* zyk_custom_quest_main_fields[MAX_CUSTOM_QUESTS][4];

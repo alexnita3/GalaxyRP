@@ -4854,6 +4854,11 @@ void NPC_Kill_f( void )
 				found = 1;
 			}
 
+			if (player->client && player->client->pers.player_statuses & (1 << 28))
+			{ // zyk: custom quest npc
+				found = 1;
+			}
+
 			if (found == 1)
 			{ // zyk: if this npc is a guardian or quest npc, do not kill it
 				continue;

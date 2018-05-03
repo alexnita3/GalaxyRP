@@ -2179,6 +2179,16 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		}
 	}
 
+	if (self->client->pers.player_statuses & (1 << 28) && self->client->playerTeam == NPCTEAM_ENEMY)
+	{// zyk: custom quest npc defeated
+		level.zyk_quest_npc_count--;
+
+		if (level.zyk_quest_npc_count == 0)
+		{ // zyk: all enemy npcs defeated
+			level.zyk_hold_quest_mission = qfalse;
+		}
+	}
+
 	if (self->client->pers.race_position > 0) // zyk: if a player dies during a race, he loses the race
 	{
 		self->client->pers.race_position = 0;
