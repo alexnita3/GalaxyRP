@@ -672,6 +672,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	// zyk: initializing quest_map value
 	level.quest_map = 0;
 	level.custom_quest_map = -1;
+	level.zyk_custom_quest_effect_id = -1;
 
 	// zyk: initializing quest_note_id value
 	level.quest_note_id = -1;
@@ -15334,6 +15335,7 @@ void G_RunFrame( int levelTime ) {
 						char zyk_info[MAX_INFO_STRING] = { 0 };
 						char zyk_mapname[128] = { 0 };
 						int k = 0;
+						int zyk_prize = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "prize"));
 
 						for (k = (MAX_CLIENTS + BODY_QUEUE_SIZE); k < level.num_entities; k++)
 						{
@@ -15341,8 +15343,14 @@ void G_RunFrame( int levelTime ) {
 
 							if (zyk_npc && zyk_npc->NPC && zyk_npc->client && zyk_npc->client->pers.player_statuses & (1 << 28))
 							{
-								zyk_NPC_Kill_f(zyk_npc->NPC_type);
+								G_FreeEntity(zyk_npc);
 							}
+						}
+
+						if (zyk_prize > 0)
+						{ // zyk: add this amount of credits to the player
+							add_credits(ent, zyk_prize);
+							trap->SendServerCommand(-1, va("chat \"^3Custom Quest: ^7Got ^2%d ^7credits\n\"", zyk_prize));
 						}
 
 						// zyk: getting the map name

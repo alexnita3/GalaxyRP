@@ -1757,6 +1757,9 @@ typedef struct level_locals_s {
 	// zyk: if qfalse, any place in the map starts the quest mission
 	qboolean zyk_quest_test_origin;
 
+	// zyk: set an effect on the quest origin point
+	int zyk_custom_quest_effect_id;
+
 	// zyk: custom quest main fields. It will saved in the first quest file line. Order of fields: name, active (value: on or off), count (integer value, number of completed missions)
 	char* zyk_custom_quest_main_fields[MAX_CUSTOM_QUESTS][4];
 

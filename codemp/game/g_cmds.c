@@ -17812,6 +17812,15 @@ void load_custom_quest_mission(char *current_map)
 				{ // zyk: current mission of this quest is in the current map
 					int radius = atoi(zyk_get_mission_value(i, current_mission, "radius"));
 					vec3_t vec;
+					gentity_t *effect_ent = NULL;
+					char *effect_path = zyk_get_mission_value(i, current_mission, "effect");
+
+					if (level.zyk_custom_quest_effect_id != -1)
+					{
+						G_FreeEntity(&g_entities[level.zyk_custom_quest_effect_id]);
+
+						level.zyk_custom_quest_effect_id = -1;
+					}
 
 					if (radius <= 0)
 					{ // zyk: default radius
@@ -17831,6 +17840,20 @@ void load_custom_quest_mission(char *current_map)
 						VectorSet(level.zyk_quest_mission_origin, 0, 0, 0);
 					}
 
+					// zyk: adding effect in custom quest origin
+					effect_ent = G_Spawn();
+
+					zyk_set_entity_field(effect_ent, "classname", "fx_runner");
+					zyk_set_entity_field(effect_ent, "spawnflags", "0");
+					zyk_set_entity_field(effect_ent, "origin", va("%f %f %f", level.zyk_quest_mission_origin[0], level.zyk_quest_mission_origin[1], level.zyk_quest_mission_origin[2]));
+
+					effect_ent->s.modelindex = G_EffectIndex(effect_path);
+
+					zyk_spawn_entity(effect_ent);
+
+					level.zyk_custom_quest_effect_id = effect_ent->s.number;
+
+					// zyk: setting default values for other control variables
 					level.zyk_hold_quest_mission = qfalse;
 					level.zyk_custom_quest_timer = 0;
 					level.zyk_custom_quest_counter = 0;
