@@ -17801,12 +17801,7 @@ void zyk_set_quest_npc_abilities(gentity_t *zyk_npc)
 
 	for (j = 0; j < 256; j++)
 	{
-		if (zyk_magic[j] == '\0')
-		{
-			break;
-		}
-
-		if (zyk_magic[j] != ',')
+		if (zyk_magic[j] != ',' && zyk_magic[j] != '\0')
 		{
 			value[k] = zyk_magic[j];
 			k++;
@@ -17824,12 +17819,17 @@ void zyk_set_quest_npc_abilities(gentity_t *zyk_npc)
 			{
 				zyk_npc->client->sess.selected_right_special_power |= (1 << (zyk_power - MAX_MAGIC_POWERS));
 			}
-			else if (zyk_power < MAX_MAGIC_POWERS + 11)
+			else if (zyk_power < MAX_MAGIC_POWERS + 13)
 			{
 				zyk_npc->client->sess.selected_special_power |= (1 << (zyk_power - MAX_MAGIC_POWERS - 8));
 			}
 
 			k = 0;
+
+			if (zyk_magic[j] == '\0')
+			{ // zyk: no more values to parse
+				return;
+			}
 		}
 	}
 }

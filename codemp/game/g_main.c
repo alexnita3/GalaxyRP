@@ -15643,7 +15643,7 @@ void G_RunFrame( int levelTime ) {
 				// zyk: unique abilities
 				if (ent->client->pers.universe_quest_timer < level.time)
 				{
-					int random_number = Q_irand(0, 2);
+					int random_number = Q_irand(0, 4);
 
 					if (ent->client->sess.selected_special_power & (1 << 0) && random_number == 0)
 					{
@@ -15664,6 +15664,16 @@ void G_RunFrame( int levelTime ) {
 					{
 						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
 						zyk_no_attack(ent);
+					}
+					else if (ent->client->sess.selected_special_power & (1 << 3) && random_number == 3)
+					{
+						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+						force_scream(ent);
+					}
+					else if (ent->client->sess.selected_special_power & (1 << 4) && random_number == 4)
+					{
+						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+						zyk_force_storm(ent);
 					}
 
 					ent->client->pers.universe_quest_timer = level.time + ent->client->pers.universe_quest_messages;
