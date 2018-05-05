@@ -15289,15 +15289,14 @@ void G_RunFrame( int levelTime ) {
 												zyk_npc->client->enemyTeam = NPCTEAM_ENEMY;
 											}
 
-											if (zyk_npc->client->playerTeam == NPCTEAM_ENEMY)
-											{ // zyk: if enemy, must count this npc in the counter and hold mission until all enemies are defeated
-												level.zyk_hold_quest_mission = qtrue;
-												level.zyk_quest_npc_count++;
-											}
-
 											if (zyk_npc->client->playerTeam == NPCTEAM_PLAYER)
 											{ // zyk: if ally, must count this npc in the counter until mission ends
 												level.zyk_quest_ally_npc_count++;
+											}
+											else
+											{ // zyk: if any non-ally team, must count this npc in the counter and hold mission until all npcs are defeated
+												level.zyk_hold_quest_mission = qtrue;
+												level.zyk_quest_npc_count++;
 											}
 
 											zyk_set_quest_npc_abilities(zyk_npc);
@@ -15468,7 +15467,7 @@ void G_RunFrame( int levelTime ) {
 			}
 
 			// zyk: abilities of custom quest npcs
-			if (ent->client->pers.player_statuses & (1 << 28) && ent->enemy && ent->health > 0)
+			if (ent->client->pers.player_statuses & (1 << 28) && ent->health > 0)
 			{
 				// zyk: magic powers
 				if (ent->client->pers.light_quest_timer < level.time)

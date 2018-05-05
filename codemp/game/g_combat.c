@@ -2182,7 +2182,18 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 	if (self->client->pers.player_statuses & (1 << 28))
 	{// zyk: custom quest npc defeated
-		if (self->client->playerTeam == NPCTEAM_ENEMY)
+		if (self->client->playerTeam == NPCTEAM_PLAYER)
+		{
+			level.zyk_quest_ally_npc_count--;
+
+			if (level.zyk_quest_ally_npc_count == 0)
+			{ // zyk: all enemy npcs defeated
+				load_custom_quest_mission();
+
+				trap->SendServerCommand(-1, "chat \"^3Custom Quest: ^7Mission failed\n\"");
+			}
+		}
+		else
 		{
 			level.zyk_quest_npc_count--;
 
@@ -2192,17 +2203,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			if (level.zyk_quest_npc_count == 0)
 			{ // zyk: all enemy npcs defeated
 				level.zyk_hold_quest_mission = qfalse;
-			}
-		}
-		else if (self->client->playerTeam == NPCTEAM_PLAYER)
-		{
-			level.zyk_quest_ally_npc_count--;
-
-			if (level.zyk_quest_ally_npc_count == 0)
-			{ // zyk: all enemy npcs defeated
-				load_custom_quest_mission();
-
-				trap->SendServerCommand(-1, "chat \"^3Custom Quest: ^7Mission failed\n\"");
 			}
 		}
 	}
