@@ -9929,11 +9929,15 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 
 					quest_number = atoi(arg2);
 
-					if (quest_number >= 0 && quest_number < MAX_CUSTOM_QUESTS && Q_stricmp(level.zyk_custom_quest_main_fields[quest_number][1], "on") == 0)
+					if (quest_number >= 0 && quest_number < MAX_CUSTOM_QUESTS && level.zyk_custom_quest_mission_count[quest_number] != -1 && Q_stricmp(level.zyk_custom_quest_main_fields[quest_number][1], "on") == 0)
 					{
 						char *mission_description = zyk_get_mission_value(quest_number, atoi(level.zyk_custom_quest_main_fields[quest_number][2]), "description");
 
 						trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\n^7%s\n\n\"", level.zyk_custom_quest_main_fields[quest_number][0], mission_description));
+					}
+					else if (quest_number >= 0 && quest_number < MAX_CUSTOM_QUESTS)
+					{
+						trap->SendServerCommand(ent->s.number, "print \"\nNo info for this quest\n\n\"");
 					}
 					else
 					{
@@ -17866,7 +17870,7 @@ void load_custom_quest_mission()
 
 	for (i = 0; i < MAX_CUSTOM_QUESTS; i++)
 	{
-		if (Q_stricmp(level.zyk_custom_quest_main_fields[i][1], "on") == 0)
+		if (level.zyk_custom_quest_mission_count[i] != -1 && Q_stricmp(level.zyk_custom_quest_main_fields[i][1], "on") == 0)
 		{ // zyk: only set the custom quest map if this is an active quest
 			current_mission = atoi(G_NewString(level.zyk_custom_quest_main_fields[i][2]));
 
@@ -18105,6 +18109,9 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 				fclose(quest_file);
 
 				remove(va("zykmod/customquests/%d.txt", quest_number));
+
+				// zyk: search for a new active quest in this map
+				load_custom_quest_mission();
 
 				trap->SendServerCommand(ent->s.number, "print \"Quest removed.\n\"");
 			}
