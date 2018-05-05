@@ -15343,9 +15343,18 @@ void G_RunFrame( int levelTime ) {
 						if (zyk_done >= zyk_steps)
 						{ // zyk: completed all steps of this mission
 							if (zyk_prize > 0)
-							{ // zyk: add this amount of credits to the player
-								add_credits(ent, zyk_prize);
-								trap->SendServerCommand(-1, va("chat \"^3Custom Quest: ^7Got ^2%d ^7credits\n\"", zyk_prize));
+							{ // zyk: add this amount of credits to all players in quest area
+								for (k = 0; k < level.maxclients; k++)
+								{
+									gentity_t *zyk_ent = &g_entities[k];
+
+									if (zyk_ent && zyk_ent->client && zyk_ent->client->sess.amrpgmode == 2 && zyk_ent->client->sess.sessionTeam != TEAM_SPECTATOR && 
+										(level.zyk_quest_test_origin == qfalse || Distance(zyk_ent->client->ps.origin, level.zyk_quest_mission_origin) < level.zyk_quest_radius))
+									{ // zyk: only players in the quest area can receive the prize
+										add_credits(ent, zyk_prize);
+										trap->SendServerCommand(zyk_ent->s.number, va("chat \"^3Custom Quest: ^7Got ^2%d ^7credits\n\"", zyk_prize));
+									}
+								}
 							}
 
 							if ((level.zyk_custom_quest_current_mission + 1) >= level.zyk_custom_quest_mission_count[level.custom_quest_map])
