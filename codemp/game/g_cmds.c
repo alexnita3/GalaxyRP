@@ -17921,7 +17921,10 @@ void load_custom_quest_mission()
 
 					// zyk: setting default values for other control variables
 					level.zyk_hold_quest_mission = qfalse;
-					level.zyk_custom_quest_timer = 0;
+
+					// zyk: add some time before starting the mission
+					level.zyk_custom_quest_timer = level.time + 2000;
+
 					level.zyk_custom_quest_counter = 0;
 					level.zyk_quest_npc_count = 0;
 					level.zyk_quest_ally_npc_count = 0;
