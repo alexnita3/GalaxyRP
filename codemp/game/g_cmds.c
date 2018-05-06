@@ -18114,7 +18114,10 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 				remove(va("zykmod/customquests/%d.txt", quest_number));
 
 				// zyk: search for a new active quest in this map
-				load_custom_quest_mission();
+				if (level.custom_quest_map == quest_number)
+				{
+					load_custom_quest_mission();
+				}
 
 				trap->SendServerCommand(ent->s.number, "print \"Quest removed.\n\"");
 			}
