@@ -9395,7 +9395,7 @@ void G_RunFrame( int levelTime ) {
 
 	if (level.load_entities_timer != 0 && level.load_entities_timer < level.time)
 	{ // zyk: loading entities from the file specified in entload command, or the default file
-		char content[1024];
+		char content[2048];
 		FILE *this_file = NULL;
 
 		strcpy(content,"");
