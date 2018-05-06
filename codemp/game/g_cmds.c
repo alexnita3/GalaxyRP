@@ -9931,9 +9931,10 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 
 					if (quest_number >= 0 && quest_number < MAX_CUSTOM_QUESTS && level.zyk_custom_quest_mission_count[quest_number] != -1 && Q_stricmp(level.zyk_custom_quest_main_fields[quest_number][1], "on") == 0)
 					{
+						char *mission_title = zyk_get_mission_value(quest_number, atoi(level.zyk_custom_quest_main_fields[quest_number][2]), "title");
 						char *mission_description = zyk_get_mission_value(quest_number, atoi(level.zyk_custom_quest_main_fields[quest_number][2]), "description");
 
-						trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\n^7%s\n\n\"", level.zyk_custom_quest_main_fields[quest_number][0], mission_description));
+						trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\n^3%d. %s\n\n^7%s\n\n\"", level.zyk_custom_quest_main_fields[quest_number][0], atoi(level.zyk_custom_quest_main_fields[quest_number][2]), mission_title, mission_description));
 					}
 					else if (quest_number >= 0 && quest_number < MAX_CUSTOM_QUESTS)
 					{
