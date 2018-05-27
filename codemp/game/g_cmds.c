@@ -17328,6 +17328,98 @@ void Cmd_QuestSkip_f(gentity_t *ent) {
 			ent->client->pers.universe_quest_messages = 27;
 			ent->client->pers.universe_quest_timer = level.time;
 		}
+		else if (ent->client->pers.universe_quest_progress == 15)
+		{
+			if (ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.universe_quest_messages >= 1)
+			{ // zyk: Sages Sequel
+				ent->client->pers.universe_quest_messages = 30;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+			else if (ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.universe_quest_messages >= 1)
+			{ // zyk: Guardians Sequel
+				ent->client->pers.universe_quest_messages = 19;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+			else if (ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.universe_quest_messages >= 24)
+			{ // zyk: Thor Sequel
+				ent->client->pers.universe_quest_messages = 34;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+			else if (ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.universe_quest_messages >= 1)
+			{ // zyk: Time Sequel
+				ent->client->pers.universe_quest_messages = 35;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+		}
+		else if (ent->client->pers.universe_quest_progress == 17)
+		{
+			if (ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.universe_quest_messages >= 1)
+			{ // zyk: Sages Sequel
+				ent->client->pers.universe_quest_messages = 28;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+			else if (ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.universe_quest_messages >= 1)
+			{ // zyk: Guardians Sequel
+				ent->client->pers.universe_quest_messages = 9;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+			else if (ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.universe_quest_messages >= 1)
+			{ // zyk: Thor Sequel
+				ent->client->pers.universe_quest_messages = 15;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+			else if (ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.universe_quest_messages >= 14)
+			{ // zyk: Time Sequel
+				ent->client->pers.universe_quest_messages = 21;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+		}
+		else if (ent->client->pers.universe_quest_progress == 19)
+		{
+			if (ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.universe_quest_messages >= 10)
+			{ // zyk: Sages Sequel
+				ent->client->pers.universe_quest_messages = 26;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+			else if (ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.universe_quest_messages >= 1)
+			{ // zyk: Guardians Sequel
+				ent->client->pers.universe_quest_messages = 8;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+			else if (ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.universe_quest_messages >= 1)
+			{ // zyk: Thor Sequel
+				ent->client->pers.universe_quest_messages = 13;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+			else if (ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.universe_quest_messages >= 53)
+			{ // zyk: Time Sequel
+				ent->client->pers.universe_quest_messages = 64;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+		}
+		else if (ent->client->pers.universe_quest_progress == 21)
+		{
+			if (ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.universe_quest_messages >= 10)
+			{ // zyk: Sages Sequel
+				ent->client->pers.universe_quest_messages = 30;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+			else if (ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.universe_quest_messages >= 1)
+			{ // zyk: Guardians Sequel
+				ent->client->pers.universe_quest_messages = 12;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+			else if (ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.universe_quest_messages >= 1)
+			{ // zyk: Thor Sequel
+				ent->client->pers.universe_quest_messages = 10;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+			else if (ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.universe_quest_messages >= 53)
+			{ // zyk: Time Sequel
+				ent->client->pers.universe_quest_messages = 70;
+				ent->client->pers.universe_quest_timer = level.time;
+			}
+		}
 	}
 	else
 	{
