@@ -16828,137 +16828,123 @@ void G_RunFrame( int levelTime ) {
 					if (ent->client->pers.guardian_timer < level.time)
 					{
 						int k = 0;
-						int use_multi_magic = Q_irand(0, 4);
-						int number_of_powers = 1;
+						int random_magic = Q_irand(0, 25);
+						gentity_t *player_ent = &g_entities[ent->client->pers.guardian_invoked_by_id];
+						int distance = (int)Distance(ent->client->ps.origin, player_ent->client->ps.origin);
 
-						if (use_multi_magic == 0)
-						{ // zyk: Multi Magic
-							number_of_powers = 2;
+						// zyk: using powers in a smarter way
+						if (distance < 300)
+						{ // zyk: close range makes boss use close range powers more frequently
+							random_magic = Q_irand(0, 12);
+						}
+						else
+						{ // zyk: long range makes boss use long range powers more frequently
+							random_magic = Q_irand(13, 25);
 						}
 
-						for (k = 0; k < number_of_powers; k++)
+						if (random_magic == 0)
 						{
-							int random_magic = Q_irand(0, 25);
-
-							if (random_magic < 13)
-							{ // zyk: half chance of using powers in a smarter way
-								gentity_t *player_ent = &g_entities[ent->client->pers.guardian_invoked_by_id];
-								int distance = (int)Distance(ent->client->ps.origin, player_ent->client->ps.origin);
-
-								if (distance < 300)
-								{ // zyk: close range makes boss use close range powers more frequently
-									random_magic = Q_irand(0, 12);
-								}
-								else
-								{ // zyk: long range makes boss use long range powers more frequently
-									random_magic = Q_irand(13, 25);
-								}
-							}
-
-							if (random_magic == 0)
-							{
-								ice_block(ent, 3500);
-							}
-							else if (random_magic == 1)
-							{
-								lightning_dome(ent, 70);
-							}
-							else if (random_magic == 2)
-							{
-								ultra_drain(ent, 450, 35, 8000);
-							}
-							else if (random_magic == 3)
-							{
-								magic_explosion(ent, 320, 140, 900);
-							}
-							else if (random_magic == 4)
-							{
-								flaming_area(ent, 25);
-							}
-							else if (random_magic == 5)
-							{
-								slow_motion(ent, 5000, 15000);
-							}
-							else if (random_magic == 6)
-							{
-								sleeping_flowers(ent, 2500, 5000);
-							}
-							else if (random_magic == 7)
-							{
-								blowing_wind(ent, 5000, 1500);
-							}
-							else if (random_magic == 8)
-							{
-								flame_burst(ent, 5000);
-							}
-							else if (random_magic == 9)
-							{
-								magic_shield(ent, 6000);
-							}
-							else if (random_magic == 10)
-							{
-								healing_water(ent, 120);
-							}
-							else if (random_magic == 11)
-							{
-								healing_area(ent, 2, 5000);
-							}
-							else if (random_magic == 12)
-							{
-								enemy_nerf(ent, 5000);
-							}
-							else if (random_magic == 13)
-							{
-								water_attack(ent, 5000, 45);
-							}
-							else if (random_magic == 14)
-							{
-								shifting_sand(ent, 5000);
-							}
-							else if (random_magic == 15)
-							{
-								magic_disable(ent, 5000);
-							}
-							else if (random_magic == 16)
-							{
-								chaos_power(ent, 5000, 100);
-							}
-							else if (random_magic == 17)
-							{
-								dome_of_damage(ent, 5000, 28);
-							}
-							else if (random_magic == 18)
-							{
-								reverse_wind(ent, 5000, 1500);
-							}
-							else if (random_magic == 19)
-							{
-								ice_boulder(ent, 5000, 50);
-							}
-							else if (random_magic == 20)
-							{
-								time_power(ent, 5000, 3000);
-							}
-							else if (random_magic == 21)
-							{
-								ice_stalagmite(ent, 5000, 140);
-							}
-							else if (random_magic == 22)
-							{
-								rock_fall(ent, 5000, 45);
-							}
-							else if (random_magic == 23)
-							{
-								poison_mushrooms(ent, 100, 5000);
-							}
-							else if (random_magic == 24)
-							{
-								ultra_flame(ent, 5000, 40);
-							}
-							else if (random_magic == 25)
-							{
-								immunity_power(ent, 20000);
-							}
+							immunity_power(ent, 20000);
+						}
+						else if (random_magic == 1)
+						{
+							lightning_dome(ent, 70);
+						}
+						else if (random_magic == 2)
+						{
+							ultra_drain(ent, 450, 35, 8000);
+						}
+						else if (random_magic == 3)
+						{
+							magic_explosion(ent, 320, 140, 900);
+						}
+						else if (random_magic == 4)
+						{
+							flaming_area(ent, 25);
+						}
+						else if (random_magic == 5)
+						{
+							slow_motion(ent, 5000, 15000);
+						}
+						else if (random_magic == 6)
+						{
+							sleeping_flowers(ent, 2500, 5000);
+						}
+						else if (random_magic == 7)
+						{
+							blowing_wind(ent, 5000, 1800);
+						}
+						else if (random_magic == 8)
+						{
+							flame_burst(ent, 5000);
+						}
+						else if (random_magic == 9)
+						{
+							magic_shield(ent, 6000);
+						}
+						else if (random_magic == 10)
+						{
+							healing_water(ent, 120);
+						}
+						else if (random_magic == 11)
+						{
+							healing_area(ent, 2, 5000);
+						}
+						else if (random_magic == 12)
+						{
+							enemy_nerf(ent, 5000);
+						}
+						else if (random_magic == 13)
+						{
+							water_attack(ent, 5000, 45);
+						}
+						else if (random_magic == 14)
+						{
+							shifting_sand(ent, 5000);
+						}
+						else if (random_magic == 15)
+						{
+							magic_disable(ent, 5000);
+						}
+						else if (random_magic == 16)
+						{
+							chaos_power(ent, 5000, 100);
+						}
+						else if (random_magic == 17)
+						{
+							dome_of_damage(ent, 5000, 28);
+						}
+						else if (random_magic == 18)
+						{
+							reverse_wind(ent, 5000, 1800);
+						}
+						else if (random_magic == 19)
+						{
+							ice_boulder(ent, 5000, 50);
+						}
+						else if (random_magic == 20)
+						{
+							time_power(ent, 5000, 3000);
+						}
+						else if (random_magic == 21)
+						{
+							ice_stalagmite(ent, 5000, 140);
+						}
+						else if (random_magic == 22)
+						{
+							rock_fall(ent, 5000, 45);
+						}
+						else if (random_magic == 23)
+						{
+							poison_mushrooms(ent, 100, 5000);
+						}
+						else if (random_magic == 24)
+						{
+							ultra_flame(ent, 5000, 40);
+						}
+						else if (random_magic == 25)
+						{
+							ice_block(ent, 3500);
 						}
 
 						ent->client->pers.guardian_timer = level.time + Q_irand(8000, 10000);
@@ -16966,7 +16952,7 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.light_quest_timer < level.time)
 					{
-						int random_unique = Q_irand(0, 1);
+						int random_unique = Q_irand(0, 2);
 
 						ent->client->pers.quest_power_status |= (1 << 13);
 
@@ -16985,6 +16971,12 @@ void G_RunFrame( int levelTime ) {
 							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
 
 							zyk_no_attack(ent);
+						}
+						else if (random_unique == 2)
+						{
+							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+
+							force_scream(ent);
 						}
 
 						ent->client->pers.light_quest_timer = level.time + ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 3000;
@@ -17037,7 +17029,7 @@ void G_RunFrame( int levelTime ) {
 						yaw[2] = 0.0f;
 						zyk_TeleportPlayer(ent, origin, yaw);
 
-						ent->client->pers.universe_quest_timer = level.time + Q_irand(((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 1000, ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 2000);
+						ent->client->pers.universe_quest_timer = level.time + ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 1000;
 					}
 				}
 			}
