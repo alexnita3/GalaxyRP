@@ -6292,7 +6292,7 @@ void choose_new_player(gentity_t *next_player)
 				Q_stricmp( g_entities[j].NPC_type, "guardian_of_time" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "guardian_boss_9" ) == 0 || 
 				Q_stricmp( g_entities[j].NPC_type, "guardian_of_darkness" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "guardian_of_eternity" ) == 0 || 
 				Q_stricmp( g_entities[j].NPC_type, "guardian_of_universe" ) == 0 || Q_stricmp( g_entities[j].NPC_type, "master_of_evil" ) == 0 || 
-				Q_stricmp(g_entities[j].NPC_type, "soul_of_sorrow") == 0))
+				Q_stricmp(g_entities[j].NPC_type, "soul_of_sorrow") == 0 || Q_stricmp(g_entities[j].NPC_type, "quest_citizen_warrior") == 0))
 			{
 				G_FreeEntity(&g_entities[j]);
 			}
