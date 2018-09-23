@@ -11774,6 +11774,18 @@ void zyk_add_ally(gentity_t *ent, int client_id)
 	}
 }
 
+void zyk_remove_ally(gentity_t *ent, int client_id)
+{
+	if (client_id > 15)
+	{
+		ent->client->sess.ally2 &= ~(1 << (client_id - 16));
+	}
+	else
+	{
+		ent->client->sess.ally1 &= ~(1 << client_id);
+	}
+}
+
 /*
 ==================
 Cmd_AllyAdd_f
@@ -11889,14 +11901,7 @@ void Cmd_AllyRemove_f( gentity_t *ent ) {
 		}
 
 		// zyk: removes this ally
-		if (client_id > 15)
-		{
-			ent->client->sess.ally2 &= ~(1 << (client_id-16));
-		}
-		else
-		{
-			ent->client->sess.ally1 &= ~(1 << client_id);
-		}
+		zyk_remove_ally(ent, client_id);
 
 		// zyk: sending event to update radar at client-side
 		G_AddEvent(ent, EV_USE_ITEM14, (client_id + MAX_CLIENTS));
@@ -16625,7 +16630,7 @@ void duel_show_table(gentity_t *ent)
 	}
 
 	// zyk: put the number of matches
-	strcpy(content, va("\n^7Total Matches: %d\nPlayed Matches: %d\n\n", level.duel_matches_quantity, level.duel_matches_done));
+	strcpy(content, va("\n^7Total: %d\nPlayed: %d\n\n", level.duel_matches_quantity, level.duel_matches_done));
 
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{ // zyk: adding players to sorted_players and calculating the array length
@@ -16671,7 +16676,7 @@ void duel_show_table(gentity_t *ent)
 			strcpy(ally_name, "");
 		}
 
-		strcpy(content, va("%s^7%s^7%s^7: ^3%d   ^1%d\n", content, player_ent->client->pers.netname, ally_name, level.duel_players[player_ent->s.number], level.duel_players_hp[player_ent->s.number]));
+		strcpy(content, va("%s^7%s^7%s^7: ^3%d  ^1%d\n", content, player_ent->client->pers.netname, ally_name, level.duel_players[player_ent->s.number], level.duel_players_hp[player_ent->s.number]));
 	}
 
 	trap->SendServerCommand(show_table_id, va("print \"%s\n\"", content));

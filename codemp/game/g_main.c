@@ -7454,6 +7454,8 @@ void player_restore_force(gentity_t *ent)
 	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_MELEE);
 }
 
+extern void zyk_add_ally(gentity_t *ent, int client_id);
+
 // zyk: finished the duel tournament
 void duel_tournament_end()
 {
@@ -7461,6 +7463,14 @@ void duel_tournament_end()
 
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
+		gentity_t *this_player = &g_entities[i];
+
+		if (this_player && this_player->client)
+		{ // zyk: removes allies after Duel Tournament ends
+			this_player->client->sess.ally1 = 0;
+			this_player->client->sess.ally2 = 0;
+		}
+
 		level.duel_players[i] = -1;
 		level.duel_allies[i] = -1;
 	}
@@ -7569,8 +7579,6 @@ void duel_tournament_prepare(gentity_t *ent)
 	// zyk: stop any movement
 	VectorSet(ent->client->ps.velocity, 0, 0, 0);
 }
-
-extern void zyk_add_ally(gentity_t *ent, int client_id);
 
 // zyk: generate the teams and validates them
 int duel_tournament_generate_teams()
