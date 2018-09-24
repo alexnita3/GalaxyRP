@@ -1603,7 +1603,7 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 			(ent->client->ps.weaponTime > 0 && ent->client->ps.weapon == WP_SABER) || 
 			 ent->client->ps.weaponstate == WEAPON_CHARGING || ent->client->ps.weaponstate == WEAPON_CHARGING_ALT))
 		{ // zyk: in these situations, player in rpg is no longer afk
-			ent->client->pers.quest_afk_timer = level.time + QUEST_AFK_TIME;
+			ent->client->pers.quest_afk_timer = level.time + zyk_quest_afk_timer.integer;
 		}
 
 		if (brokeOut &&

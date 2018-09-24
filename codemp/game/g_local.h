@@ -635,9 +635,6 @@ typedef enum {
 // zyk: duration of the duelists protection in Duel Tournament
 #define DUEL_TOURNAMENT_PROTECTION_TIME 2000
 
-// zyk: time in miliseconds in which the player can be afk during a quest
-#define QUEST_AFK_TIME 300000
-
 // client data that stays across multiple respawns, but is cleared
 // on each level change or team change at ClientBegin()
 typedef struct clientPersistant_s {

@@ -10080,7 +10080,7 @@ void G_RunFrame( int levelTime ) {
 
 						player_die(ent, ent, ent, 100000, MOD_SUICIDE);
 
-						trap->SendServerCommand(-1, va("chat \"^3Quest System: ^7%s ^7afk for 5 minutes.\"", ent->client->pers.netname));
+						trap->SendServerCommand(-1, va("chat \"^3Quest System: ^7%s ^7afk for %d seconds.\"", ent->client->pers.netname, (zyk_quest_afk_timer.integer/1000)));
 					}
 
 					if (level.quest_map == 1)
