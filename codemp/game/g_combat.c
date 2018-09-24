@@ -5260,37 +5260,51 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		return;
 	}
 
-	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && mod == MOD_SABER)
-	{ // zyk: player in RPG mode, with duals or staff, has a better damage depending on Saber Attack level
-		if (attacker->client->saber[0].saberFlags&SFL_TWO_HANDED || (attacker->client->saber[0].model[0] && attacker->client->saber[1].model[0]))
-		{
-			if (attacker->client->pers.skill_levels[5] <= FORCE_LEVEL_1)
+	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2)
+	{
+		if (mod == MOD_SABER)
+		{ // zyk: player in RPG mode, with duals or staff, has a better damage depending on Saber Attack level
+			if (attacker->client->saber[0].saberFlags&SFL_TWO_HANDED || (attacker->client->saber[0].model[0] && attacker->client->saber[1].model[0]))
 			{
-				damage = (int)ceil(damage*0.2);
-			}
-			else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_2)
-			{
-				damage = (int)ceil(damage*0.4);
-			}
-			else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_3)
-			{
-				damage = (int)ceil(damage*0.6);
-			}
-			else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_4)
-			{
-				damage = (int)ceil(damage*0.8);
+				if (attacker->client->pers.skill_levels[5] <= FORCE_LEVEL_1)
+				{
+					damage = (int)ceil(damage*0.2);
+				}
+				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_2)
+				{
+					damage = (int)ceil(damage*0.4);
+				}
+				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_3)
+				{
+					damage = (int)ceil(damage*0.6);
+				}
+				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_4)
+				{
+					damage = (int)ceil(damage*0.8);
+				}
 			}
 		}
-	}
-
-	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && mod == MOD_MELEE)
-	{ // zyk: setting melee damage in RPG Mode
-		if (attacker->client->pers.skill_levels[29] == 0)
-			damage = (int)ceil((damage * 1.0)/2.0);
-		else if (attacker->client->pers.skill_levels[29] == 2)
-			damage = damage * 2;
-		else if (attacker->client->pers.skill_levels[29] == 3)
-			damage = damage * 3;
+		else if (attacker->client->pers.skill_levels[24] == 2 && (mod == MOD_DEMP2 || mod == MOD_DEMP2_ALT))
+		{ // zyk: DEMP2 2/2 in RPG Mode causes more damage
+			damage = (int)ceil(damage * 1.12);
+		}
+		else if (attacker->client->pers.skill_levels[25] == 2 && (mod == MOD_FLECHETTE || mod == MOD_FLECHETTE_ALT_SPLASH))
+		{ // zyk: Flechette 2/2 in RPG Mode causes more damage
+			damage = (int)ceil(damage * 1.12);
+		}
+		else if (attacker->client->pers.skill_levels[27] == 2 && (mod == MOD_CONC || mod == MOD_CONC_ALT))
+		{ // zyk: Concussion Rifle 2/2 in RPG Mode causes more damage
+			damage = (int)ceil(damage * 1.12);
+		}
+		else if (mod == MOD_MELEE)
+		{ // zyk: setting melee damage in RPG Mode
+			if (attacker->client->pers.skill_levels[29] == 0)
+				damage = (int)ceil((damage * 1.0) / 2.0);
+			else if (attacker->client->pers.skill_levels[29] == 2)
+				damage = damage * 2;
+			else if (attacker->client->pers.skill_levels[29] == 3)
+				damage = damage * 3;
+		}
 	}
 
 	// zyk: force Rage increases damage of attacks
@@ -5358,21 +5372,6 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			if (inflictor && (inflictor->s.weapon == WP_BOWCASTER || inflictor->s.weapon == WP_DEMP2 || inflictor->s.weapon == WP_CONCUSSION))
 				can_damage_heavy_things = qtrue;
 		}
-	}
-
-	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && attacker->client->pers.skill_levels[24] == 2 && (mod == MOD_DEMP2 || mod == MOD_DEMP2_ALT))
-	{ // zyk: DEMP2 2/2 in RPG Mode causes more damage
-		damage = (int)ceil(damage * 1.12);
-	}
-
-	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && attacker->client->pers.skill_levels[25] == 2 && (mod == MOD_FLECHETTE || mod == MOD_FLECHETTE_ALT_SPLASH))
-	{ // zyk: Flechette 2/2 in RPG Mode causes more damage
-		damage = (int)ceil(damage * 1.12);
-	}
-
-	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && attacker->client->pers.skill_levels[27] == 2 && (mod == MOD_CONC || mod == MOD_CONC_ALT))
-	{ // zyk: Concussion Rifle 2/2 in RPG Mode causes more damage
-		damage = (int)ceil(damage * 1.12);
 	}
 
 	if (attacker && attacker->client && (attacker->NPC || attacker->client->sess.amrpgmode == 2) && attacker->client->pers.quest_power_status & (1 << 15))
