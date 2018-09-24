@@ -4734,13 +4734,10 @@ qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *targe
 
 		if (is_ally == 0 &&
 			(attacker->client->pers.guardian_mode == target->client->pers.guardian_mode ||
-			((attacker->client->pers.guardian_mode == 12 || attacker->client->pers.guardian_mode == 13) && target->NPC &&
-				(Q_stricmp(target->NPC_type, "guardian_of_universe") || Q_stricmp(target->NPC_type, "quest_reborn") ||
-					Q_stricmp(target->NPC_type, "quest_reborn_blue") || Q_stricmp(target->NPC_type, "quest_reborn_red") ||
-					Q_stricmp(target->NPC_type, "quest_reborn_boss") || Q_stricmp(target->NPC_type, "quest_mage"))
-				)
-				))
-		{ // zyk: target cannot be attacker ally. Also, non-quest players cannot hit quest players and his allies or bosses and vice-versa
+			(attacker->NPC && attacker->client->pers.guardian_mode == 0) ||
+			(!attacker->NPC && attacker->client->pers.guardian_mode > 0 && target->NPC)))
+		{ // zyk: players in bosses can only hit bosses and their helper npcs. Players not in boss battles
+		  // can only hit normal enemy npcs and npcs spawned by bosses but not the bosses themselves. Unique-using npcs can hit everyone that are not their allies
 			return qtrue;
 		}
 	}
