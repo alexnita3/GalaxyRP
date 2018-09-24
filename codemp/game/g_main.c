@@ -4690,6 +4690,12 @@ qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 		{ // zyk: noclip does not allow hitting
 			return qfalse;
 		}
+
+		if (level.duel_tournament_mode > 0 && level.duel_players[attacker->s.number] != -1 && level.duel_players[target->s.number] != -1 && 
+			level.duel_allies[attacker->s.number] == target->s.number && level.duel_allies[target->s.number] == attacker->s.number)
+		{ // zyk: Duel Tournament allies. Cannot hit each other
+			return qfalse;
+		}
 	}
 
 	return qtrue;
@@ -7454,8 +7460,6 @@ void player_restore_force(gentity_t *ent)
 	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_MELEE);
 }
 
-extern void zyk_add_ally(gentity_t *ent, int client_id);
-
 // zyk: finished the duel tournament
 void duel_tournament_end()
 {
@@ -7463,14 +7467,6 @@ void duel_tournament_end()
 
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
-		gentity_t *this_player = &g_entities[i];
-
-		if (this_player && this_player->client)
-		{ // zyk: removes allies after Duel Tournament ends
-			this_player->client->sess.ally1 = 0;
-			this_player->client->sess.ally2 = 0;
-		}
-
 		level.duel_players[i] = -1;
 		level.duel_allies[i] = -1;
 	}
@@ -7595,13 +7591,11 @@ int duel_tournament_generate_teams()
 		}
 	}
 
+	// zyk: counting the teams
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
 		if (level.duel_allies[i] != -1 && i < level.duel_allies[i] && level.duel_allies[level.duel_allies[i]] == i)
 		{ // zyk: both players added themselves as allies
-			zyk_add_ally(&g_entities[i], level.duel_allies[i]);
-			zyk_add_ally(&g_entities[level.duel_allies[i]], i);
-
 			// zyk: must count both as a single player (team)
 			number_of_teams--;
 		}
