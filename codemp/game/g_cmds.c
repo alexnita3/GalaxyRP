@@ -15373,6 +15373,11 @@ void Cmd_Saber_f( gentity_t *ent ) {
 
 qboolean zyk_can_use_unique(gentity_t *ent)
 {
+	if (ent->health < 1)
+	{ // zyk: must be alive to use unique skills or unique abilities
+		return qfalse;
+	}
+
 	if ((ent->client->ps.forceHandExtend != HANDEXTEND_NONE && ent->client->ps.forceHandExtend != HANDEXTEND_FORCE_HOLD) ||
 		 ent->client->pers.quest_power_status & (1 << 2))
 	{ // zyk: using emotes/anims, special moves, and hit by Time Power. Cannot use unique ability
