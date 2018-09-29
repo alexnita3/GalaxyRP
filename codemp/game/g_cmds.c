@@ -5298,15 +5298,6 @@ void initialize_rpg_skills(gentity_t *ent)
 		ent->client->ps.fd.forcePowerMax = ent->client->pers.max_force_power;
 		ent->client->ps.fd.forcePower = ent->client->ps.fd.forcePowerMax;
 
-		if (ent->client->pers.rpg_class == 3 && ent->client->pers.secrets_found & (1 << 16))
-		{ // zyk: setting the shot deflect of the Armored Soldier
-			ent->flags |= FL_SHIELDED;
-		}
-		else
-		{
-			ent->flags &= ~FL_SHIELDED;
-		}
-
 		// zyk: setting rpg control attributes
 		ent->client->pers.thermal_vision = qfalse;
 
@@ -6610,9 +6601,6 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 
 	// zyk: saving the not logged player mode in session
 	ent->client->sess.amrpgmode = 0;
-
-	// zyk: removing the gun deflection flag
-	ent->flags &= ~FL_SHIELDED;
 
 	// zyk: if this player was playing a quest, find a new one to play quests in this map
 	if (ent->client->pers.can_play_quest == 1)
@@ -10409,7 +10397,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		}
 		else if (i == 39)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Armored Soldier Upgrade: ^7increases damage resistance by 5 per cent, gives gun shot deflection, cuts flame thrower fuel usage by half, has less chance of losing gun to force pull, has a chance of setting ysalamiri for some seconds if attacked by force powers. It also protects from drowning\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^3Armored Soldier Upgrade: ^7increases damage resistance by 5 per cent, has chance of deflecting some gun shots, cuts flame thrower fuel usage by half, has less chance of losing gun to force pull, has a chance of setting ysalamiri for some seconds if attacked by force powers. It also protects from drowning\n\n\"");
 		}
 		else if (i == 40)
 		{
@@ -10503,7 +10491,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 9)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 1: ^7used with /unique command. You can only have one Unique Ability at a time. Force Tank gets Force Armor, which activates his resistance shield, with damage resistance, gun shot deflection, and ability to resist force powers. Spends 50 force\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 1: ^7used with /unique command. You can only have one Unique Ability at a time. Force Tank gets Force Armor, which activates his resistance shield, with damage resistance, a chance of gun shot deflection, and ability to resist force powers. Spends 50 force\n\n\"");
 			}
 		}
 		else if (i == 54)
@@ -10947,11 +10935,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		else if (value == 39)
 		{
 			ent->client->pers.secrets_found |= (1 << 16);
-
-			if (ent->client->pers.rpg_class == 3)
-			{ // zyk: setting the shot deflect of the Armored Soldier
-				ent->flags |= FL_SHIELDED;
-			}
 		}
 		else if (value == 40)
 		{
@@ -12757,9 +12740,6 @@ void Cmd_PlayerMode_f( gentity_t *ent ) {
 			level.bounty_quest_choose_target = qtrue;
 			level.bounty_quest_target_id++;
 		}
-
-		// zyk: removing the gun deflection flag
-		ent->flags &= ~FL_SHIELDED;
 
 		trap->SendServerCommand( ent-g_entities, "print \"^7You are now in ^2Admin-Only mode^7.\n\"" );
 	}
@@ -15701,8 +15681,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 4))
 				{
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
-
-					ent->flags |= FL_SHIELDED;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 10000;
 

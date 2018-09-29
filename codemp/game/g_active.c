@@ -823,11 +823,6 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 	{ // zyk: Unique Ability run out. Remove the flags
 		if (client->pers.player_statuses & (1 << 21))
 		{
-			if (client->pers.rpg_class == 9)
-			{ // zyk: Force Tank Force Armor run out. Remove shield flag
-				ent->flags &= ~FL_SHIELDED;
-			}
-
 			client->pers.player_statuses &= ~(1 << 21);
 		}
 		else if (client->pers.player_statuses & (1 << 22))
