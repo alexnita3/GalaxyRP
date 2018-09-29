@@ -4217,7 +4217,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 
 				send_rpg_events(2000);
 			}
-			else if (ent->client->sess.magic_fist_selection == 2 && ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 3))
+			else if (ent->client->sess.magic_fist_selection == 2 && ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 2))
 			{ // zyk: Instant-Hit Bolt
 				int skip, traces = DISRUPTOR_ALT_TRACES;
 				qboolean	render_impact = qtrue;
@@ -4228,7 +4228,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				float		shotRange = 8192.0f;
 				vec3_t shot_mins, shot_maxs;
 				int			i;
-				int damage = zyk_magic_fist_damage.integer * 1.4;
+				int damage = zyk_magic_fist_damage.integer * 1.2;
 
 				if (ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
 					!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
@@ -4433,14 +4433,14 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				VectorCopy(origin, tent->s.origin2);
 				VectorCopy(forward, tent->s.angles2);
 
-				rpg_skill_counter(ent, 30);
-				ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 3);
+				rpg_skill_counter(ent, 20);
+				ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 2);
 
 				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/movers/objects/green_beam_start.mp3"));
 
 				send_rpg_events(2000);
 			}
-			else if (ent->client->sess.magic_fist_selection == 3 && ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 3))
+			else if (ent->client->sess.magic_fist_selection == 3 && ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 2))
 			{ // zyk: Ultra Bolt
 				gentity_t	*missile;
 				vec3_t origin, dir, zyk_forward;
@@ -4487,8 +4487,8 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				// we don't want it to ever bounce
 				missile->bounceCount = 0;
 
-				rpg_skill_counter(ent, 30);
-				ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 3);
+				rpg_skill_counter(ent, 20);
+				ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 2);
 
 				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/weapons/concussion/fire.mp3"));
 
