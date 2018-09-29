@@ -3670,6 +3670,12 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 						ent->client->accuracy_hits++;
 					}
 
+					if (traceEnt->client && ent->client->pers.guardian_mode != traceEnt->client->pers.guardian_mode &&
+						!(ent->client->pers.guardian_mode > 0 && traceEnt->NPC && traceEnt->client->pers.guardian_mode == 0))
+					{ // zyk: non quest player cant hit quest players in boss battles and vice-versa
+						break;
+					}
+
 					noKnockBack = (traceEnt->flags&FL_NO_KNOCKBACK);//will be set if they die, I want to know if it was on *before* they died
 					if ( traceEnt && traceEnt->client && traceEnt->client->NPC_class == CLASS_GALAKMECH )
 					{//hehe
@@ -3704,18 +3710,6 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 							if (traceEnt->client->sess.amrpgmode == 2 && traceEnt->client->pers.rpg_class == 9)
 							{ // zyk: Force Tank cannot be knocked down
 								break;
-							}
-
-							if (ent->client->pers.guardian_mode != traceEnt->client->pers.guardian_mode)
-							{ // zyk: non quest player cant hit quest players in boss battles and vice-versa
-								if (!((ent->client->pers.guardian_mode == 12 || ent->client->pers.guardian_mode == 13) && traceEnt->NPC && 
-									   (Q_stricmp(traceEnt->NPC_type, "guardian_of_universe") || Q_stricmp(traceEnt->NPC_type, "quest_reborn") || 
-									    Q_stricmp(traceEnt->NPC_type, "quest_reborn_blue") || Q_stricmp(traceEnt->NPC_type, "quest_reborn_red") || 
-										Q_stricmp(traceEnt->NPC_type, "quest_reborn_boss")))
-									)
-								{
-									break;
-								}
 							}
 
 							if (traceEnt->client->ps.duelInProgress == qtrue)
@@ -4320,6 +4314,12 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 
 							noKnockBack = (traceEnt->flags&FL_NO_KNOCKBACK);//will be set if they die, I want to know if it was on *before* they died
 
+							if (traceEnt->client && ent->client->pers.guardian_mode != traceEnt->client->pers.guardian_mode &&
+								!(ent->client->pers.guardian_mode > 0 && traceEnt->NPC && traceEnt->client->pers.guardian_mode == 0))
+							{ // zyk: non quest player cant hit quest players in boss battles and vice-versa
+								break;
+							}
+
 							G_Damage( traceEnt, ent, ent, forward, tr.endpos, damage, DAMAGE_NO_KNOCKBACK|DAMAGE_NO_HIT_LOC, MOD_MELEE );
 
 							//do knockback and knockdown manually
@@ -4343,18 +4343,6 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 									if (traceEnt->client->sess.amrpgmode == 2 && traceEnt->client->pers.rpg_class == 9)
 									{ // zyk Force Tank cannot be knocked down
 										break;
-									}
-
-									if (ent->client->pers.guardian_mode != traceEnt->client->pers.guardian_mode)
-									{ // zyk: non quest player cant hit quest players in boss battles and vice-versa
-										if (!((ent->client->pers.guardian_mode == 12 || ent->client->pers.guardian_mode == 13) && traceEnt->NPC && 
-												(Q_stricmp(traceEnt->NPC_type, "guardian_of_universe") || Q_stricmp(traceEnt->NPC_type, "quest_reborn") || 
-												Q_stricmp(traceEnt->NPC_type, "quest_reborn_blue") || Q_stricmp(traceEnt->NPC_type, "quest_reborn_red") || 
-												Q_stricmp(traceEnt->NPC_type, "quest_reborn_boss")))
-											)
-										{
-											break;
-										}
 									}
 
 									if (traceEnt->client->ps.duelInProgress == qtrue)
