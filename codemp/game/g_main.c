@@ -9660,10 +9660,6 @@ void G_RunFrame( int levelTime ) {
 					{ // zyk: Bounty Hunter can have a more efficient jetpack
 						jetpack_debounce_amount -= ((ent->client->pers.skill_levels[34] * 3) + (ent->client->pers.skill_levels[55]));
 					}
-					else if (ent->client->pers.rpg_class == 8)
-					{ // zyk: Magic Master has the best jetpack
-						jetpack_debounce_amount -= ((ent->client->pers.skill_levels[34] * 3) + (ent->client->pers.skill_levels[55] * 2));
-					}
 					else
 					{
 						jetpack_debounce_amount -= (ent->client->pers.skill_levels[34] * 3);
@@ -9679,6 +9675,14 @@ void G_RunFrame( int levelTime ) {
 				}
 
 				ent->client->pers.jetpack_fuel -= jetpack_debounce_amount;
+
+				if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && ent->client->pers.jetpack_fuel <= 0 && 
+					ent->client->pers.magic_power >= 10 && ent->client->pers.skill_levels[55] > 0)
+				{ // zyk: Magic Master Improvements skill allows recovering jetpack fuel with magic
+					ent->client->pers.jetpack_fuel = (100 * ent->client->pers.skill_levels[55]);
+					ent->client->pers.magic_power -= 10;
+					send_rpg_events(2000);
+				}
 
 				if (ent->client->pers.jetpack_fuel <= 0)
 				{ // zyk: out of fuel. Turn jetpack off
