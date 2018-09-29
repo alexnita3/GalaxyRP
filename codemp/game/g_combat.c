@@ -6483,12 +6483,12 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_2)
 				{
 					targ->client->ps.fd.forcePower -= (int)ceil(take*0.25*force_decrease_change);
-					take = (int)ceil(take*0.65);
+					take = (int)ceil(take*0.7);
 				}
 				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_3)
 				{
 					targ->client->ps.fd.forcePower -= (int)ceil(take*0.125*force_decrease_change);
-					take = (int)ceil(take*0.45);
+					take = (int)ceil(take*0.55);
 				}
 
 				if (targ->client->ps.fd.forcePower < 0)
@@ -6519,9 +6519,9 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			if (targ->client->ps.fd.forcePowerLevel[FP_RAGE] == 1)
 				take = (int)ceil(take*0.85);
 			else if (targ->client->ps.fd.forcePowerLevel[FP_RAGE] == 2)
-				take = (int)ceil(take*0.65);
+				take = (int)ceil(take*0.7);
 			else if (targ->client->ps.fd.forcePowerLevel[FP_RAGE] == 3)
-				take = (int)ceil(take*0.45);
+				take = (int)ceil(take*0.55);
 		}
 
 		if (!targ->NPC && targ->client && targ->client->sess.amrpgmode == 2)
