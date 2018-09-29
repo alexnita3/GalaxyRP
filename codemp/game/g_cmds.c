@@ -9964,7 +9964,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				if (i >= 1 && i <= NUMBER_OF_SKILLS)
 				{
 					if (i == 1)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Jump: ^7makes you jump higher\n\"" );
+						trap->SendServerCommand( ent-g_entities, "print \"^3Jump: ^7makes you use the force to jump higher. Level 5 has no height limit, you can continue jumping up until you run out of force, and it also lets you jump out of water\n\"" );
 					if (i == 2)
 						trap->SendServerCommand( ent-g_entities, "print \"^3Push: ^7pushes the opponent forward\n\"" );
 					if (i == 3)
