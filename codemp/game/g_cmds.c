@@ -10397,7 +10397,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		}
 		else if (i == 39)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Armored Soldier Upgrade: ^7increases damage resistance by 5 per cent, has chance of deflecting some gun shots, cuts flame thrower fuel usage by half, has less chance of losing gun to force pull, has a chance of setting ysalamiri for some seconds if attacked by force powers. It also protects from drowning\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^3Armored Soldier Upgrade: ^7increases damage resistance by 5 per cent, deflects some gun shots, cuts flame thrower fuel usage by half, has less chance of losing gun to force pull, has a chance of setting ysalamiri for some seconds if attacked by force powers. It also protects from drowning\n\n\"");
 		}
 		else if (i == 40)
 		{
@@ -10491,7 +10491,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 9)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 1: ^7used with /unique command. You can only have one Unique Ability at a time. Force Tank gets Force Armor, which activates his resistance shield, with damage resistance, a chance of gun shot deflection, and ability to resist force powers. Spends 50 force\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 1: ^7used with /unique command. You can only have one Unique Ability at a time. Force Tank gets Force Armor, which activates his resistance shield, with damage resistance, gun shot deflection, and ability to resist force powers. Spends 50 force\n\n\"");
 			}
 		}
 		else if (i == 54)
@@ -15353,7 +15353,7 @@ void Cmd_Saber_f( gentity_t *ent ) {
 
 qboolean zyk_can_deflect_shots(gentity_t *ent)
 {
-	if (ent->client && ent->client->sess.amrpgmode == 2 && Q_irand(0, 99) < 80 &&
+	if (ent->client && ent->client->sess.amrpgmode == 2 &&
 		((ent->client->pers.rpg_class == 3 && ent->client->pers.secrets_found & (1 << 16)) || // zyk: Armored Soldier Upgrade has chance to deflect shots
 		(ent->client->pers.rpg_class == 9 && ent->client->pers.player_statuses & (1 << 21)) // zyk: Force Armor unique ability has chance to deflect shots
 		))

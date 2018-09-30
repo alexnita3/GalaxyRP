@@ -670,7 +670,7 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 
 	if ( render_impact )
 	{
-		if ( tr.entityNum < ENTITYNUM_WORLD && traceEnt->takedamage )
+		if ( tr.entityNum < ENTITYNUM_WORLD && traceEnt->takedamage && zyk_can_deflect_shots(traceEnt))
 		{
 			if ( traceEnt->client && LogAccuracyHit( traceEnt, ent ))
 			{
