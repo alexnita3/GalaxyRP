@@ -6949,13 +6949,17 @@ qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, floa
 				{ // zyk: if it is an effect used by special power, then attacker must be the owner of the effect. Also, do not hit the owner
 					if (!ent->client || ent->client->sess.amrpgmode != 2 || 
 						((ent->client->sess.amrpgmode == 2 || ent->client->pers.guardian_invoked_by_id != -1) && 
-						(!(ent->client->pers.quest_power_status & (1 << 0)) || 
-						  Q_stricmp(attacker->targetname, "zyk_effect_scream") == 0 || 
+						( Q_stricmp(attacker->targetname, "zyk_effect_scream") == 0 || 
 						  Q_stricmp(attacker->targetname, "zyk_timed_bomb_explosion") == 0 ||
 						  Q_stricmp(attacker->targetname, "zyk_vertical_dfa") == 0 ||
 						  Q_stricmp(attacker->targetname, "zyk_force_storm") == 0)))
 					{ // zyk: can only hit if this player or boss is not using Immunity Power
 						gentity_t *quest_power_user = &g_entities[level.special_power_effects[attacker->s.number]];
+
+						if (ent && ent->client && ent->client->pers.quest_power_status & (1 << 0))
+						{ // zyk: do not hit enemies using Immunity Power
+							continue;
+						}
 
 						// zyk: if the power user and the target are allies (player or npc), then do not hit
 						if (quest_power_user && quest_power_user->client && ent && ent->client &&
