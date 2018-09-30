@@ -6965,6 +6965,19 @@ qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, floa
 						continue;
 					}
 
+					if (zyk_is_ally(quest_power_user, ent) == qtrue)
+					{
+						continue;
+					}
+
+					if (quest_power_user && quest_power_user->client && ent && ent->client && 
+						quest_power_user->client->pers.guardian_mode != ent->client->pers.guardian_mode &&
+						!(quest_power_user->NPC && quest_power_user->client->pers.guardian_mode == 0) && 
+						!(!quest_power_user->NPC && quest_power_user->client->pers.guardian_mode > 0 && ent->NPC))
+					{ // zyk: validating boss battles
+						continue;
+					}
+
 					if (Q_stricmp(attacker->targetname, "zyk_quest_effect_drain") == 0 || 
 						Q_stricmp(attacker->targetname, "zyk_quest_effect_watersplash") == 0)
 					{ // zyk: Ultra Drain heals the power user
