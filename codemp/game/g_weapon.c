@@ -648,7 +648,7 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 				return;
 			}
 		}
-		else if ( (traceEnt->flags&FL_SHIELDED) )
+		else if ( (traceEnt->flags&FL_SHIELDED) || zyk_can_deflect_shots(traceEnt))
 		{//stopped cold
 			return;
 		}
@@ -966,7 +966,7 @@ void WP_DisruptorAltFire( gentity_t *ent )
 				break; // and don't try any more traces
 			}
 
-			if ( (traceEnt->flags&FL_SHIELDED) )
+			if ( (traceEnt->flags&FL_SHIELDED) || zyk_can_deflect_shots(traceEnt))
 			{//stops us cold
 				break;
 			}

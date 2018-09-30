@@ -1779,6 +1779,7 @@ int zyk_number_of_allies(gentity_t *ent, qboolean in_rpg_mode);
 void send_rpg_events(int send_event_timer);
 int zyk_get_remap_count();
 void zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qboolean broadcast_message, ...);
+qboolean zyk_can_deflect_shots(gentity_t *ent);
 
 // zyk: shader remap struct
 typedef struct shaderRemap_s {

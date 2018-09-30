@@ -486,12 +486,7 @@ void G_MissileImpact( gentity_t *ent, trace_t *trace ) {
 		}
 	}
 
-	if ((other->flags & FL_SHIELDED || 
-		(other->client && other->client->sess.amrpgmode == 2 && Q_irand(0,1) == 0 &&
-		((other->client->pers.rpg_class == 3 && other->client->pers.secrets_found & (1 << 16)) || // zyk: Armored Soldier Upgrade and Force Armor unique ability has chance to deflect shots
-		 (other->client->pers.rpg_class == 9 && other->client->pers.player_statuses & (1 << 21))
-		))
-		) &&
+	if ((other->flags & FL_SHIELDED || zyk_can_deflect_shots(other)) &&
 		ent->s.weapon != WP_ROCKET_LAUNCHER &&
 		ent->s.weapon != WP_THERMAL &&
 		ent->s.weapon != WP_TRIP_MINE &&

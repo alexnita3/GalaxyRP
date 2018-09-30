@@ -15351,6 +15351,19 @@ void Cmd_Saber_f( gentity_t *ent ) {
 	}
 }
 
+qboolean zyk_can_deflect_shots(gentity_t *ent)
+{
+	if (ent->client && ent->client->sess.amrpgmode == 2 && Q_irand(0, 1) == 0 &&
+		((ent->client->pers.rpg_class == 3 && ent->client->pers.secrets_found & (1 << 16)) || // zyk: Armored Soldier Upgrade has chance to deflect shots
+		(ent->client->pers.rpg_class == 9 && ent->client->pers.player_statuses & (1 << 21)) // zyk: Force Armor unique ability has chance to deflect shots
+		))
+	{
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
 qboolean zyk_can_use_unique(gentity_t *ent)
 {
 	if (ent->health < 1)
