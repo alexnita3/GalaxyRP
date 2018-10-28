@@ -944,6 +944,13 @@ void G_FreeEntity( gentity_t *ed ) {
 		return;
 	}
 
+	// zyk: if npc is cleaned directly, test if goal entity is still there. If it is, clean the goal entity too
+	if (ed->NPC && ed->NPC->tempGoal)
+	{
+		G_FreeEntity(ed->NPC->tempGoal);
+		ed->NPC->tempGoal = NULL;
+	}
+
 	// zyk: if entity is a vehicle with a player inside, make player get out of vehicle first
 	if (ed->client && ed->NPC && ed->client->NPC_class == CLASS_VEHICLE && ed->m_pVehicle && ed->m_pVehicle->m_pPilot)
 	{
