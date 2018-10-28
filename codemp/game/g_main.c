@@ -5421,7 +5421,7 @@ void elemental_attack(gentity_t *ent)
 	int i = 0;
 	int targets_hit = 0;
 	int min_distance = 100;
-	int damage = 20;
+	int damage = 16;
 
 	for (i = 0; i < level.num_entities; i++)
 	{
@@ -11502,8 +11502,8 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 6)
 								{ // zyk: sage of universe heals the hero during the battle
-									ent->health += 50;
-									ent->client->ps.stats[STAT_ARMOR] += 50;
+									ent->health += 20;
+									ent->client->ps.stats[STAT_ARMOR] += 20;
 									ent->client->pers.magic_power += 20;
 
 									if (ent->health > ent->client->pers.max_rpg_health)
@@ -11549,7 +11549,7 @@ void G_RunFrame( int levelTime ) {
 								}
 								else if (ent->client->pers.universe_quest_messages == 6)
 								{
-									ent->client->pers.universe_quest_timer = level.time + 18000;
+									ent->client->pers.universe_quest_timer = level.time + 20000;
 								}
 							}
 						}
