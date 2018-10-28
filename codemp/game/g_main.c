@@ -6868,7 +6868,7 @@ void quest_power_events(gentity_t *ent)
 						if (poison_mushrooms_user->client->pers.quest_power_status & (1 << 13))
 							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,22,0,MOD_UNKNOWN);
 						else
-							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,20,0,MOD_UNKNOWN);
+							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,18,0,MOD_UNKNOWN);
 					}
 
 					ent->client->pers.quest_power_hit_counter--;
