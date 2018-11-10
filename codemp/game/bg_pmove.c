@@ -2782,9 +2782,13 @@ static qboolean PM_CheckJump( void )
 	if ( pm->ps->groundEntityNum == ENTITYNUM_NONE )
 	{
 		// zyk: Jump 5/5 will allow jumping out of water, so dont return qfalse here if player has it
-		if (!(pm->waterlevel == 1 && pm->cmd.upmove > 0 && pm->ps->fd.forcePowerLevel[FP_LEVITATION] == FORCE_LEVEL_5))
+		if (!(pm->waterlevel == 1 && pm->cmd.upmove > 0 && pm->ps->fd.forcePowerLevel[FP_LEVITATION] == FORCE_LEVEL_5 && pm->ps->fd.forcePower >= 5))
 		{
 			return qfalse;
+		}
+		else
+		{ // zyk: jumping out of water uses some force
+			pm->ps->fd.forcePower -= 5;
 		}
 	}
 	if ( pm->cmd.upmove > 0 )
