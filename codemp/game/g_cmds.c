@@ -15635,11 +15635,11 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 					ent->client->ps.forceDodgeAnim = BOTH_PULL_IMPALE_STAB;
-					ent->client->ps.forceHandExtendTime = level.time + 2000;
+					ent->client->ps.forceHandExtendTime = level.time + 1500;
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2500;
 
-					ent->client->ps.weaponTime = 2000;
+					ent->client->ps.weaponTime = 1500;
 
 					rpg_skill_counter(ent, 200);
 
@@ -15938,7 +15938,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.forceHandExtendTime = level.time + 2000;
 					ent->client->ps.velocity[2] = 300;
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 3000;
 
 					ent->client->ps.weaponTime = 2000;
 
@@ -16282,7 +16282,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				{
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2800;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 3800;
 
 					ent->client->ps.weaponTime = 2800;
 
