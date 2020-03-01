@@ -7173,10 +7173,10 @@ void poison_dart_hits(gentity_t *ent)
 	{
 		gentity_t *poison_user = &g_entities[ent->client->pers.poison_dart_user_id];
 
-		G_Damage(ent,poison_user,poison_user,NULL,NULL,22,0,MOD_UNKNOWN);
+		G_Damage(ent,poison_user,poison_user,NULL,NULL,5,0,MOD_UNKNOWN);
 
 		ent->client->pers.poison_dart_hit_counter--;
-		ent->client->pers.poison_dart_hit_timer = level.time + 1000;
+		ent->client->pers.poison_dart_hit_timer = level.time + 200;
 
 		// zyk: no more do poison damage if counter is 0
 		if (ent->client->pers.poison_dart_hit_counter == 0)
