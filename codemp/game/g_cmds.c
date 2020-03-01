@@ -4142,9 +4142,9 @@ qboolean TryGrapple(gentity_t *ent)
 						hurricane(ent,600,5000);
 						ent->client->pers.magic_power -= (int)ceil((zyk_hurricane_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (10000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (12000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 10000;
+							ent->client->pers.quest_power_usage_timer = level.time + 12000;
 						trap->SendServerCommand( ent->s.number, va("chat \"%s^7: ^7Hurricane!\"", ent->client->pers.netname));
 					}
 					else if (use_this_power == MAGIC_SLOW_MOTION && zyk_enable_slow_motion.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_slow_motion_mp_cost.integer * universe_mp_cost_factor)))
@@ -4233,9 +4233,9 @@ qboolean TryGrapple(gentity_t *ent)
 						blowing_wind(ent,700,5000);
 						ent->client->pers.magic_power -= (int)ceil((zyk_blowing_wind_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (10000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (12000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 10000;
+							ent->client->pers.quest_power_usage_timer = level.time + 12000;
 						trap->SendServerCommand( ent->s.number, va("chat \"%s^7: ^7Blowing Wind!\"", ent->client->pers.netname));
 					}
 					else if (use_this_power == MAGIC_ULTRA_SPEED && zyk_enable_ultra_speed.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_ultra_speed_mp_cost.integer * universe_mp_cost_factor)))
@@ -4376,9 +4376,9 @@ qboolean TryGrapple(gentity_t *ent)
 						reverse_wind(ent, 700, 5000);
 						ent->client->pers.magic_power -= (int)ceil((zyk_reverse_wind_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (11000 * ((4.0 - ent->client->pers.skill_levels[55]) / 4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (12000 * ((4.0 - ent->client->pers.skill_levels[55]) / 4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 11000;
+							ent->client->pers.quest_power_usage_timer = level.time + 12000;
 						trap->SendServerCommand(ent->s.number, va("chat \"%s^7: ^7Reverse Wind!\"", ent->client->pers.netname));
 					}
 					else if (use_this_power == MAGIC_ENEMY_WEAKENING && zyk_enable_enemy_nerf.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_enemy_nerf_mp_cost.integer * universe_mp_cost_factor)))
