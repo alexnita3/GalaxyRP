@@ -880,7 +880,8 @@ void NPC_Begin (gentity_t *ent)
 	{//No NPCs should telefrag
 		if (NPC_SpotWouldTelefrag(ent))
 		{
-			if ( ent->wait < 0 )
+			// zyk: added jawa seller condition, remove it to avoid exploit in which player can spawn a lot of sellers
+			if ( ent->wait < 0 || Q_stricmp(ent->NPC_type, "jawa_seller") == 0)
 			{//remove yourself
 				G_DebugPrint( WL_DEBUG, "NPC %s could not spawn, firing target3 (%s) and removing self\n", ent->targetname, ent->target3 );
 				//Fire off our target3
