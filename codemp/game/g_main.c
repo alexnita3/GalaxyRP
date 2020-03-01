@@ -4936,8 +4936,8 @@ void poison_mushrooms(gentity_t *ent, int min_distance, int max_distance)
 		{
 			player_ent->client->pers.quest_power_user2_id = ent->s.number;
 			player_ent->client->pers.quest_power_status |= (1 << 4);
-			player_ent->client->pers.quest_target3_timer = level.time + 1000;
-			player_ent->client->pers.quest_power_hit_counter = 10;
+			player_ent->client->pers.quest_target3_timer = level.time + 200;
+			player_ent->client->pers.quest_power_hit_counter = 40;
 
 			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/air_burst.mp3"));
 		}
@@ -6866,13 +6866,13 @@ void quest_power_events(gentity_t *ent)
 
 						// zyk: Universe Power
 						if (poison_mushrooms_user->client->pers.quest_power_status & (1 << 13))
-							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,22,0,MOD_UNKNOWN);
+							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,6,0,MOD_UNKNOWN);
 						else
-							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,18,0,MOD_UNKNOWN);
+							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,4,0,MOD_UNKNOWN);
 					}
 
 					ent->client->pers.quest_power_hit_counter--;
-					ent->client->pers.quest_target3_timer = level.time + 1000;
+					ent->client->pers.quest_target3_timer = level.time + 200;
 				}
 				else if (ent->client->pers.quest_power_hit_counter == 0 && ent->client->pers.quest_target3_timer < level.time)
 				{
