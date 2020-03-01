@@ -8288,6 +8288,12 @@ void melee_battle_prepare()
 			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] = (1 << HI_BINOCULARS);
 			ent->client->ps.stats[STAT_HOLDABLE_ITEM] = 0;
 
+			// zyk: disable jetpack at the start of a Melee Battle
+			if (ent->client->jetPackOn)
+			{
+				Jetpack_Off(ent);
+			}
+
 			// zyk: removing the seeker drone in case if is activated
 			if (ent->client->ps.droneExistTime > (level.time + 5000))
 			{
