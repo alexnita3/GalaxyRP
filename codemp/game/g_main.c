@@ -8316,6 +8316,9 @@ void melee_battle_prepare()
 			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_RAGE);
 			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_FORCE);
 
+			// zyk: stop jumping to avoid falling from the platform
+			ent->client->ps.fd.forcePowersActive &= ~(1 << FP_LEVITATION);
+
 			VectorSet(origin, level.melee_mode_origin[0] - 120 + ((i % 6) * 45), level.melee_mode_origin[1] - 120 + ((i/6) * 45), level.melee_mode_origin[2] + 50);
 
 			zyk_TeleportPlayer(ent, origin, ent->client->ps.viewangles);
