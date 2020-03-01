@@ -10489,7 +10489,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 8)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 1: ^7used with /unique command. You can only have one Unique Ability at a time. Magic Master gets Spread Bolts, which makes Normal and Electric Bolts shoot 3 spread bolts. Each shot spends some mp\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 1: ^7used with /unique command. You can only have one Unique Ability at a time. Magic Master gets Faster Bolts, which increases speed and firerate of magic bolts\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 9)
 			{
@@ -15701,7 +15701,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 			}
 			else if (ent->client->pers.rpg_class == 8)
-			{ // zyk: Magic Master Spread Bolts activation
+			{ // zyk: Magic Master Faster Bolts activation
 				if (ent->client->pers.magic_power >= 2)
 				{
 					ent->client->pers.magic_power -= 2;

@@ -9930,6 +9930,11 @@ void G_RunFrame( int levelTime ) {
 				{
 					ent->client->ps.weaponTime = (weaponData[WP_MELEE].fireTime * 1.8)/(ent->client->pers.skill_levels[55] + 1);
 				}
+				else if (ent->client->pers.rpg_class == 8 && ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && ent->client->pers.player_statuses & (1 << 21) &&
+					ent->client->ps.weaponTime > (weaponData[WP_MELEE].fireTime * 0.7))
+				{ // zyk: Magic Master Faster Bolt ability makes melee faster to shoot bolts faster
+					ent->client->ps.weaponTime = weaponData[WP_MELEE].fireTime * 0.7;
+				}
 
 				if (ent->client->pers.flame_thrower > level.time && ent->client->cloakDebReduce < level.time)
 				{ // zyk: fires the flame thrower

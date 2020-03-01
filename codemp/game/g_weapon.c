@@ -4035,6 +4035,18 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 	}
 }
 
+int magic_fist_velocity(gentity_t *ent)
+{
+	int magic_bolt_speed = zyk_magic_fist_velocity.integer;
+
+	if (ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 8) &&
+		ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && ent->client->pers.player_statuses & (1 << 21))
+	{ // zyk: Magic Master Unique Ability 1 increases speed of magic bolt shots
+		magic_bolt_speed += (magic_bolt_speed * 0.3);
+	}
+
+	return magic_bolt_speed;
+}
 
 //---------------------------------------------------------
 // FireMelee
@@ -4075,67 +4087,45 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 			{ // zyk: Magic Bolt
 				vec3_t origin, dir, zyk_forward;
 				gentity_t *missile = NULL;
-				int i = 0;
-				int number_of_shots = 1;
 
 				if (ent->client->ps.pm_flags & PMF_DUCKED) // zyk: crouched
 					VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 12);
 				else
 					VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 36);
 
-				if (ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 4) && 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && ent->client->pers.player_statuses & (1 << 21))
-				{ // zyk: Magic Master Unique Ability 1 increases number of magic bolt shots
-					number_of_shots = 3;
-				}
+				VectorSet(dir, ent->client->ps.viewangles[0], ent->client->ps.viewangles[1], 0);
 
-				for (i = 0; i < number_of_shots; i++)
+				AngleVectors(dir, zyk_forward, NULL, NULL);
+
+				missile = CreateMissile(origin, zyk_forward, magic_fist_velocity(ent), 10000, ent, qfalse);
+
+				missile->classname = "bowcaster_proj";
+				missile->s.weapon = WP_BOWCASTER;
+
+				VectorSet(missile->r.maxs, BOWCASTER_SIZE, BOWCASTER_SIZE, BOWCASTER_SIZE);
+				VectorScale(missile->r.maxs, -1, missile->r.mins);
+
+				if (ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
+					!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
+				{// zyk: Unique Skill increases damage
+					missile->damage = zyk_magic_fist_damage.integer * 2;
+				}
+				else
 				{
-					if (number_of_shots > 1)
-					{ // zyk: Spread Bolts code to make them spread
-						VectorSet(dir, ent->client->ps.viewangles[0] + Q_flrand(-1.0f, 1.0f) * 3.0, ent->client->ps.viewangles[1] + Q_flrand(-1.0f, 1.0f) * 3.0, 0);
-					}
-					else
-					{
-						VectorSet(dir, ent->client->ps.viewangles[0], ent->client->ps.viewangles[1], 0);
-					}
-
-					AngleVectors(dir, zyk_forward, NULL, NULL);
-
-					missile = CreateMissile(origin, zyk_forward, zyk_magic_fist_velocity.integer, 10000, ent, qfalse);
-
-					missile->classname = "bowcaster_proj";
-					missile->s.weapon = WP_BOWCASTER;
-
-					VectorSet(missile->r.maxs, BOWCASTER_SIZE, BOWCASTER_SIZE, BOWCASTER_SIZE);
-					VectorScale(missile->r.maxs, -1, missile->r.mins);
-
-					if (ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
-						!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
-					{// zyk: Unique Skill increases damage
-						missile->damage = zyk_magic_fist_damage.integer * 2;
-					}
-					else
-					{
-						missile->damage = zyk_magic_fist_damage.integer;
-					}
-
-					missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-					missile->methodOfDeath = MOD_MELEE;
-					missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
-
-					// we don't want it to bounce
-					missile->bounceCount = 0;
-
-					rpg_skill_counter(ent, 10);
+					missile->damage = zyk_magic_fist_damage.integer;
 				}
+
+				missile->dflags = DAMAGE_DEATH_KNOCKBACK;
+				missile->methodOfDeath = MOD_MELEE;
+				missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
+
+				// we don't want it to bounce
+				missile->bounceCount = 0;
+
+				rpg_skill_counter(ent, 10);
+				ent->client->pers.magic_power -= zyk_magic_fist_mp_cost.integer;
 
 				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/weapons/noghri/fire.mp3"));
-
-				if (number_of_shots > 1)
-					ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 4);
-				else
-					ent->client->pers.magic_power -= zyk_magic_fist_mp_cost.integer;
 
 				send_rpg_events(2000);
 			}
@@ -4143,69 +4133,46 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 			{ // zyk: Electric Bolt
 				gentity_t	*missile;
 				vec3_t origin, dir, zyk_forward;
-				int i = 0;
-				int number_of_shots = 1;
+				int fist_damage = (int)ceil(zyk_magic_fist_damage.integer * (1.6 + ((ent->client->pers.level * 1.0) / 200.0)));
 
 				if (ent->client->ps.pm_flags & PMF_DUCKED) // zyk: crouched
 					VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 12);
 				else
 					VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 36);
-
-				if (ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 8) && 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && ent->client->pers.player_statuses & (1 << 21))
-				{ // zyk: Magic Master Unique Ability 1 increases number of electric bolt shots
-					number_of_shots = 3;
-				}
 			
-				for (i = 0; i < number_of_shots; i++)
+				VectorSet(dir, ent->client->ps.viewangles[0], ent->client->ps.viewangles[1], 0);
+
+				AngleVectors(dir, zyk_forward, NULL, NULL);
+
+				VectorNormalize(zyk_forward);
+
+				missile = CreateMissile(origin, zyk_forward, magic_fist_velocity(ent), 10000, ent, qfalse);
+
+				missile->classname = "demp2_proj";
+				missile->s.weapon = WP_DEMP2;
+
+				VectorSet(missile->r.maxs, 2, 2, 2);
+				VectorScale(missile->r.maxs, -1, missile->r.mins);
+
+				if (ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
+					!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
+				{ // zyk: Unique Skill increases damage
+					missile->damage = fist_damage * 2;
+				}
+				else
 				{
-					int fist_damage = (int)ceil(zyk_magic_fist_damage.integer * (1.6 + ((ent->client->pers.level * 1.0)/ 200.0)));
-
-					if (number_of_shots > 1)
-					{ // zyk: Spread Bolts code to make them spread
-						VectorSet(dir, ent->client->ps.viewangles[0] + Q_flrand(-1.0f, 1.0f) * 3.0, ent->client->ps.viewangles[1] + Q_flrand(-1.0f, 1.0f) * 3.0, 0);
-					}
-					else
-					{
-						VectorSet(dir, ent->client->ps.viewangles[0], ent->client->ps.viewangles[1], 0);
-					}
-
-					AngleVectors(dir, zyk_forward, NULL, NULL);
-
-					VectorNormalize(zyk_forward);
-
-					missile = CreateMissile(origin, zyk_forward, zyk_magic_fist_velocity.integer, 10000, ent, qfalse);
-
-					missile->classname = "demp2_proj";
-					missile->s.weapon = WP_DEMP2;
-
-					VectorSet(missile->r.maxs, 2, 2, 2);
-					VectorScale(missile->r.maxs, -1, missile->r.mins);
-
-					if (ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
-						!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
-					{ // zyk: Unique Skill increases damage
-						missile->damage = fist_damage * 2;
-					}
-					else
-					{
-						missile->damage = fist_damage;
-					}
-
-					missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-					missile->methodOfDeath = MOD_MELEE;
-					missile->clipmask = MASK_SHOT;
-
-					// we don't want it to ever bounce
-					missile->bounceCount = 0;
-
-					rpg_skill_counter(ent, 20);
+					missile->damage = fist_damage;
 				}
 
-				if (number_of_shots > 1)
-					ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 8);
-				else
-					ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 2);
+				missile->dflags = DAMAGE_DEATH_KNOCKBACK;
+				missile->methodOfDeath = MOD_MELEE;
+				missile->clipmask = MASK_SHOT;
+
+				// we don't want it to ever bounce
+				missile->bounceCount = 0;
+
+				rpg_skill_counter(ent, 20);
+				ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 2);
 
 				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/weapons/demp2/fire.mp3"));
 
@@ -4445,7 +4412,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 
 				VectorNormalize(zyk_forward);
 
-				missile = CreateMissile( origin, zyk_forward, zyk_magic_fist_velocity.integer, 10000, ent, qfalse);
+				missile = CreateMissile( origin, zyk_forward, magic_fist_velocity(ent), 10000, ent, qfalse);
 
 				missile->classname = "conc_proj";
 				missile->s.weapon = WP_CONCUSSION;
