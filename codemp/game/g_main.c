@@ -5217,10 +5217,8 @@ void zyk_vertical_dfa_effect(gentity_t *ent)
 
 	new_ent->splashRadius = 600;
 
-	new_ent->nextthink = level.time + 900;
-
 	level.special_power_effects[new_ent->s.number] = ent->s.number;
-	level.special_power_effects_timer[new_ent->s.number] = level.time + 1300;
+	level.special_power_effects_timer[new_ent->s.number] = level.time + 600;
 }
 
 void zyk_bomb_model_think(gentity_t *ent)
@@ -10063,6 +10061,13 @@ void G_RunFrame( int levelTime ) {
 						ent->client->ps.fd.forcePowerLevel[FP_SEE] = FORCE_LEVEL_1;
 						ent->client->ps.fd.forcePowersActive |= (1 << FP_SEE);
 					}
+				}
+				else if (ent->client->pers.rpg_class == 6 && ent->client->pers.player_statuses & (1 << 22) && ent->client->pers.vertical_dfa_timer > 0 &&
+						ent->client->pers.vertical_dfa_timer < level.time && ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
+				{ // zyk: Duelist abilities. Vertical DFA should appear when player hits the ground
+					ent->client->pers.vertical_dfa_timer = 0;
+
+					zyk_vertical_dfa_effect(ent);
 				}
 
 				if (level.quest_map > 0 && ent->client->ps.duelInProgress == qfalse && ent->health > 0)

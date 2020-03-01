@@ -5311,6 +5311,7 @@ void initialize_rpg_skills(gentity_t *ent)
 		ent->client->pers.score_modifier = 0;
 
 		ent->client->pers.buy_sell_timer = 0;
+		ent->client->pers.vertical_dfa_timer = 0;
 
 		// zyk: setting default value of can_play_quest
 		ent->client->pers.can_play_quest = 0;
@@ -15438,7 +15439,6 @@ extern void zyk_super_beam(gentity_t *ent, int angle_yaw);
 extern void force_scream(gentity_t *ent);
 extern void zyk_force_storm(gentity_t *ent);
 extern qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *target);
-extern void zyk_vertical_dfa_effect(gentity_t *ent);
 extern void zyk_ice_bomb(gentity_t *ent);
 extern void zyk_item_generation(gentity_t *ent);
 void Cmd_Unique_f(gentity_t *ent) {
@@ -15965,14 +15965,16 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 					ent->client->ps.forceDodgeAnim = BOTH_FORCELEAP2_T__B_;
-					ent->client->ps.forceHandExtendTime = level.time + 2000;
-					ent->client->ps.velocity[2] = 300;
+					ent->client->ps.forceHandExtendTime = level.time + 1800;
+					ent->client->ps.velocity[2] = 350;
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 3000;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2800;
 
-					ent->client->ps.weaponTime = 2000;
+					ent->client->ps.weaponTime = 1800;
 
-					zyk_vertical_dfa_effect(ent);
+					ent->client->pers.vertical_dfa_timer = level.time + 1000;
+
+					ent->client->pers.player_statuses |= (1 << 22);
 
 					rpg_skill_counter(ent, 200);
 

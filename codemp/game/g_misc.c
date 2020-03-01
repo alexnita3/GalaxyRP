@@ -3114,7 +3114,7 @@ void SP_fx_runner( gentity_t *ent )
 	// zyk: no need to wait 400 ms with these effects
 	if (Q_stricmp(ent->targetname, "zyk_super_beam") == 0 || Q_stricmp(ent->targetname, "zyk_force_storm") == 0 || 
 		Q_stricmp(ent->targetname, "zyk_effect_item_generation") == 0 || Q_stricmp(ent->targetname, "zyk_quest_effect_enemy_nerf") == 0 || 
-		Q_stricmp(ent->targetname, "zyk_quest_effect_magic_disable") == 0)
+		Q_stricmp(ent->targetname, "zyk_quest_effect_magic_disable") == 0 || Q_stricmp(ent->targetname, "zyk_vertical_dfa") == 0)
 	{
 		ent->nextthink = level.time;
 	}
