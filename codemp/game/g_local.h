@@ -711,6 +711,9 @@ typedef struct clientPersistant_s {
 	// zyk: timer of the poison darts
 	int poison_dart_hit_timer;
 
+	// zyk: cooldown time to buy or sell
+	int buy_sell_timer;
+
 	int player_scale;
 
 	// zyk: chat protection cooldown timer. After this time, player will be protected against damage
