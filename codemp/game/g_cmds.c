@@ -15639,6 +15639,8 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
 
+					ent->client->ps.weaponTime = 2000;
+
 					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 45000;
@@ -15937,6 +15939,8 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.velocity[2] = 300;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
+
+					ent->client->ps.weaponTime = 2000;
 
 					zyk_vertical_dfa_effect(ent);
 
@@ -16279,6 +16283,8 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2800;
+
+					ent->client->ps.weaponTime = 2800;
 
 					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 					ent->client->ps.forceDodgeAnim = BOTH_ALORA_SPIN_THROW;
