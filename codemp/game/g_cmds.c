@@ -15284,42 +15284,35 @@ void Cmd_Saber_f( gentity_t *ent ) {
 	//first we want the userinfo so we can see if we should update this client's saber -rww
 	trap->GetUserinfo( ent->s.number, userinfo, sizeof( userinfo ) );
 
+	// zyk: setting sabers for this player
+	trap->Argv( 1, arg1, sizeof( arg1 ) );
+
+	saber = ent->client->pers.saber1;
+	value = G_NewString(arg1);
+
+	if ( Q_stricmp( value, saber ) )
+	{
+		Info_SetValueForKey( userinfo, "saber1", value );
+	}
+
+	saber = ent->client->pers.saber2;
+
 	if (number_of_args == 2)
 	{
-		trap->Argv( 1, arg1, sizeof( arg1 ) );
-
-		saber = ent->client->pers.saber1;
-		value = G_NewString(arg1);
-
-		if ( Q_stricmp( value, saber ) )
-		{
-			Info_SetValueForKey( userinfo, "saber1", value );
-			trap->SetUserinfo( ent->s.number, userinfo );
-		}
+		value = "none";
 	}
 	else
 	{
-		trap->Argv( 1, arg1, sizeof( arg1 ) );
-		trap->Argv( 2, arg2, sizeof( arg2 ) );
-
-		saber = ent->client->pers.saber1;
-		value = G_NewString(arg1);
-
-		if ( Q_stricmp( value, saber ) )
-		{
-			Info_SetValueForKey( userinfo, "saber1", value );
-		}
-
-		saber = ent->client->pers.saber2;
+		trap->Argv(2, arg2, sizeof(arg2));
 		value = G_NewString(arg2);
-
-		if ( Q_stricmp( value, saber ) )
-		{
-			Info_SetValueForKey( userinfo, "saber2", value );
-		}
-
-		trap->SetUserinfo( ent->s.number, userinfo );
 	}
+
+	if ( Q_stricmp( value, saber ) )
+	{
+		Info_SetValueForKey( userinfo, "saber2", value );
+	}
+
+	trap->SetUserinfo( ent->s.number, userinfo );
 
 	//first we want the userinfo so we can see if we should update this client's saber -rww
 	trap->GetUserinfo( ent->s.number, userinfo, sizeof( userinfo ) );
