@@ -9725,11 +9725,18 @@ void G_RunFrame( int levelTime ) {
 				}
 			}
 
-			if (level.melee_mode == 2 && level.melee_players[ent->s.number] != -1 && ent->client->ps.origin[2] < level.melee_mode_origin[2])
-			{ // zyk: validating if player fell of the catwalk
-				ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
-
-				player_die(ent, ent, ent, 100000, MOD_SUICIDE);
+			if (level.melee_mode == 2 && level.melee_players[ent->s.number] != -1)
+			{ // zyk: Melee Battle
+				if (ent->client->ps.origin[2] < level.melee_mode_origin[2])
+				{ // zyk: validating if player fell of the catwalk
+					ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
+					player_die(ent, ent, ent, 100000, MOD_SUICIDE);
+				}
+				else if (Distance(ent->client->ps.origin, level.melee_mode_origin) > 1000.0)
+				{ // zyk: validating if player is too far from the platform
+					ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
+					player_die(ent, ent, ent, 100000, MOD_SUICIDE);
+				}
 			}
 
 			if (ent->client->pers.race_position > 0)
