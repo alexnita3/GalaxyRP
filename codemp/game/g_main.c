@@ -6217,18 +6217,18 @@ void flaming_area(gentity_t *ent, int damage)
 	// zyk: Universe Power
 	if (ent->client->pers.quest_power_status & (1 << 13))
 	{
-		damage *= 1.5;
+		damage *= 1.4;
 	}
 
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 5000, -60, -60);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 5000, -60, 0);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 5000, -60, 60);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 5000, 0, -60);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 5000, 0, 0);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 5000, 0, 60);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 5000, 50, -60);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 5000, 60, 0);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 5000, 60, 60);
+	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, -60, -60);
+	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, -60, 0);
+	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, -60, 60);
+	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, 0, -60);
+	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, 0, 0);
+	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, 0, 60);
+	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, 50, -60);
+	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, 60, 0);
+	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, 60, 60);
 }
 
 // zyk: Hurricane
