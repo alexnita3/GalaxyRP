@@ -3445,6 +3445,12 @@ void ClientThink_real( gentity_t *ent ) {
 #endif
 	}
 
+	if (ent->client->pers.no_attack_timer > level.time)
+	{ // zyk: player hit by No Attack ability
+		pmove.cmd.buttons &= ~(BUTTON_ATTACK);
+		pmove.cmd.buttons &= ~(BUTTON_ALT_ATTACK);
+	}
+
 	Pmove (&pmove);
 
 	if (ent->client->solidHack)

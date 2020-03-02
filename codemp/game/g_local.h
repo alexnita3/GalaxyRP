@@ -794,6 +794,9 @@ typedef struct clientPersistant_s {
 	// zyk: timer to show effect of Vertical DFA ability
 	int vertical_dfa_timer;
 
+	// zyk: timer to keep this player stunned by No Attack ability
+	int no_attack_timer;
+
 	// zyk: RPG skills
 	int skill_levels[NUMBER_OF_SKILLS];
 

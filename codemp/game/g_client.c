@@ -3847,6 +3847,9 @@ void ClientSpawn(gentity_t *ent) {
 	// zyk: initializing Quest Power attributes
 	ent->client->pers.quest_power_status = 0;
 
+	// zyk: No Attack ability timer
+	ent->client->pers.no_attack_timer = 0;
+
 	// zyk: now we use this attribute as the real fuel and then scale and set it to the jetpackFuel above
 	client->pers.jetpack_fuel = MAX_JETPACK_FUEL;
 	client->jetPackToggleTime = level.time;

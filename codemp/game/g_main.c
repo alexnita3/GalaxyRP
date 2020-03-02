@@ -5480,6 +5480,7 @@ void zyk_no_attack(gentity_t *ent)
 
 			player_ent->client->ps.weaponTime = 3000;
 			player_ent->client->ps.electrifyTime = level.time + 3000;
+			player_ent->client->pers.no_attack_timer = level.time + 3000;
 
 			if (player_ent->client->ps.weaponstate == WEAPON_CHARGING ||
 				player_ent->client->ps.weaponstate == WEAPON_CHARGING_ALT)
