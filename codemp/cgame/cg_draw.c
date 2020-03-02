@@ -7186,7 +7186,7 @@ void CG_DrawFlagStatus()
 
 //draw meter showing jetpack fuel when it's not full
 #define JPFUELBAR_H			100.0f
-#define JPFUELBAR_W			20.0f
+#define JPFUELBAR_W			10.0f // zyk: changed from 20.0f to 10.0f to reduce bar width
 #define JPFUELBAR_X			(SCREEN_WIDTH-JPFUELBAR_W-8.0f)
 #define JPFUELBAR_Y			260.0f
 void CG_DrawJetpackFuel(void)
@@ -7231,9 +7231,9 @@ void CG_DrawJetpackFuel(void)
 
 //draw meter showing e-web health when it is in use
 #define EWEBHEALTH_H			100.0f
-#define EWEBHEALTH_W			20.0f
+#define EWEBHEALTH_W			10.0f // zyk: changed from 20.0f to 10.0f to reduce bar width
 #define EWEBHEALTH_X			(SCREEN_WIDTH-EWEBHEALTH_W-8.0f)
-#define EWEBHEALTH_Y			290.0f
+#define EWEBHEALTH_Y			260.0f // zyk: changed from 290.0f to 260.0f so it does not collide with the JKA HUD
 void CG_DrawEWebHealth(void)
 {
 	vec4_t aColor;
@@ -7265,7 +7265,7 @@ void CG_DrawEWebHealth(void)
 
 	//color of the bar
 	aColor[0] = 0.5f;
-	aColor[1] = 0.0f;
+	aColor[1] = 0.5f; // zyk: changed from 0.0f to 0.5f
 	aColor[2] = 0.0f;
 	aColor[3] = 0.8f;
 
@@ -7431,7 +7431,7 @@ void CG_DrawUltraResistance(void)
 
 //draw meter showing cloak fuel when it's not full
 #define CLFUELBAR_H			100.0f
-#define CLFUELBAR_W			20.0f
+#define CLFUELBAR_W			10.0f // zyk: changed from 20.0f to 10.0f to reduce bar width
 #define CLFUELBAR_X			(SCREEN_WIDTH-CLFUELBAR_W-8.0f)
 #define CLFUELBAR_Y			260.0f
 void CG_DrawCloakFuel(void)
