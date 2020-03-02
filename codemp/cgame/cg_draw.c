@@ -7208,8 +7208,8 @@ void CG_DrawJetpackFuel(void)
 	}
 
 	//color of the bar
-	aColor[0] = 0.5f;
-	aColor[1] = 0.0f;
+	aColor[0] = 0.8f; // zyk: changed from 0.5f
+	aColor[1] = 0.4f; // zyk: changed from 0.0f
 	aColor[2] = 0.0f;
 	aColor[3] = 0.8f;
 
@@ -7265,7 +7265,7 @@ void CG_DrawEWebHealth(void)
 
 	//color of the bar
 	aColor[0] = 0.5f;
-	aColor[1] = 0.5f; // zyk: changed from 0.0f to 0.5f
+	aColor[1] = 0.0f;
 	aColor[2] = 0.0f;
 	aColor[3] = 0.8f;
 
@@ -7459,8 +7459,8 @@ void CG_DrawCloakFuel(void)
 
 	//color of the bar
 	aColor[0] = 0.0f;
-	aColor[1] = 0.0f;
-	aColor[2] = 0.6f;
+	aColor[1] = 0.2f; // zyk: changed from 0.0f
+	aColor[2] = 0.8f; // zyk: changed from 0.6f
 	aColor[3] = 0.8f;
 
 	//color of greyed out "missing fuel"
