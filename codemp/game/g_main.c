@@ -4542,16 +4542,21 @@ void spawn_boss(gentity_t *ent,int x,int y,int z,int yaw,char *boss_name,int gx,
 		}
 	}
 
-	// zyk: removing scale from allies
-	for (i = 0; i < level.maxclients; i++)
+	// zyk: removing scale from allies and setting them with the guardian_mode value
+	// zyk: this function will be called several times during some boss battles, so after the first call the quest player will already have guardian_mode set
+	// zyk: in this case, dont reset allies, otherwise dead allies would be able to again heal players in boss battle and damage the boss
+	if (ent->client->pers.guardian_mode == 0)
 	{
-		gentity_t *allied_player = &g_entities[i];
-
-		if (zyk_is_ally(ent,allied_player) == qtrue && allied_player->client->sess.amrpgmode == 2)
+		for (i = 0; i < level.maxclients; i++)
 		{
-			allied_player->client->pers.guardian_mode = guardian_mode;
-			do_scale(allied_player, 100);
-			allied_player->client->noclip = qfalse;
+			gentity_t *allied_player = &g_entities[i];
+
+			if (zyk_is_ally(ent, allied_player) == qtrue && allied_player->client->sess.amrpgmode == 2 && allied_player->health > 0)
+			{
+				allied_player->client->pers.guardian_mode = guardian_mode;
+				do_scale(allied_player, 100);
+				allied_player->client->noclip = qfalse;
+			}
 		}
 	}
 
