@@ -2644,6 +2644,7 @@ extern void quest_get_new_player(gentity_t *ent);
 void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	int			respawn;
 	qboolean	predict;
+	qboolean	zyk_bounty_sentry_validation = qfalse; // zyk: used to test if the player is a Bounty Hunter with Upgrade, which can grab more sentry guns
 
 	if (ent->genericValue10 > level.time &&
 		other &&
@@ -2806,8 +2807,17 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 		}
 	}
 
+	if (other->client->sess.amrpgmode == 2 && other->client->pers.rpg_class == 2 && 
+		ent->item->giType == IT_HOLDABLE && ent->item->giTag == HI_SENTRY_GUN && 
+		other->client->pers.secrets_found & (1 << 1) && other->client->pers.bounty_hunter_sentries < MAX_BOUNTY_HUNTER_SENTRIES)
+	{ // zyk: Bounty Hunter can grab more sentries when he has the Bounty Hunter Upgrade
+		other->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_SENTRY_GUN);
+		other->client->pers.bounty_hunter_sentries++;
+		zyk_bounty_sentry_validation = qtrue;
+	}
+
 	// the same pickup rules are used for client side and server side
-	if ( !BG_CanItemBeGrabbed( level.gametype, &ent->s, &other->client->ps ) ) {
+	if ( !BG_CanItemBeGrabbed( level.gametype, &ent->s, &other->client->ps ) && zyk_bounty_sentry_validation == qfalse) {
 		return;
 	}
 
