@@ -13165,14 +13165,14 @@ Cmd_Drop_f
 extern qboolean saberKnockOutOfHand(gentity_t *saberent, gentity_t *saberOwner, vec3_t velocity);
 void Cmd_Drop_f( gentity_t *ent ) {
 	vec3_t vel;
-	gitem_t *item;
+	gitem_t *item = NULL;
 	gentity_t *launched;
-	int weapon = ent->s.weapon;
+	int weapon = ent->client->ps.weapon;
 	vec3_t uorg, vecnorm, thispush_org;
 	int current_ammo = 0;
 	int ammo_count = 0;
 
-	if (weapon == WP_NONE || weapon == WP_MELEE || weapon == WP_EMPLACED_GUN || weapon == WP_TURRET)
+	if (weapon == WP_NONE || weapon == WP_EMPLACED_GUN || weapon == WP_TURRET)
 	{ //can't have this
 		return;
 	}
@@ -13194,48 +13194,76 @@ void Cmd_Drop_f( gentity_t *ent ) {
 		return;
 	}
 
-	// find the item type for this weapon
-	item = BG_FindItemForWeapon( (weapon_t) weapon );
+	// zyk: velocity with which the item will be tossed
+	vel[0] = vecnorm[0] * 500;
+	vel[1] = vecnorm[1] * 500;
+	vel[2] = vecnorm[2] * 500;
 
-	vel[0] = vecnorm[0]*500;
-	vel[1] = vecnorm[1]*500;
-	vel[2] = vecnorm[2]*500;
-
-	launched = LaunchItem(item, ent->client->ps.origin, vel);
-
-	launched->s.generic1 = ent->s.number;
-	launched->s.powerups = level.time + 1500;
-
-	launched->count = bg_itemlist[BG_GetItemIndexByTag(weapon, IT_WEAPON)].quantity;
-
-	// zyk: setting amount of ammo in this dropped weapon
-	current_ammo = ent->client->ps.ammo[weaponData[weapon].ammoIndex];
-	ammo_count = (int)ceil(bg_itemlist[BG_GetItemIndexByTag(weapon, IT_WEAPON)].quantity * zyk_add_ammo_scale.value);
-
-	if (current_ammo < ammo_count)
-	{ // zyk: player does not have the default ammo to set in the weapon, so set the current_ammo of the player in the weapon
-		ent->client->ps.ammo[weaponData[weapon].ammoIndex] -= current_ammo;
-		if (zyk_add_ammo_scale.value > 0 && current_ammo > 0)
-			launched->count = (current_ammo/zyk_add_ammo_scale.value);
-		else
-			launched->count = -1; // zyk: in this case, player has no ammo, so weapon should add no ammo to the player who picks up this weapon
-	}
-	else
+	// zyk: when using melee, drop items
+	if (weapon == WP_MELEE && ent->client->ps.stats[STAT_HOLDABLE_ITEM] > 0 && 
+		bg_itemlist[ent->client->ps.stats[STAT_HOLDABLE_ITEM]].giType == IT_HOLDABLE)
 	{
-		ent->client->ps.ammo[weaponData[weapon].ammoIndex] -= ammo_count;
-		if (zyk_add_ammo_scale.value > 0 && current_ammo > 0)
-			launched->count = (ammo_count/zyk_add_ammo_scale.value);
-		else
-			launched->count = -1; // zyk: in this case, player has no ammo, so weapon should add no ammo to the player who picks up this weapon
+		item = BG_FindItemForHoldable(bg_itemlist[ent->client->ps.stats[STAT_HOLDABLE_ITEM]].giTag);
+
+		if (ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << item->giTag))
+		{ // zyk: if player has the item in inventory, drop it
+			launched = LaunchItem(item, ent->client->ps.origin, vel);
+
+			// zyk: this player cannot get this item for 1 second
+			launched->genericValue10 = level.time + 1000;
+			launched->genericValue11 = ent->s.number;
+
+			// zyk: remove item from inventory
+			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << item->giTag);
+
+			// zyk: if the player is a Bounty Hunter and the item is a sentry gun, must decrease the sentry gun counter
+			if (item->giTag == HI_SENTRY_GUN && ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 2 && ent->client->pers.bounty_hunter_sentries > 0)
+			{
+				ent->client->pers.bounty_hunter_sentries--;
+			}
+		}
 	}
-
-	if ((ent->client->ps.ammo[weaponData[weapon].ammoIndex] < 1 && weapon != WP_DET_PACK) ||
-		(weapon != WP_THERMAL && weapon != WP_DET_PACK && weapon != WP_TRIP_MINE))
+	else if (weapon != WP_MELEE)
 	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << weapon);
+		// find the item type for this weapon
+		item = BG_FindItemForWeapon((weapon_t)weapon);
 
-		ent->s.weapon = WP_MELEE;
-		ent->client->ps.weapon = WP_MELEE;
+		launched = LaunchItem(item, ent->client->ps.origin, vel);
+
+		launched->s.generic1 = ent->s.number;
+		launched->s.powerups = level.time + 1500;
+
+		launched->count = bg_itemlist[BG_GetItemIndexByTag(weapon, IT_WEAPON)].quantity;
+
+		// zyk: setting amount of ammo in this dropped weapon
+		current_ammo = ent->client->ps.ammo[weaponData[weapon].ammoIndex];
+		ammo_count = (int)ceil(bg_itemlist[BG_GetItemIndexByTag(weapon, IT_WEAPON)].quantity * zyk_add_ammo_scale.value);
+
+		if (current_ammo < ammo_count)
+		{ // zyk: player does not have the default ammo to set in the weapon, so set the current_ammo of the player in the weapon
+			ent->client->ps.ammo[weaponData[weapon].ammoIndex] -= current_ammo;
+			if (zyk_add_ammo_scale.value > 0 && current_ammo > 0)
+				launched->count = (current_ammo / zyk_add_ammo_scale.value);
+			else
+				launched->count = -1; // zyk: in this case, player has no ammo, so weapon should add no ammo to the player who picks up this weapon
+		}
+		else
+		{
+			ent->client->ps.ammo[weaponData[weapon].ammoIndex] -= ammo_count;
+			if (zyk_add_ammo_scale.value > 0 && current_ammo > 0)
+				launched->count = (ammo_count / zyk_add_ammo_scale.value);
+			else
+				launched->count = -1; // zyk: in this case, player has no ammo, so weapon should add no ammo to the player who picks up this weapon
+		}
+
+		if ((ent->client->ps.ammo[weaponData[weapon].ammoIndex] < 1 && weapon != WP_DET_PACK) ||
+			(weapon != WP_THERMAL && weapon != WP_DET_PACK && weapon != WP_TRIP_MINE))
+		{
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << weapon);
+
+			ent->s.weapon = WP_MELEE;
+			ent->client->ps.weapon = WP_MELEE;
+		}
 	}
 }
 
