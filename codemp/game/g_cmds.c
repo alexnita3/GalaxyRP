@@ -15828,6 +15828,12 @@ void Cmd_Unique_f(gentity_t *ent) {
 							VectorSubtract(player_ent->client->ps.origin, ent->client->ps.origin, dir);
 							VectorNormalize(dir);
 
+							// zyk: if using Meditate taunt, remove it
+							if (player_ent->client->ps.legsAnim == BOTH_MEDITATE && player_ent->client->ps.torsoAnim == BOTH_MEDITATE)
+							{
+								player_ent->client->ps.legsAnim = player_ent->client->ps.torsoAnim = BOTH_MEDITATE_END;
+							}
+
 							player_ent->client->ps.velocity[0] = dir[0] * push_scale;
 							player_ent->client->ps.velocity[1] = dir[1] * push_scale;
 							player_ent->client->ps.velocity[2] = 250;
@@ -16405,6 +16411,12 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 							VectorSubtract(ent->client->ps.origin, player_ent->client->ps.origin, dir);
 							VectorNormalize(dir);
+
+							// zyk: if using Meditate taunt, remove it
+							if (player_ent->client->ps.legsAnim == BOTH_MEDITATE && player_ent->client->ps.torsoAnim == BOTH_MEDITATE)
+							{
+								player_ent->client->ps.legsAnim = player_ent->client->ps.torsoAnim = BOTH_MEDITATE_END;
+							}
 
 							player_ent->client->ps.velocity[0] = dir[0] * push_scale;
 							player_ent->client->ps.velocity[1] = dir[1] * push_scale;
