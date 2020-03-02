@@ -2675,6 +2675,33 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	if (other->health < 1)
 		return;		// dead people can't pickup
 
+	if (Q_stricmp(ent->targetname, "zyk_quest_artifact") == 0 && ent->item->giType == IT_POWERUP && ent->item->giTag == PW_FORCE_BOON)
+	{ // zyk: an Universe Quest artifact
+		if (other->client->sess.amrpgmode == 2 && other->client->pers.can_play_quest == 1 && other->client->pers.guardian_mode == 0 &&
+			other->client->pers.universe_quest_artifact_holder_id != -1)
+		{ // zyk: player got the artifact in Universe Quest
+			zyk_text_message(other, "universe/mission_2/mission_2_got_artifact", qtrue, qfalse, other->client->pers.netname);
+			other->client->pers.universe_quest_counter |= (1 << other->client->pers.universe_quest_artifact_holder_id);
+			other->client->pers.universe_quest_artifact_holder_id = -1;
+			save_account(other, qtrue);
+
+			universe_quest_artifacts_checker(other);
+
+			ent->targetname = NULL; // zyk: nullify so in this case the quest system does not free this entity
+
+			quest_get_new_player(other);
+		}
+		else
+		{ // zyk: this is not the quest player. Only the quest player can get the artifact
+
+			// zyk: if he is in a guardian battle and tries to get artifact, do not allow it
+			if (other->client->pers.guardian_mode > 0)
+				ent->targetname = NULL;
+
+			return;
+		}
+	}
+
 	// zyk: Some RPG classes cant pickup some items
 	if (other->client->sess.amrpgmode == 2)
 	{
@@ -2744,33 +2771,6 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 			    (ent->item->giTag == AMMO_THERMAL || ent->item->giTag == AMMO_TRIPMINE || ent->item->giTag == AMMO_DETPACK))))
 		{
 			return;
-		}
-
-		if (Q_stricmp(ent->targetname, "zyk_quest_artifact") == 0 && ent->item->giType == IT_POWERUP && ent->item->giTag == PW_FORCE_BOON)
-		{
-			if (other->client->pers.can_play_quest == 1 && other->client->pers.guardian_mode == 0 && 
-				other->client->pers.universe_quest_artifact_holder_id != -1)
-			{ // zyk: player got the artifact in Universe Quest
-				zyk_text_message(other, "universe/mission_2/mission_2_got_artifact", qtrue, qfalse, other->client->pers.netname);
-				other->client->pers.universe_quest_counter |= (1 << other->client->pers.universe_quest_artifact_holder_id);
-				other->client->pers.universe_quest_artifact_holder_id = -1;
-				save_account(other, qtrue);
-
-				universe_quest_artifacts_checker(other);
-
-				ent->targetname = NULL; // zyk: nullify so in this case the quest system does not free this entity
-
-				quest_get_new_player(other);
-			}
-			else
-			{ // zyk: this is not the quest player. Only the quest player can get the artifact
-
-				// zyk: if he is in a guardian battle and tries to get artifact, do not allow it
-				if (other->client->pers.guardian_mode > 0)
-					ent->targetname = NULL;
-
-				return;
-			}
 		}
 	}
 	else if (other->client->pers.player_statuses & (1 << 12) && (ent->item->giType == IT_WEAPON || ent->item->giType == IT_AMMO || 
