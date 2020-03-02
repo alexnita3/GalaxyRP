@@ -4822,6 +4822,12 @@ void earthquake(gentity_t *ent, int stun_time, int strength, int distance)
 		{
 			if (player_ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
 			{ // zyk: player can only be hit if he is on floor
+				// zyk: if using Meditate taunt, remove it
+				if (player_ent->client->ps.legsAnim == BOTH_MEDITATE && player_ent->client->ps.torsoAnim == BOTH_MEDITATE)
+				{
+					player_ent->client->ps.legsAnim = player_ent->client->ps.torsoAnim = BOTH_MEDITATE_END;
+				}
+
 				player_ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
 				player_ent->client->ps.forceHandExtendTime = level.time + stun_time;
 				player_ent->client->ps.velocity[2] += strength;
@@ -4971,6 +4977,12 @@ void chaos_power(gentity_t *ent, int distance, int first_damage)
 			{
 				player_ent->client->pers.player_statuses &= ~(1 << 1);
 				player_ent->client->ps.forceHandExtendTime = level.time;
+			}
+
+			// zyk: if using Meditate taunt, remove it
+			if (player_ent->client->ps.legsAnim == BOTH_MEDITATE && player_ent->client->ps.torsoAnim == BOTH_MEDITATE)
+			{
+				player_ent->client->ps.legsAnim = player_ent->client->ps.torsoAnim = BOTH_MEDITATE_END;
 			}
 
 			if (player_ent->client->jetPackOn)
@@ -5616,6 +5628,12 @@ void sleeping_flowers(gentity_t *ent, int stun_time, int distance)
 			{
 				player_ent->client->pers.player_statuses &= ~(1 << 1);
 				player_ent->client->ps.forceHandExtendTime = level.time;
+			}
+
+			// zyk: if using Meditate taunt, remove it
+			if (player_ent->client->ps.legsAnim == BOTH_MEDITATE && player_ent->client->ps.torsoAnim == BOTH_MEDITATE)
+			{
+				player_ent->client->ps.legsAnim = player_ent->client->ps.torsoAnim = BOTH_MEDITATE_END;
 			}
 
 			player_ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
