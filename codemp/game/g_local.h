@@ -613,9 +613,6 @@ typedef enum {
 // zyk: max sentries a Bounty Hunter can have if he has the Upgrade
 #define MAX_BOUNTY_HUNTER_SENTRIES 5
 
-// zyk: max level a player can be in RPG Mode
-#define MAX_RPG_LEVEL 100
-
 // zyk: max RPG chars an account can have
 #define MAX_RPG_CHARS 15
 
