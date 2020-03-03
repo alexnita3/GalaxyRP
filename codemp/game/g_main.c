@@ -16877,7 +16877,6 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.guardian_timer < level.time)
 					{
-						int k = 0;
 						int random_magic = Q_irand(0, 25);
 						gentity_t *player_ent = &g_entities[ent->client->pers.guardian_invoked_by_id];
 						int distance = (int)Distance(ent->client->ps.origin, player_ent->client->ps.origin);
