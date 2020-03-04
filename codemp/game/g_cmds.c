@@ -10724,7 +10724,8 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		trap->SendServerCommand( ent-g_entities, "print \"Magic Master can't buy this item.\n\"" );
 		return;
 	}
-	else if (ent->client->pers.rpg_class == 9 && ((value >= 5 && value <= 7) || value == 48))
+	else if (ent->client->pers.rpg_class == 9 && ((value >= 2 && value <= 7) || (value >= 10 && value <= 11) || value == 13 ||
+		(value >= 18 && value <= 24) || (value >= 34 && value <= 38) || value == 42 || value == 48))
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"Force Guardian can't buy this item.\n\"");
 		return;

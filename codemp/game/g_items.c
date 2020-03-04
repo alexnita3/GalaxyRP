@@ -2766,10 +2766,9 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 		{ // zyk: Magic Master can only pickup some items
 			return;
 		}
-		else if (other->client->pers.rpg_class == 9 && ((ent->item->giType == IT_WEAPON && 
-			    (ent->item->giTag == WP_THERMAL || ent->item->giTag == WP_TRIP_MINE || ent->item->giTag == WP_DET_PACK)) || 
-				(ent->item->giType == IT_AMMO && 
-			    (ent->item->giTag == AMMO_THERMAL || ent->item->giTag == AMMO_TRIPMINE || ent->item->giTag == AMMO_DETPACK))))
+		else if (other->client->pers.rpg_class == 9 && ((ent->item->giType == IT_WEAPON && ent->item->giTag != WP_STUN_BATON && ent->item->giTag != WP_BLASTER) ||
+			(ent->item->giType == IT_AMMO && ent->item->giTag != AMMO_BLASTER) || 
+			(ent->item->giType == IT_HOLDABLE && ent->item->giTag != HI_MEDPAC_BIG)))
 		{
 			return;
 		}
