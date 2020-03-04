@@ -7996,7 +7996,7 @@ qboolean validate_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont
 		return qfalse;
 	}
 
-	if (ent->client->pers.rpg_class == 9 && (upgrade_value == 4 || upgrade_value == 10 || (upgrade_value >= 12 && upgrade_value <= 13) || upgrade_value == 14 || upgrade_value == 16 || upgrade_value == 18 || (upgrade_value >= 20 && upgrade_value <= 29) || (upgrade_value >= 34 && upgrade_value <= 38) || (upgrade_value >= 40 && upgrade_value <= 54)))
+	if (ent->client->pers.rpg_class == 9 && (upgrade_value == 4 || upgrade_value == 10 || (upgrade_value >= 12 && upgrade_value <= 13) || upgrade_value == 14 || upgrade_value == 16 || upgrade_value == 18 || upgrade_value == 20 || (upgrade_value >= 22 && upgrade_value <= 29) || (upgrade_value >= 34 && upgrade_value <= 38) || (upgrade_value >= 41 && upgrade_value <= 51) || (upgrade_value >= 53 && upgrade_value <= 54)))
 	{
 		if (dont_show_message == qfalse)
 			trap->SendServerCommand( ent-g_entities, "print \"Force Guardian class doesn't allow this skill.\n\"" );
@@ -9207,7 +9207,7 @@ void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 		else
 			strcpy(message_content[1], va("^320 - Blaster Pistol: %d/%d    ",ent->client->pers.skill_levels[19], max_skill_levels[19]));
 							
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
+		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8)
 			strcpy(message_content[2], va("^021 - E11 Blaster Rifle: %d/%d ",ent->client->pers.skill_levels[20], max_skill_levels[20]));
 		else
 			strcpy(message_content[2], va("^321 - E11 Blaster Rifle: %d/%d ",ent->client->pers.skill_levels[20], max_skill_levels[20]));
@@ -9374,7 +9374,7 @@ void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 	}
 	else if (Q_stricmp( arg1, "ammo" ) == 0)
 	{
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
+		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8)
 			strcpy(message, va("%s^040 - Blaster Pack: %d/%d\n",message, ent->client->pers.skill_levels[39], max_skill_levels[39]));
 		else
 			strcpy(message, va("%s^340 - Blaster Pack: %d/%d\n",message, ent->client->pers.skill_levels[39], max_skill_levels[39]));
@@ -9438,7 +9438,7 @@ void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 		else
 			strcpy(message, va("%s^351 - E-Web: %d/%d\n",message, ent->client->pers.skill_levels[50], max_skill_levels[50]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
+		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8)
 			strcpy(message, va("%s^052 - Big Bacta: %d/%d\n",message, ent->client->pers.skill_levels[51], max_skill_levels[51]));
 		else
 			strcpy(message, va("%s^352 - Big Bacta: %d/%d\n",message, ent->client->pers.skill_levels[51], max_skill_levels[51]));
