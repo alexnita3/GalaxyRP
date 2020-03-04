@@ -379,11 +379,6 @@ void SP_misc_model_breakable( gentity_t *ent )
 	{
 		G_SpawnVector("mins", "-60 -60 -20", ent->r.mins);
 		G_SpawnVector("maxs", "60 60 42", ent->r.maxs);
-
-		// zyk: setting the material for when it breaks
-		ent->material = MAT_GREY_STONE;
-		ent->health = 600;
-		ent->spawnflags |= 8; // zyk: no dead/damage model
 	}
 	else if (Q_stricmp(ent->targetname, "zyk_tree_of_life") == 0)
 	{
