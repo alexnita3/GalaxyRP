@@ -16484,7 +16484,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 						if (player_ent && player_ent->client && ent != player_ent &&
 							zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue &&
-							Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 350)
+							Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 400)
 						{
 							vec3_t dir;
 
