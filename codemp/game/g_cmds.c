@@ -5025,7 +5025,7 @@ qboolean validate_rpg_class(gentity_t *ent)
 	}
 	else if (ent->client->pers.rpg_class == 9 && zyk_allow_force_tank.integer == 0)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Force Tank not allowed in this server\n\"" );
+		trap->SendServerCommand( ent-g_entities, "print \"Force Guardian not allowed in this server\n\"" );
 		return qfalse;
 	}
 
@@ -7667,7 +7667,7 @@ char *zyk_rpg_class(gentity_t *ent)
 	else if (ent->client->pers.rpg_class == 8)
 		return "Magic Master";
 	else if (ent->client->pers.rpg_class == 9)
-		return "Force Tank";
+		return "Force Guardian";
 	else
 		return "";
 }
@@ -7999,7 +7999,7 @@ qboolean validate_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont
 	if (ent->client->pers.rpg_class == 9 && (upgrade_value == 4 || upgrade_value == 10 || (upgrade_value >= 12 && upgrade_value <= 13) || upgrade_value == 14 || upgrade_value == 16 || upgrade_value == 18 || (upgrade_value >= 20 && upgrade_value <= 29) || (upgrade_value >= 34 && upgrade_value <= 38) || (upgrade_value >= 40 && upgrade_value <= 54)))
 	{
 		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"Force Tank class doesn't allow this skill.\n\"" );
+			trap->SendServerCommand( ent-g_entities, "print \"Force Guardian class doesn't allow this skill.\n\"" );
 		return qfalse;
 	}
 
@@ -9994,7 +9994,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 			}
 			else if (Q_stricmp( arg1, "classes" ) == 0)
 			{
-				trap->SendServerCommand( ent-g_entities, "print \"\n^30 - Free Warrior\n^7 Can have all 56 skills. All-round class\n^31 - Force User\n^7 Saber/force class. Force powers use less force. Regens force faster\n^32 - Bounty Hunter\n^7 Gun class. Higher max ammo, stronger items and more credits in battles\n^33 - Armored Soldier\n^7 Gun class. High resistance to damage, shot deflection and auto-shield-heal\n^34 - Monk\n^7 Force class. Highest melee damage and faster run speed. Has auto-hp-heal\n^35 - Stealth Attacker\n^7 Gun class. Highest gun damage. Resistant to electric attacks\n^36 - Duelist\n^7 Saber/force class. Highest saber damage. Regens force faster\n^37 - Force Gunner\n^7 Gun/force class. Can do acrobatic moves (like wall run) while holding guns and shooting\n^38 - Magic Master\n^7 Has no saber/force/guns. Shoots magic bolts from melee. Learns all magic powers\n^39 - Force Tank\n^7 Saber/force class. High resistance to damage. Can grab some guns and items on map\n\n^3/rpgclass <class number>\n\"" );
+				trap->SendServerCommand( ent-g_entities, "print \"\n^30 - Free Warrior\n^7 Can have all 56 skills. All-round class\n^31 - Force User\n^7 Saber/force class. Force powers use less force. Regens force faster\n^32 - Bounty Hunter\n^7 Gun class. Higher max ammo, stronger items and more credits in battles\n^33 - Armored Soldier\n^7 Gun class. High resistance to damage, shot deflection and auto-shield-heal\n^34 - Monk\n^7 Force class. Highest melee damage and faster run speed. Has auto-hp-heal\n^35 - Stealth Attacker\n^7 Gun class. Highest gun damage. Resistant to electric attacks\n^36 - Duelist\n^7 Saber/force class. Highest saber damage. Regens force faster\n^37 - Force Gunner\n^7 Gun/force class. Can do acrobatic moves (like wall run) while holding guns and shooting\n^38 - Magic Master\n^7 Has no saber/force/guns. Shoots magic bolts from melee. Learns all magic powers\n^39 - Force Guardian\n^7 Saber/force class. High resistance to damage. Can grab some guns and items on map\n\n^3/rpgclass <class number>\n\"" );
 			}
 			else if (Q_stricmp( arg1, "stuff" ) == 0)
 			{
@@ -10295,7 +10295,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		}
 		else if (Q_stricmp(arg1, "upgrades" ) == 0)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^38 - Stealth Attacker Upgrade: ^7Buy: 5000\n^315 - Impact Reducer: ^7Buy: 4000\n^316 - Flame Thrower: ^7Buy: 3000\n^325 - Power Cell Weapons Upgrade: ^7Buy: 2000\n^326 - Blaster Pack Weapons Upgrade: ^7Buy: 1800\n^327 - Metal Bolts Weapons Upgrade: ^7Buy: 2200\n^328 - Rocket Upgrade: ^7Buy: 2500\n^329 - Bounty Hunter Upgrade: ^7Buy: 5000\n^333 - Stun Baton Upgrade: ^7Buy: 1500\n^339 - Armored Soldier Upgrade: ^7Buy: 5000\n^340 - Holdable Items Upgrade: ^7Buy: 3000\n^345 - Force Gunner Upgrade: ^7Buy: 5000\n^346 - Jetpack Upgrade: ^7Buy: 10000\n^347 - Force Tank Upgrade: ^7Buy: 5000\n^353 - Unique Ability 1: ^7Buy: 7000\n^354 - Unique Ability 2: ^7Buy: 7000\n^355 - Unique Ability 3: ^7Buy: 7000\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^38 - Stealth Attacker Upgrade: ^7Buy: 5000\n^315 - Impact Reducer: ^7Buy: 4000\n^316 - Flame Thrower: ^7Buy: 3000\n^325 - Power Cell Weapons Upgrade: ^7Buy: 2000\n^326 - Blaster Pack Weapons Upgrade: ^7Buy: 1800\n^327 - Metal Bolts Weapons Upgrade: ^7Buy: 2200\n^328 - Rocket Upgrade: ^7Buy: 2500\n^329 - Bounty Hunter Upgrade: ^7Buy: 5000\n^333 - Stun Baton Upgrade: ^7Buy: 1500\n^339 - Armored Soldier Upgrade: ^7Buy: 5000\n^340 - Holdable Items Upgrade: ^7Buy: 3000\n^345 - Force Gunner Upgrade: ^7Buy: 5000\n^346 - Jetpack Upgrade: ^7Buy: 10000\n^347 - Force Guardian Upgrade: ^7Buy: 5000\n^353 - Unique Ability 1: ^7Buy: 7000\n^354 - Unique Ability 2: ^7Buy: 7000\n^355 - Unique Ability 3: ^7Buy: 7000\n\n\"");
 		}
 		else if (i == 1)
 		{
@@ -10545,7 +10545,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 9)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 1: ^7used with /unique command. You can only have one Unique Ability at a time. Force Tank gets Force Armor, which activates his resistance shield, with damage resistance, gun shot deflection, and ability to resist force powers. Spends 50 force\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 1: ^7used with /unique command. You can only have one Unique Ability at a time. Force Guardian gets Force Armor, which activates his resistance shield, with damage resistance, gun shot deflection, and ability to resist force powers. Spends 50 force\n\n\"");
 			}
 		}
 		else if (i == 54)
@@ -10588,7 +10588,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 9)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 2: ^7used with /unique command. You can only have one Unique Ability at a time. Force Tank gets Force Scream, which sets the resistance shield during 6 seconds. Player makes a scream that damages nearby enemies and may cause stun anim on them. Spends 50 force\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 2: ^7used with /unique command. You can only have one Unique Ability at a time. Force Guardian gets Force Scream, which sets the resistance shield during 6 seconds. Player makes a scream that damages nearby enemies and may cause stun anim on them. Spends 50 force\n\n\"");
 			}
 		}
 		else if (i == 55)
@@ -10631,7 +10631,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 9)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Force Tank gets Force Attraction, which damages and pulls enemies towards the user. Spends 50 force\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Force Guardian gets Force Attraction, which damages and pulls enemies towards the user. Spends 50 force\n\n\"");
 			}
 		}
 		else if (i == 56)
@@ -10726,7 +10726,7 @@ void Cmd_Buy_f( gentity_t *ent ) {
 	}
 	else if (ent->client->pers.rpg_class == 9 && ((value >= 5 && value <= 7) || value == 48))
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Force Tank can't buy this item.\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"Force Guardian can't buy this item.\n\"");
 		return;
 	}
 
@@ -10798,7 +10798,7 @@ void Cmd_Buy_f( gentity_t *ent ) {
 	}
 	else if (value == 47 && ent->client->pers.secrets_found & (1 << 19))
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"You already have the Force Tank Upgrade.\n\"" );
+		trap->SendServerCommand( ent-g_entities, "print \"You already have the Force Guardian Upgrade.\n\"" );
 		return;
 	}
 	else if (value == 53 && ent->client->pers.secrets_found & (1 << 2))
@@ -15801,7 +15801,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 			}
 			else if (ent->client->pers.rpg_class == 9)
-			{ // zyk: Force Tank Force Armor. Increases resistance, resists force powers and has shield flag
+			{ // zyk: Force Guardian Force Armor. Increases resistance, resists force powers and has shield flag
 				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 4))
 				{
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
@@ -16117,7 +16117,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 			}
 			else if (ent->client->pers.rpg_class == 9)
-			{ // zyk: Force Tank Force Scream
+			{ // zyk: Force Guardian Force Scream
 				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 4))
 				{
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
@@ -16470,7 +16470,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 			}
 			else if (ent->client->pers.rpg_class == 9)
-			{ // zyk: Force Tank Force Attraction
+			{ // zyk: Force Guardian Force Attraction
 				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 4))
 				{
 					int i = 0;

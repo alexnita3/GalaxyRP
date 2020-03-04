@@ -5529,16 +5529,16 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			damage = (int)ceil(damage * (1.0 - (0.07 * targ->client->pers.skill_levels[55])));
 		}
 		else if (targ->client->pers.rpg_class == 9)
-		{ // zyk: Force Tank damage resistance
+		{ // zyk: Force Guardian damage resistance
 			float force_tank_bonus_resistance = 0.0;
 
 			if (targ->client->pers.secrets_found & (1 << 19))
-			{ // zyk: Force Tank Upgrade increases damage resistance
+			{ // zyk: Force Guardian Upgrade increases damage resistance
 				force_tank_bonus_resistance += 0.1;
 			}
 
 			if (targ->client->ps.powerups[PW_NEUTRALFLAG] > level.time)
-			{ // zyk: Force Tank Unique Skill increases damage resistance
+			{ // zyk: Force Guardian Unique Skill increases damage resistance
 				force_tank_bonus_resistance += 0.15;
 			}
 
@@ -5751,7 +5751,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		knockback = 0;
 	}
 
-	// zyk: if player is in RPG Mode, reduce knockback based on the Impact Reducer item of the player and on Force Tank Upgrade for Force Tank class
+	// zyk: if player is in RPG Mode, reduce knockback based on the Impact Reducer item of the player and on Force Guardian Upgrade for Force Guardian class
 	if (targ && targ->client && targ->client->sess.amrpgmode == 2)
 	{
 		int new_knockback = knockback;

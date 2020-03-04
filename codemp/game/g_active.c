@@ -3858,7 +3858,7 @@ void ClientThink_real( gentity_t *ent ) {
 							}
 						}
 						else if (ent->client->pers.rpg_class == 9)
-						{ // zyk: Force Tank
+						{ // zyk: Force Guardian
 							if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer/4))
 							{
 								ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/4);

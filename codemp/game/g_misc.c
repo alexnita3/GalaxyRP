@@ -1969,7 +1969,7 @@ void ammo_generic_power_converter_use( gentity_t *self, gentity_t *other, gentit
 
 				if (activator->client->sess.amrpgmode == 2 && activator->client->pers.rpg_class == 9 && 
 					(i == AMMO_THERMAL || i == AMMO_TRIPMINE || i == AMMO_DETPACK))
-				{ // zyk: Force Tank cannot get explosive weapons
+				{ // zyk: Force Guardian cannot get explosive weapons
 					i++;
 					continue;
 				}

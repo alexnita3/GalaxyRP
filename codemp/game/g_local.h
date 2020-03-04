@@ -769,7 +769,7 @@ typedef struct clientPersistant_s {
 	// 6 - Duelist
 	// 7 - Force Gunner
 	// 8 - Magic Master
-	// 9 - Force Tank
+	// 9 - Force Guardian
 	int rpg_class;
 
 	// zyk: this is the cooldown timer of the Unique Skill used by some RPG classes
@@ -833,7 +833,7 @@ typedef struct clientPersistant_s {
 	// 16 - Armored Soldier Upgrade
 	// 17 - Jetpack Upgrade
 	// 18 - Unused
-	// 19 - Force Tank Upgrade
+	// 19 - Force Guardian Upgrade
 	int secrets_found;
 
 	// zyk: amount of sentries the Bounty Hunter starts with

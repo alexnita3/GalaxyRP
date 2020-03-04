@@ -1781,7 +1781,7 @@ static void CG_ZykMod( void )
 				else
 					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), va("%s",value));
 			}
-			else if (Q_stricmp(rpg_class, "Force Tank") == 0)
+			else if (Q_stricmp(rpg_class, "Force Guardian") == 0)
 			{
 				if (skill_number == 4 || skill_number == 10 || (skill_number > 11 && skill_number < 15) || skill_number == 16 || 
 					skill_number == 18 || (skill_number > 19 && skill_number < 30) || (skill_number > 33 && skill_number < 39) || 
@@ -1883,9 +1883,9 @@ static void CG_ZykMod( void )
 				trap->Cvar_Set("ui_zyk_upgrade_12_value","Jetpack Upgrade - no");
 
 			if (secrets_found & (1 << 19))
-				trap->Cvar_Set("ui_zyk_upgrade_13_value","Force Tank Upgrade - yes");
+				trap->Cvar_Set("ui_zyk_upgrade_13_value","Force Guardian Upgrade - yes");
 			else
-				trap->Cvar_Set("ui_zyk_upgrade_13_value","Force Tank Upgrade - no");
+				trap->Cvar_Set("ui_zyk_upgrade_13_value","Force Guardian Upgrade - no");
 		}
 		else if (j == 81)
 		{
@@ -1914,7 +1914,7 @@ static void CG_ZykMod( void )
 				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
 			else if (Q_stricmp(rpg_class, "Force Gunner") == 0 && light_quest_progress & (1 << 8))
 				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
-			else if (Q_stricmp(rpg_class, "Force Tank") == 0 && light_quest_progress & (1 << 12))
+			else if (Q_stricmp(rpg_class, "Force Guardian") == 0 && light_quest_progress & (1 << 12))
 				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
 			else if (Q_stricmp(rpg_class, "Magic Master") == 0)
 				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");

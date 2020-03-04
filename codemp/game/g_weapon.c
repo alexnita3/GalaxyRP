@@ -3708,7 +3708,7 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 							}
 
 							if (traceEnt->client->sess.amrpgmode == 2 && traceEnt->client->pers.rpg_class == 9)
-							{ // zyk: Force Tank cannot be knocked down
+							{ // zyk: Force Guardian cannot be knocked down
 								break;
 							}
 
@@ -4308,7 +4308,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 									}
 
 									if (traceEnt->client->sess.amrpgmode == 2 && traceEnt->client->pers.rpg_class == 9)
-									{ // zyk Force Tank cannot be knocked down
+									{ // zyk Force Guardian cannot be knocked down
 										break;
 									}
 
