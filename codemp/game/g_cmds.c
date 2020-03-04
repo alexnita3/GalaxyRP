@@ -452,6 +452,86 @@ void zyk_add_guns( gentity_t *ent )
 	ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
 }
 
+// zyk: tests which skills are allowed for each class
+qboolean zyk_skill_allowed_for_class(int skill_index, int rpg_class)
+{
+	int i = 0;
+
+	int classes_allowed_for_skills[NUMBER_OF_SKILLS][11] = { // zyk: each index is a skill, and contains an array of allowed RPG classes
+		{0, 1, 4, 6, 7, 9, -1}, // Jump
+		{0, 1, 4, 6, 7, 9, -1}, // Push
+		{0, 1, 4, 6, 7, 9, -1}, // Pull
+		{0, 1, 6, -1}, // Speed
+		{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1}, // Sense
+		{0, 1, 6, 9, -1}, // Saber Attack
+		{0, 1, 6, 9, -1}, // Saber Defense
+		{0, 1, 6, 9, -1}, // Saber Throw
+		{0, 1, 6, 7, 9, -1}, // Absorb
+		{0, 1, 4, 6, 7, -1}, // Heal
+		{0, 1, 6, 9, -1}, // Protect
+		{0, 1, 4, -1}, // Mind Trick
+		{0, 1, 4, 7, -1}, // Team Heal
+		{0, 1, 6, 7, -1}, // Lightning
+		{0, 1, 4, 6, 9, -1}, // Grip
+		{0, 1, 4, 6, 7, -1}, // Drain
+		{0, 1, 9, -1}, // Rage
+		{0, 1, 4, 7, -1}, // Team Energize
+		{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1}, // Stun Baton
+		{0, 2, 3, -1}, // Blaster Pistol
+		{0, 2, 3, 7, 9, -1}, // E11 Blaster Rifle
+		{0, 2, 3, 5, 7, -1}, // Disruptor
+		{0, 2, 3, -1}, // Bowcaster
+		{0, 2, 3, 5, 7, -1}, // Repeater
+		{0, 2, 3, 5, -1}, // DEMP2
+		{0, 2, 3, -1}, // Flechette
+		{0, 2, 3, 7, -1}, // Rocket Launcher
+		{0, 2, 3, 5, -1}, // Concussion Rifle
+		{0, 2, 3, -1}, // Bryar Pistol
+		{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1}, // Melee
+		{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1}, // Max Shield
+		{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1}, // Shield Strength
+		{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1}, // Health Strength
+		{0, 1, 4, 6, 7, -1}, // Drain Shield
+		{0, 2, 3, 5, 7, 8, -1}, // Jetpack
+		{0, 1, 4, 6, 7, 8, -1}, // Sense Health
+		{0, 1, 4, 6, 7, -1}, // Shield Heal
+		{0, 1, 4, 7, -1}, // Team Shield Heal
+		{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1}, // Unique Skill
+		{0, 2, 3, 7, 9, -1}, // Blaster Pack
+		{0, 2, 3, 5, 7, -1}, // Powercell
+		{0, 2, 3, 5, 7, -1}, // Metal Bolts
+		{0, 2, 3, 7, -1}, // Rockets
+		{0, 2, 3, 7, -1}, // Thermals
+		{0, 2, 3, 5, -1}, // Trip Mines
+		{0, 2, 3, 5, -1}, // Detpacks
+		{0, 2, 3, 5, 7, -1}, // Binoculars
+		{0, 2, 3, 8, -1}, // Bacta Canister
+		{0, 2, 7, -1}, // Sentry Gun
+		{0, 2, 3, 5, 7, -1}, // Seeker Drone
+		{0, 2, 3, -1}, // E-Web
+		{0, 2, 7, 9, -1}, // Big Bacta
+		{0, 2, -1}, // Force Field
+		{0, 2, 5, -1}, // Cloak Item
+		{0, 1, 4, 6, 7, 9, -1}, // Force Power
+		{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, -1} // Improvements
+	};
+
+	for (i = 0; i < 10; i++)
+	{
+		if (classes_allowed_for_skills[skill_index][i] == -1)
+		{ // zyk: end of classes array, stops the loop
+			break;
+		}
+
+		if (classes_allowed_for_skills[skill_index][i] == rpg_class)
+		{ // zyk: skill is allowed for this class
+			return qtrue;
+		}
+	}
+
+	return qfalse;
+}
+
 void Cmd_Give_f( gentity_t *ent )
 {
 	char arg1[MAX_TOKEN_CHARS] = {0};
@@ -9092,6 +9172,42 @@ void Cmd_DownSkill_f( gentity_t *ent ) {
 	do_downgrade_skill(ent, downgrade_value);
 }
 
+// zyk: returns the special jka color chars for RPG skills
+char *zyk_allowed_skill_color(int skill_index, int rpg_class)
+{
+	if (zyk_skill_allowed_for_class(skill_index, rpg_class) == qtrue)
+	{
+		if ((skill_index >= 0 && skill_index <= 4) || skill_index == 38)
+		{
+			return "^7";
+		}
+		else if ((skill_index >= 8 && skill_index <= 12) || skill_index == 54)
+		{
+			return "^5";
+		}
+		else if ((skill_index >= 13 && skill_index <= 17) || skill_index == 32)
+		{
+			return "^1";
+		}
+		else if (skill_index == 30 || skill_index == 31)
+		{
+			return "^2";
+		}
+		else if (skill_index >= 35 && skill_index <= 37)
+		{
+			return "^6";
+		}
+		else
+		{
+			return "^3";
+		}
+	}
+	else
+	{
+		return "^0";
+	}
+}
+
 void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 {
 	char message[1024];
@@ -9110,204 +9226,105 @@ void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 
 	if (Q_stricmp( arg1, "force" ) == 0)
 	{
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 8)
-			strcpy(message_content[0], va("^0 1 - Jump: %d/%d          ",ent->client->pers.skill_levels[0], max_skill_levels[0]));
-		else
-			strcpy(message_content[0], va("^7 1 - Jump: %d/%d          ",ent->client->pers.skill_levels[0], max_skill_levels[0]));
+		strcpy(message_content[0], va("%s 1 - Jump: %d/%d          ", zyk_allowed_skill_color(0, ent->client->pers.rpg_class),ent->client->pers.skill_levels[0], max_skill_levels[0]));
 				
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 8)
-			strcpy(message_content[1], va("^0 2 - Push: %d/%d          ",ent->client->pers.skill_levels[1], max_skill_levels[1]));
-		else
-			strcpy(message_content[1], va("^7 2 - Push: %d/%d          ",ent->client->pers.skill_levels[1], max_skill_levels[1]));
+		strcpy(message_content[1], va("%s 2 - Push: %d/%d          ", zyk_allowed_skill_color(1, ent->client->pers.rpg_class),ent->client->pers.skill_levels[1], max_skill_levels[1]));
 				
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 8)
-			strcpy(message_content[2], va("^0 3 - Pull: %d/%d          ",ent->client->pers.skill_levels[2], max_skill_levels[2]));
-		else
-			strcpy(message_content[2], va("^7 3 - Pull: %d/%d          ",ent->client->pers.skill_levels[2], max_skill_levels[2]));
+		strcpy(message_content[2], va("%s 3 - Pull: %d/%d          ", zyk_allowed_skill_color(2, ent->client->pers.rpg_class),ent->client->pers.skill_levels[2], max_skill_levels[2]));
 				
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[3], va("^0 4 - Speed: %d/%d         ",ent->client->pers.skill_levels[3], max_skill_levels[3]));
-		else
-			strcpy(message_content[3], va("^7 4 - Speed: %d/%d         ",ent->client->pers.skill_levels[3], max_skill_levels[3]));
+		strcpy(message_content[3], va("%s 4 - Speed: %d/%d         ", zyk_allowed_skill_color(3, ent->client->pers.rpg_class),ent->client->pers.skill_levels[3], max_skill_levels[3]));
 				
-		strcpy(message_content[4], va("^7 5 - Sense: %d/%d         ",ent->client->pers.skill_levels[4], max_skill_levels[4]));
+		strcpy(message_content[4], va("%s 5 - Sense: %d/%d         ", zyk_allowed_skill_color(4, ent->client->pers.rpg_class),ent->client->pers.skill_levels[4], max_skill_levels[4]));
 				
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8)
-			strcpy(message_content[5], va("^0 6 - Saber Attack: %d/%d  ",ent->client->pers.skill_levels[5], max_skill_levels[5]));
-		else
-			strcpy(message_content[5], va("^3 6 - Saber Attack: %d/%d  ",ent->client->pers.skill_levels[5], max_skill_levels[5]));
+		strcpy(message_content[5], va("%s 6 - Saber Attack: %d/%d  ", zyk_allowed_skill_color(5, ent->client->pers.rpg_class),ent->client->pers.skill_levels[5], max_skill_levels[5]));
 				
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8)
-			strcpy(message_content[6], va("^0 7 - Saber Defense: %d/%d ",ent->client->pers.skill_levels[6], max_skill_levels[6]));
-		else
-			strcpy(message_content[6], va("^3 7 - Saber Defense: %d/%d ",ent->client->pers.skill_levels[6], max_skill_levels[6]));
+		strcpy(message_content[6], va("%s 7 - Saber Defense: %d/%d ", zyk_allowed_skill_color(6, ent->client->pers.rpg_class),ent->client->pers.skill_levels[6], max_skill_levels[6]));
 				
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8)
-			strcpy(message_content[7], va("^0 8 - Saber Throw: %d/%d   ",ent->client->pers.skill_levels[7], max_skill_levels[7]));
-		else
-			strcpy(message_content[7], va("^3 8 - Saber Throw: %d/%d   ",ent->client->pers.skill_levels[7], max_skill_levels[7]));
+		strcpy(message_content[7], va("%s 8 - Saber Throw: %d/%d   ", zyk_allowed_skill_color(7, ent->client->pers.rpg_class),ent->client->pers.skill_levels[7], max_skill_levels[7]));
 				
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 8)
-			strcpy(message_content[8], va("^0 9 - Absorb: %d/%d        ",ent->client->pers.skill_levels[8], max_skill_levels[8]));
-		else
-			strcpy(message_content[8], va("^5 9 - Absorb: %d/%d        ",ent->client->pers.skill_levels[8], max_skill_levels[8]));
+		strcpy(message_content[8], va("%s 9 - Absorb: %d/%d        ", zyk_allowed_skill_color(8, ent->client->pers.rpg_class),ent->client->pers.skill_levels[8], max_skill_levels[8]));
 
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[0], va("%s^010 - Heal: %d/%d\n",message_content[0],ent->client->pers.skill_levels[9], max_skill_levels[9]));
-		else
-			strcpy(message_content[0], va("%s^510 - Heal: %d/%d\n",message_content[0],ent->client->pers.skill_levels[9], max_skill_levels[9]));
+		strcpy(message_content[0], va("%s%s10 - Heal: %d/%d\n",message_content[0], zyk_allowed_skill_color(9, ent->client->pers.rpg_class),ent->client->pers.skill_levels[9], max_skill_levels[9]));
 
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8)
-			strcpy(message_content[1], va("%s^011 - Protect: %d/%d\n",message_content[1],ent->client->pers.skill_levels[10], max_skill_levels[10]));
-		else
-			strcpy(message_content[1], va("%s^511 - Protect: %d/%d\n",message_content[1],ent->client->pers.skill_levels[10], max_skill_levels[10]));
+		strcpy(message_content[1], va("%s%s11 - Protect: %d/%d\n",message_content[1], zyk_allowed_skill_color(10, ent->client->pers.rpg_class),ent->client->pers.skill_levels[10], max_skill_levels[10]));
 				
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[2], va("%s^012 - Mind Trick: %d/%d\n",message_content[2],ent->client->pers.skill_levels[11], max_skill_levels[11]));
-		else
-			strcpy(message_content[2], va("%s^512 - Mind Trick: %d/%d\n",message_content[2],ent->client->pers.skill_levels[11], max_skill_levels[11]));
+		strcpy(message_content[2], va("%s%s12 - Mind Trick: %d/%d\n",message_content[2], zyk_allowed_skill_color(11, ent->client->pers.rpg_class),ent->client->pers.skill_levels[11], max_skill_levels[11]));
 				
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[3], va("%s^013 - Team Heal: %d/%d\n",message_content[3],ent->client->pers.skill_levels[12], max_skill_levels[12]));
-		else
-			strcpy(message_content[3], va("%s^513 - Team Heal: %d/%d\n",message_content[3],ent->client->pers.skill_levels[12], max_skill_levels[12]));
+		strcpy(message_content[3], va("%s%s13 - Team Heal: %d/%d\n",message_content[3], zyk_allowed_skill_color(12, ent->client->pers.rpg_class),ent->client->pers.skill_levels[12], max_skill_levels[12]));
 				
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[4], va("%s^014 - Lightning: %d/%d\n",message_content[4],ent->client->pers.skill_levels[13], max_skill_levels[13]));
-		else
-			strcpy(message_content[4], va("%s^114 - Lightning: %d/%d\n",message_content[4],ent->client->pers.skill_levels[13], max_skill_levels[13]));
+		strcpy(message_content[4], va("%s%s14 - Lightning: %d/%d\n",message_content[4], zyk_allowed_skill_color(13, ent->client->pers.rpg_class),ent->client->pers.skill_levels[13], max_skill_levels[13]));
 				
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8)
-			strcpy(message_content[5], va("%s^015 - Grip: %d/%d\n",message_content[5],ent->client->pers.skill_levels[14], max_skill_levels[14]));
-		else
-			strcpy(message_content[5], va("%s^115 - Grip: %d/%d\n",message_content[5],ent->client->pers.skill_levels[14], max_skill_levels[14]));
+		strcpy(message_content[5], va("%s%s15 - Grip: %d/%d\n",message_content[5], zyk_allowed_skill_color(14, ent->client->pers.rpg_class),ent->client->pers.skill_levels[14], max_skill_levels[14]));
 
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[6], va("%s^016 - Drain: %d/%d\n",message_content[6],ent->client->pers.skill_levels[15], max_skill_levels[15]));
-		else
-			strcpy(message_content[6], va("%s^116 - Drain: %d/%d\n",message_content[6],ent->client->pers.skill_levels[15], max_skill_levels[15]));
+		strcpy(message_content[6], va("%s%s16 - Drain: %d/%d\n",message_content[6], zyk_allowed_skill_color(15, ent->client->pers.rpg_class),ent->client->pers.skill_levels[15], max_skill_levels[15]));
 
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8)
-			strcpy(message_content[7], va("%s^017 - Rage: %d/%d\n",message_content[7],ent->client->pers.skill_levels[16], max_skill_levels[16]));
-		else
-			strcpy(message_content[7], va("%s^117 - Rage: %d/%d\n",message_content[7],ent->client->pers.skill_levels[16], max_skill_levels[16]));
+		strcpy(message_content[7], va("%s%s17 - Rage: %d/%d\n",message_content[7], zyk_allowed_skill_color(16, ent->client->pers.rpg_class),ent->client->pers.skill_levels[16], max_skill_levels[16]));
 
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[8], va("%s^018 - Team Energize: %d/%d\n",message_content[8],ent->client->pers.skill_levels[17], max_skill_levels[17]));
-		else
-			strcpy(message_content[8], va("%s^118 - Team Energize: %d/%d\n",message_content[8],ent->client->pers.skill_levels[17], max_skill_levels[17]));
+		strcpy(message_content[8], va("%s%s18 - Team Energize: %d/%d\n",message_content[8], zyk_allowed_skill_color(17, ent->client->pers.rpg_class),ent->client->pers.skill_levels[17], max_skill_levels[17]));
 
 		for (i = 0; i < 9; i++)
 		{
 			strcpy(message, va("%s%s",message,message_content[i]));
 		}
 
-		trap->SendServerCommand( target_ent-g_entities, va("print \"%s\"", message) );
+		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
 	}
 	else if (Q_stricmp( arg1, "weapons" ) == 0)
 	{
-		strcpy(message_content[0], va("^319 - Stun Baton: %d/%d        ",ent->client->pers.skill_levels[18], max_skill_levels[18]));
+		strcpy(message_content[0], va("%s19 - Stun Baton: %d/%d        ", zyk_allowed_skill_color(18, ent->client->pers.rpg_class),ent->client->pers.skill_levels[18], max_skill_levels[18]));
 					
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[1], va("^020 - Blaster Pistol: %d/%d    ",ent->client->pers.skill_levels[19], max_skill_levels[19]));
-		else
-			strcpy(message_content[1], va("^320 - Blaster Pistol: %d/%d    ",ent->client->pers.skill_levels[19], max_skill_levels[19]));
+		strcpy(message_content[1], va("%s20 - Blaster Pistol: %d/%d    ", zyk_allowed_skill_color(19, ent->client->pers.rpg_class),ent->client->pers.skill_levels[19], max_skill_levels[19]));
 							
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8)
-			strcpy(message_content[2], va("^021 - E11 Blaster Rifle: %d/%d ",ent->client->pers.skill_levels[20], max_skill_levels[20]));
-		else
-			strcpy(message_content[2], va("^321 - E11 Blaster Rifle: %d/%d ",ent->client->pers.skill_levels[20], max_skill_levels[20]));
+		strcpy(message_content[2], va("%s21 - E11 Blaster Rifle: %d/%d ", zyk_allowed_skill_color(20, ent->client->pers.rpg_class),ent->client->pers.skill_levels[20], max_skill_levels[20]));
 							
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[3], va("^022 - Disruptor: %d/%d         ",ent->client->pers.skill_levels[21], max_skill_levels[21]));
-		else
-			strcpy(message_content[3], va("^322 - Disruptor: %d/%d         ",ent->client->pers.skill_levels[21], max_skill_levels[21]));
+		strcpy(message_content[3], va("%s22 - Disruptor: %d/%d         ", zyk_allowed_skill_color(21, ent->client->pers.rpg_class),ent->client->pers.skill_levels[21], max_skill_levels[21]));
 					
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[4], va("^023 - Bowcaster: %d/%d         ",ent->client->pers.skill_levels[22], max_skill_levels[22]));
-		else
-			strcpy(message_content[4], va("^323 - Bowcaster: %d/%d         ",ent->client->pers.skill_levels[22], max_skill_levels[22]));
+		strcpy(message_content[4], va("%s23 - Bowcaster: %d/%d         ", zyk_allowed_skill_color(22, ent->client->pers.rpg_class),ent->client->pers.skill_levels[22], max_skill_levels[22]));
 					
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[5], va("^024 - Repeater: %d/%d          ",ent->client->pers.skill_levels[23], max_skill_levels[23]));
-		else
-			strcpy(message_content[5], va("^324 - Repeater: %d/%d          ",ent->client->pers.skill_levels[23], max_skill_levels[23]));
+		strcpy(message_content[5], va("%s24 - Repeater: %d/%d          ", zyk_allowed_skill_color(23, ent->client->pers.rpg_class),ent->client->pers.skill_levels[23], max_skill_levels[23]));
 					
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[0], va("%s^025 - DEMP2: %d/%d\n",message_content[0],ent->client->pers.skill_levels[24], max_skill_levels[24]));
-		else
-			strcpy(message_content[0], va("%s^325 - DEMP2: %d/%d\n",message_content[0],ent->client->pers.skill_levels[24], max_skill_levels[24]));
+		strcpy(message_content[0], va("%s%s25 - DEMP2: %d/%d\n",message_content[0], zyk_allowed_skill_color(24, ent->client->pers.rpg_class),ent->client->pers.skill_levels[24], max_skill_levels[24]));
 					
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[1], va("%s^026 - Flechette: %d/%d\n",message_content[1],ent->client->pers.skill_levels[25], max_skill_levels[25]));
-		else
-			strcpy(message_content[1], va("%s^326 - Flechette: %d/%d\n",message_content[1],ent->client->pers.skill_levels[25], max_skill_levels[25]));
+		strcpy(message_content[1], va("%s%s26 - Flechette: %d/%d\n",message_content[1], zyk_allowed_skill_color(25, ent->client->pers.rpg_class),ent->client->pers.skill_levels[25], max_skill_levels[25]));
 					
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[2], va("%s^027 - Rocket Launcher: %d/%d\n",message_content[2],ent->client->pers.skill_levels[26], max_skill_levels[26]));
-		else
-			strcpy(message_content[2], va("%s^327 - Rocket Launcher: %d/%d\n",message_content[2],ent->client->pers.skill_levels[26], max_skill_levels[26]));
+		strcpy(message_content[2], va("%s%s27 - Rocket Launcher: %d/%d\n",message_content[2], zyk_allowed_skill_color(26, ent->client->pers.rpg_class),ent->client->pers.skill_levels[26], max_skill_levels[26]));
 					
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[3], va("%s^028 - Concussion Rifle: %d/%d\n",message_content[3],ent->client->pers.skill_levels[27], max_skill_levels[27]));
-		else
-			strcpy(message_content[3], va("%s^328 - Concussion Rifle: %d/%d\n",message_content[3],ent->client->pers.skill_levels[27], max_skill_levels[27]));
+		strcpy(message_content[3], va("%s%s28 - Concussion Rifle: %d/%d\n",message_content[3], zyk_allowed_skill_color(27, ent->client->pers.rpg_class),ent->client->pers.skill_levels[27], max_skill_levels[27]));
 					
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[4], va("%s^029 - Bryar Pistol: %d/%d\n",message_content[4],ent->client->pers.skill_levels[28], max_skill_levels[28]));
-		else
-			strcpy(message_content[4], va("%s^329 - Bryar Pistol: %d/%d\n",message_content[4],ent->client->pers.skill_levels[28], max_skill_levels[28]));
+		strcpy(message_content[4], va("%s%s29 - Bryar Pistol: %d/%d\n",message_content[4], zyk_allowed_skill_color(28, ent->client->pers.rpg_class),ent->client->pers.skill_levels[28], max_skill_levels[28]));
 
-		strcpy(message_content[5], va("%s^330 - Melee: %d/%d\n",message_content[5],ent->client->pers.skill_levels[29], max_skill_levels[29]));
+		strcpy(message_content[5], va("%s%s30 - Melee: %d/%d\n",message_content[5], zyk_allowed_skill_color(29, ent->client->pers.rpg_class),ent->client->pers.skill_levels[29], max_skill_levels[29]));
 
 		for (i = 0; i < 6; i++)
 		{
 			strcpy(message, va("%s%s",message,message_content[i]));
 		}
 
-		trap->SendServerCommand( target_ent-g_entities, va("print \"%s\"", message) );
+		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
 	}
 	else if (Q_stricmp( arg1, "other" ) == 0)
 	{
-		strcpy(message_content[0], va("^231 - Max Shield: %d/%d       ", ent->client->pers.skill_levels[30], max_skill_levels[30]));
+		strcpy(message_content[0], va("%s31 - Max Shield: %d/%d       ", zyk_allowed_skill_color(30, ent->client->pers.rpg_class), ent->client->pers.skill_levels[30], max_skill_levels[30]));
 
-		strcpy(message_content[1], va("^232 - Shield Strength: %d/%d  ", ent->client->pers.skill_levels[31], max_skill_levels[31]));
+		strcpy(message_content[1], va("%s32 - Shield Strength: %d/%d  ", zyk_allowed_skill_color(31, ent->client->pers.rpg_class), ent->client->pers.skill_levels[31], max_skill_levels[31]));
 
-		strcpy(message_content[2], va("^133 - Health Strength: %d/%d  ", ent->client->pers.skill_levels[32], max_skill_levels[32]));
+		strcpy(message_content[2], va("%s33 - Health Strength: %d/%d  ", zyk_allowed_skill_color(32, ent->client->pers.rpg_class), ent->client->pers.skill_levels[32], max_skill_levels[32]));
 
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[3], va("^034 - Drain Shield: %d/%d     ", ent->client->pers.skill_levels[33], max_skill_levels[33]));
-		else
-			strcpy(message_content[3], va("^334 - Drain Shield: %d/%d     ", ent->client->pers.skill_levels[33], max_skill_levels[33]));
+		strcpy(message_content[3], va("%s34 - Drain Shield: %d/%d     ", zyk_allowed_skill_color(33, ent->client->pers.rpg_class), ent->client->pers.skill_levels[33], max_skill_levels[33]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[4], va("^035 - Jetpack: %d/%d          ", ent->client->pers.skill_levels[34], max_skill_levels[34]));
-		else
-			strcpy(message_content[4], va("^335 - Jetpack: %d/%d          ", ent->client->pers.skill_levels[34], max_skill_levels[34]));
+		strcpy(message_content[4], va("%s35 - Jetpack: %d/%d          ", zyk_allowed_skill_color(34, ent->client->pers.rpg_class), ent->client->pers.skill_levels[34], max_skill_levels[34]));
 
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[5], va("^036 - Sense Health: %d/%d     ", ent->client->pers.skill_levels[35], max_skill_levels[35]));
-		else
-			strcpy(message_content[5], va("^636 - Sense Health: %d/%d     ", ent->client->pers.skill_levels[35], max_skill_levels[35]));
+		strcpy(message_content[5], va("%s36 - Sense Health: %d/%d     ", zyk_allowed_skill_color(35, ent->client->pers.rpg_class), ent->client->pers.skill_levels[35], max_skill_levels[35]));
 
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[6], va("^037 - Shield Heal: %d/%d      ", ent->client->pers.skill_levels[36], max_skill_levels[36]));
-		else
-			strcpy(message_content[6], va("^637 - Shield Heal: %d/%d      ", ent->client->pers.skill_levels[36], max_skill_levels[36]));
+		strcpy(message_content[6], va("%s37 - Shield Heal: %d/%d      ", zyk_allowed_skill_color(36, ent->client->pers.rpg_class), ent->client->pers.skill_levels[36], max_skill_levels[36]));
 
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message_content[7], va("^038 - Team Shield Heal: %d/%d\n", ent->client->pers.skill_levels[37], max_skill_levels[37]));
-		else
-			strcpy(message_content[7], va("^638 - Team Shield Heal: %d/%d\n", ent->client->pers.skill_levels[37], max_skill_levels[37]));
+		strcpy(message_content[7], va("%s38 - Team Shield Heal: %d/%d\n", zyk_allowed_skill_color(37, ent->client->pers.rpg_class), ent->client->pers.skill_levels[37], max_skill_levels[37]));
 
-		strcpy(message_content[8], va("^739 - Unique Skill: %d/%d\n", ent->client->pers.skill_levels[38], max_skill_levels[38]));
+		strcpy(message_content[8], va("%s39 - Unique Skill: %d/%d\n", zyk_allowed_skill_color(38, ent->client->pers.rpg_class), ent->client->pers.skill_levels[38], max_skill_levels[38]));
 
-		if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 8)
-			strcpy(message_content[9], va("^055 - Force Power: %d/%d\n", ent->client->pers.skill_levels[54], max_skill_levels[54]));
-		else
-			strcpy(message_content[9], va("^555 - Force Power: %d/%d\n", ent->client->pers.skill_levels[54], max_skill_levels[54]));
+		strcpy(message_content[9], va("%s55 - Force Power: %d/%d\n", zyk_allowed_skill_color(54, ent->client->pers.rpg_class), ent->client->pers.skill_levels[54], max_skill_levels[54]));
 
-		strcpy(message_content[10], va("^356 - Improvements: %d/%d\n", ent->client->pers.skill_levels[55], max_skill_levels[55]));
+		strcpy(message_content[10], va("%s56 - Improvements: %d/%d\n", zyk_allowed_skill_color(55, ent->client->pers.rpg_class), ent->client->pers.skill_levels[55], max_skill_levels[55]));
 
 		if (ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS)
 			strcpy(message_content[0], va("%s^3l  ^7- Light Power: ^2yes\n",message_content[0]));
@@ -9376,90 +9393,45 @@ void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 			strcpy(message, va("%s%s",message,message_content[i]));
 		}
 
-		trap->SendServerCommand( target_ent-g_entities, va("print \"%s\n\"", message) );
+		trap->SendServerCommand( target_ent->s.number, va("print \"%s\n\"", message) );
 	}
 	else if (Q_stricmp( arg1, "ammo" ) == 0)
 	{
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8)
-			strcpy(message, va("%s^040 - Blaster Pack: %d/%d\n",message, ent->client->pers.skill_levels[39], max_skill_levels[39]));
-		else
-			strcpy(message, va("%s^340 - Blaster Pack: %d/%d\n",message, ent->client->pers.skill_levels[39], max_skill_levels[39]));
+		strcpy(message, va("%s%s40 - Blaster Pack: %d/%d\n",message, zyk_allowed_skill_color(39, ent->client->pers.rpg_class), ent->client->pers.skill_levels[39], max_skill_levels[39]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^041 - Power Cell: %d/%d\n",message, ent->client->pers.skill_levels[40], max_skill_levels[40]));
-		else
-			strcpy(message, va("%s^341 - Power Cell: %d/%d\n",message, ent->client->pers.skill_levels[40], max_skill_levels[40]));
+		strcpy(message, va("%s%s41 - Power Cell: %d/%d\n",message, zyk_allowed_skill_color(40, ent->client->pers.rpg_class), ent->client->pers.skill_levels[40], max_skill_levels[40]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^042 - Metallic Bolt: %d/%d\n",message, ent->client->pers.skill_levels[41], max_skill_levels[41]));
-		else
-			strcpy(message, va("%s^342 - Metallic Bolt: %d/%d\n",message, ent->client->pers.skill_levels[41], max_skill_levels[41]));
+		strcpy(message, va("%s%s42 - Metallic Bolt: %d/%d\n",message, zyk_allowed_skill_color(41, ent->client->pers.rpg_class), ent->client->pers.skill_levels[41], max_skill_levels[41]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^043 - Rockets: %d/%d\n",message, ent->client->pers.skill_levels[42], max_skill_levels[42]));
-		else
-			strcpy(message, va("%s^343 - Rockets: %d/%d\n",message, ent->client->pers.skill_levels[42], max_skill_levels[42]));
+		strcpy(message, va("%s%s43 - Rockets: %d/%d\n",message, zyk_allowed_skill_color(42, ent->client->pers.rpg_class), ent->client->pers.skill_levels[42], max_skill_levels[42]));
 					
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^044 - Thermals: %d/%d\n",message, ent->client->pers.skill_levels[43], max_skill_levels[43]));
-		else
-			strcpy(message, va("%s^344 - Thermals: %d/%d\n",message, ent->client->pers.skill_levels[43], max_skill_levels[43]));
+		strcpy(message, va("%s%s44 - Thermals: %d/%d\n",message, zyk_allowed_skill_color(43, ent->client->pers.rpg_class), ent->client->pers.skill_levels[43], max_skill_levels[43]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^045 - Trip Mines: %d/%d\n",message, ent->client->pers.skill_levels[44], max_skill_levels[44]));
-		else
-			strcpy(message, va("%s^345 - Trip Mines: %d/%d\n",message, ent->client->pers.skill_levels[44], max_skill_levels[44]));
+		strcpy(message, va("%s%s45 - Trip Mines: %d/%d\n",message, zyk_allowed_skill_color(44, ent->client->pers.rpg_class), ent->client->pers.skill_levels[44], max_skill_levels[44]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^046 - Det Packs: %d/%d\n",message, ent->client->pers.skill_levels[45], max_skill_levels[45]));
-		else
-			strcpy(message, va("%s^346 - Det Packs: %d/%d\n",message, ent->client->pers.skill_levels[45], max_skill_levels[45]));
+		strcpy(message, va("%s%s46 - Det Packs: %d/%d\n",message, zyk_allowed_skill_color(45, ent->client->pers.rpg_class), ent->client->pers.skill_levels[45], max_skill_levels[45]));
 
-		trap->SendServerCommand( target_ent-g_entities, va("print \"%s\"", message) );
+		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
 	}
 	else if (Q_stricmp( arg1, "items" ) == 0)
 	{
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^047 - Binoculars: %d/%d\n",message, ent->client->pers.skill_levels[46], max_skill_levels[46]));
-		else
-			strcpy(message, va("%s^347 - Binoculars: %d/%d\n",message, ent->client->pers.skill_levels[46], max_skill_levels[46]));
+		strcpy(message, va("%s%s47 - Binoculars: %d/%d\n",message, zyk_allowed_skill_color(46, ent->client->pers.rpg_class), ent->client->pers.skill_levels[46], max_skill_levels[46]));
 					
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^048 - Bacta Canister: %d/%d\n",message, ent->client->pers.skill_levels[47], max_skill_levels[47]));
-		else
-			strcpy(message, va("%s^348 - Bacta Canister: %d/%d\n",message, ent->client->pers.skill_levels[47], max_skill_levels[47]));
+		strcpy(message, va("%s%s48 - Bacta Canister: %d/%d\n",message, zyk_allowed_skill_color(47, ent->client->pers.rpg_class), ent->client->pers.skill_levels[47], max_skill_levels[47]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^049 - Sentry Gun: %d/%d\n",message, ent->client->pers.skill_levels[48], max_skill_levels[48]));
-		else
-			strcpy(message, va("%s^349 - Sentry Gun: %d/%d\n",message, ent->client->pers.skill_levels[48], max_skill_levels[48]));
+		strcpy(message, va("%s%s49 - Sentry Gun: %d/%d\n",message, zyk_allowed_skill_color(48, ent->client->pers.rpg_class), ent->client->pers.skill_levels[48], max_skill_levels[48]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^050 - Seeker Drone: %d/%d\n",message, ent->client->pers.skill_levels[49], max_skill_levels[49]));
-		else
-			strcpy(message, va("%s^350 - Seeker Drone: %d/%d\n",message, ent->client->pers.skill_levels[49], max_skill_levels[49]));
+		strcpy(message, va("%s%s50 - Seeker Drone: %d/%d\n",message, zyk_allowed_skill_color(49, ent->client->pers.rpg_class), ent->client->pers.skill_levels[49], max_skill_levels[49]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^051 - E-Web: %d/%d\n",message, ent->client->pers.skill_levels[50], max_skill_levels[50]));
-		else
-			strcpy(message, va("%s^351 - E-Web: %d/%d\n",message, ent->client->pers.skill_levels[50], max_skill_levels[50]));
+		strcpy(message, va("%s%s51 - E-Web: %d/%d\n",message, zyk_allowed_skill_color(50, ent->client->pers.rpg_class), ent->client->pers.skill_levels[50], max_skill_levels[50]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 8)
-			strcpy(message, va("%s^052 - Big Bacta: %d/%d\n",message, ent->client->pers.skill_levels[51], max_skill_levels[51]));
-		else
-			strcpy(message, va("%s^352 - Big Bacta: %d/%d\n",message, ent->client->pers.skill_levels[51], max_skill_levels[51]));
+		strcpy(message, va("%s%s52 - Big Bacta: %d/%d\n",message, zyk_allowed_skill_color(51, ent->client->pers.rpg_class), ent->client->pers.skill_levels[51], max_skill_levels[51]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^053 - Force Field: %d/%d\n",message, ent->client->pers.skill_levels[52], max_skill_levels[52]));
-		else
-			strcpy(message, va("%s^353 - Force Field: %d/%d\n",message, ent->client->pers.skill_levels[52], max_skill_levels[52]));
+		strcpy(message, va("%s%s53 - Force Field: %d/%d\n",message, zyk_allowed_skill_color(52, ent->client->pers.rpg_class), ent->client->pers.skill_levels[52], max_skill_levels[52]));
 
-		if (ent->client->pers.rpg_class == 1 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 4 || ent->client->pers.rpg_class == 6 || ent->client->pers.rpg_class == 7 || ent->client->pers.rpg_class == 8 || ent->client->pers.rpg_class == 9)
-			strcpy(message, va("%s^054 - Cloak Item: %d/%d\n",message, ent->client->pers.skill_levels[53], max_skill_levels[53]));
-		else
-			strcpy(message, va("%s^354 - Cloak Item: %d/%d\n",message, ent->client->pers.skill_levels[53], max_skill_levels[53]));
+		strcpy(message, va("%s%s54 - Cloak Item: %d/%d\n",message, zyk_allowed_skill_color(53, ent->client->pers.rpg_class), ent->client->pers.skill_levels[53], max_skill_levels[53]));
 
-		trap->SendServerCommand( target_ent-g_entities, va("print \"%s\"", message) );
+		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
 	}
 }
 
