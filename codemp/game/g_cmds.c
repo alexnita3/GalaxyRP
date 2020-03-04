@@ -8025,67 +8025,11 @@ qboolean validate_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont
 		return qfalse;
 	}
 
-	// zyk: validation on skills that are allowed to specific RPG classes
-	if (ent->client->pers.rpg_class == 1 && ((upgrade_value >= 20 && upgrade_value <= 29) || upgrade_value == 35 || (upgrade_value >= 40 && upgrade_value <= 54)))
+	// zyk: skill must be allowed to the player RPG class
+	if (zyk_skill_allowed_for_class(upgrade_value - 1, ent->client->pers.rpg_class) == qfalse)
 	{
 		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"Force User class doesn't allow this skill.\n\"" );
-		return qfalse;
-	}
-
-	if (ent->client->pers.rpg_class == 2 && ((upgrade_value >= 1 && upgrade_value <= 4) || (upgrade_value >= 6 && upgrade_value <= 18) || upgrade_value == 34 || (upgrade_value >= 36 && upgrade_value <= 38) || upgrade_value == 55))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"Bounty Hunter class doesn't allow this skill.\n\"" );
-		return qfalse;
-	}
-
-	if (ent->client->pers.rpg_class == 3 && ((upgrade_value >= 1 && upgrade_value <= 4) || (upgrade_value >= 6 && upgrade_value <= 18) || upgrade_value == 34 || (upgrade_value >= 36 && upgrade_value <= 38) || upgrade_value == 49 || (upgrade_value >= 52 && upgrade_value <= 55)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"Armored Soldier class doesn't allow this skill.\n\"" );
-		return qfalse;
-	}
-
-	if (ent->client->pers.rpg_class == 4 && (upgrade_value == 4 || (upgrade_value >= 6 && upgrade_value <= 9) || upgrade_value == 11 || upgrade_value == 14 || upgrade_value == 17 || (upgrade_value >= 20 && upgrade_value <= 29) || upgrade_value == 35 || (upgrade_value >= 40 && upgrade_value <= 54)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"Monk class doesn't allow this skill.\n\"" );
-		return qfalse;
-	}
-
-	if (ent->client->pers.rpg_class == 5 && ((upgrade_value >= 1 && upgrade_value <= 4) || (upgrade_value >= 6 && upgrade_value <= 18) || (upgrade_value >= 20 && upgrade_value <= 21) || upgrade_value == 23 || (upgrade_value >= 26 && upgrade_value <= 27) || upgrade_value == 29 || upgrade_value == 34 || (upgrade_value >= 36 && upgrade_value <= 38) || upgrade_value == 40 || (upgrade_value >= 43 && upgrade_value <= 44) || (upgrade_value >= 48 && upgrade_value <= 49) || (upgrade_value >= 51 && upgrade_value <= 53) || upgrade_value == 55))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"Stealth Attacker class doesn't allow this skill.\n\"" );
-		return qfalse;
-	}
-
-	if (ent->client->pers.rpg_class == 6 && ((upgrade_value >= 12 && upgrade_value <= 13) || (upgrade_value >= 17 && upgrade_value <= 18) || (upgrade_value >= 20 && upgrade_value <= 29) || upgrade_value == 35 || upgrade_value == 38 || (upgrade_value >= 40 && upgrade_value <= 54)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"Duelist class doesn't allow this skill.\n\"" );
-		return qfalse;
-	}
-
-	if (ent->client->pers.rpg_class == 7 && (upgrade_value == 4 || (upgrade_value >= 6 && upgrade_value <= 8) || (upgrade_value >= 11 && upgrade_value <= 12) || upgrade_value == 15 || upgrade_value == 17 || upgrade_value == 20 || upgrade_value == 23 || (upgrade_value >= 25 && upgrade_value <= 26) || (upgrade_value >= 28 && upgrade_value <= 29) || (upgrade_value >= 45 && upgrade_value <= 46) || upgrade_value == 48 || upgrade_value == 51 || (upgrade_value >= 53 && upgrade_value <= 54)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"Force Gunner class doesn't allow this skill.\n\"" );
-		return qfalse;
-	}
-
-	if (ent->client->pers.rpg_class == 8 && ((upgrade_value >= 1 && upgrade_value <= 4) || (upgrade_value >= 6 && upgrade_value <= 18) || (upgrade_value >= 20 && upgrade_value <= 29) || upgrade_value == 34 || (upgrade_value >= 37 && upgrade_value <= 38) || (upgrade_value >= 40 && upgrade_value <= 47) || (upgrade_value >= 49 && upgrade_value <= 55)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"Magic Master class doesn't allow this skill.\n\"" );
-		return qfalse;
-	}
-
-	if (ent->client->pers.rpg_class == 9 && (upgrade_value == 4 || upgrade_value == 10 || (upgrade_value >= 12 && upgrade_value <= 13) || upgrade_value == 14 || upgrade_value == 16 || upgrade_value == 18 || upgrade_value == 20 || (upgrade_value >= 22 && upgrade_value <= 29) || (upgrade_value >= 34 && upgrade_value <= 38) || (upgrade_value >= 41 && upgrade_value <= 51) || (upgrade_value >= 53 && upgrade_value <= 54)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"Force Guardian class doesn't allow this skill.\n\"" );
+			trap->SendServerCommand( ent->s.number, va("print \"%s class doesn't allow this skill.\n\"", zyk_rpg_class(ent)));
 		return qfalse;
 	}
 
