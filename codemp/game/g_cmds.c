@@ -323,6 +323,12 @@ void Cmd_Emote_f( gentity_t *ent )
 		return;
 	}
 
+	if (ent->client->ps.forceHandExtend == HANDEXTEND_KNOCKDOWN)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Cannot use emotes while knocked down\n\"");
+		return;
+	}
+
 	ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 	ent->client->ps.forceDodgeAnim = anim_id;
 	ent->client->ps.forceHandExtendTime = level.time + 1000;
