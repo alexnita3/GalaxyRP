@@ -5943,7 +5943,7 @@ void ice_boulder(gentity_t *ent, int distance, int damage)
 
 		if (zyk_special_power_can_hit_target(ent, player_ent, i, 50, distance, qfalse, &targets_hit) == qtrue)
 		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_ice_boulder", "1", "models/map_objects/hoth/rock_b.md3", 0, 20, 50, 4000);
+			zyk_quest_effect_spawn(ent, player_ent, "zyk_ice_boulder", "1", "models/map_objects/hoth/rock_b.md3", 0, 20, 50, 4500);
 
 			G_Damage(player_ent,ent,ent,NULL,player_ent->client->ps.origin,damage,DAMAGE_NO_PROTECTION,MOD_UNKNOWN);
 		}

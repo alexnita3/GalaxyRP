@@ -9543,9 +9543,9 @@ void zyk_list_stuff(gentity_t *ent, gentity_t *target_ent)
 		strcpy(stuff_message, va("%s^3Jetpack Upgrade - ^1no\n", stuff_message));
 
 	if (ent->client->pers.secrets_found & (1 << 19))
-		strcpy(stuff_message, va("%s^3Force Tank Upgrade - ^2yes\n", stuff_message));
+		strcpy(stuff_message, va("%s^3Force Guardian Upgrade - ^2yes\n", stuff_message));
 	else
-		strcpy(stuff_message, va("%s^3Force Tank Upgrade - ^1no\n", stuff_message));
+		strcpy(stuff_message, va("%s^3Force Guardian Upgrade - ^1no\n", stuff_message));
 
 	trap->SendServerCommand(target_ent - g_entities, va("print \"%s\n\"", stuff_message));
 }
@@ -10082,7 +10082,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					if (i == 38)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Team Shield Heal: ^7recovers 3 shield at level 1, 6 shield at level 2 and 9 shield at level 3 to players near you. To use it, when near players, use Team Heal force power. It will heal their shield after they have full HP\n\"") );
 					if (i == 39)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Unique Skill: ^7Used by pressing Engage Duel key\nFree Warrior: recovers some hp, shield and mp\nForce User: creates a force shield around the player that greatly reduces damage and protects against force powers\nBounty Hunter: allows firing poison darts with melee by spending metal bolts ammo\nArmored Soldier: spends power cell ammo to increase auto-shield-heal rate\nMonk: increases auto-healing rate and disables enemy Grip\nStealth Attacker: spends power cell ammo to increase disruptor firerate\nDuelist: recovers some MP and disables jetpack, cloak, speed and force regen of enemies nearby\nForce Gunner: disarms enemies nearby\nMagic Master: increases magic bolts, Lightning Dome, Magic Explosion and Healing Area damage. Increases Magic Sense duration. Healing Area heals more\nForce Tank: increases resistance to damage for some seconds\n\"") );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Unique Skill: ^7Used by pressing Engage Duel key\nFree Warrior: recovers some hp, shield and mp\nForce User: creates a force shield around the player that greatly reduces damage and protects against force powers\nBounty Hunter: allows firing poison darts with melee by spending metal bolts ammo\nArmored Soldier: spends power cell ammo to increase auto-shield-heal rate\nMonk: increases auto-healing rate and disables enemy Grip\nStealth Attacker: spends power cell ammo to increase disruptor firerate\nDuelist: recovers some MP and disables jetpack, cloak, speed and force regen of enemies nearby\nForce Gunner: disarms enemies nearby\nMagic Master: increases magic bolts, Lightning Dome, Magic Explosion and Healing Area damage. Increases Magic Sense duration. Healing Area heals more\nForce Guardian: increases resistance to damage for some seconds\n\"") );
 					if (i == 40)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Blaster Pack: ^7used as ammo for Blaster Pistol, Bryar Pistol and E11 Blaster Rifle. You can carry up to %d ammo\n\"",zyk_max_blaster_pack_ammo.integer) );
 					if (i == 41)
@@ -10116,7 +10116,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					if (i == 55)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Force Power: ^7increases the max force power you have. Necessary to allow you to use force powers and force-based skills\n\"") );
 					if (i == 56)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Improvements:\n^7Free Warrior gets more damage and more resistance to damage\nForce User gets more saber damage and force regens faster\nBounty Hunter gets more gun damage, max ammo, credits in battle, jetpack fuel, sentry gun health, and E-Web health\nArmored Soldier gets more resistance to damage\nMonk gets more run speed, melee damage and melee attack speed\nStealth Attacker gets more gun damage and more resistance to electric attacks\nDuelist gets more saber and melee damage and faster force regen\nForce Gunner gets more damage and more resistance to damage\nMagic Master gets more Magic Points, new magic bolt types, new magic powers, recovers some jetpack fuel with Magic Points if it runs out and has less magic power cooldown\nForce Tank gets more resistance to damage\n\"") );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Improvements:\n^7Free Warrior gets more damage and more resistance to damage\nForce User gets more saber damage and force regens faster\nBounty Hunter gets more gun damage, max ammo, credits in battle, jetpack fuel, sentry gun health, and E-Web health\nArmored Soldier gets more resistance to damage\nMonk gets more run speed, melee damage and melee attack speed\nStealth Attacker gets more gun damage and more resistance to electric attacks\nDuelist gets more saber and melee damage and faster force regen\nForce Gunner gets more damage and more resistance to damage\nMagic Master gets more Magic Points, new magic bolt types, new magic powers, recovers some jetpack fuel with Magic Points if it runs out and has less magic power cooldown\nForce Guardian gets more resistance to damage\n\"") );
 				}
 				else if (Q_stricmp( arg1, "l" ) == 0)
 				{
@@ -10483,7 +10483,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		}
 		else if (i == 47)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Force Tank Upgrade: ^7increases damage resistance. Saber can no longer be dropped out of hand. Decreases knockback a bit\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^3Force Guardian Upgrade: ^7increases damage resistance. Saber can no longer be dropped out of hand. Decreases knockback a bit\n\n\"");
 		}
 		else if (i == 48)
 		{
