@@ -9999,6 +9999,11 @@ void G_RunFrame( int levelTime ) {
 						ent->client->ps.fd.forcePowerLevel[FP_SEE] = FORCE_LEVEL_3;
 						ent->client->ps.fd.forcePowersActive |= (1 << FP_SEE);
 					}
+
+					if (ent->client->pers.secrets_found & (1 << 1) && ent->client->ps.weapon == WP_BRYAR_PISTOL && ent->client->ps.weaponTime > weaponData[WP_BRYAR_PISTOL].fireTime / 2)
+					{ // zyk: Bounty Hunter Upgrade makes his pistol shoot faster
+						ent->client->ps.weaponTime = weaponData[WP_BRYAR_PISTOL].fireTime / 2;
+					}
 				}
 				else if (ent->client->pers.rpg_class == 4 && 
 						(ent->client->pers.player_statuses & (1 << 22) || ent->client->pers.player_statuses & (1 << 23)) &&
