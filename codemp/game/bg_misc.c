@@ -2083,7 +2083,7 @@ qboolean BG_CanItemBeGrabbed( int gametype, const entityState_t *ent, const play
 	}
 	else if (cg.rpg_class[ps->clientNum] == 9 && ((item->giType == IT_WEAPON && item->giTag != WP_STUN_BATON && item->giTag != WP_BLASTER) ||
 		(item->giType == IT_AMMO && item->giTag != AMMO_BLASTER) ||
-		(item->giType == IT_HOLDABLE && item->giTag != HI_MEDPAC_BIG)))
+		(item->giType == IT_HOLDABLE && item->giTag != HI_MEDPAC_BIG && item->giTag != HI_CLOAK && item->giTag != HI_JETPACK)))
 	{
 		return qfalse;
 	}

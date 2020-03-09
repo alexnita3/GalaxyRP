@@ -10625,31 +10625,31 @@ void Cmd_Buy_f( gentity_t *ent ) {
 	if (ent->client->pers.rpg_class == 1 && ((value >= 1 && value <= 7) || (value >= 10 && value <= 13) || 
 		(value >= 17 && value <= 24) || (value >= 34 && value <= 38) || (value >= 41 && value <= 42) || value == 48))
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Force User can't buy this item.\n\"" );
+		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
 		return;
 	}
 	else if (ent->client->pers.rpg_class == 4 && ((value >= 1 && value <= 7) || (value >= 10 && value <= 13) || 
 			(value >= 17 && value <= 24) || (value >= 34 && value <= 38) || (value >= 41 && value <= 42) || value == 48))
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Monk can't buy this item.\n\"" );
+		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
 		return;
 	}
 	else if (ent->client->pers.rpg_class == 6 && ((value >= 1 && value <= 7) || (value >= 10 && value <= 13) || 
 			(value >= 17 && value <= 24) || (value >= 34 && value <= 38) || (value >= 41 && value <= 42) || value == 48))
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Duelist can't buy this item.\n\"" );
+		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
 		return;
 	}
 	else if (ent->client->pers.rpg_class == 8 && ((value >= 1 && value <= 7) || (value >= 10 && value <= 13) || 
 			(value >= 17 && value <= 24) || (value >= 35 && value <= 38) || value == 48))
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Magic Master can't buy this item.\n\"" );
+		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
 		return;
 	}
 	else if (ent->client->pers.rpg_class == 9 && ((value >= 2 && value <= 7) || (value >= 10 && value <= 11) || value == 13 ||
-		(value >= 18 && value <= 24) || (value >= 34 && value <= 38) || value == 42 || value == 48))
+		(value >= 18 && value <= 24) || (value >= 34 && value <= 38) || value == 48))
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Force Guardian can't buy this item.\n\"");
+		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
 		return;
 	}
 
