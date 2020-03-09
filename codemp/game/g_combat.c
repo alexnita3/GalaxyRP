@@ -6533,6 +6533,15 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 				bonus_resistance = 0.07;
 
 			take = (int)ceil(take * (1.0 - bonus_resistance - (0.07 * targ->client->pers.skill_levels[32])));
+
+			// zyk: Improvements skill makes Force Guardian regen some force with Rage when taking damage
+			if (targ->client->pers.rpg_class == 9 && targ->client->pers.skill_levels[55] > 0)
+			{
+				targ->client->ps.fd.forcePower += (int)ceil((take * 0.1 * targ->client->pers.skill_levels[55]));
+
+				if (targ->client->ps.fd.forcePower > targ->client->ps.fd.forcePowerMax)
+					targ->client->ps.fd.forcePower = targ->client->ps.fd.forcePowerMax;
+			}
 		}
 
 		targ->health = targ->health - take;

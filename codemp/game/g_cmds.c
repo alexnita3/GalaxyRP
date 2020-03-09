@@ -9960,7 +9960,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					if (i == 16)
 						trap->SendServerCommand( ent-g_entities, "print \"^3Drain: ^7drains force power from a player to restore your health\n\"" );
 					if (i == 17)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Rage: ^7makes you 1.3 times faster, increases your saber attack speed and damage and makes you get less damage\n\"" );
+						trap->SendServerCommand( ent-g_entities, "print \"^3Rage: ^7makes you 1.3 times faster, increases your saber attack speed and damage and makes you get less damage. Force Guardian class, with Improvements skill at least on level 1, can regen some force when taking damage on health while Rage is active\n\"" );
 					if (i == 18)
 						trap->SendServerCommand( ent-g_entities, "print \"^3Team Energize: ^7restores some force power to players near you. If Improvements skill is at least at level 1, regens blaster pack and power cell ammo of the target players\n\"" );
 					if (i == 19)
