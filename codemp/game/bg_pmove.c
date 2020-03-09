@@ -10796,12 +10796,12 @@ void PmoveSingle (pmove_t *pmove) {
 
 #if defined( _GAME )
 		if (rpg_class == 4 &&
-			player_ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && player_ent->client->pers.player_statuses & (1 << 21))
+			player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 21))
 		{ // zyk: Monk Meditation Strength ability does not allow stop the meditate anim
 			stop_meditate_anim = qfalse;
 		}
 		else if (rpg_class == 4 &&
-				 player_ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && player_ent->client->pers.player_statuses & (1 << 23))
+				 player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 23))
 		{ // zyk: Monk Meditation Drain ability does not allow stop the meditate anim
 			stop_meditate_anim = qfalse;
 		}
@@ -10956,32 +10956,32 @@ void PmoveSingle (pmove_t *pmove) {
 
 #if defined( _GAME )
 	if (rpg_class == 0 &&
-		player_ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && player_ent->client->pers.player_statuses & (1 << 22))
+		player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 22))
 	{ // zyk: Free Warrior Super Beam ability does not allow him to move
 		stiffenedUp = qtrue;
 	}
 	else if (rpg_class == 1 &&
-		player_ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && player_ent->client->pers.player_statuses & (1 << 21))
+		player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 21))
 	{ // zyk: Force User Force Maelstrom ability does not allow him to move
 		stiffenedUp = qtrue;
 	}
 	else if (rpg_class == 1 &&
-		player_ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && player_ent->client->pers.player_statuses & (1 << 23))
+		player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 23))
 	{ // zyk: Force User Force Storm ability does not allow him to move
 		stiffenedUp = qtrue;
 	}
 	else if (rpg_class == 4 &&
-		player_ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && player_ent->client->pers.player_statuses & (1 << 21))
+		player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 21))
 	{ // zyk: Monk Meditation Strength ability does not allow him to move
 		stiffenedUp = qtrue;
 	}
 	else if (rpg_class == 4 &&
-		player_ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && player_ent->client->pers.player_statuses & (1 << 23))
+		player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 23))
 	{ // zyk: Monk Meditation Drain ability does not allow him to move
 		stiffenedUp = qtrue;
 	}
 	else if (rpg_class == 9 &&
-		player_ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && player_ent->client->pers.player_statuses & (1 << 22))
+		player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 22))
 	{ // zyk: Force Guardian Force Scream ability does not allow him to move
 		stiffenedUp = qtrue;
 	}

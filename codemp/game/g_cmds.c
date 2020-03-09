@@ -15451,6 +15451,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 			ent->client->ps.powerups[PW_SHIELDHIT] = 0;
 
 			ent->client->ps.powerups[PW_NEUTRALFLAG] = 0;
+			ent->client->pers.unique_skill_duration = 0;
 
 			lightning_dome(ent, 45);
 
@@ -15473,6 +15474,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.magic_power -= 25;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 8000;
+					ent->client->pers.unique_skill_duration = level.time + 8000;
 
 					ent->client->pers.player_statuses |= (1 << 21);
 
@@ -15519,6 +15521,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.fd.forcePowerDuration[FP_LIGHTNING] = level.time + 4000;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 4000;
+					ent->client->pers.unique_skill_duration = level.time + 4000;
 
 					ent->client->pers.player_statuses |= (1 << 21);
 
@@ -15568,6 +15571,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					zyk_WP_FireRocket(ent);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+					ent->client->pers.unique_skill_duration = level.time + 500;
 
 					ent->client->pers.player_statuses |= (1 << 21);
 
@@ -15589,6 +15593,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.powerups[PW_SHIELDHIT] = level.time + 8000;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 8000;
+					ent->client->pers.unique_skill_duration = level.time + 8000;
 
 					ent->client->pers.player_statuses |= (1 << 21);
 
@@ -15612,6 +15617,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.forceHandExtendTime = level.time + 5000;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 5000;
+					ent->client->pers.unique_skill_duration = level.time + 5000;
 
 					ent->client->pers.player_statuses |= (1 << 21);
 
@@ -15670,6 +15676,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.forceHandExtendTime = level.time + 1500;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2500;
+					ent->client->pers.unique_skill_duration = level.time + 2500;
 
 					ent->client->ps.weaponTime = 1500;
 
@@ -15709,6 +15716,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.magic_power -= 2;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
+					ent->client->pers.unique_skill_duration = level.time + 15000;
 
 					ent->client->pers.player_statuses |= (1 << 21);
 
@@ -15730,6 +15738,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 10000;
+					ent->client->pers.unique_skill_duration = level.time + 10000;
 
 					ent->client->pers.player_statuses |= (1 << 21);
 
@@ -15788,6 +15797,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.magic_power -= 25;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
+					ent->client->pers.unique_skill_duration = level.time + 2000;
 
 					ent->client->pers.player_statuses |= (1 << 22);
 
@@ -15850,6 +15860,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					}
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+					ent->client->pers.unique_skill_duration = level.time + 500;
 
 					G_Sound(ent, CHAN_BODY, G_SoundIndex("sound/weapons/force/push.wav"));
 					if (ent->client->ps.forceHandExtend == HANDEXTEND_NONE)
@@ -15883,7 +15894,8 @@ void Cmd_Unique_f(gentity_t *ent) {
 				{
 					ent->client->ps.ammo[AMMO_BLASTER] -= 5;
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 20000;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+					ent->client->pers.unique_skill_duration = level.time + 20000;
 
 					ent->client->pers.player_statuses |= (1 << 22);
 
@@ -15933,6 +15945,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.forceHandExtendTime = level.time + 1500;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+					ent->client->pers.unique_skill_duration = level.time + 500;
 
 					ent->client->pers.player_statuses |= (1 << 22);
 
@@ -15977,6 +15990,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.velocity[2] = 350;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2800;
+					ent->client->pers.unique_skill_duration = level.time + 2800;
 
 					ent->client->ps.weaponTime = 1800;
 
@@ -16019,6 +16033,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.magic_power -= 20;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+					ent->client->pers.unique_skill_duration = level.time + 500;
 
 					ent->client->pers.player_statuses |= (1 << 22);
 
@@ -16048,6 +16063,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					force_scream(ent);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 6000;
+					ent->client->pers.unique_skill_duration = level.time + 6000;
 
 					ent->client->pers.player_statuses |= (1 << 22);
 
@@ -16108,6 +16124,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 			// zyk: set timers to finish the unique and clear the effect entity
 			ent->client->ps.powerups[PW_NEUTRALFLAG] = 0;
+			ent->client->pers.unique_skill_duration = 0;
 			level.special_power_effects_timer[effect_ent->s.number] = level.time + 500;
 			return;
 		}
@@ -16132,6 +16149,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.magic_power -= 20;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 42000;
+					ent->client->pers.unique_skill_duration = level.time + 42000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
@@ -16172,6 +16190,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 3000;
+					ent->client->pers.unique_skill_duration = level.time + 3000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
@@ -16201,7 +16220,8 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.ammo[AMMO_POWERCELL] -= 10;
 					ent->client->ps.ammo[AMMO_DETPACK] -= 1;
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+					ent->client->pers.unique_skill_duration = level.time + 15000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
@@ -16224,7 +16244,8 @@ void Cmd_Unique_f(gentity_t *ent) {
 				{
 					ent->client->ps.ammo[AMMO_BLASTER] -= 5;
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 8000;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+					ent->client->pers.unique_skill_duration = level.time + 8000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
@@ -16248,6 +16269,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.forceHandExtendTime = level.time + 3000;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 3000;
+					ent->client->pers.unique_skill_duration = level.time + 3000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
@@ -16302,6 +16324,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.forceHandExtendTime = level.time + 1500;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1500;
+					ent->client->pers.unique_skill_duration = level.time + 1500;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
@@ -16323,6 +16346,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 3800;
+					ent->client->pers.unique_skill_duration = level.time + 3800;
 
 					ent->client->ps.weaponTime = 2800;
 
@@ -16349,6 +16373,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.magic_power -= 10;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+					ent->client->pers.unique_skill_duration = level.time + 500;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
@@ -16372,6 +16397,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.magic_power -= 15;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 8500;
+					ent->client->pers.unique_skill_duration = level.time + 8500;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
@@ -16434,6 +16460,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					}
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+					ent->client->pers.unique_skill_duration = level.time + 500;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 

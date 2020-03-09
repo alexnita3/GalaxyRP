@@ -4344,7 +4344,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 
 		// zyk: Duelist Unique Abilities. Heavily increases saber damage
 		if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 6 && 
-			self->client->ps.powerups[PW_NEUTRALFLAG] > level.time)
+			self->client->pers.unique_skill_duration > level.time)
 		{
 			if (self->client->ps.forceHandExtendTime < level.time) // zyk: resets anim at the end of the unique
 				self->client->ps.weaponTime = 0;

@@ -5479,7 +5479,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			damage = (int)ceil(damage * 0.85);
 		}
 
-		if (targ->client->pers.rpg_class == 1 && targ->client->ps.powerups[PW_NEUTRALFLAG] > level.time) // zyk: Force User damage resistance
+		if (targ->client->pers.rpg_class == 1 && targ->client->pers.unique_skill_duration > level.time) // zyk: Force User damage resistance
 		{ // zyk: Unique Skill of Force User
 			damage = (int)ceil(damage * 0.25);
 		}
@@ -5509,7 +5509,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			// zyk: Free Warrior Mimic Damage ability. Deals half of the damage taken back to the enemy
 			if (attacker && attacker != targ && (!attacker->NPC || 
 				(attacker->client && (attacker->client->NPC_class != CLASS_RANCOR || !(targ->client->ps.eFlags2 & EF2_HELD_BY_MONSTER)))) &&
-				targ->client->ps.powerups[PW_NEUTRALFLAG] > level.time && targ->client->pers.player_statuses & (1 << 21))
+				targ->client->pers.unique_skill_duration > level.time && targ->client->pers.player_statuses & (1 << 21))
 			{
 				G_Damage(attacker, targ, targ, NULL, NULL, (int)ceil(damage * 0.5), 0, MOD_UNKNOWN);
 			}
@@ -5537,7 +5537,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 				force_tank_bonus_resistance += 0.1;
 			}
 
-			if (targ->client->ps.powerups[PW_NEUTRALFLAG] > level.time)
+			if (targ->client->pers.unique_skill_duration > level.time)
 			{ // zyk: Force Guardian Unique Skill increases damage resistance
 				force_tank_bonus_resistance += 0.15;
 			}
@@ -6886,7 +6886,7 @@ qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, floa
 						quest_power_user->client->pers.guardian_mode == ent->client->pers.guardian_mode)
 					{
 						if (quest_power_user->client->sess.amrpgmode == 2 && quest_power_user->client->pers.rpg_class == 8 && 
-							quest_power_user->client->ps.powerups[PW_NEUTRALFLAG] > level.time && 
+							quest_power_user->client->pers.unique_skill_duration > level.time &&
 							!(quest_power_user->client->pers.player_statuses & (1 << 21)) && 
 							!(quest_power_user->client->pers.player_statuses & (1 << 22)))
 						{ // zyk: Magic Master Unique Skill increases amount of health recovered

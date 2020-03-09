@@ -2688,6 +2688,7 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 
 	// zyk: cooldown time between unique skills and unique abilities
 	client->pers.unique_skill_timer = 0;
+	client->pers.unique_skill_duration = 0;
 
 	// zyk: duelist went to spec. Reset him from duels
 	if (level.duel_players[ent->s.number] > -1)

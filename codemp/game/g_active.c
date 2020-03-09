@@ -819,7 +819,7 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 	client = ent->client;
 	client->timeResidual += msec;
 
-	if (client->sess.amrpgmode == 2 && client->ps.powerups[PW_NEUTRALFLAG] < level.time)
+	if (client->sess.amrpgmode == 2 && client->pers.unique_skill_duration < level.time)
 	{ // zyk: Unique Ability run out. Remove the flags
 		if (client->pers.player_statuses & (1 << 21))
 		{
@@ -877,7 +877,7 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 		{
 			if (client->pers.rpg_class == 4 && ent->health > 0)
 			{ // zyk: Monk auto-healing ability
-				if (client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(client->pers.player_statuses & (1 << 22)) && 
+				if (client->pers.unique_skill_duration > level.time && !(client->pers.player_statuses & (1 << 22)) &&
 					!(client->pers.player_statuses & (1 << 23)))
 				{ // zyk: Monk Unique Skill
 					int heal_amount = 4;
@@ -906,7 +906,7 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 			}
 			else if (client->pers.rpg_class == 3 && ent->health > 0)
 			{ // zyk: Armored Soldier auto-shield-healing ability
-				if (client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(client->pers.player_statuses & (1 << 21)) && 
+				if (client->pers.unique_skill_duration > level.time && !(client->pers.player_statuses & (1 << 21)) &&
 					!(client->pers.player_statuses & (1 << 22)) && !(client->pers.player_statuses & (1 << 23)))
 				{ // zyk: Armored Soldier Unique Skill
 					if ((client->ps.stats[STAT_ARMOR] + 4) < client->pers.max_rpg_shield)
@@ -3577,6 +3577,7 @@ void ClientThink_real( gentity_t *ent ) {
 								ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/4);
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 10000;
+								ent->client->pers.unique_skill_duration = level.time + 10000;
 
 								rpg_skill_counter(ent, 200);
 
@@ -3593,7 +3594,8 @@ void ClientThink_real( gentity_t *ent ) {
 							{
 								ent->client->ps.ammo[AMMO_METAL_BOLTS] -= 2;
 
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
+								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+								ent->client->pers.unique_skill_duration = level.time + 15000;
 
 								rpg_skill_counter(ent, 200);
 
@@ -3611,6 +3613,7 @@ void ClientThink_real( gentity_t *ent ) {
 								ent->client->ps.ammo[AMMO_POWERCELL] -= 2;
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
+								ent->client->pers.unique_skill_duration = level.time + 15000;
 
 								rpg_skill_counter(ent, 200);
 
@@ -3644,6 +3647,7 @@ void ClientThink_real( gentity_t *ent ) {
 								}
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
+								ent->client->pers.unique_skill_duration = level.time + 15000;
 
 								rpg_skill_counter(ent, 200);
 
@@ -3660,7 +3664,8 @@ void ClientThink_real( gentity_t *ent ) {
 							{
 								ent->client->ps.ammo[AMMO_POWERCELL] -= 2;
 
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 10000;
+								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+								ent->client->pers.unique_skill_duration = level.time + 10000;
 
 								rpg_skill_counter(ent, 200);
 
@@ -3845,6 +3850,7 @@ void ClientThink_real( gentity_t *ent ) {
 								ent->client->pers.magic_power -= 2;
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
+								ent->client->pers.unique_skill_duration = level.time + 15000;
 
 								send_rpg_events(2000);
 
@@ -3864,6 +3870,7 @@ void ClientThink_real( gentity_t *ent ) {
 								ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/4);
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
+								ent->client->pers.unique_skill_duration = level.time + 15000;
 
 								rpg_skill_counter(ent, 200);
 

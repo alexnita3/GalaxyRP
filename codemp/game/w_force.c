@@ -586,13 +586,13 @@ int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forc
 	}
 
 	if (other && other->client && other->client->sess.amrpgmode == 2 && 
-		other->client->pers.rpg_class == 1 && other->client->ps.powerups[PW_NEUTRALFLAG] > level.time)
+		other->client->pers.rpg_class == 1 && other->client->pers.unique_skill_duration > level.time)
 	{ // zyk: Force User Unique Skill protects against force powers
 		return 0;
 	}
 
 	if (other && other->client && other->client->sess.amrpgmode == 2 &&
-		other->client->pers.rpg_class == 9 && other->client->ps.powerups[PW_NEUTRALFLAG] > level.time && 
+		other->client->pers.rpg_class == 9 && other->client->pers.unique_skill_duration > level.time &&
 		other->client->pers.player_statuses & (1 << 21))
 	{ // zyk: Force Guardian Force Armor protects against force powers
 		return 0;
@@ -6005,7 +6005,7 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 
 	if ( ucmd->buttons & BUTTON_FORCE_LIGHTNING || 
 		(self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 1 && 
-		 self->client->pers.player_statuses & (1 << 21) && self->client->ps.powerups[PW_NEUTRALFLAG] > level.time))
+		 self->client->pers.player_statuses & (1 << 21) && self->client->pers.unique_skill_duration > level.time))
 	{ //lightning
 		WP_DoSpecificPower(self, ucmd, FP_LIGHTNING);
 	}

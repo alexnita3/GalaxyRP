@@ -775,6 +775,9 @@ typedef struct clientPersistant_s {
 	// zyk: this is the cooldown timer of the Unique Skill used by some RPG classes
 	int unique_skill_timer;
 
+	// zyk: used to set the duration that some unique skills or unique abilities are active
+	int unique_skill_duration;
+
 	// zyk: Monk Spin Kick ability interval between hits. Also used by Monk Meditation Drain ability as interval between hits
 	int monk_unique_timer;
 

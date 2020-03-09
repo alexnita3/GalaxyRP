@@ -5017,7 +5017,7 @@ void magic_sense(gentity_t *ent, int duration)
 	}
 
 	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 &&
-		ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
+		ent->client->pers.unique_skill_duration > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
 		!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
 	{ // zyk: Magic Master Unique Skill
 		duration += 1000;
@@ -5072,7 +5072,7 @@ void lightning_dome(gentity_t *ent, int damage)
 	damage = (int)ceil(damage * (0.5 + ((ent->client->pers.level * 1.0) / 200.0)));
 
 	// zyk: Magic Master Unique Skill increases damage
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time &&
+	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && ent->client->pers.unique_skill_duration > level.time &&
 		!(ent->client->pers.player_statuses & (1 << 21)) && !(ent->client->pers.player_statuses & (1 << 22)) && 
 		!(ent->client->pers.player_statuses & (1 << 23)))
 	{
@@ -5359,7 +5359,7 @@ void zyk_ice_bomb_think(gentity_t *ent)
 	ent->nextthink = level.time + 100;
 
 	if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.rpg_class == 2 && 
-		(ent->parent->client->pers.poison_dart_hit_counter == 2 || ent->parent->client->ps.powerups[PW_NEUTRALFLAG] < level.time))
+		(ent->parent->client->pers.poison_dart_hit_counter == 2 || ent->parent->client->pers.unique_skill_duration < level.time))
 	{ // zyk: Bounty Hunter detonated the bomb or unique duration run out. Explodes the bomb
 		ent->parent->client->pers.poison_dart_hit_counter = 3;
 
@@ -6025,7 +6025,7 @@ void magic_explosion(gentity_t *ent, int radius, int damage, int duration)
 		zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_explosion", "4", "explosions/hugeexplosion1", 1500, damage, radius, duration + 1000);
 	}
 
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && 
+	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && ent->client->pers.unique_skill_duration > level.time &&
 		!(ent->client->pers.player_statuses & (1 << 21)) && !(ent->client->pers.player_statuses & (1 << 22)) && 
 		!(ent->client->pers.player_statuses & (1 << 23)))
 	{ // zyk: Magic Master Unique Skill increases damage
@@ -6046,7 +6046,7 @@ void healing_area(gentity_t *ent, int damage, int duration)
 		damage += 1;
 	}
 
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && 
+	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && ent->client->pers.unique_skill_duration > level.time &&
 		!(ent->client->pers.player_statuses & (1 << 21)) && !(ent->client->pers.player_statuses & (1 << 22)))
 	{ // zyk: Magic Master Unique Skill increases damage
 		zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_healing", "4", "env/red_cyc", 0, damage * 2, 228, duration);
@@ -9952,7 +9952,7 @@ void G_RunFrame( int levelTime ) {
 
 				// zyk: Stealth Attacker using his Unique Skill, increase firerate of disruptor
 				if (ent->client->ps.weapon == WP_DISRUPTOR && ent->client->pers.rpg_class == 5 && ent->client->pers.skill_levels[38] > 0 && 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && ent->client->ps.weaponTime > (weaponData[WP_DISRUPTOR].fireTime * 1.0)/3.0)
+					ent->client->pers.unique_skill_duration > level.time && ent->client->ps.weaponTime > (weaponData[WP_DISRUPTOR].fireTime * 1.0)/3.0)
 				{
 					ent->client->ps.weaponTime = (weaponData[WP_DISRUPTOR].fireTime * 1.0)/3.0;
 				}
@@ -9968,7 +9968,7 @@ void G_RunFrame( int levelTime ) {
 				{
 					ent->client->ps.weaponTime = (weaponData[WP_MELEE].fireTime * 1.8)/(ent->client->pers.skill_levels[55] + 1);
 				}
-				else if (ent->client->pers.rpg_class == 8 && ent->client->ps.powerups[PW_NEUTRALFLAG] > level.time && ent->client->pers.player_statuses & (1 << 21) &&
+				else if (ent->client->pers.rpg_class == 8 && ent->client->pers.unique_skill_duration > level.time && ent->client->pers.player_statuses & (1 << 21) &&
 					ent->client->ps.weaponTime > (weaponData[WP_MELEE].fireTime * 0.7))
 				{ // zyk: Magic Master Faster Bolt ability makes melee faster to shoot bolts faster
 					ent->client->ps.weaponTime = weaponData[WP_MELEE].fireTime * 0.7;
