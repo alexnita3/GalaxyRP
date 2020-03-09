@@ -10482,7 +10482,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 2)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 2: ^7used with /unique command. You can only have one Unique Ability at a time. Bounty Hunter gets Wrist Shot, which allows shooting three powerful blaster shots. Spends 5 blaster pack ammo and 5 more per shot\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 2: ^7used with /unique command. You can only have one Unique Ability at a time. Bounty Hunter gets Wrist Shot, which allows shooting up to five powerful blaster shots. Spends 5 blaster pack ammo and 5 more per shot\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 3)
 			{
@@ -15883,7 +15883,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				{
 					ent->client->ps.ammo[AMMO_BLASTER] -= 5;
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 20000;
 
 					ent->client->pers.player_statuses |= (1 << 22);
 
