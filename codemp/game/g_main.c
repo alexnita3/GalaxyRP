@@ -5351,7 +5351,7 @@ void zyk_spawn_ice_bomb_ice(gentity_t *ent, int x_offset, int y_offset)
 	zyk_spawn_entity(new_ent);
 
 	// zyk: ice duration
-	new_ent->wait = level.time + 3500;
+	new_ent->wait = level.time + 4000;
 }
 
 void zyk_ice_bomb_think(gentity_t *ent)
