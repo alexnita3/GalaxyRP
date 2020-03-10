@@ -3595,7 +3595,7 @@ void ClientThink_real( gentity_t *ent ) {
 								ent->client->ps.ammo[AMMO_METAL_BOLTS] -= 2;
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-								ent->client->pers.unique_skill_duration = level.time + 15000;
+								ent->client->pers.unique_skill_duration = level.time + 20000;
 
 								rpg_skill_counter(ent, 200);
 
