@@ -699,7 +699,6 @@ typedef struct clientPersistant_s {
 	int quest_afk_timer;
 
 	// zyk: amount of times player must be hit by poison
-	// zyk: also used by Wrist Shot ability
 	int poison_dart_hit_counter;
 
 	// zyk: player who hit the target with poison dart
@@ -707,6 +706,9 @@ typedef struct clientPersistant_s {
 
 	// zyk: timer of the poison darts
 	int poison_dart_hit_timer;
+
+	// zyk: used by Wrist Shot ability
+	int wrist_shot_counter;
 
 	// zyk: cooldown time to buy or sell
 	int buy_sell_timer;

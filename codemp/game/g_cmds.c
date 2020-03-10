@@ -15769,11 +15769,11 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 		if (ent->client->pers.rpg_class == 2 && ent->client->pers.player_statuses & (1 << 22))
 		{ // zyk: Bounty Hunter Wrist Shot ability
-			if (ent->client->ps.ammo[AMMO_BLASTER] >= 5 && ent->client->pers.poison_dart_hit_counter > 0)
+			if (ent->client->ps.ammo[AMMO_BLASTER] >= 5 && ent->client->pers.wrist_shot_counter > 0)
 			{
 				ent->client->ps.ammo[AMMO_BLASTER] -= 5;
 
-				ent->client->pers.poison_dart_hit_counter--;
+				ent->client->pers.wrist_shot_counter--;
 
 				zyk_WP_FireBryarPistol(ent);
 
@@ -15900,7 +15900,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.player_statuses |= (1 << 22);
 
 					// zyk: can shoot 5 times
-					ent->client->pers.poison_dart_hit_counter = 5;
+					ent->client->pers.wrist_shot_counter = 5;
 
 					rpg_skill_counter(ent, 200);
 
