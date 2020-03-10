@@ -710,6 +710,9 @@ typedef struct clientPersistant_s {
 	// zyk: used by Wrist Shot ability
 	int wrist_shot_counter;
 
+	// zyk: used by Ice Bomb ability
+	int ice_bomb_counter;
+
 	// zyk: cooldown time to buy or sell
 	int buy_sell_timer;
 

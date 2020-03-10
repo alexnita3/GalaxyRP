@@ -5287,7 +5287,7 @@ void zyk_ice_bomb_ice_think(gentity_t *ent)
 	ent->nextthink = level.time + 100;
 
 	if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.rpg_class == 2 && 
-		ent->parent->client->pers.poison_dart_hit_counter == 3)
+		ent->parent->client->pers.ice_bomb_counter == 3)
 	{ // zyk: keeps hitting enemies until time out
 		if (ent->wait < level.time)
 		{
@@ -5359,9 +5359,9 @@ void zyk_ice_bomb_think(gentity_t *ent)
 	ent->nextthink = level.time + 100;
 
 	if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.rpg_class == 2 && 
-		(ent->parent->client->pers.poison_dart_hit_counter == 2 || ent->parent->client->pers.unique_skill_duration < level.time))
+		(ent->parent->client->pers.ice_bomb_counter == 2 || ent->parent->client->pers.unique_skill_duration < level.time))
 	{ // zyk: Bounty Hunter detonated the bomb or unique duration run out. Explodes the bomb
-		ent->parent->client->pers.poison_dart_hit_counter = 3;
+		ent->parent->client->pers.ice_bomb_counter = 3;
 
 		zyk_spawn_ice_bomb_ice(ent, 0, 0);
 		zyk_spawn_ice_bomb_ice(ent, 0, -80);

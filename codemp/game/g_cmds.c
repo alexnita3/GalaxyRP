@@ -16128,9 +16128,9 @@ void Cmd_Unique_f(gentity_t *ent) {
 			level.special_power_effects_timer[effect_ent->s.number] = level.time + 500;
 			return;
 		}
-		else if (ent->client->pers.rpg_class == 2 && ent->client->pers.player_statuses & (1 << 23) && ent->client->pers.poison_dart_hit_counter == 1)
-		{
-			ent->client->pers.poison_dart_hit_counter = 2;
+		else if (ent->client->pers.rpg_class == 2 && ent->client->pers.player_statuses & (1 << 23) && ent->client->pers.ice_bomb_counter == 1)
+		{ // zyk: Ice Bomb detonation
+			ent->client->pers.ice_bomb_counter = 2;
 
 			G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/cloth1.mp3"));
 
@@ -16225,7 +16225,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
-					ent->client->pers.poison_dart_hit_counter = 1;
+					ent->client->pers.ice_bomb_counter = 1;
 
 					zyk_ice_bomb(ent);
 
