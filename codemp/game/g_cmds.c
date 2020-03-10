@@ -16221,7 +16221,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.ammo[AMMO_DETPACK] -= 1;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-					ent->client->pers.unique_skill_duration = level.time + 15000;
+					ent->client->pers.unique_skill_duration = level.time + 20000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
