@@ -11046,12 +11046,28 @@ void Cmd_Buy_f( gentity_t *ent ) {
 	}
 }
 
+// zyk: if an item left the inventory, makes some adjustments on the player
+extern void Jedi_Decloak(gentity_t *self);
+void zyk_adjust_holdable_items(gentity_t *ent)
+{
+	if (!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_BINOCULARS)) && !(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_MEDPAC)) &&
+		!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SENTRY_GUN)) && !(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SEEKER)) &&
+		!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_EWEB)) && !(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_MEDPAC_BIG)) &&
+		!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SHIELD)) && !(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK)))
+	{ // zyk: if player has no items left, deselect the held item
+		ent->client->ps.stats[STAT_HOLDABLE_ITEM] = 0;
+	}
+
+	// zyk: if player no longer has Cloak Item and is cloaked, decloaks
+	if (!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK)) && ent->client->ps.powerups[PW_CLOAKED])
+		Jedi_Decloak(ent);
+}
+
 	/*
 ==================
 Cmd_Sell_f
 ==================
 */
-extern void Jedi_Decloak(gentity_t *self);
 void Cmd_Sell_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int value = 0;
@@ -11265,11 +11281,6 @@ void Cmd_Sell_f( gentity_t *ent ) {
 	else if (value == 42 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK))
 	{
 		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_CLOAK);
-
-		// zyk: if cloaked, removes it
-		if (ent->client->ps.powerups[PW_CLOAKED])
-			Jedi_Decloak(ent);
-
 		sold = 1;
 	}
 	else if (value == 43 && ent->client->ps.powerups[PW_FORCE_BOON])
@@ -11278,13 +11289,7 @@ void Cmd_Sell_f( gentity_t *ent ) {
 		sold = 1;
 	}
 
-	if (!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_BINOCULARS)) && !(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_MEDPAC)) && 
-		!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SENTRY_GUN)) && !(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SEEKER)) && 
-		!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_EWEB)) && !(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_MEDPAC_BIG)) && 
-		!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SHIELD)) && !(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK)))
-	{ // zyk: if player sold an holdable item and has no items left, deselect the held item
-		ent->client->ps.stats[STAT_HOLDABLE_ITEM] = 0;
-	}
+	zyk_adjust_holdable_items(ent);
 			
 	if (sold == 1)
 	{
@@ -13195,6 +13200,8 @@ void Cmd_Drop_f( gentity_t *ent ) {
 			{
 				ent->client->pers.bounty_hunter_sentries--;
 			}
+
+			zyk_adjust_holdable_items(ent);
 		}
 	}
 	else if (weapon != WP_MELEE)
