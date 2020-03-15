@@ -2285,6 +2285,11 @@ static void CG_ZykMod( void )
 		{ // zyk: Universe Quest counter, has the amount of artifacts, amulets and crystals
 			int universe_quest_counter = atoi(value);
 
+			if (universe_quest_counter & (1 << 30) && cg.using_unique_boost == 0)
+			{
+				cg.using_unique_boost = 1;
+			}
+
 			if (universe_quest_progress == 2)
 			{
 				trap->Cvar_Set("ui_zyk_universe_text2",va("is with the sages at ^3yavin1b. ^7Artifacts: ^3%d", universe_quest_counter));

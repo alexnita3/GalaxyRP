@@ -2458,6 +2458,7 @@ Ghoul2 Insert End
 	cg.ultra_resistance_duration = 0;
 	cg.unique_cooldown_timer = 0;
 	cg.unique_duration = 0;
+	cg.using_unique_boost = 0;
 
 	// zyk: initialize the blue jet players
 	for (j = 0; j < MAX_CLIENTS; j++)

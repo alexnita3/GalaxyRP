@@ -5012,14 +5012,26 @@ void CG_DrawUniqueSkillTimer(void)
 	vec4_t cColor;
 	float x = CGUNIQUEBAR_X;
 	float y = CGUNIQUEBAR_Y;
-	float percent = ((float)(cg.unique_cooldown_timer-cg.time)/(float)cg.unique_duration) * CGUNIQUEBAR_H;
+	float percent = 0.0f;
 
 	if (cg.unique_cooldown_timer < cg.time)
-	{
+	{ // zyk: no longer draw Unique bar if unique cooldown time ends
 		cg.unique_cooldown_timer = 0;
 		cg.unique_duration = 0;
+		cg.using_unique_boost = 0;
 		return;
 	}
+
+	if (cg.using_unique_boost == 1)
+	{
+		// zyk: applied the boost. Only becomes 0 again after unique bar run out
+		cg.using_unique_boost = 2;
+
+		cg.unique_cooldown_timer -= ((cg.unique_cooldown_timer - cg.time) / 5);
+		cg.unique_duration -= (cg.unique_duration / 5);
+	}
+
+	percent = ((float)(cg.unique_cooldown_timer - cg.time) / (float)cg.unique_duration) * CGUNIQUEBAR_H;
 
 	//color of the bar
 	aColor[0] = 0.0;

@@ -7910,12 +7910,18 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 		else if (ent->client->pers.universe_quest_progress > 14)
 		{
 			universe_quest_counter_value = ent->client->pers.universe_quest_counter;
+
+			if (ent->client->pers.unique_skill_timer > level.time && ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES &&
+				ent->client->pers.universe_quest_counter & (1 << 2) && !(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
+			{ // zyk: Unique Boost decreases unique cooldown time
+				universe_quest_counter_value |= (1 << 30);
+			}
 		}
 
 		strcpy(content,va("%s%d-%d-%d-%d-%d-%d-%d-",content,ent->client->pers.secrets_found,ent->client->pers.defeated_guardians,ent->client->pers.hunter_quest_progress,
 			ent->client->pers.eternity_quest_progress,ent->client->pers.universe_quest_progress,universe_quest_counter_value,quest_player_id));
 
-		trap->SendServerCommand( ent->s.number, va("zykmod \"%d/%d-%d/%d-%d-%d/%d-%d/%d-%d-%s-%s\"",ent->client->pers.level, zyk_rpg_max_level.integer,ent->client->pers.level_up_score,(ent->client->pers.level * zyk_level_up_score_factor.integer),ent->client->pers.skillpoints,ent->client->pers.skill_counter,zyk_max_skill_counter.integer,ent->client->pers.magic_power,zyk_max_magic_power(ent),ent->client->pers.credits,zyk_rpg_class(ent),content));
+		trap->SendServerCommand(ent->s.number, va("zykmod \"%d/%d-%d/%d-%d-%d/%d-%d/%d-%d-%s-%s\"",ent->client->pers.level, zyk_rpg_max_level.integer,ent->client->pers.level_up_score,(ent->client->pers.level * zyk_level_up_score_factor.integer),ent->client->pers.skillpoints,ent->client->pers.skill_counter,zyk_max_skill_counter.integer,ent->client->pers.magic_power,zyk_max_magic_power(ent),ent->client->pers.credits,zyk_rpg_class(ent),content));
 	}
 	else if (ent->client->sess.amrpgmode == 1)
 	{ // zyk: just sends the player settings
@@ -7937,7 +7943,7 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 				
 		}
 
-		trap->SendServerCommand( ent-g_entities, va("zykmod \"%s\"", content));
+		trap->SendServerCommand(ent->s.number, va("zykmod \"%s\"", content));
 	}
 }
 
@@ -15760,6 +15766,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 			}
 
 			zyk_unique_boost(ent);
+			Cmd_ZykMod_f(ent);
 		}
 		else
 		{
@@ -16085,6 +16092,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 			}
 
 			zyk_unique_boost(ent);
+			Cmd_ZykMod_f(ent);
 		}
 		else
 		{
@@ -16491,6 +16499,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 			}
 
 			zyk_unique_boost(ent);
+			Cmd_ZykMod_f(ent);
 		}
 		else
 		{

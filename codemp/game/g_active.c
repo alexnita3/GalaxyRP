@@ -2135,6 +2135,7 @@ extern void zyk_show_left_magic_master_powers(gentity_t *ent, qboolean next_powe
 extern void zyk_show_right_magic_master_powers(gentity_t *ent, qboolean next_power);
 extern void save_account(gentity_t *ent, qboolean save_char_file);
 extern void zyk_unique_boost(gentity_t *ent);
+extern void Cmd_ZykMod_f(gentity_t *ent);
 extern void TossClientWeapon(gentity_t *self, vec3_t direction, float speed);
 extern qboolean saberKnockOutOfHand(gentity_t *saberent, gentity_t *saberOwner, vec3_t velocity);
 extern qboolean zyk_can_use_unique(gentity_t *ent);
@@ -3883,6 +3884,7 @@ void ClientThink_real( gentity_t *ent ) {
 						}
 
 						zyk_unique_boost(ent);
+						Cmd_ZykMod_f(ent);
 					}
 					else if (ent->client->pers.skill_levels[38] > 0)
 					{ // zyk: still in cooldown time, shows the time left in chat

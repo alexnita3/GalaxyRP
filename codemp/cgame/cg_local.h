@@ -1045,6 +1045,9 @@ Ghoul2 Insert End
 	int unique_cooldown_timer;
 	int unique_duration;
 
+	// zyk: used to change the Unique bar timer
+	int using_unique_boost;
+
 	// zyk: RPG Mode class of the players
 	int rpg_class[MAX_CLIENTS];
 
