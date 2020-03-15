@@ -17022,7 +17022,7 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 				{ // zyk: not played it
 					char duel_time_remaining[32];
 					
-					if (level.duel_tournament_mode == 4 && i == (level.duel_matches_done - 1))
+					if (level.duel_tournament_mode == 4 && i == (level.duel_matches_done))
 					{ // zyk: this duel is the current one, show the time remaining in seconds
 						strcpy(duel_time_remaining, va("   ^3Time: ^7%d", (level.duel_tournament_timer - level.time) / 1000));
 					}

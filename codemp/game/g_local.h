@@ -1594,7 +1594,16 @@ typedef struct level_locals_s {
 	int race_last_player_position; // zyk: after race starts, sets the position of the last player who crossed the finish line
 
 	// zyk: Duel Tournament
-	int duel_tournament_mode; // zyk: sets 1 when someone joined, 2 to choose the duelists, 3 to announce the duelists, 4 when duel begins and 5 to show score. Default 0
+
+	// zyk: Default 0. Possible values are:
+	// 1 when someone joined
+	// 2 to choose the duelists
+	// 3 to announce the duelists
+	// 4 when duel begins
+	// 5 to show score
+	// 6 to print match winner or match tie
+	int duel_tournament_mode;
+
 	qboolean duel_tournament_paused; // zyk: when an admin uses /duelpause, sets qtrue. If it is already paused, sets qfalse. Default qfalse
 	int duelists_quantity; // zyk: number of players in the duel tournament. Default 0
 	int duel_number_of_teams; // zyk: used to generate the match table based on the number of duel teams in DUel Tournament
@@ -1608,7 +1617,15 @@ typedef struct level_locals_s {
 	int duelist_2_id; // zyk: id of the second duelist
 	int duelist_1_ally_id; // zyk: ally of the first duelist
 	int duelist_2_ally_id; // zyk: ally of the second duelist
-	int duel_matches[MAX_DUEL_MATCHES][3]; // zyk: the table with all the matches between the duelists, with their ids and the winner id in the third position (or a -2 value, in case of tie)
+
+	// zyk: the table with all the matches between the duelists, with their ids in first and second position and winner id in the third position (or a -2 value, in case of tie)
+	// zyk: fourth is the number of rounds won by first duelist
+	// zyk: fifth position is the number of rounds won by second duelist
+	int duel_matches[MAX_DUEL_MATCHES][5];
+
+	// zyk: number of rounds already played per match
+	int duel_tournament_rounds;
+
 	int duel_remaining_matches; // zyk: remaining matches of this tournament. Used to randomize the duel match choosing
 	int duel_matches_quantity; // zyk: quantity of matches in this tournament
 	int duel_matches_done; // zyk: how many matches were already done

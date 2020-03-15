@@ -367,6 +367,7 @@ XCVAR_DEF( zyk_allow_saber_command,		"2",			NULL,				CVAR_ARCHIVE|CVAR_NORESTART
 XCVAR_DEF( zyk_level_up_score_factor, "1",				NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_duel_no_collision,		"0",			NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_duel_tournament_time_to_start, "12000",  NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
+XCVAR_DEF( zyk_duel_tournament_rounds_per_match, "1",	NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_sniper_battle_time_to_start, "12000",	NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_quest_afk_timer, "300000",				NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_buying_selling_cooldown, "300",			NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
