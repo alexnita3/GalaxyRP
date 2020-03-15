@@ -5459,8 +5459,6 @@ void initialize_rpg_skills(gentity_t *ent)
 		ent->client->pers.buy_sell_timer = 0;
 		ent->client->pers.vertical_dfa_timer = 0;
 
-		ent->client->pers.current_unique_in_use = 0;
-
 		// zyk: setting default value of can_play_quest
 		ent->client->pers.can_play_quest = 0;
 
@@ -15917,7 +15915,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.ammo[AMMO_BLASTER] -= 5;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-					ent->client->pers.unique_skill_duration = level.time + 20000;
+					ent->client->pers.unique_skill_duration = level.time + 25000;
 
 					ent->client->pers.player_statuses |= (1 << 22);
 
@@ -16244,7 +16242,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.ammo[AMMO_DETPACK] -= 1;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-					ent->client->pers.unique_skill_duration = level.time + 20000;
+					ent->client->pers.unique_skill_duration = level.time + 25000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
