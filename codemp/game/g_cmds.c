@@ -5608,6 +5608,7 @@ void initialize_rpg_skills(gentity_t *ent)
 		ent->client->pers.magic_power = zyk_max_magic_power(ent);
 
 		ent->client->pers.monk_unique_timer = 0;
+		ent->client->pers.unique_skill_duration = 0;
 
 		ent->client->pers.credits_modifier = 0;
 		ent->client->pers.score_modifier = 0;
