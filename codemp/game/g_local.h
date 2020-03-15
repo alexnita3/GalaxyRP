@@ -796,6 +796,8 @@ typedef struct clientPersistant_s {
 	// zyk: when a stealth attacker is using the sniper scope, it is set to true
 	qboolean thermal_vision;
 
+	int thermal_vision_cooldown_time;
+
 	// zyk: timer to show effect of Vertical DFA ability
 	int vertical_dfa_timer;
 

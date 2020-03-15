@@ -5446,6 +5446,7 @@ void initialize_rpg_skills(gentity_t *ent)
 
 		// zyk: setting rpg control attributes
 		ent->client->pers.thermal_vision = qfalse;
+		ent->client->pers.thermal_vision_cooldown_time = 0;
 
 		ent->client->pers.quest_power_status = 0;
 
