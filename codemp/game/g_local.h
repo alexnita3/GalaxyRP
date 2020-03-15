@@ -749,7 +749,7 @@ typedef struct clientPersistant_s {
 	// 4 - Universe Power
 	// 5 - Custom Language
 	// 6 - Allow Force Powers from allies
-	// 7 - Unused
+	// 7 - Show magic cast in chat
 	// 9 - Allow Screen Message
 	// 10 - Use healing force only at allied players
 	// 11 - Start With Saber
