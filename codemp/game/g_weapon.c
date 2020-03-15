@@ -4042,7 +4042,7 @@ int magic_fist_velocity(gentity_t *ent)
 	if (ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 8) &&
 		ent->client->pers.unique_skill_duration > level.time && ent->client->pers.player_statuses & (1 << 21))
 	{ // zyk: Magic Master Unique Ability 1 increases speed of magic bolt shots
-		magic_bolt_speed += (magic_bolt_speed * 0.3);
+		magic_bolt_speed += (magic_bolt_speed * 0.2);
 	}
 
 	return magic_bolt_speed;

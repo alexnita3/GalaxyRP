@@ -5067,7 +5067,7 @@ void CG_DrawUniqueSkillDurationTimer(void)
 	float y = CGUNIQUEDURATIONBAR_Y;
 	float percent = ((float)(cg.unique_duration_timer - cg.time) / (float)cg.unique_duration) * CGUNIQUEDURATIONBAR_H;
 
-	if (cg.unique_duration_timer < cg.time)
+	if (cg.unique_duration_timer < cg.time || cg.snap->ps.stats[STAT_HEALTH] < 1)
 	{ // zyk: no longer draw Unique duration bar if unique duration time ends
 		cg.unique_duration_timer = 0;
 		cg.unique_duration = 0;

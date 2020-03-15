@@ -2157,6 +2157,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	// zyk: remove any quest_power status from this player
 	self->client->pers.quest_power_status = 0;
 	self->client->pers.player_statuses &= ~(1 << 20);
+	self->client->pers.unique_skill_duration = 0;
 
 	// zyk: resetting boss battle music to default one if needed
 	if (self->client->pers.guardian_invoked_by_id != -1 && self->client->pers.guardian_mode != 15 && self->client->pers.guardian_mode != 17 && self->client->pers.guardian_mode != 18)
