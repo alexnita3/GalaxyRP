@@ -18566,22 +18566,14 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 			}
 			else if (argc == 4)
 			{ // zyk: mission info
-				char mission_content[MAX_CUSTOM_QUEST_FIELDS/MAX_MISSION_FIELD_LINES + 1][MAX_STRING_CHARS];
-				int j = 0;
-				int number_of_lines = 0;
-
 				trap->Argv(2, arg2, sizeof(arg2));
 				trap->Argv(3, arg3, sizeof(arg3));
 
-				quest_number = atoi(arg2);
-				mission_number = atoi(arg3);
+				ent->client->pers.custom_quest_quest_number = atoi(arg2);
+				ent->client->pers.custom_quest_mission_number = atoi(arg3);
 
-				for (j = 0; j < (MAX_CUSTOM_QUEST_FIELDS / MAX_MISSION_FIELD_LINES + 1); j++)
-				{
-					strcpy(mission_content[j], "");
-				}
-
-				j = 0;
+				quest_number = ent->client->pers.custom_quest_quest_number;
+				mission_number = ent->client->pers.custom_quest_mission_number;
 
 				if (quest_number < 0 || quest_number >= MAX_CUSTOM_QUESTS || level.zyk_custom_quest_mission_count[quest_number] == -1)
 				{ // zyk: this position is already empty, there is no quest to be removed in this position
@@ -18595,29 +18587,15 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 					return;
 				}
 
-				strcpy(mission_content[0], "\n");
-
-				while (i < level.zyk_custom_quest_mission_values_count[quest_number][mission_number])
+				if (ent->client->pers.custom_quest_print > 0)
 				{
-					if (number_of_lines == MAX_MISSION_FIELD_LINES)
-					{ // zyk: max of mission field lines per string array index
-						number_of_lines = 0;
-						j++;
-					}
-
-					strcpy(mission_content[j], va("%s^3%s: ^7%s\n", mission_content[j], level.zyk_custom_quest_missions[quest_number][mission_number][i], level.zyk_custom_quest_missions[quest_number][mission_number][i + 1]));
-					number_of_lines++;
-
-					i += 2;
+					trap->SendServerCommand(ent->s.number, "print \"Still printing info. Please wait.\n\"");
+					return;
 				}
 
-				strcpy(mission_content[j], va("%s\n", mission_content[j]));
-
-				// zyk: sends all mission info to client
-				for (i = 0; i <= j; i++)
-				{
-					trap->SendServerCommand(ent->s.number, va("print \"%s\"", mission_content[i]));
-				}
+				// zyk: starts printing info
+				ent->client->pers.custom_quest_print = 1;
+				ent->client->pers.custom_quest_print_timer = 0;
 
 				return;
 			}

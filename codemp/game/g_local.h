@@ -721,6 +721,12 @@ typedef struct clientPersistant_s {
 	// zyk: chat protection cooldown timer. After this time, player will be protected against damage
 	int chat_protection_timer;
 
+	// zyk: used to print all mission fields when editing a Custom Quest
+	int custom_quest_print;
+	int custom_quest_print_timer;
+	int custom_quest_quest_number;
+	int custom_quest_mission_number;
+
 	// zyk: has the player id who called this seller
 	int seller_invoked_by_id;
 

@@ -7206,6 +7206,52 @@ void poison_dart_hits(gentity_t *ent)
 	}
 }
 
+void zyk_print_custom_quest_info(gentity_t *ent)
+{
+	// zyk: show mission fields when player uses /customquest to print mission fields
+	if (ent->client->pers.custom_quest_print > 0 && ent->client->pers.custom_quest_print_timer < level.time)
+	{
+		char mission_content[MAX_STRING_CHARS];
+		int i = 2 * MAX_MISSION_FIELD_LINES * (ent->client->pers.custom_quest_print - 1);
+		int number_of_lines = MAX_MISSION_FIELD_LINES * (ent->client->pers.custom_quest_print - 1);
+		int quest_number = ent->client->pers.custom_quest_quest_number;
+		int mission_number = ent->client->pers.custom_quest_mission_number;
+		qboolean stop_printing = qtrue;
+
+		strcpy(mission_content, "");
+
+		while (i < level.zyk_custom_quest_mission_values_count[quest_number][mission_number])
+		{
+			if (number_of_lines == MAX_MISSION_FIELD_LINES * ent->client->pers.custom_quest_print)
+			{ // zyk: max of mission field lines per string array index
+				stop_printing = qfalse;
+				break;
+			}
+
+			strcpy(mission_content, va("%s^3%s: ^7%s\n", mission_content, level.zyk_custom_quest_missions[quest_number][mission_number][i], level.zyk_custom_quest_missions[quest_number][mission_number][i + 1]));
+			number_of_lines++;
+
+			i += 2;
+		}
+
+		if (stop_printing == qtrue)
+		{ // zyk: all info was printed, stop printing
+			ent->client->pers.custom_quest_print = 0;
+		}
+		else
+		{
+			ent->client->pers.custom_quest_print++;
+		}
+
+		// zyk: sends all mission info to client if there is info to print
+		if (Q_stricmp(mission_content, "") != 0)
+			trap->SendServerCommand(ent->s.number, va("print \"%s\"", mission_content));
+
+		// zyk: interval between each time part of the info is sent
+		ent->client->pers.custom_quest_print_timer = level.time + 200;
+	}
+}
+
 // zyk: tests if player already finished the Revelations mission of Universe Quest
 void first_second_act_objective(gentity_t *ent)
 {
@@ -9941,6 +9987,8 @@ void G_RunFrame( int levelTime ) {
 				ent->client->pers.tutorial_step++;
 				ent->client->pers.tutorial_timer = level.time + 7000;
 			}
+
+			zyk_print_custom_quest_info(ent);
 
 			if (ent->client->sess.amrpgmode == 2 && ent->client->sess.sessionTeam != TEAM_SPECTATOR)
 			{ // zyk: RPG Mode skills and quests actions. Must be done if player is not at Spectator Mode
