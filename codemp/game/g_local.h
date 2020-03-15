@@ -1440,6 +1440,9 @@ typedef struct {
 // zyk: max missions a custom quest can have
 #define MAX_CUSTOM_QUEST_MISSIONS 64
 
+// zyk: max lines of custom quest mission fields to send to client
+#define MAX_MISSION_FIELD_LINES 8
+
 // zyk: max fields a custom quest mission can have
 #define MAX_CUSTOM_QUEST_FIELDS 512
 
