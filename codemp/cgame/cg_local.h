@@ -1043,7 +1043,12 @@ Ghoul2 Insert End
 
 	// zyk: Unique Skill cooldown timer
 	int unique_cooldown_timer;
+	int unique_cooldown_duration;
+	int unique_duration_timer;
 	int unique_duration;
+
+	// zyk: used to control in which moment the Unique duration must be set so it does not reset when a new server command sends the unique duration again
+	int unique_duration_control;
 
 	// zyk: used to change the Unique bar timer
 	int using_unique_boost;

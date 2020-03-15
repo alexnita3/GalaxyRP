@@ -1673,7 +1673,7 @@ static void CG_ZykMod( void )
 
 	trap->Cmd_Argv( 1, arg, sizeof( arg ) );
 
-	while (j < 88)
+	while (j < 89)
 	{ // zyk: parsing info from the server and setting the respective cvars
 		k = 0;
 
@@ -2572,6 +2572,15 @@ static void CG_ZykMod( void )
 			else
 			{
 				trap->Cvar_Set("ui_zyk_quest_player", "Quest Player - ");
+			}
+		}
+		else if (j == 87)
+		{ // zyk: duration of Unique Skills and Unique Abilities
+			if (cg.unique_duration_control == 0)
+			{
+				cg.unique_duration = atoi(value);
+				cg.unique_duration_timer = cg.time + cg.unique_duration;
+				cg.unique_duration_control = 1;
 			}
 		}
 

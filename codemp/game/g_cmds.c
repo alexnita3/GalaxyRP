@@ -5459,6 +5459,8 @@ void initialize_rpg_skills(gentity_t *ent)
 		ent->client->pers.buy_sell_timer = 0;
 		ent->client->pers.vertical_dfa_timer = 0;
 
+		ent->client->pers.current_unique_in_use = 0;
+
 		// zyk: setting default value of can_play_quest
 		ent->client->pers.can_play_quest = 0;
 
@@ -7870,6 +7872,7 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 		int i = 0;
 		int quest_player_id = MAX_CLIENTS;
 		char content[1024];
+		int unique_duration = 0;
 
 		strcpy(content,"");
 
@@ -7918,8 +7921,13 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 			}
 		}
 
-		strcpy(content,va("%s%d-%d-%d-%d-%d-%d-%d-",content,ent->client->pers.secrets_found,ent->client->pers.defeated_guardians,ent->client->pers.hunter_quest_progress,
-			ent->client->pers.eternity_quest_progress,ent->client->pers.universe_quest_progress,universe_quest_counter_value,quest_player_id));
+		if (ent->client->pers.unique_skill_duration > level.time)
+		{
+			unique_duration = ent->client->pers.unique_skill_duration - level.time;
+		}
+
+		strcpy(content,va("%s%d-%d-%d-%d-%d-%d-%d-%d-",content,ent->client->pers.secrets_found,ent->client->pers.defeated_guardians,ent->client->pers.hunter_quest_progress,
+			ent->client->pers.eternity_quest_progress,ent->client->pers.universe_quest_progress,universe_quest_counter_value,quest_player_id,unique_duration));
 
 		trap->SendServerCommand(ent->s.number, va("zykmod \"%d/%d-%d/%d-%d-%d/%d-%d/%d-%d-%s-%s\"",ent->client->pers.level, zyk_rpg_max_level.integer,ent->client->pers.level_up_score,(ent->client->pers.level * zyk_level_up_score_factor.integer),ent->client->pers.skillpoints,ent->client->pers.skill_counter,zyk_max_skill_counter.integer,ent->client->pers.magic_power,zyk_max_magic_power(ent),ent->client->pers.credits,zyk_rpg_class(ent),content));
 	}

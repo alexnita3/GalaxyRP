@@ -9984,31 +9984,31 @@ void CG_Player( centity_t *cent ) {
 
 		if (cg.snap->ps.clientNum == cent->currentState.number && cg.rpg_class[cent->currentState.number] >= 0 && cg.unique_cooldown_timer == 0)
 		{ // zyk: classes that are using Unique Skill must show the cooldown time
-			int unique_duration = 0;
+			int unique_cooldown_duration = 0;
 
 			if (cg.rpg_class[cent->currentState.number] == 0)
-				unique_duration = 50000;
+				unique_cooldown_duration = 50000;
 			else if (cg.rpg_class[cent->currentState.number] == 1)
-				unique_duration = 50000;
+				unique_cooldown_duration = 50000;
 			else if (cg.rpg_class[cent->currentState.number] == 2)
-				unique_duration = 35000;
+				unique_cooldown_duration = 35000;
 			else if (cg.rpg_class[cent->currentState.number] == 3)
-				unique_duration = 30000;
+				unique_cooldown_duration = 30000;
 			else if (cg.rpg_class[cent->currentState.number] == 4)
-				unique_duration = 30000;
+				unique_cooldown_duration = 30000;
 			else if (cg.rpg_class[cent->currentState.number] == 5)
-				unique_duration = 45000;
+				unique_cooldown_duration = 45000;
 			else if (cg.rpg_class[cent->currentState.number] == 6)
-				unique_duration = 45000;
+				unique_cooldown_duration = 45000;
 			else if (cg.rpg_class[cent->currentState.number] == 7)
-				unique_duration = 40000;
+				unique_cooldown_duration = 40000;
 			else if (cg.rpg_class[cent->currentState.number] == 8)
-				unique_duration = 50000;
+				unique_cooldown_duration = 50000;
 			else if (cg.rpg_class[cent->currentState.number] == 9)
-				unique_duration = 50000;
+				unique_cooldown_duration = 50000;
 
-			cg.unique_cooldown_timer = cg.time + unique_duration;
-			cg.unique_duration = unique_duration;
+			cg.unique_cooldown_timer = cg.time + unique_cooldown_duration;
+			cg.unique_cooldown_duration = unique_cooldown_duration;
 		}
 	}
 

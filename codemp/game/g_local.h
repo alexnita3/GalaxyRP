@@ -783,6 +783,14 @@ typedef struct clientPersistant_s {
 	// zyk: used to set the duration that some unique skills or unique abilities are active
 	int unique_skill_duration;
 
+	// zyk: sets which is the last used unique skill or ability used by this player
+	// 0 - no unique in use
+	// 1 - Unique Skill
+	// 2 - First Unique Ability
+	// 3 - Second Unique Ability
+	// 4 - Third Unique Ability
+	int current_unique_in_use;
+
 	// zyk: Monk Spin Kick ability interval between hits. Also used by Monk Meditation Drain ability as interval between hits
 	int monk_unique_timer;
 
