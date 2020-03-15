@@ -9998,6 +9998,9 @@ void G_RunFrame( int levelTime ) {
 						ent->client->ps.fd.forcePowersKnown |= (1 << FP_SEE);
 						ent->client->ps.fd.forcePowerLevel[FP_SEE] = FORCE_LEVEL_3;
 						ent->client->ps.fd.forcePowersActive |= (1 << FP_SEE);
+
+						// zyk: adds some time to allow deactivating the Binoculars. Force Sense is active, so using this variable to add the cooldown time
+						ent->client->ps.forceAllowDeactivateTime = level.time + 500;
 					}
 
 					if (ent->client->pers.secrets_found & (1 << 1) && ent->client->ps.weapon == WP_BRYAR_PISTOL && ent->client->ps.weaponTime > (weaponData[WP_BRYAR_PISTOL].fireTime * 0.3))
