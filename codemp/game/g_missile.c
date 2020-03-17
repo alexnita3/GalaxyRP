@@ -840,8 +840,10 @@ killProj:
 	ent->takedamage = qfalse;
 	// splash damage (doesn't apply to person directly hit)
 	if ( ent->splashDamage ) {
-		if( G_RadiusDamage( trace->endpos, ent->parent, ent->splashDamage, ent->splashRadius,
-			other, ent, ent->splashMethodOfDeath ) ) {
+		// zyk: added the Flechette alt fire condition so it does not damage againm since the call to think(), which does the flechette splash damage, was already done before
+		if(!(ent->s.weapon == WP_FLECHETTE && (ent->s.eFlags & EF_ALT_FIRING)) && G_RadiusDamage( trace->endpos, ent->parent, ent->splashDamage, ent->splashRadius,
+			other, ent, ent->splashMethodOfDeath ) ) 
+		{
 			if( !hitClient
 				&& g_entities[ent->r.ownerNum].client ) {
 				g_entities[ent->r.ownerNum].client->accuracy_hits++;
