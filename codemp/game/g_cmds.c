@@ -4300,9 +4300,9 @@ qboolean TryGrapple(gentity_t *ent)
 						ultra_drain(ent, 450, 30, 8000);
 						ent->client->pers.magic_power -= zyk_ultra_drain_mp_cost.integer;
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (24000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (28000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 24000;
+							ent->client->pers.quest_power_usage_timer = level.time + 28000;
 
 						zyk_show_magic_in_chat(ent, -1);
 					}
@@ -4312,9 +4312,9 @@ qboolean TryGrapple(gentity_t *ent)
 						immunity_power(ent,25000);
 						ent->client->pers.magic_power -= zyk_immunity_power_mp_cost.integer;
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (23000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (28000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 23000;
+							ent->client->pers.quest_power_usage_timer = level.time + 28000;
 
 						ent->client->pers.player_statuses |= (1 << 15);
 
@@ -4326,9 +4326,9 @@ qboolean TryGrapple(gentity_t *ent)
 						chaos_power(ent,400,70);
 						ent->client->pers.magic_power -= zyk_chaos_power_mp_cost.integer;
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (26000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (28000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 26000;
+							ent->client->pers.quest_power_usage_timer = level.time + 28000;
 
 						zyk_show_magic_in_chat(ent, -3);
 					}
@@ -4338,9 +4338,9 @@ qboolean TryGrapple(gentity_t *ent)
 						time_power(ent,400,3000);
 						ent->client->pers.magic_power -= zyk_time_power_mp_cost.integer;
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (24000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (28000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 24000;
+							ent->client->pers.quest_power_usage_timer = level.time + 28000;
 
 						zyk_show_magic_in_chat(ent, -4);
 					}
