@@ -15838,6 +15838,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.fd.forcePowerDuration[FP_TELEPATHY] = level.time + 9000;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
+					ent->client->pers.unique_skill_duration = level.time + 9000;
 
 					Jedi_Cloak(ent);
 
