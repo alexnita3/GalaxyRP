@@ -2290,7 +2290,7 @@ void zyk_WP_FireRocket(gentity_t *ent)
 {
 	int	damage = zyk_rocket_damage.integer * 2.1;
 	int splash_damage = zyk_rocket_splash_damage.integer * 2.1;
-	int	vel = zyk_rocket_velocity.integer;
+	int	vel = zyk_rocket_velocity.integer * 1.2;
 	gentity_t *missile;
 	vec3_t zyk_origin, dir, zyk_forward;
 
