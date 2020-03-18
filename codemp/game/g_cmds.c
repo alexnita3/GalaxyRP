@@ -16332,18 +16332,19 @@ void Cmd_Unique_f(gentity_t *ent) {
 				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 4) && ent->client->pers.magic_power >= 20)
 				{
 					gentity_t *new_ent = G_Spawn();
+					int flee_to_safety_duration = 45000;
 
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 					ent->client->pers.magic_power -= 20;
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 42000;
-					ent->client->pers.unique_skill_duration = level.time + 42000;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + flee_to_safety_duration;
+					ent->client->pers.unique_skill_duration = level.time + flee_to_safety_duration;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
 					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 					ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
-					ent->client->ps.forceHandExtendTime = level.time + 2000;
+					ent->client->ps.forceHandExtendTime = level.time + 700;
 
 					zyk_set_entity_field(new_ent, "classname", "fx_runner");
 					zyk_set_entity_field(new_ent, "spawnflags", "0");
@@ -16358,7 +16359,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					zyk_spawn_entity(new_ent);
 
 					level.special_power_effects[new_ent->s.number] = ent->s.number;
-					level.special_power_effects_timer[new_ent->s.number] = level.time + 42000;
+					level.special_power_effects_timer[new_ent->s.number] = level.time + flee_to_safety_duration;
 
 					send_rpg_events(2000);
 
