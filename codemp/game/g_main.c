@@ -5740,8 +5740,6 @@ void time_power(gentity_t *ent, int distance, int duration)
 			player_ent->client->ps.forceDodgeAnim = player_ent->client->ps.torsoAnim;
 			player_ent->client->ps.forceHandExtendTime = level.time + duration;
 
-			VectorCopy(player_ent->client->ps.origin, player_ent->client->pers.time_power_origin);
-
 			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_time", "0", "misc/genrings", 0, 0, 0, duration);
 
 			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/electric_beam_lp.wav"));
@@ -15794,7 +15792,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (ent->client->sess.selected_right_special_power  & (1 << 3) && random_number == 3)
 					{
-						time_power(ent, 400, 3000);
+						time_power(ent, 400, 4000);
 					}
 					else if (ent->client->sess.selected_right_special_power  & (1 << 4) && random_number == 4)
 					{ // zyk: Light Power
@@ -16468,7 +16466,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 27)
 						{
-							time_power(ent,1600, 3000);
+							time_power(ent,1600, 4000);
 							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Time Power!\"");
 							ent->client->pers.hunter_quest_messages++;
 						}
@@ -16737,7 +16735,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 3)
 						{
-							time_power(ent, 400, 3000);
+							time_power(ent, 400, 4000);
 						}
 						else if (random_magic == 4)
 						{
@@ -16954,7 +16952,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 2)
 						{
-							time_power(ent, 20000, 3000);
+							time_power(ent, 20000, 4000);
 						}
 						else if (random_magic == 3)
 						{
@@ -17100,7 +17098,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 20)
 						{
-							time_power(ent, 5000, 3000);
+							time_power(ent, 5000, 4000);
 						}
 						else if (random_magic == 21)
 						{
@@ -17471,7 +17469,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (random_magic == 3)
 					{
-						time_power(ent, 400, 3000);
+						time_power(ent, 400, 4000);
 					}
 					else if (random_magic == 4)
 					{

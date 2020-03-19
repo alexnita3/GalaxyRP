@@ -5458,6 +5458,12 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	if (targ && targ->client && (targ->client->sess.amrpgmode == 2 || targ->NPC) && targ->client->pers.quest_power_status & (1 << 11))
 		damage = (int)ceil(damage*0.1);
 
+	// zyk: hit by Time Power. Receive less damage
+	if (targ && targ->client && targ->client->pers.quest_power_status & (1 << 2))
+	{
+		damage = (int)ceil(damage*0.5);
+	}
+
 	if (targ && targ->client && (targ->client->sess.amrpgmode == 2 || targ->NPC) && targ->client->pers.quest_power_status & (1 << 7))
 	{ // zyk: Ultra Resistance bonus resistance
 		// zyk: Universe Power
