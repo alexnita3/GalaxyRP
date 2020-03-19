@@ -10628,7 +10628,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 7)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 1: ^7used with /unique command. You can only have one Unique Ability at a time. Force Gunner gets Thermal Throw, which throws a thermal detonator with high damage. Spends 1 thermal and 5 power cell ammo\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 1: ^7used with /unique command. You can only have one Unique Ability at a time. Force Gunner gets Thermal Throw, which throws 3 thermal detonators with higher damage. Spends 3 thermals and 3 power cell ammo\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 8)
 			{
@@ -15618,7 +15618,7 @@ extern void WP_AddAsMindtricked(forcedata_t *fd, int entNum);
 extern qboolean G_InGetUpAnim(playerState_t *ps);
 extern void zyk_WP_FireBryarPistol(gentity_t *ent);
 extern void zyk_WP_FireRocket(gentity_t *ent);
-extern gentity_t *zyk_WP_FireThermalDetonator(gentity_t *ent);
+extern gentity_t *zyk_WP_FireThermalDetonator(gentity_t *ent, int yaw);
 extern void zyk_add_bomb_model(gentity_t *ent);
 extern void elemental_attack(gentity_t *ent);
 extern void zyk_no_attack(gentity_t *ent);
@@ -15877,12 +15877,24 @@ void Cmd_Unique_f(gentity_t *ent) {
 			}
 			else if (ent->client->pers.rpg_class == 7)
 			{ // zyk: Force Gunner Thermal Throw. Throws a high damage thermal
-				if (ent->client->ps.ammo[AMMO_POWERCELL] >= 5 && ent->client->ps.ammo[AMMO_THERMAL] >= 1)
+				if (ent->client->ps.ammo[AMMO_POWERCELL] >= 3 && ent->client->ps.ammo[AMMO_THERMAL] >= 3)
 				{
-					ent->client->ps.ammo[AMMO_POWERCELL] -= 5;
-					ent->client->ps.ammo[AMMO_THERMAL] -= 1;
+					int zyk_yaw = ent->client->ps.viewangles[YAW];
 
-					zyk_WP_FireThermalDetonator(ent);
+					ent->client->ps.ammo[AMMO_POWERCELL] -= 3;
+					ent->client->ps.ammo[AMMO_THERMAL] -= 3;
+
+					zyk_WP_FireThermalDetonator(ent, zyk_yaw);
+
+					zyk_yaw -= 20;
+					zyk_WP_FireThermalDetonator(ent, zyk_yaw);
+
+					zyk_yaw += 40;
+					zyk_WP_FireThermalDetonator(ent, zyk_yaw);
+
+					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+					ent->client->ps.forceDodgeAnim = BOTH_K1_S1_BL;
+					ent->client->ps.forceHandExtendTime = level.time + 500;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
 
@@ -15892,7 +15904,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 				else
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Unique Ability: ^7needs 1 thermal and 5 power cell ammo to use it\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Unique Ability: ^7needs 3 thermals and 3 power cell ammo to use it\"");
 				}
 			}
 			else if (ent->client->pers.rpg_class == 8)

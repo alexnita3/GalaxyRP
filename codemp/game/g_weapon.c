@@ -2504,7 +2504,7 @@ gentity_t *WP_FireThermalDetonator( gentity_t *ent, qboolean altFire )
 }
 
 // zyk: used by Thermal Throw ability
-gentity_t *zyk_WP_FireThermalDetonator(gentity_t *ent)
+gentity_t *zyk_WP_FireThermalDetonator(gentity_t *ent, int yaw)
 //---------------------------------------------------------
 {
 	gentity_t	*bolt;
@@ -2513,7 +2513,7 @@ gentity_t *zyk_WP_FireThermalDetonator(gentity_t *ent)
 
 	vec3_t zyk_origin, zyk_forward;
 
-	VectorSet(dir, ent->client->ps.viewangles[0], ent->client->ps.viewangles[1], 0);
+	VectorSet(dir, ent->client->ps.viewangles[PITCH], yaw, 0);
 	VectorSet(zyk_origin, ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2] + 30);
 	AngleVectors(dir, zyk_forward, NULL, NULL);
 
@@ -2551,9 +2551,9 @@ gentity_t *zyk_WP_FireThermalDetonator(gentity_t *ent)
 	bolt->s.loopSound = G_SoundIndex("sound/weapons/thermal/thermloop.wav");
 	bolt->s.loopIsSoundset = qfalse;
 
-	bolt->damage = zyk_thermal_damage.integer * 2.5;
+	bolt->damage = zyk_thermal_damage.integer * 1.4;
 	bolt->dflags = 0;
-	bolt->splashDamage = zyk_thermal_splash_damage.integer * 2.5;
+	bolt->splashDamage = zyk_thermal_splash_damage.integer * 1.4;
 	bolt->splashRadius = 180;
 
 	bolt->s.eType = ET_MISSILE;
