@@ -4644,9 +4644,9 @@ qboolean TryGrapple(gentity_t *ent)
 						magic_disable(ent, 450);
 						ent->client->pers.magic_power -= (int)ceil((zyk_magic_disable_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
-							ent->client->pers.quest_power_usage_timer = level.time + (42000 * ((4.0 - ent->client->pers.skill_levels[55]) / 4.0));
+							ent->client->pers.quest_power_usage_timer = level.time + (6000 * ((4.0 - ent->client->pers.skill_levels[55]) / 4.0));
 						else
-							ent->client->pers.quest_power_usage_timer = level.time + 24000;
+							ent->client->pers.quest_power_usage_timer = level.time + 6000;
 						zyk_show_magic_in_chat(ent, use_this_power);
 					}
 					else if (use_this_power == MAGIC_FAST_AND_SLOW && zyk_enable_fast_and_slow.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_fast_and_slow_mp_cost.integer * universe_mp_cost_factor)))
