@@ -762,9 +762,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		{ // zyk: initializing duel matches
 			level.duel_matches[zyk_iterator][0] = -1;
 			level.duel_matches[zyk_iterator][1] = -1;
-			level.duel_matches[zyk_iterator][2] = -1;
+			level.duel_matches[zyk_iterator][2] = 0;
 			level.duel_matches[zyk_iterator][3] = 0;
-			level.duel_matches[zyk_iterator][4] = 0;
 		}
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_RACERS; zyk_iterator++)
@@ -7529,9 +7528,8 @@ void duel_tournament_end()
 	{
 		level.duel_matches[i][0] = -1;
 		level.duel_matches[i][1] = -1;
-		level.duel_matches[i][2] = -1;
+		level.duel_matches[i][2] = 0;
 		level.duel_matches[i][3] = 0;
-		level.duel_matches[i][4] = 0;
 	}
 
 	if (level.duel_tournament_model_id != -1)
@@ -7718,7 +7716,6 @@ void duel_tournament_generate_match_table()
 		}
 	}
 
-	level.duel_remaining_matches = level.duel_matches_quantity;
 	temp_remaining_matches = level.duel_matches_quantity;
 
 	// zyk: generating the ramdomized array with the matches of the tournament
@@ -7729,9 +7726,8 @@ void duel_tournament_generate_match_table()
 
 		level.duel_matches[i][0] = temp_matches[duel_chosen_index][0];
 		level.duel_matches[i][1] = temp_matches[duel_chosen_index][1];
-		level.duel_matches[i][2] = -1;
+		level.duel_matches[i][2] = 0;
 		level.duel_matches[i][3] = 0;
-		level.duel_matches[i][4] = 0;
 
 		for (j = (duel_chosen_index + 1); j < temp_remaining_matches; j++)
 		{ // zyk: updating the match table to move all duels after the duel_chosen_index one index lower
@@ -7916,7 +7912,7 @@ void duel_tournament_give_score(gentity_t *ent, int score)
 	}
 }
 
-// zyk: sets the winner of the match based on the wins of each round
+// zyk: sets the winner of the Duel Tournament match
 void duel_tournament_set_match_winner(gentity_t *winner)
 {
 	gentity_t *first_duelist = &g_entities[level.duelist_1_id];
@@ -7938,18 +7934,16 @@ void duel_tournament_set_match_winner(gentity_t *winner)
 		second_duelist_ally = &g_entities[level.duelist_2_ally_id];
 	}
 
-	level.duel_tournament_rounds++;
-
 	// zyk: setting score
 	if (winner && level.duel_matches[level.duel_matches_done][0] == winner->s.number)
 	{ // zyk: first duelist won
-		level.duel_matches[level.duel_matches_done][3]++;
+		level.duel_matches[level.duel_matches_done][2]++;
 
 		duel_tournament_give_score(winner, 3);
 	}
 	else if (winner && level.duel_matches[level.duel_matches_done][1] == winner->s.number)
 	{ // zyk: second duelist won
-		level.duel_matches[level.duel_matches_done][4]++;
+		level.duel_matches[level.duel_matches_done][3]++;
 
 		duel_tournament_give_score(winner, 3);
 	}
@@ -7985,43 +7979,8 @@ void duel_tournament_set_match_winner(gentity_t *winner)
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Tie! %s %s\"", duel_tournament_remaining_health(first_duelist), duel_tournament_remaining_health(second_duelist)));
 	}
 
-	if (level.duel_tournament_rounds == zyk_duel_tournament_rounds_per_match.integer)
-	{
-		// zyk: setting the match winner
-		if (level.duel_matches[level.duel_matches_done][3] > level.duel_matches[level.duel_matches_done][4])
-		{ // zyk: first duelist won the match
-			if (first_duelist_ally)
-			{
-				strcpy(ally_name, va("^7 / %s", first_duelist_ally->client->pers.netname));
-			}
-
-			level.duel_matches[level.duel_matches_done][2] = first_duelist->s.number;
-
-			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s%s ^7wins the Match!\"", first_duelist->client->pers.netname, ally_name));
-		}
-		else if (level.duel_matches[level.duel_matches_done][3] < level.duel_matches[level.duel_matches_done][4])
-		{ // zyk: second duelist won the match
-			if (second_duelist_ally)
-			{
-				strcpy(ally_name, va("^7 / %s", second_duelist_ally->client->pers.netname));
-			}
-
-			level.duel_matches[level.duel_matches_done][2] = second_duelist->s.number;
-
-			trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s%s ^7wins the Match!\"", second_duelist->client->pers.netname, ally_name));
-		}
-		else
-		{ // zyk: match tied
-			level.duel_matches[level.duel_matches_done][2] = -2;
-
-			trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Match tied!\"");
-		}
-
-		// zyk: setting these variables to get the next match
-		level.duel_tournament_rounds = 0;
-		level.duel_matches_done++;
-		level.duel_remaining_matches--;
-	}
+	// zyk: this match ended. Set this variable to get next match
+	level.duel_matches_done++;
 }
 
 void duel_tournament_protect_duelists(gentity_t *duelist_1, gentity_t *duelist_2, gentity_t *duelist_1_ally, gentity_t *duelist_2_ally)
@@ -8182,8 +8141,6 @@ qboolean duel_tournament_validate_duelists()
 	else
 	{ // zyk: both teams invalid
 		duel_tournament_set_match_winner(NULL);
-
-		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7no one wins!\""));
 	}
 
 	return qfalse;
@@ -9188,7 +9145,7 @@ void G_RunFrame( int levelTime ) {
 				}
 			}
 
-			if (is_in_boss == qfalse && level.duel_remaining_matches > 0)
+			if (is_in_boss == qfalse && level.duel_matches_done < level.duel_matches_quantity)
 			{ // zyk: if there are still matches to be chosen, try to choose now
 				level.duelist_1_id = level.duel_matches[level.duel_matches_done][0];
 				level.duelist_2_id = level.duel_matches[level.duel_matches_done][1];
@@ -9233,6 +9190,16 @@ void G_RunFrame( int levelTime ) {
 					level.duel_tournament_mode = 3;
 
 					trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s%s ^7x %s%s\"", duelist_1->client->pers.netname, first_ally, duelist_2->client->pers.netname, second_ally));
+				}
+			}
+
+			if (level.duel_matches_quantity == level.duel_matches_done)
+			{ // zyk: current cycle ended. Go to next one
+				level.duel_tournament_rounds++;
+
+				if (level.duel_tournament_rounds < zyk_duel_tournament_rounds_per_match.integer)
+				{
+					level.duel_matches_done = 0;
 				}
 			}
 

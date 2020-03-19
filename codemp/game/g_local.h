@@ -1616,15 +1616,14 @@ typedef struct level_locals_s {
 	int duelist_1_ally_id; // zyk: ally of the first duelist
 	int duelist_2_ally_id; // zyk: ally of the second duelist
 
-	// zyk: the table with all the matches between the duelists, with their ids in first and second position and winner id in the third position (or a -2 value, in case of tie)
-	// zyk: fourth is the number of rounds won by first duelist
-	// zyk: fifth position is the number of rounds won by second duelist
-	int duel_matches[MAX_DUEL_MATCHES][5];
+	// zyk: the table with all the matches between the duelists, with their ids in first and second position
+	// zyk: third is the number of rounds won by first duelist
+	// zyk: fourth position is the number of rounds won by second duelist
+	int duel_matches[MAX_DUEL_MATCHES][4];
 
 	// zyk: number of rounds already played per match
 	int duel_tournament_rounds;
 
-	int duel_remaining_matches; // zyk: remaining matches of this tournament. Used to randomize the duel match choosing
 	int duel_matches_quantity; // zyk: quantity of matches in this tournament
 	int duel_matches_done; // zyk: how many matches were already done
 	int duel_leaderboard_step; // zyk: used to calculate the leaderboard position of the current duel tournament winner

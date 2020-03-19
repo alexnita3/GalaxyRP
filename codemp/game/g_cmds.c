@@ -17001,9 +17001,13 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 			gentity_t *second_duelist = &g_entities[level.duel_matches[i][1]];
 			char first_ally_name[36];
 			char second_ally_name[36];
+			char first_name[96];
+			char second_name[96];
 
 			strcpy(first_ally_name, "");
 			strcpy(second_ally_name, "");
+			strcpy(first_name, "^3Left Tournament");
+			strcpy(second_name, "^3Left Tournament");
 
 			if (first_duelist && level.duel_allies[first_duelist->s.number] != -1)
 			{
@@ -17015,93 +17019,42 @@ void Cmd_DuelTable_f(gentity_t *ent) {
 				strcpy(second_ally_name, va("^7 / %s", g_entities[level.duel_allies[second_duelist->s.number]].client->pers.netname));
 			}
 
-			if (first_duelist && first_duelist->client && first_duelist->client->pers.connected == CON_CONNECTED &&
-				first_duelist->client->sess.sessionTeam != TEAM_SPECTATOR && second_duelist && second_duelist->client &&
-				second_duelist->client->pers.connected == CON_CONNECTED &&
-				second_duelist->client->sess.sessionTeam != TEAM_SPECTATOR && level.duel_players[first_duelist->s.number] != -1 &&
-				level.duel_players[second_duelist->s.number] != -1)
-			{ // zyk: both duelists still in tournament
-				if (level.duel_matches[i][2] == first_duelist->s.number)
-				{
-					strcpy(content, va("%s^7%s%s ^2W ^3x ^1L ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
-				}
-				else if (level.duel_matches[i][2] == second_duelist->s.number)
-				{
-					strcpy(content, va("%s^7%s%s ^1L ^3x ^2W ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
-				}
-				else if (level.duel_matches[i][2] == -2)
-				{
-					strcpy(content, va("%s^7%s%s ^3T x T ^7%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name));
-				}
-				else
-				{ // zyk: not played it
-					char duel_time_remaining[32];
-					
-					if (level.duel_tournament_mode == 4 && i == (level.duel_matches_done))
-					{ // zyk: this duel is the current one, show the time remaining in seconds
-						strcpy(duel_time_remaining, va("   ^3Time: ^7%d", (level.duel_tournament_timer - level.time) / 1000));
-					}
-					else
-					{
-						strcpy(duel_time_remaining, "");
-					}
-
-					strcpy(content, va("%s^7%s%s   ^3x   ^7%s%s%s\n", content, first_duelist->client->pers.netname, first_ally_name, second_duelist->client->pers.netname, second_ally_name, duel_time_remaining));
-				}
-			}
-			else if (first_duelist && first_duelist->client && first_duelist->client->pers.connected == CON_CONNECTED &&
+			if (first_duelist && first_duelist->client && 
+				first_duelist->client->pers.connected == CON_CONNECTED &&
 				first_duelist->client->sess.sessionTeam != TEAM_SPECTATOR &&
 				level.duel_players[first_duelist->s.number] != -1)
-			{ // zyk: second duelist left
-				if (level.duel_matches[i][2] == first_duelist->s.number)
-				{
-					strcpy(content, va("%s^7%s%s ^2W ^3x ^1L ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
-				}
-				else if (level.duel_matches[i][2] > -1)
-				{
-					strcpy(content, va("%s^7%s%s ^1L ^3x ^2W ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
-				}
-				else if (level.duel_matches[i][2] == -2)
-				{
-					strcpy(content, va("%s^7%s%s ^3T x T ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
-				}
-				else
-				{ // zyk: not played it
-					strcpy(content, va("%s^7%s%s   ^3x   ^3Left Tournament\n", content, first_duelist->client->pers.netname, first_ally_name));
-				}
+			{ // zyk: first duelist still in Tournament
+				strcpy(first_name, va("^7%s%s", first_duelist->client->pers.netname, first_ally_name));
 			}
-			else if (second_duelist && second_duelist->client &&
+
+			if (second_duelist && second_duelist->client &&
 				second_duelist->client->pers.connected == CON_CONNECTED &&
 				second_duelist->client->sess.sessionTeam != TEAM_SPECTATOR &&
 				level.duel_players[second_duelist->s.number] != -1)
-			{ // zyk: first duelist left
-				if (level.duel_matches[i][2] == second_duelist->s.number)
-				{
-					strcpy(content, va("%s^3Left Tournament ^1L ^3x ^2W ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
+			{ // zyk: second duelist still in Tournament
+				strcpy(second_name, va("^7%s%s", second_duelist->client->pers.netname, second_ally_name));
+			}
+
+			if (i < level.duel_matches_done)
+			{ // zyk: this match was already played in this tournament cycle
+				strcpy(content, va("%s%s ^3%d x %d %s\n", content, first_name, level.duel_matches[i][2], level.duel_matches[i][3], second_name));
+			}
+			else if (i == level.duel_matches_done)
+			{ // zyk: current match
+				char duel_time_remaining[32];
+
+				strcpy(duel_time_remaining, "");
+
+				if (level.duel_tournament_mode == 4)
+				{ // zyk: this duel is the current one, show the time remaining in seconds
+					strcpy(duel_time_remaining, va("   ^3Time: ^7%d", (level.duel_tournament_timer - level.time) / 1000));
 				}
-				else if (level.duel_matches[i][2] > -1)
-				{
-					strcpy(content, va("%s^3Left Tournament ^2W ^3x ^1L ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
-				}
-				else if (level.duel_matches[i][2] == -2)
-				{
-					strcpy(content, va("%s^3Left Tournament ^3T x T ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
-				}
-				else
-				{ // zyk: not played it
-					strcpy(content, va("%s^3Left Tournament   ^3x   ^7%s%s\n", content, second_duelist->client->pers.netname, second_ally_name));
-				}
+
+				strcpy(content, va("%s%s ^1%d x %d %s%s\n", content, first_name, level.duel_matches[i][2], level.duel_matches[i][3], second_name, duel_time_remaining));
 			}
 			else
-			{ // zyk: both duelists left
-				if (level.duel_matches[i][2] != -1)
-				{
-					strcpy(content, va("%s^3Left Tournament ^3P x P ^3Left Tournament\n", content));
-				}
-				else
-				{ // zyk: not played it
-					strcpy(content, va("%s^3Left Tournament   ^3x   ^3Left Tournament\n", content));
-				}
+			{ // zyk: match not played yet in this tournament cycle
+				strcpy(content, va("%s%s ^7%d x %d %s\n", content, first_name, level.duel_matches[i][2], level.duel_matches[i][3], second_name));
 			}
 
 			i++;
