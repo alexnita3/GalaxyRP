@@ -986,6 +986,7 @@ typedef struct clientPersistant_s {
 	// zyk: powers that hits the target player more than once need a hit counter
 	int quest_power_hit_counter;
 	int quest_power_hit2_counter;
+	int quest_power_hit3_counter;
 
 	// zyk: timers of the quest powers used by this player
 	int quest_power1_timer;

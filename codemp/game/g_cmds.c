@@ -4026,7 +4026,7 @@ extern void earthquake(gentity_t *ent, int stun_time, int strength, int distance
 extern void blowing_wind(gentity_t *ent, int distance, int duration);
 extern void sleeping_flowers(gentity_t *ent, int stun_time, int distance);
 extern void time_power(gentity_t *ent, int distance, int duration);
-extern void chaos_power(gentity_t *ent, int distance, int first_damage);
+extern void chaos_power(gentity_t *ent, int distance, int duration);
 extern void water_splash(gentity_t *ent, int distance, int damage);
 extern void ultra_flame(gentity_t *ent, int distance, int damage);
 extern void rock_fall(gentity_t *ent, int distance, int damage);
@@ -4323,7 +4323,7 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (zyk_enable_chaos_power.integer == 1 && ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.magic_power >= zyk_chaos_power_mp_cost.integer)
 					{ // zyk: uses Chaos Power
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
-						chaos_power(ent,400,70);
+						chaos_power(ent, 400, 5000);
 						ent->client->pers.magic_power -= zyk_chaos_power_mp_cost.integer;
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (28000 * ((4.0 - ent->client->pers.skill_levels[55])/4.0));
@@ -10238,7 +10238,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
 							trap->SendServerCommand( ent-g_entities, va("print \"^3Immunity Power: ^7protects you from other magic powers. Attack S + with special melee to use this power\n\"") );
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
-							trap->SendServerCommand( ent-g_entities, va("print \"^3Chaos Power: ^7causes high damage, electrifies the enemies and throws them in the ground. Attack with S + special melee to use this power\n\"") );
+							trap->SendServerCommand( ent-g_entities, va("print \"^3Chaos Power: ^7damages, stuns, slowers and electrifies enemies. Attack with S + special melee to use this power\n\"") );
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
 							trap->SendServerCommand( ent-g_entities, va("print \"^3Time Power: ^7paralyzes enemies for some seconds. Attack with S + special melee to use this power\n\"") );
 					}

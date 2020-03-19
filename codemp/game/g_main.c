@@ -4959,7 +4959,7 @@ void poison_mushrooms(gentity_t *ent, int min_distance, int max_distance)
 }
 
 // zyk: Chaos Power
-void chaos_power(gentity_t *ent, int distance, int first_damage)
+void chaos_power(gentity_t *ent, int distance, int duration)
 {
 	int i = 0;
 	int targets_hit = 0;
@@ -4972,8 +4972,8 @@ void chaos_power(gentity_t *ent, int distance, int first_damage)
 		{
 			player_ent->client->pers.quest_power_user1_id = ent->s.number;
 			player_ent->client->pers.quest_power_status |= (1 << 1);
-			player_ent->client->pers.quest_power_hit_counter = 1;
-			player_ent->client->pers.quest_target1_timer = level.time + 1000;
+			player_ent->client->pers.quest_power_hit3_counter = duration/200;
+			player_ent->client->pers.quest_target1_timer = level.time + 200;
 
 			// zyk: removing emotes to prevent exploits
 			if (player_ent->client->pers.player_statuses & (1 << 1))
@@ -4993,20 +4993,11 @@ void chaos_power(gentity_t *ent, int distance, int first_damage)
 				Jetpack_Off(player_ent);
 			}
 
-			// zyk: First Chaos Power hit
-			player_ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-			player_ent->client->ps.forceHandExtendTime = level.time + 5000;
-			player_ent->client->ps.velocity[2] += 150;
-			player_ent->client->ps.forceDodgeAnim = 0;
-			player_ent->client->ps.quickerGetup = qtrue;
-			player_ent->client->ps.electrifyTime = level.time + 5000;
-
-			// zyk: gives fall kill to the owner of this power
-			player_ent->client->ps.otherKiller = ent->s.number;
-			player_ent->client->ps.otherKillerTime = level.time + 5000;
-			player_ent->client->ps.otherKillerDebounceTime = level.time + 100;
-
-			G_Damage(player_ent,ent,ent,NULL,NULL,first_damage,0,MOD_UNKNOWN);
+			// zyk:  setting anim
+			player_ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			player_ent->client->ps.forceDodgeAnim = BOTH_SONICPAIN_END;
+			player_ent->client->ps.forceHandExtendTime = level.time + duration;
+			player_ent->client->ps.electrifyTime = level.time + duration;
 		}
 	}
 }
@@ -6849,22 +6840,17 @@ void quest_power_events(gentity_t *ent)
 
 			if (ent->client->pers.quest_power_status & (1 << 1))
 			{ // zyk: Chaos Power
-				if (ent->client->pers.quest_power_hit_counter > 0 && ent->client->pers.quest_target1_timer < level.time)
-				{
-					G_Damage(ent,&g_entities[ent->client->pers.quest_power_user1_id],&g_entities[ent->client->pers.quest_power_user1_id],NULL,NULL, 70,0,MOD_UNKNOWN);
-					ent->client->pers.quest_power_hit_counter--;
-					ent->client->pers.quest_target1_timer = level.time + 1000;
+				if (ent->client->pers.quest_power_hit3_counter > 0 && ent->client->pers.quest_target1_timer < level.time)
+				{ // zyk: Chaos Power hit
+					gentity_t *chaos_user = &g_entities[ent->client->pers.quest_power_user1_id];
+
+					G_Damage(ent, chaos_user, chaos_user, NULL, NULL, 12, 0, MOD_UNKNOWN);
+					ent->client->pers.quest_power_hit3_counter--;
+					ent->client->pers.quest_target1_timer = level.time + 200;
 				}
-				else if (ent->client->pers.quest_power_hit_counter == 0 && ent->client->pers.quest_target1_timer < level.time)
-				{
-					G_Damage(ent,&g_entities[ent->client->pers.quest_power_user1_id],&g_entities[ent->client->pers.quest_power_user1_id],NULL,NULL, 70,0,MOD_UNKNOWN);
-
-					ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-					ent->client->ps.forceHandExtendTime = level.time + 1500;
-					ent->client->ps.velocity[2] += 550;
-					ent->client->ps.forceDodgeAnim = 0;
-					ent->client->ps.quickerGetup = qtrue;
-
+				
+				if (ent->client->pers.quest_power_hit3_counter == 0)
+				{ // zyk: end of Chaos Power
 					ent->client->pers.quest_power_status &= ~(1 << 1);
 				}
 			}
@@ -15804,7 +15790,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (ent->client->sess.selected_right_special_power  & (1 << 2) && random_number == 2)
 					{
-						chaos_power(ent, 400, 70);
+						chaos_power(ent, 400, 5000);
 					}
 					else if (ent->client->sess.selected_right_special_power  & (1 << 3) && random_number == 3)
 					{
@@ -16525,7 +16511,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 33)
 						{
-							chaos_power(ent,1600,90);
+							chaos_power(ent,1600, 5000);
 							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Chaos Power!\"");
 							ent->client->pers.hunter_quest_messages = 0;
 						}
@@ -16747,7 +16733,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 2)
 						{
-							chaos_power(ent, 400, 90);
+							chaos_power(ent, 400, 5000);
 						}
 						else if (random_magic == 3)
 						{
@@ -17098,7 +17084,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 16)
 						{
-							chaos_power(ent, 5000, 90);
+							chaos_power(ent, 5000, 5000);
 						}
 						else if (random_magic == 17)
 						{
@@ -17481,7 +17467,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (random_magic == 2)
 					{
-						chaos_power(ent, 400, 90);
+						chaos_power(ent, 400, 5000);
 					}
 					else if (random_magic == 3)
 					{

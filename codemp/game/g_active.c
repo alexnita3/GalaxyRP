@@ -2673,7 +2673,12 @@ void ClientThink_real( gentity_t *ent ) {
 		}
 
 		if (client->pers.quest_power_status & (1 << 6))
-		{ // zyk: hit by Slow Motion power. Decrease speed
+		{ // zyk: hit by Slow Motion. Decrease speed
+			client->ps.speed /= 2;
+		}
+
+		if (client->pers.quest_power_status & (1 << 1))
+		{ // zyk: hit by Chaos Power. Decrease speed
 			client->ps.speed /= 2;
 		}
 		
@@ -2716,7 +2721,12 @@ void ClientThink_real( gentity_t *ent ) {
 		}
 
 		if (client->pers.quest_power_status & (1 << 6))
-		{ // zyk: hit by Slow Motion power. Decrease speed
+		{ // zyk: hit by Slow Motion. Decrease speed
+			zyk_player_speed /= 2;
+		}
+
+		if (client->pers.quest_power_status & (1 << 1))
+		{ // zyk: hit by Chaos Power. Decrease speed
 			zyk_player_speed /= 2;
 		}
 		
