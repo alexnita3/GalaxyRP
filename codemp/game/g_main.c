@@ -6876,7 +6876,7 @@ void quest_power_events(gentity_t *ent)
 
 					if (poison_mushrooms_user && poison_mushrooms_user->client)
 					{
-						zyk_quest_effect_spawn(poison_mushrooms_user, ent, "zyk_quest_effect_poison", "0", "noghri_stick/gas_cloud", 0, 0, 0, 800);
+						zyk_quest_effect_spawn(poison_mushrooms_user, ent, "zyk_quest_effect_poison", "0", "noghri_stick/gas_cloud", 0, 0, 0, 300);
 
 						// zyk: Universe Power
 						if (poison_mushrooms_user->client->pers.quest_power_status & (1 << 13))
