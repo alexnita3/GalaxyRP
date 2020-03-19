@@ -10240,7 +10240,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
 							trap->SendServerCommand( ent-g_entities, va("print \"^3Chaos Power: ^7damages, stuns, slowers and electrifies enemies. Attack with S + special melee to use this power\n\"") );
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
-							trap->SendServerCommand( ent-g_entities, va("print \"^3Time Power: ^7paralyzes enemies for some seconds. Attack with S + special melee to use this power\n\"") );
+							trap->SendServerCommand( ent-g_entities, va("print \"^3Time Power: ^7paralyzes enemies for some seconds. Enemies take less damage while paralyzed. Attack with S + special melee to use this power\n\"") );
 					}
 				}
 				else if (Q_stricmp( arg1, "r" ) == 0)

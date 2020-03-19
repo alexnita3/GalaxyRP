@@ -2397,7 +2397,7 @@ void ClientThink_real( gentity_t *ent ) {
 				client->ps.pm_type = PM_NORMAL;
 			}
 
-			if (client->pers.quest_power_status & (1 << 2) && client->pers.quest_target2_timer > level.time)
+			if (client->pers.quest_power_status & (1 << 2))
 			{ // zyk: player hit by Time Power
 				if (client->jetPackOn)
 				{
@@ -2419,10 +2419,6 @@ void ClientThink_real( gentity_t *ent ) {
 					//prevent anything from being done for 400ms after holster
 					client->ps.weaponTime = 400;
 				}
-			}
-			else if (client->pers.quest_power_status & (1 << 2) && client->pers.quest_target2_timer <= level.time)
-			{ // zyk: Time Power is over
-				client->pers.quest_power_status &= ~(1 << 2);
 			}
 
 			if (client->pers.player_statuses & (1 << 6))
@@ -2664,6 +2660,11 @@ void ClientThink_real( gentity_t *ent ) {
 		{ // zyk: hit by Chaos Power. Decrease speed
 			client->ps.speed /= 2;
 		}
+
+		if (client->pers.quest_power_status & (1 << 2))
+		{ // zyk: hit by Time Power. Do not move at all
+			client->ps.speed = 0;
+		}
 		
 		if (client->pers.quest_power_status & (1 << 9))
 		{ // zyk: using Ultra Speed. Increase speed
@@ -2711,6 +2712,11 @@ void ClientThink_real( gentity_t *ent ) {
 		if (client->pers.quest_power_status & (1 << 1))
 		{ // zyk: hit by Chaos Power. Decrease speed
 			zyk_player_speed /= 2;
+		}
+
+		if (client->pers.quest_power_status & (1 << 2))
+		{ // zyk: hit by Time Power. Do not move at all
+			zyk_player_speed = 0;
 		}
 		
 		if (client->pers.quest_power_status & (1 << 9))

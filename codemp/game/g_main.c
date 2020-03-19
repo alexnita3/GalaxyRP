@@ -6853,6 +6853,11 @@ void quest_power_events(gentity_t *ent)
 				}
 			}
 
+			if (ent->client->pers.quest_power_status & (1 << 2) && ent->client->pers.quest_target2_timer < level.time)
+			{ // zyk: Time Power. Remove it from target when duration ends
+				ent->client->pers.quest_power_status &= ~(1 << 2);
+			}
+
 			if (ent->client->pers.quest_power_status & (1 << 3) && ent->client->pers.quest_power2_timer < level.time)
 			{ // zyk: Ultra Strength
 				ent->client->pers.quest_power_status &= ~(1 << 3);
