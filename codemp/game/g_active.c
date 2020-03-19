@@ -3547,18 +3547,18 @@ void ClientThink_real( gentity_t *ent ) {
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1000;
 
 								// zyk: recovers hp, shield and mp
-								if ((ent->health + 20) < ent->client->pers.max_rpg_health)
-									ent->health += 20;
+								if ((ent->health + 25) < ent->client->pers.max_rpg_health)
+									ent->health += 25;
 								else
 									ent->health = ent->client->pers.max_rpg_health;
 
-								if ((ent->client->ps.stats[STAT_ARMOR] + 20) < ent->client->pers.max_rpg_shield)
-									ent->client->ps.stats[STAT_ARMOR] += 20;
+								if ((ent->client->ps.stats[STAT_ARMOR] + 25) < ent->client->pers.max_rpg_shield)
+									ent->client->ps.stats[STAT_ARMOR] += 25;
 								else
 									ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
 
-								if ((ent->client->pers.magic_power + 20) < zyk_max_magic_power(ent))
-									ent->client->pers.magic_power += 20;
+								if ((ent->client->pers.magic_power + 25) < zyk_max_magic_power(ent))
+									ent->client->pers.magic_power += 25;
 								else
 									ent->client->pers.magic_power = zyk_max_magic_power(ent);
 
