@@ -4643,6 +4643,77 @@ qboolean duel_tournament_is_duelist(gentity_t *ent)
 	return qfalse;
 }
 
+void zyk_quest_effect_spawn(gentity_t *ent, gentity_t *target_ent, char *targetname, char *spawnflags, char *effect_path, int start_time, int damage, int radius, int duration)
+{
+	gentity_t *new_ent = G_Spawn();
+
+	if (!strstr(effect_path, ".md3"))
+	{// zyk: effect power
+		zyk_set_entity_field(new_ent, "classname", "fx_runner");
+		zyk_set_entity_field(new_ent, "spawnflags", spawnflags);
+		zyk_set_entity_field(new_ent, "targetname", targetname);
+
+		if (Q_stricmp(targetname, "zyk_effect_scream") == 0)
+			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)target_ent->r.currentOrigin[0], (int)target_ent->r.currentOrigin[1], (int)target_ent->r.currentOrigin[2] + 50));
+		else
+			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)target_ent->r.currentOrigin[0], (int)target_ent->r.currentOrigin[1], (int)target_ent->r.currentOrigin[2]));
+
+		new_ent->s.modelindex = G_EffectIndex(effect_path);
+
+		zyk_spawn_entity(new_ent);
+
+		if (damage > 0)
+			new_ent->splashDamage = damage;
+
+		if (radius > 0)
+			new_ent->splashRadius = radius;
+
+		if (start_time > 0)
+			new_ent->nextthink = level.time + start_time;
+
+		level.special_power_effects[new_ent->s.number] = ent->s.number;
+		level.special_power_effects_timer[new_ent->s.number] = level.time + duration;
+
+		if (Q_stricmp(targetname, "zyk_quest_effect_drain") == 0)
+			G_Sound(new_ent, CHAN_AUTO, G_SoundIndex("sound/effects/arc_lp.wav"));
+
+		if (Q_stricmp(targetname, "zyk_quest_effect_sand") == 0)
+			ent->client->pers.quest_power_effect1_id = new_ent->s.number;
+	}
+	else
+	{ // zyk: model power
+		zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
+		zyk_set_entity_field(new_ent, "spawnflags", spawnflags);
+
+		if (Q_stricmp(targetname, "zyk_tree_of_life") == 0)
+			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)target_ent->r.currentOrigin[0], (int)target_ent->r.currentOrigin[1], (int)target_ent->r.currentOrigin[2] + 350));
+		else
+			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)target_ent->r.currentOrigin[0], (int)target_ent->r.currentOrigin[1], (int)target_ent->r.currentOrigin[2]));
+
+		zyk_set_entity_field(new_ent, "model", effect_path);
+
+		zyk_set_entity_field(new_ent, "targetname", targetname);
+
+		zyk_spawn_entity(new_ent);
+
+		level.special_power_effects[new_ent->s.number] = ent->s.number;
+		level.special_power_effects_timer[new_ent->s.number] = level.time + duration;
+	}
+}
+
+// zyk: if this player or npc has immunity power, returns qtrue and shows Immunity effect
+qboolean zyk_check_immunity_power(gentity_t *ent)
+{
+	if (ent && ent->client && ent->client->pers.quest_power_status & (1 << 0))
+	{
+		zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_immunity", "0", "scepter/invincibility", 0, 0, 0, 300);
+
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
 qboolean zyk_can_hit_boss_battle_target(gentity_t *attacker, gentity_t *target)
 {
 	if (attacker->client->pers.guardian_mode == target->client->pers.guardian_mode ||
@@ -4789,7 +4860,7 @@ qboolean zyk_special_power_can_hit_target(gentity_t *attacker, gentity_t *target
 				is_ally = 1;
 			}
 
-			if (is_ally == 0 && !(target->client->pers.quest_power_status & (1 << 0)) && 
+			if (is_ally == 0 && !(zyk_check_immunity_power(target)) && 
 				zyk_can_hit_boss_battle_target(attacker, target))
 			{ // zyk: Cannot hit target with Immunity Power. Players in bosses can only hit bosses and their helper npcs. Players not in boss battles
 			  // can only hit normal enemy npcs and npcs spawned by bosses but not the bosses themselves. Magic-using npcs can hit everyone that are not their allies
@@ -5125,66 +5196,11 @@ void immunity_power(gentity_t *ent, int duration)
 {
 	ent->client->pers.quest_power_status |= (1 << 0);
 	ent->client->pers.quest_power1_timer = level.time + duration;
+
+	zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_immunity", "0", "scepter/invincibility", 0, 0, 0, 300);
+
 	if (ent->s.number < level.maxclients)
 		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/boon.mp3"));
-}
-
-void zyk_quest_effect_spawn(gentity_t *ent, gentity_t *target_ent, char *targetname, char *spawnflags, char *effect_path, int start_time, int damage, int radius, int duration)
-{
-	gentity_t *new_ent = G_Spawn();
-
-	if (!strstr(effect_path,".md3"))
-	{// zyk: effect power
-		zyk_set_entity_field(new_ent,"classname","fx_runner");
-		zyk_set_entity_field(new_ent,"spawnflags",spawnflags);
-		zyk_set_entity_field(new_ent,"targetname",targetname);
-
-		if (Q_stricmp(targetname, "zyk_effect_scream") == 0)
-			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)target_ent->r.currentOrigin[0], (int)target_ent->r.currentOrigin[1], (int)target_ent->r.currentOrigin[2] + 50));
-		else
-			zyk_set_entity_field(new_ent,"origin",va("%d %d %d",(int)target_ent->r.currentOrigin[0],(int)target_ent->r.currentOrigin[1],(int)target_ent->r.currentOrigin[2]));
-
-		new_ent->s.modelindex = G_EffectIndex( effect_path );
-
-		zyk_spawn_entity(new_ent);
-
-		if (damage > 0)
-			new_ent->splashDamage = damage;
-
-		if (radius > 0)
-			new_ent->splashRadius = radius;
-
-		if (start_time > 0) 
-			new_ent->nextthink = level.time + start_time;
-
-		level.special_power_effects[new_ent->s.number] = ent->s.number;
-		level.special_power_effects_timer[new_ent->s.number] = level.time + duration;
-
-		if (Q_stricmp(targetname, "zyk_quest_effect_drain") == 0)
-			G_Sound(new_ent, CHAN_AUTO, G_SoundIndex("sound/effects/arc_lp.wav"));
-
-		if (Q_stricmp(targetname, "zyk_quest_effect_sand") == 0)
-			ent->client->pers.quest_power_effect1_id = new_ent->s.number;
-	}
-	else
-	{ // zyk: model power
-		zyk_set_entity_field(new_ent,"classname","misc_model_breakable");
-		zyk_set_entity_field(new_ent,"spawnflags",spawnflags);
-
-		if (Q_stricmp(targetname, "zyk_tree_of_life") == 0)
-			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)target_ent->r.currentOrigin[0], (int)target_ent->r.currentOrigin[1], (int)target_ent->r.currentOrigin[2] + 350));
-		else
-			zyk_set_entity_field(new_ent,"origin",va("%d %d %d",(int)target_ent->r.currentOrigin[0],(int)target_ent->r.currentOrigin[1],(int)target_ent->r.currentOrigin[2]));
-
-		zyk_set_entity_field(new_ent,"model",effect_path);
-
-		zyk_set_entity_field(new_ent,"targetname",targetname);
-
-		zyk_spawn_entity(new_ent);
-
-		level.special_power_effects[new_ent->s.number] = ent->s.number;
-		level.special_power_effects_timer[new_ent->s.number] = level.time + duration;
-	}
 }
 
 // zyk: Enemy Weakening
@@ -6357,7 +6373,7 @@ void Player_FireFlameThrower( gentity_t *self )
 				entityList[e] = ENTITYNUM_NONE;
 			}
 			else if (traceEnt->client && (traceEnt->client->sess.amrpgmode == 2 || traceEnt->NPC) && 
-					 self->client->pers.quest_power_status & (1 << 12) && traceEnt->client->pers.quest_power_status & (1 << 0))
+					 self->client->pers.quest_power_status & (1 << 12) && zyk_check_immunity_power(traceEnt))
 			{ // zyk: Immunity Power protects from Flame Burst
 				entityList[e] = ENTITYNUM_NONE;
 			}

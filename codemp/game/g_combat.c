@@ -6772,6 +6772,7 @@ G_RadiusDamage
 */
 extern qboolean npcs_on_same_team(gentity_t *attacker, gentity_t *target);
 extern qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *target);
+extern qboolean zyk_check_immunity_power(gentity_t *ent);
 qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, float radius,
 					 gentity_t *ignore, gentity_t *missile, int mod) {
 	float		points, dist;
@@ -6966,7 +6967,7 @@ qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, floa
 				{ // zyk: if it is an effect used by special power, then attacker must be the owner of the effect. Also, do not hit the owner
 					gentity_t *quest_power_user = &g_entities[level.special_power_effects[attacker->s.number]];
 
-					if (ent && ent->client && ent->client->pers.quest_power_status & (1 << 0) && 
+					if (ent && ent->client && zyk_check_immunity_power(ent) &&
 						Q_stricmp(attacker->targetname, "zyk_effect_scream") != 0 &&
 						Q_stricmp(attacker->targetname, "zyk_timed_bomb_explosion") != 0 &&
 						Q_stricmp(attacker->targetname, "zyk_vertical_dfa") != 0 &&
