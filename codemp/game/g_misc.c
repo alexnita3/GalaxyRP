@@ -3045,7 +3045,8 @@ void fx_runner_link( gentity_t *ent )
 		}
 		else if (Q_stricmp(ent->targetname, "zyk_quest_effect_watersplash") == 0 || Q_stricmp(ent->targetname, "zyk_quest_effect_sleeping") == 0 || 
 				 Q_stricmp(ent->targetname, "zyk_quest_effect_time") == 0 || Q_stricmp(ent->targetname, "zyk_quest_effect_poison") == 0 || 
-				 Q_stricmp(ent->targetname, "zyk_quest_effect_sand") == 0 || Q_stricmp(ent->targetname, "zyk_quest_effect_immunity") == 0)
+				 Q_stricmp(ent->targetname, "zyk_quest_effect_sand") == 0 || Q_stricmp(ent->targetname, "zyk_quest_effect_immunity") == 0 || 
+				 Q_stricmp(ent->targetname, "zyk_quest_effect_flaming_area_hit") == 0)
 		{ // zyk: starts the effect imediately for these magic powers
 			ent->s.modelindex2 = FX_STATE_CONTINUOUS;
 			ent->nextthink = level.time + 200; // wait a small bit, then start working
@@ -3115,7 +3116,8 @@ void SP_fx_runner( gentity_t *ent )
 	if (Q_stricmp(ent->targetname, "zyk_super_beam") == 0 || Q_stricmp(ent->targetname, "zyk_force_storm") == 0 || 
 		Q_stricmp(ent->targetname, "zyk_effect_item_generation") == 0 || Q_stricmp(ent->targetname, "zyk_quest_effect_enemy_nerf") == 0 || 
 		Q_stricmp(ent->targetname, "zyk_quest_effect_magic_disable") == 0 || Q_stricmp(ent->targetname, "zyk_vertical_dfa") == 0 || 
-		Q_stricmp(ent->targetname, "zyk_quest_effect_poison") == 0 || Q_stricmp(ent->targetname, "zyk_quest_effect_immunity") == 0)
+		Q_stricmp(ent->targetname, "zyk_quest_effect_poison") == 0 || Q_stricmp(ent->targetname, "zyk_quest_effect_immunity") == 0 ||
+		Q_stricmp(ent->targetname, "zyk_quest_effect_flaming_area_hit") == 0)
 	{
 		ent->nextthink = level.time;
 	}

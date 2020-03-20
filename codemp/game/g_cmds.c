@@ -4663,7 +4663,7 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (use_this_power == MAGIC_FLAMING_AREA && zyk_enable_flaming_area.integer == 1 && ent->client->pers.magic_power >= (int)ceil((zyk_flaming_area_mp_cost.integer * universe_mp_cost_factor)))
 					{
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 1000;
-						flaming_area(ent, 23);
+						flaming_area(ent, 20);
 						ent->client->pers.magic_power -= (int)ceil((zyk_flaming_area_mp_cost.integer * universe_mp_cost_factor));
 						if (ent->client->pers.rpg_class == 8)
 							ent->client->pers.quest_power_usage_timer = level.time + (18000 * ((4.0 - ent->client->pers.skill_levels[55]) / 4.0));
@@ -10272,7 +10272,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					else if (ent->client->pers.rpg_class == 3)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Earthquake: ^7knocks people down causing damage. Attack with D + special melee to use this power. MP cost: %d\n^3Rockfall: ^7rocks keep falling at the enemies. Attack with A + special melee to use this power. MP cost: %d\n^3Shifting Sand: ^7a shifting sand appears, sending you to your nearest enemy. Stand near the sand to be transported to the enemy. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_earthquake_mp_cost.integer, zyk_rockfall_mp_cost.integer, zyk_shifting_sand_mp_cost.integer) );
 					else if (ent->client->pers.rpg_class == 4)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Flame Burst: ^7fires a flame burst for some seconds. Attack with D + special melee to use this power. MP cost: %d\n^3Ultra Flame: ^7a flame jet appears at the enemies and damages them. Attack with A + special melee to use this power. MP cost: %d\n^3Flaming Area: ^7creates a big area of flames around you, with high damage to enemies. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_flame_burst_mp_cost.integer, zyk_ultra_flame_mp_cost.integer, zyk_flaming_area_mp_cost.integer) );
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Flame Burst: ^7fires a flame burst for some seconds. Attack with D + special melee to use this power. MP cost: %d\n^3Ultra Flame: ^7a flame jet appears at the enemies and damages them. Attack with A + special melee to use this power. MP cost: %d\n^3Flaming Area: ^7creates a big area of flames around you, with high damage to enemies. Makes targets who touch the flames catch fire for some seconds. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_flame_burst_mp_cost.integer, zyk_ultra_flame_mp_cost.integer, zyk_flaming_area_mp_cost.integer) );
 					else if (ent->client->pers.rpg_class == 5)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Healing Water: ^7instantly recovers some hp. Attack with D + special melee to use this power. MP cost: %d\n^3Water Splash: ^7damages enemies, draining their hp and healing you. Attack with A + special melee to use this power. MP cost: %d\n^3Water Attack: ^7attacks enemies nearby with water, with high damage. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_healing_water_mp_cost.integer, zyk_water_splash_mp_cost.integer, zyk_water_attack_mp_cost.integer) );
 					else if (ent->client->pers.rpg_class == 6)

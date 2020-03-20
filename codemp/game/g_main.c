@@ -7184,6 +7184,37 @@ void quest_power_events(gentity_t *ent)
 					ent->client->pers.quest_power_status &= ~(1 << 22);
 				}
 			}
+
+			if (ent->client->pers.quest_power_status & (1 << 23))
+			{ // zyk: hit by Flaming Area
+				if (ent->client->pers.quest_power_status & (1 << 0))
+				{ // zyk: testing for Immunity Power in target player
+					ent->client->pers.quest_power_status &= ~(1 << 23);
+				}
+
+				if (ent->client->pers.quest_power_hit4_counter > 0 && ent->client->pers.quest_target8_timer < level.time)
+				{
+					gentity_t *flaming_area_user = &g_entities[ent->client->pers.quest_power_user5_id];
+
+					if (flaming_area_user && flaming_area_user->client)
+					{
+						zyk_quest_effect_spawn(flaming_area_user, ent, "zyk_quest_effect_flaming_area_hit", "0", "env/fire", 0, 0, 0, 300);
+
+						// zyk: Universe Power
+						if (flaming_area_user->client->pers.quest_power_status & (1 << 13))
+							G_Damage(ent, flaming_area_user, flaming_area_user, NULL, NULL, 3, 0, MOD_UNKNOWN);
+						else
+							G_Damage(ent, flaming_area_user, flaming_area_user, NULL, NULL, 2, 0, MOD_UNKNOWN);
+					}
+
+					ent->client->pers.quest_power_hit4_counter--;
+					ent->client->pers.quest_target8_timer = level.time + 200;
+				}
+				else if (ent->client->pers.quest_power_hit4_counter == 0 && ent->client->pers.quest_target8_timer < level.time)
+				{
+					ent->client->pers.quest_power_status &= ~(1 << 23);
+				}
+			}
 		}
 		else if (!ent->NPC && ent->client->pers.quest_power_status & (1 << 10) && ent->client->pers.quest_power1_timer < level.time && 
 				!(ent->client->ps.eFlags & EF_DISINTEGRATION)) 
@@ -15718,7 +15749,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_FLAMING_AREA) && random_number == 17)
 					{
-						flaming_area(ent, 23);
+						flaming_area(ent, 20);
 					}
 					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_BLOWING_WIND) && random_number == 18)
 					{
@@ -16018,7 +16049,7 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.universe_quest_timer < level.time)
 					{
-						flaming_area(ent, 23);
+						flaming_area(ent, 20);
 						ent->client->pers.universe_quest_timer = level.time + 19000;
 						trap->SendServerCommand(-1, "chat \"^1Guardian of Fire: ^7Flaming Area!\"");
 					}
@@ -16435,7 +16466,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 22)
 						{
-							flaming_area(ent, 23);
+							flaming_area(ent, 20);
 							trap->SendServerCommand(-1, "chat \"^1Guardian of Chaos: ^7Flaming Area!\"");
 							ent->client->pers.hunter_quest_messages++;
 						}
@@ -16649,7 +16680,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 22)
 						{
-							flaming_area(ent, 23);
+							flaming_area(ent, 20);
 						}
 						else if (random_magic == 23)
 						{
@@ -16890,7 +16921,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 22)
 						{
-							flaming_area(ent, 23);
+							flaming_area(ent, 20);
 						}
 						else if (random_magic == 23)
 						{
@@ -17033,7 +17064,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 4)
 						{
-							flaming_area(ent, 23);
+							flaming_area(ent, 20);
 						}
 						else if (random_magic == 5)
 						{
@@ -17304,7 +17335,7 @@ void G_RunFrame( int levelTime ) {
 				}
 				else if (random_magic == 23)
 				{
-					flaming_area(ent, 23);
+					flaming_area(ent, 20);
 				}
 				else if (random_magic == 24)
 				{
@@ -17421,7 +17452,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (random_magic == 23)
 					{
-						flaming_area(ent, 23);
+						flaming_area(ent, 20);
 					}
 					else if (random_magic == 24)
 					{

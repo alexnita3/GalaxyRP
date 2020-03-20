@@ -978,6 +978,7 @@ typedef struct clientPersistant_s {
 	// 20 - hit by Reverse Wind
 	// 21 - hit by Enemy Nerf
 	// 22 - using Ice Block
+	// 23 - hit by Flaming Area
 	int quest_power_status;
 
 	// zyk: cooldown between quest power uses
@@ -987,6 +988,7 @@ typedef struct clientPersistant_s {
 	int quest_power_hit_counter;
 	int quest_power_hit2_counter;
 	int quest_power_hit3_counter;
+	int quest_power_hit4_counter;
 
 	// zyk: timers of the quest powers used by this player
 	int quest_power1_timer;
@@ -1005,6 +1007,7 @@ typedef struct clientPersistant_s {
 	int quest_target5_timer;
 	int quest_target6_timer;
 	int quest_target7_timer;
+	int quest_target8_timer;
 
 	// zyk: quest powers debounce timer, for example, like Wind powers
 	int quest_debounce1_timer;
@@ -1014,6 +1017,7 @@ typedef struct clientPersistant_s {
 	int quest_power_user2_id;
 	int quest_power_user3_id;
 	int quest_power_user4_id;
+	int quest_power_user5_id;
 
 	// zyk: sets the id of the effect of the magic used by this player
 	int quest_power_effect1_id;

@@ -7024,6 +7024,14 @@ qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, floa
 						Q_stricmp(attacker->targetname, "zyk_vertical_dfa") == 0 || 
 						Q_stricmp(attacker->targetname, "zyk_force_storm") == 0)
 					{
+						if (Q_stricmp(attacker->targetname, "zyk_quest_effect_flaming_area") == 0 && quest_power_user && quest_power_user != ent && ent->client)
+						{ // zyk: if player touches the flame, will keep catching fire for some seconds
+							ent->client->pers.quest_power_status |= (1 << 23);
+							ent->client->pers.quest_power_user5_id = quest_power_user->s.number;
+							ent->client->pers.quest_power_hit4_counter = 15;
+							ent->client->pers.quest_target8_timer = level.time + 200;
+						}
+
 						G_Damage (ent, quest_power_user, quest_power_user, NULL, origin, (int)points, DAMAGE_RADIUS, mod);
 					}
 					else if (Q_stricmp(attacker->targetname, "zyk_effect_scream") == 0)
