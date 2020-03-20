@@ -4643,6 +4643,18 @@ qboolean duel_tournament_is_duelist(gentity_t *ent)
 	return qfalse;
 }
 
+qboolean zyk_can_hit_boss_battle_target(gentity_t *attacker, gentity_t *target)
+{
+	if (attacker->client->pers.guardian_mode == target->client->pers.guardian_mode ||
+		(attacker->NPC && attacker->client->pers.guardian_mode == 0) ||
+		(!attacker->NPC && attacker->client->pers.guardian_mode > 0 && target->NPC))
+	{
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
 // zyk: tests if the target player can be hit by the attacker gun/saber damage, force power or special power
 qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 {
@@ -4740,9 +4752,7 @@ qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *targe
 		}
 
 		if (is_ally == 0 &&
-			(attacker->client->pers.guardian_mode == target->client->pers.guardian_mode ||
-			(attacker->NPC && attacker->client->pers.guardian_mode == 0) ||
-			(!attacker->NPC && attacker->client->pers.guardian_mode > 0 && target->NPC)))
+			zyk_can_hit_boss_battle_target(attacker, target))
 		{ // zyk: players in bosses can only hit bosses and their helper npcs. Players not in boss battles
 		  // can only hit normal enemy npcs and npcs spawned by bosses but not the bosses themselves. Unique-using npcs can hit everyone that are not their allies
 			return qtrue;
@@ -4780,9 +4790,7 @@ qboolean zyk_special_power_can_hit_target(gentity_t *attacker, gentity_t *target
 			}
 
 			if (is_ally == 0 && !(target->client->pers.quest_power_status & (1 << 0)) && 
-				(attacker->client->pers.guardian_mode == target->client->pers.guardian_mode || 
-				(attacker->NPC && attacker->client->pers.guardian_mode == 0) ||
-				(!attacker->NPC && attacker->client->pers.guardian_mode > 0 && target->NPC)))
+				zyk_can_hit_boss_battle_target(attacker, target))
 			{ // zyk: Cannot hit target with Immunity Power. Players in bosses can only hit bosses and their helper npcs. Players not in boss battles
 			  // can only hit normal enemy npcs and npcs spawned by bosses but not the bosses themselves. Magic-using npcs can hit everyone that are not their allies
 				(*targets_hit)++;

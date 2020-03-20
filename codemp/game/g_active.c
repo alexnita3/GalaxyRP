@@ -2140,6 +2140,7 @@ extern void TossClientWeapon(gentity_t *self, vec3_t direction, float speed);
 extern qboolean saberKnockOutOfHand(gentity_t *saberent, gentity_t *saberOwner, vec3_t velocity);
 extern qboolean zyk_can_use_unique(gentity_t *ent);
 extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
+extern qboolean zyk_can_hit_boss_battle_target(gentity_t *attacker, gentity_t *target);
 void ClientThink_real( gentity_t *ent ) {
 	gclient_t	*client;
 	pmove_t		pmove;
@@ -4270,8 +4271,9 @@ void ClientThink_real( gentity_t *ent ) {
 
 		if (faceKicked && faceKicked->client && (!OnSameTeam(ent, faceKicked) || g_friendlyFire.integer) &&
 			(!faceKicked->client->ps.duelInProgress || faceKicked->client->ps.duelIndex == ent->s.number) &&
-			(!ent->client->ps.duelInProgress || ent->client->ps.duelIndex == faceKicked->s.number))
-		{
+			(!ent->client->ps.duelInProgress || ent->client->ps.duelIndex == faceKicked->s.number) &&
+			zyk_can_hit_target(ent, faceKicked) && zyk_can_hit_boss_battle_target(ent, faceKicked))
+		{ // zyk: also validates if we can hit this target
 			if ( faceKicked && faceKicked->client && faceKicked->health && faceKicked->takedamage )
 			{//push them away and do pain
 				vec3_t oppDir;
