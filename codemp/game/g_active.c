@@ -2118,6 +2118,71 @@ void G_SetTauntAnim( gentity_t *ent, int taunt )
 	}
 }
 
+void zyk_do_force_dash(gentity_t *ent)
+{
+	vec3_t	forward, dir;
+	int			i, num;
+	int			touch[MAX_GENTITIES];
+	gentity_t	*hit;
+	vec3_t		mins, maxs;
+	vec3_t	range = { 30, 30, 48 };
+
+	if (ent->client->pers.quest_power_status & (1 << 2))
+	{ // zyk: hit by Time Power or knocked down. Stop Dash
+		return;
+	}
+
+	if (ent->client->pers.fast_dash_timer > level.time)
+	{ // zyk: still starting the anim, wait a bit more
+		return;
+	}
+
+	// zyk: make player dash towards the direction he is looking at
+	VectorCopy(ent->client->ps.viewangles, dir);
+	AngleVectors(dir, forward, NULL, NULL);
+	VectorNormalize(forward);
+	VectorScale(forward, 2.5 * ent->client->ps.speed, forward);
+	VectorCopy(forward, ent->client->ps.velocity);
+
+	VectorSubtract(ent->client->ps.origin, range, mins);
+	VectorAdd(ent->client->ps.origin, range, maxs);
+
+	num = trap->EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
+
+	for (i = 0; i < num; i++)
+	{
+		hit = &g_entities[touch[i]];
+
+		if (hit && hit != ent && hit->client && (hit->s.number < MAX_CLIENTS || hit->client->NPC_class != CLASS_VEHICLE))
+		{ // zyk: Fast Dash ability knocks target down
+			vec3_t target_dir;
+			int target_knockdown_scale = 500;
+
+			VectorSubtract(hit->client->ps.origin, ent->client->ps.origin, target_dir);
+			VectorNormalize(target_dir);
+
+			// zyk: if using Meditate taunt, remove it
+			if (hit->client->ps.legsAnim == BOTH_MEDITATE && hit->client->ps.torsoAnim == BOTH_MEDITATE)
+			{
+				hit->client->ps.legsAnim = hit->client->ps.torsoAnim = BOTH_MEDITATE_END;
+			}
+
+			hit->client->ps.velocity[0] = target_dir[0] * target_knockdown_scale;
+			hit->client->ps.velocity[1] = target_dir[1] * target_knockdown_scale;
+			hit->client->ps.velocity[2] = 250;
+
+			hit->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
+			hit->client->ps.forceHandExtendTime = level.time + 1000;
+			hit->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
+			hit->client->ps.quickerGetup = qtrue;
+
+			G_Damage(hit, ent, ent, NULL, NULL, 8, DAMAGE_NO_ARMOR, MOD_UNKNOWN);
+		}
+	}
+
+
+}
+
 /*
 ==============
 ClientThink
@@ -2732,6 +2797,11 @@ void ClientThink_real( gentity_t *ent ) {
 
 		client->ps.speed = zyk_player_speed;
 		client->ps.basespeed = zyk_player_speed;
+
+		if (client->sess.amrpgmode == 2 && client->pers.rpg_class == 7 && client->pers.player_statuses & (1 << 23))
+		{ // zyk: using Force Dash
+			zyk_do_force_dash(ent);
+		}
 	}
 
 	if ( !ent->NPC || !(ent->NPC->aiFlags&NPCAI_CUSTOM_GRAVITY) )

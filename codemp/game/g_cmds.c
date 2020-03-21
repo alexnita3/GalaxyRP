@@ -10714,7 +10714,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 7)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Force Gunner gets Item Generation, which creates holdable items through the use of force and magic. Spends 50 force and 10 mp\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 3: ^7used with /unique command. You can only have one Unique Ability at a time. Force Gunner gets Fast Dash, which makes him do a dash towards where he is looking at. If he hits someone, damages and knocks the target down. Spends 50 force and 10 mp\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 8)
 			{
@@ -15627,7 +15627,7 @@ extern void force_scream(gentity_t *ent);
 extern void zyk_force_storm(gentity_t *ent);
 extern qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *target);
 extern void zyk_ice_bomb(gentity_t *ent);
-extern void zyk_item_generation(gentity_t *ent);
+extern void zyk_force_dash(gentity_t *ent);
 void Cmd_Unique_f(gentity_t *ent) {
 	if (ent->client->pers.secrets_found & (1 << 2))
 	{ // zyk: Unique Ability 1
@@ -16568,18 +16568,18 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 			}
 			else if (ent->client->pers.rpg_class == 7)
-			{ // zyk: Force Gunner Item Generation
+			{ // zyk: Force Gunner Fast Dash
 				if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer / 4) && ent->client->pers.magic_power >= 10)
 				{
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 					ent->client->pers.magic_power -= 10;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-					ent->client->pers.unique_skill_duration = level.time + 500;
+					ent->client->pers.unique_skill_duration = level.time + 2000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
-					zyk_item_generation(ent);
+					zyk_force_dash(ent);
 
 					send_rpg_events(2000);
 
