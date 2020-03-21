@@ -3023,8 +3023,8 @@ void fx_runner_link( gentity_t *ent )
 			ent->nextthink = level.time + 100; // wait a small bit, then start working
 			G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/ambience/thunder_close1.mp3"));
 		}
-		else if (Q_stricmp(ent->targetname, "zyk_effect_item_generation") == 0)
-		{ // zyk: starts the item generation effect right now
+		else if (Q_stricmp(ent->targetname, "zyk_effect_force_dash") == 0)
+		{ // zyk: starts the Fast Dash effect right now
 			ent->s.modelindex2 = FX_STATE_CONTINUOUS;
 			ent->nextthink = level.time + 100; // wait a small bit, then start working
 		}
@@ -3114,7 +3114,7 @@ void SP_fx_runner( gentity_t *ent )
 
 	// zyk: no need to wait 400 ms with these effects
 	if (Q_stricmp(ent->targetname, "zyk_super_beam") == 0 || Q_stricmp(ent->targetname, "zyk_force_storm") == 0 || 
-		Q_stricmp(ent->targetname, "zyk_effect_item_generation") == 0 || Q_stricmp(ent->targetname, "zyk_quest_effect_enemy_nerf") == 0 || 
+		Q_stricmp(ent->targetname, "zyk_effect_force_dash") == 0 || Q_stricmp(ent->targetname, "zyk_quest_effect_enemy_nerf") == 0 || 
 		Q_stricmp(ent->targetname, "zyk_quest_effect_magic_disable") == 0 || Q_stricmp(ent->targetname, "zyk_vertical_dfa") == 0 || 
 		Q_stricmp(ent->targetname, "zyk_quest_effect_poison") == 0 || Q_stricmp(ent->targetname, "zyk_quest_effect_immunity") == 0 ||
 		Q_stricmp(ent->targetname, "zyk_quest_effect_flaming_area_hit") == 0)
