@@ -2119,6 +2119,7 @@ void G_SetTauntAnim( gentity_t *ent, int taunt )
 }
 
 // zyk: each client frame must make the Fast Dash ability user faster and knockdown targets
+extern qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *target);
 extern void zyk_force_dash_effect(gentity_t *ent);
 void zyk_do_force_dash(gentity_t *ent)
 {
@@ -2162,7 +2163,7 @@ void zyk_do_force_dash(gentity_t *ent)
 	{
 		hit = &g_entities[touch[i]];
 
-		if (hit && hit != ent && hit->client && (hit->s.number < MAX_CLIENTS || hit->client->NPC_class != CLASS_VEHICLE))
+		if (hit && hit != ent && hit->client && zyk_unique_ability_can_hit_target(ent, hit))
 		{ // zyk: Fast Dash ability knocks target down
 			vec3_t target_dir;
 			int target_knockdown_scale = 500;
