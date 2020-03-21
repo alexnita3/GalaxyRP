@@ -942,7 +942,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 1;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "yavin1b", 8) == 0)
+			level.quest_map = 1;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -964,7 +966,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 10;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "yavin2", 7) == 0)
+			level.quest_map = 10;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -986,7 +990,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 5;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "hoth2", 6) == 0)
+			level.quest_map = 5;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -1005,7 +1011,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 20;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "hoth3", 6) == 0)
+			level.quest_map = 20;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -1031,7 +1039,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 18;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "t1_danger", 10) == 0)
+			level.quest_map = 18;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -1050,7 +1060,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 13;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "t1_fatal", 9) == 0)
+			level.quest_map = 13;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -1124,7 +1136,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t1_sour") == 0)
 	{
-		level.quest_map = 2;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "t1_sour", 8) == 0)
+			level.quest_map = 2;
 
 		zyk_create_info_player_deathmatch(9828,-5521,153,90);
 		zyk_create_info_player_deathmatch(9845,-5262,153,153);
@@ -1135,7 +1149,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		gentity_t *ent;
 		qboolean found_bugged_switch = qfalse;
 
-		level.quest_map = 3;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "t1_surprise", 12) == 0)
+			level.quest_map = 3;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -1215,7 +1231,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 7;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "t2_rogue", 9) == 0)
+			level.quest_map = 7;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -1303,7 +1321,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 17;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "t2_trip", 8) == 0)
+			level.quest_map = 17;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -1462,7 +1482,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 8;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "t3_hevil", 9) == 0)
+			level.quest_map = 8;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -1477,7 +1499,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t3_bounty") == 0)
 	{
-		level.quest_map = 6;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "t3_bounty", 10) == 0)
+			level.quest_map = 6;
 
 		zyk_create_info_player_deathmatch(-3721,-726,73,75);
 		zyk_create_info_player_deathmatch(-3198,-706,73,90);
@@ -1551,7 +1575,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 4;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "t3_rift", 8) == 0)
+			level.quest_map = 4;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -1583,7 +1609,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 25;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "taspir1", 8) == 0)
+			level.quest_map = 25;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -1630,7 +1658,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 9;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "kor1", 5) == 0)
+			level.quest_map = 9;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -1654,22 +1684,30 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "mp/duel5") == 0 && g_gametype.integer == GT_FFA)
 	{
-		level.quest_map = 11;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "mp/duel5", 9) == 0)
+			level.quest_map = 11;
 	}
 	else if (Q_stricmp(zyk_mapname, "mp/duel8") == 0 && g_gametype.integer == GT_FFA)
 	{
-		level.quest_map = 14;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "mp/duel8", 9) == 0)
+			level.quest_map = 14;
 	}
 	else if (Q_stricmp(zyk_mapname, "mp/duel9") == 0 && g_gametype.integer == GT_FFA)
 	{
-		level.quest_map = 15;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "mp/duel9", 9) == 0)
+			level.quest_map = 15;
 	}
 	else if (Q_stricmp(zyk_mapname, "mp/siege_korriban") == 0 && g_gametype.integer == GT_FFA)
 	{ // zyk: if its a FFA game, then remove some entities
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 12;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "mp/siege_korriban", 18) == 0)
+			level.quest_map = 12;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
@@ -1689,7 +1727,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		int i = 0;
 		gentity_t *ent;
 
-		level.quest_map = 24;
+		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
+		if (Q_strncmp(zyk_mapname, "mp/siege_desert", 16) == 0)
+			level.quest_map = 24;
 
 		for (i = 0; i < level.num_entities; i++)
 		{
