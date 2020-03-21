@@ -983,6 +983,7 @@ typedef struct clientPersistant_s {
 	// 22 - using Ice Block
 	// 23 - hit by Flaming Area
 	// 24 - hit by Sleeping Flowers
+	// 25 - hit by Ice Boulder
 	int quest_power_status;
 
 	// zyk: cooldown between quest power uses
@@ -1013,6 +1014,7 @@ typedef struct clientPersistant_s {
 	int quest_target7_timer;
 	int quest_target8_timer;
 	int quest_target9_timer;
+	int quest_target10_timer;
 
 	// zyk: quest powers debounce timer, for example, like Wind powers
 	int quest_debounce1_timer;

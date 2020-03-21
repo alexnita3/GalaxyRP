@@ -5471,6 +5471,11 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		damage = (int)ceil(damage*1.08);
 	}
 
+	if (targ && targ->client && targ->client->pers.quest_power_status & (1 << 25))
+	{ // zyk: Ice Boulder decreases damage taken
+		damage = (int)ceil(damage*0.6);
+	}
+
 	if (targ && targ->client && (targ->NPC || targ->client->sess.amrpgmode == 2) && targ->client->pers.quest_power_status & (1 << 22))
 	{ // zyk: Ice Block decreases damage taken
 		damage = (int)ceil(damage*0.2);

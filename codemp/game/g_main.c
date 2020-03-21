@@ -5960,6 +5960,9 @@ void ice_boulder(gentity_t *ent, int distance, int damage)
 			zyk_quest_effect_spawn(ent, player_ent, "zyk_ice_boulder", "1", "models/map_objects/hoth/rock_b.md3", 0, 20, 50, 4000);
 
 			G_Damage(player_ent,ent,ent,NULL,player_ent->client->ps.origin,damage,DAMAGE_NO_PROTECTION,MOD_UNKNOWN);
+
+			player_ent->client->pers.quest_power_status |= (1 << 25);
+			player_ent->client->pers.quest_target10_timer = level.time + 4000;
 		}
 	}
 }
@@ -7215,6 +7218,11 @@ void quest_power_events(gentity_t *ent)
 			if (ent->client->pers.quest_power_status & (1 << 24) && ent->client->pers.quest_target9_timer < level.time)
 			{ // zyk: hit by Sleeping Flowers
 				ent->client->pers.quest_power_status &= ~(1 << 24);
+			}
+
+			if (ent->client->pers.quest_power_status & (1 << 25) && ent->client->pers.quest_target10_timer < level.time)
+			{ // zyk: hit by Ice Boulder
+				ent->client->pers.quest_power_status &= ~(1 << 25);
 			}
 		}
 		else if (!ent->NPC && ent->client->pers.quest_power_status & (1 << 10) && ent->client->pers.quest_power1_timer < level.time && 
