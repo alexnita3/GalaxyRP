@@ -5653,6 +5653,9 @@ void sleeping_flowers(gentity_t *ent, int stun_time, int distance)
 			player_ent->client->ps.forceDodgeAnim = 0;
 			player_ent->client->ps.quickerGetup = qtrue;
 
+			player_ent->client->pers.quest_power_status |= (1 << 24);
+			player_ent->client->pers.quest_target9_timer = level.time + stun_time;
+
 			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_sleeping", "0", "force/heal2", 0, 0, 0, 800);
 
 			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/air_burst.mp3"));
@@ -7207,6 +7210,11 @@ void quest_power_events(gentity_t *ent)
 				{
 					ent->client->pers.quest_power_status &= ~(1 << 23);
 				}
+			}
+
+			if (ent->client->pers.quest_power_status & (1 << 24) && ent->client->pers.quest_target9_timer < level.time)
+			{ // zyk: hit by Sleeping Flowers
+				ent->client->pers.quest_power_status &= ~(1 << 24);
 			}
 		}
 		else if (!ent->NPC && ent->client->pers.quest_power_status & (1 << 10) && ent->client->pers.quest_power1_timer < level.time && 

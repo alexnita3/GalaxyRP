@@ -5490,6 +5490,12 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			damage = (int)ceil(damage * 0.92);
 	}
 
+	if (targ && targ->client && targ->client->pers.quest_power_status & (1 << 24))
+	{ // zyk: target hit by Sleeping Flowers. if he takes damage, he can get up
+		targ->client->ps.forceHandExtendTime = level.time;
+		targ->client->pers.quest_target9_timer = 0;
+	}
+
 	if (targ && targ->client && targ->client->sess.amrpgmode == 2)
 	{ // zyk: damage resistance of each class
 		if (targ->client->pers.player_statuses & (1 << 8) && mod == MOD_SABER)
