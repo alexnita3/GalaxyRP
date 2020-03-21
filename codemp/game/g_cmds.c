@@ -10498,7 +10498,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		}
 		else if (i == 28)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Rocket Upgrade: ^7increases rocket launcher damage by 12 percent which uses rockets as ammo. Makes it damage saber-only damage objects and move pushable/pullable objects\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^3Rocket Upgrade: ^7increases rocket launcher damage by 12 percent which uses rockets as ammo. Makes rockets and detpacks damage saber-only damage objects and move pushable/pullable objects\n\n\"");
 		}
 		else if (i == 29)
 		{

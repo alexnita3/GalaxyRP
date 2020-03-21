@@ -5177,6 +5177,11 @@ qboolean zyk_can_damage_saber_only_entities(gentity_t *attacker, gentity_t *infl
 		{ // zyk: Magic Master bolts, the Ultra Bolt
 			return qtrue;
 		}
+
+		if (mod == MOD_DET_PACK_SPLASH && attacker->client->pers.secrets_found & (1 << 14))
+		{ // zyk: detpacks
+			return qtrue;
+		}
 	}
 
 	return qfalse;
