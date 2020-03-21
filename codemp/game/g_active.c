@@ -2132,16 +2132,18 @@ void zyk_do_force_dash(gentity_t *ent)
 		return;
 	}
 
-	if (ent->client->pers.fast_dash_timer > level.time)
-	{ // zyk: still starting the anim, wait a bit more
+	if (ent->health < 1)
+	{ // zyk: if player dies, stop dash
 		return;
 	}
+
+	G_SetAnim(ent, NULL, SETANIM_BOTH, BOTH_FORCELONGLEAP_START, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
 
 	// zyk: make player dash towards the direction he is looking at
 	VectorCopy(ent->client->ps.viewangles, dir);
 	AngleVectors(dir, forward, NULL, NULL);
 	VectorNormalize(forward);
-	VectorScale(forward, 2.5 * ent->client->ps.speed, forward);
+	VectorScale(forward, 2.2 * ent->client->ps.speed, forward);
 	VectorCopy(forward, ent->client->ps.velocity);
 
 	VectorSubtract(ent->client->ps.origin, range, mins);
@@ -2176,7 +2178,7 @@ void zyk_do_force_dash(gentity_t *ent)
 			hit->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
 			hit->client->ps.quickerGetup = qtrue;
 
-			G_Damage(hit, ent, ent, NULL, NULL, 8, DAMAGE_NO_ARMOR, MOD_UNKNOWN);
+			G_Damage(hit, ent, ent, NULL, NULL, 5, DAMAGE_NO_ARMOR, MOD_UNKNOWN);
 		}
 	}
 

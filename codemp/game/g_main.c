@@ -5637,12 +5637,6 @@ void force_scream(gentity_t *ent)
 void zyk_force_dash(gentity_t *ent)
 {
 	zyk_quest_effect_spawn(ent, ent, "zyk_effect_force_dash", "0", "force/rage2", 0, 0, 0, 800);
-
-	ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-	ent->client->ps.forceDodgeAnim = BOTH_KYLE_GRAB;
-	ent->client->ps.forceHandExtendTime = level.time + 1500;
-
-	ent->client->pers.fast_dash_timer = level.time + 500;
 }
 
 // zyk: Healing Water
