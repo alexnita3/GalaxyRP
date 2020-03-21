@@ -10608,7 +10608,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			}
 			else if (ent->client->pers.rpg_class == 2)
 			{
-				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 1: ^7used with /unique command. You can only have one Unique Ability at a time. Bounty Hunter gets Homing Rocket, which shoots a powerful rocket that automatically goes after the nearest target. Spends 5 rocket ammo\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"\n^3Unique Ability 1: ^7used with /unique command. You can only have one Unique Ability at a time. Bounty Hunter gets Homing Rocket, which shoots a powerful rocket that automatically goes after the nearest target. Spends 2 rockets and 2 power cell ammo\n\n\"");
 			}
 			else if (ent->client->pers.rpg_class == 3)
 			{
@@ -15721,13 +15721,14 @@ void Cmd_Unique_f(gentity_t *ent) {
 			}
 			else if (ent->client->pers.rpg_class == 2)
 			{ // zyk: Bounty Hunter Homing Rocket. Shoots a powerful rocket that automatically goes after someone
-				if (ent->client->ps.ammo[AMMO_ROCKETS] >= 5)
+				if (ent->client->ps.ammo[AMMO_ROCKETS] >= 2 && ent->client->ps.ammo[AMMO_POWERCELL] >= 2)
 				{
 					int i = 0;
 					int min_dist = 1000;
 					gentity_t *chosen_ent = NULL;
 
-					ent->client->ps.ammo[AMMO_ROCKETS] -= 5;
+					ent->client->ps.ammo[AMMO_ROCKETS] -= 2;
+					ent->client->ps.ammo[AMMO_POWERCELL] -= 2;
 
 					for (i = 0; i < level.num_entities; i++)
 					{
@@ -15766,7 +15767,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				}
 				else
 				{
-					trap->SendServerCommand(ent->s.number, "chat \"^3Unique Ability: ^7needs 5 rocket ammo to use it\"");
+					trap->SendServerCommand(ent->s.number, "chat \"^3Unique Ability: ^7needs 2 rockets and 2 powercell ammo to use it\"");
 				}
 			}
 			else if (ent->client->pers.rpg_class == 3)
