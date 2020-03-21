@@ -5598,7 +5598,7 @@ void zyk_force_dash(gentity_t *ent)
 	ent->client->ps.forceDodgeAnim = BOTH_KYLE_GRAB;
 	ent->client->ps.forceHandExtendTime = level.time + 1500;
 
-	ent->client->pers.fast_dash_timer = level.time + 800;
+	ent->client->pers.fast_dash_timer = level.time + 500;
 }
 
 // zyk: Healing Water
