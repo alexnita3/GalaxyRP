@@ -5464,16 +5464,20 @@ void elemental_attack(gentity_t *ent)
 			// zyk: first element, Ice
 			zyk_spawn_ice_element(ent, player_ent);
 
-			// zyk: second element, Fire
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_elemental_fire", "4", "env/flame_jet", 1000, damage, 35, 2500);
+			// zyk: second element, Fire. Multiplies by 2.5 because of the damage reduction in G_Damage()
+			zyk_quest_effect_spawn(ent, player_ent, "zyk_elemental_fire", "4", "env/flame_jet", 1000, 2.5 * damage, 35, 2500);
 
-			// zyk: third element, Earth
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_elemental_earth", "4", "env/rock_smash", 2500, damage, 35, 4000);
+			// zyk: third element, Earth. Multiplies by 2.5 because of the damage reduction in G_Damage()
+			zyk_quest_effect_spawn(ent, player_ent, "zyk_elemental_earth", "4", "env/rock_smash", 2500, 2.5 * damage, 35, 4000);
 
 			// zyk: fourth element, Wind
 			player_ent->client->pers.quest_power_status |= (1 << 5);
 			player_ent->client->pers.quest_power_hit_counter = -179;
 			player_ent->client->pers.quest_target4_timer = level.time + 7000;
+
+			// zyk: target is hit by the Ice element for 4 seconds
+			player_ent->client->pers.quest_power_status |= (1 << 26);
+			player_ent->client->pers.quest_target11_timer = level.time + 4000;
 
 			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/glass_tumble3.wav"));
 		}
@@ -7223,6 +7227,11 @@ void quest_power_events(gentity_t *ent)
 			if (ent->client->pers.quest_power_status & (1 << 25) && ent->client->pers.quest_target10_timer < level.time)
 			{ // zyk: hit by Ice Boulder
 				ent->client->pers.quest_power_status &= ~(1 << 25);
+			}
+
+			if (ent->client->pers.quest_power_status & (1 << 26) && ent->client->pers.quest_target11_timer < level.time)
+			{ // zyk: hit by Elemental Attack
+				ent->client->pers.quest_power_status &= ~(1 << 26);
 			}
 		}
 		else if (!ent->NPC && ent->client->pers.quest_power_status & (1 << 10) && ent->client->pers.quest_power1_timer < level.time && 
