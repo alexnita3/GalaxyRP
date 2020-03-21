@@ -873,8 +873,8 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 			}
 		}
 
-		if (client->sess.amrpgmode == 2)
-		{
+		if (client->sess.amrpgmode == 2 && !(client->pers.quest_power_status & (1 << 2)))
+		{ // zyk: auto-healing abilities will only work if player is not hit by Time Power
 			if (client->pers.rpg_class == 4 && ent->health > 0)
 			{ // zyk: Monk auto-healing ability
 				if (client->pers.unique_skill_duration > level.time && !(client->pers.player_statuses & (1 << 22)) &&

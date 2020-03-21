@@ -963,6 +963,11 @@ void WP_ForcePowerRegenerate( gentity_t *self, int overrideAmt )
 		return;
 	}
 
+	if (self->client->pers.quest_power_status & (1 << 2))
+	{ // zyk: hit by Time Power. Cannot regen force
+		return;
+	}
+
 	if ( overrideAmt )
 	{ //custom regen amount
 		self->client->ps.fd.forcePower += overrideAmt;
