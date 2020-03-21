@@ -5633,10 +5633,19 @@ void force_scream(gentity_t *ent)
 	G_Sound(ent, CHAN_VOICE, G_SoundIndex("sound/chars/howler/howl.mp3"));
 }
 
+void zyk_force_dash_effect(gentity_t *ent)
+{
+	zyk_quest_effect_spawn(ent, ent, "zyk_effect_force_dash", "0", "force/rage2", 0, 0, 0, 200);
+}
+
 // zyk: Fast Dash ability
 void zyk_force_dash(gentity_t *ent)
 {
-	zyk_quest_effect_spawn(ent, ent, "zyk_effect_force_dash", "0", "force/rage2", 0, 0, 0, 800);
+	G_SetAnim(ent, NULL, SETANIM_BOTH, BOTH_FORCELONGLEAP_START, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
+
+	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/woosh9.mp3"));
+
+	ent->client->pers.fast_dash_timer = 0;
 }
 
 // zyk: Healing Water

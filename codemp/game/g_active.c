@@ -2118,6 +2118,8 @@ void G_SetTauntAnim( gentity_t *ent, int taunt )
 	}
 }
 
+// zyk: each client frame must make the Fast Dash ability user faster and knockdown targets
+extern void zyk_force_dash_effect(gentity_t *ent);
 void zyk_do_force_dash(gentity_t *ent)
 {
 	vec3_t	forward, dir;
@@ -2137,7 +2139,12 @@ void zyk_do_force_dash(gentity_t *ent)
 		return;
 	}
 
-	G_SetAnim(ent, NULL, SETANIM_BOTH, BOTH_FORCELONGLEAP_START, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
+	if (ent->client->pers.fast_dash_timer < level.time)
+	{
+		zyk_force_dash_effect(ent);
+
+		ent->client->pers.fast_dash_timer = level.time + 100;
+	}
 
 	// zyk: make player dash towards the direction he is looking at
 	VectorCopy(ent->client->ps.viewangles, dir);
@@ -2181,8 +2188,6 @@ void zyk_do_force_dash(gentity_t *ent)
 			G_Damage(hit, ent, ent, NULL, NULL, 5, DAMAGE_NO_ARMOR, MOD_UNKNOWN);
 		}
 	}
-
-
 }
 
 /*
