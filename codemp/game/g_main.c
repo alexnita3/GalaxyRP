@@ -15424,11 +15424,11 @@ void G_RunFrame( int levelTime ) {
 				if (level.custom_quest_map > -1 && level.zyk_custom_quest_timer < level.time && ent->client->ps.duelInProgress == qfalse && ent->health > 0 && 
 					(level.zyk_quest_test_origin == qfalse || Distance(ent->client->ps.origin, level.zyk_quest_mission_origin) < level.zyk_quest_radius))
 				{ // zyk: Custom Quest map
-					char *zyk_keys[4] = {"text", "npc", "item", "" };
+					char *zyk_keys[5] = {"text", "npc", "item", "entfile", "" };
 					int j = 0;
 					qboolean still_has_keys = qfalse;
 
-					for (j = 0; j < 4; j++)
+					for (j = 0; j < 5; j++)
 					{ // zyk: testing each key and processing them when found in this mission
 						char *zyk_value = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("%s%d", zyk_keys[j], level.zyk_custom_quest_counter));
 
@@ -15452,6 +15452,33 @@ void G_RunFrame( int levelTime ) {
 									trap->SendServerCommand(-1, va("chat \"%s\n\"", zyk_value));
 									level.zyk_custom_quest_timer = level.time + zyk_timer;
 									level.zyk_custom_quest_counter++;
+
+									// zyk: increasing the number of steps done in this mission
+									zyk_set_quest_field(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done", va("%d", atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done")) + 1));
+								}
+								else if (Q_stricmp(zyk_keys[j], "entfile") == 0)
+								{
+									char zykserverinfo[MAX_INFO_STRING] = { 0 };
+									char zyk_mapname[128] = { 0 };
+									int k = 0;
+
+									// zyk: getting mapname
+									trap->GetServerinfo(zykserverinfo, sizeof(zykserverinfo));
+									Q_strncpyz(zyk_mapname, Info_ValueForKey(zykserverinfo, "mapname"), sizeof(zyk_mapname));
+									strcpy(level.load_entities_file, va("zykmod/entities/%s/%s.txt", zyk_mapname, zyk_value));
+
+									// zyk: cleaning entities. Only the ones from the file will be in the map
+									for (k = (MAX_CLIENTS + BODY_QUEUE_SIZE); k < level.num_entities; k++)
+									{
+										gentity_t *target_ent = &g_entities[k];
+
+										if (target_ent)
+											G_FreeEntity(target_ent);
+									}
+
+									level.load_entities_timer = level.time + 1050;
+									level.zyk_custom_quest_counter++;
+									level.zyk_custom_quest_timer = level.time + 2000;
 
 									// zyk: increasing the number of steps done in this mission
 									zyk_set_quest_field(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done", va("%d", atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done")) + 1));
