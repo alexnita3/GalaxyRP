@@ -2754,9 +2754,26 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			!(self->client->ps.eFlags2 & EF2_HELD_BY_MONSTER) && self->client->pers.magic_power >= 5 && zyk_enable_resurrection_power.integer == 1 && 
 			!(self->client->sess.magic_more_disabled_powers & (1 << 1)))
 		{
-			self->client->pers.magic_power -= 5;
-			self->client->pers.quest_power_status |= (1 << 10);
-			self->client->pers.quest_power1_timer = level.time + 3000;
+			qboolean zyk_allow_vehicle_resurrect = qtrue; // zyk: if player is riding a ship, do not allow resurrection to avoid invisible player bug
+
+			if (self->client->NPC_class != CLASS_VEHICLE
+				&& self->client->ps.m_iVehicleNum)
+			{ //I'm riding a vehicle
+				//tell it I'm getting off
+				gentity_t *veh = &g_entities[self->client->ps.m_iVehicleNum];
+
+				if (veh->inuse && veh->client && veh->m_pVehicle && veh->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER)
+				{
+					zyk_allow_vehicle_resurrect = qfalse;
+				}
+			}
+
+			if (zyk_allow_vehicle_resurrect == qtrue)
+			{
+				self->client->pers.magic_power -= 5;
+				self->client->pers.quest_power_status |= (1 << 10);
+				self->client->pers.quest_power1_timer = level.time + 3000;
+			}
 		}
 	}
 
