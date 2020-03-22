@@ -2552,10 +2552,10 @@ gentity_t *zyk_WP_FireThermalDetonator(gentity_t *ent, int yaw)
 	bolt->s.loopSound = G_SoundIndex("sound/weapons/thermal/thermloop.wav");
 	bolt->s.loopIsSoundset = qfalse;
 
-	bolt->damage = zyk_thermal_damage.integer * 1.2;
+	bolt->damage = zyk_thermal_damage.integer * 1.05;
 	bolt->dflags = 0;
-	bolt->splashDamage = zyk_thermal_splash_damage.integer * 1.2;
-	bolt->splashRadius = 180;
+	bolt->splashDamage = zyk_thermal_splash_damage.integer * 1.05;
+	bolt->splashRadius = 160;
 
 	bolt->s.eType = ET_MISSILE;
 	bolt->r.svFlags = SVF_USE_CURRENT_ORIGIN;
