@@ -5783,6 +5783,7 @@ void shifting_sand(gentity_t *ent, int distance)
 }
 
 // zyk: Time Power
+extern void display_yellow_bar(gentity_t *ent, int duration);
 void time_power(gentity_t *ent, int distance, int duration)
 {
 	int i = 0;
@@ -5797,7 +5798,20 @@ void time_power(gentity_t *ent, int distance, int duration)
 			player_ent->client->pers.quest_power_status |= (1 << 2);
 			player_ent->client->pers.quest_target2_timer = level.time + duration;
 
-			if (player_ent->NPC)
+			if (i < MAX_CLIENTS)
+			{ // zyk: player hit by this power
+				if (player_ent->client->pers.quest_power_usage_timer < level.time)
+				{
+					player_ent->client->pers.quest_power_usage_timer = level.time + duration;
+				}
+				else
+				{ // zyk: already used a power, so increase the cooldown time
+					player_ent->client->pers.quest_power_usage_timer += duration;
+				}
+
+				display_yellow_bar(player_ent, (player_ent->client->pers.quest_power_usage_timer - level.time));
+			}
+			else if (player_ent->NPC)
 			{ // zyk: npc or boss must also not be able to use magic
 				player_ent->client->pers.light_quest_timer += duration;
 				player_ent->client->pers.guardian_timer += duration;
@@ -5915,7 +5929,6 @@ void tree_of_life(gentity_t *ent)
 }
 
 // zyk: Magic Disable
-extern void display_yellow_bar(gentity_t *ent, int duration);
 void magic_disable(gentity_t *ent, int distance)
 {
 	int i = 0;
