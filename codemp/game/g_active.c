@@ -2186,7 +2186,7 @@ void zyk_do_force_dash(gentity_t *ent)
 			hit->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
 			hit->client->ps.quickerGetup = qtrue;
 
-			G_Damage(hit, ent, ent, NULL, NULL, 5, DAMAGE_NO_ARMOR, MOD_UNKNOWN);
+			G_Damage(hit, ent, ent, NULL, NULL, 3, DAMAGE_NO_ARMOR, MOD_UNKNOWN);
 		}
 	}
 }
