@@ -5116,6 +5116,8 @@ void chaos_power(gentity_t *ent, int distance, int duration)
 			player_ent->client->ps.forceDodgeAnim = BOTH_SONICPAIN_END;
 			player_ent->client->ps.forceHandExtendTime = level.time + duration;
 			player_ent->client->ps.electrifyTime = level.time + duration;
+
+			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_chaos", "0", "ships/heavydmg", 0, 0, 0, 1000);
 		}
 	}
 }
