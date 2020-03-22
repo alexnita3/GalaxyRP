@@ -6916,7 +6916,7 @@ void quest_power_events(gentity_t *ent)
 				{ // zyk: Chaos Power hit
 					gentity_t *chaos_user = &g_entities[ent->client->pers.quest_power_user1_id];
 
-					G_Damage(ent, chaos_user, chaos_user, NULL, NULL, 9, 0, MOD_UNKNOWN);
+					G_Damage(ent, chaos_user, chaos_user, NULL, NULL, 8, 0, MOD_UNKNOWN);
 					ent->client->pers.quest_power_hit3_counter--;
 					ent->client->pers.quest_target1_timer = level.time + 200;
 				}
