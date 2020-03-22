@@ -2151,7 +2151,7 @@ void zyk_do_force_dash(gentity_t *ent)
 	VectorCopy(ent->client->ps.viewangles, dir);
 	AngleVectors(dir, forward, NULL, NULL);
 	VectorNormalize(forward);
-	VectorScale(forward, 2.2 * ent->client->ps.speed, forward);
+	VectorScale(forward, 2.7 * ent->client->ps.speed, forward);
 	VectorCopy(forward, ent->client->ps.velocity);
 
 	VectorSubtract(ent->client->ps.origin, range, mins);

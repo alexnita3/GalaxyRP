@@ -16574,8 +16574,8 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 					ent->client->pers.magic_power -= 10;
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1800;
-					ent->client->pers.unique_skill_duration = level.time + 1800;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1700;
+					ent->client->pers.unique_skill_duration = level.time + 1700;
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
