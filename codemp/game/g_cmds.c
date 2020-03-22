@@ -10234,13 +10234,13 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					else
 					{
 						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							trap->SendServerCommand( ent-g_entities, va("print \"^3Ultra Drain: ^7damages enemies in the area and recovers your hp. Attack with S + special melee to use this power\n\"") );
+							trap->SendServerCommand(ent->s.number, va("print \"^3Ultra Drain: ^7damages enemies in the area and recovers your hp. Attack with S + special melee to use this power\n\"") );
 						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							trap->SendServerCommand( ent-g_entities, va("print \"^3Immunity Power: ^7protects you from other magic powers. Attack S + with special melee to use this power\n\"") );
+							trap->SendServerCommand(ent->s.number, va("print \"^3Immunity Power: ^7protects you from other magic powers. Attack S + with special melee to use this power\n\"") );
 						else if (ent->client->pers.universe_quest_counter & (1 << 2))
-							trap->SendServerCommand( ent-g_entities, va("print \"^3Chaos Power: ^7damages, stuns, slowers and electrifies enemies. Attack with S + special melee to use this power\n\"") );
+							trap->SendServerCommand(ent->s.number, va("print \"^3Chaos Power: ^7damages, stuns, slowers and electrifies enemies. Attack with S + special melee to use this power\n\"") );
 						else if (ent->client->pers.universe_quest_counter & (1 << 3))
-							trap->SendServerCommand( ent-g_entities, va("print \"^3Time Power: ^7paralyzes enemies for some seconds. Enemies take less damage while paralyzed. Attack with S + special melee to use this power\n\"") );
+							trap->SendServerCommand(ent->s.number, va("print \"^3Time Power: ^7paralyzes enemies for some seconds. Disables target enemies force powers, force regen, mp regen and hp/shield regen. Increases target enemies magic cooldown of enemies. Enemies take less damage while paralyzed. Attack with S + special melee to use this power\n\"") );
 					}
 				}
 				else if (Q_stricmp( arg1, "r" ) == 0)
