@@ -1691,7 +1691,7 @@ void zyk_lightning_dome_radius_damage( gentity_t *ent )
 
 		if (gent != myOwner)
 		{
-			if (gent->client && zyk_check_immunity_power(gent) && myOwner->client->pers.rpg_class != 3)
+			if (gent->client && myOwner->client->pers.rpg_class != 3 && zyk_check_immunity_power(gent))
 			{ // zyk: Immunity Power users cannot be hit by Lightning Dome, but can be hit by Lightning Shield discharge
 				continue;
 			}

@@ -7011,11 +7011,13 @@ qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, floa
 				{ // zyk: if it is an effect used by special power, then attacker must be the owner of the effect. Also, do not hit the owner
 					gentity_t *quest_power_user = &g_entities[level.special_power_effects[attacker->s.number]];
 
-					if (ent && ent->client && zyk_check_immunity_power(ent) &&
+					if (ent && ent->client &&
 						Q_stricmp(attacker->targetname, "zyk_effect_scream") != 0 &&
 						Q_stricmp(attacker->targetname, "zyk_timed_bomb_explosion") != 0 &&
 						Q_stricmp(attacker->targetname, "zyk_vertical_dfa") != 0 &&
-						Q_stricmp(attacker->targetname, "zyk_force_storm") != 0)
+						Q_stricmp(attacker->targetname, "zyk_force_storm") != 0 &&
+						((Q_stricmp(attacker->targetname, "zyk_quest_effect_healing") != 0 && zyk_check_immunity_power(ent)) || 
+						 (Q_stricmp(attacker->targetname, "zyk_quest_effect_healing") == 0 && zyk_is_ally(quest_power_user, ent) == qfalse && zyk_check_immunity_power(ent))))
 					{ // zyk: do not hit enemies using Immunity Power if the effect is not from some unique abilities
 						continue;
 					}
