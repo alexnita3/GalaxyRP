@@ -5558,7 +5558,11 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 				(attacker->client && (attacker->client->NPC_class != CLASS_RANCOR || !(targ->client->ps.eFlags2 & EF2_HELD_BY_MONSTER)))) &&
 				targ->client->pers.unique_skill_duration > level.time && targ->client->pers.player_statuses & (1 << 21))
 			{
-				G_Damage(attacker, targ, targ, NULL, NULL, (int)ceil(damage * 0.5), 0, MOD_UNKNOWN);
+				if (!(attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && attacker->client->pers.rpg_class == 0 && 
+					attacker->client->pers.unique_skill_duration > level.time && attacker->client->pers.player_statuses & (1 << 21)))
+				{ // zyk: Mimic Damage will not work if attacker pointer is also a Free Warrior using Mimic Damage
+					G_Damage(attacker, targ, targ, NULL, NULL, (int)ceil(damage * 0.5), 0, MOD_UNKNOWN);
+				}
 			}
 
 			damage = (int)ceil(damage * (1.0 - (0.03 * targ->client->pers.skill_levels[55])));
