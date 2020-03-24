@@ -15824,9 +15824,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				{
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 
-					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-					ent->client->ps.forceDodgeAnim = BOTH_PULL_IMPALE_STAB;
-					ent->client->ps.forceHandExtendTime = level.time + 1500;
+					G_SetAnim(ent, NULL, SETANIM_BOTH, BOTH_PULL_IMPALE_STAB, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2500;
 					ent->client->pers.unique_skill_duration = level.time + 2500;
@@ -16150,9 +16148,8 @@ void Cmd_Unique_f(gentity_t *ent) {
 				{
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 
-					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-					ent->client->ps.forceDodgeAnim = BOTH_FORCELEAP2_T__B_;
-					ent->client->ps.forceHandExtendTime = level.time + 1800;
+					G_SetAnim(ent, NULL, SETANIM_BOTH, BOTH_FORCELEAP2_T__B_, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
+
 					ent->client->ps.velocity[2] = 350;
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2800;
@@ -16518,9 +16515,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->ps.weaponTime = 2800;
 
-					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-					ent->client->ps.forceDodgeAnim = BOTH_ALORA_SPIN_THROW;
-					ent->client->ps.forceHandExtendTime = level.time + 2800;
+					G_SetAnim(ent, NULL, SETANIM_BOTH, BOTH_ALORA_SPIN_THROW, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
 
 					ent->client->pers.player_statuses |= (1 << 23);
 

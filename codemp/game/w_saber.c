@@ -4346,9 +4346,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 		if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 6 && 
 			self->client->pers.unique_skill_duration > level.time)
 		{
-			if (self->client->ps.forceHandExtendTime < level.time) // zyk: resets anim at the end of the unique
-				self->client->ps.weaponTime = 0;
-			else if (self->client->ps.torsoAnim == BOTH_PULL_IMPALE_STAB) // zyk: Impale Stab
+			if (self->client->ps.torsoAnim == BOTH_PULL_IMPALE_STAB) // zyk: Impale Stab
 				dmg = 55;
 			else if (self->client->ps.torsoAnim == BOTH_FORCELEAP2_T__B_) // zyk: Vertical DFA
 				dmg = 28;
