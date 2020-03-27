@@ -15766,10 +15766,10 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
 					ent->client->ps.forceDodgeAnim = BOTH_MEDITATE;
-					ent->client->ps.forceHandExtendTime = level.time + 5000;
+					ent->client->ps.forceHandExtendTime = level.time + 3500;
 
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 5000;
-					ent->client->pers.unique_skill_duration = level.time + 5000;
+					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 3500;
+					ent->client->pers.unique_skill_duration = level.time + 3500;
 
 					ent->client->pers.player_statuses |= (1 << 21);
 
