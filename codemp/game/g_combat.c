@@ -2159,6 +2159,11 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	self->client->pers.player_statuses &= ~(1 << 20);
 	self->client->pers.unique_skill_duration = 0;
 
+	// zyk: stoping Unique Abilities when player dies
+	self->client->pers.player_statuses &= ~(1 << 21);
+	self->client->pers.player_statuses &= ~(1 << 22);
+	self->client->pers.player_statuses &= ~(1 << 23);
+
 	// zyk: resetting boss battle music to default one if needed
 	if (self->client->pers.guardian_invoked_by_id != -1 && self->client->pers.guardian_mode != 15 && self->client->pers.guardian_mode != 17 && self->client->pers.guardian_mode != 18)
 	{
