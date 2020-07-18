@@ -44,7 +44,7 @@ extern vec3_t gPainPoint;
 //==================================================================
 
 // the "gameversion" client command will print this plus compile date
-#define	GAMEVERSION	"Zyk OpenJK Mod v3.78"
+#define	GAMEVERSION	"Zyk OpenJK Mod v3.79"
 
 #define SECURITY_LOG "security.log"
 
@@ -1452,7 +1452,7 @@ typedef struct {
 #define MAX_DUEL_MATCHES 496
 
 // zyk: max amount of custom quests
-#define MAX_CUSTOM_QUESTS 16
+#define MAX_CUSTOM_QUESTS 64
 
 // zyk: max missions a custom quest can have
 #define MAX_CUSTOM_QUEST_MISSIONS 512
