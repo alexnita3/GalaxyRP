@@ -10705,6 +10705,7 @@ Cmd_Buy_f
 void Cmd_Buy_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int value = 0;
+	int found = 0;
 	int item_costs[NUMBER_OF_SELLER_ITEMS] = {15,20,25,40,80,120,150,5000,150,170,180,200,300,200,4000,3000,100,120,150,200,110,90,170,300,2000,1800,2200,2500,5000,200,200,20,1500,100,150,150,90,10,5000,3000,50,50,200,50,5000,10000,5000,700,2000,2000,2000,2000,7000,7000,7000,100000};
 
 	if (trap->Argc() == 1)
@@ -10731,7 +10732,7 @@ void Cmd_Buy_f( gentity_t *ent ) {
 	else
 	{ // zyk: searches for the jawa to see if we are near him to buy or sell to him
 		gentity_t *jawa_ent = NULL;
-		int j = 0, found = 0;
+		int j = 0;
 
 		for (j = MAX_CLIENTS; j < level.num_entities; j++)
 		{
@@ -10744,13 +10745,9 @@ void Cmd_Buy_f( gentity_t *ent ) {
 			}
 		}
 
-		// zyk: Bounty Hunter Upgrade allows buying and selling without the need to call the jawa seller
-		if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1))
-			found = 1;
-
-		if (found == 0)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You must be near the jawa seller to buy from him.\n\"" );
+		if (found == 0 && !(ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1)))
+		{ // zyk: Bounty Hunter Upgrade allows buying and selling without the need to call the jawa seller
+			trap->SendServerCommand(ent->s.number, "print \"You must be near the jawa seller to buy from him.\n\"" );
 			return;
 		}
 	}
@@ -11160,7 +11157,7 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		save_account(ent, qtrue);
 
 		// zyk: setting the cooldown time to buy and sell stuff. Bounty Hunter remote buying system has its own cooldown time cvar
-		if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1))
+		if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) && found == 0)
 		{
 			ent->client->pers.buy_sell_timer = level.time + zyk_bh_remote_buying_cooldown.integer;
 		}
@@ -11205,6 +11202,7 @@ Cmd_Sell_f
 void Cmd_Sell_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int value = 0;
+	int found = 0;
 	int sold = 0;
 	int items_costs[NUMBER_OF_SELLER_ITEMS] = {10,15,20,30,35,40,45,0,0,60,65,70,80,50,0,0,50,60,70,100,50,45,90,150,0,0,0,0,0,0,0,10,0,20,30,90,45,5,0,0,0,20,50,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
@@ -11232,7 +11230,7 @@ void Cmd_Sell_f( gentity_t *ent ) {
 	else
 	{ // zyk: searches for the jawa to see if we are near him to buy or sell to him
 		gentity_t *jawa_ent = NULL;
-		int j = 0, found = 0;
+		int j = 0;
 
 		for (j = MAX_CLIENTS; j < level.num_entities; j++)
 		{
@@ -11246,10 +11244,7 @@ void Cmd_Sell_f( gentity_t *ent ) {
 		}
 
 		// zyk: Bounty Hunter Upgrade allows buying and selling without the need to call the jawa seller
-		if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1))
-			found = 1;
-
-		if (found == 0)
+		if (found == 0 && !(ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1)))
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"You must be near the jawa seller to sell to him.\n\"" );
 			return;
@@ -11431,7 +11426,7 @@ void Cmd_Sell_f( gentity_t *ent ) {
 		save_account(ent, qtrue);
 
 		// zyk: setting the cooldown time to buy and sell stuff. Bounty Hunter remote buying system has its own cooldown time cvar
-		if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1))
+		if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) && found == 0)
 		{
 			ent->client->pers.buy_sell_timer = level.time + zyk_bh_remote_buying_cooldown.integer;
 		}
