@@ -10180,11 +10180,11 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				}
 				else if (Q_stricmp( arg1, "d" ) == 0)
 				{
-					trap->SendServerCommand( ent-g_entities, va("print \"^3Dark Power: ^7Increases damage by 15 per cent. You must finish ^1Dark Quest ^7to have it\n\"") );
+					trap->SendServerCommand( ent-g_entities, va("print \"^3Dark Power: ^7Increases damage by 10 per cent. You must finish ^1Dark Quest ^7to have it\n\"") );
 				}
 				else if (Q_stricmp( arg1, "e" ) == 0)
 				{
-					trap->SendServerCommand( ent-g_entities, va("print \"^3Eternity Power: ^7Absorbs 15 per cent of damage. You must finish the ^3Eternity Quest ^7to have it\n\"") );
+					trap->SendServerCommand( ent-g_entities, va("print \"^3Eternity Power: ^7Absorbs 10 per cent of damage. You must finish the ^3Eternity Quest ^7to have it\n\"") );
 				}
 				else if (Q_stricmp( arg1, "u" ) == 0)
 				{
