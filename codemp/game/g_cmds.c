@@ -2520,13 +2520,12 @@ void Cmd_MapList_f( gentity_t *ent ) {
 		map_list_file = fopen("zykmod/maplist.txt","r");
 		if (map_list_file != NULL)
 		{
-			while(i < (results_per_page * (page-1)))
+			while(i < (results_per_page * (page-1)) && fgets(content, sizeof(content), map_list_file) != NULL)
 			{ // zyk: reads the file until it reaches the position corresponding to the page number
-				fgets(content,sizeof(content),map_list_file);
 				i++;
 			}
 
-			while(i < (results_per_page * page) && fgets(content,sizeof(content),map_list_file) != NULL)
+			while(i < (results_per_page * page) && fgets(content, sizeof(content), map_list_file) != NULL)
 			{ // zyk: fgets returns NULL at EOF
 				strcpy(file_content,va("%s%s",file_content,content));
 				i++;
@@ -12950,9 +12949,8 @@ void Cmd_ZykFile_f(gentity_t *ent) {
 	{
 		if (page > 0)
 		{ // zyk: show results of this page
-			while (i < (results_per_page * (page - 1)))
+			while (i < (results_per_page * (page - 1)) && fgets(content, sizeof(content), server_file) != NULL)
 			{ // zyk: reads the file until it reaches the position corresponding to the page number
-				fgets(content, sizeof(content), server_file);
 				i++;
 			}
 
@@ -17444,9 +17442,8 @@ void Cmd_Tutorial_f(gentity_t *ent) {
 	{
 		if (page > 0)
 		{ // zyk: show results of this page
-			while (i < (results_per_page * (page - 1)))
+			while (i < (results_per_page * (page - 1)) && fgets(content, sizeof(content), tutorial_file) != NULL)
 			{ // zyk: reads the file until it reaches the position corresponding to the page number
-				fgets(content, sizeof(content), tutorial_file);
 				i++;
 			}
 
@@ -18615,9 +18612,8 @@ void Cmd_DuelBoard_f(gentity_t *ent) {
 	leaderboard_file = fopen("zykmod/leaderboard.txt", "r");
 	if (leaderboard_file != NULL)
 	{
-		while (i < (results_per_page * (page - 1)))
+		while (i < (results_per_page * (page - 1)) && fgets(content, sizeof(content), leaderboard_file) != NULL)
 		{ // zyk: reads the file until it reaches the position corresponding to the page number
-			fgets(content, sizeof(content), leaderboard_file);
 			if (content[strlen(content) - 1] == '\n')
 				content[strlen(content) - 1] = '\0';
 			fgets(content, sizeof(content), leaderboard_file);
