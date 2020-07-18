@@ -1068,13 +1068,15 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		{
 			ent = &g_entities[i];
 
-			if (Q_stricmp( ent->targetname, "door_trap") == 0 || Q_stricmp(ent->targetname, "lobbydoor1") == 0 || Q_stricmp(ent->targetname, "lobbydoor2") == 0 || 
+			if (Q_stricmp(ent->targetname, "door_trap") == 0)
+			{ // zyk: fixing this door so it will not lock
+				fix_sp_func_door(ent);
+			}
+				
+			if (Q_stricmp(ent->targetname, "lobbydoor1") == 0 || Q_stricmp(ent->targetname, "lobbydoor2") == 0 || 
 				Q_stricmp(ent->targetname, "t7708018") == 0 || Q_stricmp(ent->targetname, "t7708017") == 0)
 			{ // zyk: fixing these doors so they will not lock
-				ent->targetname = NULL;
-				zyk_main_set_entity_field(ent, "targetname", "zykremovekey");
-				zyk_main_set_entity_field(ent, "spawnflags", "0");
-				zyk_main_spawn_entity(ent);
+				GlobalUse(ent, ent, ent);
 			}
 
 			if (i == 443)
