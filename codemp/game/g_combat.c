@@ -5393,7 +5393,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		}
 		else if (attacker->client->pers.rpg_class == 7)
 		{ // zyk: Force Gunner bonus damage
-			damage = (int)ceil(damage * (1.0 + (0.07 * attacker->client->pers.skill_levels[55])));
+			damage = (int)ceil(damage * (1.0 + (0.06 * attacker->client->pers.skill_levels[55])));
 		}
 		else if (attacker->client->pers.rpg_class == 8 && mod == MOD_MELEE)
 		{ // zyk: Magic Master bolts can damage heavy things
@@ -5582,7 +5582,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		}
 		else if (targ->client->pers.rpg_class == 7)
 		{ // zyk: Force Gunner damage resistance
-			damage = (int)ceil(damage * (1.0 - (0.07 * targ->client->pers.skill_levels[55])));
+			damage = (int)ceil(damage * (1.0 - (0.06 * targ->client->pers.skill_levels[55])));
 		}
 		else if (targ->client->pers.rpg_class == 9)
 		{ // zyk: Force Guardian damage resistance
