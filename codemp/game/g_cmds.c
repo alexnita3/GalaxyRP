@@ -4327,7 +4327,7 @@ qboolean TryGrapple(gentity_t *ent)
 					else if (zyk_enable_chaos_power.integer == 1 && ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.magic_power >= zyk_chaos_power_mp_cost.integer)
 					{ // zyk: uses Chaos Power
 						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
-						chaos_power(ent, 400, 5000);
+						chaos_power(ent, 400, 4600);
 						ent->client->pers.magic_power -= zyk_chaos_power_mp_cost.integer;
 						
 						zyk_set_magic_power_cooldown_time(ent, 28000);

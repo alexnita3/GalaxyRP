@@ -15923,7 +15923,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (ent->client->sess.selected_right_special_power  & (1 << 2) && random_number == 2)
 					{
-						chaos_power(ent, 400, 5000);
+						chaos_power(ent, 400, 4600);
 					}
 					else if (ent->client->sess.selected_right_special_power  & (1 << 3) && random_number == 3)
 					{
@@ -16644,7 +16644,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (ent->client->pers.hunter_quest_messages == 33)
 						{
-							chaos_power(ent,1600, 5000);
+							chaos_power(ent,1600, 4600);
 							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Chaos Power!\"");
 							ent->client->pers.hunter_quest_messages = 0;
 						}
@@ -16866,7 +16866,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 2)
 						{
-							chaos_power(ent, 400, 5000);
+							chaos_power(ent, 400, 4600);
 						}
 						else if (random_magic == 3)
 						{
@@ -17217,7 +17217,7 @@ void G_RunFrame( int levelTime ) {
 						}
 						else if (random_magic == 16)
 						{
-							chaos_power(ent, 5000, 5000);
+							chaos_power(ent, 5000, 4600);
 						}
 						else if (random_magic == 17)
 						{
@@ -17600,7 +17600,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (random_magic == 2)
 					{
-						chaos_power(ent, 400, 5000);
+						chaos_power(ent, 400, 4600);
 					}
 					else if (random_magic == 3)
 					{
