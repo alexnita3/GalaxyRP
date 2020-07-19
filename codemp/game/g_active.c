@@ -2140,13 +2140,6 @@ void zyk_do_force_dash(gentity_t *ent)
 		return;
 	}
 
-	if (ent->client->pers.fast_dash_timer < level.time)
-	{
-		zyk_force_dash_effect(ent);
-
-		ent->client->pers.fast_dash_timer = level.time + 100;
-	}
-
 	// zyk: make player dash towards the direction he is looking at
 	VectorCopy(ent->client->ps.viewangles, dir);
 	AngleVectors(dir, forward, NULL, NULL);
@@ -2154,39 +2147,46 @@ void zyk_do_force_dash(gentity_t *ent)
 	VectorScale(forward, 2.7 * ent->client->ps.speed, forward);
 	VectorCopy(forward, ent->client->ps.velocity);
 
-	VectorSubtract(ent->client->ps.origin, range, mins);
-	VectorAdd(ent->client->ps.origin, range, maxs);
-
-	num = trap->EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
-
-	for (i = 0; i < num; i++)
+	if (ent->client->pers.fast_dash_timer < level.time)
 	{
-		hit = &g_entities[touch[i]];
+		ent->client->pers.fast_dash_timer = level.time + 100;
 
-		if (hit && hit != ent && hit->client && zyk_unique_ability_can_hit_target(ent, hit))
-		{ // zyk: Fast Dash ability knocks target down
-			vec3_t target_dir;
-			int target_knockdown_scale = 500;
+		zyk_force_dash_effect(ent);
 
-			VectorSubtract(hit->client->ps.origin, ent->client->ps.origin, target_dir);
-			VectorNormalize(target_dir);
+		VectorSubtract(ent->client->ps.origin, range, mins);
+		VectorAdd(ent->client->ps.origin, range, maxs);
 
-			// zyk: if using Meditate taunt, remove it
-			if (hit->client->ps.legsAnim == BOTH_MEDITATE && hit->client->ps.torsoAnim == BOTH_MEDITATE)
-			{
-				hit->client->ps.legsAnim = hit->client->ps.torsoAnim = BOTH_MEDITATE_END;
+		num = trap->EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
+
+		for (i = 0; i < num; i++)
+		{
+			hit = &g_entities[touch[i]];
+
+			if (hit && hit != ent && hit->client && zyk_unique_ability_can_hit_target(ent, hit))
+			{ // zyk: Fast Dash ability knocks target down
+				vec3_t target_dir;
+				int target_knockdown_scale = 500;
+
+				VectorSubtract(hit->client->ps.origin, ent->client->ps.origin, target_dir);
+				VectorNormalize(target_dir);
+
+				// zyk: if using Meditate taunt, remove it
+				if (hit->client->ps.legsAnim == BOTH_MEDITATE && hit->client->ps.torsoAnim == BOTH_MEDITATE)
+				{
+					hit->client->ps.legsAnim = hit->client->ps.torsoAnim = BOTH_MEDITATE_END;
+				}
+
+				hit->client->ps.velocity[0] = target_dir[0] * target_knockdown_scale;
+				hit->client->ps.velocity[1] = target_dir[1] * target_knockdown_scale;
+				hit->client->ps.velocity[2] = 250;
+
+				hit->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
+				hit->client->ps.forceHandExtendTime = level.time + 1000;
+				hit->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
+				hit->client->ps.quickerGetup = qtrue;
+
+				G_Damage(hit, ent, ent, NULL, NULL, 10, DAMAGE_NO_ARMOR, MOD_UNKNOWN);
 			}
-
-			hit->client->ps.velocity[0] = target_dir[0] * target_knockdown_scale;
-			hit->client->ps.velocity[1] = target_dir[1] * target_knockdown_scale;
-			hit->client->ps.velocity[2] = 250;
-
-			hit->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-			hit->client->ps.forceHandExtendTime = level.time + 1000;
-			hit->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
-			hit->client->ps.quickerGetup = qtrue;
-
-			G_Damage(hit, ent, ent, NULL, NULL, 3, DAMAGE_NO_ARMOR, MOD_UNKNOWN);
 		}
 	}
 }
