@@ -16038,7 +16038,7 @@ void G_RunFrame( int levelTime ) {
 
 					if (ent->client->pers.universe_quest_timer < level.time)
 					{
-						shifting_sand(ent, 5000);
+						shifting_sand(ent, 5500);
 						ent->client->pers.universe_quest_timer = level.time + 11000;
 						trap->SendServerCommand(-1, "chat \"^3Guardian of Earth: ^7Shifting Sand!\"");
 					}
