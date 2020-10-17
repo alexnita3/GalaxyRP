@@ -6253,11 +6253,15 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 		}
 
 		if (ent->client->sess.amrpgmode == 1)
-			trap->SendServerCommand( ent-g_entities, "print \"^7Account loaded succesfully in ^2Admin-Only Mode^7. Use command ^3/list^7.\n\"" );
+		{
+			trap->SendServerCommand(ent - g_entities, "print \"^7Account loaded succesfully in ^2Admin-Only Mode^7. Use command ^3/list^7.\n\"");
+			trap->SendServerCommand(-1, va("chat \"^7Account loaded succesfully in ^2Admin-Only Mode^7. Use command ^3/list^7.\n\""));
+		}
 		else if (ent->client->sess.amrpgmode == 2)
 		{
 			initialize_rpg_skills(ent);
 			trap->SendServerCommand( ent-g_entities, "print \"^7Account loaded succesfully in ^2RPG Mode^7. Use command ^3/list^7.\n\"" );
+			trap->SendServerCommand(-1, va("chat \"^7Account loaded succesfully in ^2RPG Mode^7. Use command ^3/list^7.\n\""));
 
 			if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
 			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
@@ -6914,6 +6918,7 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 	send_rpg_events(10000);
 			
 	trap->SendServerCommand( ent-g_entities, "print \"Account logout finished succesfully.\n\"" );
+	trap->SendServerCommand(-1, va("chat \"Account logout finished succesfully.\n\""));
 }
 
 qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show_message)
