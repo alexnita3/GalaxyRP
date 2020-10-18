@@ -2016,12 +2016,20 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	gentity_t	*other;
 	int			color;
 	char		name[64];
-	// don't let text be too long for malicious reasons
+	// don't let text be too long for malicious reasons. Or let it be VERY long for RP purposes ;)
 	char		text[MAX_SAY_TEXT];
 	char		location[64];
 	char		*locMsg = NULL;
+	//distance for distance-based chat
+	int distance = 999999999;
+	//This is the limit where the chat text will stop appearing at
+	int max_voice_distance = 600;
+	//variable used for OOC chat (or team chat)
+	int ooc_flag = 0;
+	char ooc_text[] = "";
 
 	if ( level.gametype < GT_TEAM && mode == SAY_TEAM ) {
+		ooc_flag = 1;
 		mode = SAY_ALL;
 	}
 
@@ -2041,16 +2049,38 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			return;
 		}
 
+		if (ooc_flag == 1) 
+		{
+			//add paranthesis for OOC chat (I know it's a workaround and it should be done better but it works)
+			char beginning[] = "((";
+			char end[] = "))";
+
+			strcat(ooc_text, beginning);
+			strcat(ooc_text, text);
+			strcat(ooc_text, end);
+
+			ooc_text;
+
+			G_LogPrintf("say: %s: %s\n", ent->client->pers.netname, text);
+			Com_sprintf(name, sizeof(name), "%s%c%c"EC": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE);
+			color = COLOR_RED;
+
+			break;
+		}
+
 		G_LogPrintf( "say: %s: %s\n", ent->client->pers.netname, text );
 		Com_sprintf (name, sizeof(name), "%s%c%c"EC": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
 		color = COLOR_GREEN;
+		//set the desired distance here
+		distance = 700;
 		break;
 	case SAY_TEAM:
 		// zyk: if player is silenced by an admin, he cannot say anything
 		if (ent->client->pers.player_statuses & (1 << 0))
 			return;
 
-		G_LogPrintf( "sayteam: %s: %s\n", ent->client->pers.netname, text );
+		//This should be visible at all times
+		G_LogPrintf( "sayteam: %s: %s\n", ent->client->pers.netname, ooc_text);
 		if (Team_GetLocationMsg(ent, location, sizeof(location)))
 		{
 			Com_sprintf (name, sizeof(name), EC"(%s%c%c"EC")"EC": ",
@@ -2059,12 +2089,13 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		}
 		else
 		{
-			Com_sprintf (name, sizeof(name), EC"(%s%c%c"EC")"EC": ",
-				ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
+		Com_sprintf (name, sizeof(name), EC"(%s%c%c"EC")"EC": ",
+			ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
 		}
 		color = COLOR_CYAN;
 		break;
 	case SAY_TELL:
+
 		if (target && target->inuse && target->client && level.gametype >= GT_TEAM &&
 			target->client->sess.sessionTeam == ent->client->sess.sessionTeam &&
 			Team_GetLocationMsg(ent, location, sizeof(location)))
@@ -2100,10 +2131,29 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		trap->Print( "%s%s\n", name, text);
 	}
 
-	// send it to all the appropriate clients
+	// send it to all the appropriate clients, within the desired distance
 	for (j = 0; j < level.maxclients; j++) {
 		other = &g_entities[j];
-		G_SayTo( ent, other, mode, color, name, text, locMsg );
+		//I know there can be a switch here, but i'm too lazy
+		if (mode == SAY_ALL || mode == SAY_TEAM)
+		{
+			if (mode == SAY_ALL) {
+
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= distance)
+				{
+					if (ooc_flag == 1) {
+						G_SayTo(ent, other, mode, color, name, ooc_text, locMsg);
+					}else
+						G_SayTo(ent, other, mode, color, name, text, locMsg);
+				}
+				else
+					continue;
+			}
+			else
+				G_SayTo(ent, other, mode, color, name, ooc_text, locMsg);
+		}
+		else
+			G_SayTo(ent, other, mode, color, name, text, locMsg);
 	}
 }
 
@@ -2151,7 +2201,7 @@ static void Cmd_SayTeam_f( gentity_t *ent ) {
 	if (zyk_number_of_allies(ent,qfalse) > 0)
 		G_Say( ent, NULL, (level.gametype>=GT_TEAM) ? SAY_TEAM : SAY_ALLY, p );
 	else
-		G_Say( ent, NULL, (level.gametype>=GT_TEAM) ? SAY_TEAM : SAY_ALL, p );
+		G_Say( ent, NULL, (level.gametype>=GT_TEAM) ? SAY_TEAM : SAY_TEAM, p );
 }
 
 /*
@@ -6255,13 +6305,13 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 		if (ent->client->sess.amrpgmode == 1)
 		{
 			trap->SendServerCommand(ent - g_entities, "print \"^7Account loaded succesfully in ^2Admin-Only Mode^7. Use command ^3/list^7.\n\"");
-			trap->SendServerCommand(-1, va("chat \"^7Account loaded succesfully in ^2Admin-Only Mode^7. Use command ^3/list^7.\n\""));
+			trap->SendServerCommand(-1, va("chat \"%s Logged in as: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
 		}
 		else if (ent->client->sess.amrpgmode == 2)
 		{
 			initialize_rpg_skills(ent);
 			trap->SendServerCommand( ent-g_entities, "print \"^7Account loaded succesfully in ^2RPG Mode^7. Use command ^3/list^7.\n\"" );
-			trap->SendServerCommand(-1, va("chat \"^7Account loaded succesfully in ^2RPG Mode^7. Use command ^3/list^7.\n\""));
+			trap->SendServerCommand(-1, va("chat \"%s Logged in as: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
 
 			if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
 			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
@@ -6917,8 +6967,7 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 	// zyk: update the rpg stuff info at the client-side game
 	send_rpg_events(10000);
 			
-	trap->SendServerCommand( ent-g_entities, "print \"Account logout finished succesfully.\n\"" );
-	trap->SendServerCommand(-1, va("chat \"Account logout finished succesfully.\n\""));
+	trap->SendServerCommand(-1, va("chat \"%s logged out\n\"", ent->client->pers.netname));
 }
 
 qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show_message)
@@ -17785,6 +17834,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			save_account(ent, qtrue);
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7created!\n\"", ent->client->sess.rpgchar));
+			trap->SendServerCommand(-1, va("chat \"%s created the char: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
 
 			if (ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->sess.amrpgmode == 2)
 			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
@@ -17890,6 +17940,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			load_account(ent);
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7loaded!\n\"", ent->client->sess.rpgchar));
+			trap->SendServerCommand(-1, va("chat \"%s switched to char: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
 
 			if (ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->sess.amrpgmode == 2)
 			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
