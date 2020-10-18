@@ -2026,7 +2026,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	int max_voice_distance = 600;
 	//variable used for OOC chat (or team chat)
 	int ooc_flag = 0;
-	char ooc_text[] = "";
+	char ooc_text[700] = "";
 
 	if ( level.gametype < GT_TEAM && mode == SAY_TEAM ) {
 		ooc_flag = 1;
