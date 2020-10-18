@@ -1,8 +1,7 @@
-# Zyk OpenJK Mod #
+# Galaxy RP Mod #
 
-
-This project is an OpenJK fork. Some years ago, I developed a mod called Zyk Mod. The code was ported from this older project into this one. This mod has an account system with admin commands, a RPG level system, quests, and more.
-
+This project is a fork of Zyk Mod, which is itself a fork of OpenJK. The aim is to improve on the work Zyk has done and move the project into a different direction: Player Roleplaying as opposed to an "RPG" game.
+This mod will be geared towards the RP community mainly. It will have features to prevent common occurences such as "spec-hiding", "Mary-sues" and more! It will also contain features that help player immersion.
 
 # OpenJK
 
