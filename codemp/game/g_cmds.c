@@ -12096,6 +12096,19 @@ void Cmd_AllyRemove_f( gentity_t *ent ) {
 
 /*
 ==================
+Cmd_AutoWalk_f
+==================
+*/
+void Cmd_AutoWalk_f( gentity_t *ent) {
+	if (!ent->client->sess.isAutoWalking)
+		ent->client->sess.isAutoWalking = qtrue;
+	else
+		ent->client->sess.isAutoWalking = qfalse;
+	return;
+}
+
+/*
+==================
 Cmd_Settings_f
 ==================
 */
@@ -18740,6 +18753,7 @@ command_t commands[] = {
 	{ "allychat",			Cmd_AllyChat_f,				CMD_NOINTERMISSION },
 	{ "allylist",			Cmd_AllyList_f,				CMD_NOINTERMISSION },
 	{ "allyremove",			Cmd_AllyRemove_f,			CMD_NOINTERMISSION },
+	{ "autowalk",			Cmd_AutoWalk_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION},
 	{ "bountyquest",		Cmd_BountyQuest_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "buy",				Cmd_Buy_f,					CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "callseller",			Cmd_CallSeller_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },

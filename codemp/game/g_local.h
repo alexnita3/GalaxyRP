@@ -1180,6 +1180,7 @@ struct gclient_s {
 	int			torsoAnimExecute;
 	qboolean	legsLastFlip;
 	qboolean	torsoLastFlip;
+	qboolean	isAutoWalking; //used for the autowalk feture
 
 	qboolean	readyToExit;		// wishes to leave the intermission
 
