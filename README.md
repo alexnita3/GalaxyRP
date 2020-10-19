@@ -106,4 +106,4 @@ If you have the Mac App Store Version of Jedi Academy, follow these steps to get
 * Sil
 * smcv
 
-[product-screenshot]: images/screenshot.png
+[product-screenshot]: cover_image.png
