@@ -1,5 +1,7 @@
 # Galaxy RP Mod #
 
+[![Product Name Screen Shot][product-screenshot]](https://www.google.com/)
+
 This project is a fork of Zyk Mod, which is itself a fork of OpenJK. The aim is to improve on the work Zyk has done and move the project into a different direction: Player Roleplaying as opposed to an "RPG" game.
 This mod will be geared towards the RP community mainly. It will have features to prevent common occurences such as "spec-hiding", "Mary-sues" and more! It will also contain features that help player immersion.
 
@@ -103,3 +105,5 @@ If you have the Mac App Store Version of Jedi Academy, follow these steps to get
 * Scooper
 * Sil
 * smcv
+
+[product-screenshot]: images/screenshot.png
