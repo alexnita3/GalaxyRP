@@ -11787,7 +11787,8 @@ Cmd_CreditGive_f
 void Cmd_CreditGive_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
-	int client_id = 0, value = 0;
+	char arg3[MAX_STRING_CHARS];
+	int client_id = 0, value = 0, create = 0;
 
 	if (trap->Argc() == 1)
 	{
@@ -11803,9 +11804,11 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 
 	trap->Argv( 1,  arg1, sizeof( arg1 ) );
 	trap->Argv( 2,  arg2, sizeof( arg2 ) );
+	trap->Argv( 3,  arg3, sizeof( arg3 ) );
 
 	client_id = ClientNumberFromString( ent, arg1, qfalse ); 
 	value = atoi(arg2);
+	create = atoi(arg3);
 
 	if (client_id == -1)
 	{
@@ -11830,13 +11833,29 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 		return;
 	}
 
+	if (create == 1 && ent->client->pers.bitvalue != 65535)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"You do not have the correct admin permission to create credits.\n\"");
+		return;
+	}
+
 	add_credits(&g_entities[client_id], value);
 	save_account(&g_entities[client_id], qtrue);
 
-	remove_credits(ent, value);
+	if (create != 1) {
+		remove_credits(ent, value);
+	}
 	save_account(ent, qtrue);
 
-	trap->SendServerCommand( client_id, va("chat \"^3Credit System: ^7You got %d credits from %s\n\"", value, ent->client->pers.netname) );
+	//trap->SendServerCommand( client_id, va("chat \"^3Credit System: ^7You got %d credits from %s\n\"", value, ent->client->pers.netname) );
+	//broadcast the transaction to the whole server
+	if (create == 1) {
+		trap->SendServerCommand(-1, va("chat \"^3Credit System: ^7%s ^7created ^2%d ^7credits and transferred them to %s\n\"", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname));
+	}
+	else
+	{
+		trap->SendServerCommand(-1, va("chat \"^3Credit System: ^7%s ^7transferred ^2%d ^7credits to %s\n\"", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname));
+	}
 
 	trap->SendServerCommand( ent-g_entities, "print \"Done.\n\"" );
 }
