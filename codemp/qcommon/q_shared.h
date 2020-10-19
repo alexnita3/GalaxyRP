@@ -209,7 +209,7 @@ typedef int32_t qhandle_t, thandle_t, fxHandle_t, sfxHandle_t, fileHandle_t, cli
 #define	MAX_NAME_LENGTH		32		// max length of a client name
 #define MAX_NETNAME			36
 
-#define	MAX_SAY_TEXT	150
+#define	MAX_SAY_TEXT	600
 
 // paramters for command buffer stuffing
 typedef enum {
