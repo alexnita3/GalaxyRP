@@ -2053,7 +2053,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		{
 			//add paranthesis for OOC chat (I know it's a workaround and it should be done better but it works)
 			char beginning[] = "((";
-			char end[] = "^1))";
+			char end[] = "))";
 
 			strcat(ooc_text, beginning);
 			strcat(ooc_text, text);
