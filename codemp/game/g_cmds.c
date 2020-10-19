@@ -9436,89 +9436,25 @@ void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 	}
 	else if (Q_stricmp( arg1, "other" ) == 0)
 	{
-		strcpy(message_content[0], va("%s31 - Max Shield: %d/%d       ", zyk_allowed_skill_color(30, ent->client->pers.rpg_class), ent->client->pers.skill_levels[30], max_skill_levels[30]));
+		strcpy(message_content[0], va("%s31 - Max Shield: %d/%d       \n", zyk_allowed_skill_color(30, ent->client->pers.rpg_class), ent->client->pers.skill_levels[30], max_skill_levels[30]));
 
-		strcpy(message_content[1], va("%s32 - Shield Strength: %d/%d  ", zyk_allowed_skill_color(31, ent->client->pers.rpg_class), ent->client->pers.skill_levels[31], max_skill_levels[31]));
+		strcpy(message_content[1], va("%s32 - Shield Strength: %d/%d  \n", zyk_allowed_skill_color(31, ent->client->pers.rpg_class), ent->client->pers.skill_levels[31], max_skill_levels[31]));
 
-		strcpy(message_content[2], va("%s33 - Health Strength: %d/%d  ", zyk_allowed_skill_color(32, ent->client->pers.rpg_class), ent->client->pers.skill_levels[32], max_skill_levels[32]));
+		strcpy(message_content[2], va("%s33 - Health Strength: %d/%d  \n", zyk_allowed_skill_color(32, ent->client->pers.rpg_class), ent->client->pers.skill_levels[32], max_skill_levels[32]));
 
-		strcpy(message_content[3], va("%s34 - Drain Shield: %d/%d     ", zyk_allowed_skill_color(33, ent->client->pers.rpg_class), ent->client->pers.skill_levels[33], max_skill_levels[33]));
+		strcpy(message_content[3], va("%s34 - Drain Shield: %d/%d     \n", zyk_allowed_skill_color(33, ent->client->pers.rpg_class), ent->client->pers.skill_levels[33], max_skill_levels[33]));
 
-		strcpy(message_content[4], va("%s35 - Jetpack: %d/%d          ", zyk_allowed_skill_color(34, ent->client->pers.rpg_class), ent->client->pers.skill_levels[34], max_skill_levels[34]));
+		strcpy(message_content[4], va("%s35 - Jetpack: %d/%d        \n", zyk_allowed_skill_color(34, ent->client->pers.rpg_class), ent->client->pers.skill_levels[34], max_skill_levels[34]));
 
-		strcpy(message_content[5], va("%s36 - Sense Health: %d/%d     ", zyk_allowed_skill_color(35, ent->client->pers.rpg_class), ent->client->pers.skill_levels[35], max_skill_levels[35]));
+		strcpy(message_content[5], va("%s36 - Sense Health: %d/%d     \n", zyk_allowed_skill_color(35, ent->client->pers.rpg_class), ent->client->pers.skill_levels[35], max_skill_levels[35]));
 
-		strcpy(message_content[6], va("%s37 - Shield Heal: %d/%d      ", zyk_allowed_skill_color(36, ent->client->pers.rpg_class), ent->client->pers.skill_levels[36], max_skill_levels[36]));
+		strcpy(message_content[6], va("%s37 - Shield Heal: %d/%d      \n", zyk_allowed_skill_color(36, ent->client->pers.rpg_class), ent->client->pers.skill_levels[36], max_skill_levels[36]));
 
 		strcpy(message_content[7], va("%s38 - Team Shield Heal: %d/%d\n", zyk_allowed_skill_color(37, ent->client->pers.rpg_class), ent->client->pers.skill_levels[37], max_skill_levels[37]));
-
-		strcpy(message_content[8], va("%s39 - Unique Skill: %d/%d\n", zyk_allowed_skill_color(38, ent->client->pers.rpg_class), ent->client->pers.skill_levels[38], max_skill_levels[38]));
 
 		strcpy(message_content[9], va("%s55 - Force Power: %d/%d\n", zyk_allowed_skill_color(54, ent->client->pers.rpg_class), ent->client->pers.skill_levels[54], max_skill_levels[54]));
 
 		strcpy(message_content[10], va("%s56 - Improvements: %d/%d\n", zyk_allowed_skill_color(55, ent->client->pers.rpg_class), ent->client->pers.skill_levels[55], max_skill_levels[55]));
-
-		if (ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS)
-			strcpy(message_content[0], va("%s^3l  ^7- Light Power: ^2yes\n",message_content[0]));
-		else
-			strcpy(message_content[0], va("%s^3l  ^7- Light Power: ^1no\n",message_content[0]));
-
-		if (ent->client->pers.hunter_quest_progress == NUMBER_OF_OBJECTIVES)
-			strcpy(message_content[1], va("%s^3d  ^1- Dark Power: ^2yes\n",message_content[1]));
-		else
-			strcpy(message_content[1], va("%s^3d  ^1- Dark Power: ^1no\n",message_content[1]));
-
-		if (ent->client->pers.eternity_quest_progress == NUMBER_OF_ETERNITY_QUEST_OBJECTIVES)
-			strcpy(message_content[2], va("%s^3e  - Eternity Power: ^2yes\n",message_content[2]));
-		else
-			strcpy(message_content[2], va("%s^3e  - Eternity Power: ^1no\n",message_content[2]));
-
-		if (ent->client->pers.universe_quest_progress >= 8)
-			strcpy(message_content[3], va("%s^3u  ^2- Universe Power: ^2yes\n",message_content[3]));
-		else
-			strcpy(message_content[3], va("%s^3u  ^2- Universe Power: ^1no\n",message_content[3]));
-
-		if (ent->client->pers.universe_quest_progress >= 14)
-			strcpy(message_content[4], va("%s^3!  ^5- Ultimate Power: ^2yes\n",message_content[4]));
-		else
-			strcpy(message_content[4], va("%s^3!  ^5- Ultimate Power: ^1no\n",message_content[4]));
-
-		if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
-			strcpy(message_content[5], va("%s^3r  ^4- Final Power: ^2yes\n",message_content[5]));
-		else
-			strcpy(message_content[5], va("%s^3r  ^4- Final Power: ^1no\n",message_content[5]));
-
-		if (ent->client->pers.rpg_class == 0 && (ent->client->pers.defeated_guardians & (1 << 11) || 
-			ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
-			strcpy(message_content[6], va("%s^3s  ^6- Magic Powers: ^2yes\n",message_content[6]));
-		else if (ent->client->pers.rpg_class == 1 && (ent->client->pers.defeated_guardians & (1 << 6) || 
-					ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
-			strcpy(message_content[6], va("%s^3s  ^6- Magic Powers: ^2yes\n",message_content[6]));
-		else if (ent->client->pers.rpg_class == 5 && (ent->client->pers.defeated_guardians & (1 << 4) || 
-					ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
-			strcpy(message_content[6], va("%s^3s  ^6- Magic Powers: ^2yes\n",message_content[6]));
-		else if (ent->client->pers.rpg_class == 4 && (ent->client->pers.defeated_guardians & (1 << 9) || 
-					ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
-			strcpy(message_content[6], va("%s^3s  ^6- Magic Powers: ^2yes\n",message_content[6]));
-		else if (ent->client->pers.rpg_class == 3 && (ent->client->pers.defeated_guardians & (1 << 5) || 
-					ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
-			strcpy(message_content[6], va("%s^3s  ^6- Magic Powers: ^2yes\n",message_content[6]));
-		else if (ent->client->pers.rpg_class == 6 && (ent->client->pers.defeated_guardians & (1 << 7) || 
-					ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
-			strcpy(message_content[6], va("%s^3s  ^6- Magic Powers: ^2yes\n",message_content[6]));
-		else if (ent->client->pers.rpg_class == 2 && (ent->client->pers.defeated_guardians & (1 << 10) || 
-					ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
-			strcpy(message_content[6], va("%s^3s  ^6- Magic Powers: ^2yes\n",message_content[6]));
-		else if (ent->client->pers.rpg_class == 7 && (ent->client->pers.defeated_guardians & (1 << 8) || 
-					ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
-			strcpy(message_content[6], va("%s^3s  ^6- Magic Powers: ^2yes\n",message_content[6]));
-		else if (ent->client->pers.rpg_class == 9 && (ent->client->pers.defeated_guardians & (1 << 12) || 
-					ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
-			strcpy(message_content[6], va("%s^3s  ^6- Magic Powers: ^2yes\n",message_content[6]));
-		else if (ent->client->pers.rpg_class == 8)
-			strcpy(message_content[6], va("%s^3s  ^6- Magic Powers: ^2yes\n",message_content[6]));
-		else
-			strcpy(message_content[6], va("%s^3s  ^6- Magic Powers: ^1no\n",message_content[6]));
 
 		for (i = 0; i < 11; i++)
 		{
@@ -9662,7 +9598,7 @@ void zyk_list_stuff(gentity_t *ent, gentity_t *target_ent)
 
 void list_rpg_info(gentity_t *ent, gentity_t *target_ent)
 { // zyk: lists general RPG info of this player
-	trap->SendServerCommand(target_ent->s.number, va("print \"\n^2Account: ^7%s\n^2Char: ^7%s\n\n^3Level: ^7%d/%d\n^3Level Up Score: ^7%d/%d\n^3Skill Points: ^7%d\n^3Skill Counter: ^7%d/%d\n^3Magic Points: ^7%d/%d\n^3Credits: ^7%d\n^3RPG Class: ^7%s\n\n^7Use ^2/list rpg ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->pers.level, zyk_rpg_max_level.integer, ent->client->pers.level_up_score, (ent->client->pers.level * zyk_level_up_score_factor.integer), ent->client->pers.skillpoints, ent->client->pers.skill_counter, zyk_max_skill_counter.integer, ent->client->pers.magic_power, zyk_max_magic_power(ent), ent->client->pers.credits, zyk_rpg_class(ent)));
+	trap->SendServerCommand(target_ent->s.number, va("print \"\n^2Account: ^7%s\n^2Character: ^7%s\n\n^3Level: ^7%d/%d\n^3Level Up Score: ^7%d/%d\n^3Skill Points: ^7%d\n^3Skill Counter: ^7%d/%d\n^3Credits: ^7%d\n\n^7Use ^2/list rpg ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->pers.level, zyk_rpg_max_level.integer, ent->client->pers.level_up_score, (ent->client->pers.level * zyk_level_up_score_factor.integer), ent->client->pers.skillpoints, ent->client->pers.skill_counter, zyk_max_skill_counter.integer, ent->client->pers.magic_power, zyk_max_magic_power(ent), ent->client->pers.credits, zyk_rpg_class(ent)));
 }
 
 /*
@@ -9689,7 +9625,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 
 			if (Q_stricmp( arg1, "rpg" ) == 0)
 			{
-				trap->SendServerCommand(ent-g_entities, "print \"\n^2/list force: ^7lists force power skills\n^2/list weapons: ^7lists weapon skills\n^2/list other: ^7lists miscellaneous skills\n^2/list ammo: ^7lists ammo skills\n^2/list items: ^7lists holdable items skills\n^2/list [skill number]: ^7lists info about a skill\n^2/list quests: ^7lists the quests\n^2/list commands: ^7lists the RPG Mode console commands\n^2/list classes: ^7lists the RPG classes\n^2/list stuff: ^7lists stuff bought from the seller\n\n\"");
+				trap->SendServerCommand(ent-g_entities, "print \"\n^2/list force: ^7lists force power skills\n^2/list weapons: ^7lists weapon skills\n^2/list other: ^7lists miscellaneous skills\n^2/list ammo: ^7lists ammo skills\n^2/list items: ^7lists holdable items skills\n^2/list [skill number]: ^7lists info about a skill\n^2/list commands: ^7lists the GalaxyRP console commands\n^2/list stuff: ^7lists stuff bought from the seller\n\n\"");
 			}
 			else if (Q_stricmp( arg1, "force" ) == 0 || Q_stricmp( arg1, "weapons" ) == 0 || Q_stricmp( arg1, "other" ) == 0 || 
 					 Q_stricmp( arg1, "ammo" ) == 0 || Q_stricmp( arg1, "items" ) == 0)
@@ -10100,7 +10036,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 			}
 			else if (Q_stricmp( arg1, "commands" ) == 0)
 			{
-				trap->SendServerCommand( ent-g_entities, "print \"\n^2RPG Mode commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account.\n^3/playermode: ^7switches between ^2Admin-Only Mode ^7and ^2RPG Mode^7.\n^3/up [skill number]: ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n^3/down [skill number]: ^7downgrades a skill.\n^3/resetaccount: ^7resets account stuff of the player.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [command number]: ^7gives the player an admin command.\n^3/admindown [player id or name] [command number]: ^7removes an admin command from a player.\n^3/settings: ^7turn on or off player settings.\n^3/callseller: ^7calls the jawa seller.\n^3/creditgive [player id or name] [amount]: ^7gives credits to a player.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/tutorial: ^7shows all info about the mod.\n^3/logout: ^7logs out the account.\n\n\"" );
+				trap->SendServerCommand( ent-g_entities, "print \"\n^2RPG Mode commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account.\n^3/up [skill number]: ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n^3/down [skill number]: ^7downgrades a skill.\n^3/resetaccount: ^7resets account stuff of the player.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [command number]: ^7gives the player an admin command.\n^3/admindown [player id or name] [command number]: ^7removes an admin command from a player.\n^3/settings: ^7turn on or off player settings.\n^3/callseller: ^7calls the jawa seller.\n^3/creditgive [player id or name] [amount] [1 to create credits (Admin)]: ^7gives credits to a player.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/tutorial: ^7shows all info about the mod.\n^3/logout: ^7logs out the account.\n\n\"" );
 			}
 			else if (Q_stricmp( arg1, "classes" ) == 0)
 			{
@@ -11851,7 +11787,8 @@ Cmd_CreditGive_f
 void Cmd_CreditGive_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
-	int client_id = 0, value = 0;
+	char arg3[MAX_STRING_CHARS];
+	int client_id = 0, value = 0, create = 0;
 
 	if (trap->Argc() == 1)
 	{
@@ -11867,9 +11804,11 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 
 	trap->Argv( 1,  arg1, sizeof( arg1 ) );
 	trap->Argv( 2,  arg2, sizeof( arg2 ) );
+	trap->Argv( 3,  arg3, sizeof( arg3 ) );
 
 	client_id = ClientNumberFromString( ent, arg1, qfalse ); 
 	value = atoi(arg2);
+	create = atoi(arg3);
 
 	if (client_id == -1)
 	{
@@ -11894,13 +11833,29 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 		return;
 	}
 
+	if (create == 1 && ent->client->pers.bitvalue != 65535)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"You do not have the correct admin permission to create credits.\n\"");
+		return;
+	}
+
 	add_credits(&g_entities[client_id], value);
 	save_account(&g_entities[client_id], qtrue);
 
-	remove_credits(ent, value);
+	if (create != 1) {
+		remove_credits(ent, value);
+	}
 	save_account(ent, qtrue);
 
-	trap->SendServerCommand( client_id, va("chat \"^3Credit System: ^7You got %d credits from %s\n\"", value, ent->client->pers.netname) );
+	//trap->SendServerCommand( client_id, va("chat \"^3Credit System: ^7You got %d credits from %s\n\"", value, ent->client->pers.netname) );
+	//broadcast the transaction to the whole server
+	if (create == 1) {
+		trap->SendServerCommand(-1, va("chat \"^3Credit System: ^7%s ^7created ^2%d ^7credits and transferred them to %s\n\"", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname));
+	}
+	else
+	{
+		trap->SendServerCommand(-1, va("chat \"^3Credit System: ^7%s ^7transferred ^2%d ^7credits to %s\n\"", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname));
+	}
 
 	trap->SendServerCommand( ent-g_entities, "print \"Done.\n\"" );
 }
