@@ -11914,7 +11914,7 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 	//trap->SendServerCommand( client_id, va("chat \"^3Credit System: ^7You got %d credits from %s\n\"", value, ent->client->pers.netname) );
 	//broadcast the transaction to the whole server
 	if (create == 1) {
-		trap->SendServerCommand(-1, va("chat \"^3Credit System: ^7%s ^7created ^2%d ^7credits and transferred them to %s\n\"", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname));
+		trap->SendServerCommand(-1, va("chat \"^3Credit System: ^5(Admin) ^7%s ^7created ^2%d ^7credits and transferred them to %s\n\"", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname));
 	}
 	else
 	{
