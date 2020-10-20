@@ -11851,25 +11851,28 @@ Cmd_CreditGive_f
 void Cmd_CreditGive_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
-	int client_id = 0, value = 0;
+	char arg3[MAX_STRING_CHARS];
+	int client_id = 0, value = 0, create = 0;
 
 	if (trap->Argc() == 1)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"You must specify a player.\n\"" );
+		trap->SendServerCommand( ent - g_entities, "print \"You must specify a player.\n\"" );
 		return;
 	}
 
 	if (trap->Argc() == 2)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"You must specify the amount of credits.\n\"" );
+		trap->SendServerCommand( ent - g_entities, "print \"You must specify the amount of credits.\n\"" );
 		return;
 	}
 
-	trap->Argv( 1,  arg1, sizeof( arg1 ) );
-	trap->Argv( 2,  arg2, sizeof( arg2 ) );
+	trap->Argv( 1, arg1, sizeof( arg1 ) );
+	trap->Argv( 2, arg2, sizeof( arg2 ) );
+	trap->Argv( 3, arg3, sizeof( arg3 ) );
 
-	client_id = ClientNumberFromString( ent, arg1, qfalse ); 
+	client_id = ClientNumberFromString( ent, arg1, qfalse );
 	value = atoi(arg2);
+	create = atoi(arg3);
 
 	if (client_id == -1)
 	{
@@ -11878,31 +11881,57 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 
 	if (value < 1)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"Can only use positive values.\n\"") );
+		trap->SendServerCommand( ent - g_entities, va("print \"Can only use positive values.\n\"" ));
 		return;
 	}
 
 	if (g_entities[client_id].client->sess.amrpgmode < 2)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"The player is not in RPG Mode\n\"") );
+		trap->SendServerCommand( ent - g_entities, va("print \"The player is not in RPG Mode\n\"" ));
 		return;
 	}
 
-	if ((ent->client->pers.credits - value) < 0)
+	int adminflag = 0;
+
+	if (create == 1)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"You don't have this amount of credits\n\"") );
-		return;
+		if (ent->client->pers.bitvalue != 65535)
+		{
+			trap->SendServerCommand(ent - g_entities, "print \"You do not have the correct admin permission to create credits.\n\"");
+			return;
+		}
+		else {
+			adminflag = 1;
+		}
+		
 	}
 
+	if ((ent->client->pers.credits - value) < 0 && adminflag == 0)
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"You don't have this amount of credits\n\""));
+		return;
+	}
+	
+	
 	add_credits(&g_entities[client_id], value);
 	save_account(&g_entities[client_id], qtrue);
 
-	remove_credits(ent, value);
+	if (create != 1) {
+		remove_credits(ent, value);
+	}
 	save_account(ent, qtrue);
 
-	trap->SendServerCommand( client_id, va("chat \"^3Credit System: ^7You got %d credits from %s\n\"", value, ent->client->pers.netname) );
+	//trap->SendServerCommand( client_id, va("chat \"^3Credit System: ^7You got %d credits from %s\n\"", value, ent->client->pers.netname) );
+	//broadcast the transaction to the whole server
+	if (create == 1) {
+		trap->SendServerCommand(-1, va("chat \"^3Credit System ^5(Admin)^3: ^7%s ^7created ^2%d ^7credits and transferred them to %s\n\"", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname));
+	}
+	else
+	{
+		trap->SendServerCommand(-1, va("chat \"^3Credit System: ^7%s ^7transferred ^2%d ^7credits to %s\n\"", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname));
+	}
 
-	trap->SendServerCommand( ent-g_entities, "print \"Done.\n\"" );
+	trap->SendServerCommand(ent - g_entities, "print \"Done.\n\"");
 }
 
 /*
