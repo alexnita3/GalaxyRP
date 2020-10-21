@@ -795,7 +795,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		{ // zyk: initializing custom quest values
 			level.zyk_custom_quest_mission_count[zyk_iterator] = -1;
 
-			quest_file = fopen(va("zykmod/customquests/%d.txt", zyk_iterator), "r");
+			quest_file = fopen(va("GalaxyRP/customquests/%d.txt", zyk_iterator), "r");
 			if (quest_file)
 			{
 				// zyk: initializes amount of quest missions
@@ -1808,7 +1808,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	zyk_create_dir(va("entities/%s", zyk_mapname));
 
 	// zyk: loading entities set as default (Entity System)
-	zyk_entities_file = fopen(va("zykmod/entities/%s/default.txt",zyk_mapname),"r");
+	zyk_entities_file = fopen(va("GalaxyRP/entities/%s/default.txt",zyk_mapname),"r");
 
 	if (zyk_entities_file != NULL)
 	{ // zyk: default file exists. Load entities from it
@@ -1823,13 +1823,13 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 				G_FreeEntity( target_ent );
 		}
 
-		strcpy(level.load_entities_file, va("zykmod/entities/%s/default.txt",zyk_mapname));
+		strcpy(level.load_entities_file, va("GalaxyRP/entities/%s/default.txt",zyk_mapname));
 
 		level.load_entities_timer = level.time + 1050;
 	}
 
 	// zyk: loading default remaps
-	zyk_remap_file = fopen(va("zykmod/remaps/%s/default.txt",zyk_mapname),"r");
+	zyk_remap_file = fopen(va("GalaxyRP/remaps/%s/default.txt",zyk_mapname),"r");
 
 	if (zyk_remap_file != NULL)
 	{
@@ -1855,7 +1855,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 
 	// zyk: loading duel arena, if this map has one
-	zyk_duel_arena_file = fopen(va("zykmod/duelarena/%s/origin.txt", zyk_mapname), "r");
+	zyk_duel_arena_file = fopen(va("GalaxyRP/duelarena/%s/origin.txt", zyk_mapname), "r");
 	if (zyk_duel_arena_file != NULL)
 	{
 		char duel_arena_content[16];
@@ -1877,7 +1877,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 
 	// zyk: loading melee arena, if this map has one
-	zyk_melee_arena_file = fopen(va("zykmod/meleearena/%s/origin.txt", zyk_mapname), "r");
+	zyk_melee_arena_file = fopen(va("GalaxyRP/meleearena/%s/origin.txt", zyk_mapname), "r");
 	if (zyk_melee_arena_file != NULL)
 	{
 		char melee_arena_content[16];
@@ -6496,7 +6496,7 @@ void zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qbo
 		strcpy(language, "english");
 	}
 
-	text_file = fopen(va("zykmod/textfiles/%s/%s.txt", language, filename), "r");
+	text_file = fopen(va("GalaxyRP/textfiles/%s/%s.txt", language, filename), "r");
 	if (text_file)
 	{
 		fgets(content, sizeof(content), text_file);
@@ -9389,7 +9389,7 @@ void G_RunFrame( int levelTime ) {
 	{
 		if (level.duel_leaderboard_step == 1)
 		{
-			FILE *leaderboard_file = fopen("zykmod/leaderboard.txt", "r");
+			FILE *leaderboard_file = fopen("GalaxyRP/leaderboard.txt", "r");
 
 			if (leaderboard_file != NULL)
 			{ 
@@ -9455,7 +9455,7 @@ void G_RunFrame( int levelTime ) {
 		}
 		else if (level.duel_leaderboard_step == 2)
 		{ // zyk: add the player to the end of the file with 1 tournament win
-			FILE *leaderboard_file = fopen("zykmod/leaderboard.txt", "a");
+			FILE *leaderboard_file = fopen("GalaxyRP/leaderboard.txt", "a");
 			fprintf(leaderboard_file, "%s\n%s\n1\n", level.duel_leaderboard_acc, level.duel_leaderboard_name);
 			fclose(leaderboard_file);
 
@@ -9478,7 +9478,7 @@ void G_RunFrame( int levelTime ) {
 				int j = 0;
 				int this_score = 0;
 				char content[64];				
-				FILE *leaderboard_file = fopen("zykmod/leaderboard.txt", "r");
+				FILE *leaderboard_file = fopen("GalaxyRP/leaderboard.txt", "r");
 
 				strcpy(content, "");
 
@@ -9515,8 +9515,8 @@ void G_RunFrame( int levelTime ) {
 		}
 		else if (level.duel_leaderboard_step == 4)
 		{ // zyk: saving the new leaderboard file with the updated score of the winner
-			FILE *leaderboard_file = fopen("zykmod/leaderboard.txt", "r");
-			FILE *new_leaderboard_file = fopen("zykmod/new_leaderboard.txt", "w");
+			FILE *leaderboard_file = fopen("GalaxyRP/leaderboard.txt", "r");
+			FILE *new_leaderboard_file = fopen("GalaxyRP/new_leaderboard.txt", "w");
 			int j = 0;
 			char content[64];
 
@@ -9590,7 +9590,7 @@ void G_RunFrame( int levelTime ) {
 		else if (level.duel_leaderboard_step == 5)
 		{ // zyk: renaming new file to leaderboard.txt
 #if defined(__linux__)
-			system("mv -f zykmod/new_leaderboard.txt zykmod/leaderboard.txt");
+			system("mv -f GalaxyRP/new_leaderboard.txt GalaxyRP/leaderboard.txt");
 #else
 			system("MOVE /Y \"zykmod\\new_leaderboard.txt\" \"zykmod\\leaderboard.txt\"");
 #endif
@@ -15525,7 +15525,7 @@ void G_RunFrame( int levelTime ) {
 									// zyk: getting mapname
 									trap->GetServerinfo(zykserverinfo, sizeof(zykserverinfo));
 									Q_strncpyz(zyk_mapname, Info_ValueForKey(zykserverinfo, "mapname"), sizeof(zyk_mapname));
-									strcpy(level.load_entities_file, va("zykmod/entities/%s/%s.txt", zyk_mapname, zyk_value));
+									strcpy(level.load_entities_file, va("GalaxyRP/entities/%s/%s.txt", zyk_mapname, zyk_value));
 
 									// zyk: cleaning entities. Only the ones from the file will be in the map
 									for (k = (MAX_CLIENTS + BODY_QUEUE_SIZE); k < level.num_entities; k++)
