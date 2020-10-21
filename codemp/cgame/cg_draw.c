@@ -862,9 +862,39 @@ static void CG_DrawSaberStyle( centity_t *cent, menuDef_t *menuHUD)
 
 		break;
 	case 2://FORCE_LEVEL_2:
-	case 6://SS_DUAL
-	case 7://SS_STAFF
 		focusItem = Menu_FindItemByName(menuHUD, "saberstyle_medium");
+
+		if (focusItem)
+		{
+			trap->R_SetColor(colorTable[CT_WHITE]);
+
+			CG_DrawPic(
+				focusItem->window.rect.x,
+				focusItem->window.rect.y,
+				focusItem->window.rect.w,
+				focusItem->window.rect.h,
+				focusItem->window.background
+			);
+		}
+		break;
+	case 6://SS_DUAL
+		focusItem = Menu_FindItemByName(menuHUD, "saberstyle_dual");
+
+		if (focusItem)
+		{
+			trap->R_SetColor(colorTable[CT_WHITE]);
+
+			CG_DrawPic(
+				focusItem->window.rect.x,
+				focusItem->window.rect.y,
+				focusItem->window.rect.w,
+				focusItem->window.rect.h,
+				focusItem->window.background
+			);
+		}
+		break;
+	case 7://SS_STAFF
+		focusItem = Menu_FindItemByName(menuHUD, "saberstyle_staff");
 
 		if (focusItem)
 		{
