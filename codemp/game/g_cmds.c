@@ -2567,7 +2567,7 @@ void Cmd_MapList_f( gentity_t *ent ) {
 			return;
 		}
 
-		map_list_file = fopen("zykmod/maplist.txt","r");
+		map_list_file = fopen("GalaxyRP/maplist.txt","r");
 		if (map_list_file != NULL)
 		{
 			while(i < (results_per_page * (page-1)) && fgets(content, sizeof(content), map_list_file) != NULL)
@@ -4972,7 +4972,7 @@ void load_account(gentity_t *ent)
 	char content[128];
 
 	strcpy(content,"");
-	account_file = fopen(va("zykmod/accounts/%s.txt",ent->client->sess.filename),"r");
+	account_file = fopen(va("GalaxyRP/accounts/%s.txt",ent->client->sess.filename),"r");
 	if (account_file != NULL)
 	{
 		int i = 0;
@@ -5014,7 +5014,7 @@ void load_account(gentity_t *ent)
 		fclose(account_file);
 
 		// zyk: loading the char file
-		account_file = fopen(va("zykmod/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
+		account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
 		if (account_file != NULL)
 		{
 			// zyk: loading level up score value
@@ -5203,7 +5203,7 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 			gclient_t *client;
 
 			client = ent->client;
-			account_file = fopen(va("zykmod/accounts/%s_%s.txt",ent->client->sess.filename, ent->client->sess.rpgchar),"w");
+			account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt",ent->client->sess.filename, ent->client->sess.rpgchar),"w");
 			fprintf(account_file,"%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
 			client->pers.level_up_score,client->pers.level,client->pers.skillpoints,client->pers.skill_levels[0],client->pers.skill_levels[1],client->pers.skill_levels[2]
 			,client->pers.skill_levels[3],client->pers.skill_levels[4],client->pers.skill_levels[5],client->pers.skill_levels[6],client->pers.skill_levels[7],client->pers.skill_levels[8]
@@ -5224,7 +5224,7 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 			gclient_t *client;
 
 			client = ent->client;
-			account_file = fopen(va("zykmod/accounts/%s.txt", ent->client->sess.filename), "w");
+			account_file = fopen(va("GalaxyRP/accounts/%s.txt", ent->client->sess.filename), "w");
 			fprintf(account_file, "%s\n%d\n%d\n%d\n%s\n",
 				client->pers.password, client->sess.amrpgmode, client->pers.player_settings, client->pers.bitvalue, client->sess.rpgchar);
 			fclose(account_file);
@@ -5914,9 +5914,9 @@ void add_new_char(gentity_t *ent)
 void zyk_create_dir(char *file_path)
 {
 #if defined(__linux__)
-	system(va("mkdir -p zykmod/%s", file_path));
+	system(va("mkdir -p GalaxyRP%s", file_path));
 #else
-	system(va("mkdir \"zykmod/%s\"", file_path));
+	system(va("mkdir \"GalaxyRP%s\"", file_path));
 #endif
 }
 
@@ -5964,12 +5964,12 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 	zyk_create_dir("accounts");
 
 #if defined(__linux__)
-	system("ls zykmod/accounts > zykmod/accounts/accounts.txt");
+	system("ls GalaxyRP/accounts > GalaxyRP/accounts/accounts.txt");
 #else
-	system("dir /B \"zykmod/accounts\" > zykmod/accounts/accounts.txt");
+	system("dir /B \"GalaxyRP/accounts\" > GalaxyRP/accounts/accounts.txt");
 #endif
 
-	logins_file = fopen("zykmod/accounts/accounts.txt","r");
+	logins_file = fopen("GalaxyRP/accounts/accounts.txt","r");
 	if (logins_file != NULL)
 	{
 		i = fscanf(logins_file, "%s", content);
@@ -6035,7 +6035,7 @@ void legacy_load_account(gentity_t *ent)
 	char content[128];
 
 	strcpy(content, "");
-	account_file = fopen(va("zykmod/accounts/%s.txt", ent->client->sess.filename), "r");
+	account_file = fopen(va("GalaxyRP/accounts/%s.txt", ent->client->sess.filename), "r");
 	if (account_file != NULL)
 	{
 		int i = 0;
@@ -6264,7 +6264,7 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 		}
 
 		// zyk: validating login
-		account_file = fopen(va("zykmod/accounts/%s.txt",arg1),"r");
+		account_file = fopen(va("GalaxyRP/accounts/%s.txt",arg1),"r");
 		if (account_file == NULL)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"Login does not exist.\n\"" );
@@ -6284,7 +6284,7 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 		strcpy(ent->client->sess.filename, arg1);
 		strcpy(ent->client->pers.password, arg2);
 
-		account_file = fopen(va("zykmod/accounts/%s_%s.txt", arg1, arg1), "r");
+		account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", arg1, arg1), "r");
 		if (account_file == NULL)
 		{ // zyk: old account. Use the legacy function to convert it to the Char system
 			legacy_load_account(ent);
@@ -8140,12 +8140,12 @@ char *zyk_get_rpg_chars(gentity_t *ent, char *separator)
 	strcpy(chars, "");
 
 #if defined(__linux__)
-	system(va("cd zykmod/accounts ; ls %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
+	system(va("cd GalaxyRP/accounts ; ls %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
 #else
-	system(va("cd \"zykmod/accounts\" & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
+	system(va("cd \"GalaxyRP/accounts\" & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
 #endif
 
-	chars_file = fopen(va("zykmod/accounts/chars_%d.txt", ent->s.number), "r");
+	chars_file = fopen(va("GalaxyRP/accounts/chars_%d.txt", ent->s.number), "r");
 	if (chars_file != NULL)
 	{
 		i = fscanf(chars_file, "%s", content);
@@ -11473,7 +11473,7 @@ void Cmd_ChangePassword_f( gentity_t *ent ) {
 void zyk_remove_configs(gentity_t *ent)
 {
 #if defined(__linux__)
-	system(va("rm -f zykmod/configs/%s_%s_freewarrior.txt zykmod/configs/%s_%s_forceuser.txt zykmod/configs/%s_%s_bountyhunter.txt zykmod/configs/%s_%s_armoredsoldier.txt zykmod/configs/%s_%s_monk.txt zykmod/configs/%s_%s_stealthattacker.txt zykmod/configs/%s_%s_duelist.txt zykmod/configs/%s_%s_forcegunner.txt zykmod/configs/%s_%s_magicmaster.txt zykmod/configs/%s_%s_forcetank.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar));
+	system(va("rm -f GalaxyRP/configs/%s_%s_freewarrior.txt GalaxyRP/configs/%s_%s_forceuser.txt GalaxyRP/configs/%s_%s_bountyhunter.txt GalaxyRP/configs/%s_%s_armoredsoldier.txt GalaxyRP/configs/%s_%s_monk.txt GalaxyRP/configs/%s_%s_stealthattacker.txt GalaxyRP/configs/%s_%s_duelist.txt GalaxyRP/configs/%s_%s_forcegunner.txt GalaxyRP/configs/%s_%s_magicmaster.txt GalaxyRP/configs/%s_%s_forcetank.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar));
 #else
 	system(va("DEL /F \"zykmod\\configs\\%s_%s_freewarrior.txt\" \"zykmod\\configs\\%s_%s_forceuser.txt\" \"zykmod\\configs\\%s_%s_bountyhunter.txt\" \"zykmod\\configs\\%s_%s_armoredsoldier.txt\" \"zykmod\\configs\\%s_%s_monk.txt\" \"zykmod\\configs\\%s_%s_stealthattacker.txt\" \"zykmod\\configs\\%s_%s_duelist.txt\" \"zykmod\\configs\\%s_%s_forcegunner.txt\" \"zykmod\\configs\\%s_%s_magicmaster.txt\" \"zykmod\\configs\\%s_%s_forcetank.txt\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar));
 #endif
@@ -12459,25 +12459,25 @@ void Cmd_Settings_f( gentity_t *ent ) {
 char *zyk_config_filename(gclient_t *client)
 {
 	if (client->pers.rpg_class == 0)
-		return va("zykmod/configs/%s_%s_freewarrior.txt", client->sess.filename, client->sess.rpgchar);
+		return va("GalaxyRP/configs/%s_%s_freewarrior.txt", client->sess.filename, client->sess.rpgchar);
 	else if (client->pers.rpg_class == 1)
-		return va("zykmod/configs/%s_%s_forceuser.txt", client->sess.filename, client->sess.rpgchar);
+		return va("GalaxyRP/configs/%s_%s_forceuser.txt", client->sess.filename, client->sess.rpgchar);
 	else if (client->pers.rpg_class == 2)
-		return va("zykmod/configs/%s_%s_bountyhunter.txt", client->sess.filename, client->sess.rpgchar);
+		return va("GalaxyRP/configs/%s_%s_bountyhunter.txt", client->sess.filename, client->sess.rpgchar);
 	else if (client->pers.rpg_class == 3)
-		return va("zykmod/configs/%s_%s_armoredsoldier.txt", client->sess.filename, client->sess.rpgchar);
+		return va("GalaxyRP/configs/%s_%s_armoredsoldier.txt", client->sess.filename, client->sess.rpgchar);
 	else if (client->pers.rpg_class == 4)
-		return va("zykmod/configs/%s_%s_monk.txt", client->sess.filename, client->sess.rpgchar);
+		return va("GalaxyRP/configs/%s_%s_monk.txt", client->sess.filename, client->sess.rpgchar);
 	else if (client->pers.rpg_class == 5)
-		return va("zykmod/configs/%s_%s_stealthattacker.txt", client->sess.filename, client->sess.rpgchar);
+		return va("GalaxyRP/configs/%s_%s_stealthattacker.txt", client->sess.filename, client->sess.rpgchar);
 	else if (client->pers.rpg_class == 6)
-		return va("zykmod/configs/%s_%s_duelist.txt", client->sess.filename, client->sess.rpgchar);
+		return va("GalaxyRP/configs/%s_%s_duelist.txt", client->sess.filename, client->sess.rpgchar);
 	else if (client->pers.rpg_class == 7)
-		return va("zykmod/configs/%s_%s_forcegunner.txt", client->sess.filename, client->sess.rpgchar);
+		return va("GalaxyRP/configs/%s_%s_forcegunner.txt", client->sess.filename, client->sess.rpgchar);
 	else if (client->pers.rpg_class == 8)
-		return va("zykmod/configs/%s_%s_magicmaster.txt", client->sess.filename, client->sess.rpgchar);
+		return va("GalaxyRP/configs/%s_%s_magicmaster.txt", client->sess.filename, client->sess.rpgchar);
 	else if (client->pers.rpg_class == 9)
-		return va("zykmod/configs/%s_%s_forcetank.txt", client->sess.filename, client->sess.rpgchar);
+		return va("GalaxyRP/configs/%s_%s_forcetank.txt", client->sess.filename, client->sess.rpgchar);
 	else
 		return "";
 }
@@ -12485,25 +12485,25 @@ char *zyk_config_filename(gclient_t *client)
 char *zyk_legacy_config_filename(gclient_t *client)
 {
 	if (client->pers.rpg_class == 0)
-		return va("zykmod/configs/%s_freewarrior.txt", client->sess.filename);
+		return va("GalaxyRP/configs/%s_freewarrior.txt", client->sess.filename);
 	else if (client->pers.rpg_class == 1)
-		return va("zykmod/configs/%s_forceuser.txt", client->sess.filename);
+		return va("GalaxyRP/configs/%s_forceuser.txt", client->sess.filename);
 	else if (client->pers.rpg_class == 2)
-		return va("zykmod/configs/%s_bountyhunter.txt", client->sess.filename);
+		return va("GalaxyRP/configs/%s_bountyhunter.txt", client->sess.filename);
 	else if (client->pers.rpg_class == 3)
-		return va("zykmod/configs/%s_armoredsoldier.txt", client->sess.filename);
+		return va("GalaxyRP/configs/%s_armoredsoldier.txt", client->sess.filename);
 	else if (client->pers.rpg_class == 4)
-		return va("zykmod/configs/%s_monk.txt", client->sess.filename);
+		return va("GalaxyRP/configs/%s_monk.txt", client->sess.filename);
 	else if (client->pers.rpg_class == 5)
-		return va("zykmod/configs/%s_stealthattacker.txt", client->sess.filename);
+		return va("GalaxyRP/configs/%s_stealthattacker.txt", client->sess.filename);
 	else if (client->pers.rpg_class == 6)
-		return va("zykmod/configs/%s_duelist.txt", client->sess.filename);
+		return va("GalaxyRP/configs/%s_duelist.txt", client->sess.filename);
 	else if (client->pers.rpg_class == 7)
-		return va("zykmod/configs/%s_forcegunner.txt", client->sess.filename);
+		return va("GalaxyRP/configs/%s_forcegunner.txt", client->sess.filename);
 	else if (client->pers.rpg_class == 8)
-		return va("zykmod/configs/%s_magicmaster.txt", client->sess.filename);
+		return va("GalaxyRP/configs/%s_magicmaster.txt", client->sess.filename);
 	else if (client->pers.rpg_class == 9)
-		return va("zykmod/configs/%s_forcetank.txt", client->sess.filename);
+		return va("GalaxyRP/configs/%s_forcetank.txt", client->sess.filename);
 	else
 		return "";
 }
@@ -12960,7 +12960,7 @@ void Cmd_ZykFile_f(gentity_t *ent) {
 	trap->Argv(2, arg2, sizeof(arg2));
 	page = atoi(arg2);
 
-	server_file = fopen(va("zykmod/%s.txt", arg1), "r");
+	server_file = fopen(va("GalaxyRP/%s.txt", arg1), "r");
 	if (server_file != NULL)
 	{
 		if (page > 0)
@@ -13546,12 +13546,12 @@ void Cmd_RemapDeleteFile_f( gentity_t *ent ) {
 
 	zyk_create_dir(va("remaps/%s", zyk_mapname));
 
-	this_file = fopen(va("zykmod/remaps/%s/%s.txt",zyk_mapname,arg1),"r");
+	this_file = fopen(va("GalaxyRP/remaps/%s/%s.txt",zyk_mapname,arg1),"r");
 	if (this_file)
 	{
 		fclose(this_file);
 
-		remove(va("zykmod/remaps/%s/%s.txt",zyk_mapname,arg1));
+		remove(va("GalaxyRP/remaps/%s/%s.txt",zyk_mapname,arg1));
 
 		trap->SendServerCommand( ent-g_entities, va("print \"File %s deleted from server\n\"", arg1) );
 	}
@@ -13595,7 +13595,7 @@ void Cmd_RemapSave_f( gentity_t *ent ) {
 	zyk_create_dir(va("remaps/%s", zyk_mapname));
 
 	// zyk: saving remaps in the file
-	remap_file = fopen(va("zykmod/remaps/%s/%s.txt",zyk_mapname,arg1),"w");
+	remap_file = fopen(va("GalaxyRP/remaps/%s/%s.txt",zyk_mapname,arg1),"w");
 	for (i = 0; i < zyk_get_remap_count(); i++)
 	{
 		fprintf(remap_file,"%s\n%s\n%f\n",remappedShaders[i].oldShader,remappedShaders[i].newShader,remappedShaders[i].timeOffset);
@@ -13645,7 +13645,7 @@ void Cmd_RemapLoad_f( gentity_t *ent ) {
 	zyk_create_dir(va("remaps/%s", zyk_mapname));
 
 	// zyk: loading remaps from the file
-	remap_file = fopen(va("zykmod/remaps/%s/%s.txt",zyk_mapname,arg1),"r");
+	remap_file = fopen(va("GalaxyRP/remaps/%s/%s.txt",zyk_mapname,arg1),"r");
 	if (remap_file)
 	{
 		while(fscanf(remap_file,"%s",old_shader) != EOF)
@@ -13971,7 +13971,7 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 	zyk_create_dir(va("entities/%s", zyk_mapname));
 
 	// zyk: saving the entities into the file
-	this_file = fopen(va("zykmod/entities/%s/%s.txt",zyk_mapname,arg1),"w");
+	this_file = fopen(va("GalaxyRP/entities/%s/%s.txt",zyk_mapname,arg1),"w");
 
 	for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
 	{
@@ -14033,7 +14033,7 @@ void Cmd_EntLoad_f( gentity_t *ent ) {
 
 	zyk_create_dir(va("entities/%s", zyk_mapname));
 
-	strcpy(level.load_entities_file, va("zykmod/entities/%s/%s.txt",zyk_mapname,arg1));
+	strcpy(level.load_entities_file, va("GalaxyRP/entities/%s/%s.txt",zyk_mapname,arg1));
 
 	this_file = fopen(level.load_entities_file,"r");
 	if (this_file)
@@ -14091,12 +14091,12 @@ void Cmd_EntDeleteFile_f( gentity_t *ent ) {
 
 	zyk_create_dir(va("entities/%s", zyk_mapname));
 
-	this_file = fopen(va("zykmod/entities/%s/%s.txt",zyk_mapname,arg1),"r");
+	this_file = fopen(va("GalaxyRP/entities/%s/%s.txt",zyk_mapname,arg1),"r");
 	if (this_file)
 	{
 		fclose(this_file);
 
-		remove(va("zykmod/entities/%s/%s.txt",zyk_mapname,arg1));
+		remove(va("GalaxyRP/entities/%s/%s.txt",zyk_mapname,arg1));
 
 		trap->SendServerCommand( ent-g_entities, va("print \"File %s deleted from server\n\"", arg1) );
 	}
@@ -17065,14 +17065,14 @@ void Cmd_DuelArena_f(gentity_t *ent) {
 
 	zyk_create_dir("duelarena");
 
-	duel_arena_file = fopen(va("zykmod/duelarena/%s/origin.txt", zyk_mapname), "r");
+	duel_arena_file = fopen(va("GalaxyRP/duelarena/%s/origin.txt", zyk_mapname), "r");
 	if (duel_arena_file == NULL)
 	{ // zyk: arena file does not exist yet, create one
 		VectorCopy(ent->client->ps.origin, level.duel_tournament_origin);
 
 		zyk_create_dir(va("duelarena/%s", zyk_mapname));
 
-		duel_arena_file = fopen(va("zykmod/duelarena/%s/origin.txt", zyk_mapname), "w");
+		duel_arena_file = fopen(va("GalaxyRP/duelarena/%s/origin.txt", zyk_mapname), "w");
 		fprintf(duel_arena_file, "%d\n%d\n%d\n", (int)level.duel_tournament_origin[0], (int)level.duel_tournament_origin[1], (int)level.duel_tournament_origin[2]);
 		fclose(duel_arena_file);
 
@@ -17084,7 +17084,7 @@ void Cmd_DuelArena_f(gentity_t *ent) {
 	{ // zyk: arena file already exists, remove it
 		fclose(duel_arena_file);
 
-		remove(va("zykmod/duelarena/%s/origin.txt", zyk_mapname));
+		remove(va("GalaxyRP/duelarena/%s/origin.txt", zyk_mapname));
 
 		level.duel_arena_loaded = qfalse;
 
@@ -17324,14 +17324,14 @@ void Cmd_MeleeArena_f(gentity_t *ent) {
 
 	zyk_create_dir("meleearena");
 
-	duel_arena_file = fopen(va("zykmod/meleearena/%s/origin.txt", zyk_mapname), "r");
+	duel_arena_file = fopen(va("GalaxyRP/meleearena/%s/origin.txt", zyk_mapname), "r");
 	if (duel_arena_file == NULL)
 	{ // zyk: arena file does not exist yet, create one
 		VectorCopy(ent->client->ps.origin, level.melee_mode_origin);
 
 		zyk_create_dir(va("meleearena/%s", zyk_mapname));
 
-		duel_arena_file = fopen(va("zykmod/meleearena/%s/origin.txt", zyk_mapname), "w");
+		duel_arena_file = fopen(va("GalaxyRP/meleearena/%s/origin.txt", zyk_mapname), "w");
 		fprintf(duel_arena_file, "%d\n%d\n%d\n", (int)level.melee_mode_origin[0], (int)level.melee_mode_origin[1], (int)level.melee_mode_origin[2]);
 		fclose(duel_arena_file);
 
@@ -17343,7 +17343,7 @@ void Cmd_MeleeArena_f(gentity_t *ent) {
 	{ // zyk: arena file already exists, remove it
 		fclose(duel_arena_file);
 
-		remove(va("zykmod/meleearena/%s/origin.txt", zyk_mapname));
+		remove(va("GalaxyRP/meleearena/%s/origin.txt", zyk_mapname));
 
 		level.melee_arena_loaded = qfalse;
 
@@ -17453,7 +17453,7 @@ void Cmd_Tutorial_f(gentity_t *ent) {
 	trap->Argv(1, arg1, sizeof(arg1));
 	page = atoi(arg1);
 
-	tutorial_file = fopen("zykmod/tutorial.txt", "r");
+	tutorial_file = fopen("GalaxyRP/tutorial.txt", "r");
 	if (tutorial_file != NULL)
 	{
 		if (page > 0)
@@ -17705,12 +17705,12 @@ int zyk_char_count(gentity_t *ent)
 	int count = 0;
 
 #if defined(__linux__)
-	system(va("cd zykmod/accounts ; ls %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
+	system(va("cd GalaxyRP/accounts ; ls %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
 #else
-	system(va("cd \"zykmod/accounts\" & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
+	system(va("cd \"GalaxyRP/accounts\" & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
 #endif
 
-	chars_file = fopen(va("zykmod/accounts/chars_%d.txt", ent->s.number), "r");
+	chars_file = fopen(va("GalaxyRP/accounts/chars_%d.txt", ent->s.number), "r");
 	if (chars_file != NULL)
 	{
 		i = fscanf(chars_file, "%s", content);
@@ -17772,7 +17772,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				return;
 			}
 
-			chars_file = fopen(va("zykmod/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
+			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
 			if (chars_file != NULL)
 			{
 				fclose(chars_file);
@@ -17816,7 +17816,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				return;
 			}
 
-			chars_file = fopen(va("zykmod/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
+			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
 			if (chars_file != NULL)
 			{
 				fclose(chars_file);
@@ -17831,9 +17831,9 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			}
 
 #if defined(__linux__)
-			system(va("mv zykmod/accounts/%s_%s.txt zykmod/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
+			system(va("mv GalaxyRP/accounts/%s_%s.txt GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
 #else
-			system(va("cd \"zykmod/accounts\" & MOVE %s_%s.txt %s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
+			system(va("cd \"GalaxyRP/accounts\" & MOVE %s_%s.txt %s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
 #endif
 
 			// zyk: saving the current char
@@ -17866,7 +17866,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				new_char_name[3] = '_';
 			}
 
-			chars_file = fopen(va("zykmod/accounts/%s_%s.txt", ent->client->sess.filename, new_char_name), "r");
+			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, new_char_name), "r");
 			if (chars_file != NULL)
 			{
 				fclose(chars_file);
@@ -17875,9 +17875,9 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			}
 
 #if defined(__linux__)
-			system(va("cp zykmod/accounts/%s_%s.txt zykmod/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, new_char_name));
+			system(va("cp GalaxyRP/accounts/%s_%s.txt GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, new_char_name));
 #else
-			system(va("cd \"zykmod/accounts\" & COPY %s_%s.txt %s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, new_char_name));
+			system(va("cd \"GalaxyRP/accounts\" & COPY %s_%s.txt %s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, new_char_name));
 #endif
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7duplicated!\n\"", ent->client->sess.rpgchar));
@@ -17890,7 +17890,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				return;
 			}
 
-			chars_file = fopen(va("zykmod/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
+			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
 			if (chars_file == NULL)
 			{
 				trap->SendServerCommand(ent->s.number, va("print \"Char %s does not exist\n\"", arg2));
@@ -17928,7 +17928,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				return;
 			}
 
-			chars_file = fopen(va("zykmod/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
+			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
 			if (chars_file == NULL)
 			{
 				trap->SendServerCommand(ent->s.number, "print \"This char does not exist\n\"");
@@ -17936,7 +17936,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			}
 			fclose(chars_file);
 
-			remove(va("zykmod/accounts/%s_%s.txt", ent->client->sess.filename, arg2));
+			remove(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2));
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7deleted!\n\"", arg2));
 		}
@@ -17951,7 +17951,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			trap->Argv(3, arg3, sizeof(arg3));
 			trap->Argv(4, arg4, sizeof(arg4));
 
-			chars_file = fopen(va("zykmod/accounts/%s.txt", arg3), "r");
+			chars_file = fopen(va("GalaxyRP/accounts/%s.txt", arg3), "r");
 			if (chars_file == NULL)
 			{
 				trap->SendServerCommand(ent->s.number, "print \"This account does not exist\n\"");
@@ -17968,7 +17968,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				return;
 			}
 
-			chars_file = fopen(va("zykmod/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
+			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
 			if (chars_file == NULL)
 			{
 				trap->SendServerCommand(ent->s.number, "print \"This char does not exist\n\"");
@@ -17976,7 +17976,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			}
 			fclose(chars_file);
 
-			chars_file = fopen(va("zykmod/accounts/%s_%s.txt", arg3, arg2), "r");
+			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", arg3, arg2), "r");
 			if (chars_file)
 			{
 				fclose(chars_file);
@@ -18003,9 +18003,9 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			}
 
 #if defined(__linux__)
-			system(va("mv zykmod/accounts/%s_%s.txt zykmod/accounts/%s_%s.txt", ent->client->sess.filename, arg2, arg3, arg2));
+			system(va("mv GalaxyRP/accounts/%s_%s.txt GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2, arg3, arg2));
 #else
-			system(va("cd \"zykmod/accounts\" & MOVE %s_%s.txt %s_%s.txt", ent->client->sess.filename, arg2, arg3, arg2));
+			system(va("cd \"GalaxyRP/accounts\" & MOVE %s_%s.txt %s_%s.txt", ent->client->sess.filename, arg2, arg3, arg2));
 #endif
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7moved!\n\"", arg2));
@@ -18028,7 +18028,7 @@ void save_quest_file(int quest_number)
 
 	zyk_create_dir("customquests");
 
-	quest_file = fopen(va("zykmod/customquests/%d.txt", quest_number), "w");
+	quest_file = fopen(va("GalaxyRP/customquests/%d.txt", quest_number), "w");
 	fprintf(quest_file, "%s;%s;%s;\n", level.zyk_custom_quest_main_fields[quest_number][0], level.zyk_custom_quest_main_fields[quest_number][1], level.zyk_custom_quest_main_fields[quest_number][2]);
 
 	for (i = 0; i < level.zyk_custom_quest_mission_count[quest_number]; i++)
@@ -18411,12 +18411,12 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 
 			zyk_create_dir("customquests");
 
-			quest_file = fopen(va("zykmod/customquests/%d.txt", quest_number), "r");
+			quest_file = fopen(va("GalaxyRP/customquests/%d.txt", quest_number), "r");
 			if (quest_file)
 			{
 				fclose(quest_file);
 
-				remove(va("zykmod/customquests/%d.txt", quest_number));
+				remove(va("GalaxyRP/customquests/%d.txt", quest_number));
 
 				// zyk: search for a new active quest in this map
 				if (level.custom_quest_map == quest_number)
@@ -18627,7 +18627,7 @@ void Cmd_DuelBoard_f(gentity_t *ent) {
 		return;
 	}
 
-	leaderboard_file = fopen("zykmod/leaderboard.txt", "r");
+	leaderboard_file = fopen("GalaxyRP/leaderboard.txt", "r");
 	if (leaderboard_file != NULL)
 	{
 		while (i < (results_per_page * (page - 1)) && fgets(content, sizeof(content), leaderboard_file) != NULL)
