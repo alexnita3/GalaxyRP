@@ -5219,10 +5219,14 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 			fclose(account_file);
 
 			account_file = fopen(va("GalaxyRP/accounts/%s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "w");
-			fprintf(account_file, "%d\n",client->ps.ammo[AMMO_BLASTER]);
+			fprintf(account_file, "%d\n%d\n%d\n%d\n%d\n%d\n%d\n",client->ps.ammo[AMMO_BLASTER]
+			,client->ps.ammo[AMMO_POWERCELL]
+			,client->ps.ammo[AMMO_METAL_BOLTS]
+			,client->ps.ammo[AMMO_ROCKETS]
+			,client->ps.ammo[AMMO_THERMAL]
+			,client->ps.ammo[AMMO_TRIPMINE]
+			,client->ps.ammo[AMMO_DETPACK]);
 			fclose(account_file);
-
-
 		}
 		else
 		{ // zyk: save the main account file
@@ -5737,15 +5741,25 @@ void initialize_rpg_skills(gentity_t *ent)
 		{
 			fscanf(account_file, "%s", content);
 			ent->client->ps.ammo[AMMO_BLASTER] = atoi(content);
-		}
 
-		// zyk: loading initial RPG ammo at spawn
-		ent->client->ps.ammo[AMMO_POWERCELL] = ((int)ceil(zyk_max_power_cell_ammo.value/3.0) * ent->client->pers.skill_levels[40]);
-		ent->client->ps.ammo[AMMO_METAL_BOLTS] = ((int)ceil(zyk_max_metal_bolt_ammo.value/3.0) * ent->client->pers.skill_levels[41]);
-		ent->client->ps.ammo[AMMO_ROCKETS] = ((int)ceil(zyk_max_rocket_ammo.value/3.0) * ent->client->pers.skill_levels[42]);
-		ent->client->ps.ammo[AMMO_THERMAL] = ((int)ceil(zyk_max_thermal_ammo.value/3.0) * ent->client->pers.skill_levels[43]);
-		ent->client->ps.ammo[AMMO_TRIPMINE] = ((int)ceil(zyk_max_tripmine_ammo.value/3.0) * ent->client->pers.skill_levels[44]);
-		ent->client->ps.ammo[AMMO_DETPACK] = ((int)ceil(zyk_max_detpack_ammo.value/3.0) * ent->client->pers.skill_levels[45]);
+			fscanf(account_file, "%s", content);
+			ent->client->ps.ammo[AMMO_POWERCELL] = atoi(content);
+
+			fscanf(account_file, "%s", content);
+			ent->client->ps.ammo[AMMO_METAL_BOLTS] = atoi(content);
+
+			fscanf(account_file, "%s", content);
+			ent->client->ps.ammo[AMMO_ROCKETS] = atoi(content);
+
+			fscanf(account_file, "%s", content);
+			ent->client->ps.ammo[AMMO_THERMAL] = atoi(content);
+
+			fscanf(account_file, "%s", content);
+			ent->client->ps.ammo[AMMO_TRIPMINE] = atoi(content);
+
+			fscanf(account_file, "%s", content);
+			ent->client->ps.ammo[AMMO_DETPACK] = atoi(content);
+		}
 		
 		if (ent->client->pers.rpg_class == 2)
 		{ // zyk: modifying max ammo if the player is a Bounty Hunter
@@ -17853,8 +17867,10 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 #if defined(__linux__)
 			system(va("mv GalaxyRP/accounts/%s_%s.txt GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
+			system(va("mv GalaxyRP/accounts/%s_%s.txt GalaxyRP/accounts/%s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
 #else
 			system(va("cd \"GalaxyRP/accounts\" & MOVE %s_%s.txt %s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
+			system(va("cd \"GalaxyRP/accounts\" & MOVE %s_%s.txt %s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
 #endif
 
 			// zyk: saving the current char
