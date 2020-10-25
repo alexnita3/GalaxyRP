@@ -2154,6 +2154,8 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	if ( !attacker )
 		return;
 
+	save_account(self, qtrue);
+
 	// zyk: remove any quest_power status from this player
 	self->client->pers.quest_power_status = 0;
 	self->client->pers.player_statuses &= ~(1 << 20);
