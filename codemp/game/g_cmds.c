@@ -338,10 +338,46 @@ void Cmd_Emote_f( gentity_t *ent )
 	
 	//alex: animation words and codes go here THEY HAVE TO BE IN THE SAME ORDER!
 
-	int anim_codes[13] = { 998, 1001, 1010, 1097 , 1099 , 999 , 936 , 922 , 939, 985, 954, 1004, 1181 };
-	char anim_words[13][50] = { "sit" ,"meditate" ,"kneel" ,"die" ,"beg" ,"sit2" ,"point" ,"cuffed" ,"heroic" ,"wave" , "typing" , "sneak", "cover"};
+	int anim_codes[37] = { 998, 1001, 1010, 1097 , 1099 , 999 , 936 , 922 , 939, 985, 954, 1004, 1181 , 940, 931, 936, 968, 993, 1014, 1098, 1188, 1191, 1192, 1193, 1194, 1195, 1196, 1197, 1198, 1200, 1313, 1333, 1348, 1349, 1368, 1394, 1409};
+	char anim_words[37][50] = { "sit" 
+		,"meditate" 
+		,"kneel" 
+		,"die" 
+		,"beg" 
+		,"sit2" 
+		,"point" 
+		,"cuffed" 
+		,"heroic" 
+		,"wave" 
+		,"type" 
+		,"sneak"
+		,"cover"
+		,"leantable"
+		,"aimgun"
+		,"aimgun2"
+		,"comm"
+		,"saberthrow"
+		,"sitpilot"
+		,"beg2"
+		,"bow"
+		,"flourish"
+		,"flourish2" 
+		,"flourish3"
+		,"flourish4"
+		,"flourish5"
+		,"victory"
+		,"victory2"
+		,"victory3"
+		,"victory4"
+		,"sleep"
+		,"mindtrick"
+		,"tossleft"
+		,"tossright"
+		,"windy"
+		,"sit3"
+		,"surrender"};
 
-	for (int i = 0; i < 13; i++) 
+	for (int i = 0; i < 37; i++)
 	{
 		if (strcmp(anim_id, anim_words[i]) == 0)
 		{
@@ -352,6 +388,28 @@ void Cmd_Emote_f( gentity_t *ent )
 			ent->client->pers.player_statuses |= (1 << 1);
 
 			return;
+		}
+	}
+
+	// alex: player can select animation id
+	if (anim_id_int > 0 && anim_id_int < MAX_ANIMATIONS)
+	{
+		ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+		ent->client->ps.forceDodgeAnim = anim_id_int;
+		ent->client->ps.forceHandExtendTime = level.time + 1000;
+
+		ent->client->pers.player_statuses |= (1 << 1);
+
+		return;
+	}
+
+	if (strcmp(anim_id, "list") == 0)
+	{
+		trap->SendServerCommand(ent - g_entities,"print \"Usage: the following animations are available:\n\"");
+
+		for (int i = 0; i < 37; i++)
+		{
+			trap->SendServerCommand(ent - g_entities, va("print \"%s\n\"", anim_words[i]));
 		}
 	}
 

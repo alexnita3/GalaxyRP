@@ -29,7 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define PRODUCT_NAME			"openjk"
 
-#define CLIENT_WINDOW_TITLE "OpenJK (MP)"
+#define CLIENT_WINDOW_TITLE "Galaxy RP"
 #define CLIENT_CONSOLE_TITLE "OpenJK Console (MP)"
 #define HOMEPATH_NAME_UNIX "zykopenjkmod"
 #define HOMEPATH_NAME_WIN "Zyk_OpenJK_Mod"
