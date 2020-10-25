@@ -27,6 +27,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "ui/menudef.h"			// for the voice chats
 
+#define MAX_EMOTE_WORDS 11;
+
 //rww - for getting bot commands...
 int AcceptBotCommand(char *cmd, gentity_t *pl);
 //end rww
@@ -283,7 +285,9 @@ int ClientNumberFromString( gentity_t *to, const char *s, qboolean allowconnecti
 void Cmd_Emote_f( gentity_t *ent )
 {
 	char arg[MAX_TOKEN_CHARS] = {0};
-	int anim_id = -1;
+	char anim_id[100] = "";
+
+	int anim_id_int = atoi(anim_id);
 
 	if (zyk_allow_emotes.integer < 1)
 	{
@@ -308,10 +312,12 @@ void Cmd_Emote_f( gentity_t *ent )
 		return;
 	}
 
+	//alex: string magic
 	trap->Argv( 1, arg, sizeof( arg ) );
-	anim_id = atoi(arg);
+	anim_id_int = atoi(arg);
+	strcpy(anim_id, arg);
 
-	if (anim_id < 0 || anim_id >= MAX_ANIMATIONS)
+	if (anim_id_int < 0 || anim_id_int >= MAX_ANIMATIONS)
 	{
 		trap->SendServerCommand( ent-g_entities, va("print \"Usage: anim ID must be between 0 and %d>\n\"",MAX_ANIMATIONS-1) );
 		return;
@@ -329,11 +335,85 @@ void Cmd_Emote_f( gentity_t *ent )
 		return;
 	}
 
-	ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-	ent->client->ps.forceDodgeAnim = anim_id;
-	ent->client->ps.forceHandExtendTime = level.time + 1000;
+	
+	//alex: animation words and codes go here THEY HAVE TO BE IN THE SAME ORDER!
 
-	ent->client->pers.player_statuses |= (1 << 1);
+	int anim_codes[37] = { 998, 1001, 1010, 1097 , 1099 , 999 , 936 , 922 , 939, 985, 954, 1004, 1181 , 940, 931, 936, 968, 993, 1014, 1098, 1188, 1191, 1192, 1193, 1194, 1195, 1196, 1197, 1198, 1200, 1313, 1333, 1348, 1349, 1368, 1394, 1409};
+	char anim_words[37][50] = { "sit" 
+		,"meditate" 
+		,"kneel" 
+		,"die" 
+		,"beg" 
+		,"sit2" 
+		,"point" 
+		,"cuffed" 
+		,"heroic" 
+		,"wave" 
+		,"type" 
+		,"sneak"
+		,"cover"
+		,"leantable"
+		,"aimgun"
+		,"aimgun2"
+		,"comm"
+		,"saberthrow"
+		,"sitpilot"
+		,"beg2"
+		,"bow"
+		,"flourish"
+		,"flourish2" 
+		,"flourish3"
+		,"flourish4"
+		,"flourish5"
+		,"victory"
+		,"victory2"
+		,"victory3"
+		,"victory4"
+		,"sleep"
+		,"mindtrick"
+		,"tossleft"
+		,"tossright"
+		,"windy"
+		,"sit3"
+		,"surrender"};
+
+	for (int i = 0; i < 37; i++)
+	{
+		if (strcmp(anim_id, anim_words[i]) == 0)
+		{
+			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			ent->client->ps.forceDodgeAnim = anim_codes[i];
+			ent->client->ps.forceHandExtendTime = level.time + 1000;
+
+			ent->client->pers.player_statuses |= (1 << 1);
+
+			return;
+		}
+	}
+
+	// alex: player can select animation id
+	if (anim_id_int > 0 && anim_id_int < MAX_ANIMATIONS)
+	{
+		ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+		ent->client->ps.forceDodgeAnim = anim_id_int;
+		ent->client->ps.forceHandExtendTime = level.time + 1000;
+
+		ent->client->pers.player_statuses |= (1 << 1);
+
+		return;
+	}
+
+	if (strcmp(anim_id, "list") == 0)
+	{
+		trap->SendServerCommand(ent - g_entities,"print \"Usage: the following animations are available:\n\"");
+
+		for (int i = 0; i < 37; i++)
+		{
+			trap->SendServerCommand(ent - g_entities, va("print \"%s\n\"", anim_words[i]));
+		}
+	}
+
+	
 }
 
 /*
