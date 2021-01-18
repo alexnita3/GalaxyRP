@@ -17854,6 +17854,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 	}
 	else
 	{
+		trap->SendServerCommand(ent->s.number, va("print \"here1\n\""));
 		char arg1[MAX_STRING_CHARS];
 		char arg2[MAX_STRING_CHARS];
 		char arg3[MAX_STRING_CHARS];
@@ -17874,11 +17875,45 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 		if (Q_stricmp(arg1, "new") == 0)
 		{
+			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7created!\n\"", arg2));
+
+			trap->SendServerCommand(ent->s.number, va("print \"here2\n\""));
+
+			trap->SendServerCommand(ent->s.number, va("print \"Char name must be alphanumerical with the exception of _\n\""));
+
+
+
+			char special_chars[32] = "?!)(*&^%$£!>.<,\~#@':;}]{[";
+
+			for (int i = 0; i < strlen(arg2); i++) {
+				for (int j = 0; j < strlen(special_chars); j++) {
+					if (arg2[i] == special_chars[j]) {
+						trap->SendServerCommand(ent->s.number, va("print \"Char name must be alphanumerical with the exception of _\n\""));
+						return;
+					}
+				}
+			}
+
+			//if (check_special_characters(arg2) == qtrue) {
+			//	trap->SendServerCommand(ent->s.number, va("print \"Char name must be alphanumerical with the exception of _\n\""));
+			//	return;
+			//}
+
 			if (Q_stricmp(arg2, ent->client->sess.filename) == 0)
 			{
 				trap->SendServerCommand(ent->s.number, "print \"Cannot overwrite the default char\n\"");
 				return;
 			}
+
+			//remove this
+			if (check_special_characters(arg2) == qtrue) {
+				trap->SendServerCommand(ent->s.number, va("print \"special chars!!!! %s\n\"", arg2));
+			}
+			else {
+				trap->SendServerCommand(ent->s.number, va("print \"No special chars :) %s\n\"", arg2));
+			}
+
+			
 
 			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
 			if (chars_file != NULL)
