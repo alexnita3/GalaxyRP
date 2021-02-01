@@ -5310,6 +5310,30 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 	}
 }
 
+void Cmd_Roll_f(gentity_t *ent) {
+
+	char arg1[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"/roll <max roll>.\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	if (StringIsInteger(arg1) == qfalse) {
+		trap->SendServerCommand(ent - g_entities, "print \"Argument must be an integer.\n\"");
+		return;
+	}
+
+	int max_value = atoi(arg1);
+	int result = rand() % (max_value + 1);
+	trap->SendServerCommand(-1, va("chat \"^3%s^2 rolled a ^3%d^2 out of ^3%d\n\"", ent->client->pers.netname, result, max_value));
+
+	return;
+}
+
 qboolean validate_rpg_class(gentity_t *ent)
 {
 	if (ent->client->pers.rpg_class == 0 && zyk_allow_free_warrior.integer == 0)
@@ -18910,6 +18934,7 @@ command_t commands[] = {
 	{ "remapload",			Cmd_RemapLoad_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "resetaccount",		Cmd_ResetAccount_f,			CMD_RPG|CMD_NOINTERMISSION },
+	{ "roll",				Cmd_Roll_f,					0 },
 	{ "rpgchar",			Cmd_RpgChar_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "rpgclass",			Cmd_RpgClass_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
@@ -19012,6 +19037,10 @@ void ClientCommand( int clientNum ) {
 	{ // zyk: new condition
 		trap->SendServerCommand( clientNum, "print \"You must be in RPG Mode\n\"" );
 		return;
+	}
+
+	else if (Q_stricmp(cmd, "roll") == 0) {
+		Cmd_Roll_f(ent);
 	}
 
 	else
