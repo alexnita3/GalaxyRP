@@ -770,19 +770,19 @@ static void CG_DrawLoadingScreen( qhandle_t	levelshot ,const char *mapName)
 	}
 
 	// Get player weapons and force power info
-	CG_GetLoadScreenInfo(&weapons,&forcepowers);
+	//CG_GetLoadScreenInfo(&weapons,&forcepowers);
 
 	// Print weapon icons
-	if (weapons)
-	{
-		CG_DrawLoadWeapons(weapons);
-	}
+	//if (weapons)
+	//{
+	//	CG_DrawLoadWeapons(weapons);
+	//}
 
 	// Print force power icons
-	if (forcepowers)
-	{
-		CG_DrawLoadForcePowers(forcepowers);
-	}
+	//if (forcepowers)
+	//{
+	//	CG_DrawLoadForcePowers(forcepowers);
+	//}
 }
 
 /*
@@ -857,7 +857,7 @@ void CG_DrawInformation( void ) {
 
 	// draw info string information
 
-	y = 20;
+	/*y = 20;
 	// map-specific message (long map name)
 	s = CG_ConfigString( CS_MESSAGE );
 
@@ -874,5 +874,5 @@ void CG_DrawInformation( void ) {
 			cgi_R_Font_DrawString( 15, y, va("\"%s\"",s),colorTable[CT_WHITE],cgs.media.qhFontMedium, -1, 1.0f );
 		}
 		y += 20;
-	}
+	}*/
 }
