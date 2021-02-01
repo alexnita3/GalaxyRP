@@ -3761,11 +3761,6 @@ void Cmd_EngageDuel_f(gentity_t *ent)
 		return;
 	}
 
-	if (ent->client->sess.amrpgmode == 2)
-	{ // zyk: cannot accept duel in RPG Mode
-		return;
-	}
-
 	if (level.duel_tournament_mode > 1 && level.duel_players[ent->s.number] != -1)
 	{ // zyk: during a Duel Tournament, players cannot private duel
 		return;
@@ -8279,7 +8274,9 @@ char *zyk_get_rpg_chars(gentity_t *ent, char *separator)
 					k++;
 				}
 
-				strcpy(chars, va("%s^7%s%s", chars, content, separator));
+				if (strstr(content, "_ammo") == NULL) {
+					strcpy(chars, va("%s^7%s%s", chars, content, separator));
+				}
 			}
 			i = fscanf(chars_file, "%s", content);
 		}
@@ -10443,7 +10440,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		}
 		else if (Q_stricmp(arg1, "misc") == 0)
 		{
-			trap->SendServerCommand(ent - g_entities, "print \"\n^314 - Ysalamiri: ^7Buy: 200 - Sell: 50\n^331 - Jetpack Fuel: ^7Buy: 200 - Sell: ^1no\n^343 - Force Boon: ^7Buy: 200 - Sell: 50\n^344 - Magic Potion: ^7Buy: 50 - Sell: ^1no\n^349 - Saber Armor: ^7Buy: 2000 - Sell: ^1no\n^350 - Gun Armor: ^7Buy: 2000 - Sell: ^1no\n^351 - Healing Crystal: ^7Buy: 2000 - Sell: ^1no\n^352 - Energy Crystal: ^7Buy: 2000 - Sell: ^1no\n^356 - Book of Riddles: ^7Buy: 100000 - Sell: ^1no^7\n\n\"");
+			trap->SendServerCommand(ent - g_entities, "print \"\n^314 - Ysalamiri: ^7Buy: 200 - Sell: 50\n^331 - Jetpack Fuel: ^7Buy: 200 - Sell: ^1no\n^343 - Force Boon: ^7Buy: 200 - Sell: 50\n^349 - Saber Armor: ^7Buy: 2000 - Sell: ^1no\n^350 - Gun Armor: ^7Buy: 2000 - Sell: ^1no\n^351 - Healing Crystal: ^7Buy: 2000 - Sell: ^1no\n^352 - Energy Crystal: ^7Buy: 2000 - Sell: ^1no\n^356 - Book of Riddles: ^7Buy: 100000 - Sell: ^1no^7\n\n\"");
 		}
 		else if (Q_stricmp(arg1, "weapons" ) == 0)
 		{
@@ -10624,10 +10621,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		else if (i == 43)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Force Boon: ^7allows the player to regenerate force faster\n\n\"");
-		}
-		else if (i == 44)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Magic Potion: ^7recovers all Magic Power\n\n\"");
 		}
 		else if (i == 45)
 		{
@@ -12797,6 +12790,8 @@ void Cmd_RpgClass_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int value = 0;
 
+	return;
+
 	if (trap->Argc() == 1)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"Look at ^3/list classes ^7to see the class number, then ^2/rpgclass <class number>^7\n\"" );
@@ -12823,6 +12818,8 @@ Cmd_GuardianQuest_f
 extern void zyk_start_boss_battle_music(gentity_t *ent);
 extern gentity_t *Zyk_NPC_SpawnType( char *npc_type, int x, int y, int z, int yaw );
 void Cmd_GuardianQuest_f( gentity_t *ent ) {
+
+	return;
 
 	if (zyk_allow_guardian_quest.integer != 1)
 	{
@@ -12910,6 +12907,8 @@ Cmd_BountyQuest_f
 */
 void Cmd_BountyQuest_f( gentity_t *ent ) {
 	gentity_t *this_ent = NULL;
+
+	return;
 
 	if (zyk_allow_bounty_quest.integer != 1)
 	{
@@ -16890,12 +16889,6 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 		return;
 	}
 
-	if (ent->client->sess.amrpgmode == 2)
-	{
-		trap->SendServerCommand(ent->s.number, "print \"This tournament is for non-rpg players\n\"");
-		return;
-	}
-
 	if (ent->client->pers.player_statuses & (1 << 26))
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Cannot join tournament while being in nofight mode\n\"");
@@ -17242,11 +17235,11 @@ void Cmd_SniperMode_f(gentity_t *ent) {
 		return;
 	}
 
-	if (ent->client->sess.amrpgmode == 2)
+	/*if (ent->client->sess.amrpgmode == 2)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"You cannot be in RPG Mode to play the Sniper Battle.\n\"");
 		return;
-	}
+	}*/
 
 	if (level.duel_tournament_mode > 0 && level.duel_players[ent->s.number] != -1)
 	{
@@ -17331,11 +17324,11 @@ void Cmd_MeleeMode_f(gentity_t *ent) {
 		return;
 	}
 
-	if (ent->client->sess.amrpgmode == 2)
+	/*if (ent->client->sess.amrpgmode == 2)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"You cannot be in RPG Mode to play the Melee Battle.\n\"");
 		return;
-	}
+	}*/
 
 	if (level.melee_arena_loaded == qfalse)
 	{
@@ -17836,6 +17829,24 @@ int zyk_char_count(gentity_t *ent)
 	return count;
 }
 
+
+
+qboolean Is_Char_Name_Valid(char charName[MAX_STRING_CHARS]) {
+
+	char forbiddenCharacters[MAX_STRING_CHARS] = " ?!£$%^&*()-+=][{}#~';:/>.<,|";
+
+	for (int i = 0; i < strlen(charName); i++) {
+		for (int j = 0; j < strlen(forbiddenCharacters); j++) {
+			if (charName[i] == forbiddenCharacters[j]) {
+				return qfalse;
+			}
+		}
+	}
+
+	return qtrue;
+}
+
+
 /*
 ==================
 Cmd_RpgChar_f
@@ -17874,6 +17885,11 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 		if (Q_stricmp(arg1, "new") == 0)
 		{
+			if (Is_Char_Name_Valid(arg2) == qfalse) {
+				trap->SendServerCommand(ent->s.number, "print \"Character name can only contain alphanumeric characters and _. Preferred format iis firstname_lastname\n\"");
+				return;
+			}
+
 			if (Q_stricmp(arg2, ent->client->sess.filename) == 0)
 			{
 				trap->SendServerCommand(ent->s.number, "print \"Cannot overwrite the default char\n\"");
