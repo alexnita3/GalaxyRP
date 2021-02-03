@@ -27,7 +27,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "ui/menudef.h"			// for the voice chats
 
+#include "sqlite3.h"
+
 #define MAX_EMOTE_WORDS 11;
+const char DB_PATH[50] = "GalaxyRP/accounts/ACCOUNTS.DB";
 
 //rww - for getting bot commands...
 int AcceptBotCommand(char *cmd, gentity_t *pl);
@@ -5033,6 +5036,136 @@ void zyk_load_common_settings(gentity_t *ent)
 	}
 }
 
+int createDB(const char*s) {
+
+	sqlite3* DB;
+
+	int exit = 0;
+
+	exit = sqlite3_open(s, &DB);
+
+	sqlite3_close(DB);
+
+	return 0;
+}
+
+int run_db_query(const char*sql) {
+	sqlite3*DB;
+	char* messageError;
+	int exit = sqlite3_open(DB_PATH, &DB);
+
+	exit = sqlite3_exec(DB, sql, NULL, 0, &messageError);
+	if (exit != SQLITE_OK) {
+		trap->SendServerCommand(-1, va("print \"%s\n\"", messageError));
+		sqlite3_free(messageError);
+	}
+}
+
+int create_new_character(const char*accountusername, const char*password, gentity_t *ent) {
+
+	char sql[9999];
+
+	strcpy(sql, va(
+		"INSERT INTO \"main\".\"characters\"("
+		"\"ID\",\"account\",\"nickname\",\"model_name\",\"level\",\"skill_counter\","
+		"\"skill_points\",\"credits\",\"jump\",\"push\",\"pull\",\"speed\",\"sense\","
+		"\"saber_attack\",\"saber_defense\",\"saber_throw\",\"absorb\",\"heal\","
+		"\"protect\",\"mind_trick\",\"team_heal\",\"lightning\",\"grip\",\"drain\","
+		"\"rage\",\"team_energize\",\"stun_baton_skill\",\"blaster_pistol_skill\","
+		"\"blaster_rifle_skill\",\"disruptor_skill\",\"bowcaster_skill\",\"repeater_skill\","
+		"\"demp2_skill\",\"flachette_skill\",\"rocket_launcher_skill\",\"concussion_rifle_skill\","
+		"\"bryar_pistol_skill\",\"melee_skill\",\"maxs_hield\",\"shield_strength\",\"health_strength\","
+		"\"drain_shield\",\"jetpack\",\"sense_health\",\"shield_heal\",\"team_shield_heal\",\"unique_skill\","
+		"\"force_power\",\"improvements\",\"blaster_pack_upgrade\",\"power_cell_upgrade\","
+		"\"metallic_bolt_upgrade\",\"rockets_upgrade\",\"thermals_upgrade\",\"tripmines_upgrade\","
+		"\"detpacks_upgrade\",\"holdableitems_upgrade\",\"bountyhunter_upgrade\",\"unique_ability_1\","
+		"\"unique_ability_2\",\"unique_ability_3\",\"stealth_attacker_upgrade\",\"force_gunner_upgrade\","
+		"\"impact_reducer\",\"flamethrower\",\"power_cell_weapons_upgrade\",\"blaster_pack_weapons_upgrade\","
+		"\"metal_bolts_weapons_upgrade\",\"rocket_weapons_upgrade\",\"stun_baton_upgrade\","
+		"\"armored_soldier_upgrade\",\"jetpack_upgrade\",\"force_guardian_upgrade\") "
+		"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",
+		"1",accountusername,"^2John Doe",ent->client->modelname, "1", "0", 
+		"1", "100", "0", "0", "0", "0", "0",
+		"0", "0", "0", "0", "0",
+		"0", "0", "0", "0", "0", "0",
+		"0", "0", "0", "0", 
+		"0", "0", "0", "0",
+		"0", "0", "0", "0",
+		"0", "0", "0", "0", "0",
+		"0", "0", "0", "0", "0", "0",
+		"0", "0", "0", "0",
+		"0", "0", "0", "0",
+		"0", "0", "0", "0",
+		"0", "0", "0", "0",
+		"0", "0", "0", "0",
+		"0", "0", "0",
+		"0", "0", "0"));
+
+	run_db_query(sql);
+
+	return 0;
+
+}
+
+int save_character_details(gentity_t *ent) {
+
+	char sql[9999];
+	gclient_t *client;
+	client = ent->client;
+
+	strcpy(sql, va(
+		"INSERT INTO \"main\".\"characters\"("
+		"\"ID\",\"account\",\"nickname\",\"model_name\",\"level\",\"skill_counter\","
+		"\"skill_points\",\"credits\",\"jump\",\"push\",\"pull\",\"speed\",\"sense\","
+		"\"saber_attack\",\"saber_defense\",\"saber_throw\",\"absorb\",\"heal\","
+		"\"protect\",\"mind_trick\",\"team_heal\",\"lightning\",\"grip\",\"drain\","
+		"\"rage\",\"team_energize\",\"stun_baton_skill\",\"blaster_pistol_skill\","
+		"\"blaster_rifle_skill\",\"disruptor_skill\",\"bowcaster_skill\",\"repeater_skill\","
+		"\"demp2_skill\",\"flachette_skill\",\"rocket_launcher_skill\",\"concussion_rifle_skill\","
+		"\"bryar_pistol_skill\",\"melee_skill\",\"maxs_hield\",\"shield_strength\",\"health_strength\","
+		"\"drain_shield\",\"jetpack\",\"sense_health\",\"shield_heal\",\"team_shield_heal\",\"unique_skill\","
+		"\"force_power\",\"improvements\",\"blaster_pack_upgrade\",\"power_cell_upgrade\","
+		"\"metallic_bolt_upgrade\",\"rockets_upgrade\",\"thermals_upgrade\",\"tripmines_upgrade\","
+		"\"detpacks_upgrade\",\"holdableitems_upgrade\",\"bountyhunter_upgrade\",\"unique_ability_1\","
+		"\"unique_ability_2\",\"unique_ability_3\",\"stealth_attacker_upgrade\",\"force_gunner_upgrade\","
+		"\"impact_reducer\",\"flamethrower\",\"power_cell_weapons_upgrade\",\"blaster_pack_weapons_upgrade\","
+		"\"metal_bolts_weapons_upgrade\",\"rocket_weapons_upgrade\",\"stun_baton_upgrade\","
+		"\"armored_soldier_upgrade\",\"jetpack_upgrade\",\"force_guardian_upgrade\","
+		"\"ammo_powercell\", \"ammo_blaster\", \"ammo_metal_bolts\", \"ammo_rockets\", \"ammo_emplaced\", \"ammo_thermal\", \"ammo_tripmine\", \"ammo_detpack\")) "
+		"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",
+		"1", "test" , client->pers.netname, ent->client->modelname, client->pers.level, client->pers.level_up_score,
+		client->pers.skillpoints, "100", client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
+		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0]));
+
+	run_db_query(sql);
+
+	return 0;
+
+}
+
+int load_character_details(gentity_t *ent) {
+	
+	char sql[9999];
+
+	strcpy(sql, "SELECT \"_rowid_\", *FROM \"main\".\"characters\" LIMIT 0, 49999;");
+
+	run_db_query(sql);
+}
+
 // zyk: loads the player account
 void load_account(gentity_t *ent)
 {
@@ -6403,6 +6536,8 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 		gentity_t *player_ent = NULL;
 
 		strcpy(password,"");
+
+		createDB("GalaxyRP/accounts/ACCOUNTS.DB");
 
 		if ( trap->Argc() != 3)
 		{ 
@@ -17990,6 +18125,8 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				return;
 			}
 
+
+			create_new_character("alex", "alex", ent);
 			add_new_char(ent);
 
 			// zyk: saving the current char
