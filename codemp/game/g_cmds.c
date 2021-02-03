@@ -5522,6 +5522,53 @@ int number_of_crystals(gentity_t *ent)
 	return number_of_crystals;
 }
 
+void load_ammo_from_file(gentity_t *ent) {
+
+	FILE *ammo_file;
+	char content[128];
+
+	ammo_file = fopen(va("GalaxyRP/accounts/%s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
+
+	// alex: load ammo from separate file at spawn
+	if (ammo_file != NULL)
+	{
+		fscanf(ammo_file, "%s", content);
+		int ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_BLASTER = %d\n\"", ammo));
+		ent->client->ps.ammo[AMMO_BLASTER] = ammo;
+
+		fscanf(ammo_file, "%s", content);
+		ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_POWERCELL = %d \n\"", ammo));
+		ent->client->ps.ammo[AMMO_POWERCELL] = ammo;
+
+		fscanf(ammo_file, "%s", content);
+		ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_METAL_BOLTS = %d \n\"", ammo));
+		ent->client->ps.ammo[AMMO_METAL_BOLTS] = ammo;
+
+		fscanf(ammo_file, "%s", content);
+		ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_ROCKETS = %d \n\"", ammo));
+		ent->client->ps.ammo[AMMO_ROCKETS] = ammo;
+
+		fscanf(ammo_file, "%s", content);
+		ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_THERMAL = %d \n\"", ammo));
+		ent->client->ps.ammo[AMMO_THERMAL] = ammo;
+
+		fscanf(ammo_file, "%s", content);
+		ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_TRIPMINE = %d \n\"", ammo));
+		ent->client->ps.ammo[AMMO_TRIPMINE] = ammo;
+
+		fscanf(ammo_file, "%s", content);
+		ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_DETPACK = %d \n\"", ammo));
+		ent->client->ps.ammo[AMMO_DETPACK] = ammo;
+	}
+}
+
 // zyk: initialize RPG skills of this player
 void initialize_rpg_skills(gentity_t *ent)
 {
@@ -5753,105 +5800,108 @@ void initialize_rpg_skills(gentity_t *ent)
 		ent->client->pers.hunter_quest_messages = 0;
 
 		// zyk: loading initial RPG weapons
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_STUN_BATON)) && ent->client->pers.skill_levels[18] > 0)
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_STUN_BATON))) {
+			//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_STUN_BATON \n\"");
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_STUN_BATON);
-		if (ent->client->pers.skill_levels[18] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_STUN_BATON);
+		}
+		//if (ent->client->pers.skill_levels[18] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_STUN_BATON);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BRYAR_PISTOL)) && ent->client->pers.skill_levels[19] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
-		if (ent->client->pers.skill_levels[19] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_PISTOL);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BRYAR_PISTOL))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_BRYAR_PISTOL \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
+			}
+		//if (ent->client->pers.skill_levels[19] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_PISTOL);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BLASTER)) && ent->client->pers.skill_levels[20] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER);
-		if (ent->client->pers.skill_levels[20] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BLASTER);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BLASTER))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_BLASTER \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER);
+			}
+		//if (ent->client->pers.skill_levels[20] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BLASTER);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DISRUPTOR)) && ent->client->pers.skill_levels[21] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DISRUPTOR);
-		if (ent->client->pers.skill_levels[21] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DISRUPTOR);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DISRUPTOR))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_DISRUPTOR \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DISRUPTOR);
+			}
+		//if (ent->client->pers.skill_levels[21] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DISRUPTOR);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BOWCASTER)) && ent->client->pers.skill_levels[22] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BOWCASTER);
-		if (ent->client->pers.skill_levels[22] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BOWCASTER);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BOWCASTER))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_BOWCASTER \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BOWCASTER);
+			}
+		//if (ent->client->pers.skill_levels[22] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BOWCASTER);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_REPEATER)) && ent->client->pers.skill_levels[23] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_REPEATER);
-		if (ent->client->pers.skill_levels[23] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_REPEATER);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_REPEATER))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_REPEATER \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_REPEATER);
+			}
+		//if (ent->client->pers.skill_levels[23] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_REPEATER);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DEMP2)) && ent->client->pers.skill_levels[24] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DEMP2);
-		if (ent->client->pers.skill_levels[24] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DEMP2);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DEMP2))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_DEMP2 \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DEMP2);
+			}
+		//if (ent->client->pers.skill_levels[24] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DEMP2);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_FLECHETTE)) && ent->client->pers.skill_levels[25] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_FLECHETTE);
-		if (ent->client->pers.skill_levels[25] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_FLECHETTE);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_FLECHETTE))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_FLECHETTE \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_FLECHETTE);
+			}
+		//if (ent->client->pers.skill_levels[25] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_FLECHETTE);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_ROCKET_LAUNCHER)) && ent->client->pers.skill_levels[26] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_ROCKET_LAUNCHER);
-		if (ent->client->pers.skill_levels[26] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_ROCKET_LAUNCHER);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_ROCKET_LAUNCHER))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_ROCKET_LAUNCHER \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_ROCKET_LAUNCHER);
+			}
+		//if (ent->client->pers.skill_levels[26] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_ROCKET_LAUNCHER);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_CONCUSSION)) && ent->client->pers.skill_levels[27] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_CONCUSSION);
-		if (ent->client->pers.skill_levels[27] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_CONCUSSION);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_CONCUSSION))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_CONCUSSION \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_CONCUSSION);
+			}
+		//if (ent->client->pers.skill_levels[27] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_CONCUSSION);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BRYAR_OLD)) && ent->client->pers.skill_levels[28] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_OLD);
-		if (ent->client->pers.skill_levels[28] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_OLD);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BRYAR_OLD))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_BRYAR_OLD \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_OLD);
+			}
+		//if (ent->client->pers.skill_levels[28] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_OLD);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_THERMAL)) && ent->client->pers.skill_levels[43] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_THERMAL);
-		if (ent->client->pers.skill_levels[43] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_THERMAL);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_THERMAL))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_THERMAL \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_THERMAL);
+			}
+		//if (ent->client->pers.skill_levels[43] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_THERMAL);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_TRIP_MINE)) && ent->client->pers.skill_levels[44] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_TRIP_MINE);
-		if (ent->client->pers.skill_levels[44] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_TRIP_MINE);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_TRIP_MINE))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_TRIP_MINE \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_TRIP_MINE);
+			}
+		//if (ent->client->pers.skill_levels[44] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_TRIP_MINE);
 
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DET_PACK)) && ent->client->pers.skill_levels[45] > 0)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DET_PACK);
-		if (ent->client->pers.skill_levels[45] == 0)
-			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DET_PACK);
+			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DET_PACK))) {
+				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_DET_PACK \n\"");
+				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DET_PACK);
+			}
+		//if (ent->client->pers.skill_levels[45] == 0)
+			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DET_PACK);
 
 		FILE *account_file;
 		char content[128];
 
-		account_file = fopen(va("GalaxyRP/accounts/%s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
-
-		// alex: load ammo from separate file at spawn
-		if (account_file != NULL)
-		{
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_BLASTER] = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_POWERCELL] = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_METAL_BOLTS] = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_ROCKETS] = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_THERMAL] = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_TRIPMINE] = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_DETPACK] = atoi(content);
-		}
+		load_ammo_from_file(ent);
 		
 		if (ent->client->pers.rpg_class == 2)
 		{ // zyk: modifying max ammo if the player is a Bounty Hunter
@@ -18055,6 +18105,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			save_account(ent, qfalse);
 
 			load_account(ent);
+			load_ammo_from_file(ent);
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7loaded!\n\"", ent->client->sess.rpgchar));
 			trap->SendServerCommand(-1, va("chat \"%s switched to char: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
