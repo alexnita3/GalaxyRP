@@ -5325,14 +5325,14 @@ int update_character(gentity_t *ent) {
 		ent->client->ps.ammo[AMMO_DETPACK],
 		char_name));
 
-
-	trap->SendServerCommand(-1, va("print \"%s\n\"", sql));
 	run_db_query(sql);
 
 	return 0;
 
 
 }
+
+
 
 int run_retrieve_db_query(const char* sql, gentity_t *ent) {
 	sqlite3*DB;
@@ -5345,12 +5345,87 @@ int run_retrieve_db_query(const char* sql, gentity_t *ent) {
 
 	sqlite3_prepare_v2(DB, sql, -1, &stmt, 0);
 
-	char test[999];
-
 	while (sqlite3_step(stmt)) {
 		
-		if (sqlite3_column_text(stmt, 3)) {
-			strcpy(test, sqlite3_column_text(stmt, 3));
+		//if id is null, don't get the next line
+		if (sqlite3_column_int(stmt, 0)) {
+			ent->client->pers.level = sqlite3_column_int(stmt, 5);
+			ent->client->pers.skill_counter = sqlite3_column_int(stmt, 6);
+			ent->client->pers.skillpoints = sqlite3_column_int(stmt, 7);
+			ent->client->pers.credits = sqlite3_column_int(stmt, 8);
+			ent->client->pers.skill_levels[0] = sqlite3_column_int(stmt, 9); //jump
+			ent->client->pers.skill_levels[1] = sqlite3_column_int(stmt, 10); //push
+			ent->client->pers.skill_levels[2] = sqlite3_column_int(stmt, 11); //pull
+			ent->client->pers.skill_levels[3] = sqlite3_column_int(stmt, 12); //speed
+			ent->client->pers.skill_levels[4] = sqlite3_column_int(stmt, 13); //sense
+			ent->client->pers.skill_levels[5] = sqlite3_column_int(stmt, 14); //saberattack
+			ent->client->pers.skill_levels[6] = sqlite3_column_int(stmt, 15); //saberdefense
+			ent->client->pers.skill_levels[7] = sqlite3_column_int(stmt, 16); //saberthrow
+			ent->client->pers.skill_levels[8] = sqlite3_column_int(stmt, 17); //absord
+			ent->client->pers.skill_levels[9] = sqlite3_column_int(stmt, 18); //heal
+			ent->client->pers.skill_levels[10] = sqlite3_column_int(stmt, 19); //protect
+			ent->client->pers.skill_levels[11] = sqlite3_column_int(stmt, 20); //mindtrick
+			ent->client->pers.skill_levels[12] = sqlite3_column_int(stmt, 21); //teamheal
+			ent->client->pers.skill_levels[13] = sqlite3_column_int(stmt, 22); //lightning
+			ent->client->pers.skill_levels[14] = sqlite3_column_int(stmt, 23); //grip
+			ent->client->pers.skill_levels[15] = sqlite3_column_int(stmt, 24); //drain
+			ent->client->pers.skill_levels[16] = sqlite3_column_int(stmt, 25); //rage
+			ent->client->pers.skill_levels[17] = sqlite3_column_int(stmt, 26); //teamenergize
+			ent->client->pers.skill_levels[18] = sqlite3_column_int(stmt, 27); //stunbatonskill
+			ent->client->pers.skill_levels[19] = sqlite3_column_int(stmt, 28); //blasterpistolskill
+			ent->client->pers.skill_levels[20] = sqlite3_column_int(stmt, 29); //blasterrifleskill
+			ent->client->pers.skill_levels[21] = sqlite3_column_int(stmt, 30); //disruptorskill
+			ent->client->pers.skill_levels[22] = sqlite3_column_int(stmt, 31); //bowcasterskill
+			ent->client->pers.skill_levels[23] = sqlite3_column_int(stmt, 32); //repeaterskill
+			ent->client->pers.skill_levels[24] = sqlite3_column_int(stmt, 33); //demp2skill
+			ent->client->pers.skill_levels[25] = sqlite3_column_int(stmt, 34); //flachetteskill
+			ent->client->pers.skill_levels[26] = sqlite3_column_int(stmt, 35); //rocketlauncherskill
+			ent->client->pers.skill_levels[27] = sqlite3_column_int(stmt, 36); //consussionrifleskill
+			ent->client->pers.skill_levels[28] = sqlite3_column_int(stmt, 37); //bryarpistolskill
+			ent->client->pers.skill_levels[29] = sqlite3_column_int(stmt, 38); //meleeskill
+			ent->client->pers.skill_levels[30] = sqlite3_column_int(stmt, 39); //maxshield
+			ent->client->pers.skill_levels[31] = sqlite3_column_int(stmt, 40); //shieldstrength
+			ent->client->pers.skill_levels[32] = sqlite3_column_int(stmt, 41); //healthstrength
+			ent->client->pers.skill_levels[33] = sqlite3_column_int(stmt, 42); //drainshield
+			ent->client->pers.skill_levels[34] = sqlite3_column_int(stmt, 43); //jetpack
+			ent->client->pers.skill_levels[35] = sqlite3_column_int(stmt, 44); //sensehealth
+			ent->client->pers.skill_levels[36] = sqlite3_column_int(stmt, 45); //shieldheal
+			ent->client->pers.skill_levels[37] = sqlite3_column_int(stmt, 46); //teamshieldheal
+			ent->client->pers.skill_levels[38] = sqlite3_column_int(stmt, 47); //uniqueskill
+			ent->client->pers.skill_levels[54] = sqlite3_column_int(stmt, 48); //forcepower
+			ent->client->pers.skill_levels[55] = sqlite3_column_int(stmt, 49); //improvements
+			ent->client->pers.skill_levels[39] = sqlite3_column_int(stmt, 50); //blasterpackupgrade
+			ent->client->pers.skill_levels[40] = sqlite3_column_int(stmt, 51); //powercellupgrade
+			ent->client->pers.skill_levels[41] = sqlite3_column_int(stmt, 52); //metallicboltupgrade
+			ent->client->pers.skill_levels[42] = sqlite3_column_int(stmt, 53); //rocketsupgrade
+			ent->client->pers.skill_levels[43] = sqlite3_column_int(stmt, 54); //thermalsupgrade
+			ent->client->pers.skill_levels[44] = sqlite3_column_int(stmt, 55); //tripmineupgrade
+			ent->client->pers.skill_levels[45] = sqlite3_column_int(stmt, 56); //detpacksupgrade
+			//0, //TODO holdableitemsupgrade
+			//0, //TODO bountyhunterupgrade
+			//0, //TODO unique1
+			//0, //TODO unique2
+			//0, //TODO unique3
+			//0, //TODO stealthattacketupgrade
+			//0, //TODO forcegunnerupgrade
+			//0, //TODO impactreducer
+			//0, //TODO flamethrower
+			//0, //TODO powercellweponupgrade
+			//0, //TODO blasterpackweponupgrade
+			//0, //TODO metalboltsweponupgrade
+			//0, //TODO rocketweponupgrade
+			//0, //TODO stunbatonweponupgrade
+			//0, //TODO armoredsoldierupgrade
+			//0, //TODO jetpackupgrade
+			//0, //TODO forceguardianupgrade
+			ent->client->ps.ammo[AMMO_POWERCELL] = sqlite3_column_int(stmt, 74);
+			ent->client->ps.ammo[AMMO_BLASTER] = sqlite3_column_int(stmt, 75);
+			ent->client->ps.ammo[AMMO_METAL_BOLTS] = sqlite3_column_int(stmt, 76);
+			ent->client->ps.ammo[AMMO_ROCKETS] = sqlite3_column_int(stmt, 77);
+			ent->client->ps.ammo[AMMO_EMPLACED] = sqlite3_column_int(stmt, 78);
+			ent->client->ps.ammo[AMMO_THERMAL] = sqlite3_column_int(stmt, 79);
+			ent->client->ps.ammo[AMMO_TRIPMINE] = sqlite3_column_int(stmt, 80);
+			ent->client->ps.ammo[AMMO_DETPACK] = sqlite3_column_int(stmt, 81);
 		}
 		else {
 			return 0;
@@ -5358,6 +5433,15 @@ int run_retrieve_db_query(const char* sql, gentity_t *ent) {
 	}
 
 	sqlite3_close(DB);
+
+	return 0;
+}
+
+int get_character_details_by_char_name(const char* charName, gentity_t *ent) {
+	char sql[999];
+	strcpy(sql, va("SELECT * FROM 'main'.'characters' WHERE char_name = '%s';", charName));
+
+	run_retrieve_db_query(sql, ent);
 
 	return 0;
 }
@@ -5575,6 +5659,8 @@ void load_account(gentity_t *ent)
 			}
 
 			fclose(account_file);
+
+			get_character_details_by_char_name(ent->client->sess.rpgchar, ent);
 		}
 		else
 		{ // zyk: char file caould not be loaded
