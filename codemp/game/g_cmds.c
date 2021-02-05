@@ -30,7 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "sqlite3.h"
 
 #define MAX_EMOTE_WORDS 11;
-const char DB_PATH[50] = "GalaxyRP/accounts/ACCOUNTS.DB";
+const char DB_PATH[200] = "GalaxyRP/accounts/ACCOUNTS.DB";
 
 //rww - for getting bot commands...
 int AcceptBotCommand(char *cmd, gentity_t *pl);
@@ -5051,6 +5051,9 @@ int createDB(const char*s) {
 
 int run_db_query(const char*sql) {
 	sqlite3*DB;
+
+	sqlite3_config(SQLITE_CONFIG_URI, 0);
+
 	char* messageError;
 	int exit = sqlite3_open(DB_PATH, &DB);
 
@@ -5059,101 +5062,273 @@ int run_db_query(const char*sql) {
 		trap->SendServerCommand(-1, va("print \"%s\n\"", messageError));
 		sqlite3_free(messageError);
 	}
+
+	return 0;
 }
 
-int create_new_character(const char*accountusername, const char*password, gentity_t *ent) {
+int create_new_character(gentity_t *ent) {
 
-	char sql[9999];
+	char sql[3000];
 
-	strcpy(sql, va(
-		"INSERT INTO \"main\".\"characters\"("
-		"\"ID\",\"account\",\"nickname\",\"model_name\",\"level\",\"skill_counter\","
-		"\"skill_points\",\"credits\",\"jump\",\"push\",\"pull\",\"speed\",\"sense\","
-		"\"saber_attack\",\"saber_defense\",\"saber_throw\",\"absorb\",\"heal\","
-		"\"protect\",\"mind_trick\",\"team_heal\",\"lightning\",\"grip\",\"drain\","
-		"\"rage\",\"team_energize\",\"stun_baton_skill\",\"blaster_pistol_skill\","
-		"\"blaster_rifle_skill\",\"disruptor_skill\",\"bowcaster_skill\",\"repeater_skill\","
-		"\"demp2_skill\",\"flachette_skill\",\"rocket_launcher_skill\",\"concussion_rifle_skill\","
-		"\"bryar_pistol_skill\",\"melee_skill\",\"maxs_hield\",\"shield_strength\",\"health_strength\","
-		"\"drain_shield\",\"jetpack\",\"sense_health\",\"shield_heal\",\"team_shield_heal\",\"unique_skill\","
-		"\"force_power\",\"improvements\",\"blaster_pack_upgrade\",\"power_cell_upgrade\","
-		"\"metallic_bolt_upgrade\",\"rockets_upgrade\",\"thermals_upgrade\",\"tripmines_upgrade\","
-		"\"detpacks_upgrade\",\"holdableitems_upgrade\",\"bountyhunter_upgrade\",\"unique_ability_1\","
-		"\"unique_ability_2\",\"unique_ability_3\",\"stealth_attacker_upgrade\",\"force_gunner_upgrade\","
-		"\"impact_reducer\",\"flamethrower\",\"power_cell_weapons_upgrade\",\"blaster_pack_weapons_upgrade\","
-		"\"metal_bolts_weapons_upgrade\",\"rocket_weapons_upgrade\",\"stun_baton_upgrade\","
-		"\"armored_soldier_upgrade\",\"jetpack_upgrade\",\"force_guardian_upgrade\") "
-		"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",
-		"1",accountusername,"^2John Doe",ent->client->modelname, "1", "0", 
-		"1", "100", "0", "0", "0", "0", "0",
-		"0", "0", "0", "0", "0",
-		"0", "0", "0", "0", "0", "0",
-		"0", "0", "0", "0", 
-		"0", "0", "0", "0",
-		"0", "0", "0", "0",
-		"0", "0", "0", "0", "0",
-		"0", "0", "0", "0", "0", "0",
-		"0", "0", "0", "0",
-		"0", "0", "0", "0",
-		"0", "0", "0", "0",
-		"0", "0", "0", "0",
-		"0", "0", "0", "0",
-		"0", "0", "0",
-		"0", "0", "0"));
+	strcpy(sql, va("INSERT INTO 'main'.'characters'('ID', 'account', 'char_name', 'nickname', 'model_name', 'level', 'skill_counter', 'skill_points', 'credits', 'jump', 'push', 'pull', 'speed', 'sense', 'saber_attack', 'saber_defense', 'saber_throw', 'absorb', 'heal', 'protect', 'mind_trick', 'team_heal', 'lightning', 'grip', 'drain', 'rage', 'team_energize', 'stun_baton_skill', 'blaster_pistol_skill', 'blaster_rifle_skill', 'disruptor_skill', 'bowcaster_skill', 'repeater_skill', 'demp2_skill', 'flachette_skill', 'rocket_launcher_skill', 'concussion_rifle_skill', 'bryar_pistol_skill', 'melee_skill', 'maxs_hield', 'shield_strength', 'health_strength', 'drain_shield', 'jetpack', 'sense_health', 'shield_heal', 'team_shield_heal', 'unique_skill', 'force_power', 'improvements', 'blaster_pack_upgrade', 'power_cell_upgrade', 'metallic_bolt_upgrade', 'rockets_upgrade', 'thermals_upgrade', 'tripmines_upgrade', 'detpacks_upgrade', 'holdableitems_upgrade', 'bountyhunter_upgrade', 'unique_ability_1', 'unique_ability_2', 'unique_ability_3', 'stealth_attacker_upgrade', 'force_gunner_upgrade', 'impact_reducer', 'flamethrower', 'power_cell_weapons_upgrade', 'blaster_pack_weapons_upgrade', 'metal_bolts_weapons_upgrade', 'rocket_weapons_upgrade', 'stun_baton_upgrade', 'armored_soldier_upgrade', 'jetpack_upgrade', 'force_guardian_upgrade', 'ammo_powercell', 'ammo_blaster', 'ammo_metal_bolts', 'ammo_rockets', 'ammo_emplaced', 'ammo_thermal', 'ammo_tripmine', 'ammo_detpack')" 
+		"VALUES( NULL, '%s', '%s', '%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d);",
+		ent->client->sess.filename , ent->client->sess.rpgchar, ent->client->pers.netname, ent->client->modelname, ent->client->pers.level, ent->client->pers.skill_counter, ent->client->pers.skillpoints, ent->client->pers.credits,
+		ent->client->pers.skill_levels[0], //jump
+		ent->client->pers.skill_levels[1], //push
+		ent->client->pers.skill_levels[2], //pull
+		ent->client->pers.skill_levels[3], //speed
+		ent->client->pers.skill_levels[4], //sense
+		ent->client->pers.skill_levels[5], //saberattack
+		ent->client->pers.skill_levels[6], //saberdefense
+		ent->client->pers.skill_levels[7], //saberthrow
+		ent->client->pers.skill_levels[8], //absord
+		ent->client->pers.skill_levels[9], //heal
+		ent->client->pers.skill_levels[10], //protect
+		ent->client->pers.skill_levels[11], //mindtrick
+		ent->client->pers.skill_levels[12], //teamheal
+		ent->client->pers.skill_levels[13], //lightning
+		ent->client->pers.skill_levels[14], //grip
+		ent->client->pers.skill_levels[15], //drain
+		ent->client->pers.skill_levels[16], //rage
+		ent->client->pers.skill_levels[17], //teamenergize
+		ent->client->pers.skill_levels[18], //stunbatonskill
+		ent->client->pers.skill_levels[19], //blasterpistolskill
+		ent->client->pers.skill_levels[20], //blasterrifleskill
+		ent->client->pers.skill_levels[21], //disruptorskill
+		ent->client->pers.skill_levels[22], //bowcasterskill
+		ent->client->pers.skill_levels[23], //repeaterskill
+		ent->client->pers.skill_levels[24], //demp2skill
+		ent->client->pers.skill_levels[25], //flachetteskill
+		ent->client->pers.skill_levels[26], //rocketlauncherskill
+		ent->client->pers.skill_levels[27], //consussionrifleskill
+		ent->client->pers.skill_levels[28], //bryarpistolskill
+		ent->client->pers.skill_levels[29], //meleeskill
+		ent->client->pers.skill_levels[30], //maxshield
+		ent->client->pers.skill_levels[31], //shieldstrength
+		ent->client->pers.skill_levels[32], //healthstrength
+		ent->client->pers.skill_levels[33], //drainshield
+		ent->client->pers.skill_levels[34], //jetpack
+		ent->client->pers.skill_levels[35], //sensehealth
+		ent->client->pers.skill_levels[36], //shieldheal
+		ent->client->pers.skill_levels[37], //teamshieldheal
+		ent->client->pers.skill_levels[38], //uniqueskill
+		ent->client->pers.skill_levels[54], //forcepower
+		ent->client->pers.skill_levels[55], //improvements
+		ent->client->pers.skill_levels[39], //blasterpackupgrade
+		ent->client->pers.skill_levels[40], //powercellupgrade
+		ent->client->pers.skill_levels[41], //metallicboltupgrade
+		ent->client->pers.skill_levels[42], //rocketsupgrade
+		ent->client->pers.skill_levels[43], //thermalsupgrade
+		ent->client->pers.skill_levels[44], //tripmineupgrade
+		ent->client->pers.skill_levels[45], //detpacksupgrade
+		0, //TODO holdableitemsupgrade
+		0, //TODO bountyhunterupgrade
+		0, //TODO unique1
+		0, //TODO unique2
+		0, //TODO unique3
+		0, //TODO stealthattacketupgrade
+		0, //TODO forcegunnerupgrade
+		0, //TODO impactreducer
+		0, //TODO flamethrower
+		0, //TODO powercellweponupgrade
+		0, //TODO blasterpackweponupgrade
+		0, //TODO metalboltsweponupgrade
+		0, //TODO rocketweponupgrade
+		0, //TODO stunbatonweponupgrade
+		0, //TODO armoredsoldierupgrade
+		0, //TODO jetpackupgrade
+		0, //TODO forceguardianupgrade
+		ent->client->ps.ammo[AMMO_POWERCELL],
+		ent->client->ps.ammo[AMMO_BLASTER],
+		ent->client->ps.ammo[AMMO_METAL_BOLTS],
+		ent->client->ps.ammo[AMMO_ROCKETS],
+		ent->client->ps.ammo[AMMO_EMPLACED],
+		ent->client->ps.ammo[AMMO_THERMAL],
+		ent->client->ps.ammo[AMMO_TRIPMINE],
+		ent->client->ps.ammo[AMMO_DETPACK]
+		
+	));
 
+	//trap->SendServerCommand(-1, va("print \"%s\n\"", sql));
 	run_db_query(sql);
 
 	return 0;
 
 }
 
-int save_character_details(gentity_t *ent) {
+int update_character(gentity_t *ent) {
 
-	char sql[9999];
-	gclient_t *client;
-	client = ent->client;
+	char sql[3000];
 
-	strcpy(sql, va(
-		"INSERT INTO \"main\".\"characters\"("
-		"\"ID\",\"account\",\"nickname\",\"model_name\",\"level\",\"skill_counter\","
-		"\"skill_points\",\"credits\",\"jump\",\"push\",\"pull\",\"speed\",\"sense\","
-		"\"saber_attack\",\"saber_defense\",\"saber_throw\",\"absorb\",\"heal\","
-		"\"protect\",\"mind_trick\",\"team_heal\",\"lightning\",\"grip\",\"drain\","
-		"\"rage\",\"team_energize\",\"stun_baton_skill\",\"blaster_pistol_skill\","
-		"\"blaster_rifle_skill\",\"disruptor_skill\",\"bowcaster_skill\",\"repeater_skill\","
-		"\"demp2_skill\",\"flachette_skill\",\"rocket_launcher_skill\",\"concussion_rifle_skill\","
-		"\"bryar_pistol_skill\",\"melee_skill\",\"maxs_hield\",\"shield_strength\",\"health_strength\","
-		"\"drain_shield\",\"jetpack\",\"sense_health\",\"shield_heal\",\"team_shield_heal\",\"unique_skill\","
-		"\"force_power\",\"improvements\",\"blaster_pack_upgrade\",\"power_cell_upgrade\","
-		"\"metallic_bolt_upgrade\",\"rockets_upgrade\",\"thermals_upgrade\",\"tripmines_upgrade\","
-		"\"detpacks_upgrade\",\"holdableitems_upgrade\",\"bountyhunter_upgrade\",\"unique_ability_1\","
-		"\"unique_ability_2\",\"unique_ability_3\",\"stealth_attacker_upgrade\",\"force_gunner_upgrade\","
-		"\"impact_reducer\",\"flamethrower\",\"power_cell_weapons_upgrade\",\"blaster_pack_weapons_upgrade\","
-		"\"metal_bolts_weapons_upgrade\",\"rocket_weapons_upgrade\",\"stun_baton_upgrade\","
-		"\"armored_soldier_upgrade\",\"jetpack_upgrade\",\"force_guardian_upgrade\","
-		"\"ammo_powercell\", \"ammo_blaster\", \"ammo_metal_bolts\", \"ammo_rockets\", \"ammo_emplaced\", \"ammo_thermal\", \"ammo_tripmine\", \"ammo_detpack\")) "
-		"VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",
-		"1", "test" , client->pers.netname, ent->client->modelname, client->pers.level, client->pers.level_up_score,
-		client->pers.skillpoints, "100", client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0],
-		client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0], client->pers.skill_levels[0]));
+	char char_name[MAX_STRING_CHARS];
 
+	strcpy(char_name, ent->client->sess.rpgchar);
+
+	strcpy(sql, va("UPDATE 'main'.'characters' SET "
+		"'account' = '%s',"
+		"'char_name' = '%s',"
+		"'nickname' = '%s',"
+		"'model_name' = '%s',"
+		"'level' = %d,"
+		"'skill_counter' = %d,"
+		"'skill_points' = %d,"
+		"'credits' = %d,"
+		"'jump' = %d,"
+		"'push' = %d,"
+		"'pull' = %d,"
+		"'speed' = %d,"
+		"'sense' = %d,"
+		"'saber_attack' = %d,"
+		"'saber_defense' = %d,"
+		"'saber_throw' = %d,"
+		"'absorb' = %d,"
+		"'heal' = %d,"
+		"'protect' = %d,"
+		"'mind_trick' = %d,"
+		"'team_heal' = %d,"
+		"'lightning' = %d,"
+		"'grip' = %d,"
+		"'drain' = %d,"
+		"'rage' = %d,"
+		"'team_energize' = %d,"
+		"'stun_baton_skill' = %d,"
+		"'blaster_pistol_skill' = %d,"
+		"'blaster_rifle_skill' = %d,"
+		"'disruptor_skill' = %d,"
+		"'bowcaster_skill' = %d,"
+		"'repeater_skill' = %d,"
+		"'demp2_skill' = %d,"
+		"'flachette_skill' = %d,"
+		"'rocket_launcher_skill' = %d,"
+		"'concussion_rifle_skill' = %d,"
+		"'bryar_pistol_skill' = %d,"
+		"'melee_skill' = %d,"
+		"'maxs_hield' = %d,"
+		"'shield_strength' = %d,"
+		"'health_strength' = %d,"
+		"'drain_shield' = %d,"
+		"'jetpack' = %d,"
+		"'sense_health' = %d,"
+		"'shield_heal' = %d,"
+		"'team_shield_heal' = %d,"
+		"'unique_skill' = %d,"
+		"'force_power' = %d,"
+		"'improvements' = %d,"
+		"'blaster_pack_upgrade' = %d,"
+		"'power_cell_upgrade' = %d,"
+		"'metallic_bolt_upgrade' = %d,"
+		"'rockets_upgrade' = %d,"
+		"'thermals_upgrade' = %d,"
+		"'tripmines_upgrade' = %d,"
+		"'detpacks_upgrade' = %d,"
+		"'holdableitems_upgrade' = %d,"
+		"'bountyhunter_upgrade' = %d,"
+		"'unique_ability_1' = %d,"
+		"'unique_ability_2' = %d,"
+		"'unique_ability_3' = %d,"
+		"'stealth_attacker_upgrade' = %d,"
+		"'force_gunner_upgrade' = %d,"
+		"'impact_reducer' = %d,"
+		"'flamethrower' = %d,"
+		"'power_cell_weapons_upgrade' = %d,"
+		"'blaster_pack_weapons_upgrade' = %d,"
+		"'metal_bolts_weapons_upgrade' = %d,"
+		"'rocket_weapons_upgrade' = %d,"
+		"'stun_baton_upgrade' = %d,"
+		"'armored_soldier_upgrade' = %d,"
+		"'jetpack_upgrade' = %d,"
+		"'force_guardian_upgrade' = %d,"
+		"'ammo_powercell' = %d,"
+		"'ammo_blaster' = %d,"
+		"'ammo_metal_bolts' = %d,"
+		"'ammo_rockets' = %d,"
+		"'ammo_emplaced' = %d,"
+		"'ammo_thermal' = %d,"
+		"'ammo_tripmine' = %d,"
+		"'ammo_detpack' = %d "
+		"WHERE char_name = '%s';",
+		ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->pers.netname, ent->client->modelname, ent->client->pers.level, ent->client->pers.skill_counter, ent->client->pers.skillpoints, ent->client->pers.credits,
+		ent->client->pers.skill_levels[0], //jump
+		ent->client->pers.skill_levels[1], //push
+		ent->client->pers.skill_levels[2], //pull
+		ent->client->pers.skill_levels[3], //speed
+		ent->client->pers.skill_levels[4], //sense
+		ent->client->pers.skill_levels[5], //saberattack
+		ent->client->pers.skill_levels[6], //saberdefense
+		ent->client->pers.skill_levels[7], //saberthrow
+		ent->client->pers.skill_levels[8], //absord
+		ent->client->pers.skill_levels[9], //heal
+		ent->client->pers.skill_levels[10], //protect
+		ent->client->pers.skill_levels[11], //mindtrick
+		ent->client->pers.skill_levels[12], //teamheal
+		ent->client->pers.skill_levels[13], //lightning
+		ent->client->pers.skill_levels[14], //grip
+		ent->client->pers.skill_levels[15], //drain
+		ent->client->pers.skill_levels[16], //rage
+		ent->client->pers.skill_levels[17], //teamenergize
+		ent->client->pers.skill_levels[18], //stunbatonskill
+		ent->client->pers.skill_levels[19], //blasterpistolskill
+		ent->client->pers.skill_levels[20], //blasterrifleskill
+		ent->client->pers.skill_levels[21], //disruptorskill
+		ent->client->pers.skill_levels[22], //bowcasterskill
+		ent->client->pers.skill_levels[23], //repeaterskill
+		ent->client->pers.skill_levels[24], //demp2skill
+		ent->client->pers.skill_levels[25], //flachetteskill
+		ent->client->pers.skill_levels[26], //rocketlauncherskill
+		ent->client->pers.skill_levels[27], //consussionrifleskill
+		ent->client->pers.skill_levels[28], //bryarpistolskill
+		ent->client->pers.skill_levels[29], //meleeskill
+		ent->client->pers.skill_levels[30], //maxshield
+		ent->client->pers.skill_levels[31], //shieldstrength
+		ent->client->pers.skill_levels[32], //healthstrength
+		ent->client->pers.skill_levels[33], //drainshield
+		ent->client->pers.skill_levels[34], //jetpack
+		ent->client->pers.skill_levels[35], //sensehealth
+		ent->client->pers.skill_levels[36], //shieldheal
+		ent->client->pers.skill_levels[37], //teamshieldheal
+		ent->client->pers.skill_levels[38], //uniqueskill
+		ent->client->pers.skill_levels[54], //forcepower
+		ent->client->pers.skill_levels[55], //improvements
+		ent->client->pers.skill_levels[39], //blasterpackupgrade
+		ent->client->pers.skill_levels[40], //powercellupgrade
+		ent->client->pers.skill_levels[41], //metallicboltupgrade
+		ent->client->pers.skill_levels[42], //rocketsupgrade
+		ent->client->pers.skill_levels[43], //thermalsupgrade
+		ent->client->pers.skill_levels[44], //tripmineupgrade
+		ent->client->pers.skill_levels[45], //detpacksupgrade
+		0, //TODO holdableitemsupgrade
+		0, //TODO bountyhunterupgrade
+		0, //TODO unique1
+		0, //TODO unique2
+		0, //TODO unique3
+		0, //TODO stealthattacketupgrade
+		0, //TODO forcegunnerupgrade
+		0, //TODO impactreducer
+		0, //TODO flamethrower
+		0, //TODO powercellweponupgrade
+		0, //TODO blasterpackweponupgrade
+		0, //TODO metalboltsweponupgrade
+		0, //TODO rocketweponupgrade
+		0, //TODO stunbatonweponupgrade
+		0, //TODO armoredsoldierupgrade
+		0, //TODO jetpackupgrade
+		0, //TODO forceguardianupgrade
+		ent->client->ps.ammo[AMMO_POWERCELL],
+		ent->client->ps.ammo[AMMO_BLASTER],
+		ent->client->ps.ammo[AMMO_METAL_BOLTS],
+		ent->client->ps.ammo[AMMO_ROCKETS],
+		ent->client->ps.ammo[AMMO_EMPLACED],
+		ent->client->ps.ammo[AMMO_THERMAL],
+		ent->client->ps.ammo[AMMO_TRIPMINE],
+		ent->client->ps.ammo[AMMO_DETPACK],
+		char_name));
+
+
+	trap->SendServerCommand(-1, va("print \"%s\n\"", sql));
 	run_db_query(sql);
 
 	return 0;
+
 
 }
 
@@ -5164,6 +5339,8 @@ int load_character_details(gentity_t *ent) {
 	strcpy(sql, "SELECT \"_rowid_\", *FROM \"main\".\"characters\" LIMIT 0, 49999;");
 
 	run_db_query(sql);
+
+	return 0;
 }
 
 // zyk: loads the player account
@@ -5393,6 +5570,9 @@ void load_account(gentity_t *ent)
 // zyk: saves info into the player account file. If save_char_file is qtrue, this function must save the char file
 void save_account(gentity_t *ent, qboolean save_char_file)
 {
+	if (save_char_file == qtrue) {
+		update_character(ent);
+	}
 	// zyk: used to prevent account save in map change time or before loading account after changing map
 	if (level.voteExecuteTime < level.time && ent->client->pers.connected == CON_CONNECTED && 
 		(ent->client->sess.amrpgmode == 1 || (ent->client->sess.amrpgmode == 2 && (zyk_rp_mode.integer != 1 || zyk_allow_saving_in_rp_mode.integer == 1)))
@@ -18125,12 +18305,11 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				return;
 			}
 
-
-			create_new_character("alex", "alex", ent);
 			add_new_char(ent);
 
 			// zyk: saving the current char
 			strcpy(ent->client->sess.rpgchar, arg2);
+			create_new_character(ent);
 
 			save_account(ent, qfalse);
 			save_account(ent, qtrue);
