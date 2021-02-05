@@ -5062,6 +5062,8 @@ int run_db_query(const char*sql) {
 		trap->SendServerCommand(-1, va("print \"%s\n\"", messageError));
 		sqlite3_free(messageError);
 	}
+	
+	sqlite3_close(DB);
 
 	return 0;
 }
@@ -5332,13 +5334,30 @@ int update_character(gentity_t *ent) {
 
 }
 
-int load_character_details(gentity_t *ent) {
-	
-	char sql[9999];
+int run_retrieve_db_query(const char* sql, gentity_t *ent) {
+	sqlite3*DB;
+	sqlite3_stmt* stmt;
 
-	strcpy(sql, "SELECT \"_rowid_\", *FROM \"main\".\"characters\" LIMIT 0, 49999;");
+	sqlite3_config(SQLITE_CONFIG_URI, 0);
 
-	run_db_query(sql);
+	char* messageError;
+	int exit = sqlite3_open(DB_PATH, &DB);
+
+	sqlite3_prepare_v2(DB, sql, -1, &stmt, 0);
+
+	char test[999];
+
+	while (sqlite3_step(stmt)) {
+		
+		if (sqlite3_column_text(stmt, 3)) {
+			strcpy(test, sqlite3_column_text(stmt, 3));
+		}
+		else {
+			return 0;
+		}
+	}
+
+	sqlite3_close(DB);
 
 	return 0;
 }
@@ -5395,6 +5414,7 @@ void load_account(gentity_t *ent)
 		account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
 		if (account_file != NULL)
 		{
+
 			// zyk: loading level up score value
 			fscanf(account_file, "%s", content);
 			ent->client->pers.level_up_score = atoi(content);
