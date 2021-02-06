@@ -621,7 +621,7 @@ void Cmd_Give_f( gentity_t *ent )
 	char arg2[MAX_TOKEN_CHARS] = {0};
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_GIVE)))
+	if (ent->client->pers.has_give == 0)
 	{ // zyk: give admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -742,7 +742,7 @@ void Cmd_Scale_f( gentity_t *ent ) {
 	int client_id = -1;
 	int new_size = 0;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_SCALE)))
+	if (ent->client->pers.has_scale == 0)
 	{ // zyk: scale admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -856,7 +856,7 @@ argv(0) noclip
 void Cmd_Noclip_f( gentity_t *ent ) {
 	char *msg = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_NOCLIP)))
+	if (ent->client->pers.has_noclip == 0)
 	{ // zyk: noclip admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -1987,7 +1987,6 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 			if (Q_stricmp(arg1, answers[ent->client->pers.eternity_quest_progress]) == 0)
 			{
 				ent->client->pers.eternity_quest_progress++;
-				save_account(ent, qtrue);
 
 				quest_get_new_player(ent);
 
@@ -5068,61 +5067,61 @@ int run_db_query(const char*sql) {
 	return 0;
 }
 
-int create_new_character(gentity_t *ent) {
+int create_new_character_to_db(gentity_t *ent, char* char_name, char* account) {
 
 	char sql[3000];
 
 	strcpy(sql, va("INSERT INTO 'main'.'characters'('ID', 'account', 'char_name', 'nickname', 'model_name', 'level', 'skill_counter', 'skill_points', 'credits', 'jump', 'push', 'pull', 'speed', 'sense', 'saber_attack', 'saber_defense', 'saber_throw', 'absorb', 'heal', 'protect', 'mind_trick', 'team_heal', 'lightning', 'grip', 'drain', 'rage', 'team_energize', 'stun_baton_skill', 'blaster_pistol_skill', 'blaster_rifle_skill', 'disruptor_skill', 'bowcaster_skill', 'repeater_skill', 'demp2_skill', 'flachette_skill', 'rocket_launcher_skill', 'concussion_rifle_skill', 'bryar_pistol_skill', 'melee_skill', 'maxs_hield', 'shield_strength', 'health_strength', 'drain_shield', 'jetpack', 'sense_health', 'shield_heal', 'team_shield_heal', 'unique_skill', 'force_power', 'improvements', 'blaster_pack_upgrade', 'power_cell_upgrade', 'metallic_bolt_upgrade', 'rockets_upgrade', 'thermals_upgrade', 'tripmines_upgrade', 'detpacks_upgrade', 'holdableitems_upgrade', 'bountyhunter_upgrade', 'unique_ability_1', 'unique_ability_2', 'unique_ability_3', 'stealth_attacker_upgrade', 'force_gunner_upgrade', 'impact_reducer', 'flamethrower', 'power_cell_weapons_upgrade', 'blaster_pack_weapons_upgrade', 'metal_bolts_weapons_upgrade', 'rocket_weapons_upgrade', 'stun_baton_upgrade', 'armored_soldier_upgrade', 'jetpack_upgrade', 'force_guardian_upgrade', 'ammo_powercell', 'ammo_blaster', 'ammo_metal_bolts', 'ammo_rockets', 'ammo_emplaced', 'ammo_thermal', 'ammo_tripmine', 'ammo_detpack')" 
 		"VALUES( NULL, '%s', '%s', '%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d);",
-		ent->client->sess.filename , ent->client->sess.rpgchar, ent->client->pers.netname, ent->client->modelname, ent->client->pers.level, ent->client->pers.skill_counter, ent->client->pers.skillpoints, ent->client->pers.credits,
-		ent->client->pers.skill_levels[0], //jump
-		ent->client->pers.skill_levels[1], //push
-		ent->client->pers.skill_levels[2], //pull
-		ent->client->pers.skill_levels[3], //speed
-		ent->client->pers.skill_levels[4], //sense
-		ent->client->pers.skill_levels[5], //saberattack
-		ent->client->pers.skill_levels[6], //saberdefense
-		ent->client->pers.skill_levels[7], //saberthrow
-		ent->client->pers.skill_levels[8], //absord
-		ent->client->pers.skill_levels[9], //heal
-		ent->client->pers.skill_levels[10], //protect
-		ent->client->pers.skill_levels[11], //mindtrick
-		ent->client->pers.skill_levels[12], //teamheal
-		ent->client->pers.skill_levels[13], //lightning
-		ent->client->pers.skill_levels[14], //grip
-		ent->client->pers.skill_levels[15], //drain
-		ent->client->pers.skill_levels[16], //rage
-		ent->client->pers.skill_levels[17], //teamenergize
-		ent->client->pers.skill_levels[18], //stunbatonskill
-		ent->client->pers.skill_levels[19], //blasterpistolskill
-		ent->client->pers.skill_levels[20], //blasterrifleskill
-		ent->client->pers.skill_levels[21], //disruptorskill
-		ent->client->pers.skill_levels[22], //bowcasterskill
-		ent->client->pers.skill_levels[23], //repeaterskill
-		ent->client->pers.skill_levels[24], //demp2skill
-		ent->client->pers.skill_levels[25], //flachetteskill
-		ent->client->pers.skill_levels[26], //rocketlauncherskill
-		ent->client->pers.skill_levels[27], //consussionrifleskill
-		ent->client->pers.skill_levels[28], //bryarpistolskill
-		ent->client->pers.skill_levels[29], //meleeskill
-		ent->client->pers.skill_levels[30], //maxshield
-		ent->client->pers.skill_levels[31], //shieldstrength
-		ent->client->pers.skill_levels[32], //healthstrength
-		ent->client->pers.skill_levels[33], //drainshield
-		ent->client->pers.skill_levels[34], //jetpack
-		ent->client->pers.skill_levels[35], //sensehealth
-		ent->client->pers.skill_levels[36], //shieldheal
-		ent->client->pers.skill_levels[37], //teamshieldheal
-		ent->client->pers.skill_levels[38], //uniqueskill
-		ent->client->pers.skill_levels[54], //forcepower
-		ent->client->pers.skill_levels[55], //improvements
-		ent->client->pers.skill_levels[39], //blasterpackupgrade
-		ent->client->pers.skill_levels[40], //powercellupgrade
-		ent->client->pers.skill_levels[41], //metallicboltupgrade
-		ent->client->pers.skill_levels[42], //rocketsupgrade
-		ent->client->pers.skill_levels[43], //thermalsupgrade
-		ent->client->pers.skill_levels[44], //tripmineupgrade
-		ent->client->pers.skill_levels[45], //detpacksupgrade
+		account , char_name, ent->client->pers.netname, ent->client->modelname, 1, 0, 1, 100,
+		0, //jump
+		0, //push
+		0, //pull
+		0, //speed
+		0, //sense
+		0, //saberattack
+		0, //saberdefense
+		0, //saberthrow
+		0, //absord
+		0, //heal
+		0, //protect
+		0, //mindtrick
+		0, //teamheal
+		0, //lightning
+		0, //grip
+		0, //drain
+		0, //rage
+		0, //teamenergize
+		0, //stunbatonskill
+		0, //blasterpistolskill
+		0, //blasterrifleskill
+		0, //disruptorskill
+		0, //bowcasterskill
+		0, //repeaterskill
+		0, //demp2skill
+		0, //flachetteskill
+		0, //rocketlauncherskill
+		0, //consussionrifleskill
+		0, //bryarpistolskill
+		0, //meleeskill
+		0, //maxshield
+		0, //shieldstrength
+		0, //healthstrength
+		0, //drainshield
+		0, //jetpack
+		0, //sensehealth
+		0, //shieldheal
+		0, //teamshieldheal
+		0, //uniqueskill
+		0, //forcepower
+		0, //improvements
+		0, //blasterpackupgrade
+		0, //powercellupgrade
+		0, //metallicboltupgrade
+		0, //rocketsupgrade
+		0, //thermalsupgrade
+		0, //tripmineupgrade
+		0, //detpacksupgrade
 		0, //TODO holdableitemsupgrade
 		0, //TODO bountyhunterupgrade
 		0, //TODO unique1
@@ -5140,31 +5139,30 @@ int create_new_character(gentity_t *ent) {
 		0, //TODO armoredsoldierupgrade
 		0, //TODO jetpackupgrade
 		0, //TODO forceguardianupgrade
-		ent->client->ps.ammo[AMMO_POWERCELL],
-		ent->client->ps.ammo[AMMO_BLASTER],
-		ent->client->ps.ammo[AMMO_METAL_BOLTS],
-		ent->client->ps.ammo[AMMO_ROCKETS],
-		ent->client->ps.ammo[AMMO_EMPLACED],
-		ent->client->ps.ammo[AMMO_THERMAL],
-		ent->client->ps.ammo[AMMO_TRIPMINE],
-		ent->client->ps.ammo[AMMO_DETPACK]
+		0, //ammo_powercell
+		50, //ammo_blaster
+		0, //ammo_ammo_metal_bolts
+		0, //ammo_ammo_rockets
+		0, //ammo_emplaced
+		0, //ammo_thermal
+		0, //ammo_tripmine
+		0  //ammo_detpack
 		
 	));
 
-	//trap->SendServerCommand(-1, va("print \"%s\n\"", sql));
 	run_db_query(sql);
 
 	return 0;
 
 }
 
-int update_character(gentity_t *ent) {
-
-	char sql[3000];
+int save_character_to_db(gentity_t *ent) {
 
 	char char_name[MAX_STRING_CHARS];
 
 	strcpy(char_name, ent->client->sess.rpgchar);
+
+	char sql[3000];
 
 	strcpy(sql, va("UPDATE 'main'.'characters' SET "
 		"'account' = '%s',"
@@ -5249,7 +5247,7 @@ int update_character(gentity_t *ent) {
 		"'ammo_tripmine' = %d,"
 		"'ammo_detpack' = %d "
 		"WHERE char_name = '%s';",
-		ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->pers.netname, ent->client->modelname, ent->client->pers.level, ent->client->pers.skill_counter, ent->client->pers.skillpoints, ent->client->pers.credits,
+		ent->client->sess.filename, char_name, ent->client->pers.netname, ent->client->modelname, ent->client->pers.level, ent->client->pers.skill_counter, ent->client->pers.skillpoints, ent->client->pers.credits,
 		ent->client->pers.skill_levels[0], //jump
 		ent->client->pers.skill_levels[1], //push
 		ent->client->pers.skill_levels[2], //pull
@@ -5334,7 +5332,11 @@ int update_character(gentity_t *ent) {
 
 
 
-int run_retrieve_db_query(const char* sql, gentity_t *ent) {
+int load_character_from_db(const char* charName, gentity_t *ent) {
+
+	char sql[999];
+	strcpy(sql, va("SELECT * FROM 'main'.'characters' WHERE char_name = '%s';", charName));
+
 	sqlite3*DB;
 	sqlite3_stmt* stmt;
 
@@ -5437,296 +5439,250 @@ int run_retrieve_db_query(const char* sql, gentity_t *ent) {
 	return 0;
 }
 
-int get_character_details_by_char_name(const char* charName, gentity_t *ent) {
-	char sql[999];
-	strcpy(sql, va("SELECT * FROM 'main'.'characters' WHERE char_name = '%s';", charName));
+int create_new_account(gentity_t *ent, char* username, char* password) {
 
-	run_retrieve_db_query(sql, ent);
+	char sql[3000];
+
+	strcpy(sql, va("INSERT INTO 'main'.'accounts'('ID','password','username','npc','noclip','giveadmin','teleport','adminprotect','entitysystem','silence','clientprint','rpmode','kick','paralyze','give','scale','players','duelarena','customquest','rpg_mode','player_settings','default_char') "
+		"VALUES (NULL,'%s','%s',%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,'%s');",
+		password, 
+		username, 
+		0, 
+		0, 
+		0, 
+		1, 
+		0, 
+		0, 
+		0, 
+		0, 
+		0, 
+		0, 
+		0, 
+		0, 
+		0, 
+		0, 
+		0, 
+		0, 
+		2, 
+		0, 
+		username
+	));
+
+	//trap->SendServerCommand(-1, va("print \"%s\n\"", sql));
+	run_db_query(sql);
+
+	create_new_character_to_db(ent, username, username);
+
+	return 0;
+
+}
+
+qboolean does_account_exist(char* username) {
+	char sql[999];
+	strcpy(sql, va("SELECT COUNT(ID) FROM 'main'.'accounts' WHERE username = '%s';", username));
+
+	sqlite3* DB;
+	sqlite3_stmt* stmt;
+
+	char* messageError;
+	int exit = sqlite3_open(DB_PATH, &DB);
+
+	sqlite3_prepare_v2(DB, sql, -1, &stmt, 0);
+
+	int numberOfAccountsWithUsername;
+
+	while (sqlite3_step(stmt)) {
+		if (sqlite3_column_int(stmt, 0)) {
+			numberOfAccountsWithUsername = sqlite3_column_int(stmt, 0);
+			if (numberOfAccountsWithUsername > 0) {
+				return qtrue;
+			}
+			return qfalse;
+		}
+		else {
+			return qfalse;
+		}
+	}
+}
+
+qboolean is_password_valid(char* password, char* username) {
+	char sql[999];
+	strcpy(sql, va("SELECT * FROM 'main'.'accounts' WHERE username = '%s';", username));
+
+	sqlite3* DB;
+	sqlite3_stmt* stmt;
+
+	char* messageError;
+	int exit = sqlite3_open(DB_PATH, &DB);
+
+	sqlite3_prepare_v2(DB, sql, -1, &stmt, 0);
+
+	unsigned char dbPassword[200];
+
+	while (sqlite3_step(stmt)) {
+
+		//if id is null, don't get the next line
+		if (sqlite3_column_text(stmt, 1)) {
+			strcpy(dbPassword,sqlite3_column_text(stmt, 1));
+		}
+		else {
+			//account doesn't exist
+			trap->SendServerCommand(-1, "print \"Account doesn't exist!\n\"");
+			return qfalse;
+		}
+
+		//if passwords match
+		if (strcmp(password, dbPassword) == 0) {
+			return qtrue;
+		}
+		else {
+			trap->SendServerCommand(-1, "print \"Invalid Password!.\n\"");
+			return qfalse;
+		}
+	}
+
+	sqlite3_close(DB);
+
+	return qfalse;
+}
+
+int load_account_from_db(char* username, gentity_t *ent) {
+	char sql[999];
+	strcpy(sql, va("SELECT * FROM 'main'.'accounts' WHERE username = '%s';", username));
+
+	sqlite3* DB;
+	sqlite3_stmt* stmt;
+
+	char* messageError;
+	int exit = sqlite3_open(DB_PATH, &DB);
+
+	sqlite3_prepare_v2(DB, sql, -1, &stmt, 0);
+
+	unsigned char dbPassword[200];
+
+	while (sqlite3_step(stmt)) {
+		if (sqlite3_column_text(stmt, 1)) {
+			strcpy(ent->client->pers.password, sqlite3_column_text(stmt, 1));
+			strcpy(ent->client->sess.filename, sqlite3_column_text(stmt, 2));
+			ent->client->pers.has_npc = sqlite3_column_int(stmt, 3);
+			ent->client->pers.has_noclip = sqlite3_column_int(stmt, 4);
+			ent->client->pers.has_giveadmin = sqlite3_column_int(stmt, 5);
+			ent->client->pers.has_teleport = sqlite3_column_int(stmt, 6);
+			ent->client->pers.has_adminprotect = sqlite3_column_int(stmt, 7);
+			ent->client->pers.has_entitysystem = sqlite3_column_int(stmt, 8);
+			ent->client->pers.has_silence = sqlite3_column_int(stmt, 9);
+			ent->client->pers.has_clientprint = sqlite3_column_int(stmt, 10);
+			ent->client->pers.has_rpmode = sqlite3_column_int(stmt, 11);
+			ent->client->pers.has_kick = sqlite3_column_int(stmt, 12);
+			ent->client->pers.has_paralyze = sqlite3_column_int(stmt, 13);
+			ent->client->pers.has_give = sqlite3_column_int(stmt, 14);
+			ent->client->pers.has_scale = sqlite3_column_int(stmt, 15);
+			ent->client->pers.has_players = sqlite3_column_int(stmt, 16);
+			ent->client->pers.has_duelarena = sqlite3_column_int(stmt, 17);
+			ent->client->pers.has_customquest = sqlite3_column_int(stmt, 18);
+			strcpy(ent->client->sess.rpgchar, sqlite3_column_text(stmt, 21));
+		}
+	}
+
+	sqlite3_close(DB);
 
 	return 0;
 }
 
-// zyk: loads the player account
-void load_account(gentity_t *ent)
-{
-	FILE *account_file;
-	char content[128];
+int save_account_to_db(gentity_t *ent, char* username) {
 
-	strcpy(content,"");
-	account_file = fopen(va("GalaxyRP/accounts/%s.txt",ent->client->sess.filename),"r");
-	if (account_file != NULL)
-	{
-		int i = 0;
-		// zyk: this variable will validate the skillpoints this player has
-		// if he has more than the max skillpoints defined, then server must remove the exceeding ones
-		int validate_skillpoints = 0;
-		int max_skillpoints = 0;
-		int j = 0;
+	char char_name[MAX_STRING_CHARS];
 
-		// zyk: loading the account password
-		fscanf(account_file,"%s",content);
-		strcpy(ent->client->pers.password,content);
+	strcpy(char_name, ent->client->sess.rpgchar);
 
-		// zyk: loading the amrpgmode value
-		fscanf(account_file,"%s",content);
-		ent->client->sess.amrpgmode = atoi(content);
+	char sql[3000];
 
-		if ((zyk_allow_rpg_mode.integer == 0 || (zyk_allow_rpg_in_other_gametypes.integer == 0 && level.gametype != GT_FFA)) && ent->client->sess.amrpgmode == 2)
-		{ // zyk: RPG Mode not allowed. Change his account to Admin-Only Mode
-			ent->client->sess.amrpgmode = 1;
-		}
-		else if (level.gametype == GT_SIEGE || level.gametype == GT_JEDIMASTER)
-		{ // zyk: Siege and Jedi Master will never allow RPG Mode
-			ent->client->sess.amrpgmode = 1;
-		}
+	strcpy(sql, va("UPDATE 'main'.'accounts' SET "
+		"'password' = '%s',"
+		"'username' = '%s',"
+		"'npc' = %d,"
+		"'noclip' = %d,"
+		"'giveadmin' = %d,"
+		"'teleport' = %d,"
+		"'adminprotect' = %d,"
+		"'entitysystem' = %d,"
+		"'silence' = %d,"
+		"'clientprint' = %d,"
+		"'rpmode' = %d,"
+		"'kick' = %d,"
+		"'paralyze' = %d,"
+		"'give' = %d,"
+		"'scale' = %d,"
+		"'players' = %d,"
+		"'duelarena' = %d,"
+		"'customquest' = %d,"
+		"'rpg_mode' = 2,"
+		"'player_settings' = 0,"
+		"'default_char' = '%s'"
+		"WHERE username = '%s'",
+		ent->client->pers.password,
+		ent->client->sess.filename,
+		ent->client->pers.has_npc,
+		ent->client->pers.has_noclip,
+		ent->client->pers.has_giveadmin,
+		ent->client->pers.has_teleport,
+		ent->client->pers.has_adminprotect,
+		ent->client->pers.has_entitysystem,
+		ent->client->pers.has_silence,
+		ent->client->pers.has_clientprint,
+		ent->client->pers.has_rpmode,
+		ent->client->pers.has_kick,
+		ent->client->pers.has_paralyze,
+		ent->client->pers.has_give,
+		ent->client->pers.has_scale,
+		ent->client->pers.has_players,
+		ent->client->pers.has_duelarena,
+		ent->client->pers.has_customquest,
+		ent->client->sess.rpgchar,
+		ent->client->sess.filename
+		));
 
-		// zyk: loading player_settings value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.player_settings = atoi(content);
+	run_db_query(sql);
 
-		// zyk: loading the admin command bit value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.bitvalue = atoi(content);
-
-		// zyk: loading the current char
-		fscanf(account_file, "%s", content);
-		strcpy(ent->client->sess.rpgchar, content);
-
-		fclose(account_file);
-
-		// zyk: loading the char file
-		account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
-		if (account_file != NULL)
-		{
-
-			// zyk: loading level up score value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.level_up_score = atoi(content);
-
-			// zyk: loading Level value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.level = atoi(content);
-
-			// zyk: loading Skillpoints value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.skillpoints = atoi(content);
-
-			if (ent->client->pers.level > zyk_rpg_max_level.integer)
-			{ // zyk: validating level
-				ent->client->pers.level = zyk_rpg_max_level.integer;
-			}
-			else if (ent->client->pers.level < 1)
-			{
-				ent->client->pers.level = 1;
-			}
-
-			for (j = 1; j <= ent->client->pers.level; j++)
-			{
-				if ((j % 10) == 0)
-				{ // zyk: level divisible by 10 has more skillpoints
-					max_skillpoints += (1 + j / 10);
-				}
-				else
-				{
-					max_skillpoints++;
-				}
-			}
-
-			validate_skillpoints = ent->client->pers.skillpoints;
-			// zyk: loading skill levels
-			for (i = 0; i < NUMBER_OF_SKILLS; i++)
-			{
-				fscanf(account_file, "%s", content);
-				ent->client->pers.skill_levels[i] = atoi(content);
-				validate_skillpoints += ent->client->pers.skill_levels[i];
-			}
-
-			// zyk: validating skillpoints
-			if (validate_skillpoints != max_skillpoints)
-			{
-				// zyk: if not valid, reset all skills and set the max skillpoints he can have in this level
-				for (i = 0; i < NUMBER_OF_SKILLS; i++)
-				{
-					ent->client->pers.skill_levels[i] = 0;
-				}
-
-				ent->client->pers.skillpoints = max_skillpoints;
-			}
-
-			// zyk: Other RPG attributes
-			// zyk: loading Light Quest Defeated Guardians number value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.defeated_guardians = atoi(content);
-
-			// zyk: compability with old mod versions, in which the players who completed the quest had a value of 9
-			if (ent->client->pers.defeated_guardians == 9)
-				ent->client->pers.defeated_guardians = NUMBER_OF_GUARDIANS;
-
-			// zyk: loading Dark Quest completed objectives value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.hunter_quest_progress = atoi(content);
-
-			// zyk: loading Eternity Quest progress value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.eternity_quest_progress = atoi(content);
-
-			// zyk: loading secrets found value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.secrets_found = atoi(content);
-
-			// zyk: loading Universe Quest Progress value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.universe_quest_progress = atoi(content);
-
-			// zyk: loading Universe Quest Counter value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.universe_quest_counter = atoi(content);
-
-			// zyk: make sure Challenge Mode settings flag and counter flag are correct
-			if (ent->client->pers.universe_quest_counter & (1 << 29))
-			{
-				ent->client->pers.player_settings |= (1 << 15);
-			}
-			else
-			{
-				ent->client->pers.player_settings &= ~(1 << 15);
-			}
-
-			// zyk: loading credits value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.credits = atoi(content);
-
-			// zyk: validating credits
-			if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
-			{
-				ent->client->pers.credits = zyk_max_rpg_credits.integer;
-			}
-			else if (ent->client->pers.credits < 0)
-			{
-				ent->client->pers.credits = 0;
-			}
-
-			// zyk: loading RPG class
-			fscanf(account_file, "%s", content);
-			ent->client->pers.rpg_class = atoi(content);
-
-			// zyk: loading disabled magic powers
-			fscanf(account_file, "%s", content);
-			ent->client->sess.magic_disabled_powers = atoi(content);
-
-			// zyk: loading more disabled magic powers
-			fscanf(account_file, "%s", content);
-			ent->client->sess.magic_more_disabled_powers = atoi(content);
-
-			// zyk: loading Magic Master first selection and selected powers
-			fscanf(account_file, "%s", content);
-			ent->client->sess.magic_fist_selection = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->sess.selected_special_power = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->sess.selected_left_special_power = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->sess.selected_right_special_power = atoi(content);
-
-			if (ent->client->sess.amrpgmode == 1)
-			{
-				ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
-
-				// zyk: setting default max hp and shield
-				ent->client->ps.stats[STAT_MAX_HEALTH] = 100;
-
-				if (ent->health > 100)
-					ent->health = 100;
-
-				if (ent->client->ps.stats[STAT_ARMOR] > 100)
-					ent->client->ps.stats[STAT_ARMOR] = 100;
-
-				// zyk: reset the force powers of this player
-				WP_InitForcePowers(ent);
-
-				if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0 &&
-					level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE
-					)
-					ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
-
-				if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
-					ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
-
-				zyk_load_common_settings(ent);
-			}
-
-			fclose(account_file);
-
-			get_character_details_by_char_name(ent->client->sess.rpgchar, ent);
-		}
-		else
-		{ // zyk: char file caould not be loaded
-			trap->SendServerCommand(ent - g_entities, "print \"Char file could not be loaded!\n\"");
-		}
-	}
-	else
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"There is no account with this login or password.\n\"" ); 
-	}
+	return 0;
 }
 
-// zyk: saves info into the player account file. If save_char_file is qtrue, this function must save the char file
-void save_account(gentity_t *ent, qboolean save_char_file)
-{
-	if (save_char_file == qtrue) {
-		update_character(ent);
-	}
-	// zyk: used to prevent account save in map change time or before loading account after changing map
-	if (level.voteExecuteTime < level.time && ent->client->pers.connected == CON_CONNECTED && 
-		(ent->client->sess.amrpgmode == 1 || (ent->client->sess.amrpgmode == 2 && (zyk_rp_mode.integer != 1 || zyk_allow_saving_in_rp_mode.integer == 1)))
-		)
-	{ // zyk: players can only save things if server is not at RP Mode or if it is allowed in config
-		if (save_char_file == qtrue)
-		{  // zyk: save the RPG char
-			FILE *account_file;
-			gclient_t *client;
+int delete_character_from_db(char* char_name) {
 
-			client = ent->client;
-			account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt",ent->client->sess.filename, ent->client->sess.rpgchar),"w");
-			fprintf(account_file,"%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
-			client->pers.level_up_score,client->pers.level,client->pers.skillpoints,client->pers.skill_levels[0],client->pers.skill_levels[1],client->pers.skill_levels[2]
-			,client->pers.skill_levels[3],client->pers.skill_levels[4],client->pers.skill_levels[5],client->pers.skill_levels[6],client->pers.skill_levels[7],client->pers.skill_levels[8]
-			,client->pers.skill_levels[9],client->pers.skill_levels[10],client->pers.skill_levels[11],client->pers.skill_levels[12],client->pers.skill_levels[13],client->pers.skill_levels[14]
-			,client->pers.skill_levels[15],client->pers.skill_levels[16],client->pers.skill_levels[17],client->pers.skill_levels[18],client->pers.skill_levels[19],client->pers.skill_levels[20],client->pers.skill_levels[21],client->pers.skill_levels[22]
-			,client->pers.skill_levels[23],client->pers.skill_levels[24],client->pers.skill_levels[25],client->pers.skill_levels[26],client->pers.skill_levels[27],client->pers.skill_levels[28],client->pers.skill_levels[29],client->pers.skill_levels[30],client->pers.skill_levels[31]
-			,client->pers.skill_levels[32],client->pers.skill_levels[33],client->pers.skill_levels[34],client->pers.skill_levels[35],client->pers.skill_levels[36],client->pers.skill_levels[37],client->pers.skill_levels[38],client->pers.skill_levels[39],client->pers.skill_levels[40],client->pers.skill_levels[41]
-			,client->pers.skill_levels[42],client->pers.skill_levels[43],client->pers.skill_levels[44],client->pers.skill_levels[45],client->pers.skill_levels[46],client->pers.skill_levels[47],client->pers.skill_levels[48],client->pers.skill_levels[49]
-			,client->pers.skill_levels[50],client->pers.skill_levels[51],client->pers.skill_levels[52],client->pers.skill_levels[53],client->pers.skill_levels[54],client->pers.skill_levels[55],client->pers.defeated_guardians,client->pers.hunter_quest_progress
-			,client->pers.eternity_quest_progress,client->pers.secrets_found,client->pers.universe_quest_progress,client->pers.universe_quest_counter,client->pers.credits,client->pers.rpg_class
-			,client->sess.magic_disabled_powers,client->sess.magic_more_disabled_powers,client->sess.magic_fist_selection,client->sess.selected_special_power,client->sess.selected_left_special_power
-			,client->sess.selected_right_special_power);
-			fclose(account_file);
+	char sql[3000];
 
-			account_file = fopen(va("GalaxyRP/accounts/%s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "w");
-			fprintf(account_file, "%d\n%d\n%d\n%d\n%d\n%d\n%d\n",client->ps.ammo[AMMO_BLASTER]
-			,client->ps.ammo[AMMO_POWERCELL]
-			,client->ps.ammo[AMMO_METAL_BOLTS]
-			,client->ps.ammo[AMMO_ROCKETS]
-			,client->ps.ammo[AMMO_THERMAL]
-			,client->ps.ammo[AMMO_TRIPMINE]
-			,client->ps.ammo[AMMO_DETPACK]);
-			fclose(account_file);
-		}
-		else
-		{ // zyk: save the main account file
-			FILE *account_file;
-			gclient_t *client;
+	strcpy(sql, va("DELETE FROM 'main'.'characters' WHERE char_name = '%s';", char_name));
 
-			client = ent->client;
-			account_file = fopen(va("GalaxyRP/accounts/%s.txt", ent->client->sess.filename), "w");
-			fprintf(account_file, "%s\n%d\n%d\n%d\n%s\n",
-				client->pers.password, client->sess.amrpgmode, client->pers.player_settings, client->pers.bitvalue, client->sess.rpgchar);
-			fclose(account_file);
+	run_db_query(sql);
+
+	return 0;
+}
+
+qboolean is_char_owned_by(char* char_name ,char* username) {
+
+	char sql[3000];
+
+	strcpy(sql, va("SELECT COUNT(account) FROM 'main'.'characters' WHERE char_name = '%s' AND account = '%s';", char_name, username));
+
+	sqlite3* DB;
+	sqlite3_stmt* stmt;
+
+	char* messageError;
+	int exit = sqlite3_open(DB_PATH, &DB);
+
+	sqlite3_prepare_v2(DB, sql, -1, &stmt, 0);
+
+	while (sqlite3_step(stmt)) {
+		if (sqlite3_column_int(stmt, 0) > 0 ) {
+			sqlite3_close(DB);
+			return qtrue;
 		}
 	}
+
+	sqlite3_close(DB);
+
+	return qfalse;
+
 }
 
 void Cmd_Roll_f(gentity_t *ent) {
@@ -5853,7 +5809,6 @@ void rpg_score(gentity_t *ent, qboolean admin_rp_mode)
 			send_message = 1;
 		}
 	}
-	save_account(ent, qtrue); // zyk: saves new score and credits in the account file
 
 	// zyk: cleaning the modifiers after they are applied
 	ent->client->pers.credits_modifier = 0;
@@ -6595,15 +6550,12 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 	}
 
 	ent->client->pers.player_settings = 0;
-	ent->client->pers.bitvalue = 0;
+	//ent->client->pers.bitvalue = 0;
 
 	add_new_char(ent);
 
 	// zyk: saving the default char
 	strcpy(ent->client->sess.rpgchar, arg1);
-
-	save_account(ent, qfalse);
-	save_account(ent, qtrue);
 
 	if (ent->client->sess.amrpgmode == 2)
 	{
@@ -6620,192 +6572,6 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 	ent->client->pers.player_statuses |= (1 << 25);
 }
 
-// zyk: loads the player account the old way
-void legacy_load_account(gentity_t *ent)
-{
-	FILE *account_file;
-	char content[128];
-
-	strcpy(content, "");
-	account_file = fopen(va("GalaxyRP/accounts/%s.txt", ent->client->sess.filename), "r");
-	if (account_file != NULL)
-	{
-		int i = 0;
-		// zyk: this variable will validate the skillpoints this player has
-		// if he has more than the max skillpoints defined, then server must remove the exceeding ones
-		int validate_skillpoints = 0;
-		int max_skillpoints = 0;
-		int j = 0;
-
-		// zyk: loading the account password
-		fscanf(account_file, "%s", content);
-		strcpy(ent->client->pers.password, content);
-
-		// zyk: loading the amrpgmode value
-		fscanf(account_file, "%s", content);
-		ent->client->sess.amrpgmode = atoi(content);
-
-		if ((zyk_allow_rpg_mode.integer == 0 || (zyk_allow_rpg_in_other_gametypes.integer == 0 && level.gametype != GT_FFA)) && ent->client->sess.amrpgmode == 2)
-		{ // zyk: RPG Mode not allowed. Change his account to Admin-Only Mode
-			ent->client->sess.amrpgmode = 1;
-		}
-		else if (level.gametype == GT_SIEGE || level.gametype == GT_JEDIMASTER)
-		{ // zyk: Siege and Jedi Master will never allow RPG Mode
-			ent->client->sess.amrpgmode = 1;
-		}
-
-		// zyk: loading player_settings value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.player_settings = atoi(content);
-
-		// zyk: loading the admin command bit value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.bitvalue = atoi(content);
-
-		// zyk: loading level up score value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.level_up_score = atoi(content);
-
-		// zyk: loading Level value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.level = atoi(content);
-
-		// zyk: loading Skillpoints value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.skillpoints = atoi(content);
-
-		if (ent->client->pers.level > zyk_rpg_max_level.integer)
-		{ // zyk: validating level
-			ent->client->pers.level = zyk_rpg_max_level.integer;
-		}
-		else if (ent->client->pers.level < 1)
-		{
-			ent->client->pers.level = 1;
-		}
-
-		for (j = 1; j <= ent->client->pers.level; j++)
-		{
-			if ((j % 10) == 0)
-			{ // zyk: level divisible by 10 has more skillpoints
-				max_skillpoints += (1 + j / 10);
-			}
-			else
-			{
-				max_skillpoints++;
-			}
-		}
-
-		validate_skillpoints = ent->client->pers.skillpoints;
-		// zyk: loading skill levels
-		for (i = 0; i < NUMBER_OF_SKILLS; i++)
-		{
-			fscanf(account_file, "%s", content);
-			ent->client->pers.skill_levels[i] = atoi(content);
-			validate_skillpoints += ent->client->pers.skill_levels[i];
-		}
-
-		// zyk: validating skillpoints
-		if (validate_skillpoints != max_skillpoints)
-		{
-			// zyk: if not valid, reset all skills and set the max skillpoints he can have in this level
-			for (i = 0; i < NUMBER_OF_SKILLS; i++)
-			{
-				ent->client->pers.skill_levels[i] = 0;
-			}
-
-			ent->client->pers.skillpoints = max_skillpoints;
-		}
-
-		// zyk: Other RPG attributes
-		// zyk: loading Light Quest Defeated Guardians number value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.defeated_guardians = atoi(content);
-
-		// zyk: compability with old mod versions, in which the players who completed the quest had a value of 9
-		if (ent->client->pers.defeated_guardians == 9)
-			ent->client->pers.defeated_guardians = NUMBER_OF_GUARDIANS;
-
-		// zyk: loading Dark Quest completed objectives value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.hunter_quest_progress = atoi(content);
-
-		// zyk: loading Eternity Quest progress value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.eternity_quest_progress = atoi(content);
-
-		// zyk: loading secrets found value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.secrets_found = atoi(content);
-
-		// zyk: loading Universe Quest Progress value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.universe_quest_progress = atoi(content);
-
-		// zyk: loading Universe Quest Counter value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.universe_quest_counter = atoi(content);
-
-		// zyk: loading credits value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.credits = atoi(content);
-
-		// zyk: validating credits
-		if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
-		{
-			ent->client->pers.credits = zyk_max_rpg_credits.integer;
-		}
-		else if (ent->client->pers.credits < 0)
-		{
-			ent->client->pers.credits = 0;
-		}
-
-		// zyk: loading RPG class
-		fscanf(account_file, "%s", content);
-		ent->client->pers.rpg_class = atoi(content);
-
-		// zyk: loading disabled magic powers
-		fscanf(account_file, "%s", content);
-		ent->client->sess.magic_disabled_powers = atoi(content);
-
-		// zyk: loading more disabled magic powers
-		fscanf(account_file, "%s", content);
-		ent->client->sess.magic_more_disabled_powers = atoi(content);
-
-		if (ent->client->sess.amrpgmode == 1)
-		{
-			ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
-
-			// zyk: setting default max hp and shield
-			ent->client->ps.stats[STAT_MAX_HEALTH] = 100;
-
-			if (ent->health > 100)
-				ent->health = 100;
-
-			if (ent->client->ps.stats[STAT_ARMOR] > 100)
-				ent->client->ps.stats[STAT_ARMOR] = 100;
-
-			// zyk: reset the force powers of this player
-			WP_InitForcePowers(ent);
-
-			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0 &&
-				level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE
-				)
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
-
-			if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
-
-			zyk_load_common_settings(ent);
-		}
-
-		fclose(account_file);
-	}
-	else
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"There is no account with this login or password.\n\"");
-	}
-}
-
 /*
 ==================
 Cmd_LoginAccount_f
@@ -6816,14 +6582,8 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 	{
 		char arg1[MAX_STRING_CHARS];
 		char arg2[MAX_STRING_CHARS];
-		char password[32];
 		int i = 0;
-		FILE *account_file;
 		gentity_t *player_ent = NULL;
-
-		strcpy(password,"");
-
-		createDB("GalaxyRP/accounts/ACCOUNTS.DB");
 
 		if ( trap->Argc() != 3)
 		{ 
@@ -6834,6 +6594,7 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 		trap->Argv(1, arg1, sizeof( arg1 ));
 		trap->Argv(2, arg2, sizeof( arg2 ));
 
+		// check if someone else is logged in with the same account
 		for (i = 0; i < level.maxclients; i++)
 		{
 			player_ent = &g_entities[i];
@@ -6857,53 +6618,20 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 			return;
 		}
 
-		// zyk: validating login
-		account_file = fopen(va("GalaxyRP/accounts/%s.txt",arg1),"r");
-		if (account_file == NULL)
+		if (does_account_exist(arg1) == qfalse)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"Login does not exist.\n\"" );
 			return;
 		}
 
-		// zyk: validating password
-		fscanf(account_file,"%s",password);
-		fclose(account_file);
-		if (strlen(password) != strlen(arg2) || Q_strncmp(password, arg2, strlen(password)) != 0)
+		if (is_password_valid(arg2, arg1) == qfalse)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"The password is incorrect.\n\"" );
 			return;
 		}
-
-		// zyk: valid login and password
-		strcpy(ent->client->sess.filename, arg1);
-		strcpy(ent->client->pers.password, arg2);
-
-		account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", arg1, arg1), "r");
-		if (account_file == NULL)
-		{ // zyk: old account. Use the legacy function to convert it to the Char system
-			legacy_load_account(ent);
-
-			// zyk: saving the default char
-			strcpy(ent->client->sess.rpgchar, arg1);
-
-			save_account(ent, qfalse);
-			save_account(ent, qtrue);
-		}
-		else
-		{
-			fclose(account_file);
-
-			load_account(ent);
-		}
-
-		if (ent->client->sess.amrpgmode == 1)
-		{
-			trap->SendServerCommand(ent - g_entities, "print \"^7Account loaded succesfully in ^2Admin-Only Mode^7. Use command ^3/list^7.\n\"");
-			trap->SendServerCommand(-1, va("chat \"%s Logged in as: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
-		}
-		else if (ent->client->sess.amrpgmode == 2)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"^7Account loaded succesfully in ^2RPG Mode^7. Use command ^3/list^7.\n\"" );
+		else {
+			load_account_from_db(arg1, ent);
+			trap->SendServerCommand(ent - g_entities, "print \"^7Account loaded succesfully in ^2RPG Mode^7. Use command ^3/list^7.\n\"");
 			trap->SendServerCommand(-1, va("chat \"%s Logged in as: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
 
 			initialize_rpg_skills(ent);
@@ -6912,41 +6640,14 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
 				G_Kill(ent);
 			}
-			
+
+			return;
 		}
+		
 	}
 	else
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"You are already logged in.\n\"" );
-	}
-}
-
-// zyk: clean the guardian npcs
-void clean_guardians(gentity_t *ent)
-{
-	int i = 0;
-	gentity_t *this_ent = NULL;
-
-	for (i = MAX_CLIENTS; i < level.num_entities; i++)
-	{
-		this_ent = &g_entities[i];
-		if (this_ent && this_ent->client && this_ent->NPC && this_ent->client->pers.guardian_invoked_by_id != -1 && this_ent->client->pers.guardian_invoked_by_id == (ent-g_entities))
-		{
-			// zyk: if quest player dies in boss battle, makes the boss stop using force powers
-			int j = 0;
-
-			while (j < NUM_FORCE_POWERS)
-			{
-				if (this_ent->client->ps.fd.forcePowersActive & (1 << j))
-				{
-					WP_ForcePowerStop(this_ent, j);
-				}
-
-				j++;
-			}
-
-			G_FreeEntity(this_ent);
-		}
 	}
 }
 
@@ -7489,7 +7190,6 @@ Cmd_LogoutAccount_f
 ==================
 */
 void Cmd_LogoutAccount_f( gentity_t *ent ) {
-	save_account(ent, qtrue);
 
 	if (ent->client->pers.being_mind_controlled != -1)
 	{
@@ -7518,7 +7218,6 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 	// zyk: if player was fighting a guardian, allow other players to fight the guardian now
 	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.guardian_mode > 0)
 	{
-		clean_guardians(ent);
 		ent->client->pers.guardian_mode = 0;
 	}
 
@@ -7533,7 +7232,7 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 		quest_get_new_player(ent);
 	}
 
-	ent->client->pers.bitvalue = 0;
+	//ent->client->pers.bitvalue = 0;
 
 	// zyk: initializing mind control attributes used in RPG mode
 	ent->client->pers.being_mind_controlled = -1;
@@ -8912,9 +8611,6 @@ void do_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean update_all)
 		if (is_upgraded == qfalse)
 			return;
 
-		// zyk: saving the account file with the upgraded skill
-		save_account(ent, qtrue);
-
 		trap->SendServerCommand( ent-g_entities, "print \"Skill upgraded successfully.\n\"" );
 
 		Cmd_ZykMod_f(ent);
@@ -8936,9 +8632,6 @@ void do_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean update_all)
 				}
 			}
 		}
-
-		// zyk: saving the account file with the upgraded skill
-		save_account(ent, qtrue);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Skills upgraded successfully.\n\"" );
 		Cmd_ZykMod_f(ent);
@@ -9868,9 +9561,6 @@ void do_downgrade_skill(gentity_t *ent, int downgrade_value)
 			return;
 		}
 	}
-
-	// zyk: saving the account file with the downgraded skill
-	save_account(ent, qtrue);
 
 	trap->SendServerCommand( ent-g_entities, "print \"Skill downgraded successfully.\n\"" );
 
@@ -11742,7 +11432,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
 
 		ent->client->pers.credits -= item_costs[value-1];
-		save_account(ent, qtrue);
 
 		// zyk: setting the cooldown time to buy and sell stuff. Bounty Hunter remote buying system has its own cooldown time cvar
 		if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) && found == 0)
@@ -12011,7 +11700,6 @@ void Cmd_Sell_f( gentity_t *ent ) {
 	if (sold == 1)
 	{
 		add_credits(ent,items_costs[value-1]);
-		save_account(ent, qtrue);
 
 		// zyk: setting the cooldown time to buy and sell stuff. Bounty Hunter remote buying system has its own cooldown time cvar
 		if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) && found == 0)
@@ -12061,7 +11749,6 @@ void Cmd_ChangePassword_f( gentity_t *ent ) {
 	}
 
 	strcpy(ent->client->pers.password,arg1);
-	save_account(ent, qfalse);
 
 	trap->SendServerCommand( ent-g_entities, "print \"Your password was changed successfully.\n\"" );
 }
@@ -12124,8 +11811,6 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		ent->client->sess.magic_disabled_powers = 0;
 		ent->client->sess.magic_more_disabled_powers = 0;
 
-		save_account(ent, qtrue);
-
 		zyk_remove_configs(ent);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Your entire account is reset.\n\"" );
@@ -12146,8 +11831,6 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		// zyk: Challenge Mode, must keep the flag
 		if (ent->client->pers.player_settings & (1 << 15))
 			ent->client->pers.universe_quest_counter |= (1 << 29);
-
-		save_account(ent, qtrue);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Your quests are reset.\n\"" );
 
@@ -12179,8 +11862,6 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 		ent->client->sess.magic_disabled_powers = 0;
 		ent->client->sess.magic_more_disabled_powers = 0;
 
-		save_account(ent, qtrue);
-
 		zyk_remove_configs(ent);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Your levels are reset.\n\"" );
@@ -12210,7 +11891,7 @@ void Cmd_Teleport_f( gentity_t *ent )
 	char arg3[MAX_STRING_CHARS];
 	char arg4[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_TELE)))
+	if (ent->client->pers.has_teleport == 0)
 	{ // zyk: teleport admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -12429,7 +12110,7 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 
 	if (create == 1)
 	{
-		if (ent->client->pers.bitvalue != 65535)
+		if (ent->client->pers.has_createcredits == 0)
 		{
 			trap->SendServerCommand(ent - g_entities, "print \"You do not have the correct admin permission to create credits.\n\"");
 			return;
@@ -12448,12 +12129,10 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 	
 	
 	add_credits(&g_entities[client_id], value);
-	save_account(&g_entities[client_id], qtrue);
 
 	if (create != 1) {
 		remove_credits(ent, value);
 	}
-	save_account(ent, qtrue);
 
 	//trap->SendServerCommand( client_id, va("chat \"^3Credit System: ^7You got %d credits from %s\n\"", value, ent->client->pers.netname) );
 	//broadcast the transaction to the whole server
@@ -12974,8 +12653,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			}
 		}
 
-		save_account(ent, qfalse);
-
 		if (value == 0)
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Quests %s\n\"", new_status) );
@@ -13040,7 +12717,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 		else if (value == 15)
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Difficulty %s\n\"", new_status) );
-			save_account(ent, qtrue);
 		}
 
 		if (value == 0 && ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->sess.amrpgmode == 2)
@@ -13266,8 +12942,6 @@ void do_change_class(gentity_t *ent, int value)
 
 	load_config(ent);
 
-	save_account(ent, qtrue);
-
 	trap->SendServerCommand( ent-g_entities, va("print \"You are now a %s\n\"", zyk_rpg_class(ent)) );
 
 	if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
@@ -13484,8 +13158,6 @@ void Cmd_PlayerMode_f( gentity_t *ent ) {
 		ent->client->pers.player_statuses &= ~(1 << 12);
 		ent->client->pers.player_statuses &= ~(1 << 13);
 	}
-
-	save_account(ent, qfalse);
 
 	if (ent->client->sess.amrpgmode == 1)
 	{
@@ -14046,8 +13718,8 @@ void Cmd_Remap_f( gentity_t *ent ) {
 	char arg2[MAX_STRING_CHARS];
 	float f = level.time * 0.001;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
+	if (ent->client->pers.has_entitysystem == 0)
+	{
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
 	}
@@ -14082,7 +13754,7 @@ void Cmd_RemapList_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
 		return;
@@ -14128,7 +13800,7 @@ void Cmd_RemapDeleteFile_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -14176,7 +13848,7 @@ void Cmd_RemapSave_f( gentity_t *ent ) {
 	int i = 0;
 	FILE *remap_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -14222,7 +13894,7 @@ void Cmd_RemapLoad_f( gentity_t *ent ) {
 	char time_offset[128];
 	FILE *remap_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -14276,7 +13948,7 @@ Cmd_EntUndo_f
 ==================
 */
 void Cmd_EntUndo_f(gentity_t *ent) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
 		return;
@@ -14298,7 +13970,7 @@ Cmd_EntOrigin_f
 ==================
 */
 void Cmd_EntOrigin_f(gentity_t *ent) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
 		return;
@@ -14334,7 +14006,7 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 	qboolean has_origin_set = qfalse; // zyk: if player do not pass an origin key, use the one set with /entorigin
 	qboolean has_angles_set = qfalse; // zyk: if player do not pass an angles key, use the one set with /entorigin
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -14456,7 +14128,7 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -14552,7 +14224,7 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent->s.number, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -14615,7 +14287,7 @@ void Cmd_EntLoad_f( gentity_t *ent ) {
 	int i = 0;
 	FILE *this_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -14673,7 +14345,7 @@ void Cmd_EntDeleteFile_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -14723,7 +14395,7 @@ void Cmd_EntNear_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	gentity_t *this_ent = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent->s.number, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -14816,7 +14488,7 @@ void Cmd_EntList_f( gentity_t *ent ) {
 
 	strcpy(message,"");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -14881,7 +14553,7 @@ void Cmd_EntRemove_f( gentity_t *ent ) {
 	char   arg1[MAX_STRING_CHARS];
 	char   arg2[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -14961,7 +14633,7 @@ void Cmd_ClientPrint_f( gentity_t *ent ) {
 	char   arg1[MAX_STRING_CHARS];
 	char   arg2[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_CLIENTPRINT)))
+	if (ent->client->pers.has_clientprint == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -14999,7 +14671,7 @@ void Cmd_Silence_f( gentity_t *ent ) {
 	int client_id = -1;
 	char   arg[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_SILENCE)))
+	if (ent->client->pers.has_silence == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -15046,7 +14718,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 	}
 	message_content[ADM_NUM_CMDS][0] = '\0';
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_NPC))) 
+	if (ent->client->pers.has_npc == 1)
 	{
 		strcpy(message_content[0],va("^3  %d ^7- NPC: ^2yes\n",ADM_NPC));
 	}
@@ -15055,7 +14727,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[0],va("^3  %d ^7- NPC: ^1no\n",ADM_NPC));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_NOCLIP))) 
+	if (ent->client->pers.has_noclip == 1)
 	{
 		strcpy(message_content[1],va("^3  %d ^7- NoClip: ^2yes\n",ADM_NOCLIP));
 	}
@@ -15064,7 +14736,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[1],va("^3  %d ^7- NoClip: ^1no\n",ADM_NOCLIP));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_GIVEADM))) 
+	if (ent->client->pers.has_giveadmin == 1)
 	{
 		strcpy(message_content[2],va("^3  %d ^7- GiveAdmin: ^2yes\n",ADM_GIVEADM));
 	}
@@ -15073,7 +14745,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[2],va("^3  %d ^7- GiveAdmin: ^1no\n",ADM_GIVEADM));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_TELE))) 
+	if (ent->client->pers.has_teleport == 1)
 	{
 		strcpy(message_content[3],va("^3  %d ^7- Teleport: ^2yes\n",ADM_TELE));
 	}
@@ -15082,7 +14754,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[3],va("^3  %d ^7- Teleport: ^1no\n",ADM_TELE));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))) 
+	if (ent->client->pers.has_adminprotect == 1)
 	{
 		strcpy(message_content[4],va("^3  %d ^7- AdminProtect: ^2yes\n",ADM_ADMPROTECT));
 	}
@@ -15091,7 +14763,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[4],va("^3  %d ^7- AdminProtect: ^1no\n",ADM_ADMPROTECT));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM))) 
+	if (ent->client->pers.has_entitysystem == 1)
 	{
 		strcpy(message_content[5],va("^3  %d ^7- EntitySystem: ^2yes\n",ADM_ENTITYSYSTEM));
 	}
@@ -15100,7 +14772,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[5],va("^3  %d ^7- EntitySystem: ^1no\n",ADM_ENTITYSYSTEM));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_SILENCE))) 
+	if (ent->client->pers.has_silence == 1)
 	{
 		strcpy(message_content[6],va("^3  %d ^7- Silence: ^2yes\n",ADM_SILENCE));
 	}
@@ -15109,7 +14781,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[6],va("^3  %d ^7- Silence: ^1no\n",ADM_SILENCE));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_CLIENTPRINT))) 
+	if (ent->client->pers.has_clientprint == 1)
 	{
 		strcpy(message_content[7],va("^3  %d ^7- ClientPrint: ^2yes\n",ADM_CLIENTPRINT));
 	}
@@ -15118,7 +14790,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[7],va("^3  %d ^7- ClientPrint: ^1no\n",ADM_CLIENTPRINT));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_RPMODE))) 
+	if (ent->client->pers.has_rpmode == 1)
 	{
 		strcpy(message_content[8],va("^3  %d ^7- RP Mode: ^2yes\n",ADM_RPMODE));
 	}
@@ -15127,7 +14799,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[8],va("^3  %d ^7- RP Mode: ^1no\n",ADM_RPMODE));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_KICK))) 
+	if (ent->client->pers.has_kick == 1)
 	{
 		strcpy(message_content[9],va("^3  %d ^7- Kick: ^2yes\n",ADM_KICK));
 	}
@@ -15136,7 +14808,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[9],va("^3  %d ^7- Kick: ^1no\n",ADM_KICK));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_PARALYZE))) 
+	if (ent->client->pers.has_paralyze == 1)
 	{
 		strcpy(message_content[10],va("^3 %d ^7- Paralyze: ^2yes\n",ADM_PARALYZE));
 	}
@@ -15145,7 +14817,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[10],va("^3 %d ^7- Paralyze: ^1no\n",ADM_PARALYZE));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_GIVE))) 
+	if (ent->client->pers.has_give == 1)
 	{
 		strcpy(message_content[11],va("^3 %d ^7- Give: ^2yes\n",ADM_GIVE));
 	}
@@ -15154,7 +14826,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[11],va("^3 %d ^7- Give: ^1no\n",ADM_GIVE));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_SCALE))) 
+	if (ent->client->pers.has_scale == 1)
 	{
 		strcpy(message_content[12],va("^3 %d ^7- Scale: ^2yes\n",ADM_SCALE));
 	}
@@ -15163,7 +14835,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[12],va("^3 %d ^7- Scale: ^1no\n",ADM_SCALE));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_PLAYERS))) 
+	if (ent->client->pers.has_players == 1)
 	{
 		strcpy(message_content[13],va("^3 %d ^7- Players: ^2yes\n",ADM_PLAYERS));
 	}
@@ -15172,7 +14844,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[13],va("^3 %d ^7- Players: ^1no\n",ADM_PLAYERS));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
+	if (ent->client->pers.has_duelarena == 1)
 	{
 		strcpy(message_content[14], va("^3 %d ^7- DuelArena: ^2yes\n", ADM_DUELARENA));
 	}
@@ -15181,7 +14853,7 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[14], va("^3 %d ^7- DuelArena: ^1no\n", ADM_DUELARENA));
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
+	if (ent->client->pers.has_customquest == 1)
 	{
 		strcpy(message_content[15], va("^3 %d ^7- Custom Quest: ^2yes\n", ADM_CUSTOMQUEST));
 	}
@@ -15293,7 +14965,7 @@ void Cmd_AdminList_f( gentity_t *ent ) {
 		{
 			gentity_t *player_ent = NULL;
 
-			if (!(ent->client->pers.bitvalue & (1 << ADM_GIVEADM)))
+			if (ent->client->pers.has_giveadmin == 0)
 			{ // zyk: admin command
 				trap->SendServerCommand( ent-g_entities, "print \"You must have GiveAdmin to use this admin command.\n\"" );
 				return;
@@ -15331,7 +15003,7 @@ Cmd_AdminUp_f
 ==================
 */
 void Cmd_AdminUp_f( gentity_t *ent ) {
-	if (ent->client->pers.bitvalue & (1 << ADM_GIVEADM))
+	if (ent->client->pers.has_giveadmin == 1)
 	{
 		char	arg1[MAX_STRING_CHARS];
 		char	arg2[MAX_STRING_CHARS];
@@ -15374,8 +15046,6 @@ void Cmd_AdminUp_f( gentity_t *ent ) {
 			g_entities[client_id].client->pers.bitvalue |= (1 << bitvaluecommand);
 		}
 
-		save_account(&g_entities[client_id], qfalse);
-
 		trap->SendServerCommand( ent-g_entities, "print \"Admin commands upgraded successfully.\n\"" );
 	}
 	else
@@ -15390,7 +15060,7 @@ Cmd_AdminDown_f
 ==================
 */
 void Cmd_AdminDown_f( gentity_t *ent ) {
-	if (ent->client->pers.bitvalue & (1 << ADM_GIVEADM))
+	if (ent->client->pers.has_giveadmin == 1)
 	{
 		char	arg1[MAX_STRING_CHARS];
 		char	arg2[MAX_STRING_CHARS];
@@ -15432,8 +15102,6 @@ void Cmd_AdminDown_f( gentity_t *ent ) {
 			g_entities[client_id].client->pers.bitvalue &= ~(1 << bitvaluecommand);
 		}
 
-		save_account(&g_entities[client_id], qfalse);
-
 		trap->SendServerCommand( ent-g_entities, "print \"Admin commands upgraded successfully.\n\"" );
 	}
 	else
@@ -15448,33 +15116,8 @@ Cmd_RpMode_f
 ==================
 */
 void Cmd_RpMode_f( gentity_t *ent ) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
-		return;
-	}
 
-	if (zyk_rp_mode.integer == 1)
-	{
-		int i = 0;
-
-		trap->Cvar_Set( "zyk_rp_mode", "0" );
-
-		for (i = 0; i < MAX_CLIENTS; i++)
-		{ // zyk: logout everyone in RPG Mode so they must reload their accounts
-			gentity_t *this_player = &g_entities[i];
-
-			if (this_player && this_player->client && this_player->client->sess.amrpgmode == 2)
-				this_player->client->sess.amrpgmode = 0;
-		}
-
-		trap->SendServerCommand( ent-g_entities, "print \"^3RPG System: ^7RP Mode ^1OFF^7\n\"" );
-	}
-	else
-	{
-		trap->Cvar_Set( "zyk_rp_mode", "1" );
-		trap->SendServerCommand( ent-g_entities, "print \"^3RPG System: ^7RP Mode ^2ON^7\n\"" );
-	}
+	return;
 }
 
 /*
@@ -15483,39 +15126,8 @@ Cmd_RpModeClass_f
 ==================
 */
 void Cmd_RpModeClass_f( gentity_t *ent ) {
-	char	arg1[MAX_STRING_CHARS];
-	char	arg2[MAX_STRING_CHARS];
-	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
-		return;
-	}
-
-	if ( trap->Argc() != 3 )
-	{ 
-		trap->SendServerCommand( ent-g_entities, "print \"You must write a player name or ID and the class number.\n\"" ); 
-		return; 
-	}
-
-	trap->Argv( 1,  arg1, sizeof( arg1 ) );
-	trap->Argv( 2,  arg2, sizeof( arg2 ) );
-	client_id = ClientNumberFromString( ent, arg1, qfalse ); 
-				
-	if (client_id == -1)
-	{
-		return;
-	}
-
-	if (g_entities[client_id].client->sess.amrpgmode != 2)
-	{
-		trap->SendServerCommand( ent-g_entities, va("print \"Player is not in RPG Mode\n\"") );
-		return;
-	}
-
-	do_change_class(&g_entities[client_id], atoi(arg2));
-	trap->SendServerCommand( ent-g_entities, va("print \"Changed target player class\n\"") );
+	return;
 }
 
 /*
@@ -15528,7 +15140,7 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
+	if (ent->client->pers.has_rpmode == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -15569,7 +15181,7 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
+	if (ent->client->pers.has_rpmode == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -15609,7 +15221,7 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
+	if (ent->client->pers.has_rpmode == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -15663,7 +15275,7 @@ Cmd_EntitySystem_f
 ==================
 */
 void Cmd_EntitySystem_f( gentity_t *ent ) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	if (ent->client->pers.has_entitysystem == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -15681,7 +15293,7 @@ void Cmd_AdmKick_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_KICK)))
+	if (ent->client->pers.has_kick == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -15786,7 +15398,7 @@ void Cmd_Paralyze_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_PARALYZE)))
+	if (ent->client->pers.has_paralyze == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -15846,7 +15458,7 @@ void Cmd_Players_f( gentity_t *ent ) {
 
 	strcpy(content,"ID - Name - IP - Type\n");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_PLAYERS)))
+	if (ent->client->pers.has_players == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -17328,26 +16940,22 @@ void Cmd_Magic_f( gentity_t *ent ) {
 			if (ent->client->sess.magic_more_disabled_powers & (1 << magic_power))
 			{
 				ent->client->sess.magic_more_disabled_powers &= ~(1 << magic_power);
-				save_account(ent, qtrue);
 				trap->SendServerCommand(ent->s.number, "print \"Enabled a magic power.\n\"");
 			}
 			else
 			{
 				ent->client->sess.magic_more_disabled_powers |= (1 << magic_power);
-				save_account(ent, qtrue);
 				trap->SendServerCommand(ent->s.number, "print \"Disabled a magic power.\n\"");
 			}
 		}
 		else if (ent->client->sess.magic_disabled_powers & (1 << magic_power))
 		{
 			ent->client->sess.magic_disabled_powers &= ~(1 << magic_power);
-			save_account(ent, qtrue);
 			trap->SendServerCommand(ent->s.number, "print \"Enabled a magic power.\n\"" );
 		}
 		else
 		{
 			ent->client->sess.magic_disabled_powers |= (1 << magic_power);
-			save_account(ent, qtrue);
 			trap->SendServerCommand(ent->s.number, "print \"Disabled a magic power.\n\"" );
 		}
 	}
@@ -17653,7 +17261,7 @@ void Cmd_DuelArena_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
+	if (ent->client->pers.has_duelarena == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
 		return;
@@ -17694,7 +17302,7 @@ Cmd_DuelPause_f
 ==================
 */
 void Cmd_DuelPause_f(gentity_t *ent) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
+	if (ent->client->pers.has_duelarena == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
 		return;
@@ -17912,7 +17520,7 @@ void Cmd_MeleeArena_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
+	if (ent->client->pers.has_duelarena == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
 		return;
@@ -18411,14 +18019,16 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				return;
 			}
 
-			add_new_char(ent);
+			//add_new_char(ent);
 
-			// zyk: saving the current char
-			strcpy(ent->client->sess.rpgchar, arg2);
-			create_new_character(ent);
+			//saving the current char
+			save_character_to_db(ent);
 
-			save_account(ent, qfalse);
-			save_account(ent, qtrue);
+			//strcpy(ent->client->sess.rpgchar, arg2);
+			//create the new char
+			create_new_character_to_db(ent, arg2,ent->client->sess.filename);
+			//load the new char
+			load_character_from_db(arg2, ent);
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7created!\n\"", ent->client->sess.rpgchar));
 			trap->SendServerCommand(-1, va("chat \"%s created the char: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
@@ -18460,7 +18070,6 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 			// zyk: saving the current char
 			strcpy(ent->client->sess.rpgchar, arg2);
-			save_account(ent, qfalse);
 
 			trap->SendServerCommand(ent->s.number, va("print \"Renamed to %s^7\n\"", ent->client->sess.rpgchar));
 		}
@@ -18947,7 +18556,7 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 	int i = 0;
 	int argc = trap->Argc();
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
+	if (ent->client->pers.has_customquest == 0)
 	{ // zyk: admin command
 		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
 		return;

@@ -2125,7 +2125,7 @@ extern void saberReactivate(gentity_t *saberent, gentity_t *saberOwner);
 extern void saberBackToOwner(gentity_t *saberent);
 extern void quest_get_new_player(gentity_t *ent);
 extern void try_finishing_race();
-extern void save_account(gentity_t *ent, qboolean save_char_file);
+extern void save_account_to_db();
 extern void remove_credits(gentity_t *ent, int credits);
 extern void zyk_NPC_Kill_f( char *name );
 extern gentity_t *Zyk_NPC_SpawnType(char *npc_type, int x, int y, int z, int yaw);

@@ -739,6 +739,23 @@ typedef struct clientPersistant_s {
 	vec3_t teleport_angles;
 
 	int	bitvalue; // zyk: player is considered as admin if bitvalue is > 0, because he has at least 1 admin command
+	int has_npc;
+	int has_noclip;
+	int has_giveadmin;
+	int has_teleport;
+	int has_adminprotect;
+	int has_entitysystem;
+	int has_silence;
+	int has_clientprint;
+	int has_rpmode;
+	int has_kick;
+	int has_paralyze;
+	int has_give;
+	int has_scale;
+	int has_players;
+	int has_duelarena;
+	int has_customquest;
+	int has_createcredits;
 	
 	int level; // zyk: RPG mode level
 	int level_up_score; // zyk: RPG mode Level Up Score
