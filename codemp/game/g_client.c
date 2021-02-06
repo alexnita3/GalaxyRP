@@ -2612,7 +2612,6 @@ and on transition between teams, but doesn't happen on respawns
 extern qboolean	gSiegeRoundBegun;
 extern qboolean	gSiegeRoundEnded;
 extern qboolean g_dontPenalizeTeam; //g_cmds.c
-extern void load_account(gentity_t *ent);
 extern void initialize_rpg_skills(gentity_t *ent);
 void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin);
 void ClientBegin( int clientNum, qboolean allowTeamReset ) {
@@ -2738,7 +2737,6 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 			level.bounty_quest_choose_target = qtrue;
 
 		// zyk: load account again
-		load_account(ent);
 
 		initialize_rpg_skills(ent);
 	}
@@ -3167,7 +3165,6 @@ Initializes all non-persistant parts of playerState
 */
 extern qboolean WP_HasForcePowers( const playerState_t *ps );
 extern void quest_get_new_player(gentity_t *ent);
-extern void clean_guardians(gentity_t *ent);
 extern void zyk_add_force_powers( gentity_t *ent );
 extern void zyk_add_guns( gentity_t *ent );
 extern void zyk_remove_force_powers( gentity_t *ent );
@@ -3860,7 +3857,6 @@ void ClientSpawn(gentity_t *ent) {
 	// zyk: if player is logged at spawn, load his skills
 	if (ent->client->sess.amrpgmode == 2)
 	{
-		clean_guardians(ent);
 
 		initialize_rpg_skills(ent);
 
@@ -4253,7 +4249,6 @@ void ClientDisconnect( int clientNum ) {
 
 	if (ent->client->pers.can_play_quest == 1)
 	{
-		clean_guardians(ent);
 		level.boss_battle_music_reset_timer = level.time + 1000;
 		quest_get_new_player(ent);
 	}
