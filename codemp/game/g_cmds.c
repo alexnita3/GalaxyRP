@@ -39,6 +39,7 @@ void Cmd_NPC_f( gentity_t *ent );
 void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin);
 
 const char DB_PATH[200] = "GalaxyRP/accounts/ACCOUNTS.DB";
+const char CHAR_DB_PATH[200] = "GalaxyRP/accounts/CHARACTERS.db";
 
 
 
@@ -109,17 +110,23 @@ DATABASE FUNCTIONS
 ==================
 */
 
-int run_db_query(const char*sql) {
+int run_db_query(const char*sql, qboolean character) {
 	sqlite3*DB;
 
 	sqlite3_config(SQLITE_CONFIG_URI, 0);
 
 	char* messageError;
-	int exit = sqlite3_open(DB_PATH, &DB);
+	int exit;
+	if (character == qtrue) {
+		sqlite3_open(CHAR_DB_PATH, &DB);
+	}
+	else {
+		sqlite3_open(DB_PATH, &DB);
+	}
 
 	exit = sqlite3_exec(DB, sql, NULL, 0, &messageError);
 	if (exit != SQLITE_OK) {
-		trap->SendServerCommand(-1, va("print \"%s\n\"", messageError));
+		trap->SendServerCommand(-1, va("print \"%s || %s\n\"", messageError, sql));
 		sqlite3_free(messageError);
 	}
 
@@ -132,8 +139,8 @@ int create_new_character_to_db(gentity_t *ent, char* char_name, char* account) {
 
 	char sql[3000];
 
-	strcpy(sql, va("INSERT INTO 'main'.'characters'('ID', 'account', 'char_name', 'nickname', 'model_name', 'level', 'skill_counter', 'skill_points', 'credits', 'jump', 'push', 'pull', 'speed', 'sense', 'saber_attack', 'saber_defense', 'saber_throw', 'absorb', 'heal', 'protect', 'mind_trick', 'team_heal', 'lightning', 'grip', 'drain', 'rage', 'team_energize', 'stun_baton_skill', 'blaster_pistol_skill', 'blaster_rifle_skill', 'disruptor_skill', 'bowcaster_skill', 'repeater_skill', 'demp2_skill', 'flachette_skill', 'rocket_launcher_skill', 'concussion_rifle_skill', 'bryar_pistol_skill', 'melee_skill', 'maxs_hield', 'shield_strength', 'health_strength', 'drain_shield', 'jetpack', 'sense_health', 'shield_heal', 'team_shield_heal', 'unique_skill', 'force_power', 'improvements', 'blaster_pack_upgrade', 'power_cell_upgrade', 'metallic_bolt_upgrade', 'rockets_upgrade', 'thermals_upgrade', 'tripmines_upgrade', 'detpacks_upgrade', 'holdableitems_upgrade', 'bountyhunter_upgrade', 'unique_ability_1', 'unique_ability_2', 'unique_ability_3', 'stealth_attacker_upgrade', 'force_gunner_upgrade', 'impact_reducer', 'flamethrower', 'power_cell_weapons_upgrade', 'blaster_pack_weapons_upgrade', 'metal_bolts_weapons_upgrade', 'rocket_weapons_upgrade', 'stun_baton_upgrade', 'armored_soldier_upgrade', 'jetpack_upgrade', 'force_guardian_upgrade', 'ammo_powercell', 'ammo_blaster', 'ammo_metal_bolts', 'ammo_rockets', 'ammo_emplaced', 'ammo_thermal', 'ammo_tripmine', 'ammo_detpack')"
-		"VALUES( NULL, '%s', '%s', '%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d);",
+	strcpy(sql, va("INSERT INTO 'main'.'characters'('account', 'char_name', 'nickname', 'model_name', 'level', 'skill_counter', 'skill_points', 'credits', 'jump', 'push', 'pull', 'speed', 'sense', 'saber_attack', 'saber_defense', 'saber_throw', 'absorb', 'heal', 'protect', 'mind_trick', 'team_heal', 'lightning', 'grip', 'drain', 'rage', 'team_energize', 'stun_baton_skill', 'blaster_pistol_skill', 'blaster_rifle_skill', 'disruptor_skill', 'bowcaster_skill', 'repeater_skill', 'demp2_skill', 'flachette_skill', 'rocket_launcher_skill', 'concussion_rifle_skill', 'bryar_pistol_skill', 'melee_skill', 'maxs_hield', 'shield_strength', 'health_strength', 'drain_shield', 'jetpack', 'sense_health', 'shield_heal', 'team_shield_heal', 'unique_skill', 'force_power', 'improvements', 'blaster_pack_upgrade', 'power_cell_upgrade', 'metallic_bolt_upgrade', 'rockets_upgrade', 'thermals_upgrade', 'tripmines_upgrade', 'detpacks_upgrade', 'holdableitems_upgrade', 'bountyhunter_upgrade', 'unique_ability_1', 'unique_ability_2', 'unique_ability_3', 'stealth_attacker_upgrade', 'force_gunner_upgrade', 'impact_reducer', 'flamethrower', 'power_cell_weapons_upgrade', 'blaster_pack_weapons_upgrade', 'metal_bolts_weapons_upgrade', 'rocket_weapons_upgrade', 'stun_baton_upgrade', 'armored_soldier_upgrade', 'jetpack_upgrade', 'force_guardian_upgrade', 'ammo_powercell', 'ammo_blaster', 'ammo_metal_bolts', 'ammo_rockets', 'ammo_emplaced', 'ammo_thermal', 'ammo_tripmine', 'ammo_detpack')"
+		"VALUES( '%s', '%s', '%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d);",
 		account, char_name, ent->client->pers.netname, ent->client->modelname, 1, 0, 1, 100,
 		0, //jump
 		0, //push
@@ -211,7 +218,89 @@ int create_new_character_to_db(gentity_t *ent, char* char_name, char* account) {
 
 	));
 
-	run_db_query(sql);
+	run_db_query(sql, qtrue);
+
+	// log them in as well to save DB performance (ik it's awful bit it is what it is, the DB breaks otherwise)
+
+	strcpy(ent->client->sess.rpgchar,char_name);
+	ent->client->sess.amrpgmode = 2;
+	ent->client->pers.level = 1;
+	ent->client->pers.skill_counter = 0;
+	ent->client->pers.skillpoints = 1;
+	ent->client->pers.credits = 100;
+	ent->client->pers.skill_levels[0] = 0; //jump
+	ent->client->pers.skill_levels[1] = 0; //push
+	ent->client->pers.skill_levels[2] = 0; //pull
+	ent->client->pers.skill_levels[3] = 0; //speed
+	ent->client->pers.skill_levels[4] = 0; //sense
+	ent->client->pers.skill_levels[5] = 0; //saberattack
+	ent->client->pers.skill_levels[6] = 0; //saberdefense
+	ent->client->pers.skill_levels[7] = 0; //saberthrow
+	ent->client->pers.skill_levels[8] = 0; //absord
+	ent->client->pers.skill_levels[9] = 0; //heal
+	ent->client->pers.skill_levels[10] = 0; //protect
+	ent->client->pers.skill_levels[11] = 0; //mindtrick
+	ent->client->pers.skill_levels[12] = 0; //teamheal
+	ent->client->pers.skill_levels[13] = 0; //lightning
+	ent->client->pers.skill_levels[14] = 0; //grip
+	ent->client->pers.skill_levels[15] = 0; //drain
+	ent->client->pers.skill_levels[16] = 0; //rage
+	ent->client->pers.skill_levels[17] = 0; //teamenergize
+	ent->client->pers.skill_levels[18] = 0; //stunbatonskill
+	ent->client->pers.skill_levels[19] = 0; //blasterpistolskill
+	ent->client->pers.skill_levels[20] = 0; //blasterrifleskill
+	ent->client->pers.skill_levels[21] = 0; //disruptorskill
+	ent->client->pers.skill_levels[22] = 0; //bowcasterskill
+	ent->client->pers.skill_levels[23] = 0; //repeaterskill
+	ent->client->pers.skill_levels[24] = 0; //demp2skill
+	ent->client->pers.skill_levels[25] = 0; //flachetteskill
+	ent->client->pers.skill_levels[26] = 0; //rocketlauncherskill
+	ent->client->pers.skill_levels[27] = 0; //consussionrifleskill
+	ent->client->pers.skill_levels[28] = 0; //bryarpistolskill
+	ent->client->pers.skill_levels[29] = 0; //meleeskill
+	ent->client->pers.skill_levels[30] = 0; //maxshield
+	ent->client->pers.skill_levels[31] = 0; //shieldstrength
+	ent->client->pers.skill_levels[32] = 0; //healthstrength
+	ent->client->pers.skill_levels[33] = 0; //drainshield
+	ent->client->pers.skill_levels[34] = 0; //jetpack
+	ent->client->pers.skill_levels[35] = 0; //sensehealth
+	ent->client->pers.skill_levels[36] = 0; //shieldheal
+	ent->client->pers.skill_levels[37] = 0; //teamshieldheal
+	ent->client->pers.skill_levels[38] = 0; //uniqueskill
+	ent->client->pers.skill_levels[54] = 0; //forcepower
+	ent->client->pers.skill_levels[55] = 0; //improvements
+	ent->client->pers.skill_levels[39] = 0; //blasterpackupgrade
+	ent->client->pers.skill_levels[40] = 0; //powercellupgrade
+	ent->client->pers.skill_levels[41] = 0; //metallicboltupgrade
+	ent->client->pers.skill_levels[42] = 0; //rocketsupgrade
+	ent->client->pers.skill_levels[43] = 0; //thermalsupgrade
+	ent->client->pers.skill_levels[44] = 0; //tripmineupgrade
+	ent->client->pers.skill_levels[45] = 0; //detpacksupgrade
+	//0, //TODO holdableitemsupgrade
+	//0, //TODO bountyhunterupgrade
+	//0, //TODO unique1
+	//0, //TODO unique2
+	//0, //TODO unique3
+	//0, //TODO stealthattacketupgrade
+	//0, //TODO forcegunnerupgrade
+	//0, //TODO impactreducer
+	//0, //TODO flamethrower
+	//0, //TODO powercellweponupgrade
+	//0, //TODO blasterpackweponupgrade
+	//0, //TODO metalboltsweponupgrade
+	//0, //TODO rocketweponupgrade
+	//0, //TODO stunbatonweponupgrade
+	//0, //TODO armoredsoldierupgrade
+	//0, //TODO jetpackupgrade
+	//0, //TODO forceguardianupgrade
+	ent->client->ps.ammo[AMMO_POWERCELL] = 0;
+	ent->client->ps.ammo[AMMO_BLASTER] = 50;
+	ent->client->ps.ammo[AMMO_METAL_BOLTS] = 0;
+	ent->client->ps.ammo[AMMO_ROCKETS] = 0;
+	ent->client->ps.ammo[AMMO_EMPLACED] = 0;
+	ent->client->ps.ammo[AMMO_THERMAL] = 0;
+	ent->client->ps.ammo[AMMO_TRIPMINE] = 0;
+	ent->client->ps.ammo[AMMO_DETPACK] = 0;
 
 	return 0;
 
@@ -384,7 +473,7 @@ int save_character_to_db(gentity_t *ent) {
 		ent->client->ps.ammo[AMMO_DETPACK],
 		char_name));
 
-	run_db_query(sql);
+	run_db_query(sql, qtrue);
 
 	return 0;
 
@@ -402,7 +491,7 @@ int load_character_from_db(const char* charName, gentity_t *ent) {
 	sqlite3_config(SQLITE_CONFIG_URI, 0);
 
 	char* messageError;
-	int exit = sqlite3_open(DB_PATH, &DB);
+	int exit = sqlite3_open(CHAR_DB_PATH, &DB);
 
 	sqlite3_prepare_v2(DB, sql, -1, &stmt, 0);
 
@@ -504,7 +593,7 @@ int delete_character_from_db(char* char_name) {
 
 	strcpy(sql, va("DELETE FROM 'main'.'characters' WHERE char_name = '%s';", char_name));
 
-	run_db_query(sql);
+	run_db_query(sql, qtrue);
 
 	return 0;
 }
@@ -517,7 +606,7 @@ qboolean does_char_exist(char* char_name) {
 	sqlite3_stmt* stmt;
 
 	char* messageError;
-	int exit = sqlite3_open(DB_PATH, &DB);
+	int exit = sqlite3_open(CHAR_DB_PATH, &DB);
 
 	sqlite3_prepare_v2(DB, sql, -1, &stmt, 0);
 
@@ -550,7 +639,7 @@ qboolean is_char_owned_by(char* char_name, char* username) {
 	sqlite3_stmt* stmt;
 
 	char* messageError;
-	int exit = sqlite3_open(DB_PATH, &DB);
+	int exit = sqlite3_open(CHAR_DB_PATH, &DB);
 
 	sqlite3_prepare_v2(DB, sql, -1, &stmt, 0);
 
@@ -595,8 +684,28 @@ int create_new_account_to_db(gentity_t *ent, char* username, char* password) {
 		username
 	));
 
-	trap->SendServerCommand(-1, va("print \"%s\n\"", sql));
-	run_db_query(sql);
+	trap->SendServerCommand(-1, va("print \"DEBUG %s.\n\"", sql));
+	run_db_query(sql, qfalse);
+
+	strcpy(ent->client->pers.password, password);
+	strcpy(ent->client->sess.filename, username);
+	ent->client->pers.has_npc = 0;
+	ent->client->pers.has_noclip = 0;
+	ent->client->pers.has_giveadmin = 0;
+	ent->client->pers.has_teleport = 0;
+	ent->client->pers.has_adminprotect = 0;
+	ent->client->pers.has_entitysystem = 0;
+	ent->client->pers.has_silence = 0;
+	ent->client->pers.has_clientprint = 0;
+	ent->client->pers.has_rpmode = 0;
+	ent->client->pers.has_kick = 0;
+	ent->client->pers.has_paralyze = 0;
+	ent->client->pers.has_give = 0;
+	ent->client->pers.has_scale = 0;
+	ent->client->pers.has_players = 0;
+	ent->client->pers.has_duelarena = 0;
+	ent->client->pers.has_customquest = 0;
+	strcpy(ent->client->sess.rpgchar, username);
 
 	//create_new_character_to_db(ent, username, username);
 
@@ -657,7 +766,7 @@ int save_account_to_db(gentity_t *ent, char* username) {
 		ent->client->sess.filename
 	));
 
-	run_db_query(sql);
+	run_db_query(sql, qfalse);
 
 	return 0;
 }
@@ -791,7 +900,7 @@ qboolean does_character_belong_to_user(char* username, char* char_name) {
 	sqlite3_stmt* stmt;
 
 	char* messageError;
-	int exit = sqlite3_open(DB_PATH, &DB);
+	int exit = sqlite3_open(CHAR_DB_PATH, &DB);
 
 	sqlite3_prepare_v2(DB, sql, -1, &stmt, 0);
 
@@ -6468,10 +6577,10 @@ void Cmd_DateTime_f( gentity_t *ent ) {
 }
 
 // zyk: adds a new RPG char with default values
-void add_new_char(gentity_t *ent)
+void add_new_char(gentity_t *ent, char* char_name)
 {
-	create_new_character_to_db(ent, ent->client->sess.rpgchar, ent->client->sess.filename);
-	load_character_from_db(ent->client->sess.rpgchar, ent);
+	trap->SendServerCommand(-1, va("print \"DEBUG char name = %s, account = %s.\n\"", char_name, ent->client->sess.filename));
+	create_new_character_to_db(ent, char_name, ent->client->sess.filename);
 }
 
 // zyk: creates the directory correctly depending on the OS
@@ -6523,13 +6632,6 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 		trap->SendServerCommand( ent-g_entities, va("print \"Password has a maximum of %d characters.\n\"", MAX_ACC_NAME_SIZE) );
 		return;
 	}
-	trap->SendServerCommand(-1, "print \"DEBUG Before does_account_exist.\n\"");
-	if (does_account_exist(arg1) == qtrue)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Login is used by another player.\n\"" );
-		return;
-	}
-	trap->SendServerCommand(-1, "print \"DEBUG After does_account_exist.\n\"");
 
 	strcpy(ent->client->sess.filename, arg1);
 	strcpy(ent->client->pers.password, arg2);
@@ -6539,20 +6641,19 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 	ent->client->pers.player_settings = 0;
 	ent->client->pers.bitvalue = 0;
 
+	trap->SendServerCommand(-1, "print \"DEBUG Before add_new_char.\n\"");
+	add_new_char(ent, ent->client->sess.filename);
+	trap->SendServerCommand(-1, "print \"DEBUG After add_new_char.\n\"");
+
 	// zyk: saving the default char
 	strcpy(ent->client->sess.rpgchar, arg1);
 
 	trap->SendServerCommand(-1, "print \"DEBUG Before create_new_account_to_db.\n\"");
 	create_new_account_to_db(ent, arg1, arg2);
 	trap->SendServerCommand(-1, "print \"DEBUG After create_new_account_to_db.\n\"");
-	trap->SendServerCommand(-1, "print \"DEBUG Before load_account_from_db.\n\"");
-	load_account_from_db(arg1, ent);
-	trap->SendServerCommand(-1, "print \"DEBUG After load_account_from_db.\n\"");
 
-	add_new_char(ent);
-
-	save_account(ent, qfalse);
-	save_account(ent, qtrue);
+	//save_account(ent, qfalse);
+	//save_account(ent, qtrue);
 
 	initialize_rpg_skills(ent);
 
@@ -18335,7 +18436,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 			// setting char name
 			strcpy(ent->client->sess.rpgchar, arg2);
-			add_new_char(ent);
+			add_new_char(ent, arg2);
 
 			save_account(ent, qfalse);
 			save_account(ent, qtrue);
