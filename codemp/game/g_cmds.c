@@ -17688,7 +17688,7 @@ void Cmd_News_f(gentity_t *ent) {
 	}
 
 	strcpy(file_content, "");
-	strcpy(content, "");
+	strcpy(content, ""); 
 	
 	if (news_file != NULL)
 	{
