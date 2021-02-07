@@ -11981,7 +11981,8 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 
 	if (create == 1)
 	{
-		if (ent->client->pers.bitvalue != 65535)
+		// player must have adminup permissions
+		if (ent->client->pers.bitvalue & (1 << ADM_GIVEADM))
 		{
 			trap->SendServerCommand(ent - g_entities, "print \"You do not have the correct admin permission to create credits.\n\"");
 			return;
