@@ -1743,8 +1743,8 @@ void ForceSeeing( gentity_t *self )
 
 	WP_ForcePowerStart( self, FP_SEE, 0 );
 
-	G_Sound( self, CHAN_AUTO, G_SoundIndex("sound/weapons/force/see.wav") );
-	G_Sound( self, TRACK_CHANNEL_5, seeLoopSound );
+	//G_Sound( self, CHAN_AUTO, G_SoundIndex("sound/weapons/force/see.wav") );
+	//G_Sound( self, TRACK_CHANNEL_5, seeLoopSound );
 }
 
 void ForceProtect( gentity_t *self )
@@ -1820,7 +1820,7 @@ void ForceAbsorb( gentity_t *self )
 
 	WP_ForcePowerStart( self, FP_ABSORB, 0 );
 	G_PreDefSound(self->client->ps.origin, PDSOUND_ABSORB);
-	G_Sound( self, TRACK_CHANNEL_3, absorbLoopSound );
+	//G_Sound( self, TRACK_CHANNEL_3, absorbLoopSound );
 }
 
 void ForceRage( gentity_t *self )
@@ -3054,7 +3054,7 @@ void ForceTelepathy(gentity_t *self)
 				WP_ForcePowerStart( self, FP_TELEPATHY, 0 );
 			}
 
-			G_Sound( self, CHAN_AUTO, G_SoundIndex("sound/weapons/force/distract.wav") );
+			//G_Sound( self, CHAN_AUTO, G_SoundIndex("sound/weapons/force/distract.wav") );
 
 			self->client->ps.forceHandExtend = HANDEXTEND_FORCEPUSH;
 			self->client->ps.forceHandExtendTime = level.time + 1000;
@@ -3164,7 +3164,7 @@ void ForceTelepathy(gentity_t *self)
 				WP_ForcePowerStart( self, FP_TELEPATHY, 0 );
 			}
 
-			G_Sound( self, CHAN_AUTO, G_SoundIndex("sound/weapons/force/distract.wav") );
+			//G_Sound( self, CHAN_AUTO, G_SoundIndex("sound/weapons/force/distract.wav") );
 
 			self->client->ps.forceHandExtend = HANDEXTEND_FORCEPUSH;
 			self->client->ps.forceHandExtendTime = level.time + 1000;
@@ -4256,7 +4256,7 @@ void WP_ForcePowerStop( gentity_t *self, forcePowers_t forcePower )
 
 		if (wasActive & (1 << FP_TELEPATHY))
 		{
-			G_Sound( self, CHAN_AUTO, G_SoundIndex("sound/weapons/force/distractstop.wav") );
+			//G_Sound( self, CHAN_AUTO, G_SoundIndex("sound/weapons/force/distractstop.wav") );
 		}
 		self->client->ps.fd.forceMindtrickTargetIndex = 0;
 		self->client->ps.fd.forceMindtrickTargetIndex2 = 0;
