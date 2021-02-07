@@ -17647,6 +17647,66 @@ void Cmd_Tutorial_f(gentity_t *ent) {
 
 /*
 ==================
+Cmd_News_f
+==================
+*/
+void Cmd_News_f(gentity_t *ent) {
+	int page = 1; // zyk: page the user wants to see
+	int i = 0;
+	int results_per_page = zyk_list_cmds_results_per_page.integer; // zyk: number of results per page
+	char arg1[MAX_STRING_CHARS];
+	char file_content[MAX_STRING_CHARS * 4];
+	char content[MAX_STRING_CHARS];
+	FILE *news_file = NULL;
+
+	if (trap->Argc() > 2)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /news <neutral/jedi/sith> (argument is optional)\n\"");
+		return;
+	}
+
+	if (trap->Argc() < 2)
+	{
+		news_file = fopen("GalaxyRP/news.txt", "r");
+	}
+	else {
+	
+		trap->Argv(1, arg1, sizeof(arg1));
+		if (strcmp(arg1, "republic") != 0 && strcmp(arg1, "sith") != 0 && strcmp(arg1, "jedi") != 0) {
+			trap->SendServerCommand(ent->s.number, "print \"Usage: /news <neutral/jedi/sith> (argument is optional)\n\"");
+			return;
+		}
+		if (strcmp(arg1, "republic") == 0) {
+			news_file = fopen("GalaxyRP/news_republic.txt", "r");
+		}
+		if (strcmp(arg1, "sith") == 0) {
+			news_file = fopen("GalaxyRP/news_sith.txt", "r");
+		}
+		if (strcmp(arg1, "jedi") == 0) {
+			news_file = fopen("GalaxyRP/news_jedi.txt", "r");
+		}
+	}
+
+	strcpy(file_content, "");
+	strcpy(content, "");
+	
+	if (news_file != NULL)
+	{
+
+		if (fgets(content, sizeof(content), news_file) != NULL) {
+			strcpy(file_content, va("%s%s", file_content, content));
+			fclose(news_file);
+			trap->SendServerCommand(ent->s.number, va("print \"\n^2NEWS: ^3%s\n\"", file_content));
+		}
+	}
+	else
+	{
+		trap->SendServerCommand(ent->s.number, "print \"No important news.\n\"");
+	}
+}
+
+/*
+==================
 Cmd_QuestSkip_f
 ==================
 */
@@ -18949,6 +19009,7 @@ command_t commands[] = {
 	{ "meleemode",			Cmd_MeleeMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "modversion",			Cmd_ModVersion_f,			CMD_NOINTERMISSION },
 	{ "new",				Cmd_NewAccount_f,			CMD_NOINTERMISSION },
+	{ "news",				Cmd_News_f,					0 },
 	{ "noclip",				Cmd_Noclip_f,				CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "nofight",			Cmd_NoFight_f,				CMD_NOINTERMISSION },
 	{ "notarget",			Cmd_Notarget_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
