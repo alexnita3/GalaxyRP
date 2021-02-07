@@ -5522,6 +5522,54 @@ int number_of_crystals(gentity_t *ent)
 	return number_of_crystals;
 }
 
+void load_ammo_from_file(gentity_t *ent) {
+
+	FILE *ammo_file;
+	char content[128];
+
+	ammo_file = fopen(va("GalaxyRP/accounts/%s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
+
+	// alex: load ammo from separate file at spawn
+	if (ammo_file != NULL)
+	{
+		fscanf(ammo_file, "%s", content);
+		int ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_BLASTER = %d\n\"", ammo));
+		ent->client->ps.ammo[AMMO_BLASTER] = ammo;
+
+		fscanf(ammo_file, "%s", content);
+		ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_POWERCELL = %d \n\"", ammo));
+		ent->client->ps.ammo[AMMO_POWERCELL] = ammo;
+
+		fscanf(ammo_file, "%s", content);
+		ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_METAL_BOLTS = %d \n\"", ammo));
+		ent->client->ps.ammo[AMMO_METAL_BOLTS] = ammo;
+
+		fscanf(ammo_file, "%s", content);
+		ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_ROCKETS = %d \n\"", ammo));
+		ent->client->ps.ammo[AMMO_ROCKETS] = ammo;
+
+		fscanf(ammo_file, "%s", content);
+		ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_THERMAL = %d \n\"", ammo));
+		ent->client->ps.ammo[AMMO_THERMAL] = ammo;
+
+		fscanf(ammo_file, "%s", content);
+		ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_TRIPMINE = %d \n\"", ammo));
+		ent->client->ps.ammo[AMMO_TRIPMINE] = ammo;
+
+		fscanf(ammo_file, "%s", content);
+		ammo = atoi(content);
+		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_DETPACK = %d \n\"", ammo));
+		ent->client->ps.ammo[AMMO_DETPACK] = ammo;
+	}
+}
+
+
 // zyk: initialize RPG skills of this player
 void initialize_rpg_skills(gentity_t *ent)
 {
@@ -5826,32 +5874,7 @@ void initialize_rpg_skills(gentity_t *ent)
 		FILE *account_file;
 		char content[128];
 
-		account_file = fopen(va("GalaxyRP/accounts/%s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
-
-		// alex: load ammo from separate file at spawn
-		if (account_file != NULL)
-		{
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_BLASTER] = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_POWERCELL] = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_METAL_BOLTS] = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_ROCKETS] = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_THERMAL] = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_TRIPMINE] = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->ps.ammo[AMMO_DETPACK] = atoi(content);
-		}
+		load_ammo_from_file(ent);
 		
 		if (ent->client->pers.rpg_class == 2)
 		{ // zyk: modifying max ammo if the player is a Bounty Hunter
@@ -18055,6 +18078,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			save_account(ent, qfalse);
 
 			load_account(ent);
+			load_ammo_from_file(ent);
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7loaded!\n\"", ent->client->sess.rpgchar));
 			trap->SendServerCommand(-1, va("chat \"%s switched to char: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
