@@ -2132,6 +2132,7 @@ extern gentity_t *Zyk_NPC_SpawnType(char *npc_type, int x, int y, int z, int yaw
 extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 extern void player_restore_force(gentity_t *ent);
 extern void load_custom_quest_mission();
+
 void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int meansOfDeath ) {
 	gentity_t	*ent;
 	int			anim;

@@ -501,8 +501,6 @@ int load_character_from_db(const char* charName, gentity_t *ent) {
 		//if id is null, don't get the next line
 		if (sqlite3_column_int(stmt, 0)) {
 
-			trap->SendServerCommand(-1, va("print \"DEBUG Here %d.\n\"", sqlite3_column_int(stmt, 8)));
-
 			// set the rpgmode to logged in
 			ent->client->sess.amrpgmode == 2;
 
@@ -694,7 +692,6 @@ int create_new_account_to_db(gentity_t *ent, char* username, char* password) {
 		username
 	));
 
-	trap->SendServerCommand(-1, va("print \"DEBUG %s.\n\"", sql));
 	run_db_query(sql, qfalse);
 
 	strcpy(ent->client->pers.password, password);
@@ -792,14 +789,11 @@ int load_account_from_db(char* username, gentity_t *ent) {
 	char* messageError;
 	int exit = sqlite3_open(DB_PATH, &DB);
 
-	trap->SendServerCommand(-1, va("print \"DEBUG Sql: %s .\n\"", sql));
-
 	sqlite3_prepare_v2(DB, sql, -1, &stmt, 0);
 
 	unsigned char dbPassword[200];
 
 	while (sqlite3_step(stmt)) {
-		trap->SendServerCommand(-1, va("print \"DEBUG column: %s .\n\"", sqlite3_column_text(stmt, 1)));
 		if (strcmp(sqlite3_column_text(stmt, 1), "") != 0) {
 			strcpy(ent->client->pers.password, sqlite3_column_text(stmt, 1));
 			strcpy(ent->client->sess.filename, sqlite3_column_text(stmt, 2));
@@ -5883,13 +5877,9 @@ void zyk_load_common_settings(gentity_t *ent)
 // zyk: loads the player account
 void load_account(gentity_t *ent)
 {
-	trap->SendServerCommand(-1, va("print \"DEBUG Before load_account_from_db Username = %s.\n\"", ent->client->sess.filename));
 	load_account_from_db(ent->client->sess.filename, ent);
-	trap->SendServerCommand(-1, "print \"DEBUG After load_account_from_db.\n\"");
 	// load char with the same name as the account
-	trap->SendServerCommand(-1, "print \"DEBUG Before load_character_from_db.\n\"");
 	load_character_from_db(ent->client->sess.filename, ent);
-	trap->SendServerCommand(-1, "print \"DEBUG After load_character_from_db.\n\"");
 }
 
 // zyk: saves info into the player account file. If save_char_file is qtrue, this function must save the char file
@@ -6608,7 +6598,6 @@ void Cmd_DateTime_f( gentity_t *ent ) {
 // zyk: adds a new RPG char with default values
 void add_new_char(gentity_t *ent, char* char_name)
 {
-	trap->SendServerCommand(-1, va("print \"DEBUG char name = %s, account = %s.\n\"", char_name, ent->client->sess.filename));
 	create_new_character_to_db(ent, char_name, ent->client->sess.filename);
 }
 
@@ -6628,7 +6617,6 @@ Cmd_NewAccount_f
 ==================
 */
 void Cmd_NewAccount_f( gentity_t *ent ) {
-	trap->SendServerCommand(-1, "print \"DEBUG help.\n\"");
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
 	char content[1024];
@@ -6670,16 +6658,12 @@ void Cmd_NewAccount_f( gentity_t *ent ) {
 	ent->client->pers.player_settings = 0;
 	ent->client->pers.bitvalue = 0;
 
-	trap->SendServerCommand(-1, "print \"DEBUG Before add_new_char.\n\"");
 	add_new_char(ent, ent->client->sess.filename);
-	trap->SendServerCommand(-1, "print \"DEBUG After add_new_char.\n\"");
 
 	// zyk: saving the default char
 	strcpy(ent->client->sess.rpgchar, arg1);
 
-	trap->SendServerCommand(-1, "print \"DEBUG Before create_new_account_to_db.\n\"");
 	create_new_account_to_db(ent, arg1, arg2);
-	trap->SendServerCommand(-1, "print \"DEBUG After create_new_account_to_db.\n\"");
 
 	//save_account(ent, qfalse);
 	//save_account(ent, qtrue);
@@ -6932,9 +6916,7 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 		strcpy(ent->client->sess.filename, arg1);
 		strcpy(ent->client->pers.password, arg2);
 		
-		trap->SendServerCommand(-1, "print \"DEBUG Before load_account.\n\"");
 		load_account(ent);
-		trap->SendServerCommand(-1, "print \"DEBUG Before load_account.\n\"");
 
 		trap->SendServerCommand( ent-g_entities, "print \"^7Account loaded succesfully. Use command ^3/list^7.\n\"" );
 		trap->SendServerCommand(-1, va("chat \"%s Logged in as: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
@@ -6943,13 +6925,10 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 
 		initialize_rpg_skills(ent);
 
-		trap->SendServerCommand(-1, "print \"DEBUG Before G_Kill.\n\"");
 		if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
 		{ // this command must kill the player if he is not in spectator mode to prevent exploits
-			_sleep(5000);
 			G_Kill(ent);
 		}
-		trap->SendServerCommand(-1, "print \"DEBUG After G_Kill.\n\"");
 	}
 	else
 	{
