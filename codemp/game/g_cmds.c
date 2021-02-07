@@ -662,6 +662,40 @@ qboolean is_char_owned_by(char* char_name, char* username) {
 	return qfalse;
 }
 
+int list_characters_by_account(gentity_t *ent) {
+
+	char username[200];
+	char sql[999];
+	strcpy(sql, va("SELECT char_name FROM 'main'.'characters' WHERE account = '%s';", username));
+	strcpy(username, ent->client->sess.filename);
+
+	sqlite3*DB;
+	sqlite3_stmt* stmt;
+
+	sqlite3_config(SQLITE_CONFIG_URI, 0);
+
+	char* messageError;
+	int exit = sqlite3_open(CHAR_DB_PATH, &DB);
+
+	sqlite3_prepare_v2(DB, sql, -1, &stmt, 0);
+
+	while (sqlite3_step(stmt)) {
+
+		//if id is null, don't get the next line
+		if (sqlite3_column_int(stmt, 0)) {
+			trap->SendServerCommand(ent->s.number, va("print \"\n %s \n\"", sqlite3_column_text(stmt, 0)));
+			sqlite3_close(DB);
+			return 0;
+		}
+		else {
+			sqlite3_close(DB);
+			return 0;
+		}
+	}
+
+	sqlite3_close(DB);
+	return 0;
+}
 
 int create_new_account_to_db(gentity_t *ent, char* username, char* password) {
 
@@ -18390,7 +18424,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 	if (argc == 1)
 	{ // zyk: lists the chars and commands
-		//trap->SendServerCommand(ent->s.number, va("print \"\n^7Using %s\n\n^7%s\n^3/rpgchar new <charname>: ^7creates a new char\n^3/rpgchar rename <new name>: ^7renames current char\n^3/rpgchar duplicate: ^7creates a copy of the current char in use\n^3/rpgchar use <charname>: ^7uses this char\n^3/rpgchar delete <charname>: ^7removes this char\n^3/rpgchar migrate <charname> <login> <password>: ^7moves char to account with this login and password\n\"", ent->client->sess.rpgchar, zyk_get_rpg_chars(ent, "\n")));
+		list_characters_by_account(ent);
 	}
 	else
 	{
@@ -18406,11 +18440,6 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 			trap->SendServerCommand(ent->s.number, "print \"This command requires at least one more argument\n\"");
 			return;
 		}
-
-		/*if (Q_stricmp(arg1, "duplicate") != 0)
-		{
-			trap->Argv(2, arg2, sizeof(arg2));
-		}*/
 
 		if (Q_stricmp(arg1, "new") == 0)
 		{
