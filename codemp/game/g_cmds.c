@@ -5569,6 +5569,7 @@ void load_ammo_from_file(gentity_t *ent) {
 	}
 }
 
+
 // zyk: initialize RPG skills of this player
 void initialize_rpg_skills(gentity_t *ent)
 {
@@ -5800,103 +5801,75 @@ void initialize_rpg_skills(gentity_t *ent)
 		ent->client->pers.hunter_quest_messages = 0;
 
 		// zyk: loading initial RPG weapons
-		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_STUN_BATON))) {
-			//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_STUN_BATON \n\"");
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_STUN_BATON)) && ent->client->pers.skill_levels[18] > 0)
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_STUN_BATON);
-		}
-		//if (ent->client->pers.skill_levels[18] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_STUN_BATON);
+		if (ent->client->pers.skill_levels[18] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_STUN_BATON);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BRYAR_PISTOL))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_BRYAR_PISTOL \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
-			}
-		//if (ent->client->pers.skill_levels[19] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_PISTOL);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BRYAR_PISTOL)) && ent->client->pers.skill_levels[19] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
+		if (ent->client->pers.skill_levels[19] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_PISTOL);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BLASTER))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_BLASTER \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER);
-			}
-		//if (ent->client->pers.skill_levels[20] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BLASTER);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BLASTER)) && ent->client->pers.skill_levels[20] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER);
+		if (ent->client->pers.skill_levels[20] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BLASTER);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DISRUPTOR))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_DISRUPTOR \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DISRUPTOR);
-			}
-		//if (ent->client->pers.skill_levels[21] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DISRUPTOR);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DISRUPTOR)) && ent->client->pers.skill_levels[21] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DISRUPTOR);
+		if (ent->client->pers.skill_levels[21] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DISRUPTOR);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BOWCASTER))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_BOWCASTER \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BOWCASTER);
-			}
-		//if (ent->client->pers.skill_levels[22] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BOWCASTER);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BOWCASTER)) && ent->client->pers.skill_levels[22] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BOWCASTER);
+		if (ent->client->pers.skill_levels[22] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BOWCASTER);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_REPEATER))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_REPEATER \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_REPEATER);
-			}
-		//if (ent->client->pers.skill_levels[23] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_REPEATER);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_REPEATER)) && ent->client->pers.skill_levels[23] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_REPEATER);
+		if (ent->client->pers.skill_levels[23] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_REPEATER);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DEMP2))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_DEMP2 \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DEMP2);
-			}
-		//if (ent->client->pers.skill_levels[24] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DEMP2);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DEMP2)) && ent->client->pers.skill_levels[24] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DEMP2);
+		if (ent->client->pers.skill_levels[24] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DEMP2);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_FLECHETTE))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_FLECHETTE \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_FLECHETTE);
-			}
-		//if (ent->client->pers.skill_levels[25] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_FLECHETTE);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_FLECHETTE)) && ent->client->pers.skill_levels[25] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_FLECHETTE);
+		if (ent->client->pers.skill_levels[25] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_FLECHETTE);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_ROCKET_LAUNCHER))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_ROCKET_LAUNCHER \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_ROCKET_LAUNCHER);
-			}
-		//if (ent->client->pers.skill_levels[26] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_ROCKET_LAUNCHER);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_ROCKET_LAUNCHER)) && ent->client->pers.skill_levels[26] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_ROCKET_LAUNCHER);
+		if (ent->client->pers.skill_levels[26] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_ROCKET_LAUNCHER);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_CONCUSSION))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_CONCUSSION \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_CONCUSSION);
-			}
-		//if (ent->client->pers.skill_levels[27] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_CONCUSSION);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_CONCUSSION)) && ent->client->pers.skill_levels[27] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_CONCUSSION);
+		if (ent->client->pers.skill_levels[27] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_CONCUSSION);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BRYAR_OLD))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_BRYAR_OLD \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_OLD);
-			}
-		//if (ent->client->pers.skill_levels[28] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_OLD);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BRYAR_OLD)) && ent->client->pers.skill_levels[28] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_OLD);
+		if (ent->client->pers.skill_levels[28] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_OLD);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_THERMAL))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_THERMAL \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_THERMAL);
-			}
-		//if (ent->client->pers.skill_levels[43] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_THERMAL);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_THERMAL)) && ent->client->pers.skill_levels[43] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_THERMAL);
+		if (ent->client->pers.skill_levels[43] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_THERMAL);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_TRIP_MINE))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_TRIP_MINE \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_TRIP_MINE);
-			}
-		//if (ent->client->pers.skill_levels[44] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_TRIP_MINE);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_TRIP_MINE)) && ent->client->pers.skill_levels[44] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_TRIP_MINE);
+		if (ent->client->pers.skill_levels[44] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_TRIP_MINE);
 
-			if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DET_PACK))) {
-				//trap->SendServerCommand(ent - g_entities, "print \" GOT WP_DET_PACK \n\"");
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DET_PACK);
-			}
-		//if (ent->client->pers.skill_levels[45] == 0)
-			//ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DET_PACK);
+		if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DET_PACK)) && ent->client->pers.skill_levels[45] > 0)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DET_PACK);
+		if (ent->client->pers.skill_levels[45] == 0)
+			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DET_PACK);
 
 		FILE *account_file;
 		char content[128];
