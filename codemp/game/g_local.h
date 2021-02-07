@@ -44,7 +44,7 @@ extern vec3_t gPainPoint;
 //==================================================================
 
 // the "gameversion" client command will print this plus compile date
-#define	GAMEVERSION	"Galaxy RP Mod v0.2"
+#define	GAMEVERSION	"Galaxy RP Mod v1.2"
 
 #define SECURITY_LOG "security.log"
 
