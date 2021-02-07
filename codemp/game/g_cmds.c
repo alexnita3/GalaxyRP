@@ -994,30 +994,36 @@ void Cmd_KillOther_f( gentity_t *ent )
 	char		otherindex[MAX_TOKEN_CHARS];
 	gentity_t	*otherEnt = NULL;
 
-	if ( trap->Argc () < 2 ) {
-		trap->SendServerCommand( ent-g_entities, "print \"Usage: killother <player id>\n\"" );
-		return;
-	}
+	if (ent->client->pers.bitvalue & (1 << ADM_GIVEADM)) {
 
-	trap->Argv( 1, otherindex, sizeof( otherindex ) );
-	i = ClientNumberFromString( ent, otherindex, qfalse );
-	if ( i == -1 ) {
-		return;
-	}
+		if (trap->Argc() < 2) {
+			trap->SendServerCommand(ent - g_entities, "print \"Usage: killother <player id>\n\"");
+			return;
+		}
 
-	otherEnt = &g_entities[i];
-	if ( !otherEnt->inuse || !otherEnt->client ) {
-		return;
-	}
+		trap->Argv(1, otherindex, sizeof(otherindex));
+		i = ClientNumberFromString(ent, otherindex, qfalse);
+		if (i == -1) {
+			return;
+		}
 
-	if ( (otherEnt->health <= 0 || otherEnt->client->tempSpectate >= level.time || otherEnt->client->sess.sessionTeam == TEAM_SPECTATOR) )
-	{
-		// Intentionally displaying for the command user
-		trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", G_GetStringEdString( "MP_SVGAME", "MUSTBEALIVE" ) ) );
-		return;
-	}
+		otherEnt = &g_entities[i];
+		if (!otherEnt->inuse || !otherEnt->client) {
+			return;
+		}
 
-	G_Kill( otherEnt );
+		if ((otherEnt->health <= 0 || otherEnt->client->tempSpectate >= level.time || otherEnt->client->sess.sessionTeam == TEAM_SPECTATOR))
+		{
+			// Intentionally displaying for the command user
+			trap->SendServerCommand(ent - g_entities, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "MUSTBEALIVE")));
+			return;
+		}
+
+		G_Kill(otherEnt);
+	}
+	else {
+		trap->SendServerCommand(ent - g_entities, "print \"You need to be an admin to use this\n\"");
+	}
 }
 
 /*
@@ -18923,13 +18929,13 @@ command_t commands[] = {
 	{ "forcechanged",		Cmd_ForceChanged_f,			0 },
 	{ "gc",					Cmd_GameCommand_f,			CMD_NOINTERMISSION },
 	{ "give",				Cmd_Give_f,					CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "god",				Cmd_God_f,					CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "god",				Cmd_God_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "guardianquest",		Cmd_GuardianQuest_f,		CMD_ALIVE|CMD_RPG|CMD_NOINTERMISSION },
 	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
 	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
 	{ "jetpack",			Cmd_Jetpack_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "kill",				Cmd_Kill_f,					CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "killother",			Cmd_KillOther_f,			CMD_CHEAT|CMD_NOINTERMISSION },
+	{ "killother",			Cmd_KillOther_f,			CMD_NOINTERMISSION },
 //	{ "kylesmash",			TryGrapple,					0 },
 	{ "levelgive",			Cmd_LevelGive_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "levelshot",			Cmd_LevelShot_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
@@ -18949,7 +18955,7 @@ command_t commands[] = {
 	{ "npc",				Cmd_NPC_f,					CMD_LOGGEDIN },
 	{ "order",				Cmd_Order_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "paralyze",			Cmd_Paralyze_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "playermode",			Cmd_PlayerMode_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
+//	{ "playermode",			Cmd_PlayerMode_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "players",			Cmd_Players_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "questskip",			Cmd_QuestSkip_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "racemode",			Cmd_RaceMode_f,				CMD_ALIVE|CMD_NOINTERMISSION },
@@ -18961,11 +18967,11 @@ command_t commands[] = {
 	{ "resetaccount",		Cmd_ResetAccount_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "roll",				Cmd_Roll_f,					0 },
 	{ "rpgchar",			Cmd_RpgChar_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "rpgclass",			Cmd_RpgClass_f,				CMD_RPG|CMD_NOINTERMISSION },
+//	{ "rpgclass",			Cmd_RpgClass_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "rpglmstable",		Cmd_RpgLmsTable_f,			CMD_NOINTERMISSION },
-	{ "rpmode",				Cmd_RpMode_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "rpmodeclass",		Cmd_RpModeClass_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
+//	{ "rpmode",				Cmd_RpMode_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+//	{ "rpmodeclass",		Cmd_RpModeClass_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "rpmodedown",			Cmd_RpModeDown_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "rpmodeup",			Cmd_RpModeUp_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "saber",				Cmd_Saber_f,				CMD_NOINTERMISSION },
