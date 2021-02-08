@@ -812,11 +812,15 @@ void Cmd_God_f( gentity_t *ent ) {
 	char *msg = NULL;
 
 	ent->flags ^= FL_GODMODE;
-	if ( !(ent->flags & FL_GODMODE) )
+	if (!(ent->flags & FL_GODMODE)) {
+		trap->SendServerCommand(-1, va("chat \"^7%s ^7turned god mode ^1OFF\n\"", ent->client->pers.netname));
 		msg = "godmode OFF";
-	else
+	}
+	else {
+		trap->SendServerCommand(-1, va("chat \"^7%s ^7turned god mode ^2ON\n\"", ent->client->pers.netname));
 		msg = "godmode ON";
-
+	}
+		
 	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", msg ) );
 }
 
@@ -11034,22 +11038,22 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		}
 		else if (value == 4)
 		{
-			Add_Ammo(ent,AMMO_ROCKETS,10);
+			Add_Ammo(ent,AMMO_ROCKETS,5);
 		}
 		else if (value == 5)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_THERMAL);
-			Add_Ammo(ent,AMMO_THERMAL,4);
+			Add_Ammo(ent,AMMO_THERMAL,1);
 		}
 		else if (value == 6)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_TRIP_MINE);
-			Add_Ammo(ent,AMMO_TRIPMINE,3);
+			Add_Ammo(ent,AMMO_TRIPMINE,1);
 		}
 		else if (value == 7)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DET_PACK);
-			Add_Ammo(ent,AMMO_DETPACK,2);
+			Add_Ammo(ent,AMMO_DETPACK,1);
 		}
 		else if (value == 8)
 		{
@@ -11937,14 +11941,111 @@ void Cmd_Teleport_f( gentity_t *ent )
 
 /*
 ==================
+Cmd_CreditSpend_f
+==================
+*/
+void Cmd_CreditSpend_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+	char arg2[MAX_STRING_CHARS];
+	char arg3[MAX_STRING_CHARS];
+	long int value = 0;
+
+	if (trap->Argc() > 2)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: /creditspend <value>\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	if (!strtol(arg1, NULL, 10)) {
+		trap->SendServerCommand(ent - g_entities, "print \"Value must be an integer\n\"");
+		return;
+	}
+
+	value = atoi(arg1);
+
+	if (value < 1)
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"Can only use positive values.\n\""));
+		return;
+	}
+
+	if ((ent->client->pers.credits - value) < 0)
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"You don't have this amount of credits\n\""));
+		return;
+	}
+
+	remove_credits(ent, value);
+
+	save_account(ent, qtrue);
+
+	trap->SendServerCommand(-1, va("chat \"^3Credit System: ^7%s ^7spent ^2%d ^7credits.\n\"", ent->client->pers.netname, value, g_entities));
+
+	trap->SendServerCommand(ent - g_entities, "print \"Done.\n\"");
+}
+
+/*
+==================
+Cmd_CreditCreate_f
+==================
+*/
+void Cmd_CreditCreate_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+	char arg2[MAX_STRING_CHARS];
+	int client_id = 0, value = 0;
+
+	if (trap->Argc() == 1)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"You must specify a player.\n\"");
+		return;
+	}
+
+	// player must have adminup permissions
+	if (!(ent->client->pers.bitvalue & (1 << ADM_GIVEADM)))
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"You do not have the correct admin permission to create credits.\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+	trap->Argv(2, arg2, sizeof(arg2));
+
+	client_id = ClientNumberFromString(ent, arg1, qfalse);
+	value = atoi(arg2);
+
+	if (client_id == -1)
+	{
+		return;
+	}
+
+	if (value < 1)
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"Can only use positive values.\n\""));
+		return;
+	}
+
+
+	add_credits(&g_entities[client_id], value);
+	save_account(&g_entities[client_id], qtrue);
+
+	//broadcast the transaction to the whole server
+
+	trap->SendServerCommand(-1, va("chat \"^3Credit System ^5(Admin)^3: ^7%s ^7created ^2%d ^7credits and transferred them to %s\n\"", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname));
+
+	trap->SendServerCommand(ent - g_entities, "print \"Done.\n\"");
+}
+
+/*
+==================
 Cmd_CreditGive_f
 ==================
 */
 void Cmd_CreditGive_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
-	char arg3[MAX_STRING_CHARS];
-	int client_id = 0, value = 0, create = 0;
+	int client_id = 0, value = 0;
 
 	if (trap->Argc() == 1)
 	{
@@ -11960,11 +12061,9 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 
 	trap->Argv( 1, arg1, sizeof( arg1 ) );
 	trap->Argv( 2, arg2, sizeof( arg2 ) );
-	trap->Argv( 3, arg3, sizeof( arg3 ) );
 
 	client_id = ClientNumberFromString( ent, arg1, qfalse );
 	value = atoi(arg2);
-	create = atoi(arg3);
 
 	if (client_id == -1)
 	{
@@ -11983,23 +12082,7 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 		return;
 	}
 
-	int adminflag = 0;
-
-	if (create == 1)
-	{
-		// player must have adminup permissions
-		if (ent->client->pers.bitvalue & (1 << ADM_GIVEADM))
-		{
-			trap->SendServerCommand(ent - g_entities, "print \"You do not have the correct admin permission to create credits.\n\"");
-			return;
-		}
-		else {
-			adminflag = 1;
-		}
-		
-	}
-
-	if ((ent->client->pers.credits - value) < 0 && adminflag == 0)
+	if ((ent->client->pers.credits - value) < 0)
 	{
 		trap->SendServerCommand(ent - g_entities, va("print \"You don't have this amount of credits\n\""));
 		return;
@@ -12009,20 +12092,12 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 	add_credits(&g_entities[client_id], value);
 	save_account(&g_entities[client_id], qtrue);
 
-	if (create != 1) {
-		remove_credits(ent, value);
-	}
+	remove_credits(ent, value);
 	save_account(ent, qtrue);
 
-	//trap->SendServerCommand( client_id, va("chat \"^3Credit System: ^7You got %d credits from %s\n\"", value, ent->client->pers.netname) );
 	//broadcast the transaction to the whole server
-	if (create == 1) {
-		trap->SendServerCommand(-1, va("chat \"^3Credit System ^5(Admin)^3: ^7%s ^7created ^2%d ^7credits and transferred them to %s\n\"", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname));
-	}
-	else
-	{
-		trap->SendServerCommand(-1, va("chat \"^3Credit System: ^7%s ^7transferred ^2%d ^7credits to %s\n\"", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname));
-	}
+
+	trap->SendServerCommand(-1, va("chat \"^3Credit System: ^7%s ^7transferred ^2%d ^7credits to %s\n\"", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname));
 
 	trap->SendServerCommand(ent - g_entities, "print \"Done.\n\"");
 }
@@ -14546,7 +14621,7 @@ void Cmd_ClientPrint_f( gentity_t *ent ) {
 
 	trap->Argv( 2, arg2, sizeof( arg2 ) );
 
-	trap->SendServerCommand( client_id, va("cp \"%s\"", arg2) );
+	trap->SendServerCommand( client_id, va("cp \"%s\"", arg2) ); 
 }
 
 /*
@@ -18955,7 +19030,7 @@ command_t commands[] = {
 	{ "callvote",			Cmd_CallVote_f,				CMD_NOINTERMISSION },
 	{ "changepassword",		Cmd_ChangePassword_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "clientprint",		Cmd_ClientPrint_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "creditgive",			Cmd_CreditGive_f,			CMD_RPG|CMD_NOINTERMISSION },
+	{ "createcredits",		Cmd_CreditCreate_f,			CMD_RPG | CMD_NOINTERMISSION },
 	{ "customquest",		Cmd_CustomQuest_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "datetime",			Cmd_DateTime_f,				CMD_NOINTERMISSION },
 	{ "debugBMove_Back",	Cmd_BotMoveBack_f,			CMD_CHEAT|CMD_ALIVE },
@@ -18989,8 +19064,9 @@ command_t commands[] = {
 	{ "forcechanged",		Cmd_ForceChanged_f,			0 },
 	{ "gc",					Cmd_GameCommand_f,			CMD_NOINTERMISSION },
 	{ "give",				Cmd_Give_f,					CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "givecredits",		Cmd_CreditGive_f,			CMD_RPG | CMD_NOINTERMISSION },
 	{ "god",				Cmd_God_f,					CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "guardianquest",		Cmd_GuardianQuest_f,		CMD_ALIVE|CMD_RPG|CMD_NOINTERMISSION },
+//	{ "guardianquest",		Cmd_GuardianQuest_f,		CMD_ALIVE|CMD_RPG|CMD_NOINTERMISSION },
 	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
 	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
 	{ "jetpack",			Cmd_Jetpack_f,				CMD_ALIVE|CMD_NOINTERMISSION },
@@ -19033,8 +19109,6 @@ command_t commands[] = {
 	{ "rpglmstable",		Cmd_RpgLmsTable_f,			CMD_NOINTERMISSION },
 //	{ "rpmode",				Cmd_RpMode_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 //	{ "rpmodeclass",		Cmd_RpModeClass_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "rpmodedown",			Cmd_RpModeDown_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "rpmodeup",			Cmd_RpModeUp_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "saber",				Cmd_Saber_f,				CMD_NOINTERMISSION },
 	{ "say",				Cmd_Say_f,					0 },
 	{ "say_team",			Cmd_SayTeam_f,				0 },
@@ -19045,8 +19119,11 @@ command_t commands[] = {
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
 	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "skilldown",			Cmd_RpModeDown_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "skillup",			Cmd_RpModeUp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "snipermode",			Cmd_SniperMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "snipertable",		Cmd_SniperTable_f,			CMD_NOINTERMISSION },
+	{ "spendcredits",		Cmd_CreditSpend_f,			CMD_RPG | CMD_NOINTERMISSION },
 	{ "stuff",				Cmd_Stuff_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "team",				Cmd_Team_f,					CMD_NOINTERMISSION },
 //	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },
@@ -19054,7 +19131,7 @@ command_t commands[] = {
 	{ "tele",				Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
-	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
+//	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
