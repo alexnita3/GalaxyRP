@@ -11038,22 +11038,22 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		}
 		else if (value == 4)
 		{
-			Add_Ammo(ent,AMMO_ROCKETS,10);
+			Add_Ammo(ent,AMMO_ROCKETS,5);
 		}
 		else if (value == 5)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_THERMAL);
-			Add_Ammo(ent,AMMO_THERMAL,4);
+			Add_Ammo(ent,AMMO_THERMAL,1);
 		}
 		else if (value == 6)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_TRIP_MINE);
-			Add_Ammo(ent,AMMO_TRIPMINE,3);
+			Add_Ammo(ent,AMMO_TRIPMINE,1);
 		}
 		else if (value == 7)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DET_PACK);
-			Add_Ammo(ent,AMMO_DETPACK,2);
+			Add_Ammo(ent,AMMO_DETPACK,1);
 		}
 		else if (value == 8)
 		{
@@ -19109,8 +19109,6 @@ command_t commands[] = {
 	{ "rpglmstable",		Cmd_RpgLmsTable_f,			CMD_NOINTERMISSION },
 //	{ "rpmode",				Cmd_RpMode_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 //	{ "rpmodeclass",		Cmd_RpModeClass_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "rpmodedown",			Cmd_RpModeDown_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "rpmodeup",			Cmd_RpModeUp_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "saber",				Cmd_Saber_f,				CMD_NOINTERMISSION },
 	{ "say",				Cmd_Say_f,					0 },
 	{ "say_team",			Cmd_SayTeam_f,				0 },
@@ -19121,6 +19119,8 @@ command_t commands[] = {
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
 	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "skilldown",			Cmd_RpModeDown_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "skillup",			Cmd_RpModeUp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "snipermode",			Cmd_SniperMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "snipertable",		Cmd_SniperTable_f,			CMD_NOINTERMISSION },
 	{ "spendcredits",		Cmd_CreditSpend_f,			CMD_RPG | CMD_NOINTERMISSION },
@@ -19131,7 +19131,7 @@ command_t commands[] = {
 	{ "tele",				Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
-	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
+//	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
