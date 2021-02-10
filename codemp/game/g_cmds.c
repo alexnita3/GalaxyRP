@@ -17814,7 +17814,7 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 	if (argc == 1)
 	{ // zyk: lists the chars and commands
-		trap->SendServerCommand(ent->s.number, va("print \"\n^7Using %s\n\n^7%s\n^3/rpgchar new <charname>: ^7creates a new char\n^3/rpgchar rename <new name>: ^7renames current char\n^3/rpgchar duplicate: ^7creates a copy of the current char in use\n^3/rpgchar use <charname>: ^7uses this char\n^3/rpgchar delete <charname>: ^7removes this char\n^3/rpgchar migrate <charname> <login> <password>: ^7moves char to account with this login and password\n\"", ent->client->sess.rpgchar, zyk_get_rpg_chars(ent, "\n")));
+		trap->SendServerCommand(ent->s.number, va("print \"\n^7Using %s\n\n^7%s\n^3/char new <charname>: ^7creates a new char\n^3/char rename <new name>: ^7renames current char\n^3/char duplicate: ^7creates a copy of the current char in use\n^3/char use <charname>: ^7uses this char\n^3/char delete <charname>: ^7removes this char\n^3/char migrate <charname> <login> <password>: ^7moves char to account with this login and password\n\"", ent->client->sess.rpgchar, zyk_get_rpg_chars(ent, "\n")));
 	}
 	else
 	{
