@@ -10489,23 +10489,67 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 
 		if (Q_stricmp(arg1, "ammo" ) == 0)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^31 - Blaster Pack: ^7Buy: 15 - Sell: 10\n^32 - Power Cell: ^7Buy: 20 - Sell: 15\n^33 - Metal Bolts: ^7Buy: 25 - Sell: 20\n^34 - Rockets: ^7Buy: 40 - Sell: 30\n^35 - Thermals: ^7Buy: 80 - Sell: 35\n^36 - Trip Mines: ^7Buy: 120 - Sell: 40\n^37 - Det Packs: ^7Buy: 150 - Sell: 45\n^330 - Flame Thrower Fuel: ^7Buy: 200 - Sell: ^1no\n^348 - Ammo All: ^7Buy: 700 - Sell: ^1no^7\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n"
+				"^31 - Blaster Pack: ^7Buy: 150 - Sell: 10\n"
+				"^32 - Power Cell: ^7Buy: 200 - Sell: 15\n"
+				"^33 - Metal Bolts: ^7Buy: 250 - Sell: 20\n"
+				"^34 - Rockets: ^7Buy: 500 - Sell: 30\n"
+				"^35 - Thermals: ^7Buy: 50 - Sell: 35\n"
+				"^36 - Trip Mines: ^7Buy: 100 - Sell: 40\n"
+				"^37 - Det Packs: ^7Buy: 200 - Sell: 45\n"
+				"^330 - Flame Thrower Fuel: ^7Buy: 500 - Sell: ^1no\n"
+				"^348 - Ammo All: ^7Buy: 1450 - Sell: ^1no^7\n\n\"");
 		}
 		else if (Q_stricmp(arg1, "items" ) == 0)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^39 - Shield Booster: ^7Buy: 150 - Sell: ^1no\n^310 - Sentry Gun: ^7Buy: 170 - Sell: 60\n^311 - Seeker Drone: ^7Buy: 180 - Sell: 65\n^312 - Big Bacta: ^7Buy: 200 - Sell: 70\n^313 - Force Field: ^7Buy: 300 - Sell: 80\n^334 - Bacta Canister: ^7Buy: 100 - Sell: 20\n^335 - E-Web: ^7Buy: 150 - Sell: 30\n^338 - Binoculars: ^7Buy: 10 - Sell: 5\n^341 - Jetpack: ^7Buy: 50 - Sell: ^1no\n^342 - Cloak Item: ^7Buy: 50 - Sell: 20\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n"
+				"^39 - Shield Booster: ^7Buy: 1500 - Sell: ^1no\n"
+				"^310 - Sentry Gun: ^7Buy: 1700 - Sell: 60\n"
+				"^311 - Seeker Drone: ^7Buy: 1800 - Sell: 65\n"
+				"^312 - Big Bacta: ^7Buy: 2000 - Sell: 70\n"
+				"^313 - Force Field: ^7Buy: 3000 - Sell: 80\n"
+				"^334 - Bacta Canister: ^7Buy: 1000 - Sell: 20\n"
+				"^335 - E-Web: ^7Buy: 1500 - Sell: 30\n"
+				"^338 - Binoculars: ^7Buy: 100 - Sell: 5\n"
+				"^341 - Jetpack: ^7Buy: 2000 - Sell: ^1no\n"
+				"^342 - Cloak Item: ^7Buy: 2000 - Sell: 20\n\n\"");
 		}
 		else if (Q_stricmp(arg1, "misc") == 0)
 		{
-			trap->SendServerCommand(ent - g_entities, "print \"\n^314 - Ysalamiri: ^7Buy: 200 - Sell: 50\n^331 - Jetpack Fuel: ^7Buy: 200 - Sell: ^1no\n^343 - Force Boon: ^7Buy: 200 - Sell: 50\n^349 - Saber Armor: ^7Buy: 2000 - Sell: ^1no\n^350 - Gun Armor: ^7Buy: 2000 - Sell: ^1no\n^351 - Healing Crystal: ^7Buy: 2000 - Sell: ^1no\n^352 - Energy Crystal: ^7Buy: 2000 - Sell: ^1no\n^356 - Book of Riddles: ^7Buy: 100000 - Sell: ^1no^7\n\n\"");
+			trap->SendServerCommand(ent - g_entities, "print \"\n"
+				"^314 - Ysalamiri: ^7Buy: 2000 - Sell: 50\n"
+				"^331 - Jetpack Fuel: ^7Buy: 500 - Sell: ^1no\n"
+				"^343 - Force Boon: ^7Buy: 2000 - Sell: 50\n"
+				"^349 - Saber Armor: ^7Buy: 20,000 - Sell: ^1no\n"
+				"^350 - Gun Armor: ^7Buy: 20,000 - Sell: ^1no\n\n\"");
 		}
 		else if (Q_stricmp(arg1, "weapons" ) == 0)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^317 - E11 Blaster Rifle: ^7Buy: 100 - Sell: 50\n^318 - Disruptor: ^7Buy: 120 - Sell: 60\n^319 - Repeater: ^7Buy: 150 - Sell: 70\n^320 - Rocket Launcher: ^7Buy: 200 - Sell: 100\n^321 - Bowcaster: ^7Buy: 110 - Sell: 50\n^322 - Blaster Pistol: ^7Buy: 90 - Sell: 45\n^323 - Flechette: ^7Buy: 170 - Sell: 90\n^324 - Concussion Rifle: ^7Buy: 300 - Sell: 150\n^332 - Stun Baton: ^7Buy: 20 - Sell: 10\n^336 - DEMP2: ^7Buy: 150 - Sell: 90\n^337 - Bryar Pistol: ^7Buy: 90 - Sell: 45^7\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n"
+				"^317 - E11 Blaster Rifle: ^7Buy: 1 - Sell: ^1NO\n"
+				"^318 - Disruptor: ^7Buy: 1 - Sell: ^1NO\n"
+				"^319 - Repeater: ^7Buy: 1 - Sell: ^1NO\n"
+				"^320 - Rocket Launcher: ^7Buy: 1 - Sell: ^1NO\n"
+				"^321 - Bowcaster: ^7Buy: 1 - Sell: ^1NO\n"
+				"^322 - Blaster Pistol: ^7Buy: 1 - Sell: ^1NO\n"
+				"^323 - Flechette: ^7Buy: 1 - Sell: ^1NO\n"
+				"^324 - Concussion Rifle: ^7Buy: 1 - Sell: ^1NO\n"
+				"^332 - Stun Baton: ^7Buy: 1 - Sell: ^1NO\n"
+				"^336 - DEMP2: ^7Buy: 1 - Sell: ^1NO\n"
+				"^337 - Bryar Pistol: ^7Buy: 1 - Sell: ^1NO\n\n\"");
 		}
 		else if (Q_stricmp(arg1, "upgrades" ) == 0)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^38 - Stealth Attacker Upgrade: ^7Buy: 5000\n^315 - Impact Reducer: ^7Buy: 4000\n^316 - Flame Thrower: ^7Buy: 3000\n^325 - Power Cell Weapons Upgrade: ^7Buy: 2000\n^326 - Blaster Pack Weapons Upgrade: ^7Buy: 1800\n^327 - Metal Bolts Weapons Upgrade: ^7Buy: 2200\n^328 - Rocket Upgrade: ^7Buy: 2500\n^329 - Bounty Hunter Upgrade: ^7Buy: 5000\n^333 - Stun Baton Upgrade: ^7Buy: 1500\n^339 - Armored Soldier Upgrade: ^7Buy: 5000\n^340 - Holdable Items Upgrade: ^7Buy: 3000\n^345 - Force Gunner Upgrade: ^7Buy: 5000\n^346 - Jetpack Upgrade: ^7Buy: 10000\n^347 - Force Guardian Upgrade: ^7Buy: 5000\n^353 - Unique Ability 1: ^7Buy: 7000\n^354 - Unique Ability 2: ^7Buy: 7000\n^355 - Unique Ability 3: ^7Buy: 7000\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n"
+				"^315 - Impact Reducer: ^7Buy: 40000\n"
+				"^316 - Flame Thrower: ^7Buy: 30000\n"
+				"^325 - Power Cell Weapons Upgrade: ^7Buy: 2000\n"
+				"^326 - Blaster Pack Weapons Upgrade: ^7Buy: 18000\n"
+				"^327 - Metal Bolts Weapons Upgrade: ^7Buy: 22000\n"
+				"^328 - Rocket Upgrade: ^7Buy: 25000\n"
+				"^333 - Stun Baton Upgrade: ^7Buy: 15000\n"
+				"^340 - Holdable Items Upgrade: ^7Buy: 30000\n"
+				"^346 - Jetpack Upgrade: ^7Buy: 100000\n\n\"");
 		}
 		else if (i == 1)
 		{
@@ -10665,7 +10709,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		}
 		else if (i == 40)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Holdable Items Upgrade: ^7Bacta Canister recovers all Magic Power, Big Bacta recovers more HP, Force Field resists more and Cloak Item will be able to cloak vehicles\n\n\"");
+			trap->SendServerCommand( ent-g_entities, "print \"\n^3Holdable Items Upgrade: ^7Bacta Canister recovers more health, Big Bacta recovers more HP, Force Field resists more and Cloak Item will be able to cloak vehicles\n\n\"");
 		}
 		else if (i == 41)
 		{
@@ -10856,7 +10900,63 @@ void Cmd_Buy_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int value = 0;
 	int found = 0;
-	int item_costs[NUMBER_OF_SELLER_ITEMS] = {15,20,25,40,80,120,150,5000,150,170,180,200,300,200,4000,3000,100,120,150,200,110,90,170,300,2000,1800,2200,2500,5000,200,200,20,1500,100,150,150,90,10,5000,3000,50,50,200,50,5000,10000,5000,700,2000,2000,2000,2000,7000,7000,7000,100000};
+	int item_costs[NUMBER_OF_SELLER_ITEMS] = {
+		150,		// id:1
+		200,		// id:2
+		250,		// id:3
+		500,		// id:4
+		50,			// id:5
+		100,		// id:6
+		200,		// id:7
+		5000,		// id:8
+		1500,		// id:9
+		1700,		// id:10
+		1800,		// id:11
+		2000,		// id:12
+		3000,		// id:13
+		2000,		// id:14
+		40000,		// id:15
+		30000,		// id:16
+		1,		// id:17
+		1,		// id:18
+		1,		// id:19
+		1,		// id:20
+		1,		// id:21
+		1,		// id:22
+		1,		// id:23
+		1,		// id:24
+		2000,		// id:25
+		1800,		// id:26
+		22000,		// id:27
+		25000,		// id:28
+		5000,		// id:29
+		500,		// id:30
+		500,		// id:31
+		1,		// id:32
+		15000,		// id:33
+		1000,		// id:34
+		1500,		// id:35
+		1,		// id:36
+		1,		// id:37
+		100,		// id:38
+		5000,		// id:39
+		30000,		// id:40
+		2000,		// id:41
+		2000,		// id:42
+		2000,		// id:43
+		50,			// id:44
+		5000,		// id:45
+		100000,		// id:46
+		5000,		// id:47
+		1450,		// id:48
+		20000,		// id:49
+		20000,		// id:50
+		2000,		// id:51
+		2000,		// id:52
+		7000,		// id:53
+		7000,		// id:54
+		7000,		// id:55
+		100000 };	// id:56
 
 	if (trap->Argc() == 1)
 	{
