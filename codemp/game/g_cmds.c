@@ -337,47 +337,121 @@ void Cmd_Emote_f( gentity_t *ent )
 
 	
 	//alex: animation words and codes go here THEY HAVE TO BE IN THE SAME ORDER!
+	//const int NUMBER_OF_ANIMS = 56;
 
-	int anim_codes[37] = { 998, 1001, 1010, 1097 , 1099 , 999 , 936 , 922 , 939, 985, 954, 1004, 1181 , 940, 931, 936, 968, 993, 1014, 1098, 1188, 1191, 1192, 1193, 1194, 1195, 1196, 1197, 1198, 1200, 1313, 1333, 1348, 1349, 1368, 1394, 1409};
-	char anim_words[37][50] = { "sit" 
-		,"meditate" 
-		,"kneel" 
-		,"die" 
-		,"beg" 
-		,"sit2" 
-		,"point" 
-		,"cuffed" 
-		,"heroic" 
-		,"wave" 
-		,"type" 
-		,"sneak"
-		,"cover"
-		,"leantable"
-		,"aimgun"
-		,"aimgun2"
-		,"comm"
-		,"saberthrow"
-		,"sitpilot"
-		,"beg2"
-		,"bow"
-		,"flourish"
-		,"flourish2" 
-		,"flourish3"
-		,"flourish4"
-		,"flourish5"
-		,"victory"
-		,"victory2"
-		,"victory3"
-		,"victory4"
-		,"sleep"
-		,"mindtrick"
-		,"tossleft"
-		,"tossright"
-		,"windy"
-		,"sit3"
-		,"surrender"};
+	int anim_codes[53] = {
+		998, 	//"sit"
+		999, 	//"sit2",
+		1394,	//"sit3",
+		1001,	//"meditate",
+		1010,	//"kneel",
+		1097,	//"die",
+		1099,	//"beg",
+		1098,	//"beg2",
+		1321,	//"beg3",
+		1188,	//"bow",
+		936, 	//"point",
+		1382,	//"lean",
+		940, 	//"leantable"
+		922, 	//"cuffed",
+		939, 	//"heroic",
+		985, 	//"wave",
+		954, 	//"type",
+		1004,	//"sneak",
+		1181,	//"cover",
+		931, 	//"aim",
+		936, 	//"aim2",
+		114, 	//"aim3",
+		1407,	//"aim4",
+		1406,	//"aim5",
+		989,	//"hug",
+		968,	//"commlinkup",
+		970,	//"commlinkdown",
+		993, 	//"saberthrow",
+		1014,	//"sitpilot",
+		1191,	//"flourish",
+		1192,	//"flourish2",
+		1193,	//"flourish3",
+		1194,	//"flourish4",
+		1195,	//"flourish5",
+		1196,	//"victory",
+		1197,	//"victory2",
+		1198,	//"victory3",
+		1200,	//"victory4",
+		1313,	//"sleep",
+		1333,	//"mindtrick",
+		1348,	//"tossleft",
+		1349,	//"tossright",
+		1368,	//"windy",
+		1409,	//"surrender",
+		1328,	//"pressbutton",
+		1337,	//"forcelightning",
+		1360,	//"drainloop",
+		1370,	//"spreadlegs",
+		1380,	//"fear",
+		1404,	//"holddetonator",
+		1344,	//"forcechoke",
+		1322,	//"choked",
+		986		//"holdobject"
+	};
 
-	for (int i = 0; i < 37; i++)
+	char anim_words[53][50] = {
+		"sit",
+		"sit2",
+		"sit3",
+		"meditate",
+		"kneel",
+		"die",
+		"beg",
+		"beg2",
+		"beg3",
+		"bow",
+		"point",
+		"lean",
+		"leantable",
+		"cuffed",
+		"heroic",
+		"wave",
+		"type",
+		"sneak",
+		"cover",
+		"aim",
+		"aim2",
+		"aim3",
+		"aim4",
+		"aim5",
+		"hug",
+		"commlinkup",
+		"commlinkdown",
+		"saberthrow",
+		"sitpilot",
+		"flourish",
+		"flourish2",
+		"flourish3",
+		"flourish4",
+		"flourish5",
+		"victory",
+		"victory2",
+		"victory3",
+		"victory4",
+		"sleep",
+		"mindtrick",
+		"tossleft",
+		"tossright",
+		"windy",
+		"surrender",
+		"pressbutton",
+		"forcelightning",
+		"drainloop",
+		"spreadlegs",
+		"fear",
+		"holddetonator",
+		"forcechoke",
+		"choked",
+		"holdobject"
+	};
+
+	for (int i = 0; i < 53; i++)
 	{
 		if (strcmp(anim_id, anim_words[i]) == 0)
 		{
@@ -407,7 +481,7 @@ void Cmd_Emote_f( gentity_t *ent )
 	{
 		trap->SendServerCommand(ent - g_entities,"print \"Usage: the following animations are available:\n\"");
 
-		for (int i = 0; i < 37; i++)
+		for (int i = 0; i < 53; i++)
 		{
 			trap->SendServerCommand(ent - g_entities, va("print \"%s\n\"", anim_words[i]));
 		}
