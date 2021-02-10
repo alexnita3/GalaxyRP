@@ -10476,7 +10476,7 @@ Cmd_Stuff_f
 void Cmd_Stuff_f( gentity_t *ent ) {
 	if (trap->Argc() == 1)
 	{ // zyk: shows the categories of stuff
-		trap->SendServerCommand( ent-g_entities, "print \"\n^7Use ^2/stuff <category> ^7to buy or sell stuff\nThe Category may be ^3ammo^7, ^3items^7, ^3misc^7, ^3weapons ^7or ^3upgrades\n^7Use ^3/stuff <number> ^7to see info about the item\n\n^7Use ^2/buy <number> ^7to buy or ^2/sell <number> ^7to sell\nStuff bought from ^3upgrades ^7category are permanent\n\n\"");
+		trap->SendServerCommand( ent-g_entities, "print \"\n^7Use ^2/stuff <category> ^7to buy or sell stuff\nThe Category may be ^3ammo^7, ^3items^7, ^3misc ^7or ^3upgrades\n^7Use ^3/stuff <number> ^7to see info about the item\n\n^7Use ^2/buy <number> ^7to buy or ^2/sell <number> ^7to sell\nStuff bought from ^3upgrades ^7category are permanent\n\n\"");
 		return;
 	}
 	else
@@ -10523,7 +10523,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 				"^349 - Saber Armor: ^7Buy: 20,000 - Sell: ^1no\n"
 				"^350 - Gun Armor: ^7Buy: 20,000 - Sell: ^1no\n\n\"");
 		}
-		else if (Q_stricmp(arg1, "weapons" ) == 0)
+		/*else if (Q_stricmp(arg1, "weapons" ) == 0)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n"
 				"^317 - E11 Blaster Rifle: ^7Buy: 1 - Sell: ^1NO\n"
@@ -10537,7 +10537,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 				"^332 - Stun Baton: ^7Buy: 1 - Sell: ^1NO\n"
 				"^336 - DEMP2: ^7Buy: 1 - Sell: ^1NO\n"
 				"^337 - Bryar Pistol: ^7Buy: 1 - Sell: ^1NO\n\n\"");
-		}
+		}*/
 		else if (Q_stricmp(arg1, "upgrades" ) == 0)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n"
@@ -11205,7 +11205,7 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		{
 			ent->client->pers.secrets_found |= (1 << 10);
 		}
-		else if (value == 17)
+		/*else if (value == 17)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER);
 		}
@@ -11236,7 +11236,7 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		else if (value == 24)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_CONCUSSION);
-		}
+		}*/
 		else if (value == 25)
 		{
 			ent->client->pers.secrets_found |= (1 << 11);
@@ -11269,10 +11269,10 @@ void Cmd_Buy_f( gentity_t *ent ) {
 			ent->client->pers.jetpack_fuel = MAX_JETPACK_FUEL;
 			ent->client->ps.jetpackFuel = 100;
 		}
-		else if (value == 32)
+		/*else if (value == 32)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_STUN_BATON);
-		}
+		}*/
 		else if (value == 33)
 		{
 			ent->client->pers.secrets_found |= (1 << 15);
@@ -11289,10 +11289,10 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DEMP2);
 		}
-		else if (value == 37)
+		/*else if (value == 37)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_OLD);
-		}
+		}*/
 		else if (value == 38)
 		{
 			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_BINOCULARS);
