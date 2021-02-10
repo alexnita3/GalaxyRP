@@ -10526,17 +10526,17 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		else if (Q_stricmp(arg1, "weapons" ) == 0)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n"
-				"^317 - E11 Blaster Rifle: ^7Buy: 1000 - Sell: 50\n"
-				"^318 - Disruptor: ^7Buy: 2000 - Sell: 60\n"
-				"^319 - Repeater: ^7Buy: 1750 - Sell: 70\n"
-				"^320 - Rocket Launcher: ^7Buy: 2500 - Sell: 100\n"
-				"^321 - Bowcaster: ^7Buy: 1200 - Sell: 50\n"
-				"^322 - Blaster Pistol: ^7Buy: 450 - Sell: 45\n"
-				"^323 - Flechette: ^7Buy: 1000 - Sell: 90\n"
-				"^324 - Concussion Rifle: ^7Buy: 2000 - Sell: 150\n"
-				"^332 - Stun Baton: ^7Buy: 300 - Sell: 10\n"
-				"^336 - DEMP2: ^7Buy: 2500 - Sell: 90\n"
-				"^337 - Bryar Pistol: ^7Buy: 450 - Sell: 45^7\n\n\"");
+				"^317 - E11 Blaster Rifle: ^7Buy: 1 - Sell: ^1NO\n"
+				"^318 - Disruptor: ^7Buy: 1 - Sell: ^1NO\n"
+				"^319 - Repeater: ^7Buy: 1 - Sell: ^1NO\n"
+				"^320 - Rocket Launcher: ^7Buy: 1 - Sell: ^1NO\n"
+				"^321 - Bowcaster: ^7Buy: 1 - Sell: ^1NO\n"
+				"^322 - Blaster Pistol: ^7Buy: 1 - Sell: ^1NO\n"
+				"^323 - Flechette: ^7Buy: 1 - Sell: ^1NO\n"
+				"^324 - Concussion Rifle: ^7Buy: 1 - Sell: ^1NO\n"
+				"^332 - Stun Baton: ^7Buy: 1 - Sell: ^1NO\n"
+				"^336 - DEMP2: ^7Buy: 1 - Sell: ^1NO\n"
+				"^337 - Bryar Pistol: ^7Buy: 1 - Sell: ^1NO\n\n\"");
 		}
 		else if (Q_stricmp(arg1, "upgrades" ) == 0)
 		{
@@ -10917,14 +10917,14 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		2000,		// id:14
 		40000,		// id:15
 		30000,		// id:16
-		1000,		// id:17
-		2000,		// id:18
-		1750,		// id:19
-		2500,		// id:20
-		1200,		// id:21
-		450,		// id:22
-		1000,		// id:23
-		2000,		// id:24
+		1,		// id:17
+		1,		// id:18
+		1,		// id:19
+		1,		// id:20
+		1,		// id:21
+		1,		// id:22
+		1,		// id:23
+		1,		// id:24
 		2000,		// id:25
 		1800,		// id:26
 		22000,		// id:27
@@ -10932,12 +10932,12 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		5000,		// id:29
 		500,		// id:30
 		500,		// id:31
-		300,		// id:32
+		1,		// id:32
 		15000,		// id:33
 		1000,		// id:34
 		1500,		// id:35
-		2500,		// id:36
-		450,		// id:37
+		1,		// id:36
+		1,		// id:37
 		100,		// id:38
 		5000,		// id:39
 		30000,		// id:40
