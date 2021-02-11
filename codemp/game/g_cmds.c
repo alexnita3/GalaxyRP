@@ -6146,7 +6146,7 @@ void zyk_create_dir(char *file_path)
 #if defined(__linux__)
 	system(va("mkdir -p GalaxyRP%s", file_path));
 #else
-	system(va("mkdir \"GalaxyRP%s\"", file_path));
+	system(va("mkdir \"GalaxyRP/%s\"", file_path));
 #endif
 }
 
