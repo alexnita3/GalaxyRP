@@ -2168,6 +2168,14 @@ static void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, cons
 	}
 }
 
+void delete_chat_command(char *original_text, int no_of_chars) {
+	char text[MAX_SAY_TEXT] = "";
+	for (int i = no_of_chars; i < strlen(original_text); i++) {
+		strncat(text, &original_text[i], 1);
+	}
+	strcpy(original_text, text);
+}
+
 void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) {
 	int			j;
 	gentity_t	*other;
@@ -2184,6 +2192,20 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	//variable used for OOC chat (or team chat)
 	int ooc_flag = 0;
 	char ooc_text[700] = "";
+	int broadcast_distance = 999999999;
+	int me_distance = 1200;
+	int melong_distance = 2000;
+	int melow_distance = 200;
+	int shout_distance = 1500;
+	int shoutlong_distance = 3000;
+	int do_distance = 1000;
+	int dolong_distance = 2000;
+	int dolow_distance = 200;
+	int force_distance = 1000;
+	int forcelong_distance = 2000;
+	int forcelow_distance = 200;
+	int low_distance = 65;
+	int long_distance = 1500;
 
 	if ( level.gametype < GT_TEAM && mode == SAY_TEAM ) {
 		ooc_flag = 1;
@@ -2206,6 +2228,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			return;
 		}
 
+		//ooc chat case
 		if (ooc_flag == 1) 
 		{
 			//add paranthesis for OOC chat (I know it's a workaround and it should be done better but it works)
@@ -2223,6 +2246,350 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			color = COLOR_RED;
 
 			break;
+		}
+
+		char *output = NULL;
+
+		output = strstr(text, "/low");
+		//low case
+		if (output) {
+			delete_chat_command(text, 4);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= low_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^9 lowers their voice: %s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/long");
+		//long case
+		if (output) {
+			delete_chat_command(text, 5);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= long_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s: %s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/all");
+		//all case
+		if (output) {
+			delete_chat_command(text, 4);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melow_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/melow");
+		//melow case
+		if (output) {
+			delete_chat_command(text, 6);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melow_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/meall");
+		//meall case
+		if (output) {
+			delete_chat_command(text, 6);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/melong");
+		//melong case
+		if (output) {
+			delete_chat_command(text, 7);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melong_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+		
+		output = strstr(text, "/me");
+		//me case
+		if (output) {
+			delete_chat_command(text, 3);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= me_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/shoutlong");
+		//shoutlong case
+		if (output) {
+			delete_chat_command(text, 10);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shoutlong_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/shoutall");
+		//shoutall case
+		if (output) {
+			delete_chat_command(text, 9);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/shout");
+		//shout case
+		if (output) {
+			delete_chat_command(text, 6);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shout_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/dolow");
+		//dolong case
+		if (output) {
+			delete_chat_command(text, 6);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolow_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/dolong");
+		//dolong case
+		if (output) {
+			delete_chat_command(text, 7);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolong_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/doall");
+		//doall case
+		if (output) {
+			delete_chat_command(text, 6);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/do");
+		//do case
+		if (output) {
+			delete_chat_command(text, 3);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= do_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/forcelow");
+		//forcelow case
+		if (output) {
+			delete_chat_command(text, 9);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelow_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/forcelong");
+		//forcelong case
+		if (output) {
+			delete_chat_command(text, 10);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelong_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/forceall");
+		//forceall case
+		if (output) {
+			delete_chat_command(text, 9);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
+		}
+
+		output = strstr(text, "/force");
+		//force case
+		if (output) {
+			delete_chat_command(text, 6);
+
+			for (j = 0; j < level.numConnectedClients; j++) {
+
+				other = &g_entities[j];
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= force_distance)
+				{
+					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
+				}
+				else
+					continue;
+			}
+
+			return;
 		}
 
 		G_LogPrintf( "say: %s: %s\n", ent->client->pers.netname, text );
