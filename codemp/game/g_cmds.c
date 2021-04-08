@@ -5416,7 +5416,16 @@ void Cmd_Roll_f(gentity_t *ent) {
 	}
 
 	int max_value = atoi(arg1);
+
+	if (max_value < 2) {
+		trap->SendServerCommand(ent - g_entities, "print \"Maximun value must be at least two.\n\"");
+		return;
+	}
+
 	int result = rand() % (max_value + 1);
+	while (result == 0) {
+		result = rand() % (max_value + 1);
+	}
 	trap->SendServerCommand(-1, va("chat \"^3%s^2 rolled a ^3%d^2 out of ^3%d\n\"", ent->client->pers.netname, result, max_value));
 
 	return;
