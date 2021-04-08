@@ -6906,7 +6906,7 @@ void Cmd_LoginAccount_f( gentity_t *ent ) {
 		}
 		else if (ent->client->sess.amrpgmode == 2)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"^7Account loaded succesfully in ^2RPG Mode^7. Use command ^3/list^7.\n\"" );
+			trap->SendServerCommand( ent-g_entities, "print \"^7Account loaded succesfully. Use command ^3/list^7.\n\"" );
 			trap->SendServerCommand(-1, va("chat \"%s Logged in as: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
 
 			initialize_rpg_skills(ent);
@@ -10287,7 +10287,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 					if (i == 18)
 						trap->SendServerCommand( ent-g_entities, "print \"^3Team Energize: ^7restores some force power to players near you. If Improvements skill is at least at level 1, regens blaster pack and power cell ammo of the target players\n\"" );
 					if (i == 19)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Stun Baton: ^7attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. Can fire the flame thrower when using alternate fire (does not work for Force User, Monk, Duelist or Magic Master). With Stun Baton Upgrade, it opens any door, even locked ones, and can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds\n\"", zyk_stun_baton_damage.integer));
+						trap->SendServerCommand( ent-g_entities, va("print \"^3Stun Baton: ^7attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. With Stun Baton Upgrade, can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds\n\"", zyk_stun_baton_damage.integer));
 					if (i == 20)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Blaster Pistol: ^7the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The pistol shot does %d damage. The charged shot causes a lot more damage depending on how much it was charged\n\"", zyk_blaster_pistol_damage.integer));
 					if (i == 21)
@@ -10326,8 +10326,8 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Shield Heal: ^7recovers 4 shield at level 1, 8 shield at level 2 and 12 shield at level 3. To use it, use Heal force power when you have full HP. This skill uses %d force power\n\"", zyk_max_force_power.integer/2) );
 					if (i == 38)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Team Shield Heal: ^7recovers 3 shield at level 1, 6 shield at level 2 and 9 shield at level 3 to players near you. To use it, when near players, use Team Heal force power. It will heal their shield after they have full HP\n\"") );
-					if (i == 39)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Unique Skill: ^7Used by pressing Engage Duel key\nFree Warrior: recovers some hp, shield and mp\nForce User: creates a force shield around the player that greatly reduces damage and protects against force powers\nBounty Hunter: allows firing poison darts with melee by spending metal bolts ammo\nArmored Soldier: spends power cell ammo to increase auto-shield-heal rate\nMonk: increases auto-healing rate and disables enemy Grip\nStealth Attacker: spends power cell ammo to increase disruptor firerate\nDuelist: recovers some MP and disables jetpack, cloak, speed and force regen of enemies nearby\nForce Gunner: disarms enemies nearby\nMagic Master: increases magic bolts, Lightning Dome, Magic Explosion and Healing Area damage. Increases Magic Sense duration. Healing Area heals more\nForce Guardian: increases resistance to damage for some seconds\n\"") );
+					//if (i == 39)
+						//trap->SendServerCommand( ent-g_entities, va("print \"^3Unique Skill: ^7Used by pressing Engage Duel key\nFree Warrior: recovers some hp, shield and mp\nForce User: creates a force shield around the player that greatly reduces damage and protects against force powers\nBounty Hunter: allows firing poison darts with melee by spending metal bolts ammo\nArmored Soldier: spends power cell ammo to increase auto-shield-heal rate\nMonk: increases auto-healing rate and disables enemy Grip\nStealth Attacker: spends power cell ammo to increase disruptor firerate\nDuelist: recovers some MP and disables jetpack, cloak, speed and force regen of enemies nearby\nForce Gunner: disarms enemies nearby\nMagic Master: increases magic bolts, Lightning Dome, Magic Explosion and Healing Area damage. Increases Magic Sense duration. Healing Area heals more\nForce Guardian: increases resistance to damage for some seconds\n\"") );
 					if (i == 40)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Blaster Pack: ^7used as ammo for Blaster Pistol, Bryar Pistol and E11 Blaster Rifle. You can carry up to %d ammo\n\"",zyk_max_blaster_pack_ammo.integer) );
 					if (i == 41)
@@ -10360,8 +10360,8 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Cloak Item: ^7makes you almost invisible to players and invisible to npcs. Can cloak your vehicle by pressing the Lightsaber Style key (default L) if you have the Holdable Items Upgrade\n\"") );
 					if (i == 55)
 						trap->SendServerCommand( ent-g_entities, va("print \"^3Force Power: ^7increases the max force power you have. Necessary to allow you to use force powers and force-based skills\n\"") );
-					if (i == 56)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Improvements:\nFree Warrior ^7gets more damage and more resistance to damage\n^3Force User ^7gets more saber damage and force regens faster\n^3Bounty Hunter ^7gets more gun damage, max ammo, credits in battle, jetpack fuel, sentry gun health, and E-Web health\n^3Armored Soldier ^7gets more resistance to damage\n^3Monk ^7gets more run speed, melee damage and melee attack speed\n^3Stealth Attacker ^7gets more gun damage and more resistance to electric attacks\n^3Duelist ^7gets more saber and melee damage and faster force regen\n^3Force Gunner ^7gets more damage and more resistance to damage\n^3Magic Master ^7gets more Magic Points, new magic bolt types, new magic powers, recovers some jetpack fuel with Magic Points if it runs out and has less magic power cooldown\n^3Force Guardian ^7gets more resistance to damage\n\"") );
+					//if (i == 56)
+						//trap->SendServerCommand( ent-g_entities, va("print \"^3Improvements:\nFree Warrior ^7gets more damage and more resistance to damage\n^3Force User ^7gets more saber damage and force regens faster\n^3Bounty Hunter ^7gets more gun damage, max ammo, credits in battle, jetpack fuel, sentry gun health, and E-Web health\n^3Armored Soldier ^7gets more resistance to damage\n^3Monk ^7gets more run speed, melee damage and melee attack speed\n^3Stealth Attacker ^7gets more gun damage and more resistance to electric attacks\n^3Duelist ^7gets more saber and melee damage and faster force regen\n^3Force Gunner ^7gets more damage and more resistance to damage\n^3Magic Master ^7gets more Magic Points, new magic bolt types, new magic powers, recovers some jetpack fuel with Magic Points if it runs out and has less magic power cooldown\n^3Force Guardian ^7gets more resistance to damage\n\"") );
 				}
 				else if (Q_stricmp( arg1, "l" ) == 0)
 				{
@@ -19263,7 +19263,7 @@ command_t commands[] = {
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
 //	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+//	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
 //	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "up",					Cmd_UpSkill_f,				CMD_RPG|CMD_NOINTERMISSION },
