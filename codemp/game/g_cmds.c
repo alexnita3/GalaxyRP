@@ -813,12 +813,6 @@ void Cmd_Scale_f( gentity_t *ent ) {
 	int client_id = -1;
 	int new_size = 0;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_SCALE)))
-	{ // zyk: scale admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
-		return;
-	}
-
 	if (level.gametype != GT_FFA && zyk_allow_adm_in_other_gametypes.integer == 0)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"Scale command not allowed in gametypes other than FFA.\n\"" );
@@ -839,6 +833,16 @@ void Cmd_Scale_f( gentity_t *ent ) {
 	if (client_id == -1)
 	{
 		return;
+	}
+
+	//only ask for admin permissions when scaling someone else
+	if (g_entities[client_id].client->pers.netname != ent->client->pers.netname) {
+
+		if (!(ent->client->pers.bitvalue & (1 << ADM_SCALE)))
+		{ // zyk: scale admin command
+			trap->SendServerCommand(ent - g_entities, "print \"You don't have permission to scale someone else.\n\"");
+			return;
+		}
 	}
 
 	new_size = atoi(arg2);
@@ -5412,7 +5416,16 @@ void Cmd_Roll_f(gentity_t *ent) {
 	}
 
 	int max_value = atoi(arg1);
+
+	if (max_value < 2) {
+		trap->SendServerCommand(ent - g_entities, "print \"Maximun value must be at least two.\n\"");
+		return;
+	}
+
 	int result = rand() % (max_value + 1);
+	while (result == 0) {
+		result = rand() % (max_value + 1);
+	}
 	trap->SendServerCommand(-1, va("chat \"^3%s^2 rolled a ^3%d^2 out of ^3%d\n\"", ent->client->pers.netname, result, max_value));
 
 	return;
