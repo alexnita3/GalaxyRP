@@ -614,7 +614,7 @@ typedef enum {
 #define MAX_BOUNTY_HUNTER_SENTRIES 5
 
 // zyk: max RPG chars an account can have
-#define MAX_RPG_CHARS 15
+#define MAX_RPG_CHARS 60
 
 // zyk: max characters an account or rpg char can have
 #define MAX_ACC_NAME_SIZE 30
