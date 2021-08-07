@@ -2262,7 +2262,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= low_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= low_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^9 lowers their voice: %s\n\"", ent->client->pers.netname, text));
 				}
@@ -2281,7 +2281,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= long_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= long_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s: %s\n\"", ent->client->pers.netname, text));
 				}
@@ -2300,7 +2300,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melow_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melow_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2319,7 +2319,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melow_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melow_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2338,7 +2338,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2357,7 +2357,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melong_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melong_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2376,7 +2376,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= me_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= me_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2395,7 +2395,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shoutlong_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shoutlong_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2414,7 +2414,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2433,7 +2433,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shout_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shout_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2452,7 +2452,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolow_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolow_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
 				}
@@ -2471,7 +2471,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolong_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolong_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
 				}
@@ -2490,7 +2490,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
 				}
@@ -2509,7 +2509,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= do_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= do_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
 				}
@@ -2528,7 +2528,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelow_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelow_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2547,7 +2547,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelong_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelong_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2566,7 +2566,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2585,7 +2585,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= force_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= force_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
 				}
