@@ -2300,7 +2300,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melow_distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance)
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
 				}
