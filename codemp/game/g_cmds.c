@@ -2300,7 +2300,8 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melow_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+        
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
 				}
@@ -18223,7 +18224,7 @@ int zyk_char_count(gentity_t *ent)
 
 qboolean Is_Char_Name_Valid(char charName[MAX_STRING_CHARS]) {
 
-	char forbiddenCharacters[MAX_STRING_CHARS] = " ?!£$%^&*()-+=][{}#~';:/>.<,|";
+	char forbiddenCharacters[MAX_STRING_CHARS] = " ?!ï¿½$%^&*()-+=][{}#~';:/>.<,|";
 
 	for (int i = 0; i < strlen(charName); i++) {
 		for (int j = 0; j < strlen(forbiddenCharacters); j++) {
