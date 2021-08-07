@@ -17926,6 +17926,63 @@ void Cmd_News_f(gentity_t *ent) {
 
 /*
 ==================
+Cmd_UpdateNews_f
+==================
+*/
+void Cmd_UpdateNews_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+	char arg2[MAX_STRING_CHARS];
+	FILE *news_file = NULL;
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_GIVEADM)))
+	{ // admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	if (trap->Argc() > 3)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /news <neutral/jedi/sith> (argument is optional) <news text>\n\"");
+		return;
+	}
+
+	if (trap->Argc() < 2)
+	{
+		news_file = fopen("GalaxyRP/news.txt", "w");
+	}
+	else {
+		trap->Argv(1, arg1, sizeof(arg1));
+		if (strcmp(arg1, "republic") != 0 && strcmp(arg1, "sith") != 0 && strcmp(arg1, "jedi") != 0) {
+			trap->SendServerCommand(ent->s.number, "print \"Usage: /news <neutral/jedi/sith> (argument is optional) <news text>\n\"");
+			return;
+		}
+		if (strcmp(arg1, "republic") == 0) {
+			news_file = fopen("GalaxyRP/news_republic.txt", "w");
+		}
+		if (strcmp(arg1, "sith") == 0) {
+			news_file = fopen("GalaxyRP/news_sith.txt", "w");
+		}
+		if (strcmp(arg1, "jedi") == 0) {
+			news_file = fopen("GalaxyRP/news_jedi.txt", "w");
+		}
+	}
+	trap->Argv(1, arg2, sizeof(arg2));
+
+	if (news_file != NULL)
+	{
+		trap->Argv(2, arg2, sizeof(arg2));
+
+		fprintf(news_file, "%s\n", arg2);
+		fclose(news_file);
+	}
+	else
+	{
+		trap->SendServerCommand(ent->s.number, "print \"File was not found.\n\"");
+	}
+}
+
+/*
+==================
 Cmd_QuestSkip_f
 ==================
 */
@@ -19280,6 +19337,7 @@ command_t commands[] = {
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
 //	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "up",					Cmd_UpSkill_f,				CMD_RPG|CMD_NOINTERMISSION },
+	{ "updatenews",			Cmd_UpdateNews_f,					0 },
 	{ "voice_cmd",			Cmd_VoiceCommand_f,			CMD_NOINTERMISSION },
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
