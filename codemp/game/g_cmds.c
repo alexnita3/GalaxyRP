@@ -17988,6 +17988,215 @@ void Cmd_UpdateNews_f(gentity_t *ent) {
 	}
 }
 
+void inventory_display_beginning(gentity_t *ent) {
+	trap->SendServerCommand(ent->s.number, "print \"^2Inventory\n\"");
+	trap->SendServerCommand(ent->s.number, va("print \"^3[Credits: %i]\n\"", ent->client->pers.credits));
+	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
+}
+
+void inventory_display_end(gentity_t *ent) {
+	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
+}
+
+void inventory_add_item(gentity_t *ent, char item_to_add[MAX_STRING_CHARS]) {
+	FILE *inv_file = NULL;
+
+	inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "a+");
+
+	if (inv_file != NULL) {
+		fputs(va("%s\n", item_to_add), inv_file);
+		fclose(inv_file);
+		trap->SendServerCommand(ent->s.number, "print \"Item added to your inventory.\n\"");
+	}
+	else
+	{
+		trap->SendServerCommand(ent->s.number, "print \"File not found.\n\"");
+	}
+
+	return;
+}
+
+char* inventory_get_item_name_from_id(gentity_t *ent, int item_id) {
+	FILE *inv_file = NULL;
+	char items[100][MAX_STRING_CHARS];
+	inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "r");
+
+	int current_item_id = 1;
+
+	//get everything in the items array
+	if (inv_file != NULL) {
+		while (fscanf(inv_file, "%[^\n] ", items[item_id]) != EOF) {
+			current_item_id++;
+		}
+		fclose(inv_file);
+	}
+	else {
+		trap->SendServerCommand(ent->s.number, "print \"File not found.\n\"");
+		return;
+	}
+	//from now on you can look in items[] for anything you need
+
+	int max_item_id = current_item_id - 1;
+
+	if (item_id > max_item_id || item_id < 1) {
+		trap->SendServerCommand(ent->s.number, "print \"Item does not exist, make sure to enter a valid ID.\n\"");
+	}
+
+	return items[item_id];
+}
+
+void inventory_remove_item(gentity_t *ent, int id_to_be_removed) {
+	FILE *inv_file = NULL;
+	char items[100][MAX_STRING_CHARS];
+	inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "r");
+
+	int item_id = 1;
+
+	if (inv_file != NULL) {
+		while (fscanf(inv_file, "%[^\n] ", items[item_id]) != EOF) {
+			item_id++;
+		}
+		fclose(inv_file);
+	}
+	else {
+		trap->SendServerCommand(ent->s.number, "print \"File not found.\n\"");
+		return;
+	}
+
+	int max_item_id = item_id - 1;
+
+	if (id_to_be_removed > max_item_id || id_to_be_removed < 1) {
+		trap->SendServerCommand(ent->s.number, "print \"Item does not exist, make sure to enter a valid ID.\n\"");
+	}
+
+	inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "w");
+	for (int i = 1; i < item_id; i++) {
+		if (i != id_to_be_removed) {
+			fprintf(inv_file, "%s\n", items[i]);
+		}
+	}
+	fclose(inv_file);
+	return;
+}
+
+/*
+==================
+Cmd_Inventory_f
+==================
+*/
+void Cmd_Inventory_f(gentity_t *ent) {
+	FILE *inv_file = NULL;
+	char item[128];
+
+	strcpy(item, "");
+	if (trap->Argc())
+	{
+		inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "r");
+		
+		if (inv_file != NULL) {
+			inventory_display_beginning(ent);
+			int i = 1;
+			while (fscanf(inv_file, "%[^\n] ", item) != EOF) {
+				trap->SendServerCommand(ent->s.number, va("print \"^2%i.^3 %s\n\"", i, item));
+				i++;
+			}
+			if (i == 1) {
+				trap->SendServerCommand(ent->s.number, "print \"Your inventory is empty.\n\"");
+			}
+			inventory_display_end(ent);
+			fclose(inv_file);
+		}
+		else
+		{
+			//if file isn't there, create it
+			FILE *new_inv_file = NULL;
+			new_inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "a");
+			fclose(new_inv_file);
+			inventory_display_beginning(ent);
+			trap->SendServerCommand(ent->s.number, "print \"Your inventory is empty.\n\"");
+			inventory_display_end(ent);
+		}
+		return;
+	}
+	return;
+}
+
+/*
+==================
+Cmd_CreateItem_f
+==================
+*/
+void Cmd_CreateItem_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 2) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /createitem <itemname>\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	inventory_add_item(ent, arg1);
+	
+	return;
+}
+
+/*
+==================
+Cmd_TrashItem_f
+==================
+*/
+void Cmd_TrashItem_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 2) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /trashitem <itemid>\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+	int id_to_be_removed = atoi(arg1);
+
+	inventory_remove_item(ent, id_to_be_removed);
+
+	return;
+}
+
+/*
+==================
+Cmd_GiveItem_f
+==================
+*/
+void Cmd_GiveItem_f(gentity_t *ent) {
+	char player_name[MAX_STRING_CHARS];
+	char arg2[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 3) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /giveitem <playername> <itemid>\n\"");
+		return;
+	}
+	trap->Argv(1, player_name, sizeof(player_name));
+	trap->Argv(2, arg2, sizeof(arg2));
+
+	int item_id = atoi(arg2);
+	char item_name[MAX_STRING_CHARS];
+	strcpy(item_name, inventory_get_item_name_from_id(ent, item_id));
+
+	int player_id = ClientNumberFromString(ent, player_name, qfalse);
+
+	//player not found, no point in going on
+	if (player_id == -1) {
+		return;
+	}
+
+	inventory_add_item(&g_entities[player_id], item_name);
+	inventory_remove_item(ent, item_id);
+
+	trap->SendServerCommand(ent->s.number, va("print \"^2You've given %s^2 to %s^2\n\"", item_name, &g_entities[player_id].client->pers.netname));
+
+	return;
+}
+
 /*
 ==================
 Cmd_QuestSkip_f
@@ -19237,8 +19446,10 @@ command_t commands[] = {
 	{ "callteamvote",		Cmd_CallTeamVote_f,			CMD_NOINTERMISSION },
 	{ "callvote",			Cmd_CallVote_f,				CMD_NOINTERMISSION },
 	{ "changepassword",		Cmd_ChangePassword_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "char",				Cmd_RpgChar_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "clientprint",		Cmd_ClientPrint_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "createcredits",		Cmd_CreditCreate_f,			CMD_RPG | CMD_NOINTERMISSION },
+	{ "createitem",			Cmd_CreateItem_f,			CMD_LOGGEDIN},
 //	{ "customquest",		Cmd_CustomQuest_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "datetime",			Cmd_DateTime_f,				CMD_NOINTERMISSION },
 	{ "debugBMove_Back",	Cmd_BotMoveBack_f,			CMD_CHEAT|CMD_ALIVE },
@@ -19273,10 +19484,12 @@ command_t commands[] = {
 	{ "gc",					Cmd_GameCommand_f,			CMD_NOINTERMISSION },
 	{ "give",				Cmd_Give_f,					CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "givecredits",		Cmd_CreditGive_f,			CMD_RPG | CMD_NOINTERMISSION },
+	{ "giveitem",			Cmd_GiveItem_f,				CMD_LOGGEDIN},
 	{ "god",				Cmd_God_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "guardianquest",		Cmd_GuardianQuest_f,		CMD_ALIVE|CMD_RPG|CMD_NOINTERMISSION },
 	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
 	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
+	{ "inv",				Cmd_Inventory_f,			CMD_LOGGEDIN},
 	{ "jetpack",			Cmd_Jetpack_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "kill",				Cmd_Kill_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "killother",			Cmd_KillOther_f,			CMD_NOINTERMISSION },
@@ -19311,7 +19524,6 @@ command_t commands[] = {
 	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "resetaccount",		Cmd_ResetAccount_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "roll",				Cmd_Roll_f,					0 },
-	{ "char",				Cmd_RpgChar_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 //	{ "rpgclass",			Cmd_RpgClass_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "rpglmstable",		Cmd_RpgLmsTable_f,			CMD_NOINTERMISSION },
@@ -19341,6 +19553,7 @@ command_t commands[] = {
 	{ "tell",				Cmd_Tell_f,					0 },
 //	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN},
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
 //	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "up",					Cmd_UpSkill_f,				CMD_RPG|CMD_NOINTERMISSION },
