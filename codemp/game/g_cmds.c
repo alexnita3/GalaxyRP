@@ -2668,7 +2668,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		{
 			if (mode == SAY_ALL) {
 
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= distance)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
 				{
 					if (ooc_flag == 1) {
 						G_SayTo(ent, other, mode, color, name, ooc_text, locMsg);
