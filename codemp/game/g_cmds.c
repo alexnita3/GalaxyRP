@@ -889,6 +889,12 @@ argv(0) god
 void Cmd_God_f( gentity_t *ent ) {
 	char *msg = NULL;
 
+	if (!(ent->client->pers.bitvalue & (1 << ADM_GOD)))
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
 	ent->flags ^= FL_GODMODE;
 	if (!(ent->flags & FL_GODMODE)) {
 		trap->SendServerCommand(-1, va("chat \"^7%s ^7turned god mode ^1OFF\n\"", ent->client->pers.netname));
@@ -2262,7 +2268,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= low_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= low_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^9 lowers their voice: %s\n\"", ent->client->pers.netname, text));
 				}
@@ -2281,7 +2287,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= long_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= long_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s: %s\n\"", ent->client->pers.netname, text));
 				}
@@ -2301,7 +2307,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 
 				other = &g_entities[j];
         
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s:^3%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2320,7 +2326,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melow_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melow_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2339,7 +2345,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2358,7 +2364,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melong_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melong_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2377,7 +2383,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= me_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= me_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2396,7 +2402,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shoutlong_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shoutlong_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2415,7 +2421,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2434,7 +2440,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shout_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shout_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2453,7 +2459,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolow_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolow_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
 				}
@@ -2472,7 +2478,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolong_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolong_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
 				}
@@ -2491,7 +2497,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
 				}
@@ -2510,7 +2516,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= do_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= do_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
 				}
@@ -2529,7 +2535,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelow_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelow_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2548,7 +2554,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelong_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelong_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2567,7 +2573,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2586,7 +2592,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			for (j = 0; j < level.numConnectedClients; j++) {
 
 				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= force_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= force_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
 				}
@@ -2668,7 +2674,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		{
 			if (mode == SAY_ALL) {
 
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					if (ooc_flag == 1) {
 						G_SayTo(ent, other, mode, color, name, ooc_text, locMsg);
@@ -12148,7 +12154,7 @@ void Cmd_CreditCreate_f(gentity_t *ent) {
 	}
 
 	// player must have adminup permissions
-	if (!(ent->client->pers.bitvalue & (1 << ADM_GIVEADM)))
+	if (!(ent->client->pers.bitvalue & (1 << ADM_CREATECREDITS)))
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"You do not have the correct admin permission to create credits.\n\"");
 		return;
@@ -14836,20 +14842,20 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_NOCLIP))) 
 	{
-		strcpy(message_content[1],va("^3  %d ^7- NoClip: ^2yes\n",ADM_NOCLIP));
+		strcpy(message_content[1],va("^3  %d ^7- No Clip: ^2yes\n",ADM_NOCLIP));
 	}
 	else
 	{
-		strcpy(message_content[1],va("^3  %d ^7- NoClip: ^1no\n",ADM_NOCLIP));
+		strcpy(message_content[1],va("^3  %d ^7- No Clip: ^1no\n",ADM_NOCLIP));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_GIVEADM))) 
 	{
-		strcpy(message_content[2],va("^3  %d ^7- GiveAdmin: ^2yes\n",ADM_GIVEADM));
+		strcpy(message_content[2],va("^3  %d ^7- Give Admin: ^2yes\n",ADM_GIVEADM));
 	}
 	else
 	{
-		strcpy(message_content[2],va("^3  %d ^7- GiveAdmin: ^1no\n",ADM_GIVEADM));
+		strcpy(message_content[2],va("^3  %d ^7- Give Admin: ^1no\n",ADM_GIVEADM));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_TELE))) 
@@ -14863,20 +14869,20 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))) 
 	{
-		strcpy(message_content[4],va("^3  %d ^7- AdminProtect: ^2yes\n",ADM_ADMPROTECT));
+		strcpy(message_content[4],va("^3  %d ^7- Admin Protect: ^2yes\n",ADM_ADMPROTECT));
 	}
 	else
 	{
-		strcpy(message_content[4],va("^3  %d ^7- AdminProtect: ^1no\n",ADM_ADMPROTECT));
+		strcpy(message_content[4],va("^3  %d ^7- Admin Protect: ^1no\n",ADM_ADMPROTECT));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM))) 
 	{
-		strcpy(message_content[5],va("^3  %d ^7- EntitySystem: ^2yes\n",ADM_ENTITYSYSTEM));
+		strcpy(message_content[5],va("^3  %d ^7- Entity System: ^2yes\n",ADM_ENTITYSYSTEM));
 	}
 	else
 	{
-		strcpy(message_content[5],va("^3  %d ^7- EntitySystem: ^1no\n",ADM_ENTITYSYSTEM));
+		strcpy(message_content[5],va("^3  %d ^7- Entity System: ^1no\n",ADM_ENTITYSYSTEM));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_SILENCE))) 
@@ -14890,20 +14896,20 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_CLIENTPRINT))) 
 	{
-		strcpy(message_content[7],va("^3  %d ^7- ClientPrint: ^2yes\n",ADM_CLIENTPRINT));
+		strcpy(message_content[7],va("^3  %d ^7- Client Print: ^2yes\n",ADM_CLIENTPRINT));
 	}
 	else
 	{
-		strcpy(message_content[7],va("^3  %d ^7- ClientPrint: ^1no\n",ADM_CLIENTPRINT));
+		strcpy(message_content[7],va("^3  %d ^7- Client Print: ^1no\n",ADM_CLIENTPRINT));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_RPMODE))) 
 	{
-		strcpy(message_content[8],va("^3  %d ^7- SkillChange: ^2yes\n",ADM_RPMODE));
+		strcpy(message_content[8],va("^3  %d ^7- Placeholder: ^2yes\n",ADM_RPMODE));
 	}
 	else
 	{
-		strcpy(message_content[8],va("^3  %d ^7- SkillChange: ^1no\n",ADM_RPMODE));
+		strcpy(message_content[8],va("^3  %d ^7- Placeholder: ^1no\n",ADM_RPMODE));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_KICK))) 
@@ -14953,20 +14959,74 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
 	{
-		strcpy(message_content[14], va("^3 %d ^7- DuelArena: ^2yes\n", ADM_DUELARENA));
+		strcpy(message_content[14], va("^3 %d ^7- Duel Arena: ^2yes\n", ADM_DUELARENA));
 	}
 	else
 	{
-		strcpy(message_content[14], va("^3 %d ^7- DuelArena: ^1no\n", ADM_DUELARENA));
+		strcpy(message_content[14], va("^3 %d ^7- Duel Arena: ^1no\n", ADM_DUELARENA));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
 	{
-		strcpy(message_content[15], va("^3 %d ^7- CreateItem: ^2yes\n", ADM_CUSTOMQUEST));
+		strcpy(message_content[15], va("^3 %d ^7- Placeholder: ^2yes\n", ADM_CUSTOMQUEST));
 	}
 	else
 	{
-		strcpy(message_content[15], va("^3 %d ^7- CreateItem: ^1no\n", ADM_CUSTOMQUEST));
+		strcpy(message_content[15], va("^3 %d ^7- Placeholder: ^1no\n", ADM_CUSTOMQUEST));
+	}
+
+	if ((ent->client->pers.bitvalue & (1 << ADM_CREATEITEM)))
+	{
+		strcpy(message_content[16], va("^3 %d ^7- Create Items: ^2yes\n", ADM_CREATEITEM));
+	}
+	else
+	{
+		strcpy(message_content[16], va("^3 %d ^7- Create Items: ^1no\n", ADM_CREATEITEM));
+	}
+
+	if ((ent->client->pers.bitvalue & (1 << ADM_GOD)))
+	{
+		strcpy(message_content[17], va("^3 %d ^7- God Mode: ^2yes\n", ADM_GOD));
+	}
+	else
+	{
+		strcpy(message_content[17], va("^3 %d ^7- God Mode: ^1no\n", ADM_GOD));
+	}
+
+	if ((ent->client->pers.bitvalue & (1 << ADM_LEVELUP)))
+	{
+		strcpy(message_content[18], va("^3 %d ^7- Upgrade Level: ^2yes\n", ADM_LEVELUP));
+	}
+	else
+	{
+		strcpy(message_content[18], va("^3 %d ^7- Upgrade Level: ^1no\n", ADM_LEVELUP));
+	}
+
+	if ((ent->client->pers.bitvalue & (1 << ADM_SKILL)))
+	{
+		strcpy(message_content[19], va("^3 %d ^7- Change Skills: ^2yes\n", ADM_SKILL));
+	}
+	else
+	{
+		strcpy(message_content[19], va("^3 %d ^7- Change Skills: ^1no\n", ADM_SKILL));
+	}
+
+	if ((ent->client->pers.bitvalue & (1 << ADM_CREATECREDITS)))
+	{
+		strcpy(message_content[20], va("^3 %d ^7- Create Credits: ^2yes\n", ADM_CREATECREDITS));
+	}
+	else
+	{
+		strcpy(message_content[20], va("^3 %d ^7- Create Credits: ^1no\n", ADM_CREATECREDITS));
+	}
+
+	if ((ent->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE)))
+	{
+		strcpy(message_content[21], va("^3 %d ^7- Ignore Chat Distance: ^2yes\n", ADM_IGNORECHATDISTANCE));
+	}
+	else
+	{
+		strcpy(message_content[21], va("^3 %d ^7- Ignore Chat Distance: ^1no\n", ADM_IGNORECHATDISTANCE));
 	}
 
 	for (i = 0; i < ADM_NUM_CMDS; i++)
@@ -15307,7 +15367,7 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
+	if (!(ent->client->pers.bitvalue & (1 << ADM_SKILL)))
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -15348,7 +15408,7 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
+	if (!(ent->client->pers.bitvalue & (1 << ADM_SKILL)))
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -15388,7 +15448,7 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
+	if (!(ent->client->pers.bitvalue & (1 << ADM_LEVELUP)))
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -18140,7 +18200,7 @@ Cmd_CreateItem_f
 void Cmd_CreateItem_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
+	if (!(ent->client->pers.bitvalue & (1 << ADM_CREATEITEM)))
 	{
 		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
 		return;
