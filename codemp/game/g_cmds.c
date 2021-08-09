@@ -14899,11 +14899,11 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_RPMODE))) 
 	{
-		strcpy(message_content[8],va("^3  %d ^7- RP Mode: ^2yes\n",ADM_RPMODE));
+		strcpy(message_content[8],va("^3  %d ^7- SkillChange: ^2yes\n",ADM_RPMODE));
 	}
 	else
 	{
-		strcpy(message_content[8],va("^3  %d ^7- RP Mode: ^1no\n",ADM_RPMODE));
+		strcpy(message_content[8],va("^3  %d ^7- SkillChange: ^1no\n",ADM_RPMODE));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_KICK))) 
@@ -14962,11 +14962,11 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
 	{
-		strcpy(message_content[15], va("^3 %d ^7- Custom Quest: ^2yes\n", ADM_CUSTOMQUEST));
+		strcpy(message_content[15], va("^3 %d ^7- CreateItem: ^2yes\n", ADM_CUSTOMQUEST));
 	}
 	else
 	{
-		strcpy(message_content[15], va("^3 %d ^7- Custom Quest: ^1no\n", ADM_CUSTOMQUEST));
+		strcpy(message_content[15], va("^3 %d ^7- CreateItem: ^1no\n", ADM_CUSTOMQUEST));
 	}
 
 	for (i = 0; i < ADM_NUM_CMDS; i++)
@@ -18079,6 +18079,17 @@ void inventory_remove_item(gentity_t *ent, int id_to_be_removed) {
 	return;
 }
 
+void inventory_add_create_item_log(gentity_t *ent, char created_item_name[MAX_STRING_CHARS]) {
+	FILE *log_file = NULL;
+
+	log_file = fopen("GalaxyRP/logs/itemlog.txt", "a+");
+
+	fputs(va("%s created the item: %s\n", ent->client->pers.netname, created_item_name), log_file);
+	fclose(log_file);
+	
+	return;
+}
+
 /*
 ==================
 Cmd_Inventory_f
@@ -18129,6 +18140,12 @@ Cmd_CreateItem_f
 void Cmd_CreateItem_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
 
+	if (!(ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
+	{
+		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
 	if (trap->Argc() != 2) {
 		trap->SendServerCommand(ent->s.number, "print \"Usage: /createitem <itemname>\n\"");
 		return;
@@ -18137,6 +18154,8 @@ void Cmd_CreateItem_f(gentity_t *ent) {
 	trap->Argv(1, arg1, sizeof(arg1));
 
 	inventory_add_item(ent, arg1);
+
+	inventory_add_create_item_log(ent, arg1);
 	
 	return;
 }
