@@ -18263,13 +18263,13 @@ void Cmd_GiveItem_f(gentity_t *ent) {
 
 	int player_id = ClientNumberFromString(ent, player_name, qfalse);
 
-	if (Distance(ent->client->ps.origin, &g_entities[player_id].client->ps.origin) > 1000) {
-		trap->SendServerCommand(ent->s.number, "print \"You are too far away from that person.\n\"");
+	//player not found, no point in going on
+	if (player_id == -1) {
 		return;
 	}
 
-	//player not found, no point in going on
-	if (player_id == -1) {
+	if (Distance(ent->client->ps.origin, &g_entities[player_id].client->ps.origin) > 1000) {
+		trap->SendServerCommand(ent->s.number, "print \"You are too far away from that person.\n\"");
 		return;
 	}
 
@@ -18326,6 +18326,11 @@ void Cmd_Examine_f(gentity_t *ent) {
 
 	trap->Argv(1, player_name, sizeof(player_name));
 	int player_id = ClientNumberFromString(ent, player_name, qfalse);
+
+	//player not found, no point in going on
+	if (player_id == -1) {
+		return;
+	}
 
 	if (Distance(ent->client->ps.origin, &g_entities[player_id].client->ps.origin) > 1000) {
 		trap->SendServerCommand(ent->s.number, "print \"You are too far away from that person.\n\"");
