@@ -19566,8 +19566,8 @@ command_t commands[] = {
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
 	{ "zykfile",			Cmd_ZykFile_f,				CMD_NOINTERMISSION },
-	{ "zykchars",			Cmd_ZykChars_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "zykmod",				Cmd_ZykMod_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+//	{ "zykchars",			Cmd_ZykChars_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+//	{ "zykmod",				Cmd_ZykMod_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "zyksound",			Cmd_ZykSound_f,				CMD_NOINTERMISSION },
 };
 static const size_t numCommands = ARRAY_LEN( commands );
