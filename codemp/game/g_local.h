@@ -30,6 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "bg_public.h"
 #include "bg_vehicles.h"
 #include "g_public.h"
+#include "qcommon/game_version.h"
+
 
 typedef struct gentity_s gentity_t;
 typedef struct gclient_s gclient_t;
@@ -44,7 +46,7 @@ extern vec3_t gPainPoint;
 //==================================================================
 
 // the "gameversion" client command will print this plus compile date
-#define	GAMEVERSION	"Galaxy RP Mod v3.1"
+#define	GAMEVERSION	JK_VERSION
 
 #define SECURITY_LOG "security.log"
 
@@ -556,7 +558,13 @@ typedef enum {
 	ADM_PLAYERS,
 	ADM_DUELARENA,
 	ADM_CUSTOMQUEST,
-	ADM_NUM_CMDS
+	ADM_CREATEITEM,
+	ADM_GOD,
+	ADM_LEVELUP,
+	ADM_SKILL,
+	ADM_CREATECREDITS,
+	ADM_IGNORECHATDISTANCE,
+	ADM_NUM_CMDS,
 } zyk_admin_t;
 
 // zyk: magic powers values

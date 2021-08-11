@@ -889,6 +889,12 @@ argv(0) god
 void Cmd_God_f( gentity_t *ent ) {
 	char *msg = NULL;
 
+	if (!(ent->client->pers.bitvalue & (1 << ADM_GOD)))
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
 	ent->flags ^= FL_GODMODE;
 	if (!(ent->flags & FL_GODMODE)) {
 		trap->SendServerCommand(-1, va("chat \"^7%s ^7turned god mode ^1OFF\n\"", ent->client->pers.netname));
@@ -2254,347 +2260,114 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 
 		char *output = NULL;
 
-		output = strstr(text, "/low");
-		//low case
-		if (output) {
-			delete_chat_command(text, 4);
+		// these two have to be in the same order, one if the distance to the modifiers, so the order has to match
+		// in chat_modifiers, shorter strings have to be AFTER the longer string (e.g. /me HAS to be AFTER /melong, otherwise it'll pick /me instead)
 
-			for (j = 0; j < level.numConnectedClients; j++) {
+		int max_chat_modifiers = 22;
 
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= low_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^9 lowers their voice: %s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
+		char chat_modifiers[22][50] = {
+			"/low",
+			"/long",
+			"/all",
+			"/melow",
+			"/meall",
+			"/melong",
+			"/me",
+			"/shoutlong",
+			"/shoutall",
+			"/shout",
+			"/dolow",
+			"/dolong",
+			"/doall",
+			"/do",
+			"/forcelow",
+			"/forcelong",
+			"/forceall",
+			"/force",
+			"/mylow",
+			"/myall",
+			"/mylong",
+			"/my"
+		};
 
-			return;
+		char text_formats[22][50] = {
+			"chat \"%s^9 lowers their voice:%s\n\"",
+			"chat \"%s:%s\n\"",
+			"chat \"%s:^3%s\n\"",
+			"chat \"%s^3%s\n\"",
+			"chat \"%s^3%s\n\"",
+			"chat \"%s^3%s\n\"",
+			"chat \"%s^3%s\n\"",
+			"chat \"%s shouts:^2%s\n\"",
+			"chat \"%s shouts:^2%s\n\"",
+			"chat \"%s shouts:^2%s\n\"",
+			"chat \"(%s)^3%s\n\"",
+			"chat \"(%s)^3%s\n\"",
+			"chat \"(%s)^3%s\n\"",
+			"chat \"(%s)^3%s\n\"",
+			"chat \"%s^5 uses the Force to%s\n\"",
+			"chat \"%s^5 uses the Force to%s\n\"",
+			"chat \"%s^5 uses the Force to%s\n\"",
+			"chat \"%s^5 uses the Force to%s\n\"",
+			"chat \"%s^3's %s\n\"",
+			"chat \"%s^3's %s\n\"",
+			"chat \"%s^3's %s\n\"",
+			"chat \"%s^3's %s\n\""
+		};
+
+		int chat_distances[22] = {
+			low_distance,
+			long_distance,
+			broadcast_distance,
+			melow_distance,
+			broadcast_distance,
+			melong_distance,
+			me_distance,
+			shoutlong_distance,
+			broadcast_distance,
+			shout_distance,
+			dolow_distance,
+			dolong_distance,
+			broadcast_distance,
+			do_distance,
+			forcelow_distance,
+			forcelong_distance,
+			broadcast_distance,
+			force_distance,
+			melow_distance,
+			broadcast_distance,
+			melong_distance,
+			me_distance
+		};
+
+		char slash = '/';
+
+		const char *ptr = strchr(text, slash);
+		int index_of_slash;
+		if (ptr) {
+			index_of_slash = ptr - text;
 		}
 
-		output = strstr(text, "/long");
-		//long case
-		if (output) {
-			delete_chat_command(text, 5);
+		for (int i = 0; i < max_chat_modifiers; i++) {
+			output = strstr(text, chat_modifiers[i]);
 
-			for (j = 0; j < level.numConnectedClients; j++) {
+			
+			if (output && index_of_slash == 0) {
+				delete_chat_command(text, strlen(chat_modifiers[i]));
 
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= long_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s: %s\n\"", ent->client->pers.netname, text));
+				for (j = 0; j < level.numConnectedClients; j++) {
+
+					other = &g_entities[j];
+					if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_distances[i] || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
+					{
+						trap->SendServerCommand(other->client->ps.clientNum, va(text_formats[i], ent->client->pers.netname, text));
+					}
+					else
+						continue;
 				}
-				else
-					continue;
+
+				return;
 			}
-
-			return;
-		}
-
-		output = strstr(text, "/all");
-		//all case
-		if (output) {
-			delete_chat_command(text, 4);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-        
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s:^3%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/melow");
-		//melow case
-		if (output) {
-			delete_chat_command(text, 6);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melow_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/meall");
-		//meall case
-		if (output) {
-			delete_chat_command(text, 6);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/melong");
-		//melong case
-		if (output) {
-			delete_chat_command(text, 7);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melong_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-		
-		output = strstr(text, "/me");
-		//me case
-		if (output) {
-			delete_chat_command(text, 3);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= me_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/shoutlong");
-		//shoutlong case
-		if (output) {
-			delete_chat_command(text, 10);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shoutlong_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/shoutall");
-		//shoutall case
-		if (output) {
-			delete_chat_command(text, 9);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/shout");
-		//shout case
-		if (output) {
-			delete_chat_command(text, 6);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shout_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/dolow");
-		//dolong case
-		if (output) {
-			delete_chat_command(text, 6);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolow_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/dolong");
-		//dolong case
-		if (output) {
-			delete_chat_command(text, 7);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolong_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/doall");
-		//doall case
-		if (output) {
-			delete_chat_command(text, 6);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/do");
-		//do case
-		if (output) {
-			delete_chat_command(text, 3);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= do_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/forcelow");
-		//forcelow case
-		if (output) {
-			delete_chat_command(text, 9);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelow_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/forcelong");
-		//forcelong case
-		if (output) {
-			delete_chat_command(text, 10);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelong_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/forceall");
-		//forceall case
-		if (output) {
-			delete_chat_command(text, 9);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/force");
-		//force case
-		if (output) {
-			delete_chat_command(text, 6);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= force_distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
 		}
 
 		G_LogPrintf( "say: %s: %s\n", ent->client->pers.netname, text );
@@ -2668,7 +2441,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		{
 			if (mode == SAY_ALL) {
 
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= distance || other->client->pers.bitvalue & (1 << ADM_ADMPROTECT))
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 				{
 					if (ooc_flag == 1) {
 						G_SayTo(ent, other, mode, color, name, ooc_text, locMsg);
@@ -5766,13 +5539,28 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 	}
 }
 
+int roll_dice(max_value) {
+	int result = rand() % (max_value + 1);
+	while (result == 0) {
+		result = rand() % (max_value + 1);
+	}
+
+	return result;
+}
+
+/*
+==================
+Cmd_Roll_f
+==================
+*/
+
 void Cmd_Roll_f(gentity_t *ent) {
 
 	char arg1[MAX_STRING_CHARS];
 
 	if (trap->Argc() != 2)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"/roll <max roll>.\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: /roll <max roll>.\n\"");
 		return;
 	}
 
@@ -5790,11 +5578,35 @@ void Cmd_Roll_f(gentity_t *ent) {
 		return;
 	}
 
-	int result = rand() % (max_value + 1);
-	while (result == 0) {
-		result = rand() % (max_value + 1);
-	}
+	int result = roll_dice(max_value);
+
 	trap->SendServerCommand(-1, va("chat \"^3%s^2 rolled a ^3%d^2 out of ^3%d\n\"", ent->client->pers.netname, result, max_value));
+
+	return;
+}
+
+/*
+==================
+Cmd_FlipCoin_f
+==================
+*/
+
+void Cmd_FlipCoin_f(gentity_t *ent) {
+
+	if (trap->Argc() != 1)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: /flipcoin\n\"");
+		return;
+	}
+
+	int result = roll_dice(2);
+
+	if (result == 1) {
+		trap->SendServerCommand(-1, va("chat \"^3%s^2 flipped a coin that landed on ^3HEADS.\n\"", ent->client->pers.netname));
+	}
+	else {
+		trap->SendServerCommand(-1, va("chat \"^3%s^2 flipped a coin that landed on ^3TAILS.\n\"", ent->client->pers.netname));
+	}
 
 	return;
 }
@@ -10217,7 +10029,7 @@ void zyk_list_stuff(gentity_t *ent, gentity_t *target_ent)
 
 void list_rpg_info(gentity_t *ent, gentity_t *target_ent)
 { // zyk: lists general RPG info of this player
-	trap->SendServerCommand(target_ent->s.number, va("print \"\n^2Account: ^7%s\n^2Character: ^7%s\n\n^3Level: ^7%d/%d\n^3Level Up Score: ^7%d/%d\n^3Skill Points: ^7%d\n^3Skill Counter: ^7%d/%d\n^3Credits: ^7%d\n\n^7Use ^2/list help ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->pers.level, zyk_rpg_max_level.integer, ent->client->pers.level_up_score, (ent->client->pers.level * zyk_level_up_score_factor.integer), ent->client->pers.skillpoints, ent->client->pers.skill_counter, zyk_max_skill_counter.integer, ent->client->pers.credits));
+	trap->SendServerCommand(target_ent->s.number, va("print \"\n^2Account: ^7%s\n^2Character: ^7%s\n\n^3Level: ^7%d/%d\n^3Skill Points: ^7%d\n\n^7Use ^2/list help ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->pers.level, zyk_rpg_max_level.integer, (ent->client->pers.level * zyk_level_up_score_factor.integer), ent->client->pers.skillpoints));
 }
 
 /*
@@ -12148,7 +11960,7 @@ void Cmd_CreditCreate_f(gentity_t *ent) {
 	}
 
 	// player must have adminup permissions
-	if (!(ent->client->pers.bitvalue & (1 << ADM_GIVEADM)))
+	if (!(ent->client->pers.bitvalue & (1 << ADM_CREATECREDITS)))
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"You do not have the correct admin permission to create credits.\n\"");
 		return;
@@ -14836,20 +14648,20 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_NOCLIP))) 
 	{
-		strcpy(message_content[1],va("^3  %d ^7- NoClip: ^2yes\n",ADM_NOCLIP));
+		strcpy(message_content[1],va("^3  %d ^7- No Clip: ^2yes\n",ADM_NOCLIP));
 	}
 	else
 	{
-		strcpy(message_content[1],va("^3  %d ^7- NoClip: ^1no\n",ADM_NOCLIP));
+		strcpy(message_content[1],va("^3  %d ^7- No Clip: ^1no\n",ADM_NOCLIP));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_GIVEADM))) 
 	{
-		strcpy(message_content[2],va("^3  %d ^7- GiveAdmin: ^2yes\n",ADM_GIVEADM));
+		strcpy(message_content[2],va("^3  %d ^7- Give Admin: ^2yes\n",ADM_GIVEADM));
 	}
 	else
 	{
-		strcpy(message_content[2],va("^3  %d ^7- GiveAdmin: ^1no\n",ADM_GIVEADM));
+		strcpy(message_content[2],va("^3  %d ^7- Give Admin: ^1no\n",ADM_GIVEADM));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_TELE))) 
@@ -14863,20 +14675,20 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))) 
 	{
-		strcpy(message_content[4],va("^3  %d ^7- AdminProtect: ^2yes\n",ADM_ADMPROTECT));
+		strcpy(message_content[4],va("^3  %d ^7- Admin Protect: ^2yes\n",ADM_ADMPROTECT));
 	}
 	else
 	{
-		strcpy(message_content[4],va("^3  %d ^7- AdminProtect: ^1no\n",ADM_ADMPROTECT));
+		strcpy(message_content[4],va("^3  %d ^7- Admin Protect: ^1no\n",ADM_ADMPROTECT));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM))) 
 	{
-		strcpy(message_content[5],va("^3  %d ^7- EntitySystem: ^2yes\n",ADM_ENTITYSYSTEM));
+		strcpy(message_content[5],va("^3  %d ^7- Entity System: ^2yes\n",ADM_ENTITYSYSTEM));
 	}
 	else
 	{
-		strcpy(message_content[5],va("^3  %d ^7- EntitySystem: ^1no\n",ADM_ENTITYSYSTEM));
+		strcpy(message_content[5],va("^3  %d ^7- Entity System: ^1no\n",ADM_ENTITYSYSTEM));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_SILENCE))) 
@@ -14890,20 +14702,20 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_CLIENTPRINT))) 
 	{
-		strcpy(message_content[7],va("^3  %d ^7- ClientPrint: ^2yes\n",ADM_CLIENTPRINT));
+		strcpy(message_content[7],va("^3  %d ^7- Client Print: ^2yes\n",ADM_CLIENTPRINT));
 	}
 	else
 	{
-		strcpy(message_content[7],va("^3  %d ^7- ClientPrint: ^1no\n",ADM_CLIENTPRINT));
+		strcpy(message_content[7],va("^3  %d ^7- Client Print: ^1no\n",ADM_CLIENTPRINT));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_RPMODE))) 
 	{
-		strcpy(message_content[8],va("^3  %d ^7- RP Mode: ^2yes\n",ADM_RPMODE));
+		strcpy(message_content[8],va("^3  %d ^7- Placeholder: ^2yes\n",ADM_RPMODE));
 	}
 	else
 	{
-		strcpy(message_content[8],va("^3  %d ^7- RP Mode: ^1no\n",ADM_RPMODE));
+		strcpy(message_content[8],va("^3  %d ^7- Placeholder: ^1no\n",ADM_RPMODE));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_KICK))) 
@@ -14953,20 +14765,74 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
 	{
-		strcpy(message_content[14], va("^3 %d ^7- DuelArena: ^2yes\n", ADM_DUELARENA));
+		strcpy(message_content[14], va("^3 %d ^7- Duel Arena: ^2yes\n", ADM_DUELARENA));
 	}
 	else
 	{
-		strcpy(message_content[14], va("^3 %d ^7- DuelArena: ^1no\n", ADM_DUELARENA));
+		strcpy(message_content[14], va("^3 %d ^7- Duel Arena: ^1no\n", ADM_DUELARENA));
 	}
 
 	if ((ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
 	{
-		strcpy(message_content[15], va("^3 %d ^7- Custom Quest: ^2yes\n", ADM_CUSTOMQUEST));
+		strcpy(message_content[15], va("^3 %d ^7- Placeholder: ^2yes\n", ADM_CUSTOMQUEST));
 	}
 	else
 	{
-		strcpy(message_content[15], va("^3 %d ^7- Custom Quest: ^1no\n", ADM_CUSTOMQUEST));
+		strcpy(message_content[15], va("^3 %d ^7- Placeholder: ^1no\n", ADM_CUSTOMQUEST));
+	}
+
+	if ((ent->client->pers.bitvalue & (1 << ADM_CREATEITEM)))
+	{
+		strcpy(message_content[16], va("^3 %d ^7- Create Items: ^2yes\n", ADM_CREATEITEM));
+	}
+	else
+	{
+		strcpy(message_content[16], va("^3 %d ^7- Create Items: ^1no\n", ADM_CREATEITEM));
+	}
+
+	if ((ent->client->pers.bitvalue & (1 << ADM_GOD)))
+	{
+		strcpy(message_content[17], va("^3 %d ^7- God Mode: ^2yes\n", ADM_GOD));
+	}
+	else
+	{
+		strcpy(message_content[17], va("^3 %d ^7- God Mode: ^1no\n", ADM_GOD));
+	}
+
+	if ((ent->client->pers.bitvalue & (1 << ADM_LEVELUP)))
+	{
+		strcpy(message_content[18], va("^3 %d ^7- Upgrade Level: ^2yes\n", ADM_LEVELUP));
+	}
+	else
+	{
+		strcpy(message_content[18], va("^3 %d ^7- Upgrade Level: ^1no\n", ADM_LEVELUP));
+	}
+
+	if ((ent->client->pers.bitvalue & (1 << ADM_SKILL)))
+	{
+		strcpy(message_content[19], va("^3 %d ^7- Change Skills: ^2yes\n", ADM_SKILL));
+	}
+	else
+	{
+		strcpy(message_content[19], va("^3 %d ^7- Change Skills: ^1no\n", ADM_SKILL));
+	}
+
+	if ((ent->client->pers.bitvalue & (1 << ADM_CREATECREDITS)))
+	{
+		strcpy(message_content[20], va("^3 %d ^7- Create Credits: ^2yes\n", ADM_CREATECREDITS));
+	}
+	else
+	{
+		strcpy(message_content[20], va("^3 %d ^7- Create Credits: ^1no\n", ADM_CREATECREDITS));
+	}
+
+	if ((ent->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE)))
+	{
+		strcpy(message_content[21], va("^3 %d ^7- Ignore Chat Distance: ^2yes\n", ADM_IGNORECHATDISTANCE));
+	}
+	else
+	{
+		strcpy(message_content[21], va("^3 %d ^7- Ignore Chat Distance: ^1no\n", ADM_IGNORECHATDISTANCE));
 	}
 
 	for (i = 0; i < ADM_NUM_CMDS; i++)
@@ -15307,7 +15173,7 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
+	if (!(ent->client->pers.bitvalue & (1 << ADM_SKILL)))
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -15348,7 +15214,7 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
+	if (!(ent->client->pers.bitvalue & (1 << ADM_SKILL)))
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -15388,7 +15254,7 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
+	if (!(ent->client->pers.bitvalue & (1 << ADM_LEVELUP)))
 	{ // zyk: admin command
 		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
 		return;
@@ -17988,6 +17854,349 @@ void Cmd_UpdateNews_f(gentity_t *ent) {
 	}
 }
 
+void inventory_display_beginning(gentity_t *ent) {
+	trap->SendServerCommand(ent->s.number, "print \"^2Inventory\n\"");
+	trap->SendServerCommand(ent->s.number, va("print \"^3[Credits: %i]\n\"", ent->client->pers.credits));
+	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
+}
+
+void inventory_display_end(gentity_t *ent) {
+	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
+}
+
+void inventory_add_item(gentity_t *ent, char item_to_add[MAX_STRING_CHARS]) {
+	FILE *inv_file = NULL;
+
+	inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "a+");
+
+	if (inv_file != NULL) {
+		fputs(va("%s\n", item_to_add), inv_file);
+		fclose(inv_file);
+		trap->SendServerCommand(ent->s.number, "print \"Item added to your inventory.\n\"");
+	}
+	else
+	{
+		trap->SendServerCommand(ent->s.number, "print \"File not found.\n\"");
+	}
+
+	return;
+}
+
+char* inventory_get_item_name_from_id(gentity_t *ent, int item_id) {
+	FILE *inv_file = NULL;
+	char items[100][MAX_STRING_CHARS];
+	inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "r");
+
+	int current_item_id = 1;
+
+	//get everything in the items array
+	if (inv_file != NULL) {
+		while (fscanf(inv_file, "%[^\n] ", items[current_item_id]) != EOF) {
+			current_item_id++;
+		}
+		fclose(inv_file);
+	}
+	else {
+		trap->SendServerCommand(ent->s.number, "print \"File not found.\n\"");
+		return;
+	}
+	//from now on you can look in items[] for anything you need
+
+	int max_item_id = current_item_id - 1;
+
+	if (item_id > max_item_id || item_id < 1) {
+		trap->SendServerCommand(ent->s.number, "print \"Item does not exist, make sure to enter a valid ID.\n\"");
+	}
+
+	return items[item_id];
+}
+
+void inventory_remove_item(gentity_t *ent, int id_to_be_removed) {
+	FILE *inv_file = NULL;
+	char items[100][MAX_STRING_CHARS];
+	inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "r");
+
+	int item_id = 1;
+
+	if (inv_file != NULL) {
+		while (fscanf(inv_file, "%[^\n] ", items[item_id]) != EOF) {
+			item_id++;
+		}
+		fclose(inv_file);
+	}
+	else {
+		trap->SendServerCommand(ent->s.number, "print \"File not found.\n\"");
+		return;
+	}
+
+	int max_item_id = item_id - 1;
+
+	if (id_to_be_removed > max_item_id || id_to_be_removed < 1) {
+		trap->SendServerCommand(ent->s.number, "print \"Item does not exist, make sure to enter a valid ID.\n\"");
+	}
+
+	inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "w");
+	for (int i = 1; i < item_id; i++) {
+		if (i != id_to_be_removed) {
+			fprintf(inv_file, "%s\n", items[i]);
+		}
+	}
+	fclose(inv_file);
+	return;
+}
+
+void inventory_add_create_item_log(gentity_t *ent, char created_item_name[MAX_STRING_CHARS]) {
+	FILE *log_file = NULL;
+
+	log_file = fopen("GalaxyRP/logs/itemlog.txt", "a+");
+
+	fputs(va("%s created the item: %s\n", ent->client->pers.netname, created_item_name), log_file);
+	fclose(log_file);
+	
+	return;
+}
+
+/*
+==================
+Cmd_Inventory_f
+==================
+*/
+void Cmd_Inventory_f(gentity_t *ent) {
+	FILE *inv_file = NULL;
+	char item[128];
+
+	strcpy(item, "");
+	if (trap->Argc())
+	{
+		inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "r");
+		
+		if (inv_file != NULL) {
+			inventory_display_beginning(ent);
+			int i = 1;
+			while (fscanf(inv_file, "%[^\n] ", item) != EOF) {
+				trap->SendServerCommand(ent->s.number, va("print \"^2%i.^3 %s\n\"", i, item));
+				i++;
+			}
+			if (i == 1) {
+				trap->SendServerCommand(ent->s.number, "print \"Your inventory is empty.\n\"");
+			}
+			inventory_display_end(ent);
+			fclose(inv_file);
+		}
+		else
+		{
+			//if file isn't there, create it
+			FILE *new_inv_file = NULL;
+			new_inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "a");
+			fclose(new_inv_file);
+			inventory_display_beginning(ent);
+			trap->SendServerCommand(ent->s.number, "print \"Your inventory is empty.\n\"");
+			inventory_display_end(ent);
+		}
+		return;
+	}
+	return;
+}
+
+/*
+==================
+Cmd_CreateItem_f
+==================
+*/
+void Cmd_CreateItem_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_CREATEITEM)))
+	{
+		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	if (trap->Argc() != 2) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /createitem <itemname>\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	inventory_add_item(ent, arg1);
+
+	inventory_add_create_item_log(ent, arg1);
+	
+	return;
+}
+
+/*
+==================
+Cmd_TrashItem_f
+==================
+*/
+void Cmd_TrashItem_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 2) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /trashitem <itemid>\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+	int id_to_be_removed = atoi(arg1);
+
+	inventory_remove_item(ent, id_to_be_removed);
+
+	return;
+}
+
+/*
+==================
+Cmd_GiveItem_f
+==================
+*/
+void Cmd_GiveItem_f(gentity_t *ent) {
+	char player_name[MAX_STRING_CHARS];
+	char arg2[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 3) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /giveitem <itemid> <playerName>\n\"");
+		return;
+	}
+	trap->Argv(1, arg2, sizeof(arg2));
+	trap->Argv(2, player_name, sizeof(player_name));
+
+	int item_id = atoi(arg2);
+	char item_name[MAX_STRING_CHARS];
+	strcpy(item_name, inventory_get_item_name_from_id(ent, item_id));
+
+	int player_id = ClientNumberFromString(ent, player_name, qfalse);
+
+	//player not found, no point in going on
+	if (player_id == -1) {
+		return;
+	}
+
+	if (Distance(ent->client->ps.origin, &g_entities[player_id].client->ps.origin) > 1000) {
+		trap->SendServerCommand(ent->s.number, "print \"You are too far away from that person.\n\"");
+		return;
+	}
+
+	inventory_add_item(&g_entities[player_id], item_name);
+	inventory_remove_item(ent, item_id);
+
+	trap->SendServerCommand(ent->s.number, va("print \"^2You've given %s^2 to %s^2\n\"", item_name, &g_entities[player_id].client->pers.netname));
+
+	return;
+}
+
+void description_display_beginning(gentity_t *ent, char netname[MAX_STRING_CHARS]) {
+	trap->SendServerCommand(ent->s.number, va("print \"^2Looking over %s^2 you notice:\n\"", netname));
+	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
+}
+
+void description_display_end(gentity_t *ent) {
+	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
+}
+
+void description_add(gentity_t *ent, char description_to_add[MAX_STRING_CHARS]) {
+	FILE *description_file = NULL;
+
+	description_file = fopen(va("GalaxyRP/descriptions/%s.txt", ent->client->sess.rpgchar), "w+");
+
+	if (description_file != NULL) {
+		fputs(va("%s\n", description_to_add), description_file);
+		fclose(description_file);
+		trap->SendServerCommand(ent->s.number, "print \"Description set sucessfully.\n\"");
+	}
+	else
+	{
+		trap->SendServerCommand(ent->s.number, "print \"File not found.\n\"");
+	}
+
+	return;
+}
+
+/*
+==================
+Cmd_Examine_f
+==================
+*/
+void Cmd_Examine_f(gentity_t *ent) {
+	char player_name[MAX_STRING_CHARS];
+	char arg2[MAX_STRING_CHARS];
+	FILE *description_file = NULL;
+	char description[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 2) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /examine <playername>\n\"");
+		return;
+	}
+
+	trap->Argv(1, player_name, sizeof(player_name));
+	int player_id = ClientNumberFromString(ent, player_name, qfalse);
+
+	//player not found, no point in going on
+	if (player_id == -1) {
+		return;
+	}
+
+	if (Distance(ent->client->ps.origin, &g_entities[player_id].client->ps.origin) > 1000) {
+		trap->SendServerCommand(ent->s.number, "print \"You are too far away from that person.\n\"");
+		return;
+	}
+
+	if (trap->Argc())
+	{
+		description_file = fopen(va("GalaxyRP/descriptions/%s.txt", &g_entities[player_id].client->sess.rpgchar), "r");
+
+		if (description_file != NULL) {
+			description_display_beginning(ent, &g_entities[player_id].client->pers.netname);
+
+			int i = 0;
+
+			while (fscanf(description_file, "%[^\n] ", description) != EOF) {
+				trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", description));
+				i++;
+			}
+			if (i == 0) {
+				trap->SendServerCommand(ent->s.number, "print \"Nothing.\n\"");
+			}
+			description_display_end(ent);
+			fclose(description_file);
+		}
+		else
+		{
+			//if file isn't there, create it
+			FILE *new_description_file = NULL;
+			new_description_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "a");
+			fclose(new_description_file);
+			description_display_beginning(ent, &g_entities[player_id].client->pers.netname);
+			trap->SendServerCommand(ent->s.number, "print \"Nothing.\n\"");
+			description_display_end(ent);
+		}
+		return;
+	}
+	return;
+}
+
+/*
+==================
+Cmd_Attributes_f
+==================
+*/
+void Cmd_Attributes_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 2) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /attributes <text>\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	description_add(ent, arg1);
+
+	return;
+}
+
 /*
 ==================
 Cmd_QuestSkip_f
@@ -19231,14 +19440,17 @@ command_t commands[] = {
 	{ "allychat",			Cmd_AllyChat_f,				CMD_NOINTERMISSION },
 	{ "allylist",			Cmd_AllyList_f,				CMD_NOINTERMISSION },
 	{ "allyremove",			Cmd_AllyRemove_f,			CMD_NOINTERMISSION },
+	{ "attributes",			Cmd_Attributes_f,			CMD_LOGGEDIN },
 //	{ "bountyquest",		Cmd_BountyQuest_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "buy",				Cmd_Buy_f,					CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "callseller",			Cmd_CallSeller_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "callteamvote",		Cmd_CallTeamVote_f,			CMD_NOINTERMISSION },
 	{ "callvote",			Cmd_CallVote_f,				CMD_NOINTERMISSION },
 	{ "changepassword",		Cmd_ChangePassword_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "char",				Cmd_RpgChar_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "clientprint",		Cmd_ClientPrint_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "createcredits",		Cmd_CreditCreate_f,			CMD_RPG | CMD_NOINTERMISSION },
+	{ "createitem",			Cmd_CreateItem_f,			CMD_LOGGEDIN},
 //	{ "customquest",		Cmd_CustomQuest_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "datetime",			Cmd_DateTime_f,				CMD_NOINTERMISSION },
 	{ "debugBMove_Back",	Cmd_BotMoveBack_f,			CMD_CHEAT|CMD_ALIVE },
@@ -19266,6 +19478,9 @@ command_t commands[] = {
 	{ "entremove",			Cmd_EntRemove_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "entsave",			Cmd_EntSave_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "entundo",			Cmd_EntUndo_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "ex",					Cmd_Examine_f,				CMD_LOGGEDIN },
+	{ "examine",			Cmd_Examine_f,				CMD_LOGGEDIN },
+	{ "flipcoin",			Cmd_FlipCoin_f,				0 },
 	{ "follow",				Cmd_Follow_f,				CMD_NOINTERMISSION },
 	{ "follownext",			Cmd_FollowNext_f,			CMD_NOINTERMISSION },
 	{ "followprev",			Cmd_FollowPrev_f,			CMD_NOINTERMISSION },
@@ -19273,10 +19488,12 @@ command_t commands[] = {
 	{ "gc",					Cmd_GameCommand_f,			CMD_NOINTERMISSION },
 	{ "give",				Cmd_Give_f,					CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "givecredits",		Cmd_CreditGive_f,			CMD_RPG | CMD_NOINTERMISSION },
+	{ "giveitem",			Cmd_GiveItem_f,				CMD_LOGGEDIN},
 	{ "god",				Cmd_God_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "guardianquest",		Cmd_GuardianQuest_f,		CMD_ALIVE|CMD_RPG|CMD_NOINTERMISSION },
 	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
 	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
+	{ "inv",				Cmd_Inventory_f,			CMD_LOGGEDIN},
 	{ "jetpack",			Cmd_Jetpack_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "kill",				Cmd_Kill_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "killother",			Cmd_KillOther_f,			CMD_NOINTERMISSION },
@@ -19311,7 +19528,6 @@ command_t commands[] = {
 	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "resetaccount",		Cmd_ResetAccount_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "roll",				Cmd_Roll_f,					0 },
-	{ "char",				Cmd_RpgChar_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 //	{ "rpgclass",			Cmd_RpgClass_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "rpglmstable",		Cmd_RpgLmsTable_f,			CMD_NOINTERMISSION },
@@ -19341,6 +19557,7 @@ command_t commands[] = {
 	{ "tell",				Cmd_Tell_f,					0 },
 //	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN},
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
 //	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "up",					Cmd_UpSkill_f,				CMD_RPG|CMD_NOINTERMISSION },
@@ -19349,8 +19566,8 @@ command_t commands[] = {
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
 	{ "zykfile",			Cmd_ZykFile_f,				CMD_NOINTERMISSION },
-	{ "zykchars",			Cmd_ZykChars_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "zykmod",				Cmd_ZykMod_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+//	{ "zykchars",			Cmd_ZykChars_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+//	{ "zykmod",				Cmd_ZykMod_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "zyksound",			Cmd_ZykSound_f,				CMD_NOINTERMISSION },
 };
 static const size_t numCommands = ARRAY_LEN( commands );
