@@ -10223,7 +10223,7 @@ void zyk_list_stuff(gentity_t *ent, gentity_t *target_ent)
 
 void list_rpg_info(gentity_t *ent, gentity_t *target_ent)
 { // zyk: lists general RPG info of this player
-	trap->SendServerCommand(target_ent->s.number, va("print \"\n^2Account: ^7%s\n^2Character: ^7%s\n\n^3Level: ^7%d/%d\n^3Level Up Score: ^7%d/%d\n^3Skill Points: ^7%d\n^3Skill Counter: ^7%d/%d\n^3Credits: ^7%d\n\n^7Use ^2/list help ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->pers.level, zyk_rpg_max_level.integer, ent->client->pers.level_up_score, (ent->client->pers.level * zyk_level_up_score_factor.integer), ent->client->pers.skillpoints, ent->client->pers.skill_counter, zyk_max_skill_counter.integer, ent->client->pers.credits));
+	trap->SendServerCommand(target_ent->s.number, va("print \"\n^2Account: ^7%s\n^2Character: ^7%s\n\n^3Level: ^7%d/%d\n^3Skill Points: ^7%d\n\n^7Use ^2/list help ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->pers.level, zyk_rpg_max_level.integer, (ent->client->pers.level * zyk_level_up_score_factor.integer), ent->client->pers.skillpoints));
 }
 
 /*
@@ -18085,7 +18085,7 @@ char* inventory_get_item_name_from_id(gentity_t *ent, int item_id) {
 
 	//get everything in the items array
 	if (inv_file != NULL) {
-		while (fscanf(inv_file, "%[^\n] ", items[item_id]) != EOF) {
+		while (fscanf(inv_file, "%[^\n] ", items[current_item_id]) != EOF) {
 			current_item_id++;
 		}
 		fclose(inv_file);
@@ -18251,11 +18251,11 @@ void Cmd_GiveItem_f(gentity_t *ent) {
 	char arg2[MAX_STRING_CHARS];
 
 	if (trap->Argc() != 3) {
-		trap->SendServerCommand(ent->s.number, "print \"Usage: /giveitem <playername> <itemid>\n\"");
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /giveitem <itemid> <playerName>\n\"");
 		return;
 	}
-	trap->Argv(1, player_name, sizeof(player_name));
-	trap->Argv(2, arg2, sizeof(arg2));
+	trap->Argv(1, arg2, sizeof(arg2));
+	trap->Argv(2, player_name, sizeof(player_name));
 
 	int item_id = atoi(arg2);
 	char item_name[MAX_STRING_CHARS];
@@ -18268,10 +18268,125 @@ void Cmd_GiveItem_f(gentity_t *ent) {
 		return;
 	}
 
+	if (Distance(ent->client->ps.origin, &g_entities[player_id].client->ps.origin) > 1000) {
+		trap->SendServerCommand(ent->s.number, "print \"You are too far away from that person.\n\"");
+		return;
+	}
+
 	inventory_add_item(&g_entities[player_id], item_name);
 	inventory_remove_item(ent, item_id);
 
 	trap->SendServerCommand(ent->s.number, va("print \"^2You've given %s^2 to %s^2\n\"", item_name, &g_entities[player_id].client->pers.netname));
+
+	return;
+}
+
+void description_display_beginning(gentity_t *ent, char netname[MAX_STRING_CHARS]) {
+	trap->SendServerCommand(ent->s.number, va("print \"^2Looking over %s^2 you notice:\n\"", netname));
+	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
+}
+
+void description_display_end(gentity_t *ent) {
+	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
+}
+
+void description_add(gentity_t *ent, char description_to_add[MAX_STRING_CHARS]) {
+	FILE *description_file = NULL;
+
+	description_file = fopen(va("GalaxyRP/descriptions/%s.txt", ent->client->sess.rpgchar), "w+");
+
+	if (description_file != NULL) {
+		fputs(va("%s\n", description_to_add), description_file);
+		fclose(description_file);
+		trap->SendServerCommand(ent->s.number, "print \"Description set sucessfully.\n\"");
+	}
+	else
+	{
+		trap->SendServerCommand(ent->s.number, "print \"File not found.\n\"");
+	}
+
+	return;
+}
+
+/*
+==================
+Cmd_Examine_f
+==================
+*/
+void Cmd_Examine_f(gentity_t *ent) {
+	char player_name[MAX_STRING_CHARS];
+	char arg2[MAX_STRING_CHARS];
+	FILE *description_file = NULL;
+	char description[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 2) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /examine <playername>\n\"");
+		return;
+	}
+
+	trap->Argv(1, player_name, sizeof(player_name));
+	int player_id = ClientNumberFromString(ent, player_name, qfalse);
+
+	//player not found, no point in going on
+	if (player_id == -1) {
+		return;
+	}
+
+	if (Distance(ent->client->ps.origin, &g_entities[player_id].client->ps.origin) > 1000) {
+		trap->SendServerCommand(ent->s.number, "print \"You are too far away from that person.\n\"");
+		return;
+	}
+
+	if (trap->Argc())
+	{
+		description_file = fopen(va("GalaxyRP/descriptions/%s.txt", &g_entities[player_id].client->sess.rpgchar), "r");
+
+		if (description_file != NULL) {
+			description_display_beginning(ent, &g_entities[player_id].client->pers.netname);
+
+			int i = 0;
+
+			while (fscanf(description_file, "%[^\n] ", description) != EOF) {
+				trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", description));
+				i++;
+			}
+			if (i == 0) {
+				trap->SendServerCommand(ent->s.number, "print \"Nothing.\n\"");
+			}
+			description_display_end(ent);
+			fclose(description_file);
+		}
+		else
+		{
+			//if file isn't there, create it
+			FILE *new_description_file = NULL;
+			new_description_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "a");
+			fclose(new_description_file);
+			description_display_beginning(ent, &g_entities[player_id].client->pers.netname);
+			trap->SendServerCommand(ent->s.number, "print \"Nothing.\n\"");
+			description_display_end(ent);
+		}
+		return;
+	}
+	return;
+}
+
+/*
+==================
+Cmd_Attributes_f
+==================
+*/
+void Cmd_Attributes_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 2) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /attributes <text>\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	description_add(ent, arg1);
 
 	return;
 }
@@ -19519,6 +19634,7 @@ command_t commands[] = {
 	{ "allychat",			Cmd_AllyChat_f,				CMD_NOINTERMISSION },
 	{ "allylist",			Cmd_AllyList_f,				CMD_NOINTERMISSION },
 	{ "allyremove",			Cmd_AllyRemove_f,			CMD_NOINTERMISSION },
+	{ "attributes",			Cmd_Attributes_f,			CMD_LOGGEDIN },
 //	{ "bountyquest",		Cmd_BountyQuest_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "buy",				Cmd_Buy_f,					CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "callseller",			Cmd_CallSeller_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
@@ -19556,6 +19672,7 @@ command_t commands[] = {
 	{ "entremove",			Cmd_EntRemove_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "entsave",			Cmd_EntSave_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "entundo",			Cmd_EntUndo_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "examine",			Cmd_Examine_f,				CMD_LOGGEDIN },
 	{ "follow",				Cmd_Follow_f,				CMD_NOINTERMISSION },
 	{ "follownext",			Cmd_FollowNext_f,			CMD_NOINTERMISSION },
 	{ "followprev",			Cmd_FollowPrev_f,			CMD_NOINTERMISSION },
