@@ -2263,9 +2263,9 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		// these two have to be in the same order, one if the distance to the modifiers, so the order has to match
 		// in chat_modifiers, shorter strings have to be AFTER the longer string (e.g. /me HAS to be AFTER /melong, otherwise it'll pick /me instead)
 
-		int max_chat_modifiers = 18;
+		int max_chat_modifiers = 22;
 
-		char chat_modifiers[18][50] = {
+		char chat_modifiers[22][50] = {
 			"/low",
 			"/long",
 			"/all",
@@ -2283,10 +2283,14 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			"/forcelow",
 			"/forcelong",
 			"/forceall",
-			"/force"
+			"/force",
+			"/mylow",
+			"/myall",
+			"/mylong",
+			"/my"
 		};
 
-		char text_formats[18][50] = {
+		char text_formats[22][50] = {
 			"chat \"%s^9 lowers their voice:%s\n\"",
 			"chat \"%s:%s\n\"",
 			"chat \"%s:^3%s\n\"",
@@ -2304,10 +2308,14 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			"chat \"%s^5 uses the Force to%s\n\"",
 			"chat \"%s^5 uses the Force to%s\n\"",
 			"chat \"%s^5 uses the Force to%s\n\"",
-			"chat \"%s^5 uses the Force to%s\n\""
+			"chat \"%s^5 uses the Force to%s\n\"",
+			"chat \"%s^3's %s\n\"",
+			"chat \"%s^3's %s\n\"",
+			"chat \"%s^3's %s\n\"",
+			"chat \"%s^3's %s\n\""
 		};
 
-		int chat_distances[18] = {
+		int chat_distances[22] = {
 			low_distance,
 			long_distance,
 			broadcast_distance,
@@ -2325,7 +2333,11 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			forcelow_distance,
 			forcelong_distance,
 			broadcast_distance,
-			force_distance
+			force_distance,
+			melow_distance,
+			broadcast_distance,
+			melong_distance,
+			me_distance
 		};
 
 		char slash = '/';
