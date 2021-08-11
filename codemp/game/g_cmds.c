@@ -5539,13 +5539,28 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 	}
 }
 
+int roll_dice(max_value) {
+	int result = rand() % (max_value + 1);
+	while (result == 0) {
+		result = rand() % (max_value + 1);
+	}
+
+	return result;
+}
+
+/*
+==================
+Cmd_Roll_f
+==================
+*/
+
 void Cmd_Roll_f(gentity_t *ent) {
 
 	char arg1[MAX_STRING_CHARS];
 
 	if (trap->Argc() != 2)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"/roll <max roll>.\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: /roll <max roll>.\n\"");
 		return;
 	}
 
@@ -5563,11 +5578,35 @@ void Cmd_Roll_f(gentity_t *ent) {
 		return;
 	}
 
-	int result = rand() % (max_value + 1);
-	while (result == 0) {
-		result = rand() % (max_value + 1);
-	}
+	int result = roll_dice(max_value);
+
 	trap->SendServerCommand(-1, va("chat \"^3%s^2 rolled a ^3%d^2 out of ^3%d\n\"", ent->client->pers.netname, result, max_value));
+
+	return;
+}
+
+/*
+==================
+Cmd_FlipCoin_f
+==================
+*/
+
+void Cmd_FlipCoin_f(gentity_t *ent) {
+
+	if (trap->Argc() != 1)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: /flipcoin\n\"");
+		return;
+	}
+
+	int result = roll_dice(2);
+
+	if (result == 1) {
+		trap->SendServerCommand(-1, va("chat \"^3%s^2 flipped a coin that landed on ^3HEADS.\n\"", ent->client->pers.netname));
+	}
+	else {
+		trap->SendServerCommand(-1, va("chat \"^3%s^2 flipped a coin that landed on ^3TAILS.\n\"", ent->client->pers.netname));
+	}
 
 	return;
 }
@@ -19439,7 +19478,9 @@ command_t commands[] = {
 	{ "entremove",			Cmd_EntRemove_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "entsave",			Cmd_EntSave_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "entundo",			Cmd_EntUndo_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "ex",					Cmd_Examine_f,				CMD_LOGGEDIN },
 	{ "examine",			Cmd_Examine_f,				CMD_LOGGEDIN },
+	{ "flipcoin",			Cmd_FlipCoin_f,				0 },
 	{ "follow",				Cmd_Follow_f,				CMD_NOINTERMISSION },
 	{ "follownext",			Cmd_FollowNext_f,			CMD_NOINTERMISSION },
 	{ "followprev",			Cmd_FollowPrev_f,			CMD_NOINTERMISSION },
