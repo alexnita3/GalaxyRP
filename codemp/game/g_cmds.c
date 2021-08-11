@@ -2260,347 +2260,114 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 
 		char *output = NULL;
 
-		output = strstr(text, "/low");
-		//low case
-		if (output) {
-			delete_chat_command(text, 4);
+		// these two have to be in the same order, one if the distance to the modifiers, so the order has to match
+		// in chat_modifiers, shorter strings have to be AFTER the longer string (e.g. /me HAS to be AFTER /melong, otherwise it'll pick /me instead)
 
-			for (j = 0; j < level.numConnectedClients; j++) {
+		int max_chat_modifiers = 22;
 
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= low_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^9 lowers their voice: %s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
+		char chat_modifiers[22][50] = {
+			"/low",
+			"/long",
+			"/all",
+			"/melow",
+			"/meall",
+			"/melong",
+			"/me",
+			"/shoutlong",
+			"/shoutall",
+			"/shout",
+			"/dolow",
+			"/dolong",
+			"/doall",
+			"/do",
+			"/forcelow",
+			"/forcelong",
+			"/forceall",
+			"/force",
+			"/mylow",
+			"/myall",
+			"/mylong",
+			"/my"
+		};
 
-			return;
+		char text_formats[22][50] = {
+			"chat \"%s^9 lowers their voice:%s\n\"",
+			"chat \"%s:%s\n\"",
+			"chat \"%s:^3%s\n\"",
+			"chat \"%s^3%s\n\"",
+			"chat \"%s^3%s\n\"",
+			"chat \"%s^3%s\n\"",
+			"chat \"%s^3%s\n\"",
+			"chat \"%s shouts:^2%s\n\"",
+			"chat \"%s shouts:^2%s\n\"",
+			"chat \"%s shouts:^2%s\n\"",
+			"chat \"(%s)^3%s\n\"",
+			"chat \"(%s)^3%s\n\"",
+			"chat \"(%s)^3%s\n\"",
+			"chat \"(%s)^3%s\n\"",
+			"chat \"%s^5 uses the Force to%s\n\"",
+			"chat \"%s^5 uses the Force to%s\n\"",
+			"chat \"%s^5 uses the Force to%s\n\"",
+			"chat \"%s^5 uses the Force to%s\n\"",
+			"chat \"%s^3's %s\n\"",
+			"chat \"%s^3's %s\n\"",
+			"chat \"%s^3's %s\n\"",
+			"chat \"%s^3's %s\n\""
+		};
+
+		int chat_distances[22] = {
+			low_distance,
+			long_distance,
+			broadcast_distance,
+			melow_distance,
+			broadcast_distance,
+			melong_distance,
+			me_distance,
+			shoutlong_distance,
+			broadcast_distance,
+			shout_distance,
+			dolow_distance,
+			dolong_distance,
+			broadcast_distance,
+			do_distance,
+			forcelow_distance,
+			forcelong_distance,
+			broadcast_distance,
+			force_distance,
+			melow_distance,
+			broadcast_distance,
+			melong_distance,
+			me_distance
+		};
+
+		char slash = '/';
+
+		const char *ptr = strchr(text, slash);
+		int index_of_slash;
+		if (ptr) {
+			index_of_slash = ptr - text;
 		}
 
-		output = strstr(text, "/long");
-		//long case
-		if (output) {
-			delete_chat_command(text, 5);
+		for (int i = 0; i < max_chat_modifiers; i++) {
+			output = strstr(text, chat_modifiers[i]);
 
-			for (j = 0; j < level.numConnectedClients; j++) {
+			
+			if (output && index_of_slash == 0) {
+				delete_chat_command(text, strlen(chat_modifiers[i]));
 
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= long_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s: %s\n\"", ent->client->pers.netname, text));
+				for (j = 0; j < level.numConnectedClients; j++) {
+
+					other = &g_entities[j];
+					if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_distances[i] || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
+					{
+						trap->SendServerCommand(other->client->ps.clientNum, va(text_formats[i], ent->client->pers.netname, text));
+					}
+					else
+						continue;
 				}
-				else
-					continue;
+
+				return;
 			}
-
-			return;
-		}
-
-		output = strstr(text, "/all");
-		//all case
-		if (output) {
-			delete_chat_command(text, 4);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-        
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s:^3%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/melow");
-		//melow case
-		if (output) {
-			delete_chat_command(text, 6);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melow_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/meall");
-		//meall case
-		if (output) {
-			delete_chat_command(text, 6);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/melong");
-		//melong case
-		if (output) {
-			delete_chat_command(text, 7);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= melong_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-		
-		output = strstr(text, "/me");
-		//me case
-		if (output) {
-			delete_chat_command(text, 3);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= me_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^3%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/shoutlong");
-		//shoutlong case
-		if (output) {
-			delete_chat_command(text, 10);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shoutlong_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/shoutall");
-		//shoutall case
-		if (output) {
-			delete_chat_command(text, 9);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/shout");
-		//shout case
-		if (output) {
-			delete_chat_command(text, 6);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= shout_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s shouts: ^2%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/dolow");
-		//dolong case
-		if (output) {
-			delete_chat_command(text, 6);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolow_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/dolong");
-		//dolong case
-		if (output) {
-			delete_chat_command(text, 7);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= dolong_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/doall");
-		//doall case
-		if (output) {
-			delete_chat_command(text, 6);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/do");
-		//do case
-		if (output) {
-			delete_chat_command(text, 3);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= do_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"^3%s\n\"", text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/forcelow");
-		//forcelow case
-		if (output) {
-			delete_chat_command(text, 9);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelow_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/forcelong");
-		//forcelong case
-		if (output) {
-			delete_chat_command(text, 10);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= forcelong_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/forceall");
-		//forceall case
-		if (output) {
-			delete_chat_command(text, 9);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= broadcast_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
-		}
-
-		output = strstr(text, "/force");
-		//force case
-		if (output) {
-			delete_chat_command(text, 6);
-
-			for (j = 0; j < level.numConnectedClients; j++) {
-
-				other = &g_entities[j];
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= force_distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
-				{
-					trap->SendServerCommand(other->client->ps.clientNum, va("chat \"%s^5 uses the Force to%s\n\"", ent->client->pers.netname, text));
-				}
-				else
-					continue;
-			}
-
-			return;
 		}
 
 		G_LogPrintf( "say: %s: %s\n", ent->client->pers.netname, text );
@@ -5772,13 +5539,28 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 	}
 }
 
+int roll_dice(max_value) {
+	int result = rand() % (max_value + 1);
+	while (result == 0) {
+		result = rand() % (max_value + 1);
+	}
+
+	return result;
+}
+
+/*
+==================
+Cmd_Roll_f
+==================
+*/
+
 void Cmd_Roll_f(gentity_t *ent) {
 
 	char arg1[MAX_STRING_CHARS];
 
 	if (trap->Argc() != 2)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"/roll <max roll>.\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: /roll <max roll>.\n\"");
 		return;
 	}
 
@@ -5796,11 +5578,35 @@ void Cmd_Roll_f(gentity_t *ent) {
 		return;
 	}
 
-	int result = rand() % (max_value + 1);
-	while (result == 0) {
-		result = rand() % (max_value + 1);
-	}
+	int result = roll_dice(max_value);
+
 	trap->SendServerCommand(-1, va("chat \"^3%s^2 rolled a ^3%d^2 out of ^3%d\n\"", ent->client->pers.netname, result, max_value));
+
+	return;
+}
+
+/*
+==================
+Cmd_FlipCoin_f
+==================
+*/
+
+void Cmd_FlipCoin_f(gentity_t *ent) {
+
+	if (trap->Argc() != 1)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: /flipcoin\n\"");
+		return;
+	}
+
+	int result = roll_dice(2);
+
+	if (result == 1) {
+		trap->SendServerCommand(-1, va("chat \"^3%s^2 flipped a coin that landed on ^3HEADS.\n\"", ent->client->pers.netname));
+	}
+	else {
+		trap->SendServerCommand(-1, va("chat \"^3%s^2 flipped a coin that landed on ^3TAILS.\n\"", ent->client->pers.netname));
+	}
 
 	return;
 }
@@ -19672,7 +19478,9 @@ command_t commands[] = {
 	{ "entremove",			Cmd_EntRemove_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "entsave",			Cmd_EntSave_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "entundo",			Cmd_EntUndo_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "ex",					Cmd_Examine_f,				CMD_LOGGEDIN },
 	{ "examine",			Cmd_Examine_f,				CMD_LOGGEDIN },
+	{ "flipcoin",			Cmd_FlipCoin_f,				0 },
 	{ "follow",				Cmd_Follow_f,				CMD_NOINTERMISSION },
 	{ "follownext",			Cmd_FollowNext_f,			CMD_NOINTERMISSION },
 	{ "followprev",			Cmd_FollowPrev_f,			CMD_NOINTERMISSION },
