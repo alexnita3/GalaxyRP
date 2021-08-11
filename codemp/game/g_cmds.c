@@ -18085,7 +18085,7 @@ char* inventory_get_item_name_from_id(gentity_t *ent, int item_id) {
 
 	//get everything in the items array
 	if (inv_file != NULL) {
-		while (fscanf(inv_file, "%[^\n] ", items[item_id]) != EOF) {
+		while (fscanf(inv_file, "%[^\n] ", items[current_item_id]) != EOF) {
 			current_item_id++;
 		}
 		fclose(inv_file);
@@ -18251,11 +18251,11 @@ void Cmd_GiveItem_f(gentity_t *ent) {
 	char arg2[MAX_STRING_CHARS];
 
 	if (trap->Argc() != 3) {
-		trap->SendServerCommand(ent->s.number, "print \"Usage: /giveitem <playername> <itemid>\n\"");
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /giveitem <itemid> <playerName>\n\"");
 		return;
 	}
-	trap->Argv(1, player_name, sizeof(player_name));
-	trap->Argv(2, arg2, sizeof(arg2));
+	trap->Argv(1, arg2, sizeof(arg2));
+	trap->Argv(2, player_name, sizeof(player_name));
 
 	int item_id = atoi(arg2);
 	char item_name[MAX_STRING_CHARS];
