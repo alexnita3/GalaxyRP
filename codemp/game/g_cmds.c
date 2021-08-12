@@ -339,7 +339,7 @@ void Cmd_Emote_f( gentity_t *ent )
 	//alex: animation words and codes go here THEY HAVE TO BE IN THE SAME ORDER!
 	//const int NUMBER_OF_ANIMS = 56;
 
-	int anim_codes[54] = {
+	int anim_codes[53] = {
 		998, 	//"sit"
 		999, 	//"sit2",
 		1394,	//"sit3",
@@ -392,11 +392,10 @@ void Cmd_Emote_f( gentity_t *ent )
 		1404,	//"holddetonator",
 		1344,	//"forcechoke",
 		1322,	//"choked",
-		986,		//"holdobject"
-		1543
+		986		//"holdobject"
 	};
 
-	char anim_words[54][50] = {
+	char anim_words[53][50] = {
 		"sit",
 		"sit2",
 		"sit3",
@@ -449,11 +448,10 @@ void Cmd_Emote_f( gentity_t *ent )
 		"holddetonator",
 		"forcechoke",
 		"choked",
-		"holdobject",
-		"test"
+		"holdobject"
 	};
 
-	for (int i = 0; i < 54; i++)
+	for (int i = 0; i < 53; i++)
 	{
 		if (strcmp(anim_id, anim_words[i]) == 0)
 		{
