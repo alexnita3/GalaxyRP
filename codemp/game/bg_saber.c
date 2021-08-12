@@ -723,8 +723,29 @@ qboolean PM_SaberKataDone(int curmove, int newmove)
 		}
 	}
 
-	if ( pm->ps->fd.saberAnimLevel == SS_DESANN || pm->ps->fd.saberAnimLevel == SS_TAVION )
-	{//desann and tavion can link up as many attacks as they want
+	if ( pm->ps->fd.saberAnimLevel == SS_DESANN )
+	{//desann and tavion can link up slower than yellow
+
+		int chainToleranceDesann = 2;
+
+		if (pm->ps->saberAttackChainCount >= chainToleranceDesann)
+		{
+			return qtrue;
+		}
+
+		return qfalse;
+	}
+
+	if (pm->ps->fd.saberAnimLevel == SS_TAVION)
+	{//desann and tavion can link up slower than yellow
+
+		int chainToleranceTavion = 5;
+
+		if (pm->ps->saberAttackChainCount >= chainToleranceTavion)
+		{
+			return qtrue;
+		}
+
 		return qfalse;
 	}
 
