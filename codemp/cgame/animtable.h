@@ -1802,7 +1802,9 @@ stringID_table_t animTable [MAX_ANIMATIONS+1] =
 	ENUM2STRING(BOTH_CIN_48),		//# Level specific cinematic
 	ENUM2STRING(BOTH_CIN_49),		//# Level specific cinematic
 	ENUM2STRING(BOTH_CIN_50),		//# Level specific cinematic
-	ENUM2STRING(STANCE1),
+	ENUM2STRING(BOTH_PONDER),
+	ENUM2STRING(BOTH_PONDER2),
+	ENUM2STRING(BOTH_SORESU),
 
 	//must be terminated
 	{NULL,-1}
