@@ -1534,10 +1534,10 @@ typedef enum saber_styles_e {
 	SS_MEDIUM,
 	SS_STRONG,
 	SS_DESANN,
-	SS_ALEX,
 	SS_TAVION,
 	SS_DUAL,
 	SS_STAFF,
+	SS_ALEX,
 	SS_NUM_SABER_STYLES
 } saber_styles_t;
 

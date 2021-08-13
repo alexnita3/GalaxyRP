@@ -200,10 +200,10 @@ saber_styles_t TranslateSaberStyle( const char *name ) {
 	if ( !Q_stricmp( name, "medium" ) ) 	return SS_MEDIUM;
 	if ( !Q_stricmp( name, "strong" ) ) 	return SS_STRONG;
 	if ( !Q_stricmp( name, "desann" ) ) 	return SS_DESANN;
-	if ( !Q_stricmp( name, "alex" ) ) 		return SS_ALEX;
 	if ( !Q_stricmp( name, "tavion" ) ) 	return SS_TAVION;
 	if ( !Q_stricmp( name, "dual" ) )		return SS_DUAL;
 	if ( !Q_stricmp( name, "staff" ) )		return SS_STAFF;
+	if ( !Q_stricmp( name, "alex" ) ) 		return SS_ALEX;
 
 	return SS_NONE;
 }

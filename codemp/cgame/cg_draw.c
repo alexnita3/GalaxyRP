@@ -826,7 +826,7 @@ static void CG_DrawSaberStyle( centity_t *cent, menuDef_t *menuHUD)
 		}
 
 		break;
-	case 6://FORCE_LEVEL_5://Tavion
+	case 5://FORCE_LEVEL_5://Tavion
 		// zyk: added tavion saber style
 		focusItem = Menu_FindItemByName(menuHUD, "saberstyle_tavion");
 
@@ -862,8 +862,8 @@ static void CG_DrawSaberStyle( centity_t *cent, menuDef_t *menuHUD)
 
 		break;
 
-	case 5://FORCE_LEVEL_5://Tavion
-		// zyk: added tavion saber style
+	case 8:
+		// alex: added new saber style
 		focusItem = Menu_FindItemByName(menuHUD, "saberstyle_alex");
 
 		if (focusItem)
@@ -914,7 +914,7 @@ static void CG_DrawSaberStyle( centity_t *cent, menuDef_t *menuHUD)
 			);
 		}
 		break;
-	case 7://SS_DUAL
+	case 6://SS_DUAL
 		focusItem = Menu_FindItemByName(menuHUD, "saberstyle_dual");
 
 		if (focusItem)
@@ -930,7 +930,7 @@ static void CG_DrawSaberStyle( centity_t *cent, menuDef_t *menuHUD)
 			);
 		}
 		break;
-	case 8://SS_STAFF
+	case 7://SS_STAFF
 		focusItem = Menu_FindItemByName(menuHUD, "saberstyle_staff");
 
 		if (focusItem)
