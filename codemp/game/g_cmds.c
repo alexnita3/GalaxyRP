@@ -29,6 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #define MAX_EMOTE_WORDS 11;
 
+
 //rww - for getting bot commands...
 int AcceptBotCommand(char *cmd, gentity_t *pl);
 //end rww
@@ -96,6 +97,186 @@ const int max_skill_levels[NUMBER_OF_SKILLS] = {
 	1, // Cloak Item
 	5, // Force Power
 	3 // Improvements
+};
+
+#define MAX_WORDED_EMOTES 53
+//alex: animation words, categories and codes go here THEY HAVE TO BE IN THE SAME ORDER!
+const int anim_codes[MAX_WORDED_EMOTES] = {
+		998, 	//"sit"
+		999, 	//"sit2",
+		1394,	//"sit3",
+		1001,	//"meditate",
+		1010,	//"kneel",
+		1097,	//"die",
+		1099,	//"beg",
+		1098,	//"beg2",
+		1321,	//"beg3",
+		1188,	//"bow",
+		936, 	//"point",
+		1382,	//"lean",
+		940, 	//"leantable"
+		922, 	//"cuffed",
+		939, 	//"heroic",
+		985, 	//"wave",
+		954, 	//"type",
+		1004,	//"sneak",
+		1181,	//"cover",
+		931, 	//"aim",
+		936, 	//"aim2",
+		114, 	//"aim3",
+		1407,	//"aim4",
+		1406,	//"aim5",
+		989,	//"hug",
+		968,	//"commlinkup",
+		970,	//"commlinkdown",
+		993, 	//"saberthrow",
+		1014,	//"sitpilot",
+		1191,	//"flourish",
+		1192,	//"flourish2",
+		1193,	//"flourish3",
+		1194,	//"flourish4",
+		1195,	//"flourish5",
+		1196,	//"victory",
+		1197,	//"victory2",
+		1198,	//"victory3",
+		1200,	//"victory4",
+		1313,	//"sleep",
+		1333,	//"mindtrick",
+		1348,	//"tossleft",
+		1349,	//"tossright",
+		1368,	//"windy",
+		1409,	//"surrender",
+		1328,	//"pressbutton",
+		1337,	//"forcelightning",
+		1360,	//"drainloop",
+		1370,	//"spreadlegs",
+		1380,	//"fear",
+		1404,	//"holddetonator",
+		1344,	//"forcechoke",
+		1322,	//"choked",
+		986		//"holdobject"
+};
+
+const char anim_words[MAX_WORDED_EMOTES][50] = {
+	"sit",
+	"sit2",
+	"sit3",
+	"meditate",
+	"kneel",
+	"die",
+	"beg",
+	"beg2",
+	"beg3",
+	"bow",
+	"point",
+	"lean",
+	"leantable",
+	"cuffed",
+	"heroic",
+	"wave",
+	"type",
+	"sneak",
+	"cover",
+	"aim",
+	"aim2",
+	"aim3",
+	"aim4",
+	"aim5",
+	"hug",
+	"commlinkup",
+	"commlinkdown",
+	"saberthrow",
+	"sitpilot",
+	"flourish",
+	"flourish2",
+	"flourish3",
+	"flourish4",
+	"flourish5",
+	"victory",
+	"victory2",
+	"victory3",
+	"victory4",
+	"sleep",
+	"mindtrick",
+	"tossleft",
+	"tossright",
+	"windy",
+	"surrender",
+	"pressbutton",
+	"forcelightning",
+	"drainloop",
+	"spreadlegs",
+	"fear",
+	"holddetonator",
+	"forcechoke",
+	"choked",
+	"holdobject"
+};
+
+const char anim_categories[MAX_WORDED_EMOTES][50] = {
+	"Body",			//"sit"
+	"Body",			//"sit2",
+	"Body",			//"sit3",
+	"Body",			//"meditate",
+	"Body",			//"kneel",
+	"Body",			//"die",
+	"Body",			//"beg",
+	"Body",			//"beg2",
+	"Body",			//"beg3",
+	"Body",			//"bow",
+	"Body",			//"point",
+	"Body",			//"lean",
+	"Body",			//"leantable"
+	"Body",			//"cuffed",
+	"Body",			//"heroic",
+	"Body",			//"wave",
+	"Body",			//"type",
+	"Movement",		//"sneak",
+	"Movement",		//"cover",
+	"Blaster",		//"aim",
+	"Blaster",		//"aim2",
+	"Blaster",		//"aim3",
+	"Blaster",		//"aim4",
+	"Blaster",		//"aim5",
+	"Body",			//"hug",
+	"Body",			//"commlinkup",
+	"Body",			//"commlinkdown",
+	"Saber",		//"saberthrow",
+	"Body",			//"sitpilot",
+	"Saber",		//"flourish",
+	"Saber",		//"flourish2",
+	"Saber",		//"flourish3",
+	"Saber",		//"flourish4",
+	"Saber",		//"flourish5",
+	"Saber",		//"victory",
+	"Saber",		//"victory2",
+	"Saber",		//"victory3",
+	"Saber",		//"victory4",
+	"Body",			//"sleep",
+	"Force",		//"mindtrick",
+	"Force",		//"tossleft",
+	"Force",		//"tossright",
+	"Movement",		//"windy",
+	"Body",			//"surrender",
+	"Body",			//"pressbutton",
+	"Force",		//"forcelightning",
+	"Force",		//"drainloop",
+	"Body",			//"spreadlegs",
+	"Body",			//"fear",
+	"Body",			//"holddetonator",
+	"Force",		//"forcechoke",
+	"Body",			//"choked",
+	"Body"			//"holdobject"
+};
+
+#define MAX_EMOTE_CATEGORIES 5
+
+const char anim_headers[MAX_EMOTE_CATEGORIES][50] = {
+	"Body",
+	"Movement",
+	"Blaster",
+	"Saber",
+	"Force"
 };
 
 /*
@@ -281,6 +462,89 @@ int ClientNumberFromString( gentity_t *to, const char *s, qboolean allowconnecti
 	return -1;
 }
 
+void print_table_horizontal_line(gentity_t *ent) {
+	trap->SendServerCommand(ent - g_entities, "print \" ^9======================================\n\"");
+	return;
+}
+
+int get_max_spaces_right(char text[MAX_STRING_CHARS]) {
+	return 33 - strlen(text);
+}
+
+void print_row(gentity_t *ent, char text[MAX_STRING_CHARS]) {
+	char emote_row[MAX_STRING_CHARS] = " ";
+
+	strcat(emote_row, "^9|| ^3");
+
+	strcat(emote_row, text);
+
+	for (int i = 0; i < get_max_spaces_right(text); i++) {
+		strcat(emote_row, " ");
+	}
+
+	strcat(emote_row, "^9||\n");
+	
+	trap->SendServerCommand(ent - g_entities, va("print \"%s\"", emote_row));
+	
+	return;
+}
+
+void print_heading_text_row(gentity_t *ent, char header_text[MAX_STRING_CHARS]) {
+	//34 characters left for space and text
+	int length = strlen(header_text);
+
+	char emote_row[MAX_STRING_CHARS] = " ";
+
+	strcat(emote_row, "^9||^3");
+
+	qboolean can_be_centered;
+
+	if (length % 2 == 0) {
+		can_be_centered == qtrue;
+	}
+	else {
+		can_be_centered = qfalse;
+	}
+
+	int number_of_spaces = 34 - length;
+	int left_spaces;
+	int right_spaces;
+
+	if (can_be_centered) {
+		left_spaces = number_of_spaces / 2;
+		right_spaces = left_spaces;
+	}
+	else {
+		//it will be rounded down
+		left_spaces = number_of_spaces / 2;
+		right_spaces = left_spaces + 1;
+	}
+
+	//take care of the space to the left of the writing
+	for (int i = 0; i < left_spaces; i++) {
+		strcat(emote_row, " ");
+	}
+
+	strcat(emote_row, header_text);
+
+	//take care of the space to the right of the writing
+	for (int i = 0; i < right_spaces; i++) {
+		strcat(emote_row, " ");
+	}
+
+	strcat(emote_row, "^9||\n");
+
+	trap->SendServerCommand(ent - g_entities, va("print \"%s\"", emote_row));
+
+	return;
+}
+
+void print_header(gentity_t *ent, char text[MAX_STRING_CHARS]) {
+	print_table_horizontal_line(ent);
+	print_heading_text_row(ent, text);
+	print_table_horizontal_line(ent);
+}
+
 // zyk: plays an animation from anims.h
 void Cmd_Emote_f( gentity_t *ent )
 {
@@ -335,123 +599,7 @@ void Cmd_Emote_f( gentity_t *ent )
 		return;
 	}
 
-	
-	//alex: animation words and codes go here THEY HAVE TO BE IN THE SAME ORDER!
-	//const int NUMBER_OF_ANIMS = 56;
-
-	int anim_codes[53] = {
-		998, 	//"sit"
-		999, 	//"sit2",
-		1394,	//"sit3",
-		1001,	//"meditate",
-		1010,	//"kneel",
-		1097,	//"die",
-		1099,	//"beg",
-		1098,	//"beg2",
-		1321,	//"beg3",
-		1188,	//"bow",
-		936, 	//"point",
-		1382,	//"lean",
-		940, 	//"leantable"
-		922, 	//"cuffed",
-		939, 	//"heroic",
-		985, 	//"wave",
-		954, 	//"type",
-		1004,	//"sneak",
-		1181,	//"cover",
-		931, 	//"aim",
-		936, 	//"aim2",
-		114, 	//"aim3",
-		1407,	//"aim4",
-		1406,	//"aim5",
-		989,	//"hug",
-		968,	//"commlinkup",
-		970,	//"commlinkdown",
-		993, 	//"saberthrow",
-		1014,	//"sitpilot",
-		1191,	//"flourish",
-		1192,	//"flourish2",
-		1193,	//"flourish3",
-		1194,	//"flourish4",
-		1195,	//"flourish5",
-		1196,	//"victory",
-		1197,	//"victory2",
-		1198,	//"victory3",
-		1200,	//"victory4",
-		1313,	//"sleep",
-		1333,	//"mindtrick",
-		1348,	//"tossleft",
-		1349,	//"tossright",
-		1368,	//"windy",
-		1409,	//"surrender",
-		1328,	//"pressbutton",
-		1337,	//"forcelightning",
-		1360,	//"drainloop",
-		1370,	//"spreadlegs",
-		1380,	//"fear",
-		1404,	//"holddetonator",
-		1344,	//"forcechoke",
-		1322,	//"choked",
-		986		//"holdobject"
-	};
-
-	char anim_words[53][50] = {
-		"sit",
-		"sit2",
-		"sit3",
-		"meditate",
-		"kneel",
-		"die",
-		"beg",
-		"beg2",
-		"beg3",
-		"bow",
-		"point",
-		"lean",
-		"leantable",
-		"cuffed",
-		"heroic",
-		"wave",
-		"type",
-		"sneak",
-		"cover",
-		"aim",
-		"aim2",
-		"aim3",
-		"aim4",
-		"aim5",
-		"hug",
-		"commlinkup",
-		"commlinkdown",
-		"saberthrow",
-		"sitpilot",
-		"flourish",
-		"flourish2",
-		"flourish3",
-		"flourish4",
-		"flourish5",
-		"victory",
-		"victory2",
-		"victory3",
-		"victory4",
-		"sleep",
-		"mindtrick",
-		"tossleft",
-		"tossright",
-		"windy",
-		"surrender",
-		"pressbutton",
-		"forcelightning",
-		"drainloop",
-		"spreadlegs",
-		"fear",
-		"holddetonator",
-		"forcechoke",
-		"choked",
-		"holdobject"
-	};
-
-	for (int i = 0; i < 53; i++)
+	for (int i = 0; i < MAX_WORDED_EMOTES; i++)
 	{
 		if (strcmp(anim_id, anim_words[i]) == 0)
 		{
@@ -481,13 +629,18 @@ void Cmd_Emote_f( gentity_t *ent )
 	{
 		trap->SendServerCommand(ent - g_entities,"print \"Usage: the following animations are available:\n\"");
 
-		for (int i = 0; i < 53; i++)
-		{
-			trap->SendServerCommand(ent - g_entities, va("print \"%s\n\"", anim_words[i]));
+		for (int i = 0; i < MAX_EMOTE_CATEGORIES; i++) {
+			print_header(ent, anim_headers[i]);
+			for (int j = 0; j < MAX_WORDED_EMOTES; j++) {
+				//if animation is in that category
+				if (strcmp(anim_categories[j], anim_headers[i]) == 0) {
+					print_row(ent, anim_words[j]);
+				}
+			}
 		}
+		//end the table
+		print_table_horizontal_line(ent);
 	}
-
-	
 }
 
 /*
@@ -19555,6 +19708,7 @@ command_t commands[] = {
 	{ "tele",				Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
+//	{ "test",				Cmd_Test_f,					0 },
 //	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN},
