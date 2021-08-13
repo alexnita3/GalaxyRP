@@ -5405,11 +5405,11 @@ void zyk_load_common_settings(gentity_t *ent)
 		}
 		else if (ent->client->pers.player_settings & (1 << 29) && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[5] == 5)
 		{
-			ent->client->ps.fd.saberAnimLevel = SS_ALEX;
+			ent->client->ps.fd.saberAnimLevel = SS_TAVION;
 		}
 		else if (ent->client->pers.player_settings & (1 << 29) && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[5] == 6)
 		{
-			ent->client->ps.fd.saberAnimLevel = SS_TAVION;
+			ent->client->ps.fd.saberAnimLevel = SS_ALEX;
 		}
 		else if (((ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[5] >= 1) || 
 				  (ent->client->sess.amrpgmode == 1 && ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_SABER))))
