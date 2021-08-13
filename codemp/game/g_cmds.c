@@ -462,67 +462,40 @@ int ClientNumberFromString( gentity_t *to, const char *s, qboolean allowconnecti
 	return -1;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-char emote_row[MAX_STRING_CHARS];
-
-//the width of the table is 38 characters long
-void emote_display_table_horizontal_line(gentity_t *ent) {
-	trap->SendServerCommand(ent - g_entities, "print \"======================================\n\"");
+void print_table_horizontal_line(gentity_t *ent) {
+	trap->SendServerCommand(ent - g_entities, "print \" ^9======================================\n\"");
 	return;
 }
 
-void emote_display_table_vertical_line(qboolean has_ending) {
-	
-	if (has_ending) {
-		strcat(emote_row, "||\n");
-		return;
-	}
-	else {
-		strcat(emote_row, "||");
-		return;
-	}
+int get_max_spaces_right(char text[MAX_STRING_CHARS]) {
+	return 33 - strlen(text);
 }
 
-void emote_display_table_empty_space(int number_of_spaces) {
-	//a line will never end in a space
-	
-	char space_string[MAX_STRING_CHARS] = " ";
+void print_row(gentity_t *ent, char text[MAX_STRING_CHARS]) {
+	char emote_row[MAX_STRING_CHARS] = " ";
 
-	for (int i = 0; i < number_of_spaces - 1; i++) {
-		strcat(space_string, " ");
+	strcat(emote_row, "^9|| ^3");
+
+	strcat(emote_row, text);
+
+	for (int i = 0; i < get_max_spaces_right(text); i++) {
+		strcat(emote_row, " ");
 	}
-	strcat(emote_row, space_string);
 
+	strcat(emote_row, "^9||\n");
+	
+	trap->SendServerCommand(ent - g_entities, va("print \"%s\"", emote_row));
+	
 	return;
 }
 
-void emote_display_heading_text(gentity_t *ent, char header_text[MAX_STRING_CHARS]) {
+void print_heading_text_row(gentity_t *ent, char header_text[MAX_STRING_CHARS]) {
 	//34 characters left for space and text
 	int length = strlen(header_text);
+
+	char emote_row[MAX_STRING_CHARS] = " ";
+
+	strcat(emote_row, "^9||^3");
 
 	qboolean can_be_centered;
 
@@ -547,97 +520,29 @@ void emote_display_heading_text(gentity_t *ent, char header_text[MAX_STRING_CHAR
 		right_spaces = left_spaces + 1;
 	}
 
-	emote_display_table_vertical_line(qfalse);
 	//take care of the space to the left of the writing
-	emote_display_table_empty_space(left_spaces);
+	for (int i = 0; i < left_spaces; i++) {
+		strcat(emote_row, " ");
+	}
 
 	strcat(emote_row, header_text);
 
 	//take care of the space to the right of the writing
-	emote_display_table_empty_space(right_spaces);
+	for (int i = 0; i < right_spaces; i++) {
+		strcat(emote_row, " ");
+	}
 
-	//emote_display_table_empty_space(ent);
-	emote_display_table_vertical_line(qtrue);
-
-	trap->SendServerCommand(ent - g_entities, va("print \"%s\"", emote_row));
-
-	strcpy(emote_row, "\n");
-
-	return;
-}
-
-void emote_display_table_heading(gentity_t *ent, char header_text[MAX_STRING_CHARS]) {
-	emote_display_table_horizontal_line(ent);
-	emote_display_heading_text(ent, header_text);
-	emote_display_table_horizontal_line(ent);
-	return;
-}
-
-void emote_display_row(gentity_t *ent, char item_text[MAX_STRING_CHARS]) {
-	//34 characters left for space and text
-
-	int length = strlen(item_text);
-
-	int spaces = 34 - length;
-
-	//a space will always be before the text
-	spaces--;
-
-	emote_display_table_vertical_line(qfalse);
-	emote_display_table_empty_space(1);
-
-	strcat(emote_row, item_text);
-
-	//take care of the space to the right of the writing
-	emote_display_table_empty_space(ent, spaces);
-
-	emote_display_table_vertical_line(qtrue);
+	strcat(emote_row, "^9||\n");
 
 	trap->SendServerCommand(ent - g_entities, va("print \"%s\"", emote_row));
 
-	strcpy(emote_row, "\n");
-
+	return;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void Cmd_Test_f(gentity_t *ent) {
-
-	char arg1[MAX_STRING_CHARS];
-	trap->Argv(1, arg1, sizeof(arg1));
-
-	emote_display_table_heading(ent, arg1);
-	return;
+void print_header(gentity_t *ent, char text[MAX_STRING_CHARS]) {
+	print_table_horizontal_line(ent);
+	print_heading_text_row(ent, text);
+	print_table_horizontal_line(ent);
 }
 
 // zyk: plays an animation from anims.h
@@ -724,21 +629,18 @@ void Cmd_Emote_f( gentity_t *ent )
 	{
 		trap->SendServerCommand(ent - g_entities,"print \"Usage: the following animations are available:\n\"");
 
-
-
-		for (int i = 0; i < MAX_EMOTE_CATEGORIES; i++)
-		{
-			emote_display_table_heading(ent, anim_headers[i]);
+		for (int i = 0; i < MAX_EMOTE_CATEGORIES; i++) {
+			print_header(ent, anim_headers[i]);
 			for (int j = 0; j < MAX_WORDED_EMOTES; j++) {
 				//if animation is in that category
-				if (strcmp(anim_categories[j], anim_headers[i])) {
-					emote_display_row(ent, anim_words[j]);
+				if (strcmp(anim_categories[j], anim_headers[i]) == 0) {
+					print_row(ent, anim_words[j]);
 				}
 			}
 		}
+		//end the table
+		print_table_horizontal_line(ent);
 	}
-
-	
 }
 
 /*
@@ -19806,7 +19708,7 @@ command_t commands[] = {
 	{ "tele",				Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
-	{ "test",				Cmd_Test_f,					0 },
+//	{ "test",				Cmd_Test_f,					0 },
 //	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN},
