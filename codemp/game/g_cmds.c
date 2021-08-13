@@ -500,7 +500,7 @@ void print_heading_text_row(gentity_t *ent, char header_text[MAX_STRING_CHARS]) 
 	qboolean can_be_centered;
 
 	if (length % 2 == 0) {
-		can_be_centered == qtrue;
+		can_be_centered = qtrue;
 	}
 	else {
 		can_be_centered = qfalse;
@@ -960,6 +960,31 @@ void do_scale(gentity_t *ent, int new_size)
 		ent->client->pers.player_statuses |= (1 << 4);
 }
 
+void display_scale_help(gentity_t *ent) {
+	FILE *help_file = NULL;
+
+	char line[MAX_STRING_CHARS];
+
+	help_file = fopen("GalaxyRP/textfiles/scaletable.txt", "r");
+
+	if (help_file != NULL) {
+
+		while (fscanf(help_file, "%[^\n] ", line) != EOF) {
+			trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", line));
+		}
+
+		fclose(help_file);
+	}
+	else
+	{
+		//if file isn't there, create it
+		trap->SendServerCommand(ent->s.number, "print \"The help file is missing.\n\"");
+	}
+	return;
+}
+
+
+
 void Cmd_Scale_f( gentity_t *ent ) {
 	char arg1[MAX_TOKEN_CHARS] = {0};
 	char arg2[MAX_TOKEN_CHARS] = {0};
@@ -972,9 +997,23 @@ void Cmd_Scale_f( gentity_t *ent ) {
 		return;
 	}
 
+	if (trap->Argc() == 2) {
+		trap->Argv(1, arg1, sizeof(arg1));
+
+		if (strcmp(arg1, "help") == 0) {
+			display_scale_help(ent);
+			return;
+		}
+		else {
+			trap->SendServerCommand(ent - g_entities, "print \"Usage: /scale <playername/help> <size between 20 and 500 (optional)>.\n\"");
+			return;
+		}
+
+	}
+
 	if (trap->Argc() != 3)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Usage: /scale <player name or ID> <size between 20 and 500>.\n\"" );
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: /scale <playername/help> <size between 20 and 500 (optional)>.\n\"");
 		return;
 	}
 
