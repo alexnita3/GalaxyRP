@@ -1928,6 +1928,7 @@ void G_SetTauntAnim( gentity_t *ent, int taunt )
 					ent->client->ps.saberHolstered = 0;
 					anim = BOTH_DUAL_TAUNT;
 					break;
+				case SS_ALEX:
 				case SS_STAFF:
 					if ( ent->client->ps.saberHolstered > 0 )
 					{//turn on all blades
@@ -2039,6 +2040,7 @@ void G_SetTauntAnim( gentity_t *ent, int taunt )
 					case SS_DUAL:
 						anim = BOTH_SHOWOFF_DUAL;
 						break;
+					case SS_ALEX:
 					case SS_STAFF:
 						anim = BOTH_SHOWOFF_STAFF;
 						break;
@@ -2089,6 +2091,7 @@ void G_SetTauntAnim( gentity_t *ent, int taunt )
 					ent->client->ps.saberHolstered = 0;
 					anim = BOTH_VICTORY_DUAL;
 					break;
+				case SS_ALEX:
 				case SS_STAFF:
 					if ( ent->client->ps.saberHolstered )
 					{//turn on first
@@ -3432,6 +3435,7 @@ void ClientThink_real( gentity_t *ent ) {
 							break;
 						case SS_MEDIUM:
 						case SS_TAVION:
+						case SS_ALEX:
 						case SS_DUAL:
 						case SS_STAFF:
 							lockHits = 2;

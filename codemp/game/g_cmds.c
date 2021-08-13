@@ -46,7 +46,7 @@ const int max_skill_levels[NUMBER_OF_SKILLS] = {
 	3, // Pull
 	4, // Speed
 	3, // Sense
-	5, // Saber Attack
+	6, // Saber Attack
 	3, // Saber Defense
 	4, // Saber Throw
 	4, // Absorb
@@ -5404,6 +5404,10 @@ void zyk_load_common_settings(gentity_t *ent)
 			ent->client->ps.fd.saberAnimLevel = SS_DESANN;
 		}
 		else if (ent->client->pers.player_settings & (1 << 29) && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[5] == 5)
+		{
+			ent->client->ps.fd.saberAnimLevel = SS_ALEX;
+		}
+		else if (ent->client->pers.player_settings & (1 << 29) && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[5] == 6)
 		{
 			ent->client->ps.fd.saberAnimLevel = SS_TAVION;
 		}

@@ -736,6 +736,19 @@ qboolean PM_SaberKataDone(int curmove, int newmove)
 		return qfalse;
 	}
 
+	if (pm->ps->fd.saberAnimLevel == SS_ALEX)
+	{//desann and tavion can link up slower than yellow
+
+		int chainToleranceDesann = 5;
+
+		if (pm->ps->saberAttackChainCount >= chainToleranceDesann)
+		{
+			return qtrue;
+		}
+
+		return qfalse;
+	}
+
 	if (pm->ps->fd.saberAnimLevel == SS_TAVION)
 	{//desann and tavion can link up slower than yellow
 
@@ -3220,6 +3233,7 @@ weapChecks:
 			case SS_DUAL:
 				PM_SetSaberMove( LS_DUAL_SPIN_PROTECT );//PM_CheckDualSpinProtect();
 				break;
+			case SS_ALEX:
 			case SS_STAFF:
 				PM_SetSaberMove( LS_STAFF_SOULCAL );
 				break;

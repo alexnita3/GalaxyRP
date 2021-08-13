@@ -826,7 +826,7 @@ static void CG_DrawSaberStyle( centity_t *cent, menuDef_t *menuHUD)
 		}
 
 		break;
-	case 5://FORCE_LEVEL_5://Tavion
+	case 6://FORCE_LEVEL_5://Tavion
 		// zyk: added tavion saber style
 		focusItem = Menu_FindItemByName(menuHUD, "saberstyle_tavion");
 
@@ -861,6 +861,43 @@ static void CG_DrawSaberStyle( centity_t *cent, menuDef_t *menuHUD)
 		}
 
 		break;
+
+	case 5://FORCE_LEVEL_5://Tavion
+		// zyk: added tavion saber style
+		focusItem = Menu_FindItemByName(menuHUD, "saberstyle_alex");
+
+		if (focusItem)
+		{
+			trap->R_SetColor(colorTable[CT_WHITE]);
+
+			CG_DrawPic(
+				focusItem->window.rect.x,
+				focusItem->window.rect.y,
+				focusItem->window.rect.w,
+				focusItem->window.rect.h,
+				focusItem->window.background
+			);
+		}
+		else
+		{ // zyk: did not find the new hud
+			focusItem = Menu_FindItemByName(menuHUD, "saberstyle_fast");
+
+			if (focusItem)
+			{
+				trap->R_SetColor(colorTable[CT_WHITE]);
+
+				CG_DrawPic(
+					focusItem->window.rect.x,
+					focusItem->window.rect.y,
+					focusItem->window.rect.w,
+					focusItem->window.rect.h,
+					focusItem->window.background
+				);
+			}
+		}
+
+		break;
+
 	case 2://FORCE_LEVEL_2:
 		focusItem = Menu_FindItemByName(menuHUD, "saberstyle_medium");
 
@@ -877,7 +914,7 @@ static void CG_DrawSaberStyle( centity_t *cent, menuDef_t *menuHUD)
 			);
 		}
 		break;
-	case 6://SS_DUAL
+	case 7://SS_DUAL
 		focusItem = Menu_FindItemByName(menuHUD, "saberstyle_dual");
 
 		if (focusItem)
@@ -893,7 +930,7 @@ static void CG_DrawSaberStyle( centity_t *cent, menuDef_t *menuHUD)
 			);
 		}
 		break;
-	case 7://SS_STAFF
+	case 8://SS_STAFF
 		focusItem = Menu_FindItemByName(menuHUD, "saberstyle_staff");
 
 		if (focusItem)
@@ -1284,6 +1321,10 @@ static void CG_DrawSimpleSaberStyle( const centity_t *cent )
 	case SS_DESANN:
 		Com_sprintf( num, sizeof( num ), "DESANN" );
 		calcColor = CT_GREEN;
+		break;
+	case SS_ALEX:
+		Com_sprintf(num, sizeof(num), "ALEX");
+		calcColor = CT_HUD_ORANGE;
 		break;
 	case SS_TAVION:
 		Com_sprintf( num, sizeof( num ), "TAVION" );

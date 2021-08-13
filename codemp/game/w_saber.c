@@ -180,6 +180,7 @@ static QINLINE int G_SaberAttackPower(gentity_t *ent, qboolean attacking)
 			//would have more advantage than it should since the animations are all much faster.
 			switch (ent->client->ps.fd.saberAnimLevel)
 			{
+			case SS_ALEX:
 			case SS_STRONG:
 				toleranceAmt = 8;
 				break;

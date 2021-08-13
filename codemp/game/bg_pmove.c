@@ -369,6 +369,9 @@ int PM_GetSaberStance(void)
 	case SS_STRONG:
 		anim = BOTH_SABERSLOW_STANCE;
 		break;
+	case SS_ALEX:
+		anim = BOTH_SORESU;
+		break;
 	case SS_NONE:
 	case SS_MEDIUM:
 	case SS_DESANN:
