@@ -27,8 +27,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "ui/menudef.h"			// for the voice chats
 
-#define MAX_EMOTE_WORDS 11;
+#include "sqlite3.h"
 
+#define MAX_EMOTE_WORDS 11;
 
 //rww - for getting bot commands...
 int AcceptBotCommand(char *cmd, gentity_t *pl);
@@ -278,6 +279,96 @@ const char anim_headers[MAX_EMOTE_CATEGORIES][50] = {
 	"Saber",
 	"Force"
 };
+
+void InitializeSQL(void)
+{
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	sqlite3_stmt *stmt;
+	int rc;
+	qboolean columnFound = qfalse;
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	//Create Account Table
+	trap->Print("Initializing Account table.\n");
+
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Accounts' ('AccountID' INTEGER, 'PlayerSettings' INTEGER, 'AdminLevel' INTEGER, 'Password' TEXT, 'Username' TEXT, 'DefaultChar' TEXT, PRIMARY KEY(AccountID))", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Account table.\n");
+
+	//Create Character Table
+	trap->Print("Initializing Character Table.\n");
+
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Character table.\n");
+
+	//Create Weapons Table
+	trap->Print("Initializing Weapons Table.\n");
+
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Weapons' ('Bowcaster' INTEGER, 'CharID' TEXT, 'Concussion' INTEGER, 'Demp2' INTEGER, 'Disruptor' INTEGER, 'E11' INTEGER, 'Flechette' INTEGER, 'Pistol' INTEGER, 'Repeater' INTEGER, 'Rocket' INTEGER)", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Weapons table.\n");
+
+	//Create Skills Table
+	trap->Print("Initializing Skills Table.\n");
+
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Skills' ('Jump' INTEGER, 'CharID' TEXT, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER)", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Skills table.\n");
+
+	//Create Ammo Table
+	trap->Print("Initializing Ammo Table.\n");
+
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Weapons' ('AmmoBlaster' INTEGER, 'CharID' TEXT, 'AmmoPowercell' INTEGER, 'AmmoMetalBolts' INTEGER, 'AmmoRockets' INTEGER, 'AmmoThermal' INTEGER, 'AmmoTripmine' INTEGER, 'AmmoDetpack' INTEGER)", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Ammo table.\n");
+
+	trap->Print("All tables have been initialized.\n");
+}
+
+void Cmd_Test_f(gentity_t *ent) {
+	InitializeSQL();
+}
+
+
 
 /*
 ==================
@@ -5477,7 +5568,7 @@ void load_account(gentity_t *ent)
 
 		// zyk: loading the amrpgmode value
 		fscanf(account_file,"%s",content);
-		ent->client->sess.amrpgmode = atoi(content);
+		ent->client->sess.amrpgmode = 2;
 
 		if ((zyk_allow_rpg_mode.integer == 0 || (zyk_allow_rpg_in_other_gametypes.integer == 0 && level.gametype != GT_FFA)) && ent->client->sess.amrpgmode == 2)
 		{ // zyk: RPG Mode not allowed. Change his account to Admin-Only Mode
@@ -19749,7 +19840,7 @@ command_t commands[] = {
 	{ "tele",				Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
-//	{ "test",				Cmd_Test_f,					0 },
+	{ "test",				Cmd_Test_f,					0 },
 //	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN},
