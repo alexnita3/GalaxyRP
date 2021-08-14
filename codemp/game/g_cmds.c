@@ -280,6 +280,8 @@ const char anim_headers[MAX_EMOTE_CATEGORIES][50] = {
 	"Force"
 };
 
+//TODO: PUT THESE IN AN SQL.h
+
 void InitializeSQL(void)
 {
 	sqlite3 *db;
@@ -362,6 +364,115 @@ void InitializeSQL(void)
 	trap->Print("Done with Ammo table.\n");
 
 	trap->Print("All tables have been initialized.\n");
+}
+
+//TODO: PUT THESE IN AN ACCOUNT.h
+
+void Cmd_Register_F(gentity_t * ent)
+{
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
+	int accountID = 0, i = 0;
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	if (trap->Argc() != 3)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /register <username> <password>\n\"");
+		sqlite3_close(db);
+		return;
+	}
+
+	trap->Argv(1, username, sizeof(username));
+	trap->Argv(2, password, sizeof(password));
+
+	Q_StripColor(username);
+	Q_strlwr(username);
+
+	rc = sqlite3_prepare(db, va("SELECT Username FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		Q_strncpyz(comparisonName, (const char *)sqlite3_column_text(stmt, 0), sizeof(comparisonName));
+		sqlite3_finalize(stmt);
+	}
+
+	if (comparisonName[0] != '\0')
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
+		trap->SendServerCommand(ent - g_entities, va("cp \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
+		sqlite3_close(db);
+		return;
+	}
+
+	//default char will have the same name as the username
+	rc = sqlite3_exec(db, va("INSERT INTO Accounts(Username,Password,AdminLevel,PlayerSettings, DefaultChar) VALUES('%s','%s','0','0','%s')", username, password, username), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+
+	rc = sqlite3_prepare(db, va("SELECT AccountID FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		accountID = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	}
+
+	/*ent->client->sess.accountID = accountID;
+	ent->client->sess.loggedIn = qtrue;*/
+
+	//trap->SendServerCommand(ent - g_entities, va("loggedIn"));
+
+	trap->SendServerCommand(ent - g_entities, "print \"^2Your account has been successfully created and you are now logged in.\n\"");
+	trap->SendServerCommand(ent - g_entities, "cp \"^2Your account has been successfully created and you are now logged in.\n\"");
+
+	//Open the character selection/creation menu
+	//trap->SendServerCommand(ent - g_entities, "charui");
+
+	sqlite3_close(db);
+	return;
 }
 
 void Cmd_Test_f(gentity_t *ent) {
@@ -1073,8 +1184,6 @@ void display_scale_help(gentity_t *ent) {
 	}
 	return;
 }
-
-
 
 void Cmd_Scale_f( gentity_t *ent ) {
 	char arg1[MAX_TOKEN_CHARS] = {0};
@@ -19794,7 +19903,7 @@ command_t commands[] = {
 //	{ "meleearena",			Cmd_MeleeArena_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "meleemode",			Cmd_MeleeMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "modversion",			Cmd_ModVersion_f,			CMD_NOINTERMISSION },
-	{ "new",				Cmd_NewAccount_f,			CMD_NOINTERMISSION },
+	{ "new",				Cmd_Register_F,				CMD_NOINTERMISSION },
 	{ "news",				Cmd_News_f,					0 },
 	{ "noclip",				Cmd_Noclip_f,				CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "nofight",			Cmd_NoFight_f,				CMD_NOINTERMISSION },
