@@ -1663,6 +1663,12 @@ void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqli
 	return;
 }
 
+void save_char_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
+{
+	save_ammo_to_db(ent, db, zErrMsg, rc, stmt);
+	save_skills_to_db(ent, db, zErrMsg, rc, stmt);
+}
+
 void Cmd_Register_F(gentity_t * ent)
 {
 	sqlite3 *db;
