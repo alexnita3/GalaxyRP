@@ -479,6 +479,11 @@ typedef struct clientSession_s {
 	// 1 - Admin-Only mode: in this mode, player can use admin commands if he has them
 	// 2 - RPG mode: in this mode, player can use admin commands and play the level system
 	int	amrpgmode; // zyk: saved in session so the player account can be loaded again in map changes
+
+	qboolean loggedin;
+
+	int accountID;
+
 	char filename[32]; // zyk: player account filename
 
 	char rpgchar[32]; // zyk: file name of the RPG char
