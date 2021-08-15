@@ -1627,8 +1627,7 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 
 	//Create skill record
 	//TODO: replace Name with something better
-	rc = sqlite3_exec(db, va("INSERT INTO Skills(Jump, CharID, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '%i', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')",
-		charID), 0, 0, &zErrMsg);
+	rc = sqlite3_exec(db, va("INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')"), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
@@ -1637,7 +1636,7 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 	}
 
 	//Create ammo record
-	rc = sqlite3_exec(db, va("INSERT INTO Weapons(CharID, AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('%i', '0', '0', '0', '0', '0', '0', '0')", charID), 0, 0, &zErrMsg);
+	rc = sqlite3_exec(db, va("INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')", charID), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
@@ -1673,7 +1672,7 @@ void save_char_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite
 
 void save_account_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
 	//TODO: Make this change more stuff
-	rc = sqlite3_exec(db, va("UPDATE Accounts PLayerSettings='0', AdminLevel='%i', DefaultChar='%i', WHERE AccountID='%i'",
+	rc = sqlite3_exec(db, va("UPDATE Accounts PlayerSettings='0', AdminLevel='%i', DefaultChar='%i', WHERE AccountID='%i'",
 		ent->client->sess.accountID,
 		ent->client->sess.rpgchar,
 		ent->client->sess.accountID
@@ -19438,11 +19437,15 @@ Cmd_RpgChar_f
 ==================
 */
 void Cmd_RpgChar_f(gentity_t *ent) {
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
+	int accountID = 0, i = 0;
+	int charID;
+	
 	int argc = trap->Argc();
-	FILE *chars_file;
-	char content[64];
-
-	strcpy(content, "");
 
 	if (argc == 1)
 	{ // zyk: lists the chars and commands
@@ -19450,6 +19453,14 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 	}
 	else
 	{
+		rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+		if (rc)
+		{
+			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+			sqlite3_close(db);
+			return;
+		}
+
 		char arg1[MAX_STRING_CHARS];
 		char arg2[MAX_STRING_CHARS];
 		char arg3[MAX_STRING_CHARS];
@@ -19457,19 +19468,18 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 
 		trap->Argv(1, arg1, sizeof(arg1));
 
-		if (argc == 2 && Q_stricmp(arg1, "duplicate") != 0)
-		{
-			trap->SendServerCommand(ent->s.number, "print \"This command requires at least one more argument\n\"");
-			return;
-		}
-
-		if (Q_stricmp(arg1, "duplicate") != 0)
-		{
-			trap->Argv(2, arg2, sizeof(arg2));
-		}
+		sqlite3 *db;
+		char *zErrMsg = 0;
+		int rc;
+		sqlite3_stmt *stmt;
+		char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
+		int accountID = 0, i = 0;
+		int charID;
 
 		if (Q_stricmp(arg1, "new") == 0)
 		{
+			trap->Argv(2, arg2, sizeof(arg2));
+
 			if (Is_Char_Name_Valid(arg2) == qfalse) {
 				trap->SendServerCommand(ent->s.number, "print \"Character name can only contain alphanumeric characters and _. Preferred format iis firstname_lastname\n\"");
 				return;
@@ -19481,150 +19491,37 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				return;
 			}
 
-			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
-			if (chars_file != NULL)
-			{
-				fclose(chars_file);
-				trap->SendServerCommand(ent->s.number, "print \"This char already exists\n\"");
-				return;
-			}
-
-			if (zyk_char_count(ent) >= MAX_RPG_CHARS)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Reached the max limit of chars\n\"");
-				return;
-			}
-
-			if (strlen(arg2) > MAX_ACC_NAME_SIZE)
-			{
-				trap->SendServerCommand(ent->s.number, va("print \"Char name must have a maximum of %d characters\n\"", MAX_ACC_NAME_SIZE));
-				return;
-			}
-
-			add_new_char(ent);
+			add_new_char_to_db(ent, arg2, db, zErrMsg, rc, stmt);
 
 			// zyk: saving the current char
 			strcpy(ent->client->sess.rpgchar, arg2);
 
-			save_account(ent, qfalse);
-			save_account(ent, qtrue);
+			save_account_to_db(ent, db, zErrMsg, rc, stmt);
+
+			load_character_from_db(ent, arg2, db, zErrMsg, rc, stmt);
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7created!\n\"", ent->client->sess.rpgchar));
 			trap->SendServerCommand(-1, va("chat \"%s created the char: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
 
-			if (ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->sess.amrpgmode == 2)
-			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
-				G_Kill(ent);
-			}
-		}
-		else if (Q_stricmp(arg1, "rename") == 0)
-		{
-			if (Q_stricmp(ent->client->sess.rpgchar, ent->client->sess.filename) == 0)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Cannot rename the default char\n\"");
-				return;
-			}
-
-			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
-			if (chars_file != NULL)
-			{
-				fclose(chars_file);
-				trap->SendServerCommand(ent->s.number, "print \"This char already exists\n\"");
-				return;
-			}
-
-			if (strlen(arg2) > MAX_ACC_NAME_SIZE)
-			{
-				trap->SendServerCommand(ent->s.number, va("print \"Char name must have a maximum of %d characters\n\"", MAX_ACC_NAME_SIZE));
-				return;
-			}
-
-#if defined(__linux__)
-			system(va("mv GalaxyRP/accounts/%s_%s.txt GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
-			system(va("mv GalaxyRP/accounts/%s_%s.txt GalaxyRP/accounts/%s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
-#else
-			system(va("cd \"GalaxyRP/accounts\" & MOVE %s_%s.txt %s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
-			system(va("cd \"GalaxyRP/accounts\" & MOVE %s_%s.txt %s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, arg2));
-#endif
-
-			// zyk: saving the current char
-			strcpy(ent->client->sess.rpgchar, arg2);
-			save_account(ent, qfalse);
-
-			trap->SendServerCommand(ent->s.number, va("print \"Renamed to %s^7\n\"", ent->client->sess.rpgchar));
-		}
-		else if (Q_stricmp(arg1, "duplicate") == 0)
-		{
-			char new_char_name[32];
-
-			if (zyk_char_count(ent) >= MAX_RPG_CHARS)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Reached the max limit of chars\n\"");
-				return;
-			}
-
-			if (strlen(ent->client->sess.rpgchar) < MAX_ACC_NAME_SIZE - 4)
-			{
-				strcpy(new_char_name, va("dup_%s", ent->client->sess.rpgchar));
-			}
-			else
-			{ // zyk: cannot go over the max, so remove the last chars
-				strcpy(new_char_name, va("%s", ent->client->sess.rpgchar));
-
-				new_char_name[0] = 'd';
-				new_char_name[1] = 'u';
-				new_char_name[2] = 'p';
-				new_char_name[3] = '_';
-			}
-
-			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, new_char_name), "r");
-			if (chars_file != NULL)
-			{
-				fclose(chars_file);
-				trap->SendServerCommand(ent->s.number, "print \"Cannot overwrite existing duplicate\n\"");
-				return;
-			}
-
-#if defined(__linux__)
-			system(va("cp GalaxyRP/accounts/%s_%s.txt GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, new_char_name));
-#else
-			system(va("cd \"GalaxyRP/accounts\" & COPY %s_%s.txt %s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, new_char_name));
-#endif
-
-			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7duplicated!\n\"", ent->client->sess.rpgchar));
+			sqlite3_close(db);
 		}
 		else if (Q_stricmp(arg1, "use") == 0)
 		{
+			trap->Argv(1, arg2, sizeof(arg2));
+
 			if (Q_stricmp(arg2, ent->client->sess.rpgchar) == 0)
 			{
 				trap->SendServerCommand(ent->s.number, "print \"You are already using this char\n\"");
 				return;
 			}
 
-			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
-			if (chars_file == NULL)
-			{
-				trap->SendServerCommand(ent->s.number, va("print \"Char %s does not exist\n\"", arg2));
-				return;
-			}
-
-			fclose(chars_file);
-
-			// zyk: saving the current char
-			strcpy(ent->client->sess.rpgchar, arg2);
-
-			save_account(ent, qfalse);
-
-			load_account(ent);
-			load_ammo_from_file(ent);
+			//Save current char
+			save_char_to_db(ent, db, zErrMsg, rc, stmt);
+			//Load new one
+			load_character_from_db(ent, arg2, db, zErrMsg, rc, stmt);
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7loaded!\n\"", ent->client->sess.rpgchar));
 			trap->SendServerCommand(-1, va("chat \"%s switched to char: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
-
-			if (ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->sess.amrpgmode == 2)
-			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
-				G_Kill(ent);
-			}
 		}
 		else if (Q_stricmp(arg1, "delete") == 0)
 		{
@@ -19640,91 +19537,16 @@ void Cmd_RpgChar_f(gentity_t *ent) {
 				return;
 			}
 
-			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
-			if (chars_file == NULL)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"This char does not exist\n\"");
-				return;
-			}
-			fclose(chars_file);
-
-			remove(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2));
+			remove_char_from_db(ent, arg2, db, zErrMsg, rc, stmt);
 
 			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7deleted!\n\"", arg2));
-		}
-		else if (Q_stricmp(arg1, "migrate") == 0)
-		{
-			if (argc < 5)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"This command requires more arguments\n\"");
-				return;
-			}
 
-			trap->Argv(3, arg3, sizeof(arg3));
-			trap->Argv(4, arg4, sizeof(arg4));
-
-			chars_file = fopen(va("GalaxyRP/accounts/%s.txt", arg3), "r");
-			if (chars_file == NULL)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"This account does not exist\n\"");
-				return;
-			}
-
-			// zyk: getting the password
-			fscanf(chars_file, "%s", content);
-			fclose(chars_file);
-
-			if (strlen(content) != strlen(arg4) || Q_strncmp(content, arg4, strlen(content)) != 0)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"The password is incorrect\n\"");
-				return;
-			}
-
-			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2), "r");
-			if (chars_file == NULL)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"This char does not exist\n\"");
-				return;
-			}
-			fclose(chars_file);
-
-			chars_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", arg3, arg2), "r");
-			if (chars_file)
-			{
-				fclose(chars_file);
-				trap->SendServerCommand(ent->s.number, "print \"Cannot overwrite existing char of that account\n\"");
-				return;
-			}
-
-			if (Q_stricmp(arg2, arg3) == 0)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Cannot overwrite the default char of that account\n\"");
-				return;
-			}
-
-			if (Q_stricmp(arg2, ent->client->sess.filename) == 0)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Cannot migrate the default char\n\"");
-				return;
-			}
-
-			if (Q_stricmp(arg2, ent->client->sess.rpgchar) == 0)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Cannot migrate char you are using now\n\"");
-				return;
-			}
-
-#if defined(__linux__)
-			system(va("mv GalaxyRP/accounts/%s_%s.txt GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, arg2, arg3, arg2));
-#else
-			system(va("cd \"GalaxyRP/accounts\" & MOVE %s_%s.txt %s_%s.txt", ent->client->sess.filename, arg2, arg3, arg2));
-#endif
-
-			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7moved!\n\"", arg2));
+			sqlite3_close(db);
 		}
 
 		// zyk: syncronize info to the client menu
-		Cmd_ZykChars_f(ent);
+		//TODO check this out
+		//Cmd_ZykChars_f(ent);
 	}
 }
 
