@@ -1354,26 +1354,13 @@ void InitializeSQL(void)
 }
 
 //TODO: PUT THESE IN AN ACCOUNT.h
-void load_ammo_from_db(gentity_t * ent) {
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
+void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
+{
 	rc = sqlite3_prepare(db, va("SELECT * FROM Weapons WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		sqlite3_close(db);
 		return;
 	}
 	rc = sqlite3_step(stmt);
@@ -1381,7 +1368,6 @@ void load_ammo_from_db(gentity_t * ent) {
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		sqlite3_close(db);
 		return;
 	}
 	if (rc == SQLITE_ROW)
@@ -1390,13 +1376,9 @@ void load_ammo_from_db(gentity_t * ent) {
 			ent->client->ps.ammo[i] = sqlite3_column_int(stmt, i - 1);
 		}
 
-		sqlite3_finalize(stmt);
-
-		sqlite3_close(db);
-
 		//kill them so that it takes effect
 		G_Kill(ent);
-
+		sqlite3_finalize(stmt);
 		return;
 
 	}
@@ -1406,20 +1388,8 @@ void load_ammo_from_db(gentity_t * ent) {
 	return;
 }
 
-void save_ammo_to_db(gentity_t * ent) {
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
+void save_ammo_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
+{
 	rc = sqlite3_exec(db, va("UPDATE Weapons AmmoBlaster='%i', AmmpPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'",
 		ent->client->ps.ammo[AMMO_BLASTER],
 		ent->client->ps.ammo[AMMO_POWERCELL],
@@ -1434,34 +1404,18 @@ void save_ammo_to_db(gentity_t * ent) {
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
 		return;
 	}
 
-	sqlite3_close(db);
 	return;
 }
 
-void load_character_skills_from_db(gentity_t * ent) {
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
+void load_character_skills_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
 	rc = sqlite3_prepare(db, va("SELECT * FROM Skills WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		sqlite3_close(db);
 		return;
 	}
 	rc = sqlite3_step(stmt);
@@ -1469,7 +1423,6 @@ void load_character_skills_from_db(gentity_t * ent) {
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		sqlite3_close(db);
 		return;
 	}
 	if (rc == SQLITE_ROW)
@@ -1479,8 +1432,6 @@ void load_character_skills_from_db(gentity_t * ent) {
 		}
 
 		sqlite3_finalize(stmt);
-
-		sqlite3_close(db);
 
 		//kill them so that it takes effect
 		G_Kill(ent);
@@ -1494,21 +1445,8 @@ void load_character_skills_from_db(gentity_t * ent) {
 	return;
 }
 
-void save_skills_to_db(gentity_t * ent) {
-
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
+void save_skills_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
+{
 	rc = sqlite3_exec(db, va("UPDATE Accounts set Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'", 
 		ent->client->pers.skill_levels[0],	//Jump
 		ent->client->pers.skill_levels[1],	//Push
@@ -1572,19 +1510,13 @@ void save_skills_to_db(gentity_t * ent) {
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
 		return;
 	}
 
-	sqlite3_close(db);
 	return;
 }
 
-void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHARS]) {
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
+void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
 
 	if (ent->client->sess.loggedin == qfalse) {
 		trap->SendServerCommand(ent - g_entities, "print \"^2You must be logged in load a character.\n\"");
@@ -1593,20 +1525,11 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 		return;
 	}
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
 	rc = sqlite3_prepare(db, va("SELECT count(CharID) FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		sqlite3_close(db);
 		return;
 	}
 	rc = sqlite3_step(stmt);
@@ -1614,7 +1537,6 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		sqlite3_close(db);
 		return;
 	}
 	if (rc == SQLITE_ROW)
@@ -1628,7 +1550,6 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 			trap->SendServerCommand(ent - g_entities, "print \"^2Character does not exist.\n\"");
 			trap->SendServerCommand(ent - g_entities, "cp \"^2Character does not exist.\n\"");
 
-			sqlite3_close(db);
 			return;
 		}
 
@@ -1639,7 +1560,6 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		sqlite3_close(db);
 		return;
 	}
 	rc = sqlite3_step(stmt);
@@ -1647,7 +1567,6 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		sqlite3_close(db);
 		return;
 	}
 	if (rc == SQLITE_ROW)
@@ -1660,10 +1579,8 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 5);
 		sqlite3_finalize(stmt);
 
-		sqlite3_close(db);
-
-		load_character_skills_from_db(ent);
-		load_ammo_from_db(ent);
+		load_character_skills_from_db(ent, db, zErrMsg, rc, stmt);
+		load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
 	}
 
 	trap->SendServerCommand(ent - g_entities, "print \"^2Character loaded sucessfully!\n\"");
@@ -1672,21 +1589,9 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 	return;
 }
 
-void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS]) {
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-
+void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
+{
 	int charID;
-
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
 
 	//TODO: assign the default values to the entity
 	//Create character record
@@ -1696,7 +1601,6 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS]) {
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
 		return;
 	}
 
@@ -1706,7 +1610,6 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS]) {
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		sqlite3_close(db);
 		return;
 	}
 	rc = sqlite3_step(stmt);
@@ -1714,7 +1617,6 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS]) {
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		sqlite3_close(db);
 		return;
 	}
 	if (rc == SQLITE_ROW)
@@ -1731,7 +1633,6 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS]) {
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
 		return;
 	}
 
@@ -1741,11 +1642,24 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS]) {
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
 		return;
 	}
 
-	sqlite3_close(db);
+	return;
+}
+
+void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
+{
+	int charID;
+
+	rc = sqlite3_exec(db, va("DELETE FROM Characters WHERE AccountID='%i' AND Name='%i'", ent->client->sess.accountID, char_name), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
 	return;
 }
 
@@ -1866,7 +1780,6 @@ void Cmd_Register_F(gentity_t * ent)
 		ent->client->pers.bitvalue = sqlite3_column_int(stmt, 2);
 		sqlite3_finalize(stmt);
 	}
-	sqlite3_close(db);
 
 	//always 2, kept for backwards compatibility
 	ent->client->sess.amrpgmode = 2;
@@ -1876,13 +1789,15 @@ void Cmd_Register_F(gentity_t * ent)
 
 	
 
-	add_new_char_to_db(ent, username);
-	load_character_from_db(ent, username);
+	add_new_char_to_db(ent, username, db, zErrMsg, rc, stmt);
+	load_character_from_db(ent, username, db, zErrMsg, rc, stmt);
 
 	trap->SendServerCommand(ent - g_entities, va("/login %s %s", username, password));
 
 	trap->SendServerCommand(ent - g_entities, "print \"^2Your account has been successfully created and you are now logged in.\n\"");
 	trap->SendServerCommand(ent - g_entities, "cp \"^2Your account has been successfully created and you are now logged in.\n\"");
+
+	sqlite3_close(db);
 
 	//Open the character selection/creation menu
 	//trap->SendServerCommand(ent - g_entities, "charui");
@@ -1907,10 +1822,19 @@ void Cmd_ChangeChar_F(gentity_t * ent)
 		return;
 	}
 
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
 	trap->Argv(1, charname, sizeof(charname));
 
-	load_character_from_db(ent, charname);
-	load_ammo_from_db(ent);
+	load_character_from_db(ent, charname, db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
 
 	return;
 }
@@ -2055,8 +1979,8 @@ void Cmd_Login_F(gentity_t * ent)
 	strcpy(ent->client->sess.filename, username);
 	strcpy(ent->client->pers.password, password);
 
-	load_character_from_db(ent, defaultChar);
-	load_ammo_from_db(ent);
+	load_character_from_db(ent, defaultChar, db, zErrMsg, rc, stmt);
+	load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
 
 	trap->SendServerCommand(ent - g_entities, "print \"^2You have sucessfully logged in.\n\"");
 
