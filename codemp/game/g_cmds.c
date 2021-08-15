@@ -1667,6 +1667,25 @@ void save_char_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite
 {
 	save_ammo_to_db(ent, db, zErrMsg, rc, stmt);
 	save_skills_to_db(ent, db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+void save_account_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
+	//TODO: Make this change more stuff
+	rc = sqlite3_exec(db, va("UPDATE Accounts PLayerSettings='0', AdminLevel='%i', DefaultChar='%i', WHERE AccountID='%i'",
+		ent->client->sess.accountID,
+		ent->client->sess.rpgchar,
+		ent->client->sess.accountID
+	), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
+	return;
 }
 
 void Cmd_Register_F(gentity_t * ent)
