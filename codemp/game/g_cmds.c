@@ -8277,7 +8277,25 @@ Cmd_LogoutAccount_f
 ==================
 */
 void Cmd_LogoutAccount_f( gentity_t *ent ) {
-	save_account(ent, qtrue);
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
+	int accountID = 0, i = 0;
+	int charID;
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	save_account_to_db(ent,db,zErrMsg, rc,stmt);
+
+	sqlite3_close(db);
 
 	if (ent->client->pers.being_mind_controlled != -1)
 	{
@@ -8349,6 +8367,8 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 
 	if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
 		ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
+
+	ent->client->sess.loggedin = qfalse;
 
 	// zyk: update the rpg stuff info at the client-side game
 	send_rpg_events(10000);
