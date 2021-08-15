@@ -880,6 +880,7 @@ typedef struct clientPersistant_s {
 
 	int credits_modifier; // zyk: sets the amount of extra credits a player can get by killing rpg players or some npcs
 	int credits; // zyk: the amount of credits (RPG Mode currency) this player has now
+	int CharID;
 
 	int tutorial_step; // zyk: sets the current tutorial step, to display the correct message to hthe player
 	int tutorial_timer; // zyk: used by the tutorial to set the interval between messages

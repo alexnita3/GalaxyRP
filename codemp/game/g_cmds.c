@@ -280,661 +280,6 @@ const char anim_headers[MAX_EMOTE_CATEGORIES][50] = {
 	"Force"
 };
 
-//TODO: PUT THESE IN AN SQL.h
-
-void InitializeSQL(void)
-{
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	sqlite3_stmt *stmt;
-	int rc;
-	qboolean columnFound = qfalse;
-
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
-	//Create Account Table
-	trap->Print("Initializing Account table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Accounts' ('AccountID' INTEGER, 'PlayerSettings' INTEGER, 'AdminLevel' INTEGER, 'Password' TEXT, 'Username' TEXT, 'DefaultChar' TEXT, PRIMARY KEY(AccountID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Account table.\n");
-
-	//Create Character Table
-	trap->Print("Initializing Character Table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, 'Description' TEXT, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Character table.\n");
-
-	//Create Weapons Table
-	trap->Print("Initializing Weapons Table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Weapons' ('Bowcaster' INTEGER, 'CharID' INTEGER, 'Concussion' INTEGER, 'Demp2' INTEGER, 'Disruptor' INTEGER, 'E11' INTEGER, 'Flechette' INTEGER, 'Pistol' INTEGER, 'Repeater' INTEGER, 'Rocket' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Weapons table.\n");
-
-	//Create Skills Table
-	trap->Print("Initializing Skills Table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Skills' ('Jump' INTEGER, 'CharID' INTEGER, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Skills table.\n");
-
-	//Create Ammo Table
-	trap->Print("Initializing Ammo Table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Weapons' ('AmmoBlaster' INTEGER, 'CharID' INTEGER, 'AmmoPowercell' INTEGER, 'AmmoMetalBolts' INTEGER, 'AmmoRockets' INTEGER, 'AmmoThermal' INTEGER, 'AmmoTripmine' INTEGER, 'AmmoDetpack' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Ammo table.\n");
-
-	trap->Print("All tables have been initialized.\n");
-}
-
-//TODO: PUT THESE IN AN ACCOUNT.h
-
-void Cmd_Register_F(gentity_t * ent)
-{
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
-	int accountID = 0, i = 0;
-	int charID;
-
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
-	if (trap->Argc() != 3)
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /register <username> <password>\n\"");
-		sqlite3_close(db);
-		return;
-	}
-
-	trap->Argv(1, username, sizeof(username));
-	trap->Argv(2, password, sizeof(password));
-
-	Q_StripColor(username);
-	Q_strlwr(username);
-
-	rc = sqlite3_prepare(db, va("SELECT Username FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		Q_strncpyz(comparisonName, (const char *)sqlite3_column_text(stmt, 0), sizeof(comparisonName));
-		sqlite3_finalize(stmt);
-	}
-
-	if (comparisonName[0] != '\0')
-	{
-		trap->SendServerCommand(ent - g_entities, va("print \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
-		trap->SendServerCommand(ent - g_entities, va("cp \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
-		sqlite3_close(db);
-		return;
-	}
-
-	//Create account record
-	rc = sqlite3_exec(db, va("INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('%s','%s','0','0','%s')", username, password, username), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-
-	rc = sqlite3_prepare(db, va("SELECT AccountID FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		accountID = sqlite3_column_int(stmt, 0);
-		sqlite3_finalize(stmt);
-	}
-
-	//TODO: assign the default values to the entity
-	//Create character record
-	//TODO: replace Name with something better
-	rc = sqlite3_exec(db, va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints) VALUES('%i','100','1','100','DefaultName', '1')", accountID), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-
-	//Get CharID for later
-	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i'", accountID), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		charID = sqlite3_column_int(stmt, 0);
-		sqlite3_finalize(stmt);
-	}
-
-	//Create skill record
-	//TODO: replace Name with something better
-	rc = sqlite3_exec(db, va("INSERT INTO Skills(Jump, CharID, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('1', '%i', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')",
-		charID), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-
-	//Create ammo record
-	rc = sqlite3_exec(db, va("INSERT INTO Weapons(Bowcaster, CharID, Concussion, Demp2, Disruptor, E11, Flechette, Pistol, Repeater, Rocket) VALUES('0', '%i', '0', '0', '0', '0', '0', '0', '0', '0')", charID), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-
-	sqlite3_close(db);
-
-	trap->SendServerCommand(ent - g_entities, "print \"^2Your account has been successfully created and you are now logged in.\n\"");
-	trap->SendServerCommand(ent - g_entities, "cp \"^2Your account has been successfully created and you are now logged in.\n\"");
-
-	//Open the character selection/creation menu
-	//trap->SendServerCommand(ent - g_entities, "charui");
-
-
-	return;
-}
-
-void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHARS]) {
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-
-	if (ent->client->sess.loggedin == qfalse) {
-		trap->SendServerCommand(ent - g_entities, "print \"^2You must be logged in load a character.\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^2You must be logged in load a character.\n\"");
-	}
-
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
-	rc = sqlite3_prepare(db, va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints FROM Characters WHERE AccountID=%i AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		//TODO: load more stuff from character
-		ent->client->pers.credits = sqlite3_column_int(stmt, 1);
-		ent->client->pers.level = sqlite3_column_int(stmt, 2);
-		strcpy(ent->client->sess.rpgchar, sqlite3_column_text(stmt, 4));
-		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 5);
-		sqlite3_finalize(stmt);
-
-		sqlite3_close(db);
-	}
-
-	trap->SendServerCommand(ent - g_entities, "print \"^2Character loaded sucessfully!\n\"");
-	trap->SendServerCommand(ent - g_entities, "cp \"^2Character loaded sucessfully!\n\"");
-
-	return;
-}
-
-void Cmd_ChangeChar_F(gentity_t * ent) 
-{
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-	char charname[MAX_STRING_CHARS];
-
-	if (trap->Argc() != 2)
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /changechar <charname>\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^2Command Usage: /changechar <charname>\n\"");
-		sqlite3_close(db);
-		return;
-	}
-
-	trap->Argv(1, charname, sizeof(charname));
-
-	load_character_from_db(ent, charname);
-
-	return;
-}
-
-void Cmd_Login_F(gentity_t * ent)
-{
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 };
-	int accountID = 0, i = 0, player_settings = 0, adminLevel = 0;
-
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
-	if (trap->Argc() != 3)
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /login <username> <password>\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^2Command Usage: /login <username> <password>\n\"");
-		sqlite3_close(db);
-		return;
-	}
-
-	if (ent->client->sess.loggedin == qtrue)
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"^1You are already logged in to your account.\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^1You are already logged in to your account.\n\"");
-		sqlite3_close(db);
-		return;
-	}
-
-	trap->Argv(1, username, sizeof(username));
-	trap->Argv(2, password, sizeof(password));
-
-	Q_StripColor(username);
-	Q_strlwr(username);
-
-	rc = sqlite3_prepare(db, va("SELECT Username FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		Q_strncpyz(comparisonUsername, (const char *)sqlite3_column_text(stmt, 0), sizeof(comparisonUsername));
-		sqlite3_finalize(stmt);
-	}
-
-	if (comparisonUsername[0] == '\0')
-	{
-		//The account does not exist, thus, the error does.
-		trap->SendServerCommand(ent - g_entities, va("print \"^1An account with the username %s does not exist.\n\"", username));
-		trap->SendServerCommand(ent - g_entities, va("cp \"^1An account with the username %s does not exist.\n\"", username));
-		sqlite3_close(db);
-		return;
-	}
-
-	rc = sqlite3_prepare(db, va("SELECT Password FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		Q_strncpyz(comparisonPassword, (const char*)sqlite3_column_text(stmt, 0), sizeof(comparisonPassword));
-		sqlite3_finalize(stmt);
-	}
-
-	if (strcmp(comparisonPassword, password))
-	{
-		//Just as there is an incorrect password (and an error), does it tell you.
-		trap->SendServerCommand(ent - g_entities, "print \"^1Incorrect password.\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^1Incorrect password.\n\"");
-		
-		//TODO: Look into getting these UIs done
-		//trap->SendServerCommand(ent - g_entities, "loginFailed");
-		//trap->SendServerCommand(ent - g_entities, "accountui");
-		sqlite3_close(db);
-		return;
-	}
-
-	rc = sqlite3_prepare(db, va("SELECT AccountID, PlayerSettings, AdminLevel FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		accountID = sqlite3_column_int(stmt, 0);
-		player_settings = sqlite3_column_int(stmt, 1);
-		adminLevel = sqlite3_column_int(stmt, 2);
-		sqlite3_finalize(stmt);
-	}
-
-	ent->client->sess.accountID = accountID;
-	//always 2, kept for backwards compatibility
-	ent->client->sess.amrpgmode = 2;
-	ent->client->sess.loggedin = qtrue;
-	ent->client->pers.player_settings = player_settings;
-	//adminlevel
-	ent->client->pers.bitvalue = adminLevel;
-	strcpy(ent->client->sess.filename, username);
-	strcpy(ent->client->pers.password, password);
-
-
-	//trap->SendServerCommand(ent - g_entities, va("loggedIn"));
-
-	//Open the character selection/creation menu
-	//TODO: Look into this ui
-	//trap->SendServerCommand(ent - g_entities, "charui");
-
-
-
-
-
-	/*
-		// zyk: loading the char file
-		account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
-		if (account_file != NULL)
-		{
-			// zyk: loading level up score value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.level_up_score = atoi(content);
-
-			// zyk: loading Level value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.level = atoi(content);
-
-			// zyk: loading Skillpoints value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.skillpoints = atoi(content);
-
-			if (ent->client->pers.level > zyk_rpg_max_level.integer)
-			{ // zyk: validating level
-				ent->client->pers.level = zyk_rpg_max_level.integer;
-			}
-			else if (ent->client->pers.level < 1)
-			{
-				ent->client->pers.level = 1;
-			}
-
-			for (j = 1; j <= ent->client->pers.level; j++)
-			{
-				if ((j % 10) == 0)
-				{ // zyk: level divisible by 10 has more skillpoints
-					max_skillpoints += (1 + j / 10);
-				}
-				else
-				{
-					max_skillpoints++;
-				}
-			}
-
-			validate_skillpoints = ent->client->pers.skillpoints;
-			// zyk: loading skill levels
-			for (i = 0; i < NUMBER_OF_SKILLS; i++)
-			{
-				fscanf(account_file, "%s", content);
-				ent->client->pers.skill_levels[i] = atoi(content);
-				validate_skillpoints += ent->client->pers.skill_levels[i];
-			}
-
-			// zyk: validating skillpoints
-			if (validate_skillpoints != max_skillpoints)
-			{
-				// zyk: if not valid, reset all skills and set the max skillpoints he can have in this level
-				for (i = 0; i < NUMBER_OF_SKILLS; i++)
-				{
-					ent->client->pers.skill_levels[i] = 0;
-				}
-
-				ent->client->pers.skillpoints = max_skillpoints;
-			}
-
-			// zyk: Other RPG attributes
-			// zyk: loading Light Quest Defeated Guardians number value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.defeated_guardians = atoi(content);
-
-			// zyk: compability with old mod versions, in which the players who completed the quest had a value of 9
-			if (ent->client->pers.defeated_guardians == 9)
-				ent->client->pers.defeated_guardians = NUMBER_OF_GUARDIANS;
-
-			// zyk: loading Dark Quest completed objectives value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.hunter_quest_progress = atoi(content);
-
-			// zyk: loading Eternity Quest progress value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.eternity_quest_progress = atoi(content);
-
-			// zyk: loading secrets found value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.secrets_found = atoi(content);
-
-			// zyk: loading Universe Quest Progress value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.universe_quest_progress = atoi(content);
-
-			// zyk: loading Universe Quest Counter value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.universe_quest_counter = atoi(content);
-
-			// zyk: make sure Challenge Mode settings flag and counter flag are correct
-			if (ent->client->pers.universe_quest_counter & (1 << 29))
-			{
-				ent->client->pers.player_settings |= (1 << 15);
-			}
-			else
-			{
-				ent->client->pers.player_settings &= ~(1 << 15);
-			}
-
-			// zyk: loading credits value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.credits = atoi(content);
-
-			// zyk: validating credits
-			if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
-			{
-				ent->client->pers.credits = zyk_max_rpg_credits.integer;
-			}
-			else if (ent->client->pers.credits < 0)
-			{
-				ent->client->pers.credits = 0;
-			}
-
-			// zyk: loading RPG class
-			fscanf(account_file, "%s", content);
-			ent->client->pers.rpg_class = atoi(content);
-
-			// zyk: loading disabled magic powers
-			fscanf(account_file, "%s", content);
-			ent->client->sess.magic_disabled_powers = atoi(content);
-
-			// zyk: loading more disabled magic powers
-			fscanf(account_file, "%s", content);
-			ent->client->sess.magic_more_disabled_powers = atoi(content);
-
-			// zyk: loading Magic Master first selection and selected powers
-			fscanf(account_file, "%s", content);
-			ent->client->sess.magic_fist_selection = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->sess.selected_special_power = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->sess.selected_left_special_power = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->sess.selected_right_special_power = atoi(content);
-
-			if (ent->client->sess.amrpgmode == 1)
-			{
-				ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
-
-				// zyk: setting default max hp and shield
-				ent->client->ps.stats[STAT_MAX_HEALTH] = 100;
-
-				if (ent->health > 100)
-					ent->health = 100;
-
-				if (ent->client->ps.stats[STAT_ARMOR] > 100)
-					ent->client->ps.stats[STAT_ARMOR] = 100;
-
-				// zyk: reset the force powers of this player
-				WP_InitForcePowers(ent);
-
-				if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0 &&
-					level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE
-					)
-					ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
-
-				if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
-					ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
-
-				zyk_load_common_settings(ent);
-			}
-
-			fclose(account_file);*/
-
-
-	trap->SendServerCommand(ent - g_entities, "print \"^2You have sucessfully logged in.\n\"");
-
-	sqlite3_close(db);
-	return;
-}
-
-void Cmd_Test_f(gentity_t *ent) {
-	InitializeSQL();
-}
-
-
-
 /*
 ==================
 DeathmatchScoreboardMessage
@@ -1921,6 +1266,815 @@ Cmd_Kill_f
 void Cmd_Kill_f( gentity_t *ent ) {
 	G_Kill( ent );
 }
+
+
+
+
+
+/*
+=================
+ACCOUNT AREA
+=================
+*/
+
+
+
+
+//TODO: PUT THESE IN AN SQL.h
+
+void InitializeSQL(void)
+{
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	sqlite3_stmt *stmt;
+	int rc;
+	qboolean columnFound = qfalse;
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	//Create Account Table
+	trap->Print("Initializing Account table.\n");
+
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Accounts' ('AccountID' INTEGER, 'PlayerSettings' INTEGER, 'AdminLevel' INTEGER, 'Password' TEXT, 'Username' TEXT, 'DefaultChar' TEXT, PRIMARY KEY(AccountID))", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Account table.\n");
+
+	//Create Character Table
+	trap->Print("Initializing Character Table.\n");
+
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, 'Description' TEXT, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Character table.\n");
+
+	//Create Weapons Table
+	trap->Print("Initializing Weapons Table.\n");
+
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Weapons' ('Bowcaster' INTEGER, 'CharID' INTEGER, 'Concussion' INTEGER, 'Demp2' INTEGER, 'Disruptor' INTEGER, 'E11' INTEGER, 'Flechette' INTEGER, 'Pistol' INTEGER, 'Repeater' INTEGER, 'Rocket' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Weapons table.\n");
+
+	//Create Skills Table
+	trap->Print("Initializing Skills Table.\n");
+
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Skills' ('CharID' INTEGER, 'Jump' INTEGER, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Skills table.\n");
+
+	//Create Ammo Table
+	trap->Print("Initializing Ammo Table.\n");
+
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Weapons' ('CharID' INTEGER, 'AmmoBlaster' INTEGER, 'AmmoPowercell' INTEGER, 'AmmoMetalBolts' INTEGER, 'AmmoRockets' INTEGER, 'AmmoThermal' INTEGER, 'AmmoTripmine' INTEGER, 'AmmoDetpack' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Ammo table.\n");
+
+	trap->Print("All tables have been initialized.\n");
+}
+
+//TODO: PUT THESE IN AN ACCOUNT.h
+
+void load_character_skills_from_db(gentity_t * ent) {
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	rc = sqlite3_prepare(db, va("SELECT * FROM Skills WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		for (int i = 0; i < NUMBER_OF_SKILLS; i++) {
+			ent->client->pers.skill_levels[i] = sqlite3_column_int(stmt, i + 1);
+		}
+
+		sqlite3_finalize(stmt);
+
+		sqlite3_close(db);
+
+		//kill them so that it takes effect
+		G_Kill(ent);
+
+		return;
+
+	}
+
+	//kill them anyway
+	G_Kill(ent);
+	return;
+}
+
+void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHARS]) {
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+
+	if (ent->client->sess.loggedin == qfalse) {
+		trap->SendServerCommand(ent - g_entities, "print \"^2You must be logged in load a character.\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^2You must be logged in load a character.\n\"");
+
+		return;
+	}
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	rc = sqlite3_prepare(db, va("SELECT count(CharID) FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		int numberOfChars;
+
+		numberOfChars = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+
+		if (numberOfChars != 1) {
+			trap->SendServerCommand(ent - g_entities, "print \"^2Character does not exist.\n\"");
+			trap->SendServerCommand(ent - g_entities, "cp \"^2Character does not exist.\n\"");
+
+			sqlite3_close(db);
+			return;
+		}
+
+	}
+
+	rc = sqlite3_prepare(db, va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints FROM Characters WHERE AccountID=%i AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		//TODO: load more stuff from character
+		ent->client->pers.CharID = sqlite3_column_int(stmt, 0);
+		ent->client->pers.credits = sqlite3_column_int(stmt, 1);
+		ent->client->pers.level = sqlite3_column_int(stmt, 2);
+		strcpy(ent->client->sess.rpgchar, sqlite3_column_text(stmt, 4));
+		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 5);
+		sqlite3_finalize(stmt);
+
+		sqlite3_close(db);
+
+		load_character_skills_from_db(ent);
+	}
+
+	trap->SendServerCommand(ent - g_entities, "print \"^2Character loaded sucessfully!\n\"");
+	trap->SendServerCommand(ent - g_entities, "cp \"^2Character loaded sucessfully!\n\"");
+
+	return;
+}
+
+void Cmd_Register_F(gentity_t * ent)
+{
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
+	int accountID = 0, i = 0;
+	int charID;
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	if (trap->Argc() != 3)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /register <username> <password>\n\"");
+		sqlite3_close(db);
+		return;
+	}
+
+	trap->Argv(1, username, sizeof(username));
+	trap->Argv(2, password, sizeof(password));
+
+	Q_StripColor(username);
+	Q_strlwr(username);
+
+	rc = sqlite3_prepare(db, va("SELECT Username FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		Q_strncpyz(comparisonName, (const char *)sqlite3_column_text(stmt, 0), sizeof(comparisonName));
+		sqlite3_finalize(stmt);
+	}
+
+	if (comparisonName[0] != '\0')
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
+		trap->SendServerCommand(ent - g_entities, va("cp \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
+		sqlite3_close(db);
+		return;
+	}
+
+	//Create account record
+	rc = sqlite3_exec(db, va("INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('%s','%s','0','0','%s')", username, password, username), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+
+	rc = sqlite3_prepare(db, va("SELECT AccountID FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		accountID = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	}
+
+	//TODO: assign the default values to the entity
+	//Create character record
+	//TODO: replace Name with something better
+	rc = sqlite3_exec(db, va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints) VALUES('%i','100','1','100','%s', '1')", accountID, username), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+
+	//Get CharID for later
+	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i'", accountID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		charID = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	}
+
+	//Create skill record
+	//TODO: replace Name with something better
+	rc = sqlite3_exec(db, va("INSERT INTO Skills(Jump, CharID, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '%i', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')",
+		charID), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+
+	//Create ammo record
+	rc = sqlite3_exec(db, va("INSERT INTO Weapons(Bowcaster, CharID, Concussion, Demp2, Disruptor, E11, Flechette, Pistol, Repeater, Rocket) VALUES('0', '%i', '0', '0', '0', '0', '0', '0', '0', '0')", charID), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+
+	//log them in
+	rc = sqlite3_prepare(db, va("SELECT AccountID, PlayerSettings, AdminLevel FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		ent->client->sess.accountID = sqlite3_column_int(stmt, 0);
+		ent->client->pers.player_settings = sqlite3_column_int(stmt, 1);
+		ent->client->pers.bitvalue = sqlite3_column_int(stmt, 2);
+		sqlite3_finalize(stmt);
+	}
+
+	//always 2, kept for backwards compatibility
+	ent->client->sess.amrpgmode = 2;
+	ent->client->sess.loggedin = qtrue;
+	strcpy(ent->client->sess.filename, username);
+	strcpy(ent->client->pers.password, password);
+
+	sqlite3_close(db);
+
+	load_character_from_db(ent, username);
+
+	trap->SendServerCommand(ent - g_entities, va("/login %s %s", username, password));
+
+	trap->SendServerCommand(ent - g_entities, "print \"^2Your account has been successfully created and you are now logged in.\n\"");
+	trap->SendServerCommand(ent - g_entities, "cp \"^2Your account has been successfully created and you are now logged in.\n\"");
+
+	//Open the character selection/creation menu
+	//trap->SendServerCommand(ent - g_entities, "charui");
+
+
+	return;
+}
+
+void Cmd_ChangeChar_F(gentity_t * ent)
+{
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char charname[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /changechar <charname>\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^2Command Usage: /changechar <charname>\n\"");
+		sqlite3_close(db);
+		return;
+	}
+
+	trap->Argv(1, charname, sizeof(charname));
+
+	load_character_from_db(ent, charname);
+
+	return;
+}
+
+void Cmd_Login_F(gentity_t * ent)
+{
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 };
+	int accountID = 0, i = 0, player_settings = 0, adminLevel = 0;
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	if (trap->Argc() != 3)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /login <username> <password>\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^2Command Usage: /login <username> <password>\n\"");
+		sqlite3_close(db);
+		return;
+	}
+
+	if (ent->client->sess.loggedin == qtrue)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"^1You are already logged in to your account.\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^1You are already logged in to your account.\n\"");
+		sqlite3_close(db);
+		return;
+	}
+
+	trap->Argv(1, username, sizeof(username));
+	trap->Argv(2, password, sizeof(password));
+
+	Q_StripColor(username);
+	Q_strlwr(username);
+
+	rc = sqlite3_prepare(db, va("SELECT Username FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		Q_strncpyz(comparisonUsername, (const char *)sqlite3_column_text(stmt, 0), sizeof(comparisonUsername));
+		sqlite3_finalize(stmt);
+	}
+
+	if (comparisonUsername[0] == '\0')
+	{
+		//The account does not exist, thus, the error does.
+		trap->SendServerCommand(ent - g_entities, va("print \"^1An account with the username %s does not exist.\n\"", username));
+		trap->SendServerCommand(ent - g_entities, va("cp \"^1An account with the username %s does not exist.\n\"", username));
+		sqlite3_close(db);
+		return;
+	}
+
+	rc = sqlite3_prepare(db, va("SELECT Password FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		Q_strncpyz(comparisonPassword, (const char*)sqlite3_column_text(stmt, 0), sizeof(comparisonPassword));
+		sqlite3_finalize(stmt);
+	}
+
+	if (strcmp(comparisonPassword, password))
+	{
+		//Just as there is an incorrect password (and an error), does it tell you.
+		trap->SendServerCommand(ent - g_entities, "print \"^1Incorrect password.\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^1Incorrect password.\n\"");
+
+		//TODO: Look into getting these UIs done
+		//trap->SendServerCommand(ent - g_entities, "loginFailed");
+		//trap->SendServerCommand(ent - g_entities, "accountui");
+		sqlite3_close(db);
+		return;
+	}
+
+	rc = sqlite3_prepare(db, va("SELECT AccountID, PlayerSettings, AdminLevel FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		accountID = sqlite3_column_int(stmt, 0);
+		player_settings = sqlite3_column_int(stmt, 1);
+		adminLevel = sqlite3_column_int(stmt, 2);
+		sqlite3_finalize(stmt);
+	}
+
+	ent->client->sess.accountID = accountID;
+	//always 2, kept for backwards compatibility
+	ent->client->sess.amrpgmode = 2;
+	ent->client->sess.loggedin = qtrue;
+	ent->client->pers.player_settings = player_settings;
+	//adminlevel
+	ent->client->pers.bitvalue = adminLevel;
+	strcpy(ent->client->sess.filename, username);
+	strcpy(ent->client->pers.password, password);
+
+
+	//trap->SendServerCommand(ent - g_entities, va("loggedIn"));
+
+	//Open the character selection/creation menu
+	//TODO: Look into this ui
+	//trap->SendServerCommand(ent - g_entities, "charui");
+
+
+
+
+
+	/*
+		// zyk: loading the char file
+		account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
+		if (account_file != NULL)
+		{
+			// zyk: loading level up score value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.level_up_score = atoi(content);
+
+			// zyk: loading Level value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.level = atoi(content);
+
+			// zyk: loading Skillpoints value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.skillpoints = atoi(content);
+
+			if (ent->client->pers.level > zyk_rpg_max_level.integer)
+			{ // zyk: validating level
+				ent->client->pers.level = zyk_rpg_max_level.integer;
+			}
+			else if (ent->client->pers.level < 1)
+			{
+				ent->client->pers.level = 1;
+			}
+
+			for (j = 1; j <= ent->client->pers.level; j++)
+			{
+				if ((j % 10) == 0)
+				{ // zyk: level divisible by 10 has more skillpoints
+					max_skillpoints += (1 + j / 10);
+				}
+				else
+				{
+					max_skillpoints++;
+				}
+			}
+
+			validate_skillpoints = ent->client->pers.skillpoints;
+			// zyk: loading skill levels
+			for (i = 0; i < NUMBER_OF_SKILLS; i++)
+			{
+				fscanf(account_file, "%s", content);
+				ent->client->pers.skill_levels[i] = atoi(content);
+				validate_skillpoints += ent->client->pers.skill_levels[i];
+			}
+
+			// zyk: validating skillpoints
+			if (validate_skillpoints != max_skillpoints)
+			{
+				// zyk: if not valid, reset all skills and set the max skillpoints he can have in this level
+				for (i = 0; i < NUMBER_OF_SKILLS; i++)
+				{
+					ent->client->pers.skill_levels[i] = 0;
+				}
+
+				ent->client->pers.skillpoints = max_skillpoints;
+			}
+
+			// zyk: Other RPG attributes
+			// zyk: loading Light Quest Defeated Guardians number value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.defeated_guardians = atoi(content);
+
+			// zyk: compability with old mod versions, in which the players who completed the quest had a value of 9
+			if (ent->client->pers.defeated_guardians == 9)
+				ent->client->pers.defeated_guardians = NUMBER_OF_GUARDIANS;
+
+			// zyk: loading Dark Quest completed objectives value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.hunter_quest_progress = atoi(content);
+
+			// zyk: loading Eternity Quest progress value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.eternity_quest_progress = atoi(content);
+
+			// zyk: loading secrets found value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.secrets_found = atoi(content);
+
+			// zyk: loading Universe Quest Progress value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.universe_quest_progress = atoi(content);
+
+			// zyk: loading Universe Quest Counter value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.universe_quest_counter = atoi(content);
+
+			// zyk: make sure Challenge Mode settings flag and counter flag are correct
+			if (ent->client->pers.universe_quest_counter & (1 << 29))
+			{
+				ent->client->pers.player_settings |= (1 << 15);
+			}
+			else
+			{
+				ent->client->pers.player_settings &= ~(1 << 15);
+			}
+
+			// zyk: loading credits value
+			fscanf(account_file, "%s", content);
+			ent->client->pers.credits = atoi(content);
+
+			// zyk: validating credits
+			if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
+			{
+				ent->client->pers.credits = zyk_max_rpg_credits.integer;
+			}
+			else if (ent->client->pers.credits < 0)
+			{
+				ent->client->pers.credits = 0;
+			}
+
+			// zyk: loading RPG class
+			fscanf(account_file, "%s", content);
+			ent->client->pers.rpg_class = atoi(content);
+
+			// zyk: loading disabled magic powers
+			fscanf(account_file, "%s", content);
+			ent->client->sess.magic_disabled_powers = atoi(content);
+
+			// zyk: loading more disabled magic powers
+			fscanf(account_file, "%s", content);
+			ent->client->sess.magic_more_disabled_powers = atoi(content);
+
+			// zyk: loading Magic Master first selection and selected powers
+			fscanf(account_file, "%s", content);
+			ent->client->sess.magic_fist_selection = atoi(content);
+
+			fscanf(account_file, "%s", content);
+			ent->client->sess.selected_special_power = atoi(content);
+
+			fscanf(account_file, "%s", content);
+			ent->client->sess.selected_left_special_power = atoi(content);
+
+			fscanf(account_file, "%s", content);
+			ent->client->sess.selected_right_special_power = atoi(content);
+
+			if (ent->client->sess.amrpgmode == 1)
+			{
+				ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
+
+				// zyk: setting default max hp and shield
+				ent->client->ps.stats[STAT_MAX_HEALTH] = 100;
+
+				if (ent->health > 100)
+					ent->health = 100;
+
+				if (ent->client->ps.stats[STAT_ARMOR] > 100)
+					ent->client->ps.stats[STAT_ARMOR] = 100;
+
+				// zyk: reset the force powers of this player
+				WP_InitForcePowers(ent);
+
+				if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0 &&
+					level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE
+					)
+					ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
+
+				if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
+					ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
+
+				zyk_load_common_settings(ent);
+			}
+
+			fclose(account_file);*/
+
+
+	trap->SendServerCommand(ent - g_entities, "print \"^2You have sucessfully logged in.\n\"");
+
+	sqlite3_close(db);
+	return;
+}
+
+void Cmd_Test_f(gentity_t *ent) {
+	InitializeSQL();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void Cmd_KillOther_f( gentity_t *ent )
 {
