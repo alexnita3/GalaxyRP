@@ -1787,6 +1787,7 @@ void load_character_list_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, in
 		strcpy(CharName, sqlite3_column_text(stmt, 0));
 		charLevel = sqlite3_column_int(stmt, 1);
 		trap->SendServerCommand(ent - g_entities, va("print \"^3%i.^2%s - Level:%i\n\"",i, CharName, charLevel));
+		i++;
 		rc = sqlite3_step(stmt);
 	}
 
