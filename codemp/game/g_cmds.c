@@ -1353,6 +1353,21 @@ void InitializeSQL(void)
 	trap->Print("All tables have been initialized.\n");
 }
 
+int callback(void *NotUsed, int argc, char **argv,
+	char **azColName) {
+
+	NotUsed = 0;
+
+	for (int i = 0; i < argc; i++) {
+
+		printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+	}
+
+	printf("\n");
+
+	return 0;
+}
+
 //TODO: PUT THESE IN AN ACCOUNT.h
 void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
 {
@@ -1584,7 +1599,7 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 	}
 
 	//Set as default so users always log into their last char
-	rc = sqlite3_exec(db, va("UPDATE Accounts SET DefaultChar='%s' WHERE CharID='%i'", character_name), 0, 0, &zErrMsg);
+	rc = sqlite3_exec(db, va("UPDATE Accounts SET DefaultChar='%s' WHERE AccountID='%i'", character_name, ent->client->sess.accountID), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
@@ -1745,6 +1760,37 @@ void save_account_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sql
 	}
 
 	return;
+}
+
+void load_character_list_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
+{
+	char CharName[MAX_STRING_CHARS];
+	int charLevel;
+
+	//Get CharID for later
+	rc = sqlite3_prepare(db, va("SELECT Name, Level FROM Characters WHERE AccountID='%i'", ent->client->sess.accountID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	int i = 1;
+	while (rc == SQLITE_ROW) {
+		strcpy(CharName, sqlite3_column_text(stmt, 0));
+		charLevel = sqlite3_column_int(stmt, 1);
+		trap->SendServerCommand(ent - g_entities, va("print \"^3%i.^2%s - Level:%i\n\"",i, CharName, charLevel));
+		rc = sqlite3_step(stmt);
+	}
+
+	sqlite3_finalize(stmt);
 }
 
 void Cmd_Register_F(gentity_t * ent)
@@ -2099,6 +2145,7 @@ void Cmd_Char_f(gentity_t *ent) {
 
 	if (argc == 1)
 	{
+		load_character_list_from_db(ent, db, zErrMsg, rc, stmt);
 		return;
 	}
 	if (argc == 3)
