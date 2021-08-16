@@ -1575,7 +1575,7 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 		ent->client->pers.CharID = sqlite3_column_int(stmt, 0);
 		ent->client->pers.credits = sqlite3_column_int(stmt, 1);
 		ent->client->pers.level = sqlite3_column_int(stmt, 2);
-		strcpy(ent->client->sess.rpgchar, sqlite3_column_text(stmt, 4));
+		strcpy(ent->client->sess.rpgchar, character_name);
 		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 5);
 		sqlite3_finalize(stmt);
 
@@ -1583,6 +1583,7 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 		load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
 	}
 
+	strcpy(ent->client->sess.rpgchar, character_name);
 	trap->SendServerCommand(ent - g_entities, "print \"^2Character loaded sucessfully!\n\"");
 	trap->SendServerCommand(ent - g_entities, "cp \"^2Character loaded sucessfully!\n\"");
 
@@ -1604,6 +1605,7 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 		return;
 	}
 
+	//TODO BUG!!!!
 	//Get CharID for later
 	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i'", ent->client->sess.accountID), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
@@ -1636,7 +1638,7 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 	}
 
 	//Create ammo record
-	rc = sqlite3_exec(db, va("INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')", charID), 0, 0, &zErrMsg);
+	rc = sqlite3_exec(db, va("INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')"), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
@@ -1651,13 +1653,59 @@ void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqli
 {
 	int charID;
 
-	rc = sqlite3_exec(db, va("DELETE FROM Characters WHERE AccountID='%i' AND Name='%i'", ent->client->sess.accountID, char_name), 0, 0, &zErrMsg);
+	if (strcmp(char_name, ent->client->sess.rpgchar) == 0) {
+		trap->SendServerCommand(ent - g_entities, "print \"^2You cannot remove the char you're currently using.\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^2You cannot remove the char you're currently using.\n\"");
+		return;
+	}
+
+	//Get CharID for later
+	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, char_name), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		charID = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	}
+
+	rc = sqlite3_exec(db, va("DELETE FROM Characters WHERE CharID='%i'", charID), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
 		return;
 	}
+
+	rc = sqlite3_exec(db, va("DELETE FROM Weapons WHERE CharID='%i'", charID), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
+	rc = sqlite3_exec(db, va("DELETE FROM Skills WHERE CharID='%i'", charID), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
+	trap->SendServerCommand(ent - g_entities, "print \"^2Char was removed sucessfully.\n\"");
+	trap->SendServerCommand(ent - g_entities, "cp \"^2Char was removed sucessfully.\n\"");
 
 	return;
 }
@@ -2016,7 +2064,61 @@ void Cmd_Test_f(gentity_t *ent) {
 	InitializeSQL();
 }
 
+void Cmd_Char_f(gentity_t *ent) {
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
+	int accountID = 0, i = 0;
+	int charID;
 
+	int argc = trap->Argc();
+	char command[MAX_STRING_CHARS];
+	char charName[MAX_STRING_CHARS];
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	if (argc == 1)
+	{
+		return;
+	}
+	if (argc == 3)
+	{
+		trap->Argv(1, command, sizeof(command));
+		trap->Argv(2, charName, sizeof(charName));
+
+		//Create New Character
+		if (Q_stricmp(command, "new") == 0) {
+			add_new_char_to_db(ent, charName, db, zErrMsg, rc, stmt);
+			trap->SendServerCommand(-1, va("chat \"%s created a char: %s\n\"", ent->client->pers.netname, charName));
+			sqlite3_close(db);
+			return;
+		}
+
+		//Switch character
+		if (Q_stricmp(command, "use") == 0) {
+			load_character_from_db(ent, charName, db, zErrMsg, rc, stmt);
+			trap->SendServerCommand(-1, va("chat \"%s switched to: %s\n\"", ent->client->pers.netname, charName));
+			sqlite3_close(db);
+			return;
+		}
+
+		//Remove character
+		if (Q_stricmp(command, "remove") == 0) {
+
+			remove_char_from_db(ent, charName, db, zErrMsg, rc, stmt);
+			sqlite3_close(db);
+			return;
+		}
+	}
+}
 
 
 
@@ -19433,125 +19535,6 @@ qboolean Is_Char_Name_Valid(char charName[MAX_STRING_CHARS]) {
 
 /*
 ==================
-Cmd_RpgChar_f
-==================
-*/
-void Cmd_RpgChar_f(gentity_t *ent) {
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
-	int accountID = 0, i = 0;
-	int charID;
-	
-	int argc = trap->Argc();
-
-	if (argc == 1)
-	{ // zyk: lists the chars and commands
-		trap->SendServerCommand(ent->s.number, va("print \"\n^7Using %s\n\n^7%s\n^3/char new <charname>: ^7creates a new char\n^3/char rename <new name>: ^7renames current char\n^3/char duplicate: ^7creates a copy of the current char in use\n^3/char use <charname>: ^7uses this char\n^3/char delete <charname>: ^7removes this char\n^3/char migrate <charname> <login> <password>: ^7moves char to account with this login and password\n\"", ent->client->sess.rpgchar, zyk_get_rpg_chars(ent, "\n")));
-	}
-	else
-	{
-		rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-		if (rc)
-		{
-			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-			sqlite3_close(db);
-			return;
-		}
-
-		char arg1[MAX_STRING_CHARS];
-		char arg2[MAX_STRING_CHARS];
-		char arg3[MAX_STRING_CHARS];
-		char arg4[MAX_STRING_CHARS];
-
-		trap->Argv(1, arg1, sizeof(arg1));
-
-		sqlite3 *db;
-		char *zErrMsg = 0;
-		int rc;
-		sqlite3_stmt *stmt;
-		char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
-		int accountID = 0, i = 0;
-		int charID;
-
-		if (Q_stricmp(arg1, "new") == 0)
-		{
-			trap->Argv(2, arg2, sizeof(arg2));
-
-			if (Is_Char_Name_Valid(arg2) == qfalse) {
-				trap->SendServerCommand(ent->s.number, "print \"Character name can only contain alphanumeric characters and _. Preferred format iis firstname_lastname\n\"");
-				return;
-			}
-
-			if (Q_stricmp(arg2, ent->client->sess.filename) == 0)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Cannot overwrite the default char\n\"");
-				return;
-			}
-
-			add_new_char_to_db(ent, arg2, db, zErrMsg, rc, stmt);
-
-			// zyk: saving the current char
-			strcpy(ent->client->sess.rpgchar, arg2);
-
-			save_account_to_db(ent, db, zErrMsg, rc, stmt);
-
-			load_character_from_db(ent, arg2, db, zErrMsg, rc, stmt);
-
-			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7created!\n\"", ent->client->sess.rpgchar));
-			trap->SendServerCommand(-1, va("chat \"%s created the char: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
-
-			sqlite3_close(db);
-		}
-		else if (Q_stricmp(arg1, "use") == 0)
-		{
-			trap->Argv(1, arg2, sizeof(arg2));
-
-			if (Q_stricmp(arg2, ent->client->sess.rpgchar) == 0)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"You are already using this char\n\"");
-				return;
-			}
-
-			//Save current char
-			save_char_to_db(ent, db, zErrMsg, rc, stmt);
-			//Load new one
-			load_character_from_db(ent, arg2, db, zErrMsg, rc, stmt);
-
-			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7loaded!\n\"", ent->client->sess.rpgchar));
-			trap->SendServerCommand(-1, va("chat \"%s switched to char: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
-		}
-		else if (Q_stricmp(arg1, "delete") == 0)
-		{
-			if (Q_stricmp(arg2, ent->client->sess.filename) == 0)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Cannot delete the default char\n\"");
-				return;
-			}
-
-			if (Q_stricmp(arg2, ent->client->sess.rpgchar) == 0)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Cannot remove the char you are using now. Change the char before deleting this one\n\"");
-				return;
-			}
-
-			remove_char_from_db(ent, arg2, db, zErrMsg, rc, stmt);
-
-			trap->SendServerCommand(ent->s.number, va("print \"Char %s ^7deleted!\n\"", arg2));
-
-			sqlite3_close(db);
-		}
-
-		// zyk: syncronize info to the client menu
-		//TODO check this out
-		//Cmd_ZykChars_f(ent);
-	}
-}
-
-/*
-==================
 Cmd_CustomQuest_f
 ==================
 */
@@ -20250,7 +20233,7 @@ command_t commands[] = {
 	{ "callvote",			Cmd_CallVote_f,				CMD_NOINTERMISSION },
 	{ "changechar",			Cmd_ChangeChar_F,			0 },
 	{ "changepassword",		Cmd_ChangePassword_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "char",				Cmd_RpgChar_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "char",				Cmd_Char_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "clientprint",		Cmd_ClientPrint_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "createcredits",		Cmd_CreditCreate_f,			CMD_RPG | CMD_NOINTERMISSION },
 	{ "createitem",			Cmd_CreateItem_f,			CMD_LOGGEDIN},
@@ -20330,7 +20313,7 @@ command_t commands[] = {
 	{ "remaplist",			Cmd_RemapList_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "remapload",			Cmd_RemapLoad_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "resetaccount",		Cmd_ResetAccount_f,			CMD_RPG|CMD_NOINTERMISSION },
+//	{ "resetaccount",		Cmd_ResetAccount_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "roll",				Cmd_Roll_f,					0 },
 //	{ "rpgclass",			Cmd_RpgClass_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
