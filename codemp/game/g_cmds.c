@@ -1583,9 +1583,19 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 		load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
 	}
 
+	//Set as default so users always log into their last char
+	rc = sqlite3_exec(db, va("UPDATE Accounts SET DefaultChar='%s' WHERE CharID='%i'", character_name), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
 	strcpy(ent->client->sess.rpgchar, character_name);
 	trap->SendServerCommand(ent - g_entities, "print \"^2Character loaded sucessfully!\n\"");
 	trap->SendServerCommand(ent - g_entities, "cp \"^2Character loaded sucessfully!\n\"");
+	trap->SendServerCommand(-1, va("chat \"%s switched to: %s\n\"", ent->client->pers.netname, character_name));
 
 	return;
 }
@@ -1607,7 +1617,7 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 
 	//TODO BUG!!!!
 	//Get CharID for later
-	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i'", ent->client->sess.accountID), -1, &stmt, NULL);
+	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, char_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
@@ -1645,6 +1655,8 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 		sqlite3_free(zErrMsg);
 		return;
 	}
+
+	trap->SendServerCommand(-1, va("chat \"%s created a char: %s\n\"", ent->client->pers.netname, char_name));
 
 	return;
 }
@@ -2097,7 +2109,6 @@ void Cmd_Char_f(gentity_t *ent) {
 		//Create New Character
 		if (Q_stricmp(command, "new") == 0) {
 			add_new_char_to_db(ent, charName, db, zErrMsg, rc, stmt);
-			trap->SendServerCommand(-1, va("chat \"%s created a char: %s\n\"", ent->client->pers.netname, charName));
 			sqlite3_close(db);
 			return;
 		}
@@ -2105,7 +2116,6 @@ void Cmd_Char_f(gentity_t *ent) {
 		//Switch character
 		if (Q_stricmp(command, "use") == 0) {
 			load_character_from_db(ent, charName, db, zErrMsg, rc, stmt);
-			trap->SendServerCommand(-1, va("chat \"%s switched to: %s\n\"", ent->client->pers.netname, charName));
 			sqlite3_close(db);
 			return;
 		}
