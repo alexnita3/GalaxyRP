@@ -2154,7 +2154,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	if ( !attacker )
 		return;
 
-	save_account(self, qtrue);
+	//save_account(self, qtrue);
 
 	// zyk: remove any quest_power status from this player
 	self->client->pers.quest_power_status = 0;
@@ -2594,16 +2594,12 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		quest_player->client->pers.guardian_mode = 0;
 		quest_player->client->pers.light_quest_messages = 0;
 
-		save_account(quest_player, qtrue);
-
 		quest_get_new_player(quest_player);
 	}
 	else if (quest_player && quest_player->client->pers.guardian_mode == 9)
 	{ // zyk: Dark Quest. Defeated the Guardian of Darkness
 		quest_player->client->pers.guardian_mode = 0;
 		quest_player->client->pers.hunter_quest_progress = NUMBER_OF_OBJECTIVES;
-
-		save_account(quest_player, qtrue);
 
 		if (quest_player->client->pers.magic_power > 0)
 		{
@@ -2619,8 +2615,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	{ // zyk: Eternity Quest. Defeated the Guardian of Eternity
 		quest_player->client->pers.guardian_mode = 0;
 		quest_player->client->pers.eternity_quest_progress = NUMBER_OF_ETERNITY_QUEST_OBJECTIVES;
-
-		save_account(quest_player, qtrue);
 
 		if (quest_player->client->pers.magic_power > 0)
 		{
