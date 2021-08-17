@@ -3285,56 +3285,6 @@ void Cmd_FollowPrev_f( gentity_t *ent ) {
 
 extern void save_account(gentity_t *ent, qboolean save_char_file);
 extern void quest_get_new_player(gentity_t *ent);
-qboolean zyk_answer(gentity_t *ent, char *arg1)
-{
-	if (ent->client->sess.amrpgmode == 2)
-	{
-		if (level.quest_map == 10 && ent->client->pers.can_play_quest == 1 && 
-			ent->client->pers.eternity_quest_progress < (NUMBER_OF_ETERNITY_QUEST_OBJECTIVES - 1) && (int) ent->client->ps.origin[0] > -676 && 
-			(int) ent->client->ps.origin[0] < -296 && (int) ent->client->ps.origin[1] > 1283 && (int) ent->client->ps.origin[1] < 1663 && 
-			(int) ent->client->ps.origin[2] > 60 && (int) ent->client->ps.origin[2] < 120)
-		{ // zyk: Eternity Quest
-			char *answers[11] = { "key", "clock", "sword", "sun", "fire", "water", "time", "star", "nature", "love", NULL };
-
-			// zyk: removing color chars which could not allow the correct answer
-			Q_StripColor(arg1);
-
-			if (Q_stricmp(arg1, answers[ent->client->pers.eternity_quest_progress]) == 0)
-			{
-				ent->client->pers.eternity_quest_progress++;
-				save_account(ent, qtrue);
-
-				quest_get_new_player(ent);
-
-				zyk_text_message(ent, va("eternity/answered_%d", ent->client->pers.eternity_quest_progress - 1), qtrue, qtrue, ent->client->pers.netname);
-				return qtrue;
-			}
-			else
-			{
-				return qfalse;
-			}
-		}
-		else if (level.quest_map == 24 && ent->client->pers.can_play_quest == 1 && 
-				 ent->client->pers.universe_quest_progress == 5 && ent->client->pers.universe_quest_messages == 101)
-		{ // zyk: amulets mission of Universe Quest
-		  // zyk: removing color chars which could not allow the correct answer
-			Q_StripColor(arg1);
-
-			if (Q_stricmp( arg1, "samir" ) == 0)
-			{
-				ent->client->pers.universe_quest_messages = 102;
-			}
-			else
-			{
-				ent->client->pers.universe_quest_messages = 103;
-			}
-
-			return qfalse;
-		}
-	}
-
-	return qfalse;
-}
 
 /*
 ==================
@@ -3456,11 +3406,6 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		// zyk: if player is silenced by an admin, he cannot say anything
 		if (ent->client->pers.player_statuses & (1 << 0))
 			return;
-
-		if (zyk_answer(ent, text) == qtrue)
-		{ // zyk: if it is a riddle answer, do not say it
-			return;
-		}
 
 		//ooc chat case
 		if (ooc_flag == 1) 

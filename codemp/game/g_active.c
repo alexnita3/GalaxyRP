@@ -3974,42 +3974,6 @@ void ClientThink_real( gentity_t *ent ) {
 						trap->SendServerCommand( ent->s.number, va("chat \"^3Unique Skill: ^7%d seconds left\"", ((ent->client->pers.unique_skill_timer - level.time)/1000)));
 					}
 				}
-				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_SEEING && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master, selects next power
-					// zyk: Magic Master can choose his power here
-					zyk_show_left_magic_master_powers(ent, qtrue);
-					save_account(ent, qtrue);
-				}
-				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_SPEED && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master, selects previous power
-					// zyk: Magic Master can choose his power here
-					zyk_show_left_magic_master_powers(ent, qfalse);
-					save_account(ent, qtrue);
-				}
-				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_PROTECT && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master, selects next power
-					// zyk: Magic Master can choose his power here
-					zyk_show_magic_master_powers(ent, qtrue);
-					save_account(ent, qtrue);
-				}
-				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_HEAL && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master, selects previous power
-					// zyk: Magic Master can choose his power here
-					zyk_show_magic_master_powers(ent, qfalse);
-					save_account(ent, qtrue);
-				}
-				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_DISTRACT && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master, selects next power
-					// zyk: Magic Master can choose his power here
-					zyk_show_right_magic_master_powers(ent, qtrue);
-					save_account(ent, qtrue);
-				}
-				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_ABSORB && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master, selects previous power
-					// zyk: Magic Master can choose his power here
-					zyk_show_right_magic_master_powers(ent, qfalse);
-					save_account(ent, qtrue);
-				}
 				else if (pmove.cmd.generic_cmd == GENCMD_SABERATTACKCYCLE)
 				{ 
 					if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) && 
@@ -4021,38 +3985,6 @@ void ClientThink_real( gentity_t *ent ) {
 						ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SEEKER);
 
 						G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/weapons/w_pkup.wav"));
-					}
-					else if (ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-					{ // zyk: Magic Master Fist attacks
-						if (ent->client->sess.magic_fist_selection < 4 && ent->client->sess.magic_fist_selection < ent->client->pers.skill_levels[55])
-							ent->client->sess.magic_fist_selection++;
-						else if (ent->client->sess.magic_fist_selection == 4)
-							ent->client->sess.magic_fist_selection = 0;
-						else
-							ent->client->sess.magic_fist_selection = 4;
-
-						save_account(ent, qtrue);
-
-						if (ent->client->sess.magic_fist_selection == 0)
-						{
-							trap->SendServerCommand(ent->s.number, va("chat \"^7Normal Bolt       ^3MP: ^7%d\"", ent->client->pers.magic_power));
-						}
-						else if (ent->client->sess.magic_fist_selection == 1)
-						{
-							trap->SendServerCommand(ent->s.number, va("chat \"^7Electric Bolt     ^3MP: ^7%d\"", ent->client->pers.magic_power));
-						}
-						else if (ent->client->sess.magic_fist_selection == 2)
-						{
-							trap->SendServerCommand(ent->s.number, va("chat \"^7Instant-Hit Bolt  ^3MP: ^7%d\"", ent->client->pers.magic_power));
-						}
-						else if (ent->client->sess.magic_fist_selection == 3)
-						{
-							trap->SendServerCommand(ent->s.number, va("chat \"^7Ultra Bolt        ^3MP: ^7%d\"", ent->client->pers.magic_power));
-						}
-						else
-						{
-							trap->SendServerCommand(ent->s.number, va("chat \"^7None              ^3MP: ^7%d\"", ent->client->pers.magic_power));
-						}
 					}
 				}
 			}
