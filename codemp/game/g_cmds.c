@@ -1267,21 +1267,12 @@ void Cmd_Kill_f( gentity_t *ent ) {
 	G_Kill( ent );
 }
 
-
-
-
-
 /*
 =================
 ACCOUNT AREA
 =================
 */
-
-
-
-
 //TODO: PUT THESE IN AN SQL.h
-
 void InitializeSQL(void)
 {
 	sqlite3 *db;
@@ -2283,22 +2274,6 @@ void Cmd_Char_f(gentity_t *ent) {
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 void Cmd_KillOther_f( gentity_t *ent )
 {
