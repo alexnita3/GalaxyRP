@@ -1714,6 +1714,37 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
 {
 	int charID;
+	char comparisonName[256] = { 0 };
+
+	rc = sqlite3_prepare(db, va("SELECT Name FROM Characters WHERE Name='%s'", char_name), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		Q_strncpyz(comparisonName, (const char *)sqlite3_column_text(stmt, 0), sizeof(comparisonName));
+		sqlite3_finalize(stmt);
+	}
+
+	if (comparisonName[0] != '\0')
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"^1Character name ^7%s ^1is already in use.\n\"", comparisonName));
+		trap->SendServerCommand(ent - g_entities, va("cp \"^1Character name ^7%s ^1is already in use.\n\"", comparisonName));
+		sqlite3_close(db);
+		return;
+	}
 
 	//TODO: assign the default values to the entity
 	//Create character record
