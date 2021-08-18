@@ -984,6 +984,8 @@ void display_scale_help(gentity_t *ent) {
 	return;
 }
 
+extern void save_account(gentity_t *ent, qboolean save_char_file);
+
 void Cmd_Scale_f( gentity_t *ent ) {
 	char arg1[MAX_TOKEN_CHARS] = {0};
 	char arg2[MAX_TOKEN_CHARS] = {0};
@@ -1065,6 +1067,8 @@ void Cmd_Scale_f( gentity_t *ent ) {
 
 	do_scale(&g_entities[client_id], new_size);
 	
+	save_account(&g_entities[client_id], qtrue);
+
 	trap->SendServerCommand( -1, va("print \"Scaled player %s ^7to ^3%d^7\n\"", g_entities[client_id].client->pers.netname, new_size) );
 }
 
@@ -1637,6 +1641,7 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 		ent->client->pers.CharID = sqlite3_column_int(stmt, 0);
 		ent->client->pers.credits = sqlite3_column_int(stmt, 1);
 		ent->client->pers.level = sqlite3_column_int(stmt, 2);
+		do_scale(ent, sqlite3_column_int(stmt, 3));
 		strcpy(ent->client->sess.rpgchar, character_name);
 		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 5);
 		strcpy(ent->client->pers.description, sqlite3_column_text(stmt, 6));
@@ -3260,7 +3265,6 @@ void Cmd_FollowPrev_f( gentity_t *ent ) {
 	Cmd_FollowCycle_f( ent, -1 );
 }
 
-extern void save_account(gentity_t *ent, qboolean save_char_file);
 extern void quest_get_new_player(gentity_t *ent);
 
 /*
