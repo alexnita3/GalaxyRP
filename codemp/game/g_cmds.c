@@ -1276,6 +1276,24 @@ void Cmd_Kill_f( gentity_t *ent ) {
 ACCOUNT AREA
 =================
 */
+
+void set_netname(gentity_t * ent, char netName[MAX_STRING_CHARS])
+{
+	char userinfo[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	//set name
+	Q_strncpyz(ent->client->pers.netname, netName, sizeof(ent->client->pers.netname));
+	Q_strncpyz(ent->client->pers.netname_nocolor, netName, sizeof(ent->client->pers.netname_nocolor));
+	Q_StripColor(ent->client->pers.netname_nocolor);
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Info_SetValueForKey(userinfo, "name", netName);
+	trap->SetUserinfo(clientNum, userinfo);
+	ClientUserinfoChanged(clientNum);
+
+	return;
+}
+
 //TODO: PUT THESE IN AN SQL.h
 void InitializeSQL(void)
 {
@@ -1637,6 +1655,8 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 	}
 	if (rc == SQLITE_ROW)
 	{
+		char displayName[MAX_INFO_STRING];
+
 		//TODO: load more stuff from character
 		ent->client->pers.CharID = sqlite3_column_int(stmt, 0);
 		ent->client->pers.credits = sqlite3_column_int(stmt, 1);
@@ -1645,20 +1665,9 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 		strcpy(ent->client->sess.rpgchar, character_name);
 		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 5);
 		strcpy(ent->client->pers.description, sqlite3_column_text(stmt, 6));
-		/*
-		//user info
-		char userinfo[MAX_INFO_STRING], displayName[MAX_INFO_STRING];
-		int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
 		strcpy(displayName, sqlite3_column_text(stmt, 7));
+		set_netname(ent, displayName);
 
-		//set name
-		trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
-		strcpy(ent->client->pers.netname, displayName);
-		strcpy(ent->client->pers.netname_nocolor, displayName);
-		Info_SetValueForKey(userinfo, "name", displayName);
-		trap->SetUserinfo(clientNum, userinfo);
-		Q_StripColor(ent->client->pers.netname_nocolor);
-		//stop char info*/
 		sqlite3_finalize(stmt);
 
 		load_character_skills_from_db(ent, db, zErrMsg, rc, stmt);
@@ -1690,8 +1699,8 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 	//TODO: assign the default values to the entity
 	//Create character record
 	//TODO: replace Name with something better
-	trap->Print(va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')\n", ent->client->sess.accountID, char_name));
-	rc = sqlite3_exec(db, va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')", ent->client->sess.accountID, char_name), 0, 0, &zErrMsg);
+	trap->Print(va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')\n", ent->client->sess.accountID, char_name));
+	rc = sqlite3_exec(db, va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')", ent->client->sess.accountID, char_name), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
