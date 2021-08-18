@@ -757,6 +757,8 @@ typedef struct clientPersistant_s {
 	int level_up_score; // zyk: RPG mode Level Up Score
 	int skillpoints; // zyk: RPG mode skillpoints
 
+	char description[MAX_STRING_CHARS];
+
 	char password[32]; // zyk: account password
 
 	// zyk: turn on or off features of this player in his account file. It is a bit value attribute

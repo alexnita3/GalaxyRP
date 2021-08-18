@@ -1343,7 +1343,6 @@ void InitializeSQL(void)
 	
 	trap->Print("All tables have been initialized.\n");
 }
-
 //TODO: PUT THESE IN AN ACCOUNT.h
 void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
 {
@@ -1617,8 +1616,8 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 
 	}
 
-	trap->Print(va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints FROM Characters WHERE AccountID=%i AND Name='%s'\n", ent->client->sess.accountID, character_name));
-	rc = sqlite3_prepare(db, va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints FROM Characters WHERE AccountID=%i AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
+	trap->Print(va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description FROM Characters WHERE AccountID=%i AND Name='%s'\n", ent->client->sess.accountID, character_name));
+	rc = sqlite3_prepare(db, va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description FROM Characters WHERE AccountID=%i AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
@@ -1640,6 +1639,7 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 		ent->client->pers.level = sqlite3_column_int(stmt, 2);
 		strcpy(ent->client->sess.rpgchar, character_name);
 		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 5);
+		strcpy(ent->client->pers.description, sqlite3_column_text(stmt, 6));
 		sqlite3_finalize(stmt);
 
 		load_character_skills_from_db(ent, db, zErrMsg, rc, stmt);
@@ -1796,17 +1796,19 @@ void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqli
 
 void save_char_info_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
 {
-	trap->Print(va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i' WHERE CharID='%i'\n",
+	trap->Print(va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\" WHERE CharID='%i'\n",
 		ent->client->pers.credits,
 		ent->client->pers.level,
 		ent->client->ps.iModelScale,
 		ent->client->pers.skillpoints,
+		ent->client->pers.description,
 		ent->client->pers.CharID));
-	rc = sqlite3_exec(db, va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i' WHERE CharID='%i'",
+	rc = sqlite3_exec(db, va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\" WHERE CharID='%i'",
 		ent->client->pers.credits,
 		ent->client->pers.level,
 		ent->client->ps.iModelScale,
 		ent->client->pers.skillpoints,
+		ent->client->pers.description,
 		ent->client->pers.CharID
 	), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
@@ -18642,24 +18644,6 @@ void description_display_end(gentity_t *ent) {
 	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
 }
 
-void description_add(gentity_t *ent, char description_to_add[MAX_STRING_CHARS]) {
-	FILE *description_file = NULL;
-
-	description_file = fopen(va("GalaxyRP/descriptions/%s.txt", ent->client->sess.rpgchar), "w+");
-
-	if (description_file != NULL) {
-		fputs(va("%s\n", description_to_add), description_file);
-		fclose(description_file);
-		trap->SendServerCommand(ent->s.number, "print \"Description set sucessfully.\n\"");
-	}
-	else
-	{
-		trap->SendServerCommand(ent->s.number, "print \"File not found.\n\"");
-	}
-
-	return;
-}
-
 /*
 ==================
 Cmd_Examine_f
@@ -18689,38 +18673,27 @@ void Cmd_Examine_f(gentity_t *ent) {
 		return;
 	}
 
-	if (trap->Argc())
-	{
-		description_file = fopen(va("GalaxyRP/descriptions/%s.txt", &g_entities[player_id].client->sess.rpgchar), "r");
+	description_display_beginning(ent, &g_entities[player_id].client->pers.netname);
+	trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", &g_entities[player_id].client->pers.description));
+	description_display_end(ent);
 
-		if (description_file != NULL) {
-			description_display_beginning(ent, &g_entities[player_id].client->pers.netname);
-
-			int i = 0;
-
-			while (fscanf(description_file, "%[^\n] ", description) != EOF) {
-				trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", description));
-				i++;
-			}
-			if (i == 0) {
-				trap->SendServerCommand(ent->s.number, "print \"Nothing.\n\"");
-			}
-			description_display_end(ent);
-			fclose(description_file);
-		}
-		else
-		{
-			//if file isn't there, create it
-			FILE *new_description_file = NULL;
-			new_description_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "a");
-			fclose(new_description_file);
-			description_display_beginning(ent, &g_entities[player_id].client->pers.netname);
-			trap->SendServerCommand(ent->s.number, "print \"Nothing.\n\"");
-			description_display_end(ent);
-		}
-		return;
-	}
 	return;
+}
+
+qboolean isStringValid(char inputString[MAX_STRING_CHARS], char invalidChars[MAX_STRING_CHARS])
+{
+	char *c = inputString;
+	while (*c)
+	{
+		if (strchr(invalidChars, *c))
+		{
+			return qfalse;
+		}
+
+		c++;
+	}
+
+	return qtrue;
 }
 
 /*
@@ -18738,7 +18711,9 @@ void Cmd_Attributes_f(gentity_t *ent) {
 
 	trap->Argv(1, arg1, sizeof(arg1));
 
-	description_add(ent, arg1);
+	strcpy(ent->client->pers.description, arg1);
+
+	save_account(ent, qtrue);
 
 	return;
 }
