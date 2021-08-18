@@ -1277,6 +1277,22 @@ ACCOUNT AREA
 =================
 */
 
+void set_model(gentity_t * ent, char modelName[MAX_STRING_CHARS])
+{
+	char userinfo[MAX_INFO_STRING], modelname[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	
+	//this is how u get the current model
+	//Q_strncpyz(modelname, Info_ValueForKey(userinfo, "model"), sizeof(modelname));
+	Info_SetValueForKey(userinfo, "model", modelName);
+	trap->SetUserinfo(clientNum, userinfo);
+	ClientUserinfoChanged(clientNum);
+
+	return;
+}
+
 void set_netname(gentity_t * ent, char netName[MAX_STRING_CHARS])
 {
 	char userinfo[MAX_INFO_STRING];
@@ -1638,8 +1654,8 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 
 	}
 
-	trap->Print(va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName FROM Characters WHERE AccountID=%i AND Name='%s'\n", ent->client->sess.accountID, character_name));
-	rc = sqlite3_prepare(db, va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName FROM Characters WHERE AccountID=%i AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
+	trap->Print(va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName FROM Characters WHERE AccountID=%i AND Name='%s'\n", ent->client->sess.accountID, character_name));
+	rc = sqlite3_prepare(db, va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName FROM Characters WHERE AccountID=%i AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
@@ -1655,7 +1671,7 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 	}
 	if (rc == SQLITE_ROW)
 	{
-		char displayName[MAX_INFO_STRING];
+		char displayName[MAX_INFO_STRING], modelName[MAX_STRING_CHARS];
 
 		//TODO: load more stuff from character
 		ent->client->pers.CharID = sqlite3_column_int(stmt, 0);
@@ -1666,7 +1682,10 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 5);
 		strcpy(ent->client->pers.description, sqlite3_column_text(stmt, 6));
 		strcpy(displayName, sqlite3_column_text(stmt, 7));
+		strcpy(modelName, sqlite3_column_text(stmt, 8));
+		
 		set_netname(ent, displayName);
+		set_model(ent, modelName);
 
 		sqlite3_finalize(stmt);
 
@@ -1824,19 +1843,29 @@ void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqli
 
 void save_char_info_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
 {
-	trap->Print(va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\" WHERE CharID='%i'\n",
+	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
+
+	trap->Print(va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i'\n",
 		ent->client->pers.credits,
 		ent->client->pers.level,
 		ent->client->ps.iModelScale,
 		ent->client->pers.skillpoints,
 		ent->client->pers.description,
+		ent->client->pers.netname,
+		modelName,
 		ent->client->pers.CharID));
-	rc = sqlite3_exec(db, va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\" WHERE CharID='%i'",
+	rc = sqlite3_exec(db, va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i'",
 		ent->client->pers.credits,
 		ent->client->pers.level,
 		ent->client->ps.iModelScale,
 		ent->client->pers.skillpoints,
 		ent->client->pers.description,
+		ent->client->pers.netname,
+		modelName,
 		ent->client->pers.CharID
 	), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
@@ -7957,17 +7986,7 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 	int accountID = 0, i = 0;
 	int charID;
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
-	save_account_to_db(ent,db,zErrMsg, rc,stmt);
-
-	sqlite3_close(db);
+	save_account(ent, qtrue);
 
 	if (ent->client->pers.being_mind_controlled != -1)
 	{
