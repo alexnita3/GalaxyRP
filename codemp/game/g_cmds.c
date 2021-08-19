@@ -6543,221 +6543,122 @@ void load_account(gentity_t *ent)
 	char content[128];
 
 	strcpy(content,"");
-	account_file = fopen(va("GalaxyRP/accounts/%s.txt",ent->client->sess.filename),"r");
-	if (account_file != NULL)
+	int i = 0;
+	// zyk: this variable will validate the skillpoints this player has
+	// if he has more than the max skillpoints defined, then server must remove the exceeding ones
+	int validate_skillpoints = 0;
+	int max_skillpoints = 0;
+	int j = 0;
+
+	ent->client->sess.amrpgmode = 2;
+
+	if ((zyk_allow_rpg_mode.integer == 0 || (zyk_allow_rpg_in_other_gametypes.integer == 0 && level.gametype != GT_FFA)) && ent->client->sess.amrpgmode == 2)
+	{ // zyk: RPG Mode not allowed. Change his account to Admin-Only Mode
+		ent->client->sess.amrpgmode = 1;
+	}
+	else if (level.gametype == GT_SIEGE || level.gametype == GT_JEDIMASTER)
+	{ // zyk: Siege and Jedi Master will never allow RPG Mode
+		ent->client->sess.amrpgmode = 1;
+	}
+
+	// zyk: loading level up score value
+	fscanf(account_file, "%s", content);
+	ent->client->pers.level_up_score = 0;
+
+	for (j = 1; j <= ent->client->pers.level; j++)
 	{
-		int i = 0;
-		// zyk: this variable will validate the skillpoints this player has
-		// if he has more than the max skillpoints defined, then server must remove the exceeding ones
-		int validate_skillpoints = 0;
-		int max_skillpoints = 0;
-		int j = 0;
-
-		// zyk: loading the account password
-		fscanf(account_file,"%s",content);
-		strcpy(ent->client->pers.password,content);
-
-		// zyk: loading the amrpgmode value
-		fscanf(account_file,"%s",content);
-		ent->client->sess.amrpgmode = 2;
-
-		if ((zyk_allow_rpg_mode.integer == 0 || (zyk_allow_rpg_in_other_gametypes.integer == 0 && level.gametype != GT_FFA)) && ent->client->sess.amrpgmode == 2)
-		{ // zyk: RPG Mode not allowed. Change his account to Admin-Only Mode
-			ent->client->sess.amrpgmode = 1;
-		}
-		else if (level.gametype == GT_SIEGE || level.gametype == GT_JEDIMASTER)
-		{ // zyk: Siege and Jedi Master will never allow RPG Mode
-			ent->client->sess.amrpgmode = 1;
-		}
-
-		// zyk: loading player_settings value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.player_settings = atoi(content);
-
-		// zyk: loading the admin command bit value
-		fscanf(account_file,"%s",content);
-		ent->client->pers.bitvalue = atoi(content);
-
-		// zyk: loading the current char
-		fscanf(account_file, "%s", content);
-		strcpy(ent->client->sess.rpgchar, content);
-
-		fclose(account_file);
-
-		// zyk: loading the char file
-		account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
-		if (account_file != NULL)
-		{
-			// zyk: loading level up score value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.level_up_score = atoi(content);
-
-			// zyk: loading Level value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.level = atoi(content);
-
-			// zyk: loading Skillpoints value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.skillpoints = atoi(content);
-
-			if (ent->client->pers.level > zyk_rpg_max_level.integer)
-			{ // zyk: validating level
-				ent->client->pers.level = zyk_rpg_max_level.integer;
-			}
-			else if (ent->client->pers.level < 1)
-			{
-				ent->client->pers.level = 1;
-			}
-
-			for (j = 1; j <= ent->client->pers.level; j++)
-			{
-				if ((j % 10) == 0)
-				{ // zyk: level divisible by 10 has more skillpoints
-					max_skillpoints += (1 + j / 10);
-				}
-				else
-				{
-					max_skillpoints++;
-				}
-			}
-
-			validate_skillpoints = ent->client->pers.skillpoints;
-			// zyk: loading skill levels
-			for (i = 0; i < NUMBER_OF_SKILLS; i++)
-			{
-				fscanf(account_file, "%s", content);
-				ent->client->pers.skill_levels[i] = atoi(content);
-				validate_skillpoints += ent->client->pers.skill_levels[i];
-			}
-
-			// zyk: validating skillpoints
-			if (validate_skillpoints != max_skillpoints)
-			{
-				// zyk: if not valid, reset all skills and set the max skillpoints he can have in this level
-				for (i = 0; i < NUMBER_OF_SKILLS; i++)
-				{
-					ent->client->pers.skill_levels[i] = 0;
-				}
-
-				ent->client->pers.skillpoints = max_skillpoints;
-			}
-
-			// zyk: Other RPG attributes
-			// zyk: loading Light Quest Defeated Guardians number value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.defeated_guardians = atoi(content);
-
-			// zyk: compability with old mod versions, in which the players who completed the quest had a value of 9
-			if (ent->client->pers.defeated_guardians == 9)
-				ent->client->pers.defeated_guardians = NUMBER_OF_GUARDIANS;
-
-			// zyk: loading Dark Quest completed objectives value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.hunter_quest_progress = atoi(content);
-
-			// zyk: loading Eternity Quest progress value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.eternity_quest_progress = atoi(content);
-
-			// zyk: loading secrets found value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.secrets_found = atoi(content);
-
-			// zyk: loading Universe Quest Progress value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.universe_quest_progress = atoi(content);
-
-			// zyk: loading Universe Quest Counter value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.universe_quest_counter = atoi(content);
-
-			// zyk: make sure Challenge Mode settings flag and counter flag are correct
-			if (ent->client->pers.universe_quest_counter & (1 << 29))
-			{
-				ent->client->pers.player_settings |= (1 << 15);
-			}
-			else
-			{
-				ent->client->pers.player_settings &= ~(1 << 15);
-			}
-
-			// zyk: loading credits value
-			fscanf(account_file, "%s", content);
-			ent->client->pers.credits = atoi(content);
-
-			// zyk: validating credits
-			if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
-			{
-				ent->client->pers.credits = zyk_max_rpg_credits.integer;
-			}
-			else if (ent->client->pers.credits < 0)
-			{
-				ent->client->pers.credits = 0;
-			}
-
-			// zyk: loading RPG class
-			fscanf(account_file, "%s", content);
-			ent->client->pers.rpg_class = atoi(content);
-
-			// zyk: loading disabled magic powers
-			fscanf(account_file, "%s", content);
-			ent->client->sess.magic_disabled_powers = atoi(content);
-
-			// zyk: loading more disabled magic powers
-			fscanf(account_file, "%s", content);
-			ent->client->sess.magic_more_disabled_powers = atoi(content);
-
-			// zyk: loading Magic Master first selection and selected powers
-			fscanf(account_file, "%s", content);
-			ent->client->sess.magic_fist_selection = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->sess.selected_special_power = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->sess.selected_left_special_power = atoi(content);
-
-			fscanf(account_file, "%s", content);
-			ent->client->sess.selected_right_special_power = atoi(content);
-
-			if (ent->client->sess.amrpgmode == 1)
-			{
-				ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
-
-				// zyk: setting default max hp and shield
-				ent->client->ps.stats[STAT_MAX_HEALTH] = 100;
-
-				if (ent->health > 100)
-					ent->health = 100;
-
-				if (ent->client->ps.stats[STAT_ARMOR] > 100)
-					ent->client->ps.stats[STAT_ARMOR] = 100;
-
-				// zyk: reset the force powers of this player
-				WP_InitForcePowers(ent);
-
-				if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0 &&
-					level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE
-					)
-					ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
-
-				if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
-					ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
-
-				zyk_load_common_settings(ent);
-			}
-
-			fclose(account_file);
+		if ((j % 10) == 0)
+		{ // zyk: level divisible by 10 has more skillpoints
+			max_skillpoints += (1 + j / 10);
 		}
 		else
-		{ // zyk: char file caould not be loaded
-			trap->SendServerCommand(ent - g_entities, "print \"Char file could not be loaded!\n\"");
+		{
+			max_skillpoints++;
 		}
+	}
+
+	// zyk: Other RPG attributes
+	// zyk: loading Light Quest Defeated Guardians number value
+	ent->client->pers.defeated_guardians = 0;
+	ent->client->pers.hunter_quest_progress = 0;
+	ent->client->pers.eternity_quest_progress = 0;
+	ent->client->pers.secrets_found = 0;
+	ent->client->pers.universe_quest_progress = 0;
+	ent->client->pers.universe_quest_counter = 0;
+
+	// zyk: make sure Challenge Mode settings flag and counter flag are correct
+	if (ent->client->pers.universe_quest_counter & (1 << 29))
+	{
+		ent->client->pers.player_settings |= (1 << 15);
 	}
 	else
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"There is no account with this login or password.\n\"" ); 
+		ent->client->pers.player_settings &= ~(1 << 15);
 	}
+
+	// zyk: validating credits
+	if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
+	{
+		ent->client->pers.credits = zyk_max_rpg_credits.integer;
+	}
+	else if (ent->client->pers.credits < 0)
+	{
+		ent->client->pers.credits = 0;
+	}
+
+	ent->client->pers.rpg_class = 0;
+	ent->client->sess.magic_disabled_powers = 0;
+	ent->client->sess.magic_more_disabled_powers = 0;
+
+	// zyk: loading Magic Master first selection and selected powers
+	ent->client->sess.magic_fist_selection = 3;
+	ent->client->sess.selected_special_power = 1;
+	ent->client->sess.selected_left_special_power = 1;
+	ent->client->sess.selected_right_special_power = 1;
+
+	if (ent->client->sess.amrpgmode == 1)
+	{
+		ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
+
+		// zyk: setting default max hp and shield
+		ent->client->ps.stats[STAT_MAX_HEALTH] = 100;
+
+		if (ent->health > 100)
+			ent->health = 100;
+
+		if (ent->client->ps.stats[STAT_ARMOR] > 100)
+			ent->client->ps.stats[STAT_ARMOR] = 100;
+
+		// zyk: reset the force powers of this player
+		WP_InitForcePowers(ent);
+
+		if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0 &&
+			level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE
+			)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
+
+		if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
+
+		zyk_load_common_settings(ent);
+	}
+
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	load_account_from_db(ent, ent->client->sess.filename, db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
 }
 
 // zyk: saves info into the player account file. If save_char_file is qtrue, this function must save the char file
@@ -7419,10 +7320,7 @@ void initialize_rpg_skills(gentity_t *ent)
 		if (ent->client->pers.skill_levels[45] == 0)
 			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DET_PACK);
 
-		FILE *account_file;
-		char content[128];
-
-		load_ammo_from_file(ent);
+		//load_ammo_from_file(ent);
 		
 		if (ent->client->pers.rpg_class == 2)
 		{ // zyk: modifying max ammo if the player is a Bounty Hunter
@@ -8597,17 +8495,7 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 	int accountID = 0, i = 0;
 	int charID;
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
-	save_account_to_db(ent,db,zErrMsg, rc,stmt);
-
-	sqlite3_close(db);
+	save_account(ent, qtrue);
 
 	if (ent->client->pers.being_mind_controlled != -1)
 	{
