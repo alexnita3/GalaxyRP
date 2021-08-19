@@ -1277,11 +1277,41 @@ ACCOUNT AREA
 =================
 */
 
+void set_model(gentity_t * ent, char modelName[MAX_STRING_CHARS])
+{
+	char userinfo[MAX_INFO_STRING], modelname[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
 
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+
+	//this is how u get the current model
+	//Q_strncpyz(modelname, Info_ValueForKey(userinfo, "model"), sizeof(modelname));
+	Info_SetValueForKey(userinfo, "model", modelName);
+	trap->SetUserinfo(clientNum, userinfo);
+	ClientUserinfoChanged(clientNum);
+
+	return;
+}
+
+void set_netname(gentity_t * ent, char netName[MAX_STRING_CHARS])
+{
+	char userinfo[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	//set name
+	Q_strncpyz(ent->client->pers.netname, netName, sizeof(ent->client->pers.netname));
+	Q_strncpyz(ent->client->pers.netname_nocolor, netName, sizeof(ent->client->pers.netname_nocolor));
+	Q_StripColor(ent->client->pers.netname_nocolor);
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Info_SetValueForKey(userinfo, "name", netName);
+	trap->SetUserinfo(clientNum, userinfo);
+	ClientUserinfoChanged(clientNum);
+
+	return;
+}
 
 
 //TODO: PUT THESE IN AN SQL.h
-
 void InitializeSQL(void)
 {
 	sqlite3 *db;
@@ -1314,7 +1344,7 @@ void InitializeSQL(void)
 	//Create Character Table
 	trap->Print("Initializing Character Table.\n");
 
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, 'Description' TEXT, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, 'Description' TEXT, 'NetName' TEXT, 'ModelName' TEXT, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
@@ -1349,13 +1379,13 @@ void InitializeSQL(void)
 		return;
 	}
 	trap->Print("Done with Skills table.\n");
-	
+
 	trap->Print("All tables have been initialized.\n");
 }
-
 //TODO: PUT THESE IN AN ACCOUNT.h
-void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
+void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
 {
+	trap->Print(va("print \"DEBUG: SELECT * FROM Weapons WHERE CharID='%i'\n\"", ent->client->pers.CharID));
 	rc = sqlite3_prepare(db, va("SELECT * FROM Weapons WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -1388,9 +1418,18 @@ void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqli
 	return;
 }
 
-void save_ammo_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
+void save_ammo_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
 {
-	rc = sqlite3_exec(db, va("UPDATE Weapons AmmoBlaster='%i', AmmpPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'",
+	trap->Print(va("print \"DEBUG: UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'\n\"",
+		ent->client->ps.ammo[AMMO_BLASTER],
+		ent->client->ps.ammo[AMMO_POWERCELL],
+		ent->client->ps.ammo[AMMO_METAL_BOLTS],
+		ent->client->ps.ammo[AMMO_ROCKETS],
+		ent->client->ps.ammo[AMMO_THERMAL],
+		ent->client->ps.ammo[AMMO_TRIPMINE],
+		ent->client->ps.ammo[AMMO_DETPACK],
+		ent->client->pers.CharID));
+	rc = sqlite3_exec(db, va("UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'",
 		ent->client->ps.ammo[AMMO_BLASTER],
 		ent->client->ps.ammo[AMMO_POWERCELL],
 		ent->client->ps.ammo[AMMO_METAL_BOLTS],
@@ -1411,6 +1450,7 @@ void save_ammo_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite
 }
 
 void load_character_skills_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
+	trap->Print(va("print \"DEBUG: SELECT * FROM Skills WHERE CharID='%i'\n\"", ent->client->pers.CharID));
 	rc = sqlite3_prepare(db, va("SELECT * FROM Skills WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -1447,7 +1487,66 @@ void load_character_skills_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, 
 
 void save_skills_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
 {
-	rc = sqlite3_exec(db, va("UPDATE Accounts set Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'", 
+	trap->Print(va("print \"UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'\n\"",
+		ent->client->pers.skill_levels[0],	//Jump
+		ent->client->pers.skill_levels[1],	//Push
+		ent->client->pers.skill_levels[2],	//Pull
+		ent->client->pers.skill_levels[3],	//Speed
+		ent->client->pers.skill_levels[4],	//Sense
+		ent->client->pers.skill_levels[5],	//SaberAttack
+		ent->client->pers.skill_levels[6],	//SaberDefense
+		ent->client->pers.skill_levels[7],	//SaberThrow
+		ent->client->pers.skill_levels[8],	//Absorb
+		ent->client->pers.skill_levels[9],	//Heal
+		ent->client->pers.skill_levels[10],	//Protect
+		ent->client->pers.skill_levels[11],	//MindTrick
+		ent->client->pers.skill_levels[12],	//TeamHeal
+		ent->client->pers.skill_levels[13],	//Lightning
+		ent->client->pers.skill_levels[14],	//Grip
+		ent->client->pers.skill_levels[15],	//Drain
+		ent->client->pers.skill_levels[16],	//Rage
+		ent->client->pers.skill_levels[17],	//TeamEnergize
+		ent->client->pers.skill_levels[18],	//StunBaton
+		ent->client->pers.skill_levels[19],	//BlasterPistol
+		ent->client->pers.skill_levels[20],	//BlasterRifle
+		ent->client->pers.skill_levels[21],	//Disruptor
+		ent->client->pers.skill_levels[22],	//Bowcaster
+		ent->client->pers.skill_levels[23],	//Repeater
+		ent->client->pers.skill_levels[24],	//DEMP2
+		ent->client->pers.skill_levels[25],	//Flechette
+		ent->client->pers.skill_levels[26],	//RocketLauncher
+		ent->client->pers.skill_levels[27],	//ConcussionRifle
+		ent->client->pers.skill_levels[28],	//BryarPistol
+		ent->client->pers.skill_levels[29],	//Melee
+		ent->client->pers.skill_levels[30],	//MaxShield
+		ent->client->pers.skill_levels[31],	//ShieldStrength
+		ent->client->pers.skill_levels[32],	//HealthStrength
+		ent->client->pers.skill_levels[33],	//DrainShield
+		ent->client->pers.skill_levels[34],	//Jetpack
+		ent->client->pers.skill_levels[35],	//SenseHealth
+		ent->client->pers.skill_levels[36],	//ShieldHeal
+		ent->client->pers.skill_levels[37],	//TeamShieldHeal
+		ent->client->pers.skill_levels[38],	//UniqueSkill
+		ent->client->pers.skill_levels[39],	//BlasterPack
+		ent->client->pers.skill_levels[40],	//PowerCell
+		ent->client->pers.skill_levels[41],	//MetalBolts
+		ent->client->pers.skill_levels[42],	//Rockets
+		ent->client->pers.skill_levels[43],	//Thermals
+		ent->client->pers.skill_levels[44],	//TripMines
+		ent->client->pers.skill_levels[45],	//Detpacks
+		ent->client->pers.skill_levels[46],	//Binoculars
+		ent->client->pers.skill_levels[47],	//BactaCanister
+		ent->client->pers.skill_levels[48],	//SentryGun
+		ent->client->pers.skill_levels[49],	//SeekerDrone
+		ent->client->pers.skill_levels[50],	//Eweb
+		ent->client->pers.skill_levels[51],	//BigBacta
+		ent->client->pers.skill_levels[52],	//ForceField
+		ent->client->pers.skill_levels[53],	//CloakItem
+		ent->client->pers.skill_levels[54],	//ForcePower
+		ent->client->pers.skill_levels[55], //Improvements
+		ent->client->pers.CharID));
+
+	rc = sqlite3_exec(db, va("UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'",
 		ent->client->pers.skill_levels[0],	//Jump
 		ent->client->pers.skill_levels[1],	//Push
 		ent->client->pers.skill_levels[2],	//Pull
@@ -1525,6 +1624,7 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 		return;
 	}
 
+	trap->Print(va("SELECT count(CharID) FROM Characters WHERE AccountID='%i' AND Name='%s'\n", ent->client->sess.accountID, character_name));
 	rc = sqlite3_prepare(db, va("SELECT count(CharID) FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -1555,7 +1655,8 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 
 	}
 
-	rc = sqlite3_prepare(db, va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints FROM Characters WHERE AccountID=%i AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
+	trap->Print(va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName FROM Characters WHERE AccountID=%i AND Name='%s'\n", ent->client->sess.accountID, character_name));
+	rc = sqlite3_prepare(db, va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName FROM Characters WHERE AccountID=%i AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
@@ -1571,18 +1672,29 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 	}
 	if (rc == SQLITE_ROW)
 	{
+		char displayName[MAX_INFO_STRING], modelName[MAX_STRING_CHARS];
+
 		//TODO: load more stuff from character
 		ent->client->pers.CharID = sqlite3_column_int(stmt, 0);
 		ent->client->pers.credits = sqlite3_column_int(stmt, 1);
 		ent->client->pers.level = sqlite3_column_int(stmt, 2);
+		do_scale(ent, sqlite3_column_int(stmt, 3));
 		strcpy(ent->client->sess.rpgchar, character_name);
 		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 5);
+		strcpy(ent->client->pers.description, sqlite3_column_text(stmt, 6));
+		strcpy(displayName, sqlite3_column_text(stmt, 7));
+		strcpy(modelName, sqlite3_column_text(stmt, 8));
+
+		set_netname(ent, displayName);
+		set_model(ent, modelName);
+
 		sqlite3_finalize(stmt);
 
 		load_character_skills_from_db(ent, db, zErrMsg, rc, stmt);
 		load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
 	}
 
+	trap->Print(va("UPDATE Accounts SET DefaultChar='%s' WHERE AccountID='%i'\n", character_name, ent->client->sess.accountID));
 	//Set as default so users always log into their last char
 	rc = sqlite3_exec(db, va("UPDATE Accounts SET DefaultChar='%s' WHERE AccountID='%i'", character_name, ent->client->sess.accountID), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
@@ -1600,14 +1712,15 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 	return;
 }
 
-void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
+void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
 {
 	int charID;
 
 	//TODO: assign the default values to the entity
 	//Create character record
 	//TODO: replace Name with something better
-	rc = sqlite3_exec(db, va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints) VALUES('%i','100','1','100','%s', '1')", ent->client->sess.accountID, char_name), 0, 0, &zErrMsg);
+	trap->Print(va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')\n", ent->client->sess.accountID, char_name));
+	rc = sqlite3_exec(db, va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')", ent->client->sess.accountID, char_name), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
@@ -1617,6 +1730,7 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 
 	//TODO BUG!!!!
 	//Get CharID for later
+	trap->Print(va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, char_name));
 	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, char_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -1639,6 +1753,7 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 
 	//Create skill record
 	//TODO: replace Name with something better
+	trap->Print(va("INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')\n"));
 	rc = sqlite3_exec(db, va("INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')"), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
@@ -1648,6 +1763,7 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 	}
 
 	//Create ammo record
+	trap->Print(va("INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')\n"));
 	rc = sqlite3_exec(db, va("INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')"), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
@@ -1661,7 +1777,7 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 	return;
 }
 
-void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
+void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
 {
 	int charID;
 
@@ -1672,6 +1788,7 @@ void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqli
 	}
 
 	//Get CharID for later
+	trap->Print(va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'\n", ent->client->sess.accountID, char_name));
 	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, char_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -1692,6 +1809,7 @@ void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqli
 		sqlite3_finalize(stmt);
 	}
 
+	trap->Print(va("DELETE FROM Characters WHERE CharID='%i'\n", charID));
 	rc = sqlite3_exec(db, va("DELETE FROM Characters WHERE CharID='%i'", charID), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
@@ -1700,6 +1818,7 @@ void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqli
 		return;
 	}
 
+	trap->Print(va("DELETE FROM Weapons WHERE CharID='%i'\n", charID));
 	rc = sqlite3_exec(db, va("DELETE FROM Weapons WHERE CharID='%i'", charID), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
@@ -1708,6 +1827,7 @@ void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqli
 		return;
 	}
 
+	trap->Print(va("DELETE FROM Skills WHERE CharID='%i'\n", charID));
 	rc = sqlite3_exec(db, va("DELETE FROM Skills WHERE CharID='%i'", charID), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
@@ -1722,18 +1842,60 @@ void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqli
 	return;
 }
 
-void save_char_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) 
+void save_char_info_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
+{
+	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
+
+	trap->Print(va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i'\n",
+		ent->client->pers.credits,
+		ent->client->pers.level,
+		ent->client->ps.iModelScale,
+		ent->client->pers.skillpoints,
+		ent->client->pers.description,
+		ent->client->pers.netname,
+		modelName,
+		ent->client->pers.CharID));
+	rc = sqlite3_exec(db, va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i'",
+		ent->client->pers.credits,
+		ent->client->pers.level,
+		ent->client->ps.iModelScale,
+		ent->client->pers.skillpoints,
+		ent->client->pers.description,
+		ent->client->pers.netname,
+		modelName,
+		ent->client->pers.CharID
+	), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
+	return;
+}
+
+void save_char_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
 {
 	save_ammo_to_db(ent, db, zErrMsg, rc, stmt);
 	save_skills_to_db(ent, db, zErrMsg, rc, stmt);
+	save_char_info_to_db(ent, db, zErrMsg, rc, stmt);
 
 	return;
 }
 
 void save_account_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
 	//TODO: Make this change more stuff
-	rc = sqlite3_exec(db, va("UPDATE Accounts PlayerSettings='0', AdminLevel='%i', DefaultChar='%i', WHERE AccountID='%i'",
-		ent->client->sess.accountID,
+	trap->Print(va("UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'\n",
+		ent->client->pers.bitvalue,
+		ent->client->sess.rpgchar,
+		ent->client->sess.accountID));
+	rc = sqlite3_exec(db, va("UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'",
+		ent->client->pers.bitvalue,
 		ent->client->sess.rpgchar,
 		ent->client->sess.accountID
 	), 0, 0, &zErrMsg);
@@ -1753,6 +1915,7 @@ void load_character_list_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, in
 	int charLevel;
 
 	//Get CharID for later
+	trap->Print(va("SELECT Name, Level FROM Characters WHERE AccountID='%i'\n", ent->client->sess.accountID));
 	rc = sqlite3_prepare(db, va("SELECT Name, Level FROM Characters WHERE AccountID='%i'", ent->client->sess.accountID), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -1771,7 +1934,7 @@ void load_character_list_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, in
 	while (rc == SQLITE_ROW) {
 		strcpy(CharName, sqlite3_column_text(stmt, 0));
 		charLevel = sqlite3_column_int(stmt, 1);
-		trap->SendServerCommand(ent - g_entities, va("print \"^3%i.^2%s - Level:%i\n\"",i, CharName, charLevel));
+		trap->SendServerCommand(ent - g_entities, va("print \"^3%i.^2%s - Level:%i\n\"", i, CharName, charLevel));
 		i++;
 		rc = sqlite3_step(stmt);
 	}
@@ -1903,7 +2066,7 @@ void Cmd_Register_F(gentity_t * ent)
 	strcpy(ent->client->sess.filename, username);
 	strcpy(ent->client->pers.password, password);
 
-	
+
 
 	add_new_char_to_db(ent, username, db, zErrMsg, rc, stmt);
 	load_character_from_db(ent, username, db, zErrMsg, rc, stmt);
@@ -1955,6 +2118,52 @@ void Cmd_ChangeChar_F(gentity_t * ent)
 	return;
 }
 
+void load_account_from_db(gentity_t * ent, char username[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
+	char defaultChar[256] = { 0 }, password[256] = { 0 };
+	int accountID = 0, i = 0, player_settings = 0, adminLevel = 0;
+
+	rc = sqlite3_prepare(db, va("SELECT AccountID, PlayerSettings, AdminLevel, DefaultChar, Password FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		accountID = sqlite3_column_int(stmt, 0);
+		player_settings = sqlite3_column_int(stmt, 1);
+		adminLevel = sqlite3_column_int(stmt, 2);
+		strcpy(defaultChar, sqlite3_column_text(stmt, 3));
+		strcpy(password, sqlite3_column_text(stmt, 4));
+		sqlite3_finalize(stmt);
+	}
+
+	ent->client->sess.accountID = accountID;
+	//always 2, kept for backwards compatibility
+	ent->client->sess.amrpgmode = 2;
+	ent->client->sess.loggedin = qtrue;
+	ent->client->pers.player_settings = player_settings;
+	//adminlevel
+	ent->client->pers.bitvalue = adminLevel;
+	strcpy(ent->client->sess.filename, username);
+	strcpy(ent->client->pers.password, password);
+
+	load_character_from_db(ent, defaultChar, db, zErrMsg, rc, stmt);
+	load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
+
+	return;
+}
+
 void Cmd_Login_F(gentity_t * ent)
 {
 	sqlite3 *db;
@@ -1962,7 +2171,6 @@ void Cmd_Login_F(gentity_t * ent)
 	int rc;
 	sqlite3_stmt *stmt;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
-	int accountID = 0, i = 0, player_settings = 0, adminLevel = 0;
 
 	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
 	if (rc)
@@ -2060,43 +2268,7 @@ void Cmd_Login_F(gentity_t * ent)
 		return;
 	}
 
-	rc = sqlite3_prepare(db, va("SELECT AccountID, PlayerSettings, AdminLevel, DefaultChar FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		accountID = sqlite3_column_int(stmt, 0);
-		player_settings = sqlite3_column_int(stmt, 1);
-		adminLevel = sqlite3_column_int(stmt, 2);
-		strcpy(defaultChar, sqlite3_column_text(stmt, 3));
-		sqlite3_finalize(stmt);
-	}
-
-	ent->client->sess.accountID = accountID;
-	//always 2, kept for backwards compatibility
-	ent->client->sess.amrpgmode = 2;
-	ent->client->sess.loggedin = qtrue;
-	ent->client->pers.player_settings = player_settings;
-	//adminlevel
-	ent->client->pers.bitvalue = adminLevel;
-	strcpy(ent->client->sess.filename, username);
-	strcpy(ent->client->pers.password, password);
-
-	load_character_from_db(ent, defaultChar, db, zErrMsg, rc, stmt);
-	load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
+	load_account_from_db(ent, username, db, zErrMsg, rc, stmt);
 
 	trap->SendServerCommand(ent - g_entities, "print \"^2You have sucessfully logged in.\n\"");
 
@@ -2162,7 +2334,6 @@ void Cmd_Char_f(gentity_t *ent) {
 		}
 	}
 }
-
 
 
 
@@ -6599,45 +6770,42 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 	{ // zyk: players can only save things if server is not at RP Mode or if it is allowed in config
 		if (save_char_file == qtrue)
 		{  // zyk: save the RPG char
-			FILE *account_file;
-			gclient_t *client;
+			sqlite3 *db;
+			char *zErrMsg = 0;
+			int rc;
+			sqlite3_stmt *stmt;
 
-			client = ent->client;
-			account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt",ent->client->sess.filename, ent->client->sess.rpgchar),"w");
-			fprintf(account_file,"%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n%d\n",
-			client->pers.level_up_score,client->pers.level,client->pers.skillpoints,client->pers.skill_levels[0],client->pers.skill_levels[1],client->pers.skill_levels[2]
-			,client->pers.skill_levels[3],client->pers.skill_levels[4],client->pers.skill_levels[5],client->pers.skill_levels[6],client->pers.skill_levels[7],client->pers.skill_levels[8]
-			,client->pers.skill_levels[9],client->pers.skill_levels[10],client->pers.skill_levels[11],client->pers.skill_levels[12],client->pers.skill_levels[13],client->pers.skill_levels[14]
-			,client->pers.skill_levels[15],client->pers.skill_levels[16],client->pers.skill_levels[17],client->pers.skill_levels[18],client->pers.skill_levels[19],client->pers.skill_levels[20],client->pers.skill_levels[21],client->pers.skill_levels[22]
-			,client->pers.skill_levels[23],client->pers.skill_levels[24],client->pers.skill_levels[25],client->pers.skill_levels[26],client->pers.skill_levels[27],client->pers.skill_levels[28],client->pers.skill_levels[29],client->pers.skill_levels[30],client->pers.skill_levels[31]
-			,client->pers.skill_levels[32],client->pers.skill_levels[33],client->pers.skill_levels[34],client->pers.skill_levels[35],client->pers.skill_levels[36],client->pers.skill_levels[37],client->pers.skill_levels[38],client->pers.skill_levels[39],client->pers.skill_levels[40],client->pers.skill_levels[41]
-			,client->pers.skill_levels[42],client->pers.skill_levels[43],client->pers.skill_levels[44],client->pers.skill_levels[45],client->pers.skill_levels[46],client->pers.skill_levels[47],client->pers.skill_levels[48],client->pers.skill_levels[49]
-			,client->pers.skill_levels[50],client->pers.skill_levels[51],client->pers.skill_levels[52],client->pers.skill_levels[53],client->pers.skill_levels[54],client->pers.skill_levels[55],client->pers.defeated_guardians,client->pers.hunter_quest_progress
-			,client->pers.eternity_quest_progress,client->pers.secrets_found,client->pers.universe_quest_progress,client->pers.universe_quest_counter,client->pers.credits,client->pers.rpg_class
-			,client->sess.magic_disabled_powers,client->sess.magic_more_disabled_powers,client->sess.magic_fist_selection,client->sess.selected_special_power,client->sess.selected_left_special_power
-			,client->sess.selected_right_special_power);
-			fclose(account_file);
+			rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+			if (rc)
+			{
+				trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+				sqlite3_close(db);
+				return;
+			}
 
-			account_file = fopen(va("GalaxyRP/accounts/%s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "w");
-			fprintf(account_file, "%d\n%d\n%d\n%d\n%d\n%d\n%d\n",client->ps.ammo[AMMO_BLASTER]
-			,client->ps.ammo[AMMO_POWERCELL]
-			,client->ps.ammo[AMMO_METAL_BOLTS]
-			,client->ps.ammo[AMMO_ROCKETS]
-			,client->ps.ammo[AMMO_THERMAL]
-			,client->ps.ammo[AMMO_TRIPMINE]
-			,client->ps.ammo[AMMO_DETPACK]);
-			fclose(account_file);
+			save_account_to_db(ent, db, zErrMsg, rc, stmt);
+			save_char_to_db(ent, db, zErrMsg, rc, stmt);
+
+			sqlite3_close(db);
 		}
 		else
 		{ // zyk: save the main account file
-			FILE *account_file;
-			gclient_t *client;
+			sqlite3 *db;
+			char *zErrMsg = 0;
+			int rc;
+			sqlite3_stmt *stmt;
 
-			client = ent->client;
-			account_file = fopen(va("GalaxyRP/accounts/%s.txt", ent->client->sess.filename), "w");
-			fprintf(account_file, "%s\n%d\n%d\n%d\n%s\n",
-				client->pers.password, client->sess.amrpgmode, client->pers.player_settings, client->pers.bitvalue, client->sess.rpgchar);
-			fclose(account_file);
+			rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+			if (rc)
+			{
+				trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+				sqlite3_close(db);
+				return;
+			}
+
+			save_account_to_db(ent, db, zErrMsg, rc, stmt);
+
+			sqlite3_close(db);
 		}
 	}
 }
