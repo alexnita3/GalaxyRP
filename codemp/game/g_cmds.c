@@ -3898,7 +3898,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 
 			ooc_text;
 
-			G_LogPrintf("say: %s: %s\n", ent->client->pers.netname, text);
+			G_LogPrintf("ooc: %s: %s\n", ent->client->pers.netname, text);
 			Com_sprintf(name, sizeof(name), "%s%c%c"EC": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE);
 			color = COLOR_RED;
 
@@ -4007,6 +4007,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 					other = &g_entities[j];
 					if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_distances[i] || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 					{
+						G_LogPrintf(va("%s: %s: %s\n"), chat_modifiers[i], ent->client->pers.netname, text);
 						trap->SendServerCommand(other->client->ps.clientNum, va(text_formats[i], ent->client->pers.netname, text));
 					}
 					else
