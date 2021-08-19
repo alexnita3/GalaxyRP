@@ -19453,33 +19453,11 @@ void Cmd_Examine_f(gentity_t *ent) {
 
 	if (trap->Argc())
 	{
-		description_file = fopen(va("GalaxyRP/descriptions/%s.txt", &g_entities[player_id].client->sess.rpgchar), "r");
 
-		if (description_file != NULL) {
-			description_display_beginning(ent, &g_entities[player_id].client->pers.netname);
+		description_display_beginning(ent, &g_entities[player_id].client->pers.netname);
+		trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", &g_entities[player_id].client->pers.description));
+		description_display_end(ent);
 
-			int i = 0;
-
-			while (fscanf(description_file, "%[^\n] ", description) != EOF) {
-				trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", description));
-				i++;
-			}
-			if (i == 0) {
-				trap->SendServerCommand(ent->s.number, "print \"Nothing.\n\"");
-			}
-			description_display_end(ent);
-			fclose(description_file);
-		}
-		else
-		{
-			//if file isn't there, create it
-			FILE *new_description_file = NULL;
-			new_description_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "a");
-			fclose(new_description_file);
-			description_display_beginning(ent, &g_entities[player_id].client->pers.netname);
-			trap->SendServerCommand(ent->s.number, "print \"Nothing.\n\"");
-			description_display_end(ent);
-		}
 		return;
 	}
 	return;
@@ -19500,7 +19478,9 @@ void Cmd_Attributes_f(gentity_t *ent) {
 
 	trap->Argv(1, arg1, sizeof(arg1));
 
-	description_add(ent, arg1);
+	strcpy(ent->client->pers.description, arg1);
+
+	save_account(ent, qtrue);
 
 	return;
 }
