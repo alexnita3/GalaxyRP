@@ -1884,7 +1884,7 @@ void save_char_info_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, s
 		ent->client->pers.description,
 		ent->client->pers.netname,
 		modelName,
-		ent->client->pers.CharID));
+		ent->client->pers.CharID));*/
 	rc = sqlite3_exec(db, va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i'",
 		ent->client->pers.credits,
 		ent->client->pers.level,
@@ -1894,7 +1894,7 @@ void save_char_info_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, s
 		ent->client->pers.netname,
 		modelName,
 		ent->client->pers.CharID
-	), 0, 0, &zErrMsg);*/
+	), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
