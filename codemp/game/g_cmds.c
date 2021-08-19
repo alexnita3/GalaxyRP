@@ -2335,7 +2335,369 @@ void Cmd_Char_f(gentity_t *ent) {
 	}
 }
 
+void Cmd_ResetPassword_F(gentity_t * ent)
+{
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char newpassword[256] = { 0 };
 
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /resetpassword <newpassword>\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /resetpassword <newpassword>\n\"");
+		sqlite3_close(db);
+		return;
+	}
+
+	trap->Argv(1, newpassword, sizeof(newpassword));
+
+	rc = sqlite3_exec(db, va("UPDATE Accounts SET Password=\"%s\" WHERE AccountID='%i'", newpassword, ent->client->sess.accountID), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
+	trap->SendServerCommand(ent - g_entities, va("print \"^2You have sucessfully reset your password to: %s.\n\"", newpassword));
+
+	sqlite3_close(db);
+	return;
+}
+
+//INVENTORY
+
+qboolean inventory_does_player_own_item(gentity_t *ent, int itemID, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
+{
+	rc = sqlite3_prepare(db, va("SELECT count(ItemID) FROM Items WHERE ItemID='%i' AND CharID='%i'", itemID, ent->client->pers.CharID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return qfalse;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return qfalse;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		int numberOfItems;
+
+		numberOfItems = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+
+		if (numberOfItems != 1) {
+			trap->SendServerCommand(ent - g_entities, "print \"^2You do not own this item.\n\"");
+			trap->SendServerCommand(ent - g_entities, "cp \"^2You do not own this item.\n\"");
+
+			return qfalse;
+		}
+		return qtrue;
+	}
+}
+
+void inventory_display_beginning(gentity_t *ent) {
+	trap->SendServerCommand(ent->s.number, "print \"^2Inventory\n\"");
+	trap->SendServerCommand(ent->s.number, va("print \"^3[Credits: %i]\n\"", ent->client->pers.credits));
+	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
+}
+
+void inventory_display_end(gentity_t *ent) {
+	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
+}
+
+void inventory_add_item(gentity_t *ent, char item_to_add[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
+	trap->Print(va("INSERT INTO Items(CharID, ItemName) VALUES('%i',\"%s\")", ent->client->pers.CharID, item_to_add));
+	rc = sqlite3_exec(db, va("INSERT INTO Items(CharID, ItemName) VALUES('%i',\"%s\")", ent->client->pers.CharID, item_to_add), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+	trap->SendServerCommand(ent->s.number, "print \"Item added to your inventory.\n\"");
+	sqlite3_finalize(stmt);
+
+	return;
+}
+
+void inventory_remove_item(gentity_t *ent, int id_to_be_removed, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
+
+	if (inventory_does_player_own_item(ent, id_to_be_removed, db, zErrMsg, rc, stmt) == qfalse) {
+		return;
+	}
+
+	trap->Print(va("DELETE FROM Items WHERE ItemID='%i'", id_to_be_removed));
+	rc = sqlite3_exec(db, va("DELETE FROM Items WHERE ItemID='%i'", id_to_be_removed), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+	trap->SendServerCommand(ent->s.number, "print \"Item was removed.\n\"");
+
+	return;
+}
+
+void inventory_transfer_item(gentity_t *ent, int otherPlayerID, int itemID, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
+	if (inventory_does_player_own_item(ent, itemID, db, zErrMsg, rc, stmt) == qfalse) {
+		return;
+	}
+
+	trap->Print(va("UPDATE Items SET CharID='%i' WHERE ItemID='%i'", otherPlayerID, itemID));
+	rc = sqlite3_exec(db, va("UPDATE Items SET CharID='%i' WHERE ItemID='%i'", otherPlayerID, itemID), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
+	trap->SendServerCommand(ent->s.number, "print \"Item was transferred.\n\"");
+}
+
+void inventory_add_create_item_log(gentity_t *ent, char created_item_name[MAX_STRING_CHARS]) {
+	FILE *log_file = NULL;
+
+	log_file = fopen("GalaxyRP/logs/itemlog.txt", "a+");
+
+	fputs(va("%s created the item: %s\n", ent->client->pers.netname, created_item_name), log_file);
+	fclose(log_file);
+
+	return;
+}
+
+void inventory_display_items(gentity_t *ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
+{
+	trap->Print(va("SELECT Count(ItemID) FROM Items WHERE CharID='%i'", ent->client->pers.CharID));
+	rc = sqlite3_prepare(db, va("SELECT Count(ItemID) FROM Items WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		int itemCount;
+		itemCount = sqlite3_column_int(stmt, 0);
+
+		if (itemCount == 0) {
+			trap->SendServerCommand(ent->s.number, "print \"Nothing to show.\n\"");
+			sqlite3_finalize(stmt);
+			return;
+		}
+	}
+	sqlite3_finalize(stmt);
+
+	trap->Print(va("SELECT ItemID, ItemName FROM Items WHERE CharID='%i'", ent->client->pers.CharID));
+	rc = sqlite3_prepare(db, va("SELECT ItemID, ItemName FROM Items WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	while (rc == SQLITE_ROW) {
+		int itemID;
+		char item[MAX_STRING_CHARS];
+		itemID = sqlite3_column_int(stmt, 0);
+		strcpy(item, sqlite3_column_text(stmt, 1));
+
+		trap->SendServerCommand(ent - g_entities, va("print \"^3%i. ^2%s\n\"", itemID, item));
+		rc = sqlite3_step(stmt);
+	}
+
+	sqlite3_finalize(stmt);
+}
+
+/*
+==================
+Cmd_Inventory_f
+==================
+*/
+void Cmd_Inventory_f(gentity_t *ent) {
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	inventory_display_beginning(ent);
+	inventory_display_items(ent, db, zErrMsg, rc, stmt);
+	inventory_display_end(ent);
+	sqlite3_close(db);
+	return;
+}
+
+/*
+==================
+Cmd_CreateItem_f
+==================
+*/
+void Cmd_CreateItem_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_CREATEITEM)))
+	{
+		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	if (trap->Argc() != 2) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /createitem <itemname>\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	inventory_add_item(ent, arg1, db, zErrMsg, rc, stmt);
+
+	inventory_add_create_item_log(ent, arg1);
+
+	sqlite3_close(db);
+
+	return;
+}
+
+/*
+==================
+Cmd_TrashItem_f
+==================
+*/
+void Cmd_TrashItem_f(gentity_t *ent) {
+	char arg1[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 2) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /trashitem <itemid>\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+	int id_to_be_removed = atoi(arg1);
+
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	inventory_remove_item(ent, id_to_be_removed, db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
+
+	return;
+}
+
+/*
+==================
+Cmd_GiveItem_f
+==================
+*/
+void Cmd_GiveItem_f(gentity_t *ent) {
+	char player_name[MAX_STRING_CHARS];
+	char arg2[MAX_STRING_CHARS];
+
+	if (trap->Argc() != 3) {
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /giveitem <itemid> <playerName>\n\"");
+		return;
+	}
+	trap->Argv(1, arg2, sizeof(arg2));
+	trap->Argv(2, player_name, sizeof(player_name));
+
+	int item_id = atoi(arg2);
+
+	int player_id = ClientNumberFromString(ent, player_name, qfalse);
+
+	//player not found, no point in going on
+	if (player_id == -1) {
+		return;
+	}
+
+	if (Distance(ent->client->ps.origin, &g_entities[player_id].client->ps.origin) > 1000) {
+		trap->SendServerCommand(ent->s.number, "print \"You are too far away from that person.\n\"");
+		return;
+	}
+
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	inventory_transfer_item(ent, &g_entities[player_id].client->pers.CharID, item_id, db, zErrMsg, rc, stmt);
+
+	trap->SendServerCommand(ent->s.number, va("print \"^2You've given an item to %s^2\n\"", &g_entities[player_id].client->pers.netname));
+
+	return;
+}
 
 
 
@@ -19031,239 +19393,6 @@ void Cmd_UpdateNews_f(gentity_t *ent) {
 	{
 		trap->SendServerCommand(ent->s.number, "print \"File was not found.\n\"");
 	}
-}
-
-void inventory_display_beginning(gentity_t *ent) {
-	trap->SendServerCommand(ent->s.number, "print \"^2Inventory\n\"");
-	trap->SendServerCommand(ent->s.number, va("print \"^3[Credits: %i]\n\"", ent->client->pers.credits));
-	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
-}
-
-void inventory_display_end(gentity_t *ent) {
-	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
-}
-
-void inventory_add_item(gentity_t *ent, char item_to_add[MAX_STRING_CHARS]) {
-	FILE *inv_file = NULL;
-
-	inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "a+");
-
-	if (inv_file != NULL) {
-		fputs(va("%s\n", item_to_add), inv_file);
-		fclose(inv_file);
-		trap->SendServerCommand(ent->s.number, "print \"Item added to your inventory.\n\"");
-	}
-	else
-	{
-		trap->SendServerCommand(ent->s.number, "print \"File not found.\n\"");
-	}
-
-	return;
-}
-
-char* inventory_get_item_name_from_id(gentity_t *ent, int item_id) {
-	FILE *inv_file = NULL;
-	char items[100][MAX_STRING_CHARS];
-	inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "r");
-
-	int current_item_id = 1;
-
-	//get everything in the items array
-	if (inv_file != NULL) {
-		while (fscanf(inv_file, "%[^\n] ", items[current_item_id]) != EOF) {
-			current_item_id++;
-		}
-		fclose(inv_file);
-	}
-	else {
-		trap->SendServerCommand(ent->s.number, "print \"File not found.\n\"");
-		return;
-	}
-	//from now on you can look in items[] for anything you need
-
-	int max_item_id = current_item_id - 1;
-
-	if (item_id > max_item_id || item_id < 1) {
-		trap->SendServerCommand(ent->s.number, "print \"Item does not exist, make sure to enter a valid ID.\n\"");
-	}
-
-	return items[item_id];
-}
-
-void inventory_remove_item(gentity_t *ent, int id_to_be_removed) {
-	FILE *inv_file = NULL;
-	char items[100][MAX_STRING_CHARS];
-	inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "r");
-
-	int item_id = 1;
-
-	if (inv_file != NULL) {
-		while (fscanf(inv_file, "%[^\n] ", items[item_id]) != EOF) {
-			item_id++;
-		}
-		fclose(inv_file);
-	}
-	else {
-		trap->SendServerCommand(ent->s.number, "print \"File not found.\n\"");
-		return;
-	}
-
-	int max_item_id = item_id - 1;
-
-	if (id_to_be_removed > max_item_id || id_to_be_removed < 1) {
-		trap->SendServerCommand(ent->s.number, "print \"Item does not exist, make sure to enter a valid ID.\n\"");
-	}
-
-	inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "w");
-	for (int i = 1; i < item_id; i++) {
-		if (i != id_to_be_removed) {
-			fprintf(inv_file, "%s\n", items[i]);
-		}
-	}
-	fclose(inv_file);
-	return;
-}
-
-void inventory_add_create_item_log(gentity_t *ent, char created_item_name[MAX_STRING_CHARS]) {
-	FILE *log_file = NULL;
-
-	log_file = fopen("GalaxyRP/logs/itemlog.txt", "a+");
-
-	fputs(va("%s created the item: %s\n", ent->client->pers.netname, created_item_name), log_file);
-	fclose(log_file);
-	
-	return;
-}
-
-/*
-==================
-Cmd_Inventory_f
-==================
-*/
-void Cmd_Inventory_f(gentity_t *ent) {
-	FILE *inv_file = NULL;
-	char item[128];
-
-	strcpy(item, "");
-	if (trap->Argc())
-	{
-		inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "r");
-		
-		if (inv_file != NULL) {
-			inventory_display_beginning(ent);
-			int i = 1;
-			while (fscanf(inv_file, "%[^\n] ", item) != EOF) {
-				trap->SendServerCommand(ent->s.number, va("print \"^2%i.^3 %s\n\"", i, item));
-				i++;
-			}
-			if (i == 1) {
-				trap->SendServerCommand(ent->s.number, "print \"Your inventory is empty.\n\"");
-			}
-			inventory_display_end(ent);
-			fclose(inv_file);
-		}
-		else
-		{
-			//if file isn't there, create it
-			FILE *new_inv_file = NULL;
-			new_inv_file = fopen(va("GalaxyRP/inventories/%s.txt", ent->client->sess.rpgchar), "a");
-			fclose(new_inv_file);
-			inventory_display_beginning(ent);
-			trap->SendServerCommand(ent->s.number, "print \"Your inventory is empty.\n\"");
-			inventory_display_end(ent);
-		}
-		return;
-	}
-	return;
-}
-
-/*
-==================
-Cmd_CreateItem_f
-==================
-*/
-void Cmd_CreateItem_f(gentity_t *ent) {
-	char arg1[MAX_STRING_CHARS];
-
-	if (!(ent->client->pers.bitvalue & (1 << ADM_CREATEITEM)))
-	{
-		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
-		return;
-	}
-
-	if (trap->Argc() != 2) {
-		trap->SendServerCommand(ent->s.number, "print \"Usage: /createitem <itemname>\n\"");
-		return;
-	}
-
-	trap->Argv(1, arg1, sizeof(arg1));
-
-	inventory_add_item(ent, arg1);
-
-	inventory_add_create_item_log(ent, arg1);
-	
-	return;
-}
-
-/*
-==================
-Cmd_TrashItem_f
-==================
-*/
-void Cmd_TrashItem_f(gentity_t *ent) {
-	char arg1[MAX_STRING_CHARS];
-
-	if (trap->Argc() != 2) {
-		trap->SendServerCommand(ent->s.number, "print \"Usage: /trashitem <itemid>\n\"");
-		return;
-	}
-
-	trap->Argv(1, arg1, sizeof(arg1));
-	int id_to_be_removed = atoi(arg1);
-
-	inventory_remove_item(ent, id_to_be_removed);
-
-	return;
-}
-
-/*
-==================
-Cmd_GiveItem_f
-==================
-*/
-void Cmd_GiveItem_f(gentity_t *ent) {
-	char player_name[MAX_STRING_CHARS];
-	char arg2[MAX_STRING_CHARS];
-
-	if (trap->Argc() != 3) {
-		trap->SendServerCommand(ent->s.number, "print \"Usage: /giveitem <itemid> <playerName>\n\"");
-		return;
-	}
-	trap->Argv(1, arg2, sizeof(arg2));
-	trap->Argv(2, player_name, sizeof(player_name));
-
-	int item_id = atoi(arg2);
-	char item_name[MAX_STRING_CHARS];
-	strcpy(item_name, inventory_get_item_name_from_id(ent, item_id));
-
-	int player_id = ClientNumberFromString(ent, player_name, qfalse);
-
-	//player not found, no point in going on
-	if (player_id == -1) {
-		return;
-	}
-
-	if (Distance(ent->client->ps.origin, &g_entities[player_id].client->ps.origin) > 1000) {
-		trap->SendServerCommand(ent->s.number, "print \"You are too far away from that person.\n\"");
-		return;
-	}
-
-	inventory_add_item(&g_entities[player_id], item_name);
-	inventory_remove_item(ent, item_id);
-
-	trap->SendServerCommand(ent->s.number, va("print \"^2You've given %s^2 to %s^2\n\"", item_name, &g_entities[player_id].client->pers.netname));
-
-	return;
 }
 
 void description_display_beginning(gentity_t *ent, char netname[MAX_STRING_CHARS]) {
