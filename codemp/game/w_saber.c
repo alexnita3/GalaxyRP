@@ -186,6 +186,9 @@ static QINLINE int G_SaberAttackPower(gentity_t *ent, qboolean attacking)
 			case SS_MEDIUM:
 				toleranceAmt = 16;
 				break;
+			case SS_TAVION:
+				toleranceAmt = 70;
+				break;
 			case SS_FAST:
 				toleranceAmt = 24;
 				break;

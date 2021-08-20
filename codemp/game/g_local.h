@@ -479,6 +479,11 @@ typedef struct clientSession_s {
 	// 1 - Admin-Only mode: in this mode, player can use admin commands if he has them
 	// 2 - RPG mode: in this mode, player can use admin commands and play the level system
 	int	amrpgmode; // zyk: saved in session so the player account can be loaded again in map changes
+
+	qboolean loggedin;
+
+	int accountID;
+
 	char filename[32]; // zyk: player account filename
 
 	char rpgchar[32]; // zyk: file name of the RPG char
@@ -752,6 +757,7 @@ typedef struct clientPersistant_s {
 	int level_up_score; // zyk: RPG mode Level Up Score
 	int skillpoints; // zyk: RPG mode skillpoints
 
+	char description[MAX_STRING_CHARS];
 	char password[32]; // zyk: account password
 
 	// zyk: turn on or off features of this player in his account file. It is a bit value attribute
@@ -875,6 +881,7 @@ typedef struct clientPersistant_s {
 
 	int credits_modifier; // zyk: sets the amount of extra credits a player can get by killing rpg players or some npcs
 	int credits; // zyk: the amount of credits (RPG Mode currency) this player has now
+	int CharID;
 
 	int tutorial_step; // zyk: sets the current tutorial step, to display the correct message to hthe player
 	int tutorial_timer; // zyk: used by the tutorial to set the interval between messages
