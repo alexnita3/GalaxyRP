@@ -56,7 +56,8 @@ const char *HolocronIcons[NUM_FORCE_POWERS] = {
 	"gfx/mp/f_icon_sight",			//FP_SEE,
 	"gfx/mp/f_icon_saber_attack",	//FP_SABER_OFFENSE,
 	"gfx/mp/f_icon_saber_defend",	//FP_SABER_DEFENSE,
-	"gfx/mp/f_icon_saber_throw"		//FP_SABERTHROW
+	"gfx/mp/f_icon_saber_throw",		//FP_SABERTHROW
+	"gfx/mp/f_icon_pull" // FP_ICE_STALAGMITE // alex add, I'm just using the Pull icon for now as a test.
 };
 
 #define SCROLL_TIME_START					500

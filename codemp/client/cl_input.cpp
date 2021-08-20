@@ -140,6 +140,9 @@ void IN_UseGivenForce(void)
 	case FP_TEAM_FORCE:
 		genCmdNum = GENCMD_FORCE_FORCEPOWEROTHER;
 		break;
+	case FP_ICE_STALAGMITE:
+		genCmdNum = GENCMD_FORCE_ICE_STALAGMITE;
+		break;
 	default:
 		assert(0);
 		break;

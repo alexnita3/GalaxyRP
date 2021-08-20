@@ -382,6 +382,7 @@ typedef enum
 	FP_SABER_OFFENSE,
 	FP_SABER_DEFENSE,
 	FP_SABERTHROW,
+	FP_ICE_STALAGMITE, // alex add
 	NUM_FORCE_POWERS
 } forcePowers_t;
 
@@ -1423,7 +1424,8 @@ typedef enum
 	GENCMD_BOW,
 	GENCMD_MEDITATE,
 	GENCMD_FLOURISH,
-	GENCMD_GLOAT
+	GENCMD_GLOAT,
+	GENCMD_FORCE_ICE_STALAGMITE // alex add
 } genCmds_t;
 
 // usercmd_t is sent to the server each client frame

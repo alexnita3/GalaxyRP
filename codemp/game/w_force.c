@@ -1172,6 +1172,15 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 		break;
 	case FP_SABERTHROW:
 		break;
+	case FP_ICE_STALAGMITE:
+
+		// eezstreet add
+
+		hearDist = 256;
+
+		hearable = qtrue;
+
+		break;
 	default:
 		break;
 	}
@@ -4220,6 +4229,91 @@ void ForceThrow( gentity_t *self, qboolean pull )
 	}
 }
 
+// zyk: tests if the target entity can be hit by the attacker special power
+qboolean zyk_special_power_can_hit_target_test(gentity_t *attacker, gentity_t *target, int i, int min_distance, int max_distance, qboolean hit_breakable, int *targets_hit)
+{
+	if ((*targets_hit) >= zyk_max_special_power_targets.integer)
+		return qfalse;
+
+	if (attacker->s.number != i && target && target->client && target->health > 0 && zyk_can_hit_target(attacker, target) == qtrue &&
+		(i > MAX_CLIENTS || (target->client->pers.connected == CON_CONNECTED && target->client->sess.sessionTeam != TEAM_SPECTATOR &&
+			target->client->ps.duelInProgress == qfalse)))
+	{ // zyk: target is a player or npc that can be hit by the attacker
+		int player_distance = (int)Distance(attacker->client->ps.origin, target->client->ps.origin);
+
+		if (player_distance > min_distance && player_distance < max_distance)
+		{
+			int is_ally = 0;
+
+			if (i < level.maxclients && !attacker->NPC &&
+				zyk_is_ally(attacker, target) == qtrue)
+			{ // zyk: allies will not be hit by this power
+				is_ally = 1;
+			}
+
+			if (OnSameTeam(attacker, target) == qtrue || npcs_on_same_team(attacker, target) == qtrue)
+			{ // zyk: if one of them is npc, also check for allies
+				is_ally = 1;
+			}
+
+			if (is_ally == 0 && !(zyk_check_immunity_power(target)) &&
+				zyk_can_hit_boss_battle_target(attacker, target))
+			{ // zyk: Cannot hit target with Immunity Power. Players in bosses can only hit bosses and their helper npcs. Players not in boss battles
+			  // can only hit normal enemy npcs and npcs spawned by bosses but not the bosses themselves. Magic-using npcs can hit everyone that are not their allies
+				(*targets_hit)++;
+
+				return qtrue;
+			}
+		}
+	}
+	else if (i >= MAX_CLIENTS && hit_breakable == qtrue && target && !target->client && target->health > 0 && target->takedamage == qtrue)
+	{
+		int entity_distance = (int)Distance(attacker->client->ps.origin, target->r.currentOrigin);
+
+		if (entity_distance > min_distance && entity_distance < max_distance)
+		{
+			(*targets_hit)++;
+
+			return qtrue;
+		}
+	}
+
+	return qfalse;
+}
+
+// zyk: spawns the flames around the player
+
+void ForceIceStalagmite(gentity_t *self)
+{
+	int distance = 2000;
+	int damage = 130;
+	int duration = 15000;
+	// Write the code here yourself, as this is the behavior of your force power --eez
+	// zyk: Universe Power
+	int i = 0;
+	int targets_hit = 0;
+	int min_distance = 50;
+
+	// zyk: Universe Power
+	if (self->client->pers.quest_power_status & (1 << 13))
+	{
+		damage += 30;
+		min_distance = 0;
+	}
+
+	for (i = 0; i < level.num_entities; i++)
+	{
+		gentity_t *player_ent = &g_entities[i];
+
+		if (zyk_special_power_can_hit_target_test(self, player_ent, i, min_distance, distance, qfalse, &targets_hit) == qtrue)
+		{
+			zyk_quest_effect_spawn(self, player_ent, "zyk_ice_stalagmite", "0", "models/map_objects/hoth/stalagmite_small.md3", 0, 0, 0, 2000);
+
+			G_Damage(player_ent, self, self, NULL, player_ent->client->ps.origin, damage, DAMAGE_NO_PROTECTION, MOD_UNKNOWN);
+		}
+	}
+}
+
 void WP_ForcePowerStop( gentity_t *self, forcePowers_t forcePower )
 {
 	int wasActive = self->client->ps.fd.forcePowersActive;
@@ -5096,6 +5190,11 @@ int WP_DoSpecificPower( gentity_t *self, usercmd_t *ucmd, forcePowers_t forcepow
 		}
 		ForceSeeing(self);
 		self->client->ps.fd.forceButtonNeedRelease = 1;
+		break;
+	case FP_ICE_STALAGMITE:
+
+		ForceIceStalagmite(self);
+
 		break;
 	case FP_SABER_OFFENSE:
 		break;

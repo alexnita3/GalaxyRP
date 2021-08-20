@@ -4109,6 +4109,9 @@ void ClientThink_real( gentity_t *ent ) {
 		case GENCMD_FORCE_SEEING:
 			ForceSeeing(ent);
 			break;
+		case GENCMD_FORCE_ICE_STALAGMITE:
+			ForceIceStalagmite(ent);
+			break;
 		case GENCMD_USE_SEEKER:
 			if ( (ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SEEKER)) &&
 				G_ItemUsable(&ent->client->ps, HI_SEEKER) )

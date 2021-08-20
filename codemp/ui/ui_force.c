@@ -65,7 +65,8 @@ qboolean uiForcePowersDisabled[NUM_FORCE_POWERS] = {
 	qfalse,//FP_SEE,
 	qfalse,//FP_SABER_OFFENSE,
 	qfalse,//FP_SABER_DEFENSE,
-	qfalse//FP_SABERTHROW,
+	qfalse,//FP_SABERTHROW,
+	qfalse//FP_ICE_STALAGMITE
 };
 
 int uiForcePowersRank[NUM_FORCE_POWERS] = {
@@ -86,7 +87,8 @@ int uiForcePowersRank[NUM_FORCE_POWERS] = {
 	0,//FP_SEE,
 	1,//FP_SABER_OFFENSE, //default to 1 point in attack
 	1,//FP_SABER_DEFENSE, //defualt to 1 point in defense
-	0//FP_SABERTHROW,
+	0,//FP_SABERTHROW,
+	1//FP_ICE_STLAGMITE
 };
 
 int uiForcePowerDarkLight[NUM_FORCE_POWERS] = //0 == neutral
@@ -108,7 +110,8 @@ int uiForcePowerDarkLight[NUM_FORCE_POWERS] = //0 == neutral
 	0,//FP_SEE,//duration
 	0,//FP_SABER_OFFENSE,
 	0,//FP_SABER_DEFENSE,
-	0//FP_SABERTHROW,
+	0,//FP_SABERTHROW,
+	0//FP_ICE_STLAGMITE
 		//NUM_FORCE_POWERS
 };
 
@@ -1117,7 +1120,8 @@ int gCustPowersRank[NUM_FORCE_POWERS] = {
 	0,//FP_SEE,
 	0,//FP_SABER_OFFENSE,
 	0,//FP_SABER_DEFENSE,
-	0//FP_SABERTHROW,
+	0,//FP_SABERTHROW,
+	0//FP_ICE_STALAGMITE
 };
 
 /*

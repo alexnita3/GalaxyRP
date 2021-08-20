@@ -7415,6 +7415,12 @@ void initialize_rpg_skills(gentity_t *ent)
 			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_LEVITATION);
 		ent->client->ps.fd.forcePowerLevel[FP_LEVITATION] = ent->client->pers.skill_levels[0];
 
+		if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_ICE_STALAGMITE)) && ent->client->pers.skill_levels[0] > 0)
+			ent->client->ps.fd.forcePowersKnown |= (1 << FP_ICE_STALAGMITE);
+		if (ent->client->pers.skill_levels[0] == 0)
+			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_ICE_STALAGMITE);
+		ent->client->ps.fd.forcePowerLevel[FP_ICE_STALAGMITE] = ent->client->pers.skill_levels[0];
+
 		// zyk: loading Push value
 		if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_PUSH)) && ent->client->pers.skill_levels[1] > 0)
 			ent->client->ps.fd.forcePowersKnown |= (1 << FP_PUSH);

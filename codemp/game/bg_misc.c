@@ -193,7 +193,8 @@ int bgForcePowerCost[NUM_FORCE_POWERS][NUM_FORCE_POWER_LEVELS] = //0 == neutral
 	{	0,	2,	5,	8	},	// Sight		//FP_SEE,//duration
 	{	0,	1,	5,	8	},	// Saber Attack	//FP_SABER_OFFENSE,
 	{	0,	1,	5,	8	},	// Saber Defend	//FP_SABER_DEFENSE,
-	{	0,	4,	6,	8	}	// Saber Throw	//FP_SABERTHROW,
+	{	0,	4,	6,	8	},	// Saber Throw	//FP_SABERTHROW,
+	{	0,	4,	6,	8	},
 	//NUM_FORCE_POWERS
 };
 
@@ -216,7 +217,8 @@ int forcePowerSorted[NUM_FORCE_POWERS] =
 	FP_TEAM_FORCE,
 	FP_SABER_OFFENSE,
 	FP_SABER_DEFENSE,
-	FP_SABERTHROW
+	FP_SABERTHROW,
+	FP_ICE_STALAGMITE
 };
 
 int forcePowerDarkLight[NUM_FORCE_POWERS] = //0 == neutral
@@ -238,7 +240,8 @@ int forcePowerDarkLight[NUM_FORCE_POWERS] = //0 == neutral
 	0,//FP_SEE,//duration
 	0,//FP_SABER_OFFENSE,
 	0,//FP_SABER_DEFENSE,
-	0//FP_SABERTHROW,
+	0,//FP_SABERTHROW,
+	0 //FP_ICE_STALAGMITE
 		//NUM_FORCE_POWERS
 };
 
