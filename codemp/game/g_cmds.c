@@ -100,7 +100,7 @@ const int max_skill_levels[NUMBER_OF_SKILLS] = {
 	3 // Improvements
 };
 
-#define MAX_WORDED_EMOTES 53
+#define MAX_WORDED_EMOTES 84
 //alex: animation words, categories and codes go here THEY HAVE TO BE IN THE SAME ORDER!
 const int anim_codes[MAX_WORDED_EMOTES] = {
 		998, 	//"sit"
@@ -155,7 +155,38 @@ const int anim_codes[MAX_WORDED_EMOTES] = {
 		1404,	//"holddetonator",
 		1344,	//"forcechoke",
 		1322,	//"choked",
-		986		//"holdobject"
+		986,	//"holdobject"
+		1543,	//cross
+		1544,	//cufffront
+		1545,	//cuffknees
+		1546,	//bump
+		1547,	//handsback
+		1548,	//handsfront
+		1549,	//headhold
+		1550,	//hips
+		1551,	//hips2
+		1552,	//handstand
+		1553,	//scratch
+		1554,	//hurt
+		1555,	//hurt2
+		1556,	//relax
+		1557,	//leanback
+		1558,	//ponder
+		1559,	//ponder2
+		1560,	//salute 
+		1561,	//situp
+		1562,	//ataru
+		1563,	//djemso
+		1564,	//jarkai
+		1565,	//jarkai2
+		1566,	//makashi
+		1567,	//idle
+		1568,	//stance
+		1569,	//shien
+		1570,	//soresu
+		1571,	//meditate3
+		1572,	//meditate2
+		1573	//force
 };
 
 const char anim_words[MAX_WORDED_EMOTES][50] = {
@@ -211,7 +242,38 @@ const char anim_words[MAX_WORDED_EMOTES][50] = {
 	"holddetonator",
 	"forcechoke",
 	"choked",
-	"holdobject"
+	"holdobject",
+	"cross",
+	"cufffront",
+	"cuffknees",
+	"bump",
+	"handsback",
+	"handsfront",
+	"headhold",
+	"hips",
+	"hips2",
+	"handstand",
+	"scratch",
+	"hurt",
+	"hurt2",
+	"relax",
+	"leanback",
+	"ponder",
+	"ponder2",
+	"salute ",
+	"situp",
+	"ataru",
+	"djemso",
+	"jarkai",
+	"jarkai2",
+	"makashi",
+	"idle",
+	"stance",
+	"shien",
+	"soresu",
+	"meditate3",
+	"meditate2",
+	"force"
 };
 
 const char anim_categories[MAX_WORDED_EMOTES][50] = {
@@ -267,7 +329,38 @@ const char anim_categories[MAX_WORDED_EMOTES][50] = {
 	"Body",			//"holddetonator",
 	"Force",		//"forcechoke",
 	"Body",			//"choked",
-	"Body"			//"holdobject"
+	"Body",			//"holdobject"
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Body",
+	"Saber",
+	"Saber",
+	"Saber",
+	"Saber",
+	"Saber",
+	"Saber",
+	"Saber",
+	"Saber",
+	"Saber",
+	"Force",
+	"Force",
+	"Force"
 };
 
 #define MAX_EMOTE_CATEGORIES 5
