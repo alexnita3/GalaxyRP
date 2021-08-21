@@ -20626,6 +20626,7 @@ command_t commands[] = {
 	{ "remaplist",			Cmd_RemapList_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "remapload",			Cmd_RemapLoad_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "resetpassword",		Cmd_ResetPassword_F,		CMD_LOGGEDIN},
 //	{ "resetaccount",		Cmd_ResetAccount_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "roll",				Cmd_Roll_f,					0 },
 //	{ "rpgclass",			Cmd_RpgClass_f,				CMD_RPG|CMD_NOINTERMISSION },
