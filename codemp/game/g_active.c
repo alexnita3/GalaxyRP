@@ -2881,8 +2881,8 @@ void ClientThink_real( gentity_t *ent ) {
 				ent->client->ps.duelTime = 0;
 
 				// zyk: this will guarantee that the player has full health at start of the duel
-				ent->health = 100;
-				ent->client->ps.stats[STAT_ARMOR] = 100;
+				ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
+				ent->client->ps.stats[STAT_ARMOR] = (int)ceil(((ent->client->pers.skill_levels[30] * 1.0) / 5) * ent->client->pers.max_rpg_health);
 			}
 
 			if (duelAgainst
@@ -2907,9 +2907,9 @@ void ClientThink_real( gentity_t *ent ) {
 
 				duelAgainst->client->ps.duelTime = 0;
 
-				// zyk: this will guarantee that the player has full health at start of the duel
-				duelAgainst->health = 100;
-				duelAgainst->client->ps.stats[STAT_ARMOR] = 100;
+				// zyk: this will guarantee that the player has full health at start of the duel TEST
+				duelAgainst->health = duelAgainst->client->ps.stats[STAT_MAX_HEALTH];
+				duelAgainst->client->ps.stats[STAT_ARMOR] = (int)ceil(((duelAgainst->client->pers.skill_levels[30] * 1.0) / 5) * duelAgainst->client->pers.max_rpg_health);
 			}
 		}
 		else

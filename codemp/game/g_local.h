@@ -30,6 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "bg_public.h"
 #include "bg_vehicles.h"
 #include "g_public.h"
+#include "qcommon/game_version.h"
+
 
 typedef struct gentity_s gentity_t;
 typedef struct gclient_s gclient_t;
@@ -44,7 +46,7 @@ extern vec3_t gPainPoint;
 //==================================================================
 
 // the "gameversion" client command will print this plus compile date
-#define	GAMEVERSION	"Galaxy RP Mod v0.2"
+#define	GAMEVERSION	JK_VERSION
 
 #define SECURITY_LOG "security.log"
 
@@ -477,6 +479,11 @@ typedef struct clientSession_s {
 	// 1 - Admin-Only mode: in this mode, player can use admin commands if he has them
 	// 2 - RPG mode: in this mode, player can use admin commands and play the level system
 	int	amrpgmode; // zyk: saved in session so the player account can be loaded again in map changes
+
+	qboolean loggedin;
+
+	int accountID;
+
 	char filename[32]; // zyk: player account filename
 
 	char rpgchar[32]; // zyk: file name of the RPG char
@@ -556,7 +563,13 @@ typedef enum {
 	ADM_PLAYERS,
 	ADM_DUELARENA,
 	ADM_CUSTOMQUEST,
-	ADM_NUM_CMDS
+	ADM_CREATEITEM,
+	ADM_GOD,
+	ADM_LEVELUP,
+	ADM_SKILL,
+	ADM_CREATECREDITS,
+	ADM_IGNORECHATDISTANCE,
+	ADM_NUM_CMDS,
 } zyk_admin_t;
 
 // zyk: magic powers values
@@ -614,7 +627,7 @@ typedef enum {
 #define MAX_BOUNTY_HUNTER_SENTRIES 5
 
 // zyk: max RPG chars an account can have
-#define MAX_RPG_CHARS 15
+#define MAX_RPG_CHARS 60
 
 // zyk: max characters an account or rpg char can have
 #define MAX_ACC_NAME_SIZE 30
@@ -744,6 +757,7 @@ typedef struct clientPersistant_s {
 	int level_up_score; // zyk: RPG mode Level Up Score
 	int skillpoints; // zyk: RPG mode skillpoints
 
+	char description[MAX_STRING_CHARS];
 	char password[32]; // zyk: account password
 
 	// zyk: turn on or off features of this player in his account file. It is a bit value attribute
@@ -867,6 +881,7 @@ typedef struct clientPersistant_s {
 
 	int credits_modifier; // zyk: sets the amount of extra credits a player can get by killing rpg players or some npcs
 	int credits; // zyk: the amount of credits (RPG Mode currency) this player has now
+	int CharID;
 
 	int tutorial_step; // zyk: sets the current tutorial step, to display the correct message to hthe player
 	int tutorial_timer; // zyk: used by the tutorial to set the interval between messages
