@@ -10660,7 +10660,7 @@ stillDoSaber:
 				legs.shaderRGBA[0] /= 5.0f;
 				legs.shaderRGBA[1] /= 5.0f;
 				legs.shaderRGBA[2] /= 5.0f;
-				legs.shaderRGBA[3] /= 100.0f; //make them invisible??
+				legs.shaderRGBA[3] /= 3.0f; //make them see through
 				legs.renderfx |= RF_FORCE_ENT_ALPHA;
 			}
 		}
