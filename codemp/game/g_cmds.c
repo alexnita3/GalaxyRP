@@ -260,7 +260,7 @@ const char anim_words[MAX_WORDED_EMOTES][50] = {
 	"leanback",
 	"ponder",
 	"ponder2",
-	"salute ",
+	"salute",
 	"situp",
 	"ataru",
 	"djemso",
