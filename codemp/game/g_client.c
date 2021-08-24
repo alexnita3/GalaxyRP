@@ -2612,7 +2612,7 @@ and on transition between teams, but doesn't happen on respawns
 extern qboolean	gSiegeRoundBegun;
 extern qboolean	gSiegeRoundEnded;
 extern qboolean g_dontPenalizeTeam; //g_cmds.c
-extern void load_account(gentity_t *ent);
+extern void load_account_from_db_with_default_char(gentity_t *ent);
 extern void initialize_rpg_skills(gentity_t *ent);
 void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin);
 void ClientBegin( int clientNum, qboolean allowTeamReset ) {
@@ -2738,7 +2738,13 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 			level.bounty_quest_choose_target = qtrue;
 
 		// zyk: load account again
-		load_account(ent);
+
+		ent->client->sess.accountID = NULL;
+		ent->client->sess.loggedin = qfalse;
+		ent->client->sess.amrpgmode = 0;
+
+		//TODO: find a way to bring this back in (server doesn't like loading the db while it's changing maps)
+		//load_account_from_db_with_default_char(ent);
 
 		initialize_rpg_skills(ent);
 	}

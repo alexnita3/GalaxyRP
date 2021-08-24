@@ -1712,7 +1712,7 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 		return;
 	}
 
-	//trap->Print(va("SELECT count(CharID) FROM Characters WHERE AccountID='%i' AND Name='%s'\n", ent->client->sess.accountID, character_name));
+	trap->Print(va("SELECT count(CharID) FROM Characters WHERE AccountID='%i' AND Name='%s'\n", ent->client->sess.accountID, character_name));
 	rc = sqlite3_prepare(db, va("SELECT count(CharID) FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -1743,7 +1743,7 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 
 	}
 
-	//trap->Print(va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName FROM Characters WHERE AccountID=%i AND Name='%s'\n", ent->client->sess.accountID, character_name));
+	trap->Print(va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName FROM Characters WHERE AccountID=%i AND Name='%s'\n", ent->client->sess.accountID, character_name));
 	rc = sqlite3_prepare(db, va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName FROM Characters WHERE AccountID=%i AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -2239,6 +2239,7 @@ void load_account_from_db(gentity_t * ent, char username[MAX_STRING_CHARS], sqli
 	char defaultChar[256] = { 0 }, password[256] = { 0 };
 	int accountID = 0, i = 0, player_settings = 0, adminLevel = 0;
 
+	trap->Print(va("SELECT AccountID, PlayerSettings, AdminLevel, DefaultChar, Password FROM Accounts WHERE Username='%s'", username));
 	rc = sqlite3_prepare(db, va("SELECT AccountID, PlayerSettings, AdminLevel, DefaultChar, Password FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -2278,6 +2279,27 @@ void load_account_from_db(gentity_t * ent, char username[MAX_STRING_CHARS], sqli
 	load_character_from_db(ent, defaultChar, db, zErrMsg, rc, stmt);
 	load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
 
+	return;
+}
+
+void load_account_from_db_with_default_char(gentity_t * ent) {
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char defaultChar[256] = { 0 };
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	load_account_from_db(ent, ent->client->sess.filename, db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
 	return;
 }
 
@@ -2384,6 +2406,8 @@ void Cmd_Login_F(gentity_t * ent)
 		sqlite3_close(db);
 		return;
 	}
+
+	strcpy(ent->client->sess.filename, username);
 
 	load_account_from_db(ent, username, db, zErrMsg, rc, stmt);
 
@@ -7003,131 +7027,6 @@ void zyk_load_common_settings(gentity_t *ent)
 	}
 }
 
-// zyk: loads the player account
-void load_account(gentity_t *ent)
-{
-	FILE *account_file;
-	char content[128];
-
-	strcpy(content,"");
-	int i = 0;
-	// zyk: this variable will validate the skillpoints this player has
-	// if he has more than the max skillpoints defined, then server must remove the exceeding ones
-	int validate_skillpoints = 0;
-	int max_skillpoints = 0;
-	int j = 0;
-
-	ent->client->sess.amrpgmode = 2;
-
-	if ((zyk_allow_rpg_mode.integer == 0 || (zyk_allow_rpg_in_other_gametypes.integer == 0 && level.gametype != GT_FFA)) && ent->client->sess.amrpgmode == 2)
-	{ // zyk: RPG Mode not allowed. Change his account to Admin-Only Mode
-		ent->client->sess.amrpgmode = 1;
-	}
-	else if (level.gametype == GT_SIEGE || level.gametype == GT_JEDIMASTER)
-	{ // zyk: Siege and Jedi Master will never allow RPG Mode
-		ent->client->sess.amrpgmode = 1;
-	}
-
-	// zyk: loading level up score value
-	fscanf(account_file, "%s", content);
-	ent->client->pers.level_up_score = 0;
-
-	for (j = 1; j <= ent->client->pers.level; j++)
-	{
-		if ((j % 10) == 0)
-		{ // zyk: level divisible by 10 has more skillpoints
-			max_skillpoints += (1 + j / 10);
-		}
-		else
-		{
-			max_skillpoints++;
-		}
-	}
-
-	// zyk: Other RPG attributes
-	// zyk: loading Light Quest Defeated Guardians number value
-	ent->client->pers.defeated_guardians = 0;
-	ent->client->pers.hunter_quest_progress = 0;
-	ent->client->pers.eternity_quest_progress = 0;
-	ent->client->pers.secrets_found = 0;
-	ent->client->pers.universe_quest_progress = 0;
-	ent->client->pers.universe_quest_counter = 0;
-
-	// zyk: make sure Challenge Mode settings flag and counter flag are correct
-	if (ent->client->pers.universe_quest_counter & (1 << 29))
-	{
-		ent->client->pers.player_settings |= (1 << 15);
-	}
-	else
-	{
-		ent->client->pers.player_settings &= ~(1 << 15);
-	}
-
-	// zyk: validating credits
-	if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
-	{
-		ent->client->pers.credits = zyk_max_rpg_credits.integer;
-	}
-	else if (ent->client->pers.credits < 0)
-	{
-		ent->client->pers.credits = 0;
-	}
-
-	ent->client->pers.rpg_class = 0;
-	ent->client->sess.magic_disabled_powers = 0;
-	ent->client->sess.magic_more_disabled_powers = 0;
-
-	// zyk: loading Magic Master first selection and selected powers
-	ent->client->sess.magic_fist_selection = 3;
-	ent->client->sess.selected_special_power = 1;
-	ent->client->sess.selected_left_special_power = 1;
-	ent->client->sess.selected_right_special_power = 1;
-
-	if (ent->client->sess.amrpgmode == 1)
-	{
-		ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
-
-		// zyk: setting default max hp and shield
-		ent->client->ps.stats[STAT_MAX_HEALTH] = 100;
-
-		if (ent->health > 100)
-			ent->health = 100;
-
-		if (ent->client->ps.stats[STAT_ARMOR] > 100)
-			ent->client->ps.stats[STAT_ARMOR] = 100;
-
-		// zyk: reset the force powers of this player
-		WP_InitForcePowers(ent);
-
-		if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0 &&
-			level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE
-			)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
-
-		if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
-
-		zyk_load_common_settings(ent);
-	}
-
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
-	load_account_from_db(ent, ent->client->sess.filename, db, zErrMsg, rc, stmt);
-
-	sqlite3_close(db);
-}
-
 // zyk: saves info into the player account file. If save_char_file is qtrue, this function must save the char file
 void save_account(gentity_t *ent, qboolean save_char_file)
 {
@@ -8270,119 +8169,6 @@ void legacy_load_account(gentity_t *ent)
 	else
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"There is no account with this login or password.\n\"");
-	}
-}
-
-/*
-==================
-Cmd_LoginAccount_f
-==================
-*/
-void Cmd_LoginAccount_f( gentity_t *ent ) {
-	if (ent->client->sess.amrpgmode == 0)
-	{
-		char arg1[MAX_STRING_CHARS];
-		char arg2[MAX_STRING_CHARS];
-		char password[32];
-		int i = 0;
-		FILE *account_file;
-		gentity_t *player_ent = NULL;
-
-		strcpy(password,"");
-
-		if ( trap->Argc() != 3)
-		{ 
-			trap->SendServerCommand( ent-g_entities, "print \"You must write your login and password.\n\"" ); 
-			return;
-		}
-
-		trap->Argv(1, arg1, sizeof( arg1 ));
-		trap->Argv(2, arg2, sizeof( arg2 ));
-
-		for (i = 0; i < level.maxclients; i++)
-		{
-			player_ent = &g_entities[i];
-			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode > 0 && Q_stricmp(player_ent->client->sess.filename,arg1) == 0)
-			{
-				trap->SendServerCommand( ent-g_entities, "print \"There is already someone logged in this account.\n\"" );
-				return;
-			}
-		}
-
-		// alex: cannot login if player is in Duel Tournament or Sniper Battle
-		if (level.duel_tournament_mode > 0 && level.duel_players[ent->s.number] != -1)
-		{
-			trap->SendServerCommand(ent->s.number, "print \"Cannot login while in a Duel Tournament\n\"");
-			return;
-		}
-
-		if (level.sniper_mode > 0 && level.sniper_players[ent->s.number] != -1)
-		{
-			trap->SendServerCommand(ent->s.number, "print \"Cannot login while in a Sniper Battle\n\"");
-			return;
-		}
-
-		// zyk: validating login
-		account_file = fopen(va("GalaxyRP/accounts/%s.txt",arg1),"r");
-		if (account_file == NULL)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"Login does not exist.\n\"" );
-			return;
-		}
-
-		// zyk: validating password
-		fscanf(account_file,"%s",password);
-		fclose(account_file);
-		if (strlen(password) != strlen(arg2) || Q_strncmp(password, arg2, strlen(password)) != 0)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"The password is incorrect.\n\"" );
-			return;
-		}
-
-		// zyk: valid login and password
-		strcpy(ent->client->sess.filename, arg1);
-		strcpy(ent->client->pers.password, arg2);
-
-		account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", arg1, arg1), "r");
-		if (account_file == NULL)
-		{ // zyk: old account. Use the legacy function to convert it to the Char system
-			legacy_load_account(ent);
-
-			// zyk: saving the default char
-			strcpy(ent->client->sess.rpgchar, arg1);
-
-			save_account(ent, qfalse);
-			save_account(ent, qtrue);
-		}
-		else
-		{
-			fclose(account_file);
-
-			load_account(ent);
-		}
-
-		if (ent->client->sess.amrpgmode == 1)
-		{
-			trap->SendServerCommand(ent - g_entities, "print \"^7Account loaded succesfully in ^2Admin-Only Mode^7. Use command ^3/list^7.\n\"");
-			trap->SendServerCommand(-1, va("chat \"%s Logged in as: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
-		}
-		else if (ent->client->sess.amrpgmode == 2)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"^7Account loaded succesfully. Use command ^3/list^7.\n\"" );
-			trap->SendServerCommand(-1, va("chat \"%s Logged in as: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
-
-			initialize_rpg_skills(ent);
-
-			if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
-			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
-				G_Kill(ent);
-			}
-			
-		}
-	}
-	else
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You are already logged in.\n\"" );
 	}
 }
 
