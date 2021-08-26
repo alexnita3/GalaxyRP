@@ -137,7 +137,7 @@ qboolean BG_ParseLiteral( const char **data, const char *string ) {
 
 	token = COM_ParseExt( data, qtrue );
 	if ( !token[0] ) {
-		Com_Printf( "BG_ParseLiteral unexpected EOF\n" );
+		Com_Printf( "unexpected EOF\n" );
 		return qtrue;
 	}
 

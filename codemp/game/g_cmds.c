@@ -27,7 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "ui/menudef.h"			// for the voice chats
 
-#include "sqlite3.h"
+#include "sqlite/sqlite3.h"
 
 #define MAX_EMOTE_WORDS 11;
 

@@ -1,5 +1,5 @@
 #============================================================================
-# Copyright (C) 2013 - 2015, OpenJK contributors
+# Copyright (C) 2013 - 2018, OpenJK contributors
 # 
 # This file is part of the OpenJK source code.
 # 
@@ -28,6 +28,7 @@ set(JK2SPGameIncludeDirectories
 	"${JK2SPDir}/game"
 	"${SharedDir}"
 	"${GSLIncludeDirectory}"
+	"${CMAKE_BINARY_DIR}/shared"
 	)
 if(WIN32)
 	set(JK2SPGameLibraries "winmm")

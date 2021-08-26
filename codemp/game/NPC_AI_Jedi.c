@@ -220,6 +220,7 @@ void Boba_ChangeWeapon( int wp )
 		return;
 	}
 	NPC_ChangeWeapon( wp );
+	G_AddEvent( NPCS.NPC, EV_GENERAL_SOUND, G_SoundIndex( "sound/weapons/change.wav" ));
 }
 */
 
@@ -918,6 +919,15 @@ void Boba_FireDecide( void )
 				if( !(NPCS.NPCInfo->scriptFlags & SCF_FIRE_WEAPON) ) // we've already fired, no need to do it again here
 				{
 					WeaponThink( qtrue );
+				}
+				//NASTY
+				if ( NPCS.NPC->s.weapon == WP_ROCKET_LAUNCHER
+					&& (NPCS.ucmd.buttons&BUTTON_ATTACK)
+					&& !Q_irand( 0, 3 ) )
+				{//every now and then, shoot a homing rocket
+					NPCS.ucmd.buttons &= ~BUTTON_ATTACK;
+					NPCS.ucmd.buttons |= BUTTON_ALT_ATTACK;
+					NPCS.NPC->client->ps.weaponTime = Q_irand( 500, 1500 );
 				}
 			}
 		}

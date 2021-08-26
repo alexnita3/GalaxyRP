@@ -2217,7 +2217,7 @@ void ForceDrainDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec3_t 
 
 	if ( traceEnt && traceEnt->takedamage )
 	{
-		if ( traceEnt->client && (!OnSameTeam(self, traceEnt) || g_friendlyFire.integer) && self->client->ps.fd.forceDrainTime < level.time)
+		if ( traceEnt->client && (!OnSameTeam(self, traceEnt) || g_friendlyFire.integer) && self->client->ps.fd.forceDrainTime < level.time && traceEnt->client->ps.fd.forcePower )
 		{//an enemy or object
 			if (!traceEnt->client && traceEnt->s.eType == ET_NPC)
 			{ //g2animent
@@ -5665,6 +5665,19 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 	if (!self->client->ps.fd.saberAnimLevel)
 	{
 		self->client->ps.fd.saberAnimLevel = FORCE_LEVEL_1;
+	}
+
+	if (level.gametype != GT_SIEGE)
+	{
+		if (!(self->client->ps.fd.forcePowersKnown & (1 << FP_LEVITATION)))
+		{
+			self->client->ps.fd.forcePowersKnown |= (1 << FP_LEVITATION);
+		}
+
+		if (self->client->ps.fd.forcePowerLevel[FP_LEVITATION] < FORCE_LEVEL_1)
+		{
+			self->client->ps.fd.forcePowerLevel[FP_LEVITATION] = FORCE_LEVEL_1;
+		}
 	}
 
 	if (self->client->ps.fd.forcePowerSelected < 0 || self->client->ps.fd.forcePowerSelected >= NUM_FORCE_POWERS)

@@ -5230,8 +5230,8 @@ extern void Boba_FlyStop( gentity_t *self );
 extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
 void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t dir, vec3_t point, int damage, int dflags, int mod ) {
 	gclient_t	*client;
-	int			take, asave = 0, knockback;
-	float		shieldAbsorbed = 0;
+	int			take, asave = 0, max, subamt = 0, knockback;
+	float		famt = 0, hamt = 0, shieldAbsorbed = 0;
 	int			check_shield = 1; // zyk: tests if damage can be absorbed by shields
 	qboolean	can_damage_heavy_things = qfalse; // zyk: will be qtrue if attacker is a RPG Mode Monk using melee or a Magic Master using Magic Fist
 
@@ -5744,6 +5744,14 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			return;
 		}
 	}
+	
+	if ( !(dflags & DAMAGE_NO_PROTECTION) )
+	{//rage overridden by no_protection
+		if (targ && targ->client && (targ->client->ps.fd.forcePowersActive & (1 << FP_RAGE)))
+		{
+			damage *= 0.5;
+		}
+	}
 
 	// the intermission has allready been qualified for, so don't
 	// allow any extra scoring
@@ -5766,6 +5774,16 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		}
 		return;
 	}
+	// reduce damage by the attacker's handicap value
+	// unless they are rocket jumping
+	if ( attacker->client
+		&& attacker != targ
+		&& attacker->s.eType == ET_PLAYER
+		&& level.gametype != GT_SIEGE )
+	{
+		max = attacker->client->ps.stats[STAT_MAX_HEALTH];
+		damage = damage * max / 100;
+	}
 
 	if ( !(dflags&DAMAGE_NO_HIT_LOC) )
 	{//see if we should modify it by damage location
@@ -5773,6 +5791,21 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			attacker->inuse && (attacker->client || attacker->s.eType == ET_NPC))
 		{ //check for location based damage stuff.
 			G_LocationBasedDamageModifier(targ, point, mod, dflags, &damage);
+		}
+	}
+	
+	if ( targ->client
+		&& targ->client->NPC_class == CLASS_RANCOR
+		&& (!attacker||!attacker->client||attacker->client->NPC_class!=CLASS_RANCOR) )
+	{
+		// I guess always do 10 points of damage...feel free to tweak as needed
+		if ( damage < 10 )
+		{//ignore piddly little damage
+			damage = 0;
+		}
+		else if ( damage >= 10 )
+		{
+			damage = 10;
 		}
 	}
 
@@ -6471,6 +6504,72 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		targ->client->lasthurt_mod = mod;
 	}
 
+	if (!(dflags & DAMAGE_NO_PROTECTION))
+	{//protect overridden by no_protection
+		if (take && targ->client && (targ->client->ps.fd.forcePowersActive & (1 << FP_PROTECT)))
+		{
+			if (targ->client->ps.fd.forcePower)
+			{
+				int maxtake = take;
+				//G_Sound(targ, CHAN_AUTO, protectHitSound);
+				if (targ->client->forcePowerSoundDebounce < level.time)
+				{
+					G_PreDefSound(targ->client->ps.origin, PDSOUND_PROTECTHIT);
+					targ->client->forcePowerSoundDebounce = level.time + 400;
+				}
+				if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_1)
+				{
+					famt = 1;
+					hamt = 0.40f;
+					if (maxtake > 100)
+					{
+						maxtake = 100;
+					}
+				}
+				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_2)
+				{
+					famt = 0.5f;
+					hamt = 0.60f;
+					if (maxtake > 200)
+					{
+						maxtake = 200;
+					}
+				}
+				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_3)
+				{
+					famt = 0.25f;
+					hamt = 0.80f;
+					if (maxtake > 400)
+					{
+						maxtake = 400;
+					}
+				}
+				if (!targ->client->ps.powerups[PW_FORCE_BOON])
+				{
+					targ->client->ps.fd.forcePower -= maxtake * famt;
+				}
+				else
+				{
+					targ->client->ps.fd.forcePower -= (maxtake * famt) / 2;
+				}
+				subamt = (maxtake * hamt) + (take - maxtake);
+				if (targ->client->ps.fd.forcePower < 0)
+				{
+					subamt += targ->client->ps.fd.forcePower;
+					targ->client->ps.fd.forcePower = 0;
+				}
+				if (subamt)
+				{
+					take -= subamt;
+					if (take < 0)
+					{
+						take = 0;
+					}
+				}
+			}
+		}
+	}
+
 	if (shieldAbsorbed)
 	{
 		/*
@@ -6623,6 +6722,21 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 		if ( targ->client ) {
 			targ->client->ps.stats[STAT_HEALTH] = targ->health;
+		}
+		
+		if ( !(dflags & DAMAGE_NO_PROTECTION) )
+		{//rage overridden by no_protection
+			if (targ->client && (targ->client->ps.fd.forcePowersActive & (1 << FP_RAGE)) && (inflictor->client || attacker->client))
+			{
+				if (targ->health <= 0)
+				{
+					targ->health = 1;
+				}
+				if (targ->client->ps.stats[STAT_HEALTH] <= 0)
+				{
+					targ->client->ps.stats[STAT_HEALTH] = 1;
+				}
+			}
 		}
 
 		//We want to go ahead and set gPainHitLoc regardless of if we have a pain func,
