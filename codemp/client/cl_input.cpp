@@ -392,16 +392,6 @@ void IN_VoiceChatButton(void)
 	UIVM_SetActiveMenu( UIMENU_VOICECHAT );
 }
 
-// zyk: new menu
-void IN_ZykModButton(void)
-{
-	if (!cls.uiStarted)
-	{ //ui not loaded so this command is useless
-		return;
-	}
-	UIVM_SetActiveMenu( UIMENU_ZYKMOD );
-}
-
 void IN_KeyDown( kbutton_t *b ) {
 	int		k;
 	char	*c;
@@ -1760,7 +1750,6 @@ static const cmdList_t inputCmds[] =
 	{ "automap_button", "Show/hide automap", IN_AutoMapButton, NULL },
 	{ "automap_toggle", "Show/hide radar", IN_AutoMapToggle, NULL },
 	{ "voicechat", "Open voice chat menu", IN_VoiceChatButton, NULL },
-	{ "zykmodopen", "Open Zyk Mod menu", IN_ZykModButton, NULL },
 	{ NULL, NULL, NULL, NULL }
 };
 

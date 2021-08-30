@@ -6429,6 +6429,11 @@ int PM_ItemUsable(playerState_t *ps, int forcedUse)
 		return 0;
 	}
 
+	if (!forcedUse)
+	{
+		forcedUse = bg_itemlist[ps->stats[STAT_HOLDABLE_ITEM]].giTag;
+	}
+
 	if (!BG_IsItemSelectable(ps, forcedUse))
 	{
 		return 0;

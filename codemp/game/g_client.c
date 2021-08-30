@@ -376,7 +376,7 @@ void JMSaberThink(gentity_t *ent)
 			VectorCopy(ent->enemy->s.pos.trBase, ent->s.pos.trBase);
 			VectorCopy(ent->enemy->s.pos.trBase, ent->s.origin);
 			VectorCopy(ent->enemy->s.pos.trBase, ent->r.currentOrigin);
-			ent->s.modelindex = G_ModelIndex("models/weapons2/saber/saber_w.glm");
+			ent->s.modelindex = G_ModelIndex( DEFAULT_SABER_MODEL );
 			ent->s.eFlags &= ~(EF_NODRAW);
 			ent->s.modelGhoul2 = 1;
 			ent->s.eType = ET_MISSILE;
@@ -509,7 +509,7 @@ void SP_info_jedimaster_start(gentity_t *ent)
 
 	ent->flags = FL_BOUNCE_HALF;
 
-	ent->s.modelindex = G_ModelIndex("models/weapons2/saber/saber_w.glm");
+	ent->s.modelindex = G_ModelIndex( DEFAULT_SABER_MODEL );
 	ent->s.modelGhoul2 = 1;
 	ent->s.g2radius = 20;
 	//ent->s.eType = ET_GENERAL;
@@ -1589,7 +1589,7 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 	{
 		int defSkin;
 
-		Com_sprintf( afilename, sizeof( afilename ), "models/players/kyle/model.glm" );
+		Com_sprintf( afilename, sizeof( afilename ), "models/players/" DEFAULT_MODEL "/model.glm" );
 		handle = trap->G2API_InitGhoul2Model(&precachedKyle, afilename, 0, 0, -20, 0, 0);
 
 		if (handle<0)
@@ -1597,7 +1597,7 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 			return;
 		}
 
-		defSkin = trap->R_RegisterSkin("models/players/kyle/model_default.skin");
+		defSkin = trap->R_RegisterSkin("models/players/" DEFAULT_MODEL "/model_default.skin");
 		trap->G2API_SetSkin(precachedKyle, 0, defSkin, defSkin);
 	}
 
@@ -1908,7 +1908,7 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 
 		if (!g2SaberInstance)
 		{
-			trap->G2API_InitGhoul2Model(&g2SaberInstance, "models/weapons2/saber/saber_w.glm", 0, 0, -20, 0, 0);
+			trap->G2API_InitGhoul2Model(&g2SaberInstance, DEFAULT_SABER_MODEL, 0, 0, -20, 0, 0);
 
 			if (g2SaberInstance)
 			{
@@ -3327,7 +3327,6 @@ void ClientSpawn(gentity_t *ent) {
 			}
 		}
 	}
-
 	client->pers.teamState.state = TEAM_ACTIVE;
 
 	// toggle the teleport bit so the client knows to not lerp
@@ -3406,6 +3405,10 @@ void ClientSpawn(gentity_t *ent) {
 	client->ps.fd = savedForce;
 
 	client->ps.duelIndex = ENTITYNUM_NONE;
+
+	//spawn with 100
+	client->ps.jetpackFuel = 100;
+	client->ps.cloakFuel = 100;
 
 	client->pers = saved;
 	client->sess = savedSess;
@@ -3487,9 +3490,7 @@ void ClientSpawn(gentity_t *ent) {
 		wDisable = g_weaponDisable.integer;
 	}
 
-	//spawn with 100
-	client->ps.jetpackFuel = 100;
-	client->ps.cloakFuel = 100;
+
 
 	if ( level.gametype != GT_HOLOCRON
 		&& level.gametype != GT_JEDIMASTER
@@ -3815,6 +3816,14 @@ void ClientSpawn(gentity_t *ent) {
 		{
 			ent->health = client->ps.stats[STAT_HEALTH] = client->ps.stats[STAT_MAX_HEALTH] = 100;
 		}
+	}
+	else if (client->ps.stats[STAT_MAX_HEALTH] <= 100)
+	{
+		ent->health = client->ps.stats[STAT_HEALTH] = client->ps.stats[STAT_MAX_HEALTH] * 1.25;
+	}
+	else if (client->ps.stats[STAT_MAX_HEALTH] < 125)
+	{
+		ent->health = client->ps.stats[STAT_HEALTH] = 125;
 	}
 	else
 	{

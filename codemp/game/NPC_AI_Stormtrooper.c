@@ -2873,6 +2873,13 @@ void NPC_BSST_Attack( void )
 		shoot = qfalse;
 	}
 
+	if ( NPCS.NPC->enemy && NPCS.NPC->enemy->enemy )
+	{
+		if ( NPCS.NPC->enemy->s.weapon == WP_SABER && NPCS.NPC->enemy->enemy->s.weapon == WP_SABER )
+		{//don't shoot at an enemy jedi who is fighting another jedi, for fear of injuring one or causing rogue blaster deflections (a la Obi Wan/Vader duel at end of ANH)
+			shoot = qfalse;
+		}
+	}
 	//FIXME: don't shoot right away!
 	if ( NPCS.NPC->client->ps.weaponTime > 0 )
 	{
@@ -2895,6 +2902,17 @@ void NPC_BSST_Attack( void )
 			if( !(NPCS.NPCInfo->scriptFlags & SCF_FIRE_WEAPON) ) // we've already fired, no need to do it again here
 			{
 				WeaponThink( qtrue );
+			}
+			//NASTY
+			if ( NPCS.NPC->s.weapon == WP_ROCKET_LAUNCHER
+				&& (NPCS.ucmd.buttons&BUTTON_ATTACK)
+				&& !move
+				&& g_npcspskill.integer > 1
+				&& !Q_irand( 0, 3 ) )
+			{//every now and then, shoot a homing rocket
+				NPCS.ucmd.buttons &= ~BUTTON_ATTACK;
+				NPCS.ucmd.buttons |= BUTTON_ALT_ATTACK;
+				NPCS.NPC->client->ps.weaponTime = Q_irand( 1000, 2500 );
 			}
 		}
 	}

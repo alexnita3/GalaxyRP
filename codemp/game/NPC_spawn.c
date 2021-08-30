@@ -1751,11 +1751,9 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 		{//last guy should fire this target when he dies
 			newent->target = ent->closetarget;
 		}
-		
 		ent->targetname = NULL;
-
 		//why not remove me...?  Because of all the string pointers?  Just do G_NewStrings?
-		G_FreeEntity(ent);//bye!
+		G_FreeEntity( ent );//bye!
 	}
 
 finish:

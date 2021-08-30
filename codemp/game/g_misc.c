@@ -169,7 +169,6 @@ void SP_light( gentity_t *self ) {
 	G_SpawnInt( "style", "0", &self->count );
 	G_SpawnInt( "switch_style", "0", &self->bounceCount );
 	G_SpawnInt( "style_off", "0", &self->fly_sound_debounce_time );
-
 	G_SetOrigin( self, self->s.origin );
 	trap->LinkEntity( (sharedEntity_t *)self );
 
@@ -353,7 +352,7 @@ Damage: default is none
 14 = MAT_CRATE2		(red multi-colored crate chunks)
 15 = MAT_WHITE_METAL (white angular chunks for Stu, NS_hideout )
 FIXME/TODO:
-set size better? - FIXED
+set size better?
 multiple damage models?
 custom explosion effect/sound?
 */
