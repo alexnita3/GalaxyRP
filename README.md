@@ -2,105 +2,66 @@
 
 ![cover_image](https://user-images.githubusercontent.com/16083854/130863860-95907912-39bf-4684-be9a-db8e04f73603.png)
 
-This project is a fork of Zyk Mod, which is itself a fork of OpenJK. The aim is to improve on the work Zyk has done and move the project into a different direction: Player Roleplaying as opposed to an "RPG" game.
+<div align="center">
+  
+This project is a fork of **Zyk Mod**, which is itself a fork of [OpenJK](https://github.com/JACoders/OpenJK). The aim is to improve on the work Zyk has done and move the project into a different direction: Player Roleplaying as opposed to an "RPG" game.
 This mod will be geared towards the RP community mainly. It will have features to prevent common occurences such as "spec-hiding", "Mary-sues" and more! It will also contain features that help player immersion.
 
-# OpenJK
+[![version](https://img.shields.io/github/v/release/alexnita3/GalaxyRP?label=Current%20Version&color=brightgreen)](https://github.com/alexnita3/GalaxyRP/releases)
+[![discord](https://img.shields.io/badge/Discord-Join-blueviolet.svg?logo=discord&style=flat&logoColor=white)](https://discord.gg/aKnXckEFr5)
+[![issues](https://img.shields.io/github/issues/alexnita3/GalaxyRP.svg?label=Issues%20%26%20Requests&color=red)](https://github.com/alexnita3/GalaxyRP/issues)
+[![guides](https://img.shields.io/badge/GalaxyRP-Website-blue.svg)](https://alexnita3.github.io)
+[![license](https://img.shields.io/github/license/alexnita3/GalaxyRP.svg?label=License&color=yellow)](#license)
 
-OpenJK is an effort by the JACoders group to maintain and improve the game engines on which the Jedi Academy (JA) and Jedi Outcast (JO) games run on, while maintaining *full backwards compatibility* with the existing games. *This project does not attempt to rebalance or otherwise modify core gameplay*.
+</div>
 
-Our aims are to:
-* Improve the stability of the engine by fixing bugs and improving performance.
-* Provide a clean base from which new JO and JA code modifications can be made.
-* Make available this engine to more operating systems. To date, we have ports on Linux and macOS.
+# Information
+- Mod releases and download [here](https://github.com/alexnita3/GalaxyRP/releases)
+- Mod dcumentation and guides [here](https://alexnita3.github.io)
+- Mod support **Discord** chat [here](https://discord.gg/aKnXckEFr5)
 
-Currently, the most stable portion of this project is the Jedi Academy multiplayer code, with the single player code in a reasonable state.
+# Features
+The mod contains these following main features:
 
-Rough support for Jedi Outcast single player is also available, however this should be considered heavily work in progress. This is not currently actively worked on or tested. OpenJK does not have Jedi Outcast multiplayer support.
+- An account system
+- Custom Force powers
+- Complete rebalance between gunslingers and Force users
+- An item shop
+- A completely revamped chat system, which makes writing much easier, and declutters the server
+- Different distances at which chat can be seen, depending on 22 chat modifiers
+- A news system that admins can use to let people know of major happenings in the galaxy
+- An inventory system for custom items
+- A description system that allows players to see your description
+- A dice system
+- A level system, and skill points system
+- An admin system with admin commands. These can be given one by one to each account
+- Acount settings, which the player can configure to turn on or off some features
+- A Racing Mode, with prize for the winner
+- A Duel Tournament system, with prize for the winner
+- Credits, which can be used to buy and sell stuff while roleplaying
+- A skill counter
+- An ally system, which allows a player to add or remove allies
+- An emote system, together with 57 worded emotes, with a further 3000 accessible by id
+- Players can call vote to single player maps.
+- Siege voice chat in FFA gametype
+- An entity system, which allows players to add, edit, list and remove entities that are in the map
+- Commands to remap shaders in a map
+- A client-side plugin with menus
+- Many cvars at server.cfg to customize mod features
+- And more...
 
-Please use discretion when making issue requests on GitHub. The [JKHub sub-forum](https://jkhub.org/forums/forum/49-openjk/) is a better place for support queries, discussions, and feature requests.
-
-<a href="https://discord.gg/dPNCfeQ"><img src="https://img.shields.io/badge/discord-join-7289DA.svg?logo=discord&longCache=true&style=flat" /></a>
-[![Forum](https://img.shields.io/badge/forum-JKHub.org%20OpenJK-brightgreen.svg)](https://jkhub.org/forums/forum/49-openjk/)
-
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/1153/badge.svg)](https://scan.coverity.com/projects/1153)
-
-## License
-
-OpenJK is licensed under GPLv2 as free software. You are free to use, modify and redistribute OpenJK following the terms in LICENSE.txt.
-
-
-## For players
-
-To install OpenJK, you will first need Jedi Academy installed. If you don't already own the game you can buy it from online stores such as [Steam](http://store.steampowered.com/app/6020/), [Amazon](http://www.amazon.com/Star-Wars-Jedi-Knight-Academy-Pc/dp/B0000A2MCN) or [GOG](https://www.gog.com/game/star_wars_jedi_knight_jedi_academy).
-
-Installing and running OpenJK:
-
-1. [Download the latest build](http://builds.openjk.org) for your operating system.
-2. Extract the contents of the file into the Jedi Academy `GameData/` folder. For Steam users, this will be in `<Steam Folder>/steamapps/common/Jedi Academy/GameData`.
-3. Run `openjk.x86.exe` (Windows), `openjk.i386` (Linux 32-bit), `openjk.x86_64` (Linux 64-bit) or the `OpenJK` app bundle (macOS), depending on your operating system.
-
-
-**Linux Instructions**
-
-If you do not have a windows partition and need to download the game base.
-
-1. Download  and Install SteamCMD [SteamCMD](https://developer.valvesoftware.com/wiki/SteamCMD#Linux) .
-2. Set the download path using steamCMD, force_install_dir <path> .
-3. Using SteamCMD Set the platform to windows to download any windows game on steam. @sSteamCmdForcePlatformType "windows"
-4. Using SteamCMD download the game,  app_update 6020.
-5. [Download the latest build](http://builds.openjk.org) for your operating system.
-6. Extract the contents of the file into the Jedi Academy `GameData/` folder. For Steam users, this will be in `<Steam Folder>/steamapps/common/Jedi Academy/GameData`.
-
-
-**macOS Instructions**
-
-If you have the Mac App Store Version of Jedi Academy, follow these steps to get OpenJK runnning under macOS:
-
-1. Install [Homebrew](http://brew.sh/) if you don't have it.
-2. Open the Terminal app, and enter the command `brew install sdl2`.
-3. Extract the contents of the OpenJK DMG ([Download the latest build](http://builds.openjk.org)) into the game directory `/Applications/Star Wars Jedi Knight: Jedi Academy.app/Contents/`
-4. Run `OpenJK.app` or `OpenJK SP.app` 
-5. Savegames, Config Files and Log Files are stored in `/Users/<USER>/Library/Application Support/OpenJK/`
-
-
-## For Developers
-
-
-### Building OpenJK
+# Building
+The mod actually requires the only game-code files from the build project: `jampgamex86`, `cgamex86` and `uix86`. MP Engine files and SP files have been disabled for builds. You can follow the **OpenJK** guides for build process:
 
 * [Compilation guide](https://github.com/JACoders/OpenJK/wiki/Compilation-guide)
 * [Debugging guide](https://github.com/JACoders/OpenJK/wiki/Debugging)
 
+# Maintainers
+- Alex
+- ZelZel
+- JustJordyn
+- RepJunkie
+- TriForce
 
-### Contributing to OpenJK
-
-* [Fork](https://github.com/JACoders/OpenJK/fork) the project on GitHub
-* Create a new branch and make your changes
-* Send a [pull request](https://help.github.com/articles/creating-a-pull-request) to upstream (JACoders/OpenJK)
-
-
-### Using OpenJK as a base for a new mod
-
-* [Fork](https://github.com/JACoders/OpenJK/fork) the project on GitHub
-* Change the GAMEVERSION define in codemp/game/g_local.h from "OpenJK" to your project name
-* If you make a nice change, please consider back-porting to upstream via pull request as described above. This is so everyone benefits without having to reinvent the wheel for every project.
-
-
-## Maintainers (in alphabetical order)
-
-* Ensiform
-* Razish
-* Xycaleth
-
-
-## Significant contributors (in alphabetical order)
-
-* eezstreet
-* exidl
-* ImperatorPrime
-* mrwonko
-* redsaurus
-* Scooper
-* Sil
-* smcv
+# License
+**OpenJK** is licensed under GPLv2 as free software. You are free to use, modify and redistribute OpenJK following the terms in LICENSE.txt.
