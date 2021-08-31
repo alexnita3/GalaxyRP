@@ -1468,6 +1468,19 @@ void InitializeSQL(void)
 	}
 	trap->Print("Done with Skills table.\n");
 
+	//Create Weapons Table
+	trap->Print("Initializing Items Table.\n");
+
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Items' ('ItemID' INTEGER, 'CharID' INTEGER, 'ItemName' TEXT, PRIMARY KEY(ItemID))", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Items table.\n");
+
 	trap->Print("All tables have been initialized.\n");
 }
 //TODO: PUT THESE IN AN ACCOUNT.h
@@ -2417,7 +2430,7 @@ void Cmd_Login_F(gentity_t * ent)
 	return;
 }
 
-void Cmd_Test_f(gentity_t *ent) {
+void Cmd_InitializeMod_f(gentity_t *ent) {
 	InitializeSQL();
 }
 
@@ -20378,6 +20391,7 @@ command_t commands[] = {
 //	{ "guardianquest",		Cmd_GuardianQuest_f,		CMD_ALIVE|CMD_RPG|CMD_NOINTERMISSION },
 	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
 	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
+	{ "initializetables",	Cmd_InitializeMod_f,		0 },
 	{ "inv",				Cmd_Inventory_f,			CMD_LOGGEDIN},
 	{ "inventory",				Cmd_Inventory_f,			CMD_LOGGEDIN},
 	{ "jetpack",			Cmd_Jetpack_f,				CMD_ALIVE|CMD_NOINTERMISSION },
@@ -20442,7 +20456,6 @@ command_t commands[] = {
 	{ "tele",				Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
-	{ "test",				Cmd_Test_f,					0 },
 //	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN},
