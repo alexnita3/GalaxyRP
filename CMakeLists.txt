@@ -43,10 +43,6 @@ option(BuildSPEngine "Whether to create projects for the SP engine (openjk_sp.ex
 option(BuildSPGame "Whether to create projects for the SP gamecode (jagamex86.dll)" ON)
 option(BuildSPRdVanilla "Whether to create projects for the SP default renderer (rdsp-vanilla_x86.dll)" ON)
 
-option(BuildJK2SPEngine "Whether to create projects for the jk2 SP engine (openjo_sp.exe)" OFF)
-option(BuildJK2SPGame "Whether to create projects for the jk2 sp gamecode mod (jk2gamex86.dll)" OFF)
-option(BuildJK2SPRdVanilla "Whether to create projects for the jk2 sp renderer (rdjosp-vanilla_x86.dll)" OFF)
-
 option(BuildTests "Whether to build automatic unit tests (requires Boost)" OFF)
 
 include(CMakeDependentOption)
@@ -154,9 +150,6 @@ set(MPDed "openjkded.${Architecture}")
 set(MPGame "jampgame${Architecture}")
 set(MPCGame "cgame${Architecture}")
 set(MPUI "ui${Architecture}")
-set(JK2SPEngine "openjo_sp.${Architecture}")
-set(JK2SPGame "jospgame${Architecture}")
-set(JK2SPVanillaRenderer "rdjosp-vanilla_${Architecture}")
 set(AssetsPk3 "openjk-${Architecture}.pk3")
 # Library names
 set(MPBotLib "botlib")
@@ -169,7 +162,6 @@ set(SharedLib "shared")
 #=============================================================================
 set(SPDir "${CMAKE_SOURCE_DIR}/code")
 set(MPDir "${CMAKE_SOURCE_DIR}/codemp")
-set(JK2SPDir "${CMAKE_SOURCE_DIR}/codeJK2")
 set(SharedDir ${CMAKE_SOURCE_DIR}/shared)
 set(OpenJKLibDir "${CMAKE_SOURCE_DIR}/lib")
 set(GSLIncludeDirectory "${OpenJKLibDir}/gsl-lite/include")
@@ -377,9 +369,6 @@ add_subdirectory(lib/minizip)
 
 # Add projects
 add_subdirectory(${SPDir})
-if(BuildJK2SPGame)
-	add_subdirectory("${JK2SPDir}/game")
-endif()
 
 add_subdirectory(${MPDir})
 
