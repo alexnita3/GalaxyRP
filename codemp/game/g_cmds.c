@@ -1373,7 +1373,7 @@ void set_model(gentity_t * ent, char modelName[MAX_STRING_CHARS])
 
 	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
 
-	//this is how u get the current model
+	//Alex: this is how u get the current model
 	//Q_strncpyz(modelname, Info_ValueForKey(userinfo, "model"), sizeof(modelname));
 	Info_SetValueForKey(userinfo, "model", modelName);
 	trap->SetUserinfo(clientNum, userinfo);
@@ -1387,7 +1387,7 @@ void set_netname(gentity_t * ent, char netName[MAX_STRING_CHARS])
 	char userinfo[MAX_INFO_STRING];
 	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
 
-	//set name
+	//Alex: set display name
 	Q_strncpyz(ent->client->pers.netname, netName, sizeof(ent->client->pers.netname));
 	Q_strncpyz(ent->client->pers.netname_nocolor, netName, sizeof(ent->client->pers.netname_nocolor));
 	Q_StripColor(ent->client->pers.netname_nocolor);
@@ -1416,7 +1416,7 @@ void InitializeSQL(void)
 		return;
 	}
 
-	//Create Account Table
+	//Alex: Create Account Table
 	trap->Print("Initializing Account table.\n");
 
 	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Accounts' ('AccountID' INTEGER, 'PlayerSettings' INTEGER, 'AdminLevel' INTEGER, 'Password' TEXT, 'Username' TEXT, 'DefaultChar' TEXT, PRIMARY KEY(AccountID))", 0, 0, &zErrMsg);
@@ -1429,7 +1429,7 @@ void InitializeSQL(void)
 	}
 	trap->Print("Done with Account table.\n");
 
-	//Create Character Table
+	//Alex: Create Character Table
 	trap->Print("Initializing Character Table.\n");
 
 	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, 'Description' TEXT, 'NetName' TEXT, 'ModelName' TEXT, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
@@ -1442,7 +1442,7 @@ void InitializeSQL(void)
 	}
 	trap->Print("Done with Character table.\n");
 
-	//Create Weapons Table
+	//Alex: Create Weapons Table
 	trap->Print("Initializing Weapons Table.\n");
 
 	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Weapons' ('CharID' INTEGER, 'AmmoBlaster' INTEGER, 'AmmoPowercell' INTEGER, 'AmmoMetalBolts' INTEGER, 'AmmoRockets' INTEGER, 'AmmoThermal' INTEGER, 'AmmoTripmine' INTEGER, 'AmmoDetpack' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
@@ -1455,7 +1455,7 @@ void InitializeSQL(void)
 	}
 	trap->Print("Done with Weapons table.\n");
 
-	//Create Skills Table
+	//Alex: Create Skills Table
 	trap->Print("Initializing Skills Table.\n");
 
 	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Skills' ('CharID' INTEGER, 'Jump' INTEGER, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
@@ -1467,6 +1467,19 @@ void InitializeSQL(void)
 		return;
 	}
 	trap->Print("Done with Skills table.\n");
+
+	//Alex: Create Items Table
+	trap->Print("Initializing Items Table.\n");
+
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Items' ('ItemID' INTEGER, 'CharID' INTEGER, 'ItemName' TEXT, PRIMARY KEY(ItemID))", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Items table.\n");
 
 	trap->Print("All tables have been initialized.\n");
 }
@@ -1494,14 +1507,14 @@ void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqli
 			ent->client->ps.ammo[i] = sqlite3_column_int(stmt, i - 1);
 		}
 
-		//kill them so that it takes effect
+		//Alex: kill them so that it takes effect
 		G_Kill(ent);
 		sqlite3_finalize(stmt);
 		return;
 
 	}
 
-	//kill them anyway
+	//Alex: kill them anyway
 	G_Kill(ent);
 	return;
 }
@@ -1568,7 +1581,7 @@ void load_character_skills_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, 
 
 	}
 
-	//kill them anyway
+	//Alex: kill them anyway
 	G_Kill(ent);
 	return;
 }
@@ -1783,7 +1796,7 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 	}
 
 	trap->Print(va("UPDATE Accounts SET DefaultChar='%s' WHERE AccountID='%i'\n", character_name, ent->client->sess.accountID));
-	//Set as default so users always log into their last char
+	//Alex: Set as default so users always log into their last char
 	rc = sqlite3_exec(db, va("UPDATE Accounts SET DefaultChar='%s' WHERE AccountID='%i'", character_name, ent->client->sess.accountID), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
@@ -2417,7 +2430,7 @@ void Cmd_Login_F(gentity_t * ent)
 	return;
 }
 
-void Cmd_Test_f(gentity_t *ent) {
+void Cmd_InitializeMod_f(gentity_t *ent) {
 	InitializeSQL();
 }
 
@@ -20378,6 +20391,7 @@ command_t commands[] = {
 //	{ "guardianquest",		Cmd_GuardianQuest_f,		CMD_ALIVE|CMD_RPG|CMD_NOINTERMISSION },
 	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
 	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
+	{ "initializetables",	Cmd_InitializeMod_f,		0 },
 	{ "inv",				Cmd_Inventory_f,			CMD_LOGGEDIN},
 	{ "inventory",				Cmd_Inventory_f,			CMD_LOGGEDIN},
 	{ "jetpack",			Cmd_Jetpack_f,				CMD_ALIVE|CMD_NOINTERMISSION },
@@ -20442,7 +20456,6 @@ command_t commands[] = {
 	{ "tele",				Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
-	{ "test",				Cmd_Test_f,					0 },
 //	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN},
