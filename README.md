@@ -10,14 +10,14 @@ This mod will be geared towards the RP community mainly. It will have features t
 [![version](https://img.shields.io/github/v/release/alexnita3/GalaxyRP?label=Current%20Version&color=brightgreen)](https://github.com/alexnita3/GalaxyRP/releases)
 [![discord](https://img.shields.io/badge/Discord-Join-blueviolet.svg?logo=discord&style=flat&logoColor=white)](https://discord.gg/aKnXckEFr5)
 [![issues](https://img.shields.io/github/issues/alexnita3/GalaxyRP.svg?label=Issues%20%26%20Requests&color=red)](https://github.com/alexnita3/GalaxyRP/issues)
-[![guides](https://img.shields.io/badge/GalaxyRP-Website-blue.svg)](https://alexnita3.github.io)
+[![guides](https://img.shields.io/badge/GalaxyRP-Website-blue.svg)](https://galaxyrp.github.io/)
 [![license](https://img.shields.io/github/license/alexnita3/GalaxyRP.svg?label=License&color=yellow)](#license)
 
 </div>
 
 # Information
 - Mod releases and download [here](https://github.com/alexnita3/GalaxyRP/releases)
-- Mod dcumentation and guides [here](https://alexnita3.github.io)
+- Mod dcumentation and guides [here](https://galaxyrp.github.io/)
 - Mod support **Discord** chat [here](https://discord.gg/aKnXckEFr5)
 
 # Features
@@ -58,10 +58,10 @@ The mod actually requires the only game-code files from the build project: `jamp
 
 # Maintainers
 - Alex
-- ZelZel
 - JustJordyn
 - RepJunkie
 - TriForce
+- ZelZel
 
 # License
 **OpenJK** is licensed under GPLv2 as free software. You are free to use, modify and redistribute OpenJK following the terms in LICENSE.txt.
