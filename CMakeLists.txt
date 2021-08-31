@@ -43,11 +43,6 @@ option(BuildSPEngine "Whether to create projects for the SP engine (openjk_sp.ex
 option(BuildSPGame "Whether to create projects for the SP gamecode (jagamex86.dll)" OFF)
 option(BuildSPRdVanilla "Whether to create projects for the SP default renderer (rdsp-vanilla_x86.dll)" OFF)
 
-option(BuildTests "Whether to build automatic unit tests (requires Boost)" OFF)
-
-include(CMakeDependentOption)
-cmake_dependent_option(BuildSymbolServer "Build WIP Windows Symbol Server (experimental and unused)" OFF "NOT WIN32 OR NOT MSVC" OFF)
-
 # Configure the use of bundled libraries.  By default, we assume the user is on
 # a platform that does not require any bundling.
 #
@@ -371,12 +366,3 @@ add_subdirectory(lib/minizip)
 add_subdirectory(${SPDir})
 
 add_subdirectory(${MPDir})
-
-if(BuildSymbolServer)
-	add_subdirectory("tools/WinSymbol")
-endif()
-
-if(BuildTests)
-	enable_testing()
-	add_subdirectory("tests")
-endif()
