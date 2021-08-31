@@ -16,16 +16,14 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-# Subdirectories to package JK2 and JKA into
+# Subdirectories to package JKA into
 set(JKAInstallDir "JediAcademy")
-set(JK2InstallDir "JediOutcast")
 
 # Install components
 set(JKAMPCoreComponent "JKAMPCore")
 set(JKAMPServerComponent "JKAMPServer")
 set(JKAMPClientComponent "JKAMPClient")
 set(JKASPClientComponent "JKASPClient")
-set(JK2SPClientComponent "JK2SPClient")
 
 # Component display names
 include(CPackComponent)
@@ -39,8 +37,6 @@ set(CPACK_COMPONENT_JKAMPSERVER_DISPLAY_NAME "Server")
 set(CPACK_COMPONENT_JKAMPSERVER_DESCRIPTION "Files required to run a Jedi Academy server.")
 set(CPACK_COMPONENT_JKASPCLIENT_DISPLAY_NAME "Core")
 set(CPACK_COMPONENT_JKASPCLIENT_DESCRIPTION "Files required to play the Jedi Academy single player game.")
-set(CPACK_COMPONENT_JK2SPCLIENT_DISPLAY_NAME "Core")
-set(CPACK_COMPONENT_JK2SPCLIENT_DESCRIPTION "Files required to play the Jedi Outcast single player game.")
 set(CPACK_COMPONENTS_ALL
 	${JKAMPCoreComponent}
 	${JKAMPClientComponent}
@@ -54,7 +50,6 @@ set(CPACK_COMPONENT_JKAMPCORE_GROUP "JKAMP")
 set(CPACK_COMPONENT_JKAMPCLIENT_GROUP "JKAMP")
 set(CPACK_COMPONENT_JKAMPSERVER_GROUP "JKAMP")
 set(CPACK_COMPONENT_JKASPCLIENT_GROUP "JKASP")
-set(CPACK_COMPONENT_JK2SPCLIENT_GROUP "JK2SP")
 
 cpack_add_component_group(JKAMP
 	DISPLAY_NAME "Jedi Academy Multiplayer"
@@ -62,9 +57,6 @@ cpack_add_component_group(JKAMP
 cpack_add_component_group(JKASP
 	DISPLAY_NAME "Jedi Academy Single Player"
 	DESCRIPTION "Jedi Academy single player game")
-cpack_add_component_group(JK2SP
-	DISPLAY_NAME "Jedi Outcast Single Player"
-	DESCRIPTION "Jedi Outcast single player game")
 
 if(WIN32)
 	set(CPACK_NSIS_DISPLAY_NAME "OpenJK")
@@ -120,28 +112,6 @@ if(WIN32)
 				COMPONENT ${JKASPClientComponent})
 	endif()
 
-	# Don't run this for now until we have JK2 SP working
-	if(FALSE AND BuildJK2SPEngine)
-		string(REPLACE "/" "\\\\" ICON "${SPDir}/win32/starwars.ico")
-		set(CPACK_NSIS_CREATE_ICONS_EXTRA
-			"${CPACK_NSIS_CREATE_ICONS_EXTRA}
-			CreateShortCut '$SMPROGRAMS\\\\$STARTMENU_FOLDER\\\\Jedi Outcast SP.lnk' \\\\
-				'$INSTDIR\\\\${JK2SPEngine}.exe' \\\\
-				'' \\\\
-				'${ICON}'")
-
-		set(CPACK_NSIS_DELETE_ICONS_EXTRA
-			"${CPACK_NSIS_DELETE_ICONS_EXTRA}
-			Delete '$SMPROGRAMS\\\\$MUI_TEMP\\\\Jedi Outcast SP.lnk'")
-
-		install(FILES ${MPDir}/OpenAL32.dll ${MPDir}/EaxMan.dll
-			DESTINATION ${JK2InstallDir}
-			COMPONENT ${JK2SPClientComponent})
-
-		install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
-				DESTINATION ${JK2InstallDir}
-				COMPONENT ${JK2SPClientComponent})
-	endif()
 endif()
 
 # CPack for installer creation
