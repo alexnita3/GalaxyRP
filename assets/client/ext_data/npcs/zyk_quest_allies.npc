@@ -1,0 +1,263 @@
+
+sage_of_light
+{
+	playerModel	jawa
+	weapon	WP_SABER
+	saber	kyle
+	saber2	kyle
+	saberStyle	6
+	FP_HEAL			3
+	FP_LEVITATION	3
+	FP_SPEED		1
+	FP_PUSH			3
+	FP_PULL			3
+	FP_PROTECT		3
+	FP_ABSORB		3
+	FP_SEE			3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	scale 		90
+	health		1700
+	snd			jawa
+	sndcombat	jawa
+	sndjedi	jawa
+	rank		crewman
+	playerTeam	TEAM_PLAYER
+	enemyTeam	TEAM_ENEMY
+	class		CLASS_REBORN
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	150
+}
+
+sage_of_darkness
+{
+	playerModel	jawa
+	scale 		90
+	health		1700
+	snd			jawa
+	sndcombat	jawa
+	sndjedi	jawa
+	weapon	WP_SABER
+	saber	tavion
+	saber2	tavion
+	saberStyle	6
+	FP_DRAIN		3
+	FP_LEVITATION	3
+	FP_SPEED		1
+	FP_PUSH			3
+	FP_PULL			3
+	FP_GRIP	3
+	FP_RAGE		3
+	FP_LIGHTNING		3
+	FP_SEE			3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		crewman
+	playerTeam	TEAM_PLAYER
+	enemyTeam	TEAM_ENEMY
+	class		CLASS_REBORN
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	150
+}
+
+sage_of_eternity
+{
+	playerModel	jawa
+	scale 		90
+	health		1700
+	snd			jawa
+	sndcombat	jawa
+	sndjedi	jawa
+	weapon	WP_SABER
+	saber	dual_1
+	saberStyle	7
+	FP_DRAIN		3
+	FP_LEVITATION	3
+	FP_SPEED		1
+	FP_PUSH			3
+	FP_PULL			3
+	FP_RAGE		3
+	FP_LIGHTNING		3
+	FP_GRIP		3
+	FP_SEE			3
+	FP_HEAL			3
+	FP_PROTECT	3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		crewman
+	playerTeam	TEAM_PLAYER
+	enemyTeam	TEAM_ENEMY
+	class		CLASS_REBORN
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	150
+}
+
+quest_ragnos
+{
+	playerModel	marka_ragnos
+	weapon	WP_NONE
+        health 1000
+	rank		captain
+	snd		ragnos
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	playerTeam	TEAM_PLAYER
+	enemyTeam	TEAM_ENEMY
+	class		CLASS_GRAN
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	200
+}
+
+sage_of_universe
+{
+	playerModel	jawa
+	scale 		80
+	health		2000
+	snd			jawa
+	sndcombat	jawa
+	sndjedi	jawa
+	weapon	WP_SABER
+	saber	dual_1
+	saberStyle	7
+	FP_DRAIN		3
+	FP_LEVITATION	3
+	FP_SPEED		2
+	FP_PUSH			3
+	FP_PULL			3
+	FP_RAGE		3
+	FP_LIGHTNING		3
+	FP_GRIP		3
+	FP_SEE			3
+	FP_HEAL			3
+	FP_PROTECT	3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		crewman
+	playerTeam	TEAM_PLAYER
+	enemyTeam	TEAM_ENEMY
+	class		CLASS_REBORN
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	150
+}
+
+quest_jawa
+{
+	playerModel	jawa
+	weapon		WP_NONE
+	scale 		75
+	health		200
+	snd		jawa
+	sndcombat	jawa
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		ltcomm
+	playerTeam	TEAM_PLAYER
+	enemyTeam	TEAM_ENEMY
+	class		CLASS_STORMTROOPER
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	150
+}
+
+guardian_of_time
+{
+	playerModel	jedi_tf
+	customSkin	head_A2|torso_A1|lower_A1
+	customRGBA	120 120 120
+	weapon	WP_SABER
+	saber	dual_2
+	saberStyle	7
+	FP_LEVITATION	3
+	FP_SPEED		3
+	FP_PUSH			3
+	FP_PULL			3
+	FP_RAGE		3
+	FP_LIGHTNING		3
+	FP_SEE			3
+	FP_ABSORB		3
+	FP_PROTECT	3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	health	8000
+	playerTeam	TEAM_PLAYER
+	enemyTeam	TEAM_ENEMY
+	class		CLASS_REBORN
+	snd		female_jedi2
+	sndcombat	female_jedi2
+	sndjedi		female_jedi2
+	sndextra	female_jedi2
+	yawspeed	150
+	walkSpeed	150
+	runSpeed	300
+}
+
+jawa_seller
+{
+	playerModel	jawa
+	scale 		75
+	health		200
+	snd		jawa
+	sndcombat	jawa
+	reactions	3
+	aim		3
+	move		3
+	aggression	3
+	evasion		3
+	intelligence	5
+	rank		crewman
+	playerTeam	TEAM_PLAYER
+	enemyTeam	TEAM_ENEMY
+	class		CLASS_JAWA
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	150
+}

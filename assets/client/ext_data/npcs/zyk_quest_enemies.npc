@@ -1,0 +1,466 @@
+
+quest_reborn
+{
+	playerModel	reborn
+	saber		reborn
+	weapon	WP_SABER
+	saberStyle	1
+	FP_LEVITATION	1
+	FP_SABER_DEFENSE 1
+	FP_SABER_OFFENSE 1
+	forcePowerMax	50
+	forceRegenRate	200
+	reactions	1
+	aim		1
+	move		1
+	aggression	1
+	evasion		1
+	intelligence	1
+	hfov		120
+	vfov		120
+	scale		94
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		reborn1
+	sndcombat	reborn1
+	sndjedi		reborn1
+	yawSpeed	60
+	walkSpeed	45
+	runSpeed	180
+	health		150
+}
+
+quest_reborn_blue
+{
+	playerModel	reborn
+	customSkin	blue
+	saber		reborn
+	weapon	WP_SABER
+	saberStyle	1
+	saberStyle	2
+	FP_LEVITATION	1
+	FP_SABER_DEFENSE 2
+	FP_SABER_OFFENSE 2
+	forcePowerMax	50
+	forceRegenRate	200
+	reactions	2
+	aim		2
+	move		2
+	aggression	2
+	evasion		2
+	intelligence	2
+	hfov		120
+	vfov		120
+	scale		94
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		reborn1
+	sndcombat	reborn1
+	sndjedi		reborn1
+	yawSpeed	60
+	walkSpeed	45
+	runSpeed	180
+	health		300
+}
+
+quest_reborn_red
+{
+	playerModel	reborn
+	customSkin	red
+	saber		reborn
+	weapon	WP_SABER
+	saberStyle	1
+	saberStyle	2
+	saberStyle	3
+	FP_LEVITATION	1
+	FP_SPEED	1
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	forcePowerMax	50
+	forceRegenRate	200
+	rank		captain
+	reactions	3
+	aim		3
+	move		3
+	aggression	3
+	evasion		3
+	intelligence	3
+	hfov		120
+	vfov		120
+	scale		94
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		reborn1
+	sndcombat	reborn1
+	sndjedi		reborn1
+	yawSpeed	60
+	walkSpeed	45
+	runSpeed	180
+	health		450
+}
+
+quest_reborn_boss
+{
+	playerModel	reborn
+	customSkin	boss
+	saber		tavion
+	weapon	WP_SABER
+	saberStyle	1
+	saberStyle	2
+	saberStyle	3
+	saberStyle	4
+	FP_LEVITATION	3
+	FP_SPEED		2
+	FP_PUSH			3
+	FP_PULL			3
+	FP_GRIP			3
+	FP_LIGHTNING	3
+	FP_RAGE			3
+	FP_PROTECT		3
+	FP_ABSORB		3
+	FP_SEE			3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	rank		captain
+	reactions	5
+	aim			5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	hfov		160
+	vfov		160
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		reborn3
+	sndcombat	reborn3
+	sndjedi		reborn3
+	yawSpeed	140
+	walkSpeed	80
+	runSpeed	200
+	health		600
+}
+
+quest_protocol_imp
+{
+	playerModel	protocol
+	altFire		1
+	weapon		WP_BRYAR_PISTOL
+	weapon		WP_ROCKET_LAUNCHER
+	weapon		WP_REPEATER
+	weapon		WP_FLECHETTE
+	weapon		WP_CONCUSSION
+	surfOn		head_off
+	surfOff		head
+	customSkin	imp
+	health 2000
+	reactions	3
+	aim		3
+	move		3
+	aggression	3
+	evasion		3
+	intelligence	5
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_PROTOCOL
+	yawSpeed	60
+	runSpeed	150
+	walkSpeed	50
+	height		65
+	width		12
+	hFOV		120
+	vfov		45
+	snd		protocol
+	sndcombat	protocol
+	sndjedi	protocol
+}
+
+quest_sand_raider_green
+{
+	playerModel	cultist
+	saber		tavion
+	weapon	WP_SABER
+	saberStyle	2
+	saberStyle	3
+	saberStyle	4
+	saberStyle	5
+	FP_LEVITATION	3
+	FP_SPEED		1
+	FP_PUSH			3
+	FP_PULL			3
+	FP_SEE			3
+	FP_HEAL			3
+	FP_PROTECT	3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	rank		captain
+	reactions	3
+	aim		3
+	move		3
+	aggression	3
+	evasion		3
+	intelligence	3
+	hfov		120
+	vfov		120
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		cultist1
+	sndcombat	cultist1
+	sndjedi		cultist1
+	yawSpeed	80
+	walkSpeed	70
+	runSpeed	220
+	health		1000
+}
+
+quest_sand_raider_brown
+{
+	playerModel	cultist
+	customSkin	brown
+	saber		tavion
+	weapon	WP_SABER
+	saberStyle	2
+	saberStyle	3
+	saberStyle	4
+	saberStyle	5
+	FP_DRAIN		3
+	FP_LEVITATION	3
+	FP_SPEED		1
+	FP_PUSH			3
+	FP_PULL			3
+	FP_RAGE		3
+	FP_SEE			3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	rank		captain
+	reactions	3
+	aim		3
+	move		3
+	aggression	3
+	evasion		3
+	intelligence	3
+	hfov		120
+	vfov		120
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		cultist1
+	sndcombat	cultist1
+	sndjedi		cultist1
+	yawSpeed	80
+	walkSpeed	70
+	runSpeed	220
+	health		1000
+}
+
+quest_sand_raider_blue
+{
+	playerModel	cultist
+	customSkin	blue
+	saber		tavion
+	weapon	WP_SABER
+	saberStyle	2
+	saberStyle	3
+	saberStyle	4
+	saberStyle	5
+	FP_LEVITATION	3
+	FP_SPEED		1
+	FP_PUSH			3
+	FP_PULL			3
+	FP_SEE			3
+	FP_TELEPATHY	3
+	FP_ABSORB		3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	rank		captain
+	reactions	3
+	aim		3
+	move		3
+	aggression	3
+	evasion		3
+	intelligence	3
+	hfov		120
+	vfov		120
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		cultist1
+	sndcombat	cultist1
+	sndjedi		cultist1
+	yawSpeed	80
+	walkSpeed	70
+	runSpeed	220
+	health		1000
+}
+
+quest_sand_raider_red
+{
+	playerModel	cultist
+	customSkin	red
+	saber		tavion
+	weapon	WP_SABER
+	saberStyle	2
+	saberStyle	3
+	saberStyle	4
+	saberStyle	5
+	FP_LEVITATION	3
+	FP_SPEED		1
+	FP_PUSH			3
+	FP_PULL			3
+	FP_LIGHTNING		3
+	FP_GRIP		3
+	FP_SEE			3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	rank		captain
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	hfov		120
+	vfov		120
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		reborn3
+	sndcombat	reborn3
+	sndjedi		reborn3
+	yawSpeed	80
+	walkSpeed	70
+	runSpeed	220
+	health		1000
+}
+
+quest_super_soldier
+{
+	playerModel	shadowtrooper
+	altFire		1
+	weapon		WP_DISRUPTOR
+	weapon		WP_ROCKET_LAUNCHER
+	weapon		WP_REPEATER
+	weapon		WP_FLECHETTE
+	weapon		WP_CONCUSSION
+	rank		commander
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	hfov		160
+	vfov		160
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_STORMTROOPER
+	snd		shadow1
+	sndcombat	shadow1
+	yawSpeed	140
+	walkSpeed	55
+	runSpeed	200
+	health		700
+}
+
+quest_mage
+{
+	playerModel	jawa
+	scale 		75
+	FP_LEVITATION	3
+	FP_PUSH			3
+	FP_PULL			3
+	FP_GRIP			3
+	FP_LIGHTNING	3
+	FP_RAGE			3
+	FP_PROTECT		3
+	FP_ABSORB		3
+	FP_SEE			3
+	health		800
+	snd		jawa
+	sndcombat	jawa
+	reactions	4
+	aim		4
+	move		4
+	aggression	4
+	evasion		4
+	intelligence	5
+	rank		crewman
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	yawspeed	100
+	walkSpeed	70
+	runSpeed	170
+}
+
+quest_citizen_warrior
+{
+	playerModel	jawa
+	altFire		1
+	weapon		WP_DISRUPTOR
+	weapon		WP_REPEATER
+	weapon		WP_FLECHETTE
+	weapon		WP_CONCUSSION
+	scale 		75
+	health		500
+	snd		jawa
+	sndcombat	jawa
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		commander
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_STORMTROOPER
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	150
+}
+
+map_guardian
+{
+	playerModel	weequay
+	customSkin	sp
+	customRGBA	30 30 40
+	altFire		1
+	weapon	WP_DISRUPTOR
+	weapon	WP_DEMP2
+	weapon	WP_FLECHETTE
+	weapon	WP_CONCUSSION
+	FP_LEVITATION	3
+	health		7000
+	headPitchRangeDown 30
+	reactions		5
+	aim			5
+	move			5
+	aggression		5
+	evasion			5
+	intelligence	5
+	earshot			2048
+	visrange		4096
+	hfov			120
+	vfov			100
+	rank			commander
+	playerTeam		TEAM_ENEMY
+	enemyTeam		TEAM_PLAYER
+	class			CLASS_BOBAFETT
+	walkSpeed		90
+	runSpeed		270
+	snd			rax
+	sndcombat		rax
+	sndextra		rax
+	yawspeed		180
+}
