@@ -1055,25 +1055,26 @@ void do_scale(gentity_t *ent, int new_size)
 }
 
 void display_scale_help(gentity_t *ent) {
-	FILE *help_file = NULL;
+	int i;
+	int scale_table_min = 30; // start scale
+	int scale_table_max = 150;
+	float scale_table_meters = 0.53; // start meters
+	float scale_table_factor = 3.2808399;
 
-	char line[MAX_STRING_CHARS];
+	trap->SendServerCommand(ent->s.number, "print \""
+			"^9++=========================++\n"
+			"^9||^3 Scale ^9||^3 Meters ^9||^3 Feet ^9||\n"
+			"^9++=========================++\n"
+			"^7\"");
 
-	help_file = fopen("GalaxyRP/textfiles/scaletable.txt", "r");
-
-	if (help_file != NULL) {
-
-		while (fscanf(help_file, "%[^\n] ", line) != EOF) {
-			trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", line));
-		}
-
-		fclose(help_file);
-	}
-	else
+	for (i = scale_table_min; i <= scale_table_max; i++)
 	{
-		//if file isn't there, create it
-		trap->SendServerCommand(ent->s.number, "print \"The help file is missing.\n\"");
+		trap->SendServerCommand(ent->s.number, va("print \"^9||^3 %-5i ^9||^3 %-6.2f ^9||^3 %-4.2f ^9||\n\"", i, scale_table_meters, (scale_table_meters*scale_table_factor)));
+		if (i == 56 || i == 112) trap->SendServerCommand(ent->s.number, "print \"^9++=========================++\n\"");
+		scale_table_meters += 0.02;
 	}
+
+	trap->SendServerCommand(ent->s.number, "print \"^9++=========================++\n\"");
 	return;
 }
 
@@ -1097,7 +1098,7 @@ void Cmd_Scale_f( gentity_t *ent ) {
 			return;
 		}
 		else {
-			trap->SendServerCommand(ent - g_entities, "print \"Usage: /scale <playername/help> <size between 20 and 500 (optional)>.\n\"");
+			trap->SendServerCommand(ent - g_entities, "print \"Usage: /scale <playername/help> <size between 20 and 500 (optional, default is 100)>.\n\"");
 			return;
 		}
 
@@ -1105,7 +1106,7 @@ void Cmd_Scale_f( gentity_t *ent ) {
 
 	if (trap->Argc() != 3)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Usage: /scale <playername/help> <size between 20 and 500 (optional)>.\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: /scale <playername/help> <size between 20 and 500 (optional, default is 100)>.\n\"");
 		return;
 	}
 
