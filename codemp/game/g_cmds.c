@@ -19199,7 +19199,7 @@ void Cmd_News_f(gentity_t *ent) {
 
 	if (trap->Argc() < 2)
 	{
-		news_file = fopen("GalaxyRP/news.txt", "r");
+		news_file = fopen("GalaxyRP/news/news.txt", "r");
 	}
 	else {
 	
@@ -19209,13 +19209,13 @@ void Cmd_News_f(gentity_t *ent) {
 			return;
 		}
 		if (strcmp(arg1, "republic") == 0) {
-			news_file = fopen("GalaxyRP/news_republic.txt", "r");
+			news_file = fopen("GalaxyRP/news/news_republic.txt", "r");
 		}
 		if (strcmp(arg1, "sith") == 0) {
-			news_file = fopen("GalaxyRP/news_sith.txt", "r");
+			news_file = fopen("GalaxyRP/news/news_sith.txt", "r");
 		}
 		if (strcmp(arg1, "jedi") == 0) {
-			news_file = fopen("GalaxyRP/news_jedi.txt", "r");
+			news_file = fopen("GalaxyRP/news/news_jedi.txt", "r");
 		}
 	}
 
@@ -19261,7 +19261,7 @@ void Cmd_UpdateNews_f(gentity_t *ent) {
 
 	if (trap->Argc() < 3)
 	{
-		news_file = fopen("GalaxyRP/news.txt", "w");
+		news_file = fopen("GalaxyRP/news/news.txt", "w");
 
 		trap->Argv(1, arg2, sizeof(arg2));
 
@@ -19276,13 +19276,13 @@ void Cmd_UpdateNews_f(gentity_t *ent) {
 			return;
 		}
 		if (strcmp(arg1, "republic") == 0) {
-			news_file = fopen("GalaxyRP/news_republic.txt", "w");
+			news_file = fopen("GalaxyRP/news/news_republic.txt", "w");
 		}
 		if (strcmp(arg1, "sith") == 0) {
-			news_file = fopen("GalaxyRP/news_sith.txt", "w");
+			news_file = fopen("GalaxyRP/news/news_sith.txt", "w");
 		}
 		if (strcmp(arg1, "jedi") == 0) {
-			news_file = fopen("GalaxyRP/news_jedi.txt", "w");
+			news_file = fopen("GalaxyRP/news/news_jedi.txt", "w");
 		}
 	}
 	trap->Argv(1, arg2, sizeof(arg2));
