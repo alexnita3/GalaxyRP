@@ -632,14 +632,14 @@
 			type				ITEM_TYPE_EDITFIELD
 			text			  	"Video Resolution:"
 			cvar    			"r_customWidth"
-			rect				385 63 35 20
+			rect				385 63 28 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			0
 			textaligny			0
 			font 				4
 			textscale 			1
 			forecolor			.615 .615 .956 1
-			maxchars 			4
+			maxchars 			5
 			visible				1
 			descText			"Set the custom width"
 			cvarTest			"ui_r_mode"
@@ -669,14 +669,14 @@
 			type				ITEM_TYPE_EDITFIELD
 			text			  	"×"
 			cvar    			"r_customHeight"
-			rect				430 63 35 20
+			rect				430 63 28 20
 			textalign			ITEM_ALIGN_RIGHT
 			textalignx			0
 			textaligny			0
 			font 				4
 			textscale 			1
 			forecolor			.615 .615 .956 1
-			maxchars 			4
+			maxchars 			5
 			visible				1
 			descText			"Set the custom height"
 			cvarTest			"ui_r_mode"
