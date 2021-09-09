@@ -1056,25 +1056,29 @@ void do_scale(gentity_t *ent, int new_size)
 
 void display_scale_help(gentity_t *ent) {
 	int i;
-	int scale_table_min = 30; // start scale
-	int scale_table_max = 150;
-	float scale_table_meters = 0.53; // start meters
-	float scale_table_factor = 3.2808399;
+	int scale_table_min = 30;			// start scale
+	int scale_table_max = 150;			// final scale
+	float scale_table_meters = 0.53;	// start meters
+	float scale_table_steps = 0.02;		// increased by
 
 	trap->SendServerCommand(ent->s.number, "print \""
-			"^9++=========================++\n"
-			"^9||^3 Scale ^9||^3 Meters ^9||^3 Feet ^9||\n"
-			"^9++=========================++\n"
+			"^9++============================++\n"
+			"^9||^3 Scale ^9||^3 Meters ^9||^3 Feet    ^9||\n"
+			"^9++============================++\n"
 			"^7\"");
 
 	for (i = scale_table_min; i <= scale_table_max; i++)
 	{
-		trap->SendServerCommand(ent->s.number, va("print \"^9||^3 %-5i ^9||^3 %-6.2f ^9||^3 %-4.2f ^9||\n\"", i, scale_table_meters, (scale_table_meters*scale_table_factor)));
-		if (i == 56 || i == 112) trap->SendServerCommand(ent->s.number, "print \"^9++=========================++\n\"");
-		scale_table_meters += 0.02;
+		float scale_table_length = (100 * scale_table_meters / 2.54);
+		float scale_table_feet = floor(scale_table_length / 12);
+		float scale_table_inch = (scale_table_length - 12 * scale_table_feet);
+
+		trap->SendServerCommand(ent->s.number, va("print \"^9||^3 %-5i ^9||^3 %-6.2f ^9||^3 %1.0f' %2.0f'' ^9||\n\"", i, scale_table_meters, scale_table_feet, scale_table_inch));
+		if (i == 56 || i == 112) trap->SendServerCommand(ent->s.number, "print \"^9++============================++\n\"");
+		scale_table_meters += scale_table_steps;
 	}
 
-	trap->SendServerCommand(ent->s.number, "print \"^9++=========================++\n\"");
+	trap->SendServerCommand(ent->s.number, "print \"^9++============================++\n\"");
 	return;
 }
 
