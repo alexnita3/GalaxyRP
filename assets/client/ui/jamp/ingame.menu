@@ -308,6 +308,8 @@
 			forecolor			1 .682 0 1
 			backcolor			0 0 0 0
 			visible				1
+			cvarTest			"sv_running"
+			hideCvar 			{ 1 }
 			action 
 			{ 
 				play			"sound/interface/button1.wav" ;
@@ -328,7 +330,7 @@
 			name				addBotButton
 			group				none
 			style				WINDOW_STYLE_SHADER
-			rect				205 0 70 32
+			rect				195 0 70 32
 			background			"gfx/menus/menu_buttonback"			// Frame around button
 			forecolor			1 1 1 1
 			decoration
@@ -343,7 +345,7 @@
 			text				@MENUS_ADD_BOT
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_FILLED
-			rect				205 0 70 32
+			rect				195 0 70 32
 			font				2
 			textscale			.8
 			textstyle			3
