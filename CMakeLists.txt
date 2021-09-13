@@ -21,7 +21,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment ver
 
 set(InOpenJK ON)
 
-set(ProjectName "OpenJK" CACHE STRING "Project Name")
+set(ProjectName "GalaxyRP" CACHE STRING "OpenJK")
 project(${ProjectName})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -366,3 +366,8 @@ add_subdirectory(lib/minizip)
 add_subdirectory(${SPDir})
 
 add_subdirectory(${MPDir})
+
+# Add PK3 projects
+add_subdirectory("assets")
+set_property(TARGET assets PROPERTY PROJECT_LABEL "Build PK3")
+set_property(TARGET assets-extras PROPERTY PROJECT_LABEL "Build PK3 (Extras)")
