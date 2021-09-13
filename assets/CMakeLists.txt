@@ -22,11 +22,7 @@ add_zip_command(${TMPFILE} ${OUTFILE} DIR "${PK3PATH}" FILES "${PK3ASSETS}" )
 add_zip_command(${TMPFILE_2} ${OUTFILE_2} DIR "${PK3PATH_2}" FILES "${PK3ASSETS_2}" )
 
 # Finish and cleanup
-add_custom_target(assets DEPENDS "${TMPFILE}")
+add_custom_target(assets DEPENDS "${TMPFILE}" "${TMPFILE_2}")
 add_custom_command(TARGET assets POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E remove -f "${TMPFILE}"
-)
-add_custom_target(assets-extras DEPENDS "${TMPFILE_2}")
-add_custom_command(TARGET assets-extras POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E remove -f "${TMPFILE_2}"
+	COMMAND ${CMAKE_COMMAND} -E remove -f "${TMPFILE}" "${TMPFILE_2}"
 )

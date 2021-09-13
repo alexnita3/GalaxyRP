@@ -370,4 +370,3 @@ add_subdirectory(${MPDir})
 # Add PK3 projects
 add_subdirectory("assets")
 set_property(TARGET assets PROPERTY PROJECT_LABEL "Build PK3")
-set_property(TARGET assets-extras PROPERTY PROJECT_LABEL "Build PK3 (Extras)")
