@@ -108,7 +108,10 @@ typedef struct worded_animation_s {
 	const char* animation_category;
 } worded_animation_t;
 
-//alex: list of all worded emotes, ids, and categories, these are to be stored alphabetically
+/*
+alex: list of all worded emotes, ids, and categories, these are to be stored alphabetically
+the animation code is to be exactly the same as the correcponding id in anims.h
+*/
 const worded_animation_t animations[MAX_WORDED_EMOTES] = {
 	{"aim",				931,	"Blaster"},
 	{"aim2",			936,	"Blaster"},
@@ -566,7 +569,7 @@ void Cmd_Emote_f( gentity_t *ent )
 				}
 			}
 		}
-		//end the table
+		//alex: end the table
 		print_table_horizontal_line(ent);
 	}
 }
