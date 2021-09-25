@@ -101,266 +101,102 @@ const int max_skill_levels[NUMBER_OF_SKILLS] = {
 };
 
 #define MAX_WORDED_EMOTES 84
-//alex: animation words, categories and codes go here THEY HAVE TO BE IN THE SAME ORDER!
-const int anim_codes[MAX_WORDED_EMOTES] = {
-		998, 	//"sit"
-		999, 	//"sit2",
-		1394,	//"sit3",
-		1001,	//"meditate",
-		1010,	//"kneel",
-		1097,	//"die",
-		1099,	//"beg",
-		1098,	//"beg2",
-		1321,	//"beg3",
-		1188,	//"bow",
-		936, 	//"point",
-		1382,	//"lean",
-		940, 	//"leantable"
-		922, 	//"cuffed",
-		939, 	//"heroic",
-		985, 	//"wave",
-		954, 	//"type",
-		1004,	//"sneak",
-		1181,	//"cover",
-		931, 	//"aim",
-		936, 	//"aim2",
-		114, 	//"aim3",
-		1407,	//"aim4",
-		1406,	//"aim5",
-		989,	//"hug",
-		968,	//"commlinkup",
-		970,	//"commlinkdown",
-		993, 	//"saberthrow",
-		1014,	//"sitpilot",
-		1191,	//"flourish",
-		1192,	//"flourish2",
-		1193,	//"flourish3",
-		1194,	//"flourish4",
-		1195,	//"flourish5",
-		1196,	//"victory",
-		1197,	//"victory2",
-		1198,	//"victory3",
-		1200,	//"victory4",
-		1313,	//"sleep",
-		1333,	//"mindtrick",
-		1348,	//"tossleft",
-		1349,	//"tossright",
-		1368,	//"windy",
-		1409,	//"surrender",
-		1328,	//"pressbutton",
-		1337,	//"forcelightning",
-		1360,	//"drainloop",
-		1370,	//"spreadlegs",
-		1380,	//"fear",
-		1404,	//"holddetonator",
-		1344,	//"forcechoke",
-		1322,	//"choked",
-		986,	//"holdobject"
-		1543,	//cross
-		1544,	//cufffront
-		1545,	//cuffknees
-		1546,	//bump
-		1547,	//handsback
-		1548,	//handsfront
-		1549,	//headhold
-		1550,	//hips
-		1551,	//hips2
-		1552,	//handstand
-		1553,	//scratch
-		1554,	//hurt
-		1555,	//hurt2
-		1556,	//relax
-		1557,	//leanback
-		1558,	//ponder
-		1559,	//ponder2
-		1560,	//salute 
-		1561,	//situp
-		1562,	//ataru
-		1563,	//djemso
-		1564,	//jarkai
-		1565,	//jarkai2
-		1566,	//makashi
-		1567,	//idle
-		1568,	//stance
-		1569,	//shien
-		1570,	//soresu
-		1571,	//meditate3
-		1572,	//meditate2
-		1573	//force
-};
+//alex: type for storing worde animations wo use with the emote system
+typedef struct worded_animation_s {
+	const char* animation_name;
+	int			animation_code;
+	const char* animation_category;
+} worded_animation_t;
 
-const char anim_words[MAX_WORDED_EMOTES][50] = {
-	"sit",
-	"sit2",
-	"sit3",
-	"meditate",
-	"kneel",
-	"die",
-	"beg",
-	"beg2",
-	"beg3",
-	"bow",
-	"point",
-	"lean",
-	"leantable",
-	"cuffed",
-	"heroic",
-	"wave",
-	"type",
-	"sneak",
-	"cover",
-	"aim",
-	"aim2",
-	"aim3",
-	"aim4",
-	"aim5",
-	"hug",
-	"commlinkup",
-	"commlinkdown",
-	"saberthrow",
-	"sitpilot",
-	"flourish",
-	"flourish2",
-	"flourish3",
-	"flourish4",
-	"flourish5",
-	"victory",
-	"victory2",
-	"victory3",
-	"victory4",
-	"sleep",
-	"mindtrick",
-	"tossleft",
-	"tossright",
-	"windy",
-	"surrender",
-	"pressbutton",
-	"forcelightning",
-	"drainloop",
-	"spreadlegs",
-	"fear",
-	"holddetonator",
-	"forcechoke",
-	"choked",
-	"holdobject",
-	"cross",
-	"cufffront",
-	"cuffknees",
-	"bump",
-	"handsback",
-	"handsfront",
-	"headhold",
-	"hips",
-	"hips2",
-	"handstand",
-	"scratch",
-	"hurt",
-	"hurt2",
-	"relax",
-	"leanback",
-	"ponder",
-	"ponder2",
-	"salute",
-	"situp",
-	"ataru",
-	"djemso",
-	"jarkai",
-	"jarkai2",
-	"makashi",
-	"idle",
-	"stance",
-	"shien",
-	"soresu",
-	"meditate3",
-	"meditate2",
-	"force"
-};
-
-const char anim_categories[MAX_WORDED_EMOTES][50] = {
-	"Body",			//"sit"
-	"Body",			//"sit2",
-	"Body",			//"sit3",
-	"Body",			//"meditate",
-	"Body",			//"kneel",
-	"Body",			//"die",
-	"Body",			//"beg",
-	"Body",			//"beg2",
-	"Body",			//"beg3",
-	"Body",			//"bow",
-	"Body",			//"point",
-	"Body",			//"lean",
-	"Body",			//"leantable"
-	"Body",			//"cuffed",
-	"Body",			//"heroic",
-	"Body",			//"wave",
-	"Body",			//"type",
-	"Movement",		//"sneak",
-	"Movement",		//"cover",
-	"Blaster",		//"aim",
-	"Blaster",		//"aim2",
-	"Blaster",		//"aim3",
-	"Blaster",		//"aim4",
-	"Blaster",		//"aim5",
-	"Body",			//"hug",
-	"Body",			//"commlinkup",
-	"Body",			//"commlinkdown",
-	"Saber",		//"saberthrow",
-	"Body",			//"sitpilot",
-	"Saber",		//"flourish",
-	"Saber",		//"flourish2",
-	"Saber",		//"flourish3",
-	"Saber",		//"flourish4",
-	"Saber",		//"flourish5",
-	"Saber",		//"victory",
-	"Saber",		//"victory2",
-	"Saber",		//"victory3",
-	"Saber",		//"victory4",
-	"Body",			//"sleep",
-	"Force",		//"mindtrick",
-	"Force",		//"tossleft",
-	"Force",		//"tossright",
-	"Movement",		//"windy",
-	"Body",			//"surrender",
-	"Body",			//"pressbutton",
-	"Force",		//"forcelightning",
-	"Force",		//"drainloop",
-	"Body",			//"spreadlegs",
-	"Body",			//"fear",
-	"Body",			//"holddetonator",
-	"Force",		//"forcechoke",
-	"Body",			//"choked",
-	"Body",			//"holdobject"
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Force",
-	"Force",
-	"Force"
+/*
+alex: list of all worded emotes, ids, and categories, these are to be stored alphabetically
+the animation code is to be exactly the same as the correcponding id in anims.h
+*/
+const worded_animation_t animations[MAX_WORDED_EMOTES] = {
+	{"aim",				931,	"Blaster"},
+	{"aim2",			936,	"Blaster"},
+	{"aim3",			114,	"Blaster"},
+	{"aim4",			1407,	"Blaster"},
+	{"aim5",			1406,	"Blaster"},
+	{"ataru",			1562,	"Saber"},
+	{"beg",				1099,	"Body"},
+	{"beg2",			1098,	"Body"},
+	{"beg3",			1321,	"Body"},
+	{"bow",				1188,	"Body"},
+	{"bump",			1546,	"Body"},
+	{"choked",			1322,	"Body"},
+	{"commlinkdown",	970,	"Body"},
+	{"commlinkup",		968,	"Body"},
+	{"cover",			1181,	"Movement"},
+	{"cross",			1543,	"Body"},
+	{"cuffed",			922,	"Body"},
+	{"cufffront",		1544,	"Body"},
+	{"cuffknees",		1545,	"Body"},
+	{"die",				1097,	"Body"},
+	{"djemso",			1563,	"Saber"},
+	{"drainloop",		1360,	"Force"},
+	{"fear",			1380,	"Body"},
+	{"flourish",		1191,	"Saber"},
+	{"flourish2",		1192,	"Saber"},
+	{"flourish3",		1193,	"Saber"},
+	{"flourish4",		1194,	"Saber"},
+	{"flourish5",		1195,	"Saber"},
+	{"force",			1573,	"Force"},
+	{"forcechoke",		1344,	"Force"},
+	{"forcelightning",	1337,	"Force"},
+	{"handsback",		1547,	"Body"},
+	{"handsfront",		1548,	"Body"},
+	{"handstand",		1552,	"Body"},
+	{"headhold",		1549,	"Body"},
+	{"heroid",			939,	"Body"},
+	{"hips",			1550,	"Body"},
+	{"hips2",			1551,	"Body"},
+	{"holddetonator",	1404,	"Body"},
+	{"holdobject",		986,	"Body"},
+	{"hug",				989,	"Body"},
+	{"hurt",			1554,	"Body"},
+	{"hurt2",			1555,	"Body"},
+	{"idle",			1567,	"Saber"},
+	{"jarkai",			1564,	"Saber"},
+	{"jarkai2",			1565,	"Saber"},
+	{"kneel",			1010,	"Body"},
+	{"lean",			1382,	"Body"},
+	{"leanback",		1557,	"Body"},
+	{"leantable",		940,	"Body"},
+	{"makashi",			1566,	"Saber"},
+	{"meditate",		1001,	"Body"},
+	{"meditate2",		1572,	"Force"},
+	{"meditate3",		1571,	"Force"},
+	{"mindtrick",		1333,	"Force"},
+	{"point",			936,	"Body"},
+	{"ponder",			1558,	"Body"},
+	{"ponder2",			1559,	"Body"},
+	{"pressbutton",		1328,	"Body"},
+	{"relax",			1556,	"Body"},
+	{"saberthrow",		993,	"Saber"},
+	{"salute",			1560,	"Body"},
+	{"scratch",			1553,	"Body"},
+	{"shien",			1569,	"Saber"},
+	{"sit",				998,	"Body"},
+	{"sit2",			999,	"Body"},
+	{"sit3",			1394,	"Body"},
+	{"sitpilot",		1014,	"Body"},
+	{"situp",			1561,	"Body"},
+	{"sleep",			1313,	"Body"},
+	{"sneak",			1004,	"Movement"},
+	{"soresu",			1570,	"Saber"},
+	{"spreadlegs",		1370,	"Body"},
+	{"stance",			1568,	"Saber"},
+	{"surrender",		1409,	"Body"},
+	{"tossleft",		1348,	"Force"},
+	{"tossright",		1349,	"Force"},
+	{"type",			954,	"Body"},
+	{"victory",			1196,	"Saber"},
+	{"victory2",		1197,	"Saber"},
+	{"victory3",		1198,	"Saber"},
+	{"victory4",		1200,	"Saber"},
+	{"wave",			985,	"Body"},
+	{"windy",			1368,	"Movement"},
 };
 
 #define MAX_EMOTE_CATEGORIES 5
@@ -639,7 +475,7 @@ void print_header(gentity_t *ent, char text[MAX_STRING_CHARS]) {
 	print_table_horizontal_line(ent);
 }
 
-// zyk: plays an animation from anims.h
+// alex: plays an animation from anims.h by id OR a word (look for animation_t)
 void Cmd_Emote_f( gentity_t *ent )
 {
 	char arg[MAX_TOKEN_CHARS] = {0};
@@ -695,10 +531,11 @@ void Cmd_Emote_f( gentity_t *ent )
 
 	for (int i = 0; i < MAX_WORDED_EMOTES; i++)
 	{
-		if (strcmp(anim_id, anim_words[i]) == 0)
+		//alex: here, the anim_id is the worded animation name
+		if (strcmp(anim_id, animations[i].animation_name) == 0)
 		{
 			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-			ent->client->ps.forceDodgeAnim = anim_codes[i];
+			ent->client->ps.forceDodgeAnim = animations[i].animation_code;
 			ent->client->ps.forceHandExtendTime = level.time + 1000;
 
 			ent->client->pers.player_statuses |= (1 << 1);
@@ -726,13 +563,13 @@ void Cmd_Emote_f( gentity_t *ent )
 		for (int i = 0; i < MAX_EMOTE_CATEGORIES; i++) {
 			print_header(ent, anim_headers[i]);
 			for (int j = 0; j < MAX_WORDED_EMOTES; j++) {
-				//if animation is in that category
-				if (strcmp(anim_categories[j], anim_headers[i]) == 0) {
-					print_row(ent, anim_words[j]);
+				//alex: if animation is in that category
+				if (strcmp(animations[j].animation_category, anim_headers[i]) == 0) {
+					print_row(ent, animations[j].animation_name);
 				}
 			}
 		}
-		//end the table
+		//alex: end the table
 		print_table_horizontal_line(ent);
 	}
 }
