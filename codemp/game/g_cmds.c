@@ -1241,199 +1241,6 @@ void set_netname(gentity_t * ent, char netName[MAX_STRING_CHARS])
 	return;
 }
 
-//TODO: PUT THESE IN AN SQL.h
-qboolean admin_account_exists(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-
-	int count;
-
-	trap->Print("hello");
-
-	rc = sqlite3_prepare(db, "SELECT count(AccountID) FROM Accounts WHERE Username='admin'", -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return qfalse;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return qfalse;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		count = sqlite3_column_int(stmt, 0);
-		sqlite3_finalize(stmt);
-	}
-
-	trap->Print(va("Count: %i", count));
-
-	if (count == 0) {
-		return qfalse;
-	}
-
-	return qtrue;
-}
-
-void create_admin_account(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt)
-{
-	int charID;
-	int accountID;
-	char comparisonName[256] = { 0 };
-	char char_name[10] = "admin";
-
-	//Create account record
-	rc = sqlite3_exec(db, "INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('admin','admin','0','0','admin')", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-
-	//TODO BUG!!!!
-	//Get CharID for later
-	trap->Print("SELECT AccountID FROM Accounts WHERE Username='admin'");
-	rc = sqlite3_prepare(db, "SELECT AccountID FROM Accounts WHERE Username='admin'", -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		accountID = sqlite3_column_int(stmt, 0);
-		sqlite3_finalize(stmt);
-	}
-
-	//TODO: assign the default values to the entity
-	//Create character record
-	//TODO: replace Name with something better
-	trap->Print(va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')\n", accountID, char_name));
-	rc = sqlite3_exec(db, va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')\n", accountID, char_name), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	//Create skill record
-	//TODO: replace Name with something better
-	trap->Print(va("INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')\n"));
-	rc = sqlite3_exec(db, va("INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')"), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	//Create ammo record
-	trap->Print(va("INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')\n"));
-	rc = sqlite3_exec(db, va("INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')"), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	return;
-}
-
-void InitializeSQL(qboolean with_admin_account, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt)
-{
-	//Alex: Create Account Table
-	trap->Print("Initializing Account table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Accounts' ('AccountID' INTEGER, 'PlayerSettings' INTEGER, 'AdminLevel' INTEGER, 'Password' TEXT, 'Username' TEXT, 'DefaultChar' TEXT, PRIMARY KEY(AccountID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Account table.\n");
-
-	//Alex: Create Character Table
-	trap->Print("Initializing Character Table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, 'Description' TEXT, 'NetName' TEXT, 'ModelName' TEXT, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Character table.\n");
-
-	//Alex: Create Weapons Table
-	trap->Print("Initializing Weapons Table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Weapons' ('CharID' INTEGER, 'AmmoBlaster' INTEGER, 'AmmoPowercell' INTEGER, 'AmmoMetalBolts' INTEGER, 'AmmoRockets' INTEGER, 'AmmoThermal' INTEGER, 'AmmoTripmine' INTEGER, 'AmmoDetpack' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Weapons table.\n");
-
-	//Alex: Create Skills Table
-	trap->Print("Initializing Skills Table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Skills' ('CharID' INTEGER, 'Jump' INTEGER, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Skills table.\n");
-
-	//Alex: Create Items Table
-	trap->Print("Initializing Items Table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Items' ('ItemID' INTEGER, 'CharID' INTEGER, 'ItemName' TEXT, PRIMARY KEY(ItemID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Items table.\n");
-
-	trap->Print("All tables have been initialized.\n");
-
-	if (with_admin_account == qtrue) {
-		trap->Print("Initializing admin account.\n");
-		if (admin_account_exists(db, zErrMsg, rc, stmt) == qfalse) {
-			create_admin_account(db, zErrMsg, rc, stmt);
-		}
-		else {
-			trap->Print("Admin account already exists, nothing to do here.\n");
-		}
-		trap->Print("Done with admin account.\n");
-	}
-
-}
 //TODO: PUT THESE IN AN ACCOUNT.h
 void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
 {
@@ -2056,8 +1863,6 @@ void Cmd_Register_F(gentity_t * ent)
 	Q_StripColor(username);
 	Q_strlwr(username);
 
-	InitializeSQL(qtrue, db, zErrMsg, rc, stmt);
-
 	rc = sqlite3_prepare(db, va("SELECT Username FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -2301,8 +2106,6 @@ void Cmd_Login_F(gentity_t * ent)
 		return;
 	}
 
-	InitializeSQL(qtrue, db, zErrMsg, rc, stmt);
-
 	trap->Argv(1, username, sizeof(username));
 	trap->Argv(2, password, sizeof(password));
 
@@ -2383,10 +2186,6 @@ void Cmd_Login_F(gentity_t * ent)
 
 	sqlite3_close(db);
 	return;
-}
-
-void Cmd_InitializeMod_f(gentity_t *ent) {
-	//InitializeSQL(qtrue);
 }
 
 void Cmd_Char_f(gentity_t *ent) {
@@ -20345,7 +20144,6 @@ command_t commands[] = {
 //	{ "guardianquest",		Cmd_GuardianQuest_f,		CMD_ALIVE|CMD_RPG|CMD_NOINTERMISSION },
 	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
 	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
-	{ "initializetables",	Cmd_InitializeMod_f,		0 },
 	{ "inv",				Cmd_Inventory_f,			CMD_LOGGEDIN},
 	{ "inventory",				Cmd_Inventory_f,			CMD_LOGGEDIN},
 	{ "jetpack",			Cmd_Jetpack_f,				CMD_ALIVE|CMD_NOINTERMISSION },
