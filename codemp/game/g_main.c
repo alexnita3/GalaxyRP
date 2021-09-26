@@ -29,6 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "bg_saga.h"
 #include "b_local.h"
 #include "qcommon/q_version.h"
+#include "sqlite/sqlite3.h"
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -161,6 +162,216 @@ void G_CacheMapname( const vmCvar_t *mapname )
 {
 	Com_sprintf( level.mapname, sizeof( level.mapname ), "maps/%s.bsp", mapname->string );
 	Com_sprintf( level.rawmapname, sizeof( level.rawmapname ), "maps/%s", mapname->string );
+}
+
+//alex: checks if an admin account exists
+qboolean admin_account_exists(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	int count = 0;
+
+	rc = sqlite3_prepare(db, "SELECT count(AccountID) FROM Accounts WHERE Username='admin'", -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return qfalse;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return qfalse;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		count = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	}
+
+	if (count == 0) {
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+//alex: creates an admin account with default values and highest admin authority possible
+void create_admin_account(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt)
+{
+	int accountID = 1;
+	char comparisonName[256] = { 0 };
+	char char_name[10] = "admin";
+
+	char statement_account_entry_creation[200] = "INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('admin','admin','4194303','0','admin')";
+	char statement_account_id_select[100] = "SELECT AccountID FROM Accounts WHERE Username='admin'";
+	char statement_character_entry_creation[200] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i', '100', '1', '100', '%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')";
+	char statement_skill_entry_creation[1000] = "INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
+	char statement_weapon_entry_creation[200] = "INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')";
+
+	//alex: Create account record
+	rc = sqlite3_exec(db, statement_account_entry_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+
+	//alex: Get AccountID for later so we know which account the char is tied to
+	rc = sqlite3_prepare(db, statement_account_id_select, -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		accountID = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	}
+
+
+	//alex: Create character record
+	rc = sqlite3_exec(db, va(statement_character_entry_creation, accountID, char_name), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
+	//alex: Create skill record
+	rc = sqlite3_exec(db, statement_skill_entry_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
+	//alex: Create ammo record
+	rc = sqlite3_exec(db, statement_weapon_entry_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
+	return;
+}
+
+//alex: creates tables is they didn't exist, and admin account if it doesn't exist. This is the place to add things whenever the database structure changes (use UPDATE TABLE for further changes)
+void InitializeGalaxyRpTables(qboolean with_admin_account)
+{
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt;
+
+	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+	if (rc)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	char statement_account_table_creation[186] = "CREATE TABLE IF NOT EXISTS 'Accounts' ('AccountID' INTEGER, 'PlayerSettings' INTEGER, 'AdminLevel' INTEGER, 'Password' TEXT, 'Username' TEXT, 'DefaultChar' TEXT, PRIMARY KEY(AccountID))";
+	char statement_character_table_creation[249] = "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, 'Description' TEXT, 'NetName' TEXT, 'ModelName' TEXT, PRIMARY KEY(CharID))";
+	char statement_weapon_table_creation[244] = "CREATE TABLE IF NOT EXISTS 'Weapons' ('CharID' INTEGER, 'AmmoBlaster' INTEGER, 'AmmoPowercell' INTEGER, 'AmmoMetalBolts' INTEGER, 'AmmoRockets' INTEGER, 'AmmoThermal' INTEGER, 'AmmoTripmine' INTEGER, 'AmmoDetpack' INTEGER, PRIMARY KEY(CharID))";
+	char statement_skill_table_creation[1249] = "CREATE TABLE IF NOT EXISTS 'Skills' ('CharID' INTEGER, 'Jump' INTEGER, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER, PRIMARY KEY(CharID))";
+	char statement_item_table_creation[110] = "CREATE TABLE IF NOT EXISTS 'Items' ('ItemID' INTEGER, 'CharID' INTEGER, 'ItemName' TEXT, PRIMARY KEY(ItemID))";
+
+	//Alex: Create Account Table
+	trap->Print("Initializing Account table.\n");
+
+	rc = sqlite3_exec(db, statement_account_table_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Account table.\n");
+
+	//Alex: Create Character Table
+	trap->Print("Initializing Character Table.\n");
+
+	rc = sqlite3_exec(db, statement_character_table_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Character table.\n");
+
+	//Alex: Create Weapons Table
+	trap->Print("Initializing Weapons Table.\n");
+
+	rc = sqlite3_exec(db, statement_weapon_table_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Weapons table.\n");
+
+	//Alex: Create Skills Table
+	trap->Print("Initializing Skills Table.\n");
+
+	rc = sqlite3_exec(db, statement_skill_table_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Skills table.\n");
+
+	//Alex: Create Items Table
+	trap->Print("Initializing Items Table.\n");
+
+	rc = sqlite3_exec(db, statement_item_table_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Items table.\n");
+
+	trap->Print("All tables have been initialized.\n");
+
+	if (with_admin_account == qtrue) {
+		trap->Print("Initializing admin account.\n");
+		if (admin_account_exists(db, zErrMsg, rc, stmt) == qfalse) {
+			create_admin_account(db, zErrMsg, rc, stmt);
+		}
+		else {
+			trap->Print("Admin account already exists, nothing to do here.\n");
+		}
+		trap->Print("Done with admin account.\n");
+	}
+
+	sqlite3_close(db);
 }
 
 // zyk: this function spawns an info_player_deathmatch entity in the map
@@ -1904,6 +2115,10 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 	// zyk: setting map as a custom quest map if it has a mission
 	load_custom_quest_mission();
+
+	//alex: create tables required for storing stuff, and also create admin account. ONLY if those do not already exist.
+	InitializeGalaxyRpTables(qtrue);
+
 }
 
 
