@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "g_local.h"
 #include "ghoul2/G2.h"
 #include "bg_saga.h"
+#include "sqlite/sqlite3.h"
 
 // g_client.c -- client functions that don't happen every frame
 
@@ -3181,6 +3182,7 @@ extern void zyk_remove_guns( gentity_t *ent );
 extern void do_scale(gentity_t *ent, int new_size);
 extern int zyk_max_magic_power(gentity_t *ent);
 extern void zyk_load_common_settings(gentity_t *ent);
+extern void load_ammo_from_db(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 void ClientSpawn(gentity_t *ent) {
 	int					i = 0, index = 0, saveSaberNum = ENTITYNUM_NONE, wDisable = 0, savedSiegeIndex = 0, maxHealth = 100;
 	vec3_t				spawn_origin, spawn_angles;
@@ -4033,6 +4035,25 @@ void ClientSpawn(gentity_t *ent) {
 	//rww - make sure client has a valid icarus instance
 	trap->ICARUS_FreeEnt( (sharedEntity_t *)ent );
 	trap->ICARUS_InitEnt( (sharedEntity_t *)ent );
+
+	if (ent->client->sess.loggedin == qtrue) {
+
+		sqlite3* db;
+		char* zErrMsg = 0;
+		int rc;
+		sqlite3_stmt* stmt;
+
+		rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
+		if (rc)
+		{
+			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+			sqlite3_close(db);
+			return;
+		}
+		load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
+		sqlite3_close(db);
+	}
+
 }
 
 
