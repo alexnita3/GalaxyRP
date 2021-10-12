@@ -1309,15 +1309,9 @@ void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqli
 			ent->client->ps.ammo[i] = sqlite3_column_int(stmt, i - 1);
 		}
 
-		//Alex: kill them so that it takes effect
-		G_Kill(ent);
 		sqlite3_finalize(stmt);
 		return;
-
 	}
-
-	//Alex: kill them anyway
-	G_Kill(ent);
 	return;
 }
 
@@ -1593,8 +1587,9 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 
 		sqlite3_finalize(stmt);
 
-		load_character_skills_from_db(ent, db, zErrMsg, rc, stmt);
 		load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
+
+		load_character_skills_from_db(ent, db, zErrMsg, rc, stmt);
 	}
 
 	trap->Print(va("UPDATE Accounts SET DefaultChar='%s' WHERE AccountID='%i'\n", character_name, ent->client->sess.accountID));
@@ -2092,7 +2087,6 @@ void load_account_from_db(gentity_t * ent, char username[MAX_STRING_CHARS], sqli
 	strcpy(ent->client->pers.password, password);
 
 	load_character_from_db(ent, defaultChar, db, zErrMsg, rc, stmt);
-	load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
 
 	return;
 }
