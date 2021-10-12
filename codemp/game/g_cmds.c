@@ -30,6 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "sqlite/sqlite3.h"
 
 #define MAX_EMOTE_WORDS 11;
+#define MAX_CHAT_MODIFIERS 24;
 
 //rww - for getting bot commands...
 int AcceptBotCommand(char *cmd, gentity_t *pl);
@@ -207,6 +208,49 @@ const char anim_headers[MAX_EMOTE_CATEGORIES][50] = {
 	"Blaster",
 	"Saber",
 	"Force"
+};
+
+typedef struct chat_modifiers_s {
+	const char* chat_modifier;
+	const char* chat_format;
+	int			distance;
+} chat_modifiers_t;
+
+#define BROADCAST_DISTANCE 999999999
+#define MAX_EMOTES 31
+
+const chat_modifiers_t chat_modifiers[MAX_EMOTES] = {
+	{"/low",		"chat \"%s^9 lowers their voice:%s\n\"",	65					},
+	{"/long",		"chat \"%s:%s\n\"",							1500				},
+	{"/all",		"chat \"%s:^2%s\n\"",						BROADCAST_DISTANCE	},
+	{"/melow",		"chat \"%s^3%s\n\"",						65					},
+	{"/meall",		"chat \"%s^3%s\n\"",						BROADCAST_DISTANCE	},
+	{"/melong",		"chat \"%s^3%s\n\"",						2000				},
+	{"/me",			"chat \"%s^3%s\n\"",						1200				},
+	{"/shoutlong",	"chat \"%s shouts:^2%s\n\"",				3000				},
+	{"/shoutall",	"chat \"%s shouts:^2%s\n\"",				BROADCAST_DISTANCE	},
+	{"/shout",		"chat \"%s shouts:^2%s\n\"",				1500				},
+	{"/dolow",		"chat \"^3(%s^3)%s\n\"",					200					},
+	{"/dolong",		"chat \"^3(%s^3)%s\n\"",					2000				},
+	{"/doall",		"chat \"^3(%s^3)%s\n\"",					BROADCAST_DISTANCE	},
+	{"/do",			"chat \"^3(%s^3)%s\n\"",					1000				},
+	{"/forcelow",	"chat \"%s^5 uses the Force to%s\n\"",		200					},
+	{"/forcelong",	"chat \"%s^5 uses the Force to%s\n\"",		2000				},
+	{"/forceall",	"chat \"%s^5 uses the Force to%s\n\"",		BROADCAST_DISTANCE	},
+	{"/force",		"chat \"%s^5 uses the Force to%s\n\"",		1000				},
+	{"/mylow",		"chat \"%s^3's %s\n\"",						200					},
+	{"/myall",		"chat \"%s^3's %s\n\"",						BROADCAST_DISTANCE	},
+	{"/mylong",		"chat \"%s^3's %s\n\"",						2000				},
+	{"/my",			"chat \"%s^3's %s\n\"",						1200				},
+	{"/ryl2",		"chat \"%s ^3(Ryl - Lekku only):^2%s\n\"",	600					},
+	{"/ryl",		"chat \"%s ^3(Ryl):^2%s\n\"",				600					},
+	{"/rodian",		"chat \"%s ^3(Rodian):^2%s\n\"",			600					},
+	{"/huttese",	"chat \"%s ^3(Huttese):^2%s\n\"",			600					},
+	{"/catharese",	"chat \"%s ^3(Catharese):^2%s\n\"",			600					},
+	{"/mando",		"chat \"%s ^3(Mando'a):^2%s\n\"",			600					},
+	{"/npc",		"chat \"^3(%s^3) NPC:^4%s\n\"",				BROADCAST_DISTANCE	},
+	{"/comm",		"chat \"^6<%s^6>^3 -C-^2%s\n\"",			BROADCAST_DISTANCE	},
+	{"/c",			"chat \"^6<%s^6>^3 -C-^2%s\n\"",			BROADCAST_DISTANCE	}
 };
 
 /*
@@ -3733,19 +3777,6 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	int ooc_flag = 0;
 	char ooc_text[700] = "";
 	int broadcast_distance = 999999999;
-	int me_distance = 1200;
-	int melong_distance = 2000;
-	int melow_distance = 200;
-	int shout_distance = 1500;
-	int shoutlong_distance = 3000;
-	int do_distance = 1000;
-	int dolong_distance = 2000;
-	int dolow_distance = 200;
-	int force_distance = 1000;
-	int forcelong_distance = 2000;
-	int forcelow_distance = 200;
-	int low_distance = 65;
-	int long_distance = 1500;
 
 	if ( level.gametype < GT_TEAM && mode == SAY_TEAM ) {
 		ooc_flag = 1;
@@ -3793,83 +3824,6 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		// these two have to be in the same order, one if the distance to the modifiers, so the order has to match
 		// in chat_modifiers, shorter strings have to be AFTER the longer string (e.g. /me HAS to be AFTER /melong, otherwise it'll pick /me instead)
 
-		int max_chat_modifiers = 22;
-
-		char chat_modifiers[22][50] = {
-			"/low",
-			"/long",
-			"/all",
-			"/melow",
-			"/meall",
-			"/melong",
-			"/me",
-			"/shoutlong",
-			"/shoutall",
-			"/shout",
-			"/dolow",
-			"/dolong",
-			"/doall",
-			"/do",
-			"/forcelow",
-			"/forcelong",
-			"/forceall",
-			"/force",
-			"/mylow",
-			"/myall",
-			"/mylong",
-			"/my"
-		};
-
-		char text_formats[22][50] = {
-			"chat \"%s^9 lowers their voice:%s\n\"",
-			"chat \"%s:%s\n\"",
-			"chat \"%s:^3%s\n\"",
-			"chat \"%s^3%s\n\"",
-			"chat \"%s^3%s\n\"",
-			"chat \"%s^3%s\n\"",
-			"chat \"%s^3%s\n\"",
-			"chat \"%s shouts:^2%s\n\"",
-			"chat \"%s shouts:^2%s\n\"",
-			"chat \"%s shouts:^2%s\n\"",
-			"chat \"(%s)^3%s\n\"",
-			"chat \"(%s)^3%s\n\"",
-			"chat \"(%s)^3%s\n\"",
-			"chat \"(%s)^3%s\n\"",
-			"chat \"%s^5 uses the Force to%s\n\"",
-			"chat \"%s^5 uses the Force to%s\n\"",
-			"chat \"%s^5 uses the Force to%s\n\"",
-			"chat \"%s^5 uses the Force to%s\n\"",
-			"chat \"%s^3's %s\n\"",
-			"chat \"%s^3's %s\n\"",
-			"chat \"%s^3's %s\n\"",
-			"chat \"%s^3's %s\n\""
-		};
-
-		int chat_distances[22] = {
-			low_distance,
-			long_distance,
-			broadcast_distance,
-			melow_distance,
-			broadcast_distance,
-			melong_distance,
-			me_distance,
-			shoutlong_distance,
-			broadcast_distance,
-			shout_distance,
-			dolow_distance,
-			dolong_distance,
-			broadcast_distance,
-			do_distance,
-			forcelow_distance,
-			forcelong_distance,
-			broadcast_distance,
-			force_distance,
-			melow_distance,
-			broadcast_distance,
-			melong_distance,
-			me_distance
-		};
-
 		char slash = '/';
 
 		const char *ptr = strchr(text, slash);
@@ -3878,20 +3832,20 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			index_of_slash = ptr - text;
 		}
 
-		for (int i = 0; i < max_chat_modifiers; i++) {
-			output = strstr(text, chat_modifiers[i]);
+		for (int i = 0; i < MAX_EMOTES; i++) {
+			output = strstr(text, chat_modifiers[i].chat_modifier);
 
 			
 			if (output && index_of_slash == 0) {
-				delete_chat_command(text, strlen(chat_modifiers[i]));
+				delete_chat_command(text, strlen(chat_modifiers[i].chat_modifier));
 
 				for (j = 0; j < level.numConnectedClients; j++) {
 
 					other = &g_entities[j];
-					if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_distances[i] || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
+					if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_modifiers[i].distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
 					{
-						G_LogPrintf(va("%s: %s: %s\n"), chat_modifiers[i], ent->client->pers.netname, text);
-						trap->SendServerCommand(other->client->ps.clientNum, va(text_formats[i], ent->client->pers.netname, text));
+						G_LogPrintf(va("%s: %s: %s\n"), chat_modifiers[i].chat_modifier, ent->client->pers.netname, text);
+						trap->SendServerCommand(other->client->ps.clientNum, va(chat_modifiers[i].chat_format, ent->client->pers.netname, text));
 					}
 					else
 						continue;
