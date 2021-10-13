@@ -10543,6 +10543,15 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 	switch ( cstate.connState ) {
 	case CA_CONNECTING:
 		{
+			// Tr!Force: [AssetsCache] Detect previous game
+			char fsGame[1024];
+			trap->Cvar_VariableStringBuffer("fs_game", fsGame, 1024);
+			if (!Q_stricmp(fsGame, "GalaxyRP")) 
+			{
+				trap->Cvar_Set("ui_galaxyrp_game", "1");
+				trap->Print(S_COLOR_GREEN "GalaxyRP pre-loaded correctly!\n");
+			}
+
 			trap->SE_GetStringTextString("MENUS_AWAITING_CONNECTION", sStringEdTemp, sizeof(sStringEdTemp));
 			s = va(/*"Awaiting connection...%i"*/sStringEdTemp, cstate.connectPacketCount);
 		}

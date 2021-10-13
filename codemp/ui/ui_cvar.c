@@ -112,11 +112,23 @@ static const size_t uiCvarTableSize = ARRAY_LEN( uiCvarTable );
 void UI_RegisterCvars( void ) {
 	size_t i = 0;
 	const cvarTable_t *cv = NULL;
+	uiClientState_t	cstate; // Tr!Force: [AssetsCache] Get client state
 
 	for ( i=0, cv=uiCvarTable; i<uiCvarTableSize; i++, cv++ ) {
 		trap->Cvar_Register( cv->vmCvar, cv->cvarName, cv->defaultString, cv->cvarFlags );
 		if ( cv->update )
 			cv->update();
+	}
+
+	// Tr!Force: [AssetsCache] Get client state
+	trap->GetClientState( &cstate );
+
+	// Tr!Force: [AssetsCache] Force cache refresh
+	if (cstate.connState > CA_CONNECTED && !trap->Cvar_VariableValue("ui_galaxyrp_game")) 
+	{
+		trap->Cvar_Set("ui_galaxyrp_game", "1");
+		trap->Print(S_COLOR_RED "GalaxyRP not fully loaded, clearing cache ...\n");
+		trap->Cmd_ExecuteText(EXEC_APPEND, "vid_restart\n");
 	}
 }
 
