@@ -4043,8 +4043,8 @@ void ClientSpawn(gentity_t *ent) {
 		int rc;
 		sqlite3_stmt* stmt;
 
-		rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-		if (rc)
+		rc = sqlite3_open(DB_PATH, &db);
+		if (rc != SQLITE_OK)
 		{
 			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 			sqlite3_close(db);

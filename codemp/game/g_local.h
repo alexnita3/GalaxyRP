@@ -48,6 +48,8 @@ extern vec3_t gPainPoint;
 // the "gameversion" client command will print this plus compile date
 #define	GAMEVERSION	JK_VERSION
 
+#define DB_PATH "GalaxyRP/database/accounts.db"
+
 #define SECURITY_LOG "security.log"
 
 #define BODY_QUEUE_SIZE		8

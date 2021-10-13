@@ -1881,8 +1881,8 @@ void Cmd_Register_F(gentity_t * ent)
 	int accountID = 0, i = 0;
 	int charID;
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2028,8 +2028,8 @@ void Cmd_ChangeChar_F(gentity_t * ent)
 		return;
 	}
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2098,8 +2098,8 @@ void load_account_from_db_with_default_char(gentity_t * ent) {
 	sqlite3_stmt *stmt;
 	char defaultChar[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2120,8 +2120,8 @@ void Cmd_Login_F(gentity_t * ent)
 	sqlite3_stmt *stmt;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2239,8 +2239,8 @@ void Cmd_Char_f(gentity_t *ent) {
 	char command[MAX_STRING_CHARS];
 	char charName[MAX_STRING_CHARS];
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2289,8 +2289,8 @@ void Cmd_ResetPassword_F(gentity_t * ent)
 	sqlite3_stmt *stmt;
 	char newpassword[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2493,8 +2493,8 @@ void Cmd_Inventory_f(gentity_t *ent) {
 	sqlite3_stmt *stmt;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2535,8 +2535,8 @@ void Cmd_CreateItem_f(gentity_t *ent) {
 	sqlite3_stmt *stmt;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2574,8 +2574,8 @@ void Cmd_TrashItem_f(gentity_t *ent) {
 	sqlite3_stmt *stmt;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2625,8 +2625,8 @@ void Cmd_GiveItem_f(gentity_t *ent) {
 	sqlite3_stmt *stmt;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -6756,8 +6756,8 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 			int rc;
 			sqlite3_stmt *stmt;
 
-			rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-			if (rc)
+			rc = sqlite3_open(DB_PATH, &db);
+			if (rc != SQLITE_OK)
 			{
 				trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 				sqlite3_close(db);
@@ -6776,8 +6776,8 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 			int rc;
 			sqlite3_stmt *stmt;
 
-			rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-			if (rc)
+			rc = sqlite3_open(DB_PATH, &db);
+			if (rc != SQLITE_OK)
 			{
 				trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 				sqlite3_close(db);
