@@ -2528,7 +2528,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	{ // zyk: Light Quest. If guardian was defeated by the invoker, increase the defeated_guardians value
 		if (quest_player->client->pers.guardian_mode == 8)
 		{ // zyk: defeated the Guardian of Light
-			quest_player->client->pers.defeated_guardians = NUMBER_OF_GUARDIANS;
+			quest_player->client->pers.defeated_guardians = NUM_OF_GUARDIANS;
 
 			if (quest_player->client->pers.magic_power > 0)
 			{
@@ -2601,7 +2601,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	else if (quest_player && quest_player->client->pers.guardian_mode == 9)
 	{ // zyk: Dark Quest. Defeated the Guardian of Darkness
 		quest_player->client->pers.guardian_mode = 0;
-		quest_player->client->pers.hunter_quest_progress = NUMBER_OF_OBJECTIVES;
+		quest_player->client->pers.hunter_quest_progress = NUM_OF_OBJECTIVES;
 
 		save_account(quest_player, qtrue);
 
@@ -2618,7 +2618,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	else if (quest_player && quest_player->client->pers.guardian_mode == 10)
 	{ // zyk: Eternity Quest. Defeated the Guardian of Eternity
 		quest_player->client->pers.guardian_mode = 0;
-		quest_player->client->pers.eternity_quest_progress = NUMBER_OF_ETERNITY_QUEST_OBJECTIVES;
+		quest_player->client->pers.eternity_quest_progress = NUM_OF_ETERNITY_QUEST_OBJ;
 
 		save_account(quest_player, qtrue);
 
@@ -2757,7 +2757,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		self->client->pers.player_statuses &= ~(1 << 11);
 
 		// zyk: player has the Resurrection Power, after completing quests in Challenge Mode. Uses mp. Not allowed in CTF gametype
-		if (self->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && self->client->pers.universe_quest_counter & (1 << 29) && g_gametype.integer != GT_CTF && 
+		if (self->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ && self->client->pers.universe_quest_counter & (1 << 29) && g_gametype.integer != GT_CTF && 
 			!(self->client->ps.eFlags2 & EF2_HELD_BY_MONSTER) && self->client->pers.magic_power >= 5 && zyk_enable_resurrection_power.integer == 1 && 
 			!(self->client->sess.magic_more_disabled_powers & (1 << 1)))
 		{
@@ -3122,7 +3122,7 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 			attacker->client->pers.credits_modifier = self->client->pers.level;
 			attacker->client->pers.score_modifier = self->client->pers.level / 50;
 
-			if (self->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
+			if (self->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ)
 			{
 				attacker->client->pers.score_modifier += 1;
 				attacker->client->pers.credits_modifier += 20;

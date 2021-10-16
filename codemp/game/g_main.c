@@ -6741,137 +6741,137 @@ void zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qbo
 qboolean magic_master_has_this_power(gentity_t *ent, int selected_power)
 {
 	if (selected_power == MAGIC_HEALING_WATER && !(ent->client->pers.defeated_guardians & (1 << 4)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_WATER_SPLASH && !(ent->client->pers.defeated_guardians & (1 << 4)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_WATER_ATTACK && !(ent->client->pers.defeated_guardians & (1 << 4)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_EARTHQUAKE && !(ent->client->pers.defeated_guardians & (1 << 5)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ROCKFALL && !(ent->client->pers.defeated_guardians & (1 << 5)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_SHIFTING_SAND && !(ent->client->pers.defeated_guardians & (1 << 5)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_SLEEPING_FLOWERS && !(ent->client->pers.defeated_guardians & (1 << 6)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_POISON_MUSHROOMS && !(ent->client->pers.defeated_guardians & (1 << 6)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_TREE_OF_LIFE && !(ent->client->pers.defeated_guardians & (1 << 6)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_MAGIC_SHIELD && !(ent->client->pers.defeated_guardians & (1 << 7)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_DOME_OF_DAMAGE && !(ent->client->pers.defeated_guardians & (1 << 7)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_MAGIC_DISABLE && !(ent->client->pers.defeated_guardians & (1 << 7)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ULTRA_SPEED && !(ent->client->pers.defeated_guardians & (1 << 8)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_SLOW_MOTION && !(ent->client->pers.defeated_guardians & (1 << 8)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_FAST_AND_SLOW && !(ent->client->pers.defeated_guardians & (1 << 8)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_FLAME_BURST && !(ent->client->pers.defeated_guardians & (1 << 9)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ULTRA_FLAME && !(ent->client->pers.defeated_guardians & (1 << 9)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_FLAMING_AREA && !(ent->client->pers.defeated_guardians & (1 << 9)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_BLOWING_WIND && !(ent->client->pers.defeated_guardians & (1 << 10)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_HURRICANE && !(ent->client->pers.defeated_guardians & (1 << 10)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_REVERSE_WIND && !(ent->client->pers.defeated_guardians & (1 << 10)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ULTRA_RESISTANCE && !(ent->client->pers.defeated_guardians & (1 << 11)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ULTRA_STRENGTH && !(ent->client->pers.defeated_guardians & (1 << 11)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ENEMY_WEAKENING && !(ent->client->pers.defeated_guardians & (1 << 11)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ICE_STALAGMITE && !(ent->client->pers.defeated_guardians & (1 << 12)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ICE_BOULDER && !(ent->client->pers.defeated_guardians & (1 << 12)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ICE_BLOCK && !(ent->client->pers.defeated_guardians & (1 << 12)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
@@ -7823,7 +7823,7 @@ void universe_crystals_check(gentity_t *ent)
 extern void clean_note_model();
 void zyk_try_get_dark_quest_note(gentity_t *ent, int note_bitvalue)
 {
-	if (ent->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && ent->client->pers.guardian_mode == 0 && 
+	if (ent->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && ent->client->pers.guardian_mode == 0 && 
 		!(ent->client->pers.hunter_quest_progress & (1 << note_bitvalue)) && ent->client->pers.can_play_quest == 1 &&
 		level.quest_note_id != -1 && (int)Distance(ent->client->ps.origin, g_entities[level.quest_note_id].r.currentOrigin) < 40)
 	{
@@ -8341,21 +8341,21 @@ void duel_tournament_set_match_winner(gentity_t *winner)
 void duel_tournament_protect_duelists(gentity_t *duelist_1, gentity_t *duelist_2, gentity_t *duelist_1_ally, gentity_t *duelist_2_ally)
 {
 	duelist_1->client->ps.eFlags |= EF_INVULNERABLE;
-	duelist_1->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECTION_TIME;
+	duelist_1->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECT_TIME;
 
 	duelist_2->client->ps.eFlags |= EF_INVULNERABLE;
-	duelist_2->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECTION_TIME;
+	duelist_2->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECT_TIME;
 
 	if (duelist_1_ally)
 	{
 		duelist_1_ally->client->ps.eFlags |= EF_INVULNERABLE;
-		duelist_1_ally->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECTION_TIME;
+		duelist_1_ally->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECT_TIME;
 	}
 
 	if (duelist_2_ally)
 	{
 		duelist_2_ally->client->ps.eFlags |= EF_INVULNERABLE;
-		duelist_2_ally->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECTION_TIME;
+		duelist_2_ally->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECT_TIME;
 	}
 }
 
@@ -10581,7 +10581,7 @@ void G_RunFrame( int levelTime ) {
 					{
 						zyk_try_get_dark_quest_note(ent, 4);
 
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 4)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->r.currentOrigin[0] > 1962 && (int) ent->r.currentOrigin[0] < 2162 && (int) ent->r.currentOrigin[1] > 3989 && (int) ent->r.currentOrigin[1] < 4189 && (int) ent->r.currentOrigin[2] >= 360 && (int) ent->r.currentOrigin[2] <= 369)
+						if (ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 4)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->r.currentOrigin[0] > 1962 && (int) ent->r.currentOrigin[0] < 2162 && (int) ent->r.currentOrigin[1] > 3989 && (int) ent->r.currentOrigin[1] < 4189 && (int) ent->r.currentOrigin[2] >= 360 && (int) ent->r.currentOrigin[2] <= 369)
 						{
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
@@ -11513,7 +11513,7 @@ void G_RunFrame( int levelTime ) {
 							}
 						}
 
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 12)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->r.currentOrigin[0] > -5648 && (int) ent->r.currentOrigin[0] < -5448 && (int) ent->r.currentOrigin[1] > 11448 && (int) ent->r.currentOrigin[1] < 11648 && (int) ent->r.currentOrigin[2] >= 980 && (int) ent->r.currentOrigin[2] <= 1000)
+						if (ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 12)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->r.currentOrigin[0] > -5648 && (int) ent->r.currentOrigin[0] < -5448 && (int) ent->r.currentOrigin[1] > 11448 && (int) ent->r.currentOrigin[1] < 11648 && (int) ent->r.currentOrigin[2] >= 980 && (int) ent->r.currentOrigin[2] <= 1000)
 						{
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
@@ -12521,7 +12521,7 @@ void G_RunFrame( int levelTime ) {
 					{
 						zyk_try_get_dark_quest_note(ent, 10);
 
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 7)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > 1820 && (int) ent->client->ps.origin[0] < 2020 && (int) ent->client->ps.origin[1] > 1968 && (int) ent->client->ps.origin[1] < 2168 && (int) ent->client->ps.origin[2] == 728)
+						if (ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 7)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > 1820 && (int) ent->client->ps.origin[0] < 2020 && (int) ent->client->ps.origin[1] > 1968 && (int) ent->client->ps.origin[1] < 2168 && (int) ent->client->ps.origin[2] == 728)
 						{
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
@@ -12795,7 +12795,7 @@ void G_RunFrame( int levelTime ) {
 					else if (level.quest_map == 10)
 					{   
 						// zyk: battle against the Guardian of Light
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && light_quest_defeated_guardians(ent) == qtrue && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -1350 && (int) ent->client->ps.origin[0] < -630 && (int) ent->client->ps.origin[1] > -1900 && (int) ent->client->ps.origin[1] < -1400 && (int) ent->client->ps.origin[2] > 5 && (int) ent->client->ps.origin[2] < 56)
+						if (ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS && light_quest_defeated_guardians(ent) == qtrue && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -1350 && (int) ent->client->ps.origin[0] < -630 && (int) ent->client->ps.origin[1] > -1900 && (int) ent->client->ps.origin[1] < -1400 && (int) ent->client->ps.origin[2] > 5 && (int) ent->client->ps.origin[2] < 56)
 						{
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
@@ -12814,7 +12814,7 @@ void G_RunFrame( int levelTime ) {
 						}
 
 						// zyk: battle against the Guardian of Darkness
-						if (ent->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && dark_quest_collected_notes(ent) == qtrue && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -200 && (int) ent->client->ps.origin[0] < 100 && (int) ent->client->ps.origin[1] > 252 && (int) ent->client->ps.origin[1] < 552 && (int) ent->client->ps.origin[2] == -231)
+						if (ent->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && dark_quest_collected_notes(ent) == qtrue && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -200 && (int) ent->client->ps.origin[0] < 100 && (int) ent->client->ps.origin[1] > 252 && (int) ent->client->ps.origin[1] < 552 && (int) ent->client->ps.origin[2] == -231)
 						{
 							if (ent->client->pers.hunter_quest_timer < level.time)
 							{
@@ -12831,7 +12831,7 @@ void G_RunFrame( int levelTime ) {
 							}
 						}
 
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 6)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > 412 && (int) ent->client->ps.origin[0] < 612 && (int) ent->client->ps.origin[1] > 4729 && (int) ent->client->ps.origin[1] < 4929 && (int) ent->client->ps.origin[2] >= 55 && (int) ent->client->ps.origin[2] <= 64)
+						if (ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 6)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > 412 && (int) ent->client->ps.origin[0] < 612 && (int) ent->client->ps.origin[1] > 4729 && (int) ent->client->ps.origin[1] < 4929 && (int) ent->client->ps.origin[2] >= 55 && (int) ent->client->ps.origin[2] <= 64)
 						{
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
@@ -12848,15 +12848,15 @@ void G_RunFrame( int levelTime ) {
 							}
 						}
 
-						if (ent->client->pers.eternity_quest_progress < NUMBER_OF_ETERNITY_QUEST_OBJECTIVES && ent->client->pers.eternity_quest_timer < level.time && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -676 && (int) ent->client->ps.origin[0] < -296 && (int) ent->client->ps.origin[1] > 1283 && (int) ent->client->ps.origin[1] < 1663 && (int) ent->client->ps.origin[2] > 60 && (int) ent->client->ps.origin[2] < 120)
+						if (ent->client->pers.eternity_quest_progress < NUM_OF_ETERNITY_QUEST_OBJ && ent->client->pers.eternity_quest_timer < level.time && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -676 && (int) ent->client->ps.origin[0] < -296 && (int) ent->client->ps.origin[1] > 1283 && (int) ent->client->ps.origin[1] < 1663 && (int) ent->client->ps.origin[2] > 60 && (int) ent->client->ps.origin[2] < 120)
 						{ // zyk: Eternity Quest
-							if (ent->client->pers.eternity_quest_progress < (NUMBER_OF_ETERNITY_QUEST_OBJECTIVES - 1))
+							if (ent->client->pers.eternity_quest_progress < (NUM_OF_ETERNITY_QUEST_OBJ - 1))
 							{
 								zyk_text_message(ent, va("eternity/riddle_%d", ent->client->pers.eternity_quest_progress), qtrue, qfalse);
 
 								ent->client->pers.eternity_quest_timer = level.time + 30000;
 							}
-							else if (ent->client->pers.eternity_quest_progress == (NUMBER_OF_ETERNITY_QUEST_OBJECTIVES - 1))
+							else if (ent->client->pers.eternity_quest_progress == (NUM_OF_ETERNITY_QUEST_OBJ - 1))
 							{
 								if (ent->client->pers.eternity_quest_timer == 0)
 								{
@@ -13096,7 +13096,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (level.quest_map == 11)
 					{   
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 9)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -100 && (int) ent->client->ps.origin[0] < 100 && (int) ent->client->ps.origin[1] > -95 && (int) ent->client->ps.origin[1] < 105 && (int) ent->client->ps.origin[2] == -375)
+						if (ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 9)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -100 && (int) ent->client->ps.origin[0] < 100 && (int) ent->client->ps.origin[1] > -95 && (int) ent->client->ps.origin[1] < 105 && (int) ent->client->ps.origin[2] == -375)
 						{
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
@@ -13725,7 +13725,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (level.quest_map == 13)
 					{
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 5)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -2249 && (int) ent->client->ps.origin[0] < -2049 && (int) ent->client->ps.origin[1] > -4287 && (int) ent->client->ps.origin[1] < -4087 && (int) ent->client->ps.origin[2] == 3644)
+						if (ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 5)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -2249 && (int) ent->client->ps.origin[0] < -2049 && (int) ent->client->ps.origin[1] > -4287 && (int) ent->client->ps.origin[1] < -4087 && (int) ent->client->ps.origin[2] == 3644)
 						{
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
@@ -13761,7 +13761,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (level.quest_map == 14)
 					{
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 11)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -100 && (int) ent->client->ps.origin[0] < 100 && (int) ent->client->ps.origin[1] > 1035 && (int) ent->client->ps.origin[1] < 1235 && (int) ent->client->ps.origin[2] == 24)
+						if (ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 11)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -100 && (int) ent->client->ps.origin[0] < 100 && (int) ent->client->ps.origin[1] > 1035 && (int) ent->client->ps.origin[1] < 1235 && (int) ent->client->ps.origin[2] == 24)
 						{
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
@@ -13780,7 +13780,7 @@ void G_RunFrame( int levelTime ) {
 					}
 					else if (level.quest_map == 15)
 					{
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 10)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -253 && (int) ent->client->ps.origin[0] < -53 && (int) ent->client->ps.origin[1] > -555 && (int) ent->client->ps.origin[1] < -355 && (int) ent->client->ps.origin[2] == 216)
+						if (ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 10)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -253 && (int) ent->client->ps.origin[0] < -53 && (int) ent->client->ps.origin[1] > -555 && (int) ent->client->ps.origin[1] < -355 && (int) ent->client->ps.origin[2] == 216)
 						{
 							if (ent->client->pers.light_quest_timer < level.time)
 							{
@@ -14718,7 +14718,7 @@ void G_RunFrame( int levelTime ) {
 					else if (level.quest_map == 20)
 					{
 						// zyk: Guardian of Agility
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 8)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > 8374 && (int) ent->client->ps.origin[0] < 8574 && (int) ent->client->ps.origin[1] > -1422 && (int) ent->client->ps.origin[1] < -1222 && (int) ent->client->ps.origin[2] > -165 && (int) ent->client->ps.origin[2] < -160)
+						if (ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 8)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > 8374 && (int) ent->client->ps.origin[0] < 8574 && (int) ent->client->ps.origin[1] > -1422 && (int) ent->client->ps.origin[1] < -1222 && (int) ent->client->ps.origin[2] > -165 && (int) ent->client->ps.origin[2] < -160)
 						{
 							if (ent->client->pers.light_quest_timer < level.time)
 							{

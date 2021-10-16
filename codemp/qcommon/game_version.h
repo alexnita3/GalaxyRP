@@ -19,24 +19,6 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
-#define VAL(x) #x
-#define STR(x) VAL(x)
 
-#ifdef _DEBUG
-    #define VER(x) "(debug)" x
-#else
-    #define VER(x) x
-#endif
-
-// Current version of the multi player game
-#define VERSION_MAJOR_RELEASE		3
-#define VERSION_MINOR_RELEASE		4
-#define VERSION_EXTERNAL_BUILD		0
-#define VERSION_INTERNAL_BUILD		0
-
-#define VERSION_STRING STR(VERSION_MAJOR_RELEASE) ", " STR(VERSION_MINOR_RELEASE) // "a, b"
-#define VERSION_STRING_DOTTED STR(VERSION_MAJOR_RELEASE) "." STR(VERSION_MINOR_RELEASE) // "a.b"
-
-// Set mod version definitions
-#define	JK_VERSION                  VER("GalaxyRP Mod v" VERSION_STRING_DOTTED)
-#define JK_VERSION_OLD              VER("JAmp: v" VERSION_STRING_DOTTED)
+// Version header
+#include "../../galaxyrp/game/rp_version.h"
