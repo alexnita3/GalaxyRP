@@ -50,7 +50,7 @@ extern vec3_t gPainPoint;
 
 #define DB_PATH "GalaxyRP/database/accounts.db"
 
-#define SECURITY_LOG "security.log"
+#define SECURITY_LOG "logs/security.log"
 
 #define BODY_QUEUE_SIZE		8
 

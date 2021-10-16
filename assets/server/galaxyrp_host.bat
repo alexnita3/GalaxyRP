@@ -4,7 +4,7 @@
 set jk_executable=openjkded.x86.exe
 set jk_dedicated=2
 set jk_net_port=29070
-set jk_config=server.cfg
+set jk_config=galaxyrp_server.cfg
 set jk_force_path=true
 
 :: Executable check
