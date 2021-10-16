@@ -1,5 +1,5 @@
 /*
-======================= Jedi Knight Plus Mod ========================
+=========================== GalaxyRP Mod ============================
 Project based on OpenJK and Zyk Mod. Work copyrighted (C) 2020 - 2022
 =====================================================================
 [Description]: Main version header

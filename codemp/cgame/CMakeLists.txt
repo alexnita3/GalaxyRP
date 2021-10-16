@@ -93,6 +93,7 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/fx_rocketlauncher.c"
 	"${MPDir}/cgame/animtable.h"
 	"${MPDir}/cgame/cg_local.h"
+	"${RPDir}/cgame/rp_cg_local.h" # GalaxyRP headers
 	"${MPDir}/cgame/cg_public.h"
 	"${MPDir}/cgame/cg_xcvar.h"
 	"${MPDir}/cgame/fx_local.h"
