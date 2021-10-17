@@ -1285,6 +1285,18 @@ void set_netname(gentity_t * ent, char netName[MAX_STRING_CHARS])
 	return;
 }
 
+// GalaxyRP: [Database] This method is strictly for running INSERT, UPDATE, DROP and CREATE statements.
+void run_db_query(char* query, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt){
+	//trap->Print(query);
+	rc = sqlite3_exec(db, query, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+}
+
 //TODO: PUT THESE IN AN ACCOUNT.h
 void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
 {
@@ -1615,7 +1627,9 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 	int charID;
 	char comparisonName[256] = { 0 };
 
-	rc = sqlite3_prepare(db, va("SELECT Name FROM Characters WHERE Name='%s'", char_name), -1, &stmt, NULL);
+	// GalaxyRP: [Database] Grab character name BEFORE inserting the new character. If it already exists, it means a char with that name can't be created. No two characters should have the same name!!!
+	char select_char_name[44] = "SELECT Name FROM Characters WHERE Name='%s'";
+	rc = sqlite3_prepare(db, va(select_char_name, char_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
@@ -1645,22 +1659,15 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 		return;
 	}
 
-	//TODO: assign the default values to the entity
-	//Create character record
-	//TODO: replace Name with something better
-	//trap->Print(va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')\n", ent->client->sess.accountID, char_name));
-	rc = sqlite3_exec(db, va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')", ent->client->sess.accountID, char_name), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
+	// GalaxyRP: [Database] Create character record
+	char insert_new_entry_to_char_table[195] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')";
+	//trap->Print(va(insert_new_entry_to_char, ent->client->sess.accountID, char_name));
+	run_db_query(va(insert_new_entry_to_char_table, ent->client->sess.accountID, char_name), db, zErrMsg, rc, stmt);
 
-	//TODO BUG!!!!
-	//Get CharID for later
-	//trap->Print(va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, char_name));
-	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, char_name), -1, &stmt, NULL);
+	// GalaxyRP: [Database] Get CharID for use in later queries
+	char select_char_id[69] = "SELECT CharID FROM Characters WHERE AccountID = '%i' AND Name = '%s'";
+	//trap->Print(va(select_char_id, ent->client->sess.accountID, char_name));
+	rc = sqlite3_prepare(db, va(select_char_id, ent->client->sess.accountID, char_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
@@ -1680,26 +1687,15 @@ void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlit
 		sqlite3_finalize(stmt);
 	}
 
-	//Create skill record
-	//TODO: replace Name with something better
-	//trap->Print(va("INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')\n"));
-	rc = sqlite3_exec(db, va("INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')"), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
+	// GalaxyRP: [Database] Create skill record
+	char insert_new_entry_to_skills_table[919] = "INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
+	//trap->Print(insert_new_entry_to_skills_table);
+	run_db_query(insert_new_entry_to_skills_table, db, zErrMsg, rc, stmt);
 
-	//Create ammo record
-	//trap->Print(va("INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')\n"));
-	rc = sqlite3_exec(db, va("INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')"), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
+	// GalaxyRP: [Database] Create ammo record
+	char insert_new_entry_to_weapons_table[159] = "INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')";
+	//trap->Print(insert_new_entry_to_weapons_table\n"));
+	run_db_query(insert_new_entry_to_weapons_table, db, zErrMsg, rc, stmt);
 
 	trap->SendServerCommand(-1, va("chat \"%s created a char: %s\n\"", ent->client->pers.netname, char_name));
 
