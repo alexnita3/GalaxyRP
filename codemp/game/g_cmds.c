@@ -1628,26 +1628,6 @@ void update_weapons_table_row_with_current_values(gentity_t* ent, sqlite3* db, c
 	return;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /*
 =================
 DATABASE ACTIONS for interacting with the database
@@ -1691,12 +1671,12 @@ void select_player_character(gentity_t* ent, char *character_name, sqlite3* db, 
 	// GalaxyRP (Alex): [Database] Assign the player the info from Skills table.
 	select_skills_table_row_from_entity(ent, db, zErrMsg, rc, stmt);
 
-	// GalaxyRP (Alex): [Database] Kill the tntity to allow everything to take effect.
-	G_Kill(ent);
-
 	// GalaxyRP (Alex): [Database] Assign the player the info from Weapons table.
 	select_weapons_table_row_from_entity(ent, character_name, db, zErrMsg, rc, stmt);
 	
+	// GalaxyRP (Alex): [Database] Kill the tntity to allow everything to take effect.
+	G_Kill(ent);
+
 	// GalaxyRP (Alex): [Database] Assign the player the info from Accounts table.
 	update_accounts_table_row_with_default_char(ent, character_name, db, zErrMsg, rc, stmt);
 
@@ -1707,39 +1687,6 @@ void select_player_character(gentity_t* ent, char *character_name, sqlite3* db, 
 
 	return;
 }
-
-
-
-//TODO: PUT THESE IN AN ACCOUNT.h
-void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	//trap->Print(va("print \"DEBUG: SELECT * FROM Weapons WHERE CharID='%i'\n\"", ent->client->pers.CharID));
-	rc = sqlite3_prepare(db, va("SELECT * FROM Weapons WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		for (int i = 2; i < AMMO_MAX; i++) {
-			ent->client->ps.ammo[i] = sqlite3_column_int(stmt, i - 1);
-		}
-
-		sqlite3_finalize(stmt);
-		return;
-	}
-	return;
-}
-
 
 void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
 {
