@@ -1327,37 +1327,6 @@ void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqli
 	return;
 }
 
-void save_ammo_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	/*trap->Print(va("print \"DEBUG: UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'\n\"",
-		ent->client->ps.ammo[AMMO_BLASTER],
-		ent->client->ps.ammo[AMMO_POWERCELL],
-		ent->client->ps.ammo[AMMO_METAL_BOLTS],
-		ent->client->ps.ammo[AMMO_ROCKETS],
-		ent->client->ps.ammo[AMMO_THERMAL],
-		ent->client->ps.ammo[AMMO_TRIPMINE],
-		ent->client->ps.ammo[AMMO_DETPACK],
-		ent->client->pers.CharID));*/
-	rc = sqlite3_exec(db, va("UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'",
-		ent->client->ps.ammo[AMMO_BLASTER],
-		ent->client->ps.ammo[AMMO_POWERCELL],
-		ent->client->ps.ammo[AMMO_METAL_BOLTS],
-		ent->client->ps.ammo[AMMO_ROCKETS],
-		ent->client->ps.ammo[AMMO_THERMAL],
-		ent->client->ps.ammo[AMMO_TRIPMINE],
-		ent->client->ps.ammo[AMMO_DETPACK],
-		ent->client->pers.CharID
-	), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	return;
-}
-
 void load_character_skills_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
 	//trap->Print(va("print \"DEBUG: SELECT * FROM Skills WHERE CharID='%i'\n\"", ent->client->pers.CharID));
 	rc = sqlite3_prepare(db, va("SELECT * FROM Skills WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
@@ -1391,136 +1360,6 @@ void load_character_skills_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, 
 
 	//Alex: kill them anyway
 	G_Kill(ent);
-	return;
-}
-
-void save_skills_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	/*trap->Print(va("print \"UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'\n\"",
-		ent->client->pers.skill_levels[0],	//Jump
-		ent->client->pers.skill_levels[1],	//Push
-		ent->client->pers.skill_levels[2],	//Pull
-		ent->client->pers.skill_levels[3],	//Speed
-		ent->client->pers.skill_levels[4],	//Sense
-		ent->client->pers.skill_levels[5],	//SaberAttack
-		ent->client->pers.skill_levels[6],	//SaberDefense
-		ent->client->pers.skill_levels[7],	//SaberThrow
-		ent->client->pers.skill_levels[8],	//Absorb
-		ent->client->pers.skill_levels[9],	//Heal
-		ent->client->pers.skill_levels[10],	//Protect
-		ent->client->pers.skill_levels[11],	//MindTrick
-		ent->client->pers.skill_levels[12],	//TeamHeal
-		ent->client->pers.skill_levels[13],	//Lightning
-		ent->client->pers.skill_levels[14],	//Grip
-		ent->client->pers.skill_levels[15],	//Drain
-		ent->client->pers.skill_levels[16],	//Rage
-		ent->client->pers.skill_levels[17],	//TeamEnergize
-		ent->client->pers.skill_levels[18],	//StunBaton
-		ent->client->pers.skill_levels[19],	//BlasterPistol
-		ent->client->pers.skill_levels[20],	//BlasterRifle
-		ent->client->pers.skill_levels[21],	//Disruptor
-		ent->client->pers.skill_levels[22],	//Bowcaster
-		ent->client->pers.skill_levels[23],	//Repeater
-		ent->client->pers.skill_levels[24],	//DEMP2
-		ent->client->pers.skill_levels[25],	//Flechette
-		ent->client->pers.skill_levels[26],	//RocketLauncher
-		ent->client->pers.skill_levels[27],	//ConcussionRifle
-		ent->client->pers.skill_levels[28],	//BryarPistol
-		ent->client->pers.skill_levels[29],	//Melee
-		ent->client->pers.skill_levels[30],	//MaxShield
-		ent->client->pers.skill_levels[31],	//ShieldStrength
-		ent->client->pers.skill_levels[32],	//HealthStrength
-		ent->client->pers.skill_levels[33],	//DrainShield
-		ent->client->pers.skill_levels[34],	//Jetpack
-		ent->client->pers.skill_levels[35],	//SenseHealth
-		ent->client->pers.skill_levels[36],	//ShieldHeal
-		ent->client->pers.skill_levels[37],	//TeamShieldHeal
-		ent->client->pers.skill_levels[38],	//UniqueSkill
-		ent->client->pers.skill_levels[39],	//BlasterPack
-		ent->client->pers.skill_levels[40],	//PowerCell
-		ent->client->pers.skill_levels[41],	//MetalBolts
-		ent->client->pers.skill_levels[42],	//Rockets
-		ent->client->pers.skill_levels[43],	//Thermals
-		ent->client->pers.skill_levels[44],	//TripMines
-		ent->client->pers.skill_levels[45],	//Detpacks
-		ent->client->pers.skill_levels[46],	//Binoculars
-		ent->client->pers.skill_levels[47],	//BactaCanister
-		ent->client->pers.skill_levels[48],	//SentryGun
-		ent->client->pers.skill_levels[49],	//SeekerDrone
-		ent->client->pers.skill_levels[50],	//Eweb
-		ent->client->pers.skill_levels[51],	//BigBacta
-		ent->client->pers.skill_levels[52],	//ForceField
-		ent->client->pers.skill_levels[53],	//CloakItem
-		ent->client->pers.skill_levels[54],	//ForcePower
-		ent->client->pers.skill_levels[55], //Improvements
-		ent->client->pers.CharID));*/
-
-	rc = sqlite3_exec(db, va("UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'",
-		ent->client->pers.skill_levels[0],	//Jump
-		ent->client->pers.skill_levels[1],	//Push
-		ent->client->pers.skill_levels[2],	//Pull
-		ent->client->pers.skill_levels[3],	//Speed
-		ent->client->pers.skill_levels[4],	//Sense
-		ent->client->pers.skill_levels[5],	//SaberAttack
-		ent->client->pers.skill_levels[6],	//SaberDefense
-		ent->client->pers.skill_levels[7],	//SaberThrow
-		ent->client->pers.skill_levels[8],	//Absorb
-		ent->client->pers.skill_levels[9],	//Heal
-		ent->client->pers.skill_levels[10],	//Protect
-		ent->client->pers.skill_levels[11],	//MindTrick
-		ent->client->pers.skill_levels[12],	//TeamHeal
-		ent->client->pers.skill_levels[13],	//Lightning
-		ent->client->pers.skill_levels[14],	//Grip
-		ent->client->pers.skill_levels[15],	//Drain
-		ent->client->pers.skill_levels[16],	//Rage
-		ent->client->pers.skill_levels[17],	//TeamEnergize
-		ent->client->pers.skill_levels[18],	//StunBaton
-		ent->client->pers.skill_levels[19],	//BlasterPistol
-		ent->client->pers.skill_levels[20],	//BlasterRifle
-		ent->client->pers.skill_levels[21],	//Disruptor
-		ent->client->pers.skill_levels[22],	//Bowcaster
-		ent->client->pers.skill_levels[23],	//Repeater
-		ent->client->pers.skill_levels[24],	//DEMP2
-		ent->client->pers.skill_levels[25],	//Flechette
-		ent->client->pers.skill_levels[26],	//RocketLauncher
-		ent->client->pers.skill_levels[27],	//ConcussionRifle
-		ent->client->pers.skill_levels[28],	//BryarPistol
-		ent->client->pers.skill_levels[29],	//Melee
-		ent->client->pers.skill_levels[30],	//MaxShield
-		ent->client->pers.skill_levels[31],	//ShieldStrength
-		ent->client->pers.skill_levels[32],	//HealthStrength
-		ent->client->pers.skill_levels[33],	//DrainShield
-		ent->client->pers.skill_levels[34],	//Jetpack
-		ent->client->pers.skill_levels[35],	//SenseHealth
-		ent->client->pers.skill_levels[36],	//ShieldHeal
-		ent->client->pers.skill_levels[37],	//TeamShieldHeal
-		ent->client->pers.skill_levels[38],	//UniqueSkill
-		ent->client->pers.skill_levels[39],	//BlasterPack
-		ent->client->pers.skill_levels[40],	//PowerCell
-		ent->client->pers.skill_levels[41],	//MetalBolts
-		ent->client->pers.skill_levels[42],	//Rockets
-		ent->client->pers.skill_levels[43],	//Thermals
-		ent->client->pers.skill_levels[44],	//TripMines
-		ent->client->pers.skill_levels[45],	//Detpacks
-		ent->client->pers.skill_levels[46],	//Binoculars
-		ent->client->pers.skill_levels[47],	//BactaCanister
-		ent->client->pers.skill_levels[48],	//SentryGun
-		ent->client->pers.skill_levels[49],	//SeekerDrone
-		ent->client->pers.skill_levels[50],	//Eweb
-		ent->client->pers.skill_levels[51],	//BigBacta
-		ent->client->pers.skill_levels[52],	//ForceField
-		ent->client->pers.skill_levels[53],	//CloakItem
-		ent->client->pers.skill_levels[54],	//ForcePower
-		ent->client->pers.skill_levels[55], //Improvements
-		ent->client->pers.CharID
-	), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
 	return;
 }
 
@@ -1775,16 +1614,8 @@ void save_char_info_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, s
 	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
 	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
 
-	/*trap->Print(va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i'\n",
-		ent->client->pers.credits,
-		ent->client->pers.level,
-		ent->client->ps.iModelScale,
-		ent->client->pers.skillpoints,
-		ent->client->pers.description,
-		ent->client->pers.netname,
-		modelName,
-		ent->client->pers.CharID));*/
-	rc = sqlite3_exec(db, va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i'",
+	char update_char_query[148] = "UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i'";
+	run_db_query(va(update_char_query,
 		ent->client->pers.credits,
 		ent->client->pers.level,
 		ent->client->ps.iModelScale,
@@ -1793,43 +1624,119 @@ void save_char_info_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, s
 		ent->client->pers.netname,
 		modelName,
 		ent->client->pers.CharID
-	), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
+	), db, zErrMsg, rc, stmt);
 
 	return;
 }
 
 void save_char_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
 {
-	save_ammo_to_db(ent, db, zErrMsg, rc, stmt);
-	save_skills_to_db(ent, db, zErrMsg, rc, stmt);
-	save_char_info_to_db(ent, db, zErrMsg, rc, stmt);
+	// GalaxyRP: [Database] Update skills information to the database.
+	char update_skills_query[928] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'";
+	run_db_query(va(update_skills_query,
+		ent->client->pers.skill_levels[0],	//Jump
+		ent->client->pers.skill_levels[1],	//Push
+		ent->client->pers.skill_levels[2],	//Pull
+		ent->client->pers.skill_levels[3],	//Speed
+		ent->client->pers.skill_levels[4],	//Sense
+		ent->client->pers.skill_levels[5],	//SaberAttack
+		ent->client->pers.skill_levels[6],	//SaberDefense
+		ent->client->pers.skill_levels[7],	//SaberThrow
+		ent->client->pers.skill_levels[8],	//Absorb
+		ent->client->pers.skill_levels[9],	//Heal
+		ent->client->pers.skill_levels[10],	//Protect
+		ent->client->pers.skill_levels[11],	//MindTrick
+		ent->client->pers.skill_levels[12],	//TeamHeal
+		ent->client->pers.skill_levels[13],	//Lightning
+		ent->client->pers.skill_levels[14],	//Grip
+		ent->client->pers.skill_levels[15],	//Drain
+		ent->client->pers.skill_levels[16],	//Rage
+		ent->client->pers.skill_levels[17],	//TeamEnergize
+		ent->client->pers.skill_levels[18],	//StunBaton
+		ent->client->pers.skill_levels[19],	//BlasterPistol
+		ent->client->pers.skill_levels[20],	//BlasterRifle
+		ent->client->pers.skill_levels[21],	//Disruptor
+		ent->client->pers.skill_levels[22],	//Bowcaster
+		ent->client->pers.skill_levels[23],	//Repeater
+		ent->client->pers.skill_levels[24],	//DEMP2
+		ent->client->pers.skill_levels[25],	//Flechette
+		ent->client->pers.skill_levels[26],	//RocketLauncher
+		ent->client->pers.skill_levels[27],	//ConcussionRifle
+		ent->client->pers.skill_levels[28],	//BryarPistol
+		ent->client->pers.skill_levels[29],	//Melee
+		ent->client->pers.skill_levels[30],	//MaxShield
+		ent->client->pers.skill_levels[31],	//ShieldStrength
+		ent->client->pers.skill_levels[32],	//HealthStrength
+		ent->client->pers.skill_levels[33],	//DrainShield
+		ent->client->pers.skill_levels[34],	//Jetpack
+		ent->client->pers.skill_levels[35],	//SenseHealth
+		ent->client->pers.skill_levels[36],	//ShieldHeal
+		ent->client->pers.skill_levels[37],	//TeamShieldHeal
+		ent->client->pers.skill_levels[38],	//UniqueSkill
+		ent->client->pers.skill_levels[39],	//BlasterPack
+		ent->client->pers.skill_levels[40],	//PowerCell
+		ent->client->pers.skill_levels[41],	//MetalBolts
+		ent->client->pers.skill_levels[42],	//Rockets
+		ent->client->pers.skill_levels[43],	//Thermals
+		ent->client->pers.skill_levels[44],	//TripMines
+		ent->client->pers.skill_levels[45],	//Detpacks
+		ent->client->pers.skill_levels[46],	//Binoculars
+		ent->client->pers.skill_levels[47],	//BactaCanister
+		ent->client->pers.skill_levels[48],	//SentryGun
+		ent->client->pers.skill_levels[49],	//SeekerDrone
+		ent->client->pers.skill_levels[50],	//Eweb
+		ent->client->pers.skill_levels[51],	//BigBacta
+		ent->client->pers.skill_levels[52],	//ForceField
+		ent->client->pers.skill_levels[53],	//CloakItem
+		ent->client->pers.skill_levels[54],	//ForcePower
+		ent->client->pers.skill_levels[55], //Improvements
+		ent->client->pers.CharID), db, zErrMsg, rc, stmt);
+	
+	// GalaxyRP: [Database] Update the ammo information in the database.
+	char update_ammo_query[168] = "UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'";
+	run_db_query(va(update_ammo_query,
+		ent->client->ps.ammo[AMMO_BLASTER],
+		ent->client->ps.ammo[AMMO_POWERCELL],
+		ent->client->ps.ammo[AMMO_METAL_BOLTS],
+		ent->client->ps.ammo[AMMO_ROCKETS],
+		ent->client->ps.ammo[AMMO_THERMAL],
+		ent->client->ps.ammo[AMMO_TRIPMINE],
+		ent->client->ps.ammo[AMMO_DETPACK],
+		ent->client->pers.CharID
+	), db, zErrMsg, rc, stmt);
+
+	// GalaxyRP: [Database] Grab the model and display name, so they can be saved in the database.
+	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
+
+	// GalaxyRP: [Database] Update character information in the database.
+	char update_char_query[148] = "UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i'";
+	run_db_query(va(update_char_query,
+		ent->client->pers.credits,
+		ent->client->pers.level,
+		ent->client->ps.iModelScale,
+		ent->client->pers.skillpoints,
+		ent->client->pers.description,
+		ent->client->pers.netname,
+		modelName,
+		ent->client->pers.CharID
+	), db, zErrMsg, rc, stmt);
 
 	return;
 }
 
 void save_account_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
-	//TODO: Make this change more stuff
-	/*trap->Print(va("UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'\n",
-		ent->client->pers.bitvalue,
-		ent->client->sess.rpgchar,
-		ent->client->sess.accountID));*/
-	rc = sqlite3_exec(db, va("UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'",
+
+	char update_account_query[95] = "UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'";
+
+	run_db_query(va(update_account_query,
 		ent->client->pers.bitvalue,
 		ent->client->sess.rpgchar,
 		ent->client->sess.accountID
-	), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
+	), db, zErrMsg, rc, stmt);
 
 	return;
 }
@@ -2004,39 +1911,6 @@ void Cmd_Register_F(gentity_t * ent)
 	//Open the character selection/creation menu
 	//trap->SendServerCommand(ent - g_entities, "charui");
 
-
-	return;
-}
-
-void Cmd_ChangeChar_F(gentity_t * ent)
-{
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-	char charname[MAX_STRING_CHARS];
-
-	if (trap->Argc() != 2)
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /changechar <charname>\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^2Command Usage: /changechar <charname>\n\"");
-		sqlite3_close(db);
-		return;
-	}
-
-	rc = sqlite3_open(DB_PATH, &db);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
-	trap->Argv(1, charname, sizeof(charname));
-
-	load_character_from_db(ent, charname, db, zErrMsg, rc, stmt);
-
-	sqlite3_close(db);
 
 	return;
 }
@@ -20271,9 +20145,8 @@ command_t commands[] = {
 	{ "callseller",			Cmd_CallSeller_f,			CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "callteamvote",		Cmd_CallTeamVote_f,			CMD_NOINTERMISSION },
 	{ "callvote",			Cmd_CallVote_f,				CMD_NOINTERMISSION },
-	{ "changechar",			Cmd_ChangeChar_F,			0 },
 	{ "changepassword",		Cmd_ChangePassword_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "char",				Cmd_Char_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "char",				Cmd_Char_f,					CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "clientprint",		Cmd_ClientPrint_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "createcredits",		Cmd_CreditCreate_f,			CMD_RPG | CMD_NOINTERMISSION },
 	{ "createitem",			Cmd_CreateItem_f,			CMD_LOGGEDIN},
