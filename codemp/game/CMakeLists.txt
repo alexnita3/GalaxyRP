@@ -124,15 +124,18 @@ set(MPGameGameFiles
 	"${MPDir}/game/b_public.h"
 	"${MPDir}/game/bg_local.h"
 	"${MPDir}/game/bg_public.h"
+	"${RPDir}/game/rp_public.h" # GalaxyRP headers
 	"${MPDir}/game/bg_saga.h"
 	"${MPDir}/game/bg_vehicles.h"
 	"${MPDir}/game/bg_weapons.h"
 	"${MPDir}/game/chars.h"
 	"${MPDir}/game/g_ICARUScb.h"
 	"${MPDir}/game/g_local.h"
+	"${RPDir}/game/rp_local.h" # GalaxyRP headers
 	"${MPDir}/game/g_nav.h"
 	"${MPDir}/game/g_public.h"
 	"${MPDir}/game/g_team.h"
+	"${RPDir}/game/rp_version.h" # GalaxyRP headers
 	"${MPDir}/game/g_xcvar.h"
 	"${MPDir}/game/inv.h"
 	"${MPDir}/game/match.h"

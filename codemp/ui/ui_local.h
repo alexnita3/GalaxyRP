@@ -30,6 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "game/bg_public.h"
 #include "ui_shared.h"
 
+#include "../../galaxyrp/ui/rp_ui_local.h" // GalaxyRP: [UIGeneral] Main header
+
 // ui_cvar.c
 #define XCVAR_PROTO
 	#include "ui_xcvar.h"

@@ -42,7 +42,7 @@ void Cmd_NPC_f( gentity_t *ent );
 void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin);
 
 // zyk: max levels of the RPG skills
-const int max_skill_levels[NUMBER_OF_SKILLS] = {
+const int max_skill_levels[NUM_OF_SKILLS] = {
 	5, // Jump
 	3, // Push
 	3, // Pull
@@ -739,7 +739,7 @@ qboolean zyk_skill_allowed_for_class(int skill_index, int rpg_class)
 {
 	int i = 0;
 
-	int classes_allowed_for_skills[NUMBER_OF_SKILLS][11] = { // zyk: each index is a skill, and contains an array of allowed RPG classes
+	int classes_allowed_for_skills[NUM_OF_SKILLS][11] = { // zyk: each index is a skill, and contains an array of allowed RPG classes
 		{0, 1, 4, 6, 7, 9, -1}, // Jump
 		{0, 1, 4, 6, 7, 9, -1}, // Push
 		{0, 1, 4, 6, 7, 9, -1}, // Pull
@@ -1364,7 +1364,7 @@ void load_character_skills_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, 
 	}
 	if (rc == SQLITE_ROW)
 	{
-		for (int i = 0; i < NUMBER_OF_SKILLS; i++) {
+		for (int i = 0; i < NUM_OF_SKILLS; i++) {
 			ent->client->pers.skill_levels[i] = sqlite3_column_int(stmt, i + 1);
 		}
 
@@ -3634,7 +3634,7 @@ qboolean zyk_answer(gentity_t *ent, char *arg1)
 	if (ent->client->sess.amrpgmode == 2)
 	{
 		if (level.quest_map == 10 && ent->client->pers.can_play_quest == 1 && 
-			ent->client->pers.eternity_quest_progress < (NUMBER_OF_ETERNITY_QUEST_OBJECTIVES - 1) && (int) ent->client->ps.origin[0] > -676 && 
+			ent->client->pers.eternity_quest_progress < (NUM_OF_ETERNITY_QUEST_OBJ - 1) && (int) ent->client->ps.origin[0] > -676 && 
 			(int) ent->client->ps.origin[0] < -296 && (int) ent->client->ps.origin[1] > 1283 && (int) ent->client->ps.origin[1] < 1663 && 
 			(int) ent->client->ps.origin[2] > 60 && (int) ent->client->ps.origin[2] < 120)
 		{ // zyk: Eternity Quest
@@ -5970,47 +5970,47 @@ qboolean TryGrapple(gentity_t *ent)
 					{ // zyk: Magic Power Right direction
 						// zyk: can use the power if he beat a specific light quest boss
 						if (ent->client->pers.rpg_class == 0 && (ent->client->pers.defeated_guardians & (1 << 11) || 
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ultra Resistance
 							use_this_power = MAGIC_ULTRA_RESISTANCE;
 						}
 						else if (ent->client->pers.rpg_class == 1 && (ent->client->pers.defeated_guardians & (1 << 6) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Sleeping Flowers
 							use_this_power = MAGIC_SLEEPING_FLOWERS;
 						}
 						else if (ent->client->pers.rpg_class == 5 && (ent->client->pers.defeated_guardians & (1 << 4) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Healing Water
 							use_this_power = MAGIC_HEALING_WATER;
 						}
 						else if (ent->client->pers.rpg_class == 4 && (ent->client->pers.defeated_guardians & (1 << 9) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Flame Burst
 							use_this_power = MAGIC_FLAME_BURST;
 						}
 						else if (ent->client->pers.rpg_class == 3 && (ent->client->pers.defeated_guardians & (1 << 5) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Earthquake
 							use_this_power = MAGIC_EARTHQUAKE;
 						}
 						else if (ent->client->pers.rpg_class == 6 && (ent->client->pers.defeated_guardians & (1 << 7) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Magic Shield
 							use_this_power = MAGIC_MAGIC_SHIELD;
 						}
 						else if (ent->client->pers.rpg_class == 2 && (ent->client->pers.defeated_guardians & (1 << 10) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Blowing Wind
 							use_this_power = MAGIC_BLOWING_WIND;
 						}
 						else if (ent->client->pers.rpg_class == 7 && (ent->client->pers.defeated_guardians & (1 << 8) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ultra Speed
 							use_this_power = MAGIC_ULTRA_SPEED;
 						}
 						else if (ent->client->pers.rpg_class == 9 && (ent->client->pers.defeated_guardians & (1 << 12) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ice Boulder
 							use_this_power = MAGIC_ICE_BOULDER;
 						}
@@ -6019,47 +6019,47 @@ qboolean TryGrapple(gentity_t *ent)
 					{ // zyk: Magic Power Left direction
 						// zyk: can use the power if he beat a specific light quest boss
 						if (ent->client->pers.rpg_class == 0 && (ent->client->pers.defeated_guardians & (1 << 11) || 
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ultra Strength
 							use_this_power = MAGIC_ULTRA_STRENGTH;
 						}
 						else if (ent->client->pers.rpg_class == 1 && (ent->client->pers.defeated_guardians & (1 << 6) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Poison Mushrooms
 							use_this_power = MAGIC_POISON_MUSHROOMS;
 						}
 						else if (ent->client->pers.rpg_class == 5 && (ent->client->pers.defeated_guardians & (1 << 4) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Water Splash
 							use_this_power = MAGIC_WATER_SPLASH;
 						}
 						else if (ent->client->pers.rpg_class == 4 && (ent->client->pers.defeated_guardians & (1 << 9) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ultra Flame
 							use_this_power = MAGIC_ULTRA_FLAME;
 						}
 						else if (ent->client->pers.rpg_class == 3 && (ent->client->pers.defeated_guardians & (1 << 5) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Rockfall
 							use_this_power = MAGIC_ROCKFALL;
 						}
 						else if (ent->client->pers.rpg_class == 6 && (ent->client->pers.defeated_guardians & (1 << 7) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Dome of Damage
 							use_this_power = MAGIC_DOME_OF_DAMAGE;
 						}
 						else if (ent->client->pers.rpg_class == 2 && (ent->client->pers.defeated_guardians & (1 << 10) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Hurricane
 							use_this_power = MAGIC_HURRICANE;
 						}
 						else if (ent->client->pers.rpg_class == 7 && (ent->client->pers.defeated_guardians & (1 << 8) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Slow Motion
 							use_this_power = MAGIC_SLOW_MOTION;
 						}
 						else if (ent->client->pers.rpg_class == 9 && (ent->client->pers.defeated_guardians & (1 << 12) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ice Stalagmite
 							use_this_power = MAGIC_ICE_STALAGMITE;
 						}
@@ -6068,47 +6068,47 @@ qboolean TryGrapple(gentity_t *ent)
 					{ // zyk: Magic Power Front direction
 						// zyk: can use the power if he beat a specific light quest boss
 						if (ent->client->pers.rpg_class == 0 && (ent->client->pers.defeated_guardians & (1 << 11) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Enemy Weakening
 							use_this_power = MAGIC_ENEMY_WEAKENING;
 						}
 						else if (ent->client->pers.rpg_class == 1 && (ent->client->pers.defeated_guardians & (1 << 6) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Tree of Life
 							use_this_power = MAGIC_TREE_OF_LIFE;
 						}
 						else if (ent->client->pers.rpg_class == 2 && (ent->client->pers.defeated_guardians & (1 << 10) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Reverse Wind
 							use_this_power = MAGIC_REVERSE_WIND;
 						}
 						else if (ent->client->pers.rpg_class == 3 && (ent->client->pers.defeated_guardians & (1 << 5) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Shifting Sand
 							use_this_power = MAGIC_SHIFTING_SAND;
 						}
 						else if (ent->client->pers.rpg_class == 4 && (ent->client->pers.defeated_guardians & (1 << 9) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Flaming Area
 							use_this_power = MAGIC_FLAMING_AREA;
 						}
 						else if (ent->client->pers.rpg_class == 5 && (ent->client->pers.defeated_guardians & (1 << 4) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Water Attack
 							use_this_power = MAGIC_WATER_ATTACK;
 						}
 						else if (ent->client->pers.rpg_class == 6 && (ent->client->pers.defeated_guardians & (1 << 7) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Magic Disable
 							use_this_power = MAGIC_MAGIC_DISABLE;
 						}
 						else if (ent->client->pers.rpg_class == 7 && (ent->client->pers.defeated_guardians & (1 << 8) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Fast and Slow
 							use_this_power = MAGIC_FAST_AND_SLOW;
 						}
 						else if (ent->client->pers.rpg_class == 9 && (ent->client->pers.defeated_guardians & (1 << 12) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ice Block
 							use_this_power = MAGIC_ICE_BLOCK;
 						}
@@ -6120,7 +6120,7 @@ qboolean TryGrapple(gentity_t *ent)
 					use_this_power = -1;
 				}
 
-				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 3) && 
+				if (ent->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ && ent->client->pers.universe_quest_counter & (1 << 3) && 
 					!(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
 				{ // zyk: Magic Improvement. Decreases mp cost of Universe Power
 					universe_mp_cost_factor = 1.0;
@@ -6497,7 +6497,7 @@ qboolean TryGrapple(gentity_t *ent)
 					}
 				}
 
-				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 1) && 
+				if (ent->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ && ent->client->pers.universe_quest_counter & (1 << 1) && 
 					!(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
 				{ // zyk: Magic Boost, reward for completing quests in Guardians Sequel. Decreases cooldown time of magic powers
 					if (ent->client->pers.rpg_class == 8)
@@ -7476,7 +7476,7 @@ void initialize_rpg_skills(gentity_t *ent)
 		ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
 
 		// zyk: Light Power, Dark Power and Eternity Power use mp
-		if (ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS && !(ent->client->pers.player_settings & (1 << 1)) && 
+		if (ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS && !(ent->client->pers.player_settings & (1 << 1)) && 
 			zyk_enable_light_power.integer == 1)
 		{
 			ent->client->pers.magic_power--;
@@ -7487,7 +7487,7 @@ void initialize_rpg_skills(gentity_t *ent)
 			ent->client->pers.quest_power_status &= ~(1 << 14);
 		}
 
-		if (ent->client->pers.hunter_quest_progress == NUMBER_OF_OBJECTIVES && !(ent->client->pers.player_settings & (1 << 2)) && 
+		if (ent->client->pers.hunter_quest_progress == NUM_OF_OBJECTIVES && !(ent->client->pers.player_settings & (1 << 2)) && 
 			zyk_enable_dark_power.integer == 1)
 		{
 			ent->client->pers.magic_power--;
@@ -7498,7 +7498,7 @@ void initialize_rpg_skills(gentity_t *ent)
 			ent->client->pers.quest_power_status &= ~(1 << 15);
 		}
 
-		if (ent->client->pers.eternity_quest_progress == NUMBER_OF_ETERNITY_QUEST_OBJECTIVES && !(ent->client->pers.player_settings & (1 << 3)) && 
+		if (ent->client->pers.eternity_quest_progress == NUM_OF_ETERNITY_QUEST_OBJ && !(ent->client->pers.player_settings & (1 << 3)) && 
 			zyk_enable_eternity_power.integer == 1)
 		{
 			ent->client->pers.magic_power--;
@@ -7558,7 +7558,7 @@ void add_new_char(gentity_t *ent)
 	ent->client->pers.level = 1;
 	ent->client->pers.skillpoints = 1;
 
-	for (i = 0; i < NUMBER_OF_SKILLS; i++)
+	for (i = 0; i < NUM_OF_SKILLS; i++)
 	{
 		ent->client->pers.skill_levels[i] = 0;
 	}
@@ -7777,7 +7777,7 @@ void legacy_load_account(gentity_t *ent)
 
 		validate_skillpoints = ent->client->pers.skillpoints;
 		// zyk: loading skill levels
-		for (i = 0; i < NUMBER_OF_SKILLS; i++)
+		for (i = 0; i < NUM_OF_SKILLS; i++)
 		{
 			fscanf(account_file, "%s", content);
 			ent->client->pers.skill_levels[i] = atoi(content);
@@ -7788,7 +7788,7 @@ void legacy_load_account(gentity_t *ent)
 		if (validate_skillpoints != max_skillpoints)
 		{
 			// zyk: if not valid, reset all skills and set the max skillpoints he can have in this level
-			for (i = 0; i < NUMBER_OF_SKILLS; i++)
+			for (i = 0; i < NUM_OF_SKILLS; i++)
 			{
 				ent->client->pers.skill_levels[i] = 0;
 			}
@@ -7803,7 +7803,7 @@ void legacy_load_account(gentity_t *ent)
 
 		// zyk: compability with old mod versions, in which the players who completed the quest had a value of 9
 		if (ent->client->pers.defeated_guardians == 9)
-			ent->client->pers.defeated_guardians = NUMBER_OF_GUARDIANS;
+			ent->client->pers.defeated_guardians = NUM_OF_GUARDIANS;
 
 		// zyk: loading Dark Quest completed objectives value
 		fscanf(account_file, "%s", content);
@@ -7918,17 +7918,17 @@ void clean_guardians(gentity_t *ent)
 // zyk: tests if the player has beaten the guardians before the Guardian of Light in Light Quest
 qboolean light_quest_defeated_guardians(gentity_t *ent)
 {
-	int j = 0, number_of_guardians_defeated = 0;
+	int j = 0, NUM_OF_GUARDIANS_defeated = 0;
 
 	for (j = 4; j <= 12; j++)
 	{
 		if (ent->client->pers.defeated_guardians & (1 << j))
 		{
-			number_of_guardians_defeated++;
+			NUM_OF_GUARDIANS_defeated++;
 		}
 	}
 
-	if (number_of_guardians_defeated == (NUMBER_OF_GUARDIANS - 1))
+	if (NUM_OF_GUARDIANS_defeated == (NUM_OF_GUARDIANS - 1))
 		return qtrue;
 	else
 		return qfalse;
@@ -8063,11 +8063,11 @@ int zyk_number_of_completed_quests(gentity_t *ent)
 {
 	int number_of_completed_quests = 0;
 
-	if (ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS)
+	if (ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS)
 		number_of_completed_quests++;
-	if (ent->client->pers.hunter_quest_progress == NUMBER_OF_OBJECTIVES)
+	if (ent->client->pers.hunter_quest_progress == NUM_OF_OBJECTIVES)
 		number_of_completed_quests++;
-	if (ent->client->pers.eternity_quest_progress == NUMBER_OF_ETERNITY_QUEST_OBJECTIVES)
+	if (ent->client->pers.eternity_quest_progress == NUM_OF_ETERNITY_QUEST_OBJ)
 		number_of_completed_quests++;
 
 	return number_of_completed_quests;
@@ -8079,71 +8079,71 @@ void choose_new_player(gentity_t *next_player)
 	int found = 0;
 	if (next_player && next_player->client && next_player->client->sess.amrpgmode == 2 && !(next_player->client->pers.player_settings & (1 << 0)) && next_player->client->pers.can_play_quest == 0 && next_player->client->pers.connected == CON_CONNECTED && next_player->client->sess.sessionTeam != TEAM_SPECTATOR && next_player->inuse == qtrue)
 	{
-		if (level.quest_map == 1 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 4))) || (next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 4))) || (next_player->client->pers.universe_quest_progress == 2 && (!(next_player->client->pers.universe_quest_counter & (1 << 1)) || !(next_player->client->pers.universe_quest_counter & (1 << 3)))) || next_player->client->pers.universe_quest_progress == 3))
+		if (level.quest_map == 1 && ((next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 4))) || (next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 4))) || (next_player->client->pers.universe_quest_progress == 2 && (!(next_player->client->pers.universe_quest_counter & (1 << 1)) || !(next_player->client->pers.universe_quest_counter & (1 << 3)))) || next_player->client->pers.universe_quest_progress == 3))
 			found = 1;
-		else if (level.quest_map == 2 && next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 5)))
+		else if (level.quest_map == 2 && next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 5)))
 			found = 1;
-		else if (level.quest_map == 3 && next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 6)))
+		else if (level.quest_map == 3 && next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 6)))
 			found = 1;
 		else if (level.quest_map == 4 && (
-			(next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 7))) || 
-			(next_player->client->pers.universe_quest_progress >= 17 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES &&
+			(next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 7))) || 
+			(next_player->client->pers.universe_quest_progress >= 17 && next_player->client->pers.universe_quest_progress < NUM_OF_UNIVERSE_QUEST_OBJ &&
 			 next_player->client->pers.universe_quest_counter & (1 << 3))))
 			found = 1;
-		else if (level.quest_map == 5 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 12))) || (next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 8))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 9)))))
+		else if (level.quest_map == 5 && ((next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 12))) || (next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 8))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 9)))))
 			found = 1;
 		else if (level.quest_map == 6 && (
-			(next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 9))) ||
+			(next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 9))) ||
 			(next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 6))) ||
-			(next_player->client->pers.universe_quest_progress >= 18 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && 
+			(next_player->client->pers.universe_quest_progress >= 18 && next_player->client->pers.universe_quest_progress < NUM_OF_UNIVERSE_QUEST_OBJ && 
 			 next_player->client->pers.universe_quest_counter & (1 << 0)) || 
 			(next_player->client->pers.universe_quest_progress == 16 && next_player->client->pers.universe_quest_counter & (1 << 1)) || 
 			(next_player->client->pers.universe_quest_progress >= 15 && next_player->client->pers.universe_quest_progress <= 17 && next_player->client->pers.universe_quest_counter & (1 << 2))))
 		{
 			found = 1;
 		}
-		else if (level.quest_map == 7 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 7))) || (next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 10)))))
+		else if (level.quest_map == 7 && ((next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 7))) || (next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 10)))))
 			found = 1;
 		else if (level.quest_map == 8 && next_player->client->pers.universe_quest_progress == 4)
 			found = 1;
-		else if (level.quest_map == 9 && (next_player->client->pers.universe_quest_progress < 2 || (next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 12)))))
+		else if (level.quest_map == 9 && (next_player->client->pers.universe_quest_progress < 2 || (next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 12)))))
 			found = 1;
-		else if (level.quest_map == 10 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 6))) || 
+		else if (level.quest_map == 10 && ((next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 6))) || 
 				 light_quest_defeated_guardians(next_player) == qtrue || dark_quest_collected_notes(next_player) == qtrue || 
-				 next_player->client->pers.eternity_quest_progress < NUMBER_OF_ETERNITY_QUEST_OBJECTIVES || 
+				 next_player->client->pers.eternity_quest_progress < NUM_OF_ETERNITY_QUEST_OBJ || 
 				(next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 8))) || 
 				(next_player->client->pers.universe_quest_progress == 15 && next_player->client->pers.universe_quest_counter & (1 << 0)) || 
 				(next_player->client->pers.universe_quest_progress == 16 && next_player->client->pers.universe_quest_counter & (1 << 3))))
 		{
 			found = 1;
 		}
-		else if (level.quest_map == 11 && next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 9)))
+		else if (level.quest_map == 11 && next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 9)))
 			found = 1;
 		else if (level.quest_map == 12 && (next_player->client->pers.universe_quest_progress == 7 ||
 				(next_player->client->pers.universe_quest_progress == 8 && !(next_player->client->pers.universe_quest_counter & (1 << 1))) || 
 				(next_player->client->pers.universe_quest_progress == 15 && next_player->client->pers.universe_quest_counter & (1 << 1)) || 
-				(next_player->client->pers.universe_quest_progress >= 17 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && 
+				(next_player->client->pers.universe_quest_progress >= 17 && next_player->client->pers.universe_quest_progress < NUM_OF_UNIVERSE_QUEST_OBJ && 
 				 next_player->client->pers.universe_quest_counter & (1 << 1)) || 
 				(next_player->client->pers.universe_quest_progress == 15 && next_player->client->pers.universe_quest_counter & (1 << 3))))
 		{
 			found = 1;
 		}
-		else if (level.quest_map == 13 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 5))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 5)))))
+		else if (level.quest_map == 13 && ((next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 5))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 5)))))
 			found = 1;
-		else if (level.quest_map == 14 && next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 11)))
+		else if (level.quest_map == 14 && next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 11)))
 			found = 1;
-		else if (level.quest_map == 15 && next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 10)))
+		else if (level.quest_map == 15 && next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 10)))
 			found = 1;
 		else if (level.quest_map == 17 && ((next_player->client->pers.universe_quest_progress == 8 && !(next_player->client->pers.universe_quest_counter & (1 << 2))) || (next_player->client->pers.universe_quest_progress == 9 && (!(next_player->client->pers.universe_quest_counter & (1 << 0)) || !(next_player->client->pers.universe_quest_counter & (1 << 1)) || !(next_player->client->pers.universe_quest_counter & (1 << 2)))) || (next_player->client->pers.universe_quest_progress >= 10 && next_player->client->pers.universe_quest_progress < 14) || (next_player->client->pers.universe_quest_progress == 14 && zyk_number_of_completed_quests(next_player) == 3)))
 			found = 1;
-		else if (level.quest_map == 18 && ((next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 11))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 4)))))
+		else if (level.quest_map == 18 && ((next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 11))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 4)))))
 			found = 1;
-		else if (level.quest_map == 20 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 8))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 7)))))
+		else if (level.quest_map == 20 && ((next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 8))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 7)))))
 			found = 1;
 		else if (level.quest_map == 24 && (next_player->client->pers.universe_quest_progress == 5 ||
 				(next_player->client->pers.universe_quest_progress == 16 && next_player->client->pers.universe_quest_counter & (1 << 0)) || 
 				(next_player->client->pers.universe_quest_progress == 17 && next_player->client->pers.universe_quest_counter & (1 << 0)) || 
-				(next_player->client->pers.universe_quest_progress >= 18 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && 
+				(next_player->client->pers.universe_quest_progress >= 18 && next_player->client->pers.universe_quest_progress < NUM_OF_UNIVERSE_QUEST_OBJ && 
 				 next_player->client->pers.universe_quest_counter & (1 << 2))))
 		{
 			found = 1;
@@ -8196,7 +8196,7 @@ void choose_new_player(gentity_t *next_player)
 		next_player->client->pers.light_quest_timer = level.time + 3000;
 		next_player->client->pers.light_quest_messages = 0;
 
-		if (next_player->client->pers.eternity_quest_progress < (NUMBER_OF_ETERNITY_QUEST_OBJECTIVES - 1))
+		if (next_player->client->pers.eternity_quest_progress < (NUM_OF_ETERNITY_QUEST_OBJ - 1))
 		{ // zyk: give some time before the riddle appears to the quest player
 			next_player->client->pers.eternity_quest_timer = level.time + 1000;
 		}
@@ -8264,7 +8264,7 @@ void choose_new_player(gentity_t *next_player)
 		}
 
 		// zyk: loading note models if player must find a Dark Quest note
-		if (level.quest_note_id == -1 && next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES)
+		if (level.quest_note_id == -1 && next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES)
 		{
 			if (level.quest_map == 1 && !(next_player->client->pers.hunter_quest_progress & (1 << 4)))
 			{
@@ -8305,7 +8305,7 @@ void choose_new_player(gentity_t *next_player)
 		}
 
 		// zyk: loading effects in guardian area
-		if (level.quest_effect_id == -1 && next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		if (level.quest_effect_id == -1 && next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 		{
 			if (level.quest_map == 1 && !(next_player->client->pers.defeated_guardians & (1 << 4)))
 			{ // zyk: Guardian of Water
@@ -9861,7 +9861,7 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 			}
 		}
 
-		for (i = 0; i < NUMBER_OF_SKILLS; i++)
+		for (i = 0; i < NUM_OF_SKILLS; i++)
 		{
 			strcpy(content, va("%s%d/%d-", content, ent->client->pers.skill_levels[i], max_skill_levels[i]));
 		}
@@ -9888,7 +9888,7 @@ void Cmd_ZykMod_f( gentity_t *ent ) {
 		{
 			universe_quest_counter_value = ent->client->pers.universe_quest_counter;
 
-			if (ent->client->pers.unique_skill_timer > level.time && ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES &&
+			if (ent->client->pers.unique_skill_timer > level.time && ent->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ &&
 				ent->client->pers.universe_quest_counter & (1 << 2) && !(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
 			{ // zyk: Unique Boost decreases unique cooldown time
 				universe_quest_counter_value |= (1 << 30);
@@ -10001,7 +10001,7 @@ void Cmd_ZykChars_f(gentity_t *ent) {
 qboolean validate_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, qboolean dont_show_message)
 {
 	// zyk: validation on the upgrade level, which must be in the range of valid skills.
-	if (upgrade_value < 1 || upgrade_value > NUMBER_OF_SKILLS)
+	if (upgrade_value < 1 || upgrade_value > NUM_OF_SKILLS)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"Invalid skill number.\n\"" );
 		return qfalse;
@@ -10130,7 +10130,7 @@ void do_upgrade_skill(gentity_t *ent, gentity_t *target_ent, int upgrade_value, 
 	{ // zyk: update all skills
 		int i = 0;
 
-		for (i = 1; i <= NUMBER_OF_SKILLS; i++)
+		for (i = 1; i <= NUM_OF_SKILLS; i++)
 		{
 			int j = 0;
 
@@ -10193,7 +10193,7 @@ void Cmd_UpSkill_f( gentity_t *ent ) {
 void do_downgrade_skill(gentity_t *ent, int downgrade_value)
 {
 	// zyk: validation on the downgrade level, which must be in the range of valid skills.
-	if (downgrade_value < 1 || downgrade_value > NUMBER_OF_SKILLS)
+	if (downgrade_value < 1 || downgrade_value > NUM_OF_SKILLS)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"^1Invalid skill number.\n\"" );
 		return;
@@ -11453,7 +11453,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 			else
 			{ // zyk: the player can also list the specific info of a skill passing the skill number as argument
 				i = atoi(arg1);
-				if (i >= 1 && i <= NUMBER_OF_SKILLS)
+				if (i >= 1 && i <= NUM_OF_SKILLS)
 				{
 					if (i == 1)
 						trap->SendServerCommand( ent-g_entities, "print \"^3Jump: ^7makes you use the force to jump higher. Level 5 has no height limit, you can continue jumping up until you run out of force, and it also lets you jump out of water\n\"" );
@@ -11604,7 +11604,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				}
 				else if (Q_stricmp( arg1, "r" ) == 0)
 				{
-					if (ent->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
+					if (ent->client->pers.universe_quest_progress < NUM_OF_UNIVERSE_QUEST_OBJ)
 					{
 						trap->SendServerCommand(ent->s.number, va("print \"^3Final Power: ^7You must finish ^2Universe Quest ^7to have this power\n\""));
 					}
@@ -12993,7 +12993,7 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 	{
 		int i = 0;
 
-		for (i = 0; i < NUMBER_OF_SKILLS; i++)
+		for (i = 0; i < NUM_OF_SKILLS; i++)
 			ent->client->pers.skill_levels[i] = 0;
 
 		ent->client->pers.max_rpg_shield = 0;
@@ -13058,7 +13058,7 @@ void Cmd_ResetAccount_f( gentity_t *ent ) {
 	{
 		int i = 0;
 
-		for (i = 0; i < NUMBER_OF_SKILLS; i++)
+		for (i = 0; i < NUM_OF_SKILLS; i++)
 			ent->client->pers.skill_levels[i] = 0;
 
 		ent->client->pers.max_rpg_shield = 0;
@@ -13816,19 +13816,19 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			{
 				ent->client->pers.player_settings &= ~(1 << value);
 
-				if (value == 1 && ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS && zyk_enable_light_power.integer == 1)
+				if (value == 1 && ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS && zyk_enable_light_power.integer == 1)
 				{
 					ent->client->pers.magic_power--;
 					ent->client->pers.quest_power_status |= (1 << 14);
 					send_rpg_events(1000);
 				}
-				else if (value == 2 && ent->client->pers.hunter_quest_progress == NUMBER_OF_OBJECTIVES && zyk_enable_dark_power.integer == 1)
+				else if (value == 2 && ent->client->pers.hunter_quest_progress == NUM_OF_OBJECTIVES && zyk_enable_dark_power.integer == 1)
 				{
 					ent->client->pers.magic_power--;
 					ent->client->pers.quest_power_status |= (1 << 15);
 					send_rpg_events(1000);
 				}
-				else if (value == 3 && ent->client->pers.eternity_quest_progress == NUMBER_OF_ETERNITY_QUEST_OBJECTIVES && zyk_enable_eternity_power.integer == 1)
+				else if (value == 3 && ent->client->pers.eternity_quest_progress == NUM_OF_ETERNITY_QUEST_OBJ && zyk_enable_eternity_power.integer == 1)
 				{
 					ent->client->pers.magic_power--;
 					ent->client->pers.quest_power_status |= (1 << 16);
@@ -13897,7 +13897,7 @@ void Cmd_Settings_f( gentity_t *ent ) {
 				ent->client->pers.player_settings |= (1 << value);
 				ent->client->pers.universe_quest_counter |= (1 << 29);
 			}
-			else if (ent->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
+			else if (ent->client->pers.universe_quest_progress < NUM_OF_UNIVERSE_QUEST_OBJ)
 			{ // zyk: setting Normal Mode removes the Challenge Mode flag. Cannot change after completing all quests
 				ent->client->pers.player_settings &= ~(1 << value);
 				ent->client->pers.universe_quest_counter &= ~(1 << 29);
@@ -14101,7 +14101,7 @@ void load_config(gentity_t *ent)
 		if (client->pers.level >= value)
 		{ // zyk: only loads config if current level is at least the one read from the file
 		  // if the value is lower, it means the player reset his account. In this case, do not load anything
-			for (i = 1; i <= NUMBER_OF_SKILLS; i++)
+			for (i = 1; i <= NUM_OF_SKILLS; i++)
 			{
 				fscanf(config_file,"%s",content);
 				value = atoi(content); // zyk: the skill levels the player has in this skill
@@ -14224,7 +14224,7 @@ void do_change_class(gentity_t *ent, int value)
 	ent->client->pers.rpg_class = value;
 
 	// zyk: resetting skills
-	for (i = 0; i < NUMBER_OF_SKILLS; i++)
+	for (i = 0; i < NUM_OF_SKILLS; i++)
 	{
 		while (ent->client->pers.skill_levels[i] > 0)
 		{
@@ -17205,7 +17205,7 @@ qboolean zyk_can_use_unique(gentity_t *ent)
 // zyk: Unique Boost, makes unique skill cooldown time lower
 void zyk_unique_boost(gentity_t *ent)
 {
-	if (ent->client->pers.unique_skill_timer > level.time && ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES &&
+	if (ent->client->pers.unique_skill_timer > level.time && ent->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ &&
 		ent->client->pers.universe_quest_counter & (1 << 2) && !(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
 	{
 		ent->client->pers.unique_skill_timer -= ((ent->client->pers.unique_skill_timer - level.time) / 5);

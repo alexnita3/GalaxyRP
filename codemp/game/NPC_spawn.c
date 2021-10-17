@@ -4529,7 +4529,7 @@ void NPC_Spawn_f( gentity_t *ent )
 
 	// zyk: guardian npcs cant be spawned by players, quest npcs also cant be spawned
 
-	for (i = 0; i < NUMBER_OF_GUARDIANS; i++)
+	for (i = 0; i < NUM_OF_GUARDIANS; i++)
 	{
 		if (Q_stricmp(va("guardian_boss_%d", (i+1)), npc_type) == 0)
 			return;
@@ -4700,7 +4700,7 @@ void NPC_Kill_f( void )
 			int i = 0; // zyk: used to test the guardian npcs
 			int found = 0; // zyk: will be set to 1 when found a guardian npc
 
-			for (i = 1; i <= NUMBER_OF_GUARDIANS; i++)
+			for (i = 1; i <= NUM_OF_GUARDIANS; i++)
 			{
 				if (Q_stricmp( player->NPC_type, va("guardian_boss_%d",i) ) == 0)
 				{

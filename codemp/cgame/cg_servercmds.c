@@ -1586,17 +1586,17 @@ static void CG_ClientLevelShot_f( void ) {
 
 static qboolean light_quest_defeated_guardians(int light_quest_progress)
 {
-	int j = 0, number_of_guardians_defeated = 0;
+	int j = 0, NUM_OF_GUARDIANS_defeated = 0;
 
 	for (j = 4; j <= 12; j++)
 	{
 		if (light_quest_progress & (1 << j))
 		{
-			number_of_guardians_defeated++;
+			NUM_OF_GUARDIANS_defeated++;
 		}
 	}
 
-	if (number_of_guardians_defeated == 9)
+	if (NUM_OF_GUARDIANS_defeated == 9)
 		return qtrue;
 	else
 		return qfalse;

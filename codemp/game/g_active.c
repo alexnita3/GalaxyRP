@@ -924,7 +924,7 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 				}
 			}
 
-			if (client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && client->pers.universe_quest_counter & (1 << 0) &&
+			if (client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ && client->pers.universe_quest_counter & (1 << 0) &&
 				client->pers.magic_power < zyk_max_magic_power(ent) && !(client->sess.magic_more_disabled_powers & (1 << 1)))
 			{ // zyk: Final Power of Sages Sequel. Magic Regen. Adds auto-healing of mp
 				client->pers.magic_power += 1;

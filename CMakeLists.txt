@@ -157,6 +157,7 @@ set(SharedLib "shared")
 #=============================================================================
 set(SPDir "${CMAKE_SOURCE_DIR}/code")
 set(MPDir "${CMAKE_SOURCE_DIR}/codemp")
+set(RPDir "${CMAKE_SOURCE_DIR}/galaxyrp") # GalaxyRP source files
 set(SharedDir ${CMAKE_SOURCE_DIR}/shared)
 set(OpenJKLibDir "${CMAKE_SOURCE_DIR}/lib")
 set(GSLIncludeDirectory "${OpenJKLibDir}/gsl-lite/include")
