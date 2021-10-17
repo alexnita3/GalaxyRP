@@ -8545,6 +8545,9 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 
 qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, qboolean dont_show_message)
 {
+	char maximum_skill_message[256] = "print \"^1You reached the maximum level of %s ^1skill. Nothing was updated.\n\"";
+	char maximum_skill_message_other[256] = "print \"^1Target already reached the maximum level of %s ^1skill. Nothing was updated\n\"";
+
 	if (upgrade_value == 1)
 	{
 		if (ent->client->pers.skill_levels[0] < max_skill_levels[upgrade_value - 1])
@@ -8558,9 +8561,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse){
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Jump ^7skill.\n\"" );
+				trap->SendServerCommand( ent-g_entities, va(maximum_skill_message, "^3Jump"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Jump ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Jump"));
 				}
 			}
 			return qfalse;
@@ -8580,9 +8583,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Push ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Push"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Push ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Push"));
 				}
 			}
 			return qfalse;
@@ -8602,9 +8605,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Pull ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Pull"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Pull ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Pull"));
 				}
 			}
 			return qfalse;
@@ -8624,9 +8627,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Speed ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Speed"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Speed ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Speed"));
 				}
 			}
 			return qfalse;
@@ -8655,9 +8658,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Sense ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Sense"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Sense ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Sense"));
 				}
 			}
 			return qfalse;
@@ -8684,9 +8687,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Saber Attack ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Saber Attack"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Saber Attack ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Saber Attack"));
 				}
 			}
 			return qfalse;
@@ -8706,9 +8709,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Saber Defense ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Saber Defense"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Saber Defense ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Saber Defense"));
 				}
 			}
 			return qfalse;
@@ -8728,9 +8731,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Saber Throw ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Saber Throw"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Saber Throw ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Saber Throw"));
 				}
 			}
 			return qfalse;
@@ -8755,9 +8758,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Absorb ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Absorb"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Absorb ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Absorb"));
 				}
 			}
 			return qfalse;
@@ -8777,9 +8780,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Heal ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Heal"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Heal ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Heal"));
 				}
 			}
 			return qfalse;
@@ -8803,9 +8806,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Protect ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Protect"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Protect ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Protect"));
 				}
 			}
 			return qfalse;
@@ -8825,9 +8828,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Mind Trick ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Mind Trick"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Mind Trick ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Mind Trick"));
 				}
 			}
 			return qfalse;
@@ -8847,9 +8850,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Team Heal ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Team Heal"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Team Heal ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Team Heal"));
 				}
 			}
 			return qfalse;
@@ -8873,9 +8876,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Lightning ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Lightning"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Lightning ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Lightning"));
 				}
 			}
 			return qfalse;
@@ -8895,9 +8898,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Grip ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Grip"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Grip ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Grip"));
 				}
 			}
 			return qfalse;
@@ -8917,9 +8920,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Drain ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Drain"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Drain ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Drain"));
 				}
 			}
 			return qfalse;
@@ -8944,9 +8947,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Rage ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Rage"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Rage ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Rage"));
 				}
 			}
 			return qfalse;
@@ -8966,9 +8969,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Team Energize ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Team Energize"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Team Energize ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Team Energize"));
 				}
 			}
 			return qfalse;
@@ -8985,9 +8988,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Stun Baton ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Stun Baton"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Stun Baton ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Stun Baton"));
 				}
 			}
 			return qfalse;
@@ -9004,9 +9007,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Blaster Pistol ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Blaster Pistol"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Blaster Pistol ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Blaster Pistol"));
 				}
 			}
 			return qfalse;
@@ -9023,9 +9026,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3E11 Blaster Rifle ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3E11 Blaster Rifle"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3E11 Blaster Rifle ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3E11 Blaster Rifle"));
 				}
 			}
 			return qfalse;
@@ -9042,9 +9045,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Disruptor ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Disruptor"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Disruptor ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Disruptor"));
 				}
 			}
 			return qfalse;
@@ -9061,9 +9064,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Bowcaster ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Bowcaster"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Bowcaster ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Bowcaster"));
 				}
 			}
 			return qfalse;
@@ -9080,9 +9083,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Repeater ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Repeater"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Repeater ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Repeater"));
 				}
 			}
 			return qfalse;
@@ -9099,9 +9102,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3DEMP2 ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3DEMP2"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3DEMP2 ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3DEMP2"));
 				}
 			}
 			return qfalse;
@@ -9118,9 +9121,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Flechette ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Flechette"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Flechette ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Flechette"));
 				}
 			}
 			return qfalse;
@@ -9137,9 +9140,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Rocket Launcher ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Rocket Launcher"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Rocket Launcher ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Rocket Launcher"));
 				}
 			}
 			return qfalse;
@@ -9156,9 +9159,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Concussion Rifle ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Concussion Rifle"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Concussion Rifle ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Concussion Rifle"));
 				}
 			}
 			return qfalse;
@@ -9175,9 +9178,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Bryar Pistol ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Bryar Pistol"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Bryar Pistol ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Bryar Pistol"));
 				}
 			}
 			return qfalse;
@@ -9194,9 +9197,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Melee ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Melee"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Melee ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Melee"));
 				}
 			}
 			return qfalse;
@@ -9214,9 +9217,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Max Shield ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Max Shield"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Max Shield ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Max Shield"));
 				}
 			}
 			return qfalse;
@@ -9233,9 +9236,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Shield Strength ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Shield Strength"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Shield Strength ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Shield Strength"));
 				}
 			}
 			return qfalse;
@@ -9252,9 +9255,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Health Strength ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Health Strength"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Health Strength ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Health Strength"));
 				}
 			}
 			return qfalse;
@@ -9271,9 +9274,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Drain Shield ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Drain Shield"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Drain Shield ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Drain Shield"));
 				}
 			}
 			return qfalse;
@@ -9292,9 +9295,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Jetpack ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Jetpack"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Jetpack ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Jetpack"));
 				}
 			}
 			return qfalse;
@@ -9311,9 +9314,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Sense Health ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Sense Health"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Sense Health ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Sense Health"));
 				}
 			}
 			return qfalse;
@@ -9330,9 +9333,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Shield Heal ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Shield Heal"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Shield Heal ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Shield Heal"));
 				}
 			}
 			return qfalse;
@@ -9349,9 +9352,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Team Shield Heal ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Team Shield"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Team Shield ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Team Shield"));
 				}
 			}
 			return qfalse;
@@ -9368,9 +9371,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Unique Skill^7.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Unique Skill"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Unique Skill ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Unique Skill"));
 				}
 			}
 			return qfalse;
@@ -9387,9 +9390,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Blaster Pack ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Blaster Pack"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Blaster Pack ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Blaster Pack"));
 				}
 			}
 			return qfalse;
@@ -9406,9 +9409,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Power Cell ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Power Cell"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Power Cell ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Power Cell"));
 				}
 			}
 			return qfalse;
@@ -9425,9 +9428,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Metallic Bolts ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Metallic Bolts"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Metallic Bolts ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Metallic Bolts"));
 				}
 			}
 			return qfalse;
@@ -9444,9 +9447,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Rockets ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Rockets"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Rockets ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Rockets"));
 				}
 			}
 			return qfalse;
@@ -9463,9 +9466,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Thermals ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Thermals"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Thermals ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Thermals"));
 				}
 			}
 			return qfalse;
@@ -9482,9 +9485,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Trip Mines ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Trip Mines"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Trip Mines ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Trip Mines"));
 				}
 			}
 			return qfalse;
@@ -9501,9 +9504,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Det Packs ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Det Packs"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Det Packs ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Det Packs"));
 				}
 			}
 			return qfalse;
@@ -9520,9 +9523,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Binoculars ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Binoculars"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Binoculars ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Binoculars"));
 				}
 			}
 			return qfalse;
@@ -9539,9 +9542,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Bacta Canister ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Bacta Canister"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Bacta Canister ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Bacta Canister"));
 				}
 			}
 			return qfalse;
@@ -9558,9 +9561,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Sentry Gun ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Sentry Gun"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Sentry Gun ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Sentry Gun"));
 				}
 			}
 			return qfalse;
@@ -9577,9 +9580,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Seeker Drone ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Seeker Drone"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Seeker Drone ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Seeker Drone"));
 				}
 			}
 			return qfalse;
@@ -9596,9 +9599,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3E-Web ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3E-Web"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3E-Web ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3E-Web"));
 				}
 			}
 			return qfalse;
@@ -9615,9 +9618,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Big Bacta ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Big Bacta"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Big Bacta ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Big Bacta"));
 				}
 			}
 			return qfalse;
@@ -9634,9 +9637,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Force Field ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Force Field"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Force Field ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Force Field"));
 				}
 			}
 			return qfalse;
@@ -9653,9 +9656,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Cloak Item ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Cloak Item"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Cloak Item ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Cloak Item"));
 				}
 			}
 			return qfalse;
@@ -9674,9 +9677,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Force Power ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Force Power"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Force Power ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Force Power"));
 				}
 			}
 			return qfalse;
@@ -9693,9 +9696,9 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, "print \"You reached the maximum level of ^3Improvements ^7skill.\n\"");
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Improvements"));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, "print \"Target already reached the maximum level of ^3Improvements ^7skill.\n\"");
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Improvements"));
 				}
 			}
 			return qfalse;
@@ -10008,9 +10011,9 @@ qboolean validate_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_val
 	if (ent->client->pers.skillpoints == 0)
 	{
 		if (dont_show_message == qfalse) {
-			trap->SendServerCommand(ent - g_entities, "print \"You don't have enough skillpoints.\n\"");
+			trap->SendServerCommand(ent - g_entities, "print \"^1You don't have enough skillpoints.\n\"");
 			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-				trap->SendServerCommand(ent2 - g_entities, "print \"Target player doesn't have enough skillpoints.\n\"");
+				trap->SendServerCommand(ent2 - g_entities, "print \"^1Target player doesn't have enough skillpoints.\n\"");
 			}
 		}
 		return qfalse;
@@ -10118,8 +10121,8 @@ void do_upgrade_skill(gentity_t *ent, gentity_t *target_ent, int upgrade_value, 
 		// zyk: saving the account file with the upgraded skill
 		save_account(target_ent, qtrue);
 
-		trap->SendServerCommand(target_ent -g_entities, "print \"Skill upgraded successfully.\n\"" );
-		trap->SendServerCommand(ent - g_entities, "print \"Target skill upgraded successfully.\n\"");
+		trap->SendServerCommand(target_ent -g_entities, "print \"^2Skill upgraded successfully.\n\"" );
+		trap->SendServerCommand(ent - g_entities, "print \"^2Target skill upgraded successfully.\n\"");
 
 		Cmd_ZykMod_f(target_ent);
 	}
@@ -10192,7 +10195,7 @@ void do_downgrade_skill(gentity_t *ent, int downgrade_value)
 	// zyk: validation on the downgrade level, which must be in the range of valid skills.
 	if (downgrade_value < 1 || downgrade_value > NUMBER_OF_SKILLS)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Invalid skill number.\n\"" );
+		trap->SendServerCommand( ent-g_entities, "print \"^1Invalid skill number.\n\"" );
 		return;
 	}
 
@@ -14105,7 +14108,6 @@ void load_config(gentity_t *ent)
 
 				while (value > 0)
 				{
-					//rpg_upgrade_skill(ent, i, qtrue);
 					value--;
 				}
 			}
@@ -16664,11 +16666,11 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 			g_entities[client_id].client->pers.credits_modifier = -10;
 			rpg_score(&g_entities[client_id], qtrue);
 
-			trap->SendServerCommand( ent-g_entities, va("print \"Target player leveled up\n\"") );
+			trap->SendServerCommand( ent-g_entities, va("print \"^2Target player leveled up. Their current level is: ^3%i^2. Their skillpoint count is: ^3%i^2.\n\"", g_entities[client_id].client->pers.level, g_entities[client_id].client->pers.skillpoints) );
 		}
 		else
 		{
-			trap->SendServerCommand( ent-g_entities, va("print \"Target player is at the max rpg level\n\"") );
+			trap->SendServerCommand( ent-g_entities, va("print \"^1Target player is at the max level.\n\"") );
 		}
 	}
 	else
