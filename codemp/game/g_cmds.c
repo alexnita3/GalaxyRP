@@ -1688,6 +1688,39 @@ void select_player_character(gentity_t* ent, char *character_name, sqlite3* db, 
 	return;
 }
 
+// GalaxyRP (Alex): [Database] This method Displayes the list of characters to a player.
+void select_character_list(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt)
+{
+	char CharName[MAX_STRING_CHARS];
+	int charLevel;
+
+	// GalaxyRP (Alex): [Database] Get list of char names.
+	rc = sqlite3_prepare(db, va("SELECT Name, Level FROM Characters WHERE AccountID='%i'", ent->client->sess.accountID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	int i = 1;
+	while (rc == SQLITE_ROW) {
+		strcpy(CharName, sqlite3_column_text(stmt, 0));
+		charLevel = sqlite3_column_int(stmt, 1);
+		trap->SendServerCommand(ent - g_entities, va("print \"^3%i.^2%s - Level:%i\n\"", i, CharName, charLevel));
+		i++;
+		rc = sqlite3_step(stmt);
+	}
+
+	sqlite3_finalize(stmt);
+}
+
 void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
 {
 	int charID;
