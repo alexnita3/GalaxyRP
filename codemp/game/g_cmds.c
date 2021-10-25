@@ -1329,7 +1329,109 @@ void insert_inv_table_row(gentity_t* ent, char* item_to_add, sqlite3* db, char* 
 ----ACCOUNTS TABLE----
 */
 
-// GalaxyRP (Alex): [Database] UPDATE This method updated an accounts table row with information contained within the entity with which it's called.
+// GalaxyRP (Alex): [Database] SELECT This method selects a row form the accounts table, and assigns the values to the entity.
+void select_accounts_table_row(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char select_account_row_query[79] = "SELECT AccountID, PlayerSettings, AdminLevel FROM Accounts WHERE Username='%s'";
+
+	rc = sqlite3_prepare(db, va(select_account_row_query, username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		ent->client->sess.accountID = sqlite3_column_int(stmt, 0);
+		ent->client->pers.player_settings = sqlite3_column_int(stmt, 1);
+		ent->client->pers.bitvalue = sqlite3_column_int(stmt, 2);
+		sqlite3_finalize(stmt);
+	}
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] SELECT This method selects the id of an account going by the username provided. Usernames should be unique.
+int select_account_id_from_username(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	int accountID;
+	char select_account_id_query[51] = "SELECT AccountID FROM Accounts WHERE Username='%s'";
+
+	rc = sqlite3_prepare(db, va(select_account_id_query, username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return -1;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return -1;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		accountID = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	}
+
+	return accountID;
+}
+
+// GalaxyRP (Alex): [Database] INSERT This method inserts a new row into the accounts table, using the username and password provided, and default values for everything else.
+void insert_accounts_table_row(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char insert_new_entry_to_accounts_table[195] = "INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('%s','%s','0','0','%s')";
+	run_db_query(va(insert_new_entry_to_accounts_table, username, password, username), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] SELECT This method returns the number of accounts with one specific username. Useful for checking if a username is unique.
+int select_number_of_accounts_with_username(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char select_username_query[57] = "SELECT count(Username) FROM Accounts WHERE Username='%s'";
+
+	int numberOfAccounts = 0;
+
+	rc = sqlite3_prepare(db, va(select_username_query, username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return 1;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return 1;
+	}
+	if (rc == SQLITE_ROW)
+	{
+
+		numberOfAccounts = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+
+		return numberOfAccounts;
+
+	}
+
+	return 1;
+}
+
+// GalaxyRP (Alex): [Database] UPDATE This method updates an accounts table row with information contained within the entity with which it's called.
 void update_accounts_table_row_with_current_values(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	char update_account_query[95] = "UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'";
 
@@ -1350,6 +1452,40 @@ void update_accounts_table_row_with_default_char(gentity_t* ent, char* character
 	return;
 }
 
+qboolean is_password_correct(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char select_password_query[58] = "SELECT Password FROM Accounts WHERE Username='%s'";
+	
+	rc = sqlite3_prepare(db, va(select_password_query, username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return qfalse;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return qfalse;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		char comparisonPassword[MAX_STRING_CHARS];
+		Q_strncpyz(comparisonPassword, (const char*)sqlite3_column_text(stmt, 0), sizeof(comparisonPassword));
+		sqlite3_finalize(stmt);
+
+		if (strcmp(password, comparisonPassword) == 0) {
+			return qtrue;
+		}
+
+		return qfalse;
+	}
+
+	return qfalse;
+}
 
 /*
 ----CHARACTERS TABLE----
@@ -1495,6 +1631,16 @@ void delete_chars_table_row_with_id(gentity_t* ent, int id, sqlite3* db, char* z
 	char delete_char_query[41] = "DELETE FROM Characters WHERE CharID='%i'";
 
 	run_db_query(va(delete_char_query, id), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] DELETE This method deletes a characters table row which is associated with the name given.
+void delete_chars_table_row_with_name(gentity_t* ent, char* charName, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	char delete_char_query[41] = "DELETE FROM Characters WHERE Name='%s'";
+
+	run_db_query(va(delete_char_query, charName), db, zErrMsg, rc, stmt);
 
 	return;
 }
@@ -1778,6 +1924,86 @@ void select_character_list(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, s
 	sqlite3_finalize(stmt);
 }
 
+// GalaxyRP (Alex): [Database] This method loads the account information, as well as the information related to the default character, and assigns it to the entity.
+void select_account_and_default_character_data(gentity_t* ent, char username[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char defaultChar[256], password[256], name[256], description[MAX_STRING_CHARS], netName[MAX_STRING_CHARS], modelName[MAX_STRING_CHARS];
+	int accountID, i, player_settings, adminLevel, charID, credits, level, modelScale, skillpoints;
+
+	char select_account_table_row[235] = "SELECT *\
+		FROM Accounts\
+		INNER JOIN Characters\
+			ON Characters.Name = Accounts.DefaultChar\
+		INNER JOIN Skills\
+			ON Skills.CharID = Characters.CharID\
+		INNER JOIN Weapons\
+			ON Weapons.CharID = Characters.CharID\
+		WHERE Username = '%s'";
+
+	trap->Print(va(select_account_table_row, username));
+
+	rc = sqlite3_prepare(db, va(select_account_table_row, username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		accountID = sqlite3_column_int(stmt, 0);
+		player_settings = sqlite3_column_int(stmt, 1);
+		adminLevel = sqlite3_column_int(stmt, 2);
+		strcpy(password, sqlite3_column_text(stmt, 3));
+		strcpy(username, sqlite3_column_text(stmt, 4));
+		strcpy(defaultChar, sqlite3_column_text(stmt, 5));
+		charID = sqlite3_column_int(stmt, 7);
+		credits = sqlite3_column_int(stmt, 8);
+		level = sqlite3_column_int(stmt, 9);
+		modelScale = sqlite3_column_int(stmt, 10);
+		strcpy(name, sqlite3_column_text(stmt, 11));
+		skillpoints = sqlite3_column_int(stmt, 12);
+		strcpy(description, sqlite3_column_text(stmt, 13));
+		strcpy(netName, sqlite3_column_text(stmt, 14));
+		strcpy(modelName, sqlite3_column_text(stmt, 15));
+		//17
+		for (int i = 0; i < NUM_OF_SKILLS; i++) {
+			ent->client->pers.skill_levels[i] = sqlite3_column_int(stmt, i + 17);
+		}
+		//74 empty
+		for (int i = 2; i < AMMO_MAX; i++) {
+			ent->client->ps.ammo[i] = sqlite3_column_int(stmt, i + 73);
+		}
+
+		sqlite3_finalize(stmt);
+	}
+
+	ent->client->sess.accountID = accountID;
+	ent->client->pers.player_settings = player_settings;
+	ent->client->pers.bitvalue = adminLevel;
+	strcpy(ent->client->pers.password, password);
+	do_scale(ent, modelScale);
+	strcpy(ent->client->sess.rpgchar, name);
+	strcpy(ent->client->sess.filename, username);
+	ent->client->pers.skillpoints = skillpoints;
+	strcpy(ent->client->pers.description, description);
+	set_netname(ent, netName);
+	set_model(ent, modelName);
+
+	ent->client->sess.amrpgmode = 2;
+	ent->client->sess.loggedin = qtrue;
+
+	return;
+}
+
 // GalaxyRP (Alex): [Database] This method creates a new character associated with the account the player is currently logged in, and adds the default data in all the tables. ASSUMES PLAYER IS LOGGED IN!
 void create_new_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	
@@ -1819,234 +2045,6 @@ void remove_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3*
 	return;
 }
 
-void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	int charID;
-	char comparisonName[256] = { 0 };
-
-	// GalaxyRP (Alex): [Database] Grab character name BEFORE inserting the new character. If it already exists, it means a char with that name can't be created. No two characters should have the same name!!!
-	char select_char_name[44] = "SELECT Name FROM Characters WHERE Name='%s'";
-	rc = sqlite3_prepare(db, va(select_char_name, char_name), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		Q_strncpyz(comparisonName, (const char *)sqlite3_column_text(stmt, 0), sizeof(comparisonName));
-		sqlite3_finalize(stmt);
-	}
-
-	if (comparisonName[0] != '\0')
-	{
-		trap->SendServerCommand(ent - g_entities, va("print \"^1Character name ^7%s ^1is already in use.\n\"", comparisonName));
-		trap->SendServerCommand(ent - g_entities, va("cp \"^1Character name ^7%s ^1is already in use.\n\"", comparisonName));
-		sqlite3_close(db);
-		return;
-	}
-
-	// GalaxyRP (Alex): [Database] Create character record
-	char insert_new_entry_to_char_table[195] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')";
-	//trap->Print(va(insert_new_entry_to_char, ent->client->sess.accountID, char_name));
-	run_db_query(va(insert_new_entry_to_char_table, ent->client->sess.accountID, char_name), db, zErrMsg, rc, stmt);
-
-	// GalaxyRP (Alex): [Database] Get CharID for use in later queries
-	char select_char_id[69] = "SELECT CharID FROM Characters WHERE AccountID = '%i' AND Name = '%s'";
-	//trap->Print(va(select_char_id, ent->client->sess.accountID, char_name));
-	rc = sqlite3_prepare(db, va(select_char_id, ent->client->sess.accountID, char_name), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		charID = sqlite3_column_int(stmt, 0);
-		sqlite3_finalize(stmt);
-	}
-
-	// GalaxyRP (Alex): [Database] Create skill record
-	char insert_new_entry_to_skills_table[919] = "INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
-	//trap->Print(insert_new_entry_to_skills_table);
-	run_db_query(insert_new_entry_to_skills_table, db, zErrMsg, rc, stmt);
-
-	// GalaxyRP (Alex): [Database] Create ammo record
-	char insert_new_entry_to_weapons_table[159] = "INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')";
-	//trap->Print(insert_new_entry_to_weapons_table\n"));
-	run_db_query(insert_new_entry_to_weapons_table, db, zErrMsg, rc, stmt);
-
-	trap->SendServerCommand(-1, va("chat \"%s created a char: %s\n\"", ent->client->pers.netname, char_name));
-
-	return;
-}
-
-void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	int charID;
-
-	if (strcmp(char_name, ent->client->sess.rpgchar) == 0) {
-		trap->SendServerCommand(ent - g_entities, "print \"^2You cannot remove the char you're currently using.\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^2You cannot remove the char you're currently using.\n\"");
-		return;
-	}
-
-	//Get CharID for later
-	//trap->Print(va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'\n", ent->client->sess.accountID, char_name));
-	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, char_name), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		charID = sqlite3_column_int(stmt, 0);
-		sqlite3_finalize(stmt);
-	}
-
-	//trap->Print(va("DELETE FROM Characters WHERE CharID='%i'\n", charID));
-	rc = sqlite3_exec(db, va("DELETE FROM Characters WHERE CharID='%i'", charID), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	//trap->Print(va("DELETE FROM Weapons WHERE CharID='%i'\n", charID));
-	rc = sqlite3_exec(db, va("DELETE FROM Weapons WHERE CharID='%i'", charID), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	//trap->Print(va("DELETE FROM Skills WHERE CharID='%i'\n", charID));
-	rc = sqlite3_exec(db, va("DELETE FROM Skills WHERE CharID='%i'", charID), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	trap->SendServerCommand(ent - g_entities, "print \"^2Char was removed sucessfully.\n\"");
-	trap->SendServerCommand(ent - g_entities, "cp \"^2Char was removed sucessfully.\n\"");
-
-	return;
-}
-
-void save_char_info_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
-	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
-
-	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
-	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
-
-	char update_char_query[148] = "UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i'";
-	run_db_query(va(update_char_query,
-		ent->client->pers.credits,
-		ent->client->pers.level,
-		ent->client->ps.iModelScale,
-		ent->client->pers.skillpoints,
-		ent->client->pers.description,
-		ent->client->pers.netname,
-		modelName,
-		ent->client->pers.CharID
-	), db, zErrMsg, rc, stmt);
-
-	return;
-}
-
-void save_char_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	// GalaxyRP (Alex): [Database] Update skills information to the database.
-	update_skills_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
-	
-	// GalaxyRP (Alex): [Database] Update the ammo information in the database.
-	update_weapons_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
-
-	// GalaxyRP (Alex): [Database] Update character information in the database.
-	update_chars_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
-
-	return;
-}
-
-void save_account_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
-
-	char update_account_query[95] = "UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'";
-
-	run_db_query(va(update_account_query,
-		ent->client->pers.bitvalue,
-		ent->client->sess.rpgchar,
-		ent->client->sess.accountID
-	), db, zErrMsg, rc, stmt);
-
-	return;
-}
-
-void load_character_list_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	char CharName[MAX_STRING_CHARS];
-	int charLevel;
-
-	//Get CharID for later
-	//trap->Print(va("SELECT Name, Level FROM Characters WHERE AccountID='%i'\n", ent->client->sess.accountID));
-	rc = sqlite3_prepare(db, va("SELECT Name, Level FROM Characters WHERE AccountID='%i'", ent->client->sess.accountID), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	int i = 1;
-	while (rc == SQLITE_ROW) {
-		strcpy(CharName, sqlite3_column_text(stmt, 0));
-		charLevel = sqlite3_column_int(stmt, 1);
-		trap->SendServerCommand(ent - g_entities, va("print \"^3%i.^2%s - Level:%i\n\"", i, CharName, charLevel));
-		i++;
-		rc = sqlite3_step(stmt);
-	}
-
-	sqlite3_finalize(stmt);
-}
-
 void Cmd_Register_F(gentity_t * ent)
 {
 	sqlite3 *db;
@@ -2078,92 +2076,17 @@ void Cmd_Register_F(gentity_t * ent)
 	Q_StripColor(username);
 	Q_strlwr(username);
 
-	rc = sqlite3_prepare(db, va("SELECT Username FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		Q_strncpyz(comparisonName, (const char *)sqlite3_column_text(stmt, 0), sizeof(comparisonName));
-		sqlite3_finalize(stmt);
-	}
-
-	if (comparisonName[0] != '\0')
-	{
+	if (select_number_of_accounts_with_username(ent, username, db, zErrMsg, rc, stmt) != 0) {
 		trap->SendServerCommand(ent - g_entities, va("print \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
 		trap->SendServerCommand(ent - g_entities, va("cp \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
+
 		sqlite3_close(db);
 		return;
 	}
 
-	//Create account record
-	rc = sqlite3_exec(db, va("INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('%s','%s','0','0','%s')", username, password, username), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
+	insert_accounts_table_row(ent, username, password, db, zErrMsg, rc, stmt);
 
-	rc = sqlite3_prepare(db, va("SELECT AccountID FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		accountID = sqlite3_column_int(stmt, 0);
-		sqlite3_finalize(stmt);
-	}
-
-	//log them in
-	rc = sqlite3_prepare(db, va("SELECT AccountID, PlayerSettings, AdminLevel FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		ent->client->sess.accountID = sqlite3_column_int(stmt, 0);
-		ent->client->pers.player_settings = sqlite3_column_int(stmt, 1);
-		ent->client->pers.bitvalue = sqlite3_column_int(stmt, 2);
-		sqlite3_finalize(stmt);
-	}
+	select_accounts_table_row(ent, username, db, zErrMsg, rc, stmt);
 
 	//always 2, kept for backwards compatibility
 	ent->client->sess.amrpgmode = 2;
@@ -2171,9 +2094,7 @@ void Cmd_Register_F(gentity_t * ent)
 	strcpy(ent->client->sess.filename, username);
 	strcpy(ent->client->pers.password, password);
 
-
-
-	add_new_char_to_db(ent, username, db, zErrMsg, rc, stmt);
+	insert_chars_table_row(ent, username, db, zErrMsg, rc, stmt);
 	select_player_character(ent, username, db, zErrMsg, rc, stmt);
 
 	trap->SendServerCommand(ent - g_entities, "print \"^2Your account has been successfully created and you are now logged in.\n\"");
@@ -2181,77 +2102,6 @@ void Cmd_Register_F(gentity_t * ent)
 
 	sqlite3_close(db);
 
-	//Open the character selection/creation menu
-	//trap->SendServerCommand(ent - g_entities, "charui");
-
-
-	return;
-}
-
-void load_account_from_db(gentity_t * ent, char username[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
-	char defaultChar[256] = { 0 }, password[256] = { 0 };
-	int accountID = 0, i = 0, player_settings = 0, adminLevel = 0;
-
-	trap->Print(va("SELECT AccountID, PlayerSettings, AdminLevel, DefaultChar, Password FROM Accounts WHERE Username='%s'", username));
-	rc = sqlite3_prepare(db, va("SELECT AccountID, PlayerSettings, AdminLevel, DefaultChar, Password FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		accountID = sqlite3_column_int(stmt, 0);
-		player_settings = sqlite3_column_int(stmt, 1);
-		adminLevel = sqlite3_column_int(stmt, 2);
-		strcpy(defaultChar, sqlite3_column_text(stmt, 3));
-		strcpy(password, sqlite3_column_text(stmt, 4));
-		sqlite3_finalize(stmt);
-	}
-
-	ent->client->sess.accountID = accountID;
-	//always 2, kept for backwards compatibility
-	ent->client->sess.amrpgmode = 2;
-	ent->client->sess.loggedin = qtrue;
-	ent->client->pers.player_settings = player_settings;
-	//adminlevel
-	ent->client->pers.bitvalue = adminLevel;
-	strcpy(ent->client->sess.filename, username);
-	strcpy(ent->client->pers.password, password);
-
-	select_player_character(ent, defaultChar, db, zErrMsg, rc, stmt);
-
-	return;
-}
-
-void load_account_from_db_with_default_char(gentity_t * ent) {
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-	char defaultChar[256] = { 0 };
-
-	rc = sqlite3_open(DB_PATH, &db);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
-	load_account_from_db(ent, ent->client->sess.filename, db, zErrMsg, rc, stmt);
-
-	sqlite3_close(db);
 	return;
 }
 
@@ -2293,75 +2143,26 @@ void Cmd_Login_F(gentity_t * ent)
 	Q_StripColor(username);
 	Q_strlwr(username);
 
-	rc = sqlite3_prepare(db, va("SELECT Username FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		Q_strncpyz(comparisonUsername, (const char *)sqlite3_column_text(stmt, 0), sizeof(comparisonUsername));
-		sqlite3_finalize(stmt);
-	}
-
-	if (comparisonUsername[0] == '\0')
+	if (select_number_of_accounts_with_username(ent, username, db, zErrMsg, rc, stmt) == 0)
 	{
 		//The account does not exist, thus, the error does.
 		trap->SendServerCommand(ent - g_entities, va("print \"^1An account with the username %s does not exist.\n\"", username));
 		trap->SendServerCommand(ent - g_entities, va("cp \"^1An account with the username %s does not exist.\n\"", username));
-		sqlite3_close(db);
-		return;
-	}
 
-	rc = sqlite3_prepare(db, va("SELECT Password FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
 		sqlite3_close(db);
 		return;
 	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		Q_strncpyz(comparisonPassword, (const char*)sqlite3_column_text(stmt, 0), sizeof(comparisonPassword));
-		sqlite3_finalize(stmt);
-	}
-
-	if (strcmp(comparisonPassword, password))
-	{
-		//Just as there is an incorrect password (and an error), does it tell you.
+	
+	if (is_password_correct(ent, username, password, db, zErrMsg, rc, stmt) == qfalse) {
 		trap->SendServerCommand(ent - g_entities, "print \"^1Incorrect password.\n\"");
 		trap->SendServerCommand(ent - g_entities, "cp \"^1Incorrect password.\n\"");
 
-		//TODO: Look into getting these UIs done
-		//trap->SendServerCommand(ent - g_entities, "loginFailed");
-		//trap->SendServerCommand(ent - g_entities, "accountui");
 		sqlite3_close(db);
 		return;
 	}
 
-	strcpy(ent->client->sess.filename, username);
-
-	load_account_from_db(ent, username, db, zErrMsg, rc, stmt);
+	select_account_and_default_character_data(ent, username, db, zErrMsg, rc, stmt);
+	G_Kill(ent);
 
 	trap->SendServerCommand(ent - g_entities, "print \"^2You have sucessfully logged in.\n\"");
 
@@ -2392,7 +2193,7 @@ void Cmd_Char_f(gentity_t *ent) {
 
 	if (argc == 1)
 	{
-		load_character_list_from_db(ent, db, zErrMsg, rc, stmt);
+		select_character_list(ent, db, zErrMsg, rc, stmt);
 		return;
 	}
 	if (argc == 3)
@@ -2402,7 +2203,7 @@ void Cmd_Char_f(gentity_t *ent) {
 
 		//Create New Character
 		if (Q_stricmp(command, "new") == 0) {
-			add_new_char_to_db(ent, charName, db, zErrMsg, rc, stmt);
+			insert_chars_table_row(ent, charName, db, zErrMsg, rc, stmt);
 			sqlite3_close(db);
 			return;
 		}
@@ -2417,7 +2218,7 @@ void Cmd_Char_f(gentity_t *ent) {
 		//Remove character
 		if (Q_stricmp(command, "remove") == 0) {
 
-			remove_char_from_db(ent, charName, db, zErrMsg, rc, stmt);
+			delete_chars_table_row_with_name(ent, charName, db, zErrMsg, rc, stmt);
 			sqlite3_close(db);
 			return;
 		}
@@ -6907,8 +6708,8 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 				return;
 			}
 
-			save_account_to_db(ent, db, zErrMsg, rc, stmt);
-			save_char_to_db(ent, db, zErrMsg, rc, stmt);
+			update_accounts_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
+			update_chars_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
 
 			sqlite3_close(db);
 		}
@@ -6927,7 +6728,7 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 				return;
 			}
 
-			save_account_to_db(ent, db, zErrMsg, rc, stmt);
+			update_accounts_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
 
 			sqlite3_close(db);
 		}
