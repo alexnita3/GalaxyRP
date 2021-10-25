@@ -1355,7 +1355,7 @@ void update_accounts_table_row_with_default_char(gentity_t* ent, char* character
 ----CHARACTERS TABLE----
 */
 
-// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the character table, with default values.
+// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the character table, with default values. ASSUMES PLAYER IS ALREADY LOGGED IN.
 void insert_chars_table_row(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	char insert_new_entry_to_char_table[195] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')";
 	run_db_query(va(insert_new_entry_to_char_table, ent->client->sess.accountID, character_name), db, zErrMsg, rc, stmt);
@@ -1437,6 +1437,33 @@ int select_number_of_characters_with_name(gentity_t* ent, char* character_name, 
 	return 0;
 }
 
+// GalaxyRP (Alex): [Database] SELECT This method returns the character ID associated with the character name given, AND which belongs to the account the player is currently logged in with.
+int select_char_id_using_char_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	int charID = -1;
+
+	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return -1;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return -1;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		charID = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	}
+
+	return charID;
+}
+
 // GalaxyRP (Alex): [Database] UPDATE This method updated a characters table row with information contained within the entity with which it's called.
 void update_chars_table_row_with_current_values(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	// GalaxyRP (Alex): [Database] Grab the model and display name, so they can be saved in the database.
@@ -1462,12 +1489,22 @@ void update_chars_table_row_with_current_values(gentity_t* ent, sqlite3* db, cha
 	return;
 }
 
+// GalaxyRP (Alex): [Database] DELETE This method deletes a characters table row which is associated with the ID given.
+void delete_chars_table_row_with_id(gentity_t* ent, int id, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	char delete_char_query[41] = "DELETE FROM Characters WHERE CharID='%i'";
+
+	run_db_query(va(delete_char_query, id), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
 /*
 ----SKILLS TABLE----
 */
 
 // GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the skills table, with default values.
-void insert_skills_table_row(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+void insert_skills_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	char insert_new_entry_to_skills_table[919] = "INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
 	run_db_query(insert_new_entry_to_skills_table, db, zErrMsg, rc, stmt);
 
@@ -1570,6 +1607,16 @@ void update_skills_table_row_with_current_values(gentity_t* ent, sqlite3* db, ch
 	return;
 }
 
+// GalaxyRP (Alex): [Database] DELETE This method deletes a skills table row which is associated with the ID given.
+void delete_skills_table_row_with_id(gentity_t* ent, int id, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	char delete_skills_query[41] = "DELETE FROM Skills WHERE CharID='%i'";
+
+	run_db_query(va(delete_skills_query, id), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
 /*
 ----WEAPONS TABLE----
 */
@@ -1624,6 +1671,16 @@ void update_weapons_table_row_with_current_values(gentity_t* ent, sqlite3* db, c
 		ent->client->ps.ammo[AMMO_DETPACK],
 		ent->client->pers.CharID
 	), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] DELETE This method deletes a weapons table row which is associated with the ID given.
+void delete_weapons_table_row_with_id(gentity_t* ent, int id, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	char delete_weapons_query[41] = "DELETE FROM Weapons WHERE CharID='%i'";
+
+	run_db_query(va(delete_weapons_query, id), db, zErrMsg, rc, stmt);
 
 	return;
 }
@@ -1688,7 +1745,7 @@ void select_player_character(gentity_t* ent, char *character_name, sqlite3* db, 
 	return;
 }
 
-// GalaxyRP (Alex): [Database] This method Displayes the list of characters to a player.
+// GalaxyRP (Alex): [Database] This method displays the list of characters to a player.
 void select_character_list(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt)
 {
 	char CharName[MAX_STRING_CHARS];
@@ -1719,6 +1776,47 @@ void select_character_list(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, s
 	}
 
 	sqlite3_finalize(stmt);
+}
+
+// GalaxyRP (Alex): [Database] This method creates a new character associated with the account the player is currently logged in, and adds the default data in all the tables. ASSUMES PLAYER IS LOGGED IN!
+void create_new_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	
+	// GalaxyRP (Alex): [Database] Character names should be unique, check for it here.
+	if (select_number_of_characters_with_name(ent, char_name, db, zErrMsg, rc, stmt) > 0) {
+		trap->SendServerCommand(ent - g_entities, va("print \"^1Character name ^7%s ^1is already in use.\n\"", char_name));
+		trap->SendServerCommand(ent - g_entities, va("cp \"^1Character name ^7%s ^1is already in use.\n\"", char_name));
+		return;
+	}
+
+	insert_chars_table_row(ent, char_name, db, zErrMsg, rc, stmt);
+	insert_skills_table_row(ent, db, zErrMsg, rc, stmt);
+	insert_weapons_table_row(ent, db, zErrMsg, rc, stmt);
+
+	trap->SendServerCommand(-1, va("chat \"%s created a char: %s\n\"", ent->client->pers.netname, char_name));
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] This method updates the character that is curently being played with current values. ASSUMES PLAYER IS LOGGED IN!
+void update_current_character(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	update_chars_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
+	update_skills_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
+	update_weapons_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] This method creates a new character associated with the account the player is currently logged in, and adds the default data in all the tables. ASSUMES PLAYER IS LOGGED IN!
+void remove_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	int charID;
+	charID = select_char_id_using_char_name(ent, char_name, db, zErrMsg, rc, stmt);
+
+	delete_chars_table_row_with_id(ent, charID, db, zErrMsg, rc, stmt);
+	delete_skills_table_row_with_id(ent, charID, db, zErrMsg, rc, stmt);
+	delete_weapons_table_row_with_id(ent, charID, db, zErrMsg, rc, stmt);
+
+	return;
 }
 
 void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
