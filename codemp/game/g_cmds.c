@@ -6761,6 +6761,8 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 
 			update_accounts_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
 			update_chars_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
+			update_skills_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
+			update_weapons_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
 
 			sqlite3_close(db);
 		}
