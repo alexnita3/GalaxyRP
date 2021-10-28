@@ -1501,7 +1501,6 @@ void insert_chars_table_row(gentity_t* ent, char* character_name, sqlite3* db, c
 
 // GalaxyRP (Alex): [Database] SELECT This method grabs all the values from a characters table row (needs a character name passed on), and assigns them to the entity.
 void select_chars_table_row_from_char_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-	trap->Print(va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName FROM Characters WHERE AccountID=%i AND Name='%s'\n", ent->client->sess.accountID, character_name));
 	rc = sqlite3_prepare(db, va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName FROM Characters WHERE AccountID=%i AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -1689,7 +1688,20 @@ void select_skills_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErr
 }
 
 // GalaxyRP (Alex): [Database] UPDATE This method updated a skills table row with information contained within the entity with which it's called.
-void update_skills_table_row_with_current_values(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+void update_skills_table_row_with_current_values(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+	
 	char update_skills_query[928] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'";
 	run_db_query(va(update_skills_query,
 		ent->client->pers.skill_levels[0],	//Jump
@@ -1749,6 +1761,8 @@ void update_skills_table_row_with_current_values(gentity_t* ent, sqlite3* db, ch
 		ent->client->pers.skill_levels[54],	//ForcePower
 		ent->client->pers.skill_levels[55], //Improvements
 		ent->client->pers.CharID), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
 
 	return;
 }
@@ -1840,10 +1854,95 @@ The methods do broader actions, which are a combination of multiple actions that
 */
 
 // GalaxyRP (Alex): [Database] This method saves all of the player's character attributes to the database. All the information is taken from ent. (Weapons, Skills and Characters tables)
-void update_player_character(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-	update_chars_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
-	update_skills_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
-	update_weapons_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
+void update_current_character(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
+
+	
+
+	char update_character_query[1248] = "UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i';\
+		UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i';\
+		UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'";
+
+	run_db_query(va(update_character_query,
+		ent->client->pers.credits,
+		ent->client->pers.level,
+		ent->client->ps.iModelScale,
+		ent->client->pers.skillpoints,
+		ent->client->pers.description,
+		ent->client->pers.netname,
+		modelName,
+		ent->client->pers.CharID,
+		ent->client->pers.skill_levels[0],	//Jump
+		ent->client->pers.skill_levels[1],	//Push
+		ent->client->pers.skill_levels[2],	//Pull
+		ent->client->pers.skill_levels[3],	//Speed
+		ent->client->pers.skill_levels[4],	//Sense
+		ent->client->pers.skill_levels[5],	//SaberAttack
+		ent->client->pers.skill_levels[6],	//SaberDefense
+		ent->client->pers.skill_levels[7],	//SaberThrow
+		ent->client->pers.skill_levels[8],	//Absorb
+		ent->client->pers.skill_levels[9],	//Heal
+		ent->client->pers.skill_levels[10],	//Protect
+		ent->client->pers.skill_levels[11],	//MindTrick
+		ent->client->pers.skill_levels[12],	//TeamHeal
+		ent->client->pers.skill_levels[13],	//Lightning
+		ent->client->pers.skill_levels[14],	//Grip
+		ent->client->pers.skill_levels[15],	//Drain
+		ent->client->pers.skill_levels[16],	//Rage
+		ent->client->pers.skill_levels[17],	//TeamEnergize
+		ent->client->pers.skill_levels[18],	//StunBaton
+		ent->client->pers.skill_levels[19],	//BlasterPistol
+		ent->client->pers.skill_levels[20],	//BlasterRifle
+		ent->client->pers.skill_levels[21],	//Disruptor
+		ent->client->pers.skill_levels[22],	//Bowcaster
+		ent->client->pers.skill_levels[23],	//Repeater
+		ent->client->pers.skill_levels[24],	//DEMP2
+		ent->client->pers.skill_levels[25],	//Flechette
+		ent->client->pers.skill_levels[26],	//RocketLauncher
+		ent->client->pers.skill_levels[27],	//ConcussionRifle
+		ent->client->pers.skill_levels[28],	//BryarPistol
+		ent->client->pers.skill_levels[29],	//Melee
+		ent->client->pers.skill_levels[30],	//MaxShield
+		ent->client->pers.skill_levels[31],	//ShieldStrength
+		ent->client->pers.skill_levels[32],	//HealthStrength
+		ent->client->pers.skill_levels[33],	//DrainShield
+		ent->client->pers.skill_levels[34],	//Jetpack
+		ent->client->pers.skill_levels[35],	//SenseHealth
+		ent->client->pers.skill_levels[36],	//ShieldHeal
+		ent->client->pers.skill_levels[37],	//TeamShieldHeal
+		ent->client->pers.skill_levels[38],	//UniqueSkill
+		ent->client->pers.skill_levels[39],	//BlasterPack
+		ent->client->pers.skill_levels[40],	//PowerCell
+		ent->client->pers.skill_levels[41],	//MetalBolts
+		ent->client->pers.skill_levels[42],	//Rockets
+		ent->client->pers.skill_levels[43],	//Thermals
+		ent->client->pers.skill_levels[44],	//TripMines
+		ent->client->pers.skill_levels[45],	//Detpacks
+		ent->client->pers.skill_levels[46],	//Binoculars
+		ent->client->pers.skill_levels[47],	//BactaCanister
+		ent->client->pers.skill_levels[48],	//SentryGun
+		ent->client->pers.skill_levels[49],	//SeekerDrone
+		ent->client->pers.skill_levels[50],	//Eweb
+		ent->client->pers.skill_levels[51],	//BigBacta
+		ent->client->pers.skill_levels[52],	//ForceField
+		ent->client->pers.skill_levels[53],	//CloakItem
+		ent->client->pers.skill_levels[54],	//ForcePower
+		ent->client->pers.skill_levels[55], //Improvements
+		ent->client->pers.CharID,
+		ent->client->ps.ammo[AMMO_BLASTER],
+		ent->client->ps.ammo[AMMO_POWERCELL],
+		ent->client->ps.ammo[AMMO_METAL_BOLTS],
+		ent->client->ps.ammo[AMMO_ROCKETS],
+		ent->client->ps.ammo[AMMO_THERMAL],
+		ent->client->ps.ammo[AMMO_TRIPMINE],
+		ent->client->ps.ammo[AMMO_DETPACK],
+		ent->client->pers.CharID
+	), db, zErrMsg, rc, stmt);
+
 	return;
 }
 
@@ -2069,15 +2168,6 @@ void create_new_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqli
 	run_db_query(va(create_new_character_query, ent->client->sess.accountID, char_name), db, zErrMsg, rc, stmt);
 
 	trap->SendServerCommand(-1, va("chat \"%s created a char: %s\n\"", ent->client->pers.netname, char_name));
-
-	return;
-}
-
-// GalaxyRP (Alex): [Database] This method updates the character that is curently being played with current values. ASSUMES PLAYER IS LOGGED IN!
-void update_current_character(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-	update_chars_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
-	update_skills_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
-	update_weapons_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
 
 	return;
 }
@@ -6760,9 +6850,7 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 			}
 
 			update_accounts_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
-			update_chars_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
-			update_skills_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
-			update_weapons_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
+			update_current_character(ent, db, zErrMsg, rc, stmt);
 
 			sqlite3_close(db);
 		}
@@ -7587,114 +7675,6 @@ void zyk_create_dir(char *file_path)
 #else
 	system(va("mkdir \"GalaxyRP/%s\"", file_path));
 #endif
-}
-
-/*
-==================
-Cmd_NewAccount_f
-==================
-*/
-void Cmd_NewAccount_f( gentity_t *ent ) {
-	FILE *logins_file;
-	char arg1[MAX_STRING_CHARS];
-	char arg2[MAX_STRING_CHARS];
-	char content[1024];
-	int i = 0;
-
-	strcpy(content,"");
-
-	if ( trap->Argc() != 3) 
-	{ 
-		trap->SendServerCommand( ent-g_entities, "print \"You must write a login and a password of your choice. Example: ^3/new yourlogin yourpass^7.\n\"" ); 
-		return;
-	}
-	trap->Argv(1, arg1, sizeof( arg1 ));
-	trap->Argv(2, arg2, sizeof( arg2 ));
-
-	// zyk: creates the account if player is not logged in
-	if (ent->client->sess.amrpgmode != 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You are already logged in.\n\"" ); 
-		return;
-	}
-
-	if (strlen(arg1) > MAX_ACC_NAME_SIZE)
-	{
-		trap->SendServerCommand( ent-g_entities, va("print \"Login has a maximum of %d characters.\n\"", MAX_ACC_NAME_SIZE) );
-		return;
-	}
-	if (strlen(arg2) > MAX_ACC_NAME_SIZE)
-	{
-		trap->SendServerCommand( ent-g_entities, va("print \"Password has a maximum of %d characters.\n\"", MAX_ACC_NAME_SIZE) );
-		return;
-	}
-
-	// zyk: validating if this login already exists
-	zyk_create_dir("accounts");
-
-#if defined(__linux__)
-	system("ls GalaxyRP/accounts > GalaxyRP/accounts/accounts.txt");
-#else
-	system("dir /B \"GalaxyRP/accounts\" > GalaxyRP/accounts/accounts.txt");
-#endif
-
-	logins_file = fopen("GalaxyRP/accounts/accounts.txt","r");
-	if (logins_file != NULL)
-	{
-		i = fscanf(logins_file, "%s", content);
-		while (i != -1)
-		{
-			if (Q_stricmp(content,"accounts.txt") != 0)
-			{ // zyk: validating login, which is the file name
-				if (Q_stricmp( content, va("%s.txt",arg1) ) == 0)
-				{ // zyk: if this login is the same as the one passed in arg1, then it already exists
-					fclose(logins_file);
-					trap->SendServerCommand( ent-g_entities, "print \"Login is used by another player.\n\"" );
-					return;
-				}
-			}
-			i = fscanf(logins_file, "%s", content);
-		}
-		fclose(logins_file);
-	}
-
-	strcpy(ent->client->sess.filename, arg1);
-	strcpy(ent->client->pers.password, arg2);
-
-	// zyk: setting the values to be saved in the account file
-	if (zyk_allow_rpg_mode.integer == 0)
-	{
-		ent->client->sess.amrpgmode = 1;
-	}
-	else
-	{
-		ent->client->sess.amrpgmode = 2;
-	}
-
-	ent->client->pers.player_settings = 0;
-	ent->client->pers.bitvalue = 0;
-
-	add_new_char(ent);
-
-	// zyk: saving the default char
-	strcpy(ent->client->sess.rpgchar, arg1);
-
-	save_account(ent, qfalse);
-	save_account(ent, qtrue);
-
-	if (ent->client->sess.amrpgmode == 2)
-	{
-		initialize_rpg_skills(ent);
-	}
-	else
-	{
-		trap->SendServerCommand(ent->s.number, "print \"Account created successfully in ^2Admin-Only ^7Mode\n\"");
-	}
-
-	// zyk: starting the tutorial, to help players use the mod features
-	ent->client->pers.tutorial_step = 0;
-	ent->client->pers.tutorial_timer = level.time + 1000;
-	ent->client->pers.player_statuses |= (1 << 25);
 }
 
 // zyk: loads the player account the old way
@@ -10115,8 +10095,8 @@ void do_upgrade_skill(gentity_t *ent, gentity_t *target_ent, int upgrade_value, 
 		if (is_upgraded == qfalse)
 			return;
 
-		// zyk: saving the account file with the upgraded skill
-		save_account(target_ent, qtrue);
+		// GalaxyRP (Alex): [Database] Only update the skills table.
+		update_skills_table_row_with_current_values(target_ent);
 
 		trap->SendServerCommand(target_ent -g_entities, "print \"^2Skill upgraded successfully.\n\"" );
 		trap->SendServerCommand(ent - g_entities, "print \"^2Target skill upgraded successfully.\n\"");
@@ -10141,8 +10121,8 @@ void do_upgrade_skill(gentity_t *ent, gentity_t *target_ent, int upgrade_value, 
 			}
 		}
 
-		// zyk: saving the account file with the upgraded skill
-		save_account(target_ent, qtrue);
+		// GalaxyRP (Alex): [Database] Only update the skills table.
+		update_skills_table_row_with_current_values(target_ent);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Skills upgraded successfully.\n\"" );
 		trap->SendServerCommand(ent - g_entities, "print \"Target skill upgraded successfully.\n\"");
@@ -11074,8 +11054,8 @@ void do_downgrade_skill(gentity_t *ent, int downgrade_value)
 		}
 	}
 
-	// zyk: saving the account file with the downgraded skill
-	save_account(ent, qtrue);
+	// GalaxyRP (Alex): [Database] Only update the skills table.
+	update_skills_table_row_with_current_values(ent);
 
 	trap->SendServerCommand( ent-g_entities, "print \"Skill downgraded successfully.\n\"" );
 
