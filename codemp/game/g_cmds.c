@@ -2006,7 +2006,7 @@ void select_account_and_default_character_data(gentity_t* ent, char username[MAX
 
 // GalaxyRP (Alex): [Database] This method creates a new character associated with the account the player is currently logged in, and adds the default data in all the tables. ASSUMES PLAYER IS LOGGED IN!
 void create_new_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-	
+
 	// GalaxyRP (Alex): [Database] Character names should be unique, check for it here.
 	if (select_number_of_characters_with_name(ent, char_name, db, zErrMsg, rc, stmt) > 0) {
 		trap->SendServerCommand(ent - g_entities, va("print \"^1Character name ^7%s ^1is already in use.\n\"", char_name));
@@ -2014,9 +2014,11 @@ void create_new_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqli
 		return;
 	}
 
-	insert_chars_table_row(ent, char_name, db, zErrMsg, rc, stmt);
-	insert_skills_table_row(ent, db, zErrMsg, rc, stmt);
-	insert_weapons_table_row(ent, db, zErrMsg, rc, stmt);
+	char create_new_character_query[1274] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle');"\
+		"INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0');"\
+		"INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')";
+
+	run_db_query(va(create_new_character_query, ent->client->sess.accountID, char_name), db, zErrMsg, rc, stmt);
 
 	trap->SendServerCommand(-1, va("chat \"%s created a char: %s\n\"", ent->client->pers.netname, char_name));
 
@@ -2032,15 +2034,15 @@ void update_current_character(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc
 	return;
 }
 
-// GalaxyRP (Alex): [Database] This method creates a new character associated with the account the player is currently logged in, and adds the default data in all the tables. ASSUMES PLAYER IS LOGGED IN!
+// GalaxyRP (Alex): [Database] This method removes a character form the database. It affects all tables that contain character information. ASSUMES THE PLAYER IS LOGGED IN!!!
 void remove_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 
 	int charID;
 	charID = select_char_id_using_char_name(ent, char_name, db, zErrMsg, rc, stmt);
 
-	delete_chars_table_row_with_id(ent, charID, db, zErrMsg, rc, stmt);
-	delete_skills_table_row_with_id(ent, charID, db, zErrMsg, rc, stmt);
-	delete_weapons_table_row_with_id(ent, charID, db, zErrMsg, rc, stmt);
+	char remove_character_query[117] = "DELETE FROM Characters WHERE CharID='%i';DELETE FROM Skills WHERE CharID='%i';DELETE FROM Weapons WHERE CharID='%i';";
+
+	run_db_query(va(remove_character_query, charID, charID, charID), db, zErrMsg, rc, stmt);
 
 	return;
 }
@@ -2203,7 +2205,7 @@ void Cmd_Char_f(gentity_t *ent) {
 
 		//Create New Character
 		if (Q_stricmp(command, "new") == 0) {
-			insert_chars_table_row(ent, charName, db, zErrMsg, rc, stmt);
+			create_new_character(ent, charName, db, zErrMsg, rc, stmt);
 			sqlite3_close(db);
 			return;
 		}
@@ -2218,7 +2220,7 @@ void Cmd_Char_f(gentity_t *ent) {
 		//Remove character
 		if (Q_stricmp(command, "remove") == 0) {
 
-			delete_chars_table_row_with_name(ent, charName, db, zErrMsg, rc, stmt);
+			remove_character(ent, charName, db, zErrMsg, rc, stmt);
 			sqlite3_close(db);
 			return;
 		}
