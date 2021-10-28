@@ -1868,15 +1868,63 @@ void select_player_character(gentity_t* ent, char *character_name, sqlite3* db, 
 		return;
 	}
 
-	// GalaxyRP (Alex): [Database] Assign the player the info from Characters table.
-	select_chars_table_row_from_char_name(ent, character_name, db, zErrMsg, rc, stmt);
+	// GalaxyRP (Alex): [Database] Select all info from all character related tables.
+	char select_character_query[202] = "SELECT *\
+		FROM Characters\
+		INNER JOIN Skills\
+		ON Skills.CharID = Characters.CharID\
+		INNER JOIN Weapons\
+		ON Weapons.CharID = Characters.CharID\
+		WHERE Characters.Name = '%s' AND Characters.AccountID = %i";
 
-	// GalaxyRP (Alex): [Database] Assign the player the info from Skills table.
-	select_skills_table_row_from_entity(ent, db, zErrMsg, rc, stmt);
+	rc = sqlite3_prepare(db, va(select_character_query, character_name, ent->client->sess.accountID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		char displayName[MAX_INFO_STRING], modelName[MAX_STRING_CHARS];
 
-	// GalaxyRP (Alex): [Database] Assign the player the info from Weapons table.
-	select_weapons_table_row_from_entity(ent, character_name, db, zErrMsg, rc, stmt);
-	
+		// GalaxyRP (Alex): [Database] Grab info from characters table.
+		ent->client->pers.CharID = sqlite3_column_int(stmt, 1);
+		ent->client->pers.credits = sqlite3_column_int(stmt, 2);
+		ent->client->pers.level = sqlite3_column_int(stmt, 3);
+		do_scale(ent, sqlite3_column_int(stmt, 4));
+		strcpy(ent->client->sess.rpgchar, character_name);
+		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 6);
+		strcpy(ent->client->pers.description, sqlite3_column_text(stmt, 7));
+		strcpy(displayName, sqlite3_column_text(stmt, 8));
+		strcpy(modelName, sqlite3_column_text(stmt, 9));
+
+		// GalaxyRP (Alex): [Database] Grab info from skills table. (column 10 is CharID, no need to grab that)
+		for (int i = 0; i < NUM_OF_SKILLS; i++) {
+			ent->client->pers.skill_levels[i] = sqlite3_column_int(stmt, i + 11);
+		}
+
+		// GalaxyRP (Alex): [Database] Grab info from weapons table. (column 67 is CharID, no need to grab that)
+		for (int i = 2; i < AMMO_MAX; i++) {
+			ent->client->ps.ammo[i] = sqlite3_column_int(stmt, i + 66);
+		}
+
+		// GalaxyRP (Alex): [Database] Apply the modelname and net name.
+		set_netname(ent, displayName);
+		set_model(ent, modelName);
+
+		sqlite3_finalize(stmt);
+
+		return;
+	}	
+
 	// GalaxyRP (Alex): [Database] Kill the tntity to allow everything to take effect.
 	G_Kill(ent);
 
@@ -2214,6 +2262,7 @@ void Cmd_Char_f(gentity_t *ent) {
 		if (Q_stricmp(command, "use") == 0) {
 			select_player_character(ent, charName, db, zErrMsg, rc, stmt);
 			sqlite3_close(db);
+			G_Kill(ent);
 			return;
 		}
 
