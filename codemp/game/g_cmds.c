@@ -1506,6 +1506,31 @@ qboolean is_password_correct(gentity_t* ent, char* username, char* password, sql
 ----CHARACTERS TABLE----
 */
 
+void update_credits_value(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	char update_char_query[148] = "UPDATE Characters SET Credits='%i' WHERE CharID='%i'";
+	run_db_query(va(update_char_query,
+		ent->client->pers.credits,
+		ent->client->pers.CharID
+	), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
+
+	return;
+}
+
 // GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the character table, with default values. ASSUMES PLAYER IS ALREADY LOGGED IN.
 void insert_chars_table_row(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	char insert_new_entry_to_char_table[195] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')";
@@ -3855,56 +3880,6 @@ void Cmd_FollowPrev_f( gentity_t *ent ) {
 
 extern void save_account(gentity_t *ent, qboolean save_char_file);
 extern void quest_get_new_player(gentity_t *ent);
-qboolean zyk_answer(gentity_t *ent, char *arg1)
-{
-	if (ent->client->sess.amrpgmode == 2)
-	{
-		if (level.quest_map == 10 && ent->client->pers.can_play_quest == 1 && 
-			ent->client->pers.eternity_quest_progress < (NUM_OF_ETERNITY_QUEST_OBJ - 1) && (int) ent->client->ps.origin[0] > -676 && 
-			(int) ent->client->ps.origin[0] < -296 && (int) ent->client->ps.origin[1] > 1283 && (int) ent->client->ps.origin[1] < 1663 && 
-			(int) ent->client->ps.origin[2] > 60 && (int) ent->client->ps.origin[2] < 120)
-		{ // zyk: Eternity Quest
-			char *answers[11] = { "key", "clock", "sword", "sun", "fire", "water", "time", "star", "nature", "love", NULL };
-
-			// zyk: removing color chars which could not allow the correct answer
-			Q_StripColor(arg1);
-
-			if (Q_stricmp(arg1, answers[ent->client->pers.eternity_quest_progress]) == 0)
-			{
-				ent->client->pers.eternity_quest_progress++;
-				save_account(ent, qtrue);
-
-				quest_get_new_player(ent);
-
-				zyk_text_message(ent, va("eternity/answered_%d", ent->client->pers.eternity_quest_progress - 1), qtrue, qtrue, ent->client->pers.netname);
-				return qtrue;
-			}
-			else
-			{
-				return qfalse;
-			}
-		}
-		else if (level.quest_map == 24 && ent->client->pers.can_play_quest == 1 && 
-				 ent->client->pers.universe_quest_progress == 5 && ent->client->pers.universe_quest_messages == 101)
-		{ // zyk: amulets mission of Universe Quest
-		  // zyk: removing color chars which could not allow the correct answer
-			Q_StripColor(arg1);
-
-			if (Q_stricmp( arg1, "samir" ) == 0)
-			{
-				ent->client->pers.universe_quest_messages = 102;
-			}
-			else
-			{
-				ent->client->pers.universe_quest_messages = 103;
-			}
-
-			return qfalse;
-		}
-	}
-
-	return qfalse;
-}
 
 /*
 ==================
@@ -4014,11 +3989,6 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		if (ent->client->pers.player_statuses & (1 << 0))
 			return;
 
-		if (zyk_answer(ent, text) == qtrue)
-		{ // zyk: if it is a riddle answer, do not say it
-			return;
-		}
-
 		//ooc chat case
 		if (ooc_flag == 1) 
 		{
@@ -4062,7 +4032,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 				for (j = 0; j < level.numConnectedClients; j++) {
 
 					other = &g_entities[j];
-					if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_modifiers[i].distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
+					if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_modifiers[i].distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE) || other->client->sess.sessionTeam == TEAM_SPECTATOR)
 					{
 						G_LogPrintf(va("%s: %s: %s\n"), chat_modifiers[i].chat_modifier, ent->client->pers.netname, text);
 						trap->SendServerCommand(other->client->ps.clientNum, va(chat_modifiers[i].chat_format, ent->client->pers.netname, text));
@@ -13061,127 +13031,6 @@ void zyk_remove_configs(gentity_t *ent)
 #endif
 }
 
-/*
-==================
-Cmd_ResetAccount_f
-==================
-*/
-void Cmd_ResetAccount_f( gentity_t *ent ) {
-	char arg1[MAX_STRING_CHARS];
-			
-	if (trap->Argc() == 1)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"^2Choose one of the options below\n\n^3/resetaccount rpg: ^7resets your entire account except admin commands.\n^3/resetaccount quests: ^7resets your RPG quests.\n^3/resetaccount levels: ^7resets your levels and upgrades.\n\"" );
-		return;
-	}
-
-	trap->Argv( 1, arg1, sizeof( arg1 ) );
-
-	if (Q_stricmp( arg1, "rpg") == 0)
-	{
-		int i = 0;
-
-		for (i = 0; i < NUM_OF_SKILLS; i++)
-			ent->client->pers.skill_levels[i] = 0;
-
-		ent->client->pers.max_rpg_shield = 0;
-		ent->client->pers.secrets_found = 0;
-
-		ent->client->pers.defeated_guardians = 0;
-		ent->client->pers.hunter_quest_progress = 0;
-		ent->client->pers.eternity_quest_progress = 0;
-		ent->client->pers.universe_quest_progress = 0;
-		ent->client->pers.universe_quest_counter = 0;
-
-		// zyk: Challenge Mode, must keep the flag
-		if (ent->client->pers.player_settings & (1 << 15))
-			ent->client->pers.universe_quest_counter |= (1 << 29);
-
-		ent->client->pers.level = 1;
-		ent->client->pers.level_up_score = 0;
-		ent->client->pers.skillpoints = 1;
-
-		ent->client->pers.credits = 100;
-
-		ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
-		ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
-		ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
-		ent->client->sess.magic_fist_selection = 0;
-		ent->client->sess.magic_disabled_powers = 0;
-		ent->client->sess.magic_more_disabled_powers = 0;
-
-		save_account(ent, qtrue);
-
-		zyk_remove_configs(ent);
-
-		trap->SendServerCommand( ent-g_entities, "print \"Your entire account is reset.\n\"" );
-
-		if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
-		{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
-			G_Kill(ent);
-		}
-	}
-	else if (Q_stricmp( arg1, "quests") == 0)
-	{
-		ent->client->pers.defeated_guardians = 0;
-		ent->client->pers.hunter_quest_progress = 0;
-		ent->client->pers.eternity_quest_progress = 0;
-		ent->client->pers.universe_quest_progress = 0;
-		ent->client->pers.universe_quest_counter = 0;
-
-		// zyk: Challenge Mode, must keep the flag
-		if (ent->client->pers.player_settings & (1 << 15))
-			ent->client->pers.universe_quest_counter |= (1 << 29);
-
-		save_account(ent, qtrue);
-
-		trap->SendServerCommand( ent-g_entities, "print \"Your quests are reset.\n\"" );
-
-		if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
-		{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
-			G_Kill(ent);
-		}
-	}
-	else if (Q_stricmp( arg1, "levels") == 0)
-	{
-		int i = 0;
-
-		for (i = 0; i < NUM_OF_SKILLS; i++)
-			ent->client->pers.skill_levels[i] = 0;
-
-		ent->client->pers.max_rpg_shield = 0;
-		ent->client->pers.secrets_found = 0;
-
-		ent->client->pers.level = 1;
-		ent->client->pers.level_up_score = 0;
-		ent->client->pers.skillpoints = 1;
-
-		ent->client->pers.credits = 100;
-
-		ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
-		ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
-		ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
-		ent->client->sess.magic_fist_selection = 0;
-		ent->client->sess.magic_disabled_powers = 0;
-		ent->client->sess.magic_more_disabled_powers = 0;
-
-		save_account(ent, qtrue);
-
-		zyk_remove_configs(ent);
-
-		trap->SendServerCommand( ent-g_entities, "print \"Your levels are reset.\n\"" );
-
-		if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
-		{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
-			G_Kill(ent);
-		}
-	}
-	else
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Invalid option.\n\"" );
-	}
-}
-
 extern void zyk_TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles );
 
 /*
@@ -13403,7 +13252,7 @@ void Cmd_CreditSpend_f(gentity_t *ent) {
 
 	remove_credits(ent, value);
 
-	save_account(ent, qtrue);
+	update_credits_value(ent);
 
 	trap->SendServerCommand(-1, va("chat \"^3Credit System: ^7%s ^7spent ^2%d ^7credits.\n\"", ent->client->pers.netname, value, g_entities));
 
@@ -13452,7 +13301,7 @@ void Cmd_CreditCreate_f(gentity_t *ent) {
 
 
 	add_credits(&g_entities[client_id], value);
-	save_account(&g_entities[client_id], qtrue);
+	update_credits_value(&g_entities[client_id]);
 
 	//broadcast the transaction to the whole server
 
@@ -13514,10 +13363,10 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 	
 	
 	add_credits(&g_entities[client_id], value);
-	save_account(&g_entities[client_id], qtrue);
+	update_credits_value(&g_entities[client_id]);
 
 	remove_credits(ent, value);
-	save_account(ent, qtrue);
+	update_credits_value(ent);
 
 	//broadcast the transaction to the whole server
 
@@ -14269,70 +14118,6 @@ void save_config(gentity_t *ent)
 	}
 }
 
-void do_change_class(gentity_t *ent, int value)
-{
-	int i = 0;
-	int old_class = ent->client->pers.rpg_class;
-
-	if (value < 0 || value > 9)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Invalid RPG Class.\n\"" );
-		return;
-	}
-
-	if (zyk_allow_class_change.integer != 1 && ent->client->pers.level > 1)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You cannot change class after level 1 in this server.\n\"" );
-		return;
-	}
-
-	// zyk validating the new class
-	ent->client->pers.rpg_class = value;
-	if (validate_rpg_class(ent) == qfalse)
-	{
-		ent->client->pers.rpg_class = old_class;
-		return;
-	}
-
-	ent->client->pers.rpg_class = old_class;
-
-	if (zyk_allow_class_change.integer == 1)
-	{
-		if (ent->client->pers.credits < 20)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You don't have enough credits to change your class.\n\"" );
-			return;
-		}
-
-		remove_credits(ent, 20);
-	}
-
-	save_config(ent);
-
-	ent->client->pers.rpg_class = value;
-
-	// zyk: resetting skills
-	for (i = 0; i < NUM_OF_SKILLS; i++)
-	{
-		while (ent->client->pers.skill_levels[i] > 0)
-		{
-			ent->client->pers.skill_levels[i]--;
-			ent->client->pers.skillpoints++;
-		}
-	}
-
-	load_config(ent);
-
-	save_account(ent, qtrue);
-
-	trap->SendServerCommand( ent-g_entities, va("print \"You are now a %s\n\"", zyk_rpg_class(ent)) );
-
-	if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
-	{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
-		G_Kill(ent);
-	}
-}
-
 /*
 ==================
 Cmd_RpgClass_f
@@ -14359,7 +14144,6 @@ void Cmd_RpgClass_f( gentity_t *ent ) {
 		return;
 	}
 
-	do_change_class(ent, value);
 }
 
 /*
@@ -16590,47 +16374,6 @@ void Cmd_RpMode_f( gentity_t *ent ) {
 
 /*
 ==================
-Cmd_RpModeClass_f
-==================
-*/
-void Cmd_RpModeClass_f( gentity_t *ent ) {
-	char	arg1[MAX_STRING_CHARS];
-	char	arg2[MAX_STRING_CHARS];
-	int client_id = -1;
-
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
-		return;
-	}
-
-	if ( trap->Argc() != 3 )
-	{ 
-		trap->SendServerCommand( ent-g_entities, "print \"You must write a player name or ID and the class number.\n\"" ); 
-		return; 
-	}
-
-	trap->Argv( 1,  arg1, sizeof( arg1 ) );
-	trap->Argv( 2,  arg2, sizeof( arg2 ) );
-	client_id = ClientNumberFromString( ent, arg1, qfalse ); 
-				
-	if (client_id == -1)
-	{
-		return;
-	}
-
-	if (g_entities[client_id].client->sess.amrpgmode != 2)
-	{
-		trap->SendServerCommand( ent-g_entities, va("print \"Player is not in RPG Mode\n\"") );
-		return;
-	}
-
-	do_change_class(&g_entities[client_id], atoi(arg2));
-	trap->SendServerCommand( ent-g_entities, va("print \"Changed target player class\n\"") );
-}
-
-/*
-==================
 Cmd_RpModeUp_f
 ==================
 */
@@ -18389,82 +18132,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 /*
 ==================
-Cmd_Magic_f
-==================
-*/
-void Cmd_Magic_f( gentity_t *ent ) {
-	char arg1[MAX_STRING_CHARS];
-
-	if (trap->Argc() == 1)
-	{
-		trap->SendServerCommand( ent->s.number, va("print \" 0 Magic Sense - %s^7      31 Ultimate - %s^7        32 Final - %s^7\n 1 ^4Healing Water - %s^7     2 ^4Water Splash - %s^7     3 ^4Water Attack - %s^7\n 4 ^3Earthquake - %s^7        5 ^3Rockfall - %s^7         6 ^3Shifting Sand - %s^7\n 7 ^2Sleeping Flowers - %s^7  8 ^2Poison Mushrooms - %s^7 9 ^2Tree of Life - %s^7\n10 ^5Magic Shield - %s^7     11 ^5Dome of Damage - %s^7  12 ^5Magic Disable - %s^7\n13 ^6Ultra Speed - %s^7      14 ^6Slow Motion - %s^7     15 ^6Fast and Slow - %s^7\n16 ^1Flame Burst - %s^7      17 ^1Ultra Flame - %s^7     18 ^1Flaming Area - %s^7\n19 Blowing Wind - %s^7     20 Hurricane - %s^7       21 Reverse Wind - %s^7\n22 ^3Ultra Resistance - %s^7 23 ^3Ultra Strength - %s^7  24 ^3Enemy Weakening - %s^7\n25 ^5Ice Stalagmite - %s^7   26 ^5Ice Boulder - %s^7     27 ^5Ice Block - %s^7\n28 Healing Area - %s^7     29 Magic Explosion - %s^7 30 Lightning Dome - %s^7\n\"", 
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_MAGIC_SENSE)) ? "^2yes" : "^1no ", 
-			!(ent->client->sess.magic_more_disabled_powers & (1 << 0)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_more_disabled_powers & (1 << 1)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_HEALING_WATER)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_WATER_SPLASH)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_WATER_ATTACK)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_EARTHQUAKE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ROCKFALL)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_SHIFTING_SAND)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_SLEEPING_FLOWERS)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_POISON_MUSHROOMS)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_TREE_OF_LIFE)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_MAGIC_SHIELD)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_DOME_OF_DAMAGE)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_MAGIC_DISABLE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ULTRA_SPEED)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_SLOW_MOTION)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_FAST_AND_SLOW)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_FLAME_BURST)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ULTRA_FLAME)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_FLAMING_AREA)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_BLOWING_WIND)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_HURRICANE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_REVERSE_WIND)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ULTRA_RESISTANCE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ULTRA_STRENGTH)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ENEMY_WEAKENING)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ICE_STALAGMITE)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ICE_BOULDER)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ICE_BLOCK)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_HEALING_AREA)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_MAGIC_EXPLOSION)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_LIGHTNING_DOME)) ? "^2yes" : "^1no ") );
-	}
-	else
-	{
-		int magic_power = 0;
-
-		trap->Argv( 1, arg1, sizeof( arg1 ) );
-
-		magic_power = atoi(arg1);
-
-		if (magic_power < MAGIC_MAGIC_SENSE || magic_power >= (MAX_MAGIC_POWERS + 2))
-		{
-			trap->SendServerCommand(ent->s.number, "print \"Invalid magic power.\n\"" );
-			return;
-		}
-
-		if (magic_power >= 31)
-		{
-			magic_power -= 31;
-
-			if (ent->client->sess.magic_more_disabled_powers & (1 << magic_power))
-			{
-				ent->client->sess.magic_more_disabled_powers &= ~(1 << magic_power);
-				save_account(ent, qtrue);
-				trap->SendServerCommand(ent->s.number, "print \"Enabled a magic power.\n\"");
-			}
-			else
-			{
-				ent->client->sess.magic_more_disabled_powers |= (1 << magic_power);
-				save_account(ent, qtrue);
-				trap->SendServerCommand(ent->s.number, "print \"Disabled a magic power.\n\"");
-			}
-		}
-		else if (ent->client->sess.magic_disabled_powers & (1 << magic_power))
-		{
-			ent->client->sess.magic_disabled_powers &= ~(1 << magic_power);
-			save_account(ent, qtrue);
-			trap->SendServerCommand(ent->s.number, "print \"Enabled a magic power.\n\"" );
-		}
-		else
-		{
-			ent->client->sess.magic_disabled_powers |= (1 << magic_power);
-			save_account(ent, qtrue);
-			trap->SendServerCommand(ent->s.number, "print \"Disabled a magic power.\n\"" );
-		}
-	}
-}
-
-/*
-==================
 Cmd_DuelMode_f
 ==================
 */
@@ -19404,7 +19071,7 @@ void Cmd_Attributes_f(gentity_t *ent) {
 
 	strcpy(ent->client->pers.description, arg1);
 
-	save_account(ent, qtrue);
+	update_chars_table_row_with_current_values(ent);
 
 	return;
 }
@@ -20407,7 +20074,6 @@ command_t commands[] = {
 	{ "givecredits",		Cmd_CreditGive_f,			CMD_RPG | CMD_NOINTERMISSION },
 	{ "giveitem",			Cmd_GiveItem_f,				CMD_LOGGEDIN},
 	{ "god",				Cmd_God_f,					CMD_ALIVE|CMD_NOINTERMISSION },
-//	{ "guardianquest",		Cmd_GuardianQuest_f,		CMD_ALIVE|CMD_RPG|CMD_NOINTERMISSION },
 	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
 	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
 	{ "inv",				Cmd_Inventory_f,			CMD_LOGGEDIN},
@@ -20422,7 +20088,6 @@ command_t commands[] = {
 	{ "listaccount",		Cmd_ListAccount_f,			CMD_NOINTERMISSION },
 	{ "login",				Cmd_Login_F,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "logout",				Cmd_LogoutAccount_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
-//	{ "magic",				Cmd_Magic_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "maplist",			Cmd_MapList_f,				CMD_NOINTERMISSION },
 //	{ "meleearena",			Cmd_MeleeArena_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "meleemode",			Cmd_MeleeMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
@@ -20435,9 +20100,7 @@ command_t commands[] = {
 	{ "npc",				Cmd_NPC_f,					CMD_LOGGEDIN },
 	{ "order",				Cmd_Order_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "paralyze",			Cmd_Paralyze_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-//	{ "playermode",			Cmd_PlayerMode_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "players",			Cmd_Players_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-//	{ "questskip",			Cmd_QuestSkip_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "racemode",			Cmd_RaceMode_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "remap",				Cmd_Remap_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "remapdeletefile",	Cmd_RemapDeleteFile_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
@@ -20445,13 +20108,9 @@ command_t commands[] = {
 	{ "remapload",			Cmd_RemapLoad_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "resetpassword",		Cmd_ResetPassword_F,		CMD_LOGGEDIN},
-//	{ "resetaccount",		Cmd_ResetAccount_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "roll",				Cmd_Roll_f,					0 },
-//	{ "rpgclass",			Cmd_RpgClass_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "rpglmstable",		Cmd_RpgLmsTable_f,			CMD_NOINTERMISSION },
-//	{ "rpmode",				Cmd_RpMode_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-//	{ "rpmodeclass",		Cmd_RpModeClass_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "saber",				Cmd_Saber_f,				CMD_NOINTERMISSION },
 	{ "say",				Cmd_Say_f,					0 },
 	{ "say_team",			Cmd_SayTeam_f,				0 },
