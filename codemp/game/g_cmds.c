@@ -2086,8 +2086,6 @@ void select_account_and_default_character_data(gentity_t* ent, char username[MAX
 			ON Weapons.CharID = Characters.CharID\
 		WHERE Username = '%s'";
 
-	trap->Print(va(select_account_table_row, username));
-
 	rc = sqlite3_prepare(db, va(select_account_table_row, username), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -2111,7 +2109,6 @@ void select_account_and_default_character_data(gentity_t* ent, char username[MAX
 		adminLevel = sqlite3_column_int(stmt, 2);
 		strcpy(password, sqlite3_column_text(stmt, 3));
 		strcpy(username, sqlite3_column_text(stmt, 4));
-		strcpy(defaultChar, sqlite3_column_text(stmt, 5));
 		charID = sqlite3_column_int(stmt, 7);
 		credits = sqlite3_column_int(stmt, 8);
 		level = sqlite3_column_int(stmt, 9);
@@ -2137,9 +2134,12 @@ void select_account_and_default_character_data(gentity_t* ent, char username[MAX
 	ent->client->pers.player_settings = player_settings;
 	ent->client->pers.bitvalue = adminLevel;
 	strcpy(ent->client->pers.password, password);
+	strcpy(ent->client->sess.filename, username);
+	ent->client->pers.CharID = charID;
+	ent->client->pers.credits = credits;
+	ent->client->pers.level = level;
 	do_scale(ent, modelScale);
 	strcpy(ent->client->sess.rpgchar, name);
-	strcpy(ent->client->sess.filename, username);
 	ent->client->pers.skillpoints = skillpoints;
 	strcpy(ent->client->pers.description, description);
 	set_netname(ent, netName);
