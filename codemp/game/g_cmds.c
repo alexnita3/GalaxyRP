@@ -1600,7 +1600,21 @@ int select_char_id_using_char_name(gentity_t* ent, char* character_name, sqlite3
 }
 
 // GalaxyRP (Alex): [Database] UPDATE This method updated a characters table row with information contained within the entity with which it's called.
-void update_chars_table_row_with_current_values(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+void update_chars_table_row_with_current_values(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+
 	// GalaxyRP (Alex): [Database] Grab the model and display name, so they can be saved in the database.
 	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
 	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
@@ -1620,6 +1634,8 @@ void update_chars_table_row_with_current_values(gentity_t* ent, sqlite3* db, cha
 		modelName,
 		ent->client->pers.CharID
 	), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
 
 	return;
 }
@@ -1687,7 +1703,7 @@ void select_skills_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErr
 	return;
 }
 
-// GalaxyRP (Alex): [Database] UPDATE This method updated a skills table row with information contained within the entity with which it's called.
+// GalaxyRP (Alex): [Database] UPDATE This method updated a skills table row with information contained within the entity with which it's called. Also updates the skillpoint values, since there's no instance where a skill is updated and the skillpoints are not.
 void update_skills_table_row_with_current_values(gentity_t* ent) {
 	sqlite3* db;
 	char* zErrMsg = 0;
@@ -1702,7 +1718,7 @@ void update_skills_table_row_with_current_values(gentity_t* ent) {
 		return;
 	}
 	
-	char update_skills_query[928] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'";
+	char update_skills_query[987] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'; UPDATE Characters SET SkillPoints='%i' WHERE CharID='%i';";
 	run_db_query(va(update_skills_query,
 		ent->client->pers.skill_levels[0],	//Jump
 		ent->client->pers.skill_levels[1],	//Push
@@ -1760,6 +1776,8 @@ void update_skills_table_row_with_current_values(gentity_t* ent) {
 		ent->client->pers.skill_levels[53],	//CloakItem
 		ent->client->pers.skill_levels[54],	//ForcePower
 		ent->client->pers.skill_levels[55], //Improvements
+		ent->client->pers.CharID,
+		ent->client->pers.skillpoints,
 		ent->client->pers.CharID), db, zErrMsg, rc, stmt);
 
 	sqlite3_close(db);
@@ -2118,11 +2136,11 @@ void select_account_and_default_character_data(gentity_t* ent, char username[MAX
 		strcpy(description, sqlite3_column_text(stmt, 13));
 		strcpy(netName, sqlite3_column_text(stmt, 14));
 		strcpy(modelName, sqlite3_column_text(stmt, 15));
-		//17
+		// GalaxyRP (Alex): [Database] Column 16 is a duplicate of CharID, no need to grab that.
 		for (int i = 0; i < NUM_OF_SKILLS; i++) {
 			ent->client->pers.skill_levels[i] = sqlite3_column_int(stmt, i + 17);
 		}
-		//74 empty
+		// GalaxyRP (Alex): [Database] Column 74 is a duplicate of CharID, no need to grab that.
 		for (int i = 2; i < AMMO_MAX; i++) {
 			ent->client->ps.ammo[i] = sqlite3_column_int(stmt, i + 73);
 		}
@@ -10095,7 +10113,7 @@ void do_upgrade_skill(gentity_t *ent, gentity_t *target_ent, int upgrade_value, 
 		if (is_upgraded == qfalse)
 			return;
 
-		// GalaxyRP (Alex): [Database] Only update the skills table.
+		// GalaxyRP (Alex): [Database] Only update the skills table. Also update the characters table to save the skill point
 		update_skills_table_row_with_current_values(target_ent);
 
 		trap->SendServerCommand(target_ent -g_entities, "print \"^2Skill upgraded successfully.\n\"" );
