@@ -1432,7 +1432,20 @@ int select_number_of_accounts_with_username(gentity_t* ent, char* username, sqli
 }
 
 // GalaxyRP (Alex): [Database] UPDATE This method updates an accounts table row with information contained within the entity with which it's called.
-void update_accounts_table_row_with_current_values(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+void update_accounts_table_row_with_current_values(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+	
 	char update_account_query[95] = "UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'";
 
 	run_db_query(va(update_account_query,
@@ -1440,6 +1453,8 @@ void update_accounts_table_row_with_current_values(gentity_t* ent, sqlite3* db, 
 		ent->client->sess.rpgchar,
 		ent->client->sess.accountID
 	), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
 
 	return;
 }
@@ -1879,8 +1894,6 @@ void update_current_character(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc
 	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
 	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
 
-	
-
 	char update_character_query[1248] = "UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i';\
 		UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i';\
 		UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'";
@@ -2199,6 +2212,116 @@ void remove_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3*
 	char remove_character_query[117] = "DELETE FROM Characters WHERE CharID='%i';DELETE FROM Skills WHERE CharID='%i';DELETE FROM Weapons WHERE CharID='%i';";
 
 	run_db_query(va(remove_character_query, charID, charID, charID), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] This method updates the account, Characters, Skills and Weapons tables with current values. ASSUMES THE PLAYER IS LOGGED IN!!!
+void update_current_character_and_account(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
+	
+	char update_character_query[1390] = "UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName=\"%s\" WHERE CharID='%i';\
+		UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i';\
+		UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i';\
+		UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'";
+
+	run_db_query(va(update_character_query,
+		ent->client->pers.credits,
+		ent->client->pers.level,
+		ent->client->ps.iModelScale,
+		ent->client->pers.skillpoints,
+		ent->client->pers.description,
+		ent->client->pers.netname,
+		modelName,
+		ent->client->pers.CharID,
+		ent->client->pers.skill_levels[0],	//Jump
+		ent->client->pers.skill_levels[1],	//Push
+		ent->client->pers.skill_levels[2],	//Pull
+		ent->client->pers.skill_levels[3],	//Speed
+		ent->client->pers.skill_levels[4],	//Sense
+		ent->client->pers.skill_levels[5],	//SaberAttack
+		ent->client->pers.skill_levels[6],	//SaberDefense
+		ent->client->pers.skill_levels[7],	//SaberThrow
+		ent->client->pers.skill_levels[8],	//Absorb
+		ent->client->pers.skill_levels[9],	//Heal
+		ent->client->pers.skill_levels[10],	//Protect
+		ent->client->pers.skill_levels[11],	//MindTrick
+		ent->client->pers.skill_levels[12],	//TeamHeal
+		ent->client->pers.skill_levels[13],	//Lightning
+		ent->client->pers.skill_levels[14],	//Grip
+		ent->client->pers.skill_levels[15],	//Drain
+		ent->client->pers.skill_levels[16],	//Rage
+		ent->client->pers.skill_levels[17],	//TeamEnergize
+		ent->client->pers.skill_levels[18],	//StunBaton
+		ent->client->pers.skill_levels[19],	//BlasterPistol
+		ent->client->pers.skill_levels[20],	//BlasterRifle
+		ent->client->pers.skill_levels[21],	//Disruptor
+		ent->client->pers.skill_levels[22],	//Bowcaster
+		ent->client->pers.skill_levels[23],	//Repeater
+		ent->client->pers.skill_levels[24],	//DEMP2
+		ent->client->pers.skill_levels[25],	//Flechette
+		ent->client->pers.skill_levels[26],	//RocketLauncher
+		ent->client->pers.skill_levels[27],	//ConcussionRifle
+		ent->client->pers.skill_levels[28],	//BryarPistol
+		ent->client->pers.skill_levels[29],	//Melee
+		ent->client->pers.skill_levels[30],	//MaxShield
+		ent->client->pers.skill_levels[31],	//ShieldStrength
+		ent->client->pers.skill_levels[32],	//HealthStrength
+		ent->client->pers.skill_levels[33],	//DrainShield
+		ent->client->pers.skill_levels[34],	//Jetpack
+		ent->client->pers.skill_levels[35],	//SenseHealth
+		ent->client->pers.skill_levels[36],	//ShieldHeal
+		ent->client->pers.skill_levels[37],	//TeamShieldHeal
+		ent->client->pers.skill_levels[38],	//UniqueSkill
+		ent->client->pers.skill_levels[39],	//BlasterPack
+		ent->client->pers.skill_levels[40],	//PowerCell
+		ent->client->pers.skill_levels[41],	//MetalBolts
+		ent->client->pers.skill_levels[42],	//Rockets
+		ent->client->pers.skill_levels[43],	//Thermals
+		ent->client->pers.skill_levels[44],	//TripMines
+		ent->client->pers.skill_levels[45],	//Detpacks
+		ent->client->pers.skill_levels[46],	//Binoculars
+		ent->client->pers.skill_levels[47],	//BactaCanister
+		ent->client->pers.skill_levels[48],	//SentryGun
+		ent->client->pers.skill_levels[49],	//SeekerDrone
+		ent->client->pers.skill_levels[50],	//Eweb
+		ent->client->pers.skill_levels[51],	//BigBacta
+		ent->client->pers.skill_levels[52],	//ForceField
+		ent->client->pers.skill_levels[53],	//CloakItem
+		ent->client->pers.skill_levels[54],	//ForcePower
+		ent->client->pers.skill_levels[55], //Improvements
+		ent->client->pers.CharID,
+		ent->client->ps.ammo[AMMO_BLASTER],
+		ent->client->ps.ammo[AMMO_POWERCELL],
+		ent->client->ps.ammo[AMMO_METAL_BOLTS],
+		ent->client->ps.ammo[AMMO_ROCKETS],
+		ent->client->ps.ammo[AMMO_THERMAL],
+		ent->client->ps.ammo[AMMO_TRIPMINE],
+		ent->client->ps.ammo[AMMO_DETPACK],
+		ent->client->pers.CharID,
+		ent->client->pers.bitvalue,
+		ent->client->sess.rpgchar,
+		ent->client->sess.accountID
+	), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
 
 	return;
 }
@@ -6854,42 +6977,11 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 	{ // zyk: players can only save things if server is not at RP Mode or if it is allowed in config
 		if (save_char_file == qtrue)
 		{  // zyk: save the RPG char
-			sqlite3 *db;
-			char *zErrMsg = 0;
-			int rc;
-			sqlite3_stmt *stmt;
-
-			rc = sqlite3_open(DB_PATH, &db);
-			if (rc != SQLITE_OK)
-			{
-				trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-				sqlite3_close(db);
-				return;
-			}
-
-			update_accounts_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
-			update_current_character(ent, db, zErrMsg, rc, stmt);
-
-			sqlite3_close(db);
+			update_current_character_and_account(ent);
 		}
 		else
 		{ // zyk: save the main account file
-			sqlite3 *db;
-			char *zErrMsg = 0;
-			int rc;
-			sqlite3_stmt *stmt;
-
-			rc = sqlite3_open(DB_PATH, &db);
-			if (rc != SQLITE_OK)
-			{
-				trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-				sqlite3_close(db);
-				return;
-			}
-
-			update_accounts_table_row_with_current_values(ent, db, zErrMsg, rc, stmt);
-
-			sqlite3_close(db);
+			update_accounts_table_row_with_current_values(ent);
 		}
 	}
 }
@@ -12954,7 +13046,8 @@ void Cmd_ChangePassword_f( gentity_t *ent ) {
 	}
 
 	strcpy(ent->client->pers.password,arg1);
-	save_account(ent, qfalse);
+
+	update_accounts_table_row_with_current_values(ent);
 
 	trap->SendServerCommand( ent-g_entities, "print \"Your password was changed successfully.\n\"" );
 }
