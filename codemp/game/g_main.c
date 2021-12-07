@@ -277,7 +277,7 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 	sqlite3* db;
 	char* zErrMsg = 0;
 	int rc;
-	sqlite3_stmt* stmt;
+	sqlite3_stmt* stmt = 0;
 
 	rc = sqlite3_open(DB_PATH, &db);
 	if (rc != SQLITE_OK)

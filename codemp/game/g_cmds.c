@@ -441,11 +441,11 @@ void print_table_horizontal_line(gentity_t *ent) {
 	return;
 }
 
-int get_max_spaces_right(char text[MAX_STRING_CHARS]) {
+int get_max_spaces_right(const char text[MAX_STRING_CHARS]) {
 	return 33 - strlen(text);
 }
 
-void print_row(gentity_t *ent, char text[MAX_STRING_CHARS]) {
+void print_row(gentity_t *ent, const char text[MAX_STRING_CHARS]) {
 	char emote_row[MAX_STRING_CHARS] = " ";
 
 	strcat(emote_row, "^9|| ^3");
@@ -463,7 +463,7 @@ void print_row(gentity_t *ent, char text[MAX_STRING_CHARS]) {
 	return;
 }
 
-void print_heading_text_row(gentity_t *ent, char header_text[MAX_STRING_CHARS]) {
+void print_heading_text_row(gentity_t *ent, const char header_text[MAX_STRING_CHARS]) {
 	//34 characters left for space and text
 	int length = strlen(header_text);
 
@@ -513,7 +513,7 @@ void print_heading_text_row(gentity_t *ent, char header_text[MAX_STRING_CHARS]) 
 	return;
 }
 
-void print_header(gentity_t *ent, char text[MAX_STRING_CHARS]) {
+void print_header(gentity_t *ent, const char text[MAX_STRING_CHARS]) {
 	print_table_horizontal_line(ent);
 	print_heading_text_row(ent, text);
 	print_table_horizontal_line(ent);
@@ -1254,7 +1254,7 @@ ACCOUNT AREA
 
 void set_model(gentity_t * ent, char modelName[MAX_STRING_CHARS])
 {
-	char userinfo[MAX_INFO_STRING], modelname[MAX_INFO_STRING];
+	char userinfo[MAX_INFO_STRING];
 	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
 
 	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
@@ -1827,7 +1827,7 @@ void save_account_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sql
 		ent->client->pers.bitvalue,
 		ent->client->sess.rpgchar,
 		ent->client->sess.accountID
-	), 0, 0, &zErrMsg);
+	), 0, &stmt, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
@@ -1876,10 +1876,9 @@ void Cmd_Register_F(gentity_t * ent)
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = 0;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
 	int accountID = 0, i = 0;
-	int charID;
 
 	rc = sqlite3_open(DB_PATH, &db);
 	if (rc != SQLITE_OK)
@@ -2017,21 +2016,21 @@ void Cmd_ChangeChar_F(gentity_t * ent)
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = 0;
 	char charname[MAX_STRING_CHARS];
-
-	if (trap->Argc() != 2)
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /changechar <charname>\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^2Command Usage: /changechar <charname>\n\"");
-		sqlite3_close(db);
-		return;
-	}
 
 	rc = sqlite3_open(DB_PATH, &db);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /changechar <charname>\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^2Command Usage: /changechar <charname>\n\"");
 		sqlite3_close(db);
 		return;
 	}
@@ -2095,7 +2094,7 @@ void load_account_from_db_with_default_char(gentity_t * ent) {
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = 0;
 	char defaultChar[256] = { 0 };
 
 	rc = sqlite3_open(DB_PATH, &db);
@@ -2117,7 +2116,7 @@ void Cmd_Login_F(gentity_t * ent)
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = 0;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
 	rc = sqlite3_open(DB_PATH, &db);
@@ -2230,10 +2229,9 @@ void Cmd_Char_f(gentity_t *ent) {
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = 0;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
 	int accountID = 0, i = 0;
-	int charID;
 
 	int argc = trap->Argc();
 	char command[MAX_STRING_CHARS];
@@ -2286,7 +2284,6 @@ void Cmd_ResetPassword_F(gentity_t * ent)
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
 	char newpassword[256] = { 0 };
 
 	rc = sqlite3_open(DB_PATH, &db);
@@ -2353,6 +2350,8 @@ qboolean inventory_does_player_own_item(gentity_t *ent, int itemID, sqlite3 *db,
 		}
 		return qtrue;
 	}
+
+	return qfalse;
 }
 
 void inventory_display_beginning(gentity_t *ent) {
@@ -2367,7 +2366,7 @@ void inventory_display_end(gentity_t *ent) {
 
 void inventory_add_item(gentity_t *ent, char item_to_add[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
 	//trap->Print(va("INSERT INTO Items(CharID, ItemName) VALUES('%i',\"%s\")", ent->client->pers.CharID, item_to_add));
-	rc = sqlite3_exec(db, va("INSERT INTO Items(CharID, ItemName) VALUES('%i',\"%s\")", ent->client->pers.CharID, item_to_add), 0, 0, &zErrMsg);
+	rc = sqlite3_exec(db, va("INSERT INTO Items(CharID, ItemName) VALUES('%i',\"%s\")", ent->client->pers.CharID, item_to_add), 0, &stmt, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
@@ -2387,7 +2386,7 @@ void inventory_remove_item(gentity_t *ent, int id_to_be_removed, sqlite3 *db, ch
 	}
 
 	//trap->Print(va("DELETE FROM Items WHERE ItemID='%i'", id_to_be_removed));
-	rc = sqlite3_exec(db, va("DELETE FROM Items WHERE ItemID='%i'", id_to_be_removed), 0, 0, &zErrMsg);
+	rc = sqlite3_exec(db, va("DELETE FROM Items WHERE ItemID='%i'", id_to_be_removed), 0, &stmt, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
@@ -2401,7 +2400,7 @@ void inventory_remove_item(gentity_t *ent, int id_to_be_removed, sqlite3 *db, ch
 
 void inventory_transfer_item(gentity_t *ent, gentity_t *otherEnt, int itemID, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
 	//trap->Print(va("UPDATE Items SET CharID='%i' WHERE ItemID='%i'", otherEnt->client->pers.CharID, itemID));
-	rc = sqlite3_exec(db, va("UPDATE Items SET CharID='%i' WHERE ItemID='%i'", otherEnt->client->pers.CharID, itemID), 0, 0, &zErrMsg);
+	rc = sqlite3_exec(db, va("UPDATE Items SET CharID='%i' WHERE ItemID='%i'", otherEnt->client->pers.CharID, itemID), 0, &stmt, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
@@ -2490,7 +2489,7 @@ void Cmd_Inventory_f(gentity_t *ent) {
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = 0;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
 	rc = sqlite3_open(DB_PATH, &db);
@@ -2532,7 +2531,7 @@ void Cmd_CreateItem_f(gentity_t *ent) {
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = 0;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
 	rc = sqlite3_open(DB_PATH, &db);
@@ -2571,7 +2570,7 @@ void Cmd_TrashItem_f(gentity_t *ent) {
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = 0;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
 	rc = sqlite3_open(DB_PATH, &db);
@@ -2614,7 +2613,7 @@ void Cmd_GiveItem_f(gentity_t *ent) {
 		return;
 	}
 
-	if (Distance(ent->client->ps.origin, &g_entities[player_id].client->ps.origin) > 1000) {
+	if (Distance(ent->client->ps.origin, g_entities[player_id].client->ps.origin) > 1000) {
 		trap->SendServerCommand(ent->s.number, "print \"You are too far away from that person.\n\"");
 		return;
 	}
@@ -2622,7 +2621,7 @@ void Cmd_GiveItem_f(gentity_t *ent) {
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = 0;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
 	rc = sqlite3_open(DB_PATH, &db);
@@ -2639,7 +2638,7 @@ void Cmd_GiveItem_f(gentity_t *ent) {
 
 	inventory_transfer_item(ent, &g_entities[player_id], item_id, db, zErrMsg, rc, stmt);
 
-	trap->SendServerCommand(ent->s.number, va("print \"^2You've given an item to %s^2\n\"", &g_entities[player_id].client->pers.netname));
+	trap->SendServerCommand(ent->s.number, va("print \"^2You've given an item to %s^2\n\"", g_entities[player_id].client->pers.netname));
 
 	return;
 }
@@ -6754,7 +6753,7 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 			sqlite3 *db;
 			char *zErrMsg = 0;
 			int rc;
-			sqlite3_stmt *stmt;
+			sqlite3_stmt *stmt = 0;
 
 			rc = sqlite3_open(DB_PATH, &db);
 			if (rc != SQLITE_OK)
@@ -6774,7 +6773,7 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 			sqlite3 *db;
 			char *zErrMsg = 0;
 			int rc;
-			sqlite3_stmt *stmt;
+			sqlite3_stmt *stmt = 0;
 
 			rc = sqlite3_open(DB_PATH, &db);
 			if (rc != SQLITE_OK)
@@ -8454,13 +8453,9 @@ Cmd_LogoutAccount_f
 ==================
 */
 void Cmd_LogoutAccount_f( gentity_t *ent ) {
-	sqlite3 *db;
 	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
 	int accountID = 0, i = 0;
-	int charID;
 
 	save_account(ent, qtrue);
 
@@ -13282,8 +13277,6 @@ Cmd_CreditSpend_f
 */
 void Cmd_CreditSpend_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
-	char arg2[MAX_STRING_CHARS];
-	char arg3[MAX_STRING_CHARS];
 	long int value = 0;
 
 	if (trap->Argc() > 2)
@@ -19265,9 +19258,7 @@ Cmd_Examine_f
 */
 void Cmd_Examine_f(gentity_t *ent) {
 	char player_name[MAX_STRING_CHARS];
-	char arg2[MAX_STRING_CHARS];
 	FILE *description_file = NULL;
-	char description[MAX_STRING_CHARS];
 
 	if (trap->Argc() != 2) {
 		trap->SendServerCommand(ent->s.number, "print \"Usage: /examine <playername>\n\"");
@@ -19282,7 +19273,7 @@ void Cmd_Examine_f(gentity_t *ent) {
 		return;
 	}
 
-	if (Distance(ent->client->ps.origin, &g_entities[player_id].client->ps.origin) > 1000) {
+	if (Distance(ent->client->ps.origin, g_entities[player_id].client->ps.origin) > 1000) {
 		trap->SendServerCommand(ent->s.number, "print \"You are too far away from that person.\n\"");
 		return;
 	}
@@ -19290,8 +19281,8 @@ void Cmd_Examine_f(gentity_t *ent) {
 	if (trap->Argc())
 	{
 
-		description_display_beginning(ent, &g_entities[player_id].client->pers.netname);
-		trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", &g_entities[player_id].client->pers.description));
+		description_display_beginning(ent, g_entities[player_id].client->pers.netname);
+		trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", g_entities[player_id].client->pers.description));
 		description_display_end(ent);
 
 		return;
