@@ -7918,17 +7918,17 @@ void clean_guardians(gentity_t *ent)
 // zyk: tests if the player has beaten the guardians before the Guardian of Light in Light Quest
 qboolean light_quest_defeated_guardians(gentity_t *ent)
 {
-	int j = 0, NUM_OF_GUARDIANS_defeated = 0;
+	int j = 0, defeated_guardians = 0;
 
 	for (j = 4; j <= 12; j++)
 	{
 		if (ent->client->pers.defeated_guardians & (1 << j))
 		{
-			NUM_OF_GUARDIANS_defeated++;
+			defeated_guardians++;
 		}
 	}
 
-	if (NUM_OF_GUARDIANS_defeated == (NUM_OF_GUARDIANS - 1))
+	if (defeated_guardians == (NUM_OF_GUARDIANS - 1))
 		return qtrue;
 	else
 		return qfalse;
