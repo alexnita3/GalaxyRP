@@ -16659,7 +16659,7 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 			g_entities[client_id].client->pers.credits_modifier = -10;
 			rpg_score(&g_entities[client_id], qtrue);
 
-			trap->SendServerCommand( ent-g_entities, va("print \"^2Target player leveled up. Their current level is: ^3%i^2. Their skillpoint count is: ^3%i^2.\n\"", g_entities[client_id].client->pers.level, g_entities[client_id].client->pers.skillpoints) );
+			trap->SendServerCommand( ent-g_entities, va("print \"^2Target player leveled up. Their current level is: ^3%i^2. Their skillpoint count is: ^3%i^2. Make sure they die!\n\"", g_entities[client_id].client->pers.level, g_entities[client_id].client->pers.skillpoints) );
 		}
 		else
 		{
@@ -16669,6 +16669,108 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 	else
 	{
 		trap->SendServerCommand( ent-g_entities, va("print \"The player must be in RPG Mode\n\"") );
+	}
+}
+
+/*
+==================
+Cmd_SkillPointGive_f
+==================
+*/
+void Cmd_SkillPointGive_f(gentity_t* ent) {
+	char arg1[MAX_STRING_CHARS];
+	int client_id = -1;
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_LEVELUP)))
+	{ // zyk: admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"You must specify the player name or ID.\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	client_id = ClientNumberFromString(ent, arg1, qfalse);
+
+	if (client_id == -1)
+	{
+		return;
+	}
+
+	if (zyk_rp_mode.integer != 1)
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"The server is not at RP Mode\n\""));
+		return;
+	}
+
+	if (g_entities[client_id].client->sess.amrpgmode == 2)
+	{
+		g_entities[client_id].client->pers.skillpoints ++;
+
+		trap->SendServerCommand(ent - g_entities, va("print \"^2Target player has a new skillpoint. Their skillpoint count is: ^3%i^2. Make sure they die!\n\"", g_entities[client_id].client->pers.skillpoints));
+	}
+	else
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"The player must be in RPG Mode\n\""));
+	}
+}
+
+/*
+==================
+Cmd_SkillPointRemove_f
+==================
+*/
+void Cmd_SkillPointRemove_f(gentity_t* ent) {
+	char arg1[MAX_STRING_CHARS];
+	int client_id = -1;
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_LEVELUP)))
+	{ // zyk: admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"You must specify the player name or ID.\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	client_id = ClientNumberFromString(ent, arg1, qfalse);
+
+	if (client_id == -1)
+	{
+		return;
+	}
+
+	if (zyk_rp_mode.integer != 1)
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"The server is not at RP Mode\n\""));
+		return;
+	}
+
+	if (g_entities[client_id].client->sess.amrpgmode == 2)
+	{
+		if (g_entities[client_id].client->pers.skillpoints == 0) {
+			trap->SendServerCommand(ent - g_entities, va("print \"^2The player already has 0 skillpoints.\n\""));
+
+			return;
+		}
+
+		g_entities[client_id].client->pers.skillpoints--;
+
+		trap->SendServerCommand(ent - g_entities, va("print \"^2Target player has one fewer skillpoint. Their skillpoint count is: ^3%i^2. Make sure they die!\n\"", g_entities[client_id].client->pers.skillpoints));
+	}
+	else
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"The player must be in RPG Mode\n\""));
 	}
 }
 
@@ -20368,6 +20470,8 @@ command_t commands[] = {
 	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "skilldown",			Cmd_RpModeDown_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "skillup",			Cmd_RpModeUp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "skillpointgive",		Cmd_SkillPointGive_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "skillpointremove",	Cmd_SkillPointRemove_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "snipermode",			Cmd_SniperMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "snipertable",		Cmd_SniperTable_f,			CMD_NOINTERMISSION },
 	{ "spendcredits",		Cmd_CreditSpend_f,			CMD_RPG | CMD_NOINTERMISSION },
