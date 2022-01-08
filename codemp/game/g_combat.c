@@ -2125,7 +2125,7 @@ extern void saberReactivate(gentity_t *saberent, gentity_t *saberOwner);
 extern void saberBackToOwner(gentity_t *saberent);
 extern void quest_get_new_player(gentity_t *ent);
 extern void try_finishing_race();
-extern void save_account(gentity_t *ent, qboolean save_char_file);
+extern void update_weapons_table_row_with_current_values(gentity_t *ent);
 extern void remove_credits(gentity_t *ent, int credits);
 extern void zyk_NPC_Kill_f( char *name );
 extern gentity_t *Zyk_NPC_SpawnType(char *npc_type, int x, int y, int z, int yaw);
@@ -2154,7 +2154,8 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	if ( !attacker )
 		return;
 
-	save_account(self, qtrue);
+	// GalaxyRP (Alex): [Database] Update just the ammo table with the current values on death.
+	update_weapons_table_row_with_current_values(self);
 
 	// zyk: remove any quest_power status from this player
 	self->client->pers.quest_power_status = 0;

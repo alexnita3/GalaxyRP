@@ -1877,7 +1877,21 @@ void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zEr
 }
 
 // GalaxyRP (Alex): [Database] UPDATE This method updated a weapons table row with information contained within the entity with which it's called.
-void update_weapons_table_row_with_current_values(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+void update_weapons_table_row_with_current_values(gentity_t* ent) {
+
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
 	char update_ammo_query[168] = "UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'";
 	run_db_query(va(update_ammo_query,
 		ent->client->ps.ammo[AMMO_BLASTER],
@@ -1889,6 +1903,8 @@ void update_weapons_table_row_with_current_values(gentity_t* ent, sqlite3* db, c
 		ent->client->ps.ammo[AMMO_DETPACK],
 		ent->client->pers.CharID
 	), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
 
 	return;
 }
@@ -2472,8 +2488,9 @@ void Cmd_Login_F(gentity_t * ent)
 		return;
 	}
 
-	select_account_and_default_character_data(ent, username, db, zErrMsg, rc, stmt);
 	G_Kill(ent);
+
+	select_account_and_default_character_data(ent, username, db, zErrMsg, rc, stmt);
 
 	trap->SendServerCommand(ent - g_entities, "print \"^2You have sucessfully logged in.\n\"");
 
@@ -7105,8 +7122,6 @@ void rpg_score(gentity_t *ent, qboolean admin_rp_mode)
 	if (validate_rpg_class(ent) == qfalse)
 		return;
 
-	add_credits(ent, (10 + ent->client->pers.credits_modifier));
-
 	if (ent->client->pers.level < zyk_rpg_max_level.integer)
 	{
 		ent->client->pers.level_up_score += (1 + ent->client->pers.score_modifier); // zyk: add score to the RPG mode score
@@ -7133,7 +7148,7 @@ void rpg_score(gentity_t *ent, qboolean admin_rp_mode)
 			send_message = 1;
 		}
 	}
-	save_account(ent, qtrue); // zyk: saves new score and credits in the account file
+	update_chars_table_row_with_current_values(ent);
 
 	// zyk: cleaning the modifiers after they are applied
 	ent->client->pers.credits_modifier = 0;
