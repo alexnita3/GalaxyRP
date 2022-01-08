@@ -7965,8 +7965,9 @@ static void PM_Weapon( void )
 							//it's silly to be able to do them right as you land.
 							//also looks wrong to transition from a non-complete flip anim...
 							if ((!BG_FlippingAnim( pm->ps->legsAnim ) || pm->ps->legsTimer <= 0) &&
-								gDist > 64.0f && //strict minimum
-								gDist > (-pm->ps->velocity[2])-64.0f //make sure we are high to ground relative to downward velocity as well
+								// GalaxyRP [Melee]: Kick in the air distance reduced from 64.
+								gDist > 32.0f && //strict minimum
+								gDist > (-pm->ps->velocity[2])-32.0f //make sure we are high to ground relative to downward velocity as well
 								)
 							{
 								switch ( kickMove )

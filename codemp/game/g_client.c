@@ -2740,7 +2740,7 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 
 		// zyk: load account again
 
-		ent->client->sess.accountID = NULL;
+		ent->client->sess.accountID = -1;
 		ent->client->sess.loggedin = qfalse;
 		ent->client->sess.amrpgmode = 0;
 
@@ -4041,7 +4041,7 @@ void ClientSpawn(gentity_t *ent) {
 		sqlite3* db;
 		char* zErrMsg = 0;
 		int rc;
-		sqlite3_stmt* stmt;
+		sqlite3_stmt* stmt = 0;
 
 		rc = sqlite3_open(DB_PATH, &db);
 		if (rc != SQLITE_OK)
