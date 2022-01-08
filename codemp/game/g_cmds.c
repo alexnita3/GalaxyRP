@@ -12999,12 +12999,6 @@ Cmd_ChangePassword_f
 void Cmd_ChangePassword_f( gentity_t *ent ) {
 	char arg1[1024];
 
-	if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You must be at Spectator Mode to change password.\n\"" );
-		return;
-	}
-
 	if (trap->Argc() != 2)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"Use ^3changepassword <new_password> ^7to change it.\n\"" );
