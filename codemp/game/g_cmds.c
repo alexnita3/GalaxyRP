@@ -2132,17 +2132,22 @@ void select_account_and_default_character_data(gentity_t* ent, char username[MAX
 	char defaultChar[256], password[256], name[256], description[MAX_STRING_CHARS], netName[MAX_STRING_CHARS], modelName[MAX_STRING_CHARS];
 	int accountID, i, player_settings, adminLevel, charID, credits, level, modelScale, skillpoints;
 
-	char select_account_table_row[235] = "SELECT *\
-		FROM Accounts\
-		INNER JOIN Characters\
-			ON Characters.Name = Accounts.DefaultChar\
+	char select_account_table_row[356] = "SELECT *\
+		FROM Accounts, Characters\
 		INNER JOIN Skills\
-			ON Skills.CharID = Characters.CharID\
+		ON Skills.CharID = Characters.CharID\
 		INNER JOIN Weapons\
-			ON Weapons.CharID = Characters.CharID\
-		WHERE Username = '%s'";
+		ON Weapons.CharID = Characters.CharID\
+		WHERE Accounts.Username = 'admin' AND Characters.CharID = (\
+			SELECT CharID\
+			FROM Characters\
+			Where Characters.Name = (\
+				SELECT DefaultChar\
+				FROM Accounts\
+				WHERE Accounts.Username = 'admin')\
+			)";
 
-	rc = sqlite3_prepare(db, va(select_account_table_row, username), -1, &stmt, NULL);
+	rc = sqlite3_prepare(db, va(select_account_table_row, username, username), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
@@ -2217,9 +2222,9 @@ void create_new_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqli
 		return;
 	}
 
-	char create_new_character_query[1274] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle');"\
-		"INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0');"\
-		"INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')";
+	char create_new_character_query[1279] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle');\
+		INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0');\
+		INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0');";
 
 	run_db_query(va(create_new_character_query, ent->client->sess.accountID, char_name), db, zErrMsg, rc, stmt);
 
