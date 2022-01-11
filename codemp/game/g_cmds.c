@@ -1436,7 +1436,7 @@ void update_accounts_table_row_with_current_values(gentity_t* ent) {
 	sqlite3* db;
 	char* zErrMsg = 0;
 	int rc;
-	sqlite3_stmt* stmt;
+	sqlite3_stmt* stmt = 0;
 
 	rc = sqlite3_open(DB_PATH, &db);
 	if (rc != SQLITE_OK)
@@ -1452,7 +1452,7 @@ void update_accounts_table_row_with_current_values(gentity_t* ent) {
 		ent->client->pers.bitvalue,
 		ent->client->sess.rpgchar,
 		ent->client->sess.accountID
-	), db, zErrMsg, rc, stmt);
+	), db, zErrMsg, rc, &stmt);
 
 	sqlite3_close(db);
 
@@ -1510,7 +1510,7 @@ void update_credits_value(gentity_t* ent) {
 	sqlite3* db;
 	char* zErrMsg = 0;
 	int rc;
-	sqlite3_stmt* stmt;
+	sqlite3_stmt* stmt = 0;
 
 	rc = sqlite3_open(DB_PATH, &db);
 	if (rc != SQLITE_OK)
@@ -1524,7 +1524,7 @@ void update_credits_value(gentity_t* ent) {
 	run_db_query(va(update_char_query,
 		ent->client->pers.credits,
 		ent->client->pers.CharID
-	), db, zErrMsg, rc, stmt);
+	), db, zErrMsg, rc, &stmt);
 
 	sqlite3_close(db);
 
@@ -1644,7 +1644,7 @@ void update_chars_table_row_with_current_values(gentity_t* ent) {
 	sqlite3* db;
 	char* zErrMsg = 0;
 	int rc;
-	sqlite3_stmt* stmt;
+	sqlite3_stmt* stmt = 0;
 
 	rc = sqlite3_open(DB_PATH, &db);
 	if (rc != SQLITE_OK)
@@ -1673,7 +1673,7 @@ void update_chars_table_row_with_current_values(gentity_t* ent) {
 		ent->client->pers.netname,
 		modelName,
 		ent->client->pers.CharID
-	), db, zErrMsg, rc, stmt);
+	), db, zErrMsg, rc, &stmt);
 
 	sqlite3_close(db);
 
@@ -1748,7 +1748,7 @@ void update_skills_table_row_with_current_values(gentity_t* ent) {
 	sqlite3* db;
 	char* zErrMsg = 0;
 	int rc;
-	sqlite3_stmt* stmt;
+	sqlite3_stmt* stmt = 0;
 
 	rc = sqlite3_open(DB_PATH, &db);
 	if (rc != SQLITE_OK)
@@ -1818,7 +1818,7 @@ void update_skills_table_row_with_current_values(gentity_t* ent) {
 		ent->client->pers.skill_levels[55], //Improvements
 		ent->client->pers.CharID,
 		ent->client->pers.skillpoints,
-		ent->client->pers.CharID), db, zErrMsg, rc, stmt);
+		ent->client->pers.CharID), db, zErrMsg, rc, &stmt);
 
 	sqlite3_close(db);
 
@@ -1882,7 +1882,7 @@ void update_weapons_table_row_with_current_values(gentity_t* ent) {
 	sqlite3* db;
 	char* zErrMsg = 0;
 	int rc;
-	sqlite3_stmt* stmt;
+	sqlite3_stmt* stmt = 0;
 
 	rc = sqlite3_open(DB_PATH, &db);
 	if (rc != SQLITE_OK)
@@ -1902,7 +1902,7 @@ void update_weapons_table_row_with_current_values(gentity_t* ent) {
 		ent->client->ps.ammo[AMMO_TRIPMINE],
 		ent->client->ps.ammo[AMMO_DETPACK],
 		ent->client->pers.CharID
-	), db, zErrMsg, rc, stmt);
+	), db, zErrMsg, rc, &stmt);
 
 	sqlite3_close(db);
 
@@ -2363,7 +2363,7 @@ void update_current_character_and_account(gentity_t* ent) {
 		ent->client->pers.bitvalue,
 		ent->client->sess.rpgchar,
 		ent->client->sess.accountID
-	), db, zErrMsg, rc, stmt);
+	), db, zErrMsg, rc, &stmt);
 
 	sqlite3_close(db);
 
@@ -2401,7 +2401,7 @@ void Cmd_Register_F(gentity_t * ent)
 	Q_StripColor(username);
 	Q_strlwr(username);
 
-	if (select_number_of_accounts_with_username(ent, username, db, zErrMsg, rc, stmt) != 0) {
+	if (select_number_of_accounts_with_username(ent, username, db, zErrMsg, rc, &stmt) != 0) {
 		trap->SendServerCommand(ent - g_entities, va("print \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
 		trap->SendServerCommand(ent - g_entities, va("cp \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
 
@@ -2468,7 +2468,7 @@ void Cmd_Login_F(gentity_t * ent)
 	Q_StripColor(username);
 	Q_strlwr(username);
 
-	if (select_number_of_accounts_with_username(ent, username, db, zErrMsg, rc, stmt) == 0)
+	if (select_number_of_accounts_with_username(ent, username, db, zErrMsg, rc, &stmt) == 0)
 	{
 		//The account does not exist, thus, the error does.
 		trap->SendServerCommand(ent - g_entities, va("print \"^1An account with the username %s does not exist.\n\"", username));
@@ -2500,7 +2500,7 @@ void Cmd_Char_f(gentity_t *ent) {
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = 0;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
 	int accountID = 0, i = 0;
 	int charID;
@@ -2519,7 +2519,7 @@ void Cmd_Char_f(gentity_t *ent) {
 
 	if (argc == 1)
 	{
-		select_character_list(ent, db, zErrMsg, rc, stmt);
+		select_character_list(ent, db, zErrMsg, rc, &stmt);
 		return;
 	}
 	if (argc == 3)
@@ -2544,7 +2544,7 @@ void Cmd_Char_f(gentity_t *ent) {
 		//Remove character
 		if (Q_stricmp(command, "remove") == 0) {
 
-			remove_character(ent, charName, db, zErrMsg, rc, stmt);
+			remove_character(ent, charName, db, zErrMsg, rc, &stmt);
 			sqlite3_close(db);
 			return;
 		}
@@ -2772,7 +2772,7 @@ void Cmd_Inventory_f(gentity_t *ent) {
 	}
 
 	inventory_display_beginning(ent);
-	inventory_display_items(ent, db, zErrMsg, rc, stmt);
+	inventory_display_items(ent, db, zErrMsg, rc, &stmt);
 	inventory_display_end(ent);
 	sqlite3_close(db);
 	return;
@@ -2813,7 +2813,7 @@ void Cmd_CreateItem_f(gentity_t *ent) {
 		return;
 	}
 
-	inventory_add_item(ent, arg1, db, zErrMsg, rc, stmt);
+	inventory_add_item(ent, arg1, db, zErrMsg, rc, &stmt);
 
 	inventory_add_create_item_log(ent, arg1);
 
@@ -2852,7 +2852,7 @@ void Cmd_TrashItem_f(gentity_t *ent) {
 		return;
 	}
 
-	inventory_remove_item(ent, id_to_be_removed, db, zErrMsg, rc, stmt);
+	inventory_remove_item(ent, id_to_be_removed, db, zErrMsg, rc, &stmt);
 
 	sqlite3_close(db);
 
@@ -2903,7 +2903,7 @@ void Cmd_GiveItem_f(gentity_t *ent) {
 		return;
 	}
 
-	if (inventory_does_player_own_item(ent, item_id, db, zErrMsg, rc, stmt) == qfalse) {
+	if (inventory_does_player_own_item(ent, item_id, db, zErrMsg, rc, &stmt) == qfalse) {
 		return;
 	}
 
@@ -7233,54 +7233,6 @@ int number_of_crystals(gentity_t *ent)
 	return number_of_crystals;
 }
 
-void load_ammo_from_file(gentity_t *ent) {
-
-	FILE *ammo_file;
-	char content[128];
-
-	ammo_file = fopen(va("GalaxyRP/accounts/%s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
-
-	// alex: load ammo from separate file at spawn
-	if (ammo_file != NULL)
-	{
-		fscanf(ammo_file, "%s", content);
-		int ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_BLASTER = %d\n\"", ammo));
-		ent->client->ps.ammo[AMMO_BLASTER] = ammo;
-
-		fscanf(ammo_file, "%s", content);
-		ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_POWERCELL = %d \n\"", ammo));
-		ent->client->ps.ammo[AMMO_POWERCELL] = ammo;
-
-		fscanf(ammo_file, "%s", content);
-		ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_METAL_BOLTS = %d \n\"", ammo));
-		ent->client->ps.ammo[AMMO_METAL_BOLTS] = ammo;
-
-		fscanf(ammo_file, "%s", content);
-		ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_ROCKETS = %d \n\"", ammo));
-		ent->client->ps.ammo[AMMO_ROCKETS] = ammo;
-
-		fscanf(ammo_file, "%s", content);
-		ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_THERMAL = %d \n\"", ammo));
-		ent->client->ps.ammo[AMMO_THERMAL] = ammo;
-
-		fscanf(ammo_file, "%s", content);
-		ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_TRIPMINE = %d \n\"", ammo));
-		ent->client->ps.ammo[AMMO_TRIPMINE] = ammo;
-
-		fscanf(ammo_file, "%s", content);
-		ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_DETPACK = %d \n\"", ammo));
-		ent->client->ps.ammo[AMMO_DETPACK] = ammo;
-	}
-}
-
-
 // zyk: initialize RPG skills of this player
 void initialize_rpg_skills(gentity_t *ent)
 {
@@ -7581,8 +7533,6 @@ void initialize_rpg_skills(gentity_t *ent)
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DET_PACK);
 		if (ent->client->pers.skill_levels[45] == 0)
 			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DET_PACK);
-
-		//load_ammo_from_file(ent);
 		
 		if (ent->client->pers.rpg_class == 2)
 		{ // zyk: modifying max ammo if the player is a Bounty Hunter
