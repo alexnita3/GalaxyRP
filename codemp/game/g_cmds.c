@@ -2154,13 +2154,13 @@ void select_account_and_default_character_data(gentity_t* ent, char username[MAX
 		ON Skills.CharID = Characters.CharID\
 		INNER JOIN Weapons\
 		ON Weapons.CharID = Characters.CharID\
-		WHERE Accounts.Username = 'admin' AND Characters.CharID = (\
+		WHERE Accounts.Username = '%s' AND Characters.CharID = (\
 			SELECT CharID\
 			FROM Characters\
 			Where Characters.Name = (\
 				SELECT DefaultChar\
 				FROM Accounts\
-				WHERE Accounts.Username = 'admin')\
+				WHERE Accounts.Username = '%s')\
 			)";
 
 	rc = sqlite3_prepare(db, va(select_account_table_row, username, username), -1, &stmt, NULL);
