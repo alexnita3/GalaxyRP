@@ -2092,8 +2092,6 @@ void select_player_character(gentity_t* ent, char *character_name, sqlite3* db, 
 		set_model(ent, modelName);
 
 		sqlite3_finalize(stmt);
-
-		return;
 	}	
 
 	// GalaxyRP (Alex): [Database] Kill the tntity to allow everything to take effect.
@@ -2540,7 +2538,6 @@ void Cmd_Char_f(gentity_t *ent) {
 		if (Q_stricmp(command, "use") == 0) {
 			select_player_character(ent, charName, db, zErrMsg, rc, stmt);
 			sqlite3_close(db);
-			G_Kill(ent);
 			return;
 		}
 
