@@ -3182,7 +3182,7 @@ extern void zyk_remove_guns( gentity_t *ent );
 extern void do_scale(gentity_t *ent, int new_size);
 extern int zyk_max_magic_power(gentity_t *ent);
 extern void zyk_load_common_settings(gentity_t *ent);
-extern void load_ammo_from_db(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+extern void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 void ClientSpawn(gentity_t *ent) {
 	int					i = 0, index = 0, saveSaberNum = ENTITYNUM_NONE, wDisable = 0, savedSiegeIndex = 0, maxHealth = 100;
 	vec3_t				spawn_origin, spawn_angles;
@@ -4050,7 +4050,7 @@ void ClientSpawn(gentity_t *ent) {
 			sqlite3_close(db);
 			return;
 		}
-		load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
+		select_weapons_table_row_from_entity(ent, db, zErrMsg, rc, stmt);
 		sqlite3_close(db);
 	}
 

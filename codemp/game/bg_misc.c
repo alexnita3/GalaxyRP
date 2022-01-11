@@ -1724,18 +1724,18 @@ qboolean BG_CanUseFPNow(int gametype, playerState_t *ps, int time, forcePowers_t
 		return qfalse;
 	}
 	*/
-
+	// GalaxyRP (Alex): [Dueling] Characters should be able to use force powers while dueling
+	/*
 	if (ps->duelInProgress)
 	{
-		if (power != FP_SABER_OFFENSE && power != FP_SABER_DEFENSE && /*power != FP_SABERTHROW &&*/
-			power != FP_LEVITATION)
+		if (power != FP_SABER_OFFENSE && power != FP_SABER_DEFENSE && power != FP_LEVITATION)
 		{
 			if (!ps->saberLockFrame || power != FP_PUSH)
 			{
 				return qfalse;
 			}
 		}
-	}
+	}*/
 
 	if (ps->saberLockFrame || ps->saberLockTime > time)
 	{
