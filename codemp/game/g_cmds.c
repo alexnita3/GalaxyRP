@@ -15784,6 +15784,15 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 		strcpy(message_content[21], va("^3 %d ^7- Ignore Chat Distance: ^1no\n", ADM_IGNORECHATDISTANCE));
 	}
 
+	if ((ent->client->pers.bitvalue & (1 << ADM_XP)))
+	{
+		strcpy(message_content[21], va("^3 %d ^7- XP Give: ^2yes\n", ADM_XP));
+	}
+	else
+	{
+		strcpy(message_content[21], va("^3 %d ^7- XP Give: ^1no\n", ADM_XP));
+	}
+
 	for (i = 0; i < ADM_NUM_CMDS; i++)
 	{
 		strcpy(message,va("%s%s",message,message_content[i]));
@@ -16224,7 +16233,7 @@ void Cmd_GiveXp_f(gentity_t* ent) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_LEVELUP)))
+	if (!(ent->client->pers.bitvalue & (1 << ADM_XP)))
 	{ // zyk: admin command
 		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
 		return;

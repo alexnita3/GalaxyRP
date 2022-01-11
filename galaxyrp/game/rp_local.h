@@ -73,6 +73,7 @@ typedef enum {
 	ADM_SKILL,
 	ADM_CREATECREDITS,
 	ADM_IGNORECHATDISTANCE,
+	ADM_XP,
 	ADM_NUM_CMDS
 
 } zyk_admin_t;
