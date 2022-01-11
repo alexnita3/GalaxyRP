@@ -1589,14 +1589,14 @@ int select_number_of_characters_with_name(gentity_t* ent, char* character_name, 
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		return;
+		return 0;
 	}
 	rc = sqlite3_step(stmt);
 	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		return;
+		return 0;
 	}
 	if (rc == SQLITE_ROW)
 	{
@@ -8292,13 +8292,6 @@ Cmd_LogoutAccount_f
 ==================
 */
 void Cmd_LogoutAccount_f( gentity_t *ent ) {
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
-	int accountID = 0, i = 0;
-	int charID;
 
 	save_account(ent, qtrue);
 
@@ -12994,8 +12987,6 @@ Cmd_CreditSpend_f
 */
 void Cmd_CreditSpend_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
-	char arg2[MAX_STRING_CHARS];
-	char arg3[MAX_STRING_CHARS];
 	long int value = 0;
 
 	if (trap->Argc() > 2)
@@ -18730,9 +18721,6 @@ Cmd_Examine_f
 */
 void Cmd_Examine_f(gentity_t *ent) {
 	char player_name[MAX_STRING_CHARS];
-	char arg2[MAX_STRING_CHARS];
-	FILE *description_file = NULL;
-	char description[MAX_STRING_CHARS];
 
 	if (trap->Argc() != 2) {
 		trap->SendServerCommand(ent->s.number, "print \"Usage: /examine <playername>\n\"");
