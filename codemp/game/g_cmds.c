@@ -16276,6 +16276,51 @@ void Cmd_GiveXp_f(gentity_t* ent) {
 
 /*
 ==================
+Cmd_RemoveXp_f
+==================
+*/
+void Cmd_RemoveXp_f(gentity_t* ent) {
+	char arg1[MAX_STRING_CHARS];
+	int client_id = -1;
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_XP)))
+	{ // zyk: admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"You must specify the player name or ID.\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	client_id = ClientNumberFromString(ent, arg1, qfalse);
+
+	if (client_id == -1)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Player not found on server.\n\"");
+		return;
+	}
+
+	if(g_entities[client_id].client->pers.xp == 0) {
+		trap->SendServerCommand(ent - g_entities, va("print \"^2Target player's XP is already at 0. Nothing was done.\n\""));
+		return;
+	}
+
+	g_entities[client_id].client->pers.xp--;
+
+	trap->SendServerCommand(ent - g_entities, va("print \"^2Target player's XP was reduced with one point. Their current XP is: ^3%i^2/^3%i^2\n\"", g_entities[client_id].client->pers.xp, check_xp(g_entities[client_id].client->pers.level)));
+
+	update_chars_table_row_with_current_values(&g_entities[client_id]);
+
+	return;
+}
+
+/*
+==================
 Cmd_EntitySystem_f
 ==================
 */
@@ -19869,6 +19914,7 @@ command_t commands[] = {
 	{ "remaplist",			Cmd_RemapList_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "remapload",			Cmd_RemapLoad_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "removexp",			Cmd_RemoveXp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "resetpassword",		Cmd_ResetPassword_F,		CMD_LOGGEDIN},
 	{ "roll",				Cmd_Roll_f,					0 },
 	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
