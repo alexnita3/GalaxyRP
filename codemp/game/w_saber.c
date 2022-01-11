@@ -7562,7 +7562,7 @@ void UpdateClientRenderinfo(gentity_t *self, vec3_t renderOrigin, vec3_t renderA
 	}
 }
 
-#define STAFF_KICK_RANGE 30
+#define STAFF_KICK_RANGE 16
 extern void G_GetBoltPosition( gentity_t *self, int boltIndex, vec3_t pos, int modelIndex ); //NPC_utils.c
 
 extern qboolean BG_InKnockDown( int anim );

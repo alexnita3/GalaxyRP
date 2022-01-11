@@ -622,8 +622,8 @@ int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forc
 		return 0;
 	}
 
-	// GalaxyRP (Alex): [Dueling] Characters should be able to use force powers while dueling
-	/*if (attacker && attacker->client && attacker->client->ps.duelInProgress)
+	//Dueling fighters cannot use force powers on others, with the exception of force push when locked with each other
+	if (attacker && attacker->client && attacker->client->ps.duelInProgress)
 	{
 		return 0;
 	}

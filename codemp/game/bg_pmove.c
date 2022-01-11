@@ -6424,11 +6424,10 @@ int PM_ItemUsable(playerState_t *ps, int forcedUse)
 		return 0;
 	}
 
-	// GalaxyRP (Alex): [Dueling] Characters should be able to use holdables while dueling
-	/*if (ps->duelInProgress)
+	if (ps->duelInProgress)
 	{ //not allowed to use holdables while in a private duel.
 		return 0;
-	}*/
+	}
 
 	if (!forcedUse)
 	{
