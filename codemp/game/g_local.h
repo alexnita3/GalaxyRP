@@ -657,6 +657,7 @@ typedef struct clientPersistant_s {
 	
 	int level; // zyk: RPG mode level
 	int level_up_score; // zyk: RPG mode Level Up Score
+	int xp;
 	int skillpoints; // zyk: RPG mode skillpoints
 
 	char description[MAX_STRING_CHARS];
