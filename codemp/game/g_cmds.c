@@ -7129,40 +7129,25 @@ void rpg_score(gentity_t *ent, qboolean admin_rp_mode)
 		return;
 	}
 
-	if (validate_rpg_class(ent) == qfalse)
-		return;
-
 	if (ent->client->pers.level < zyk_rpg_max_level.integer)
 	{
-		ent->client->pers.level_up_score += (1 + ent->client->pers.score_modifier); // zyk: add score to the RPG mode score
+		ent->client->pers.level++;
 
-		if (ent->client->pers.level_up_score >= (ent->client->pers.level * zyk_level_up_score_factor.integer))
-		{ // zyk: player got a new level
-			ent->client->pers.level_up_score -= (ent->client->pers.level * zyk_level_up_score_factor.integer);
-			ent->client->pers.level++;
+		if (ent->client->pers.level % 10 == 0) // zyk: every level divisible by 10 the player will get bonus skillpoints
+			ent->client->pers.skillpoints+=(ent->client->pers.level/10) + 1;
+		else
+			ent->client->pers.skillpoints++;
 
-			if (ent->client->pers.level % 10 == 0) // zyk: every level divisible by 10 the player will get bonus skillpoints
-				ent->client->pers.skillpoints+=(ent->client->pers.level/10) + 1;
-			else
-				ent->client->pers.skillpoints++;
+		strcpy(message,va("^3New Level: ^7%d^3, Skillpoints: ^7%d\n", ent->client->pers.level, ent->client->pers.skillpoints));
 
-			strcpy(message,va("^3New Level: ^7%d^3, Skillpoints: ^7%d\n", ent->client->pers.level, ent->client->pers.skillpoints));
+		// zyk: got a new level, so change the max health and max shield
+		set_max_health(ent);
+		set_max_shield(ent);
 
-			// zyk: got a new level, so change the max health and max shield
-			set_max_health(ent);
-			set_max_shield(ent);
-
-			// zyk: mp also increased, so send event to client-side to display the magic power bar
-			send_rpg_events(2000);
-
-			send_message = 1;
-		}
+		send_message = 1;
+		
 	}
 	update_chars_table_row_with_current_values(ent);
-
-	// zyk: cleaning the modifiers after they are applied
-	ent->client->pers.credits_modifier = 0;
-	ent->client->pers.score_modifier = 0;
 
 	if (send_message == 1)
 	{
@@ -16263,12 +16248,14 @@ void Cmd_GiveXp_f(gentity_t* ent) {
 
 	g_entities[client_id].client->pers.xp++;
 
+	trap->SendServerCommand(&g_entities[client_id] - g_entities, va("chat \"^2You were given XP! Your current XP is: ^3%i^2/^3%i^2\n\"", g_entities[client_id].client->pers.xp, check_xp(g_entities[client_id].client->pers.level)));
+	trap->SendServerCommand(ent - g_entities, va("print \"^2Target player was given XP. Their current XP is: ^3%i^2/^3%i^2\n\"", g_entities[client_id].client->pers.xp, check_xp(g_entities[client_id].client->pers.level)));
+
 	// GalaxyRP (Alex): [XP System] If player has reached max xp for this level, level them up.
 	if (g_entities[client_id].client->pers.xp == check_xp(g_entities[client_id].client->pers.level)) {
 
-		g_entities[client_id].client->pers.score_modifier = g_entities[client_id].client->pers.level;
-		g_entities[client_id].client->pers.credits_modifier = -10;
 		rpg_score(&g_entities[client_id], qtrue);
+		trap->SendServerCommand(ent - g_entities, va("print \"^2Target player leveled up. Their current level is: ^3%i^2. Their skillpoint count is: ^3%i^2.\n\"", g_entities[client_id].client->pers.level, g_entities[client_id].client->pers.skillpoints));
 		// GalaxyRP (Alex): [XP System] Player levelled up, so their xp is now 0.
 		g_entities[client_id].client->pers.xp = 0;
 	}
