@@ -10854,7 +10854,13 @@ stillDoSaber:
 				if (cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer)
 				{
 					trap->R_SetRefractionProperties(1.0f, 0.0f, qfalse, qfalse); //don't need to do this every frame.. but..
-					legs.customShader = 2; //crazy "refractive" shader
+					// GalaxyRP (Alex): [Items] Instead of applying a hardcoded, make them fully invisible to any other player.
+					//legs.customShader = 2; //crazy "refractive" shader
+					legs.shaderRGBA[0] /= 5.0f;
+					legs.shaderRGBA[1] /= 5.0f;
+					legs.shaderRGBA[2] /= 5.0f;
+					legs.shaderRGBA[3] /= 255.0f; //make them invisible
+					legs.renderfx |= RF_FORCE_ENT_ALPHA;
 					trap->R_AddRefEntityToScene( &legs );
 					legs.customShader = 0;
 				}
