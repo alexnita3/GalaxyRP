@@ -1535,7 +1535,7 @@ void update_credits_value(gentity_t* ent) {
 
 // GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the character table, with default values. ASSUMES PLAYER IS ALREADY LOGGED IN.
 void insert_chars_table_row(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-	char insert_new_entry_to_char_table[199] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle', 0)";
+	char insert_new_entry_to_char_table[203] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName, xp) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle', 0)";
 	run_db_query(va(insert_new_entry_to_char_table, ent->client->sess.accountID, character_name), db, zErrMsg, rc, stmt);
 
 	return;
@@ -2249,7 +2249,7 @@ void create_new_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqli
 		return;
 	}
 
-	char create_new_character_query[1282] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle', 0);\
+	char create_new_character_query[1286] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName, xp) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle', 0);\
 		INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0');\
 		INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0');";
 
@@ -2433,6 +2433,8 @@ void Cmd_Register_F(gentity_t * ent)
 	strcpy(ent->client->pers.password, password);
 
 	insert_chars_table_row(ent, username, db, zErrMsg, rc, stmt);
+	insert_skills_table_row(ent, db, zErrMsg, rc, stmt);
+	insert_weapons_table_row(ent, db, zErrMsg, rc, stmt);
 	select_player_character(ent, username, db, zErrMsg, rc, stmt);
 
 	trap->SendServerCommand(ent - g_entities, "print \"^2Your account has been successfully created and you are now logged in.\n\"");
