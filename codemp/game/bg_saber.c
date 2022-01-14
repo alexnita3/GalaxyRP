@@ -726,7 +726,7 @@ qboolean PM_SaberKataDone(int curmove, int newmove)
 	if ( pm->ps->fd.saberAnimLevel == SS_DESANN )
 	{//desann and tavion can link up slower than yellow
 
-		int chainToleranceDesann = 2;
+		int chainToleranceDesann = 3;
 
 		if (pm->ps->saberAttackChainCount >= chainToleranceDesann)
 		{
