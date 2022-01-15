@@ -4062,13 +4062,13 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			
 			if (output && index_of_slash == 0) {
 				delete_chat_command(text, strlen(chat_modifiers[i].chat_modifier));
+				G_LogPrintf(va("%s: %s: %s\n"), chat_modifiers[i].chat_modifier, ent->client->pers.netname, text);
 
 				for (j = 0; j < level.numConnectedClients; j++) {
 
 					other = &g_entities[j];
 					if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_modifiers[i].distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE) || other->client->sess.sessionTeam == TEAM_SPECTATOR)
 					{
-						G_LogPrintf(va("%s: %s: %s\n"), chat_modifiers[i].chat_modifier, ent->client->pers.netname, text);
 						trap->SendServerCommand(other->client->ps.clientNum, va(chat_modifiers[i].chat_format, ent->client->pers.netname, text));
 					}
 					else
