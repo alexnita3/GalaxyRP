@@ -19065,6 +19065,28 @@ void Cmd_ModVersion_f(gentity_t *ent) {
 	trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\n\"", GAMEVERSION));
 }
 
+typedef struct sound_channels_s {
+	const char* channel_name;
+	int			channel_code;
+} sound_channels_t;
+
+const sound_channels_t sound_channels[14] = {
+	{"auto",				CHAN_AUTO			},
+	{"local",				CHAN_LOCAL			},
+	{"weapon",				CHAN_WEAPON			},
+	{"voice",				CHAN_VOICE			},
+	{"voice_attenuate",		CHAN_VOICE_ATTEN	},
+	{"item",				CHAN_ITEM			},
+	{"body",				CHAN_BODY			},
+	{"ambient",				CHAN_AMBIENT		},
+	{"local_sound",			CHAN_LOCAL_SOUND	},
+	{"announcer",			CHAN_ANNOUNCER		},
+	{"less_attenuate",		CHAN_LESS_ATTEN		},
+	{"menu1",				CHAN_MENU1			},
+	{"voice_global",		CHAN_VOICE_GLOBAL	},
+	{"music",				CHAN_MUSIC			},
+};
+
 /*
 ==================
 Cmd_ZykSound_f
@@ -19072,6 +19094,7 @@ Cmd_ZykSound_f
 */
 void Cmd_ZykSound_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
+	char arg2[MAX_STRING_CHARS];
 
 	if (zyk_allow_zyksound_command.integer < 1)
 	{
@@ -19079,15 +19102,40 @@ void Cmd_ZykSound_f(gentity_t *ent) {
 		return;
 	}
 
-	if (trap->Argc() < 2)
+	if (trap->Argc() < 2 || trap->Argc() > 3)
 	{
-		trap->SendServerCommand(ent->s.number, "print \"Use ^3/zyksound <sound file path> ^7to play any sound file\n\"");
+		trap->SendServerCommand(ent->s.number, "print \"Usage: ^3/playsound <channel> <sound file path>\n ^2Sound channels available: \n\"");
+		for (int i = 0; i < 14; i++) {
+			trap->SendServerCommand(ent->s.number, va("print \"^3%s\n\"", sound_channels[i].channel_name));
+		}
 		return;
 	}
 
 	trap->Argv(1, arg1, sizeof(arg1));
 
-	G_Sound(ent, CHAN_VOICE, G_SoundIndex(G_NewString(arg1)));
+	if (trap->Argc() == 3)
+	{
+		trap->Argv(2, arg2, sizeof(arg2));
+
+		for (int i = 0; i < 14; i++) {
+			if (strcmp(arg1, sound_channels[i].channel_name) == 0) {
+				G_Sound(ent, sound_channels[i].channel_code, G_SoundIndex(G_NewString(arg2)));
+
+				return;
+			}
+		}
+
+		trap->SendServerCommand(ent->s.number, "print \"Channel not found! \n\"");
+		return;
+	}
+
+	if (trap->Argc() == 2)
+	{
+		G_Sound(ent, CHAN_AUTO, G_SoundIndex(G_NewString(arg1)));
+		return;
+	}
+
+	return;
 }
 
 // zyk: quantity of chars this player has
@@ -19909,6 +19957,7 @@ command_t commands[] = {
 	{ "npc",				Cmd_NPC_f,					CMD_LOGGEDIN },
 	{ "order",				Cmd_Order_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "paralyze",			Cmd_Paralyze_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "playsound",			Cmd_ZykSound_f,				CMD_NOINTERMISSION },
 	{ "players",			Cmd_Players_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "racemode",			Cmd_RaceMode_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "remap",				Cmd_Remap_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
@@ -19956,7 +20005,6 @@ command_t commands[] = {
 	{ "zykfile",			Cmd_ZykFile_f,				CMD_NOINTERMISSION },
 //	{ "zykchars",			Cmd_ZykChars_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 //	{ "zykmod",				Cmd_ZykMod_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "zyksound",			Cmd_ZykSound_f,				CMD_NOINTERMISSION },
 };
 static const size_t numCommands = ARRAY_LEN( commands );
 
