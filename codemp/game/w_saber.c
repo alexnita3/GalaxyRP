@@ -7328,16 +7328,26 @@ void saberFirstThrown(gentity_t *saberent)
 
 		VectorNormalize(dir);
 
-		if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] >= FORCE_LEVEL_4) // zyk: level 4 makes it even faster
+		if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_4) // zyk: level 4 makes it even faster
 			VectorScale(dir, 900, saberent->s.pos.trDelta );
+		else if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_5) // zyk: level 4 makes it even faster
+			VectorScale(dir, 1300, saberent->s.pos.trDelta);
 		else
 			VectorScale(dir, 500, saberent->s.pos.trDelta );
 
 		saberent->s.pos.trTime = level.time;
 
-		if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] >= FORCE_LEVEL_3)
+		if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_3)
 		{ //we'll treat them to a quicker update rate if their throw rank is high enough
 			saberent->speed = level.time + 100;
+		}
+		else if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_4)
+		{ //we'll treat them to a quicker update rate if their throw rank is high enough
+			saberent->speed = level.time + 200;
+		}
+		else if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_5)
+		{ //we'll treat them to a quicker update rate if their throw rank is high enough
+			saberent->speed = level.time + 300;
 		}
 		else
 		{
