@@ -631,7 +631,7 @@ int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forc
 	if (other && other->client && other->client->ps.duelInProgress)
 	{
 		return 0;
-	}
+	}*/
 
 	if (forcePower == FP_GRIP)
 	{
@@ -1074,6 +1074,14 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 		else if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_3)
 		{
 			duration = 30000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_4)
+		{
+			duration = 35000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_5)
+		{
+			duration = 40000;
 		}
 		else //shouldn't get here
 		{
@@ -3019,12 +3027,22 @@ void ForceTelepathy(gentity_t *self)
 
 	if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_2)
 	{
-		visionArc = 180;
+		visionArc = 90;
 	}
 	else if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_3)
 	{
+		visionArc = 180;
+		radius = MAX_TRICK_DISTANCE * 1.5f;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_4)
+	{
+		visionArc = 270;
+		radius = MAX_TRICK_DISTANCE * 2.0f;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_5)
+	{
 		visionArc = 360;
-		radius = MAX_TRICK_DISTANCE*2.0f;
+		radius = MAX_TRICK_DISTANCE * 2.5f;
 	}
 
 	VectorCopy( self->client->ps.viewangles, fwdangles );
@@ -3073,6 +3091,10 @@ void ForceTelepathy(gentity_t *self)
 
 			if (!tricked_entity->NPC) // zyk: NPCs wont have the glowing head effect of mind trick because of how the game handles the tricked entities
 				WP_AddAsMindtricked(&self->client->ps.fd, tr.entityNum);
+
+			if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] < tricked_entity->client->ps.fd.forcePowerLevel[FP_SEE]) {
+				return;
+			}
 
 			// zyk: mind control this player, if he is not being mind controlled by someone else
 			if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 1 && 
