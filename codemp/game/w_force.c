@@ -4573,6 +4573,46 @@ void DoGripAction(gentity_t *self, forcePowers_t forcePower)
 	{
 		gripEnt->client->ps.fd.forceGripBeingGripped = level.time + 1000;
 
+		if (gripEnt->client->ps.forceGripMoveInterval < level.time)
+		{
+			gripEnt->client->ps.velocity[2] = 30;
+
+			gripEnt->client->ps.forceGripMoveInterval = level.time + 300; //only update velocity every 300ms, so as to avoid heavy bandwidth usage
+		}
+
+		gripEnt->client->ps.otherKiller = self->s.number;
+		gripEnt->client->ps.otherKillerTime = level.time + 5000;
+		gripEnt->client->ps.otherKillerDebounceTime = level.time + 100;
+
+		gripEnt->client->ps.forceGripChangeMovetype = PM_FLOAT;
+
+		if ((level.time - gripEnt->client->ps.fd.forceGripStarted) > 3000 && !self->client->ps.fd.forceGripDamageDebounceTime)
+		{ //if we managed to lift him into the air for 2 seconds, give him a crack
+			self->client->ps.fd.forceGripDamageDebounceTime = 1;
+			G_Damage(gripEnt, self, self, NULL, NULL, 30, DAMAGE_NO_ARMOR, MOD_FORCE_DARK);
+
+			//Must play custom sounds on the actual entity. Don't use G_Sound (it creates a temp entity for the sound)
+			G_EntitySound(gripEnt, CHAN_VOICE, G_SoundIndex(va("*choke%d.wav", Q_irand(1, 3))));
+
+			gripEnt->client->ps.forceHandExtend = HANDEXTEND_CHOKE;
+			gripEnt->client->ps.forceHandExtendTime = level.time + 2000;
+
+			if (gripEnt->client->ps.fd.forcePowersActive & (1 << FP_GRIP))
+			{ //choking, so don't let him keep gripping himself
+				WP_ForcePowerStop(gripEnt, FP_GRIP);
+			}
+		}
+		else if ((level.time - gripEnt->client->ps.fd.forceGripStarted) > 4000)
+		{
+			WP_ForcePowerStop(self, forcePower);
+		}
+		return;
+	}
+
+	if (gripLevel > FORCE_LEVEL_3)
+	{
+		gripEnt->client->ps.fd.forceGripBeingGripped = level.time + 1000;
+
 		gripEnt->client->ps.otherKiller = self->s.number;
 		gripEnt->client->ps.otherKillerTime = level.time + 5000;
 		gripEnt->client->ps.otherKillerDebounceTime = level.time + 100;
@@ -4635,7 +4675,14 @@ void DoGripAction(gentity_t *self, forcePowers_t forcePower)
 		if ((level.time - gripEnt->client->ps.fd.forceGripStarted) > 3000 && !self->client->ps.fd.forceGripDamageDebounceTime)
 		{ //if we managed to lift him into the air for 2 seconds, give him a crack
 			self->client->ps.fd.forceGripDamageDebounceTime = 1;
-			G_Damage(gripEnt, self, self, NULL, NULL, 40, DAMAGE_NO_ARMOR, MOD_FORCE_DARK);
+			if (gripLevel == FORCE_LEVEL_4) 
+			{
+				G_Damage(gripEnt, self, self, NULL, NULL, 40, DAMAGE_NO_ARMOR, MOD_FORCE_DARK);
+			}
+			else
+			{
+				G_Damage(gripEnt, self, self, NULL, NULL, 60, DAMAGE_NO_ARMOR, MOD_FORCE_DARK);
+			}
 
 			//Must play custom sounds on the actual entity. Don't use G_Sound (it creates a temp entity for the sound)
 			G_EntitySound( gripEnt, CHAN_VOICE, G_SoundIndex(va( "*choke%d.wav", Q_irand( 1, 3 ) )) );
