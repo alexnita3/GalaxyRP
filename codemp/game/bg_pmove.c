@@ -180,7 +180,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		60,//FP_PULL,//hold/duration
 		20,//FP_TELEPATHY,//instant
 		999,//FP_GRIP,//hold/duration
-		999,//FP_LIGHTNING,//hold/duration
+		1,//FP_LIGHTNING,//hold/duration
 		999,//FP_RAGE,//duration
 		20,//FP_PROTECT,//duration
 		10,//FP_ABSORB,//duration
@@ -201,7 +201,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		60,//FP_PULL,//hold/duration
 		20,//FP_TELEPATHY,//instant
 		999,//FP_GRIP,//hold/duration
-		999,//FP_LIGHTNING,//hold/duration
+		1,//FP_LIGHTNING,//hold/duration
 		999,//FP_RAGE,//duration
 		20,//FP_PROTECT,//duration
 		5,//FP_ABSORB,//duration
