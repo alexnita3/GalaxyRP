@@ -1545,6 +1545,7 @@ void ForceTeamForceReplenish( gentity_t *self )
 		return;
 	}
 
+	// GalaxyRP (Alex): [Force Powers] Increase radius by .5 for each level up to 5
 	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_2)
 	{
 		radius *= 1.5;
@@ -1552,6 +1553,14 @@ void ForceTeamForceReplenish( gentity_t *self )
 	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_3)
 	{
 		radius *= 2;
+	}
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_4)
+	{
+		radius *= 2.5;
+	}
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_5)
+	{
+		radius *= 3;
 	}
 
 	// while (i < MAX_CLIENTS)  // zyk: now the condition will be the level.num_entities
@@ -1602,7 +1611,13 @@ void ForceTeamForceReplenish( gentity_t *self )
 	}
 
 	// zyk: decreased amount of force recovered. Default values in order: 50, 33 and 25
-	if (numpl == 1)
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_4 && numpl > 2) {
+		poweradd = 40;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_5 && numpl > 2) {
+		poweradd = 50;
+	}
+	else if (numpl == 1)
 	{
 		poweradd = 40;
 	}
@@ -1614,7 +1629,23 @@ void ForceTeamForceReplenish( gentity_t *self )
 	{
 		poweradd = 20;
 	}
-	self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 2000;
+
+	// GalaxyRP (Alex): [Force Powers] Cooldown should go down as the ability is more advanced
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_1) {
+		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 2000;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_2) {
+		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 1500;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_3) {
+		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 1000;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_4) {
+		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 500;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_5) {
+		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time;
+	}
 
 	BG_ForcePowerDrain( &self->client->ps, FP_TEAM_FORCE, forcePowerNeeded[self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE]][FP_TEAM_FORCE] );
 
@@ -1623,7 +1654,7 @@ void ForceTeamForceReplenish( gentity_t *self )
 	while (i < numpl)
 	{
 		// zyk: Team Energize now can recover ammo if the player has full force and improvements skill
-		if (self->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[55] > 0 && !g_entities[pl[i]].NPC && g_entities[pl[i]].client->ps.fd.forcePower == g_entities[pl[i]].client->ps.fd.forcePowerMax)
+		if (self->client->sess.amrpgmode == 2 && !g_entities[pl[i]].NPC && g_entities[pl[i]].client->ps.fd.forcePower == g_entities[pl[i]].client->ps.fd.forcePowerMax)
 		{
 			Add_Ammo(&g_entities[pl[i]], AMMO_BLASTER, (self->client->pers.skill_levels[55] * 10));
 			Add_Ammo(&g_entities[pl[i]], AMMO_POWERCELL, (self->client->pers.skill_levels[55] * 10));

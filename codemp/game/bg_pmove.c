@@ -143,7 +143,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		40,//FP_PROTECT,//duration
 		30,//FP_ABSORB,//duration
 		60,//FP_TEAM_HEAL,//instant
-		33,//FP_TEAM_FORCE,//instant
+		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
 		0,//FP_SABER_OFFENSE,
@@ -164,7 +164,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		30,//FP_PROTECT,//duration
 		20,//FP_ABSORB,//duration
 		70,//FP_TEAM_HEAL,//instant
-		25,//FP_TEAM_FORCE,//instant
+		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
 		0,//FP_SABER_OFFENSE,
@@ -185,7 +185,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		20,//FP_PROTECT,//duration
 		10,//FP_ABSORB,//duration
 		80,//FP_TEAM_HEAL,//instant
-		999,//FP_TEAM_FORCE,//instant
+		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		30,//FP_SEE,//duration
 		999,//FP_SABER_OFFENSE,
@@ -206,7 +206,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		20,//FP_PROTECT,//duration
 		5,//FP_ABSORB,//duration
 		90,//FP_TEAM_HEAL,//instant
-		999,//FP_TEAM_FORCE,//instant
+		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		30,//FP_SEE,//duration
 		999,//FP_SABER_OFFENSE,
