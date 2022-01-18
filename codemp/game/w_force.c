@@ -2307,6 +2307,15 @@ void ForceDrainDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec3_t 
 				{
 					dmg = 4;
 				}
+				// GalaxyRP (Alex): [Force Powers] More damage for levels 4 and 5
+				else if (self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_4)
+				{
+					dmg = 5;
+				}
+				else if (self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_5)
+				{
+					dmg = 6;
+				}
 
 				if (traceEnt->client)
 				{
@@ -4430,9 +4439,17 @@ void WP_ForcePowerStop( gentity_t *self, forcePowers_t forcePower )
 		{//don't do it again for 3 seconds, minimum...
 			self->client->ps.fd.forcePowerDebounce[FP_DRAIN] = level.time + 3000;
 		}
-		else
-		{
+		else if(self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_3)
+		{// GalaxyRP (Alex): [Force Powers] Level 3 has a lower cooldown
 			self->client->ps.fd.forcePowerDebounce[FP_DRAIN] = level.time + 1500;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_4)
+		{// GalaxyRP (Alex): [Force Powers] Level 4 has a lower cooldown
+			self->client->ps.fd.forcePowerDebounce[FP_DRAIN] = level.time + 1000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_5)
+		{// GalaxyRP (Alex): [Force Powers] Level 5 has no cooldown
+			self->client->ps.fd.forcePowerDebounce[FP_DRAIN] = level.time;
 		}
 
 		if (self->client->ps.forceHandExtend == HANDEXTEND_FORCE_HOLD)
