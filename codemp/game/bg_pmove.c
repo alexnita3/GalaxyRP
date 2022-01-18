@@ -140,7 +140,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		30,//FP_GRIP,//hold/duration
 		1,//FP_LIGHTNING,//hold/duration
 		50,//FP_RAGE,//duration
-		25,//FP_PROTECT,//duration
+		40,//FP_PROTECT,//duration
 		30,//FP_ABSORB,//duration
 		60,//FP_TEAM_HEAL,//instant
 		33,//FP_TEAM_FORCE,//instant
@@ -161,7 +161,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		60,//FP_GRIP,//hold/duration
 		1,//FP_LIGHTNING,//hold/duration
 		50,//FP_RAGE,//duration
-		10,//FP_PROTECT,//duration
+		30,//FP_PROTECT,//duration
 		20,//FP_ABSORB,//duration
 		70,//FP_TEAM_HEAL,//instant
 		25,//FP_TEAM_FORCE,//instant
@@ -182,7 +182,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		999,//FP_GRIP,//hold/duration
 		999,//FP_LIGHTNING,//hold/duration
 		999,//FP_RAGE,//duration
-		999,//FP_PROTECT,//duration
+		20,//FP_PROTECT,//duration
 		10,//FP_ABSORB,//duration
 		80,//FP_TEAM_HEAL,//instant
 		999,//FP_TEAM_FORCE,//instant
@@ -203,7 +203,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		999,//FP_GRIP,//hold/duration
 		999,//FP_LIGHTNING,//hold/duration
 		999,//FP_RAGE,//duration
-		999,//FP_PROTECT,//duration
+		20,//FP_PROTECT,//duration
 		5,//FP_ABSORB,//duration
 		90,//FP_TEAM_HEAL,//instant
 		999,//FP_TEAM_FORCE,//instant

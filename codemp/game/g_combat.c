@@ -6192,6 +6192,26 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 						maxtake = 400;
 					}
 				}
+
+				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_4)
+				{
+					famt = 0.125f;
+					hamt = 1.0f;
+					if (maxtake > 600)
+					{
+						maxtake = 600;
+					}
+				}
+
+				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_5)
+				{
+					famt = 0.0625f;
+					hamt = 1.20f;
+					if (maxtake > 800)
+					{
+						maxtake = 800;
+					}
+				}
 				if (!targ->client->ps.powerups[PW_FORCE_BOON])
 				{
 					targ->client->ps.fd.forcePower -= maxtake * famt;
@@ -6294,6 +6314,16 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 				{
 					targ->client->ps.fd.forcePower -= (int)ceil(take*0.125*force_decrease_change);
 					take = (int)ceil(take*0.55);
+				}
+				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_4)
+				{
+					targ->client->ps.fd.forcePower -= (int)ceil(take * 0.062 * force_decrease_change);
+					take = (int)ceil(take * 0.40);
+				}
+				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_5)
+				{
+					targ->client->ps.fd.forcePower -= (int)ceil(take * 0.031 * force_decrease_change);
+					take = (int)ceil(take * 0.25);
 				}
 
 				if (targ->client->ps.fd.forcePower < 0)
