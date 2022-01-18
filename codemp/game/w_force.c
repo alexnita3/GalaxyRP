@@ -1109,15 +1109,23 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 		hearDist = 256;
 		if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_1)
 		{
-			duration = 8000;
+			duration = 5000;
 		}
 		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_2)
 		{
-			duration = 14000;
+			duration = 10000;
 		}
 		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_3)
 		{
+			duration = 15000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_4)
+		{
 			duration = 20000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_5)
+		{
+			duration = 25000;
 		}
 		else //shouldn't get here
 		{
@@ -4416,7 +4424,26 @@ void WP_ForcePowerStop( gentity_t *self, forcePowers_t forcePower )
 		self->client->ps.activeForcePass = 0;
 		break;
 	case FP_RAGE:
-		self->client->ps.fd.forceRageRecoveryTime = level.time + 10000;
+		if (self->client->ps.fd.forcePowerLevel[FP_RAGE] < FORCE_LEVEL_2)
+		{// GalaxyRP (Alex): [Force Powers] Level 1 has a higher cooldown
+			self->client->ps.fd.forceRageRecoveryTime = level.time + 20000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_2)
+		{
+			self->client->ps.fd.forceRageRecoveryTime = level.time + 15000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_3)
+		{
+			self->client->ps.fd.forceRageRecoveryTime = level.time + 10000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_4)
+		{
+			self->client->ps.fd.forceRageRecoveryTime = level.time + 5000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_5)
+		{// GalaxyRP (Alex): [Force Powers] Level 5 has no cooldown
+			self->client->ps.fd.forceRageRecoveryTime = level.time;
+		}
 		if (wasActive & (1 << FP_RAGE))
 		{
 			G_MuteSound(self->client->ps.fd.killSoundEntIndex[TRACK_CHANNEL_3-50], CHAN_VOICE);
@@ -4947,23 +4974,33 @@ static void WP_ForcePowerRun( gentity_t *self, forcePowers_t forcePower, usercmd
 		}
 		if (self->client->ps.forceRageDrainTime < level.time)
 		{
-			int addTime = 400;
+			int addTime = 0;
 
-			// zyk: added this condition because of Rage 4/4 in RPG Mode, which dont damage the player
-			if (self->client->sess.amrpgmode < 2 || self->client->pers.skill_levels[16] < 4)
-				self->health -= 2;
+			self->health -= 2;
 
+			// GalaxyRP (Alex): [Force Powers] Levels 1 through 3 take extra damage for more time
 			if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_1)
 			{
+				self->health -= 3;
 				addTime = 150;
 			}
 			else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_2)
 			{
-				addTime = 300;
+				self->health -= 2;
+				addTime = 200;
 			}
 			else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_3)
 			{
-				addTime = 450;
+				self->health -= 1;
+				addTime = 250;
+			}
+			else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_4)
+			{
+				addTime = 300;
+			}
+			else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_5)
+			{
+				addTime = 350;
 			}
 			self->client->ps.forceRageDrainTime = level.time + addTime;
 		}

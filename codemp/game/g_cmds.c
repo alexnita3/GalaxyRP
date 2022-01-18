@@ -61,7 +61,7 @@ const int max_skill_levels[NUM_OF_SKILLS] = {
 	5, // Lightning
 	5, // Grip
 	5, // Drain
-	4, // Rage
+	5, // Rage
 	3, // Team Energize
 	4, // Stun Baton
 	2, // Blaster Pistol
