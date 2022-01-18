@@ -9521,20 +9521,29 @@ int WP_SaberCanBlock(gentity_t *self, vec3_t point, int dflags, int mod, qboolea
 		return 0;
 	}
 
-	if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_3)
+	// GalaxyRP (Alex): [Combat] Def 5 and 4 will get increased block rate
+	if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_5)
 	{
 		if (d_saberGhoul2Collision.integer)
 		{
-			blockFactor = 0.3f;
+			blockFactor = 0.1f;
 		}
 		else
 		{
 			blockFactor = 0.05f;
 		}
 	}
+	if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_4)
+	{
+		blockFactor = 0.2f;
+	}
+	if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_3)
+	{
+		blockFactor = 0.4f;
+	}
 	else if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_2)
 	{
-		blockFactor = 0.6f;
+		blockFactor = 0.7f;
 	}
 	else if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_1)
 	{
