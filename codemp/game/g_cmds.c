@@ -48,7 +48,7 @@ const int max_skill_levels[NUM_OF_SKILLS] = {
 	5, // Jump
 	5, // Push
 	5, // Pull
-	4, // Speed
+	5, // Speed
 	3, // Sense
 	5, // Saber Attack
 	5, // Saber Defense

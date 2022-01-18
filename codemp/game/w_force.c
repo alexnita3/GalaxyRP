@@ -1036,6 +1036,10 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 		{ // zyk: added speed level 4
 			duration = 25000;
 		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_SPEED] == FORCE_LEVEL_5)
+		{ // GalaxyRP (Alex): [Force Powers] Level 5 for more duration
+			duration = 30000;
+		}
 		else //shouldn't get here
 		{
 			break;

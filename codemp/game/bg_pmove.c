@@ -196,7 +196,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 	{ // zyk: level 5
 		999,//FP_HEAL,//instant
 		10,//FP_LEVITATION,//hold/duration
-		999,//FP_SPEED,//duration
+		50,//FP_SPEED,//duration
 		60,//FP_PUSH,//hold/duration
 		60,//FP_PULL,//hold/duration
 		999,//FP_TELEPATHY,//instant
@@ -8850,6 +8850,9 @@ void BG_AdjustClientSpeed(playerState_t *ps, usercmd_t *cmd, int svTime)
 		}
 		else if (ps->fd.forcePowerLevel[FP_SPEED] == FORCE_LEVEL_4){
 			ps->speed *= 2.9f; // zyk: changed speed value
+		}
+		else if (ps->fd.forcePowerLevel[FP_SPEED] == FORCE_LEVEL_5) {
+			ps->speed *= 3.3f; // GalaxyRP (Alex): [Force Powers] Moar speed!
 		}
 	}
 	else if (ps->fd.forcePowersActive & (1 << FP_RAGE))
