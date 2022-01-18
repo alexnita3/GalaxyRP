@@ -722,7 +722,7 @@ void G_MissileImpact( gentity_t *ent, trace_t *trace ) {
 			// GalaxyRP (Alex): [Combat] Def 5 100% chance to reflect
 			else
 			{
-				G_ReflectMissile(other, ent, fwd);
+				G_ReflectMissile(otherOwner, ent, fwd);
 			}
 			otherOwner->client->ps.saberBlockTime = level.time + (350 - (otherDefLevel*100));//200;
 
