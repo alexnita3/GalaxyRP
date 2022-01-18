@@ -126,7 +126,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
 		0,//FP_SABER_OFFENSE,
-		2,//FP_SABER_DEFENSE,
+		4,//FP_SABER_DEFENSE,
 		20//FP_SABERTHROW,
 		//NUM_FORCE_POWERS
 	},
@@ -147,7 +147,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
 		0,//FP_SABER_OFFENSE,
-		1,//FP_SABER_DEFENSE,
+		3,//FP_SABER_DEFENSE,
 		20//FP_SABERTHROW,
 		//NUM_FORCE_POWERS
 	},
@@ -168,7 +168,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
 		0,//FP_SABER_OFFENSE,
-		0,//FP_SABER_DEFENSE,
+		2,//FP_SABER_DEFENSE,
 		20//FP_SABERTHROW,
 		//NUM_FORCE_POWERS
 	},
@@ -189,7 +189,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		999,//FP_DRAIN,//hold/duration
 		999,//FP_SEE,//duration
 		999,//FP_SABER_OFFENSE,
-		999,//FP_SABER_DEFENSE,
+		1,//FP_SABER_DEFENSE,
 		20//FP_SABERTHROW,
 		//NUM_FORCE_POWERS
 	},
@@ -210,7 +210,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		999,//FP_DRAIN,//hold/duration
 		999,//FP_SEE,//duration
 		999,//FP_SABER_OFFENSE,
-		999,//FP_SABER_DEFENSE,
+		0,//FP_SABER_DEFENSE,
 		999//FP_SABERTHROW,
 		//NUM_FORCE_POWERS
 	}
