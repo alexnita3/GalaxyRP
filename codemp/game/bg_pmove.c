@@ -110,7 +110,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		//NUM_FORCE_POWERS
 	},
 	{
-		65,//FP_HEAL,//instant //was 25, but that was way too little
+		30,//FP_HEAL,//instant //was 25, but that was way too little
 		10,//FP_LEVITATION,//hold/duration
 		50,//FP_SPEED,//duration
 		20,//FP_PUSH,//hold/duration
@@ -152,7 +152,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		//NUM_FORCE_POWERS
 	},
 	{
-		50,//FP_HEAL,//instant //You get 5 points of health.. for 50 force points!
+		70,//FP_HEAL,//instant //You get 5 points of health.. for 50 force points!
 		10,//FP_LEVITATION,//hold/duration
 		50,//FP_SPEED,//duration
 		40,//FP_PUSH,//hold/duration
@@ -173,7 +173,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		//NUM_FORCE_POWERS
 	},
 	{ // zyk: level 4
-		999,//FP_HEAL,//instant
+		80,//FP_HEAL,//instant
 		10,//FP_LEVITATION,//hold/duration
 		50,//FP_SPEED,//duration
 		60,//FP_PUSH,//hold/duration
@@ -194,7 +194,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		//NUM_FORCE_POWERS
 	},
 	{ // zyk: level 5
-		999,//FP_HEAL,//instant
+		90,//FP_HEAL,//instant
 		10,//FP_LEVITATION,//hold/duration
 		50,//FP_SPEED,//duration
 		60,//FP_PUSH,//hold/duration

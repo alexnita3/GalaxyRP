@@ -54,7 +54,7 @@ const int max_skill_levels[NUM_OF_SKILLS] = {
 	5, // Saber Defense
 	5, // Saber Throw
 	5, // Absorb
-	3, // Heal
+	5, // Heal
 	4, // Protect
 	3, // Mind Trick
 	3, // Team Heal
