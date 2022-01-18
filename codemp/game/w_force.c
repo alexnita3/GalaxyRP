@@ -1163,6 +1163,14 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 		{
 			duration = 30000;
 		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_SEE] == FORCE_LEVEL_4)
+		{
+			duration = 40000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_SEE] == FORCE_LEVEL_5)
+		{
+			duration = 50000;
+		}
 		else //shouldn't get here
 		{
 			break;
@@ -6252,10 +6260,21 @@ qboolean Jedi_DodgeEvasion( gentity_t *self, gentity_t *shooter, trace_t *tr, in
 	}
 	else
 	{
-		//We now dodge all the time, but only on level 3
+		// GalaxyRP (Alex): [Force Powers] Level 4 will dodge 30% of the time.
 		if (self->client->ps.fd.forcePowerLevel[FP_SEE] < FORCE_LEVEL_3)
 		{//more likely to fail on lower force sight level
-			return qfalse;
+			if (Q_irand(0, 3))
+			{
+				return qfalse;
+			}
+		}
+		// GalaxyRP (Alex): [Force Powers] Level 4 will dodge half the time.
+		if (self->client->ps.fd.forcePowerLevel[FP_SEE] < FORCE_LEVEL_4)
+		{//more likely to fail on lower force sight level
+			if (Q_irand(0, 1)) 
+			{
+				return qfalse;
+			}
 		}
 	}
 
