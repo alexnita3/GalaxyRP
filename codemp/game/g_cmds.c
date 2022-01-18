@@ -46,8 +46,8 @@ extern int check_xp(int currentLevel);
 // zyk: max levels of the RPG skills
 const int max_skill_levels[NUM_OF_SKILLS] = {
 	5, // Jump
-	3, // Push
-	3, // Pull
+	5, // Push
+	5, // Pull
 	4, // Speed
 	3, // Sense
 	5, // Saber Attack

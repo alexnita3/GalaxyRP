@@ -3486,6 +3486,15 @@ void ForceThrow( gentity_t *self, qboolean pull )
 	{
 		visionArc = 180;
 	}
+	// GalaxyRP (Alex): [Force Powers] Wider vision for levels 4 and 5
+	else if (powerLevel == FORCE_LEVEL_4)
+	{
+		visionArc = 270;
+	}
+	else if (powerLevel == FORCE_LEVEL_5)
+	{
+		visionArc = 360;
+	}
 
 	if (powerLevel == FORCE_LEVEL_1)
 	{ //can only push/pull targeted things at level 1
