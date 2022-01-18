@@ -1377,6 +1377,14 @@ void ForceTeamHeal( gentity_t *self )
 	{
 		radius *= 2;
 	}
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == FORCE_LEVEL_4)
+	{
+		radius *= 2.5;
+	}
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == FORCE_LEVEL_5)
+	{
+		radius *= 3;
+	}
 
 	// while (i < MAX_CLIENTS)  // zyk: now the condition will be the level.num_entities
 	while (i < level.num_entities)
@@ -1420,18 +1428,26 @@ void ForceTeamHeal( gentity_t *self )
 		return;
 	}
 
-	// zyk: decreased amount of hp healed. Default values in order: 50, 33 and 25
-	if (numpl == 1)
+	// GalaxyRP (Alex): [Force Powers] For levels 4 and 5 heal a fixed amount, otherwise, based on how many people are healed
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == FORCE_LEVEL_4 && numpl > 2)
+	{
+		healthadd = 40;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == FORCE_LEVEL_5 && numpl > 2)
+	{
+		healthadd = 50;
+	}
+	else if (numpl == 1)
 	{
 		healthadd = 40;
 	}
 	else if (numpl == 2)
 	{
 		healthadd = 30;
-	}
+	} 
 	else
 	{
-		healthadd = 20;
+		healthadd = 25;
 	}
 
 	self->client->ps.fd.forcePowerDebounce[FP_TEAM_HEAL] = level.time + 2000;

@@ -121,7 +121,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		50,//FP_RAGE,//duration
 		50,//FP_PROTECT,//duration
 		40,//FP_ABSORB,//duration
-		50,//FP_TEAM_HEAL,//instant
+		30,//FP_TEAM_HEAL,//instant
 		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
@@ -142,7 +142,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		50,//FP_RAGE,//duration
 		25,//FP_PROTECT,//duration
 		30,//FP_ABSORB,//duration
-		33,//FP_TEAM_HEAL,//instant
+		60,//FP_TEAM_HEAL,//instant
 		33,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
@@ -163,7 +163,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		50,//FP_RAGE,//duration
 		10,//FP_PROTECT,//duration
 		20,//FP_ABSORB,//duration
-		25,//FP_TEAM_HEAL,//instant
+		70,//FP_TEAM_HEAL,//instant
 		25,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
@@ -184,7 +184,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		999,//FP_RAGE,//duration
 		999,//FP_PROTECT,//duration
 		10,//FP_ABSORB,//duration
-		999,//FP_TEAM_HEAL,//instant
+		80,//FP_TEAM_HEAL,//instant
 		999,//FP_TEAM_FORCE,//instant
 		999,//FP_DRAIN,//hold/duration
 		30,//FP_SEE,//duration
@@ -205,7 +205,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		999,//FP_RAGE,//duration
 		999,//FP_PROTECT,//duration
 		5,//FP_ABSORB,//duration
-		999,//FP_TEAM_HEAL,//instant
+		90,//FP_TEAM_HEAL,//instant
 		999,//FP_TEAM_FORCE,//instant
 		999,//FP_DRAIN,//hold/duration
 		30,//FP_SEE,//duration

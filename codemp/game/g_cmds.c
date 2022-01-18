@@ -57,7 +57,7 @@ const int max_skill_levels[NUM_OF_SKILLS] = {
 	5, // Heal
 	4, // Protect
 	3, // Mind Trick
-	3, // Team Heal
+	5, // Team Heal
 	4, // Lightning
 	3, // Grip
 	3, // Drain
