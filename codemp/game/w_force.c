@@ -4947,7 +4947,7 @@ static void WP_ForcePowerRun( gentity_t *self, forcePowers_t forcePower, usercmd
 		}
 		break;
 	case FP_ABSORB:
-		if (self->client->sess.amrpgmode < 2 || self->client->pers.skill_levels[8] < 4)
+		if (self->client->sess.amrpgmode < 2 || self->client->pers.skill_levels[8] < FORCE_LEVEL_4)
 		{ // zyk: Absorb 4/4 does not have force debounce
 			if (self->client->ps.fd.forcePowerDebounce[forcePower] < level.time)
 			{
