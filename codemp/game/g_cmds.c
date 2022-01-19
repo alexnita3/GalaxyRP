@@ -1394,8 +1394,8 @@ int select_account_id_from_username(gentity_t* ent, char* username, sqlite3* db,
 
 // GalaxyRP (Alex): [Database] INSERT This method inserts a new row into the accounts table, using the username and password provided, and default values for everything else.
 void insert_accounts_table_row(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-	char insert_new_entry_to_accounts_table[195] = "INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('%s','%s','0','0','%s')";
-	run_db_query(va(insert_new_entry_to_accounts_table, username, password, username), db, zErrMsg, rc, stmt);
+	char insert_new_entry_to_accounts_table[195] = "INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('%s','%s','%i','0','%s')";
+	run_db_query(va(insert_new_entry_to_accounts_table, username, password, rp_default_account_permissions.integer, username), db, zErrMsg, rc, stmt);
 
 	return;
 }
