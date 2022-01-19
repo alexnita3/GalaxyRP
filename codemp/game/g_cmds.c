@@ -15498,6 +15498,67 @@ void Cmd_EntRemove_f( gentity_t *ent ) {
 	}
 }
 
+void Cmd_SpawnPlatform_f(gentity_t* ent) 
+{
+	gentity_t* new_ent = NULL;
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	{ // zyk: admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	new_ent = G_Spawn();
+
+	if (new_ent)
+	{
+		zyk_main_set_entity_field(new_ent, "classname", "func_plat");
+		zyk_main_set_entity_field(new_ent, "origin", G_NewString(va("%f %f %f", ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2])));
+		zyk_main_set_entity_field(new_ent, "angles", "0 0 0");
+		zyk_main_set_entity_field(new_ent, "spawnflags", "1024");
+		zyk_main_set_entity_field(new_ent, "mins", "-64 -64 -8");
+		zyk_main_set_entity_field(new_ent, "maxs", "64 64 8");
+		zyk_main_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+		zyk_main_spawn_entity(new_ent);
+
+		if (new_ent->s.number != 0)
+		{
+			level.last_spawned_entity = new_ent;
+		}
+	}
+
+}
+
+void Cmd_SpawnDummy_f(gentity_t* ent)
+{
+	gentity_t* new_ent = NULL;
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	{ // zyk: admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	new_ent = G_Spawn();
+
+	if (new_ent)
+	{
+		zyk_main_set_entity_field(new_ent, "classname", "zyk_training_pole");
+		zyk_main_set_entity_field(new_ent, "origin", G_NewString(va("%f %f %f", ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2])));
+		zyk_main_set_entity_field(new_ent, "angles", "0 0 0");
+		zyk_main_set_entity_field(new_ent, "spawnflags", "1");
+
+		zyk_main_spawn_entity(new_ent);
+
+		if (new_ent->s.number != 0)
+		{
+			level.last_spawned_entity = new_ent;
+		}
+	}
+
+}
+
 /*
 ==================
 Cmd_ClientPrint_f
@@ -19962,6 +20023,8 @@ command_t commands[] = {
 	{ "npc",				Cmd_NPC_f,					CMD_LOGGEDIN },
 	{ "order",				Cmd_Order_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "paralyze",			Cmd_Paralyze_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "spawnplatform",		Cmd_SpawnPlatform_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "spawndummy",			Cmd_SpawnDummy_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "playsound",			Cmd_ZykSound_f,				CMD_NOINTERMISSION },
 	{ "players",			Cmd_Players_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "racemode",			Cmd_RaceMode_f,				CMD_ALIVE|CMD_NOINTERMISSION },
