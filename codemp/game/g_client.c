@@ -2732,6 +2732,9 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	VectorSet(client->pers.teleport_point,0,0,0);
 	VectorCopy(client->ps.viewangles,client->pers.teleport_angles);
 
+	VectorSet(client->pers.saved_origin, 0, 0, 0);
+	VectorSet(client->pers.saved_view_angles, 0, 0, 0);
+
 	if (ent->client->sess.amrpgmode > 0)
 	{
 		// zyk: if the target goes to spec or something, then the server must choose another target

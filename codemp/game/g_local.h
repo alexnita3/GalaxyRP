@@ -772,6 +772,10 @@ typedef struct clientPersistant_s {
 	// 19 - Force Guardian Upgrade
 	int secrets_found;
 
+	// GalaxyRP (Alex): [Telemark] Saving the coordinates here
+	vec3_t saved_origin;
+	vec3_t saved_view_angles;
+
 	// zyk: amount of sentries the Bounty Hunter starts with
 	int bounty_hunter_sentries;
 

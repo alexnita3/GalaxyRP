@@ -12833,7 +12833,7 @@ void Cmd_Teleport_f( gentity_t *ent )
 
 	if (trap->Argc() == 1)
 	{
-		zyk_TeleportPlayer(ent,ent->client->pers.teleport_point,ent->client->pers.teleport_angles);
+		zyk_TeleportPlayer(ent, ent->client->pers.saved_origin, ent->client->pers.saved_view_angles);
 	}
 	else if (trap->Argc() == 2)
 	{
@@ -12841,41 +12841,31 @@ void Cmd_Teleport_f( gentity_t *ent )
 
 		trap->Argv( 1,  arg1, sizeof( arg1 ) );
 
-		if (Q_stricmp(arg1, "point") == 0)
+		vec3_t target_origin;
+
+		client_id = ClientNumberFromString( ent, arg1, qfalse );
+
+		if (client_id == -1)
 		{
-			VectorCopy(ent->client->ps.origin,ent->client->pers.teleport_point);
-			VectorCopy(ent->client->ps.viewangles,ent->client->pers.teleport_angles);
-			trap->SendServerCommand( ent-g_entities, va("print \"Marked point %s with angles %s\n\"", vtos(ent->client->pers.teleport_point), vtos(ent->client->pers.teleport_angles)) );
 			return;
 		}
-		else
-		{
-			vec3_t target_origin;
 
-			client_id = ClientNumberFromString( ent, arg1, qfalse );
-
-			if (client_id == -1)
-			{
-				return;
-			}
-
-			if (g_entities[client_id].client->sess.amrpgmode > 0 && g_entities[client_id].client->pers.bitvalue & (1 << ADM_ADMPROTECT) && !(g_entities[client_id].client->pers.player_settings & (1 << 13)))
+		if (g_entities[client_id].client->sess.amrpgmode > 0 && g_entities[client_id].client->pers.bitvalue & (1 << ADM_ADMPROTECT) && !(g_entities[client_id].client->pers.player_settings & (1 << 13)))
 			{
 				trap->SendServerCommand( ent-g_entities, va("print \"Target player is adminprotected\n\"") );
 				return;
 			}
 
-			if (g_entities[client_id].client->sess.amrpgmode == 2 && g_entities[client_id].client->pers.guardian_mode > 0)
+		if (g_entities[client_id].client->sess.amrpgmode == 2 && g_entities[client_id].client->pers.guardian_mode > 0)
 			{
 				trap->SendServerCommand( ent-g_entities, "print \"Cannot teleport to a player in a guardian battle.\n\"" );
 				return;
 			}
 
-			VectorCopy(g_entities[client_id].client->ps.origin,target_origin);
-			target_origin[2] = target_origin[2] + 100;
+		VectorCopy(g_entities[client_id].client->ps.origin,target_origin);
+		target_origin[2] = target_origin[2] + 100;
 
-			zyk_TeleportPlayer(ent,target_origin,g_entities[client_id].client->ps.viewangles);
-		}
+		zyk_TeleportPlayer(ent,target_origin,g_entities[client_id].client->ps.viewangles);
 	}
 	else if (trap->Argc() == 3)
 	{
@@ -12978,6 +12968,21 @@ void Cmd_Teleport_f( gentity_t *ent )
 
 		zyk_TeleportPlayer(&g_entities[client_id],target_origin,g_entities[client_id].client->ps.viewangles);
 	}
+}
+
+/*
+==================
+Cmd_Telemark_f
+==================
+*/
+void Cmd_Telemark_f(gentity_t* ent)
+{
+	VectorCopy(ent->client->ps.origin, ent->client->pers.saved_origin);
+	VectorCopy(ent->client->ps.viewangles, ent->client->pers.saved_view_angles);
+
+	trap->SendServerCommand(ent - g_entities, va("print \"Marked point %s with angles %s\n\"", vtos(ent->client->pers.saved_origin), vtos(ent->client->pers.saved_view_angles)));
+
+	return;
 }
 
 /*
@@ -19990,6 +19995,7 @@ command_t commands[] = {
 //	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },
 	{ "teamvote",			Cmd_TeamVote_f,				CMD_NOINTERMISSION },
 	{ "tele",				Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
+	{ "telemark",			Cmd_Telemark_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
 //	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
