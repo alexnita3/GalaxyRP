@@ -155,8 +155,8 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		70,//FP_HEAL,//instant //You get 5 points of health.. for 50 force points!
 		10,//FP_LEVITATION,//hold/duration
 		50,//FP_SPEED,//duration
-		40,//FP_PUSH,//hold/duration
-		40,//FP_PULL,//hold/duration
+		20,//FP_PUSH,//hold/duration
+		20,//FP_PULL,//hold/duration
 		20,//FP_TELEPATHY,//instant
 		60,//FP_GRIP,//hold/duration
 		1,//FP_LIGHTNING,//hold/duration
@@ -176,8 +176,8 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		80,//FP_HEAL,//instant
 		10,//FP_LEVITATION,//hold/duration
 		50,//FP_SPEED,//duration
-		60,//FP_PUSH,//hold/duration
-		60,//FP_PULL,//hold/duration
+		20,//FP_PUSH,//hold/duration
+		20,//FP_PULL,//hold/duration
 		20,//FP_TELEPATHY,//instant
 		60,//FP_GRIP,//hold/duration
 		1,//FP_LIGHTNING,//hold/duration
@@ -197,8 +197,8 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		90,//FP_HEAL,//instant
 		10,//FP_LEVITATION,//hold/duration
 		50,//FP_SPEED,//duration
-		60,//FP_PUSH,//hold/duration
-		60,//FP_PULL,//hold/duration
+		20,//FP_PUSH,//hold/duration
+		20,//FP_PULL,//hold/duration
 		20,//FP_TELEPATHY,//instant
 		80,//FP_GRIP,//hold/duration
 		1,//FP_LIGHTNING,//hold/duration
