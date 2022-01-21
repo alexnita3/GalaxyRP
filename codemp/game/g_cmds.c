@@ -15559,6 +15559,57 @@ void Cmd_SpawnDummy_f(gentity_t* ent)
 
 }
 
+qboolean is_entity_a_pickup(gentity_t* ent) {
+	char* output = NULL;
+
+	// GalaxyRP (Alex): [Entity System] Remove all weapon pickups
+	output = strstr(ent->classname, "weapon_");
+
+	if (output) {
+		return qtrue;
+	}
+
+	// GalaxyRP (Alex): [Entity System] Remove all ammo pickups
+	output = strstr(ent->classname, "ammo_");
+
+	if (output) {
+		return qtrue;
+	}
+
+	// GalaxyRP (Alex): [Entity System] Remove all item pickups
+	output = strstr(ent->classname, "item_");
+
+	if (output) {
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
+void Cmd_RemovePickups_f(gentity_t* ent) {
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	{ // zyk: admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	gentity_t* target_ent;
+
+	for (int i = 0; i < level.num_entities; i++)
+	{
+		target_ent = &g_entities[i];
+
+		if (is_entity_a_pickup(target_ent) == qtrue) {
+			trap->SendServerCommand(ent - g_entities, va("print \"%s with id %d removed.\n\"", target_ent->classname, i));
+			G_FreeEntity(target_ent);
+		}
+	}
+
+	return;
+
+}
+
 /*
 ==================
 Cmd_ClientPrint_f
@@ -20034,6 +20085,7 @@ command_t commands[] = {
 	{ "remapload",			Cmd_RemapLoad_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "removexp",			Cmd_RemoveXp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "removepickups",		Cmd_RemovePickups_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "resetpassword",		Cmd_ResetPassword_F,		CMD_LOGGEDIN},
 	{ "roll",				Cmd_Roll_f,					0 },
 	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
