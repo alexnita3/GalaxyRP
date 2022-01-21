@@ -6296,7 +6296,8 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 				// zyk: if you are looking at someone (player or npc), this will be the client id
 				sense_health_info(self, &g_entities[self->client->ps.lookTarget]);
 
-				self->client->pers.sense_health_timer = level.time + 1000; // zyk: show health each second
+				// GalaxyRP (Alex): [Force Powers] Update health display every half a second
+				self->client->pers.sense_health_timer = level.time + 500;
 			}
 		}
 		if ( (self->client->ps.fd.forcePowersActive&( 1 << i )) )
