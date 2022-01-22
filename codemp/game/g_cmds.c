@@ -15690,6 +15690,37 @@ void Cmd_Silence_f( gentity_t *ent ) {
 	}
 }
 
+typedef struct admin_command_description_s {
+	const char* title;
+	int			number;
+} admin_command_description_t;
+
+const admin_command_description_t admin_commands[ADM_NUM_CMDS] = {
+	{ "NPC",					ADM_NPC					},
+	{ "No Clip",				ADM_NOCLIP				},
+	{ "Give Admin",				ADM_GIVEADM				},
+	{ "Teleport",				ADM_TELE				},
+	{ "Admin Protect",			ADM_ADMPROTECT			},
+	{ "Entity System",			ADM_ENTITYSYSTEM		},
+	{ "Silence",				ADM_SILENCE				},
+	{ "Client Print",			ADM_CLIENTPRINT			},
+	{ "Placeholder",			ADM_RPMODE				},
+	{ "Kick",					ADM_KICK				},
+	{ "Paralyze",				ADM_PARALYZE			},
+	{ "Give",					ADM_GIVE				},
+	{ "Scale",					ADM_SCALE				},
+	{ "Players",				ADM_PLAYERS				},
+	{ "Duel Arena",				ADM_DUELARENA			},
+	{ "Placeholder",			ADM_CUSTOMQUEST			},
+	{ "Create Item",			ADM_CREATEITEM			},
+	{ "God Mode",				ADM_GOD					},
+	{ "Level Give",				ADM_LEVELUP				},
+	{ "Skill Give",				ADM_SKILL				},
+	{ "Create Credits",			ADM_CREATECREDITS		},
+	{ "Ignore Char Distance",	ADM_IGNORECHATDISTANCE	},
+	{ "Give XP",				ADM_XP					}
+};
+
 // zyk: shows admin commands of this player. Shows info to the target_ent player
 void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 {
@@ -15698,226 +15729,18 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 	int i = 0;
 	strcpy(message,"");
 
-	while (i < ADM_NUM_CMDS)
-	{
-		strcpy(message_content[i],"");
-		i++;
-	}
-	message_content[ADM_NUM_CMDS][0] = '\0';
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_NPC))) 
-	{
-		strcpy(message_content[0],va("^3  %d ^7- NPC: ^2yes\n",ADM_NPC));
-	}
-	else
-	{
-		strcpy(message_content[0],va("^3  %d ^7- NPC: ^1no\n",ADM_NPC));
+	for (int i = 0; i < ADM_NUM_CMDS; i++) {
+		if ((ent->client->pers.bitvalue & (1 << admin_commands[i].number)))
+		{
+			trap->SendServerCommand(target_ent - g_entities, va("print \"^3%d ^7- %s: ^2yes\n\"", admin_commands[i].number, admin_commands[i].title));
+		}
+		else
+		{
+			trap->SendServerCommand(target_ent - g_entities, va("print \"^3%d ^7- %s: ^1no\n\"", admin_commands[i].number, admin_commands[i].title));
+		}
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_NOCLIP))) 
-	{
-		strcpy(message_content[1],va("^3  %d ^7- No Clip: ^2yes\n",ADM_NOCLIP));
-	}
-	else
-	{
-		strcpy(message_content[1],va("^3  %d ^7- No Clip: ^1no\n",ADM_NOCLIP));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_GIVEADM))) 
-	{
-		strcpy(message_content[2],va("^3  %d ^7- Give Admin: ^2yes\n",ADM_GIVEADM));
-	}
-	else
-	{
-		strcpy(message_content[2],va("^3  %d ^7- Give Admin: ^1no\n",ADM_GIVEADM));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_TELE))) 
-	{
-		strcpy(message_content[3],va("^3  %d ^7- Teleport: ^2yes\n",ADM_TELE));
-	}
-	else
-	{
-		strcpy(message_content[3],va("^3  %d ^7- Teleport: ^1no\n",ADM_TELE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))) 
-	{
-		strcpy(message_content[4],va("^3  %d ^7- Admin Protect: ^2yes\n",ADM_ADMPROTECT));
-	}
-	else
-	{
-		strcpy(message_content[4],va("^3  %d ^7- Admin Protect: ^1no\n",ADM_ADMPROTECT));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM))) 
-	{
-		strcpy(message_content[5],va("^3  %d ^7- Entity System: ^2yes\n",ADM_ENTITYSYSTEM));
-	}
-	else
-	{
-		strcpy(message_content[5],va("^3  %d ^7- Entity System: ^1no\n",ADM_ENTITYSYSTEM));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_SILENCE))) 
-	{
-		strcpy(message_content[6],va("^3  %d ^7- Silence: ^2yes\n",ADM_SILENCE));
-	}
-	else
-	{
-		strcpy(message_content[6],va("^3  %d ^7- Silence: ^1no\n",ADM_SILENCE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_CLIENTPRINT))) 
-	{
-		strcpy(message_content[7],va("^3  %d ^7- Client Print: ^2yes\n",ADM_CLIENTPRINT));
-	}
-	else
-	{
-		strcpy(message_content[7],va("^3  %d ^7- Client Print: ^1no\n",ADM_CLIENTPRINT));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_RPMODE))) 
-	{
-		strcpy(message_content[8],va("^3  %d ^7- Placeholder: ^2yes\n",ADM_RPMODE));
-	}
-	else
-	{
-		strcpy(message_content[8],va("^3  %d ^7- Placeholder: ^1no\n",ADM_RPMODE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_KICK))) 
-	{
-		strcpy(message_content[9],va("^3  %d ^7- Kick: ^2yes\n",ADM_KICK));
-	}
-	else
-	{
-		strcpy(message_content[9],va("^3  %d ^7- Kick: ^1no\n",ADM_KICK));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_PARALYZE))) 
-	{
-		strcpy(message_content[10],va("^3 %d ^7- Paralyze: ^2yes\n",ADM_PARALYZE));
-	}
-	else
-	{
-		strcpy(message_content[10],va("^3 %d ^7- Paralyze: ^1no\n",ADM_PARALYZE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_GIVE))) 
-	{
-		strcpy(message_content[11],va("^3 %d ^7- Give: ^2yes\n",ADM_GIVE));
-	}
-	else
-	{
-		strcpy(message_content[11],va("^3 %d ^7- Give: ^1no\n",ADM_GIVE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_SCALE))) 
-	{
-		strcpy(message_content[12],va("^3 %d ^7- Scale: ^2yes\n",ADM_SCALE));
-	}
-	else
-	{
-		strcpy(message_content[12],va("^3 %d ^7- Scale: ^1no\n",ADM_SCALE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_PLAYERS))) 
-	{
-		strcpy(message_content[13],va("^3 %d ^7- Players: ^2yes\n",ADM_PLAYERS));
-	}
-	else
-	{
-		strcpy(message_content[13],va("^3 %d ^7- Players: ^1no\n",ADM_PLAYERS));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
-	{
-		strcpy(message_content[14], va("^3 %d ^7- Duel Arena: ^2yes\n", ADM_DUELARENA));
-	}
-	else
-	{
-		strcpy(message_content[14], va("^3 %d ^7- Duel Arena: ^1no\n", ADM_DUELARENA));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
-	{
-		strcpy(message_content[15], va("^3 %d ^7- Placeholder: ^2yes\n", ADM_CUSTOMQUEST));
-	}
-	else
-	{
-		strcpy(message_content[15], va("^3 %d ^7- Placeholder: ^1no\n", ADM_CUSTOMQUEST));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_CREATEITEM)))
-	{
-		strcpy(message_content[16], va("^3 %d ^7- Create Items: ^2yes\n", ADM_CREATEITEM));
-	}
-	else
-	{
-		strcpy(message_content[16], va("^3 %d ^7- Create Items: ^1no\n", ADM_CREATEITEM));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_GOD)))
-	{
-		strcpy(message_content[17], va("^3 %d ^7- God Mode: ^2yes\n", ADM_GOD));
-	}
-	else
-	{
-		strcpy(message_content[17], va("^3 %d ^7- God Mode: ^1no\n", ADM_GOD));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_LEVELUP)))
-	{
-		strcpy(message_content[18], va("^3 %d ^7- Upgrade Level: ^2yes\n", ADM_LEVELUP));
-	}
-	else
-	{
-		strcpy(message_content[18], va("^3 %d ^7- Upgrade Level: ^1no\n", ADM_LEVELUP));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_SKILL)))
-	{
-		strcpy(message_content[19], va("^3 %d ^7- Change Skills: ^2yes\n", ADM_SKILL));
-	}
-	else
-	{
-		strcpy(message_content[19], va("^3 %d ^7- Change Skills: ^1no\n", ADM_SKILL));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_CREATECREDITS)))
-	{
-		strcpy(message_content[20], va("^3 %d ^7- Create Credits: ^2yes\n", ADM_CREATECREDITS));
-	}
-	else
-	{
-		strcpy(message_content[20], va("^3 %d ^7- Create Credits: ^1no\n", ADM_CREATECREDITS));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE)))
-	{
-		strcpy(message_content[21], va("^3 %d ^7- Ignore Chat Distance: ^2yes\n", ADM_IGNORECHATDISTANCE));
-	}
-	else
-	{
-		strcpy(message_content[21], va("^3 %d ^7- Ignore Chat Distance: ^1no\n", ADM_IGNORECHATDISTANCE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_XP)))
-	{
-		strcpy(message_content[21], va("^3 %d ^7- XP Give: ^2yes\n", ADM_XP));
-	}
-	else
-	{
-		strcpy(message_content[21], va("^3 %d ^7- XP Give: ^1no\n", ADM_XP));
-	}
-
-	for (i = 0; i < ADM_NUM_CMDS; i++)
-	{
-		strcpy(message,va("%s%s",message,message_content[i]));
-	}
-
-	trap->SendServerCommand( target_ent-g_entities, va("print \"\n%s^7\n%s\n^7Use ^3/adminlist <number> ^7to see command info\n\n\"", ent->client->pers.netname, message) );
+	return;
 }
 
 /*
