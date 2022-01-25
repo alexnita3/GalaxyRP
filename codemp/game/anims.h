@@ -1806,6 +1806,7 @@ typedef enum //# animNumber_e
 	BOTH_CIN_48,		//# Level specific cinematic
 	BOTH_CIN_49,		//# Level specific cinematic
 	BOTH_CIN_50,		//# Level specific cinematic
+	//GalaxyRP Animations start here
 	BOTH_ARMSCROSSED,
 	BOTH_CUFFEDFRONT,
 	BOTH_CUFFEDKNEES,
@@ -1837,6 +1838,20 @@ typedef enum //# animNumber_e
 	BOTH_MEDITATEFORCE,
 	BOTH_MEDITATION2,
 	BOTH_USEFORCE,
+	BOTH_SHIEN2,
+	BOTH_NIMAN,
+	BOTH_SHIICHO,
+	BOTH_JUYO,
+	BOTH_HANDSTAND,
+	BOTH_SITFEET,
+	BOTH_COFFEE_IDLE,
+	BOTH_COFFEE_SIP,
+	BOTH_SABERPOINT,
+	BOTH_SABERPOINT2,
+	BOTH_CARRY,
+	BOTH_LEANFRONT,
+	BOTH_GUARD,
+	BOTH_OBJECT,
 
 	//# #eol
 	MAX_ANIMATIONS,

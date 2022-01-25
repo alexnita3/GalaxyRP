@@ -103,7 +103,7 @@ const int max_skill_levels[NUM_OF_SKILLS] = {
 	3 // Improvements
 };
 
-#define MAX_WORDED_EMOTES 84
+#define MAX_WORDED_EMOTES 97
 //alex: type for storing worde animations wo use with the emote system
 typedef struct worded_animation_s {
 	const char* animation_name;
@@ -116,28 +116,31 @@ alex: list of all worded emotes, ids, and categories, these are to be stored alp
 the animation code is to be exactly the same as the correcponding id in anims.h
 */
 const worded_animation_t animations[MAX_WORDED_EMOTES] = {
-	{"aim",				931,	"Blaster"},
+	{"aim",				1581,	"Blaster"},
 	{"aim2",			936,	"Blaster"},
 	{"aim3",			114,	"Blaster"},
 	{"aim4",			1407,	"Blaster"},
 	{"aim5",			1406,	"Blaster"},
-	{"ataru",			1562,	"Saber"},
+	{"ataru",			1562,	"Saber" },
 	{"beg",				1099,	"Body"},
 	{"beg2",			1098,	"Body"},
 	{"beg3",			1321,	"Body"},
 	{"bow",				1188,	"Body"},
 	{"bump",			1546,	"Body"},
+	{"carry",			1584,	"Movement" },
 	{"choked",			1322,	"Body"},
 	{"commlinkdown",	970,	"Body"},
 	{"commlinkup",		968,	"Body"},
 	{"cover",			1181,	"Movement"},
 	{"cross",			1543,	"Body"},
 	{"cuffed",			922,	"Body"},
-	{"cufffront",		1544,	"Body"},
-	{"cuffknees",		1545,	"Body"},
+	{"cufffront",		1544,	"Body" },
+	{"cuffknees",		1545,	"Body" },
+	{"cup",				1580,	"Body" },
 	{"die",				1097,	"Body"},
 	{"djemso",			1563,	"Saber"},
 	{"drainloop",		1360,	"Force"},
+	{"drink",			1581,	"Body" },
 	{"fear",			1380,	"Body"},
 	{"flourish",		1191,	"Saber"},
 	{"flourish2",		1192,	"Saber"},
@@ -147,42 +150,52 @@ const worded_animation_t animations[MAX_WORDED_EMOTES] = {
 	{"force",			1573,	"Force"},
 	{"forcechoke",		1344,	"Force"},
 	{"forcelightning",	1337,	"Force"},
+	{"guard",			1586,	"Saber" },
 	{"handsback",		1547,	"Body"},
 	{"handsfront",		1548,	"Body"},
-	{"handstand",		1552,	"Body"},
+	{"handstand",		1578,	"Body" },
+	{"handstand2",		1552,	"Body"},
 	{"headhold",		1549,	"Body"},
-	{"heroid",			939,	"Body"},
+	{"heroic",			939,	"Body"},
 	{"hips",			1550,	"Body"},
 	{"hips2",			1551,	"Body"},
 	{"holddetonator",	1404,	"Body"},
-	{"holdobject",		986,	"Body"},
+	{"holdobject",		1587,	"Body"},
 	{"hug",				989,	"Body"},
 	{"hurt",			1554,	"Body"},
 	{"hurt2",			1555,	"Body"},
 	{"idle",			1567,	"Saber"},
 	{"jarkai",			1564,	"Saber"},
 	{"jarkai2",			1565,	"Saber"},
+	{"juyo",			1577,	"Saber" },
 	{"kneel",			1010,	"Body"},
 	{"lean",			1382,	"Body"},
 	{"leanback",		1557,	"Body"},
+	{"leanfront",		1585,	"Body" },
 	{"leantable",		940,	"Body"},
 	{"makashi",			1566,	"Saber"},
 	{"meditate",		1001,	"Body"},
 	{"meditate2",		1572,	"Force"},
 	{"meditate3",		1571,	"Force"},
 	{"mindtrick",		1333,	"Force"},
+	{"niman",			1575,	"Saber" },
 	{"point",			936,	"Body"},
 	{"ponder",			1558,	"Body"},
 	{"ponder2",			1559,	"Body"},
 	{"pressbutton",		1328,	"Body"},
 	{"relax",			1556,	"Body"},
+	{"saberpoint",		1582,	"Saber" },
+	{"saberpoint2",		1583,	"Saber" },
 	{"saberthrow",		993,	"Saber"},
 	{"salute",			1560,	"Body"},
 	{"scratch",			1553,	"Body"},
 	{"shien",			1569,	"Saber"},
+	{"shien2",			1574,	"Saber" },
+	{"shiicho",			1576,	"Saber" },
 	{"sit",				998,	"Body"},
 	{"sit2",			999,	"Body"},
 	{"sit3",			1394,	"Body"},
+	{"sitfeet",			1579,	"Body" },
 	{"sitpilot",		1014,	"Body"},
 	{"situp",			1561,	"Body"},
 	{"sleep",			1313,	"Body"},
@@ -4051,7 +4064,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		char slash = '/';
 
 		const char *ptr = strchr(text, slash);
-		int index_of_slash;
+		int index_of_slash = -1;
 		if (ptr) {
 			index_of_slash = ptr - text;
 		}
