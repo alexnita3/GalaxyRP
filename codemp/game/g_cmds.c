@@ -1961,7 +1961,6 @@ void insert_news_table_row(gentity_t* ent, char* channel, char* news_text) {
 	}
 
 	char insert_new_entry_to_weapons_table[159] = "INSERT INTO News(channel, text) VALUES ('%s','%s')";
-	trap->SendServerCommand(ent->s.number, va("print \"INSERT INTO News(channel, text) VALUES ('%s','%s')\n\"", channel, news_text));
 	run_db_query(va(insert_new_entry_to_weapons_table, channel, news_text), db, zErrMsg, rc, stmt);
 
 	sqlite3_close(db);
@@ -2012,6 +2011,71 @@ void select_news_channels(gentity_t* ent) {
 		strcpy(channelName, sqlite3_column_text(stmt, 0));
 		trap->SendServerCommand(ent - g_entities, va("print \"%s\n\"", channelName));
 		rc = sqlite3_step(stmt);
+	}
+
+	sqlite3_finalize(stmt);
+	sqlite3_close(db);
+
+	return;
+}
+
+void display_news(gentity_t* ent, int newsID, char* newsText, char* date) {
+
+	trap->SendServerCommand(ent - g_entities, va("print \"^3--------------------------|%i|%s|----------------------\n\"",newsID, date));
+	trap->SendServerCommand(ent - g_entities, va("print \"^2%s\n\"", newsText));
+	trap->SendServerCommand(ent - g_entities, va("print \"^3-------------------------------------------------------------\n\"", date));
+	return;
+}
+
+void select_news_from_channel(gentity_t* ent, char* channel, int numberOfEntries) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+	char newsText[MAX_STRING_CHARS], date[MAX_STRING_CHARS];
+	int newsID = 0;
+	int i = 1;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	// GalaxyRP (Alex): [Database] Select all news that appear in a channel.
+	char select_news_query[300] = "SELECT newsID, text, date\
+		from(SELECT newsID, text, date from News WHERE channel = '%s' ORDER BY newsID DESC LIMIT %i) \
+		ORDER BY newsID ASC";
+
+	rc = sqlite3_prepare(db, va(select_news_query, channel, numberOfEntries), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	while (rc == SQLITE_ROW)
+	{
+		if (i <= numberOfEntries) {
+			// GalaxyRP (Alex): [Database] Grab all the news texts line by line.
+			newsID = sqlite3_column_int(stmt, 0);
+			strcpy(newsText, sqlite3_column_text(stmt, 1));
+			strcpy(date, sqlite3_column_text(stmt, 2));
+
+			display_news(ent, newsID, newsText, date);
+		}
+
+		rc = sqlite3_step(stmt);
+		i++;
 	}
 
 	sqlite3_finalize(stmt);
@@ -18715,63 +18779,31 @@ Cmd_News_f
 ==================
 */
 void Cmd_News_f(gentity_t *ent) {
-	int page = 1; // zyk: page the user wants to see
-	int i = 0;
-	int results_per_page = zyk_list_cmds_results_per_page.integer; // zyk: number of results per page
-	char arg1[MAX_STRING_CHARS];
-	char file_content[MAX_STRING_CHARS * 4];
-	char content[MAX_STRING_CHARS];
-	FILE *news_file = NULL;
+	char arg1[MAX_STRING_CHARS], arg2[MAX_STRING_CHARS];
+	int numberOfEntries = 10;
 
-	if (trap->Argc() > 2)
+	if (trap->Argc() > 3 || trap->Argc() < 2)
 	{
-		trap->SendServerCommand(ent->s.number, "print \"Usage: /news <neutral/jedi/sith> (argument is optional)\n\"");
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /news <channel name> <number of entries>\n\"");
 		return;
 	}
 
-	if (trap->Argc() < 2)
+	if (trap->Argc() == 3)
 	{
-		news_file = fopen("GalaxyRP/news/news.txt", "r");
-	}
-	else {
-	
-		trap->Argv(1, arg1, sizeof(arg1));
-		if (strcmp(arg1, "republic") != 0 && strcmp(arg1, "sith") != 0 && strcmp(arg1, "jedi") != 0) {
-			trap->SendServerCommand(ent->s.number, "print \"Usage: /news <neutral/jedi/sith> (argument is optional)\n\"");
-			return;
-		}
-		if (strcmp(arg1, "republic") == 0) {
-			news_file = fopen("GalaxyRP/news/news_republic.txt", "r");
-		}
-		if (strcmp(arg1, "sith") == 0) {
-			news_file = fopen("GalaxyRP/news/news_sith.txt", "r");
-		}
-		if (strcmp(arg1, "jedi") == 0) {
-			news_file = fopen("GalaxyRP/news/news_jedi.txt", "r");
+		trap->Argv(2, arg2, sizeof(arg2));
+		numberOfEntries = atoi(arg2);
+		if (numberOfEntries < 1 || numberOfEntries > 10) {
+			trap->SendServerCommand(ent->s.number, "print \"Error: Can only display between one and ten entries at a time.\n\"");
 		}
 	}
 
-	strcpy(file_content, "");
-	strcpy(content, ""); 
-	
-	if (news_file != NULL)
-	{
-
-		if (fgets(content, sizeof(content), news_file) != NULL) {
-			strcpy(file_content, va("%s%s", file_content, content));
-			fclose(news_file);
-			trap->SendServerCommand(ent->s.number, va("print \"\n^2NEWS: ^3%s\n\"", file_content));
-		}
-	}
-	else
-	{
-		trap->SendServerCommand(ent->s.number, "print \"No important news.\n\"");
-	}
+	trap->Argv(1, arg1, sizeof(arg1));
+	trap->SendServerCommand(ent->s.number, va("print \"^3Viewing entries in channel ^2%s^3:\n\"", arg1));
+	select_news_from_channel(ent, arg1, numberOfEntries);
 }
 
 void Cmd_NewsChannels_f(gentity_t* ent) {
 	select_news_channels(ent);
-
 	return;
 }
 
