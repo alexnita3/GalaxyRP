@@ -2046,7 +2046,7 @@ void select_news_from_channel(gentity_t* ent, char* channel, int numberOfEntries
 
 	// GalaxyRP (Alex): [Database] Select all news that appear in a channel.
 	char select_news_query[300] = "SELECT newsID, text, date\
-		from(SELECT newsID, text, date from News WHERE channel = '%s' ORDER BY newsID DESC LIMIT %i) \
+		from(SELECT newsID, text, date from News WHERE channel = '%s' COLLATE NOCASE ORDER BY newsID DESC LIMIT %i) \
 		ORDER BY newsID ASC";
 
 	rc = sqlite3_prepare(db, va(select_news_query, channel, numberOfEntries), -1, &stmt, NULL);
@@ -2079,6 +2079,30 @@ void select_news_from_channel(gentity_t* ent, char* channel, int numberOfEntries
 	}
 
 	sqlite3_finalize(stmt);
+	sqlite3_close(db);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] DELETE This method deletes a news table row which is associated with the ID given.
+void delete_news_table_row_with_id(gentity_t* ent, int newsID) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	char delete_weapons_query[41] = "DELETE FROM News WHERE newsID='%i'";
+
+	run_db_query(va(delete_weapons_query, newsID), db, zErrMsg, rc, stmt);
+
 	sqlite3_close(db);
 
 	return;
@@ -18807,6 +18831,30 @@ void Cmd_NewsChannels_f(gentity_t* ent) {
 	return;
 }
 
+void Cmd_NewsRemove_f(gentity_t* ent) {
+
+	char arg1[MAX_STRING_CHARS];
+	int newsID;
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /newsremove <news id>\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+	newsID = atoi(arg1);
+	if (newsID < 0) {
+		trap->SendServerCommand(ent->s.number, "print \"ID must be positive.\n\"");
+		return;
+	}
+
+	delete_news_table_row_with_id(ent, newsID);
+	trap->SendServerCommand(ent->s.number, va("print \"Removed news entry with ID %i!\n\"", newsID));
+
+	return;
+}
+
 /*
 ==================
 Cmd_UpdateNews_f
@@ -19992,6 +20040,7 @@ command_t commands[] = {
 	{ "new",				Cmd_Register_F,				CMD_NOINTERMISSION },
 	{ "news",				Cmd_News_f,					0 },
 	{ "newschannels",		Cmd_NewsChannels_f,					0 },
+	{ "newsremove",			Cmd_NewsRemove_f,					0 },
 	{ "noclip",				Cmd_Noclip_f,				CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "nofight",			Cmd_NoFight_f,				CMD_NOINTERMISSION },
 	{ "notarget",			Cmd_Notarget_f,				CMD_ALIVE|CMD_NOINTERMISSION },
