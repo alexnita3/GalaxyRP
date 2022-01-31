@@ -292,6 +292,7 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 	char statement_weapon_table_creation[244] = "CREATE TABLE IF NOT EXISTS 'Weapons' ('CharID' INTEGER, 'AmmoBlaster' INTEGER, 'AmmoPowercell' INTEGER, 'AmmoMetalBolts' INTEGER, 'AmmoRockets' INTEGER, 'AmmoThermal' INTEGER, 'AmmoTripmine' INTEGER, 'AmmoDetpack' INTEGER, PRIMARY KEY(CharID))";
 	char statement_skill_table_creation[1249] = "CREATE TABLE IF NOT EXISTS 'Skills' ('CharID' INTEGER, 'Jump' INTEGER, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER, PRIMARY KEY(CharID))";
 	char statement_item_table_creation[110] = "CREATE TABLE IF NOT EXISTS 'Items' ('ItemID' INTEGER, 'CharID' INTEGER, 'ItemName' TEXT, PRIMARY KEY(ItemID))";
+	char statement_news_table_creation[155] = "CREATE TABLE IF NOT EXISTS 'News' ('newsID' INTEGER, 'channel' TEXT, 'date' TEXT DEFAULT (strftime('%d-%m-%Y','now')), 'text' TEXT, PRIMARY KEY('newsID'))";
 
 	char statement_xp_column_alter[110] = "ALTER TABLE Characters ADD COLUMN xp INTEGER DEFAULT 0";
 
@@ -359,6 +360,20 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 		return;
 	}
 	trap->Print("Done with Items table.\n");
+
+	//Alex: Create News Table
+
+	trap->Print("Initializing News Table.\n");
+
+	rc = sqlite3_exec(db, statement_news_table_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with News table.\n");
 
 	trap->Print("All tables have been initialized.\n");
 
@@ -4566,7 +4581,7 @@ void CheckCvars( void ) {
 		}
 		trap->Cvar_Set("g_password", password );
 
-		if ( *g_password.string && Q_stricmp( g_password.string, "none" ) ) {
+		if (*g_password.string && Q_stricmp(g_password.string, "none")) {
 			trap->Cvar_Set( "g_needpass", "1" );
 		} else {
 			trap->Cvar_Set( "g_needpass", "0" );

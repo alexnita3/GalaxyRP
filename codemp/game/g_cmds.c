@@ -1942,6 +1942,85 @@ void delete_weapons_table_row_with_id(gentity_t* ent, int id, sqlite3* db, char*
 }
 
 /*
+----NEWS TABLE----
+*/
+
+// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the news table, requires the channel and text be passed into it.
+void insert_news_table_row(gentity_t* ent, char* channel, char* news_text) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	char insert_new_entry_to_weapons_table[159] = "INSERT INTO News(channel, text) VALUES ('%s','%s')";
+	trap->SendServerCommand(ent->s.number, va("print \"INSERT INTO News(channel, text) VALUES ('%s','%s')\n\"", channel, news_text));
+	run_db_query(va(insert_new_entry_to_weapons_table, channel, news_text), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] SELECT This method selects all the unique channels from the news table.
+void select_news_channels(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+	char channelName[MAX_STRING_CHARS];
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	trap->SendServerCommand(ent - g_entities, "print \"^3Existing channels:\n\"");
+
+	// GalaxyRP (Alex): [Database] Select all info from all character related tables.
+	char select_channels_query[300] = "SELECT DISTINCT channel \
+		from News\
+		ORDER BY channel";
+
+	rc = sqlite3_prepare(db, select_channels_query, -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	while (rc == SQLITE_ROW)
+	{
+		// GalaxyRP (Alex): [Database] Grab all the channels line by line.
+		strcpy(channelName, sqlite3_column_text(stmt, 0));
+		trap->SendServerCommand(ent - g_entities, va("print \"%s\n\"", channelName));
+		rc = sqlite3_step(stmt);
+	}
+
+	sqlite3_finalize(stmt);
+	sqlite3_close(db);
+
+	return;
+}
+
+/*
 =================
 DATABASE ACTIONS for interacting with the database
 
@@ -18690,6 +18769,12 @@ void Cmd_News_f(gentity_t *ent) {
 	}
 }
 
+void Cmd_NewsChannels_f(gentity_t* ent) {
+	select_news_channels(ent);
+
+	return;
+}
+
 /*
 ==================
 Cmd_UpdateNews_f
@@ -18706,51 +18791,18 @@ void Cmd_UpdateNews_f(gentity_t *ent) {
 		return;
 	}
 
-	if (trap->Argc() > 3)
+	if (trap->Argc() != 3)
 	{
-		trap->SendServerCommand(ent->s.number, "print \"Usage: /news <neutral/jedi/sith> (argument is optional) <news text>\n\"");
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /news <channel> <news text>\n\"");
 		return;
 	}
+	trap->Argv(1, arg1, sizeof(arg1));
+	trap->Argv(2, arg2, sizeof(arg2));
 
-	if (trap->Argc() < 3)
-	{
-		news_file = fopen("GalaxyRP/news/news.txt", "w");
+	insert_news_table_row(ent, arg1, arg2);
 
-		trap->Argv(1, arg2, sizeof(arg2));
-
-		fprintf(news_file, "%s\n", arg2);
-		fclose(news_file);
-		return;
-	}
-	else {
-		trap->Argv(1, arg1, sizeof(arg1));
-		if (strcmp(arg1, "republic") != 0 && strcmp(arg1, "sith") != 0 && strcmp(arg1, "jedi") != 0) {
-			trap->SendServerCommand(ent->s.number, "print \"Usage: /news <neutral/jedi/sith> (argument is optional) <news text>\n\"");
-			return;
-		}
-		if (strcmp(arg1, "republic") == 0) {
-			news_file = fopen("GalaxyRP/news/news_republic.txt", "w");
-		}
-		if (strcmp(arg1, "sith") == 0) {
-			news_file = fopen("GalaxyRP/news/news_sith.txt", "w");
-		}
-		if (strcmp(arg1, "jedi") == 0) {
-			news_file = fopen("GalaxyRP/news/news_jedi.txt", "w");
-		}
-	}
-	trap->Argv(1, arg2, sizeof(arg2));
-
-	if (news_file != NULL)
-	{
-		trap->Argv(2, arg2, sizeof(arg2));
-
-		fprintf(news_file, "%s\n", arg2);
-		fclose(news_file);
-	}
-	else
-	{
-		trap->SendServerCommand(ent->s.number, "print \"File was not found.\n\"");
-	}
+	trap->SendServerCommand(ent->s.number, va("print \"Added news to channel %s\n\"", arg1));
+	
 }
 
 void description_display_beginning(gentity_t *ent, char netname[MAX_STRING_CHARS]) {
@@ -19907,6 +19959,7 @@ command_t commands[] = {
 	{ "modversion",			Cmd_ModVersion_f,			CMD_NOINTERMISSION },
 	{ "new",				Cmd_Register_F,				CMD_NOINTERMISSION },
 	{ "news",				Cmd_News_f,					0 },
+	{ "newschannels",		Cmd_NewsChannels_f,					0 },
 	{ "noclip",				Cmd_Noclip_f,				CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "nofight",			Cmd_NoFight_f,				CMD_NOINTERMISSION },
 	{ "notarget",			Cmd_Notarget_f,				CMD_ALIVE|CMD_NOINTERMISSION },
