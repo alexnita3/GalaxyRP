@@ -15901,7 +15901,9 @@ const admin_command_description_t admin_commands[ADM_NUM_CMDS] = {
 	{ "Skill Give",				ADM_SKILL				},
 	{ "Create Credits",			ADM_CREATECREDITS		},
 	{ "Ignore Char Distance",	ADM_IGNORECHATDISTANCE	},
-	{ "Give XP",				ADM_XP					}
+	{ "Give XP",				ADM_XP					},
+	{ "Update News",			ADM_UPDATENEWS			},
+	{ "Remove News",			ADM_REMOVENEWS			}
 };
 
 // zyk: shows admin commands of this player. Shows info to the target_ent player
@@ -18832,9 +18834,14 @@ void Cmd_NewsChannels_f(gentity_t* ent) {
 }
 
 void Cmd_NewsRemove_f(gentity_t* ent) {
-
 	char arg1[MAX_STRING_CHARS];
 	int newsID;
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_REMOVENEWS)))
+	{ // admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
 
 	if (trap->Argc() != 2)
 	{
@@ -18865,7 +18872,7 @@ void Cmd_UpdateNews_f(gentity_t *ent) {
 	char arg2[MAX_STRING_CHARS];
 	FILE *news_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_GIVEADM)))
+	if (!(ent->client->pers.bitvalue & (1 << ADM_UPDATENEWS)))
 	{ // admin command
 		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
 		return;
