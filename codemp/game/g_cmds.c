@@ -15887,7 +15887,7 @@ const admin_command_description_t admin_commands[ADM_NUM_CMDS] = {
 	{ "Entity System",			ADM_ENTITYSYSTEM		},
 	{ "Silence",				ADM_SILENCE				},
 	{ "Client Print",			ADM_CLIENTPRINT			},
-	{ "Placeholder",			ADM_RPMODE				},
+	{ "Shake Screen",			ADM_SHAKESCREEN			},
 	{ "Kick",					ADM_KICK				},
 	{ "Paralyze",				ADM_PARALYZE			},
 	{ "Give",					ADM_GIVE				},
@@ -15978,9 +15978,9 @@ void Cmd_AdminList_f( gentity_t *ent ) {
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\nUse ^3/clientprint <player name or ID, or -1 to show to all players> <message> ^7to print a message in the screen\n\n\"" );
 		}
-		else if (command_number == ADM_RPMODE)
+		else if (command_number == ADM_SHAKESCREEN)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\nUse ^3/rpmode ^7to make all players not able to use ^3/rpgclass ^7and level up. Admins can give levels by using ^3/levelgive <player name or ID>^7\n\n\"" );
+			trap->SendServerCommand( ent-g_entities, "print \"\nUse ^3/shakescreen ^7to shake people's screen.^7\n\n\"" );
 		}
 		else if (command_number == ADM_KICK)
 		{
@@ -16169,41 +16169,6 @@ void Cmd_AdminDown_f( gentity_t *ent ) {
 	else
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"You can't use this command.\n\"" );
-	}
-}
-
-/*
-==================
-Cmd_RpMode_f
-==================
-*/
-void Cmd_RpMode_f( gentity_t *ent ) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
-		return;
-	}
-
-	if (zyk_rp_mode.integer == 1)
-	{
-		int i = 0;
-
-		trap->Cvar_Set( "zyk_rp_mode", "0" );
-
-		for (i = 0; i < MAX_CLIENTS; i++)
-		{ // zyk: logout everyone in RPG Mode so they must reload their accounts
-			gentity_t *this_player = &g_entities[i];
-
-			if (this_player && this_player->client && this_player->client->sess.amrpgmode == 2)
-				this_player->client->sess.amrpgmode = 0;
-		}
-
-		trap->SendServerCommand( ent-g_entities, "print \"^3RPG System: ^7RP Mode ^1OFF^7\n\"" );
-	}
-	else
-	{
-		trap->Cvar_Set( "zyk_rp_mode", "1" );
-		trap->SendServerCommand( ent-g_entities, "print \"^3RPG System: ^7RP Mode ^2ON^7\n\"" );
 	}
 }
 
@@ -18990,7 +18955,7 @@ void Cmd_ShakeScreen_f(gentity_t* ent)
 	char arg1[MAX_STRING_CHARS], arg2[MAX_STRING_CHARS], arg3[MAX_STRING_CHARS];
 	gentity_t *other;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_UPDATENEWS)))
+	if (!(ent->client->pers.bitvalue & (1 << ADM_SHAKESCREEN)))
 	{ // admin command
 		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
 		return;
@@ -19016,7 +18981,6 @@ void Cmd_ShakeScreen_f(gentity_t* ent)
 		if (g_entities[i].inuse && g_entities[i].client && g_entities[i].client->pers.connected == CON_CONNECTED && Distance(ent->client->ps.origin, other->client->ps.origin) <= distanceFromPlayer)
 		{
 			G_ScreenShake(g_entities[i].s.origin, &g_entities[i], intensity, duration, qtrue);
-			//Don't do a center print for the target - it would distract from the shaking screen.
 			trap->SendServerCommand(i, "print \"^3An admin shook your screen.\n\"");
 		}
 	}
