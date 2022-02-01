@@ -567,7 +567,8 @@ const admin_command_description_t admin_commands[ADM_NUM_CMDS] = {
 	{ "Ignore Char Distance",	ADM_IGNORECHATDISTANCE	},
 	{ "Give XP",				ADM_XP					},
 	{ "Update News",			ADM_UPDATENEWS			},
-	{ "Remove News",			ADM_REMOVENEWS			}
+	{ "Remove News",			ADM_REMOVENEWS			},
+	{ "Play Music",				ADM_MUSIC				}
 };
 
 qboolean check_admin_command(gentity_t* ent, int admin_command) {
@@ -19212,6 +19213,33 @@ void Cmd_ZykSound_f(gentity_t *ent) {
 	return;
 }
 
+/*
+==================
+Cmd_Music_f
+==================
+*/
+void Cmd_Music_f(gentity_t* ent) {
+	char audioPath[MAX_STRING_CHARS];
+
+	if (!check_admin_command(ent, ADM_MUSIC)) {
+		return;
+	}
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Usage: ^3/playmusic <sound file path>\n\"");
+		return;
+	}
+
+	trap->Argv(1, audioPath, sizeof(audioPath));
+
+	trap->SendServerCommand(ent - g_entities, va("print \"^2You started playing the music file: ^7%s\n\"", audioPath));
+	trap->SetConfigstring(CS_MUSIC, audioPath);
+
+	return;
+}
+
+
 // zyk: quantity of chars this player has
 int zyk_char_count(gentity_t *ent)
 {
@@ -20022,6 +20050,7 @@ command_t commands[] = {
 //	{ "meleearena",			Cmd_MeleeArena_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "meleemode",			Cmd_MeleeMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "modversion",			Cmd_ModVersion_f,			CMD_NOINTERMISSION },
+	{ "music",				Cmd_Music_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "new",				Cmd_Register_F,				CMD_NOINTERMISSION },
 	{ "news",				Cmd_News_f,					0 },
 	{ "newsadd",			Cmd_UpdateNews_f,					0 },
