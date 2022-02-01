@@ -537,6 +537,49 @@ void print_header(gentity_t *ent, char text[MAX_STRING_CHARS]) {
 	print_table_horizontal_line(ent);
 }
 
+typedef struct admin_command_description_s {
+	const char* title;
+	int			number;
+} admin_command_description_t;
+
+const admin_command_description_t admin_commands[ADM_NUM_CMDS] = {
+	{ "NPC",					ADM_NPC					},
+	{ "No Clip",				ADM_NOCLIP				},
+	{ "Give Admin",				ADM_GIVEADM				},
+	{ "Teleport",				ADM_TELE				},
+	{ "Admin Protect",			ADM_ADMPROTECT			},
+	{ "Entity System",			ADM_ENTITYSYSTEM		},
+	{ "Silence",				ADM_SILENCE				},
+	{ "Client Print",			ADM_CLIENTPRINT			},
+	{ "Shake Screen",			ADM_SHAKESCREEN			},
+	{ "Kick",					ADM_KICK				},
+	{ "Paralyze",				ADM_PARALYZE			},
+	{ "Give",					ADM_GIVE				},
+	{ "Scale",					ADM_SCALE				},
+	{ "Players",				ADM_PLAYERS				},
+	{ "Duel Arena",				ADM_DUELARENA			},
+	{ "Placeholder",			ADM_CUSTOMQUEST			},
+	{ "Create Item",			ADM_CREATEITEM			},
+	{ "God Mode",				ADM_GOD					},
+	{ "Level Give",				ADM_LEVELUP				},
+	{ "Skill Give",				ADM_SKILL				},
+	{ "Create Credits",			ADM_CREATECREDITS		},
+	{ "Ignore Char Distance",	ADM_IGNORECHATDISTANCE	},
+	{ "Give XP",				ADM_XP					},
+	{ "Update News",			ADM_UPDATENEWS			},
+	{ "Remove News",			ADM_REMOVENEWS			}
+};
+
+qboolean check_admin_command(gentity_t* ent, int admin_command) {
+	if (!(ent->client->pers.bitvalue & (1 << admin_command)))
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"^1You don't have the necessary admin command to execute this.\n^1You need the ^3%s ^1admin command.\n\"", admin_commands[admin_command].title));
+		return qfalse;
+	}
+	
+	return qtrue;
+}
+
 // alex: plays an animation from anims.h by id OR a word (look for animation_t)
 void Cmd_Emote_f( gentity_t *ent )
 {
@@ -838,9 +881,8 @@ void Cmd_Give_f( gentity_t *ent )
 	char arg2[MAX_TOKEN_CHARS] = {0};
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_GIVE)))
-	{ // zyk: give admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_GIVE))
+	{
 		return;
 	}
 
@@ -1026,9 +1068,8 @@ void Cmd_Scale_f( gentity_t *ent ) {
 	//only ask for admin permissions when scaling someone else
 	if (g_entities[client_id].client->pers.netname != ent->client->pers.netname) {
 
-		if (!(ent->client->pers.bitvalue & (1 << ADM_SCALE)))
-		{ // zyk: scale admin command
-			trap->SendServerCommand(ent - g_entities, "print \"You don't have permission to scale someone else.\n\"");
+		if (!check_admin_command(ent, ADM_SCALE))
+		{
 			return;
 		}
 	}
@@ -1077,9 +1118,8 @@ argv(0) god
 void Cmd_God_f( gentity_t *ent ) {
 	char *msg = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_GOD)))
+	if (!check_admin_command(ent, ADM_GOD))
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
 		return;
 	}
 
@@ -1129,9 +1169,8 @@ argv(0) noclip
 void Cmd_Noclip_f( gentity_t *ent ) {
 	char *msg = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_NOCLIP)))
-	{ // zyk: noclip admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_NOCLIP))
+	{
 		return;
 	}
 
@@ -2984,9 +3023,8 @@ Cmd_CreateItem_f
 void Cmd_CreateItem_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_CREATEITEM)))
+	if (!check_admin_command(ent, ADM_CREATEITEM))
 	{
-		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
 		return;
 	}
 
@@ -12996,9 +13034,8 @@ void Cmd_Teleport_f( gentity_t *ent )
 	char arg3[MAX_STRING_CHARS];
 	char arg4[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_TELE)))
-	{ // zyk: teleport admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_TELE))
+	{
 		return;
 	}
 
@@ -14776,9 +14813,8 @@ void Cmd_Remap_f( gentity_t *ent ) {
 	char arg2[MAX_STRING_CHARS];
 	float f = level.time * 0.001;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -14812,9 +14848,8 @@ void Cmd_RemapList_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -14858,9 +14893,8 @@ void Cmd_RemapDeleteFile_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -14906,9 +14940,8 @@ void Cmd_RemapSave_f( gentity_t *ent ) {
 	int i = 0;
 	FILE *remap_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -14952,9 +14985,8 @@ void Cmd_RemapLoad_f( gentity_t *ent ) {
 	char time_offset[128];
 	FILE *remap_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15006,9 +15038,8 @@ Cmd_EntUndo_f
 ==================
 */
 void Cmd_EntUndo_f(gentity_t *ent) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15028,9 +15059,8 @@ Cmd_EntOrigin_f
 ==================
 */
 void Cmd_EntOrigin_f(gentity_t *ent) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15064,9 +15094,8 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 	qboolean has_origin_set = qfalse; // zyk: if player do not pass an origin key, use the one set with /entorigin
 	qboolean has_angles_set = qfalse; // zyk: if player do not pass an angles key, use the one set with /entorigin
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15186,9 +15215,8 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15282,9 +15310,8 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent->s.number, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15345,9 +15372,8 @@ void Cmd_EntLoad_f( gentity_t *ent ) {
 	int i = 0;
 	FILE *this_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15403,9 +15429,8 @@ void Cmd_EntDeleteFile_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15453,9 +15478,8 @@ void Cmd_EntNear_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	gentity_t *this_ent = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent->s.number, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15546,9 +15570,8 @@ void Cmd_EntList_f( gentity_t *ent ) {
 
 	strcpy(message,"");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15611,9 +15634,8 @@ void Cmd_EntRemove_f( gentity_t *ent ) {
 	char   arg1[MAX_STRING_CHARS];
 	char   arg2[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15685,9 +15707,8 @@ void Cmd_SpawnPlatform_f(gentity_t* ent)
 {
 	gentity_t* new_ent = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15771,9 +15792,8 @@ qboolean is_entity_a_pickup(gentity_t* ent) {
 
 void Cmd_RemovePickups_f(gentity_t* ent) {
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15803,9 +15823,8 @@ void Cmd_ClientPrint_f( gentity_t *ent ) {
 	char   arg1[MAX_STRING_CHARS];
 	char   arg2[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_CLIENTPRINT)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_CLIENTPRINT))
+	{
 		return;
 	}
 
@@ -15841,9 +15860,8 @@ void Cmd_Silence_f( gentity_t *ent ) {
 	int client_id = -1;
 	char   arg[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_SILENCE)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_SILENCE))
+	{
 		return;
 	}
 
@@ -15872,39 +15890,6 @@ void Cmd_Silence_f( gentity_t *ent ) {
 		trap->SendServerCommand( -1, va("chat \"^3Admin System: ^7player %s^7 is silenced!\n\"", g_entities[client_id].client->pers.netname) );
 	}
 }
-
-typedef struct admin_command_description_s {
-	const char* title;
-	int			number;
-} admin_command_description_t;
-
-const admin_command_description_t admin_commands[ADM_NUM_CMDS] = {
-	{ "NPC",					ADM_NPC					},
-	{ "No Clip",				ADM_NOCLIP				},
-	{ "Give Admin",				ADM_GIVEADM				},
-	{ "Teleport",				ADM_TELE				},
-	{ "Admin Protect",			ADM_ADMPROTECT			},
-	{ "Entity System",			ADM_ENTITYSYSTEM		},
-	{ "Silence",				ADM_SILENCE				},
-	{ "Client Print",			ADM_CLIENTPRINT			},
-	{ "Shake Screen",			ADM_SHAKESCREEN			},
-	{ "Kick",					ADM_KICK				},
-	{ "Paralyze",				ADM_PARALYZE			},
-	{ "Give",					ADM_GIVE				},
-	{ "Scale",					ADM_SCALE				},
-	{ "Players",				ADM_PLAYERS				},
-	{ "Duel Arena",				ADM_DUELARENA			},
-	{ "Placeholder",			ADM_CUSTOMQUEST			},
-	{ "Create Item",			ADM_CREATEITEM			},
-	{ "God Mode",				ADM_GOD					},
-	{ "Level Give",				ADM_LEVELUP				},
-	{ "Skill Give",				ADM_SKILL				},
-	{ "Create Credits",			ADM_CREATECREDITS		},
-	{ "Ignore Char Distance",	ADM_IGNORECHATDISTANCE	},
-	{ "Give XP",				ADM_XP					},
-	{ "Update News",			ADM_UPDATENEWS			},
-	{ "Remove News",			ADM_REMOVENEWS			}
-};
 
 // zyk: shows admin commands of this player. Shows info to the target_ent player
 void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
@@ -16182,9 +16167,8 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_SKILL)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_SKILL))
+	{
 		return;
 	}
 
@@ -16222,9 +16206,8 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_SKILL)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_SKILL))
+	{
 		return;
 	}
 
@@ -16262,9 +16245,8 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_LEVELUP)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_LEVELUP))
+	{
 		return;
 	}
    
@@ -16325,9 +16307,8 @@ void Cmd_GiveXp_f(gentity_t* ent) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_XP)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_XP))
+	{
 		return;
 	}
 
@@ -16375,9 +16356,8 @@ void Cmd_RemoveXp_f(gentity_t* ent) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_XP)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_XP))
+	{
 		return;
 	}
 
@@ -16417,9 +16397,8 @@ Cmd_EntitySystem_f
 ==================
 */
 void Cmd_EntitySystem_f( gentity_t *ent ) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -16435,9 +16414,8 @@ void Cmd_AdmKick_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_KICK)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_KICK))
+	{
 		return;
 	}
    
@@ -16540,9 +16518,8 @@ void Cmd_Paralyze_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_PARALYZE)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_PARALYZE))
+	{
 		return;
 	}
    
@@ -16600,9 +16577,8 @@ void Cmd_Players_f( gentity_t *ent ) {
 
 	strcpy(content,"ID - Name - IP - Type\n");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_PLAYERS)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_PLAYERS))
+	{
 		return;
 	}
 
@@ -18331,9 +18307,8 @@ void Cmd_DuelArena_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_DUELARENA))
+	{
 		return;
 	}
 
@@ -18372,9 +18347,8 @@ Cmd_DuelPause_f
 ==================
 */
 void Cmd_DuelPause_f(gentity_t *ent) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_DUELARENA))
+	{
 		return;
 	}
 
@@ -18590,9 +18564,8 @@ void Cmd_MeleeArena_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_DUELARENA))
+	{
 		return;
 	}
 
@@ -18802,9 +18775,8 @@ void Cmd_NewsRemove_f(gentity_t* ent) {
 	char arg1[MAX_STRING_CHARS];
 	int newsID;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_REMOVENEWS)))
-	{ // admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_REMOVENEWS))
+	{
 		return;
 	}
 
@@ -18837,9 +18809,8 @@ void Cmd_UpdateNews_f(gentity_t *ent) {
 	char arg2[MAX_STRING_CHARS];
 	FILE *news_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_UPDATENEWS)))
-	{ // admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_UPDATENEWS))
+	{
 		return;
 	}
 
@@ -18955,9 +18926,8 @@ void Cmd_ShakeScreen_f(gentity_t* ent)
 	char arg1[MAX_STRING_CHARS], arg2[MAX_STRING_CHARS], arg3[MAX_STRING_CHARS];
 	gentity_t *other;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_SHAKESCREEN)))
-	{ // admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_SHAKESCREEN))
+	{
 		return;
 	}
 
@@ -19600,9 +19570,8 @@ void Cmd_CustomQuest_f(gentity_t *ent) {
 	int i = 0;
 	int argc = trap->Argc();
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_CUSTOMQUEST))
+	{
 		return;
 	}
 
