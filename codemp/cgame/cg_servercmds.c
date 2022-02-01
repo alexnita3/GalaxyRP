@@ -1660,6 +1660,14 @@ static void CG_ZykChars(void)
 	}
 }
 
+static void CG_Holo(void) {
+	if (!cg.isHologram)
+		cg.isHologram = qtrue;
+	else
+		cg.isHologram = qfalse;
+	return;
+}
+
 static void CG_ZykMod( void )
 { // zyk: receives account info of logged players
 	char arg[512] = {0};
@@ -2603,6 +2611,7 @@ static serverCommand_t	commands[] = {
 	{ "cp",					CG_CenterPrint_f },
 	{ "cps",				CG_CenterPrintSE_f },
 	{ "cs",					CG_ConfigStringModified },
+	{ "hologram",			CG_Holo },
 	{ "ircg",				CG_RestoreClientGhoul_f },
 	{ "kg2",				CG_KillGhoul2_f },
 	{ "kls",				CG_KillLoopSounds_f },

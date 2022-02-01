@@ -1035,6 +1035,8 @@ Ghoul2 Insert End
 	// 1 - Blue Jetpack Flame
 	int rpg_stuff;
 
+	qboolean isHologram;
+
 	// zyk: current amount of Magic Power (MP) of this RPG player
 	int magic_power;
 
@@ -1270,6 +1272,9 @@ typedef struct cgMedia_s {
 	qhandle_t	endarkenmentShader;
 	qhandle_t	enlightenmentShader;
 	qhandle_t	invulnerabilityShader;
+
+	// GalaxyRP (Alex): [Hologram] Holo shader
+	qhandle_t hologramShader;
 
 #ifdef JK2AWARDS
 	// medals shown during gameplay

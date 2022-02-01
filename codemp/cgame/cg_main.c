@@ -641,6 +641,9 @@ static void CG_RegisterSounds( void ) {
 	cgs.media.saberBlurShader			= trap->R_RegisterShader( "gfx/effects/sabers/saberBlur" );
 	cgs.media.swordTrailShader			= trap->R_RegisterShader( "gfx/effects/sabers/swordTrail" );
 
+	// GalaxyRP (Alex): [Hologram] Here we register the shader for the hologram.
+	cgs.media.hologramShader			= trap->R_RegisterShader("gfx/effects/hologramShader");
+
 	cgs.media.forceCoronaShader			= trap->R_RegisterShaderNoMip( "gfx/hud/force_swirl" );
 
 	cgs.media.yellowDroppedSaberShader	= trap->R_RegisterShader("gfx/effects/yellow_glow");
@@ -2454,6 +2457,7 @@ Ghoul2 Insert End
 
 	// zyk: initialize this value, used by RPG Mode
 	cg.rpg_stuff = 0;
+	cg.isHologram = qfalse;
 
 	cg.magic_power = 100;
 

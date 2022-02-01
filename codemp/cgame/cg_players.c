@@ -8514,6 +8514,15 @@ void CG_Player( centity_t *cent ) {
 		}
 	}
 
+	// GalaxyRP (Alex): [Hologram] Setting the shader stuff
+	if (cg.isHologram)
+	{
+		trap->R_SetRefractionProperties(1.0f, 0.0f, qfalse, qfalse); //don't need to do this every frame.. but..
+		legs.customShader = cgs.media.hologramShader; //crazy "refractive" shader
+		trap->R_AddRefEntityToScene(&legs);
+		legs.customShader = 0;
+	}
+
 	if (cent->currentState.iModelScale)
 	{ //if the server says we have a custom scale then set it now.
 		cent->modelScale[0] = cent->modelScale[1] = cent->modelScale[2] = cent->currentState.iModelScale/100.0f;

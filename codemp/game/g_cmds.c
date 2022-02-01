@@ -18988,6 +18988,24 @@ void Cmd_ShakeScreen_f(gentity_t* ent)
 	return;
 }
 
+void Cmd_Hologram_f(gentity_t* ent)
+{
+	if (!ent->client->sess.isHologram)
+	{
+		ent->client->sess.isHologram = qtrue;
+		trap_SendServerCommand(ent - g_entities, "hologram");
+		trap_SendServerCommand(ent - g_entities, "print \"^2Hologram of yourself ^7ON^2.\n\"");
+		return;
+	}
+	else
+	{
+		ent->client->sess.isHologram = qfalse;
+		trap_SendServerCommand(ent - g_entities, "hologram");
+		trap_SendServerCommand(ent - g_entities, "print \"^2Hologram of yourself ^7OFF^2.\n\"");
+		return;
+	}
+}
+
 /*
 ==================
 Cmd_QuestSkip_f
@@ -20034,6 +20052,7 @@ command_t commands[] = {
 	{ "givecredits",		Cmd_CreditGive_f,			CMD_RPG | CMD_NOINTERMISSION },
 	{ "giveitem",			Cmd_GiveItem_f,				CMD_LOGGEDIN},
 	{ "givexp",				Cmd_GiveXp_f,				CMD_LOGGEDIN},
+	{ "holo",				Cmd_Hologram_f,				CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "god",				Cmd_God_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
 	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },

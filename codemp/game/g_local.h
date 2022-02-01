@@ -485,6 +485,8 @@ typedef struct clientSession_s {
 
 	int accountID;
 
+	qboolean isHologram;
+
 	char filename[32]; // zyk: player account filename
 
 	char rpgchar[32]; // zyk: file name of the RPG char
