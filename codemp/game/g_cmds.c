@@ -18981,6 +18981,51 @@ void Cmd_Attributes_f(gentity_t *ent) {
 
 /*
 ==================
+Cmd_ShakeScreen_f
+==================
+*/
+void Cmd_ShakeScreen_f(gentity_t* ent)
+{
+	int i, distanceFromPlayer, intensity, duration;
+	char arg1[MAX_STRING_CHARS], arg2[MAX_STRING_CHARS], arg3[MAX_STRING_CHARS];
+	gentity_t *other;
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_UPDATENEWS)))
+	{ // admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	if (trap->Argc() != 4)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /shakeScreen <distance from player> <intensity> <length>\nExample: /shakeScreen 5 7\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+	distanceFromPlayer = atoi(arg1);
+	trap->Argv(2, arg2, sizeof(arg2));
+	intensity = atoi(arg2);
+	trap->Argv(3, arg3, sizeof(arg3));
+	duration = atoi(arg3) * 1000;
+
+	for (i = 0; i < level.maxclients; i++)
+	{
+		other = &g_entities[i];
+
+		if (g_entities[i].inuse && g_entities[i].client && g_entities[i].client->pers.connected == CON_CONNECTED && Distance(ent->client->ps.origin, other->client->ps.origin) <= distanceFromPlayer)
+		{
+			G_ScreenShake(g_entities[i].s.origin, &g_entities[i], intensity, duration, qtrue);
+			//Don't do a center print for the target - it would distract from the shaking screen.
+			trap->SendServerCommand(i, "print \"^3An admin shook your screen.\n\"");
+		}
+	}
+	trap->SendServerCommand(ent - g_entities, "print \"^2You shook people's screen.\n\"");
+	return;
+}
+
+/*
+==================
 Cmd_QuestSkip_f
 ==================
 */
@@ -20079,6 +20124,7 @@ command_t commands[] = {
 	{ "sell",				Cmd_Sell_f,					CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "settings",			Cmd_Settings_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
+	{ "shakescreen",		Cmd_ShakeScreen_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
 	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "skilldown",			Cmd_RpModeDown_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
