@@ -383,12 +383,14 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 	rc = sqlite3_exec(db, statement_xp_column_alter, 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
+		if (strcmp(zErrMsg, "duplicate column name: xp") != 0) {
+			trap->Print("SQL error: %s\n", zErrMsg);
+			sqlite3_free(zErrMsg);
+			sqlite3_close(db);
+			return;
+		}
 	}
-	trap->Print("Done with xp column.\n");
+	trap->Print("Done with XP column.\n");
 
 	if (with_admin_account == qtrue) {
 		trap->Print("Initializing admin account.\n");
