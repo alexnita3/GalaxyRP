@@ -7755,43 +7755,6 @@ void initialize_rpg_skills(gentity_t *ent)
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DET_PACK);
 		if (ent->client->pers.skill_levels[45] == 0)
 			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DET_PACK);
-		
-		if (ent->client->pers.rpg_class == 2)
-		{ // zyk: modifying max ammo if the player is a Bounty Hunter
-			gentity_t *this_ent = NULL;
-			int sentry_guns_iterator = 0;
-
-			// zyk: Bounty Hunter starts with 5 sentries if he has the Upgrade
-			if (ent->client->pers.skill_levels[48] > 0)
-			{
-				if (ent->client->pers.secrets_found & (1 << 1))
-					ent->client->pers.bounty_hunter_sentries = MAX_BOUNTY_HUNTER_SENTRIES;
-				else
-					ent->client->pers.bounty_hunter_sentries = 1;
-			}
-			else
-			{
-				ent->client->pers.bounty_hunter_sentries = 0;
-			}
-
-			ent->client->pers.bounty_hunter_placed_sentries = 0;
-
-			for (sentry_guns_iterator = MAX_CLIENTS; sentry_guns_iterator < level.num_entities; sentry_guns_iterator++)
-			{
-				this_ent = &g_entities[sentry_guns_iterator];
-
-				if (this_ent && Q_stricmp(this_ent->classname,"sentryGun") == 0 && this_ent->s.owner == ent->s.number)
-					ent->client->pers.bounty_hunter_placed_sentries++;
-			}
-
-			ent->client->ps.ammo[AMMO_BLASTER] += ent->client->ps.ammo[AMMO_BLASTER] / 6 * ent->client->pers.skill_levels[55];
-			ent->client->ps.ammo[AMMO_POWERCELL] += ent->client->ps.ammo[AMMO_POWERCELL]/6 * ent->client->pers.skill_levels[55];
-			ent->client->ps.ammo[AMMO_METAL_BOLTS] += ent->client->ps.ammo[AMMO_METAL_BOLTS]/6 * ent->client->pers.skill_levels[55];
-			ent->client->ps.ammo[AMMO_ROCKETS] += ent->client->ps.ammo[AMMO_ROCKETS]/6 * ent->client->pers.skill_levels[55];
-			ent->client->ps.ammo[AMMO_THERMAL] += ent->client->ps.ammo[AMMO_THERMAL]/6 * ent->client->pers.skill_levels[55];
-			ent->client->ps.ammo[AMMO_TRIPMINE] += ent->client->ps.ammo[AMMO_TRIPMINE]/6 * ent->client->pers.skill_levels[55];
-			ent->client->ps.ammo[AMMO_DETPACK] += ent->client->ps.ammo[AMMO_DETPACK]/6 * ent->client->pers.skill_levels[55];
-		}
 
 		// zyk: reseting initial holdable items of the player
 		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_SEEKER) & ~(1 << HI_BINOCULARS) & ~(1 << HI_SENTRY_GUN) & ~(1 << HI_EWEB) & ~(1 << HI_CLOAK) & ~(1 << HI_SHIELD) & ~(1 << HI_MEDPAC) & ~(1 << HI_MEDPAC_BIG);
@@ -7828,62 +7791,6 @@ void initialize_rpg_skills(gentity_t *ent)
 		// zyk: loading initial shield of the player
 		set_max_shield(ent);
 		ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
-
-		// zyk: Light Power, Dark Power and Eternity Power use mp
-		if (ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS && !(ent->client->pers.player_settings & (1 << 1)) && 
-			zyk_enable_light_power.integer == 1)
-		{
-			ent->client->pers.magic_power--;
-			ent->client->pers.quest_power_status |= (1 << 14);
-		}
-		else
-		{
-			ent->client->pers.quest_power_status &= ~(1 << 14);
-		}
-
-		if (ent->client->pers.hunter_quest_progress == NUM_OF_OBJECTIVES && !(ent->client->pers.player_settings & (1 << 2)) && 
-			zyk_enable_dark_power.integer == 1)
-		{
-			ent->client->pers.magic_power--;
-			ent->client->pers.quest_power_status |= (1 << 15);
-		}
-		else
-		{
-			ent->client->pers.quest_power_status &= ~(1 << 15);
-		}
-
-		if (ent->client->pers.eternity_quest_progress == NUM_OF_ETERNITY_QUEST_OBJ && !(ent->client->pers.player_settings & (1 << 3)) && 
-			zyk_enable_eternity_power.integer == 1)
-		{
-			ent->client->pers.magic_power--;
-			ent->client->pers.quest_power_status |= (1 << 16);
-		}
-		else
-		{
-			ent->client->pers.quest_power_status &= ~(1 << 16);
-		}
-
-		// zyk: Universe Power
-		if (ent->client->pers.universe_quest_progress > 7 && !(ent->client->pers.player_settings & (1 << 4)) && 
-			zyk_enable_universe_power.integer == 1)
-		{
-			ent->client->pers.quest_power_status |= (1 << 13);
-		}
-		else
-		{
-			ent->client->pers.quest_power_status &= ~(1 << 13);
-		}
-
-		// zyk: the player can have only one of the Unique Abilities. If for some reason he has more, remove all of them
-		if ((ent->client->pers.secrets_found & (1 << 2) && ent->client->pers.secrets_found & (1 << 3)) || 
-			(ent->client->pers.secrets_found & (1 << 2) && ent->client->pers.secrets_found & (1 << 4)) || 
-			(ent->client->pers.secrets_found & (1 << 3) && ent->client->pers.secrets_found & (1 << 4)) || 
-			(ent->client->pers.secrets_found & (1 << 2) && ent->client->pers.secrets_found & (1 << 3) && ent->client->pers.secrets_found & (1 << 4)))
-		{
-			ent->client->pers.secrets_found &= ~(1 << 2);
-			ent->client->pers.secrets_found &= ~(1 << 3);
-			ent->client->pers.secrets_found &= ~(1 << 4);
-		}
 
 		// zyk: update the rpg stuff info at the client-side game
 		send_rpg_events(10000);
@@ -12341,38 +12248,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		}
 	}
 
-	// zyk: class validations. Some items require certain conditions to be bought
-	if (ent->client->pers.rpg_class == 1 && ((value >= 1 && value <= 7) || (value >= 10 && value <= 13) || 
-		(value >= 17 && value <= 24) || (value >= 34 && value <= 38) || (value >= 41 && value <= 42) || value == 48))
-	{
-		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
-		return;
-	}
-	else if (ent->client->pers.rpg_class == 4 && ((value >= 1 && value <= 7) || (value >= 10 && value <= 13) || 
-			(value >= 17 && value <= 24) || (value >= 34 && value <= 38) || (value >= 41 && value <= 42) || value == 48))
-	{
-		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
-		return;
-	}
-	else if (ent->client->pers.rpg_class == 6 && ((value >= 1 && value <= 7) || (value >= 10 && value <= 13) || 
-			(value >= 17 && value <= 24) || (value >= 34 && value <= 38) || (value >= 41 && value <= 42) || value == 48))
-	{
-		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
-		return;
-	}
-	else if (ent->client->pers.rpg_class == 8 && ((value >= 1 && value <= 7) || (value >= 10 && value <= 13) || 
-			(value >= 17 && value <= 24) || (value >= 35 && value <= 38) || value == 48))
-	{
-		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
-		return;
-	}
-	else if (ent->client->pers.rpg_class == 9 && ((value >= 2 && value <= 7) || (value >= 10 && value <= 11) || value == 13 ||
-		(value >= 18 && value <= 24) || (value >= 34 && value <= 38) || value == 48))
-	{
-		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
-		return;
-	}
-
 	// zyk: general validations. Some items require certain conditions to be bought
 	if (value == 8 && ent->client->pers.secrets_found & (1 << 7))
 	{
@@ -12745,15 +12620,7 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		ent->client->pers.credits -= item_costs[value-1];
 		save_account(ent, qtrue);
 
-		// zyk: setting the cooldown time to buy and sell stuff. Bounty Hunter remote buying system has its own cooldown time cvar
-		if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) && found == 0)
-		{
-			ent->client->pers.buy_sell_timer = level.time + zyk_bh_remote_buying_cooldown.integer;
-		}
-		else
-		{
-			ent->client->pers.buy_sell_timer = level.time + zyk_buying_selling_cooldown.integer;
-		}
+		ent->client->pers.buy_sell_timer = level.time + zyk_buying_selling_cooldown.integer;
 
 		trap->SendServerCommand( ent-g_entities, va("chat \"^3Jawa Seller: ^7Thanks %s^7!\n\"",ent->client->pers.netname) );
 
@@ -14093,34 +13960,6 @@ void save_config(gentity_t *ent)
 		
 		fclose(config_file);
 	}
-}
-
-/*
-==================
-Cmd_RpgClass_f
-==================
-*/
-void Cmd_RpgClass_f( gentity_t *ent ) {
-	char arg1[MAX_STRING_CHARS];
-	int value = 0;
-
-	return;
-
-	if (trap->Argc() == 1)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Look at ^3/list classes ^7to see the class number, then ^2/rpgclass <class number>^7\n\"" );
-		return;
-	}
-
-	trap->Argv(1, arg1, sizeof( arg1 ));
-	value = atoi(arg1);
-
-	if (zyk_rp_mode.integer == 1)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You can't change class when RP Mode is activated by an admin.\n\"" );
-		return;
-	}
-
 }
 
 /*
@@ -19011,153 +18850,6 @@ void Cmd_ShakeScreen_f(gentity_t* ent)
 
 /*
 ==================
-Cmd_QuestSkip_f
-==================
-*/
-void Cmd_QuestSkip_f(gentity_t *ent) {
-	if (ent->client->pers.can_play_quest == 1)
-	{
-		if (ent->client->pers.universe_quest_progress == 1 && ent->client->pers.universe_quest_messages > 4)
-		{
-			ent->client->pers.universe_quest_messages = 35;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 3 && ent->client->pers.universe_quest_messages > 0)
-		{
-			ent->client->pers.universe_quest_messages = 16;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 4 && ent->client->pers.universe_quest_messages > 5)
-		{
-			ent->client->pers.universe_quest_messages = 18;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 5 && number_of_amulets(ent) == 3 && ent->client->pers.universe_quest_messages > 205)
-		{
-			ent->client->pers.universe_quest_messages = 223;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 8 && ent->client->pers.universe_quest_messages > 1)
-		{
-			ent->client->pers.universe_quest_messages = 20;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 10 && ent->client->pers.universe_quest_messages > 1)
-		{
-			ent->client->pers.universe_quest_messages = 18;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 12 && ent->client->pers.universe_quest_messages > 1)
-		{
-			ent->client->pers.universe_quest_messages = 24;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 13 && ent->client->pers.universe_quest_messages > 1)
-		{
-			ent->client->pers.universe_quest_messages = 27;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 15)
-		{
-			if (ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Sages Sequel
-				ent->client->pers.universe_quest_messages = 30;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Guardians Sequel
-				ent->client->pers.universe_quest_messages = 19;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.universe_quest_messages >= 24)
-			{ // zyk: Thor Sequel
-				ent->client->pers.universe_quest_messages = 34;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Time Sequel
-				ent->client->pers.universe_quest_messages = 35;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-		}
-		else if (ent->client->pers.universe_quest_progress == 17)
-		{
-			if (ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Sages Sequel
-				ent->client->pers.universe_quest_messages = 28;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Guardians Sequel
-				ent->client->pers.universe_quest_messages = 9;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Thor Sequel
-				ent->client->pers.universe_quest_messages = 15;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.universe_quest_messages >= 14)
-			{ // zyk: Time Sequel
-				ent->client->pers.universe_quest_messages = 21;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-		}
-		else if (ent->client->pers.universe_quest_progress == 19)
-		{
-			if (ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.universe_quest_messages >= 10)
-			{ // zyk: Sages Sequel
-				ent->client->pers.universe_quest_messages = 26;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Guardians Sequel
-				ent->client->pers.universe_quest_messages = 8;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Thor Sequel
-				ent->client->pers.universe_quest_messages = 13;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.universe_quest_messages >= 53)
-			{ // zyk: Time Sequel
-				ent->client->pers.universe_quest_messages = 64;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-		}
-		else if (ent->client->pers.universe_quest_progress == 21)
-		{
-			if (ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.universe_quest_messages >= 10)
-			{ // zyk: Sages Sequel
-				ent->client->pers.universe_quest_messages = 30;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Guardians Sequel
-				ent->client->pers.universe_quest_messages = 12;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Thor Sequel
-				ent->client->pers.universe_quest_messages = 10;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.universe_quest_messages >= 53)
-			{ // zyk: Time Sequel
-				ent->client->pers.universe_quest_messages = 70;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-		}
-	}
-	else
-	{
-		trap->SendServerCommand(ent->s.number, "chat \"^3Quest System: ^7Must be in a quest to use this command\"");
-	}
-}
-
-/*
-==================
 Cmd_NoFight_f
 ==================
 */
@@ -19289,41 +18981,6 @@ void Cmd_Music_f(gentity_t* ent) {
 	return;
 }
 
-
-// zyk: quantity of chars this player has
-int zyk_char_count(gentity_t *ent)
-{
-	FILE *chars_file;
-	char content[64];
-	int i = 0;
-	int count = 0;
-
-#if defined(__linux__)
-	system(va("cd GalaxyRP/accounts ; ls %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
-#else
-	system(va("cd \"GalaxyRP/accounts\" & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
-#endif
-
-	chars_file = fopen(va("GalaxyRP/accounts/chars_%d.txt", ent->s.number), "r");
-	if (chars_file != NULL)
-	{
-		i = fscanf(chars_file, "%s", content);
-		while (i != EOF)
-		{
-			if (Q_stricmp(content, va("chars_%d.txt", ent->s.number)) != 0)
-			{ // zyk: counting this char
-				count++;
-			}
-			i = fscanf(chars_file, "%s", content);
-		}
-		fclose(chars_file);
-	}
-
-	return count;
-}
-
-
-
 qboolean Is_Char_Name_Valid(char charName[MAX_STRING_CHARS]) {
 
 	char forbiddenCharacters[MAX_STRING_CHARS] = " ?!�$%^&*()-+=][{}#~';:/>.<,|";
@@ -19338,7 +18995,6 @@ qboolean Is_Char_Name_Valid(char charName[MAX_STRING_CHARS]) {
 
 	return qtrue;
 }
-
 
 /*
 ==================
