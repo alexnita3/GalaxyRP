@@ -2726,27 +2726,6 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 			return;
 		}
 
-		if (ent->spawnflags & 262144)
-		{ // zyk: custom quest item
-			// zyk: remove touch function to avoid getting it again
-			ent->touch = NULL;
-
-			level.zyk_quest_item_count--;
-
-			if (level.zyk_quest_item_count == 0)
-			{
-				level.zyk_hold_quest_mission = qfalse;
-			}
-
-			// zyk: increasing the number of steps done in this mission
-			zyk_set_quest_field(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done", va("%d", atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done")) + 1));
-
-			ent->think = G_FreeEntity;
-			ent->nextthink = level.time;
-
-			return;
-		}
-
 		if (other->client->pers.rpg_class == 1 && ((ent->item->giType == IT_WEAPON && ent->item->giTag != WP_STUN_BATON) || ent->item->giType == IT_AMMO || 
 			ent->item->giType == IT_HOLDABLE))
 		{

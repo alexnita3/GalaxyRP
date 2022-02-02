@@ -148,7 +148,6 @@ Common / new functions
 */
 
 char		*zyk_get_mission_value(int custom_quest, int mission, char *key);
-void		zyk_set_quest_field(int quest_number, int mission_number, char *key, char *value);
 qboolean	zyk_is_ally(gentity_t *ent, gentity_t *other);
 int			zyk_number_of_allies(gentity_t *ent, qboolean in_rpg_mode);
 void		send_rpg_events(int send_event_timer);
