@@ -2146,10 +2146,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 	//alex: create tables required for storing stuff, and also create admin account. ONLY if those do not already exist.
 	InitializeGalaxyRpTables(qtrue);
-
 }
-
-
 
 /*
 =================

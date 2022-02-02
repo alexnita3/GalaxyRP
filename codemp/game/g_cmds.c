@@ -9668,32 +9668,6 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 	return qtrue;
 }
 
-char *zyk_rpg_class(gentity_t *ent)
-{
-	if (ent->client->pers.rpg_class == 0)
-		return "Free Warrior";
-	else if (ent->client->pers.rpg_class == 1)
-		return "Force User";
-	else if (ent->client->pers.rpg_class == 2)
-		return "Bounty Hunter";
-	else if (ent->client->pers.rpg_class == 3)
-		return "Armored Soldier";
-	else if (ent->client->pers.rpg_class == 4)
-		return "Monk";
-	else if (ent->client->pers.rpg_class == 5)
-		return "Stealth Attacker";
-	else if (ent->client->pers.rpg_class == 6)
-		return "Duelist";
-	else if (ent->client->pers.rpg_class == 7)
-		return "Force Gunner";
-	else if (ent->client->pers.rpg_class == 8)
-		return "Magic Master";
-	else if (ent->client->pers.rpg_class == 9)
-		return "Force Guardian";
-	else
-		return "";
-}
-
 char *zyk_get_settings_values(gentity_t *ent)
 {
 	int i = 0;
@@ -9787,177 +9761,6 @@ char *zyk_get_settings_values(gentity_t *ent)
 	return G_NewString(content);
 }
 
-/*
-==================
-Cmd_ZykMod_f
-==================
-*/
-void Cmd_ZykMod_f( gentity_t *ent ) {
-	// zyk: sends info to the client-side menu if player has the client-side plugin
-	int universe_quest_counter_value = 0;
-
-	if (Q_stricmp(ent->client->pers.guid, "NOGUID") == 0)
-	{
-		return;
-	}
-
-	if (ent->client->sess.amrpgmode == 2)
-	{
-		int i = 0;
-		int quest_player_id = MAX_CLIENTS;
-		char content[1024];
-		int unique_duration = 0;
-
-		strcpy(content,"");
-
-		for (i = 0; i < level.maxclients; i++)
-		{
-			gentity_t *player_ent = &g_entities[i];
-
-			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.can_play_quest == 1)
-			{ // zyk: found the quest player
-				quest_player_id = i;
-				break;
-			}
-		}
-
-		for (i = 0; i < NUM_OF_SKILLS; i++)
-		{
-			strcpy(content, va("%s%d/%d-", content, ent->client->pers.skill_levels[i], max_skill_levels[i]));
-		}
-
-		strcpy(content, va("%s%s", content, zyk_get_settings_values(ent)));
-
-		if (ent->client->pers.universe_quest_progress == 2)
-		{
-			universe_quest_counter_value = number_of_artifacts(ent);
-		}
-		else if (ent->client->pers.universe_quest_progress == 5)
-		{
-			universe_quest_counter_value = number_of_amulets(ent);
-		}
-		else if (ent->client->pers.universe_quest_progress == 8)
-		{
-			universe_quest_counter_value = ent->client->pers.universe_quest_counter;
-		}
-		else if (ent->client->pers.universe_quest_progress == 9)
-		{
-			universe_quest_counter_value = number_of_crystals(ent);
-		}
-		else if (ent->client->pers.universe_quest_progress > 14)
-		{
-			universe_quest_counter_value = ent->client->pers.universe_quest_counter;
-
-			if (ent->client->pers.unique_skill_timer > level.time && ent->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ &&
-				ent->client->pers.universe_quest_counter & (1 << 2) && !(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
-			{ // zyk: Unique Boost decreases unique cooldown time
-				universe_quest_counter_value |= (1 << 30);
-			}
-		}
-
-		if (ent->client->pers.unique_skill_duration > level.time)
-		{
-			unique_duration = ent->client->pers.unique_skill_duration - level.time;
-		}
-
-		strcpy(content,va("%s%d-%d-%d-%d-%d-%d-%d-%d-",content,ent->client->pers.secrets_found,ent->client->pers.defeated_guardians,ent->client->pers.hunter_quest_progress,
-			ent->client->pers.eternity_quest_progress,ent->client->pers.universe_quest_progress,universe_quest_counter_value,quest_player_id,unique_duration));
-
-		trap->SendServerCommand(ent->s.number, va("zykmod \"%d/%d-%d/%d-%d-%d/%d-%d/%d-%d-%s-%s\"",ent->client->pers.level, zyk_rpg_max_level.integer,ent->client->pers.level_up_score,(ent->client->pers.level * zyk_level_up_score_factor.integer),ent->client->pers.skillpoints,ent->client->pers.skill_counter,zyk_max_skill_counter.integer,ent->client->pers.magic_power,zyk_max_magic_power(ent),ent->client->pers.credits,zyk_rpg_class(ent),content));
-	}
-	else if (ent->client->sess.amrpgmode == 1)
-	{ // zyk: just sends the player settings
-		int i = 0;
-		char content[1024];
-
-		strcpy(content,"");
-
-		for (i = 0; i < 69; i++)
-		{
-			if (i == 63)
-			{
-				strcpy(content, va("%s%s", content, zyk_get_settings_values(ent)));
-			}
-			else
-			{
-				strcpy(content, va("%s0-", content));
-			}
-				
-		}
-
-		trap->SendServerCommand(ent->s.number, va("zykmod \"%s\"", content));
-	}
-}
-
-char *zyk_get_rpg_chars(gentity_t *ent, char *separator)
-{
-	FILE *chars_file;
-	char content[64];
-	char chars[MAX_STRING_CHARS];
-	int i = 0;
-
-	strcpy(content, "");
-	strcpy(chars, "");
-
-#if defined(__linux__)
-	system(va("cd GalaxyRP/accounts ; ls %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
-#else
-	system(va("cd \"GalaxyRP/accounts\" & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
-#endif
-
-	chars_file = fopen(va("GalaxyRP/accounts/chars_%d.txt", ent->s.number), "r");
-	if (chars_file != NULL)
-	{
-		i = fscanf(chars_file, "%s", content);
-		while (i != EOF)
-		{
-			if (Q_stricmp(content, va("chars_%d.txt", ent->s.number)) != 0)
-			{ // zyk: getting the char names
-				int j = strlen(ent->client->sess.filename) + 1, k = 0;
-
-				while (j < 64)
-				{
-					if (content[j] == '.' && content[j + 1] == 't' && content[j + 2] == 'x' && content[j + 3] == 't')
-					{
-						content[k] = '\0';
-						break;
-					}
-					else
-					{
-						content[k] = content[j];
-					}
-
-					j++;
-					k++;
-				}
-
-				if (strstr(content, "_ammo") == NULL) {
-					strcpy(chars, va("%s^7%s%s", chars, content, separator));
-				}
-			}
-			i = fscanf(chars_file, "%s", content);
-		}
-		fclose(chars_file);
-	}
-
-	return G_NewString(chars);
-}
-
-/*
-==================
-Cmd_ZykChars_f
-==================
-*/
-void Cmd_ZykChars_f(gentity_t *ent) {
-	// zyk: sends info to the client-side menu if player has the client-side plugin
-	if (Q_stricmp(ent->client->pers.guid, "NOGUID") == 0)
-	{
-		return;
-	}
-
-	trap->SendServerCommand(ent->s.number, va("zykchars \"%s^7%s<zykc>\"", zyk_get_rpg_chars(ent, "<zyk>"), ent->client->sess.rpgchar));
-}
-
 qboolean validate_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, qboolean dont_show_message)
 {
 	// zyk: validation on the upgrade level, which must be in the range of valid skills.
@@ -9976,14 +9779,6 @@ qboolean validate_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_val
 				trap->SendServerCommand(ent2 - g_entities, "print \"^1Target player doesn't have enough skillpoints.\n\"");
 			}
 		}
-		return qfalse;
-	}
-
-	// zyk: skill must be allowed to the player RPG class
-	if (zyk_skill_allowed_for_class(upgrade_value - 1, ent->client->pers.rpg_class) == qfalse)
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent->s.number, va("print \"%s class doesn't allow this skill.\n\"", zyk_rpg_class(ent)));
 		return qfalse;
 	}
 
@@ -10083,8 +9878,6 @@ void do_upgrade_skill(gentity_t *ent, gentity_t *target_ent, int upgrade_value, 
 
 		trap->SendServerCommand(target_ent -g_entities, "print \"^2Skill upgraded successfully.\n\"" );
 		trap->SendServerCommand(ent - g_entities, "print \"^2Target skill upgraded successfully.\n\"");
-
-		Cmd_ZykMod_f(target_ent);
 	}
 	else
 	{ // zyk: update all skills
@@ -10109,7 +9902,6 @@ void do_upgrade_skill(gentity_t *ent, gentity_t *target_ent, int upgrade_value, 
 
 		trap->SendServerCommand( ent-g_entities, "print \"Skills upgraded successfully.\n\"" );
 		trap->SendServerCommand(ent - g_entities, "print \"Target skill upgraded successfully.\n\"");
-		Cmd_ZykMod_f(target_ent);
 	}
 }
 
@@ -11041,8 +10833,6 @@ void do_downgrade_skill(gentity_t *ent, int downgrade_value)
 	update_skills_table_row_with_current_values(ent);
 
 	trap->SendServerCommand( ent-g_entities, "print \"Skill downgraded successfully.\n\"" );
-
-	Cmd_ZykMod_f(ent);
 }
 
 /*
@@ -12624,7 +12414,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 
 		trap->SendServerCommand( ent-g_entities, va("chat \"^3Jawa Seller: ^7Thanks %s^7!\n\"",ent->client->pers.netname) );
 
-		Cmd_ZykMod_f(ent);
 	}
 	else
 	{
@@ -13864,7 +13653,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			G_Kill(ent);
 		}
 
-		Cmd_ZykMod_f(ent);
 	}
 }
 
@@ -17152,7 +16940,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 			}
 
 			zyk_unique_boost(ent);
-			Cmd_ZykMod_f(ent);
 		}
 		else
 		{
@@ -17477,7 +17264,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 			}
 
 			zyk_unique_boost(ent);
-			Cmd_ZykMod_f(ent);
 		}
 		else
 		{
@@ -17883,7 +17669,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 			}
 
 			zyk_unique_boost(ent);
-			Cmd_ZykMod_f(ent);
 		}
 		else
 		{
@@ -19029,22 +18814,6 @@ void save_quest_file(int quest_number)
 	fclose(quest_file);
 }
 
-// zyk: gets a key value for Custom Quest
-char *zyk_get_mission_value(int custom_quest, int mission, char *key)
-{
-	int i = 0;
-
-	for (i = 0; i < level.zyk_custom_quest_mission_values_count[custom_quest][mission]; i += 2)
-	{
-		if (Q_stricmp(level.zyk_custom_quest_missions[custom_quest][mission][i], key) == 0)
-		{
-			return G_NewString(level.zyk_custom_quest_missions[custom_quest][mission][i + 1]);
-		}
-	}
-
-	return "";
-}
-
 /*
 ==================
 Cmd_DuelBoard_f
@@ -19291,9 +19060,6 @@ command_t commands[] = {
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
 	{ "zykfile",			Cmd_ZykFile_f,				CMD_NOINTERMISSION }
-//	{ "zykchars",			Cmd_ZykChars_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-//	{ "zykmod",				Cmd_ZykMod_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-//	{ "customquest",		Cmd_CustomQuest_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 //	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 //	{ "meleearena",			Cmd_MeleeArena_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "bountyquest",		Cmd_BountyQuest_f,			CMD_RPG|CMD_NOINTERMISSION },

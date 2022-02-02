@@ -5771,8 +5771,6 @@ qboolean G_SpecialRollGetup(gentity_t *self)
 	return rolled;
 }
 
-extern char *zyk_rpg_class(gentity_t *ent);
-extern int zyk_max_magic_power(gentity_t *ent);
 void sense_health_info(gentity_t *self, gentity_t *target)
 {
 	int client_health = 0;
@@ -5818,22 +5816,15 @@ void sense_health_info(gentity_t *self, gentity_t *target)
 		{
 			strcpy(player_type, "NPC");
 		}
-		else if (target->client->sess.amrpgmode == 1)
-		{
-			strcpy(player_type, "Admin-Only Player");
-		}
 		else if (target->client->sess.amrpgmode == 2)
 		{
-			strcpy(player_type, zyk_rpg_class(target));
+			strcpy(player_type, "Player");
 
 			// zyk: calculating the max armor of this player
 			client_max_armor = target->client->pers.max_rpg_shield;
-
-			magic_power = target->client->pers.magic_power;
-			max_magic_power = zyk_max_magic_power(target);
 		}
 
-		trap->SendServerCommand(self->s.number, va("cp \"%s\n^1%d^3/^1%d  ^2%d^3/^2%d\n^5%d^3/^5%d  ^7%d^3/^7%d\n^7%s\n\"", client_name, client_health, target->client->ps.stats[STAT_MAX_HEALTH], client_armor, client_max_armor, target->client->ps.fd.forcePower, target->client->ps.fd.forcePowerMax, magic_power, max_magic_power, player_type));
+		trap->SendServerCommand(self->s.number, va("cp \"%s\n^1%d^3/^1%d  ^2%d^3/^2%d\n^5%d^3/^5%d \n^7%s\n\"", client_name, client_health, target->client->ps.stats[STAT_MAX_HEALTH], client_armor, client_max_armor, target->client->ps.fd.forcePower, target->client->ps.fd.forcePowerMax, player_type));
 	}
 }
 
