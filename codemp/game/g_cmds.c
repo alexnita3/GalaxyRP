@@ -11497,7 +11497,57 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 			}
 			else if (Q_stricmp( arg1, "commands" ) == 0)
 			{
-				trap->SendServerCommand( ent-g_entities, "print \"\n^2Commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account.\n^3/up [skill number]: ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n^3/down [skill number]: ^7downgrades a skill.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [command number]: ^7gives the player an admin command.\n^3/admindown [player id or name] [command number]: ^7removes an admin command from a player.\n^3/callseller: ^7calls the jawa seller.\n^3/givecredits [player id or name] [amount]: ^7gives credits to a player.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/tutorial: ^7shows all info about the mod.\n^3/logout: ^7logs out the account.\n\n\"" );
+				trap->SendServerCommand(ent - g_entities, "print \"\n^2Commands\n\n\^3--------Account--------\n\
+^3/new [login] [password]: ^7creates a new account.\n\
+^3/login [login] [password]: ^7loads the account.\n\
+^3/logout: ^7logs out the account.\n\
+^3/changepassword <new password>: ^7changes the account password.\n\n\" ");
+				trap->SendServerCommand(ent - g_entities, "print \"^3--------Character--------\n\
+^3/attributes <description>: ^7Sets your character's description. Can be viewed by others with ^3\ex^7.\n\
+^3/examine <player name>: ^7Displays someone's character description. (/ex can be used also)\n\
+^3/char <new/use/delete (optional)> <character name (optional)>: ^7Creates/switches to/deletes a character. Run with no arguments to list your characters.\n\n\" ");
+				trap->SendServerCommand(ent - g_entities, "print \"^3--------Admin Commands--------\n\
+^3/adminlist: ^7lists admin commands.\n\
+^3/adminup <player name> <command number>: ^7gives the player an admin command.\n\
+^3/admindown <player name> <command number>: ^7removes an admin command from a player.\n\
+^3/music <path>: ^7Replaces the current map music with the song given.\n\
+^3/levelup <player name>: ^7Levels the player up by one.\n\
+^3/leveldown <player name>: ^7Brings the player's level down by one.\n\
+^3/givexp <player name>: ^7Gives the player one xp.\n\
+^3/skillup <player name> <skill number>: ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"^3/skildown <player name> <skill number>: ^7downgrades a skill.\n\
+^3/god: ^7Makes you invincible.\n\
+^3/players <player name> <force/weapons/orther/ammo/items/stuff (optional)>: ^7Checks a player's abilities and stats.\n\
+^3/telemark: ^7Sets a marker you can teleport to later.\n\
+^3/teleport <player name (optional)>: ^7Teleport to the player. Use with no arguments to teleport to your telemark.\n\
+^3/silence <player name>: ^7Silences the player.\n\
+^3/paralyze <player name>: ^7Paralyzes the player.\n\
+^3/clientprint <player name> <text>: ^7Prints text on the player's screen.\n\
+^3/shakescreen <distance from player> <intensity> <length>: ^7Shakes players' screen who are a certain distance from you.\n\
+^3/noclip: ^7Makes you able to go through walls.\n\n\" ");
+				trap->SendServerCommand(ent - g_entities, "print \"^3--------Entity System--------\n\
+^3/entlist <page>: ^7Displays entities present on the map.\n\
+^3/entadd <entity parameters>: ^7Adds an entity to the map.\n\
+^3/entsave <filename>: ^7Saves the current entities in a preset file. (use 'default' to load the preset as soon as the map changes)\n\
+^3/entload <filename>: ^7Loads a preset of entities.\n\
+^3/entorigin: ^7Saves current location for entity spawning.\n\
+^3/entundo: ^7Undos the last entity spawned. Only works once.\n\
+^3/spawnplatform: ^7Spawns a platform where the player is.\n\
+^3/spawndummy: ^7Spawns a dummy where the player is.\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"^3--------Credits--------\n\
+^3/callseller: ^7calls the jawa seller.\n\
+^3/createcredits: ^7Creates credits and gives them to a player. ^1(Admin only)\n\
+^3/spendcredits: ^7Deletes credits from your inventory and displays a message. (For paying NPCs)\n\
+^3/givecredits <player name> <amount>: ^7gives credits to a player.\n\n\"" );
+				trap->SendServerCommand(ent - g_entities, "print \"^3--------Ally System--------\n\
+^3/allyadd <player name>: ^7Adds a player as an ally.\n\
+^3/allyremove <player name>: ^7Removes the player from allies.\n\
+^3/allylist: ^7Lists your allies.\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"^3--------Misc--------\n\
+^3/flipcoin: ^7Flips a coin and displays the result in chat.\n\
+^3/roll <max value>: ^7Rolls a dice and displays the result in chat.\n\
+^3/anim <id/word/list>: ^7Plays an animation by id or word. List is for listing all the available animations.\n\
+^3/where: ^7Displays your current coordinates.\n\n\"");
 			}
 			else if (Q_stricmp( arg1, "stuff" ) == 0)
 			{
@@ -19999,7 +20049,6 @@ command_t commands[] = {
 	{ "debugBMove_Left",	Cmd_BotMoveLeft_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "debugBMove_Right",	Cmd_BotMoveRight_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "debugBMove_Up",		Cmd_BotMoveUp_f,			CMD_CHEAT|CMD_ALIVE },
-	{ "down",				Cmd_DownSkill_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "drop",				Cmd_Drop_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "duelarena",			Cmd_DuelArena_f,			CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "duelboard",			Cmd_DuelBoard_f,			CMD_NOINTERMISSION },
@@ -20107,7 +20156,6 @@ command_t commands[] = {
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN},
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
 //	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
-	{ "up",					Cmd_UpSkill_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "voice_cmd",			Cmd_VoiceCommand_f,			CMD_NOINTERMISSION },
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
