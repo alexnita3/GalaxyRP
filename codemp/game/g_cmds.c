@@ -18351,69 +18351,6 @@ void Cmd_RpgLmsTable_f(gentity_t *ent) {
 
 /*
 ==================
-Cmd_Tutorial_f
-==================
-*/
-void Cmd_Tutorial_f(gentity_t *ent) {
-	int page = 1; // zyk: page the user wants to see
-	int i = 0;
-	int results_per_page = zyk_list_cmds_results_per_page.integer; // zyk: number of results per page
-	char arg1[MAX_STRING_CHARS];
-	char file_content[MAX_STRING_CHARS * 4];
-	char content[MAX_STRING_CHARS];
-	FILE *tutorial_file = NULL;
-
-	if (trap->Argc() < 2)
-	{
-		trap->SendServerCommand(ent->s.number, "print \"You must pass a page number. Example: ^3/tutorial 1^7\n\"");
-		return;
-	}
-
-	strcpy(file_content, "");
-	strcpy(content, "");
-
-	trap->Argv(1, arg1, sizeof(arg1));
-	page = atoi(arg1);
-
-	tutorial_file = fopen("GalaxyRP/tutorial.txt", "r");
-	if (tutorial_file != NULL)
-	{
-		if (page > 0)
-		{ // zyk: show results of this page
-			while (i < (results_per_page * (page - 1)) && fgets(content, sizeof(content), tutorial_file) != NULL)
-			{ // zyk: reads the file until it reaches the position corresponding to the page number
-				i++;
-			}
-
-			while (i < (results_per_page * page) && fgets(content, sizeof(content), tutorial_file) != NULL)
-			{ // zyk: fgets returns NULL at EOF
-				strcpy(file_content, va("%s%s", file_content, content));
-				i++;
-			}
-		}
-		else
-		{ // zyk: search for the string
-			while (i < results_per_page && fgets(content, sizeof(content), tutorial_file) != NULL)
-			{ // zyk: fgets returns NULL at EOF
-				if (strstr(G_NewString(content), G_NewString(arg1)))
-				{
-					strcpy(file_content, va("%s%s", file_content, content));
-					i++;
-				}
-			}
-		}
-
-		fclose(tutorial_file);
-		trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\"", file_content));
-	}
-	else
-	{
-		trap->SendServerCommand(ent->s.number, "print \"Tutorial file does not exist\n\"");
-	}
-}
-
-/*
-==================
 Cmd_News_f
 ==================
 */
@@ -19064,7 +19001,6 @@ command_t commands[] = {
 //	{ "meleearena",			Cmd_MeleeArena_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "bountyquest",		Cmd_BountyQuest_f,			CMD_RPG|CMD_NOINTERMISSION },
 //	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
-//	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 //	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },
 //	{ "kylesmash",			TryGrapple,					0 },
 
