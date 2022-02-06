@@ -998,6 +998,10 @@ typedef struct clientPersistant_s {
 
 	// zyk: player id that is fighting this guardian
 	int guardian_invoked_by_id;
+
+	// Tr!Force: [Plugin] Client plugin check
+	qboolean		clientPlugin;	
+
 } clientPersistant_t;
 
 typedef struct renderInfo_s
@@ -2050,6 +2054,7 @@ void QDECL G_LogPrintf( const char *fmt, ... );
 void QDECL G_SecurityLogPrintf( const char *fmt, ... );
 void SendScoreboardMessageToAllClients( void );
 const char *G_GetStringEdString(char *refSection, char *refName);
+void RP_CVU_pluginRequired(void);
 
 //
 // g_client.c

@@ -8373,6 +8373,12 @@ static void CG_Draw2D( void ) {
 		return;
 	}
 
+	// Tr!Force: [CGameGeneral] Server mod check
+	if (!cgs.modCheck)
+	{
+		CG_CenterPrint(CG_GetStringEdString("RP_INGAME", "MOD_ALERT"), SCREEN_HEIGHT * .30, 0);
+	}
+
 	if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_SPECTATOR)
 	{
 		cgRageTime = 0;

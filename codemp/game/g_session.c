@@ -269,7 +269,7 @@ void G_InitSessionData( gclient_t *client, char *userinfo, qboolean isBot ) {
 					level.numNonSpectatorClients >= g_maxGameClients.integer ) {
 					sess->sessionTeam = TEAM_SPECTATOR;
 				} else {
-					sess->sessionTeam = TEAM_FREE;
+					sess->sessionTeam = (rp_pluginRequired.integer == 2 && !client->pers.clientPlugin && !isBot) ? TEAM_SPECTATOR : TEAM_FREE; // Tr!Force: [Plugin] Don't allow
 				}
 				break;
 			case GT_DUEL:
@@ -277,7 +277,7 @@ void G_InitSessionData( gclient_t *client, char *userinfo, qboolean isBot ) {
 				if ( level.numNonSpectatorClients >= 2 ) {
 					sess->sessionTeam = TEAM_SPECTATOR;
 				} else {
-					sess->sessionTeam = TEAM_FREE;
+					sess->sessionTeam = (rp_pluginRequired.integer == 2 && !client->pers.clientPlugin && !isBot) ? TEAM_SPECTATOR : TEAM_FREE; // Tr!Force: [Plugin] Don't allow
 				}
 				break;
 			case GT_POWERDUEL:

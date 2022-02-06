@@ -714,6 +714,7 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd ) {
 		client->ps.pm_type = PM_SPECTATOR;
 		client->ps.speed = 400;	// faster than normal
 		client->ps.basespeed = 400;
+		client->ps.forceHandExtend = rp_pluginRequired.integer == 2 && !client->pers.clientPlugin ? HANDEXTEND_KNOCKDOWN : HANDEXTEND_NONE; // Tr!Force: [Plugin] Don't allow user actions
 
 		//hmm, shouldn't have an anim if you're a spectator, make sure
 		//it gets cleared.
