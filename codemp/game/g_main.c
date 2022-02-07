@@ -164,6 +164,23 @@ void G_CacheMapname( const vmCvar_t *mapname )
 	Com_sprintf( level.rawmapname, sizeof( level.rawmapname ), "maps/%s", mapname->string );
 }
 
+void RP_CVU_pluginRequired(void)
+{
+	if (rp_pluginRequired.integer == 2)
+	{
+		gentity_t *ent;
+		int i;
+
+		for (i = 0, ent = g_entities; i < MAX_CLIENTS; ++i, ++ent)
+		{
+			if (ent && ent->client && ent->client->pers.connected != CON_DISCONNECTED)
+			{
+				if (!ent->client->pers.clientPlugin) ClientBegin(ent->s.number, qfalse);
+			}
+		}
+	}
+}
+
 //alex: checks if an admin account exists
 qboolean admin_account_exists(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 
@@ -1025,8 +1042,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_CLIENTS; zyk_iterator++)
 		{
-			level.read_screen_message[zyk_iterator] = qfalse;
-			level.screen_message_timer[zyk_iterator] = 0;
 			level.ignored_players[zyk_iterator][0] = 0;
 			level.ignored_players[zyk_iterator][1] = 0;
 		}
@@ -2281,6 +2296,10 @@ void AddTournamentPlayer( void ) {
 			client->sess.spectatorClient < 0  ) {
 			continue;
 		}
+		// Tr!Force: [Plugin] Don't allow
+		if (rp_pluginRequired.integer == 2 && !client->pers.clientPlugin) {
+			continue;
+		}
 
 		if ( !nextInLine || client->sess.spectatorNum > nextInLine->sess.spectatorNum )
 			nextInLine = client;
@@ -2432,6 +2451,10 @@ void AddPowerDuelPlayers( void )
 		// never select the dedicated follow or scoreboard clients
 		if ( client->sess.spectatorState == SPECTATOR_SCOREBOARD ||
 			client->sess.spectatorClient < 0  ) {
+			continue;
+		}
+		// Tr!Force: [Plugin] Don't allow
+		if (rp_pluginRequired.integer == 2 && !client->pers.clientPlugin) {
 			continue;
 		}
 

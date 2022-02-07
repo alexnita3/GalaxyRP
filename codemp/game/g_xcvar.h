@@ -376,6 +376,8 @@ XCVAR_DEF( zyk_buying_selling_cooldown, "300",			NULL,				CVAR_ARCHIVE|CVAR_NORE
 XCVAR_DEF( zyk_bh_remote_buying_cooldown, "500",		NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_rpg_max_level, "100",					NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( zyk_duelForcePowerDisable,	"0",			NULL,				CVAR_ARCHIVE|CVAR_LATCH,						qtrue )
-XCVAR_DEF( rp_default_account_permissions,		"0",	NULL,				CVAR_ARCHIVE | CVAR_NORESTART,					qtrue )
+
+XCVAR_DEF( rp_default_account_permissions,		"0",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART,					qtrue )
+XCVAR_DEF( rp_pluginRequired,					"1",	RP_CVU_pluginRequired,	CVAR_ARCHIVE | CVAR_SERVERINFO,					qtrue )
 
 #undef XCVAR_DEF

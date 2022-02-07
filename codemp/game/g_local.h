@@ -482,6 +482,7 @@ typedef struct clientSession_s {
 	int	amrpgmode; // zyk: saved in session so the player account can be loaded again in map changes
 
 	qboolean loggedin;
+	qboolean motdSeen; // Tr!Force; [Motd] Server motd seen
 
 	int accountID;
 
@@ -998,6 +999,10 @@ typedef struct clientPersistant_s {
 
 	// zyk: player id that is fighting this guardian
 	int guardian_invoked_by_id;
+
+	// Tr!Force: [Plugin] Client plugin check
+	qboolean		clientPlugin;	
+
 } clientPersistant_t;
 
 typedef struct renderInfo_s
@@ -1289,6 +1294,8 @@ struct gclient_s {
 		int		drainDebounce;
 		int		lightningDebounce;
 	} force;
+
+	int	motdTime; // Tr!Force: [Motd] Server motd time
 };
 
 //Interest points
@@ -1629,12 +1636,6 @@ typedef struct level_locals_s {
 	// zyk: vehicle ids of the swoops used in Race Mode. Used to validate if player is using the correct vehicle
 	int race_mode_vehicle[MAX_RACERS];
 
-	// zyk: sets the players who already read the screen message
-	qboolean read_screen_message[MAX_CLIENTS];
-
-	// zyk: how much time it must show the message for the player
-	int screen_message_timer[MAX_CLIENTS];
-
 	// zyk: the player who called the last vote
 	int voting_player;
 
@@ -1788,6 +1789,7 @@ void SaveRegisteredItems( void );
 //
 // g_utils.c
 //
+void	RPMod_StringEscape(char *in, char *out, int outSize);
 int		G_ModelIndex( const char *name );
 int		G_SoundIndex( const char *name );
 int		G_SoundSetIndex(const char *name);
@@ -2050,6 +2052,7 @@ void QDECL G_LogPrintf( const char *fmt, ... );
 void QDECL G_SecurityLogPrintf( const char *fmt, ... );
 void SendScoreboardMessageToAllClients( void );
 const char *G_GetStringEdString(char *refSection, char *refName);
+void RP_CVU_pluginRequired(void);
 
 //
 // g_client.c

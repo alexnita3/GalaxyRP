@@ -75,6 +75,33 @@ model / sound configstring indexes
 */
 
 /*
+=====================================================================
+Cleans the given string from newlines and such
+=====================================================================
+*/
+void RPMod_StringEscape(char *in, char *out, int outSize)
+{
+	char	ch, ch1;
+	int len = 0;
+	outSize--;
+
+	while (1)
+	{
+		ch = *in++;
+		ch1 = *in;
+		if (ch == '\\' && ch1 == 'n') {
+			in++;
+			*out++ = '\n';
+		} else {
+			*out++ = ch;
+		}
+		if (len > outSize - 1) break;
+		len++;
+	}
+	return;
+}
+
+/*
 ================
 G_FindConfigstringIndex
 

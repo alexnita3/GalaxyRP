@@ -714,6 +714,7 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd ) {
 		client->ps.pm_type = PM_SPECTATOR;
 		client->ps.speed = 400;	// faster than normal
 		client->ps.basespeed = 400;
+		client->ps.forceHandExtend = rp_pluginRequired.integer == 2 && !client->pers.clientPlugin ? HANDEXTEND_KNOCKDOWN : HANDEXTEND_NONE; // Tr!Force: [Plugin] Don't allow user actions
 
 		//hmm, shouldn't have an anim if you're a spectator, make sure
 		//it gets cleared.
@@ -960,9 +961,18 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 			client->sess.vote_timer--;
 		}
 
-		if (level.screen_message_timer[ent->s.number] >= (level.time + 1000))
-		{ // zyk: show the screen message. The cp shows the message at least for 3 seconds
-			trap->SendServerCommand( ent->s.number, va("cp \"%s\"", zyk_screen_message.string) );
+		// Tr!Force: [Motd] Show server motd
+		if (client->motdTime)
+		{
+			char serverMotd[MAX_STRING_CHARS];
+
+			if (client->motdTime <= zyk_screen_message_timer.integer)
+			{
+				RPMod_StringEscape(zyk_screen_message.string, serverMotd, MAX_STRING_CHARS);
+				trap->SendServerCommand(ent->s.number, va("cp \"%s\nTime: %d\"", serverMotd, client->motdTime));
+			}
+			
+			client->motdTime--;
 		}
 	}
 

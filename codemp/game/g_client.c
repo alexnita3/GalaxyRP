@@ -2133,6 +2133,14 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	if ( !strcmp( s, "localhost" ) && !(ent->r.svFlags & SVF_BOT) )
 		client->pers.localClient = qtrue;
 
+	// Tr!Force: [Plugin] Check plugin
+	s = Info_ValueForKey( userinfo, "rpmod_client" );
+	if ( !strcmp( s, JK_VERSION ) ) {
+		client->pers.clientPlugin = qtrue;
+	} else {
+		client->pers.clientPlugin = qfalse;
+	}
+
 	// check the item prediction
 	s = Info_ValueForKey( userinfo, "cg_predictItems" );
 	if ( !atoi( s ) )	client->pers.predictItemPickup = qfalse;
@@ -2833,6 +2841,74 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	CalculateRanks();
 
 	G_ClearClientLog(clientNum);
+
+	// Check client plugin
+	if (rp_pluginRequired.integer && !client->pers.clientPlugin)
+	{
+		char	pluginVersion[MAX_INFO_VALUE];
+		char	clientEternal[MAX_INFO_VALUE];
+		int		allowDownload = trap->Cvar_VariableIntegerValue("sv_allowDownload");
+
+		// Force to spectator mode
+		if (rp_pluginRequired.integer == 2 && client->sess.sessionTeam != TEAM_SPECTATOR)
+		{
+			SetTeam(ent, "spectator");
+			return;
+		}
+
+		// Get info
+		Q_strncpyz(pluginVersion, Info_ValueForKey(userinfo, "rpmod_client"), sizeof(pluginVersion));
+		Q_strncpyz(clientEternal, Info_ValueForKey(userinfo, "cjp_client"), sizeof(clientEternal));
+
+		// Check for EternalJK2
+		if (!strcmp(clientEternal, "1.4JAPRO")) 
+		{
+			trap->SendServerCommand(clientNum, "cp \"You are using ^1EternalJK\nSome features may be ^3disabled^7\nPlease use OpenJK ^5https://builds.openjk.org\"");
+			trap->SendServerCommand(clientNum, "print \"You are running in ^3Server Side^7 mode only due ^1EternalJK^7 was detected\n\"");
+			G_LogPrintf("ClientPlugin: Player does not have any plugin (Using EternalJK)\n");
+		}
+		else
+		{
+			// Show center print message
+			if (!VALIDSTRINGCVAR(pluginVersion))
+			{
+				trap->SendServerCommand(clientNum, va("cp \"Please download\n^5%s^7 client plugin\nCheck the console or %s\"", JK_VERSION, (allowDownload ? "enable downloads in main menu" : "download from\n^2" JK_URL)));
+				G_LogPrintf("ClientPlugin: Player does not have any plugin\n");
+			}
+			else
+			{
+				trap->SendServerCommand(clientNum, va("cp \"Your client plugin is\n^3%s\nThe server version is ^5%s^7\nCheck the console or %s\"", pluginVersion, JK_VERSION, (allowDownload ? "enable downloads in main menu" : "download from\n^2" JK_URL)));
+				G_LogPrintf("ClientPlugin: Player is using '%s' instead '%s'\n", pluginVersion, JK_VERSION);
+			}
+
+			// Show console print message
+			if (allowDownload)
+			{
+				trap->SendServerCommand(clientNum, va("print \"Update your client plugin typing ^2/cl_allowdownload 1^7 in the console and reconnect\n\""));
+			}
+			else
+			{
+				trap->SendServerCommand(clientNum, va("print \"Download ^5%s^7 client plugin from ^2%s\n\"", JK_VERSION, JK_URL));
+			}
+		}
+	}
+
+	if (client->sess.sessionTeam != TEAM_SPECTATOR)
+	{
+		// Tr!Force: [Motd] Check screen message
+		if (!client->sess.motdSeen && VALIDSTRINGCVAR(zyk_screen_message.string))
+		{
+			// Logged players can disable the screen message if they want to
+			if (ent->client->sess.amrpgmode == 0 || !(ent->client->pers.player_settings & (1 << 9)))
+			{
+				// Delay motd for non-plugin clients
+				int motdDelayed = rp_pluginRequired.integer && !client->pers.clientPlugin ? zyk_screen_message_timer.integer + 2 : 0;
+			
+				client->motdTime = motdDelayed ? motdDelayed : zyk_screen_message_timer.integer;
+				client->sess.motdSeen = qtrue;
+			}
+		}
+	}
 }
 
 static qboolean AllForceDisabled(int force)
@@ -3965,16 +4041,6 @@ void ClientSpawn(gentity_t *ent) {
 
 			trap->LinkEntity ((sharedEntity_t *)ent);
 
-			// zyk: show screen message if the player did not see it yet
-			if (level.read_screen_message[ent->s.number] == qfalse && Q_stricmp(zyk_screen_message.string, "") != 0)
-			{
-				if (ent->client->sess.amrpgmode == 0 || !(ent->client->pers.player_settings & (1 << 9)))
-				{ // zyk: logged players can disable the screen message if they want to
-					level.read_screen_message[ent->s.number] = qtrue;
-					level.screen_message_timer[ent->s.number] = level.time + zyk_screen_message_timer.integer;
-				}
-			}
-
 			// zyk: if player is paralyzed by an admin, keeps him that way
 			if (ent->client->pers.player_statuses & (1 << 6))
 			{
@@ -4305,8 +4371,6 @@ void ClientDisconnect( int clientNum ) {
 	ent->client->ps.persistant[PERS_TEAM] = TEAM_FREE;
 	ent->client->sess.sessionTeam = TEAM_FREE;
 	ent->r.contents = 0;
-
-	level.read_screen_message[ent->s.number] = qfalse;
 
 	ent->client->pers.universe_quest_objective_control = -1;
 

@@ -1661,6 +1661,12 @@ typedef struct cgs_s {
 	int					numMiscStaticModels;
 	cg_staticmodel_t	miscStaticModels[MAX_STATIC_MODELS];
 
+	// Tr!Force: [Plugin] Main cvar
+	int			pluginRequired;
+
+	// Tr!Force: [ModCheck] Server mod check
+	qboolean	modCheck;
+
 } cgs_t;
 
 typedef struct siegeExtended_s
