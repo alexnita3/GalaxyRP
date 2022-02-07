@@ -7233,7 +7233,7 @@ void Cmd_Roll_f(gentity_t *ent) {
 
 	if (trap->Argc() != 2)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Usage: /roll <max roll>.\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^2/roll ^3<max roll>.\n^1Example: ^2/roll ^320\n\"");
 		return;
 	}
 
@@ -7247,7 +7247,7 @@ void Cmd_Roll_f(gentity_t *ent) {
 	int max_value = atoi(arg1);
 
 	if (max_value < 2) {
-		trap->SendServerCommand(ent - g_entities, "print \"Maximun value must be at least two.\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"Maximum value must be at least two.\n\"");
 		return;
 	}
 
@@ -7268,7 +7268,7 @@ void Cmd_FlipCoin_f(gentity_t *ent) {
 
 	if (trap->Argc() != 1)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Usage: /flipcoin\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^2/flipcoin\n\"");
 		return;
 	}
 
@@ -7284,59 +7284,10 @@ void Cmd_FlipCoin_f(gentity_t *ent) {
 	return;
 }
 
+// TODO: Remove this method
+// ZykMod: (Jesse) appears to be outdate validation of the RPG class system that's no longer implemented. 
 qboolean validate_rpg_class(gentity_t *ent)
 {
-	if (ent->client->pers.rpg_class == 0 && zyk_allow_free_warrior.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Free Warrior not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 1 && zyk_allow_force_user.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Force User not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 2 && zyk_allow_bounty_hunter.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Bounty Hunter not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 3 && zyk_allow_armored_soldier.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Armored Soldier not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 4 && zyk_allow_monk.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Monk not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 5 && zyk_allow_stealth_attacker.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Stealth Attacker not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 6 && zyk_allow_duelist.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Duelist not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 7 && zyk_allow_force_gunner.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Force Gunner not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 8 && zyk_allow_magic_master.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Magic Master not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 9 && zyk_allow_force_tank.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Force Guardian not allowed in this server\n\"" );
-		return qfalse;
-	}
-
 	return qtrue;
 }
 
@@ -7810,6 +7761,7 @@ void Cmd_DateTime_f( gentity_t *ent ) {
 	trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", ctime(&current_time)) ); 
 }
 
+// TODO: Char class is set here, to be removed.
 // zyk: adds a new RPG char with default values
 void add_new_char(gentity_t *ent)
 {
@@ -7831,7 +7783,7 @@ void add_new_char(gentity_t *ent)
 	ent->client->pers.universe_quest_progress = 0;
 	ent->client->pers.universe_quest_counter = 0;
 	ent->client->pers.credits = 100;
-	ent->client->pers.rpg_class = 0;
+	ent->client->pers.rpg_class = 0; // Sets the char class, which we want to remove
 	ent->client->sess.magic_disabled_powers = 0;
 	ent->client->sess.magic_more_disabled_powers = 0;
 	ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
@@ -7843,7 +7795,7 @@ void add_new_char(gentity_t *ent)
 	ent->client->pers.player_settings &= ~(1 << 15);
 }
 
-// zyk: creates the directory correctly depending on the OS
+// GalaxyRP: Sets up the GalaxyRP directory
 void zyk_create_dir(char *file_path)
 {
 #if defined(__linux__)
@@ -8500,7 +8452,7 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 	// zyk: update the rpg stuff info at the client-side game
 	send_rpg_events(10000);
 			
-	trap->SendServerCommand(-1, va("chat \"%s logged out\n\"", ent->client->pers.netname));
+	trap->SendServerCommand(-1, va("chat \"^3%s ^2logged out\n\"", ent->client->pers.netname));
 }
 
 qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, qboolean dont_show_message)
@@ -12698,7 +12650,7 @@ void Cmd_ChangePassword_f( gentity_t *ent ) {
 
 	if (trap->Argc() != 2)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Use ^3changepassword <new_password> ^7to change it.\n\"" );
+		trap->SendServerCommand( ent-g_entities, "print \"^1Command Usage: ^3/changepassword ^2<new_password>\n^1Example: ^3/changepassword ^2password123\n\"" );
 		return;
 	}
 
@@ -12707,7 +12659,7 @@ void Cmd_ChangePassword_f( gentity_t *ent ) {
 
 	if (strlen(arg1) > 30)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"The password must have a maximum of 30 characters.\n\"" );
+		trap->SendServerCommand( ent-g_entities, "print \"The password can only have a maximum of 30 characters.\n\"" );
 		return;
 	}
 
@@ -12715,7 +12667,7 @@ void Cmd_ChangePassword_f( gentity_t *ent ) {
 
 	update_accounts_table_row_with_current_values(ent);
 
-	trap->SendServerCommand( ent-g_entities, "print \"Your password was changed successfully.\n\"" );
+	trap->SendServerCommand( ent-g_entities, "print \"^3Your password was changed successfully.\n\"" );
 }
 
 void zyk_remove_configs(gentity_t *ent)
@@ -12923,7 +12875,7 @@ void Cmd_CreditSpend_f(gentity_t *ent) {
 
 	if (trap->Argc() > 2)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Usage: /creditspend <value>\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^3/creditspend ^2<value>\n^1Example: ^3/creditspend ^2350\"");
 		return;
 	}
 
@@ -12944,7 +12896,7 @@ void Cmd_CreditSpend_f(gentity_t *ent) {
 
 	if ((ent->client->pers.credits - value) < 0)
 	{
-		trap->SendServerCommand(ent - g_entities, va("print \"You don't have this amount of credits\n\""));
+		trap->SendServerCommand(ent - g_entities, va("print \"^1You can\'t spend ^3%i ^1credits.\n^7You only have ^3%i ^7credits.\n\""), value, ent->client->pers.credits);
 		return;
 	}
 
@@ -12974,9 +12926,8 @@ void Cmd_CreditCreate_f(gentity_t *ent) {
 	}
 
 	// player must have adminup permissions
-	if (!(ent->client->pers.bitvalue & (1 << ADM_CREATECREDITS)))
+	if (!check_admin_command(ent, ADM_CREATECREDITS))
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"You do not have the correct admin permission to create credits.\n\"");
 		return;
 	}
 
@@ -13055,7 +13006,7 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 
 	if ((ent->client->pers.credits - value) < 0)
 	{
-		trap->SendServerCommand(ent - g_entities, va("print \"You don't have this amount of credits\n\""));
+		trap->SendServerCommand(ent - g_entities, va("print \"^1You can\'t give ^3%i ^1credits.\n^7You only have ^3%i ^7credits.\n\""), value, ent->client->pers.credits);
 		return;
 	}
 	
@@ -13145,7 +13096,7 @@ Cmd_AllyAdd_f
 void Cmd_AllyAdd_f( gentity_t *ent ) {
 	if (trap->Argc() == 1)
 	{
-		trap->SendServerCommand(ent->s.number, va("print \"Use ^3/allyadd <player name or id> ^7to add an ally.\n\"") );
+		trap->SendServerCommand(ent->s.number, va("print \"^1Command Usage: ^3/allyadd ^2<player name or id>\n^1Example: ^3/allyadd ^2Alex\n\"") );
 	}
 	else
 	{
@@ -13224,7 +13175,7 @@ Cmd_AllyRemove_f
 void Cmd_AllyRemove_f( gentity_t *ent ) {
 	if (trap->Argc() == 1)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"Use ^3/allyremove <player name or id> ^7to remove an ally.\n\"") );
+		trap->SendServerCommand( ent-g_entities, va("print \"^1Command Usage: ^3/allyremove <player name or id>\n^1Example: ^3/allyremove ^2Alex\n\"") );
 	}
 	else
 	{
@@ -13258,10 +13209,10 @@ void Cmd_AllyRemove_f( gentity_t *ent ) {
 		G_AddEvent(ent, EV_USE_ITEM14, (client_id + MAX_CLIENTS));
 
 		trap->SendServerCommand( ent-g_entities, va("print \"Removed ally %s^7\n\"", g_entities[client_id].client->pers.netname) );
-		trap->SendServerCommand( client_id, va("print \"%s^7 removed you as ally\n\"", ent->client->pers.netname) );
+		trap->SendServerCommand( client_id, va("print \"%s^7 removed you as an ally\n\"", ent->client->pers.netname) );
 	}
 }
-
+// TODO: JLH start here
 /*
 ==================
 Cmd_Settings_f
