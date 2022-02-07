@@ -1042,8 +1042,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_CLIENTS; zyk_iterator++)
 		{
-			level.read_screen_message[zyk_iterator] = qfalse;
-			level.screen_message_timer[zyk_iterator] = 0;
 			level.ignored_players[zyk_iterator][0] = 0;
 			level.ignored_players[zyk_iterator][1] = 0;
 		}

@@ -961,9 +961,18 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 			client->sess.vote_timer--;
 		}
 
-		if (level.screen_message_timer[ent->s.number] >= (level.time + 1000))
-		{ // zyk: show the screen message. The cp shows the message at least for 3 seconds
-			trap->SendServerCommand( ent->s.number, va("cp \"%s\"", zyk_screen_message.string) );
+		// Tr!Force: [Motd] Show server motd
+		if (client->motdTime)
+		{
+			char serverMotd[MAX_STRING_CHARS];
+
+			if (client->motdTime <= zyk_screen_message_timer.integer)
+			{
+				RPMod_StringEscape(zyk_screen_message.string, serverMotd, MAX_STRING_CHARS);
+				trap->SendServerCommand(ent->s.number, va("cp \"%s\nTime: %d\"", serverMotd, client->motdTime));
+			}
+			
+			client->motdTime--;
 		}
 	}
 

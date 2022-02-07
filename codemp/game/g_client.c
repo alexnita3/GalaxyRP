@@ -2892,6 +2892,23 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 			}
 		}
 	}
+
+	if (client->sess.sessionTeam != TEAM_SPECTATOR)
+	{
+		// Tr!Force: [Motd] Check screen message
+		if (!client->sess.motdSeen && VALIDSTRINGCVAR(zyk_screen_message.string))
+		{
+			// Logged players can disable the screen message if they want to
+			if (ent->client->sess.amrpgmode == 0 || !(ent->client->pers.player_settings & (1 << 9)))
+			{
+				// Delay motd for non-plugin clients
+				int motdDelayed = rp_pluginRequired.integer && !client->pers.clientPlugin ? zyk_screen_message_timer.integer + 2 : 0;
+			
+				client->motdTime = motdDelayed ? motdDelayed : zyk_screen_message_timer.integer;
+				client->sess.motdSeen = qtrue;
+			}
+		}
+	}
 }
 
 static qboolean AllForceDisabled(int force)
@@ -4024,16 +4041,6 @@ void ClientSpawn(gentity_t *ent) {
 
 			trap->LinkEntity ((sharedEntity_t *)ent);
 
-			// zyk: show screen message if the player did not see it yet
-			if (level.read_screen_message[ent->s.number] == qfalse && Q_stricmp(zyk_screen_message.string, "") != 0)
-			{
-				if (ent->client->sess.amrpgmode == 0 || !(ent->client->pers.player_settings & (1 << 9)))
-				{ // zyk: logged players can disable the screen message if they want to
-					level.read_screen_message[ent->s.number] = qtrue;
-					level.screen_message_timer[ent->s.number] = level.time + zyk_screen_message_timer.integer;
-				}
-			}
-
 			// zyk: if player is paralyzed by an admin, keeps him that way
 			if (ent->client->pers.player_statuses & (1 << 6))
 			{
@@ -4364,8 +4371,6 @@ void ClientDisconnect( int clientNum ) {
 	ent->client->ps.persistant[PERS_TEAM] = TEAM_FREE;
 	ent->client->sess.sessionTeam = TEAM_FREE;
 	ent->r.contents = 0;
-
-	level.read_screen_message[ent->s.number] = qfalse;
 
 	ent->client->pers.universe_quest_objective_control = -1;
 
