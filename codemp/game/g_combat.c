@@ -2353,10 +2353,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			self->client->pers.guardian_mode = 0;
 		}
 
-		// zyk: removing the armors from the player
-		self->client->pers.player_statuses &= ~(1 << 8);
-		self->client->pers.player_statuses &= ~(1 << 9);
-
 		// zyk: removing the crystals from the player
 		self->client->pers.player_statuses &= ~(1 << 10);
 		self->client->pers.player_statuses &= ~(1 << 11);
@@ -5126,86 +5122,11 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	}
 
 	if (targ && targ->client && targ->client->sess.amrpgmode == 2)
-	{ // zyk: damage resistance of each class
-		if (targ->client->pers.player_statuses & (1 << 8) && mod == MOD_SABER)
-		{ // zyk: using the Saber Armor, reduces saber damage
-			damage = (int)ceil(damage * 0.85);
-		}
-
-		if (targ->client->pers.player_statuses & (1 << 9) && mod != MOD_SABER && mod != MOD_UNKNOWN && mod != MOD_TRIGGER_HURT && 
-			mod != MOD_FORCE_DARK && mod != MOD_WATER && mod != MOD_FALLING && mod != MOD_SUICIDE && mod != MOD_TELEFRAG && mod != MOD_SLIME)
-		{ // zyk: using the Gun Armor, reduces gun and melee damage
-			damage = (int)ceil(damage * 0.85);
-		}
-
-		if (targ->client->pers.rpg_class == 1 && targ->client->pers.unique_skill_duration > level.time) // zyk: Force User damage resistance
-		{ // zyk: Unique Skill of Force User
-			damage = (int)ceil(damage * 0.25);
-		}
-		else if (targ->client->pers.rpg_class == 3) // zyk: Armored Soldier damage resistance
+	{ 
+		// GalaxyRP (Alex): [Armor Skill] Armor reduces damage taken by up to 50%
+		if (targ->client->pers.skill_levels[56] > 0 ) 
 		{
-			float armored_soldier_bonus_resistance = 0.0;
-			// zyk: Armored Soldier Upgrade increases damage resistance
-			if (targ->client->pers.secrets_found & (1 << 16))
-				armored_soldier_bonus_resistance = 0.05;
-
-			// zyk: Armored Soldier Lightning Shield reduces damage
-			if (targ->client->ps.powerups[PW_SHIELDHIT] > level.time)
-			{
-				armored_soldier_bonus_resistance += 0.25;
-			}
-			
-			damage = (int)ceil(damage * (0.9 - ((0.05 * targ->client->pers.skill_levels[55]) + armored_soldier_bonus_resistance)));
-		}
-		else if (targ->client->pers.rpg_class == 4 && 
-				 targ->client->ps.legsAnim == BOTH_MEDITATE)
-		{ // zyk: Monk Meditation Strength and Meditation Drain increases resistance to damage of Monk
-			if (targ->client->pers.player_statuses & (1 << 21) || targ->client->pers.player_statuses & (1 << 23))
-				damage = (int)ceil(damage * (0.5));
-		}
-		else if (targ->client->pers.rpg_class == 0) // zyk: Free Warrior damage resistance
-		{
-			// zyk: Free Warrior Mimic Damage ability. Deals half of the damage taken back to the enemy
-			if (attacker && attacker != targ && (!attacker->NPC || 
-				(attacker->client && (attacker->client->NPC_class != CLASS_RANCOR || !(targ->client->ps.eFlags2 & EF2_HELD_BY_MONSTER)))) &&
-				targ->client->pers.unique_skill_duration > level.time && targ->client->pers.player_statuses & (1 << 21))
-			{
-				if (!(attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && attacker->client->pers.rpg_class == 0 && 
-					attacker->client->pers.unique_skill_duration > level.time && attacker->client->pers.player_statuses & (1 << 21)))
-				{ // zyk: Mimic Damage will not work if attacker pointer is also a Free Warrior using Mimic Damage
-					G_Damage(attacker, targ, targ, NULL, NULL, (int)ceil(damage * 0.5), 0, MOD_UNKNOWN);
-				}
-			}
-
-			damage = (int)ceil(damage * (1.0 - (0.03 * targ->client->pers.skill_levels[55])));
-		}
-		else if (targ->client->pers.rpg_class == 5 && (mod == MOD_DEMP2 || mod == MOD_DEMP2_ALT))
-		{ // zyk: Stealth Attacker damage resistance against DEMP2
-			// zyk: only takes damage if he does not have the upgrade
-			if (targ->client->pers.secrets_found & (1 << 7))
-				return;
-
-			damage = (int)ceil(damage * (1 - (0.25 * targ->client->pers.skill_levels[55])));
-		}
-		else if (targ->client->pers.rpg_class == 7)
-		{ // zyk: Force Gunner damage resistance
-			damage = (int)ceil(damage * (1.0 - (0.06 * targ->client->pers.skill_levels[55])));
-		}
-		else if (targ->client->pers.rpg_class == 9)
-		{ // zyk: Force Guardian damage resistance
-			float force_tank_bonus_resistance = 0.0;
-
-			if (targ->client->pers.secrets_found & (1 << 19))
-			{ // zyk: Force Guardian Upgrade increases damage resistance
-				force_tank_bonus_resistance += 0.1;
-			}
-
-			if (targ->client->pers.unique_skill_duration > level.time)
-			{ // zyk: Force Guardian Unique Skill increases damage resistance
-				force_tank_bonus_resistance += 0.15;
-			}
-
-			damage = (int)ceil(damage * (0.9 - force_tank_bonus_resistance - (0.1 * targ->client->pers.skill_levels[55])));
+			damage = damage - (targ->client->pers.skill_levels[56] * damage * 0.1);
 		}
 	}
 

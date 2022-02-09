@@ -100,7 +100,8 @@ const int max_skill_levels[NUM_OF_SKILLS] = {
 	1, // Force Field
 	1, // Cloak Item
 	5, // Force Power
-	3 // Improvements
+	3, // Improvements
+	5  // Armor
 };
 
 #define MAX_WORDED_EMOTES 97
@@ -1820,7 +1821,7 @@ void update_skills_table_row_with_current_values(gentity_t* ent) {
 		return;
 	}
 	
-	char update_skills_query[987] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'; UPDATE Characters SET SkillPoints='%i' WHERE CharID='%i';";
+	char update_skills_query[999] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i', Armor='%i' WHERE CharID='%i'; UPDATE Characters SET SkillPoints='%i' WHERE CharID='%i';";
 	run_db_query(va(update_skills_query,
 		ent->client->pers.skill_levels[0],	//Jump
 		ent->client->pers.skill_levels[1],	//Push
@@ -1878,6 +1879,7 @@ void update_skills_table_row_with_current_values(gentity_t* ent) {
 		ent->client->pers.skill_levels[53],	//CloakItem
 		ent->client->pers.skill_levels[54],	//ForcePower
 		ent->client->pers.skill_levels[55], //Improvements
+		ent->client->pers.skill_levels[56], //Armor
 		ent->client->pers.CharID,
 		ent->client->pers.skillpoints,
 		ent->client->pers.CharID), db, zErrMsg, rc, stmt);
@@ -9631,6 +9633,25 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		}
 	}
 
+	if (upgrade_value == 57)
+	{
+		if (ent->client->pers.skill_levels[56] < max_skill_levels[upgrade_value - 1])
+		{
+			ent->client->pers.skill_levels[56]++;
+			ent->client->pers.skillpoints--;
+		}
+		else
+		{
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Armor"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Armor"));
+				}
+			}
+			return qfalse;
+		}
+	}
+
 	return qtrue;
 }
 
@@ -10795,6 +10816,27 @@ void do_downgrade_skill(gentity_t *ent, int downgrade_value)
 		}
 	}
 
+	if (downgrade_value == 57)
+	{
+		if (ent->client->pers.skill_levels[56] > 0)
+		{
+			ent->client->pers.skill_levels[56]--;
+			ent->client->pers.skillpoints++;
+
+			if (ent->client->pers.rpg_class == 8)
+			{ // zyk: resetting selected powers
+				ent->client->sess.selected_special_power = 1;
+				ent->client->sess.selected_left_special_power = 1;
+				ent->client->sess.selected_right_special_power = 1;
+			}
+		}
+		else
+		{
+			trap->SendServerCommand(ent - g_entities, "print \"You reached the minimum level of ^3Armor ^7skill.\n\"");
+			return;
+		}
+	}
+
 	// GalaxyRP (Alex): [Database] Only update the skills table.
 	update_skills_table_row_with_current_values(ent);
 
@@ -11024,6 +11066,8 @@ void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 		strcpy(message, va("%s%s53 - Force Field: %d/%d\n",message, zyk_allowed_skill_color(52, ent->client->pers.rpg_class), ent->client->pers.skill_levels[52], max_skill_levels[52]));
 
 		strcpy(message, va("%s%s54 - Cloak Item: %d/%d\n",message, zyk_allowed_skill_color(53, ent->client->pers.rpg_class), ent->client->pers.skill_levels[53], max_skill_levels[53]));
+
+		strcpy(message, va("%s%s57 - Armor: %d/%d\n", message, zyk_allowed_skill_color(53, ent->client->pers.rpg_class), ent->client->pers.skill_levels[56], max_skill_levels[56]));
 
 		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
 	}
@@ -11521,9 +11565,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 			trap->SendServerCommand(ent - g_entities, "print \"\n"
 				"^314 - Ysalamiri: ^7Buy: 2000 - Sell: 50\n"
 				"^331 - Jetpack Fuel: ^7Buy: 500 - Sell: ^1no\n"
-				"^343 - Force Boon: ^7Buy: 2000 - Sell: 50\n"
-				"^349 - Saber Armor: ^7Buy: 20,000 - Sell: ^1no\n"
-				"^350 - Gun Armor: ^7Buy: 20,000 - Sell: ^1no\n\n\"");
+				"^343 - Force Boon: ^7Buy: 2000 - Sell: 50\n\n\"");
 		}
 		/*else if (Q_stricmp(arg1, "weapons" ) == 0)
 		{
@@ -11740,14 +11782,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		else if (i == 48)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Ammo All: ^7recovers all ammo types, including flame thrower fuel\n\n\"");
-		}
-		else if (i == 49)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Saber Armor: ^7increases damage resistance to saber attacks. If the player dies, he loses the armor\n\n\"");
-		}
-		else if (i == 50)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Gun Armor: ^7increases damage resistance to gun attacks and melee attacks. If the player dies, he loses the armor\n\n\"");
 		}
 		else if (i == 51)
 		{
@@ -12331,14 +12365,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 			Add_Ammo(ent,AMMO_DETPACK,2);
 
 			ent->client->ps.cloakFuel = 100;
-		}
-		else if (value == 49)
-		{
-			ent->client->pers.player_statuses |= (1 << 8);
-		}
-		else if (value == 50)
-		{
-			ent->client->pers.player_statuses |= (1 << 9);
 		}
 		else if (value == 51)
 		{
