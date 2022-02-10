@@ -7269,7 +7269,7 @@ void Cmd_Roll_f(gentity_t *ent) {
 
 	int result = roll_dice(max_value);
 
-	trap->SendServerCommand(-1, va("chat \"^3%s^2 rolled a ^3%d^2 out of ^3%d\n\"", ent->client->pers.netname, result, max_value));
+	trap->SendServerCommand(-1, va("chat \"^3<Dice Roll> %s^2 rolled a ^3%d^2 out of ^3%d\n\"", ent->client->pers.netname, result, max_value));
 
 	return;
 }
