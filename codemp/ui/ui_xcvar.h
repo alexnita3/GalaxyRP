@@ -107,6 +107,14 @@ XCVAR_DEF( ui_redteam5,						"1",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_redteam6,						"1",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_redteam7,						"1",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_redteam8,						"1",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+XCVAR_DEF( cp_sbRGB1,						"0",					NULL,				CVAR_ARCHIVE|CVAR_USERINFO ) // Tr!Force: [RGBSabers] Main cvar
+XCVAR_DEF( cp_sbRGB2,						"0",					NULL,				CVAR_ARCHIVE|CVAR_USERINFO ) // Tr!Force: [RGBSabers] Main cvar
+XCVAR_DEF( ui_sab1_b,						"255",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL ) // Tr!Force: [RGBSabers] Main cvar
+XCVAR_DEF( ui_sab1_g,						"255",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL ) // Tr!Force: [RGBSabers] Main cvar
+XCVAR_DEF( ui_sab1_r,						"255",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL ) // Tr!Force: [RGBSabers] Main cvar
+XCVAR_DEF( ui_sab2_b,						"255",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL ) // Tr!Force: [RGBSabers] Main cvar
+XCVAR_DEF( ui_sab2_g,						"255",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL ) // Tr!Force: [RGBSabers] Main cvar
+XCVAR_DEF( ui_sab2_r,						"255",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL ) // Tr!Force: [RGBSabers] Main cvar
 XCVAR_DEF( ui_saber,						DEFAULT_SABER,			NULL,				CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_saber2,						"none",					NULL,				CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_saber2_color,					"yellow",				NULL,				CVAR_ROM|CVAR_INTERNAL )

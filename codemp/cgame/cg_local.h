@@ -312,6 +312,7 @@ typedef struct clientInfo_s {
 	float		facial_aux;			// time before next aux. If a minus value, we are in aux mode
 
 	int			superSmoothTime; //do crazy amount of smoothing
+	vec3_t		rgb1, rgb2; // Tr!Force: [RGBSabers] Client info
 
 } clientInfo_t;
 
@@ -1176,6 +1177,40 @@ typedef struct cgMedia_s {
 	qhandle_t	purpleSaberCoreShader;
 	qhandle_t	saberBlurShader;
 	qhandle_t	swordTrailShader;
+
+	// Tr!Force: [RGBSabers] Saber shaders
+	qhandle_t	rgbSaberGlowShader;
+	qhandle_t	rgbSaberCoreShader;
+
+	qhandle_t	ShaderSaberTrail;
+	qhandle_t	ShaderSaberBlade;
+	qhandle_t	ShaderSaberBladeRGB;
+	qhandle_t	ShaderSaberEnd;
+	qhandle_t	ShaderSaberEndRGB;
+
+	#define _SHITTYLINEFX 1
+	#if _SHITTYLINEFX
+	qhandle_t	rgbSaberGlow2Shader;
+	qhandle_t	rgbSaberCore2Shader;
+	qhandle_t	rgbSaberTrail2Shader;
+
+	qhandle_t	rgbSaberGlow3Shader;
+	qhandle_t	rgbSaberCore3Shader;
+	qhandle_t	rgbSaberTrail3Shader;
+
+	qhandle_t	rgbSaberGlow4Shader;
+	qhandle_t	rgbSaberCore4Shader;
+	qhandle_t	rgbSaberTrail4Shader;
+
+	qhandle_t	rgbSaberGlow5Shader;
+	qhandle_t	rgbSaberCore5Shader;
+	qhandle_t	rgbSaberTrail5Shader;
+	#endif
+
+	qhandle_t	blackSaberGlowShader;
+	qhandle_t	blackSaberCoreShader;
+	qhandle_t	blackBlurShader;
+	// Tr!Force: [RGBSabers] Saber shaders
 
 	qhandle_t	yellowDroppedSaberShader;
 

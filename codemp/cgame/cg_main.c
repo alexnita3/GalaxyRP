@@ -641,6 +641,43 @@ static void CG_RegisterSounds( void ) {
 	cgs.media.saberBlurShader			= trap->R_RegisterShader( "gfx/effects/sabers/saberBlur" );
 	cgs.media.swordTrailShader			= trap->R_RegisterShader( "gfx/effects/sabers/swordTrail" );
 
+	// Tr!Force; [RGBSabers] Saber shaders
+	cgs.media.rgbSaberGlowShader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBglow1" );
+	cgs.media.rgbSaberCoreShader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore1" );
+
+	cgs.media.ShaderSaberTrail = trap->R_RegisterShader("gfx/effects/sabers/saber_trail");
+	cgs.media.ShaderSaberBlade = trap->R_RegisterShader("gfx/effects/sabers/saber_blade");
+	cgs.media.ShaderSaberBladeRGB = trap->R_RegisterShader("gfx/effects/sabers/saber_blade_rgb");
+	cgs.media.ShaderSaberEnd = trap->R_RegisterShader("gfx/effects/sabers/saber_end");
+	cgs.media.ShaderSaberEndRGB = trap->R_RegisterShader("gfx/effects/sabers/saber_end_rgb");
+
+	#if _SHITTYLINEFX
+	//Flame 1
+	cgs.media.rgbSaberGlow2Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBglow2" );
+	cgs.media.rgbSaberCore2Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore2" );
+	cgs.media.rgbSaberTrail2Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBtrail2" );
+
+	//Electric 1
+	cgs.media.rgbSaberGlow3Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBglow3" );
+	cgs.media.rgbSaberCore3Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore3" );
+	cgs.media.rgbSaberTrail3Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBtrail3" );
+
+	//Flame 2
+	cgs.media.rgbSaberGlow4Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBglow4" );
+	cgs.media.rgbSaberCore4Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore4" );
+	cgs.media.rgbSaberTrail4Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBtrail4" );
+
+	//Electric 2
+	cgs.media.rgbSaberGlow5Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBglow5" );
+	cgs.media.rgbSaberCore5Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore5" );
+	cgs.media.rgbSaberTrail5Shader		= trap->R_RegisterShader( "gfx/effects/sabers/swordTrail" );
+	#endif
+
+	cgs.media.blackSaberGlowShader		= trap->R_RegisterShader( "gfx/effects/sabers/blackglow" );
+	cgs.media.blackSaberCoreShader		= trap->R_RegisterShader( "gfx/effects/sabers/blackcore" );
+	cgs.media.blackBlurShader			= trap->R_RegisterShader( "gfx/effects/sabers/blacktrail" );
+	// Tr!Force; [RGBSabers] Saber shaders
+
 	cgs.media.forceCoronaShader			= trap->R_RegisterShaderNoMip( "gfx/hud/force_swirl" );
 
 	cgs.media.yellowDroppedSaberShader	= trap->R_RegisterShader("gfx/effects/yellow_glow");

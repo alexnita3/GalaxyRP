@@ -147,6 +147,8 @@ XCVAR_DEF( cg_weaponBob,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_zyk_duel_keep_colors,				"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_zyk_duel_keep_duelists_colors,	"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_zyk_duel_only_render_duelists,	"0",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cp_sbRGB1,							"0",					NULL,					CVAR_ARCHIVE | CVAR_USERINFO ) // Tr!Force: [RGBSabers] Main cvar
+XCVAR_DEF( cp_sbRGB2,							"0",					NULL,					CVAR_ARCHIVE | CVAR_USERINFO ) // Tr!Force: [RGBSabers] Main cvar
 XCVAR_DEF( cl_paused,							"0",					NULL,					CVAR_ROM )
 XCVAR_DEF( com_buildScript,						"0",					NULL,					CVAR_NONE )
 XCVAR_DEF( com_cameraMode,						"0",					NULL,					CVAR_CHEAT )

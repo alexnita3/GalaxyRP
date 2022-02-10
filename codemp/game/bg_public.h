@@ -1592,6 +1592,7 @@ typedef enum saber_styles_e {
 #define SFL2_NO_MANUAL_DEACTIVATE2	(1<<16)//if set, the blades cannot manually be toggled on and off
 #define SFL2_TRANSITION_DAMAGE2		(1<<17)//if set, the blade does damage in start, transition and return anims (like strong style does)
 
+#define NEW_SABER_PARMS 1 // Tr!Force: [RGBSabers] New .sab file features
 #define SABER_NAME_LENGTH (64)
 typedef struct saberInfo_s {
 	char			name[SABER_NAME_LENGTH];				// entry in sabers.cfg, if any
@@ -1649,6 +1650,14 @@ typedef struct saberInfo_s {
 
 	//done in cgame (client-side code)
 	int				trailStyle, trailStyle2;				// 0 - default (0) is normal, 1 is a motion blur and 2 is no trail at all (good for real-sword type mods)
+	
+	// Tr!Force: [RGBSabers] Public vars
+	#if NEW_SABER_PARMS
+	qhandle_t		customBladeShader, customTrailShader, customGlowShader;
+	qboolean		useCustomRGBColor;
+	float			customRGB[3];
+	#endif
+	
 	int				g2MarksShader, g2MarksShader2;			// none - if set, the game will use this shader for marks on enemies instead of the default "gfx/damage/saberglowmark"
 	int				g2WeaponMarkShader, g2WeaponMarkShader2;// none - if set, the game will ry to project this shader onto the weapon when it damages a person (good for a blood splatter on the weapon)
 	qhandle_t		hitSound[3], hit2Sound[3];				// none - if set, plays one of these 3 sounds when saber hits a person - NOTE: must provide all 3!!!

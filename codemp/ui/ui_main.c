@@ -5254,15 +5254,25 @@ static void UI_UpdateSaberCvars ( void )
 {
 	saber_colors_t colorI;
 
+	// Tr!Force: [RGBSabers] Update cvar
+	if ( !Q_stricmpn( UI_Cvar_VariableString( "ui_saber_color" ), "rgb", 3 ) )
+		trap->Cvar_Set( "cp_sbRGB1", va( "%i", ui_sab1_r.integer | ((ui_sab1_g.integer | (ui_sab1_b.integer << 8)) << 8) ) );
+	else
+		trap->Cvar_Set( "cp_sbRGB1", "0" );
+	if ( !Q_stricmpn( UI_Cvar_VariableString( "ui_saber2_color" ), "rgb", 3 ) )
+		trap->Cvar_Set( "cp_sbRGB2", va( "%i", ui_sab2_r.integer | ((ui_sab2_g.integer | (ui_sab2_b.integer << 8)) << 8) ) );
+	else
+		trap->Cvar_Set( "cp_sbRGB2", "0" );
+
 	trap->Cvar_Set ( "saber1", UI_Cvar_VariableString ( "ui_saber" ) );
 	trap->Cvar_Set ( "saber2", UI_Cvar_VariableString ( "ui_saber2" ) );
 
 	colorI = TranslateSaberColor( UI_Cvar_VariableString ( "ui_saber_color" ) );
-	trap->Cvar_Set ( "color1", va("%d",colorI));
+	trap->Cvar_SetValue( "color1", (float)colorI); // Tr!Force: [RGBSabers] Update cvar
 	trap->Cvar_Set ( "g_saber_color", UI_Cvar_VariableString ( "ui_saber_color" ));
 
 	colorI = TranslateSaberColor( UI_Cvar_VariableString ( "ui_saber2_color" ) );
-	trap->Cvar_Set ( "color2", va("%d",colorI) );
+	trap->Cvar_SetValue( "color2", (float)colorI ); // Tr!Force: [RGBSabers] Update cvar
 	trap->Cvar_Set ( "g_saber2_color", UI_Cvar_VariableString ( "ui_saber2_color" ));
 }
 
