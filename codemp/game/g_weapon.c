@@ -3920,15 +3920,15 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 	// zyk: starts flame thrower
 	if (ent->client && ent->client->sess.amrpgmode == 2 && alt_fire == qtrue && ent->client->pers.rpg_class != 1 && ent->client->pers.rpg_class != 4 && 
 		ent->client->pers.rpg_class != 6 && ent->client->pers.rpg_class != 8 && ent->client->pers.rpg_class != 9 && 
-		ent->client->pers.secrets_found & (1 << 10) && ent->client->ps.cloakFuel > 0 && ent->waterlevel < 3)
+		ent->client->pers.skill_levels[57] > 0 && ent->client->ps.cloakFuel > 0 && ent->waterlevel < 3)
 	{ // zyk: do not use flame thrower when underwater
 		int flame_thrower_fuel_usage = 2;
 		G_Sound( ent, CHAN_WEAPON, G_SoundIndex("sound/effects/fireout.mp3") );
 
 		ent->client->pers.flame_thrower = level.time + 1500;
 		
-		// zyk: Armored Soldier Upgrade spends less flame thrower fuel
-		if (ent->client->pers.rpg_class == 3 && ent->client->pers.secrets_found & (1 << 16))
+		// GalaxyRP (Alex): [Flamethrower Skill] With two points, spend less fuel.
+		if (ent->client->pers.skill_levels[57] == 2)
 			flame_thrower_fuel_usage = 1;
 
 		ent->client->ps.cloakFuel -= flame_thrower_fuel_usage;

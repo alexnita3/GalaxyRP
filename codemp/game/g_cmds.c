@@ -101,7 +101,8 @@ const int max_skill_levels[NUM_OF_SKILLS] = {
 	1, // Cloak Item
 	5, // Force Power
 	3, // Improvements
-	5  // Armor
+	5, // Armor
+	2  // Flame Thrower
 };
 
 #define MAX_WORDED_EMOTES 97
@@ -1821,7 +1822,7 @@ void update_skills_table_row_with_current_values(gentity_t* ent) {
 		return;
 	}
 	
-	char update_skills_query[999] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i', Armor='%i' WHERE CharID='%i'; UPDATE Characters SET SkillPoints='%i' WHERE CharID='%i';";
+	char update_skills_query[1018] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i', Armor='%i', Flamethrower='%i' WHERE CharID='%i'; UPDATE Characters SET SkillPoints='%i' WHERE CharID='%i';";
 	run_db_query(va(update_skills_query,
 		ent->client->pers.skill_levels[0],	//Jump
 		ent->client->pers.skill_levels[1],	//Push
@@ -1880,6 +1881,7 @@ void update_skills_table_row_with_current_values(gentity_t* ent) {
 		ent->client->pers.skill_levels[54],	//ForcePower
 		ent->client->pers.skill_levels[55], //Improvements
 		ent->client->pers.skill_levels[56], //Armor
+		ent->client->pers.skill_levels[57], //Flamethrower
 		ent->client->pers.CharID,
 		ent->client->pers.skillpoints,
 		ent->client->pers.CharID), db, zErrMsg, rc, stmt);
@@ -9634,6 +9636,25 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 		}
 	}
 
+	if (upgrade_value == 58)
+	{
+		if (ent->client->pers.skill_levels[57] < max_skill_levels[upgrade_value - 1])
+		{
+			ent->client->pers.skill_levels[57]++;
+			ent->client->pers.skillpoints--;
+		}
+		else
+		{
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Flame Thrower"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Flame Thrower"));
+				}
+			}
+			return qfalse;
+		}
+	}
+
 	return qtrue;
 }
 
@@ -9819,6 +9840,15 @@ qboolean validate_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_val
 	{
 		if (dont_show_message == qfalse)
 			trap->SendServerCommand( ent-g_entities, "print \"You must buy the Blaster Pack Weapons Upgrade to get 2/2 in Bryar Pistol.\n\"" );
+		return qfalse;
+	}
+
+	if (upgrade_value == 58 && ent->client->pers.skill_levels[57] == 0 && ent->client->pers.skill_levels[18] == 0)
+	{
+		if (dont_show_message == qfalse) {
+			trap->SendServerCommand(ent - g_entities, "print \"^1You must have the ^3Stun baton ^1skill first.\n\"");
+			trap->SendServerCommand(ent2 - g_entities, "print \"^1Player must have the ^3Stun baton ^1skill first\n\"");
+		}
 		return qfalse;
 	}
 
@@ -10819,6 +10849,27 @@ void do_downgrade_skill(gentity_t *ent, int downgrade_value)
 		}
 	}
 
+	if (downgrade_value == 58)
+	{
+		if (ent->client->pers.skill_levels[57] > 0)
+		{
+			ent->client->pers.skill_levels[57]--;
+			ent->client->pers.skillpoints++;
+
+			if (ent->client->pers.rpg_class == 8)
+			{ // zyk: resetting selected powers
+				ent->client->sess.selected_special_power = 1;
+				ent->client->sess.selected_left_special_power = 1;
+				ent->client->sess.selected_right_special_power = 1;
+			}
+		}
+		else
+		{
+			trap->SendServerCommand(ent - g_entities, "print \"You reached the minimum level of ^3Flame Thrower ^7skill.\n\"");
+			return;
+		}
+	}
+
 	// GalaxyRP (Alex): [Database] Only update the skills table.
 	update_skills_table_row_with_current_values(ent);
 
@@ -11051,6 +11102,8 @@ void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 
 		strcpy(message, va("%s%s35 - Jetpack: %d/%d\n", message, zyk_allowed_skill_color(34, ent->client->pers.rpg_class), ent->client->pers.skill_levels[34], max_skill_levels[34]));
 
+		strcpy(message, va("%s%s58 - Flame Thrower: %d/%d\n", message, zyk_allowed_skill_color(34, ent->client->pers.rpg_class), ent->client->pers.skill_levels[57], max_skill_levels[57]));
+
 		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
 	}
 }
@@ -11099,11 +11152,6 @@ void zyk_list_stuff(gentity_t *ent, gentity_t *target_ent)
 		strcpy(stuff_message, va("%s^3Impact Reducer - ^2yes\n", stuff_message));
 	else
 		strcpy(stuff_message, va("%s^3Impact Reducer - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 10))
-		strcpy(stuff_message, va("%s^3Flame Thrower - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Flame Thrower - ^1no\n", stuff_message));
 
 	if (ent->client->pers.secrets_found & (1 << 11))
 		strcpy(stuff_message, va("%s^3Power Cell Weapons Upgrade - ^2yes\n", stuff_message));
@@ -11499,7 +11547,7 @@ Cmd_Stuff_f
 void Cmd_Stuff_f( gentity_t *ent ) {
 	if (trap->Argc() == 1)
 	{ // zyk: shows the categories of stuff
-		trap->SendServerCommand( ent-g_entities, "print \"\n^7Use ^2/stuff <category> ^7to buy or sell stuff\nThe Category may be ^3ammo^7, ^3items^7, ^3misc ^7or ^3upgrades\n^7Use ^3/stuff <number> ^7to see info about the item\n\n^7Use ^2/buy <number> ^7to buy or ^2/sell <number> ^7to sell\nStuff bought from ^3upgrades ^7category are permanent\n\n\"");
+		trap->SendServerCommand( ent-g_entities, "print \"\n^7Use ^2/stuff <category> ^7to buy or sell stuff\nThe Category may be ^3ammo^7, ^3misc ^7or ^3upgrades\n^7Use ^3/stuff <number> ^7to see info about the item\n\n^7Use ^2/buy <number> ^7to buy or ^2/sell <number> ^7to sell\nStuff bought from ^3upgrades ^7category are permanent\n\n\"");
 		return;
 	}
 	else
@@ -11523,14 +11571,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 				"^330 - Flame Thrower Fuel: ^7Buy: 500\n"
 				"^348 - Ammo All: ^7Buy: 1450\n\n\"");
 		}
-		else if (Q_stricmp(arg1, "items" ) == 0)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n"
-				"^39 - Shield Booster: ^7Buy: 1500\n"
-				"^334 - Bacta Canister: ^7Buy: 1000\n"
-				"^335 - E-Web: ^7Buy: 1500\n"
-				"^342 - Cloak Item: ^7Buy: 2000\n\n\"");
-		}
 		else if (Q_stricmp(arg1, "misc") == 0)
 		{
 			trap->SendServerCommand(ent - g_entities, "print \"\n"
@@ -11542,14 +11582,12 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n"
 				"^315 - Impact Reducer: ^7Buy: 40000\n"
-				"^316 - Flame Thrower: ^7Buy: 30000\n"
 				"^325 - Power Cell Weapons Upgrade: ^7Buy: 2000\n"
 				"^326 - Blaster Pack Weapons Upgrade: ^7Buy: 18000\n"
 				"^327 - Metal Bolts Weapons Upgrade: ^7Buy: 22000\n"
 				"^328 - Rocket Upgrade: ^7Buy: 25000\n"
 				"^333 - Stun Baton Upgrade: ^7Buy: 15000\n"
-				"^340 - Holdable Items Upgrade: ^7Buy: 30000\n"
-				"^346 - Jetpack Upgrade: ^7Buy: 100000\n\n\"");
+				"^340 - Holdable Items Upgrade: ^7Buy: 30000\n\"");
 		}
 		else if (i == 1)
 		{
@@ -11594,10 +11632,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		else if (i == 15)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Impact Reducer: ^7reduces the knockback of some weapons attacks by 80 per cent\n\n\"");
-		}
-		else if (i == 16)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Flame Thrower: ^7gives you the flame thrower. To use it, get stun baton and use alternate fire\n\n\"");
 		}
 		else if (i == 17)
 		{
@@ -11702,10 +11736,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		else if (i == 45)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Force Gunner Upgrade: ^7increases run speed by 20 per cent. Force power regens 2x faster. Unique Skill will restore 25 shield\n\n\"");
-		}
-		else if (i == 46)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Jetpack Upgrade: ^7decreases jetpack fuel consumption a bit and makes the jetpack more stable and faster\n\n\"");
 		}
 		else if (i == 47)
 		{
@@ -11877,7 +11907,7 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		100,		// id:6
 		200,		// id:7
 		5000,		// id:8
-		1500,		// id:9
+		0,		// id:9
 		0,			// id:10
 		0,			// id:11
 		0,			// id:12
@@ -11902,15 +11932,15 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		500,		// id:31
 		1,		// id:32
 		15000,		// id:33
-		1000,		// id:34
-		1500,		// id:35
+		0,		// id:34
+		0,		// id:35
 		1,		// id:36
 		1,		// id:37
 		100,		// id:38
 		5000,		// id:39
 		30000,		// id:40
 		2000,		// id:41
-		2000,		// id:42
+		0,		// id:42
 		2000,		// id:43
 		50,			// id:44
 		5000,		// id:45
@@ -11979,11 +12009,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 	else if (value == 15 && ent->client->pers.secrets_found & (1 << 9))
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"You already have the Impact Reducer.\n\"" );
-		return;
-	}
-	else if (value == 16 && ent->client->pers.secrets_found & (1 << 10))
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You already have the Flame Thrower.\n\"" );
 		return;
 	}
 	else if (value == 25 && ent->client->pers.secrets_found & (1 << 11))
@@ -12093,16 +12118,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 			// zyk: update the rpg stuff info at the client-side game
 			send_rpg_events(10000);
 		}
-		else if (value == 9)
-		{
-			if (ent->client->ps.stats[STAT_ARMOR] < ent->client->pers.max_rpg_shield)
-			{ // zyk: RPG Mode has the Max Shield skill that doesnt allow someone to heal shields above this value
-				ent->client->ps.stats[STAT_ARMOR] += 50;
-			}
-
-			if (ent->client->ps.stats[STAT_ARMOR] > ent->client->pers.max_rpg_shield)
-				ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
-		}
 		else if (value == 14)
 		{
 			if (ent->client->ps.powerups[PW_YSALAMIRI] < level.time)
@@ -12113,10 +12128,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		else if (value == 15)
 		{
 			ent->client->pers.secrets_found |= (1 << 9);
-		}
-		else if (value == 16)
-		{
-			ent->client->pers.secrets_found |= (1 << 10);
 		}
 		/*else if (value == 17)
 		{
@@ -12190,14 +12201,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		{
 			ent->client->pers.secrets_found |= (1 << 15);
 		}
-		else if (value == 34)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_MEDPAC);
-		}
-		else if (value == 35)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_EWEB);
-		}
 		else if (value == 36)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DEMP2);
@@ -12213,10 +12216,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		else if (value == 40)
 		{
 			ent->client->pers.secrets_found |= (1 << 0);
-		}
-		else if (value == 42)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_CLOAK);
 		}
 		else if (value == 43)
 		{
@@ -12234,13 +12233,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		else if (value == 45)
 		{
 			ent->client->pers.secrets_found |= (1 << 8);
-		}
-		else if (value == 46)
-		{
-			ent->client->pers.secrets_found |= (1 << 17);
-
-			// zyk: update the rpg stuff info at the client-side game
-			send_rpg_events(10000);
 		}
 		else if (value == 47)
 		{

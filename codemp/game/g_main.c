@@ -223,7 +223,7 @@ void create_admin_account(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt
 	char statement_account_entry_creation[200] = "INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('admin','admin','4194303','0','admin')";
 	char statement_account_id_select[100] = "SELECT AccountID FROM Accounts WHERE Username='admin'";
 	char statement_character_entry_creation[207] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName, xp) VALUES('%i', '100', '1', '100', '%s', '1', 'Nothing to show.', 'DefaultName', 'kyle', 0)";
-	char statement_skill_entry_creation[1000] = "INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements, Armor) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
+	char statement_skill_entry_creation[1000] = "INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements, Armor, Flamethrower) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
 	char statement_weapon_entry_creation[200] = "INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')";
 
 	//alex: Create account record
@@ -307,14 +307,14 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 	char statement_account_table_creation[186] = "CREATE TABLE IF NOT EXISTS 'Accounts' ('AccountID' INTEGER, 'PlayerSettings' INTEGER, 'AdminLevel' INTEGER, 'Password' TEXT, 'Username' TEXT, 'DefaultChar' TEXT, PRIMARY KEY(AccountID))";
 	char statement_character_table_creation[249] = "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, 'Description' TEXT, 'NetName' TEXT, 'ModelName' TEXT, PRIMARY KEY(CharID))";
 	char statement_weapon_table_creation[244] = "CREATE TABLE IF NOT EXISTS 'Weapons' ('CharID' INTEGER, 'AmmoBlaster' INTEGER, 'AmmoPowercell' INTEGER, 'AmmoMetalBolts' INTEGER, 'AmmoRockets' INTEGER, 'AmmoThermal' INTEGER, 'AmmoTripmine' INTEGER, 'AmmoDetpack' INTEGER, PRIMARY KEY(CharID))";
-	char statement_skill_table_creation[1266] = "CREATE TABLE IF NOT EXISTS 'Skills' ('CharID' INTEGER, 'Jump' INTEGER, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER, 'Armor' INTEGER, PRIMARY KEY(CharID))";
+	char statement_skill_table_creation[1289] = "CREATE TABLE IF NOT EXISTS 'Skills' ('CharID' INTEGER, 'Jump' INTEGER, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER, PRIMARY KEY(CharID))";
 	char statement_item_table_creation[110] = "CREATE TABLE IF NOT EXISTS 'Items' ('ItemID' INTEGER, 'CharID' INTEGER, 'ItemName' TEXT, PRIMARY KEY(ItemID))";
 	char statement_news_table_creation[155] = "CREATE TABLE IF NOT EXISTS 'News' ('newsID' INTEGER, 'channel' TEXT, 'date' TEXT DEFAULT (strftime('%d-%m-%Y','now')), 'text' TEXT, PRIMARY KEY('newsID'))";
 
+	// GalaxyRP (Alex): [Database] New columns that are added as part of updates. If they were included in the previous columns, upgrading servers would have to redo their database from scratch.
 	char statement_xp_column_alter[110] = "ALTER TABLE Characters ADD COLUMN xp INTEGER DEFAULT 0";
-
-	// GalaxyRP (Alex): [Database] Column for new Armor skill that was added.
 	char statement_armor_column_alter[110] = "ALTER TABLE Skills ADD COLUMN Armor INTEGER DEFAULT 0";
+	char statement_flamethrower_column_alter[110] = "ALTER TABLE Skills ADD COLUMN Flamethrower INTEGER DEFAULT 0";
 
 	//Alex: Create Account Table
 	trap->Print("Initializing Account table.\n");
@@ -409,10 +409,13 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 			sqlite3_close(db);
 			return;
 		}
+		else {
+			trap->Print("XP column already exists, nothing to do here.\n");
+		}
 	}
 	trap->Print("Done with XP column.\n");
 
-	// GalaxyRP (Alex): [XP System] Add the XP column to the tables (done this way so that servers upgrading don't have to redo their database).
+	// GalaxyRP (Alex): [Armor Skill] Add the Armor Skill column to the tables (done this way so that servers upgrading don't have to redo their database).
 	trap->Print("Initializing Armor Skill column.\n");
 
 	rc = sqlite3_exec(db, statement_armor_column_alter, 0, 0, &zErrMsg);
@@ -424,8 +427,29 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 			sqlite3_close(db);
 			return;
 		}
+		else {
+			trap->Print("Armor skill column already exists, nothing to do here.\n");
+		}
 	}
 	trap->Print("Done with Armor Skill column.\n");
+
+	// GalaxyRP (Alex): [Armor Skill] Add the Armor Skill column to the tables (done this way so that servers upgrading don't have to redo their database).
+	trap->Print("Initializing Flamethrower Skill column.\n");
+
+	rc = sqlite3_exec(db, statement_flamethrower_column_alter, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		if (strcmp(zErrMsg, "duplicate column name: Flamethrower") != 0) {
+			trap->Print("SQL error: %s\n", zErrMsg);
+			sqlite3_free(zErrMsg);
+			sqlite3_close(db);
+			return;
+		}
+		else {
+			trap->Print("Flamethrower skill column already exists, nothing to do here.\n");
+		}
+	}
+	trap->Print("Done with Flamethrower Skill column.\n");
 
 	if (with_admin_account == qtrue) {
 		trap->Print("Initializing admin account.\n");
