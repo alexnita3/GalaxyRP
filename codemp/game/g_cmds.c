@@ -11533,7 +11533,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 				"^313 - Force Field: ^7Buy: 3000 - Sell: 80\n"
 				"^334 - Bacta Canister: ^7Buy: 1000 - Sell: 20\n"
 				"^335 - E-Web: ^7Buy: 1500 - Sell: 30\n"
-				"^338 - Binoculars: ^7Buy: 100 - Sell: 5\n"
 				"^342 - Cloak Item: ^7Buy: 2000 - Sell: 20\n\n\"");
 		}
 		else if (Q_stricmp(arg1, "misc") == 0)
@@ -11718,10 +11717,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		else if (i == 37)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Bryar Pistol: ^7similar to blaster pistol, but has a faster fire rate with normal fire. Uses blaster pack ammo\n\n\"");
-		}
-		else if (i == 38)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Binoculars: ^7allows the player to see far things better with the zoom feature\n\n\"");
 		}
 		else if (i == 39)
 		{
@@ -12264,10 +12259,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_OLD);
 		}*/
-		else if (value == 38)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_BINOCULARS);
-		}
 		else if (value == 39)
 		{
 			ent->client->pers.secrets_found |= (1 << 16);
