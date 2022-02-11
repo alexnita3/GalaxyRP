@@ -7139,27 +7139,6 @@ void remove_credits(gentity_t *ent, int credits)
 		ent->client->pers.credits = 0;
 }
 
-// zyk: gives or removes jetpack from player
-void zyk_jetpack(gentity_t *ent)
-{
-	// zyk: player starts with jetpack if it is enabled in player settings, is not in Siege Mode, and does not have all force powers through /give command
-	if (!(ent->client->pers.player_settings & (1 << 12)) && zyk_allow_jetpack_command.integer && 
-		(level.gametype != GT_SIEGE || zyk_allow_jetpack_in_siege.integer) && level.gametype != GT_JEDIMASTER && 
-		!(ent->client->pers.player_statuses & (1 << 12)) &&
-		((ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[34] > 0) || ent->client->sess.amrpgmode == 1))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-	}
-	else
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_JETPACK);
-		if (ent->client->jetPackOn)
-		{
-			Jetpack_Off(ent);
-		}
-	}
-}
-
 // zyk: loads settings valid both to Admin-Only Mode and to RPG Mode
 void zyk_load_common_settings(gentity_t *ent)
 {
@@ -7172,8 +7151,6 @@ void zyk_load_common_settings(gentity_t *ent)
 	{
 		ent->client->ps.weapon = WP_MELEE;
 	}
-		
-	zyk_jetpack(ent);
 
 	if (!(ent->client->saber[0].model[0] && ent->client->saber[1].model[0]) && !(ent->client->saber[0].saberFlags&SFL_TWO_HANDED))
 	{ // zyk: Single Saber
@@ -7749,6 +7726,11 @@ void initialize_rpg_skills(gentity_t *ent)
 
 		if (ent->client->pers.skill_levels[53] > 0)
 			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_CLOAK);
+
+		if (zyk_allow_jetpack_command.integer &&
+			(level.gametype != GT_SIEGE || zyk_allow_jetpack_in_siege.integer) && level.gametype != GT_JEDIMASTER &&
+			(ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[34] > 0))
+			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
 
 		// zyk: loading initial health of the player
 		set_max_health(ent);
@@ -11010,8 +10992,6 @@ void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 
 		strcpy(message_content[3], va("%s34 - Drain Shield: %d/%d     \n", zyk_allowed_skill_color(33, ent->client->pers.rpg_class), ent->client->pers.skill_levels[33], max_skill_levels[33]));
 
-		strcpy(message_content[4], va("%s35 - Jetpack: %d/%d          \n", zyk_allowed_skill_color(34, ent->client->pers.rpg_class), ent->client->pers.skill_levels[34], max_skill_levels[34]));
-
 		strcpy(message_content[5], va("%s36 - Sense Health: %d/%d     \n", zyk_allowed_skill_color(35, ent->client->pers.rpg_class), ent->client->pers.skill_levels[35], max_skill_levels[35]));
 
 		strcpy(message_content[6], va("%s37 - Shield Heal: %d/%d      \n", zyk_allowed_skill_color(36, ent->client->pers.rpg_class), ent->client->pers.skill_levels[36], max_skill_levels[36]));
@@ -11068,6 +11048,8 @@ void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 		strcpy(message, va("%s%s54 - Cloak Item: %d/%d\n",message, zyk_allowed_skill_color(53, ent->client->pers.rpg_class), ent->client->pers.skill_levels[53], max_skill_levels[53]));
 
 		strcpy(message, va("%s%s57 - Armor: %d/%d\n", message, zyk_allowed_skill_color(53, ent->client->pers.rpg_class), ent->client->pers.skill_levels[56], max_skill_levels[56]));
+
+		strcpy(message, va("%s%s35 - Jetpack: %d/%d\n", message, zyk_allowed_skill_color(34, ent->client->pers.rpg_class), ent->client->pers.skill_levels[34], max_skill_levels[34]));
 
 		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
 	}
@@ -11152,11 +11134,6 @@ void zyk_list_stuff(gentity_t *ent, gentity_t *target_ent)
 		strcpy(stuff_message, va("%s^3Armored Soldier Upgrade - ^2yes\n", stuff_message));
 	else
 		strcpy(stuff_message, va("%s^3Armored Soldier Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 17))
-		strcpy(stuff_message, va("%s^3Jetpack Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Jetpack Upgrade - ^1no\n", stuff_message));
 
 	if (ent->client->pers.secrets_found & (1 << 19))
 		strcpy(stuff_message, va("%s^3Force Guardian Upgrade - ^2yes\n", stuff_message));
@@ -11557,7 +11534,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 				"^334 - Bacta Canister: ^7Buy: 1000 - Sell: 20\n"
 				"^335 - E-Web: ^7Buy: 1500 - Sell: 30\n"
 				"^338 - Binoculars: ^7Buy: 100 - Sell: 5\n"
-				"^341 - Jetpack: ^7Buy: 2000 - Sell: ^1no\n"
 				"^342 - Cloak Item: ^7Buy: 2000 - Sell: 20\n\n\"");
 		}
 		else if (Q_stricmp(arg1, "misc") == 0)
@@ -11754,10 +11730,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		else if (i == 40)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Holdable Items Upgrade: ^7Bacta Canister recovers more health, Big Bacta recovers more HP, Force Field resists more and Cloak Item will be able to cloak vehicles\n\n\"");
-		}
-		else if (i == 41)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Jetpack: ^7allows the player to fly. Jump and press Use Key to use it\n\n\"");
 		}
 		else if (i == 42)
 		{
@@ -12099,11 +12071,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		trap->SendServerCommand( ent-g_entities, "print \"You already have the Force Gunner Upgrade.\n\"" );
 		return;
 	}
-	else if (value == 46 && ent->client->pers.secrets_found & (1 << 17))
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"You already have the Jetpack Upgrade.\n\"");
-		return;
-	}
 	else if (value == 47 && ent->client->pers.secrets_found & (1 << 19))
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"You already have the Force Guardian Upgrade.\n\"" );
@@ -12308,10 +12275,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		else if (value == 40)
 		{
 			ent->client->pers.secrets_found |= (1 << 0);
-		}
-		else if (value == 41)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
 		}
 		else if (value == 42)
 		{
@@ -13620,11 +13583,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Start With Saber %s\n\"", new_status) );
 		}
-		else if (value == 12)
-		{
-			zyk_jetpack(ent);
-			trap->SendServerCommand( ent-g_entities, va("print \"Jetpack %s\n\"", new_status) );
-		}
 		else if (value == 13)
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Admin Protect %s\n\"", new_status) );
@@ -14450,7 +14408,7 @@ Cmd_Jetpack_f
 ==================
 */
 void Cmd_Jetpack_f( gentity_t *ent ) {
-	if (level.melee_mode > 1 && level.melee_players[ent->s.number] != -1)
+	if (level.melee_mode > 1 && level.melee_players[ent->s.number] != -1)//<-
 	{ // zyk: cannot get jetpack in Melee Battle
 		return;
 	}

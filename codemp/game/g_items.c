@@ -1414,7 +1414,7 @@ void ItemUse_Jetpack( gentity_t *ent )
 	rpg_skill_counter(ent, 10);
 
 	// zyk: Jetpack Upgrade decreases jetpack toggle time
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.secrets_found & (1 << 17))
+	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[34] == 3)
 		ent->client->jetPackToggleTime = level.time + (JETPACK_TOGGLE_TIME/2);
 	else
 		ent->client->jetPackToggleTime = level.time + JETPACK_TOGGLE_TIME;

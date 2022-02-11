@@ -10191,7 +10191,7 @@ void G_RunFrame( int levelTime ) {
 						jetpack_debounce_amount -= (ent->client->pers.skill_levels[34] * 3);
 					}
 
-					if (ent->client->pers.secrets_found & (1 << 17)) // zyk: Jetpack Upgrade decreases fuel usage
+					if (ent->client->pers.skill_levels[34] == 3) // zyk: Jetpack Upgrade decreases fuel usage
 						jetpack_debounce_amount -= 2;
 				}
 
