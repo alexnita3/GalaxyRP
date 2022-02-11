@@ -226,46 +226,46 @@ const char anim_headers[MAX_EMOTE_CATEGORIES][50] = {
 	"Force"
 };
 
-typedef struct chat_modifiers_s {
-	const char* chat_modifier;
-	const char* chat_format;
-	int			distance;
-} chat_modifiers_t;
-
 #define BROADCAST_DISTANCE 999999999
-#define MAX_EMOTES 34
+#define VOICE_DISTANCE 600
+#define VOICE_DISTANCE_LONG 2000
+#define VOICE_DISTANCE_LOW 65
+#define SHOUT_DISTANCE 1500
+#define ACTION_DISTANCE 1200
+#define ACTION_DISTANCE_LOW 200
+#define ACTION_DISTANCE_LONG 2000
 
-const chat_modifiers_t chat_modifiers[MAX_EMOTES] = {
-	{"/low",		"chat \"%s^9 lowers their voice:%s\n\"",			65					},
-	{"/long",		"chat \"%s:%s\n\"",									1500				},
+const chat_modifiers_t chat_modifiers[] = {
+	{"/low",		"chat \"%s^9 lowers their voice:%s\n\"",			VOICE_DISTANCE_LOW	},
+	{"/long",		"chat \"%s:%s\n\"",									VOICE_DISTANCE_LONG	},
 	{"/all",		"chat \"%s:^2%s\n\"",								BROADCAST_DISTANCE	},
-	{"/melow",		"chat \"%s^3%s\n\"",								65					},
+	{"/melow",		"chat \"%s^3%s\n\"",								ACTION_DISTANCE_LOW	},
 	{"/meall",		"chat \"%s^3%s\n\"",								BROADCAST_DISTANCE	},
-	{"/melong",		"chat \"%s^3%s\n\"",								2000				},
-	{"/me",			"chat \"%s^3%s\n\"",								1200				},
-	{"/shoutlong",	"chat \"%s shouts:^2%s\n\"",						3000				},
+	{"/melong",		"chat \"%s^3%s\n\"",								ACTION_DISTANCE_LONG},
+	{"/me",			"chat \"%s^3%s\n\"",								ACTION_DISTANCE		},
+	{"/shoutlong",	"chat \"%s shouts:^2%s\n\"",						VOICE_DISTANCE_LONG	},
 	{"/shoutall",	"chat \"%s shouts:^2%s\n\"",						BROADCAST_DISTANCE	},
-	{"/shout",		"chat \"%s shouts:^2%s\n\"",						1500				},
-	{"/dolow",		"chat \"^3(%s^3)%s\n\"",							200					},
-	{"/dolong",		"chat \"^3(%s^3)%s\n\"",							2000				},
+	{"/shout",		"chat \"%s shouts:^2%s\n\"",						SHOUT_DISTANCE		},
+	{"/dolow",		"chat \"^3(%s^3)%s\n\"",							ACTION_DISTANCE_LOW	},
+	{"/dolong",		"chat \"^3(%s^3)%s\n\"",							ACTION_DISTANCE_LONG},
 	{"/doall",		"chat \"^3(%s^3)%s\n\"",							BROADCAST_DISTANCE	},
-	{"/do",			"chat \"^3(%s^3)%s\n\"",							1000				},
-	{"/forcelow",	"chat \"%s^5 uses the Force to%s\n\"",				200					},
-	{"/forcelong",	"chat \"%s^5 uses the Force to%s\n\"",				2000				},
+	{"/do",			"chat \"^3(%s^3)%s\n\"",							ACTION_DISTANCE		},
+	{"/forcelow",	"chat \"%s^5 uses the Force to%s\n\"",				ACTION_DISTANCE_LOW	},
+	{"/forcelong",	"chat \"%s^5 uses the Force to%s\n\"",				ACTION_DISTANCE_LONG},
 	{"/forceall",	"chat \"%s^5 uses the Force to%s\n\"",				BROADCAST_DISTANCE	},
-	{"/force",		"chat \"%s^5 uses the Force to%s\n\"",				1000				},
-	{"/mylow",		"chat \"%s^3's %s\n\"",								200					},
+	{"/force",		"chat \"%s^5 uses the Force to%s\n\"",				ACTION_DISTANCE		},
+	{"/mylow",		"chat \"%s^3's %s\n\"",								ACTION_DISTANCE_LOW	},
 	{"/myall",		"chat \"%s^3's %s\n\"",								BROADCAST_DISTANCE	},
-	{"/mylong",		"chat \"%s^3's %s\n\"",								2000				},
-	{"/my",			"chat \"%s^3's %s\n\"",								1200				},
-	{"/ryl2",		"chat \"%s ^3(Ryl - Lekku only):^2%s\n\"",			600					},
-	{"/ryl",		"chat \"%s ^3(Ryl):^2%s\n\"",						600					},
-	{"/rodian",		"chat \"%s ^3(Rodian):^2%s\n\"",					600					},
-	{"/huttese",	"chat \"%s ^3(Huttese):^2%s\n\"",					600					},
-	{"/catharese",	"chat \"%s ^3(Catharese):^2%s\n\"",					600					},
-	{"/mando",		"chat \"%s ^3(Mando'a):^2%s\n\"",					600					},
-	{"/npc",		"chat \"^3(%s^3) NPC:^4%s\n\"",						600					},
-	{"/npclow",		"chat \"^3(%s^3) NPC Lowers their voice:^4%s\n\"",	65					},
+	{"/mylong",		"chat \"%s^3's %s\n\"",								ACTION_DISTANCE_LONG},
+	{"/my",			"chat \"%s^3's %s\n\"",								ACTION_DISTANCE		},
+	{"/ryl2",		"chat \"%s ^3(Ryl - Lekku only):^2%s\n\"",			VOICE_DISTANCE		},
+	{"/ryl",		"chat \"%s ^3(Ryl):^2%s\n\"",						VOICE_DISTANCE		},
+	{"/rodian",		"chat \"%s ^3(Rodian):^2%s\n\"",					VOICE_DISTANCE		},
+	{"/huttese",	"chat \"%s ^3(Huttese):^2%s\n\"",					VOICE_DISTANCE		},
+	{"/catharese",	"chat \"%s ^3(Catharese):^2%s\n\"",					VOICE_DISTANCE		},
+	{"/mando",		"chat \"%s ^3(Mando'a):^2%s\n\"",					VOICE_DISTANCE		},
+	{"/npc",		"chat \"^3(%s^3) NPC:^4%s\n\"",						VOICE_DISTANCE		},
+	{"/npclow",		"chat \"^3(%s^3) NPC Lowers their voice:^4%s\n\"",	VOICE_DISTANCE_LOW	},
 	{"/npcall",		"chat \"^3(%s^3) NPC:^4%s\n\"",						BROADCAST_DISTANCE	},
 	{"/comm",		"chat \"^6<%s^6>^3 -C-^2%s\n\"",					BROADCAST_DISTANCE	},
 	{"/c",			"chat \"^6<%s^6>^3 -C-^2%s\n\"",					BROADCAST_DISTANCE	},
@@ -4294,7 +4294,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			index_of_slash = ptr - text;
 		}
 
-		for (int i = 0; i < MAX_EMOTES; i++) {
+		for (int i = 0; i < ARRAY_LEN(chat_modifiers); i++) {
 			output = strstr(text, chat_modifiers[i].chat_modifier);
 
 			

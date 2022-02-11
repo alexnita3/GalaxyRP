@@ -129,6 +129,12 @@ typedef struct shaderRemap_s {
 
 shaderRemap_t remappedShaders[MAX_SHADER_REMAPS];
 
+typedef struct chat_modifiers_s {
+	const char* chat_modifier;
+	const char* chat_format;
+	int			distance;
+} chat_modifiers_t;
+
 /*
 =====================================================================
 Re-routed functions
