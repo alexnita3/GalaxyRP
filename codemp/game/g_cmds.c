@@ -11513,50 +11513,35 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		if (Q_stricmp(arg1, "ammo" ) == 0)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n"
-				"^31 - Blaster Pack: ^7Buy: 150 - Sell: 10\n"
-				"^32 - Power Cell: ^7Buy: 200 - Sell: 15\n"
-				"^33 - Metal Bolts: ^7Buy: 250 - Sell: 20\n"
-				"^34 - Rockets: ^7Buy: 500 - Sell: 30\n"
-				"^35 - Thermals: ^7Buy: 50 - Sell: 35\n"
-				"^36 - Trip Mines: ^7Buy: 100 - Sell: 40\n"
-				"^37 - Det Packs: ^7Buy: 200 - Sell: 45\n"
-				"^330 - Flame Thrower Fuel: ^7Buy: 500 - Sell: ^1no\n"
-				"^348 - Ammo All: ^7Buy: 1450 - Sell: ^1no^7\n\n\"");
+				"^31 - Blaster Pack: ^7Buy: 150\n"
+				"^32 - Power Cell: ^7Buy: 200\n"
+				"^33 - Metal Bolts: ^7Buy: 250\n"
+				"^34 - Rockets: ^7Buy: 500\n"
+				"^35 - Thermals: ^7Buy: 50\n"
+				"^36 - Trip Mines: ^7Buy: 100\n"
+				"^37 - Det Packs: ^7Buy: 200\n"
+				"^330 - Flame Thrower Fuel: ^7Buy: 500\n"
+				"^348 - Ammo All: ^7Buy: 1450\n\n\"");
 		}
 		else if (Q_stricmp(arg1, "items" ) == 0)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n"
-				"^39 - Shield Booster: ^7Buy: 1500 - Sell: ^1no\n"
-				"^310 - Sentry Gun: ^7Buy: 1700 - Sell: 60\n"
-				"^311 - Seeker Drone: ^7Buy: 1800 - Sell: 65\n"
-				"^312 - Big Bacta: ^7Buy: 2000 - Sell: 70\n"
-				"^313 - Force Field: ^7Buy: 3000 - Sell: 80\n"
-				"^334 - Bacta Canister: ^7Buy: 1000 - Sell: 20\n"
-				"^335 - E-Web: ^7Buy: 1500 - Sell: 30\n"
-				"^342 - Cloak Item: ^7Buy: 2000 - Sell: 20\n\n\"");
+				"^39 - Shield Booster: ^7Buy: 1500\n"
+				"^310 - Sentry Gun: ^7Buy: 1700\n"
+				"^311 - Seeker Drone: ^7Buy: 1800\n"
+				"^312 - Big Bacta: ^7Buy: 2000\n"
+				"^313 - Force Field: ^7Buy: 3000\n"
+				"^334 - Bacta Canister: ^7Buy: 1000\n"
+				"^335 - E-Web: ^7Buy: 1500\n"
+				"^342 - Cloak Item: ^7Buy: 2000\n\n\"");
 		}
 		else if (Q_stricmp(arg1, "misc") == 0)
 		{
 			trap->SendServerCommand(ent - g_entities, "print \"\n"
-				"^314 - Ysalamiri: ^7Buy: 2000 - Sell: 50\n"
-				"^331 - Jetpack Fuel: ^7Buy: 500 - Sell: ^1no\n"
-				"^343 - Force Boon: ^7Buy: 2000 - Sell: 50\n\n\"");
+				"^314 - Ysalamiri: ^7Buy: 2000\n"
+				"^331 - Jetpack Fuel: ^7Buy: 500\n"
+				"^343 - Force Boon: ^7Buy: 2000\n\n\"");
 		}
-		/*else if (Q_stricmp(arg1, "weapons" ) == 0)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n"
-				"^317 - E11 Blaster Rifle: ^7Buy: 1 - Sell: ^1NO\n"
-				"^318 - Disruptor: ^7Buy: 1 - Sell: ^1NO\n"
-				"^319 - Repeater: ^7Buy: 1 - Sell: ^1NO\n"
-				"^320 - Rocket Launcher: ^7Buy: 1 - Sell: ^1NO\n"
-				"^321 - Bowcaster: ^7Buy: 1 - Sell: ^1NO\n"
-				"^322 - Blaster Pistol: ^7Buy: 1 - Sell: ^1NO\n"
-				"^323 - Flechette: ^7Buy: 1 - Sell: ^1NO\n"
-				"^324 - Concussion Rifle: ^7Buy: 1 - Sell: ^1NO\n"
-				"^332 - Stun Baton: ^7Buy: 1 - Sell: ^1NO\n"
-				"^336 - DEMP2: ^7Buy: 1 - Sell: ^1NO\n"
-				"^337 - Bryar Pistol: ^7Buy: 1 - Sell: ^1NO\n\n\"");
-		}*/
 		else if (Q_stricmp(arg1, "upgrades" ) == 0)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n"
@@ -12383,255 +12368,6 @@ void zyk_adjust_holdable_items(gentity_t *ent)
 	// zyk: if player no longer has Cloak Item and is cloaked, decloaks
 	if (!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK)) && ent->client->ps.powerups[PW_CLOAKED])
 		Jedi_Decloak(ent);
-}
-
-	/*
-==================
-Cmd_Sell_f
-==================
-*/
-void Cmd_Sell_f( gentity_t *ent ) {
-	char arg1[MAX_STRING_CHARS];
-	int value = 0;
-	int found = 0;
-	int sold = 0;
-	int items_costs[NUMBER_OF_SELLER_ITEMS] = {10,15,20,30,35,40,45,0,0,60,65,70,80,50,0,0,50,60,70,100,50,45,90,150,0,0,0,0,0,0,0,10,0,20,30,90,45,5,0,0,0,20,50,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
-	if (trap->Argc() == 1)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You must specify a product number.\n\"" );
-		return;
-	}
-
-	trap->Argv(1, arg1, sizeof( arg1 ));
-	value = atoi(arg1);
-
-	// zyk: tests the cooldown time to buy or sell
-	if (ent->client->pers.buy_sell_timer > level.time)
-	{
-		trap->SendServerCommand(ent->s.number, "print \"In Buy/Sell cooldown time.\n\"");
-		return;
-	}
-
-	if (value < 1 || value > NUMBER_OF_SELLER_ITEMS || items_costs[value-1] == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Invalid product number.\n\"" );
-		return;
-	}
-	else
-	{ // zyk: searches for the jawa to see if we are near him to buy or sell to him
-		gentity_t *jawa_ent = NULL;
-		int j = 0;
-
-		for (j = MAX_CLIENTS; j < level.num_entities; j++)
-		{
-			jawa_ent = &g_entities[j];
-
-			if (jawa_ent && jawa_ent->client && jawa_ent->NPC && jawa_ent->health > 0 && Q_stricmp( jawa_ent->NPC_type, "jawa_seller" ) == 0 && (int)Distance(ent->client->ps.origin, jawa_ent->client->ps.origin) < 90)
-			{
-				found = 1;
-				break;
-			}
-		}
-
-		// zyk: Bounty Hunter Upgrade allows buying and selling without the need to call the jawa seller
-		if (found == 0 && !(ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1)))
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You must be near the jawa seller to sell to him.\n\"" );
-			return;
-		}
-	}
-
-	if (value == 1 && ent->client->ps.ammo[AMMO_BLASTER] >= 100)
-	{
-		ent->client->ps.ammo[AMMO_BLASTER] -= 100;
-		sold = 1;
-	}
-	else if (value == 2 && ent->client->ps.ammo[AMMO_POWERCELL] >= 100)
-	{
-		ent->client->ps.ammo[AMMO_POWERCELL] -= 100;
-		sold = 1;
-	}
-	else if (value == 3 && ent->client->ps.ammo[AMMO_METAL_BOLTS] >= 100)
-	{
-		ent->client->ps.ammo[AMMO_METAL_BOLTS] -= 100;
-		sold = 1;
-	}
-	else if (value == 4 && ent->client->ps.ammo[AMMO_ROCKETS] >= 10)
-	{
-		ent->client->ps.ammo[AMMO_ROCKETS] -= 10;
-		sold = 1;
-	}
-	else if (value == 5 && ent->client->ps.ammo[AMMO_THERMAL] >= 4)
-	{
-		ent->client->ps.ammo[AMMO_THERMAL] -= 4;
-		sold = 1;
-	}
-	else if (value == 6 && ent->client->ps.ammo[AMMO_TRIPMINE] >= 3)
-	{
-		ent->client->ps.ammo[AMMO_TRIPMINE] -= 3;
-		sold = 1;
-	}
-	else if (value == 7 && ent->client->ps.ammo[AMMO_DETPACK] >= 2)
-	{
-		ent->client->ps.ammo[AMMO_DETPACK] -= 2;
-		sold = 1;
-	}
-	else if (value == 10 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SENTRY_GUN))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_SENTRY_GUN);
-
-		if (ent->client->pers.rpg_class == 2 && ent->client->pers.bounty_hunter_sentries > 0)
-			ent->client->pers.bounty_hunter_sentries--;
-
-		sold = 1;
-	}
-	else if (value == 11 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SEEKER))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_SEEKER);
-		sold = 1;
-	}
-	else if (value == 12 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_MEDPAC_BIG))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_MEDPAC_BIG);
-		sold = 1;
-	}
-	else if (value == 13 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SHIELD))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_SHIELD);
-		sold = 1;
-	}
-	else if (value == 14 && ent->client->ps.powerups[PW_YSALAMIRI])
-	{
-		ent->client->ps.powerups[PW_YSALAMIRI] = 0;
-		sold = 1;
-	}
-	else if (value == 17 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BLASTER)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BLASTER);
-		if (ent->client->ps.weapon == WP_BLASTER)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 18 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DISRUPTOR)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DISRUPTOR);
-		if (ent->client->ps.weapon == WP_DISRUPTOR)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 19 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_REPEATER)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_REPEATER);
-		if (ent->client->ps.weapon == WP_REPEATER)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 20 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_ROCKET_LAUNCHER)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_ROCKET_LAUNCHER);
-		if (ent->client->ps.weapon == WP_ROCKET_LAUNCHER)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 21 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BOWCASTER)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BOWCASTER);
-		if (ent->client->ps.weapon == WP_BOWCASTER)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 22 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BRYAR_PISTOL)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_PISTOL);
-		if (ent->client->ps.weapon == WP_BRYAR_PISTOL)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 23 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_FLECHETTE)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_FLECHETTE);
-		if (ent->client->ps.weapon == WP_FLECHETTE)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 24 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_CONCUSSION)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_CONCUSSION);
-		if (ent->client->ps.weapon == WP_CONCUSSION)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 32 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_STUN_BATON)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_STUN_BATON);
-		if (ent->client->ps.weapon == WP_STUN_BATON)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 34 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_MEDPAC))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_MEDPAC);
-		sold = 1;
-	}
-	else if (value == 35 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_EWEB))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_EWEB);
-		sold = 1;
-	}
-	else if (value == 36 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DEMP2)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DEMP2);
-		if (ent->client->ps.weapon == WP_DEMP2)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 37 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BRYAR_OLD)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_OLD);
-		if (ent->client->ps.weapon == WP_BRYAR_OLD)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 38 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_BINOCULARS))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_BINOCULARS);
-		sold = 1;
-	}
-	else if (value == 42 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_CLOAK);
-		sold = 1;
-	}
-	else if (value == 43 && ent->client->ps.powerups[PW_FORCE_BOON])
-	{
-		ent->client->ps.powerups[PW_FORCE_BOON] = 0;
-		sold = 1;
-	}
-
-	zyk_adjust_holdable_items(ent);
-			
-	if (sold == 1)
-	{
-		add_credits(ent,items_costs[value-1]);
-		save_account(ent, qtrue);
-
-		// zyk: setting the cooldown time to buy and sell stuff. Bounty Hunter remote buying system has its own cooldown time cvar
-		if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) && found == 0)
-		{
-			ent->client->pers.buy_sell_timer = level.time + zyk_bh_remote_buying_cooldown.integer;
-		}
-		else
-		{
-			ent->client->pers.buy_sell_timer = level.time + zyk_buying_selling_cooldown.integer;
-		}
-
-		trap->SendServerCommand( ent-g_entities, va("chat \"^3Jawa Seller: ^7Thanks %s^7!\n\"",ent->client->pers.netname) );
-	}
-	else
-	{
-		trap->SendServerCommand( ent-g_entities, va("chat \"^3Jawa Seller: ^7You don't have this item.\n\"") );
-	}
 }
 
 /*
@@ -18923,7 +18659,6 @@ command_t commands[] = {
 	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "rpglmstable",		Cmd_RpgLmsTable_f,			CMD_NOINTERMISSION },
 	{ "scale",				Cmd_Scale_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "sell",				Cmd_Sell_f,					CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "skilldown",			Cmd_RpModeDown_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "skillup",			Cmd_RpModeUp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
