@@ -11527,10 +11527,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n"
 				"^39 - Shield Booster: ^7Buy: 1500\n"
-				"^310 - Sentry Gun: ^7Buy: 1700\n"
-				"^311 - Seeker Drone: ^7Buy: 1800\n"
-				"^312 - Big Bacta: ^7Buy: 2000\n"
-				"^313 - Force Field: ^7Buy: 3000\n"
 				"^334 - Bacta Canister: ^7Buy: 1000\n"
 				"^335 - E-Web: ^7Buy: 1500\n"
 				"^342 - Cloak Item: ^7Buy: 2000\n\n\"");
@@ -11590,22 +11586,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		else if (i == 9)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Shield Booster: ^7recovers 50 shield\n\n\"");
-		}
-		else if (i == 10)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Sentry Gun: ^7portable gun which is placed in the ground and shoots nearby enemies\n\n\"");
-		}
-		else if (i == 11)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Seeker Drone: ^7portable remote drone that shoots enemies at sight\n\n\"");
-		}
-		else if (i == 12)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Big Bacta: ^7recovers 50 HP\n\n\"");
-		}
-		else if (i == 13)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Force Field: ^7creates a force field wall in front of the player that can hold almost any attack, except the concussion rifle alternate fire, which can get through\n\n\"");
 		}
 		else if (i == 14)
 		{
@@ -11898,10 +11878,10 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		200,		// id:7
 		5000,		// id:8
 		1500,		// id:9
-		1700,		// id:10
-		1800,		// id:11
-		2000,		// id:12
-		3000,		// id:13
+		0,			// id:10
+		0,			// id:11
+		0,			// id:12
+		0,			// id:13
 		2000,		// id:14
 		40000,		// id:15
 		30000,		// id:16
@@ -12122,24 +12102,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 
 			if (ent->client->ps.stats[STAT_ARMOR] > ent->client->pers.max_rpg_shield)
 				ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
-		}
-		else if (value == 10)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN);
-			if (ent->client->pers.rpg_class == 2 && ent->client->pers.bounty_hunter_sentries < MAX_BOUNTY_HUNTER_SENTRIES)
-				ent->client->pers.bounty_hunter_sentries++;
-		}
-		else if (value == 11)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SEEKER);
-		}
-		else if (value == 12)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_MEDPAC_BIG);
-		}
-		else if (value == 13)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SHIELD);
 		}
 		else if (value == 14)
 		{
