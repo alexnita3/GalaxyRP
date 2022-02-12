@@ -135,6 +135,14 @@ typedef struct chat_modifiers_s {
 	int			distance;
 } chat_modifiers_t;
 
+typedef struct skill_s {
+	int			max_level;
+	const char* skill_name;
+	const char* skill_description;
+	const char* category;
+	const char* alignment;
+} skill_t;
+
 /*
 =====================================================================
 Re-routed functions

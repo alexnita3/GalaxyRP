@@ -43,6 +43,68 @@ void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin);
 
 extern int check_xp(int currentLevel);
 
+// GalaxyRP (Alex): [Skills] This is used to display everything about a skill in various places throughout the mod.
+const skill_t skills[] = {
+	{5, "Jump",					"makes you use the force to jump higher. Level 5 has no height limit, you can continue jumping up until you run out of force, and it also lets you jump out of water",																																			"force",	"neutral"	},
+	{5, "Push",					"pushes the opponent forward",																																																																					"force",	"neutral"	},
+	{5, "Pull",					"pulls the opponent towards you",																																																																				"force",	"neutral"	},
+	{5, "Speed",				"increases your speed. Level 1 is 1.5 times normal speed. Level 2 is 2.0, level 3 is 2.5 times and level 4 is 3.0 times",																																														"force",	"neutral"	},
+	{5, "Sense",				"allows you to see people through walls, invisible people or cloaked people and you can dodge disruptor shots. Represents your mind strength to resist Mind Control if your sense level is equal or higher than the enemy's mind trick level",																	"force",	"neutral"	},
+	{5, "Saber Attack",			"gives you the saber. If you are using Single Saber, gives you the saber styles. If using duals or staff, increases saber damage, which is increased by 20 per cent for each level.",																															"force",	"neutral"	},
+	{5, "Saber Defense",		"increases your ability to block, parry enemy saber attacks or enemy shots",																																																									"force",	"neutral"	},
+	{5, "Saber Throw",			"throws your saber at enemy and gets it back. Each level increases max distance and saber throw speed.",																																																		"force",	"neutral"	},
+	{5, "Absorb",				"allows you to absorb force power attacks done to you",																																																															"force",	"light"		},
+	{5, "Heal",					"recover some Health. Level 1 restores 5 hp, level 2 restores 10 hp and level 3 restores 25 hp",																																																				"force",	"light"		},
+	{5, "Protect",				"decreases damage done to you by non-force power attacks. At level 4 decreases force consumption when receiving damage",																																														"force",	"light"		},
+	{5, "Mind Trick",			"makes yourself invisible to the players affected by this force power. Force User class can mind control a player or npc. Level 1 has a duration of 20 seconds, level 2 is 25 seconds and level 3 is 30 seconds",																								"force",	"neutral"	},
+	{5, "Team Heal",			"restores some health to players near you",																																																																		"force",	"light"		},
+	{5, "Lightning",			"attacks with a powerful electric attack at players near you. At level 4, does more damage and pushes the enemy back",																																															"force",	"dark"		},
+	{5, "Grip",					"attacks a player by holding and damaging him",																																																																	"force",	"dark"		},
+	{5, "Drain",				"drains force power from a player to restore your health",																																																														"force",	"dark"		},
+	{5, "Rage",					"makes you 1.3 times faster, increases your saber attack speed and damage and makes you get less damage. Force Guardian class, with Improvements skill at least on level 1, can regen some force when taking damage on health while Rage is active",															"force",	"dark"		},
+	{5, "Team Energize",		"restores some force power to players near you. If Improvements skill is at least at level 1, regens blaster pack and power cell ammo of the target players",																																					"force",	"dark"		},
+	{4, "Stun Baton",			"attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. With Stun Baton Upgrade, can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds",																	"weapons",	"merc"		},
+	{2, "Blaster Pistol",		"the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The charged shot causes a lot more damage depending on how much it was charged",																	"weapons",	"merc"		},
+	{2, "E11 Blaster Rifle",	"the rifle used by the Storm Troopers. E11 shots do %d damage. Normal fire is a single shot, while the alternate fire is the rapid fire",																																										"weapons",	"merc"		},
+	{2, "Disruptor",			"the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged",																																					"weapons",	"merc"		},
+	{2, "Bowcaster",			"the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once.",																																																				"weapons",	"merc"		},
+	{2, "Repeater",				"a powerful weapon with a rapid fire and a plasma bomb. Normal fire shoots the rapid fire, and does %d damage. Alt fire fires the plasma bomb",																																									"weapons",	"merc"		},
+	{2, "DEMP2",				"a very powerful weapon against machine npc and some vehicles, causing more damage to them and stunning them. Normal fire does %d damage and alt fire can be charged",																																			"weapons",	"merc"		},
+	{2, "Flechette",			"this weapon is similar to a shotgun. Normal fire causes %d damage. Alt fire shoots 2 bombs",																																																					"weapons",	"merc"		},
+	{2, "Rocket Launcher",		"a powerful explosive weapon. Normal fire shoots a rocket causing %d damage. Alt fire shoots a homing missile",																																																	"weapons",	"merc"		},
+	{2, "Concussion Rifle",		"it shoots a powerful shot that has a big damage area. Alt fire shoots a ray similar to disruptor shots, but it can go through force fields and can throw the enemy on the ground.",																															"weapons",	"merc"		},
+	{2, "Bryar Pistol",			"very similar to the blaster pistol, but this one has a better fire rate with normal shot.",																																																					"weapons",	"merc"		},
+	{3, "Melee",				"allows you to attack with your fists and legs. You can punch, kick or do a special melee attack by holding both Attack and Alt Attack buttons (usually the mouse buttons).",																																	"weapons",	"merc"		},
+	{5, "Max Shield",			"The max shield (armor) the player can have. Each level increases 20 per cent of max shield the player can have",																																																"other",	"merc"		},
+	{4, "Shield Strength",		"Each level increases your shield resistance by 7 per cent",																																																													"other",	"merc"		},
+	{4, "Health Strength",		"Each level increases your health resistance by 7 per cent",																																																													"other",	"merc"		},
+	{1, "Drain Shield",			"When using Drain force power, and your health is full, restores some shield. It also makes Drain suck hp/shield from the enemy to restore your hp/shield",																																						"other",	"merc"		},
+	{3, "Jetpack",				"the jetpack, used by Boba Fett. Allows you to fly. To use it, jump and press the Use key (usually R) while in the middle of the jump. Each level uses less fuel, allowing you to fly for a longer time",																										"items",	"merc"		},
+	{3, "Sense Health",			"allows you to see info about someone, including npcs. Level 1 shows current health. Level 2 shows name, health and shield. Level 3 shows name, health and max health, shield and max shield, force and max force, mp and max mp. To use it, when you are near a player or npc, use ^3Sense ^7force power",		"force",	"light"		},
+	{3, "Shield Heal",			"recovers 4 shield at level 1, 8 shield at level 2 and 12 shield at level 3. To use it, use Heal force power when you have full HP.",																																											"other",	"merc"		},
+	{3, "Team Shield Heal",		"recovers 3 shield at level 1, 6 shield at level 2 and 9 shield at level 3 to players near you. To use it, when near players, use Team Heal force power. It will heal their shield after they have full HP",																									"other",	"merc"		},
+	{1, "Unique Skill",			"placeholder",																																																																									"other",	"merc"		},
+	{3, "Blaster Pack",			"used as ammo for Blaster Pistol, Bryar Pistol and E11 Blaster Rifle.",																																																											"ammo",		"merc"		},
+	{3, "Powercell",			"used as ammo for Disruptor, Bowcaster and DEMP2.",																																																																"ammo",		"merc"		},
+	{3, "Metal Bolts",			"used as ammo for Repeater, Flechette and Concussion Rifle.",																																																													"ammo",		"merc"		},
+	{3, "Rockets",				"used as ammo for Rocket Launcher.",																																																																			"ammo",		"merc"		},
+	{3, "Thermals",				"the famous detonator used by Leia in Ep 6 at the Jabba Palace. Normal fire throws it, which explodes after some seconds. Alt fire throws it and it explodes as soon as it touches something.",																													"ammo",		"merc"		},
+	{3, "Trip Mines",			"a mine that can be planted somewhere. Normal fire plants a mine with a laser that when touched makes the mine explode. Alt fire plants proximity mines",																																						"ammo",		"merc"		},
+	{3, "Detpacks",				"a very powerful explosive, which you can detonate remotely with the alt fire button.",																																																							"ammo",		"merc"		},
+	{1, "Binoculars",			"this item allows you to see distant things better with its zoom.",																																																												"items",	"merc"		},
+	{1, "Bacta Canister",		"allows you to recover 25 HP",																																																																					"items",	"merc"		},
+	{1, "Sentry Gun",			"after placed on the ground, shoots at any nearby enemy",																																																														"items",	"merc"		},
+	{1, "Seeker Drone",			"a flying ball that flies around you, shooting anyone in its range",																																																											"items",	"merc"		},
+	{1, "E-Web",				"allows you to shoot at people with it, it has a good fire rate",																																																												"items",	"merc"		},
+	{1, "Big Bacta",			"allows you to recover 50 HP",																																																																					"items",	"merc"		},
+	{1, "Force Field",			"a powerful shield that protects you from enemy attacks, it can resist a lot against any weapon",																																																				"items",	"merc"		},
+	{1, "Cloak Item",			"makes you almost invisible to players and invisible to npcs.",																																																													"items",	"merc"		},
+	{5, "Force Power",			"increases the max force power you have. Necessary to allow you to use force powers and force-based skills",																																																	"force",	"neutral"	},
+	{3, "Improvements",			"placeholder",																																																																									"items",	"merc"		},
+	{5, "Armor",				"Each level increases your damage resistance by 10 percent, but also decreases your movement speed by 10 percent.",																																																"items",	"merc"		},
+	{2, "Flame Thrower",		"Allows you to use a flamethrower. Used by alt-firing with a stun baton.",																																																										"items",	"merc"		}
+};
+
 // zyk: max levels of the RPG skills
 const int max_skill_levels[NUM_OF_SKILLS] = {
 	5, // Jump
@@ -10903,292 +10965,65 @@ void Cmd_DownSkill_f( gentity_t *ent ) {
 	do_downgrade_skill(ent, downgrade_value);
 }
 
-// zyk: returns the special jka color chars for RPG skills
-char *zyk_allowed_skill_color(int skill_index, int rpg_class)
-{
-	if (zyk_skill_allowed_for_class(skill_index, rpg_class) == qtrue)
-	{
-		if ((skill_index >= 0 && skill_index <= 4) || skill_index == 38)
-		{
-			return "^7";
-		}
-		else if ((skill_index >= 8 && skill_index <= 12) || skill_index == 54)
-		{
-			return "^5";
-		}
-		else if ((skill_index >= 13 && skill_index <= 17) || skill_index == 32)
-		{
-			return "^1";
-		}
-		else if (skill_index == 30 || skill_index == 31)
-		{
-			return "^2";
-		}
-		else if (skill_index >= 35 && skill_index <= 37)
-		{
-			return "^6";
-		}
-		else
-		{
-			return "^3";
-		}
+// GalaxyRP (Alex): [Skill Display] This method returns a color string based on the ability alignment. Used in displaying the skill to the user.
+char *color_ability(skill_t skill) {
+	if (strcmp(skill.alignment, "light") == 0) {
+		return "^4";
 	}
-	else
-	{
-		return "^0";
+	else if (strcmp(skill.alignment, "dark") == 0) {
+		return "^1";
 	}
+	else if (strcmp(skill.alignment, "neutral") == 0) {
+		return "^5";
+	}
+	else if (strcmp(skill.alignment, "merc") == 0) {
+		return "^3";
+	}
+}
+
+char *add_spacing_for_columns(skill_t skill, char* message, int skill_id) {
+
+	int array_stop = 20 - strlen(skill.skill_name);
+
+	if (skill_id >= 10) {
+		array_stop--;
+	}
+
+	for (int i = 0; i < array_stop; i++)
+	{
+		strcpy(message, va("%s ", message));
+	}
+
+	strcpy(message, va("%s", message));
+
+	return message;
 }
 
 void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 {
 	char message[1024];
-	char message_content[12][100];
+	char message_columns[10][1024];
 	int i = 0;
+	int display_counter = 0;
 
 	strcpy(message,"");
-				
-	while (i < 11)
+
+	for (int i = 0; i < ARRAY_LEN(skills); i++)
 	{
-		strcpy(message_content[i],"");
-		i++;
-	}
-	message_content[11][0] = '\0';
-	i = 0;
-
-	if (Q_stricmp( arg1, "force" ) == 0)
-	{
-		strcpy(message_content[0], va("%s 1 - Jump: %d/%d          ", zyk_allowed_skill_color(0, ent->client->pers.rpg_class),ent->client->pers.skill_levels[0], max_skill_levels[0]));
-				
-		strcpy(message_content[1], va("%s 2 - Push: %d/%d          ", zyk_allowed_skill_color(1, ent->client->pers.rpg_class),ent->client->pers.skill_levels[1], max_skill_levels[1]));
-				
-		strcpy(message_content[2], va("%s 3 - Pull: %d/%d          ", zyk_allowed_skill_color(2, ent->client->pers.rpg_class),ent->client->pers.skill_levels[2], max_skill_levels[2]));
-				
-		strcpy(message_content[3], va("%s 4 - Speed: %d/%d         ", zyk_allowed_skill_color(3, ent->client->pers.rpg_class),ent->client->pers.skill_levels[3], max_skill_levels[3]));
-				
-		strcpy(message_content[4], va("%s 5 - Sense: %d/%d         ", zyk_allowed_skill_color(4, ent->client->pers.rpg_class),ent->client->pers.skill_levels[4], max_skill_levels[4]));
-				
-		strcpy(message_content[5], va("%s 6 - Saber Attack: %d/%d  ", zyk_allowed_skill_color(5, ent->client->pers.rpg_class),ent->client->pers.skill_levels[5], max_skill_levels[5]));
-				
-		strcpy(message_content[6], va("%s 7 - Saber Defense: %d/%d ", zyk_allowed_skill_color(6, ent->client->pers.rpg_class),ent->client->pers.skill_levels[6], max_skill_levels[6]));
-				
-		strcpy(message_content[7], va("%s 8 - Saber Throw: %d/%d   ", zyk_allowed_skill_color(7, ent->client->pers.rpg_class),ent->client->pers.skill_levels[7], max_skill_levels[7]));
-				
-		strcpy(message_content[8], va("%s 9 - Absorb: %d/%d        ", zyk_allowed_skill_color(8, ent->client->pers.rpg_class),ent->client->pers.skill_levels[8], max_skill_levels[8]));
-
-		strcpy(message_content[0], va("%s%s10 - Heal: %d/%d\n",message_content[0], zyk_allowed_skill_color(9, ent->client->pers.rpg_class),ent->client->pers.skill_levels[9], max_skill_levels[9]));
-
-		strcpy(message_content[1], va("%s%s11 - Protect: %d/%d\n",message_content[1], zyk_allowed_skill_color(10, ent->client->pers.rpg_class),ent->client->pers.skill_levels[10], max_skill_levels[10]));
-				
-		strcpy(message_content[2], va("%s%s12 - Mind Trick: %d/%d\n",message_content[2], zyk_allowed_skill_color(11, ent->client->pers.rpg_class),ent->client->pers.skill_levels[11], max_skill_levels[11]));
-				
-		strcpy(message_content[3], va("%s%s13 - Team Heal: %d/%d\n",message_content[3], zyk_allowed_skill_color(12, ent->client->pers.rpg_class),ent->client->pers.skill_levels[12], max_skill_levels[12]));
-				
-		strcpy(message_content[4], va("%s%s14 - Lightning: %d/%d\n",message_content[4], zyk_allowed_skill_color(13, ent->client->pers.rpg_class),ent->client->pers.skill_levels[13], max_skill_levels[13]));
-				
-		strcpy(message_content[5], va("%s%s15 - Grip: %d/%d\n",message_content[5], zyk_allowed_skill_color(14, ent->client->pers.rpg_class),ent->client->pers.skill_levels[14], max_skill_levels[14]));
-
-		strcpy(message_content[6], va("%s%s16 - Drain: %d/%d\n",message_content[6], zyk_allowed_skill_color(15, ent->client->pers.rpg_class),ent->client->pers.skill_levels[15], max_skill_levels[15]));
-
-		strcpy(message_content[7], va("%s%s17 - Rage: %d/%d\n",message_content[7], zyk_allowed_skill_color(16, ent->client->pers.rpg_class),ent->client->pers.skill_levels[16], max_skill_levels[16]));
-
-		strcpy(message_content[8], va("%s%s18 - Team Energize: %d/%d\n",message_content[8], zyk_allowed_skill_color(17, ent->client->pers.rpg_class),ent->client->pers.skill_levels[17], max_skill_levels[17]));
-
-		for (i = 0; i < 9; i++)
-		{
-			strcpy(message, va("%s%s",message,message_content[i]));
+		if (strcmp(skills[i].category, arg1) == 0) {
+			strcpy(message, va("%s%s%d - %s: %d/%d", message, color_ability(skills[i]), i + 1, skills[i].skill_name, ent->client->pers.skill_levels[i], skills[i].max_level));
+			
+			if (display_counter % 2 != 0) {
+				strcpy(message, va("%s\n", message));
+			}
+			else {
+				strcpy(message, va("%s", add_spacing_for_columns(skills[i], message, i + 1)));
+			}
+			display_counter++;
 		}
-
-		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
 	}
-	else if (Q_stricmp( arg1, "weapons" ) == 0)
-	{
-		strcpy(message_content[0], va("%s19 - Stun Baton: %d/%d        ", zyk_allowed_skill_color(18, ent->client->pers.rpg_class),ent->client->pers.skill_levels[18], max_skill_levels[18]));
-					
-		strcpy(message_content[1], va("%s20 - Blaster Pistol: %d/%d    ", zyk_allowed_skill_color(19, ent->client->pers.rpg_class),ent->client->pers.skill_levels[19], max_skill_levels[19]));
-							
-		strcpy(message_content[2], va("%s21 - E11 Blaster Rifle: %d/%d ", zyk_allowed_skill_color(20, ent->client->pers.rpg_class),ent->client->pers.skill_levels[20], max_skill_levels[20]));
-							
-		strcpy(message_content[3], va("%s22 - Disruptor: %d/%d         ", zyk_allowed_skill_color(21, ent->client->pers.rpg_class),ent->client->pers.skill_levels[21], max_skill_levels[21]));
-					
-		strcpy(message_content[4], va("%s23 - Bowcaster: %d/%d         ", zyk_allowed_skill_color(22, ent->client->pers.rpg_class),ent->client->pers.skill_levels[22], max_skill_levels[22]));
-					
-		strcpy(message_content[5], va("%s24 - Repeater: %d/%d          ", zyk_allowed_skill_color(23, ent->client->pers.rpg_class),ent->client->pers.skill_levels[23], max_skill_levels[23]));
-					
-		strcpy(message_content[0], va("%s%s25 - DEMP2: %d/%d\n",message_content[0], zyk_allowed_skill_color(24, ent->client->pers.rpg_class),ent->client->pers.skill_levels[24], max_skill_levels[24]));
-					
-		strcpy(message_content[1], va("%s%s26 - Flechette: %d/%d\n",message_content[1], zyk_allowed_skill_color(25, ent->client->pers.rpg_class),ent->client->pers.skill_levels[25], max_skill_levels[25]));
-					
-		strcpy(message_content[2], va("%s%s27 - Rocket Launcher: %d/%d\n",message_content[2], zyk_allowed_skill_color(26, ent->client->pers.rpg_class),ent->client->pers.skill_levels[26], max_skill_levels[26]));
-					
-		strcpy(message_content[3], va("%s%s28 - Concussion Rifle: %d/%d\n",message_content[3], zyk_allowed_skill_color(27, ent->client->pers.rpg_class),ent->client->pers.skill_levels[27], max_skill_levels[27]));
-					
-		strcpy(message_content[4], va("%s%s29 - Bryar Pistol: %d/%d\n",message_content[4], zyk_allowed_skill_color(28, ent->client->pers.rpg_class),ent->client->pers.skill_levels[28], max_skill_levels[28]));
 
-		strcpy(message_content[5], va("%s%s30 - Melee: %d/%d\n",message_content[5], zyk_allowed_skill_color(29, ent->client->pers.rpg_class),ent->client->pers.skill_levels[29], max_skill_levels[29]));
-
-		for (i = 0; i < 6; i++)
-		{
-			strcpy(message, va("%s%s",message,message_content[i]));
-		}
-
-		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
-	}
-	else if (Q_stricmp( arg1, "other" ) == 0)
-	{
-		strcpy(message_content[0], va("%s31 - Max Shield: %d/%d       \n", zyk_allowed_skill_color(30, ent->client->pers.rpg_class), ent->client->pers.skill_levels[30], max_skill_levels[30]));
-
-		strcpy(message_content[1], va("%s32 - Shield Strength: %d/%d  \n", zyk_allowed_skill_color(31, ent->client->pers.rpg_class), ent->client->pers.skill_levels[31], max_skill_levels[31]));
-
-		strcpy(message_content[2], va("%s33 - Health Strength: %d/%d  \n", zyk_allowed_skill_color(32, ent->client->pers.rpg_class), ent->client->pers.skill_levels[32], max_skill_levels[32]));
-
-		strcpy(message_content[3], va("%s34 - Drain Shield: %d/%d     \n", zyk_allowed_skill_color(33, ent->client->pers.rpg_class), ent->client->pers.skill_levels[33], max_skill_levels[33]));
-
-		strcpy(message_content[5], va("%s36 - Sense Health: %d/%d     \n", zyk_allowed_skill_color(35, ent->client->pers.rpg_class), ent->client->pers.skill_levels[35], max_skill_levels[35]));
-
-		strcpy(message_content[6], va("%s37 - Shield Heal: %d/%d      \n", zyk_allowed_skill_color(36, ent->client->pers.rpg_class), ent->client->pers.skill_levels[36], max_skill_levels[36]));
-
-		strcpy(message_content[7], va("%s38 - Team Shield Heal: %d/%d\n", zyk_allowed_skill_color(37, ent->client->pers.rpg_class), ent->client->pers.skill_levels[37], max_skill_levels[37]));
-
-		strcpy(message_content[8], va("%s39 - Unique Skill: %d/%d\n", zyk_allowed_skill_color(38, ent->client->pers.rpg_class), ent->client->pers.skill_levels[38], max_skill_levels[38]));
-
-		strcpy(message_content[9], va("%s55 - Force Power: %d/%d\n", zyk_allowed_skill_color(54, ent->client->pers.rpg_class), ent->client->pers.skill_levels[54], max_skill_levels[54]));
-
-		strcpy(message_content[10], va("%s56 - Improvements: %d/%d\n", zyk_allowed_skill_color(55, ent->client->pers.rpg_class), ent->client->pers.skill_levels[55], max_skill_levels[55]));
-
-		for (i = 0; i < 11; i++)
-		{
-			strcpy(message, va("%s%s",message,message_content[i]));
-		}
-
-		trap->SendServerCommand( target_ent->s.number, va("print \"%s\n\"", message) );
-	}
-	else if (Q_stricmp( arg1, "ammo" ) == 0)
-	{
-		strcpy(message, va("%s%s40 - Blaster Pack: %d/%d\n",message, zyk_allowed_skill_color(39, ent->client->pers.rpg_class), ent->client->pers.skill_levels[39], max_skill_levels[39]));
-
-		strcpy(message, va("%s%s41 - Power Cell: %d/%d\n",message, zyk_allowed_skill_color(40, ent->client->pers.rpg_class), ent->client->pers.skill_levels[40], max_skill_levels[40]));
-
-		strcpy(message, va("%s%s42 - Metallic Bolt: %d/%d\n",message, zyk_allowed_skill_color(41, ent->client->pers.rpg_class), ent->client->pers.skill_levels[41], max_skill_levels[41]));
-
-		strcpy(message, va("%s%s43 - Rockets: %d/%d\n",message, zyk_allowed_skill_color(42, ent->client->pers.rpg_class), ent->client->pers.skill_levels[42], max_skill_levels[42]));
-					
-		strcpy(message, va("%s%s44 - Thermals: %d/%d\n",message, zyk_allowed_skill_color(43, ent->client->pers.rpg_class), ent->client->pers.skill_levels[43], max_skill_levels[43]));
-
-		strcpy(message, va("%s%s45 - Trip Mines: %d/%d\n",message, zyk_allowed_skill_color(44, ent->client->pers.rpg_class), ent->client->pers.skill_levels[44], max_skill_levels[44]));
-
-		strcpy(message, va("%s%s46 - Det Packs: %d/%d\n",message, zyk_allowed_skill_color(45, ent->client->pers.rpg_class), ent->client->pers.skill_levels[45], max_skill_levels[45]));
-
-		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
-	}
-	else if (Q_stricmp( arg1, "items" ) == 0)
-	{
-		strcpy(message, va("%s%s47 - Binoculars: %d/%d\n",message, zyk_allowed_skill_color(46, ent->client->pers.rpg_class), ent->client->pers.skill_levels[46], max_skill_levels[46]));
-					
-		strcpy(message, va("%s%s48 - Bacta Canister: %d/%d\n",message, zyk_allowed_skill_color(47, ent->client->pers.rpg_class), ent->client->pers.skill_levels[47], max_skill_levels[47]));
-
-		strcpy(message, va("%s%s49 - Sentry Gun: %d/%d\n",message, zyk_allowed_skill_color(48, ent->client->pers.rpg_class), ent->client->pers.skill_levels[48], max_skill_levels[48]));
-
-		strcpy(message, va("%s%s50 - Seeker Drone: %d/%d\n",message, zyk_allowed_skill_color(49, ent->client->pers.rpg_class), ent->client->pers.skill_levels[49], max_skill_levels[49]));
-
-		strcpy(message, va("%s%s51 - E-Web: %d/%d\n",message, zyk_allowed_skill_color(50, ent->client->pers.rpg_class), ent->client->pers.skill_levels[50], max_skill_levels[50]));
-
-		strcpy(message, va("%s%s52 - Big Bacta: %d/%d\n",message, zyk_allowed_skill_color(51, ent->client->pers.rpg_class), ent->client->pers.skill_levels[51], max_skill_levels[51]));
-
-		strcpy(message, va("%s%s53 - Force Field: %d/%d\n",message, zyk_allowed_skill_color(52, ent->client->pers.rpg_class), ent->client->pers.skill_levels[52], max_skill_levels[52]));
-
-		strcpy(message, va("%s%s54 - Cloak Item: %d/%d\n",message, zyk_allowed_skill_color(53, ent->client->pers.rpg_class), ent->client->pers.skill_levels[53], max_skill_levels[53]));
-
-		strcpy(message, va("%s%s57 - Armor: %d/%d\n", message, zyk_allowed_skill_color(53, ent->client->pers.rpg_class), ent->client->pers.skill_levels[56], max_skill_levels[56]));
-
-		strcpy(message, va("%s%s35 - Jetpack: %d/%d\n", message, zyk_allowed_skill_color(34, ent->client->pers.rpg_class), ent->client->pers.skill_levels[34], max_skill_levels[34]));
-
-		strcpy(message, va("%s%s58 - Flame Thrower: %d/%d\n", message, zyk_allowed_skill_color(34, ent->client->pers.rpg_class), ent->client->pers.skill_levels[57], max_skill_levels[57]));
-
-		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
-	}
-}
-
-void zyk_list_stuff(gentity_t *ent, gentity_t *target_ent)
-{
-	char stuff_message[1024];
-	strcpy(stuff_message, "");
-
-	if (ent->client->pers.secrets_found & (1 << 0))
-		strcpy(stuff_message, va("%s^3\nHoldable Items Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3\nHoldable Items Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 1))
-		strcpy(stuff_message, va("%s^3Bounty Hunter Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Bounty Hunter Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 2))
-		strcpy(stuff_message, va("%s^3Unique Ability 1 - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Unique Ability 1 - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 3))
-		strcpy(stuff_message, va("%s^3Unique Ability 2 - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Unique Ability 2 - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 4))
-		strcpy(stuff_message, va("%s^3Unique Ability 3 - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Unique Ability 3 - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 7))
-		strcpy(stuff_message, va("%s^3Stealth Attacker Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Stealth Attacker Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 8))
-		strcpy(stuff_message, va("%s^3Force Gunner Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Force Gunner Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 9))
-		strcpy(stuff_message, va("%s^3Impact Reducer - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Impact Reducer - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 11))
-		strcpy(stuff_message, va("%s^3Power Cell Weapons Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Power Cell Weapons Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 12))
-		strcpy(stuff_message, va("%s^3Blaster Pack Weapons Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Blaster Pack Weapons Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 13))
-		strcpy(stuff_message, va("%s^3Metal Bolts Weapons Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Metal Bolts Weapons Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 14))
-		strcpy(stuff_message, va("%s^3Rocket Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Rocket Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 15))
-		strcpy(stuff_message, va("%s^3Stun Baton Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Stun Baton Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 16))
-		strcpy(stuff_message, va("%s^3Armored Soldier Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Armored Soldier Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 19))
-		strcpy(stuff_message, va("%s^3Force Guardian Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Force Guardian Upgrade - ^1no\n", stuff_message));
-
-	trap->SendServerCommand(target_ent - g_entities, va("print \"%s\n\"", stuff_message));
+	trap->SendServerCommand(target_ent->s.number, va("print \"%s\n\n\"", message));
 }
 
 void list_rpg_info(gentity_t *ent, gentity_t *target_ent)
@@ -11220,7 +11055,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 
 			if (Q_stricmp( arg1, "help" ) == 0)
 			{
-				trap->SendServerCommand(ent-g_entities, "print \"\n^2/list force: ^7lists force power skills\n^2/list weapons: ^7lists weapon skills\n^2/list other: ^7lists miscellaneous skills\n^2/list ammo: ^7lists ammo skills\n^2/list items: ^7lists holdable items skills\n^2/list [skill number]: ^7lists info about a skill\n^2/list commands: ^7lists the Galaxy Mod console commands\n^2/list stuff: ^7lists stuff bought from the seller\n\n\"");
+				trap->SendServerCommand(ent-g_entities, "print \"\n^2/list force: ^7lists force power skills\n^2/list weapons: ^7lists weapon skills\n^2/list other: ^7lists miscellaneous skills\n^2/list ammo: ^7lists ammo skills\n^2/list items: ^7lists holdable items skills\n^2/list [skill number]: ^7lists info about a skill\n^2/list commands: ^7lists the Galaxy Mod console commands\n\n\"");
 			}
 			else if (Q_stricmp( arg1, "force" ) == 0 || Q_stricmp( arg1, "weapons" ) == 0 || Q_stricmp( arg1, "other" ) == 0 || 
 					 Q_stricmp( arg1, "ammo" ) == 0 || Q_stricmp( arg1, "items" ) == 0)
@@ -11281,202 +11116,12 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 ^3/anim <id/word/list>: ^7Plays an animation by id or word. List is for listing all the available animations.\n\
 ^3/where: ^7Displays your current coordinates.\n\n\"");
 			}
-			else if (Q_stricmp( arg1, "stuff" ) == 0)
-			{
-				zyk_list_stuff(ent, ent);
-			}
 			else
 			{ // zyk: the player can also list the specific info of a skill passing the skill number as argument
 				i = atoi(arg1);
 				if (i >= 1 && i <= NUM_OF_SKILLS)
 				{
-					if (i == 1)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Jump: ^7makes you use the force to jump higher. Level 5 has no height limit, you can continue jumping up until you run out of force, and it also lets you jump out of water\n\"" );
-					if (i == 2)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Push: ^7pushes the opponent forward\n\"" );
-					if (i == 3)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Pull: ^7pulls the opponent towards you\n\"" );
-					if (i == 4)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Speed: ^7increases your speed. Level 1 is 1.5 times normal speed. Level 2 is 2.0, level 3 is 2.5 times and level 4 is 3.0 times\n\"" );
-					if (i == 5)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Sense: ^7allows you to see people through walls, invisible people or cloaked people and you can dodge disruptor shots. Represents your mind strength to resist Mind Control if your sense level is equal or higher than the enemy's mind trick level\n\"" );
-					if (i == 6)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Saber Attack: ^7gives you the saber. If you are using Single Saber, gives you the saber styles. If using duals or staff, increases saber damage, which is increased by 20 per cent for each level. This server has a saber damage scale of %.2f\n\"", g_saberDamageScale.value) );
-					if (i == 7)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Saber Defense: ^7increases your ability to block, parry enemy saber attacks or enemy shots\n\"" );
-					if (i == 8)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Saber Throw: ^7throws your saber at enemy and gets it back. Each level increases max distance and saber throw speed. Has %d damage\n\"", zyk_saber_throw_damage.integer) );
-					if (i == 9)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Absorb: ^7allows you to absorb force power attacks done to you\n\"" );
-					if (i == 10)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Heal: ^7recover some Health. Level 1 restores 5 hp, level 2 restores 10 hp and level 3 restores 25 hp\n\"" );
-					if (i == 11)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Protect: ^7decreases damage done to you by non-force power attacks. At level 4 decreases force consumption when receiving damage\n\"" );
-					if (i == 12)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Mind Trick: ^7makes yourself invisible to the players affected by this force power. Force User class can mind control a player or npc. Level 1 has a duration of 20 seconds, level 2 is 25 seconds and level 3 is 30 seconds\n\"" );
-					if (i == 13)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Team Heal: ^7restores some health to players near you\n\"" );
-					if (i == 14)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Lightning: ^7attacks with a powerful electric attack at players near you. At level 4, does more damage and pushes the enemy back\n\"" );
-					if (i == 15)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Grip: ^7attacks a player by holding and damaging him\n\"" );
-					if (i == 16)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Drain: ^7drains force power from a player to restore your health\n\"" );
-					if (i == 17)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Rage: ^7makes you 1.3 times faster, increases your saber attack speed and damage and makes you get less damage. Force Guardian class, with Improvements skill at least on level 1, can regen some force when taking damage on health while Rage is active\n\"" );
-					if (i == 18)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Team Energize: ^7restores some force power to players near you. If Improvements skill is at least at level 1, regens blaster pack and power cell ammo of the target players\n\"" );
-					if (i == 19)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Stun Baton: ^7attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. With Stun Baton Upgrade, can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds\n\"", zyk_stun_baton_damage.integer));
-					if (i == 20)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Blaster Pistol: ^7the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The pistol shot does %d damage. The charged shot causes a lot more damage depending on how much it was charged\n\"", zyk_blaster_pistol_damage.integer));
-					if (i == 21)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3E11 Blaster Rifle: ^7the rifle used by the Storm Troopers. E11 shots do %d damage. Normal fire is a single shot, while the alternate fire is the rapid fire\n\"", zyk_e11_blaster_rifle_damage.integer) );
-					if (i == 22)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Disruptor: ^7the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged, causes %d damage\n\"", zyk_disruptor_damage.integer, zyk_disruptor_alt_damage.integer) );
-					if (i == 23)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Bowcaster: ^7the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once. It does %d damage\n\"", zyk_bowcaster_damage.integer) );
-					if (i == 24)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Repeater: ^7a powerful weapon with a rapid fire and a plasma bomb. Normal fire shoots the rapid fire, and does %d damage. Alt fire fires the plasma bomb and does %d damage\n\"", zyk_repeater_damage.integer, zyk_repeater_alt_damage.integer) );
-					if (i == 25)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3DEMP2: ^7a very powerful weapon against machine npc and some vehicles, causing more damage to them and stunning them. Normal fire does %d damage and alt fire can be charged and does %d damage\n\"", zyk_demp2_damage.integer, zyk_demp2_alt_damage.integer) );
-					if (i == 26)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Flechette: ^7this weapon is similar to a shotgun. Normal fire causes %d damage. Alt fire shoots 2 bombs and causes %d damage\n\"", zyk_flechette_damage.integer, zyk_flechette_alt_damage.integer) );
-					if (i == 27)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Rocket Launcher: ^7a powerful explosive weapon. Normal fire shoots a rocket causing %d damage. Alt fire shoots a homing missile\n\"", zyk_rocket_damage.integer) );
-					if (i == 28)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Concussion Rifle: ^7it shoots a powerful shot that has a big damage area. Alt fire shoots a ray similar to disruptor shots, but it can go through force fields and can throw the enemy on the ground. Normal fire does %d damage and alt fire does %d damage\n\"", zyk_concussion_damage.integer, zyk_concussion_alt_damage.integer) );
-					if (i == 29)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Bryar Pistol: ^7very similar to the blaster pistol, but this one has a better fire rate with normal shot. Does %d damage\n\"", zyk_blaster_pistol_damage.integer) );
-					if (i == 30)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Melee: ^7allows you to attack with your fists and legs. You can punch, kick or do a special melee attack by holding both Attack and Alt Attack buttons (usually the mouse buttons). At level 0, melee attacks cause only half normal damage. Right hand punch causes %d normal damage, left hand punch causes %d normal damage and kick causes %d damage at level 1\n\"", zyk_melee_right_hand_damage.integer, zyk_melee_left_hand_damage.integer, zyk_melee_kick_damage.integer) );
-					if (i == 31)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Max Shield: ^7The max shield (armor) the player can have. Each level increases 20 per cent of max shield the player can have\n\"" );
-					if (i == 32)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Shield Strength: ^7Each level increases your shield resistance by 7 per cent\n\"" );
-					if (i == 33)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Health Strength: ^7Each level increases your health resistance by 7 per cent\n\"" );
-					if (i == 34)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Drain Shield: ^7When using Drain force power, and your health is full, restores some shield. It also makes Drain suck hp/shield from the enemy to restore your hp/shield\n\"" );
-					if (i == 35)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Jetpack: ^7the jetpack, used by Boba Fett. Allows you to fly. To use it, jump and press the Use key (usually R) while in the middle of the jump. Each level uses less fuel, allowing you to fly for a longer time\n\"" );
-					if (i == 36)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Sense Health: ^7allows you to see info about someone, including npcs. Level 1 shows current health. Level 2 shows name, health and shield. Level 3 shows name, health and max health, shield and max shield, force and max force, mp and max mp. To use it, when you are near a player or npc, use ^3Sense ^7force power\n\"" );
-					if (i == 37)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Shield Heal: ^7recovers 4 shield at level 1, 8 shield at level 2 and 12 shield at level 3. To use it, use Heal force power when you have full HP. This skill uses %d force power\n\"", zyk_max_force_power.integer/2) );
-					if (i == 38)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Team Shield Heal: ^7recovers 3 shield at level 1, 6 shield at level 2 and 9 shield at level 3 to players near you. To use it, when near players, use Team Heal force power. It will heal their shield after they have full HP\n\"") );
-					//if (i == 39)
-						//trap->SendServerCommand( ent-g_entities, va("print \"^3Unique Skill: ^7Used by pressing Engage Duel key\nFree Warrior: recovers some hp, shield and mp\nForce User: creates a force shield around the player that greatly reduces damage and protects against force powers\nBounty Hunter: allows firing poison darts with melee by spending metal bolts ammo\nArmored Soldier: spends power cell ammo to increase auto-shield-heal rate\nMonk: increases auto-healing rate and disables enemy Grip\nStealth Attacker: spends power cell ammo to increase disruptor firerate\nDuelist: recovers some MP and disables jetpack, cloak, speed and force regen of enemies nearby\nForce Gunner: disarms enemies nearby\nMagic Master: increases magic bolts, Lightning Dome, Magic Explosion and Healing Area damage. Increases Magic Sense duration. Healing Area heals more\nForce Guardian: increases resistance to damage for some seconds\n\"") );
-					if (i == 40)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Blaster Pack: ^7used as ammo for Blaster Pistol, Bryar Pistol and E11 Blaster Rifle. You can carry up to %d ammo\n\"",zyk_max_blaster_pack_ammo.integer) );
-					if (i == 41)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Power Cell: ^7used as ammo for Disruptor, Bowcaster and DEMP2. You can carry up to %d ammo\n\"",zyk_max_power_cell_ammo.integer) );
-					if (i == 42)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Metallic Bolt: ^7used as ammo for Repeater, Flechette and Concussion Rifle. You can carry up to %d ammo\n\"",zyk_max_metal_bolt_ammo.integer) );
-					if (i == 43)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Rockets: ^7used as ammo for Rocket Launcher. You can carry up to %d ammo\n\"",zyk_max_rocket_ammo.integer) );
-					if (i == 44)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Thermal Detonator: ^7the famous detonator used by Leia in Ep 6 at the Jabba Palace. Normal fire throws it, which explodes after some seconds. Alt fire throws it and it explodes as soon as it touches something. Thermals cause %d damage\n\"", zyk_thermal_damage.integer) );
-					if (i == 45)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Trip Mine: ^7a mine that can be planted somewhere. Normal fire plants a mine with a laser that when touched makes the mine explode, causing %d damage. Alt fire plants proximity mines\n\"", zyk_tripmine_damage.integer) );
-					if (i == 46)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Det Pack: ^7a very powerful explosive, which you can detonate remotely with the alt fire button. Causes %d damage\n\"", zyk_detpack_damage.integer) );
-					if (i == 47)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Binoculars: ^7this item allows you to see distant things better with its zoom.\n\"") );
-					if (i == 48)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Bacta Canister: ^7allows you to recover 25 HP\n\"") );
-					if (i == 49)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Sentry Gun: ^7after placed on the ground, shoots at any nearby enemy\n\"") );
-					if (i == 50)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Seeker Drone: ^7a flying ball that flies around you, shooting anyone in its range\n\"") );
-					if (i == 51)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3E-Web: ^7allows you to shoot at people with it, it has a good fire rate\n\"") );
-					if (i == 52)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Big Bacta: ^7allows you to recover 50 HP\n\"") );
-					if (i == 53)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Force Field: ^7a powerful shield that protects you from enemy attacks, it can resist a lot against any weapon\n\"") );
-					if (i == 54)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Cloak Item: ^7makes you almost invisible to players and invisible to npcs. Can cloak your vehicle by pressing the Lightsaber Style key (default L) if you have the Holdable Items Upgrade\n\"") );
-					if (i == 55)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Force Power: ^7increases the max force power you have. Necessary to allow you to use force powers and force-based skills\n\"") );
-					//if (i == 56)
-						//trap->SendServerCommand( ent-g_entities, va("print \"^3Improvements:\nFree Warrior ^7gets more damage and more resistance to damage\n^3Force User ^7gets more saber damage and force regens faster\n^3Bounty Hunter ^7gets more gun damage, max ammo, credits in battle, jetpack fuel, sentry gun health, and E-Web health\n^3Armored Soldier ^7gets more resistance to damage\n^3Monk ^7gets more run speed, melee damage and melee attack speed\n^3Stealth Attacker ^7gets more gun damage and more resistance to electric attacks\n^3Duelist ^7gets more saber and melee damage and faster force regen\n^3Force Gunner ^7gets more damage and more resistance to damage\n^3Magic Master ^7gets more Magic Points, new magic bolt types, new magic powers, recovers some jetpack fuel with Magic Points if it runs out and has less magic power cooldown\n^3Force Guardian ^7gets more resistance to damage\n\"") );
-				}
-				else if (Q_stricmp( arg1, "l" ) == 0)
-				{
-					trap->SendServerCommand( ent-g_entities, va("print \"^3Light Power: ^7Regens 1 hp per second. Regens shield if hp is full. You must finish ^5Light Quest ^7to have it\n\"") );
-				}
-				else if (Q_stricmp( arg1, "d" ) == 0)
-				{
-					trap->SendServerCommand( ent-g_entities, va("print \"^3Dark Power: ^7Increases damage by 10 per cent. You must finish ^1Dark Quest ^7to have it\n\"") );
-				}
-				else if (Q_stricmp( arg1, "e" ) == 0)
-				{
-					trap->SendServerCommand( ent-g_entities, va("print \"^3Eternity Power: ^7Absorbs 10 per cent of damage. You must finish the ^3Eternity Quest ^7to have it\n\"") );
-				}
-				else if (Q_stricmp( arg1, "u" ) == 0)
-				{
-					trap->SendServerCommand( ent-g_entities, va("print \"^3Universe Power: ^7Increases strength of your magic powers, except ultimate power. You must defeat the ^2Guardian of Universe ^7to have it\n\"") );
-				}
-				else if (Q_stricmp( arg1, "!" ) == 0)
-				{
-					if (ent->client->pers.universe_quest_progress < 14)
-					{
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Ultimate Power: ^7You must finish the 14th mission of ^2Universe Quest ^7to have this power\n\"") );
-					}
-					else
-					{
-						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Ultra Drain: ^7damages enemies in the area and recovers your hp. Attack with S + special melee to use this power\n\"") );
-						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Immunity Power: ^7protects you from other magic powers. Attack S + with special melee to use this power\n\"") );
-						else if (ent->client->pers.universe_quest_counter & (1 << 2))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Chaos Power: ^7damages, stuns, slowers and electrifies enemies. Attack with S + special melee to use this power\n\"") );
-						else if (ent->client->pers.universe_quest_counter & (1 << 3))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Time Power: ^7paralyzes enemies for some seconds. Disables target enemies force powers, force regen, mp regen and hp/shield regen. Increases target enemies magic cooldown of enemies. Enemies take less damage while paralyzed. Attack with S + special melee to use this power\n\"") );
-					}
-				}
-				else if (Q_stricmp( arg1, "r" ) == 0)
-				{
-					if (ent->client->pers.universe_quest_progress < NUM_OF_UNIVERSE_QUEST_OBJ)
-					{
-						trap->SendServerCommand(ent->s.number, va("print \"^3Final Power: ^7You must finish ^2Universe Quest ^7to have this power\n\""));
-					}
-					else
-					{
-						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Regen: ^7regens 1 mp per second. Finish Universe Quest to have it\n\""));
-						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Boost: ^7Decreases cooldown time of magic powers. Finish Universe Quest to have it\n\""));
-						else if (ent->client->pers.universe_quest_counter & (1 << 2))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Unique Boost: ^7decreases cooldown time of unique skill and unique abilities. Finish Universe Quest to have it\n\""));
-						else if (ent->client->pers.universe_quest_counter & (1 << 3))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Improvement: ^7makes Universe Power have no additional mp cost. Finish Universe Quest to have it\n\""));
-					}
-				}
-				else if (Q_stricmp( arg1, "s" ) == 0)
-				{
-					if (ent->client->pers.rpg_class == 0)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Ultra Resistance: ^7increases resistance to damage. Attack with D + special melee to use this power. MP cost: %d\n^3Ultra Strength: ^7increases damage. Attack with A + special melee to use this power. MP cost: %d\n^3Enemy Weakening: ^7decreases damage and resistance of enemies nearby. Attack with W + special melee to use this power. MP cost: %d\n\n\"", zyk_ultra_resistance_mp_cost.integer, zyk_ultra_strength_mp_cost.integer, zyk_enemy_nerf_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 1)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Sleeping Flowers: ^7knocks down enemies for some seconds. Attack with D + special melee to use this power. MP cost: %d\n^3Poison Mushrooms: ^7keep damaging the enemies for some time. Attack with A + special melee to use this power. MP cost: %d\n^3Tree of Life: ^7a big tree appears, protecting you from attacks and healing you. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_sleeping_flowers_mp_cost.integer, zyk_poison_mushrooms_mp_cost.integer, zyk_tree_of_life_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 2)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Blowing Wind: ^7blows people away for some seconds. Attack with D + special melee to use this power. MP cost: %d\n^3Hurricane: ^7makes enemies fly up like if they were inside a tornado. Attack with A + special melee to use this power. MP cost: %d\n^3Reverse Wind: ^7makes people go towards you. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_blowing_wind_mp_cost.integer, zyk_hurricane_mp_cost.integer, zyk_reverse_wind_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 3)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Earthquake: ^7knocks people down causing damage. Attack with D + special melee to use this power. MP cost: %d\n^3Rockfall: ^7rocks keep falling at the enemies. Attack with A + special melee to use this power. MP cost: %d\n^3Shifting Sand: ^7a shifting sand appears, sending you to your nearest enemy. Stand near the sand to be transported to the enemy. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_earthquake_mp_cost.integer, zyk_rockfall_mp_cost.integer, zyk_shifting_sand_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 4)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Flame Burst: ^7fires a flame burst for some seconds. Attack with D + special melee to use this power. MP cost: %d\n^3Ultra Flame: ^7a flame jet appears at the enemies and damages them. Attack with A + special melee to use this power. MP cost: %d\n^3Flaming Area: ^7creates a big area of flames around you, with high damage to enemies. Makes targets who touch the flames catch fire for some seconds. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_flame_burst_mp_cost.integer, zyk_ultra_flame_mp_cost.integer, zyk_flaming_area_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 5)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Healing Water: ^7instantly recovers some hp. Attack with D + special melee to use this power. MP cost: %d\n^3Water Splash: ^7damages enemies, draining their hp and healing you. Attack with A + special melee to use this power. MP cost: %d\n^3Water Attack: ^7attacks enemies nearby with water, with high damage. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_healing_water_mp_cost.integer, zyk_water_splash_mp_cost.integer, zyk_water_attack_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 6)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Magic Shield: ^7creates a shield that makes you take very little dmage from enemies for a short time. Also protects from Push, Pull and Grip force powers. Attack with D + special melee to use this power. MP cost: %d\n^3Dome of Damage: ^7an energy dome appears at enemies, damaging anyone inside the dome. Attack with A + special melee to use this power. MP cost: %d\n^3Magic Disable: ^7makes enemies unable to use magic powers for some seconds. Not so effective against magic using npcs, like bosses. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_magic_shield_mp_cost.integer, zyk_dome_of_damage_mp_cost.integer, zyk_magic_disable_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 7)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Ultra Speed: ^7increases your run speed. Attack with D + special melee to use this power. MP cost: %d\n^3Slow Motion: ^7decreases the run speed of enemies nearby. Attack with A + special melee to use this power. MP cost: %d\n^3Fast and Slow: ^7increases your speed and decreases enemies speed, with less duration than the other two magic powers. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_ultra_speed_mp_cost.integer, zyk_slow_motion_mp_cost.integer, zyk_fast_and_slow_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 8)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Magic Sense: ^7similar to Sense and Sense Health skills, but with less duration. Benefits from Sense, Sense Health and Improvements skill levels. MP cost: %d\n^3Healing Area: ^7creates an energy area that heals you and your allies and damage enemies. MP cost: %d\n^3Lightning Dome: ^7creates a dome that does lightning damage. Damage is based on player level. MP cost: %d\n^3Magic Explosion: ^7creates an explosion that does a lot of damage. MP cost: %d\n\nThis class can use any of the Light Quest special powers. Use A, W or D and melee kata to use a power. You can set each of A, W and D powers with the force power keys (usually the F3, F4, F5, F6, F7 and F8 keys)\n\"", zyk_magic_sense_mp_cost.integer, zyk_healing_area_mp_cost.integer, zyk_lightning_dome_mp_cost.integer, zyk_magic_explosion_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 9)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Ice Boulder: ^7creates a boulder that damages and traps enemies nearby for some seconds. Attack with D + special melee to use this power. MP cost: %d\n^3Ice Stalagmite: ^7greatly damages enemies nearby with a stalagmite. Attack with A + special melee to use this power. MP cost: %d\n^3Ice Block: ^7creates a block of ice around you, protecting you from attacks and increasing your resistance to damage. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_ice_boulder_mp_cost.integer, zyk_ice_stalagmite_mp_cost.integer, zyk_ice_block_mp_cost.integer) );
+					trap->SendServerCommand(ent - g_entities, va("print \"^3%s: ^7%s\n\"", skills[i-1].skill_name, skills[i-1].skill_description));
 				}
 				else
 				{
@@ -15954,10 +15599,6 @@ void Cmd_Players_f( gentity_t *ent ) {
 				Q_stricmp(arg2, "ammo") == 0 || Q_stricmp(arg2, "items") == 0)
 			{ // zyk: show skills of the player
 				zyk_list_player_skills(player_ent, ent, G_NewString(arg2));
-			}
-			else if (Q_stricmp(arg2, "stuff") == 0)
-			{ // zyk: lists stuff bought by the player
-				zyk_list_stuff(player_ent, ent);
 			}
 			else
 			{
