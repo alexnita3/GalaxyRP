@@ -11002,7 +11002,6 @@ char *add_spacing_for_columns(skill_t skill, char* message, int skill_id) {
 void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 {
 	char message[1024];
-	char message_columns[10][1024];
 	int i = 0;
 	int display_counter = 0;
 
