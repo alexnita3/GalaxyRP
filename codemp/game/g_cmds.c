@@ -83,7 +83,7 @@ const skill_t skills[] = {
 	{3, "Sense Health",			"allows you to see info about someone, including npcs. Level 1 shows current health. Level 2 shows name, health and shield. Level 3 shows name, health and max health, shield and max shield, force and max force, mp and max mp. To use it, when you are near a player or npc, use ^3Sense ^7force power",		"force",	"light"		},
 	{3, "Shield Heal",			"recovers 4 shield at level 1, 8 shield at level 2 and 12 shield at level 3. To use it, use Heal force power when you have full HP.",																																											"other",	"merc"		},
 	{3, "Team Shield Heal",		"recovers 3 shield at level 1, 6 shield at level 2 and 9 shield at level 3 to players near you. To use it, when near players, use Team Heal force power. It will heal their shield after they have full HP",																									"other",	"merc"		},
-	{1, "Unique Skill",			"placeholder",																																																																									"other",	"merc"		},
+	{1, "Unique Skill",			"placeholder, does nothing",																																																																									"other",	"merc"		},
 	{3, "Blaster Pack",			"used as ammo for Blaster Pistol, Bryar Pistol and E11 Blaster Rifle.",																																																											"ammo",		"merc"		},
 	{3, "Powercell",			"used as ammo for Disruptor, Bowcaster and DEMP2.",																																																																"ammo",		"merc"		},
 	{3, "Metal Bolts",			"used as ammo for Repeater, Flechette and Concussion Rifle.",																																																													"ammo",		"merc"		},
@@ -103,68 +103,6 @@ const skill_t skills[] = {
 	{3, "Improvements",			"placeholder",																																																																									"items",	"merc"		},
 	{5, "Armor",				"Each level increases your damage resistance by 10 percent, but also decreases your movement speed by 10 percent.",																																																"items",	"merc"		},
 	{2, "Flame Thrower",		"Allows you to use a flamethrower. Used by alt-firing with a stun baton.",																																																										"items",	"merc"		}
-};
-
-// zyk: max levels of the RPG skills
-const int max_skill_levels[NUM_OF_SKILLS] = {
-	5, // Jump
-	5, // Push
-	5, // Pull
-	5, // Speed
-	5, // Sense
-	5, // Saber Attack
-	5, // Saber Defense
-	5, // Saber Throw
-	5, // Absorb
-	5, // Heal
-	5, // Protect
-	5, // Mind Trick
-	5, // Team Heal
-	5, // Lightning
-	5, // Grip
-	5, // Drain
-	5, // Rage
-	5, // Team Energize
-	4, // Stun Baton
-	2, // Blaster Pistol
-	2, // E11 Blaster Rifle
-	2, // Disruptor
-	2, // Bowcaster
-	2, // Repeater
-	2, // DEMP2
-	2, // Flechette
-	2, // Rocket Launcher
-	2, // Concussion Rifle
-	2, // Bryar Pistol
-	3, // Melee
-	5, // Max Shield
-	4, // Shield Strength
-	4, // Health Strength
-	1, // Drain Shield
-	3, // Jetpack
-	3, // Sense Health
-	3, // Shield Heal
-	3, // Team Shield Heal
-	1, // Unique Skill
-	3, // Blaster Pack
-	3, // Powercell
-	3, // Metal Bolts
-	3, // Rockets
-	3, // Thermals
-	3, // Trip Mines
-	3, // Detpacks
-	1, // Binoculars
-	1, // Bacta Canister
-	1, // Sentry Gun
-	1, // Seeker Drone
-	1, // E-Web
-	1, // Big Bacta
-	1, // Force Field
-	1, // Cloak Item
-	5, // Force Power
-	3, // Improvements
-	5, // Armor
-	2  // Flame Thrower
 };
 
 #define MAX_WORDED_EMOTES 97
@@ -8524,7 +8462,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 1)
 	{
-		if (ent->client->pers.skill_levels[0] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[0] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_LEVITATION)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_LEVITATION);
@@ -8546,7 +8484,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 			
 	if (upgrade_value == 2)
 	{
-		if (ent->client->pers.skill_levels[1] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[1] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_PUSH)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_PUSH);
@@ -8568,7 +8506,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 3)
 	{
-		if (ent->client->pers.skill_levels[2] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[2] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_PULL)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_PULL);
@@ -8590,7 +8528,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 4)
 	{
-		if (ent->client->pers.skill_levels[3] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[3] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SPEED)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_SPEED);
@@ -8612,7 +8550,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 5)
 	{
-		if (ent->client->pers.skill_levels[4] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[4] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[4]++;
 			ent->client->pers.skillpoints--;
@@ -8643,7 +8581,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 6)
 	{
-		if (ent->client->pers.skill_levels[5] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[5] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SABER_OFFENSE)))
 			{
@@ -8672,7 +8610,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 7)
 	{
-		if (ent->client->pers.skill_levels[6] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[6] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SABER_DEFENSE)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_SABER_DEFENSE);
@@ -8694,7 +8632,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 8)
 	{
-		if (ent->client->pers.skill_levels[7] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[7] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SABERTHROW)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_SABERTHROW);
@@ -8716,7 +8654,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 9)
 	{
-		if (ent->client->pers.skill_levels[8] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[8] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_ABSORB)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_ABSORB);
@@ -8743,7 +8681,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 10)
 	{
-		if (ent->client->pers.skill_levels[9] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[9] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_HEAL)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_HEAL);
@@ -8765,7 +8703,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 11)
 	{
-		if (ent->client->pers.skill_levels[10] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[10] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_PROTECT)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_PROTECT);
@@ -8791,7 +8729,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 12)
 	{
-		if (ent->client->pers.skill_levels[11] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[11] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_TELEPATHY)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_TELEPATHY);
@@ -8813,7 +8751,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 13)
 	{
-		if (ent->client->pers.skill_levels[12] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[12] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_TEAM_HEAL)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_TEAM_HEAL);
@@ -8835,7 +8773,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 14)
 	{
-		if (ent->client->pers.skill_levels[13] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[13] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_LIGHTNING)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_LIGHTNING);
@@ -8861,7 +8799,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 15)
 	{
-		if (ent->client->pers.skill_levels[14] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[14] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_GRIP)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_GRIP);
@@ -8883,7 +8821,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 16)
 	{
-		if (ent->client->pers.skill_levels[15] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[15] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_DRAIN)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_DRAIN);
@@ -8905,7 +8843,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 17)
 	{
-		if (ent->client->pers.skill_levels[16] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[16] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_RAGE)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_RAGE);
@@ -8932,7 +8870,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 18)
 	{
-		if (ent->client->pers.skill_levels[17] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[17] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_TEAM_FORCE)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_TEAM_FORCE);
@@ -8954,7 +8892,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 19)
 	{
-		if (ent->client->pers.skill_levels[18] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[18] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[18]++;
 			ent->client->pers.skillpoints--;
@@ -8973,7 +8911,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 20)
 	{
-		if (ent->client->pers.skill_levels[19] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[19] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[19]++;
 			ent->client->pers.skillpoints--;
@@ -8992,7 +8930,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 21)
 	{
-		if (ent->client->pers.skill_levels[20] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[20] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[20]++;
 			ent->client->pers.skillpoints--;
@@ -9011,7 +8949,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 22)
 	{
-		if (ent->client->pers.skill_levels[21] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[21] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[21]++;
 			ent->client->pers.skillpoints--;
@@ -9030,7 +8968,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 23)
 	{
-		if (ent->client->pers.skill_levels[22] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[22] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[22]++;
 			ent->client->pers.skillpoints--;
@@ -9049,7 +8987,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 24)
 	{
-		if (ent->client->pers.skill_levels[23] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[23] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[23]++;
 			ent->client->pers.skillpoints--;
@@ -9068,7 +9006,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 25)
 	{
-		if (ent->client->pers.skill_levels[24] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[24] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[24]++;
 			ent->client->pers.skillpoints--;
@@ -9087,7 +9025,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 26)
 	{
-		if (ent->client->pers.skill_levels[25] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[25] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[25]++;
 			ent->client->pers.skillpoints--;
@@ -9106,7 +9044,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 27)
 	{
-		if (ent->client->pers.skill_levels[26] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[26] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[26]++;
 			ent->client->pers.skillpoints--;
@@ -9125,7 +9063,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 28)
 	{
-		if (ent->client->pers.skill_levels[27] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[27] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[27]++;
 			ent->client->pers.skillpoints--;
@@ -9144,7 +9082,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 29)
 	{
-		if (ent->client->pers.skill_levels[28] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[28] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[28]++;
 			ent->client->pers.skillpoints--;
@@ -9163,7 +9101,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 30)
 	{
-		if (ent->client->pers.skill_levels[29] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[29] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[29]++;
 			ent->client->pers.skillpoints--;
@@ -9182,7 +9120,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 31)
 	{
-		if (ent->client->pers.skill_levels[30] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[30] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[30]++;
 			set_max_shield(ent);
@@ -9202,7 +9140,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 32)
 	{
-		if (ent->client->pers.skill_levels[31] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[31] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[31]++;
 			ent->client->pers.skillpoints--;
@@ -9221,7 +9159,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 33)
 	{
-		if (ent->client->pers.skill_levels[32] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[32] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[32]++;
 			ent->client->pers.skillpoints--;
@@ -9240,7 +9178,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 34)
 	{
-		if (ent->client->pers.skill_levels[33] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[33] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[33]++;
 			ent->client->pers.skillpoints--;
@@ -9259,7 +9197,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 35)
 	{
-		if (ent->client->pers.skill_levels[34] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[34] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[34]++;
 			if (!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_JETPACK)))
@@ -9280,7 +9218,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 36)
 	{
-		if (ent->client->pers.skill_levels[35] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[35] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[35]++;
 			ent->client->pers.skillpoints--;
@@ -9299,7 +9237,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 37)
 	{
-		if (ent->client->pers.skill_levels[36] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[36] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[36]++;
 			ent->client->pers.skillpoints--;
@@ -9318,7 +9256,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 38)
 	{
-		if (ent->client->pers.skill_levels[37] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[37] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[37]++;
 			ent->client->pers.skillpoints--;
@@ -9337,7 +9275,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 39)
 	{
-		if (ent->client->pers.skill_levels[38] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[38] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[38]++;
 			ent->client->pers.skillpoints--;
@@ -9356,7 +9294,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 40)
 	{
-		if (ent->client->pers.skill_levels[39] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[39] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[39]++;
 			ent->client->pers.skillpoints--;
@@ -9375,7 +9313,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 41)
 	{
-		if (ent->client->pers.skill_levels[40] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[40] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[40]++;
 			ent->client->pers.skillpoints--;
@@ -9394,7 +9332,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 42)
 	{
-		if (ent->client->pers.skill_levels[41] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[41] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[41]++;
 			ent->client->pers.skillpoints--;
@@ -9413,7 +9351,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 43)
 	{
-		if (ent->client->pers.skill_levels[42] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[42] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[42]++;
 			ent->client->pers.skillpoints--;
@@ -9432,7 +9370,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 44)
 	{
-		if (ent->client->pers.skill_levels[43] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[43] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[43]++;
 			ent->client->pers.skillpoints--;
@@ -9451,7 +9389,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 45)
 	{
-		if (ent->client->pers.skill_levels[44] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[44] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[44]++;
 			ent->client->pers.skillpoints--;
@@ -9470,7 +9408,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 46)
 	{
-		if (ent->client->pers.skill_levels[45] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[45] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[45]++;
 			ent->client->pers.skillpoints--;
@@ -9489,7 +9427,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 47)
 	{
-		if (ent->client->pers.skill_levels[46] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[46] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[46]++;
 			ent->client->pers.skillpoints--;
@@ -9508,7 +9446,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 48)
 	{
-		if (ent->client->pers.skill_levels[47] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[47] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[47]++;
 			ent->client->pers.skillpoints--;
@@ -9527,7 +9465,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 49)
 	{
-		if (ent->client->pers.skill_levels[48] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[48] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[48]++;
 			ent->client->pers.skillpoints--;
@@ -9546,7 +9484,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 50)
 	{
-		if (ent->client->pers.skill_levels[49] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[49] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[49]++;
 			ent->client->pers.skillpoints--;
@@ -9565,7 +9503,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 51)
 	{
-		if (ent->client->pers.skill_levels[50] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[50] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[50]++;
 			ent->client->pers.skillpoints--;
@@ -9584,7 +9522,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 52)
 	{
-		if (ent->client->pers.skill_levels[51] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[51] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[51]++;
 			ent->client->pers.skillpoints--;
@@ -9603,7 +9541,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 53)
 	{
-		if (ent->client->pers.skill_levels[52] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[52] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[52]++;
 			ent->client->pers.skillpoints--;
@@ -9622,7 +9560,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 54)
 	{
-		if (ent->client->pers.skill_levels[53] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[53] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[53]++;
 			ent->client->pers.skillpoints--;
@@ -9641,7 +9579,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 55)
 	{
-		if (ent->client->pers.skill_levels[54] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[54] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[54]++;
 			ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value/4.0) * ent->client->pers.skill_levels[54]);
@@ -9662,7 +9600,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 56)
 	{
-		if (ent->client->pers.skill_levels[55] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[55] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[55]++;
 			ent->client->pers.skillpoints--;
@@ -9681,7 +9619,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 57)
 	{
-		if (ent->client->pers.skill_levels[56] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[56] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[56]++;
 			ent->client->pers.skillpoints--;
@@ -9700,7 +9638,7 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 
 	if (upgrade_value == 58)
 	{
-		if (ent->client->pers.skill_levels[57] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[57] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[57]++;
 			ent->client->pers.skillpoints--;
