@@ -4899,19 +4899,19 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			{
 				if (attacker->client->pers.skill_levels[5] <= FORCE_LEVEL_1)
 				{
-					damage = (int)ceil(damage*0.5);
+					damage = (int)ceil(damage*0.3);
 				}
-				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_3)
+				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_2)
 				{
-					damage = (int)ceil(damage*1.2);
+					damage = (int)ceil(damage*0.6);
 				}
 				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_4)
 				{
-					damage = (int)ceil(damage*1.4);
+					damage = (int)ceil(damage*1.2);
 				}
 				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_5)
 				{
-					damage = (int)ceil(damage * 1.6);
+					damage = (int)ceil(damage * 1.4);
 				}
 			}
 		}
