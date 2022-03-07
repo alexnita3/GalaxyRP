@@ -49,7 +49,7 @@ const skill_t skills[] = {
 	{5, "Push",					"pushes the opponent forward",																																																																					"force",	"neutral"	},
 	{5, "Pull",					"pulls the opponent towards you",																																																																				"force",	"neutral"	},
 	{5, "Speed",				"increases your speed. Level 1 is 1.5 times normal speed. Level 2 is 2.0, level 3 is 2.5 times and level 4 is 3.0 times",																																														"force",	"neutral"	},
-	{5, "Sense",				"allows you to see people through walls, invisible people or cloaked people and you can dodge disruptor shots. Represents your mind strength to resist Mind Control if your sense level is equal or higher than the enemy's mind trick level",																	"force",	"neutral"	},
+	{3, "Sense",				"allows you to see people through walls, invisible people or cloaked people and you can dodge disruptor shots. Represents your mind strength to resist Mind Control if your sense level is equal or higher than the enemy's mind trick level",																	"force",	"neutral"	},
 	{5, "Saber Attack",			"gives you the saber. If you are using Single Saber, gives you the saber styles. If using duals or staff, increases saber damage, which is increased by 20 per cent for each level.",																															"force",	"neutral"	},
 	{5, "Saber Defense",		"increases your ability to block, parry enemy saber attacks or enemy shots",																																																									"force",	"neutral"	},
 	{5, "Saber Throw",			"throws your saber at enemy and gets it back. Each level increases max distance and saber throw speed.",																																																		"force",	"neutral"	},
@@ -17753,7 +17753,7 @@ void Cmd_ShakeScreen_f(gentity_t* ent)
 
 	if (trap->Argc() != 4)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /shakeScreen <distance from player> <intensity> <length>\nExample: /shakeScreen 5 7\"");
+		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /shakeScreen <distance from player> <intensity> <length>\nExample: /shakeScreen 1 5 7\"");
 		return;
 	}
 
@@ -18162,7 +18162,6 @@ command_t commands[] = {
 	{ "logout",				Cmd_LogoutAccount_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "meleemode",			Cmd_MeleeMode_f,			CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "modversion",			Cmd_ModVersion_f,			CMD_NOINTERMISSION },
-	{ "music",				Cmd_Music_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "new",				Cmd_Register_F,				CMD_NOINTERMISSION },
 	{ "news",				Cmd_News_f,					0 },
 	{ "newsadd",			Cmd_UpdateNews_f,					0 },
@@ -18177,6 +18176,7 @@ command_t commands[] = {
 	{ "spawnplatform",		Cmd_SpawnPlatform_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "spawndummy",			Cmd_SpawnDummy_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "playsound",			Cmd_ZykSound_f,				CMD_NOINTERMISSION },
+	{ "playmusic",			Cmd_Music_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "players",			Cmd_Players_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "racemode",			Cmd_RaceMode_f,				CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "remap",				Cmd_Remap_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },

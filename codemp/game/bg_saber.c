@@ -3320,9 +3320,9 @@ weapChecks:
 	// *********************************************************
 	// Check for WEAPON ATTACK
 	// *********************************************************
-	if (pm->ps->fd.saberAnimLevel == SS_STAFF &&
-		(pm->cmd.buttons & BUTTON_ALT_ATTACK))
+	if (pm->cmd.buttons & BUTTON_ALT_ATTACK)
 	{ //ok, try a kick I guess.
+		//GalaxyRP (Alex): [Saber Throw] Now all styles will be able to kick.
 		int kickMove = -1;
 
 		if ( !BG_KickingAnim(pm->ps->torsoAnim) &&
