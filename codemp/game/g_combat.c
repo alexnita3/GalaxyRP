@@ -4914,6 +4914,25 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 					damage = (int)ceil(damage * 1.4);
 				}
 			}
+			if (attacker->client->ps.fd.saberAnimLevel == SS_FAST)
+			{
+				if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_2)
+				{
+					damage = (int)ceil(damage * 1.1);
+				}
+				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_3)
+				{
+					damage = (int)ceil(damage * 1.2);
+				}
+				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_4)
+				{
+					damage = (int)ceil(damage * 1.3);
+				}
+				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_5)
+				{
+					damage = (int)ceil(damage * 1.4);
+				}
+			}
 		}
 		else if (attacker->client->pers.skill_levels[24] == 2 && (mod == MOD_DEMP2 || mod == MOD_DEMP2_ALT))
 		{ // zyk: DEMP2 2/2 in RPG Mode causes more damage
