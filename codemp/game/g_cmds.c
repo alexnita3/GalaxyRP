@@ -2320,7 +2320,7 @@ void select_player_character(gentity_t* ent, char *character_name, sqlite3* db, 
 
 		// GalaxyRP (Alex): [Database] Grab info from weapons table. (column 68 is CharID, no need to grab that)
 		for (int i = 2; i < AMMO_MAX; i++) {
-			ent->client->ps.ammo[i] = sqlite3_column_int(stmt, i + 67);
+			ent->client->ps.ammo[i] = sqlite3_column_int(stmt, i + 69);
 		}
 
 		// GalaxyRP (Alex): [Database] Apply the modelname and net name.
