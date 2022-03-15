@@ -2125,13 +2125,12 @@ extern void saberReactivate(gentity_t *saberent, gentity_t *saberOwner);
 extern void saberBackToOwner(gentity_t *saberent);
 extern void quest_get_new_player(gentity_t *ent);
 extern void try_finishing_race();
-extern void save_account(gentity_t *ent, qboolean save_char_file);
+extern void update_weapons_table_row_with_current_values(gentity_t *ent);
 extern void remove_credits(gentity_t *ent, int credits);
 extern void zyk_NPC_Kill_f( char *name );
 extern gentity_t *Zyk_NPC_SpawnType(char *npc_type, int x, int y, int z, int yaw);
 extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 extern void player_restore_force(gentity_t *ent);
-extern void load_custom_quest_mission();
 void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int meansOfDeath ) {
 	gentity_t	*ent;
 	int			anim;
@@ -2154,7 +2153,8 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	if ( !attacker )
 		return;
 
-	save_account(self, qtrue);
+	// GalaxyRP (Alex): [Database] Update just the ammo table with the current values on death.
+	update_weapons_table_row_with_current_values(self);
 
 	// zyk: remove any quest_power status from this player
 	self->client->pers.quest_power_status = 0;
@@ -2185,48 +2185,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			{
 				this_ent->client->pers.guardian_mode = 0;
 			}
-		}
-	}
-
-	if (self->client->pers.player_statuses & (1 << 28))
-	{// zyk: custom quest npc defeated
-		if (self->client->playerTeam == NPCTEAM_PLAYER)
-		{
-			level.zyk_quest_ally_npc_count--;
-
-			if (level.zyk_quest_ally_npc_count == 0)
-			{ // zyk: all enemy npcs defeated
-				load_custom_quest_mission();
-
-				trap->SendServerCommand(-1, "chat \"^3Custom Quest: ^7Mission failed\n\"");
-			}
-		}
-		else
-		{
-			level.zyk_quest_npc_count--;
-
-			// zyk: increasing the number of steps done in this mission
-			zyk_set_quest_field(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done", va("%d", atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done")) + 1));
-
-			if (level.zyk_quest_npc_count == 0)
-			{ // zyk: all enemy npcs defeated
-				level.zyk_hold_quest_mission = qfalse;
-			}
-		}
-	}
-
-	// zyk: if someone dies by a custom quest npc and it has the recovery field, recover some of its health
-	if (attacker && attacker->client && attacker && attacker->NPC && attacker->client->pers.player_statuses & (1 << 28))
-	{
-		int zyk_npc_recovery = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "npcrecovery"));
-
-		if ((attacker->health + zyk_npc_recovery) < attacker->client->ps.stats[STAT_MAX_HEALTH])
-		{
-			attacker->health += zyk_npc_recovery;
-		}
-		else
-		{
-			attacker->health = attacker->client->ps.stats[STAT_MAX_HEALTH];
 		}
 	}
 
@@ -2375,9 +2333,9 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	}
 	else if (self->client->pers.universe_quest_artifact_holder_id != -1 && self->NPC)
 	{ // zyk: artifact holder of Universe Quest, set the player universe_quest_artifact_holder_id to -2 so he can get the artifact when he touches the force boon item
-		if (Q_stricmp( self->NPC_type, "quest_ragnos" ) == 0) // zyk: quest_ragnos npc has a different way to get the artifact
+		if (Q_stricmp(self->NPC_type, "quest_ragnos") == 0) // zyk: quest_ragnos npc has a different way to get the artifact
 		{
-			gentity_t *player_ent = &g_entities[self->client->pers.universe_quest_artifact_holder_id];
+			gentity_t* player_ent = &g_entities[self->client->pers.universe_quest_artifact_holder_id];
 
 			zyk_text_message(player_ent, "universe/mission_2/mission_2_artifact_guardian_fail", qtrue, qfalse);
 			player_ent->client->pers.universe_quest_artifact_holder_id = -1;
@@ -2387,359 +2345,6 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 				quest_get_new_player(player_ent);
 		}
 	}
-	else if (self->client->pers.universe_quest_objective_control > -1 && self->NPC)
-	{ // zyk: Universe Quest objective verification
-		gentity_t *the_old_player = &g_entities[self->client->pers.universe_quest_objective_control];
-
-		self->client->pers.universe_quest_objective_control = -1;
-
-		if (Q_stricmp( self->NPC_type, "quest_protocol_imp" ) == 0)
-		{ // zyk: quest_protocol_imp npc of the sixth objective of Universe Quest died, player can now receive the Amulet of Darkness from the jawa by setting this value to universe_quest_messages
-			the_old_player->client->pers.universe_quest_messages = 51;
-		}
-		else if (the_old_player->client->pers.universe_quest_progress == 6 && Q_stricmp( self->NPC_type, "quest_reborn_boss" ) == 0)
-		{ // zyk: quest reborn npc of the Master of Evil mission of Universe Quest died
-			the_old_player->client->pers.universe_quest_messages = 2;
-		}
-		else if (Q_stricmp( self->NPC_type, "quest_sand_raider_green" ) == 0 || Q_stricmp( self->NPC_type, "quest_sand_raider_brown" ) == 0 || Q_stricmp( self->NPC_type, "quest_sand_raider_blue" ) == 0 || Q_stricmp( self->NPC_type, "quest_sand_raider_red" ) == 0)
-		{
-			the_old_player->client->pers.universe_quest_objective_control--;
-			if (the_old_player->client->pers.universe_quest_objective_control == 0)
-			{ // zyk: killed all raiders, set 65 so player can receive the Amulet of Eternity from the jawa citizen
-				the_old_player->client->pers.universe_quest_messages = 65;
-			}
-		}
-		else if ((Q_stricmp( self->NPC_type, "sage_of_light" ) == 0 || Q_stricmp( self->NPC_type, "sage_of_darkness" ) == 0 || 
-				 Q_stricmp( self->NPC_type, "sage_of_eternity" ) == 0) && the_old_player->client->sess.amrpgmode == 2 && 
-				 the_old_player->client->pers.universe_quest_progress == 0 && level.quest_map == 9 && 
-				 the_old_player->client->pers.universe_quest_messages != 14) // zyk: if its a Sage, player fails the objective
-		{
-			zyk_text_message(the_old_player, "universe/mission_0/mission_0_fail", qtrue, qfalse, the_old_player->client->pers.netname);
-
-			// zyk: if player fails the first Universe Quest objective, pass the turn to another player
-			the_old_player->client->pers.universe_quest_messages = 14;
-			the_old_player->client->pers.universe_quest_timer = level.time + 3000;
-			zyk_NPC_Kill_f("all");
-		}
-		else if (the_old_player->client->sess.amrpgmode == 2 && the_old_player->client->pers.universe_quest_objective_control != -1 && 
-				 the_old_player->client->pers.universe_quest_progress == 0 && level.quest_map == 9 && 
-				 the_old_player->client->pers.universe_quest_messages != 14 && 
-				 (the_old_player->client->pers.universe_quest_objective_control > 1 || Q_stricmp(self->NPC_type, "quest_reborn_boss") == 0))
-		{
-			the_old_player->client->pers.universe_quest_objective_control--;
-
-			if (the_old_player->client->pers.universe_quest_objective_control == 0)
-			{ // zyk: all quest reborn npcs were defeated. The player then completed the first Universe Quest objective
-				the_old_player->client->pers.universe_quest_messages = 12;
-			}
-		}
-		else if (Q_stricmp( self->NPC_type, "sage_of_universe" ) == 0 && the_old_player->client->sess.amrpgmode == 2 && the_old_player->client->pers.universe_quest_objective_control == 5 && the_old_player->client->pers.universe_quest_progress == 4)
-		{ // zyk: Sage of Universe died in the fifth Universe Quest objective, pass turn to another player
-			zyk_text_message(the_old_player, "universe/mission_4/mission_4_fail", qtrue, qfalse, the_old_player->client->pers.netname);
-
-			quest_get_new_player(the_old_player);
-		}
-		else if (the_old_player->client->pers.universe_quest_progress == 11)
-		{ // zyk: Battle for the Temple, soldier was defeated by the player
-			if (Q_stricmp( self->NPC_type, "quest_super_soldier" ) == 0)
-			{
-				the_old_player->client->pers.universe_quest_objective_control--;
-
-				if (the_old_player->client->pers.universe_quest_objective_control == 0)
-				{ // zyk: player defeated all soldiers, so he completed the mission
-					zyk_text_message(the_old_player, "universe/mission_11/mission_11_end", qtrue, qfalse);
-					the_old_player->client->pers.hunter_quest_timer = level.time + 3000;
-					the_old_player->client->pers.hunter_quest_messages = 40;
-				}
-				else if (the_old_player->client->pers.universe_quest_objective_control == 10)
-				{ // zyk: after the player defeats some soldiers, Master of Evil will send more
-					the_old_player->client->pers.hunter_quest_messages = 12;
-					zyk_text_message(the_old_player, "universe/mission_11/mission_11_more", qtrue, qfalse);
-				}
-			}
-			else
-			{
-				zyk_text_message(the_old_player, "universe/mission_11/mission_11_fail", qtrue, qfalse, the_old_player->client->pers.netname);
-				the_old_player->client->pers.hunter_quest_timer = level.time + 3000;
-				the_old_player->client->pers.hunter_quest_messages = 50;
-			}
-		}
-		else if (the_old_player->client->pers.universe_quest_progress == 16 && the_old_player->client->pers.universe_quest_counter & (1 << 0))
-		{ // zyk: Save the City mission, mage was defeated by the player
-			if (Q_stricmp(self->NPC_type, "quest_mage") == 0)
-			{
-				int j = 0, mages_count = 0;
-
-				for (j = MAX_CLIENTS + BODY_QUEUE_SIZE; j < level.num_entities; j++)
-				{
-					gentity_t *mage_ent = &g_entities[j];
-
-					if (mage_ent && mage_ent->NPC && mage_ent->health > 0 && Q_stricmp(mage_ent->NPC_type, "quest_mage") == 0)
-					{
-						mages_count++;
-					}
-				}
-
-				if (mages_count == 0)
-				{ // zyk: defeated all mages
-					zyk_text_message(the_old_player, "universe/mission_16_sages/mission_16_sages_end", qtrue, qfalse, the_old_player->client->pers.netname);
-
-					the_old_player->client->pers.universe_quest_messages = 100;
-					the_old_player->client->pers.universe_quest_timer = level.time + 3000;
-				}
-			}
-		}
-		else if (the_old_player->client->pers.universe_quest_progress == 18 && the_old_player->client->pers.universe_quest_counter & (1 << 2))
-		{ // zyk: War at the City mission, citizen or sage was defeated by the player
-			int j = 0, citizens_count = 0, key_enemies = 0;
-
-			for (j = MAX_CLIENTS + BODY_QUEUE_SIZE; j < level.num_entities; j++)
-			{
-				gentity_t *mage_ent = &g_entities[j];
-
-				if (mage_ent && mage_ent->NPC && mage_ent->health > 0)
-				{
-					if (Q_stricmp(mage_ent->NPC_type, "quest_citizen_warrior") == 0)
-					{
-						citizens_count++;
-					}
-
-					if (strncmp(mage_ent->NPC_type, "sage_of", 7) == 0 || strncmp(mage_ent->NPC_type, "guardian_", 9) == 0)
-					{
-						key_enemies++;
-					}
-				}
-			}
-
-			if (citizens_count == 0 && key_enemies == 0)
-			{ // zyk: defeated all citizens
-				zyk_text_message(the_old_player, "universe/mission_18_thor/mission_18_thor_conquer", qtrue, qfalse, the_old_player->client->pers.netname);
-
-				the_old_player->client->pers.universe_quest_messages = 100;
-				the_old_player->client->pers.universe_quest_timer = level.time + 3000;
-			}
-			else if (((citizens_count + key_enemies) % 5) == 0)
-			{ // zyk: killed some enemies
-				the_old_player->client->pers.hunter_quest_messages = 1;
-			}
-		}
-	}
-	else if (quest_player && (quest_player->client->pers.guardian_mode <= 8 || quest_player->client->pers.guardian_mode == 11 || quest_player->client->pers.guardian_mode == 16))
-	{ // zyk: Light Quest. If guardian was defeated by the invoker, increase the defeated_guardians value
-		if (quest_player->client->pers.guardian_mode == 8)
-		{ // zyk: defeated the Guardian of Light
-			quest_player->client->pers.defeated_guardians = NUMBER_OF_GUARDIANS;
-
-			if (quest_player->client->pers.magic_power > 0)
-			{
-				quest_player->client->pers.magic_power--;
-				quest_player->client->pers.quest_power_status |= (1 << 14);
-			}
-
-			zyk_text_message(quest_player, "light/boss_defeated", qtrue, qfalse);
-		}
-		else
-		{
-			int light_quest_bitvalue = quest_player->client->pers.guardian_mode + 3;
-			if (quest_player->client->pers.guardian_mode == 11)
-			{
-				light_quest_bitvalue = 11;
-			}
-			else if (quest_player->client->pers.guardian_mode == 16)
-			{
-				light_quest_bitvalue = 12;
-			}
-
-			quest_player->client->pers.defeated_guardians |= (1 << light_quest_bitvalue);
-
-			// zyk: make the chat message for each guardian the player defeats
-			if (light_quest_bitvalue == 4)
-			{
-				zyk_text_message(quest_player, "light/guardian_of_water_defeated", qtrue, qfalse);
-			}
-			else if (light_quest_bitvalue == 5)
-			{
-				zyk_text_message(quest_player, "light/guardian_of_earth_defeated", qtrue, qfalse);
-			}
-			else if (light_quest_bitvalue == 6)
-			{
-				zyk_text_message(quest_player, "light/guardian_of_forest_defeated", qtrue, qfalse);
-			}
-			else if (light_quest_bitvalue == 7)
-			{
-				zyk_text_message(quest_player, "light/guardian_of_intelligence_defeated", qtrue, qfalse);
-			}
-			else if (light_quest_bitvalue == 8)
-			{
-				zyk_text_message(quest_player, "light/guardian_of_agility_defeated", qtrue, qfalse);
-			}
-			else if (light_quest_bitvalue == 9)
-			{
-				zyk_text_message(quest_player, "light/guardian_of_fire_defeated", qtrue, qfalse);
-			}
-			else if (light_quest_bitvalue == 10)
-			{
-				zyk_text_message(quest_player, "light/guardian_of_wind_defeated", qtrue, qfalse);
-			}
-			else if (light_quest_bitvalue == 11)
-			{
-				zyk_text_message(quest_player, "light/guardian_of_resistance_defeated", qtrue, qfalse);
-			}
-			else if (light_quest_bitvalue == 12)
-			{
-				zyk_text_message(quest_player, "light/guardian_of_ice_defeated", qtrue, qfalse);
-			}
-		}
-
-		quest_player->client->pers.guardian_mode = 0;
-		quest_player->client->pers.light_quest_messages = 0;
-
-		save_account(quest_player, qtrue);
-
-		quest_get_new_player(quest_player);
-	}
-	else if (quest_player && quest_player->client->pers.guardian_mode == 9)
-	{ // zyk: Dark Quest. Defeated the Guardian of Darkness
-		quest_player->client->pers.guardian_mode = 0;
-		quest_player->client->pers.hunter_quest_progress = NUMBER_OF_OBJECTIVES;
-
-		save_account(quest_player, qtrue);
-
-		if (quest_player->client->pers.magic_power > 0)
-		{
-			quest_player->client->pers.magic_power--;
-			quest_player->client->pers.quest_power_status |= (1 << 15);
-		}
-
-		zyk_text_message(quest_player, "dark/boss_defeated", qtrue, qfalse);
-
-		quest_get_new_player(quest_player);
-	}
-	else if (quest_player && quest_player->client->pers.guardian_mode == 10)
-	{ // zyk: Eternity Quest. Defeated the Guardian of Eternity
-		quest_player->client->pers.guardian_mode = 0;
-		quest_player->client->pers.eternity_quest_progress = NUMBER_OF_ETERNITY_QUEST_OBJECTIVES;
-
-		save_account(quest_player, qtrue);
-
-		if (quest_player->client->pers.magic_power > 0)
-		{
-			quest_player->client->pers.magic_power--;
-			quest_player->client->pers.quest_power_status |= (1 << 16);
-		}
-
-		zyk_text_message(quest_player, "eternity/boss_defeated", qtrue, qfalse);
-
-		quest_get_new_player(quest_player);
-	}
-	else if (quest_player && quest_player->client->pers.guardian_mode == 12)
-	{ // zyk: defeated the Master of Evil
-		quest_player->client->pers.universe_quest_messages = 12;
-		quest_player->client->pers.universe_quest_timer = level.time + 2000;
-		quest_player->client->pers.guardian_mode = 0;
-
-		zyk_text_message(quest_player, "universe/mission_6/mission_6_boss_defeated", qtrue, qfalse);
-	}
-	else if (quest_player && quest_player->client->pers.guardian_mode == 13)
-	{ // zyk: defeated the Guardian of Universe
-		quest_player->client->pers.universe_quest_messages = 5;
-		quest_player->client->pers.universe_quest_timer = level.time + 2000;
-		quest_player->client->pers.guardian_mode = 0;
-	}
-	else if (quest_player && quest_player->client->pers.guardian_mode == 14)
-	{ // zyk: defeated the Guardian of Chaos
-		quest_player->client->pers.universe_quest_messages = 20;
-		quest_player->client->pers.universe_quest_timer = level.time + 8000;
-		quest_player->client->pers.guardian_mode = 0;
-		G_Sound(self, CHAN_VOICE, G_SoundIndex("sound/chars/ragnos/misc/death3.mp3"));
-	}
-	else if (quest_player && quest_player->client->pers.guardian_mode == 15)
-	{ // zyk: defeated either Ymir or Thor
-		int j = 0;
-		qboolean still_has_boss = qfalse;
-
-		G_Sound(self, CHAN_VOICE, G_SoundIndex("sound/chars/ragnos/misc/death3.mp3"));
-
-		for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
-		{
-			gentity_t *old_boss = &g_entities[j];
-
-			if (old_boss && old_boss->NPC && old_boss->health > 0 && old_boss->client && old_boss->client->pers.guardian_mode == 15)
-			{
-				if (Q_stricmp(old_boss->NPC_type, "ymir_boss") == 0)
-				{
-					zyk_text_message(quest_player, "universe/mission_20_sages/mission_20_sages_thor_defeated", qtrue, qfalse);
-				}
-				else
-				{
-					zyk_text_message(quest_player, "universe/mission_20_sages/mission_20_sages_ymir_defeated", qtrue, qfalse);
-				}
-
-				// zyk: wrath of the remaining boss makes him stronger
-				old_boss->spawnflags |= 131072;
-				old_boss->client->pers.quest_power_status |= (1 << 13);
-
-				still_has_boss = qtrue;
-			}
-		}
-
-		if (still_has_boss == qfalse)
-		{
-			level.boss_battle_music_reset_timer = level.time + 1000;
-
-			quest_player->client->pers.universe_quest_messages = 7;
-			quest_player->client->pers.universe_quest_timer = level.time + 5000;
-			quest_player->client->pers.guardian_mode = 0;
-		}
-	}
-	else if (quest_player && quest_player->client->pers.guardian_mode == 17)
-	{ // zyk: defeated a boss in Guardian Trials
-		quest_player->client->pers.light_quest_messages++;
-		quest_player->client->pers.hunter_quest_messages--;
-
-		if (quest_player->client->pers.light_quest_messages == 9)
-		{ // zyk: defeated all bosses
-			level.boss_battle_music_reset_timer = level.time + 1000;
-
-			quest_player->client->pers.universe_quest_messages = 11;
-			quest_player->client->pers.universe_quest_timer = level.time + 3000;
-		}
-	}
-	else if (quest_player && quest_player->client->pers.guardian_mode == 18)
-	{ // zyk: defeated a boss in The Final Challenge (Guardians Sequel)
-		quest_player->client->pers.light_quest_messages++;
-
-		if (quest_player->client->pers.light_quest_messages == 4)
-		{ // zyk: defeated all bosses
-			level.boss_battle_music_reset_timer = level.time + 1000;
-
-			quest_player->client->pers.universe_quest_messages = 6;
-			quest_player->client->pers.universe_quest_timer = level.time + 3000;
-		}
-	}
-	else if (quest_player && quest_player->client->pers.guardian_mode == 19)
-	{ // zyk: defeated Ymir
-		quest_player->client->pers.universe_quest_messages = 3;
-		quest_player->client->pers.universe_quest_timer = level.time + 2000;
-		quest_player->client->pers.guardian_mode = 0;
-		G_Sound(self, CHAN_VOICE, G_SoundIndex("sound/chars/ragnos/misc/death3.mp3"));
-	}
-	else if (quest_player && quest_player->client->pers.guardian_mode == 20)
-	{ // zyk: defeated the Guardian of Time
-		quest_player->client->pers.universe_quest_messages = 3;
-		quest_player->client->pers.universe_quest_timer = level.time + 3000;
-		quest_player->client->pers.guardian_mode = 0;
-
-		zyk_text_message(quest_player, "universe/mission_20_thor/mission_20_thor_boss_defeated", qtrue, qfalse);
-	}
-	else if (quest_player && quest_player->client->pers.guardian_mode == 21)
-	{ // zyk: defeated the Soul of Sorrow
-		quest_player->client->pers.universe_quest_messages = 54;
-		quest_player->client->pers.universe_quest_timer = level.time + 3000;
-		quest_player->client->pers.guardian_mode = 0;
-
-		zyk_text_message(quest_player, "universe/mission_20_time/mission_20_time_boss_defeated", qtrue, qfalse);
-	}
 	
 	if (self->client->sess.amrpgmode == 2)
 	{ 
@@ -2748,16 +2353,12 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			self->client->pers.guardian_mode = 0;
 		}
 
-		// zyk: removing the armors from the player
-		self->client->pers.player_statuses &= ~(1 << 8);
-		self->client->pers.player_statuses &= ~(1 << 9);
-
 		// zyk: removing the crystals from the player
 		self->client->pers.player_statuses &= ~(1 << 10);
 		self->client->pers.player_statuses &= ~(1 << 11);
 
 		// zyk: player has the Resurrection Power, after completing quests in Challenge Mode. Uses mp. Not allowed in CTF gametype
-		if (self->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && self->client->pers.universe_quest_counter & (1 << 29) && g_gametype.integer != GT_CTF && 
+		if (self->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ && self->client->pers.universe_quest_counter & (1 << 29) && g_gametype.integer != GT_CTF && 
 			!(self->client->ps.eFlags2 & EF2_HELD_BY_MONSTER) && self->client->pers.magic_power >= 5 && zyk_enable_resurrection_power.integer == 1 && 
 			!(self->client->sess.magic_more_disabled_powers & (1 << 1)))
 		{
@@ -3122,7 +2723,7 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 			attacker->client->pers.credits_modifier = self->client->pers.level;
 			attacker->client->pers.score_modifier = self->client->pers.level / 50;
 
-			if (self->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
+			if (self->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ)
 			{
 				attacker->client->pers.score_modifier += 1;
 				attacker->client->pers.credits_modifier += 20;
@@ -5230,8 +4831,8 @@ extern void Boba_FlyStop( gentity_t *self );
 extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
 void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t dir, vec3_t point, int damage, int dflags, int mod ) {
 	gclient_t	*client;
-	int			take, asave = 0, knockback;
-	float		shieldAbsorbed = 0;
+	int			take, asave = 0, max, subamt = 0, knockback;
+	float		famt = 0, hamt = 0, shieldAbsorbed = 0;
 	int			check_shield = 1; // zyk: tests if damage can be absorbed by shields
 	qboolean	can_damage_heavy_things = qfalse; // zyk: will be qtrue if attacker is a RPG Mode Monk using melee or a Magic Master using Magic Fist
 
@@ -5298,19 +4899,38 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			{
 				if (attacker->client->pers.skill_levels[5] <= FORCE_LEVEL_1)
 				{
-					damage = (int)ceil(damage*0.2);
+					damage = (int)ceil(damage*0.3);
 				}
 				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_2)
-				{
-					damage = (int)ceil(damage*0.4);
-				}
-				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_3)
 				{
 					damage = (int)ceil(damage*0.6);
 				}
 				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_4)
 				{
-					damage = (int)ceil(damage*0.8);
+					damage = (int)ceil(damage*1.2);
+				}
+				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_5)
+				{
+					damage = (int)ceil(damage * 1.4);
+				}
+			}
+			if (attacker->client->ps.fd.saberAnimLevel == SS_FAST)
+			{
+				if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_2)
+				{
+					damage = (int)ceil(damage * 1.1);
+				}
+				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_3)
+				{
+					damage = (int)ceil(damage * 1.2);
+				}
+				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_4)
+				{
+					damage = (int)ceil(damage * 1.3);
+				}
+				else if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_5)
+				{
+					damage = (int)ceil(damage * 1.4);
 				}
 			}
 		}
@@ -5521,86 +5141,11 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	}
 
 	if (targ && targ->client && targ->client->sess.amrpgmode == 2)
-	{ // zyk: damage resistance of each class
-		if (targ->client->pers.player_statuses & (1 << 8) && mod == MOD_SABER)
-		{ // zyk: using the Saber Armor, reduces saber damage
-			damage = (int)ceil(damage * 0.85);
-		}
-
-		if (targ->client->pers.player_statuses & (1 << 9) && mod != MOD_SABER && mod != MOD_UNKNOWN && mod != MOD_TRIGGER_HURT && 
-			mod != MOD_FORCE_DARK && mod != MOD_WATER && mod != MOD_FALLING && mod != MOD_SUICIDE && mod != MOD_TELEFRAG && mod != MOD_SLIME)
-		{ // zyk: using the Gun Armor, reduces gun and melee damage
-			damage = (int)ceil(damage * 0.85);
-		}
-
-		if (targ->client->pers.rpg_class == 1 && targ->client->pers.unique_skill_duration > level.time) // zyk: Force User damage resistance
-		{ // zyk: Unique Skill of Force User
-			damage = (int)ceil(damage * 0.25);
-		}
-		else if (targ->client->pers.rpg_class == 3) // zyk: Armored Soldier damage resistance
+	{ 
+		// GalaxyRP (Alex): [Armor Skill] Armor reduces damage taken by up to 50%
+		if (targ->client->pers.skill_levels[56] > 0 ) 
 		{
-			float armored_soldier_bonus_resistance = 0.0;
-			// zyk: Armored Soldier Upgrade increases damage resistance
-			if (targ->client->pers.secrets_found & (1 << 16))
-				armored_soldier_bonus_resistance = 0.05;
-
-			// zyk: Armored Soldier Lightning Shield reduces damage
-			if (targ->client->ps.powerups[PW_SHIELDHIT] > level.time)
-			{
-				armored_soldier_bonus_resistance += 0.25;
-			}
-			
-			damage = (int)ceil(damage * (0.9 - ((0.05 * targ->client->pers.skill_levels[55]) + armored_soldier_bonus_resistance)));
-		}
-		else if (targ->client->pers.rpg_class == 4 && 
-				 targ->client->ps.legsAnim == BOTH_MEDITATE)
-		{ // zyk: Monk Meditation Strength and Meditation Drain increases resistance to damage of Monk
-			if (targ->client->pers.player_statuses & (1 << 21) || targ->client->pers.player_statuses & (1 << 23))
-				damage = (int)ceil(damage * (0.5));
-		}
-		else if (targ->client->pers.rpg_class == 0) // zyk: Free Warrior damage resistance
-		{
-			// zyk: Free Warrior Mimic Damage ability. Deals half of the damage taken back to the enemy
-			if (attacker && attacker != targ && (!attacker->NPC || 
-				(attacker->client && (attacker->client->NPC_class != CLASS_RANCOR || !(targ->client->ps.eFlags2 & EF2_HELD_BY_MONSTER)))) &&
-				targ->client->pers.unique_skill_duration > level.time && targ->client->pers.player_statuses & (1 << 21))
-			{
-				if (!(attacker && attacker->client && attacker->client->sess.amrpgmode == 2 && attacker->client->pers.rpg_class == 0 && 
-					attacker->client->pers.unique_skill_duration > level.time && attacker->client->pers.player_statuses & (1 << 21)))
-				{ // zyk: Mimic Damage will not work if attacker pointer is also a Free Warrior using Mimic Damage
-					G_Damage(attacker, targ, targ, NULL, NULL, (int)ceil(damage * 0.5), 0, MOD_UNKNOWN);
-				}
-			}
-
-			damage = (int)ceil(damage * (1.0 - (0.03 * targ->client->pers.skill_levels[55])));
-		}
-		else if (targ->client->pers.rpg_class == 5 && (mod == MOD_DEMP2 || mod == MOD_DEMP2_ALT))
-		{ // zyk: Stealth Attacker damage resistance against DEMP2
-			// zyk: only takes damage if he does not have the upgrade
-			if (targ->client->pers.secrets_found & (1 << 7))
-				return;
-
-			damage = (int)ceil(damage * (1 - (0.25 * targ->client->pers.skill_levels[55])));
-		}
-		else if (targ->client->pers.rpg_class == 7)
-		{ // zyk: Force Gunner damage resistance
-			damage = (int)ceil(damage * (1.0 - (0.06 * targ->client->pers.skill_levels[55])));
-		}
-		else if (targ->client->pers.rpg_class == 9)
-		{ // zyk: Force Guardian damage resistance
-			float force_tank_bonus_resistance = 0.0;
-
-			if (targ->client->pers.secrets_found & (1 << 19))
-			{ // zyk: Force Guardian Upgrade increases damage resistance
-				force_tank_bonus_resistance += 0.1;
-			}
-
-			if (targ->client->pers.unique_skill_duration > level.time)
-			{ // zyk: Force Guardian Unique Skill increases damage resistance
-				force_tank_bonus_resistance += 0.15;
-			}
-
-			damage = (int)ceil(damage * (0.9 - force_tank_bonus_resistance - (0.1 * targ->client->pers.skill_levels[55])));
+			damage = damage - (targ->client->pers.skill_levels[56] * damage * 0.1);
 		}
 	}
 
@@ -5744,6 +5289,14 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			return;
 		}
 	}
+	
+	if ( !(dflags & DAMAGE_NO_PROTECTION) )
+	{//rage overridden by no_protection
+		if (targ && targ->client && (targ->client->ps.fd.forcePowersActive & (1 << FP_RAGE)))
+		{
+			damage *= 0.5;
+		}
+	}
 
 	// the intermission has allready been qualified for, so don't
 	// allow any extra scoring
@@ -5766,6 +5319,16 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		}
 		return;
 	}
+	// reduce damage by the attacker's handicap value
+	// unless they are rocket jumping
+	if ( attacker->client
+		&& attacker != targ
+		&& attacker->s.eType == ET_PLAYER
+		&& level.gametype != GT_SIEGE )
+	{
+		max = attacker->client->ps.stats[STAT_MAX_HEALTH];
+		damage = damage * max / 100;
+	}
 
 	if ( !(dflags&DAMAGE_NO_HIT_LOC) )
 	{//see if we should modify it by damage location
@@ -5773,6 +5336,21 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			attacker->inuse && (attacker->client || attacker->s.eType == ET_NPC))
 		{ //check for location based damage stuff.
 			G_LocationBasedDamageModifier(targ, point, mod, dflags, &damage);
+		}
+	}
+	
+	if ( targ->client
+		&& targ->client->NPC_class == CLASS_RANCOR
+		&& (!attacker||!attacker->client||attacker->client->NPC_class!=CLASS_RANCOR) )
+	{
+		// I guess always do 10 points of damage...feel free to tweak as needed
+		if ( damage < 10 )
+		{//ignore piddly little damage
+			damage = 0;
+		}
+		else if ( damage >= 10 )
+		{
+			damage = 10;
 		}
 	}
 
@@ -6471,6 +6049,92 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		targ->client->lasthurt_mod = mod;
 	}
 
+	if (!(dflags & DAMAGE_NO_PROTECTION))
+	{//protect overridden by no_protection
+		if (take && targ->client && (targ->client->ps.fd.forcePowersActive & (1 << FP_PROTECT)))
+		{
+			if (targ->client->ps.fd.forcePower)
+			{
+				int maxtake = take;
+				//G_Sound(targ, CHAN_AUTO, protectHitSound);
+				if (targ->client->forcePowerSoundDebounce < level.time)
+				{
+					G_PreDefSound(targ->client->ps.origin, PDSOUND_PROTECTHIT);
+					targ->client->forcePowerSoundDebounce = level.time + 400;
+				}
+				if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_1)
+				{
+					famt = 1;
+					hamt = 0.40f;
+					if (maxtake > 100)
+					{
+						maxtake = 100;
+					}
+				}
+				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_2)
+				{
+					famt = 0.5f;
+					hamt = 0.60f;
+					if (maxtake > 200)
+					{
+						maxtake = 200;
+					}
+				}
+				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_3)
+				{
+					famt = 0.25f;
+					hamt = 0.80f;
+					if (maxtake > 400)
+					{
+						maxtake = 400;
+					}
+				}
+
+				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_4)
+				{
+					famt = 0.125f;
+					hamt = 1.0f;
+					if (maxtake > 600)
+					{
+						maxtake = 600;
+					}
+				}
+
+				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_5)
+				{
+					famt = 0.0625f;
+					hamt = 1.20f;
+					if (maxtake > 800)
+					{
+						maxtake = 800;
+					}
+				}
+				if (!targ->client->ps.powerups[PW_FORCE_BOON])
+				{
+					targ->client->ps.fd.forcePower -= maxtake * famt;
+				}
+				else
+				{
+					targ->client->ps.fd.forcePower -= (maxtake * famt) / 2;
+				}
+				subamt = (maxtake * hamt) + (take - maxtake);
+				if (targ->client->ps.fd.forcePower < 0)
+				{
+					subamt += targ->client->ps.fd.forcePower;
+					targ->client->ps.fd.forcePower = 0;
+				}
+				if (subamt)
+				{
+					take -= subamt;
+					if (take < 0)
+					{
+						take = 0;
+					}
+				}
+			}
+		}
+	}
+
 	if (shieldAbsorbed)
 	{
 		/*
@@ -6548,6 +6212,16 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 					targ->client->ps.fd.forcePower -= (int)ceil(take*0.125*force_decrease_change);
 					take = (int)ceil(take*0.55);
 				}
+				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_4)
+				{
+					targ->client->ps.fd.forcePower -= (int)ceil(take * 0.062 * force_decrease_change);
+					take = (int)ceil(take * 0.40);
+				}
+				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_5)
+				{
+					targ->client->ps.fd.forcePower -= (int)ceil(take * 0.031 * force_decrease_change);
+					take = (int)ceil(take * 0.25);
+				}
 
 				if (targ->client->ps.fd.forcePower < 0)
 					targ->client->ps.fd.forcePower = 0;
@@ -6623,6 +6297,21 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 		if ( targ->client ) {
 			targ->client->ps.stats[STAT_HEALTH] = targ->health;
+		}
+		
+		if ( !(dflags & DAMAGE_NO_PROTECTION) )
+		{//rage overridden by no_protection
+			if (targ->client && (targ->client->ps.fd.forcePowersActive & (1 << FP_RAGE)) && (inflictor->client || attacker->client))
+			{
+				if (targ->health <= 0)
+				{
+					targ->health = 1;
+				}
+				if (targ->client->ps.stats[STAT_HEALTH] <= 0)
+				{
+					targ->client->ps.stats[STAT_HEALTH] = 1;
+				}
+			}
 		}
 
 		//We want to go ahead and set gPainHitLoc regardless of if we have a pain func,

@@ -1430,23 +1430,21 @@ void SP_func_door (gentity_t *ent)
 	// default wait of 2 seconds
 	if (!ent->wait)
 		ent->wait = 2;
-
-	// default lip of 8 units
 	ent->wait *= 1000;
 
 	ent->delay *= 1000;
 
+	// default lip of 8 units
 	G_SpawnFloat( "lip", "8", &lip );
 
 	// default damage of 2 points
 	G_SpawnInt( "dmg", "2", &ent->damage );
-
-	G_SpawnInt( "teamallow", "0", &ent->alliedTeam );
-
 	if ( ent->damage < 0 )
 	{
 		ent->damage = 0;
 	}
+
+	G_SpawnInt( "teamallow", "0", &ent->alliedTeam );
 
 	// first position at start
 	VectorCopy( ent->s.origin, ent->pos1 );
@@ -1661,7 +1659,7 @@ void SP_func_plat (gentity_t *ent) {
 		VectorCopy( ent->s.angles2, ent->s.apos.trBase );
 	}
 
-	if (!G_SpawnFloat( "height", "0", &height ) ) {
+	if ( !G_SpawnFloat( "height", "0", &height ) ) {
 		height = (ent->r.maxs[2] - ent->r.mins[2]) - lip;
 	}
 
@@ -2102,9 +2100,6 @@ void SP_func_static( gentity_t *ent )
 	}
 
 	G_SpawnInt("model2scale", "0", &ent->s.iModelScale);
-
-	G_SpawnInt( "hyperspace", "0", &test );
-
 	if (ent->s.iModelScale < 0)
 	{
 		ent->s.iModelScale = 0;
@@ -2113,7 +2108,8 @@ void SP_func_static( gentity_t *ent )
 	{
 		ent->s.iModelScale = 1023;
 	}
-	
+
+	G_SpawnInt( "hyperspace", "0", &test );
 	if ( test )
 	{
 		ent->r.svFlags |= SVF_BROADCAST; // I need to rotate something that is huge and it's touching too many area portals...
@@ -2276,7 +2272,6 @@ void SP_func_rotating (gentity_t *ent) {
 	}
 
 	G_SpawnInt("model2scale", "0", &ent->s.iModelScale);
-
 	if (ent->s.iModelScale < 0)
 	{
 		ent->s.iModelScale = 0;
@@ -2286,7 +2281,7 @@ void SP_func_rotating (gentity_t *ent) {
 		ent->s.iModelScale = 1023;
 	}
 
-	if (G_SpawnVector( "spinangles", "0 0 0", spinangles ) )
+	if ( G_SpawnVector( "spinangles", "0 0 0", spinangles ) )
 	{
 		ent->speed = VectorLength( spinangles );
 		// set the axis of rotation
@@ -2308,7 +2303,6 @@ void SP_func_rotating (gentity_t *ent) {
 			ent->s.apos.trDelta[1] = ent->speed;
 		}
 	}
-
 	ent->s.apos.trType = TR_LINEAR;
 
 	if (!ent->damage) {
@@ -2942,7 +2936,6 @@ void SP_func_breakable( gentity_t *self )
 
 	G_SoundIndex("sound/weapons/explosions/cargoexplode.wav");//precaching
 	G_SpawnFloat( "radius", "1", &self->radius ); // used to scale chunk code if desired by a designer
-
 	G_SpawnInt( "material", "0", (int*)&self->material );
 
 	G_SpawnInt( "splashDamage", "0", &self->splashDamage );

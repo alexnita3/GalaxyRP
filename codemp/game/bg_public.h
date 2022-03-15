@@ -669,6 +669,7 @@ typedef enum {
 #define	EF2_SHIP_DEATH			(1<<7)		// "died in ship" mode
 #define	EF2_NOT_USED_1			(1<<8)		// not used
 
+#include "../../galaxyrp/game/rp_public.h" // Tr!Force: [GameGeneral] Public header
 
 typedef enum {
 	EFFECT_NONE = 0,
@@ -1030,6 +1031,7 @@ typedef enum {
 
 	EV_SIEGESPEC,
 
+	EV_NUM_ENTITY_EVENTS
 } entity_event_t;			// There is a maximum of 256 events (8 bits transmission, 2 high bits for uniqueness)
 
 

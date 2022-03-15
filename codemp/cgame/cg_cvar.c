@@ -86,6 +86,10 @@ void CG_RegisterCvars( void ) {
 		if ( cv->update )
 			cv->update();
 	}
+
+	// Tr!Force: [Plugin] Set the client plugin version
+	trap->Cvar_Register(NULL, "rpmod_client", "", CVAR_USERINFO | CVAR_ROM);
+	trap->Cvar_Set("rpmod_client", JK_VERSION);
 }
 
 void CG_UpdateCvars( void ) {

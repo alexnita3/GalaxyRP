@@ -1,5 +1,5 @@
 #============================================================================
-# Copyright (C) 2013 - 2015, OpenJK contributors
+# Copyright (C) 2013 - 2018, OpenJK contributors
 #
 # This file is part of the OpenJK source code.
 #
@@ -79,6 +79,7 @@ set(MPUIUIFiles
 	"${MPDir}/ui/menudef.h"
 	"${MPDir}/ui/ui_force.h"
 	"${MPDir}/ui/ui_local.h"
+	"${RPDir}/ui/rp_ui_local.h" # GalaxyRP headers
 	"${MPDir}/ui/ui_public.h"
 	"${MPDir}/ui/ui_shared.h"
 	"${MPDir}/ui/ui_xcvar.h"

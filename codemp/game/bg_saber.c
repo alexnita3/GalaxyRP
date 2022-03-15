@@ -726,7 +726,7 @@ qboolean PM_SaberKataDone(int curmove, int newmove)
 	if ( pm->ps->fd.saberAnimLevel == SS_DESANN )
 	{//desann and tavion can link up slower than yellow
 
-		int chainToleranceDesann = 2;
+		int chainToleranceDesann = 3;
 
 		if (pm->ps->saberAttackChainCount >= chainToleranceDesann)
 		{
@@ -2603,8 +2603,10 @@ int bg_parryDebounce[NUM_FORCE_POWER_LEVELS] =
 {
 	500,//if don't even have defense, can't use defense!
 	300,
-	150,
-	50
+	200,
+	100,
+	50,
+	30
 };
 
 qboolean PM_SaberPowerCheck(void)
@@ -3318,9 +3320,9 @@ weapChecks:
 	// *********************************************************
 	// Check for WEAPON ATTACK
 	// *********************************************************
-	if (pm->ps->fd.saberAnimLevel == SS_STAFF &&
-		(pm->cmd.buttons & BUTTON_ALT_ATTACK))
+	if (pm->cmd.buttons & BUTTON_ALT_ATTACK)
 	{ //ok, try a kick I guess.
+		//GalaxyRP (Alex): [Saber Throw] Now all styles will be able to kick.
 		int kickMove = -1;
 
 		if ( !BG_KickingAnim(pm->ps->torsoAnim) &&

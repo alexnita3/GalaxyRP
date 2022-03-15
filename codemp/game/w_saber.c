@@ -6685,7 +6685,7 @@ void WP_SaberAddG2Model( gentity_t *saberent, const char *saberModel, qhandle_t 
 	}
 	else
 	{
-		saberent->s.modelindex = G_ModelIndex( "models/weapons2/saber/saber_w.glm" );
+		saberent->s.modelindex = G_ModelIndex( DEFAULT_SABER_MODEL );
 	}
 	//FIXME: use customSkin?
 	trap->G2API_InitGhoul2Model( &saberent->ghoul2, saberModel, saberent->s.modelindex, saberSkin, 0, 0, 0 );
@@ -7328,16 +7328,26 @@ void saberFirstThrown(gentity_t *saberent)
 
 		VectorNormalize(dir);
 
-		if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] >= FORCE_LEVEL_4) // zyk: level 4 makes it even faster
+		if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_4) // zyk: level 4 makes it even faster
 			VectorScale(dir, 900, saberent->s.pos.trDelta );
+		else if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_5) // zyk: level 4 makes it even faster
+			VectorScale(dir, 1300, saberent->s.pos.trDelta);
 		else
 			VectorScale(dir, 500, saberent->s.pos.trDelta );
 
 		saberent->s.pos.trTime = level.time;
 
-		if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] >= FORCE_LEVEL_3)
+		if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_3)
 		{ //we'll treat them to a quicker update rate if their throw rank is high enough
 			saberent->speed = level.time + 100;
+		}
+		else if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_4)
+		{ //we'll treat them to a quicker update rate if their throw rank is high enough
+			saberent->speed = level.time + 200;
+		}
+		else if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_5)
+		{ //we'll treat them to a quicker update rate if their throw rank is high enough
+			saberent->speed = level.time + 300;
 		}
 		else
 		{
@@ -7562,7 +7572,7 @@ void UpdateClientRenderinfo(gentity_t *self, vec3_t renderOrigin, vec3_t renderA
 	}
 }
 
-#define STAFF_KICK_RANGE 16
+#define STAFF_KICK_RANGE 30
 extern void G_GetBoltPosition( gentity_t *self, int boltIndex, vec3_t pos, int modelIndex ); //NPC_utils.c
 
 extern qboolean BG_InKnockDown( int anim );
@@ -9521,20 +9531,29 @@ int WP_SaberCanBlock(gentity_t *self, vec3_t point, int dflags, int mod, qboolea
 		return 0;
 	}
 
-	if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_3)
+	// GalaxyRP (Alex): [Combat] Def 5 and 4 will get increased block rate
+	if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_5)
 	{
 		if (d_saberGhoul2Collision.integer)
 		{
-			blockFactor = 0.3f;
+			blockFactor = 0.05f;
 		}
 		else
 		{
-			blockFactor = 0.05f;
+			blockFactor = 0.3f;
 		}
+	}
+	if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_4)
+	{
+		blockFactor = 0.5f;
+	}
+	if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_3)
+	{
+		blockFactor = 0.7f;
 	}
 	else if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_2)
 	{
-		blockFactor = 0.6f;
+		blockFactor = 0.8f;
 	}
 	else if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_1)
 	{

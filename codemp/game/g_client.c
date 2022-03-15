@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "g_local.h"
 #include "ghoul2/G2.h"
 #include "bg_saga.h"
+#include "sqlite/sqlite3.h"
 
 // g_client.c -- client functions that don't happen every frame
 
@@ -376,7 +377,7 @@ void JMSaberThink(gentity_t *ent)
 			VectorCopy(ent->enemy->s.pos.trBase, ent->s.pos.trBase);
 			VectorCopy(ent->enemy->s.pos.trBase, ent->s.origin);
 			VectorCopy(ent->enemy->s.pos.trBase, ent->r.currentOrigin);
-			ent->s.modelindex = G_ModelIndex("models/weapons2/saber/saber_w.glm");
+			ent->s.modelindex = G_ModelIndex( DEFAULT_SABER_MODEL );
 			ent->s.eFlags &= ~(EF_NODRAW);
 			ent->s.modelGhoul2 = 1;
 			ent->s.eType = ET_MISSILE;
@@ -509,7 +510,7 @@ void SP_info_jedimaster_start(gentity_t *ent)
 
 	ent->flags = FL_BOUNCE_HALF;
 
-	ent->s.modelindex = G_ModelIndex("models/weapons2/saber/saber_w.glm");
+	ent->s.modelindex = G_ModelIndex( DEFAULT_SABER_MODEL );
 	ent->s.modelGhoul2 = 1;
 	ent->s.g2radius = 20;
 	//ent->s.eType = ET_GENERAL;
@@ -1589,7 +1590,7 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 	{
 		int defSkin;
 
-		Com_sprintf( afilename, sizeof( afilename ), "models/players/kyle/model.glm" );
+		Com_sprintf( afilename, sizeof( afilename ), "models/players/" DEFAULT_MODEL "/model.glm" );
 		handle = trap->G2API_InitGhoul2Model(&precachedKyle, afilename, 0, 0, -20, 0, 0);
 
 		if (handle<0)
@@ -1597,7 +1598,7 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 			return;
 		}
 
-		defSkin = trap->R_RegisterSkin("models/players/kyle/model_default.skin");
+		defSkin = trap->R_RegisterSkin("models/players/" DEFAULT_MODEL "/model_default.skin");
 		trap->G2API_SetSkin(precachedKyle, 0, defSkin, defSkin);
 	}
 
@@ -1908,7 +1909,7 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 
 		if (!g2SaberInstance)
 		{
-			trap->G2API_InitGhoul2Model(&g2SaberInstance, "models/weapons2/saber/saber_w.glm", 0, 0, -20, 0, 0);
+			trap->G2API_InitGhoul2Model(&g2SaberInstance, DEFAULT_SABER_MODEL, 0, 0, -20, 0, 0);
 
 			if (g2SaberInstance)
 			{
@@ -2131,6 +2132,14 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	s = Info_ValueForKey( userinfo, "ip" );
 	if ( !strcmp( s, "localhost" ) && !(ent->r.svFlags & SVF_BOT) )
 		client->pers.localClient = qtrue;
+
+	// Tr!Force: [Plugin] Check plugin
+	s = Info_ValueForKey( userinfo, "rpmod_client" );
+	if ( !strcmp( s, JK_VERSION ) ) {
+		client->pers.clientPlugin = qtrue;
+	} else {
+		client->pers.clientPlugin = qfalse;
+	}
 
 	// check the item prediction
 	s = Info_ValueForKey( userinfo, "cg_predictItems" );
@@ -2612,7 +2621,7 @@ and on transition between teams, but doesn't happen on respawns
 extern qboolean	gSiegeRoundBegun;
 extern qboolean	gSiegeRoundEnded;
 extern qboolean g_dontPenalizeTeam; //g_cmds.c
-extern void load_account(gentity_t *ent);
+extern void load_account_from_db_with_default_char(gentity_t *ent);
 extern void initialize_rpg_skills(gentity_t *ent);
 void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin);
 void ClientBegin( int clientNum, qboolean allowTeamReset ) {
@@ -2731,6 +2740,9 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	VectorSet(client->pers.teleport_point,0,0,0);
 	VectorCopy(client->ps.viewangles,client->pers.teleport_angles);
 
+	VectorSet(client->pers.saved_origin, 0, 0, 0);
+	VectorSet(client->pers.saved_view_angles, 0, 0, 0);
+
 	if (ent->client->sess.amrpgmode > 0)
 	{
 		// zyk: if the target goes to spec or something, then the server must choose another target
@@ -2738,7 +2750,13 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 			level.bounty_quest_choose_target = qtrue;
 
 		// zyk: load account again
-		load_account(ent);
+
+		ent->client->sess.accountID = -1;
+		ent->client->sess.loggedin = qfalse;
+		ent->client->sess.amrpgmode = 0;
+
+		//TODO: find a way to bring this back in (server doesn't like loading the db while it's changing maps)
+		//load_account_from_db_with_default_char(ent);
 
 		initialize_rpg_skills(ent);
 	}
@@ -2823,6 +2841,74 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	CalculateRanks();
 
 	G_ClearClientLog(clientNum);
+
+	// Check client plugin
+	if (rp_pluginRequired.integer && !client->pers.clientPlugin)
+	{
+		char	pluginVersion[MAX_INFO_VALUE];
+		char	clientEternal[MAX_INFO_VALUE];
+		int		allowDownload = trap->Cvar_VariableIntegerValue("sv_allowDownload");
+
+		// Force to spectator mode
+		if (rp_pluginRequired.integer == 2 && client->sess.sessionTeam != TEAM_SPECTATOR)
+		{
+			SetTeam(ent, "spectator");
+			return;
+		}
+
+		// Get info
+		Q_strncpyz(pluginVersion, Info_ValueForKey(userinfo, "rpmod_client"), sizeof(pluginVersion));
+		Q_strncpyz(clientEternal, Info_ValueForKey(userinfo, "cjp_client"), sizeof(clientEternal));
+
+		// Check for EternalJK2
+		if (!strcmp(clientEternal, "1.4JAPRO")) 
+		{
+			trap->SendServerCommand(clientNum, "cp \"You are using ^1EternalJK\nSome features may be ^3disabled^7\nPlease use OpenJK ^5https://builds.openjk.org\"");
+			trap->SendServerCommand(clientNum, "print \"You are running in ^3Server Side^7 mode only due ^1EternalJK^7 was detected\n\"");
+			G_LogPrintf("ClientPlugin: Player does not have any plugin (Using EternalJK)\n");
+		}
+		else
+		{
+			// Show center print message
+			if (!VALIDSTRINGCVAR(pluginVersion))
+			{
+				trap->SendServerCommand(clientNum, va("cp \"Please download\n^5%s^7 client plugin\nCheck the console or %s\"", JK_VERSION, (allowDownload ? "enable downloads in main menu" : "download from\n^2" JK_URL)));
+				G_LogPrintf("ClientPlugin: Player does not have any plugin\n");
+			}
+			else
+			{
+				trap->SendServerCommand(clientNum, va("cp \"Your client plugin is\n^3%s\nThe server version is ^5%s^7\nCheck the console or %s\"", pluginVersion, JK_VERSION, (allowDownload ? "enable downloads in main menu" : "download from\n^2" JK_URL)));
+				G_LogPrintf("ClientPlugin: Player is using '%s' instead '%s'\n", pluginVersion, JK_VERSION);
+			}
+
+			// Show console print message
+			if (allowDownload)
+			{
+				trap->SendServerCommand(clientNum, va("print \"Update your client plugin typing ^2/cl_allowdownload 1^7 in the console and reconnect\n\""));
+			}
+			else
+			{
+				trap->SendServerCommand(clientNum, va("print \"Download ^5%s^7 client plugin from ^2%s\n\"", JK_VERSION, JK_URL));
+			}
+		}
+	}
+
+	if (client->sess.sessionTeam != TEAM_SPECTATOR)
+	{
+		// Tr!Force: [Motd] Check screen message
+		if (!client->sess.motdSeen && VALIDSTRINGCVAR(zyk_screen_message.string))
+		{
+			// Logged players can disable the screen message if they want to
+			if (ent->client->sess.amrpgmode == 0 || !(ent->client->pers.player_settings & (1 << 9)))
+			{
+				// Delay motd for non-plugin clients
+				int motdDelayed = rp_pluginRequired.integer && !client->pers.clientPlugin ? zyk_screen_message_timer.integer + 2 : 0;
+			
+				client->motdTime = motdDelayed ? motdDelayed : zyk_screen_message_timer.integer;
+				client->sess.motdSeen = qtrue;
+			}
+		}
+	}
 }
 
 static qboolean AllForceDisabled(int force)
@@ -3175,6 +3261,7 @@ extern void zyk_remove_guns( gentity_t *ent );
 extern void do_scale(gentity_t *ent, int new_size);
 extern int zyk_max_magic_power(gentity_t *ent);
 extern void zyk_load_common_settings(gentity_t *ent);
+extern void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 void ClientSpawn(gentity_t *ent) {
 	int					i = 0, index = 0, saveSaberNum = ENTITYNUM_NONE, wDisable = 0, savedSiegeIndex = 0, maxHealth = 100;
 	vec3_t				spawn_origin, spawn_angles;
@@ -3321,7 +3408,6 @@ void ClientSpawn(gentity_t *ent) {
 			}
 		}
 	}
-
 	client->pers.teamState.state = TEAM_ACTIVE;
 
 	// toggle the teleport bit so the client knows to not lerp
@@ -3400,6 +3486,10 @@ void ClientSpawn(gentity_t *ent) {
 	client->ps.fd = savedForce;
 
 	client->ps.duelIndex = ENTITYNUM_NONE;
+
+	//spawn with 100
+	client->ps.jetpackFuel = 100;
+	client->ps.cloakFuel = 100;
 
 	client->pers = saved;
 	client->sess = savedSess;
@@ -3481,9 +3571,7 @@ void ClientSpawn(gentity_t *ent) {
 		wDisable = g_weaponDisable.integer;
 	}
 
-	//spawn with 100
-	client->ps.jetpackFuel = 100;
-	client->ps.cloakFuel = 100;
+
 
 	if ( level.gametype != GT_HOLOCRON
 		&& level.gametype != GT_JEDIMASTER
@@ -3810,6 +3898,14 @@ void ClientSpawn(gentity_t *ent) {
 			ent->health = client->ps.stats[STAT_HEALTH] = client->ps.stats[STAT_MAX_HEALTH] = 100;
 		}
 	}
+	else if (client->ps.stats[STAT_MAX_HEALTH] <= 100)
+	{
+		ent->health = client->ps.stats[STAT_HEALTH] = client->ps.stats[STAT_MAX_HEALTH] * 1.25;
+	}
+	else if (client->ps.stats[STAT_MAX_HEALTH] < 125)
+	{
+		ent->health = client->ps.stats[STAT_HEALTH] = 125;
+	}
 	else
 	{
 		ent->health = client->ps.stats[STAT_HEALTH] = client->ps.stats[STAT_MAX_HEALTH];
@@ -3945,16 +4041,6 @@ void ClientSpawn(gentity_t *ent) {
 
 			trap->LinkEntity ((sharedEntity_t *)ent);
 
-			// zyk: show screen message if the player did not see it yet
-			if (level.read_screen_message[ent->s.number] == qfalse && Q_stricmp(zyk_screen_message.string, "") != 0)
-			{
-				if (ent->client->sess.amrpgmode == 0 || !(ent->client->pers.player_settings & (1 << 9)))
-				{ // zyk: logged players can disable the screen message if they want to
-					level.read_screen_message[ent->s.number] = qtrue;
-					level.screen_message_timer[ent->s.number] = level.time + zyk_screen_message_timer.integer;
-				}
-			}
-
 			// zyk: if player is paralyzed by an admin, keeps him that way
 			if (ent->client->pers.player_statuses & (1 << 6))
 			{
@@ -4018,6 +4104,25 @@ void ClientSpawn(gentity_t *ent) {
 	//rww - make sure client has a valid icarus instance
 	trap->ICARUS_FreeEnt( (sharedEntity_t *)ent );
 	trap->ICARUS_InitEnt( (sharedEntity_t *)ent );
+
+	if (ent->client->sess.loggedin == qtrue) {
+
+		sqlite3* db;
+		char* zErrMsg = 0;
+		int rc;
+		sqlite3_stmt* stmt = 0;
+
+		rc = sqlite3_open(DB_PATH, &db);
+		if (rc != SQLITE_OK)
+		{
+			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+			sqlite3_close(db);
+			return;
+		}
+		select_weapons_table_row_from_entity(ent, db, zErrMsg, rc, stmt);
+		sqlite3_close(db);
+	}
+
 }
 
 
@@ -4266,8 +4371,6 @@ void ClientDisconnect( int clientNum ) {
 	ent->client->ps.persistant[PERS_TEAM] = TEAM_FREE;
 	ent->client->sess.sessionTeam = TEAM_FREE;
 	ent->r.contents = 0;
-
-	level.read_screen_message[ent->s.number] = qfalse;
 
 	ent->client->pers.universe_quest_objective_control = -1;
 

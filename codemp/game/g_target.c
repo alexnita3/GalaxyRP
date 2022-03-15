@@ -120,7 +120,6 @@ void SP_target_delay( gentity_t *ent ) {
 	if ( !ent->wait ) {
 		ent->wait = 1;
 	}
-
 	ent->use = Use_Target_Delay;
 }
 
@@ -905,7 +904,6 @@ void SP_target_scriptrunner( gentity_t *self )
 		self->wait = 1;//default wait of 1 sec
 	}
 	*/
-
 	// FIXME: this is a hack... because delay is read in as an int, so I'm bypassing that because it's too late in the project to change it and I want to be able to set less than a second delays
 	// no one should be setting a radius on a scriptrunner, if they are this would be bad, take this out for the next project
 	v = 0.0f;

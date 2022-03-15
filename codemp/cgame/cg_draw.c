@@ -3349,19 +3349,17 @@ float CG_DrawRadar ( float y )
 	float			zScale;
 	int				xOffset = 0;
 
-	
 	if (!cg.snap)
 	{
 		return y;
 	}
-	
+
 	// Make sure the radar should be showing
 	if ( cg.snap->ps.stats[STAT_HEALTH] <= 0 )
 	{
 		return y;
 	}
 
-	
 	if ( (cg.predictedPlayerState.pm_flags & PMF_FOLLOW) || cg.predictedPlayerState.persistant[PERS_TEAM] == TEAM_SPECTATOR )
 	{
 		return y;
@@ -3924,7 +3922,7 @@ float CG_DrawRadar ( float y )
 					color[1] = teamColor[1] + (1.0f - teamColor[1]) * f;
 					color[2] = teamColor[2] + (1.0f - teamColor[2]) * f;
 				}
-					
+
 				trap->R_SetColor ( color );
 
 				//we want to scale the thing up/down based on the relative Z (up/down) positioning
@@ -3958,10 +3956,10 @@ float CG_DrawRadar ( float y )
 				arrow_w = arrowBaseScale * RADAR_RADIUS / 128;
 				arrow_h = arrowBaseScale * RADAR_RADIUS / 128;
 
-				CG_DrawRotatePic2(RADAR_X + RADAR_RADIUS + sin(angle) * distance + xOffset,
-					y + RADAR_RADIUS + cos(angle) * distance,
-					arrow_w, arrow_h,
-					(360 - cent->lerpAngles[YAW]) + cg.predictedPlayerState.viewangles[YAW], cgs.media.mAutomapPlayerIcon);
+				CG_DrawRotatePic2( RADAR_X + RADAR_RADIUS + sin (angle) * distance + xOffset,
+								   y + RADAR_RADIUS + cos (angle) * distance,
+								   arrow_w, arrow_h,
+								   (360 - cent->lerpAngles[YAW]) + cg.predictedPlayerState.viewangles[YAW], cgs.media.mAutomapPlayerIcon );
 				break;
 			}
 		}
@@ -5501,7 +5499,7 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 
 	if ( !hShader )
 	{
-		hShader = cgs.media.crosshairShader[ cg_drawCrosshair.integer % NUM_CROSSHAIRS ];
+		hShader = cgs.media.crosshairShader[Com_Clampi( 1, NUM_CROSSHAIRS, cg_drawCrosshair.integer ) - 1];
 	}
 
 	chX = x + cg.refdef.x + 0.5 * (640 - w);
@@ -8373,6 +8371,12 @@ static void CG_Draw2D( void ) {
 	// if we are taking a levelshot for the menu, don't draw anything
 	if ( cg.levelShot ) {
 		return;
+	}
+
+	// Tr!Force: [CGameGeneral] Server mod check
+	if (!cgs.modCheck)
+	{
+		CG_CenterPrint(CG_GetStringEdString("RP_INGAME", "MOD_ALERT"), SCREEN_HEIGHT * .30, 0);
 	}
 
 	if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_SPECTATOR)

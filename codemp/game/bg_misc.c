@@ -1101,7 +1101,7 @@ Don't place this
 	{
 		"weapon_saber",
 		"sound/weapons/w_pkup.wav",
-        { "models/weapons2/saber/saber_w.glm",
+        { DEFAULT_SABER_MODEL,
 		0, 0, 0},
 /* view */		"models/weapons2/saber/saber_w.md3",
 /* icon */		"gfx/hud/w_icon_lightsaber",
@@ -1724,18 +1724,18 @@ qboolean BG_CanUseFPNow(int gametype, playerState_t *ps, int time, forcePowers_t
 		return qfalse;
 	}
 	*/
-
+	// GalaxyRP (Alex): [Dueling] Characters should be able to use force powers while dueling
+	/*
 	if (ps->duelInProgress)
 	{
-		if (power != FP_SABER_OFFENSE && power != FP_SABER_DEFENSE && /*power != FP_SABERTHROW &&*/
-			power != FP_LEVITATION)
+		if (power != FP_SABER_OFFENSE && power != FP_SABER_DEFENSE && power != FP_LEVITATION)
 		{
 			if (!ps->saberLockFrame || power != FP_PUSH)
 			{
 				return qfalse;
 			}
 		}
-	}
+	}*/
 
 	if (ps->saberLockFrame || ps->saberLockTime > time)
 	{
@@ -2359,7 +2359,7 @@ void BG_EvaluateTrajectoryDelta( const trajectory_t *tr, int atTime, vec3_t resu
 	}
 }
 
-const char *eventnames[] = {
+const char *eventnames[EV_NUM_ENTITY_EVENTS] = {
 	"EV_NONE",
 
 	"EV_CLIENTJOIN",

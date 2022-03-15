@@ -632,8 +632,7 @@ idealclass	-	Can only be used by this class/these classes. You can specify use b
 void SP_trigger_multiple( gentity_t *ent )
 {
 	char	*s;
-
-	if (G_SpawnString( "noise", "", &s ) )
+	if ( G_SpawnString( "noise", "", &s ) )
 	{
 		if (s && s[0])
 		{
@@ -645,11 +644,11 @@ void SP_trigger_multiple( gentity_t *ent )
 		}
 	}
 
+	G_SpawnInt("usetime", "0", &ent->genericValue7);
+
 	//For siege gametype
 	G_SpawnInt("siegetrig", "0", &ent->genericValue1);
-	G_SpawnInt("teambalance", "0", &ent->genericValue2);
-
-	G_SpawnInt("usetime", "0", &ent->genericValue7);
+    G_SpawnInt("teambalance", "0", &ent->genericValue2);
 
 	G_SpawnInt("delay", "0", &ent->delay);
 
@@ -1801,7 +1800,6 @@ void func_timer_use( gentity_t *self, gentity_t *other, gentity_t *activator ) {
 }
 
 void SP_func_timer( gentity_t *self ) {
-
 	G_SpawnFloat( "random", "1", &self->random);
 	G_SpawnFloat( "wait", "1", &self->wait );
 

@@ -1,0 +1,149 @@
+{
+map			"yavin1"
+longname		"Yavin 1"
+type			"ffa"
+}
+
+{
+map			"yavin1b"
+longname		"Yavin 1B"
+type			"ffa"
+}
+
+{
+map			"yavin2"
+longname		"Yavin 2"
+type			"ffa"
+}
+
+{
+map			"t1_danger"
+longname		"T1 Danger"
+type			"ffa"
+}
+
+{
+map			"t1_fatal"
+longname		"T1 Fatal"
+type			"ffa ctf"
+}
+
+{
+map			"t1_inter"
+longname		"T1 Inter"
+type			"ffa"
+}
+
+{
+map			"t1_rail"
+longname		"T1 Rail"
+type			"ffa ctf"
+}
+
+{
+map			"t1_sour"
+longname		"T1 Sour"
+type			"ffa"
+}
+
+{
+map			"t1_surprise"
+longname		"T1 Surprise"
+type			"ffa ctf"
+}
+
+{
+map			"hoth2"
+longname		"Hoth 2"
+type			"ffa"
+}
+
+{
+map			"hoth3"
+longname		"Hoth 3"
+type			"ffa"
+}
+
+{
+map			"t2_dpred"
+longname		"T2 Dpred"
+type			"ffa ctf"
+}
+
+{
+map			"t2_rancor"
+longname		"T2 Rancor"
+type			"ffa"
+}
+
+{
+map			"t2_rogue"
+longname		"T2 Rogue"
+type			"ffa"
+}
+
+{
+map			"t2_trip"
+longname		"T2 Trip"
+type			"ffa ctf"
+}
+
+{
+map			"t2_wedge"
+longname		"T2 Wedge"
+type			"ffa"
+}
+
+{
+map			"t3_bounty"
+longname		"T3 Bounty"
+type			"ffa ctf"
+}
+
+{
+map			"t3_byss"
+longname		"T3 Byss"
+type			"ffa"
+}
+
+{
+map			"t3_hevil"
+longname		"T3 Hevil"
+type			"ffa"
+}
+
+{
+map			"t3_rift"
+longname		"T3 Rift"
+type			"ffa"
+}
+
+{
+map			"t3_stamp"
+longname		"T3 Stamp"
+type			"ffa"
+}
+
+{
+map			"taspir1"
+longname		"Taspir 1"
+type			"ffa"
+}
+
+{
+map			"taspir2"
+longname		"Taspir 2"
+type			"ffa"
+}
+
+{
+map			"kor1"
+longname		"Kor 1"
+type			"ffa"
+}
+
+{
+map			"kor2"
+longname		"Kor 2"
+type			"ffa"
+}

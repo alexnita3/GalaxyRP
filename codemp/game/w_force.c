@@ -622,8 +622,8 @@ int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forc
 		return 0;
 	}
 
-	//Dueling fighters cannot use force powers on others, with the exception of force push when locked with each other
-	if (attacker && attacker->client && attacker->client->ps.duelInProgress)
+	// GalaxyRP (Alex): [Dueling] Characters should be able to use force powers while dueling
+	/*if (attacker && attacker->client && attacker->client->ps.duelInProgress)
 	{
 		return 0;
 	}
@@ -631,7 +631,7 @@ int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forc
 	if (other && other->client && other->client->ps.duelInProgress)
 	{
 		return 0;
-	}
+	}*/
 
 	if (forcePower == FP_GRIP)
 	{
@@ -1036,6 +1036,10 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 		{ // zyk: added speed level 4
 			duration = 25000;
 		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_SPEED] == FORCE_LEVEL_5)
+		{ // GalaxyRP (Alex): [Force Powers] Level 5 for more duration
+			duration = 30000;
+		}
 		else //shouldn't get here
 		{
 			break;
@@ -1071,6 +1075,14 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 		{
 			duration = 30000;
 		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_4)
+		{
+			duration = 35000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_5)
+		{
+			duration = 40000;
+		}
 		else //shouldn't get here
 		{
 			break;
@@ -1097,15 +1109,23 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 		hearDist = 256;
 		if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_1)
 		{
-			duration = 8000;
+			duration = 5000;
 		}
 		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_2)
 		{
-			duration = 14000;
+			duration = 10000;
 		}
 		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_3)
 		{
+			duration = 15000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_4)
+		{
 			duration = 20000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_5)
+		{
+			duration = 25000;
 		}
 		else //shouldn't get here
 		{
@@ -1158,6 +1178,14 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 		else if (self->client->ps.fd.forcePowerLevel[FP_SEE] == FORCE_LEVEL_3)
 		{
 			duration = 30000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_SEE] == FORCE_LEVEL_4)
+		{
+			duration = 40000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_SEE] == FORCE_LEVEL_5)
+		{
+			duration = 50000;
 		}
 		else //shouldn't get here
 		{
@@ -1245,17 +1273,43 @@ void ForceHeal( gentity_t *self )
 		return;
 	}
 
-	if (self->client->ps.fd.forcePowerLevel[FP_HEAL] == FORCE_LEVEL_3)
+	if (self->client->ps.fd.forcePowerLevel[FP_HEAL] == FORCE_LEVEL_5)
 	{
-		self->health += 25; //This was 50, but that angered the Balance God.
+		self->health += 50;
 
 		if (self->health > self->client->ps.stats[STAT_MAX_HEALTH])
 		{
 			self->health = self->client->ps.stats[STAT_MAX_HEALTH];
 		}
-		// zyk: commented this line BG_ForcePowerDrain( &self->client->ps, FP_HEAL, 0 );
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_HEAL] == FORCE_LEVEL_4)
+	{
+		self->health += 40;
+
+		if (self->health > self->client->ps.stats[STAT_MAX_HEALTH])
+		{
+			self->health = self->client->ps.stats[STAT_MAX_HEALTH];
+		}
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_HEAL] == FORCE_LEVEL_3)
+	{
+		self->health += 30; //This was 50, but that angered the Balance God.
+
+		if (self->health > self->client->ps.stats[STAT_MAX_HEALTH])
+		{
+			self->health = self->client->ps.stats[STAT_MAX_HEALTH];
+		}
 	}
 	else if (self->client->ps.fd.forcePowerLevel[FP_HEAL] == FORCE_LEVEL_2)
+	{
+		self->health += 20;
+
+		if (self->health > self->client->ps.stats[STAT_MAX_HEALTH])
+		{
+			self->health = self->client->ps.stats[STAT_MAX_HEALTH];
+		}
+	}
+	else
 	{
 		self->health += 10;
 
@@ -1263,17 +1317,6 @@ void ForceHeal( gentity_t *self )
 		{
 			self->health = self->client->ps.stats[STAT_MAX_HEALTH];
 		}
-		// zyk: commented this line BG_ForcePowerDrain( &self->client->ps, FP_HEAL, 0 );
-	}
-	else
-	{
-		self->health += 5;
-
-		if (self->health > self->client->ps.stats[STAT_MAX_HEALTH])
-		{
-			self->health = self->client->ps.stats[STAT_MAX_HEALTH];
-		}
-		// zyk: commented this line BG_ForcePowerDrain( &self->client->ps, FP_HEAL, 0 );
 	}
 	/*
 	else
@@ -1350,6 +1393,14 @@ void ForceTeamHeal( gentity_t *self )
 	{
 		radius *= 2;
 	}
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == FORCE_LEVEL_4)
+	{
+		radius *= 2.5;
+	}
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == FORCE_LEVEL_5)
+	{
+		radius *= 3;
+	}
 
 	// while (i < MAX_CLIENTS)  // zyk: now the condition will be the level.num_entities
 	while (i < level.num_entities)
@@ -1393,18 +1444,26 @@ void ForceTeamHeal( gentity_t *self )
 		return;
 	}
 
-	// zyk: decreased amount of hp healed. Default values in order: 50, 33 and 25
-	if (numpl == 1)
+	// GalaxyRP (Alex): [Force Powers] For levels 4 and 5 heal a fixed amount, otherwise, based on how many people are healed
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == FORCE_LEVEL_4 && numpl > 2)
+	{
+		healthadd = 40;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == FORCE_LEVEL_5 && numpl > 2)
+	{
+		healthadd = 50;
+	}
+	else if (numpl == 1)
 	{
 		healthadd = 40;
 	}
 	else if (numpl == 2)
 	{
 		healthadd = 30;
-	}
+	} 
 	else
 	{
-		healthadd = 20;
+		healthadd = 25;
 	}
 
 	self->client->ps.fd.forcePowerDebounce[FP_TEAM_HEAL] = level.time + 2000;
@@ -1486,6 +1545,7 @@ void ForceTeamForceReplenish( gentity_t *self )
 		return;
 	}
 
+	// GalaxyRP (Alex): [Force Powers] Increase radius by .5 for each level up to 5
 	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_2)
 	{
 		radius *= 1.5;
@@ -1493,6 +1553,14 @@ void ForceTeamForceReplenish( gentity_t *self )
 	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_3)
 	{
 		radius *= 2;
+	}
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_4)
+	{
+		radius *= 2.5;
+	}
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_5)
+	{
+		radius *= 3;
 	}
 
 	// while (i < MAX_CLIENTS)  // zyk: now the condition will be the level.num_entities
@@ -1543,7 +1611,13 @@ void ForceTeamForceReplenish( gentity_t *self )
 	}
 
 	// zyk: decreased amount of force recovered. Default values in order: 50, 33 and 25
-	if (numpl == 1)
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_4 && numpl > 2) {
+		poweradd = 40;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_5 && numpl > 2) {
+		poweradd = 50;
+	}
+	else if (numpl == 1)
 	{
 		poweradd = 40;
 	}
@@ -1555,7 +1629,23 @@ void ForceTeamForceReplenish( gentity_t *self )
 	{
 		poweradd = 20;
 	}
-	self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 2000;
+
+	// GalaxyRP (Alex): [Force Powers] Cooldown should go down as the ability is more advanced
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_1) {
+		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 2000;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_2) {
+		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 1500;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_3) {
+		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 1000;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_4) {
+		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 500;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_5) {
+		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time;
+	}
 
 	BG_ForcePowerDrain( &self->client->ps, FP_TEAM_FORCE, forcePowerNeeded[self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE]][FP_TEAM_FORCE] );
 
@@ -1564,7 +1654,7 @@ void ForceTeamForceReplenish( gentity_t *self )
 	while (i < numpl)
 	{
 		// zyk: Team Energize now can recover ammo if the player has full force and improvements skill
-		if (self->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[55] > 0 && !g_entities[pl[i]].NPC && g_entities[pl[i]].client->ps.fd.forcePower == g_entities[pl[i]].client->ps.fd.forcePowerMax)
+		if (self->client->sess.amrpgmode == 2 && !g_entities[pl[i]].NPC && g_entities[pl[i]].client->ps.fd.forcePower == g_entities[pl[i]].client->ps.fd.forcePowerMax)
 		{
 			Add_Ammo(&g_entities[pl[i]], AMMO_BLASTER, (self->client->pers.skill_levels[55] * 10));
 			Add_Ammo(&g_entities[pl[i]], AMMO_POWERCELL, (self->client->pers.skill_levels[55] * 10));
@@ -1978,7 +2068,12 @@ void ForceLightningDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec
 				}
 				*/
 				// zyk: Lightning level 4 in RPG Mode causes double damage
-				if (self->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[13] > 3)
+				if (self->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[13] == FORCE_LEVEL_4)
+				{
+					dmg *= 1.5;
+				}
+
+				if (self->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[13] == FORCE_LEVEL_5)
 				{
 					dmg *= 2;
 				}
@@ -2217,7 +2312,7 @@ void ForceDrainDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec3_t 
 
 	if ( traceEnt && traceEnt->takedamage )
 	{
-		if ( traceEnt->client && (!OnSameTeam(self, traceEnt) || g_friendlyFire.integer) && self->client->ps.fd.forceDrainTime < level.time)
+		if ( traceEnt->client && (!OnSameTeam(self, traceEnt) || g_friendlyFire.integer) && self->client->ps.fd.forceDrainTime < level.time && traceEnt->client->ps.fd.forcePower )
 		{//an enemy or object
 			if (!traceEnt->client && traceEnt->s.eType == ET_NPC)
 			{ //g2animent
@@ -2250,6 +2345,15 @@ void ForceDrainDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec3_t 
 				else if (self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_3)
 				{
 					dmg = 4;
+				}
+				// GalaxyRP (Alex): [Force Powers] More damage for levels 4 and 5
+				else if (self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_4)
+				{
+					dmg = 5;
+				}
+				else if (self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_5)
+				{
+					dmg = 6;
 				}
 
 				if (traceEnt->client)
@@ -2976,12 +3080,22 @@ void ForceTelepathy(gentity_t *self)
 
 	if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_2)
 	{
-		visionArc = 180;
+		visionArc = 90;
 	}
 	else if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_3)
 	{
+		visionArc = 180;
+		radius = MAX_TRICK_DISTANCE * 1.5f;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_4)
+	{
+		visionArc = 270;
+		radius = MAX_TRICK_DISTANCE * 2.0f;
+	}
+	else if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == FORCE_LEVEL_5)
+	{
 		visionArc = 360;
-		radius = MAX_TRICK_DISTANCE*2.0f;
+		radius = MAX_TRICK_DISTANCE * 2.5f;
 	}
 
 	VectorCopy( self->client->ps.viewangles, fwdangles );
@@ -3030,6 +3144,10 @@ void ForceTelepathy(gentity_t *self)
 
 			if (!tricked_entity->NPC) // zyk: NPCs wont have the glowing head effect of mind trick because of how the game handles the tricked entities
 				WP_AddAsMindtricked(&self->client->ps.fd, tr.entityNum);
+
+			if (self->client->ps.fd.forcePowerLevel[FP_TELEPATHY] < tricked_entity->client->ps.fd.forcePowerLevel[FP_SEE]) {
+				return;
+			}
 
 			// zyk: mind control this player, if he is not being mind controlled by someone else
 			if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 1 && 
@@ -3485,6 +3603,15 @@ void ForceThrow( gentity_t *self, qboolean pull )
 	else if (powerLevel == FORCE_LEVEL_3)
 	{
 		visionArc = 180;
+	}
+	// GalaxyRP (Alex): [Force Powers] Wider vision for levels 4 and 5
+	else if (powerLevel == FORCE_LEVEL_4)
+	{
+		visionArc = 270;
+	}
+	else if (powerLevel == FORCE_LEVEL_5)
+	{
+		visionArc = 360;
 	}
 
 	if (powerLevel == FORCE_LEVEL_1)
@@ -4328,7 +4455,26 @@ void WP_ForcePowerStop( gentity_t *self, forcePowers_t forcePower )
 		self->client->ps.activeForcePass = 0;
 		break;
 	case FP_RAGE:
-		self->client->ps.fd.forceRageRecoveryTime = level.time + 10000;
+		if (self->client->ps.fd.forcePowerLevel[FP_RAGE] < FORCE_LEVEL_2)
+		{// GalaxyRP (Alex): [Force Powers] Level 1 has a higher cooldown
+			self->client->ps.fd.forceRageRecoveryTime = level.time + 20000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_2)
+		{
+			self->client->ps.fd.forceRageRecoveryTime = level.time + 15000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_3)
+		{
+			self->client->ps.fd.forceRageRecoveryTime = level.time + 10000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_4)
+		{
+			self->client->ps.fd.forceRageRecoveryTime = level.time + 5000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_5)
+		{// GalaxyRP (Alex): [Force Powers] Level 5 has no cooldown
+			self->client->ps.fd.forceRageRecoveryTime = level.time;
+		}
 		if (wasActive & (1 << FP_RAGE))
 		{
 			G_MuteSound(self->client->ps.fd.killSoundEntIndex[TRACK_CHANNEL_3-50], CHAN_VOICE);
@@ -4351,9 +4497,17 @@ void WP_ForcePowerStop( gentity_t *self, forcePowers_t forcePower )
 		{//don't do it again for 3 seconds, minimum...
 			self->client->ps.fd.forcePowerDebounce[FP_DRAIN] = level.time + 3000;
 		}
-		else
-		{
+		else if(self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_3)
+		{// GalaxyRP (Alex): [Force Powers] Level 3 has a lower cooldown
 			self->client->ps.fd.forcePowerDebounce[FP_DRAIN] = level.time + 1500;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_4)
+		{// GalaxyRP (Alex): [Force Powers] Level 4 has a lower cooldown
+			self->client->ps.fd.forcePowerDebounce[FP_DRAIN] = level.time + 1000;
+		}
+		else if (self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_5)
+		{// GalaxyRP (Alex): [Force Powers] Level 5 has no cooldown
+			self->client->ps.fd.forcePowerDebounce[FP_DRAIN] = level.time;
 		}
 
 		if (self->client->ps.forceHandExtend == HANDEXTEND_FORCE_HOLD)
@@ -4494,6 +4648,46 @@ void DoGripAction(gentity_t *self, forcePowers_t forcePower)
 	{
 		gripEnt->client->ps.fd.forceGripBeingGripped = level.time + 1000;
 
+		if (gripEnt->client->ps.forceGripMoveInterval < level.time)
+		{
+			gripEnt->client->ps.velocity[2] = 30;
+
+			gripEnt->client->ps.forceGripMoveInterval = level.time + 300; //only update velocity every 300ms, so as to avoid heavy bandwidth usage
+		}
+
+		gripEnt->client->ps.otherKiller = self->s.number;
+		gripEnt->client->ps.otherKillerTime = level.time + 5000;
+		gripEnt->client->ps.otherKillerDebounceTime = level.time + 100;
+
+		gripEnt->client->ps.forceGripChangeMovetype = PM_FLOAT;
+
+		if ((level.time - gripEnt->client->ps.fd.forceGripStarted) > 3000 && !self->client->ps.fd.forceGripDamageDebounceTime)
+		{ //if we managed to lift him into the air for 2 seconds, give him a crack
+			self->client->ps.fd.forceGripDamageDebounceTime = 1;
+			G_Damage(gripEnt, self, self, NULL, NULL, 30, DAMAGE_NO_ARMOR, MOD_FORCE_DARK);
+
+			//Must play custom sounds on the actual entity. Don't use G_Sound (it creates a temp entity for the sound)
+			G_EntitySound(gripEnt, CHAN_VOICE, G_SoundIndex(va("*choke%d.wav", Q_irand(1, 3))));
+
+			gripEnt->client->ps.forceHandExtend = HANDEXTEND_CHOKE;
+			gripEnt->client->ps.forceHandExtendTime = level.time + 2000;
+
+			if (gripEnt->client->ps.fd.forcePowersActive & (1 << FP_GRIP))
+			{ //choking, so don't let him keep gripping himself
+				WP_ForcePowerStop(gripEnt, FP_GRIP);
+			}
+		}
+		else if ((level.time - gripEnt->client->ps.fd.forceGripStarted) > 4000)
+		{
+			WP_ForcePowerStop(self, forcePower);
+		}
+		return;
+	}
+
+	if (gripLevel > FORCE_LEVEL_3)
+	{
+		gripEnt->client->ps.fd.forceGripBeingGripped = level.time + 1000;
+
 		gripEnt->client->ps.otherKiller = self->s.number;
 		gripEnt->client->ps.otherKillerTime = level.time + 5000;
 		gripEnt->client->ps.otherKillerDebounceTime = level.time + 100;
@@ -4556,7 +4750,14 @@ void DoGripAction(gentity_t *self, forcePowers_t forcePower)
 		if ((level.time - gripEnt->client->ps.fd.forceGripStarted) > 3000 && !self->client->ps.fd.forceGripDamageDebounceTime)
 		{ //if we managed to lift him into the air for 2 seconds, give him a crack
 			self->client->ps.fd.forceGripDamageDebounceTime = 1;
-			G_Damage(gripEnt, self, self, NULL, NULL, 40, DAMAGE_NO_ARMOR, MOD_FORCE_DARK);
+			if (gripLevel == FORCE_LEVEL_4) 
+			{
+				G_Damage(gripEnt, self, self, NULL, NULL, 40, DAMAGE_NO_ARMOR, MOD_FORCE_DARK);
+			}
+			else
+			{
+				G_Damage(gripEnt, self, self, NULL, NULL, 60, DAMAGE_NO_ARMOR, MOD_FORCE_DARK);
+			}
 
 			//Must play custom sounds on the actual entity. Don't use G_Sound (it creates a temp entity for the sound)
 			G_EntitySound( gripEnt, CHAN_VOICE, G_SoundIndex(va( "*choke%d.wav", Q_irand( 1, 3 ) )) );
@@ -4745,7 +4946,7 @@ static void WP_ForcePowerRun( gentity_t *self, forcePowers_t forcePower, usercmd
 		}
 
 		if ( (self->client->ps.fd.forcePowerLevel[FP_HEAL] == FORCE_LEVEL_1 && self->client->ps.fd.forceHealAmount >= 25) ||
-			(self->client->ps.fd.forcePowerLevel[FP_HEAL] == FORCE_LEVEL_2 && self->client->ps.fd.forceHealAmount >= 33))
+			(self->client->ps.fd.forcePowerLevel[FP_HEAL] == FORCE_LEVEL_2 && self->client->ps.fd.forceHealAmount >= 33)) 
 		{
 			WP_ForcePowerStop( self, forcePower );
 		}
@@ -4804,23 +5005,33 @@ static void WP_ForcePowerRun( gentity_t *self, forcePowers_t forcePower, usercmd
 		}
 		if (self->client->ps.forceRageDrainTime < level.time)
 		{
-			int addTime = 400;
+			int addTime = 0;
 
-			// zyk: added this condition because of Rage 4/4 in RPG Mode, which dont damage the player
-			if (self->client->sess.amrpgmode < 2 || self->client->pers.skill_levels[16] < 4)
-				self->health -= 2;
+			self->health -= 2;
 
+			// GalaxyRP (Alex): [Force Powers] Levels 1 through 3 take extra damage for more time
 			if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_1)
 			{
+				self->health -= 3;
 				addTime = 150;
 			}
 			else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_2)
 			{
-				addTime = 300;
+				self->health -= 2;
+				addTime = 200;
 			}
 			else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_3)
 			{
-				addTime = 450;
+				self->health -= 1;
+				addTime = 250;
+			}
+			else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_4)
+			{
+				addTime = 300;
+			}
+			else if (self->client->ps.fd.forcePowerLevel[FP_RAGE] == FORCE_LEVEL_5)
+			{
+				addTime = 350;
 			}
 			self->client->ps.forceRageDrainTime = level.time + addTime;
 		}
@@ -4926,7 +5137,7 @@ static void WP_ForcePowerRun( gentity_t *self, forcePowers_t forcePower, usercmd
 		}
 		break;
 	case FP_ABSORB:
-		if (self->client->sess.amrpgmode < 2 || self->client->pers.skill_levels[8] < 4)
+		if (self->client->sess.amrpgmode < 2 || self->client->pers.skill_levels[8] < FORCE_LEVEL_4)
 		{ // zyk: Absorb 4/4 does not have force debounce
 			if (self->client->ps.fd.forcePowerDebounce[forcePower] < level.time)
 			{
@@ -5560,8 +5771,6 @@ qboolean G_SpecialRollGetup(gentity_t *self)
 	return rolled;
 }
 
-extern char *zyk_rpg_class(gentity_t *ent);
-extern int zyk_max_magic_power(gentity_t *ent);
 void sense_health_info(gentity_t *self, gentity_t *target)
 {
 	int client_health = 0;
@@ -5607,22 +5816,15 @@ void sense_health_info(gentity_t *self, gentity_t *target)
 		{
 			strcpy(player_type, "NPC");
 		}
-		else if (target->client->sess.amrpgmode == 1)
-		{
-			strcpy(player_type, "Admin-Only Player");
-		}
 		else if (target->client->sess.amrpgmode == 2)
 		{
-			strcpy(player_type, zyk_rpg_class(target));
+			strcpy(player_type, "Player");
 
 			// zyk: calculating the max armor of this player
 			client_max_armor = target->client->pers.max_rpg_shield;
-
-			magic_power = target->client->pers.magic_power;
-			max_magic_power = zyk_max_magic_power(target);
 		}
 
-		trap->SendServerCommand(self->s.number, va("cp \"%s\n^1%d^3/^1%d  ^2%d^3/^2%d\n^5%d^3/^5%d  ^7%d^3/^7%d\n^7%s\n\"", client_name, client_health, target->client->ps.stats[STAT_MAX_HEALTH], client_armor, client_max_armor, target->client->ps.fd.forcePower, target->client->ps.fd.forcePowerMax, magic_power, max_magic_power, player_type));
+		trap->SendServerCommand(self->s.number, va("cp \"%s\n^1%d^3/^1%d  ^2%d^3/^2%d\n^5%d^3/^5%d \n^7%s\n\"", client_name, client_health, target->client->ps.stats[STAT_MAX_HEALTH], client_armor, client_max_armor, target->client->ps.fd.forcePower, target->client->ps.fd.forcePowerMax, player_type));
 	}
 }
 
@@ -5665,6 +5867,19 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 	if (!self->client->ps.fd.saberAnimLevel)
 	{
 		self->client->ps.fd.saberAnimLevel = FORCE_LEVEL_1;
+	}
+
+	if (level.gametype != GT_SIEGE)
+	{
+		if (!(self->client->ps.fd.forcePowersKnown & (1 << FP_LEVITATION)))
+		{
+			self->client->ps.fd.forcePowersKnown |= (1 << FP_LEVITATION);
+		}
+
+		if (self->client->ps.fd.forcePowerLevel[FP_LEVITATION] < FORCE_LEVEL_1)
+		{
+			self->client->ps.fd.forcePowerLevel[FP_LEVITATION] = FORCE_LEVEL_1;
+		}
 	}
 
 	if (self->client->ps.fd.forcePowerSelected < 0 || self->client->ps.fd.forcePowerSelected >= NUM_FORCE_POWERS)
@@ -6072,7 +6287,8 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 				// zyk: if you are looking at someone (player or npc), this will be the client id
 				sense_health_info(self, &g_entities[self->client->ps.lookTarget]);
 
-				self->client->pers.sense_health_timer = level.time + 1000; // zyk: show health each second
+				// GalaxyRP (Alex): [Force Powers] Update health display every half a second
+				self->client->pers.sense_health_timer = level.time + 500;
 			}
 		}
 		if ( (self->client->ps.fd.forcePowersActive&( 1 << i )) )
@@ -6226,10 +6442,21 @@ qboolean Jedi_DodgeEvasion( gentity_t *self, gentity_t *shooter, trace_t *tr, in
 	}
 	else
 	{
-		//We now dodge all the time, but only on level 3
+		// GalaxyRP (Alex): [Force Powers] Level 4 will dodge 30% of the time.
 		if (self->client->ps.fd.forcePowerLevel[FP_SEE] < FORCE_LEVEL_3)
 		{//more likely to fail on lower force sight level
-			return qfalse;
+			if (Q_irand(0, 3))
+			{
+				return qfalse;
+			}
+		}
+		// GalaxyRP (Alex): [Force Powers] Level 4 will dodge half the time.
+		if (self->client->ps.fd.forcePowerLevel[FP_SEE] < FORCE_LEVEL_4)
+		{//more likely to fail on lower force sight level
+			if (Q_irand(0, 1)) 
+			{
+				return qfalse;
+			}
 		}
 	}
 

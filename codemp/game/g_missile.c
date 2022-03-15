@@ -592,6 +592,31 @@ void G_MissileImpact( gentity_t *ent, trace_t *trace ) {
 		{
 			G_DeflectMissile(other, ent, fwd);
 		}
+		// GalaxyRP (Alex): [Combat] Def 3 25% chance to reflect
+		else if (otherDefLevel == FORCE_LEVEL_3)
+		{
+			if (Q_irand(0, 3)) 
+			{
+				G_DeflectMissile(other, ent, fwd);
+			}
+			else 
+			{
+				G_ReflectMissile(other, ent, fwd);
+			}
+		}
+		// GalaxyRP (Alex): [Combat] Def 4 50% chance to reflect
+		else if (otherDefLevel == FORCE_LEVEL_4)
+		{
+			if (Q_irand(0, 1))
+			{
+				G_DeflectMissile(other, ent, fwd);
+			}
+			else
+			{
+				G_ReflectMissile(other, ent, fwd);
+			}
+		}
+		// GalaxyRP (Alex): [Combat] Def 5 100% chance to reflect
 		else
 		{
 			G_ReflectMissile(other, ent, fwd);
@@ -670,6 +695,31 @@ void G_MissileImpact( gentity_t *ent, trace_t *trace ) {
 			{
 				G_DeflectMissile(otherOwner, ent, fwd);
 			}
+			// GalaxyRP (Alex): [Combat] Def 3 25% chance to reflect
+			else if (otherDefLevel == FORCE_LEVEL_3)
+			{
+				if (Q_irand(0, 3))
+				{
+					G_DeflectMissile(other, ent, fwd);
+				}
+				else
+				{
+					G_ReflectMissile(other, ent, fwd);
+				}
+			}
+			// GalaxyRP (Alex): [Combat] Def 4 50% chance to reflect
+			else if (otherDefLevel == FORCE_LEVEL_4)
+			{
+				if (Q_irand(0, 1))
+				{
+					G_DeflectMissile(other, ent, fwd);
+				}
+				else
+				{
+					G_ReflectMissile(other, ent, fwd);
+				}
+			}
+			// GalaxyRP (Alex): [Combat] Def 5 100% chance to reflect
 			else
 			{
 				G_ReflectMissile(otherOwner, ent, fwd);

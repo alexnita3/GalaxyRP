@@ -30,7 +30,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "bg_public.h"
 #include "bg_vehicles.h"
 #include "g_public.h"
-#include "qcommon/game_version.h"
 
 
 typedef struct gentity_s gentity_t;
@@ -46,9 +45,9 @@ extern vec3_t gPainPoint;
 //==================================================================
 
 // the "gameversion" client command will print this plus compile date
-#define	GAMEVERSION	JK_VERSION
+// #define	GAMEVERSION	"OpenJK"
 
-#define SECURITY_LOG "security.log"
+#define SECURITY_LOG "logs/security.log"
 
 #define BODY_QUEUE_SIZE		8
 
@@ -175,6 +174,8 @@ extern void *g2SaberInstance;
 
 extern qboolean gEscaping;
 extern int gEscapeTime;
+
+#include "../../galaxyrp/game/rp_local.h" // GalaxyRP: [GameGeneral] Main header
 
 struct gentity_s {
 	//rww - entstate must be first, to correspond with the bg shared entity structure
@@ -481,6 +482,7 @@ typedef struct clientSession_s {
 	int	amrpgmode; // zyk: saved in session so the player account can be loaded again in map changes
 
 	qboolean loggedin;
+	qboolean motdSeen; // Tr!Force; [Motd] Server motd seen
 
 	int accountID;
 
@@ -545,105 +547,6 @@ typedef struct clientSession_s {
 #define MAX_NETNAME			36
 #define	MAX_VOTE_COUNT		3
 
-// zyk: admin bit values
-typedef enum {
-	ADM_NPC,
-	ADM_NOCLIP,
-	ADM_GIVEADM,
-	ADM_TELE,
-	ADM_ADMPROTECT,
-	ADM_ENTITYSYSTEM,
-	ADM_SILENCE,
-	ADM_CLIENTPRINT,
-	ADM_RPMODE,
-	ADM_KICK,
-	ADM_PARALYZE,
-	ADM_GIVE,
-	ADM_SCALE,
-	ADM_PLAYERS,
-	ADM_DUELARENA,
-	ADM_CUSTOMQUEST,
-	ADM_CREATEITEM,
-	ADM_GOD,
-	ADM_LEVELUP,
-	ADM_SKILL,
-	ADM_CREATECREDITS,
-	ADM_IGNORECHATDISTANCE,
-	ADM_NUM_CMDS,
-} zyk_admin_t;
-
-// zyk: magic powers values
-typedef enum {
-	MAGIC_MAGIC_SENSE,
-	MAGIC_HEALING_WATER,
-	MAGIC_WATER_SPLASH,
-	MAGIC_WATER_ATTACK,
-	MAGIC_EARTHQUAKE,
-	MAGIC_ROCKFALL,
-	MAGIC_SHIFTING_SAND,
-	MAGIC_SLEEPING_FLOWERS,
-	MAGIC_POISON_MUSHROOMS,
-	MAGIC_TREE_OF_LIFE,
-	MAGIC_MAGIC_SHIELD,
-	MAGIC_DOME_OF_DAMAGE,
-	MAGIC_MAGIC_DISABLE,
-	MAGIC_ULTRA_SPEED,
-	MAGIC_SLOW_MOTION,
-	MAGIC_FAST_AND_SLOW,
-	MAGIC_FLAME_BURST,
-	MAGIC_ULTRA_FLAME,
-	MAGIC_FLAMING_AREA,
-	MAGIC_BLOWING_WIND,
-	MAGIC_HURRICANE,
-	MAGIC_REVERSE_WIND,
-	MAGIC_ULTRA_RESISTANCE,
-	MAGIC_ULTRA_STRENGTH,
-	MAGIC_ENEMY_WEAKENING,
-	MAGIC_ICE_STALAGMITE,
-	MAGIC_ICE_BOULDER,
-	MAGIC_ICE_BLOCK,
-	MAGIC_HEALING_AREA,
-	MAGIC_MAGIC_EXPLOSION,
-	MAGIC_LIGHTNING_DOME,
-	MAX_MAGIC_POWERS
-} zyk_magic_t;
-
-// zyk: number of Light Quest guardians to be defeated 
-#define NUMBER_OF_GUARDIANS 10
-
-// zyk: number of Dark Quest objectives
-#define NUMBER_OF_OBJECTIVES 10
-
-// zyk: number of Eternity Quest objectives
-#define NUMBER_OF_ETERNITY_QUEST_OBJECTIVES 11
-
-// zyk: number of Universe Quest objectives
-#define NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES 22
-
-// zyk: number of RPG Mode skills
-#define NUMBER_OF_SKILLS 56
-
-// zyk: max sentries a Bounty Hunter can have if he has the Upgrade
-#define MAX_BOUNTY_HUNTER_SENTRIES 5
-
-// zyk: max RPG chars an account can have
-#define MAX_RPG_CHARS 60
-
-// zyk: max characters an account or rpg char can have
-#define MAX_ACC_NAME_SIZE 30
-
-// zyk: max jetpack fuel the player can have
-#define MAX_JETPACK_FUEL 10000
-#define JETPACK_SCALE 100 // zyk: used to scale the MAX_JETPACK_FUEL to set the jetpackFuel attribute. Dividing MAX_JETPACK_FUEL per JETPACK_SCALE must result in 100
-
-// zyk: quantity of items at the jawa seller
-#define NUMBER_OF_SELLER_ITEMS 56
-
-// zyk: default size of the globe model used as the Duel Tournament arena
-#define DUEL_TOURNAMENT_ARENA_SIZE 64
-
-// zyk: duration of the duelists protection in Duel Tournament
-#define DUEL_TOURNAMENT_PROTECTION_TIME 2000
 
 // client data that stays across multiple respawns, but is cleared
 // on each level change or team change at ClientBegin()
@@ -755,6 +658,7 @@ typedef struct clientPersistant_s {
 	
 	int level; // zyk: RPG mode level
 	int level_up_score; // zyk: RPG mode Level Up Score
+	int xp;
 	int skillpoints; // zyk: RPG mode skillpoints
 
 	char description[MAX_STRING_CHARS];
@@ -828,7 +732,7 @@ typedef struct clientPersistant_s {
 	int no_attack_timer;
 
 	// zyk: RPG skills
-	int skill_levels[NUMBER_OF_SKILLS];
+	int skill_levels[NUM_OF_SKILLS];
 
 	int max_rpg_health; // zyk: max health the player can have in RPG Mode. This is set to STAT_MAX_HEALTH for RPG players
 	int max_rpg_shield; // zyk: max shield the player can have in RPG Mode based in the skill_levels[30] value
@@ -869,6 +773,10 @@ typedef struct clientPersistant_s {
 	// 19 - Force Guardian Upgrade
 	int secrets_found;
 
+	// GalaxyRP (Alex): [Telemark] Saving the coordinates here
+	vec3_t saved_origin;
+	vec3_t saved_view_angles;
+
 	// zyk: amount of sentries the Bounty Hunter starts with
 	int bounty_hunter_sentries;
 
@@ -896,7 +804,7 @@ typedef struct clientPersistant_s {
 	int skill_counter;
 
 	// zyk: number of guardians the player already defeated
-	// the value will be NUMBER_OF_GUARDIANS after completing the quest
+	// the value will be NUM_OF_GUARDIANS after completing the quest
 	// before that, has bitvalue of each defeated guardian. Possible bitvalues are:
 	// 4 - Guardian of Water
 	// 5 - Guardian of Earth
@@ -910,7 +818,7 @@ typedef struct clientPersistant_s {
 	int defeated_guardians; 
 
 	// zyk: number of notes collected in Dark Quest
-	// the value will be NUMBER_OF_OBJECTIVES after completing the quest
+	// the value will be NUM_OF_OBJECTIVES after completing the quest
 	// before that, has bitvalue of each collected note. Possible bitvalues are:
 	// 4 - Note at yavin1b
 	// 5 - Note at t1_sour
@@ -1091,6 +999,10 @@ typedef struct clientPersistant_s {
 
 	// zyk: player id that is fighting this guardian
 	int guardian_invoked_by_id;
+
+	// Tr!Force: [Plugin] Client plugin check
+	qboolean		clientPlugin;	
+
 } clientPersistant_t;
 
 typedef struct renderInfo_s
@@ -1382,6 +1294,8 @@ struct gclient_s {
 		int		drainDebounce;
 		int		lightningDebounce;
 	} force;
+
+	int	motdTime; // Tr!Force: [Motd] Server motd time
 };
 
 //Interest points
@@ -1459,24 +1373,6 @@ typedef struct {
 	int		cs_index;
 	vec3_t	origin;
 } locationData_t;
-
-// zyk: Max racers in the map
-#define MAX_RACERS 16
-
-// zyk: max matches a tournament may have
-#define MAX_DUEL_MATCHES 496
-
-// zyk: max amount of custom quests
-#define MAX_CUSTOM_QUESTS 64
-
-// zyk: max missions a custom quest can have
-#define MAX_CUSTOM_QUEST_MISSIONS 512
-
-// zyk: max lines of custom quest mission fields to send to client
-#define MAX_MISSION_FIELD_LINES 8
-
-// zyk: max fields a custom quest mission can have
-#define MAX_CUSTOM_QUEST_FIELDS 512
 
 typedef struct level_locals_s {
 	struct gclient_s	*clients;		// [maxclients]
@@ -1740,12 +1636,6 @@ typedef struct level_locals_s {
 	// zyk: vehicle ids of the swoops used in Race Mode. Used to validate if player is using the correct vehicle
 	int race_mode_vehicle[MAX_RACERS];
 
-	// zyk: sets the players who already read the screen message
-	qboolean read_screen_message[MAX_CLIENTS];
-
-	// zyk: how much time it must show the message for the player
-	int screen_message_timer[MAX_CLIENTS];
-
 	// zyk: the player who called the last vote
 	int voting_player;
 
@@ -1837,28 +1727,6 @@ typedef struct level_locals_s {
 	char		rawmapname[MAX_QPATH];
 } level_locals_t;
 
-
-// zyk: functions used in a lot of places
-char *zyk_get_mission_value(int custom_quest, int mission, char *key);
-void zyk_set_quest_field(int quest_number, int mission_number, char *key, char *value);
-qboolean zyk_is_ally(gentity_t *ent, gentity_t *other);
-int zyk_number_of_allies(gentity_t *ent, qboolean in_rpg_mode);
-void send_rpg_events(int send_event_timer);
-int zyk_get_remap_count();
-void zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qboolean broadcast_message, ...);
-qboolean zyk_can_deflect_shots(gentity_t *ent);
-
-// zyk: shader remap struct
-typedef struct shaderRemap_s {
-  char oldShader[MAX_QPATH];
-  char newShader[MAX_QPATH];
-  float timeOffset;
-} shaderRemap_t;
-
-#define MAX_SHADER_REMAPS 128
-
-shaderRemap_t remappedShaders[MAX_SHADER_REMAPS];
-
 //
 // g_spawn.c
 //
@@ -1921,6 +1789,7 @@ void SaveRegisteredItems( void );
 //
 // g_utils.c
 //
+void	RPMod_StringEscape(char *in, char *out, int outSize);
 int		G_ModelIndex( const char *name );
 int		G_SoundIndex( const char *name );
 int		G_SoundSetIndex(const char *name);
@@ -2183,6 +2052,7 @@ void QDECL G_LogPrintf( const char *fmt, ... );
 void QDECL G_SecurityLogPrintf( const char *fmt, ... );
 void SendScoreboardMessageToAllClients( void );
 const char *G_GetStringEdString(char *refSection, char *refName);
+void RP_CVU_pluginRequired(void);
 
 //
 // g_client.c

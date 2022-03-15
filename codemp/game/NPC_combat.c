@@ -861,15 +861,6 @@ void ChangeWeapon( gentity_t *ent, int newWeapon )
 	}
 }
 
-/*
-HaveWeapon
-*/
-
-qboolean HaveWeapon( int weapon )
-{
-	return ( NPCS.client->ps.stats[STAT_WEAPONS] & ( 1 << weapon ) );
-}
-
 void NPC_ChangeWeapon( int newWeapon )
 {
 	// zyk: new code for the npc weapon change
@@ -1031,6 +1022,15 @@ void WeaponThink( qboolean inCombat )
 
 	NPCS.ucmd.weapon = NPCS.client->ps.weapon;
 	ShootThink();
+}
+
+/*
+HaveWeapon
+*/
+
+qboolean HaveWeapon( int weapon )
+{
+	return ( NPCS.client->ps.stats[STAT_WEAPONS] & ( 1 << weapon ) );
 }
 
 qboolean EntIsGlass (gentity_t *check)

@@ -208,7 +208,7 @@ void P_WorldEffects( gentity_t *ent ) {
 	//
 	if ( waterlevel && (ent->watertype & (CONTENTS_LAVA|CONTENTS_SLIME)) )
 	{
-		if ( ent->health > 0 && ent->client->tempSpectate < level.time && ent->pain_debounce_time <= level.time)
+		if ( ent->health > 0 && ent->client->tempSpectate < level.time && ent->pain_debounce_time <= level.time )
 		{
 		#ifdef BASE_COMPAT
 			if ( envirosuit )
@@ -714,6 +714,7 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd ) {
 		client->ps.pm_type = PM_SPECTATOR;
 		client->ps.speed = 400;	// faster than normal
 		client->ps.basespeed = 400;
+		client->ps.forceHandExtend = rp_pluginRequired.integer == 2 && !client->pers.clientPlugin ? HANDEXTEND_KNOCKDOWN : HANDEXTEND_NONE; // Tr!Force: [Plugin] Don't allow user actions
 
 		//hmm, shouldn't have an anim if you're a spectator, make sure
 		//it gets cleared.
@@ -924,7 +925,7 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 				}
 			}
 
-			if (client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && client->pers.universe_quest_counter & (1 << 0) &&
+			if (client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ && client->pers.universe_quest_counter & (1 << 0) &&
 				client->pers.magic_power < zyk_max_magic_power(ent) && !(client->sess.magic_more_disabled_powers & (1 << 1)))
 			{ // zyk: Final Power of Sages Sequel. Magic Regen. Adds auto-healing of mp
 				client->pers.magic_power += 1;
@@ -960,9 +961,18 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 			client->sess.vote_timer--;
 		}
 
-		if (level.screen_message_timer[ent->s.number] >= (level.time + 1000))
-		{ // zyk: show the screen message. The cp shows the message at least for 3 seconds
-			trap->SendServerCommand( ent->s.number, va("cp \"%s\"", zyk_screen_message.string) );
+		// Tr!Force: [Motd] Show server motd
+		if (client->motdTime)
+		{
+			char serverMotd[MAX_STRING_CHARS];
+
+			if (client->motdTime <= zyk_screen_message_timer.integer)
+			{
+				RPMod_StringEscape(zyk_screen_message.string, serverMotd, MAX_STRING_CHARS);
+				trap->SendServerCommand(ent->s.number, va("cp \"%s\nTime: %d\"", serverMotd, client->motdTime));
+			}
+			
+			client->motdTime--;
 		}
 	}
 
@@ -1011,7 +1021,7 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 		else if (!(client->pers.player_statuses & (1 << 3)))
 		{
 			// zyk: event to set the blue jetpack flame
-			if (client->sess.amrpgmode == 2 && client->pers.secrets_found & (1 << 17))
+			if (client->sess.amrpgmode == 2 && client->pers.skill_levels[34] == 3)
 				G_AddEvent(ent, EV_ITEMUSEFAIL, 7);
 			else
 				G_AddEvent(ent, EV_ITEMUSEFAIL, 8);
@@ -2206,9 +2216,7 @@ extern void Boba_FlyStop( gentity_t *self );
 extern void zyk_show_magic_master_powers(gentity_t *ent, qboolean next_power);
 extern void zyk_show_left_magic_master_powers(gentity_t *ent, qboolean next_power);
 extern void zyk_show_right_magic_master_powers(gentity_t *ent, qboolean next_power);
-extern void save_account(gentity_t *ent, qboolean save_char_file);
 extern void zyk_unique_boost(gentity_t *ent);
-extern void Cmd_ZykMod_f(gentity_t *ent);
 extern void TossClientWeapon(gentity_t *self, vec3_t direction, float speed);
 extern qboolean saberKnockOutOfHand(gentity_t *saberent, gentity_t *saberOwner, vec3_t velocity);
 extern qboolean zyk_can_use_unique(gentity_t *ent);
@@ -2223,6 +2231,7 @@ void ClientThink_real( gentity_t *ent ) {
 	qboolean	isNPC = qfalse;
 	qboolean	controlledByPlayer = qfalse;
 	qboolean	killJetFlags = qtrue;
+	qboolean	isFollowing;
 
 	client = ent->client;
 
@@ -2260,7 +2269,9 @@ void ClientThink_real( gentity_t *ent ) {
 		}
 	}
 
-	if (!(client->ps.pm_flags & PMF_FOLLOW))
+	isFollowing = (client->ps.pm_flags & PMF_FOLLOW) ? qtrue : qfalse;
+
+	if (!isFollowing)
 	{
 		if (level.gametype == GT_SIEGE &&
 			client->siegeClass != -1 &&
@@ -2344,7 +2355,7 @@ void ClientThink_real( gentity_t *ent ) {
 	// mark the time, so the connection sprite can be removed
 	ucmd = &ent->client->pers.cmd;
 
-	if ( client && (client->ps.eFlags2&EF2_HELD_BY_MONSTER) )
+	if ( client && !isFollowing && (client->ps.eFlags2&EF2_HELD_BY_MONSTER) )
 	{
 		G_HeldByMonster( ent, ucmd );
 	}
@@ -2757,15 +2768,6 @@ void ClientThink_real( gentity_t *ent ) {
 	{
 		float zyk_player_speed = g_speed.value;
 
-		// set speed
-		if (client->sess.amrpgmode == 2)
-		{ 
-			if (client->pers.rpg_class == 4) // zyk: each Improvements level increases the Monk speed
-				zyk_player_speed *= (client->pers.skill_levels[55] * 0.3 + 1);
-			else if (client->pers.rpg_class == 7 && client->pers.secrets_found & (1 << 8)) // zyk: Force Gunner with Upgrade has more run speed
-				zyk_player_speed *= 1.2;
-		}
-
 		//Check for a siege class speed multiplier
 		if (level.gametype == GT_SIEGE &&
 			client->siegeClass != -1)
@@ -2801,6 +2803,12 @@ void ClientThink_real( gentity_t *ent ) {
 		if (client->pers.stun_baton_less_speed_timer > level.time)
 		{ // zyk: stun baton 3/3 decreases speed
 			zyk_player_speed /= 2;
+		}
+
+		// GalaxyRP (Alex): [Armor Skill] Armor reduces your movement based on your level. Better the armor, slower the wearer.
+		if (client->pers.skill_levels[56] > 0) 
+		{ 
+			zyk_player_speed = zyk_player_speed - (client->pers.skill_levels[56] * zyk_player_speed * 0.1);
 		}
 
 		client->ps.speed = zyk_player_speed;
@@ -2924,7 +2932,7 @@ void ClientThink_real( gentity_t *ent ) {
 		if (!duelAgainst || !duelAgainst->client || !duelAgainst->inuse ||
 			duelAgainst->client->ps.duelIndex != ent->s.number)
 		{
-			ent->client->ps.duelInProgress = qfalse;
+			ent->client->ps.duelInProgress = 0;
 			G_AddEvent(ent, EV_PRIVATE_DUEL, 0);
 		}
 		else if (duelAgainst->health < 1 || duelAgainst->client->ps.stats[STAT_HEALTH] < 1)
@@ -2932,8 +2940,8 @@ void ClientThink_real( gentity_t *ent ) {
 			int old_health = ent->health;
 			int old_shield = ent->client->ps.stats[STAT_ARMOR];
 
-			ent->client->ps.duelInProgress = qfalse;
-			duelAgainst->client->ps.duelInProgress = qfalse;
+			ent->client->ps.duelInProgress = 0;
+			duelAgainst->client->ps.duelInProgress = 0;
 
 			G_AddEvent(ent, EV_PRIVATE_DUEL, 0);
 			G_AddEvent(duelAgainst, EV_PRIVATE_DUEL, 0);
@@ -3967,7 +3975,6 @@ void ClientThink_real( gentity_t *ent ) {
 						}
 
 						zyk_unique_boost(ent);
-						Cmd_ZykMod_f(ent);
 					}
 					else if (ent->client->pers.skill_levels[38] > 0)
 					{ // zyk: still in cooldown time, shows the time left in chat
@@ -3978,37 +3985,31 @@ void ClientThink_real( gentity_t *ent ) {
 				{ // zyk: Magic Master, selects next power
 					// zyk: Magic Master can choose his power here
 					zyk_show_left_magic_master_powers(ent, qtrue);
-					save_account(ent, qtrue);
 				}
 				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_SPEED && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
 				{ // zyk: Magic Master, selects previous power
 					// zyk: Magic Master can choose his power here
 					zyk_show_left_magic_master_powers(ent, qfalse);
-					save_account(ent, qtrue);
 				}
 				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_PROTECT && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
 				{ // zyk: Magic Master, selects next power
 					// zyk: Magic Master can choose his power here
 					zyk_show_magic_master_powers(ent, qtrue);
-					save_account(ent, qtrue);
 				}
 				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_HEAL && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
 				{ // zyk: Magic Master, selects previous power
 					// zyk: Magic Master can choose his power here
 					zyk_show_magic_master_powers(ent, qfalse);
-					save_account(ent, qtrue);
 				}
 				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_DISTRACT && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
 				{ // zyk: Magic Master, selects next power
 					// zyk: Magic Master can choose his power here
 					zyk_show_right_magic_master_powers(ent, qtrue);
-					save_account(ent, qtrue);
 				}
 				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_ABSORB && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
 				{ // zyk: Magic Master, selects previous power
 					// zyk: Magic Master can choose his power here
 					zyk_show_right_magic_master_powers(ent, qfalse);
-					save_account(ent, qtrue);
 				}
 				else if (pmove.cmd.generic_cmd == GENCMD_SABERATTACKCYCLE)
 				{ 
@@ -4030,8 +4031,6 @@ void ClientThink_real( gentity_t *ent ) {
 							ent->client->sess.magic_fist_selection = 0;
 						else
 							ent->client->sess.magic_fist_selection = 4;
-
-						save_account(ent, qtrue);
 
 						if (ent->client->sess.magic_fist_selection == 0)
 						{

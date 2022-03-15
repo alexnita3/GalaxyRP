@@ -1,0 +1,53 @@
+holocomm
+{
+	name		"^3Holo Communicator"
+	saberType	SABER_SINGLE
+	saberModel	"models/weapons2/Holocomm/Holocomm.glm"
+	soundOn		"sound/weapons/Holocomm/on.mp3"
+	soundLoop	"sound/weapons/Holocomm/loop.mp3"
+	soundOff	"sound/weapons/Holocomm/off.mp3"
+	saberLength		0
+	saberColor		random
+	damageScale 	0
+    noBlade         1
+    saberRadius     0
+    maxChain        0
+    lockable        0
+    throwable       1
+    disarmable      1
+    blocking        0
+    twohanded       0
+    bounceOnWalls   1 
+    noWallMarks     1
+    noDlight        1
+    trailStyle      2
+	noPullAttack 	0
+	noRollStab 		0
+	noBackAttack 	0
+	noStabDown 		0
+	noClashFlare 	1
+	noIdleEffect	1
+	kataMove 		LS_NONE
+	lungeAtkMove 	LS_NONE
+	jumpAtkFwdMove 	LS_NONE
+	onInWater		1
+	hitPersonEffect	none
+	g2MarksShader	none
+	blockEffect		"sparks/spark.efx"	
+	hitOtherEffect	"sparks/spark.efx"
+    swingsound1     "sound/weapons/silence.mp3"
+    swingsound2     "sound/weapons/silence.mp3"
+    swingsound3     "sound/weapons/silence.mp3"
+    fallsound1      "sound/weapons/silence.mp3"
+    fallsound2      "sound/weapons/silence.mp3"
+    fallsound3      "sound/weapons/silence.mp3"
+    hitsound1       "sound/weapons/silence.mp3"
+    hitsound2       "sound/weapons/silence.mp3"
+    hitsound3       "sound/weapons/silence.mp3"
+	blocksound1		"sound/weapons/silence.mp3"
+	blocksound2		"sound/weapons/silence.mp3"
+	blocksound3		"sound/weapons/silence.mp3"
+	bounceSound1	"sound/weapons/swords/fall1.mp3"
+	bounceSound2	"sound/weapons/swords/fall1.mp3"
+	bounceSound3	"sound/weapons/swords/fall1.mp3"
+}

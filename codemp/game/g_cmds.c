@@ -27,9 +27,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "ui/menudef.h"			// for the voice chats
 
-#include "sqlite3.h"
+#include "sqlite/sqlite3.h"
 
 #define MAX_EMOTE_WORDS 11;
+#define MAX_CHAT_MODIFIERS 24;
 
 //rww - for getting bot commands...
 int AcceptBotCommand(char *cmd, gentity_t *pl);
@@ -40,327 +41,180 @@ void WP_SetSaber( int entNum, saberInfo_t *sabers, int saberNum, const char *sab
 void Cmd_NPC_f( gentity_t *ent );
 void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin);
 
-// zyk: max levels of the RPG skills
-const int max_skill_levels[NUMBER_OF_SKILLS] = {
-	5, // Jump
-	3, // Push
-	3, // Pull
-	4, // Speed
-	3, // Sense
-	5, // Saber Attack
-	3, // Saber Defense
-	4, // Saber Throw
-	4, // Absorb
-	3, // Heal
-	4, // Protect
-	3, // Mind Trick
-	3, // Team Heal
-	4, // Lightning
-	3, // Grip
-	3, // Drain
-	4, // Rage
-	3, // Team Energize
-	4, // Stun Baton
-	2, // Blaster Pistol
-	2, // E11 Blaster Rifle
-	2, // Disruptor
-	2, // Bowcaster
-	2, // Repeater
-	2, // DEMP2
-	2, // Flechette
-	2, // Rocket Launcher
-	2, // Concussion Rifle
-	2, // Bryar Pistol
-	3, // Melee
-	5, // Max Shield
-	4, // Shield Strength
-	4, // Health Strength
-	1, // Drain Shield
-	3, // Jetpack
-	3, // Sense Health
-	3, // Shield Heal
-	3, // Team Shield Heal
-	1, // Unique Skill
-	3, // Blaster Pack
-	3, // Powercell
-	3, // Metal Bolts
-	3, // Rockets
-	3, // Thermals
-	3, // Trip Mines
-	3, // Detpacks
-	1, // Binoculars
-	1, // Bacta Canister
-	1, // Sentry Gun
-	1, // Seeker Drone
-	1, // E-Web
-	1, // Big Bacta
-	1, // Force Field
-	1, // Cloak Item
-	5, // Force Power
-	3 // Improvements
+extern int check_xp(int currentLevel);
+
+// GalaxyRP (Alex): [Skills] This is used to display everything about a skill in various places throughout the mod.
+const skill_t skills[] = {
+	{5, "Jump",					"makes you use the force to jump higher. Level 5 has no height limit, you can continue jumping up until you run out of force, and it also lets you jump out of water",																																			"force",	"neutral"	},
+	{5, "Push",					"pushes the opponent forward",																																																																					"force",	"neutral"	},
+	{5, "Pull",					"pulls the opponent towards you",																																																																				"force",	"neutral"	},
+	{5, "Speed",				"increases your speed. Level 1 is 1.5 times normal speed. Level 2 is 2.0, level 3 is 2.5 times and level 4 is 3.0 times",																																														"force",	"neutral"	},
+	{3, "Sense",				"allows you to see people through walls, invisible people or cloaked people and you can dodge disruptor shots. Represents your mind strength to resist Mind Control if your sense level is equal or higher than the enemy's mind trick level",																	"force",	"neutral"	},
+	{5, "Saber Attack",			"gives you the saber. If you are using Single Saber, gives you the saber styles. If using duals or staff, increases saber damage, which is increased by 20 per cent for each level.",																															"force",	"neutral"	},
+	{5, "Saber Defense",		"increases your ability to block, parry enemy saber attacks or enemy shots",																																																									"force",	"neutral"	},
+	{5, "Saber Throw",			"throws your saber at enemy and gets it back. Each level increases max distance and saber throw speed.",																																																		"force",	"neutral"	},
+	{5, "Absorb",				"allows you to absorb force power attacks done to you",																																																															"force",	"light"		},
+	{5, "Heal",					"recover some Health. Level 1 restores 5 hp, level 2 restores 10 hp and level 3 restores 25 hp",																																																				"force",	"light"		},
+	{5, "Protect",				"decreases damage done to you by non-force power attacks. At level 4 decreases force consumption when receiving damage",																																														"force",	"light"		},
+	{5, "Mind Trick",			"makes yourself invisible to the players affected by this force power. Force User class can mind control a player or npc. Level 1 has a duration of 20 seconds, level 2 is 25 seconds and level 3 is 30 seconds",																								"force",	"neutral"	},
+	{5, "Team Heal",			"restores some health to players near you",																																																																		"force",	"light"		},
+	{5, "Lightning",			"attacks with a powerful electric attack at players near you. At level 4, does more damage and pushes the enemy back",																																															"force",	"dark"		},
+	{5, "Grip",					"attacks a player by holding and damaging him",																																																																	"force",	"dark"		},
+	{5, "Drain",				"drains force power from a player to restore your health",																																																														"force",	"dark"		},
+	{5, "Rage",					"makes you 1.3 times faster, increases your saber attack speed and damage and makes you get less damage. Force Guardian class, with Improvements skill at least on level 1, can regen some force when taking damage on health while Rage is active",															"force",	"dark"		},
+	{5, "Team Energize",		"restores some force power to players near you. If Improvements skill is at least at level 1, regens blaster pack and power cell ammo of the target players",																																					"force",	"dark"		},
+	{4, "Stun Baton",			"attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. With Stun Baton Upgrade, can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds",																	"weapons",	"merc"		},
+	{2, "Blaster Pistol",		"the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The charged shot causes a lot more damage depending on how much it was charged",																	"weapons",	"merc"		},
+	{2, "E11 Blaster Rifle",	"the rifle used by the Storm Troopers. E11 shots do %d damage. Normal fire is a single shot, while the alternate fire is the rapid fire",																																										"weapons",	"merc"		},
+	{2, "Disruptor",			"the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged",																																					"weapons",	"merc"		},
+	{2, "Bowcaster",			"the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once.",																																																				"weapons",	"merc"		},
+	{2, "Repeater",				"a powerful weapon with a rapid fire and a plasma bomb. Normal fire shoots the rapid fire, and does %d damage. Alt fire fires the plasma bomb",																																									"weapons",	"merc"		},
+	{2, "DEMP2",				"a very powerful weapon against machine npc and some vehicles, causing more damage to them and stunning them. Normal fire does %d damage and alt fire can be charged",																																			"weapons",	"merc"		},
+	{2, "Flechette",			"this weapon is similar to a shotgun. Normal fire causes %d damage. Alt fire shoots 2 bombs",																																																					"weapons",	"merc"		},
+	{2, "Rocket Launcher",		"a powerful explosive weapon. Normal fire shoots a rocket causing %d damage. Alt fire shoots a homing missile",																																																	"weapons",	"merc"		},
+	{2, "Concussion Rifle",		"it shoots a powerful shot that has a big damage area. Alt fire shoots a ray similar to disruptor shots, but it can go through force fields and can throw the enemy on the ground.",																															"weapons",	"merc"		},
+	{2, "Bryar Pistol",			"very similar to the blaster pistol, but this one has a better fire rate with normal shot.",																																																					"weapons",	"merc"		},
+	{3, "Melee",				"allows you to attack with your fists and legs. You can punch, kick or do a special melee attack by holding both Attack and Alt Attack buttons (usually the mouse buttons).",																																	"weapons",	"merc"		},
+	{5, "Max Shield",			"The max shield (armor) the player can have. Each level increases 20 per cent of max shield the player can have",																																																"other",	"merc"		},
+	{4, "Shield Strength",		"Each level increases your shield resistance by 7 per cent",																																																													"other",	"merc"		},
+	{4, "Health Strength",		"Each level increases your health resistance by 7 per cent",																																																													"other",	"merc"		},
+	{1, "Drain Shield",			"When using Drain force power, and your health is full, restores some shield. It also makes Drain suck hp/shield from the enemy to restore your hp/shield",																																						"other",	"merc"		},
+	{3, "Jetpack",				"the jetpack, used by Boba Fett. Allows you to fly. To use it, jump and press the Use key (usually R) while in the middle of the jump. Each level uses less fuel, allowing you to fly for a longer time",																										"items",	"merc"		},
+	{3, "Sense Health",			"allows you to see info about someone, including npcs. Level 1 shows current health. Level 2 shows name, health and shield. Level 3 shows name, health and max health, shield and max shield, force and max force, mp and max mp. To use it, when you are near a player or npc, use ^3Sense ^7force power",		"force",	"light"		},
+	{3, "Shield Heal",			"recovers 4 shield at level 1, 8 shield at level 2 and 12 shield at level 3. To use it, use Heal force power when you have full HP.",																																											"other",	"merc"		},
+	{3, "Team Shield Heal",		"recovers 3 shield at level 1, 6 shield at level 2 and 9 shield at level 3 to players near you. To use it, when near players, use Team Heal force power. It will heal their shield after they have full HP",																									"other",	"merc"		},
+	{1, "Unique Skill",			"placeholder, does nothing",																																																																									"other",	"merc"		},
+	{3, "Blaster Pack",			"used as ammo for Blaster Pistol, Bryar Pistol and E11 Blaster Rifle.",																																																											"ammo",		"merc"		},
+	{3, "Powercell",			"used as ammo for Disruptor, Bowcaster and DEMP2.",																																																																"ammo",		"merc"		},
+	{3, "Metal Bolts",			"used as ammo for Repeater, Flechette and Concussion Rifle.",																																																													"ammo",		"merc"		},
+	{3, "Rockets",				"used as ammo for Rocket Launcher.",																																																																			"ammo",		"merc"		},
+	{3, "Thermals",				"the famous detonator used by Leia in Ep 6 at the Jabba Palace. Normal fire throws it, which explodes after some seconds. Alt fire throws it and it explodes as soon as it touches something.",																													"ammo",		"merc"		},
+	{3, "Trip Mines",			"a mine that can be planted somewhere. Normal fire plants a mine with a laser that when touched makes the mine explode. Alt fire plants proximity mines",																																						"ammo",		"merc"		},
+	{3, "Detpacks",				"a very powerful explosive, which you can detonate remotely with the alt fire button.",																																																							"ammo",		"merc"		},
+	{1, "Binoculars",			"this item allows you to see distant things better with its zoom.",																																																												"items",	"merc"		},
+	{1, "Bacta Canister",		"allows you to recover 25 HP",																																																																					"items",	"merc"		},
+	{1, "Sentry Gun",			"after placed on the ground, shoots at any nearby enemy",																																																														"items",	"merc"		},
+	{1, "Seeker Drone",			"a flying ball that flies around you, shooting anyone in its range",																																																											"items",	"merc"		},
+	{1, "E-Web",				"allows you to shoot at people with it, it has a good fire rate",																																																												"items",	"merc"		},
+	{1, "Big Bacta",			"allows you to recover 50 HP",																																																																					"items",	"merc"		},
+	{1, "Force Field",			"a powerful shield that protects you from enemy attacks, it can resist a lot against any weapon",																																																				"items",	"merc"		},
+	{1, "Cloak Item",			"makes you almost invisible to players and invisible to npcs.",																																																													"items",	"merc"		},
+	{5, "Force Power",			"increases the max force power you have. Necessary to allow you to use force powers and force-based skills",																																																	"force",	"neutral"	},
+	{3, "Improvements",			"placeholder",																																																																									"items",	"merc"		},
+	{5, "Armor",				"Each level increases your damage resistance by 10 percent, but also decreases your movement speed by 10 percent.",																																																"items",	"merc"		},
+	{2, "Flame Thrower",		"Allows you to use a flamethrower. Used by alt-firing with a stun baton.",																																																										"items",	"merc"		}
 };
 
-#define MAX_WORDED_EMOTES 84
-//alex: animation words, categories and codes go here THEY HAVE TO BE IN THE SAME ORDER!
-const int anim_codes[MAX_WORDED_EMOTES] = {
-		998, 	//"sit"
-		999, 	//"sit2",
-		1394,	//"sit3",
-		1001,	//"meditate",
-		1010,	//"kneel",
-		1097,	//"die",
-		1099,	//"beg",
-		1098,	//"beg2",
-		1321,	//"beg3",
-		1188,	//"bow",
-		936, 	//"point",
-		1382,	//"lean",
-		940, 	//"leantable"
-		922, 	//"cuffed",
-		939, 	//"heroic",
-		985, 	//"wave",
-		954, 	//"type",
-		1004,	//"sneak",
-		1181,	//"cover",
-		931, 	//"aim",
-		936, 	//"aim2",
-		114, 	//"aim3",
-		1407,	//"aim4",
-		1406,	//"aim5",
-		989,	//"hug",
-		968,	//"commlinkup",
-		970,	//"commlinkdown",
-		993, 	//"saberthrow",
-		1014,	//"sitpilot",
-		1191,	//"flourish",
-		1192,	//"flourish2",
-		1193,	//"flourish3",
-		1194,	//"flourish4",
-		1195,	//"flourish5",
-		1196,	//"victory",
-		1197,	//"victory2",
-		1198,	//"victory3",
-		1200,	//"victory4",
-		1313,	//"sleep",
-		1333,	//"mindtrick",
-		1348,	//"tossleft",
-		1349,	//"tossright",
-		1368,	//"windy",
-		1409,	//"surrender",
-		1328,	//"pressbutton",
-		1337,	//"forcelightning",
-		1360,	//"drainloop",
-		1370,	//"spreadlegs",
-		1380,	//"fear",
-		1404,	//"holddetonator",
-		1344,	//"forcechoke",
-		1322,	//"choked",
-		986,	//"holdobject"
-		1543,	//cross
-		1544,	//cufffront
-		1545,	//cuffknees
-		1546,	//bump
-		1547,	//handsback
-		1548,	//handsfront
-		1549,	//headhold
-		1550,	//hips
-		1551,	//hips2
-		1552,	//handstand
-		1553,	//scratch
-		1554,	//hurt
-		1555,	//hurt2
-		1556,	//relax
-		1557,	//leanback
-		1558,	//ponder
-		1559,	//ponder2
-		1560,	//salute 
-		1561,	//situp
-		1562,	//ataru
-		1563,	//djemso
-		1564,	//jarkai
-		1565,	//jarkai2
-		1566,	//makashi
-		1567,	//idle
-		1568,	//stance
-		1569,	//shien
-		1570,	//soresu
-		1571,	//meditate3
-		1572,	//meditate2
-		1573	//force
-};
+#define MAX_WORDED_EMOTES 97
+//alex: type for storing worde animations wo use with the emote system
+typedef struct worded_animation_s {
+	const char* animation_name;
+	int			animation_code;
+	const char* animation_category;
+} worded_animation_t;
 
-const char anim_words[MAX_WORDED_EMOTES][50] = {
-	"sit",
-	"sit2",
-	"sit3",
-	"meditate",
-	"kneel",
-	"die",
-	"beg",
-	"beg2",
-	"beg3",
-	"bow",
-	"point",
-	"lean",
-	"leantable",
-	"cuffed",
-	"heroic",
-	"wave",
-	"type",
-	"sneak",
-	"cover",
-	"aim",
-	"aim2",
-	"aim3",
-	"aim4",
-	"aim5",
-	"hug",
-	"commlinkup",
-	"commlinkdown",
-	"saberthrow",
-	"sitpilot",
-	"flourish",
-	"flourish2",
-	"flourish3",
-	"flourish4",
-	"flourish5",
-	"victory",
-	"victory2",
-	"victory3",
-	"victory4",
-	"sleep",
-	"mindtrick",
-	"tossleft",
-	"tossright",
-	"windy",
-	"surrender",
-	"pressbutton",
-	"forcelightning",
-	"drainloop",
-	"spreadlegs",
-	"fear",
-	"holddetonator",
-	"forcechoke",
-	"choked",
-	"holdobject",
-	"cross",
-	"cufffront",
-	"cuffknees",
-	"bump",
-	"handsback",
-	"handsfront",
-	"headhold",
-	"hips",
-	"hips2",
-	"handstand",
-	"scratch",
-	"hurt",
-	"hurt2",
-	"relax",
-	"leanback",
-	"ponder",
-	"ponder2",
-	"salute",
-	"situp",
-	"ataru",
-	"djemso",
-	"jarkai",
-	"jarkai2",
-	"makashi",
-	"idle",
-	"stance",
-	"shien",
-	"soresu",
-	"meditate3",
-	"meditate2",
-	"force"
-};
-
-const char anim_categories[MAX_WORDED_EMOTES][50] = {
-	"Body",			//"sit"
-	"Body",			//"sit2",
-	"Body",			//"sit3",
-	"Body",			//"meditate",
-	"Body",			//"kneel",
-	"Body",			//"die",
-	"Body",			//"beg",
-	"Body",			//"beg2",
-	"Body",			//"beg3",
-	"Body",			//"bow",
-	"Body",			//"point",
-	"Body",			//"lean",
-	"Body",			//"leantable"
-	"Body",			//"cuffed",
-	"Body",			//"heroic",
-	"Body",			//"wave",
-	"Body",			//"type",
-	"Movement",		//"sneak",
-	"Movement",		//"cover",
-	"Blaster",		//"aim",
-	"Blaster",		//"aim2",
-	"Blaster",		//"aim3",
-	"Blaster",		//"aim4",
-	"Blaster",		//"aim5",
-	"Body",			//"hug",
-	"Body",			//"commlinkup",
-	"Body",			//"commlinkdown",
-	"Saber",		//"saberthrow",
-	"Body",			//"sitpilot",
-	"Saber",		//"flourish",
-	"Saber",		//"flourish2",
-	"Saber",		//"flourish3",
-	"Saber",		//"flourish4",
-	"Saber",		//"flourish5",
-	"Saber",		//"victory",
-	"Saber",		//"victory2",
-	"Saber",		//"victory3",
-	"Saber",		//"victory4",
-	"Body",			//"sleep",
-	"Force",		//"mindtrick",
-	"Force",		//"tossleft",
-	"Force",		//"tossright",
-	"Movement",		//"windy",
-	"Body",			//"surrender",
-	"Body",			//"pressbutton",
-	"Force",		//"forcelightning",
-	"Force",		//"drainloop",
-	"Body",			//"spreadlegs",
-	"Body",			//"fear",
-	"Body",			//"holddetonator",
-	"Force",		//"forcechoke",
-	"Body",			//"choked",
-	"Body",			//"holdobject"
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Body",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Saber",
-	"Force",
-	"Force",
-	"Force"
+/*
+alex: list of all worded emotes, ids, and categories, these are to be stored alphabetically
+the animation code is to be exactly the same as the correcponding id in anims.h
+*/
+const worded_animation_t animations[MAX_WORDED_EMOTES] = {
+	{"aim",				1581,	"Blaster"},
+	{"aim2",			936,	"Blaster"},
+	{"aim3",			114,	"Blaster"},
+	{"aim4",			1407,	"Blaster"},
+	{"aim5",			1406,	"Blaster"},
+	{"ataru",			1562,	"Saber" },
+	{"beg",				1099,	"Body"},
+	{"beg2",			1098,	"Body"},
+	{"beg3",			1321,	"Body"},
+	{"bow",				1188,	"Body"},
+	{"bump",			1546,	"Body"},
+	{"carry",			1584,	"Movement" },
+	{"choked",			1322,	"Body"},
+	{"commlinkdown",	970,	"Body"},
+	{"commlinkup",		968,	"Body"},
+	{"cover",			1181,	"Movement"},
+	{"cross",			1543,	"Body"},
+	{"cuffed",			922,	"Body"},
+	{"cufffront",		1544,	"Body" },
+	{"cuffknees",		1545,	"Body" },
+	{"cup",				1580,	"Body" },
+	{"die",				1097,	"Body"},
+	{"djemso",			1563,	"Saber"},
+	{"drainloop",		1360,	"Force"},
+	{"drink",			1581,	"Body" },
+	{"fear",			1380,	"Body"},
+	{"flourish",		1191,	"Saber"},
+	{"flourish2",		1192,	"Saber"},
+	{"flourish3",		1193,	"Saber"},
+	{"flourish4",		1194,	"Saber"},
+	{"flourish5",		1195,	"Saber"},
+	{"force",			1573,	"Force"},
+	{"forcechoke",		1344,	"Force"},
+	{"forcelightning",	1337,	"Force"},
+	{"guard",			1586,	"Saber" },
+	{"handsback",		1547,	"Body"},
+	{"handsfront",		1548,	"Body"},
+	{"handstand",		1578,	"Body" },
+	{"handstand2",		1552,	"Body"},
+	{"headhold",		1549,	"Body"},
+	{"heroic",			939,	"Body"},
+	{"hips",			1550,	"Body"},
+	{"hips2",			1551,	"Body"},
+	{"holddetonator",	1404,	"Body"},
+	{"holdobject",		1587,	"Body"},
+	{"hug",				989,	"Body"},
+	{"hurt",			1554,	"Body"},
+	{"hurt2",			1555,	"Body"},
+	{"idle",			1567,	"Saber"},
+	{"jarkai",			1564,	"Saber"},
+	{"jarkai2",			1565,	"Saber"},
+	{"juyo",			1577,	"Saber" },
+	{"kneel",			1010,	"Body"},
+	{"lean",			1382,	"Body"},
+	{"leanback",		1557,	"Body"},
+	{"leanfront",		1585,	"Body" },
+	{"leantable",		940,	"Body"},
+	{"makashi",			1566,	"Saber"},
+	{"meditate",		1001,	"Body"},
+	{"meditate2",		1572,	"Force"},
+	{"meditate3",		1571,	"Force"},
+	{"mindtrick",		1333,	"Force"},
+	{"niman",			1575,	"Saber" },
+	{"point",			936,	"Body"},
+	{"ponder",			1558,	"Body"},
+	{"ponder2",			1559,	"Body"},
+	{"pressbutton",		1328,	"Body"},
+	{"relax",			1556,	"Body"},
+	{"saberpoint",		1582,	"Saber" },
+	{"saberpoint2",		1583,	"Saber" },
+	{"saberthrow",		993,	"Saber"},
+	{"salute",			1560,	"Body"},
+	{"scratch",			1553,	"Body"},
+	{"shien",			1569,	"Saber"},
+	{"shien2",			1574,	"Saber" },
+	{"shiicho",			1576,	"Saber" },
+	{"sit",				998,	"Body"},
+	{"sit2",			999,	"Body"},
+	{"sit3",			1394,	"Body"},
+	{"sitfeet",			1579,	"Body" },
+	{"sitpilot",		1014,	"Body"},
+	{"situp",			1561,	"Body"},
+	{"sleep",			1313,	"Body"},
+	{"sneak",			1004,	"Movement"},
+	{"soresu",			1570,	"Saber"},
+	{"spreadlegs",		1370,	"Body"},
+	{"stance",			1568,	"Saber"},
+	{"surrender",		1409,	"Body"},
+	{"tossleft",		1348,	"Force"},
+	{"tossright",		1349,	"Force"},
+	{"type",			954,	"Body"},
+	{"victory",			1196,	"Saber"},
+	{"victory2",		1197,	"Saber"},
+	{"victory3",		1198,	"Saber"},
+	{"victory4",		1200,	"Saber"},
+	{"wave",			985,	"Body"},
+	{"windy",			1368,	"Movement"},
 };
 
 #define MAX_EMOTE_CATEGORIES 5
@@ -371,6 +225,52 @@ const char anim_headers[MAX_EMOTE_CATEGORIES][50] = {
 	"Blaster",
 	"Saber",
 	"Force"
+};
+
+#define BROADCAST_DISTANCE 999999999
+#define VOICE_DISTANCE 600
+#define VOICE_DISTANCE_LONG 2000
+#define VOICE_DISTANCE_LOW 65
+#define SHOUT_DISTANCE 1500
+#define ACTION_DISTANCE 1200
+#define ACTION_DISTANCE_LOW 200
+#define ACTION_DISTANCE_LONG 2000
+
+const chat_modifiers_t chat_modifiers[] = {
+	{"/low",		"chat \"%s^9 lowers their voice:%s\n\"",			VOICE_DISTANCE_LOW	},
+	{"/long",		"chat \"%s:%s\n\"",									VOICE_DISTANCE_LONG	},
+	{"/all",		"chat \"%s:^2%s\n\"",								BROADCAST_DISTANCE	},
+	{"/melow",		"chat \"%s^3%s\n\"",								ACTION_DISTANCE_LOW	},
+	{"/meall",		"chat \"%s^3%s\n\"",								BROADCAST_DISTANCE	},
+	{"/melong",		"chat \"%s^3%s\n\"",								ACTION_DISTANCE_LONG},
+	{"/me",			"chat \"%s^3%s\n\"",								ACTION_DISTANCE		},
+	{"/shoutlong",	"chat \"%s shouts:^2%s\n\"",						VOICE_DISTANCE_LONG	},
+	{"/shoutall",	"chat \"%s shouts:^2%s\n\"",						BROADCAST_DISTANCE	},
+	{"/shout",		"chat \"%s shouts:^2%s\n\"",						SHOUT_DISTANCE		},
+	{"/dolow",		"chat \"^3(%s^3)%s\n\"",							ACTION_DISTANCE_LOW	},
+	{"/dolong",		"chat \"^3(%s^3)%s\n\"",							ACTION_DISTANCE_LONG},
+	{"/doall",		"chat \"^3(%s^3)%s\n\"",							BROADCAST_DISTANCE	},
+	{"/do",			"chat \"^3(%s^3)%s\n\"",							ACTION_DISTANCE		},
+	{"/forcelow",	"chat \"%s^5 uses the Force to%s\n\"",				ACTION_DISTANCE_LOW	},
+	{"/forcelong",	"chat \"%s^5 uses the Force to%s\n\"",				ACTION_DISTANCE_LONG},
+	{"/forceall",	"chat \"%s^5 uses the Force to%s\n\"",				BROADCAST_DISTANCE	},
+	{"/force",		"chat \"%s^5 uses the Force to%s\n\"",				ACTION_DISTANCE		},
+	{"/mylow",		"chat \"%s^3's %s\n\"",								ACTION_DISTANCE_LOW	},
+	{"/myall",		"chat \"%s^3's %s\n\"",								BROADCAST_DISTANCE	},
+	{"/mylong",		"chat \"%s^3's %s\n\"",								ACTION_DISTANCE_LONG},
+	{"/my",			"chat \"%s^3's %s\n\"",								ACTION_DISTANCE		},
+	{"/ryl2",		"chat \"%s ^3(Ryl - Lekku only):^2%s\n\"",			VOICE_DISTANCE		},
+	{"/ryl",		"chat \"%s ^3(Ryl):^2%s\n\"",						VOICE_DISTANCE		},
+	{"/rodian",		"chat \"%s ^3(Rodian):^2%s\n\"",					VOICE_DISTANCE		},
+	{"/huttese",	"chat \"%s ^3(Huttese):^2%s\n\"",					VOICE_DISTANCE		},
+	{"/catharese",	"chat \"%s ^3(Catharese):^2%s\n\"",					VOICE_DISTANCE		},
+	{"/mando",		"chat \"%s ^3(Mando'a):^2%s\n\"",					VOICE_DISTANCE		},
+	{"/npc",		"chat \"^3(%s^3) NPC:^4%s\n\"",						VOICE_DISTANCE		},
+	{"/npclow",		"chat \"^3(%s^3) NPC Lowers their voice:^4%s\n\"",	VOICE_DISTANCE_LOW	},
+	{"/npcall",		"chat \"^3(%s^3) NPC:^4%s\n\"",						BROADCAST_DISTANCE	},
+	{"/comm",		"chat \"^6<%s^6>^3 -C-^2%s\n\"",					BROADCAST_DISTANCE	},
+	{"/c",			"chat \"^6<%s^6>^3 -C-^2%s\n\"",					BROADCAST_DISTANCE	},
+	{"/thought",	"chat \"%s ^7is thinking: %s\n\"",					BROADCAST_DISTANCE	},
 };
 
 /*
@@ -420,7 +320,7 @@ void DeathmatchScoreboardMessage( gentity_t *ent ) {
 
 		Com_sprintf (entry, sizeof(entry),
 			" %i %i %i %i %i %i %i %i %i %i %i %i %i %i", level.sortedClients[i],
-			cl->ps.persistant[PERS_SCORE], ping, (level.time - cl->pers.enterTime)/60000,
+			cl->pers.level, ping, (level.time - cl->pers.enterTime)/60000,
 			scoreFlags, g_entities[level.sortedClients[i]].s.powerups, accuracy,
 			cl->ps.persistant[PERS_IMPRESSIVE_COUNT],
 			cl->ps.persistant[PERS_EXCELLENT_COUNT],
@@ -639,7 +539,51 @@ void print_header(gentity_t *ent, char text[MAX_STRING_CHARS]) {
 	print_table_horizontal_line(ent);
 }
 
-// zyk: plays an animation from anims.h
+typedef struct admin_command_description_s {
+	const char* title;
+	int			number;
+} admin_command_description_t;
+
+const admin_command_description_t admin_commands[ADM_NUM_CMDS] = {
+	{ "NPC",					ADM_NPC					},
+	{ "No Clip",				ADM_NOCLIP				},
+	{ "Give Admin",				ADM_GIVEADM				},
+	{ "Teleport",				ADM_TELE				},
+	{ "Admin Protect",			ADM_ADMPROTECT			},
+	{ "Entity System",			ADM_ENTITYSYSTEM		},
+	{ "Silence",				ADM_SILENCE				},
+	{ "Client Print",			ADM_CLIENTPRINT			},
+	{ "Shake Screen",			ADM_SHAKESCREEN			},
+	{ "Kick",					ADM_KICK				},
+	{ "Paralyze",				ADM_PARALYZE			},
+	{ "Give",					ADM_GIVE				},
+	{ "Scale",					ADM_SCALE				},
+	{ "Players",				ADM_PLAYERS				},
+	{ "Duel Arena",				ADM_DUELARENA			},
+	{ "Placeholder",			ADM_CUSTOMQUEST			},
+	{ "Create Item",			ADM_CREATEITEM			},
+	{ "God Mode",				ADM_GOD					},
+	{ "Level Give",				ADM_LEVELUP				},
+	{ "Skill Give",				ADM_SKILL				},
+	{ "Create Credits",			ADM_CREATECREDITS		},
+	{ "Ignore Char Distance",	ADM_IGNORECHATDISTANCE	},
+	{ "Give XP",				ADM_XP					},
+	{ "Update News",			ADM_UPDATENEWS			},
+	{ "Remove News",			ADM_REMOVENEWS			},
+	{ "Play Music",				ADM_MUSIC				}
+};
+
+qboolean check_admin_command(gentity_t* ent, int admin_command) {
+	if (!(ent->client->pers.bitvalue & (1 << admin_command)))
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"^1You don't have the necessary admin command to execute this.\n^1You need the ^3%s ^1admin command.\n\"", admin_commands[admin_command].title));
+		return qfalse;
+	}
+	
+	return qtrue;
+}
+
+// alex: plays an animation from anims.h by id OR a word (look for animation_t)
 void Cmd_Emote_f( gentity_t *ent )
 {
 	char arg[MAX_TOKEN_CHARS] = {0};
@@ -695,10 +639,11 @@ void Cmd_Emote_f( gentity_t *ent )
 
 	for (int i = 0; i < MAX_WORDED_EMOTES; i++)
 	{
-		if (strcmp(anim_id, anim_words[i]) == 0)
+		//alex: here, the anim_id is the worded animation name
+		if (strcmp(anim_id, animations[i].animation_name) == 0)
 		{
 			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-			ent->client->ps.forceDodgeAnim = anim_codes[i];
+			ent->client->ps.forceDodgeAnim = animations[i].animation_code;
 			ent->client->ps.forceHandExtendTime = level.time + 1000;
 
 			ent->client->pers.player_statuses |= (1 << 1);
@@ -726,13 +671,13 @@ void Cmd_Emote_f( gentity_t *ent )
 		for (int i = 0; i < MAX_EMOTE_CATEGORIES; i++) {
 			print_header(ent, anim_headers[i]);
 			for (int j = 0; j < MAX_WORDED_EMOTES; j++) {
-				//if animation is in that category
-				if (strcmp(anim_categories[j], anim_headers[i]) == 0) {
-					print_row(ent, anim_words[j]);
+				//alex: if animation is in that category
+				if (strcmp(animations[j].animation_category, anim_headers[i]) == 0) {
+					print_row(ent, animations[j].animation_name);
 				}
 			}
 		}
-		//end the table
+		//alex: end the table
 		print_table_horizontal_line(ent);
 	}
 }
@@ -858,7 +803,7 @@ qboolean zyk_skill_allowed_for_class(int skill_index, int rpg_class)
 {
 	int i = 0;
 
-	int classes_allowed_for_skills[NUMBER_OF_SKILLS][11] = { // zyk: each index is a skill, and contains an array of allowed RPG classes
+	int classes_allowed_for_skills[NUM_OF_SKILLS][11] = { // zyk: each index is a skill, and contains an array of allowed RPG classes
 		{0, 1, 4, 6, 7, 9, -1}, // Jump
 		{0, 1, 4, 6, 7, 9, -1}, // Push
 		{0, 1, 4, 6, 7, 9, -1}, // Pull
@@ -939,9 +884,8 @@ void Cmd_Give_f( gentity_t *ent )
 	char arg2[MAX_TOKEN_CHARS] = {0};
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_GIVE)))
-	{ // zyk: give admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_GIVE))
+	{
 		return;
 	}
 
@@ -1055,25 +999,30 @@ void do_scale(gentity_t *ent, int new_size)
 }
 
 void display_scale_help(gentity_t *ent) {
-	FILE *help_file = NULL;
+	int i;
+	int scale_table_min = 30;			// start scale
+	int scale_table_max = 150;			// final scale
+	float scale_table_meters = 0.53;	// start meters
+	float scale_table_steps = 0.02;		// increased by
 
-	char line[MAX_STRING_CHARS];
+	trap->SendServerCommand(ent->s.number, "print \""
+			"^9++============================++\n"
+			"^9||^3 Scale ^9||^3 Meters ^9||^3 Feet    ^9||\n"
+			"^9++============================++\n"
+			"^7\"");
 
-	help_file = fopen("GalaxyRP/textfiles/scaletable.txt", "r");
-
-	if (help_file != NULL) {
-
-		while (fscanf(help_file, "%[^\n] ", line) != EOF) {
-			trap->SendServerCommand(ent->s.number, va("print \"%s\n\"", line));
-		}
-
-		fclose(help_file);
-	}
-	else
+	for (i = scale_table_min; i <= scale_table_max; i++)
 	{
-		//if file isn't there, create it
-		trap->SendServerCommand(ent->s.number, "print \"The help file is missing.\n\"");
+		float scale_table_length = (100 * scale_table_meters / 2.54);
+		float scale_table_feet = floor(scale_table_length / 12);
+		float scale_table_inch = (scale_table_length - 12 * scale_table_feet);
+
+		trap->SendServerCommand(ent->s.number, va("print \"^9||^3 %-5i ^9||^3 %-6.2f ^9||^3 %1.0f' %2.0f'' ^9||\n\"", i, scale_table_meters, scale_table_feet, scale_table_inch));
+		if (i == 56 || i == 112) trap->SendServerCommand(ent->s.number, "print \"^9++============================++\n\"");
+		scale_table_meters += scale_table_steps;
 	}
+
+	trap->SendServerCommand(ent->s.number, "print \"^9++============================++\n\"");
 	return;
 }
 
@@ -1097,7 +1046,7 @@ void Cmd_Scale_f( gentity_t *ent ) {
 			return;
 		}
 		else {
-			trap->SendServerCommand(ent - g_entities, "print \"Usage: /scale <playername/help> <size between 20 and 500 (optional)>.\n\"");
+			trap->SendServerCommand(ent - g_entities, "print \"Usage: /scale <playername/help> <size between 20 and 500 (optional, default is 100)>.\n\"");
 			return;
 		}
 
@@ -1105,7 +1054,7 @@ void Cmd_Scale_f( gentity_t *ent ) {
 
 	if (trap->Argc() != 3)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Usage: /scale <playername/help> <size between 20 and 500 (optional)>.\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: /scale <playername/help> <size between 20 and 500 (optional, default is 100)>.\n\"");
 		return;
 	}
 
@@ -1122,9 +1071,8 @@ void Cmd_Scale_f( gentity_t *ent ) {
 	//only ask for admin permissions when scaling someone else
 	if (g_entities[client_id].client->pers.netname != ent->client->pers.netname) {
 
-		if (!(ent->client->pers.bitvalue & (1 << ADM_SCALE)))
-		{ // zyk: scale admin command
-			trap->SendServerCommand(ent - g_entities, "print \"You don't have permission to scale someone else.\n\"");
+		if (!check_admin_command(ent, ADM_SCALE))
+		{
 			return;
 		}
 	}
@@ -1173,9 +1121,8 @@ argv(0) god
 void Cmd_God_f( gentity_t *ent ) {
 	char *msg = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_GOD)))
+	if (!check_admin_command(ent, ADM_GOD))
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
 		return;
 	}
 
@@ -1225,9 +1172,8 @@ argv(0) noclip
 void Cmd_Noclip_f( gentity_t *ent ) {
 	char *msg = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_NOCLIP)))
-	{ // zyk: noclip admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_NOCLIP))
+	{
 		return;
 	}
 
@@ -1366,14 +1312,23 @@ ACCOUNT AREA
 =================
 */
 
-void set_model(gentity_t * ent, char modelName[MAX_STRING_CHARS])
+/*
+=================
+HELPER METHODS for interacting with the database
+
+The methods in the area are used to split up database actions into multiple helper methods, that can be used in multiple areas without code dupplication.
+=================
+*/
+
+// GalaxyRP (Alex): [Database] This method forces a model onto a player.
+void set_model(gentity_t* ent, char modelName[MAX_STRING_CHARS])
 {
-	char userinfo[MAX_INFO_STRING], modelname[MAX_INFO_STRING];
+	char userinfo[MAX_INFO_STRING];
 	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
 
 	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
 
-	//this is how u get the current model
+	//Alex: this is how u get the current model
 	//Q_strncpyz(modelname, Info_ValueForKey(userinfo, "model"), sizeof(modelname));
 	Info_SetValueForKey(userinfo, "model", modelName);
 	trap->SetUserinfo(clientNum, userinfo);
@@ -1382,12 +1337,13 @@ void set_model(gentity_t * ent, char modelName[MAX_STRING_CHARS])
 	return;
 }
 
-void set_netname(gentity_t * ent, char netName[MAX_STRING_CHARS])
+// GalaxyRP (Alex): [Database] This method forces a netname onto a player.
+void set_netname(gentity_t* ent, char netName[MAX_STRING_CHARS])
 {
 	char userinfo[MAX_INFO_STRING];
 	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
 
-	//set name
+	//Alex: set display name
 	Q_strncpyz(ent->client->pers.netname, netName, sizeof(ent->client->pers.netname));
 	Q_strncpyz(ent->client->pers.netname_nocolor, netName, sizeof(ent->client->pers.netname_nocolor));
 	Q_StripColor(ent->client->pers.netname_nocolor);
@@ -1399,81 +1355,566 @@ void set_netname(gentity_t * ent, char netName[MAX_STRING_CHARS])
 	return;
 }
 
-//TODO: PUT THESE IN AN SQL.h
-void InitializeSQL(void)
-{
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	sqlite3_stmt *stmt;
-	int rc;
-	qboolean columnFound = qfalse;
+// GalaxyRP (Alex): [Database] This generic method is strictly for running INSERT, UPDATE, DROP and CREATE statements.
+void run_db_query(char* query, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt){
+	//trap->Print(query);
+	rc = sqlite3_exec(db, query, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+}
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+/*
+----ITEMS TABLE----
+*/
+
+// GalaxyRP (Alex): [Database] INSERT This method inserts a new item row in the database.
+void insert_inv_table_row(gentity_t* ent, char* item_to_add, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char insert_inv_query[54] = "INSERT INTO Items(CharID, ItemName) VALUES('%i',\"%s\")";
+
+	run_db_query(va(insert_inv_query, ent->client->pers.CharID, item_to_add), db, zErrMsg, rc, stmt);
+	trap->SendServerCommand(ent->s.number, "print \"Item added to your inventory.\n\"");
+
+	// GalaxyRP (Alex): [Database] Finalize this outside of run_db_query.
+	sqlite3_finalize(stmt);
+
+	return;
+}
+
+
+/*
+----ACCOUNTS TABLE----
+*/
+
+// GalaxyRP (Alex): [Database] SELECT This method selects a row form the accounts table, and assigns the values to the entity.
+void select_accounts_table_row(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char select_account_row_query[79] = "SELECT AccountID, PlayerSettings, AdminLevel FROM Accounts WHERE Username='%s'";
+
+	rc = sqlite3_prepare(db, va(select_account_row_query, username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		ent->client->sess.accountID = sqlite3_column_int(stmt, 0);
+		ent->client->pers.player_settings = sqlite3_column_int(stmt, 1);
+		ent->client->pers.bitvalue = sqlite3_column_int(stmt, 2);
+		sqlite3_finalize(stmt);
+	}
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] SELECT This method selects the id of an account going by the username provided. Usernames should be unique.
+int select_account_id_from_username(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	int accountID;
+	char select_account_id_query[51] = "SELECT AccountID FROM Accounts WHERE Username='%s'";
+
+	rc = sqlite3_prepare(db, va(select_account_id_query, username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return -1;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return -1;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		accountID = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	}
+
+	return accountID;
+}
+
+// GalaxyRP (Alex): [Database] INSERT This method inserts a new row into the accounts table, using the username and password provided, and default values for everything else.
+void insert_accounts_table_row(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char insert_new_entry_to_accounts_table[195] = "INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('%s','%s','%i','0','%s')";
+	run_db_query(va(insert_new_entry_to_accounts_table, username, password, rp_default_account_permissions.integer, username), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] SELECT This method returns the number of accounts with one specific username. Useful for checking if a username is unique.
+int select_number_of_accounts_with_username(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char select_username_query[57] = "SELECT count(Username) FROM Accounts WHERE Username='%s'";
+
+	int numberOfAccounts = 0;
+
+	rc = sqlite3_prepare(db, va(select_username_query, username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return 1;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return 1;
+	}
+	if (rc == SQLITE_ROW)
+	{
+
+		numberOfAccounts = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+
+		return numberOfAccounts;
+
+	}
+
+	return 1;
+}
+
+// GalaxyRP (Alex): [Database] UPDATE This method updates an accounts table row with information contained within the entity with which it's called.
+void update_accounts_table_row_with_current_values(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+	
+	char update_account_query[95] = "UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'";
+
+	run_db_query(va(update_account_query,
+		ent->client->pers.bitvalue,
+		ent->client->sess.rpgchar,
+		ent->client->sess.accountID
+	), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] UPDATE This method updated a accounts table row with information contained within the entity with which it's called. (NEEDS A CHAR NAME AND FOR THE USER TO BE LOGGED IN)
+void update_accounts_table_row_with_default_char(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char update_default_char_query[58] = "UPDATE Accounts SET DefaultChar='%s' WHERE AccountID='%i'";
+	run_db_query(va(update_default_char_query, character_name, ent->client->sess.accountID), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+qboolean is_password_correct(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char select_password_query[58] = "SELECT Password FROM Accounts WHERE Username='%s'";
+	
+	rc = sqlite3_prepare(db, va(select_password_query, username), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return qfalse;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return qfalse;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		char comparisonPassword[MAX_STRING_CHARS];
+		Q_strncpyz(comparisonPassword, (const char*)sqlite3_column_text(stmt, 0), sizeof(comparisonPassword));
+		sqlite3_finalize(stmt);
+
+		if (strcmp(password, comparisonPassword) == 0) {
+			return qtrue;
+		}
+
+		return qfalse;
+	}
+
+	return qfalse;
+}
+
+/*
+----CHARACTERS TABLE----
+*/
+
+void update_credits_value(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
 		return;
 	}
 
-	//Create Account Table
-	trap->Print("Initializing Account table.\n");
+	char update_char_query[148] = "UPDATE Characters SET Credits='%i' WHERE CharID='%i'";
+	run_db_query(va(update_char_query,
+		ent->client->pers.credits,
+		ent->client->pers.CharID
+	), db, zErrMsg, rc, stmt);
 
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Accounts' ('AccountID' INTEGER, 'PlayerSettings' INTEGER, 'AdminLevel' INTEGER, 'Password' TEXT, 'Username' TEXT, 'DefaultChar' TEXT, PRIMARY KEY(AccountID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Account table.\n");
+	sqlite3_close(db);
 
-	//Create Character Table
-	trap->Print("Initializing Character Table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, 'Description' TEXT, 'NetName' TEXT, 'ModelName' TEXT, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Character table.\n");
-
-	//Create Weapons Table
-	trap->Print("Initializing Weapons Table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Weapons' ('CharID' INTEGER, 'AmmoBlaster' INTEGER, 'AmmoPowercell' INTEGER, 'AmmoMetalBolts' INTEGER, 'AmmoRockets' INTEGER, 'AmmoThermal' INTEGER, 'AmmoTripmine' INTEGER, 'AmmoDetpack' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Weapons table.\n");
-
-	//Create Skills Table
-	trap->Print("Initializing Skills Table.\n");
-
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS 'Skills' ('CharID' INTEGER, 'Jump' INTEGER, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER, PRIMARY KEY(CharID))", 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-	trap->Print("Done with Skills table.\n");
-
-	trap->Print("All tables have been initialized.\n");
+	return;
 }
-//TODO: PUT THESE IN AN ACCOUNT.h
-void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	//trap->Print(va("print \"DEBUG: SELECT * FROM Weapons WHERE CharID='%i'\n\"", ent->client->pers.CharID));
+
+// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the character table, with default values. ASSUMES PLAYER IS ALREADY LOGGED IN.
+void insert_chars_table_row(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char insert_new_entry_to_char_table[203] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName, xp) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle', 0)";
+	run_db_query(va(insert_new_entry_to_char_table, ent->client->sess.accountID, character_name), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] SELECT This method grabs all the values from a characters table row (needs a character name passed on), and assigns them to the entity.
+void select_chars_table_row_from_char_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	rc = sqlite3_prepare(db, va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName, xp FROM Characters WHERE AccountID=%i AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		char displayName[MAX_INFO_STRING], modelName[MAX_STRING_CHARS];
+
+		ent->client->pers.CharID = sqlite3_column_int(stmt, 0);
+		ent->client->pers.credits = sqlite3_column_int(stmt, 1);
+		ent->client->pers.level = sqlite3_column_int(stmt, 2);
+		do_scale(ent, sqlite3_column_int(stmt, 3));
+		strcpy(ent->client->sess.rpgchar, character_name);
+		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 5);
+		strcpy(ent->client->pers.description, sqlite3_column_text(stmt, 6));
+		strcpy(displayName, sqlite3_column_text(stmt, 7));
+		strcpy(modelName, sqlite3_column_text(stmt, 8));
+
+		set_netname(ent, displayName);
+		set_model(ent, modelName);
+
+		// GalaxyRP (Alex): [XP System] Grab XP value from database.
+		ent->client->pers.xp = sqlite3_column_int(stmt, 9);
+
+		sqlite3_finalize(stmt);
+
+		return;
+	}
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] SELECT This method returns the number of characters that exist with one name. (Useful for preventing duplicates)
+int select_number_of_characters_with_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	char select_char_count_query[72] = "SELECT count(CharID) FROM Characters WHERE AccountID='%i' AND Name='%s'";
+	rc = sqlite3_prepare(db, va(select_char_count_query, ent->client->sess.accountID, character_name), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return 0;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return 0;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		int numberOfChars;
+
+		numberOfChars = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+
+		return numberOfChars;
+
+	}
+
+	return 0;
+}
+
+// GalaxyRP (Alex): [Database] SELECT This method returns the character ID associated with the character name given, AND which belongs to the account the player is currently logged in with.
+int select_char_id_using_char_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	int charID = -1;
+
+	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return -1;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return -1;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		charID = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	}
+
+	return charID;
+}
+
+// GalaxyRP (Alex): [Database] UPDATE This method updated a characters table row with information contained within the entity with which it's called.
+void update_chars_table_row_with_current_values(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+
+	// GalaxyRP (Alex): [Database] Grab the model and display name, so they can be saved in the database.
+	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
+
+
+	char update_char_query[157] = "UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s', xp='%i' WHERE CharID='%i'";
+	run_db_query(va(update_char_query,
+		ent->client->pers.credits,
+		ent->client->pers.level,
+		ent->client->ps.iModelScale,
+		ent->client->pers.skillpoints,
+		ent->client->pers.description,
+		ent->client->pers.netname,
+		modelName,
+		ent->client->pers.xp,
+		ent->client->pers.CharID
+	), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] DELETE This method deletes a characters table row which is associated with the ID given.
+void delete_chars_table_row_with_id(gentity_t* ent, int id, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	char delete_char_query[41] = "DELETE FROM Characters WHERE CharID='%i'";
+
+	run_db_query(va(delete_char_query, id), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] DELETE This method deletes a characters table row which is associated with the name given.
+void delete_chars_table_row_with_name(gentity_t* ent, char* charName, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	char delete_char_query[41] = "DELETE FROM Characters WHERE Name='%s'";
+
+	run_db_query(va(delete_char_query, charName), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+/*
+----SKILLS TABLE----
+*/
+
+// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the skills table, with default values.
+void insert_skills_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char insert_new_entry_to_skills_table[919] = "INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
+	run_db_query(insert_new_entry_to_skills_table, db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] SELECT This method grabs all the values from a skills table row (ASSUMES THE PLAYERS IS ALREADY LOGGED IN), and assigns them to the entity.
+void select_skills_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	rc = sqlite3_prepare(db, va("SELECT * FROM Skills WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		for (int i = 0; i < NUM_OF_SKILLS; i++) {
+			ent->client->pers.skill_levels[i] = sqlite3_column_int(stmt, i + 1);
+		}
+
+		sqlite3_finalize(stmt);
+
+		return;
+
+	}
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] UPDATE This method updated a skills table row with information contained within the entity with which it's called. Also updates the skillpoint values, since there's no instance where a skill is updated and the skillpoints are not.
+void update_skills_table_row_with_current_values(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+	
+	char update_skills_query[1018] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i', Armor='%i', Flamethrower='%i' WHERE CharID='%i'; UPDATE Characters SET SkillPoints='%i' WHERE CharID='%i';";
+	run_db_query(va(update_skills_query,
+		ent->client->pers.skill_levels[0],	//Jump
+		ent->client->pers.skill_levels[1],	//Push
+		ent->client->pers.skill_levels[2],	//Pull
+		ent->client->pers.skill_levels[3],	//Speed
+		ent->client->pers.skill_levels[4],	//Sense
+		ent->client->pers.skill_levels[5],	//SaberAttack
+		ent->client->pers.skill_levels[6],	//SaberDefense
+		ent->client->pers.skill_levels[7],	//SaberThrow
+		ent->client->pers.skill_levels[8],	//Absorb
+		ent->client->pers.skill_levels[9],	//Heal
+		ent->client->pers.skill_levels[10],	//Protect
+		ent->client->pers.skill_levels[11],	//MindTrick
+		ent->client->pers.skill_levels[12],	//TeamHeal
+		ent->client->pers.skill_levels[13],	//Lightning
+		ent->client->pers.skill_levels[14],	//Grip
+		ent->client->pers.skill_levels[15],	//Drain
+		ent->client->pers.skill_levels[16],	//Rage
+		ent->client->pers.skill_levels[17],	//TeamEnergize
+		ent->client->pers.skill_levels[18],	//StunBaton
+		ent->client->pers.skill_levels[19],	//BlasterPistol
+		ent->client->pers.skill_levels[20],	//BlasterRifle
+		ent->client->pers.skill_levels[21],	//Disruptor
+		ent->client->pers.skill_levels[22],	//Bowcaster
+		ent->client->pers.skill_levels[23],	//Repeater
+		ent->client->pers.skill_levels[24],	//DEMP2
+		ent->client->pers.skill_levels[25],	//Flechette
+		ent->client->pers.skill_levels[26],	//RocketLauncher
+		ent->client->pers.skill_levels[27],	//ConcussionRifle
+		ent->client->pers.skill_levels[28],	//BryarPistol
+		ent->client->pers.skill_levels[29],	//Melee
+		ent->client->pers.skill_levels[30],	//MaxShield
+		ent->client->pers.skill_levels[31],	//ShieldStrength
+		ent->client->pers.skill_levels[32],	//HealthStrength
+		ent->client->pers.skill_levels[33],	//DrainShield
+		ent->client->pers.skill_levels[34],	//Jetpack
+		ent->client->pers.skill_levels[35],	//SenseHealth
+		ent->client->pers.skill_levels[36],	//ShieldHeal
+		ent->client->pers.skill_levels[37],	//TeamShieldHeal
+		ent->client->pers.skill_levels[38],	//UniqueSkill
+		ent->client->pers.skill_levels[39],	//BlasterPack
+		ent->client->pers.skill_levels[40],	//PowerCell
+		ent->client->pers.skill_levels[41],	//MetalBolts
+		ent->client->pers.skill_levels[42],	//Rockets
+		ent->client->pers.skill_levels[43],	//Thermals
+		ent->client->pers.skill_levels[44],	//TripMines
+		ent->client->pers.skill_levels[45],	//Detpacks
+		ent->client->pers.skill_levels[46],	//Binoculars
+		ent->client->pers.skill_levels[47],	//BactaCanister
+		ent->client->pers.skill_levels[48],	//SentryGun
+		ent->client->pers.skill_levels[49],	//SeekerDrone
+		ent->client->pers.skill_levels[50],	//Eweb
+		ent->client->pers.skill_levels[51],	//BigBacta
+		ent->client->pers.skill_levels[52],	//ForceField
+		ent->client->pers.skill_levels[53],	//CloakItem
+		ent->client->pers.skill_levels[54],	//ForcePower
+		ent->client->pers.skill_levels[55], //Improvements
+		ent->client->pers.skill_levels[56], //Armor
+		ent->client->pers.skill_levels[57], //Flamethrower
+		ent->client->pers.CharID,
+		ent->client->pers.skillpoints,
+		ent->client->pers.CharID), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] DELETE This method deletes a skills table row which is associated with the ID given.
+void delete_skills_table_row_with_id(gentity_t* ent, int id, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	char delete_skills_query[41] = "DELETE FROM Skills WHERE CharID='%i'";
+
+	run_db_query(va(delete_skills_query, id), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+/*
+----WEAPONS TABLE----
+*/
+
+// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the weapons table, with default values.
+void insert_weapons_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char insert_new_entry_to_weapons_table[159] = "INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')";
+	run_db_query(insert_new_entry_to_weapons_table, db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] SELECT This method grabs all the values from a weapons table row (ASSUMES THE PLAYERS IS ALREADY LOGGED IN), and assigns them to the entity.
+void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	rc = sqlite3_prepare(db, va("SELECT * FROM Weapons WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -1494,30 +1935,31 @@ void load_ammo_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqli
 			ent->client->ps.ammo[i] = sqlite3_column_int(stmt, i - 1);
 		}
 
-		//kill them so that it takes effect
-		G_Kill(ent);
 		sqlite3_finalize(stmt);
 		return;
-
 	}
 
-	//kill them anyway
-	G_Kill(ent);
 	return;
 }
 
-void save_ammo_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	/*trap->Print(va("print \"DEBUG: UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'\n\"",
-		ent->client->ps.ammo[AMMO_BLASTER],
-		ent->client->ps.ammo[AMMO_POWERCELL],
-		ent->client->ps.ammo[AMMO_METAL_BOLTS],
-		ent->client->ps.ammo[AMMO_ROCKETS],
-		ent->client->ps.ammo[AMMO_THERMAL],
-		ent->client->ps.ammo[AMMO_TRIPMINE],
-		ent->client->ps.ammo[AMMO_DETPACK],
-		ent->client->pers.CharID));*/
-	rc = sqlite3_exec(db, va("UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'",
+// GalaxyRP (Alex): [Database] UPDATE This method updated a weapons table row with information contained within the entity with which it's called.
+void update_weapons_table_row_with_current_values(gentity_t* ent) {
+
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	char update_ammo_query[168] = "UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'";
+	run_db_query(va(update_ammo_query,
 		ent->client->ps.ammo[AMMO_BLASTER],
 		ent->client->ps.ammo[AMMO_POWERCELL],
 		ent->client->ps.ammo[AMMO_METAL_BOLTS],
@@ -1526,20 +1968,74 @@ void save_ammo_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite
 		ent->client->ps.ammo[AMMO_TRIPMINE],
 		ent->client->ps.ammo[AMMO_DETPACK],
 		ent->client->pers.CharID
-	), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
+	), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
 
 	return;
 }
 
-void load_character_skills_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
-	//trap->Print(va("print \"DEBUG: SELECT * FROM Skills WHERE CharID='%i'\n\"", ent->client->pers.CharID));
-	rc = sqlite3_prepare(db, va("SELECT * FROM Skills WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
+// GalaxyRP (Alex): [Database] DELETE This method deletes a weapons table row which is associated with the ID given.
+void delete_weapons_table_row_with_id(gentity_t* ent, int id, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	char delete_weapons_query[41] = "DELETE FROM Weapons WHERE CharID='%i'";
+
+	run_db_query(va(delete_weapons_query, id), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+/*
+----NEWS TABLE----
+*/
+
+// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the news table, requires the channel and text be passed into it.
+void insert_news_table_row(gentity_t* ent, char* channel, char* news_text) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	char insert_new_entry_to_weapons_table[159] = "INSERT INTO News(channel, text) VALUES ('%s','%s')";
+	run_db_query(va(insert_new_entry_to_weapons_table, channel, news_text), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] SELECT This method selects all the unique channels from the news table.
+void select_news_channels(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+	char channelName[MAX_STRING_CHARS];
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	trap->SendServerCommand(ent - g_entities, "print \"^3Existing channels:\n\"");
+
+	// GalaxyRP (Alex): [Database] Select all info from all character related tables.
+	char select_channels_query[300] = "SELECT DISTINCT channel \
+		from News\
+		ORDER BY channel";
+
+	rc = sqlite3_prepare(db, select_channels_query, -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
@@ -1553,158 +2049,212 @@ void load_character_skills_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, 
 		sqlite3_finalize(stmt);
 		return;
 	}
-	if (rc == SQLITE_ROW)
+	while (rc == SQLITE_ROW)
 	{
-		for (int i = 0; i < NUMBER_OF_SKILLS; i++) {
-			ent->client->pers.skill_levels[i] = sqlite3_column_int(stmt, i + 1);
-		}
-
-		sqlite3_finalize(stmt);
-
-		//kill them so that it takes effect
-		G_Kill(ent);
-
-		return;
-
+		// GalaxyRP (Alex): [Database] Grab all the channels line by line.
+		strcpy(channelName, sqlite3_column_text(stmt, 0));
+		trap->SendServerCommand(ent - g_entities, va("print \"%s\n\"", channelName));
+		rc = sqlite3_step(stmt);
 	}
 
-	//kill them anyway
-	G_Kill(ent);
+	sqlite3_finalize(stmt);
+	sqlite3_close(db);
+
 	return;
 }
 
-void save_skills_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	/*trap->Print(va("print \"UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'\n\"",
-		ent->client->pers.skill_levels[0],	//Jump
-		ent->client->pers.skill_levels[1],	//Push
-		ent->client->pers.skill_levels[2],	//Pull
-		ent->client->pers.skill_levels[3],	//Speed
-		ent->client->pers.skill_levels[4],	//Sense
-		ent->client->pers.skill_levels[5],	//SaberAttack
-		ent->client->pers.skill_levels[6],	//SaberDefense
-		ent->client->pers.skill_levels[7],	//SaberThrow
-		ent->client->pers.skill_levels[8],	//Absorb
-		ent->client->pers.skill_levels[9],	//Heal
-		ent->client->pers.skill_levels[10],	//Protect
-		ent->client->pers.skill_levels[11],	//MindTrick
-		ent->client->pers.skill_levels[12],	//TeamHeal
-		ent->client->pers.skill_levels[13],	//Lightning
-		ent->client->pers.skill_levels[14],	//Grip
-		ent->client->pers.skill_levels[15],	//Drain
-		ent->client->pers.skill_levels[16],	//Rage
-		ent->client->pers.skill_levels[17],	//TeamEnergize
-		ent->client->pers.skill_levels[18],	//StunBaton
-		ent->client->pers.skill_levels[19],	//BlasterPistol
-		ent->client->pers.skill_levels[20],	//BlasterRifle
-		ent->client->pers.skill_levels[21],	//Disruptor
-		ent->client->pers.skill_levels[22],	//Bowcaster
-		ent->client->pers.skill_levels[23],	//Repeater
-		ent->client->pers.skill_levels[24],	//DEMP2
-		ent->client->pers.skill_levels[25],	//Flechette
-		ent->client->pers.skill_levels[26],	//RocketLauncher
-		ent->client->pers.skill_levels[27],	//ConcussionRifle
-		ent->client->pers.skill_levels[28],	//BryarPistol
-		ent->client->pers.skill_levels[29],	//Melee
-		ent->client->pers.skill_levels[30],	//MaxShield
-		ent->client->pers.skill_levels[31],	//ShieldStrength
-		ent->client->pers.skill_levels[32],	//HealthStrength
-		ent->client->pers.skill_levels[33],	//DrainShield
-		ent->client->pers.skill_levels[34],	//Jetpack
-		ent->client->pers.skill_levels[35],	//SenseHealth
-		ent->client->pers.skill_levels[36],	//ShieldHeal
-		ent->client->pers.skill_levels[37],	//TeamShieldHeal
-		ent->client->pers.skill_levels[38],	//UniqueSkill
-		ent->client->pers.skill_levels[39],	//BlasterPack
-		ent->client->pers.skill_levels[40],	//PowerCell
-		ent->client->pers.skill_levels[41],	//MetalBolts
-		ent->client->pers.skill_levels[42],	//Rockets
-		ent->client->pers.skill_levels[43],	//Thermals
-		ent->client->pers.skill_levels[44],	//TripMines
-		ent->client->pers.skill_levels[45],	//Detpacks
-		ent->client->pers.skill_levels[46],	//Binoculars
-		ent->client->pers.skill_levels[47],	//BactaCanister
-		ent->client->pers.skill_levels[48],	//SentryGun
-		ent->client->pers.skill_levels[49],	//SeekerDrone
-		ent->client->pers.skill_levels[50],	//Eweb
-		ent->client->pers.skill_levels[51],	//BigBacta
-		ent->client->pers.skill_levels[52],	//ForceField
-		ent->client->pers.skill_levels[53],	//CloakItem
-		ent->client->pers.skill_levels[54],	//ForcePower
-		ent->client->pers.skill_levels[55], //Improvements
-		ent->client->pers.CharID));*/
+void display_news(gentity_t* ent, int newsID, char* newsText, char* date) {
 
-	rc = sqlite3_exec(db, va("UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i'",
-		ent->client->pers.skill_levels[0],	//Jump
-		ent->client->pers.skill_levels[1],	//Push
-		ent->client->pers.skill_levels[2],	//Pull
-		ent->client->pers.skill_levels[3],	//Speed
-		ent->client->pers.skill_levels[4],	//Sense
-		ent->client->pers.skill_levels[5],	//SaberAttack
-		ent->client->pers.skill_levels[6],	//SaberDefense
-		ent->client->pers.skill_levels[7],	//SaberThrow
-		ent->client->pers.skill_levels[8],	//Absorb
-		ent->client->pers.skill_levels[9],	//Heal
-		ent->client->pers.skill_levels[10],	//Protect
-		ent->client->pers.skill_levels[11],	//MindTrick
-		ent->client->pers.skill_levels[12],	//TeamHeal
-		ent->client->pers.skill_levels[13],	//Lightning
-		ent->client->pers.skill_levels[14],	//Grip
-		ent->client->pers.skill_levels[15],	//Drain
-		ent->client->pers.skill_levels[16],	//Rage
-		ent->client->pers.skill_levels[17],	//TeamEnergize
-		ent->client->pers.skill_levels[18],	//StunBaton
-		ent->client->pers.skill_levels[19],	//BlasterPistol
-		ent->client->pers.skill_levels[20],	//BlasterRifle
-		ent->client->pers.skill_levels[21],	//Disruptor
-		ent->client->pers.skill_levels[22],	//Bowcaster
-		ent->client->pers.skill_levels[23],	//Repeater
-		ent->client->pers.skill_levels[24],	//DEMP2
-		ent->client->pers.skill_levels[25],	//Flechette
-		ent->client->pers.skill_levels[26],	//RocketLauncher
-		ent->client->pers.skill_levels[27],	//ConcussionRifle
-		ent->client->pers.skill_levels[28],	//BryarPistol
-		ent->client->pers.skill_levels[29],	//Melee
-		ent->client->pers.skill_levels[30],	//MaxShield
-		ent->client->pers.skill_levels[31],	//ShieldStrength
-		ent->client->pers.skill_levels[32],	//HealthStrength
-		ent->client->pers.skill_levels[33],	//DrainShield
-		ent->client->pers.skill_levels[34],	//Jetpack
-		ent->client->pers.skill_levels[35],	//SenseHealth
-		ent->client->pers.skill_levels[36],	//ShieldHeal
-		ent->client->pers.skill_levels[37],	//TeamShieldHeal
-		ent->client->pers.skill_levels[38],	//UniqueSkill
-		ent->client->pers.skill_levels[39],	//BlasterPack
-		ent->client->pers.skill_levels[40],	//PowerCell
-		ent->client->pers.skill_levels[41],	//MetalBolts
-		ent->client->pers.skill_levels[42],	//Rockets
-		ent->client->pers.skill_levels[43],	//Thermals
-		ent->client->pers.skill_levels[44],	//TripMines
-		ent->client->pers.skill_levels[45],	//Detpacks
-		ent->client->pers.skill_levels[46],	//Binoculars
-		ent->client->pers.skill_levels[47],	//BactaCanister
-		ent->client->pers.skill_levels[48],	//SentryGun
-		ent->client->pers.skill_levels[49],	//SeekerDrone
-		ent->client->pers.skill_levels[50],	//Eweb
-		ent->client->pers.skill_levels[51],	//BigBacta
-		ent->client->pers.skill_levels[52],	//ForceField
-		ent->client->pers.skill_levels[53],	//CloakItem
-		ent->client->pers.skill_levels[54],	//ForcePower
-		ent->client->pers.skill_levels[55], //Improvements
-		ent->client->pers.CharID
-	), 0, 0, &zErrMsg);
+	trap->SendServerCommand(ent - g_entities, va("print \"^3--------------------------|%i|%s|----------------------\n\"",newsID, date));
+	trap->SendServerCommand(ent - g_entities, va("print \"^2%s\n\"", newsText));
+	trap->SendServerCommand(ent - g_entities, va("print \"^3-------------------------------------------------------------\n\"", date));
+	return;
+}
+
+void select_news_from_channel(gentity_t* ent, char* channel, int numberOfEntries) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+	char newsText[MAX_STRING_CHARS], date[MAX_STRING_CHARS];
+	int newsID = 0;
+	int i = 1;
+
+	rc = sqlite3_open(DB_PATH, &db);
 	if (rc != SQLITE_OK)
 	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
 		return;
 	}
+
+	// GalaxyRP (Alex): [Database] Select all news that appear in a channel.
+	char select_news_query[300] = "SELECT newsID, text, date\
+		from(SELECT newsID, text, date from News WHERE channel = '%s' COLLATE NOCASE ORDER BY newsID DESC LIMIT %i) \
+		ORDER BY newsID ASC";
+
+	rc = sqlite3_prepare(db, va(select_news_query, channel, numberOfEntries), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	while (rc == SQLITE_ROW)
+	{
+		if (i <= numberOfEntries) {
+			// GalaxyRP (Alex): [Database] Grab all the news texts line by line.
+			newsID = sqlite3_column_int(stmt, 0);
+			strcpy(newsText, sqlite3_column_text(stmt, 1));
+			strcpy(date, sqlite3_column_text(stmt, 2));
+
+			display_news(ent, newsID, newsText, date);
+		}
+
+		rc = sqlite3_step(stmt);
+		i++;
+	}
+
+	sqlite3_finalize(stmt);
+	sqlite3_close(db);
 
 	return;
 }
 
-void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
+// GalaxyRP (Alex): [Database] DELETE This method deletes a news table row which is associated with the ID given.
+void delete_news_table_row_with_id(gentity_t* ent, int newsID) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
 
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	char delete_weapons_query[41] = "DELETE FROM News WHERE newsID='%i'";
+
+	run_db_query(va(delete_weapons_query, newsID), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
+
+	return;
+}
+
+/*
+=================
+DATABASE ACTIONS for interacting with the database
+
+The methods do broader actions, which are a combination of multiple actions that will almost always be used together.
+=================
+*/
+
+// GalaxyRP (Alex): [Database] This method saves all of the player's character attributes to the database. All the information is taken from ent. (Weapons, Skills and Characters tables)
+void update_current_character(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
+
+	char update_character_query[1248] = "UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i';\
+		UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i';\
+		UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'";
+
+	run_db_query(va(update_character_query,
+		ent->client->pers.credits,
+		ent->client->pers.level,
+		ent->client->ps.iModelScale,
+		ent->client->pers.skillpoints,
+		ent->client->pers.description,
+		ent->client->pers.netname,
+		modelName,
+		ent->client->pers.CharID,
+		ent->client->pers.skill_levels[0],	//Jump
+		ent->client->pers.skill_levels[1],	//Push
+		ent->client->pers.skill_levels[2],	//Pull
+		ent->client->pers.skill_levels[3],	//Speed
+		ent->client->pers.skill_levels[4],	//Sense
+		ent->client->pers.skill_levels[5],	//SaberAttack
+		ent->client->pers.skill_levels[6],	//SaberDefense
+		ent->client->pers.skill_levels[7],	//SaberThrow
+		ent->client->pers.skill_levels[8],	//Absorb
+		ent->client->pers.skill_levels[9],	//Heal
+		ent->client->pers.skill_levels[10],	//Protect
+		ent->client->pers.skill_levels[11],	//MindTrick
+		ent->client->pers.skill_levels[12],	//TeamHeal
+		ent->client->pers.skill_levels[13],	//Lightning
+		ent->client->pers.skill_levels[14],	//Grip
+		ent->client->pers.skill_levels[15],	//Drain
+		ent->client->pers.skill_levels[16],	//Rage
+		ent->client->pers.skill_levels[17],	//TeamEnergize
+		ent->client->pers.skill_levels[18],	//StunBaton
+		ent->client->pers.skill_levels[19],	//BlasterPistol
+		ent->client->pers.skill_levels[20],	//BlasterRifle
+		ent->client->pers.skill_levels[21],	//Disruptor
+		ent->client->pers.skill_levels[22],	//Bowcaster
+		ent->client->pers.skill_levels[23],	//Repeater
+		ent->client->pers.skill_levels[24],	//DEMP2
+		ent->client->pers.skill_levels[25],	//Flechette
+		ent->client->pers.skill_levels[26],	//RocketLauncher
+		ent->client->pers.skill_levels[27],	//ConcussionRifle
+		ent->client->pers.skill_levels[28],	//BryarPistol
+		ent->client->pers.skill_levels[29],	//Melee
+		ent->client->pers.skill_levels[30],	//MaxShield
+		ent->client->pers.skill_levels[31],	//ShieldStrength
+		ent->client->pers.skill_levels[32],	//HealthStrength
+		ent->client->pers.skill_levels[33],	//DrainShield
+		ent->client->pers.skill_levels[34],	//Jetpack
+		ent->client->pers.skill_levels[35],	//SenseHealth
+		ent->client->pers.skill_levels[36],	//ShieldHeal
+		ent->client->pers.skill_levels[37],	//TeamShieldHeal
+		ent->client->pers.skill_levels[38],	//UniqueSkill
+		ent->client->pers.skill_levels[39],	//BlasterPack
+		ent->client->pers.skill_levels[40],	//PowerCell
+		ent->client->pers.skill_levels[41],	//MetalBolts
+		ent->client->pers.skill_levels[42],	//Rockets
+		ent->client->pers.skill_levels[43],	//Thermals
+		ent->client->pers.skill_levels[44],	//TripMines
+		ent->client->pers.skill_levels[45],	//Detpacks
+		ent->client->pers.skill_levels[46],	//Binoculars
+		ent->client->pers.skill_levels[47],	//BactaCanister
+		ent->client->pers.skill_levels[48],	//SentryGun
+		ent->client->pers.skill_levels[49],	//SeekerDrone
+		ent->client->pers.skill_levels[50],	//Eweb
+		ent->client->pers.skill_levels[51],	//BigBacta
+		ent->client->pers.skill_levels[52],	//ForceField
+		ent->client->pers.skill_levels[53],	//CloakItem
+		ent->client->pers.skill_levels[54],	//ForcePower
+		ent->client->pers.skill_levels[55], //Improvements
+		ent->client->pers.CharID,
+		ent->client->ps.ammo[AMMO_BLASTER],
+		ent->client->ps.ammo[AMMO_POWERCELL],
+		ent->client->ps.ammo[AMMO_METAL_BOLTS],
+		ent->client->ps.ammo[AMMO_ROCKETS],
+		ent->client->ps.ammo[AMMO_THERMAL],
+		ent->client->ps.ammo[AMMO_TRIPMINE],
+		ent->client->ps.ammo[AMMO_DETPACK],
+		ent->client->pers.CharID
+	), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] This method changes the character used currently by the player. It reassigns skills, weapons, userinfo, and changes the default character associated with the account.
+void select_player_character(gentity_t* ent, char *character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	int numberOfChars = 0;
+	
 	if (ent->client->sess.loggedin == qfalse) {
 		trap->SendServerCommand(ent - g_entities, "print \"^2You must be logged in load a character.\n\"");
 		trap->SendServerCommand(ent - g_entities, "cp \"^2You must be logged in load a character.\n\"");
@@ -1712,39 +2262,26 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 		return;
 	}
 
-	//trap->Print(va("SELECT count(CharID) FROM Characters WHERE AccountID='%i' AND Name='%s'\n", ent->client->sess.accountID, character_name));
-	rc = sqlite3_prepare(db, va("SELECT count(CharID) FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
+	// GalaxyRP (Alex): [Database] Check to see if character exists or not.
+	numberOfChars = select_number_of_characters_with_name(ent, character_name, db, zErrMsg, rc, stmt);
+
+	if (numberOfChars != 1) {
+		trap->SendServerCommand(ent - g_entities, "print \"^2Character does not exist.\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^2Character does not exist.\n\"");
+
 		return;
 	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		int numberOfChars;
 
-		numberOfChars = sqlite3_column_int(stmt, 0);
-		sqlite3_finalize(stmt);
+	// GalaxyRP (Alex): [Database] Select all info from all character related tables.
+	char select_character_query[202] = "SELECT *\
+		FROM Characters\
+		INNER JOIN Skills\
+		ON Skills.CharID = Characters.CharID\
+		INNER JOIN Weapons\
+		ON Weapons.CharID = Characters.CharID\
+		WHERE Characters.Name = '%s' AND Characters.AccountID = %i";
 
-		if (numberOfChars != 1) {
-			trap->SendServerCommand(ent - g_entities, "print \"^2Character does not exist.\n\"");
-			trap->SendServerCommand(ent - g_entities, "cp \"^2Character does not exist.\n\"");
-
-			return;
-		}
-
-	}
-
-	//trap->Print(va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName FROM Characters WHERE AccountID=%i AND Name='%s'\n", ent->client->sess.accountID, character_name));
-	rc = sqlite3_prepare(db, va("SELECT CharID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName FROM Characters WHERE AccountID=%i AND Name='%s'", ent->client->sess.accountID, character_name), -1, &stmt, NULL);
+	rc = sqlite3_prepare(db, va(select_character_query, character_name, ent->client->sess.accountID), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
@@ -1762,37 +2299,44 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 	{
 		char displayName[MAX_INFO_STRING], modelName[MAX_STRING_CHARS];
 
-		//TODO: load more stuff from character
-		ent->client->pers.CharID = sqlite3_column_int(stmt, 0);
-		ent->client->pers.credits = sqlite3_column_int(stmt, 1);
-		ent->client->pers.level = sqlite3_column_int(stmt, 2);
-		do_scale(ent, sqlite3_column_int(stmt, 3));
+		// GalaxyRP (Alex): [Database] Grab info from characters table.
+		ent->client->pers.CharID = sqlite3_column_int(stmt, 1);
+		ent->client->pers.credits = sqlite3_column_int(stmt, 2);
+		ent->client->pers.level = sqlite3_column_int(stmt, 3);
+		do_scale(ent, sqlite3_column_int(stmt, 4));
 		strcpy(ent->client->sess.rpgchar, character_name);
-		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 5);
-		strcpy(ent->client->pers.description, sqlite3_column_text(stmt, 6));
-		strcpy(displayName, sqlite3_column_text(stmt, 7));
-		strcpy(modelName, sqlite3_column_text(stmt, 8));
+		ent->client->pers.skillpoints = sqlite3_column_int(stmt, 6);
+		strcpy(ent->client->pers.description, sqlite3_column_text(stmt, 7));
+		strcpy(displayName, sqlite3_column_text(stmt, 8));
+		strcpy(modelName, sqlite3_column_text(stmt, 9));
 
+		// GalaxyRP (Alex): [XP System] Grab XP value from database.
+		ent->client->pers.xp = sqlite3_column_int(stmt, 10);
+
+		// GalaxyRP (Alex): [Database] Grab info from skills table. (column 11 is CharID, no need to grab that)
+		for (int i = 0; i < NUM_OF_SKILLS; i++) {
+			ent->client->pers.skill_levels[i] = sqlite3_column_int(stmt, i + 12);
+		}
+
+		// GalaxyRP (Alex): [Database] Grab info from weapons table. (column 68 is CharID, no need to grab that)
+		for (int i = 2; i < AMMO_MAX; i++) {
+			ent->client->ps.ammo[i] = sqlite3_column_int(stmt, i + 67);
+		}
+
+		// GalaxyRP (Alex): [Database] Apply the modelname and net name.
 		set_netname(ent, displayName);
 		set_model(ent, modelName);
 
 		sqlite3_finalize(stmt);
+	}	
 
-		load_character_skills_from_db(ent, db, zErrMsg, rc, stmt);
-		load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
-	}
+	// GalaxyRP (Alex): [Database] Kill the tntity to allow everything to take effect.
+	G_Kill(ent);
 
-	trap->Print(va("UPDATE Accounts SET DefaultChar='%s' WHERE AccountID='%i'\n", character_name, ent->client->sess.accountID));
-	//Set as default so users always log into their last char
-	rc = sqlite3_exec(db, va("UPDATE Accounts SET DefaultChar='%s' WHERE AccountID='%i'", character_name, ent->client->sess.accountID), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
+	// GalaxyRP (Alex): [Database] Assign the player the info from Accounts table.
+	update_accounts_table_row_with_default_char(ent, character_name, db, zErrMsg, rc, stmt);
 
-	strcpy(ent->client->sess.rpgchar, character_name);
+	// GalaxyRP (Alex): [Database] Display Messages.
 	trap->SendServerCommand(ent - g_entities, "print \"^2Character loaded sucessfully!\n\"");
 	trap->SendServerCommand(ent - g_entities, "cp \"^2Character loaded sucessfully!\n\"");
 	trap->SendServerCommand(-1, va("chat \"%s switched to: %s\n\"", ent->client->pers.netname, character_name));
@@ -1800,241 +2344,13 @@ void load_character_from_db(gentity_t * ent, char character_name[MAX_STRING_CHAR
 	return;
 }
 
-void add_new_char_to_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	int charID;
-	char comparisonName[256] = { 0 };
-
-	rc = sqlite3_prepare(db, va("SELECT Name FROM Characters WHERE Name='%s'", char_name), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		Q_strncpyz(comparisonName, (const char *)sqlite3_column_text(stmt, 0), sizeof(comparisonName));
-		sqlite3_finalize(stmt);
-	}
-
-	if (comparisonName[0] != '\0')
-	{
-		trap->SendServerCommand(ent - g_entities, va("print \"^1Character name ^7%s ^1is already in use.\n\"", comparisonName));
-		trap->SendServerCommand(ent - g_entities, va("cp \"^1Character name ^7%s ^1is already in use.\n\"", comparisonName));
-		sqlite3_close(db);
-		return;
-	}
-
-	//TODO: assign the default values to the entity
-	//Create character record
-	//TODO: replace Name with something better
-	//trap->Print(va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')\n", ent->client->sess.accountID, char_name));
-	rc = sqlite3_exec(db, va("INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle')", ent->client->sess.accountID, char_name), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	//TODO BUG!!!!
-	//Get CharID for later
-	//trap->Print(va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, char_name));
-	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, char_name), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		charID = sqlite3_column_int(stmt, 0);
-		sqlite3_finalize(stmt);
-	}
-
-	//Create skill record
-	//TODO: replace Name with something better
-	//trap->Print(va("INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')\n"));
-	rc = sqlite3_exec(db, va("INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')"), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	//Create ammo record
-	//trap->Print(va("INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')\n"));
-	rc = sqlite3_exec(db, va("INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')"), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	trap->SendServerCommand(-1, va("chat \"%s created a char: %s\n\"", ent->client->pers.netname, char_name));
-
-	return;
-}
-
-void remove_char_from_db(gentity_t * ent, char char_name[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	int charID;
-
-	if (strcmp(char_name, ent->client->sess.rpgchar) == 0) {
-		trap->SendServerCommand(ent - g_entities, "print \"^2You cannot remove the char you're currently using.\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^2You cannot remove the char you're currently using.\n\"");
-		return;
-	}
-
-	//Get CharID for later
-	//trap->Print(va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'\n", ent->client->sess.accountID, char_name));
-	rc = sqlite3_prepare(db, va("SELECT CharID FROM Characters WHERE AccountID='%i' AND Name='%s'", ent->client->sess.accountID, char_name), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		charID = sqlite3_column_int(stmt, 0);
-		sqlite3_finalize(stmt);
-	}
-
-	//trap->Print(va("DELETE FROM Characters WHERE CharID='%i'\n", charID));
-	rc = sqlite3_exec(db, va("DELETE FROM Characters WHERE CharID='%i'", charID), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	//trap->Print(va("DELETE FROM Weapons WHERE CharID='%i'\n", charID));
-	rc = sqlite3_exec(db, va("DELETE FROM Weapons WHERE CharID='%i'", charID), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	//trap->Print(va("DELETE FROM Skills WHERE CharID='%i'\n", charID));
-	rc = sqlite3_exec(db, va("DELETE FROM Skills WHERE CharID='%i'", charID), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	trap->SendServerCommand(ent - g_entities, "print \"^2Char was removed sucessfully.\n\"");
-	trap->SendServerCommand(ent - g_entities, "cp \"^2Char was removed sucessfully.\n\"");
-
-	return;
-}
-
-void save_char_info_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
-	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
-
-	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
-	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
-
-	/*trap->Print(va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i'\n",
-		ent->client->pers.credits,
-		ent->client->pers.level,
-		ent->client->ps.iModelScale,
-		ent->client->pers.skillpoints,
-		ent->client->pers.description,
-		ent->client->pers.netname,
-		modelName,
-		ent->client->pers.CharID));*/
-	rc = sqlite3_exec(db, va("UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i'",
-		ent->client->pers.credits,
-		ent->client->pers.level,
-		ent->client->ps.iModelScale,
-		ent->client->pers.skillpoints,
-		ent->client->pers.description,
-		ent->client->pers.netname,
-		modelName,
-		ent->client->pers.CharID
-	), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	return;
-}
-
-void save_char_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
-{
-	save_ammo_to_db(ent, db, zErrMsg, rc, stmt);
-	save_skills_to_db(ent, db, zErrMsg, rc, stmt);
-	save_char_info_to_db(ent, db, zErrMsg, rc, stmt);
-
-	return;
-}
-
-void save_account_to_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
-	//TODO: Make this change more stuff
-	/*trap->Print(va("UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'\n",
-		ent->client->pers.bitvalue,
-		ent->client->sess.rpgchar,
-		ent->client->sess.accountID));*/
-	rc = sqlite3_exec(db, va("UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'",
-		ent->client->pers.bitvalue,
-		ent->client->sess.rpgchar,
-		ent->client->sess.accountID
-	), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	return;
-}
-
-void load_character_list_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt)
+// GalaxyRP (Alex): [Database] This method displays the list of characters to a player.
+void select_character_list(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt)
 {
 	char CharName[MAX_STRING_CHARS];
 	int charLevel;
 
-	//Get CharID for later
-	//trap->Print(va("SELECT Name, Level FROM Characters WHERE AccountID='%i'\n", ent->client->sess.accountID));
+	// GalaxyRP (Alex): [Database] Get list of char names.
 	rc = sqlite3_prepare(db, va("SELECT Name, Level FROM Characters WHERE AccountID='%i'", ent->client->sess.accountID), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -2061,185 +2377,27 @@ void load_character_list_from_db(gentity_t * ent, sqlite3 *db, char *zErrMsg, in
 	sqlite3_finalize(stmt);
 }
 
-void Cmd_Register_F(gentity_t * ent)
-{
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
-	int accountID = 0, i = 0;
-	int charID;
+// GalaxyRP (Alex): [Database] This method loads the account information, as well as the information related to the default character, and assigns it to the entity.
+void select_account_and_default_character_data(gentity_t* ent, char username[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char password[256], name[256], description[MAX_STRING_CHARS], netName[MAX_STRING_CHARS], modelName[MAX_STRING_CHARS];
+	int accountID, player_settings, adminLevel, charID, credits, level, modelScale, skillpoints;
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
+	char select_account_table_row[356] = "SELECT *\
+		FROM Accounts, Characters\
+		INNER JOIN Skills\
+		ON Skills.CharID = Characters.CharID\
+		INNER JOIN Weapons\
+		ON Weapons.CharID = Characters.CharID\
+		WHERE Accounts.Username = '%s' AND Characters.CharID = (\
+			SELECT CharID\
+			FROM Characters\
+			Where Characters.Name = (\
+				SELECT DefaultChar\
+				FROM Accounts\
+				WHERE Accounts.Username = '%s')\
+			)";
 
-	if (trap->Argc() != 3)
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /register <username> <password>\n\"");
-		sqlite3_close(db);
-		return;
-	}
-
-	trap->Argv(1, username, sizeof(username));
-	trap->Argv(2, password, sizeof(password));
-
-	Q_StripColor(username);
-	Q_strlwr(username);
-
-	rc = sqlite3_prepare(db, va("SELECT Username FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		Q_strncpyz(comparisonName, (const char *)sqlite3_column_text(stmt, 0), sizeof(comparisonName));
-		sqlite3_finalize(stmt);
-	}
-
-	if (comparisonName[0] != '\0')
-	{
-		trap->SendServerCommand(ent - g_entities, va("print \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
-		trap->SendServerCommand(ent - g_entities, va("cp \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
-		sqlite3_close(db);
-		return;
-	}
-
-	//Create account record
-	rc = sqlite3_exec(db, va("INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('%s','%s','0','0','%s')", username, password, username), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
-		return;
-	}
-
-	rc = sqlite3_prepare(db, va("SELECT AccountID FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		accountID = sqlite3_column_int(stmt, 0);
-		sqlite3_finalize(stmt);
-	}
-
-	//log them in
-	rc = sqlite3_prepare(db, va("SELECT AccountID, PlayerSettings, AdminLevel FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		ent->client->sess.accountID = sqlite3_column_int(stmt, 0);
-		ent->client->pers.player_settings = sqlite3_column_int(stmt, 1);
-		ent->client->pers.bitvalue = sqlite3_column_int(stmt, 2);
-		sqlite3_finalize(stmt);
-	}
-
-	//always 2, kept for backwards compatibility
-	ent->client->sess.amrpgmode = 2;
-	ent->client->sess.loggedin = qtrue;
-	strcpy(ent->client->sess.filename, username);
-	strcpy(ent->client->pers.password, password);
-
-
-
-	add_new_char_to_db(ent, username, db, zErrMsg, rc, stmt);
-	load_character_from_db(ent, username, db, zErrMsg, rc, stmt);
-
-	trap->SendServerCommand(ent - g_entities, "print \"^2Your account has been successfully created and you are now logged in.\n\"");
-	trap->SendServerCommand(ent - g_entities, "cp \"^2Your account has been successfully created and you are now logged in.\n\"");
-
-	sqlite3_close(db);
-
-	//Open the character selection/creation menu
-	//trap->SendServerCommand(ent - g_entities, "charui");
-
-
-	return;
-}
-
-void Cmd_ChangeChar_F(gentity_t * ent)
-{
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-	char charname[MAX_STRING_CHARS];
-
-	if (trap->Argc() != 2)
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /changechar <charname>\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^2Command Usage: /changechar <charname>\n\"");
-		sqlite3_close(db);
-		return;
-	}
-
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
-	trap->Argv(1, charname, sizeof(charname));
-
-	load_character_from_db(ent, charname, db, zErrMsg, rc, stmt);
-
-	sqlite3_close(db);
-
-	return;
-}
-
-void load_account_from_db(gentity_t * ent, char username[MAX_STRING_CHARS], sqlite3 *db, char *zErrMsg, int rc, sqlite3_stmt *stmt) {
-	char defaultChar[256] = { 0 }, password[256] = { 0 };
-	int accountID = 0, i = 0, player_settings = 0, adminLevel = 0;
-
-	rc = sqlite3_prepare(db, va("SELECT AccountID, PlayerSettings, AdminLevel, DefaultChar, Password FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
+	rc = sqlite3_prepare(db, va(select_account_table_row, username, username), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
@@ -2260,23 +2418,256 @@ void load_account_from_db(gentity_t * ent, char username[MAX_STRING_CHARS], sqli
 		accountID = sqlite3_column_int(stmt, 0);
 		player_settings = sqlite3_column_int(stmt, 1);
 		adminLevel = sqlite3_column_int(stmt, 2);
-		strcpy(defaultChar, sqlite3_column_text(stmt, 3));
-		strcpy(password, sqlite3_column_text(stmt, 4));
+		strcpy(password, sqlite3_column_text(stmt, 3));
+		strcpy(username, sqlite3_column_text(stmt, 4));
+		charID = sqlite3_column_int(stmt, 7);
+		credits = sqlite3_column_int(stmt, 8);
+		level = sqlite3_column_int(stmt, 9);
+		modelScale = sqlite3_column_int(stmt, 10);
+		strcpy(name, sqlite3_column_text(stmt, 11));
+		skillpoints = sqlite3_column_int(stmt, 12);
+		strcpy(description, sqlite3_column_text(stmt, 13));
+		strcpy(netName, sqlite3_column_text(stmt, 14));
+		strcpy(modelName, sqlite3_column_text(stmt, 15));
+
+		// GalaxyRP (Alex): [XP System] Grab XP value from database.
+		ent->client->pers.xp = sqlite3_column_int(stmt, 16);
+
+		// GalaxyRP (Alex): [Database] Column 17 is a duplicate of CharID, no need to grab that.
+		for (int i = 0; i < NUM_OF_SKILLS; i++) {
+			ent->client->pers.skill_levels[i] = sqlite3_column_int(stmt, i + 18);
+		}
+		// GalaxyRP (Alex): [Database] Column 75 is a duplicate of CharID, no need to grab that.
+		for (int i = 2; i < AMMO_MAX; i++) {
+			ent->client->ps.ammo[i] = sqlite3_column_int(stmt, i + 74);
+		}
+
 		sqlite3_finalize(stmt);
 	}
 
 	ent->client->sess.accountID = accountID;
+	ent->client->pers.player_settings = player_settings;
+	ent->client->pers.bitvalue = adminLevel;
+	strcpy(ent->client->pers.password, password);
+	strcpy(ent->client->sess.filename, username);
+	ent->client->pers.CharID = charID;
+	ent->client->pers.credits = credits;
+	ent->client->pers.level = level;
+	do_scale(ent, modelScale);
+	strcpy(ent->client->sess.rpgchar, name);
+	ent->client->pers.skillpoints = skillpoints;
+	strcpy(ent->client->pers.description, description);
+	set_netname(ent, netName);
+	set_model(ent, modelName);
+
+	ent->client->sess.amrpgmode = 2;
+	ent->client->sess.loggedin = qtrue;
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] This method creates a new character associated with the account the player is currently logged in, and adds the default data in all the tables. ASSUMES PLAYER IS LOGGED IN!
+void create_new_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	// GalaxyRP (Alex): [Database] Character names should be unique, check for it here.
+	if (select_number_of_characters_with_name(ent, char_name, db, zErrMsg, rc, stmt) > 0) {
+		trap->SendServerCommand(ent - g_entities, va("print \"^1Character name ^7%s ^1is already in use.\n\"", char_name));
+		trap->SendServerCommand(ent - g_entities, va("cp \"^1Character name ^7%s ^1is already in use.\n\"", char_name));
+		return;
+	}
+
+	char create_new_character_query[1286] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName, xp) VALUES('%i','100','1','100','%s', '1', 'Nothing to show.', 'DefaultName', 'kyle', 0);\
+		INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0');\
+		INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0');";
+
+	run_db_query(va(create_new_character_query, ent->client->sess.accountID, char_name), db, zErrMsg, rc, stmt);
+
+	trap->SendServerCommand(-1, va("chat \"%s created a char: %s\n\"", ent->client->pers.netname, char_name));
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] This method removes a character form the database. It affects all tables that contain character information. ASSUMES THE PLAYER IS LOGGED IN!!!
+void remove_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	int charID;
+	charID = select_char_id_using_char_name(ent, char_name, db, zErrMsg, rc, stmt);
+
+	char remove_character_query[117] = "DELETE FROM Characters WHERE CharID='%i';DELETE FROM Skills WHERE CharID='%i';DELETE FROM Weapons WHERE CharID='%i';";
+
+	run_db_query(va(remove_character_query, charID, charID, charID), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] This method updates the account, Characters, Skills and Weapons tables with current values. ASSUMES THE PLAYER IS LOGGED IN!!!
+void update_current_character_and_account(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
+	
+	char update_character_query[1390] = "UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName=\"%s\", xp='%i' WHERE CharID='%i';\
+		UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i';\
+		UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i';\
+		UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'";
+
+	run_db_query(va(update_character_query,
+		ent->client->pers.credits,
+		ent->client->pers.level,
+		ent->client->ps.iModelScale,
+		ent->client->pers.skillpoints,
+		ent->client->pers.description,
+		ent->client->pers.netname,
+		modelName,
+		ent->client->pers.xp,
+		ent->client->pers.CharID,
+		ent->client->pers.skill_levels[0],	//Jump
+		ent->client->pers.skill_levels[1],	//Push
+		ent->client->pers.skill_levels[2],	//Pull
+		ent->client->pers.skill_levels[3],	//Speed
+		ent->client->pers.skill_levels[4],	//Sense
+		ent->client->pers.skill_levels[5],	//SaberAttack
+		ent->client->pers.skill_levels[6],	//SaberDefense
+		ent->client->pers.skill_levels[7],	//SaberThrow
+		ent->client->pers.skill_levels[8],	//Absorb
+		ent->client->pers.skill_levels[9],	//Heal
+		ent->client->pers.skill_levels[10],	//Protect
+		ent->client->pers.skill_levels[11],	//MindTrick
+		ent->client->pers.skill_levels[12],	//TeamHeal
+		ent->client->pers.skill_levels[13],	//Lightning
+		ent->client->pers.skill_levels[14],	//Grip
+		ent->client->pers.skill_levels[15],	//Drain
+		ent->client->pers.skill_levels[16],	//Rage
+		ent->client->pers.skill_levels[17],	//TeamEnergize
+		ent->client->pers.skill_levels[18],	//StunBaton
+		ent->client->pers.skill_levels[19],	//BlasterPistol
+		ent->client->pers.skill_levels[20],	//BlasterRifle
+		ent->client->pers.skill_levels[21],	//Disruptor
+		ent->client->pers.skill_levels[22],	//Bowcaster
+		ent->client->pers.skill_levels[23],	//Repeater
+		ent->client->pers.skill_levels[24],	//DEMP2
+		ent->client->pers.skill_levels[25],	//Flechette
+		ent->client->pers.skill_levels[26],	//RocketLauncher
+		ent->client->pers.skill_levels[27],	//ConcussionRifle
+		ent->client->pers.skill_levels[28],	//BryarPistol
+		ent->client->pers.skill_levels[29],	//Melee
+		ent->client->pers.skill_levels[30],	//MaxShield
+		ent->client->pers.skill_levels[31],	//ShieldStrength
+		ent->client->pers.skill_levels[32],	//HealthStrength
+		ent->client->pers.skill_levels[33],	//DrainShield
+		ent->client->pers.skill_levels[34],	//Jetpack
+		ent->client->pers.skill_levels[35],	//SenseHealth
+		ent->client->pers.skill_levels[36],	//ShieldHeal
+		ent->client->pers.skill_levels[37],	//TeamShieldHeal
+		ent->client->pers.skill_levels[38],	//UniqueSkill
+		ent->client->pers.skill_levels[39],	//BlasterPack
+		ent->client->pers.skill_levels[40],	//PowerCell
+		ent->client->pers.skill_levels[41],	//MetalBolts
+		ent->client->pers.skill_levels[42],	//Rockets
+		ent->client->pers.skill_levels[43],	//Thermals
+		ent->client->pers.skill_levels[44],	//TripMines
+		ent->client->pers.skill_levels[45],	//Detpacks
+		ent->client->pers.skill_levels[46],	//Binoculars
+		ent->client->pers.skill_levels[47],	//BactaCanister
+		ent->client->pers.skill_levels[48],	//SentryGun
+		ent->client->pers.skill_levels[49],	//SeekerDrone
+		ent->client->pers.skill_levels[50],	//Eweb
+		ent->client->pers.skill_levels[51],	//BigBacta
+		ent->client->pers.skill_levels[52],	//ForceField
+		ent->client->pers.skill_levels[53],	//CloakItem
+		ent->client->pers.skill_levels[54],	//ForcePower
+		ent->client->pers.skill_levels[55], //Improvements
+		ent->client->pers.CharID,
+		ent->client->ps.ammo[AMMO_BLASTER],
+		ent->client->ps.ammo[AMMO_POWERCELL],
+		ent->client->ps.ammo[AMMO_METAL_BOLTS],
+		ent->client->ps.ammo[AMMO_ROCKETS],
+		ent->client->ps.ammo[AMMO_THERMAL],
+		ent->client->ps.ammo[AMMO_TRIPMINE],
+		ent->client->ps.ammo[AMMO_DETPACK],
+		ent->client->pers.CharID,
+		ent->client->pers.bitvalue,
+		ent->client->sess.rpgchar,
+		ent->client->sess.accountID
+	), db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
+
+	return;
+}
+
+void Cmd_Register_F(gentity_t * ent)
+{
+	sqlite3 *db;
+	char *zErrMsg = 0;
+	int rc;
+	sqlite3_stmt *stmt;
+	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
+	int accountID = 0, i = 0;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	if (trap->Argc() != 3)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /register <username> <password>\n\"");
+		sqlite3_close(db);
+		return;
+	}
+
+	trap->Argv(1, username, sizeof(username));
+	trap->Argv(2, password, sizeof(password));
+
+	Q_StripColor(username);
+	Q_strlwr(username);
+
+	if (select_number_of_accounts_with_username(ent, username, db, zErrMsg, rc, stmt) != 0) {
+		trap->SendServerCommand(ent - g_entities, va("print \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
+		trap->SendServerCommand(ent - g_entities, va("cp \"^1Username ^7%s ^1is already in use.\n\"", comparisonName));
+
+		sqlite3_close(db);
+		return;
+	}
+
+	insert_accounts_table_row(ent, username, password, db, zErrMsg, rc, stmt);
+
+	select_accounts_table_row(ent, username, db, zErrMsg, rc, stmt);
+
 	//always 2, kept for backwards compatibility
 	ent->client->sess.amrpgmode = 2;
 	ent->client->sess.loggedin = qtrue;
-	ent->client->pers.player_settings = player_settings;
-	//adminlevel
-	ent->client->pers.bitvalue = adminLevel;
 	strcpy(ent->client->sess.filename, username);
 	strcpy(ent->client->pers.password, password);
 
-	load_character_from_db(ent, defaultChar, db, zErrMsg, rc, stmt);
-	load_ammo_from_db(ent, db, zErrMsg, rc, stmt);
+	insert_chars_table_row(ent, username, db, zErrMsg, rc, stmt);
+	insert_skills_table_row(ent, db, zErrMsg, rc, stmt);
+	insert_weapons_table_row(ent, db, zErrMsg, rc, stmt);
+	select_player_character(ent, username, db, zErrMsg, rc, stmt);
+
+	trap->SendServerCommand(ent - g_entities, "print \"^2Your account has been successfully created and you are now logged in.\n\"");
+	trap->SendServerCommand(ent - g_entities, "cp \"^2Your account has been successfully created and you are now logged in.\n\"");
+
+	sqlite3_close(db);
 
 	return;
 }
@@ -2289,8 +2680,8 @@ void Cmd_Login_F(gentity_t * ent)
 	sqlite3_stmt *stmt;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2319,73 +2710,27 @@ void Cmd_Login_F(gentity_t * ent)
 	Q_StripColor(username);
 	Q_strlwr(username);
 
-	rc = sqlite3_prepare(db, va("SELECT Username FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		Q_strncpyz(comparisonUsername, (const char *)sqlite3_column_text(stmt, 0), sizeof(comparisonUsername));
-		sqlite3_finalize(stmt);
-	}
-
-	if (comparisonUsername[0] == '\0')
+	if (select_number_of_accounts_with_username(ent, username, db, zErrMsg, rc, stmt) == 0)
 	{
 		//The account does not exist, thus, the error does.
 		trap->SendServerCommand(ent - g_entities, va("print \"^1An account with the username %s does not exist.\n\"", username));
 		trap->SendServerCommand(ent - g_entities, va("cp \"^1An account with the username %s does not exist.\n\"", username));
-		sqlite3_close(db);
-		return;
-	}
 
-	rc = sqlite3_prepare(db, va("SELECT Password FROM Accounts WHERE Username='%s'", username), -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
 		sqlite3_close(db);
 		return;
 	}
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		Q_strncpyz(comparisonPassword, (const char*)sqlite3_column_text(stmt, 0), sizeof(comparisonPassword));
-		sqlite3_finalize(stmt);
-	}
-
-	if (strcmp(comparisonPassword, password))
-	{
-		//Just as there is an incorrect password (and an error), does it tell you.
+	
+	if (is_password_correct(ent, username, password, db, zErrMsg, rc, stmt) == qfalse) {
 		trap->SendServerCommand(ent - g_entities, "print \"^1Incorrect password.\n\"");
 		trap->SendServerCommand(ent - g_entities, "cp \"^1Incorrect password.\n\"");
 
-		//TODO: Look into getting these UIs done
-		//trap->SendServerCommand(ent - g_entities, "loginFailed");
-		//trap->SendServerCommand(ent - g_entities, "accountui");
 		sqlite3_close(db);
 		return;
 	}
 
-	load_account_from_db(ent, username, db, zErrMsg, rc, stmt);
+	G_Kill(ent);
+
+	select_account_and_default_character_data(ent, username, db, zErrMsg, rc, stmt);
 
 	trap->SendServerCommand(ent - g_entities, "print \"^2You have sucessfully logged in.\n\"");
 
@@ -2393,25 +2738,20 @@ void Cmd_Login_F(gentity_t * ent)
 	return;
 }
 
-void Cmd_Test_f(gentity_t *ent) {
-	InitializeSQL();
-}
-
 void Cmd_Char_f(gentity_t *ent) {
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = 0;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
 	int accountID = 0, i = 0;
-	int charID;
 
 	int argc = trap->Argc();
 	char command[MAX_STRING_CHARS];
 	char charName[MAX_STRING_CHARS];
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2420,7 +2760,7 @@ void Cmd_Char_f(gentity_t *ent) {
 
 	if (argc == 1)
 	{
-		load_character_list_from_db(ent, db, zErrMsg, rc, stmt);
+		select_character_list(ent, db, zErrMsg, rc, stmt);
 		return;
 	}
 	if (argc == 3)
@@ -2430,14 +2770,14 @@ void Cmd_Char_f(gentity_t *ent) {
 
 		//Create New Character
 		if (Q_stricmp(command, "new") == 0) {
-			add_new_char_to_db(ent, charName, db, zErrMsg, rc, stmt);
+			create_new_character(ent, charName, db, zErrMsg, rc, stmt);
 			sqlite3_close(db);
 			return;
 		}
 
 		//Switch character
 		if (Q_stricmp(command, "use") == 0) {
-			load_character_from_db(ent, charName, db, zErrMsg, rc, stmt);
+			select_player_character(ent, charName, db, zErrMsg, rc, stmt);
 			sqlite3_close(db);
 			return;
 		}
@@ -2445,7 +2785,7 @@ void Cmd_Char_f(gentity_t *ent) {
 		//Remove character
 		if (Q_stricmp(command, "remove") == 0) {
 
-			remove_char_from_db(ent, charName, db, zErrMsg, rc, stmt);
+			remove_character(ent, charName, db, zErrMsg, rc, stmt);
 			sqlite3_close(db);
 			return;
 		}
@@ -2457,11 +2797,10 @@ void Cmd_ResetPassword_F(gentity_t * ent)
 	sqlite3 *db;
 	char *zErrMsg = 0;
 	int rc;
-	sqlite3_stmt *stmt;
 	char newpassword[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2470,7 +2809,6 @@ void Cmd_ResetPassword_F(gentity_t * ent)
 
 	if (trap->Argc() != 2)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /resetpassword <newpassword>\n\"");
 		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /resetpassword <newpassword>\n\"");
 		sqlite3_close(db);
 		return;
@@ -2525,6 +2863,8 @@ qboolean inventory_does_player_own_item(gentity_t *ent, int itemID, sqlite3 *db,
 		}
 		return qtrue;
 	}
+
+	return qfalse;
 }
 
 void inventory_display_beginning(gentity_t *ent) {
@@ -2665,8 +3005,8 @@ void Cmd_Inventory_f(gentity_t *ent) {
 	sqlite3_stmt *stmt;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2688,9 +3028,8 @@ Cmd_CreateItem_f
 void Cmd_CreateItem_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_CREATEITEM)))
+	if (!check_admin_command(ent, ADM_CREATEITEM))
 	{
-		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
 		return;
 	}
 
@@ -2707,8 +3046,8 @@ void Cmd_CreateItem_f(gentity_t *ent) {
 	sqlite3_stmt *stmt;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2746,8 +3085,8 @@ void Cmd_TrashItem_f(gentity_t *ent) {
 	sqlite3_stmt *stmt;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
@@ -2797,15 +3136,15 @@ void Cmd_GiveItem_f(gentity_t *ent) {
 	sqlite3_stmt *stmt;
 	char username[256] = { 0 }, password[256] = { 0 }, comparisonUsername[256] = { 0 }, comparisonPassword[256] = { 0 }, defaultChar[256] = { 0 };
 
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
 		return;
 	}
 
-	if (inventory_does_player_own_item(ent, item_id, db, zErrMsg, rc, stmt) == qfalse) {
+	if (inventory_does_player_own_item(ent, item_id, db, zErrMsg, rc, &stmt) == qfalse) {
 		return;
 	}
 
@@ -3306,7 +3645,16 @@ void Cmd_Team_f( gentity_t *ent ) {
 		return;
 	}
 
-	trap->Argv( 1, s, sizeof( s ) );
+	// Tr!Force: [Plugin] Don't allow
+	if (rp_pluginRequired.integer == 2 && !ent->client->pers.clientPlugin)
+	{
+		ClientBegin(ent->s.number, qfalse);
+		return;
+	}
+	else
+	{
+		trap->Argv( 1, s, sizeof( s ) );
+	}
 
 	SetTeam( ent, s );
 
@@ -3717,6 +4065,11 @@ void Cmd_FollowCycle_f( gentity_t *ent, int dir ) {
 		return;
 	}
 
+	// Tr!Force: [Plugin] Don't allow
+	if (rp_pluginRequired.integer == 2 && !ent->client->pers.clientPlugin) {
+		return;
+	}
+
 	// if they are playing a tournament game, count as a loss
 	if ( (level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL)
 		&& ent->client->sess.sessionTeam == TEAM_FREE ) {\
@@ -3801,56 +4154,6 @@ void Cmd_FollowPrev_f( gentity_t *ent ) {
 
 extern void save_account(gentity_t *ent, qboolean save_char_file);
 extern void quest_get_new_player(gentity_t *ent);
-qboolean zyk_answer(gentity_t *ent, char *arg1)
-{
-	if (ent->client->sess.amrpgmode == 2)
-	{
-		if (level.quest_map == 10 && ent->client->pers.can_play_quest == 1 && 
-			ent->client->pers.eternity_quest_progress < (NUMBER_OF_ETERNITY_QUEST_OBJECTIVES - 1) && (int) ent->client->ps.origin[0] > -676 && 
-			(int) ent->client->ps.origin[0] < -296 && (int) ent->client->ps.origin[1] > 1283 && (int) ent->client->ps.origin[1] < 1663 && 
-			(int) ent->client->ps.origin[2] > 60 && (int) ent->client->ps.origin[2] < 120)
-		{ // zyk: Eternity Quest
-			char *answers[11] = { "key", "clock", "sword", "sun", "fire", "water", "time", "star", "nature", "love", NULL };
-
-			// zyk: removing color chars which could not allow the correct answer
-			Q_StripColor(arg1);
-
-			if (Q_stricmp(arg1, answers[ent->client->pers.eternity_quest_progress]) == 0)
-			{
-				ent->client->pers.eternity_quest_progress++;
-				save_account(ent, qtrue);
-
-				quest_get_new_player(ent);
-
-				zyk_text_message(ent, va("eternity/answered_%d", ent->client->pers.eternity_quest_progress - 1), qtrue, qtrue, ent->client->pers.netname);
-				return qtrue;
-			}
-			else
-			{
-				return qfalse;
-			}
-		}
-		else if (level.quest_map == 24 && ent->client->pers.can_play_quest == 1 && 
-				 ent->client->pers.universe_quest_progress == 5 && ent->client->pers.universe_quest_messages == 101)
-		{ // zyk: amulets mission of Universe Quest
-		  // zyk: removing color chars which could not allow the correct answer
-			Q_StripColor(arg1);
-
-			if (Q_stricmp( arg1, "samir" ) == 0)
-			{
-				ent->client->pers.universe_quest_messages = 102;
-			}
-			else
-			{
-				ent->client->pers.universe_quest_messages = 103;
-			}
-
-			return qfalse;
-		}
-	}
-
-	return qfalse;
-}
 
 /*
 ==================
@@ -3943,19 +4246,6 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	int ooc_flag = 0;
 	char ooc_text[700] = "";
 	int broadcast_distance = 999999999;
-	int me_distance = 1200;
-	int melong_distance = 2000;
-	int melow_distance = 200;
-	int shout_distance = 1500;
-	int shoutlong_distance = 3000;
-	int do_distance = 1000;
-	int dolong_distance = 2000;
-	int dolow_distance = 200;
-	int force_distance = 1000;
-	int forcelong_distance = 2000;
-	int forcelow_distance = 200;
-	int low_distance = 65;
-	int long_distance = 1500;
 
 	if ( level.gametype < GT_TEAM && mode == SAY_TEAM ) {
 		ooc_flag = 1;
@@ -3972,11 +4262,6 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		// zyk: if player is silenced by an admin, he cannot say anything
 		if (ent->client->pers.player_statuses & (1 << 0))
 			return;
-
-		if (zyk_answer(ent, text) == qtrue)
-		{ // zyk: if it is a riddle answer, do not say it
-			return;
-		}
 
 		//ooc chat case
 		if (ooc_flag == 1) 
@@ -4003,105 +4288,28 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		// these two have to be in the same order, one if the distance to the modifiers, so the order has to match
 		// in chat_modifiers, shorter strings have to be AFTER the longer string (e.g. /me HAS to be AFTER /melong, otherwise it'll pick /me instead)
 
-		int max_chat_modifiers = 22;
-
-		char chat_modifiers[22][50] = {
-			"/low",
-			"/long",
-			"/all",
-			"/melow",
-			"/meall",
-			"/melong",
-			"/me",
-			"/shoutlong",
-			"/shoutall",
-			"/shout",
-			"/dolow",
-			"/dolong",
-			"/doall",
-			"/do",
-			"/forcelow",
-			"/forcelong",
-			"/forceall",
-			"/force",
-			"/mylow",
-			"/myall",
-			"/mylong",
-			"/my"
-		};
-
-		char text_formats[22][50] = {
-			"chat \"%s^9 lowers their voice:%s\n\"",
-			"chat \"%s:%s\n\"",
-			"chat \"%s:^3%s\n\"",
-			"chat \"%s^3%s\n\"",
-			"chat \"%s^3%s\n\"",
-			"chat \"%s^3%s\n\"",
-			"chat \"%s^3%s\n\"",
-			"chat \"%s shouts:^2%s\n\"",
-			"chat \"%s shouts:^2%s\n\"",
-			"chat \"%s shouts:^2%s\n\"",
-			"chat \"(%s)^3%s\n\"",
-			"chat \"(%s)^3%s\n\"",
-			"chat \"(%s)^3%s\n\"",
-			"chat \"(%s)^3%s\n\"",
-			"chat \"%s^5 uses the Force to%s\n\"",
-			"chat \"%s^5 uses the Force to%s\n\"",
-			"chat \"%s^5 uses the Force to%s\n\"",
-			"chat \"%s^5 uses the Force to%s\n\"",
-			"chat \"%s^3's %s\n\"",
-			"chat \"%s^3's %s\n\"",
-			"chat \"%s^3's %s\n\"",
-			"chat \"%s^3's %s\n\""
-		};
-
-		int chat_distances[22] = {
-			low_distance,
-			long_distance,
-			broadcast_distance,
-			melow_distance,
-			broadcast_distance,
-			melong_distance,
-			me_distance,
-			shoutlong_distance,
-			broadcast_distance,
-			shout_distance,
-			dolow_distance,
-			dolong_distance,
-			broadcast_distance,
-			do_distance,
-			forcelow_distance,
-			forcelong_distance,
-			broadcast_distance,
-			force_distance,
-			melow_distance,
-			broadcast_distance,
-			melong_distance,
-			me_distance
-		};
-
 		char slash = '/';
 
 		const char *ptr = strchr(text, slash);
-		int index_of_slash;
+		int index_of_slash = -1;
 		if (ptr) {
 			index_of_slash = ptr - text;
 		}
 
-		for (int i = 0; i < max_chat_modifiers; i++) {
-			output = strstr(text, chat_modifiers[i]);
+		for (int i = 0; i < ARRAY_LEN(chat_modifiers); i++) {
+			output = strstr(text, chat_modifiers[i].chat_modifier);
 
 			
 			if (output && index_of_slash == 0) {
-				delete_chat_command(text, strlen(chat_modifiers[i]));
+				delete_chat_command(text, strlen(chat_modifiers[i].chat_modifier));
+				G_LogPrintf(va("%s: %s: %s\n"), chat_modifiers[i].chat_modifier, ent->client->pers.netname, text);
 
 				for (j = 0; j < level.numConnectedClients; j++) {
 
 					other = &g_entities[j];
-					if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_distances[i] || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE))
+					if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_modifiers[i].distance || other->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE) || other->client->sess.sessionTeam == TEAM_SPECTATOR)
 					{
-						G_LogPrintf(va("%s: %s: %s\n"), chat_modifiers[i], ent->client->pers.netname, text);
-						trap->SendServerCommand(other->client->ps.clientNum, va(text_formats[i], ent->client->pers.netname, text));
+						trap->SendServerCommand(other->client->ps.clientNum, va(chat_modifiers[i].chat_format, ent->client->pers.netname, text));
 					}
 					else
 						continue;
@@ -6232,47 +6440,47 @@ qboolean TryGrapple(gentity_t *ent)
 					{ // zyk: Magic Power Right direction
 						// zyk: can use the power if he beat a specific light quest boss
 						if (ent->client->pers.rpg_class == 0 && (ent->client->pers.defeated_guardians & (1 << 11) || 
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ultra Resistance
 							use_this_power = MAGIC_ULTRA_RESISTANCE;
 						}
 						else if (ent->client->pers.rpg_class == 1 && (ent->client->pers.defeated_guardians & (1 << 6) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Sleeping Flowers
 							use_this_power = MAGIC_SLEEPING_FLOWERS;
 						}
 						else if (ent->client->pers.rpg_class == 5 && (ent->client->pers.defeated_guardians & (1 << 4) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Healing Water
 							use_this_power = MAGIC_HEALING_WATER;
 						}
 						else if (ent->client->pers.rpg_class == 4 && (ent->client->pers.defeated_guardians & (1 << 9) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Flame Burst
 							use_this_power = MAGIC_FLAME_BURST;
 						}
 						else if (ent->client->pers.rpg_class == 3 && (ent->client->pers.defeated_guardians & (1 << 5) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Earthquake
 							use_this_power = MAGIC_EARTHQUAKE;
 						}
 						else if (ent->client->pers.rpg_class == 6 && (ent->client->pers.defeated_guardians & (1 << 7) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Magic Shield
 							use_this_power = MAGIC_MAGIC_SHIELD;
 						}
 						else if (ent->client->pers.rpg_class == 2 && (ent->client->pers.defeated_guardians & (1 << 10) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Blowing Wind
 							use_this_power = MAGIC_BLOWING_WIND;
 						}
 						else if (ent->client->pers.rpg_class == 7 && (ent->client->pers.defeated_guardians & (1 << 8) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ultra Speed
 							use_this_power = MAGIC_ULTRA_SPEED;
 						}
 						else if (ent->client->pers.rpg_class == 9 && (ent->client->pers.defeated_guardians & (1 << 12) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ice Boulder
 							use_this_power = MAGIC_ICE_BOULDER;
 						}
@@ -6281,47 +6489,47 @@ qboolean TryGrapple(gentity_t *ent)
 					{ // zyk: Magic Power Left direction
 						// zyk: can use the power if he beat a specific light quest boss
 						if (ent->client->pers.rpg_class == 0 && (ent->client->pers.defeated_guardians & (1 << 11) || 
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ultra Strength
 							use_this_power = MAGIC_ULTRA_STRENGTH;
 						}
 						else if (ent->client->pers.rpg_class == 1 && (ent->client->pers.defeated_guardians & (1 << 6) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Poison Mushrooms
 							use_this_power = MAGIC_POISON_MUSHROOMS;
 						}
 						else if (ent->client->pers.rpg_class == 5 && (ent->client->pers.defeated_guardians & (1 << 4) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Water Splash
 							use_this_power = MAGIC_WATER_SPLASH;
 						}
 						else if (ent->client->pers.rpg_class == 4 && (ent->client->pers.defeated_guardians & (1 << 9) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ultra Flame
 							use_this_power = MAGIC_ULTRA_FLAME;
 						}
 						else if (ent->client->pers.rpg_class == 3 && (ent->client->pers.defeated_guardians & (1 << 5) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Rockfall
 							use_this_power = MAGIC_ROCKFALL;
 						}
 						else if (ent->client->pers.rpg_class == 6 && (ent->client->pers.defeated_guardians & (1 << 7) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Dome of Damage
 							use_this_power = MAGIC_DOME_OF_DAMAGE;
 						}
 						else if (ent->client->pers.rpg_class == 2 && (ent->client->pers.defeated_guardians & (1 << 10) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Hurricane
 							use_this_power = MAGIC_HURRICANE;
 						}
 						else if (ent->client->pers.rpg_class == 7 && (ent->client->pers.defeated_guardians & (1 << 8) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Slow Motion
 							use_this_power = MAGIC_SLOW_MOTION;
 						}
 						else if (ent->client->pers.rpg_class == 9 && (ent->client->pers.defeated_guardians & (1 << 12) || 
-								 ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+								 ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ice Stalagmite
 							use_this_power = MAGIC_ICE_STALAGMITE;
 						}
@@ -6330,47 +6538,47 @@ qboolean TryGrapple(gentity_t *ent)
 					{ // zyk: Magic Power Front direction
 						// zyk: can use the power if he beat a specific light quest boss
 						if (ent->client->pers.rpg_class == 0 && (ent->client->pers.defeated_guardians & (1 << 11) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Enemy Weakening
 							use_this_power = MAGIC_ENEMY_WEAKENING;
 						}
 						else if (ent->client->pers.rpg_class == 1 && (ent->client->pers.defeated_guardians & (1 << 6) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Tree of Life
 							use_this_power = MAGIC_TREE_OF_LIFE;
 						}
 						else if (ent->client->pers.rpg_class == 2 && (ent->client->pers.defeated_guardians & (1 << 10) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Reverse Wind
 							use_this_power = MAGIC_REVERSE_WIND;
 						}
 						else if (ent->client->pers.rpg_class == 3 && (ent->client->pers.defeated_guardians & (1 << 5) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Shifting Sand
 							use_this_power = MAGIC_SHIFTING_SAND;
 						}
 						else if (ent->client->pers.rpg_class == 4 && (ent->client->pers.defeated_guardians & (1 << 9) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Flaming Area
 							use_this_power = MAGIC_FLAMING_AREA;
 						}
 						else if (ent->client->pers.rpg_class == 5 && (ent->client->pers.defeated_guardians & (1 << 4) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Water Attack
 							use_this_power = MAGIC_WATER_ATTACK;
 						}
 						else if (ent->client->pers.rpg_class == 6 && (ent->client->pers.defeated_guardians & (1 << 7) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Magic Disable
 							use_this_power = MAGIC_MAGIC_DISABLE;
 						}
 						else if (ent->client->pers.rpg_class == 7 && (ent->client->pers.defeated_guardians & (1 << 8) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Fast and Slow
 							use_this_power = MAGIC_FAST_AND_SLOW;
 						}
 						else if (ent->client->pers.rpg_class == 9 && (ent->client->pers.defeated_guardians & (1 << 12) ||
-							ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS))
+							ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS))
 						{ // zyk: Ice Block
 							use_this_power = MAGIC_ICE_BLOCK;
 						}
@@ -6382,7 +6590,7 @@ qboolean TryGrapple(gentity_t *ent)
 					use_this_power = -1;
 				}
 
-				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 3) && 
+				if (ent->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ && ent->client->pers.universe_quest_counter & (1 << 3) && 
 					!(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
 				{ // zyk: Magic Improvement. Decreases mp cost of Universe Power
 					universe_mp_cost_factor = 1.0;
@@ -6759,7 +6967,7 @@ qboolean TryGrapple(gentity_t *ent)
 					}
 				}
 
-				if (ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && ent->client->pers.universe_quest_counter & (1 << 1) && 
+				if (ent->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ && ent->client->pers.universe_quest_counter & (1 << 1) && 
 					!(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
 				{ // zyk: Magic Boost, reward for completing quests in Guardians Sequel. Decreases cooldown time of magic powers
 					if (ent->client->pers.rpg_class == 8)
@@ -6933,27 +7141,6 @@ void remove_credits(gentity_t *ent, int credits)
 		ent->client->pers.credits = 0;
 }
 
-// zyk: gives or removes jetpack from player
-void zyk_jetpack(gentity_t *ent)
-{
-	// zyk: player starts with jetpack if it is enabled in player settings, is not in Siege Mode, and does not have all force powers through /give command
-	if (!(ent->client->pers.player_settings & (1 << 12)) && zyk_allow_jetpack_command.integer && 
-		(level.gametype != GT_SIEGE || zyk_allow_jetpack_in_siege.integer) && level.gametype != GT_JEDIMASTER && 
-		!(ent->client->pers.player_statuses & (1 << 12)) &&
-		((ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[34] > 0) || ent->client->sess.amrpgmode == 1))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-	}
-	else
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_JETPACK);
-		if (ent->client->jetPackOn)
-		{
-			Jetpack_Off(ent);
-		}
-	}
-}
-
 // zyk: loads settings valid both to Admin-Only Mode and to RPG Mode
 void zyk_load_common_settings(gentity_t *ent)
 {
@@ -6966,8 +7153,6 @@ void zyk_load_common_settings(gentity_t *ent)
 	{
 		ent->client->ps.weapon = WP_MELEE;
 	}
-		
-	zyk_jetpack(ent);
 
 	if (!(ent->client->saber[0].model[0] && ent->client->saber[1].model[0]) && !(ent->client->saber[0].saberFlags&SFL_TWO_HANDED))
 	{ // zyk: Single Saber
@@ -7003,131 +7188,6 @@ void zyk_load_common_settings(gentity_t *ent)
 	}
 }
 
-// zyk: loads the player account
-void load_account(gentity_t *ent)
-{
-	FILE *account_file;
-	char content[128];
-
-	strcpy(content,"");
-	int i = 0;
-	// zyk: this variable will validate the skillpoints this player has
-	// if he has more than the max skillpoints defined, then server must remove the exceeding ones
-	int validate_skillpoints = 0;
-	int max_skillpoints = 0;
-	int j = 0;
-
-	ent->client->sess.amrpgmode = 2;
-
-	if ((zyk_allow_rpg_mode.integer == 0 || (zyk_allow_rpg_in_other_gametypes.integer == 0 && level.gametype != GT_FFA)) && ent->client->sess.amrpgmode == 2)
-	{ // zyk: RPG Mode not allowed. Change his account to Admin-Only Mode
-		ent->client->sess.amrpgmode = 1;
-	}
-	else if (level.gametype == GT_SIEGE || level.gametype == GT_JEDIMASTER)
-	{ // zyk: Siege and Jedi Master will never allow RPG Mode
-		ent->client->sess.amrpgmode = 1;
-	}
-
-	// zyk: loading level up score value
-	fscanf(account_file, "%s", content);
-	ent->client->pers.level_up_score = 0;
-
-	for (j = 1; j <= ent->client->pers.level; j++)
-	{
-		if ((j % 10) == 0)
-		{ // zyk: level divisible by 10 has more skillpoints
-			max_skillpoints += (1 + j / 10);
-		}
-		else
-		{
-			max_skillpoints++;
-		}
-	}
-
-	// zyk: Other RPG attributes
-	// zyk: loading Light Quest Defeated Guardians number value
-	ent->client->pers.defeated_guardians = 0;
-	ent->client->pers.hunter_quest_progress = 0;
-	ent->client->pers.eternity_quest_progress = 0;
-	ent->client->pers.secrets_found = 0;
-	ent->client->pers.universe_quest_progress = 0;
-	ent->client->pers.universe_quest_counter = 0;
-
-	// zyk: make sure Challenge Mode settings flag and counter flag are correct
-	if (ent->client->pers.universe_quest_counter & (1 << 29))
-	{
-		ent->client->pers.player_settings |= (1 << 15);
-	}
-	else
-	{
-		ent->client->pers.player_settings &= ~(1 << 15);
-	}
-
-	// zyk: validating credits
-	if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
-	{
-		ent->client->pers.credits = zyk_max_rpg_credits.integer;
-	}
-	else if (ent->client->pers.credits < 0)
-	{
-		ent->client->pers.credits = 0;
-	}
-
-	ent->client->pers.rpg_class = 0;
-	ent->client->sess.magic_disabled_powers = 0;
-	ent->client->sess.magic_more_disabled_powers = 0;
-
-	// zyk: loading Magic Master first selection and selected powers
-	ent->client->sess.magic_fist_selection = 3;
-	ent->client->sess.selected_special_power = 1;
-	ent->client->sess.selected_left_special_power = 1;
-	ent->client->sess.selected_right_special_power = 1;
-
-	if (ent->client->sess.amrpgmode == 1)
-	{
-		ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
-
-		// zyk: setting default max hp and shield
-		ent->client->ps.stats[STAT_MAX_HEALTH] = 100;
-
-		if (ent->health > 100)
-			ent->health = 100;
-
-		if (ent->client->ps.stats[STAT_ARMOR] > 100)
-			ent->client->ps.stats[STAT_ARMOR] = 100;
-
-		// zyk: reset the force powers of this player
-		WP_InitForcePowers(ent);
-
-		if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0 &&
-			level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE
-			)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
-
-		if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
-
-		zyk_load_common_settings(ent);
-	}
-
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-
-	rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-	if (rc)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
-	load_account_from_db(ent, ent->client->sess.filename, db, zErrMsg, rc, stmt);
-
-	sqlite3_close(db);
-}
-
 // zyk: saves info into the player account file. If save_char_file is qtrue, this function must save the char file
 void save_account(gentity_t *ent, qboolean save_char_file)
 {
@@ -7138,42 +7198,11 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 	{ // zyk: players can only save things if server is not at RP Mode or if it is allowed in config
 		if (save_char_file == qtrue)
 		{  // zyk: save the RPG char
-			sqlite3 *db;
-			char *zErrMsg = 0;
-			int rc;
-			sqlite3_stmt *stmt;
-
-			rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-			if (rc)
-			{
-				trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-				sqlite3_close(db);
-				return;
-			}
-
-			save_account_to_db(ent, db, zErrMsg, rc, stmt);
-			save_char_to_db(ent, db, zErrMsg, rc, stmt);
-
-			sqlite3_close(db);
+			update_current_character_and_account(ent);
 		}
 		else
 		{ // zyk: save the main account file
-			sqlite3 *db;
-			char *zErrMsg = 0;
-			int rc;
-			sqlite3_stmt *stmt;
-
-			rc = sqlite3_open("GalaxyRP/database/accounts.db", &db);
-			if (rc)
-			{
-				trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-				sqlite3_close(db);
-				return;
-			}
-
-			save_account_to_db(ent, db, zErrMsg, rc, stmt);
-
-			sqlite3_close(db);
+			update_accounts_table_row_with_current_values(ent);
 		}
 	}
 }
@@ -7199,7 +7228,7 @@ void Cmd_Roll_f(gentity_t *ent) {
 
 	if (trap->Argc() != 2)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Usage: /roll <max roll>.\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^2/roll ^3<max roll>.\n^1Example: ^2/roll ^320\n\"");
 		return;
 	}
 
@@ -7213,13 +7242,13 @@ void Cmd_Roll_f(gentity_t *ent) {
 	int max_value = atoi(arg1);
 
 	if (max_value < 2) {
-		trap->SendServerCommand(ent - g_entities, "print \"Maximun value must be at least two.\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"Maximum value must be at least two.\n\"");
 		return;
 	}
 
 	int result = roll_dice(max_value);
 
-	trap->SendServerCommand(-1, va("chat \"^3%s^2 rolled a ^3%d^2 out of ^3%d\n\"", ent->client->pers.netname, result, max_value));
+	trap->SendServerCommand(-1, va("chat \"^3<Dice Roll> %s^2 rolled a ^3%d^2 out of ^3%d\n\"", ent->client->pers.netname, result, max_value));
 
 	return;
 }
@@ -7234,7 +7263,7 @@ void Cmd_FlipCoin_f(gentity_t *ent) {
 
 	if (trap->Argc() != 1)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Usage: /flipcoin\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^2/flipcoin\n\"");
 		return;
 	}
 
@@ -7250,59 +7279,10 @@ void Cmd_FlipCoin_f(gentity_t *ent) {
 	return;
 }
 
+// TODO: Remove this method
+// ZykMod: (Jesse) appears to be outdate validation of the RPG class system that's no longer implemented. 
 qboolean validate_rpg_class(gentity_t *ent)
 {
-	if (ent->client->pers.rpg_class == 0 && zyk_allow_free_warrior.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Free Warrior not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 1 && zyk_allow_force_user.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Force User not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 2 && zyk_allow_bounty_hunter.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Bounty Hunter not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 3 && zyk_allow_armored_soldier.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Armored Soldier not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 4 && zyk_allow_monk.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Monk not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 5 && zyk_allow_stealth_attacker.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Stealth Attacker not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 6 && zyk_allow_duelist.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Duelist not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 7 && zyk_allow_force_gunner.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Force Gunner not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 8 && zyk_allow_magic_master.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Magic Master not allowed in this server\n\"" );
-		return qfalse;
-	}
-	else if (ent->client->pers.rpg_class == 9 && zyk_allow_force_tank.integer == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Force Guardian not allowed in this server\n\"" );
-		return qfalse;
-	}
-
 	return qtrue;
 }
 
@@ -7319,42 +7299,25 @@ void rpg_score(gentity_t *ent, qboolean admin_rp_mode)
 		return;
 	}
 
-	if (validate_rpg_class(ent) == qfalse)
-		return;
-
-	add_credits(ent, (10 + ent->client->pers.credits_modifier));
-
 	if (ent->client->pers.level < zyk_rpg_max_level.integer)
 	{
-		ent->client->pers.level_up_score += (1 + ent->client->pers.score_modifier); // zyk: add score to the RPG mode score
+		ent->client->pers.level++;
 
-		if (ent->client->pers.level_up_score >= (ent->client->pers.level * zyk_level_up_score_factor.integer))
-		{ // zyk: player got a new level
-			ent->client->pers.level_up_score -= (ent->client->pers.level * zyk_level_up_score_factor.integer);
-			ent->client->pers.level++;
+		if (ent->client->pers.level % 10 == 0) // zyk: every level divisible by 10 the player will get bonus skillpoints
+			ent->client->pers.skillpoints+=(ent->client->pers.level/10) + 1;
+		else
+			ent->client->pers.skillpoints++;
 
-			if (ent->client->pers.level % 10 == 0) // zyk: every level divisible by 10 the player will get bonus skillpoints
-				ent->client->pers.skillpoints+=(ent->client->pers.level/10) + 1;
-			else
-				ent->client->pers.skillpoints++;
+		strcpy(message,va("^3New Level: ^7%d^3, Skillpoints: ^7%d\n", ent->client->pers.level, ent->client->pers.skillpoints));
 
-			strcpy(message,va("^3New Level: ^7%d^3, Skillpoints: ^7%d\n", ent->client->pers.level, ent->client->pers.skillpoints));
+		// zyk: got a new level, so change the max health and max shield
+		set_max_health(ent);
+		set_max_shield(ent);
 
-			// zyk: got a new level, so change the max health and max shield
-			set_max_health(ent);
-			set_max_shield(ent);
-
-			// zyk: mp also increased, so send event to client-side to display the magic power bar
-			send_rpg_events(2000);
-
-			send_message = 1;
-		}
+		send_message = 1;
+		
 	}
-	save_account(ent, qtrue); // zyk: saves new score and credits in the account file
-
-	// zyk: cleaning the modifiers after they are applied
-	ent->client->pers.credits_modifier = 0;
-	ent->client->pers.score_modifier = 0;
+	update_chars_table_row_with_current_values(ent);
 
 	if (send_message == 1)
 	{
@@ -7437,54 +7400,6 @@ int number_of_crystals(gentity_t *ent)
 
 	return number_of_crystals;
 }
-
-void load_ammo_from_file(gentity_t *ent) {
-
-	FILE *ammo_file;
-	char content[128];
-
-	ammo_file = fopen(va("GalaxyRP/accounts/%s_%s_ammo.txt", ent->client->sess.filename, ent->client->sess.rpgchar), "r");
-
-	// alex: load ammo from separate file at spawn
-	if (ammo_file != NULL)
-	{
-		fscanf(ammo_file, "%s", content);
-		int ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_BLASTER = %d\n\"", ammo));
-		ent->client->ps.ammo[AMMO_BLASTER] = ammo;
-
-		fscanf(ammo_file, "%s", content);
-		ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_POWERCELL = %d \n\"", ammo));
-		ent->client->ps.ammo[AMMO_POWERCELL] = ammo;
-
-		fscanf(ammo_file, "%s", content);
-		ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_METAL_BOLTS = %d \n\"", ammo));
-		ent->client->ps.ammo[AMMO_METAL_BOLTS] = ammo;
-
-		fscanf(ammo_file, "%s", content);
-		ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_ROCKETS = %d \n\"", ammo));
-		ent->client->ps.ammo[AMMO_ROCKETS] = ammo;
-
-		fscanf(ammo_file, "%s", content);
-		ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_THERMAL = %d \n\"", ammo));
-		ent->client->ps.ammo[AMMO_THERMAL] = ammo;
-
-		fscanf(ammo_file, "%s", content);
-		ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_TRIPMINE = %d \n\"", ammo));
-		ent->client->ps.ammo[AMMO_TRIPMINE] = ammo;
-
-		fscanf(ammo_file, "%s", content);
-		ammo = atoi(content);
-		//trap->SendServerCommand(ent - g_entities, va("print \"AMMO_DETPACK = %d \n\"", ammo));
-		ent->client->ps.ammo[AMMO_DETPACK] = ammo;
-	}
-}
-
 
 // zyk: initialize RPG skills of this player
 void initialize_rpg_skills(gentity_t *ent)
@@ -7787,45 +7702,6 @@ void initialize_rpg_skills(gentity_t *ent)
 		if (ent->client->pers.skill_levels[45] == 0)
 			ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DET_PACK);
 
-		//load_ammo_from_file(ent);
-		
-		if (ent->client->pers.rpg_class == 2)
-		{ // zyk: modifying max ammo if the player is a Bounty Hunter
-			gentity_t *this_ent = NULL;
-			int sentry_guns_iterator = 0;
-
-			// zyk: Bounty Hunter starts with 5 sentries if he has the Upgrade
-			if (ent->client->pers.skill_levels[48] > 0)
-			{
-				if (ent->client->pers.secrets_found & (1 << 1))
-					ent->client->pers.bounty_hunter_sentries = MAX_BOUNTY_HUNTER_SENTRIES;
-				else
-					ent->client->pers.bounty_hunter_sentries = 1;
-			}
-			else
-			{
-				ent->client->pers.bounty_hunter_sentries = 0;
-			}
-
-			ent->client->pers.bounty_hunter_placed_sentries = 0;
-
-			for (sentry_guns_iterator = MAX_CLIENTS; sentry_guns_iterator < level.num_entities; sentry_guns_iterator++)
-			{
-				this_ent = &g_entities[sentry_guns_iterator];
-
-				if (this_ent && Q_stricmp(this_ent->classname,"sentryGun") == 0 && this_ent->s.owner == ent->s.number)
-					ent->client->pers.bounty_hunter_placed_sentries++;
-			}
-
-			ent->client->ps.ammo[AMMO_BLASTER] += ent->client->ps.ammo[AMMO_BLASTER] / 6 * ent->client->pers.skill_levels[55];
-			ent->client->ps.ammo[AMMO_POWERCELL] += ent->client->ps.ammo[AMMO_POWERCELL]/6 * ent->client->pers.skill_levels[55];
-			ent->client->ps.ammo[AMMO_METAL_BOLTS] += ent->client->ps.ammo[AMMO_METAL_BOLTS]/6 * ent->client->pers.skill_levels[55];
-			ent->client->ps.ammo[AMMO_ROCKETS] += ent->client->ps.ammo[AMMO_ROCKETS]/6 * ent->client->pers.skill_levels[55];
-			ent->client->ps.ammo[AMMO_THERMAL] += ent->client->ps.ammo[AMMO_THERMAL]/6 * ent->client->pers.skill_levels[55];
-			ent->client->ps.ammo[AMMO_TRIPMINE] += ent->client->ps.ammo[AMMO_TRIPMINE]/6 * ent->client->pers.skill_levels[55];
-			ent->client->ps.ammo[AMMO_DETPACK] += ent->client->ps.ammo[AMMO_DETPACK]/6 * ent->client->pers.skill_levels[55];
-		}
-
 		// zyk: reseting initial holdable items of the player
 		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_SEEKER) & ~(1 << HI_BINOCULARS) & ~(1 << HI_SENTRY_GUN) & ~(1 << HI_EWEB) & ~(1 << HI_CLOAK) & ~(1 << HI_SHIELD) & ~(1 << HI_MEDPAC) & ~(1 << HI_MEDPAC_BIG);
 
@@ -7853,6 +7729,11 @@ void initialize_rpg_skills(gentity_t *ent)
 		if (ent->client->pers.skill_levels[53] > 0)
 			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_CLOAK);
 
+		if (zyk_allow_jetpack_command.integer &&
+			(level.gametype != GT_SIEGE || zyk_allow_jetpack_in_siege.integer) && level.gametype != GT_JEDIMASTER &&
+			(ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[34] > 0))
+			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
+
 		// zyk: loading initial health of the player
 		set_max_health(ent);
 		ent->health = ent->client->pers.max_rpg_health;
@@ -7861,62 +7742,6 @@ void initialize_rpg_skills(gentity_t *ent)
 		// zyk: loading initial shield of the player
 		set_max_shield(ent);
 		ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
-
-		// zyk: Light Power, Dark Power and Eternity Power use mp
-		if (ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS && !(ent->client->pers.player_settings & (1 << 1)) && 
-			zyk_enable_light_power.integer == 1)
-		{
-			ent->client->pers.magic_power--;
-			ent->client->pers.quest_power_status |= (1 << 14);
-		}
-		else
-		{
-			ent->client->pers.quest_power_status &= ~(1 << 14);
-		}
-
-		if (ent->client->pers.hunter_quest_progress == NUMBER_OF_OBJECTIVES && !(ent->client->pers.player_settings & (1 << 2)) && 
-			zyk_enable_dark_power.integer == 1)
-		{
-			ent->client->pers.magic_power--;
-			ent->client->pers.quest_power_status |= (1 << 15);
-		}
-		else
-		{
-			ent->client->pers.quest_power_status &= ~(1 << 15);
-		}
-
-		if (ent->client->pers.eternity_quest_progress == NUMBER_OF_ETERNITY_QUEST_OBJECTIVES && !(ent->client->pers.player_settings & (1 << 3)) && 
-			zyk_enable_eternity_power.integer == 1)
-		{
-			ent->client->pers.magic_power--;
-			ent->client->pers.quest_power_status |= (1 << 16);
-		}
-		else
-		{
-			ent->client->pers.quest_power_status &= ~(1 << 16);
-		}
-
-		// zyk: Universe Power
-		if (ent->client->pers.universe_quest_progress > 7 && !(ent->client->pers.player_settings & (1 << 4)) && 
-			zyk_enable_universe_power.integer == 1)
-		{
-			ent->client->pers.quest_power_status |= (1 << 13);
-		}
-		else
-		{
-			ent->client->pers.quest_power_status &= ~(1 << 13);
-		}
-
-		// zyk: the player can have only one of the Unique Abilities. If for some reason he has more, remove all of them
-		if ((ent->client->pers.secrets_found & (1 << 2) && ent->client->pers.secrets_found & (1 << 3)) || 
-			(ent->client->pers.secrets_found & (1 << 2) && ent->client->pers.secrets_found & (1 << 4)) || 
-			(ent->client->pers.secrets_found & (1 << 3) && ent->client->pers.secrets_found & (1 << 4)) || 
-			(ent->client->pers.secrets_found & (1 << 2) && ent->client->pers.secrets_found & (1 << 3) && ent->client->pers.secrets_found & (1 << 4)))
-		{
-			ent->client->pers.secrets_found &= ~(1 << 2);
-			ent->client->pers.secrets_found &= ~(1 << 3);
-			ent->client->pers.secrets_found &= ~(1 << 4);
-		}
 
 		// zyk: update the rpg stuff info at the client-side game
 		send_rpg_events(10000);
@@ -7936,6 +7761,7 @@ void Cmd_DateTime_f( gentity_t *ent ) {
 	trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", ctime(&current_time)) ); 
 }
 
+// TODO: Char class is set here, to be removed.
 // zyk: adds a new RPG char with default values
 void add_new_char(gentity_t *ent)
 {
@@ -7945,7 +7771,7 @@ void add_new_char(gentity_t *ent)
 	ent->client->pers.level = 1;
 	ent->client->pers.skillpoints = 1;
 
-	for (i = 0; i < NUMBER_OF_SKILLS; i++)
+	for (i = 0; i < NUM_OF_SKILLS; i++)
 	{
 		ent->client->pers.skill_levels[i] = 0;
 	}
@@ -7957,7 +7783,7 @@ void add_new_char(gentity_t *ent)
 	ent->client->pers.universe_quest_progress = 0;
 	ent->client->pers.universe_quest_counter = 0;
 	ent->client->pers.credits = 100;
-	ent->client->pers.rpg_class = 0;
+	ent->client->pers.rpg_class = 0; // Sets the char class, which we want to remove
 	ent->client->sess.magic_disabled_powers = 0;
 	ent->client->sess.magic_more_disabled_powers = 0;
 	ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
@@ -7969,7 +7795,7 @@ void add_new_char(gentity_t *ent)
 	ent->client->pers.player_settings &= ~(1 << 15);
 }
 
-// zyk: creates the directory correctly depending on the OS
+// GalaxyRP: Sets up the GalaxyRP directory
 void zyk_create_dir(char *file_path)
 {
 #if defined(__linux__)
@@ -7977,413 +7803,6 @@ void zyk_create_dir(char *file_path)
 #else
 	system(va("mkdir \"GalaxyRP/%s\"", file_path));
 #endif
-}
-
-/*
-==================
-Cmd_NewAccount_f
-==================
-*/
-void Cmd_NewAccount_f( gentity_t *ent ) {
-	FILE *logins_file;
-	char arg1[MAX_STRING_CHARS];
-	char arg2[MAX_STRING_CHARS];
-	char content[1024];
-	int i = 0;
-
-	strcpy(content,"");
-
-	if ( trap->Argc() != 3) 
-	{ 
-		trap->SendServerCommand( ent-g_entities, "print \"You must write a login and a password of your choice. Example: ^3/new yourlogin yourpass^7.\n\"" ); 
-		return;
-	}
-	trap->Argv(1, arg1, sizeof( arg1 ));
-	trap->Argv(2, arg2, sizeof( arg2 ));
-
-	// zyk: creates the account if player is not logged in
-	if (ent->client->sess.amrpgmode != 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You are already logged in.\n\"" ); 
-		return;
-	}
-
-	if (strlen(arg1) > MAX_ACC_NAME_SIZE)
-	{
-		trap->SendServerCommand( ent-g_entities, va("print \"Login has a maximum of %d characters.\n\"", MAX_ACC_NAME_SIZE) );
-		return;
-	}
-	if (strlen(arg2) > MAX_ACC_NAME_SIZE)
-	{
-		trap->SendServerCommand( ent-g_entities, va("print \"Password has a maximum of %d characters.\n\"", MAX_ACC_NAME_SIZE) );
-		return;
-	}
-
-	// zyk: validating if this login already exists
-	zyk_create_dir("accounts");
-
-#if defined(__linux__)
-	system("ls GalaxyRP/accounts > GalaxyRP/accounts/accounts.txt");
-#else
-	system("dir /B \"GalaxyRP/accounts\" > GalaxyRP/accounts/accounts.txt");
-#endif
-
-	logins_file = fopen("GalaxyRP/accounts/accounts.txt","r");
-	if (logins_file != NULL)
-	{
-		i = fscanf(logins_file, "%s", content);
-		while (i != -1)
-		{
-			if (Q_stricmp(content,"accounts.txt") != 0)
-			{ // zyk: validating login, which is the file name
-				if (Q_stricmp( content, va("%s.txt",arg1) ) == 0)
-				{ // zyk: if this login is the same as the one passed in arg1, then it already exists
-					fclose(logins_file);
-					trap->SendServerCommand( ent-g_entities, "print \"Login is used by another player.\n\"" );
-					return;
-				}
-			}
-			i = fscanf(logins_file, "%s", content);
-		}
-		fclose(logins_file);
-	}
-
-	strcpy(ent->client->sess.filename, arg1);
-	strcpy(ent->client->pers.password, arg2);
-
-	// zyk: setting the values to be saved in the account file
-	if (zyk_allow_rpg_mode.integer == 0)
-	{
-		ent->client->sess.amrpgmode = 1;
-	}
-	else
-	{
-		ent->client->sess.amrpgmode = 2;
-	}
-
-	ent->client->pers.player_settings = 0;
-	ent->client->pers.bitvalue = 0;
-
-	add_new_char(ent);
-
-	// zyk: saving the default char
-	strcpy(ent->client->sess.rpgchar, arg1);
-
-	save_account(ent, qfalse);
-	save_account(ent, qtrue);
-
-	if (ent->client->sess.amrpgmode == 2)
-	{
-		initialize_rpg_skills(ent);
-	}
-	else
-	{
-		trap->SendServerCommand(ent->s.number, "print \"Account created successfully in ^2Admin-Only ^7Mode\n\"");
-	}
-
-	// zyk: starting the tutorial, to help players use the mod features
-	ent->client->pers.tutorial_step = 0;
-	ent->client->pers.tutorial_timer = level.time + 1000;
-	ent->client->pers.player_statuses |= (1 << 25);
-}
-
-// zyk: loads the player account the old way
-void legacy_load_account(gentity_t *ent)
-{
-	FILE *account_file;
-	char content[128];
-
-	strcpy(content, "");
-	account_file = fopen(va("GalaxyRP/accounts/%s.txt", ent->client->sess.filename), "r");
-	if (account_file != NULL)
-	{
-		int i = 0;
-		// zyk: this variable will validate the skillpoints this player has
-		// if he has more than the max skillpoints defined, then server must remove the exceeding ones
-		int validate_skillpoints = 0;
-		int max_skillpoints = 0;
-		int j = 0;
-
-		// zyk: loading the account password
-		fscanf(account_file, "%s", content);
-		strcpy(ent->client->pers.password, content);
-
-		// zyk: loading the amrpgmode value
-		fscanf(account_file, "%s", content);
-		ent->client->sess.amrpgmode = atoi(content);
-
-		if ((zyk_allow_rpg_mode.integer == 0 || (zyk_allow_rpg_in_other_gametypes.integer == 0 && level.gametype != GT_FFA)) && ent->client->sess.amrpgmode == 2)
-		{ // zyk: RPG Mode not allowed. Change his account to Admin-Only Mode
-			ent->client->sess.amrpgmode = 1;
-		}
-		else if (level.gametype == GT_SIEGE || level.gametype == GT_JEDIMASTER)
-		{ // zyk: Siege and Jedi Master will never allow RPG Mode
-			ent->client->sess.amrpgmode = 1;
-		}
-
-		// zyk: loading player_settings value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.player_settings = atoi(content);
-
-		// zyk: loading the admin command bit value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.bitvalue = atoi(content);
-
-		// zyk: loading level up score value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.level_up_score = atoi(content);
-
-		// zyk: loading Level value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.level = atoi(content);
-
-		// zyk: loading Skillpoints value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.skillpoints = atoi(content);
-
-		if (ent->client->pers.level > zyk_rpg_max_level.integer)
-		{ // zyk: validating level
-			ent->client->pers.level = zyk_rpg_max_level.integer;
-		}
-		else if (ent->client->pers.level < 1)
-		{
-			ent->client->pers.level = 1;
-		}
-
-		for (j = 1; j <= ent->client->pers.level; j++)
-		{
-			if ((j % 10) == 0)
-			{ // zyk: level divisible by 10 has more skillpoints
-				max_skillpoints += (1 + j / 10);
-			}
-			else
-			{
-				max_skillpoints++;
-			}
-		}
-
-		validate_skillpoints = ent->client->pers.skillpoints;
-		// zyk: loading skill levels
-		for (i = 0; i < NUMBER_OF_SKILLS; i++)
-		{
-			fscanf(account_file, "%s", content);
-			ent->client->pers.skill_levels[i] = atoi(content);
-			validate_skillpoints += ent->client->pers.skill_levels[i];
-		}
-
-		// zyk: validating skillpoints
-		if (validate_skillpoints != max_skillpoints)
-		{
-			// zyk: if not valid, reset all skills and set the max skillpoints he can have in this level
-			for (i = 0; i < NUMBER_OF_SKILLS; i++)
-			{
-				ent->client->pers.skill_levels[i] = 0;
-			}
-
-			ent->client->pers.skillpoints = max_skillpoints;
-		}
-
-		// zyk: Other RPG attributes
-		// zyk: loading Light Quest Defeated Guardians number value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.defeated_guardians = atoi(content);
-
-		// zyk: compability with old mod versions, in which the players who completed the quest had a value of 9
-		if (ent->client->pers.defeated_guardians == 9)
-			ent->client->pers.defeated_guardians = NUMBER_OF_GUARDIANS;
-
-		// zyk: loading Dark Quest completed objectives value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.hunter_quest_progress = atoi(content);
-
-		// zyk: loading Eternity Quest progress value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.eternity_quest_progress = atoi(content);
-
-		// zyk: loading secrets found value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.secrets_found = atoi(content);
-
-		// zyk: loading Universe Quest Progress value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.universe_quest_progress = atoi(content);
-
-		// zyk: loading Universe Quest Counter value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.universe_quest_counter = atoi(content);
-
-		// zyk: loading credits value
-		fscanf(account_file, "%s", content);
-		ent->client->pers.credits = atoi(content);
-
-		// zyk: validating credits
-		if (ent->client->pers.credits > zyk_max_rpg_credits.integer)
-		{
-			ent->client->pers.credits = zyk_max_rpg_credits.integer;
-		}
-		else if (ent->client->pers.credits < 0)
-		{
-			ent->client->pers.credits = 0;
-		}
-
-		// zyk: loading RPG class
-		fscanf(account_file, "%s", content);
-		ent->client->pers.rpg_class = atoi(content);
-
-		// zyk: loading disabled magic powers
-		fscanf(account_file, "%s", content);
-		ent->client->sess.magic_disabled_powers = atoi(content);
-
-		// zyk: loading more disabled magic powers
-		fscanf(account_file, "%s", content);
-		ent->client->sess.magic_more_disabled_powers = atoi(content);
-
-		if (ent->client->sess.amrpgmode == 1)
-		{
-			ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
-
-			// zyk: setting default max hp and shield
-			ent->client->ps.stats[STAT_MAX_HEALTH] = 100;
-
-			if (ent->health > 100)
-				ent->health = 100;
-
-			if (ent->client->ps.stats[STAT_ARMOR] > 100)
-				ent->client->ps.stats[STAT_ARMOR] = 100;
-
-			// zyk: reset the force powers of this player
-			WP_InitForcePowers(ent);
-
-			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0 &&
-				level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE
-				)
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
-
-			if (level.gametype != GT_JEDIMASTER && level.gametype != GT_SIEGE)
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
-
-			zyk_load_common_settings(ent);
-		}
-
-		fclose(account_file);
-	}
-	else
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"There is no account with this login or password.\n\"");
-	}
-}
-
-/*
-==================
-Cmd_LoginAccount_f
-==================
-*/
-void Cmd_LoginAccount_f( gentity_t *ent ) {
-	if (ent->client->sess.amrpgmode == 0)
-	{
-		char arg1[MAX_STRING_CHARS];
-		char arg2[MAX_STRING_CHARS];
-		char password[32];
-		int i = 0;
-		FILE *account_file;
-		gentity_t *player_ent = NULL;
-
-		strcpy(password,"");
-
-		if ( trap->Argc() != 3)
-		{ 
-			trap->SendServerCommand( ent-g_entities, "print \"You must write your login and password.\n\"" ); 
-			return;
-		}
-
-		trap->Argv(1, arg1, sizeof( arg1 ));
-		trap->Argv(2, arg2, sizeof( arg2 ));
-
-		for (i = 0; i < level.maxclients; i++)
-		{
-			player_ent = &g_entities[i];
-			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode > 0 && Q_stricmp(player_ent->client->sess.filename,arg1) == 0)
-			{
-				trap->SendServerCommand( ent-g_entities, "print \"There is already someone logged in this account.\n\"" );
-				return;
-			}
-		}
-
-		// alex: cannot login if player is in Duel Tournament or Sniper Battle
-		if (level.duel_tournament_mode > 0 && level.duel_players[ent->s.number] != -1)
-		{
-			trap->SendServerCommand(ent->s.number, "print \"Cannot login while in a Duel Tournament\n\"");
-			return;
-		}
-
-		if (level.sniper_mode > 0 && level.sniper_players[ent->s.number] != -1)
-		{
-			trap->SendServerCommand(ent->s.number, "print \"Cannot login while in a Sniper Battle\n\"");
-			return;
-		}
-
-		// zyk: validating login
-		account_file = fopen(va("GalaxyRP/accounts/%s.txt",arg1),"r");
-		if (account_file == NULL)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"Login does not exist.\n\"" );
-			return;
-		}
-
-		// zyk: validating password
-		fscanf(account_file,"%s",password);
-		fclose(account_file);
-		if (strlen(password) != strlen(arg2) || Q_strncmp(password, arg2, strlen(password)) != 0)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"The password is incorrect.\n\"" );
-			return;
-		}
-
-		// zyk: valid login and password
-		strcpy(ent->client->sess.filename, arg1);
-		strcpy(ent->client->pers.password, arg2);
-
-		account_file = fopen(va("GalaxyRP/accounts/%s_%s.txt", arg1, arg1), "r");
-		if (account_file == NULL)
-		{ // zyk: old account. Use the legacy function to convert it to the Char system
-			legacy_load_account(ent);
-
-			// zyk: saving the default char
-			strcpy(ent->client->sess.rpgchar, arg1);
-
-			save_account(ent, qfalse);
-			save_account(ent, qtrue);
-		}
-		else
-		{
-			fclose(account_file);
-
-			load_account(ent);
-		}
-
-		if (ent->client->sess.amrpgmode == 1)
-		{
-			trap->SendServerCommand(ent - g_entities, "print \"^7Account loaded succesfully in ^2Admin-Only Mode^7. Use command ^3/list^7.\n\"");
-			trap->SendServerCommand(-1, va("chat \"%s Logged in as: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
-		}
-		else if (ent->client->sess.amrpgmode == 2)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"^7Account loaded succesfully. Use command ^3/list^7.\n\"" );
-			trap->SendServerCommand(-1, va("chat \"%s Logged in as: %s\n\"", ent->client->pers.netname, ent->client->sess.rpgchar));
-
-			initialize_rpg_skills(ent);
-
-			if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
-			{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
-				G_Kill(ent);
-			}
-			
-		}
-	}
-	else
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You are already logged in.\n\"" );
-	}
 }
 
 // zyk: clean the guardian npcs
@@ -8418,17 +7837,17 @@ void clean_guardians(gentity_t *ent)
 // zyk: tests if the player has beaten the guardians before the Guardian of Light in Light Quest
 qboolean light_quest_defeated_guardians(gentity_t *ent)
 {
-	int j = 0, number_of_guardians_defeated = 0;
+	int j = 0, NUM_OF_GUARDIANS_defeated = 0;
 
 	for (j = 4; j <= 12; j++)
 	{
 		if (ent->client->pers.defeated_guardians & (1 << j))
 		{
-			number_of_guardians_defeated++;
+			NUM_OF_GUARDIANS_defeated++;
 		}
 	}
 
-	if (number_of_guardians_defeated == (NUMBER_OF_GUARDIANS - 1))
+	if (NUM_OF_GUARDIANS_defeated == (NUM_OF_GUARDIANS - 1))
 		return qtrue;
 	else
 		return qfalse;
@@ -8563,11 +7982,11 @@ int zyk_number_of_completed_quests(gentity_t *ent)
 {
 	int number_of_completed_quests = 0;
 
-	if (ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS)
+	if (ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS)
 		number_of_completed_quests++;
-	if (ent->client->pers.hunter_quest_progress == NUMBER_OF_OBJECTIVES)
+	if (ent->client->pers.hunter_quest_progress == NUM_OF_OBJECTIVES)
 		number_of_completed_quests++;
-	if (ent->client->pers.eternity_quest_progress == NUMBER_OF_ETERNITY_QUEST_OBJECTIVES)
+	if (ent->client->pers.eternity_quest_progress == NUM_OF_ETERNITY_QUEST_OBJ)
 		number_of_completed_quests++;
 
 	return number_of_completed_quests;
@@ -8579,71 +7998,71 @@ void choose_new_player(gentity_t *next_player)
 	int found = 0;
 	if (next_player && next_player->client && next_player->client->sess.amrpgmode == 2 && !(next_player->client->pers.player_settings & (1 << 0)) && next_player->client->pers.can_play_quest == 0 && next_player->client->pers.connected == CON_CONNECTED && next_player->client->sess.sessionTeam != TEAM_SPECTATOR && next_player->inuse == qtrue)
 	{
-		if (level.quest_map == 1 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 4))) || (next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 4))) || (next_player->client->pers.universe_quest_progress == 2 && (!(next_player->client->pers.universe_quest_counter & (1 << 1)) || !(next_player->client->pers.universe_quest_counter & (1 << 3)))) || next_player->client->pers.universe_quest_progress == 3))
+		if (level.quest_map == 1 && ((next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 4))) || (next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 4))) || (next_player->client->pers.universe_quest_progress == 2 && (!(next_player->client->pers.universe_quest_counter & (1 << 1)) || !(next_player->client->pers.universe_quest_counter & (1 << 3)))) || next_player->client->pers.universe_quest_progress == 3))
 			found = 1;
-		else if (level.quest_map == 2 && next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 5)))
+		else if (level.quest_map == 2 && next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 5)))
 			found = 1;
-		else if (level.quest_map == 3 && next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 6)))
+		else if (level.quest_map == 3 && next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 6)))
 			found = 1;
 		else if (level.quest_map == 4 && (
-			(next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 7))) || 
-			(next_player->client->pers.universe_quest_progress >= 17 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES &&
+			(next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 7))) || 
+			(next_player->client->pers.universe_quest_progress >= 17 && next_player->client->pers.universe_quest_progress < NUM_OF_UNIVERSE_QUEST_OBJ &&
 			 next_player->client->pers.universe_quest_counter & (1 << 3))))
 			found = 1;
-		else if (level.quest_map == 5 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 12))) || (next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 8))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 9)))))
+		else if (level.quest_map == 5 && ((next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 12))) || (next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 8))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 9)))))
 			found = 1;
 		else if (level.quest_map == 6 && (
-			(next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 9))) ||
+			(next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 9))) ||
 			(next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 6))) ||
-			(next_player->client->pers.universe_quest_progress >= 18 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && 
+			(next_player->client->pers.universe_quest_progress >= 18 && next_player->client->pers.universe_quest_progress < NUM_OF_UNIVERSE_QUEST_OBJ && 
 			 next_player->client->pers.universe_quest_counter & (1 << 0)) || 
 			(next_player->client->pers.universe_quest_progress == 16 && next_player->client->pers.universe_quest_counter & (1 << 1)) || 
 			(next_player->client->pers.universe_quest_progress >= 15 && next_player->client->pers.universe_quest_progress <= 17 && next_player->client->pers.universe_quest_counter & (1 << 2))))
 		{
 			found = 1;
 		}
-		else if (level.quest_map == 7 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 7))) || (next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 10)))))
+		else if (level.quest_map == 7 && ((next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 7))) || (next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 10)))))
 			found = 1;
 		else if (level.quest_map == 8 && next_player->client->pers.universe_quest_progress == 4)
 			found = 1;
-		else if (level.quest_map == 9 && (next_player->client->pers.universe_quest_progress < 2 || (next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 12)))))
+		else if (level.quest_map == 9 && (next_player->client->pers.universe_quest_progress < 2 || (next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 12)))))
 			found = 1;
-		else if (level.quest_map == 10 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 6))) || 
+		else if (level.quest_map == 10 && ((next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 6))) || 
 				 light_quest_defeated_guardians(next_player) == qtrue || dark_quest_collected_notes(next_player) == qtrue || 
-				 next_player->client->pers.eternity_quest_progress < NUMBER_OF_ETERNITY_QUEST_OBJECTIVES || 
+				 next_player->client->pers.eternity_quest_progress < NUM_OF_ETERNITY_QUEST_OBJ || 
 				(next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 8))) || 
 				(next_player->client->pers.universe_quest_progress == 15 && next_player->client->pers.universe_quest_counter & (1 << 0)) || 
 				(next_player->client->pers.universe_quest_progress == 16 && next_player->client->pers.universe_quest_counter & (1 << 3))))
 		{
 			found = 1;
 		}
-		else if (level.quest_map == 11 && next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 9)))
+		else if (level.quest_map == 11 && next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 9)))
 			found = 1;
 		else if (level.quest_map == 12 && (next_player->client->pers.universe_quest_progress == 7 ||
 				(next_player->client->pers.universe_quest_progress == 8 && !(next_player->client->pers.universe_quest_counter & (1 << 1))) || 
 				(next_player->client->pers.universe_quest_progress == 15 && next_player->client->pers.universe_quest_counter & (1 << 1)) || 
-				(next_player->client->pers.universe_quest_progress >= 17 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && 
+				(next_player->client->pers.universe_quest_progress >= 17 && next_player->client->pers.universe_quest_progress < NUM_OF_UNIVERSE_QUEST_OBJ && 
 				 next_player->client->pers.universe_quest_counter & (1 << 1)) || 
 				(next_player->client->pers.universe_quest_progress == 15 && next_player->client->pers.universe_quest_counter & (1 << 3))))
 		{
 			found = 1;
 		}
-		else if (level.quest_map == 13 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 5))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 5)))))
+		else if (level.quest_map == 13 && ((next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 5))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 5)))))
 			found = 1;
-		else if (level.quest_map == 14 && next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 11)))
+		else if (level.quest_map == 14 && next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 11)))
 			found = 1;
-		else if (level.quest_map == 15 && next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 10)))
+		else if (level.quest_map == 15 && next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 10)))
 			found = 1;
 		else if (level.quest_map == 17 && ((next_player->client->pers.universe_quest_progress == 8 && !(next_player->client->pers.universe_quest_counter & (1 << 2))) || (next_player->client->pers.universe_quest_progress == 9 && (!(next_player->client->pers.universe_quest_counter & (1 << 0)) || !(next_player->client->pers.universe_quest_counter & (1 << 1)) || !(next_player->client->pers.universe_quest_counter & (1 << 2)))) || (next_player->client->pers.universe_quest_progress >= 10 && next_player->client->pers.universe_quest_progress < 14) || (next_player->client->pers.universe_quest_progress == 14 && zyk_number_of_completed_quests(next_player) == 3)))
 			found = 1;
-		else if (level.quest_map == 18 && ((next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 11))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 4)))))
+		else if (level.quest_map == 18 && ((next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && !(next_player->client->pers.hunter_quest_progress & (1 << 11))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 4)))))
 			found = 1;
-		else if (level.quest_map == 20 && ((next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 8))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 7)))))
+		else if (level.quest_map == 20 && ((next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS && !(next_player->client->pers.defeated_guardians & (1 << 8))) || (next_player->client->pers.universe_quest_progress == 2 && !(next_player->client->pers.universe_quest_counter & (1 << 7)))))
 			found = 1;
 		else if (level.quest_map == 24 && (next_player->client->pers.universe_quest_progress == 5 ||
 				(next_player->client->pers.universe_quest_progress == 16 && next_player->client->pers.universe_quest_counter & (1 << 0)) || 
 				(next_player->client->pers.universe_quest_progress == 17 && next_player->client->pers.universe_quest_counter & (1 << 0)) || 
-				(next_player->client->pers.universe_quest_progress >= 18 && next_player->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES && 
+				(next_player->client->pers.universe_quest_progress >= 18 && next_player->client->pers.universe_quest_progress < NUM_OF_UNIVERSE_QUEST_OBJ && 
 				 next_player->client->pers.universe_quest_counter & (1 << 2))))
 		{
 			found = 1;
@@ -8696,7 +8115,7 @@ void choose_new_player(gentity_t *next_player)
 		next_player->client->pers.light_quest_timer = level.time + 3000;
 		next_player->client->pers.light_quest_messages = 0;
 
-		if (next_player->client->pers.eternity_quest_progress < (NUMBER_OF_ETERNITY_QUEST_OBJECTIVES - 1))
+		if (next_player->client->pers.eternity_quest_progress < (NUM_OF_ETERNITY_QUEST_OBJ - 1))
 		{ // zyk: give some time before the riddle appears to the quest player
 			next_player->client->pers.eternity_quest_timer = level.time + 1000;
 		}
@@ -8764,7 +8183,7 @@ void choose_new_player(gentity_t *next_player)
 		}
 
 		// zyk: loading note models if player must find a Dark Quest note
-		if (level.quest_note_id == -1 && next_player->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES)
+		if (level.quest_note_id == -1 && next_player->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES)
 		{
 			if (level.quest_map == 1 && !(next_player->client->pers.hunter_quest_progress & (1 << 4)))
 			{
@@ -8805,7 +8224,7 @@ void choose_new_player(gentity_t *next_player)
 		}
 
 		// zyk: loading effects in guardian area
-		if (level.quest_effect_id == -1 && next_player->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		if (level.quest_effect_id == -1 && next_player->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 		{
 			if (level.quest_map == 1 && !(next_player->client->pers.defeated_guardians & (1 << 4)))
 			{ // zyk: Guardian of Water
@@ -8954,13 +8373,6 @@ Cmd_LogoutAccount_f
 ==================
 */
 void Cmd_LogoutAccount_f( gentity_t *ent ) {
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	sqlite3_stmt *stmt;
-	char username[256] = { 0 }, password[256] = { 0 }, comparisonName[256] = { 0 };
-	int accountID = 0, i = 0;
-	int charID;
 
 	save_account(ent, qtrue);
 
@@ -9040,14 +8452,17 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 	// zyk: update the rpg stuff info at the client-side game
 	send_rpg_events(10000);
 			
-	trap->SendServerCommand(-1, va("chat \"%s logged out\n\"", ent->client->pers.netname));
+	trap->SendServerCommand(-1, va("chat \"^3%s ^2logged out\n\"", ent->client->pers.netname));
 }
 
-qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show_message)
+qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, qboolean dont_show_message)
 {
+	char maximum_skill_message[256] = "print \"^1You reached the maximum level of %s ^1skill. Nothing was updated.\n\"";
+	char maximum_skill_message_other[256] = "print \"^1Target already reached the maximum level of %s ^1skill. Nothing was updated\n\"";
+
 	if (upgrade_value == 1)
 	{
-		if (ent->client->pers.skill_levels[0] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[0] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_LEVITATION)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_LEVITATION);
@@ -9057,15 +8472,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Jump ^7skill.\n\"" );
+			if (dont_show_message == qfalse){
+				trap->SendServerCommand( ent-g_entities, va(maximum_skill_message, "^3Jump"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Jump"));
+				}
+			}
 			return qfalse;
 		}
 	}
 			
 	if (upgrade_value == 2)
 	{
-		if (ent->client->pers.skill_levels[1] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[1] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_PUSH)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_PUSH);
@@ -9075,15 +8494,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Push ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Push"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Push"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 3)
 	{
-		if (ent->client->pers.skill_levels[2] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[2] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_PULL)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_PULL);
@@ -9093,15 +8516,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Pull ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Pull"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Pull"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 4)
 	{
-		if (ent->client->pers.skill_levels[3] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[3] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SPEED)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_SPEED);
@@ -9111,15 +8538,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Speed ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Speed"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Speed"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 5)
 	{
-		if (ent->client->pers.skill_levels[4] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[4] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[4]++;
 			ent->client->pers.skillpoints--;
@@ -9138,15 +8569,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Sense ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Sense"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Sense"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 6)
 	{
-		if (ent->client->pers.skill_levels[5] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[5] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SABER_OFFENSE)))
 			{
@@ -9163,15 +8598,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Saber Attack ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Saber Attack"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Saber Attack"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 7)
 	{
-		if (ent->client->pers.skill_levels[6] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[6] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SABER_DEFENSE)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_SABER_DEFENSE);
@@ -9181,15 +8620,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Saber Defense ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Saber Defense"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Saber Defense"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 8)
 	{
-		if (ent->client->pers.skill_levels[7] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[7] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SABERTHROW)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_SABERTHROW);
@@ -9199,15 +8642,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Saber Throw ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Saber Throw"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Saber Throw"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 9)
 	{
-		if (ent->client->pers.skill_levels[8] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[8] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_ABSORB)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_ABSORB);
@@ -9222,15 +8669,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Absorb ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Absorb"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Absorb"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 10)
 	{
-		if (ent->client->pers.skill_levels[9] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[9] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_HEAL)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_HEAL);
@@ -9240,15 +8691,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Heal ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Heal"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Heal"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 11)
 	{
-		if (ent->client->pers.skill_levels[10] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[10] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_PROTECT)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_PROTECT);
@@ -9262,15 +8717,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Protect ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Protect"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Protect"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 12)
 	{
-		if (ent->client->pers.skill_levels[11] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[11] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_TELEPATHY)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_TELEPATHY);
@@ -9280,15 +8739,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Mind Trick ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Mind Trick"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Mind Trick"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 13)
 	{
-		if (ent->client->pers.skill_levels[12] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[12] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_TEAM_HEAL)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_TEAM_HEAL);
@@ -9298,15 +8761,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Team Heal ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Team Heal"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Team Heal"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 14)
 	{
-		if (ent->client->pers.skill_levels[13] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[13] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_LIGHTNING)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_LIGHTNING);
@@ -9320,15 +8787,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Lightning ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Lightning"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Lightning"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 15)
 	{
-		if (ent->client->pers.skill_levels[14] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[14] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_GRIP)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_GRIP);
@@ -9338,15 +8809,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Grip ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Grip"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Grip"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 16)
 	{
-		if (ent->client->pers.skill_levels[15] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[15] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_DRAIN)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_DRAIN);
@@ -9356,15 +8831,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Drain ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Drain"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Drain"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 17)
 	{
-		if (ent->client->pers.skill_levels[16] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[16] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_RAGE)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_RAGE);
@@ -9379,15 +8858,19 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Rage ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Rage"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Rage"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 18)
 	{
-		if (ent->client->pers.skill_levels[17] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[17] < skills[upgrade_value - 1].max_level)
 		{
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_TEAM_FORCE)))
 				ent->client->ps.fd.forcePowersKnown |= (1 << FP_TEAM_FORCE);
@@ -9397,195 +8880,247 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Team Energize ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Team Energize"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Team Energize"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 19)
 	{
-		if (ent->client->pers.skill_levels[18] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[18] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[18]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Stun Baton ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Stun Baton"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Stun Baton"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 20)
 	{
-		if (ent->client->pers.skill_levels[19] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[19] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[19]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Blaster Pistol ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Blaster Pistol"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Blaster Pistol"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 21)
 	{
-		if (ent->client->pers.skill_levels[20] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[20] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[20]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3E11 Blaster Rifle ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3E11 Blaster Rifle"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3E11 Blaster Rifle"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 22)
 	{
-		if (ent->client->pers.skill_levels[21] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[21] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[21]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Disruptor ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Disruptor"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Disruptor"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 23)
 	{
-		if (ent->client->pers.skill_levels[22] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[22] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[22]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Bowcaster ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Bowcaster"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Bowcaster"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 24)
 	{
-		if (ent->client->pers.skill_levels[23] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[23] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[23]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Repeater ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Repeater"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Repeater"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 25)
 	{
-		if (ent->client->pers.skill_levels[24] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[24] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[24]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3DEMP2 ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3DEMP2"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3DEMP2"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 26)
 	{
-		if (ent->client->pers.skill_levels[25] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[25] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[25]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Flechette ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Flechette"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Flechette"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 27)
 	{
-		if (ent->client->pers.skill_levels[26] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[26] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[26]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Rocket Launcher ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Rocket Launcher"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Rocket Launcher"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 28)
 	{
-		if (ent->client->pers.skill_levels[27] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[27] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[27]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Concussion Rifle ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Concussion Rifle"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Concussion Rifle"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 29)
 	{
-		if (ent->client->pers.skill_levels[28] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[28] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[28]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Bryar Pistol ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Bryar Pistol"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Bryar Pistol"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 30)
 	{
-		if (ent->client->pers.skill_levels[29] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[29] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[29]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Melee ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Melee"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Melee"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 31)
 	{
-		if (ent->client->pers.skill_levels[30] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[30] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[30]++;
 			set_max_shield(ent);
@@ -9593,60 +9128,76 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Max Shield ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Max Shield"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Max Shield"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 32)
 	{
-		if (ent->client->pers.skill_levels[31] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[31] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[31]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Shield Strength ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Shield Strength"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Shield Strength"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 33)
 	{
-		if (ent->client->pers.skill_levels[32] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[32] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[32]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Health Strength ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Health Strength"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Health Strength"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 34)
 	{
-		if (ent->client->pers.skill_levels[33] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[33] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[33]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Drain Shield ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Drain Shield"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Drain Shield"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 35)
 	{
-		if (ent->client->pers.skill_levels[34] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[34] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[34]++;
 			if (!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_JETPACK)))
@@ -9655,300 +9206,380 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Jetpack ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Jetpack"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Jetpack"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 36)
 	{
-		if (ent->client->pers.skill_levels[35] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[35] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[35]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Sense Health ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Sense Health"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Sense Health"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 37)
 	{
-		if (ent->client->pers.skill_levels[36] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[36] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[36]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Shield Heal ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Shield Heal"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Shield Heal"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 38)
 	{
-		if (ent->client->pers.skill_levels[37] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[37] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[37]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Team Shield Heal ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Team Shield"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Team Shield"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 39)
 	{
-		if (ent->client->pers.skill_levels[38] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[38] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[38]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Unique Skill^7.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Unique Skill"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Unique Skill"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 40)
 	{
-		if (ent->client->pers.skill_levels[39] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[39] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[39]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Blaster Pack ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Blaster Pack"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Blaster Pack"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 41)
 	{
-		if (ent->client->pers.skill_levels[40] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[40] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[40]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Power Cell ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Power Cell"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Power Cell"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 42)
 	{
-		if (ent->client->pers.skill_levels[41] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[41] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[41]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Metallic Bolts ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Metallic Bolts"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Metallic Bolts"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 43)
 	{
-		if (ent->client->pers.skill_levels[42] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[42] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[42]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Rockets ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Rockets"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Rockets"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 44)
 	{
-		if (ent->client->pers.skill_levels[43] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[43] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[43]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Thermals ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Thermals"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Thermals"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 45)
 	{
-		if (ent->client->pers.skill_levels[44] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[44] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[44]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Trip Mines ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Trip Mines"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Trip Mines"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 46)
 	{
-		if (ent->client->pers.skill_levels[45] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[45] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[45]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Det Packs ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Det Packs"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Det Packs"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 47)
 	{
-		if (ent->client->pers.skill_levels[46] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[46] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[46]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Binoculars ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Binoculars"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Binoculars"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 48)
 	{
-		if (ent->client->pers.skill_levels[47] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[47] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[47]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Bacta Canister ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Bacta Canister"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Bacta Canister"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 49)
 	{
-		if (ent->client->pers.skill_levels[48] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[48] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[48]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Sentry Gun ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Sentry Gun"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Sentry Gun"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 50)
 	{
-		if (ent->client->pers.skill_levels[49] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[49] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[49]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Seeker Drone ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Seeker Drone"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Seeker Drone"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 51)
 	{
-		if (ent->client->pers.skill_levels[50] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[50] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[50]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3E-Web ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3E-Web"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3E-Web"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 52)
 	{
-		if (ent->client->pers.skill_levels[51] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[51] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[51]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Big Bacta ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Big Bacta"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Big Bacta"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 53)
 	{
-		if (ent->client->pers.skill_levels[52] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[52] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[52]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Force Field ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Force Field"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Force Field"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 54)
 	{
-		if (ent->client->pers.skill_levels[53] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[53] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[53]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Cloak Item ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Cloak Item"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Cloak Item"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 55)
 	{
-		if (ent->client->pers.skill_levels[54] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[54] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[54]++;
 			ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value/4.0) * ent->client->pers.skill_levels[54]);
@@ -9957,54 +9588,74 @@ qboolean rpg_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Force Power ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Force Power"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Force Power"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	if (upgrade_value == 56)
 	{
-		if (ent->client->pers.skill_levels[55] < max_skill_levels[upgrade_value - 1])
+		if (ent->client->pers.skill_levels[55] < skills[upgrade_value - 1].max_level)
 		{
 			ent->client->pers.skill_levels[55]++;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
-			if (dont_show_message == qfalse)
-				trap->SendServerCommand( ent-g_entities, "print \"You reached the maximum level of ^3Improvements ^7skill.\n\"" );
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Improvements"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Improvements"));
+				}
+			}
+			return qfalse;
+		}
+	}
+
+	if (upgrade_value == 57)
+	{
+		if (ent->client->pers.skill_levels[56] < skills[upgrade_value - 1].max_level)
+		{
+			ent->client->pers.skill_levels[56]++;
+			ent->client->pers.skillpoints--;
+		}
+		else
+		{
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Armor"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Armor"));
+				}
+			}
+			return qfalse;
+		}
+	}
+
+	if (upgrade_value == 58)
+	{
+		if (ent->client->pers.skill_levels[57] < skills[upgrade_value - 1].max_level)
+		{
+			ent->client->pers.skill_levels[57]++;
+			ent->client->pers.skillpoints--;
+		}
+		else
+		{
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Flame Thrower"));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Flame Thrower"));
+				}
+			}
 			return qfalse;
 		}
 	}
 
 	return qtrue;
-}
-
-char *zyk_rpg_class(gentity_t *ent)
-{
-	if (ent->client->pers.rpg_class == 0)
-		return "Free Warrior";
-	else if (ent->client->pers.rpg_class == 1)
-		return "Force User";
-	else if (ent->client->pers.rpg_class == 2)
-		return "Bounty Hunter";
-	else if (ent->client->pers.rpg_class == 3)
-		return "Armored Soldier";
-	else if (ent->client->pers.rpg_class == 4)
-		return "Monk";
-	else if (ent->client->pers.rpg_class == 5)
-		return "Stealth Attacker";
-	else if (ent->client->pers.rpg_class == 6)
-		return "Duelist";
-	else if (ent->client->pers.rpg_class == 7)
-		return "Force Gunner";
-	else if (ent->client->pers.rpg_class == 8)
-		return "Magic Master";
-	else if (ent->client->pers.rpg_class == 9)
-		return "Force Guardian";
-	else
-		return "";
 }
 
 char *zyk_get_settings_values(gentity_t *ent)
@@ -10100,181 +9751,10 @@ char *zyk_get_settings_values(gentity_t *ent)
 	return G_NewString(content);
 }
 
-/*
-==================
-Cmd_ZykMod_f
-==================
-*/
-void Cmd_ZykMod_f( gentity_t *ent ) {
-	// zyk: sends info to the client-side menu if player has the client-side plugin
-	int universe_quest_counter_value = 0;
-
-	if (Q_stricmp(ent->client->pers.guid, "NOGUID") == 0)
-	{
-		return;
-	}
-
-	if (ent->client->sess.amrpgmode == 2)
-	{
-		int i = 0;
-		int quest_player_id = MAX_CLIENTS;
-		char content[1024];
-		int unique_duration = 0;
-
-		strcpy(content,"");
-
-		for (i = 0; i < level.maxclients; i++)
-		{
-			gentity_t *player_ent = &g_entities[i];
-
-			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.can_play_quest == 1)
-			{ // zyk: found the quest player
-				quest_player_id = i;
-				break;
-			}
-		}
-
-		for (i = 0; i < NUMBER_OF_SKILLS; i++)
-		{
-			strcpy(content, va("%s%d/%d-", content, ent->client->pers.skill_levels[i], max_skill_levels[i]));
-		}
-
-		strcpy(content, va("%s%s", content, zyk_get_settings_values(ent)));
-
-		if (ent->client->pers.universe_quest_progress == 2)
-		{
-			universe_quest_counter_value = number_of_artifacts(ent);
-		}
-		else if (ent->client->pers.universe_quest_progress == 5)
-		{
-			universe_quest_counter_value = number_of_amulets(ent);
-		}
-		else if (ent->client->pers.universe_quest_progress == 8)
-		{
-			universe_quest_counter_value = ent->client->pers.universe_quest_counter;
-		}
-		else if (ent->client->pers.universe_quest_progress == 9)
-		{
-			universe_quest_counter_value = number_of_crystals(ent);
-		}
-		else if (ent->client->pers.universe_quest_progress > 14)
-		{
-			universe_quest_counter_value = ent->client->pers.universe_quest_counter;
-
-			if (ent->client->pers.unique_skill_timer > level.time && ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES &&
-				ent->client->pers.universe_quest_counter & (1 << 2) && !(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
-			{ // zyk: Unique Boost decreases unique cooldown time
-				universe_quest_counter_value |= (1 << 30);
-			}
-		}
-
-		if (ent->client->pers.unique_skill_duration > level.time)
-		{
-			unique_duration = ent->client->pers.unique_skill_duration - level.time;
-		}
-
-		strcpy(content,va("%s%d-%d-%d-%d-%d-%d-%d-%d-",content,ent->client->pers.secrets_found,ent->client->pers.defeated_guardians,ent->client->pers.hunter_quest_progress,
-			ent->client->pers.eternity_quest_progress,ent->client->pers.universe_quest_progress,universe_quest_counter_value,quest_player_id,unique_duration));
-
-		trap->SendServerCommand(ent->s.number, va("zykmod \"%d/%d-%d/%d-%d-%d/%d-%d/%d-%d-%s-%s\"",ent->client->pers.level, zyk_rpg_max_level.integer,ent->client->pers.level_up_score,(ent->client->pers.level * zyk_level_up_score_factor.integer),ent->client->pers.skillpoints,ent->client->pers.skill_counter,zyk_max_skill_counter.integer,ent->client->pers.magic_power,zyk_max_magic_power(ent),ent->client->pers.credits,zyk_rpg_class(ent),content));
-	}
-	else if (ent->client->sess.amrpgmode == 1)
-	{ // zyk: just sends the player settings
-		int i = 0;
-		char content[1024];
-
-		strcpy(content,"");
-
-		for (i = 0; i < 69; i++)
-		{
-			if (i == 63)
-			{
-				strcpy(content, va("%s%s", content, zyk_get_settings_values(ent)));
-			}
-			else
-			{
-				strcpy(content, va("%s0-", content));
-			}
-				
-		}
-
-		trap->SendServerCommand(ent->s.number, va("zykmod \"%s\"", content));
-	}
-}
-
-char *zyk_get_rpg_chars(gentity_t *ent, char *separator)
-{
-	FILE *chars_file;
-	char content[64];
-	char chars[MAX_STRING_CHARS];
-	int i = 0;
-
-	strcpy(content, "");
-	strcpy(chars, "");
-
-#if defined(__linux__)
-	system(va("cd GalaxyRP/accounts ; ls %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
-#else
-	system(va("cd \"GalaxyRP/accounts\" & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
-#endif
-
-	chars_file = fopen(va("GalaxyRP/accounts/chars_%d.txt", ent->s.number), "r");
-	if (chars_file != NULL)
-	{
-		i = fscanf(chars_file, "%s", content);
-		while (i != EOF)
-		{
-			if (Q_stricmp(content, va("chars_%d.txt", ent->s.number)) != 0)
-			{ // zyk: getting the char names
-				int j = strlen(ent->client->sess.filename) + 1, k = 0;
-
-				while (j < 64)
-				{
-					if (content[j] == '.' && content[j + 1] == 't' && content[j + 2] == 'x' && content[j + 3] == 't')
-					{
-						content[k] = '\0';
-						break;
-					}
-					else
-					{
-						content[k] = content[j];
-					}
-
-					j++;
-					k++;
-				}
-
-				if (strstr(content, "_ammo") == NULL) {
-					strcpy(chars, va("%s^7%s%s", chars, content, separator));
-				}
-			}
-			i = fscanf(chars_file, "%s", content);
-		}
-		fclose(chars_file);
-	}
-
-	return G_NewString(chars);
-}
-
-/*
-==================
-Cmd_ZykChars_f
-==================
-*/
-void Cmd_ZykChars_f(gentity_t *ent) {
-	// zyk: sends info to the client-side menu if player has the client-side plugin
-	if (Q_stricmp(ent->client->pers.guid, "NOGUID") == 0)
-	{
-		return;
-	}
-
-	trap->SendServerCommand(ent->s.number, va("zykchars \"%s^7%s<zykc>\"", zyk_get_rpg_chars(ent, "<zyk>"), ent->client->sess.rpgchar));
-}
-
-qboolean validate_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont_show_message)
+qboolean validate_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, qboolean dont_show_message)
 {
 	// zyk: validation on the upgrade level, which must be in the range of valid skills.
-	if (upgrade_value < 1 || upgrade_value > NUMBER_OF_SKILLS)
+	if (upgrade_value < 1 || upgrade_value > NUM_OF_SKILLS)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"Invalid skill number.\n\"" );
 		return qfalse;
@@ -10283,16 +9763,12 @@ qboolean validate_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont
 	// zyk: the user must have skillpoints to get a new skill level
 	if (ent->client->pers.skillpoints == 0)
 	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"You dont have enough skillpoints.\n\"" );
-		return qfalse;
-	}
-
-	// zyk: skill must be allowed to the player RPG class
-	if (zyk_skill_allowed_for_class(upgrade_value - 1, ent->client->pers.rpg_class) == qfalse)
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent->s.number, va("print \"%s class doesn't allow this skill.\n\"", zyk_rpg_class(ent)));
+		if (dont_show_message == qfalse) {
+			trap->SendServerCommand(ent - g_entities, "print \"^1You don't have enough skillpoints.\n\"");
+			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+				trap->SendServerCommand(ent2 - g_entities, "print \"^1Target player doesn't have enough skillpoints.\n\"");
+			}
+		}
 		return qfalse;
 	}
 
@@ -10367,56 +9843,64 @@ qboolean validate_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean dont
 		return qfalse;
 	}
 
+	if (upgrade_value == 58 && ent->client->pers.skill_levels[57] == 0 && ent->client->pers.skill_levels[18] == 0)
+	{
+		if (dont_show_message == qfalse) {
+			trap->SendServerCommand(ent - g_entities, "print \"^1You must have the ^3Stun baton ^1skill first.\n\"");
+			trap->SendServerCommand(ent2 - g_entities, "print \"^1Player must have the ^3Stun baton ^1skill first\n\"");
+		}
+		return qfalse;
+	}
+
 	return qtrue;
 }
 
-void do_upgrade_skill(gentity_t *ent, int upgrade_value, qboolean update_all)
+void do_upgrade_skill(gentity_t *ent, gentity_t *target_ent, int upgrade_value, qboolean update_all)
 {
 	if (update_all == qfalse)
 	{ // zyk: update a single skill
 		qboolean is_upgraded = qfalse;
 
-		if (validate_upgrade_skill(ent, upgrade_value, qfalse) == qfalse)
+		if (validate_upgrade_skill(target_ent, ent, upgrade_value, qfalse) == qfalse)
 		{
 			return;
 		}
 
 		// zyk: the upgrade is done if it doesnt go above the maximum level of the skill
-		is_upgraded = rpg_upgrade_skill(ent, upgrade_value, qfalse);
+		is_upgraded = rpg_upgrade_skill(target_ent, ent, upgrade_value, qfalse);
 
 		if (is_upgraded == qfalse)
 			return;
 
-		// zyk: saving the account file with the upgraded skill
-		save_account(ent, qtrue);
+		// GalaxyRP (Alex): [Database] Only update the skills table. Also update the characters table to save the skill point
+		update_skills_table_row_with_current_values(target_ent);
 
-		trap->SendServerCommand( ent-g_entities, "print \"Skill upgraded successfully.\n\"" );
-
-		Cmd_ZykMod_f(ent);
+		trap->SendServerCommand(target_ent -g_entities, "print \"^2Skill upgraded successfully.\n\"" );
+		trap->SendServerCommand(ent - g_entities, "print \"^2Target skill upgraded successfully.\n\"");
 	}
 	else
 	{ // zyk: update all skills
 		int i = 0;
 
-		for (i = 1; i <= NUMBER_OF_SKILLS; i++)
+		for (i = 1; i <= NUM_OF_SKILLS; i++)
 		{
 			int j = 0;
 
 			for (j = 0; j < 5; j++)
 			{
-				if (validate_upgrade_skill(ent, i, qtrue) == qtrue)
+				if (validate_upgrade_skill(target_ent, ent, i, qtrue) == qtrue)
 				{
 					// zyk: the upgrade is done if it doesnt go above the maximum level of the skill
-					rpg_upgrade_skill(ent, i, qtrue);
+					rpg_upgrade_skill(target_ent, ent, i, qtrue);
 				}
 			}
 		}
 
-		// zyk: saving the account file with the upgraded skill
-		save_account(ent, qtrue);
+		// GalaxyRP (Alex): [Database] Only update the skills table.
+		update_skills_table_row_with_current_values(target_ent);
 
 		trap->SendServerCommand( ent-g_entities, "print \"Skills upgraded successfully.\n\"" );
-		Cmd_ZykMod_f(ent);
+		trap->SendServerCommand(ent - g_entities, "print \"Target skill upgraded successfully.\n\"");
 	}
 }
 
@@ -10449,20 +9933,20 @@ void Cmd_UpSkill_f( gentity_t *ent ) {
 
 	if (Q_stricmp(arg1, "all") == 0)
 	{ // zyk: upgrade all skills of this class
-		do_upgrade_skill(ent, 0, qtrue);
+		do_upgrade_skill(ent, ent, 0, qtrue);
 	}
 	else
 	{
-		do_upgrade_skill(ent, upgrade_value, qfalse);
+		do_upgrade_skill(ent, ent, upgrade_value, qfalse);
 	}
 }
 
 void do_downgrade_skill(gentity_t *ent, int downgrade_value)
 {
 	// zyk: validation on the downgrade level, which must be in the range of valid skills.
-	if (downgrade_value < 1 || downgrade_value > NUMBER_OF_SKILLS)
+	if (downgrade_value < 1 || downgrade_value > NUM_OF_SKILLS)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Invalid skill number.\n\"" );
+		trap->SendServerCommand( ent-g_entities, "print \"^1Invalid skill number.\n\"" );
 		return;
 	}
 
@@ -11344,12 +10828,52 @@ void do_downgrade_skill(gentity_t *ent, int downgrade_value)
 		}
 	}
 
-	// zyk: saving the account file with the downgraded skill
-	save_account(ent, qtrue);
+	if (downgrade_value == 57)
+	{
+		if (ent->client->pers.skill_levels[56] > 0)
+		{
+			ent->client->pers.skill_levels[56]--;
+			ent->client->pers.skillpoints++;
+
+			if (ent->client->pers.rpg_class == 8)
+			{ // zyk: resetting selected powers
+				ent->client->sess.selected_special_power = 1;
+				ent->client->sess.selected_left_special_power = 1;
+				ent->client->sess.selected_right_special_power = 1;
+			}
+		}
+		else
+		{
+			trap->SendServerCommand(ent - g_entities, "print \"You reached the minimum level of ^3Armor ^7skill.\n\"");
+			return;
+		}
+	}
+
+	if (downgrade_value == 58)
+	{
+		if (ent->client->pers.skill_levels[57] > 0)
+		{
+			ent->client->pers.skill_levels[57]--;
+			ent->client->pers.skillpoints++;
+
+			if (ent->client->pers.rpg_class == 8)
+			{ // zyk: resetting selected powers
+				ent->client->sess.selected_special_power = 1;
+				ent->client->sess.selected_left_special_power = 1;
+				ent->client->sess.selected_right_special_power = 1;
+			}
+		}
+		else
+		{
+			trap->SendServerCommand(ent - g_entities, "print \"You reached the minimum level of ^3Flame Thrower ^7skill.\n\"");
+			return;
+		}
+	}
+
+	// GalaxyRP (Alex): [Database] Only update the skills table.
+	update_skills_table_row_with_current_values(ent);
 
 	trap->SendServerCommand( ent-g_entities, "print \"Skill downgraded successfully.\n\"" );
-
-	Cmd_ZykMod_f(ent);
 }
 
 /*
@@ -11379,303 +10903,69 @@ void Cmd_DownSkill_f( gentity_t *ent ) {
 	do_downgrade_skill(ent, downgrade_value);
 }
 
-// zyk: returns the special jka color chars for RPG skills
-char *zyk_allowed_skill_color(int skill_index, int rpg_class)
-{
-	if (zyk_skill_allowed_for_class(skill_index, rpg_class) == qtrue)
-	{
-		if ((skill_index >= 0 && skill_index <= 4) || skill_index == 38)
-		{
-			return "^7";
-		}
-		else if ((skill_index >= 8 && skill_index <= 12) || skill_index == 54)
-		{
-			return "^5";
-		}
-		else if ((skill_index >= 13 && skill_index <= 17) || skill_index == 32)
-		{
-			return "^1";
-		}
-		else if (skill_index == 30 || skill_index == 31)
-		{
-			return "^2";
-		}
-		else if (skill_index >= 35 && skill_index <= 37)
-		{
-			return "^6";
-		}
-		else
-		{
-			return "^3";
-		}
+// GalaxyRP (Alex): [Skill Display] This method returns a color string based on the ability alignment. Used in displaying the skill to the user.
+char *color_ability(skill_t skill) {
+	if (strcmp(skill.alignment, "light") == 0) {
+		return "^4";
 	}
-	else
-	{
-		return "^0";
+	else if (strcmp(skill.alignment, "dark") == 0) {
+		return "^1";
 	}
+	else if (strcmp(skill.alignment, "neutral") == 0) {
+		return "^5";
+	}
+	else if (strcmp(skill.alignment, "merc") == 0) {
+		return "^3";
+	}
+}
+
+char *add_spacing_for_columns(skill_t skill, char* message, int skill_id) {
+
+	int array_stop = 20 - strlen(skill.skill_name);
+
+	if (skill_id >= 10) {
+		array_stop--;
+	}
+
+	for (int i = 0; i < array_stop; i++)
+	{
+		strcpy(message, va("%s ", message));
+	}
+
+	strcpy(message, va("%s", message));
+
+	return message;
 }
 
 void zyk_list_player_skills(gentity_t *ent, gentity_t *target_ent, char *arg1)
 {
 	char message[1024];
-	char message_content[12][100];
 	int i = 0;
+	int display_counter = 0;
 
 	strcpy(message,"");
-				
-	while (i < 11)
+
+	for (int i = 0; i < ARRAY_LEN(skills); i++)
 	{
-		strcpy(message_content[i],"");
-		i++;
-	}
-	message_content[11][0] = '\0';
-	i = 0;
-
-	if (Q_stricmp( arg1, "force" ) == 0)
-	{
-		strcpy(message_content[0], va("%s 1 - Jump: %d/%d          ", zyk_allowed_skill_color(0, ent->client->pers.rpg_class),ent->client->pers.skill_levels[0], max_skill_levels[0]));
-				
-		strcpy(message_content[1], va("%s 2 - Push: %d/%d          ", zyk_allowed_skill_color(1, ent->client->pers.rpg_class),ent->client->pers.skill_levels[1], max_skill_levels[1]));
-				
-		strcpy(message_content[2], va("%s 3 - Pull: %d/%d          ", zyk_allowed_skill_color(2, ent->client->pers.rpg_class),ent->client->pers.skill_levels[2], max_skill_levels[2]));
-				
-		strcpy(message_content[3], va("%s 4 - Speed: %d/%d         ", zyk_allowed_skill_color(3, ent->client->pers.rpg_class),ent->client->pers.skill_levels[3], max_skill_levels[3]));
-				
-		strcpy(message_content[4], va("%s 5 - Sense: %d/%d         ", zyk_allowed_skill_color(4, ent->client->pers.rpg_class),ent->client->pers.skill_levels[4], max_skill_levels[4]));
-				
-		strcpy(message_content[5], va("%s 6 - Saber Attack: %d/%d  ", zyk_allowed_skill_color(5, ent->client->pers.rpg_class),ent->client->pers.skill_levels[5], max_skill_levels[5]));
-				
-		strcpy(message_content[6], va("%s 7 - Saber Defense: %d/%d ", zyk_allowed_skill_color(6, ent->client->pers.rpg_class),ent->client->pers.skill_levels[6], max_skill_levels[6]));
-				
-		strcpy(message_content[7], va("%s 8 - Saber Throw: %d/%d   ", zyk_allowed_skill_color(7, ent->client->pers.rpg_class),ent->client->pers.skill_levels[7], max_skill_levels[7]));
-				
-		strcpy(message_content[8], va("%s 9 - Absorb: %d/%d        ", zyk_allowed_skill_color(8, ent->client->pers.rpg_class),ent->client->pers.skill_levels[8], max_skill_levels[8]));
-
-		strcpy(message_content[0], va("%s%s10 - Heal: %d/%d\n",message_content[0], zyk_allowed_skill_color(9, ent->client->pers.rpg_class),ent->client->pers.skill_levels[9], max_skill_levels[9]));
-
-		strcpy(message_content[1], va("%s%s11 - Protect: %d/%d\n",message_content[1], zyk_allowed_skill_color(10, ent->client->pers.rpg_class),ent->client->pers.skill_levels[10], max_skill_levels[10]));
-				
-		strcpy(message_content[2], va("%s%s12 - Mind Trick: %d/%d\n",message_content[2], zyk_allowed_skill_color(11, ent->client->pers.rpg_class),ent->client->pers.skill_levels[11], max_skill_levels[11]));
-				
-		strcpy(message_content[3], va("%s%s13 - Team Heal: %d/%d\n",message_content[3], zyk_allowed_skill_color(12, ent->client->pers.rpg_class),ent->client->pers.skill_levels[12], max_skill_levels[12]));
-				
-		strcpy(message_content[4], va("%s%s14 - Lightning: %d/%d\n",message_content[4], zyk_allowed_skill_color(13, ent->client->pers.rpg_class),ent->client->pers.skill_levels[13], max_skill_levels[13]));
-				
-		strcpy(message_content[5], va("%s%s15 - Grip: %d/%d\n",message_content[5], zyk_allowed_skill_color(14, ent->client->pers.rpg_class),ent->client->pers.skill_levels[14], max_skill_levels[14]));
-
-		strcpy(message_content[6], va("%s%s16 - Drain: %d/%d\n",message_content[6], zyk_allowed_skill_color(15, ent->client->pers.rpg_class),ent->client->pers.skill_levels[15], max_skill_levels[15]));
-
-		strcpy(message_content[7], va("%s%s17 - Rage: %d/%d\n",message_content[7], zyk_allowed_skill_color(16, ent->client->pers.rpg_class),ent->client->pers.skill_levels[16], max_skill_levels[16]));
-
-		strcpy(message_content[8], va("%s%s18 - Team Energize: %d/%d\n",message_content[8], zyk_allowed_skill_color(17, ent->client->pers.rpg_class),ent->client->pers.skill_levels[17], max_skill_levels[17]));
-
-		for (i = 0; i < 9; i++)
-		{
-			strcpy(message, va("%s%s",message,message_content[i]));
+		if (strcmp(skills[i].category, arg1) == 0) {
+			strcpy(message, va("%s%s%d - %s: %d/%d", message, color_ability(skills[i]), i + 1, skills[i].skill_name, ent->client->pers.skill_levels[i], skills[i].max_level));
+			
+			if (display_counter % 2 != 0) {
+				strcpy(message, va("%s\n", message));
+			}
+			else {
+				strcpy(message, va("%s", add_spacing_for_columns(skills[i], message, i + 1)));
+			}
+			display_counter++;
 		}
-
-		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
 	}
-	else if (Q_stricmp( arg1, "weapons" ) == 0)
-	{
-		strcpy(message_content[0], va("%s19 - Stun Baton: %d/%d        ", zyk_allowed_skill_color(18, ent->client->pers.rpg_class),ent->client->pers.skill_levels[18], max_skill_levels[18]));
-					
-		strcpy(message_content[1], va("%s20 - Blaster Pistol: %d/%d    ", zyk_allowed_skill_color(19, ent->client->pers.rpg_class),ent->client->pers.skill_levels[19], max_skill_levels[19]));
-							
-		strcpy(message_content[2], va("%s21 - E11 Blaster Rifle: %d/%d ", zyk_allowed_skill_color(20, ent->client->pers.rpg_class),ent->client->pers.skill_levels[20], max_skill_levels[20]));
-							
-		strcpy(message_content[3], va("%s22 - Disruptor: %d/%d         ", zyk_allowed_skill_color(21, ent->client->pers.rpg_class),ent->client->pers.skill_levels[21], max_skill_levels[21]));
-					
-		strcpy(message_content[4], va("%s23 - Bowcaster: %d/%d         ", zyk_allowed_skill_color(22, ent->client->pers.rpg_class),ent->client->pers.skill_levels[22], max_skill_levels[22]));
-					
-		strcpy(message_content[5], va("%s24 - Repeater: %d/%d          ", zyk_allowed_skill_color(23, ent->client->pers.rpg_class),ent->client->pers.skill_levels[23], max_skill_levels[23]));
-					
-		strcpy(message_content[0], va("%s%s25 - DEMP2: %d/%d\n",message_content[0], zyk_allowed_skill_color(24, ent->client->pers.rpg_class),ent->client->pers.skill_levels[24], max_skill_levels[24]));
-					
-		strcpy(message_content[1], va("%s%s26 - Flechette: %d/%d\n",message_content[1], zyk_allowed_skill_color(25, ent->client->pers.rpg_class),ent->client->pers.skill_levels[25], max_skill_levels[25]));
-					
-		strcpy(message_content[2], va("%s%s27 - Rocket Launcher: %d/%d\n",message_content[2], zyk_allowed_skill_color(26, ent->client->pers.rpg_class),ent->client->pers.skill_levels[26], max_skill_levels[26]));
-					
-		strcpy(message_content[3], va("%s%s28 - Concussion Rifle: %d/%d\n",message_content[3], zyk_allowed_skill_color(27, ent->client->pers.rpg_class),ent->client->pers.skill_levels[27], max_skill_levels[27]));
-					
-		strcpy(message_content[4], va("%s%s29 - Bryar Pistol: %d/%d\n",message_content[4], zyk_allowed_skill_color(28, ent->client->pers.rpg_class),ent->client->pers.skill_levels[28], max_skill_levels[28]));
 
-		strcpy(message_content[5], va("%s%s30 - Melee: %d/%d\n",message_content[5], zyk_allowed_skill_color(29, ent->client->pers.rpg_class),ent->client->pers.skill_levels[29], max_skill_levels[29]));
-
-		for (i = 0; i < 6; i++)
-		{
-			strcpy(message, va("%s%s",message,message_content[i]));
-		}
-
-		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
-	}
-	else if (Q_stricmp( arg1, "other" ) == 0)
-	{
-		strcpy(message_content[0], va("%s31 - Max Shield: %d/%d       \n", zyk_allowed_skill_color(30, ent->client->pers.rpg_class), ent->client->pers.skill_levels[30], max_skill_levels[30]));
-
-		strcpy(message_content[1], va("%s32 - Shield Strength: %d/%d  \n", zyk_allowed_skill_color(31, ent->client->pers.rpg_class), ent->client->pers.skill_levels[31], max_skill_levels[31]));
-
-		strcpy(message_content[2], va("%s33 - Health Strength: %d/%d  \n", zyk_allowed_skill_color(32, ent->client->pers.rpg_class), ent->client->pers.skill_levels[32], max_skill_levels[32]));
-
-		strcpy(message_content[3], va("%s34 - Drain Shield: %d/%d     \n", zyk_allowed_skill_color(33, ent->client->pers.rpg_class), ent->client->pers.skill_levels[33], max_skill_levels[33]));
-
-		strcpy(message_content[4], va("%s35 - Jetpack: %d/%d          \n", zyk_allowed_skill_color(34, ent->client->pers.rpg_class), ent->client->pers.skill_levels[34], max_skill_levels[34]));
-
-		strcpy(message_content[5], va("%s36 - Sense Health: %d/%d     \n", zyk_allowed_skill_color(35, ent->client->pers.rpg_class), ent->client->pers.skill_levels[35], max_skill_levels[35]));
-
-		strcpy(message_content[6], va("%s37 - Shield Heal: %d/%d      \n", zyk_allowed_skill_color(36, ent->client->pers.rpg_class), ent->client->pers.skill_levels[36], max_skill_levels[36]));
-
-		strcpy(message_content[7], va("%s38 - Team Shield Heal: %d/%d\n", zyk_allowed_skill_color(37, ent->client->pers.rpg_class), ent->client->pers.skill_levels[37], max_skill_levels[37]));
-
-		strcpy(message_content[8], va("%s39 - Unique Skill: %d/%d\n", zyk_allowed_skill_color(38, ent->client->pers.rpg_class), ent->client->pers.skill_levels[38], max_skill_levels[38]));
-
-		strcpy(message_content[9], va("%s55 - Force Power: %d/%d\n", zyk_allowed_skill_color(54, ent->client->pers.rpg_class), ent->client->pers.skill_levels[54], max_skill_levels[54]));
-
-		strcpy(message_content[10], va("%s56 - Improvements: %d/%d\n", zyk_allowed_skill_color(55, ent->client->pers.rpg_class), ent->client->pers.skill_levels[55], max_skill_levels[55]));
-
-		for (i = 0; i < 11; i++)
-		{
-			strcpy(message, va("%s%s",message,message_content[i]));
-		}
-
-		trap->SendServerCommand( target_ent->s.number, va("print \"%s\n\"", message) );
-	}
-	else if (Q_stricmp( arg1, "ammo" ) == 0)
-	{
-		strcpy(message, va("%s%s40 - Blaster Pack: %d/%d\n",message, zyk_allowed_skill_color(39, ent->client->pers.rpg_class), ent->client->pers.skill_levels[39], max_skill_levels[39]));
-
-		strcpy(message, va("%s%s41 - Power Cell: %d/%d\n",message, zyk_allowed_skill_color(40, ent->client->pers.rpg_class), ent->client->pers.skill_levels[40], max_skill_levels[40]));
-
-		strcpy(message, va("%s%s42 - Metallic Bolt: %d/%d\n",message, zyk_allowed_skill_color(41, ent->client->pers.rpg_class), ent->client->pers.skill_levels[41], max_skill_levels[41]));
-
-		strcpy(message, va("%s%s43 - Rockets: %d/%d\n",message, zyk_allowed_skill_color(42, ent->client->pers.rpg_class), ent->client->pers.skill_levels[42], max_skill_levels[42]));
-					
-		strcpy(message, va("%s%s44 - Thermals: %d/%d\n",message, zyk_allowed_skill_color(43, ent->client->pers.rpg_class), ent->client->pers.skill_levels[43], max_skill_levels[43]));
-
-		strcpy(message, va("%s%s45 - Trip Mines: %d/%d\n",message, zyk_allowed_skill_color(44, ent->client->pers.rpg_class), ent->client->pers.skill_levels[44], max_skill_levels[44]));
-
-		strcpy(message, va("%s%s46 - Det Packs: %d/%d\n",message, zyk_allowed_skill_color(45, ent->client->pers.rpg_class), ent->client->pers.skill_levels[45], max_skill_levels[45]));
-
-		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
-	}
-	else if (Q_stricmp( arg1, "items" ) == 0)
-	{
-		strcpy(message, va("%s%s47 - Binoculars: %d/%d\n",message, zyk_allowed_skill_color(46, ent->client->pers.rpg_class), ent->client->pers.skill_levels[46], max_skill_levels[46]));
-					
-		strcpy(message, va("%s%s48 - Bacta Canister: %d/%d\n",message, zyk_allowed_skill_color(47, ent->client->pers.rpg_class), ent->client->pers.skill_levels[47], max_skill_levels[47]));
-
-		strcpy(message, va("%s%s49 - Sentry Gun: %d/%d\n",message, zyk_allowed_skill_color(48, ent->client->pers.rpg_class), ent->client->pers.skill_levels[48], max_skill_levels[48]));
-
-		strcpy(message, va("%s%s50 - Seeker Drone: %d/%d\n",message, zyk_allowed_skill_color(49, ent->client->pers.rpg_class), ent->client->pers.skill_levels[49], max_skill_levels[49]));
-
-		strcpy(message, va("%s%s51 - E-Web: %d/%d\n",message, zyk_allowed_skill_color(50, ent->client->pers.rpg_class), ent->client->pers.skill_levels[50], max_skill_levels[50]));
-
-		strcpy(message, va("%s%s52 - Big Bacta: %d/%d\n",message, zyk_allowed_skill_color(51, ent->client->pers.rpg_class), ent->client->pers.skill_levels[51], max_skill_levels[51]));
-
-		strcpy(message, va("%s%s53 - Force Field: %d/%d\n",message, zyk_allowed_skill_color(52, ent->client->pers.rpg_class), ent->client->pers.skill_levels[52], max_skill_levels[52]));
-
-		strcpy(message, va("%s%s54 - Cloak Item: %d/%d\n",message, zyk_allowed_skill_color(53, ent->client->pers.rpg_class), ent->client->pers.skill_levels[53], max_skill_levels[53]));
-
-		trap->SendServerCommand( target_ent->s.number, va("print \"%s\"", message) );
-	}
-}
-
-void zyk_list_stuff(gentity_t *ent, gentity_t *target_ent)
-{
-	char stuff_message[1024];
-	strcpy(stuff_message, "");
-
-	if (ent->client->pers.secrets_found & (1 << 0))
-		strcpy(stuff_message, va("%s^3\nHoldable Items Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3\nHoldable Items Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 1))
-		strcpy(stuff_message, va("%s^3Bounty Hunter Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Bounty Hunter Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 2))
-		strcpy(stuff_message, va("%s^3Unique Ability 1 - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Unique Ability 1 - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 3))
-		strcpy(stuff_message, va("%s^3Unique Ability 2 - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Unique Ability 2 - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 4))
-		strcpy(stuff_message, va("%s^3Unique Ability 3 - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Unique Ability 3 - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 7))
-		strcpy(stuff_message, va("%s^3Stealth Attacker Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Stealth Attacker Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 8))
-		strcpy(stuff_message, va("%s^3Force Gunner Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Force Gunner Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 9))
-		strcpy(stuff_message, va("%s^3Impact Reducer - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Impact Reducer - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 10))
-		strcpy(stuff_message, va("%s^3Flame Thrower - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Flame Thrower - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 11))
-		strcpy(stuff_message, va("%s^3Power Cell Weapons Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Power Cell Weapons Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 12))
-		strcpy(stuff_message, va("%s^3Blaster Pack Weapons Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Blaster Pack Weapons Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 13))
-		strcpy(stuff_message, va("%s^3Metal Bolts Weapons Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Metal Bolts Weapons Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 14))
-		strcpy(stuff_message, va("%s^3Rocket Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Rocket Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 15))
-		strcpy(stuff_message, va("%s^3Stun Baton Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Stun Baton Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 16))
-		strcpy(stuff_message, va("%s^3Armored Soldier Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Armored Soldier Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 17))
-		strcpy(stuff_message, va("%s^3Jetpack Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Jetpack Upgrade - ^1no\n", stuff_message));
-
-	if (ent->client->pers.secrets_found & (1 << 19))
-		strcpy(stuff_message, va("%s^3Force Guardian Upgrade - ^2yes\n", stuff_message));
-	else
-		strcpy(stuff_message, va("%s^3Force Guardian Upgrade - ^1no\n", stuff_message));
-
-	trap->SendServerCommand(target_ent - g_entities, va("print \"%s\n\"", stuff_message));
+	trap->SendServerCommand(target_ent->s.number, va("print \"%s\n\n\"", message));
 }
 
 void list_rpg_info(gentity_t *ent, gentity_t *target_ent)
 { // zyk: lists general RPG info of this player
-	trap->SendServerCommand(target_ent->s.number, va("print \"\n^2Account: ^7%s\n^2Character: ^7%s\n\n^3Level: ^7%d/%d\n^3Skill Points: ^7%d\n\n^7Use ^2/list help ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->pers.level, zyk_rpg_max_level.integer, (ent->client->pers.level * zyk_level_up_score_factor.integer), ent->client->pers.skillpoints));
+	trap->SendServerCommand(target_ent->s.number, va("print \"\n^2Account: ^7%s\n^2Character: ^7%s\n\n^3Level: ^7%d/%d\n^3XP: ^7%d/%d\n^3Skill Points: ^7%d\n\n^7Use ^2/list help ^7to see console commands\n\n\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->pers.level, zyk_rpg_max_level.integer, ent->client->pers.xp, check_xp(ent->client->pers.level), ent->client->pers.skillpoints));
 }
 
 /*
@@ -11702,7 +10992,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 
 			if (Q_stricmp( arg1, "help" ) == 0)
 			{
-				trap->SendServerCommand(ent-g_entities, "print \"\n^2/list force: ^7lists force power skills\n^2/list weapons: ^7lists weapon skills\n^2/list other: ^7lists miscellaneous skills\n^2/list ammo: ^7lists ammo skills\n^2/list items: ^7lists holdable items skills\n^2/list [skill number]: ^7lists info about a skill\n^2/list commands: ^7lists the Galaxy Mod console commands\n^2/list stuff: ^7lists stuff bought from the seller\n\n\"");
+				trap->SendServerCommand(ent-g_entities, "print \"\n^2/list force: ^7lists force power skills\n^2/list weapons: ^7lists weapon skills\n^2/list other: ^7lists miscellaneous skills\n^2/list ammo: ^7lists ammo skills\n^2/list items: ^7lists holdable items skills\n^2/list [skill number]: ^7lists info about a skill\n^2/list commands: ^7lists the Galaxy Mod console commands\n\n\"");
 			}
 			else if (Q_stricmp( arg1, "force" ) == 0 || Q_stricmp( arg1, "weapons" ) == 0 || Q_stricmp( arg1, "other" ) == 0 || 
 					 Q_stricmp( arg1, "ammo" ) == 0 || Q_stricmp( arg1, "items" ) == 0)
@@ -11711,204 +11001,64 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 			}
 			else if (Q_stricmp( arg1, "commands" ) == 0)
 			{
-				trap->SendServerCommand( ent-g_entities, "print \"\n^2Commands\n\n^3/new [login] [password]: ^7creates a new account.\n^3/login [login] [password]: ^7loads the account.\n^3/up [skill number]: ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n^3/down [skill number]: ^7downgrades a skill.\n^3/adminlist: ^7lists admin commands.\n^3/adminup [player id or name] [command number]: ^7gives the player an admin command.\n^3/admindown [player id or name] [command number]: ^7removes an admin command from a player.\n^3/callseller: ^7calls the jawa seller.\n^3/givecredits [player id or name] [amount]: ^7gives credits to a player.\n^3/changepassword <new_password>: ^7changes the account password.\n^3/tutorial: ^7shows all info about the mod.\n^3/logout: ^7logs out the account.\n\n\"" );
-			}
-			else if (Q_stricmp( arg1, "stuff" ) == 0)
-			{
-				zyk_list_stuff(ent, ent);
+				trap->SendServerCommand(ent - g_entities, "print \"\n^2Commands\n\n\^3--------Account--------\n\
+^3/new [login] [password]: ^7creates a new account.\n\
+^3/login [login] [password]: ^7loads the account.\n\
+^3/logout: ^7logs out the account.\n\
+^3/changepassword <new password>: ^7changes the account password.\n\n\" ");
+				trap->SendServerCommand(ent - g_entities, "print \"^3--------Character--------\n\
+^3/attributes <description>: ^7Sets your character's description. Can be viewed by others with ^3\ex^7.\n\
+^3/examine <player name>: ^7Displays someone's character description. (/ex can be used also)\n\
+^3/char <new/use/delete (optional)> <character name (optional)>: ^7Creates/switches to/deletes a character. Run with no arguments to list your characters.\n\n\" ");
+				trap->SendServerCommand(ent - g_entities, "print \"^3--------Admin Commands--------\n\
+^3/adminlist: ^7lists admin commands.\n\
+^3/adminup <player name> <command number>: ^7gives the player an admin command.\n\
+^3/admindown <player name> <command number>: ^7removes an admin command from a player.\n\
+^3/music <path>: ^7Replaces the current map music with the song given.\n\
+^3/levelup <player name>: ^7Levels the player up by one.\n\
+^3/leveldown <player name>: ^7Brings the player's level down by one.\n\
+^3/givexp <player name>: ^7Gives the player one xp.\n\
+^3/skillup <player name> <skill number>: ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"^3/skildown <player name> <skill number>: ^7downgrades a skill.\n\
+^3/god: ^7Makes you invincible.\n\
+^3/players <player name> <force/weapons/orther/ammo/items/stuff (optional)>: ^7Checks a player's abilities and stats.\n\
+^3/telemark: ^7Sets a marker you can teleport to later.\n\
+^3/teleport <player name (optional)>: ^7Teleport to the player. Use with no arguments to teleport to your telemark.\n\
+^3/silence <player name>: ^7Silences the player.\n\
+^3/paralyze <player name>: ^7Paralyzes the player.\n\
+^3/clientprint <player name> <text>: ^7Prints text on the player's screen.\n\
+^3/shakescreen <distance from player> <intensity> <length>: ^7Shakes players' screen who are a certain distance from you.\n\
+^3/noclip: ^7Makes you able to go through walls.\n\n\" ");
+				trap->SendServerCommand(ent - g_entities, "print \"^3--------Entity System--------\n\
+^3/entlist <page>: ^7Displays entities present on the map.\n\
+^3/entadd <entity parameters>: ^7Adds an entity to the map.\n\
+^3/entsave <filename>: ^7Saves the current entities in a preset file. (use 'default' to load the preset as soon as the map changes)\n\
+^3/entload <filename>: ^7Loads a preset of entities.\n\
+^3/entorigin: ^7Saves current location for entity spawning.\n\
+^3/entundo: ^7Undos the last entity spawned. Only works once.\n\
+^3/spawnplatform: ^7Spawns a platform where the player is.\n\
+^3/spawndummy: ^7Spawns a dummy where the player is.\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"^3--------Credits--------\n\
+^3/callseller: ^7calls the jawa seller.\n\
+^3/createcredits: ^7Creates credits and gives them to a player. ^1(Admin only)\n\
+^3/spendcredits: ^7Deletes credits from your inventory and displays a message. (For paying NPCs)\n\
+^3/givecredits <player name> <amount>: ^7gives credits to a player.\n\n\"" );
+				trap->SendServerCommand(ent - g_entities, "print \"^3--------Ally System--------\n\
+^3/allyadd <player name>: ^7Adds a player as an ally.\n\
+^3/allyremove <player name>: ^7Removes the player from allies.\n\
+^3/allylist: ^7Lists your allies.\n\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"^3--------Misc--------\n\
+^3/flipcoin: ^7Flips a coin and displays the result in chat.\n\
+^3/roll <max value>: ^7Rolls a dice and displays the result in chat.\n\
+^3/anim <id/word/list>: ^7Plays an animation by id or word. List is for listing all the available animations.\n\
+^3/where: ^7Displays your current coordinates.\n\n\"");
 			}
 			else
 			{ // zyk: the player can also list the specific info of a skill passing the skill number as argument
 				i = atoi(arg1);
-				if (i >= 1 && i <= NUMBER_OF_SKILLS)
+				if (i >= 1 && i <= NUM_OF_SKILLS)
 				{
-					if (i == 1)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Jump: ^7makes you use the force to jump higher. Level 5 has no height limit, you can continue jumping up until you run out of force, and it also lets you jump out of water\n\"" );
-					if (i == 2)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Push: ^7pushes the opponent forward\n\"" );
-					if (i == 3)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Pull: ^7pulls the opponent towards you\n\"" );
-					if (i == 4)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Speed: ^7increases your speed. Level 1 is 1.5 times normal speed. Level 2 is 2.0, level 3 is 2.5 times and level 4 is 3.0 times\n\"" );
-					if (i == 5)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Sense: ^7allows you to see people through walls, invisible people or cloaked people and you can dodge disruptor shots. Represents your mind strength to resist Mind Control if your sense level is equal or higher than the enemy's mind trick level\n\"" );
-					if (i == 6)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Saber Attack: ^7gives you the saber. If you are using Single Saber, gives you the saber styles. If using duals or staff, increases saber damage, which is increased by 20 per cent for each level. This server has a saber damage scale of %.2f\n\"", g_saberDamageScale.value) );
-					if (i == 7)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Saber Defense: ^7increases your ability to block, parry enemy saber attacks or enemy shots\n\"" );
-					if (i == 8)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Saber Throw: ^7throws your saber at enemy and gets it back. Each level increases max distance and saber throw speed. Has %d damage\n\"", zyk_saber_throw_damage.integer) );
-					if (i == 9)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Absorb: ^7allows you to absorb force power attacks done to you\n\"" );
-					if (i == 10)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Heal: ^7recover some Health. Level 1 restores 5 hp, level 2 restores 10 hp and level 3 restores 25 hp\n\"" );
-					if (i == 11)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Protect: ^7decreases damage done to you by non-force power attacks. At level 4 decreases force consumption when receiving damage\n\"" );
-					if (i == 12)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Mind Trick: ^7makes yourself invisible to the players affected by this force power. Force User class can mind control a player or npc. Level 1 has a duration of 20 seconds, level 2 is 25 seconds and level 3 is 30 seconds\n\"" );
-					if (i == 13)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Team Heal: ^7restores some health to players near you\n\"" );
-					if (i == 14)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Lightning: ^7attacks with a powerful electric attack at players near you. At level 4, does more damage and pushes the enemy back\n\"" );
-					if (i == 15)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Grip: ^7attacks a player by holding and damaging him\n\"" );
-					if (i == 16)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Drain: ^7drains force power from a player to restore your health\n\"" );
-					if (i == 17)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Rage: ^7makes you 1.3 times faster, increases your saber attack speed and damage and makes you get less damage. Force Guardian class, with Improvements skill at least on level 1, can regen some force when taking damage on health while Rage is active\n\"" );
-					if (i == 18)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Team Energize: ^7restores some force power to players near you. If Improvements skill is at least at level 1, regens blaster pack and power cell ammo of the target players\n\"" );
-					if (i == 19)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Stun Baton: ^7attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. With Stun Baton Upgrade, can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds\n\"", zyk_stun_baton_damage.integer));
-					if (i == 20)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Blaster Pistol: ^7the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The pistol shot does %d damage. The charged shot causes a lot more damage depending on how much it was charged\n\"", zyk_blaster_pistol_damage.integer));
-					if (i == 21)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3E11 Blaster Rifle: ^7the rifle used by the Storm Troopers. E11 shots do %d damage. Normal fire is a single shot, while the alternate fire is the rapid fire\n\"", zyk_e11_blaster_rifle_damage.integer) );
-					if (i == 22)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Disruptor: ^7the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged, causes %d damage\n\"", zyk_disruptor_damage.integer, zyk_disruptor_alt_damage.integer) );
-					if (i == 23)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Bowcaster: ^7the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once. It does %d damage\n\"", zyk_bowcaster_damage.integer) );
-					if (i == 24)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Repeater: ^7a powerful weapon with a rapid fire and a plasma bomb. Normal fire shoots the rapid fire, and does %d damage. Alt fire fires the plasma bomb and does %d damage\n\"", zyk_repeater_damage.integer, zyk_repeater_alt_damage.integer) );
-					if (i == 25)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3DEMP2: ^7a very powerful weapon against machine npc and some vehicles, causing more damage to them and stunning them. Normal fire does %d damage and alt fire can be charged and does %d damage\n\"", zyk_demp2_damage.integer, zyk_demp2_alt_damage.integer) );
-					if (i == 26)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Flechette: ^7this weapon is similar to a shotgun. Normal fire causes %d damage. Alt fire shoots 2 bombs and causes %d damage\n\"", zyk_flechette_damage.integer, zyk_flechette_alt_damage.integer) );
-					if (i == 27)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Rocket Launcher: ^7a powerful explosive weapon. Normal fire shoots a rocket causing %d damage. Alt fire shoots a homing missile\n\"", zyk_rocket_damage.integer) );
-					if (i == 28)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Concussion Rifle: ^7it shoots a powerful shot that has a big damage area. Alt fire shoots a ray similar to disruptor shots, but it can go through force fields and can throw the enemy on the ground. Normal fire does %d damage and alt fire does %d damage\n\"", zyk_concussion_damage.integer, zyk_concussion_alt_damage.integer) );
-					if (i == 29)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Bryar Pistol: ^7very similar to the blaster pistol, but this one has a better fire rate with normal shot. Does %d damage\n\"", zyk_blaster_pistol_damage.integer) );
-					if (i == 30)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Melee: ^7allows you to attack with your fists and legs. You can punch, kick or do a special melee attack by holding both Attack and Alt Attack buttons (usually the mouse buttons). At level 0, melee attacks cause only half normal damage. Right hand punch causes %d normal damage, left hand punch causes %d normal damage and kick causes %d damage at level 1\n\"", zyk_melee_right_hand_damage.integer, zyk_melee_left_hand_damage.integer, zyk_melee_kick_damage.integer) );
-					if (i == 31)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Max Shield: ^7The max shield (armor) the player can have. Each level increases 20 per cent of max shield the player can have\n\"" );
-					if (i == 32)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Shield Strength: ^7Each level increases your shield resistance by 7 per cent\n\"" );
-					if (i == 33)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Health Strength: ^7Each level increases your health resistance by 7 per cent\n\"" );
-					if (i == 34)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Drain Shield: ^7When using Drain force power, and your health is full, restores some shield. It also makes Drain suck hp/shield from the enemy to restore your hp/shield\n\"" );
-					if (i == 35)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Jetpack: ^7the jetpack, used by Boba Fett. Allows you to fly. To use it, jump and press the Use key (usually R) while in the middle of the jump. Each level uses less fuel, allowing you to fly for a longer time\n\"" );
-					if (i == 36)
-						trap->SendServerCommand( ent-g_entities, "print \"^3Sense Health: ^7allows you to see info about someone, including npcs. Level 1 shows current health. Level 2 shows name, health and shield. Level 3 shows name, health and max health, shield and max shield, force and max force, mp and max mp. To use it, when you are near a player or npc, use ^3Sense ^7force power\n\"" );
-					if (i == 37)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Shield Heal: ^7recovers 4 shield at level 1, 8 shield at level 2 and 12 shield at level 3. To use it, use Heal force power when you have full HP. This skill uses %d force power\n\"", zyk_max_force_power.integer/2) );
-					if (i == 38)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Team Shield Heal: ^7recovers 3 shield at level 1, 6 shield at level 2 and 9 shield at level 3 to players near you. To use it, when near players, use Team Heal force power. It will heal their shield after they have full HP\n\"") );
-					//if (i == 39)
-						//trap->SendServerCommand( ent-g_entities, va("print \"^3Unique Skill: ^7Used by pressing Engage Duel key\nFree Warrior: recovers some hp, shield and mp\nForce User: creates a force shield around the player that greatly reduces damage and protects against force powers\nBounty Hunter: allows firing poison darts with melee by spending metal bolts ammo\nArmored Soldier: spends power cell ammo to increase auto-shield-heal rate\nMonk: increases auto-healing rate and disables enemy Grip\nStealth Attacker: spends power cell ammo to increase disruptor firerate\nDuelist: recovers some MP and disables jetpack, cloak, speed and force regen of enemies nearby\nForce Gunner: disarms enemies nearby\nMagic Master: increases magic bolts, Lightning Dome, Magic Explosion and Healing Area damage. Increases Magic Sense duration. Healing Area heals more\nForce Guardian: increases resistance to damage for some seconds\n\"") );
-					if (i == 40)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Blaster Pack: ^7used as ammo for Blaster Pistol, Bryar Pistol and E11 Blaster Rifle. You can carry up to %d ammo\n\"",zyk_max_blaster_pack_ammo.integer) );
-					if (i == 41)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Power Cell: ^7used as ammo for Disruptor, Bowcaster and DEMP2. You can carry up to %d ammo\n\"",zyk_max_power_cell_ammo.integer) );
-					if (i == 42)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Metallic Bolt: ^7used as ammo for Repeater, Flechette and Concussion Rifle. You can carry up to %d ammo\n\"",zyk_max_metal_bolt_ammo.integer) );
-					if (i == 43)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Rockets: ^7used as ammo for Rocket Launcher. You can carry up to %d ammo\n\"",zyk_max_rocket_ammo.integer) );
-					if (i == 44)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Thermal Detonator: ^7the famous detonator used by Leia in Ep 6 at the Jabba Palace. Normal fire throws it, which explodes after some seconds. Alt fire throws it and it explodes as soon as it touches something. Thermals cause %d damage\n\"", zyk_thermal_damage.integer) );
-					if (i == 45)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Trip Mine: ^7a mine that can be planted somewhere. Normal fire plants a mine with a laser that when touched makes the mine explode, causing %d damage. Alt fire plants proximity mines\n\"", zyk_tripmine_damage.integer) );
-					if (i == 46)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Det Pack: ^7a very powerful explosive, which you can detonate remotely with the alt fire button. Causes %d damage\n\"", zyk_detpack_damage.integer) );
-					if (i == 47)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Binoculars: ^7this item allows you to see distant things better with its zoom.\n\"") );
-					if (i == 48)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Bacta Canister: ^7allows you to recover 25 HP\n\"") );
-					if (i == 49)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Sentry Gun: ^7after placed on the ground, shoots at any nearby enemy\n\"") );
-					if (i == 50)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Seeker Drone: ^7a flying ball that flies around you, shooting anyone in its range\n\"") );
-					if (i == 51)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3E-Web: ^7allows you to shoot at people with it, it has a good fire rate\n\"") );
-					if (i == 52)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Big Bacta: ^7allows you to recover 50 HP\n\"") );
-					if (i == 53)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Force Field: ^7a powerful shield that protects you from enemy attacks, it can resist a lot against any weapon\n\"") );
-					if (i == 54)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Cloak Item: ^7makes you almost invisible to players and invisible to npcs. Can cloak your vehicle by pressing the Lightsaber Style key (default L) if you have the Holdable Items Upgrade\n\"") );
-					if (i == 55)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Force Power: ^7increases the max force power you have. Necessary to allow you to use force powers and force-based skills\n\"") );
-					//if (i == 56)
-						//trap->SendServerCommand( ent-g_entities, va("print \"^3Improvements:\nFree Warrior ^7gets more damage and more resistance to damage\n^3Force User ^7gets more saber damage and force regens faster\n^3Bounty Hunter ^7gets more gun damage, max ammo, credits in battle, jetpack fuel, sentry gun health, and E-Web health\n^3Armored Soldier ^7gets more resistance to damage\n^3Monk ^7gets more run speed, melee damage and melee attack speed\n^3Stealth Attacker ^7gets more gun damage and more resistance to electric attacks\n^3Duelist ^7gets more saber and melee damage and faster force regen\n^3Force Gunner ^7gets more damage and more resistance to damage\n^3Magic Master ^7gets more Magic Points, new magic bolt types, new magic powers, recovers some jetpack fuel with Magic Points if it runs out and has less magic power cooldown\n^3Force Guardian ^7gets more resistance to damage\n\"") );
-				}
-				else if (Q_stricmp( arg1, "l" ) == 0)
-				{
-					trap->SendServerCommand( ent-g_entities, va("print \"^3Light Power: ^7Regens 1 hp per second. Regens shield if hp is full. You must finish ^5Light Quest ^7to have it\n\"") );
-				}
-				else if (Q_stricmp( arg1, "d" ) == 0)
-				{
-					trap->SendServerCommand( ent-g_entities, va("print \"^3Dark Power: ^7Increases damage by 10 per cent. You must finish ^1Dark Quest ^7to have it\n\"") );
-				}
-				else if (Q_stricmp( arg1, "e" ) == 0)
-				{
-					trap->SendServerCommand( ent-g_entities, va("print \"^3Eternity Power: ^7Absorbs 10 per cent of damage. You must finish the ^3Eternity Quest ^7to have it\n\"") );
-				}
-				else if (Q_stricmp( arg1, "u" ) == 0)
-				{
-					trap->SendServerCommand( ent-g_entities, va("print \"^3Universe Power: ^7Increases strength of your magic powers, except ultimate power. You must defeat the ^2Guardian of Universe ^7to have it\n\"") );
-				}
-				else if (Q_stricmp( arg1, "!" ) == 0)
-				{
-					if (ent->client->pers.universe_quest_progress < 14)
-					{
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Ultimate Power: ^7You must finish the 14th mission of ^2Universe Quest ^7to have this power\n\"") );
-					}
-					else
-					{
-						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Ultra Drain: ^7damages enemies in the area and recovers your hp. Attack with S + special melee to use this power\n\"") );
-						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Immunity Power: ^7protects you from other magic powers. Attack S + with special melee to use this power\n\"") );
-						else if (ent->client->pers.universe_quest_counter & (1 << 2))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Chaos Power: ^7damages, stuns, slowers and electrifies enemies. Attack with S + special melee to use this power\n\"") );
-						else if (ent->client->pers.universe_quest_counter & (1 << 3))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Time Power: ^7paralyzes enemies for some seconds. Disables target enemies force powers, force regen, mp regen and hp/shield regen. Increases target enemies magic cooldown of enemies. Enemies take less damage while paralyzed. Attack with S + special melee to use this power\n\"") );
-					}
-				}
-				else if (Q_stricmp( arg1, "r" ) == 0)
-				{
-					if (ent->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
-					{
-						trap->SendServerCommand(ent->s.number, va("print \"^3Final Power: ^7You must finish ^2Universe Quest ^7to have this power\n\""));
-					}
-					else
-					{
-						if (ent->client->pers.universe_quest_counter & (1 << 0))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Regen: ^7regens 1 mp per second. Finish Universe Quest to have it\n\""));
-						else if (ent->client->pers.universe_quest_counter & (1 << 1))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Boost: ^7Decreases cooldown time of magic powers. Finish Universe Quest to have it\n\""));
-						else if (ent->client->pers.universe_quest_counter & (1 << 2))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Unique Boost: ^7decreases cooldown time of unique skill and unique abilities. Finish Universe Quest to have it\n\""));
-						else if (ent->client->pers.universe_quest_counter & (1 << 3))
-							trap->SendServerCommand(ent->s.number, va("print \"^3Magic Improvement: ^7makes Universe Power have no additional mp cost. Finish Universe Quest to have it\n\""));
-					}
-				}
-				else if (Q_stricmp( arg1, "s" ) == 0)
-				{
-					if (ent->client->pers.rpg_class == 0)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Ultra Resistance: ^7increases resistance to damage. Attack with D + special melee to use this power. MP cost: %d\n^3Ultra Strength: ^7increases damage. Attack with A + special melee to use this power. MP cost: %d\n^3Enemy Weakening: ^7decreases damage and resistance of enemies nearby. Attack with W + special melee to use this power. MP cost: %d\n\n\"", zyk_ultra_resistance_mp_cost.integer, zyk_ultra_strength_mp_cost.integer, zyk_enemy_nerf_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 1)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Sleeping Flowers: ^7knocks down enemies for some seconds. Attack with D + special melee to use this power. MP cost: %d\n^3Poison Mushrooms: ^7keep damaging the enemies for some time. Attack with A + special melee to use this power. MP cost: %d\n^3Tree of Life: ^7a big tree appears, protecting you from attacks and healing you. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_sleeping_flowers_mp_cost.integer, zyk_poison_mushrooms_mp_cost.integer, zyk_tree_of_life_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 2)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Blowing Wind: ^7blows people away for some seconds. Attack with D + special melee to use this power. MP cost: %d\n^3Hurricane: ^7makes enemies fly up like if they were inside a tornado. Attack with A + special melee to use this power. MP cost: %d\n^3Reverse Wind: ^7makes people go towards you. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_blowing_wind_mp_cost.integer, zyk_hurricane_mp_cost.integer, zyk_reverse_wind_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 3)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Earthquake: ^7knocks people down causing damage. Attack with D + special melee to use this power. MP cost: %d\n^3Rockfall: ^7rocks keep falling at the enemies. Attack with A + special melee to use this power. MP cost: %d\n^3Shifting Sand: ^7a shifting sand appears, sending you to your nearest enemy. Stand near the sand to be transported to the enemy. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_earthquake_mp_cost.integer, zyk_rockfall_mp_cost.integer, zyk_shifting_sand_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 4)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Flame Burst: ^7fires a flame burst for some seconds. Attack with D + special melee to use this power. MP cost: %d\n^3Ultra Flame: ^7a flame jet appears at the enemies and damages them. Attack with A + special melee to use this power. MP cost: %d\n^3Flaming Area: ^7creates a big area of flames around you, with high damage to enemies. Makes targets who touch the flames catch fire for some seconds. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_flame_burst_mp_cost.integer, zyk_ultra_flame_mp_cost.integer, zyk_flaming_area_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 5)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Healing Water: ^7instantly recovers some hp. Attack with D + special melee to use this power. MP cost: %d\n^3Water Splash: ^7damages enemies, draining their hp and healing you. Attack with A + special melee to use this power. MP cost: %d\n^3Water Attack: ^7attacks enemies nearby with water, with high damage. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_healing_water_mp_cost.integer, zyk_water_splash_mp_cost.integer, zyk_water_attack_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 6)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Magic Shield: ^7creates a shield that makes you take very little dmage from enemies for a short time. Also protects from Push, Pull and Grip force powers. Attack with D + special melee to use this power. MP cost: %d\n^3Dome of Damage: ^7an energy dome appears at enemies, damaging anyone inside the dome. Attack with A + special melee to use this power. MP cost: %d\n^3Magic Disable: ^7makes enemies unable to use magic powers for some seconds. Not so effective against magic using npcs, like bosses. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_magic_shield_mp_cost.integer, zyk_dome_of_damage_mp_cost.integer, zyk_magic_disable_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 7)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Ultra Speed: ^7increases your run speed. Attack with D + special melee to use this power. MP cost: %d\n^3Slow Motion: ^7decreases the run speed of enemies nearby. Attack with A + special melee to use this power. MP cost: %d\n^3Fast and Slow: ^7increases your speed and decreases enemies speed, with less duration than the other two magic powers. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_ultra_speed_mp_cost.integer, zyk_slow_motion_mp_cost.integer, zyk_fast_and_slow_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 8)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Magic Sense: ^7similar to Sense and Sense Health skills, but with less duration. Benefits from Sense, Sense Health and Improvements skill levels. MP cost: %d\n^3Healing Area: ^7creates an energy area that heals you and your allies and damage enemies. MP cost: %d\n^3Lightning Dome: ^7creates a dome that does lightning damage. Damage is based on player level. MP cost: %d\n^3Magic Explosion: ^7creates an explosion that does a lot of damage. MP cost: %d\n\nThis class can use any of the Light Quest special powers. Use A, W or D and melee kata to use a power. You can set each of A, W and D powers with the force power keys (usually the F3, F4, F5, F6, F7 and F8 keys)\n\"", zyk_magic_sense_mp_cost.integer, zyk_healing_area_mp_cost.integer, zyk_lightning_dome_mp_cost.integer, zyk_magic_explosion_mp_cost.integer) );
-					else if (ent->client->pers.rpg_class == 9)
-						trap->SendServerCommand( ent-g_entities, va("print \"^3Ice Boulder: ^7creates a boulder that damages and traps enemies nearby for some seconds. Attack with D + special melee to use this power. MP cost: %d\n^3Ice Stalagmite: ^7greatly damages enemies nearby with a stalagmite. Attack with A + special melee to use this power. MP cost: %d\n^3Ice Block: ^7creates a block of ice around you, protecting you from attacks and increasing your resistance to damage. Attack with W + special melee to use this power. MP cost: %d\n\"", zyk_ice_boulder_mp_cost.integer, zyk_ice_stalagmite_mp_cost.integer, zyk_ice_block_mp_cost.integer) );
+					trap->SendServerCommand(ent - g_entities, va("print \"^3%s: ^7%s\n\"", skills[i-1].skill_name, skills[i-1].skill_description));
 				}
 				else
 				{
@@ -11979,7 +11129,7 @@ Cmd_Stuff_f
 void Cmd_Stuff_f( gentity_t *ent ) {
 	if (trap->Argc() == 1)
 	{ // zyk: shows the categories of stuff
-		trap->SendServerCommand( ent-g_entities, "print \"\n^7Use ^2/stuff <category> ^7to buy or sell stuff\nThe Category may be ^3ammo^7, ^3items^7, ^3misc ^7or ^3upgrades\n^7Use ^3/stuff <number> ^7to see info about the item\n\n^7Use ^2/buy <number> ^7to buy or ^2/sell <number> ^7to sell\nStuff bought from ^3upgrades ^7category are permanent\n\n\"");
+		trap->SendServerCommand( ent-g_entities, "print \"\n^7Use ^2/stuff <category> ^7to buy or sell stuff\nThe Category may be ^3ammo^7, ^3misc ^7or ^3upgrades\n^7Use ^3/stuff <number> ^7to see info about the item\n\n^7Use ^2/buy <number> ^7to buy or ^2/sell <number> ^7to sell\nStuff bought from ^3upgrades ^7category are permanent\n\n\"");
 		return;
 	}
 	else
@@ -11993,66 +11143,33 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		if (Q_stricmp(arg1, "ammo" ) == 0)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n"
-				"^31 - Blaster Pack: ^7Buy: 150 - Sell: 10\n"
-				"^32 - Power Cell: ^7Buy: 200 - Sell: 15\n"
-				"^33 - Metal Bolts: ^7Buy: 250 - Sell: 20\n"
-				"^34 - Rockets: ^7Buy: 500 - Sell: 30\n"
-				"^35 - Thermals: ^7Buy: 50 - Sell: 35\n"
-				"^36 - Trip Mines: ^7Buy: 100 - Sell: 40\n"
-				"^37 - Det Packs: ^7Buy: 200 - Sell: 45\n"
-				"^330 - Flame Thrower Fuel: ^7Buy: 500 - Sell: ^1no\n"
-				"^348 - Ammo All: ^7Buy: 1450 - Sell: ^1no^7\n\n\"");
-		}
-		else if (Q_stricmp(arg1, "items" ) == 0)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n"
-				"^39 - Shield Booster: ^7Buy: 1500 - Sell: ^1no\n"
-				"^310 - Sentry Gun: ^7Buy: 1700 - Sell: 60\n"
-				"^311 - Seeker Drone: ^7Buy: 1800 - Sell: 65\n"
-				"^312 - Big Bacta: ^7Buy: 2000 - Sell: 70\n"
-				"^313 - Force Field: ^7Buy: 3000 - Sell: 80\n"
-				"^334 - Bacta Canister: ^7Buy: 1000 - Sell: 20\n"
-				"^335 - E-Web: ^7Buy: 1500 - Sell: 30\n"
-				"^338 - Binoculars: ^7Buy: 100 - Sell: 5\n"
-				"^341 - Jetpack: ^7Buy: 2000 - Sell: ^1no\n"
-				"^342 - Cloak Item: ^7Buy: 2000 - Sell: 20\n\n\"");
+				"^31 - Blaster Pack: ^7Buy: 150\n"
+				"^32 - Power Cell: ^7Buy: 200\n"
+				"^33 - Metal Bolts: ^7Buy: 250\n"
+				"^34 - Rockets: ^7Buy: 500\n"
+				"^35 - Thermals: ^7Buy: 50\n"
+				"^36 - Trip Mines: ^7Buy: 100\n"
+				"^37 - Det Packs: ^7Buy: 200\n"
+				"^330 - Flame Thrower Fuel: ^7Buy: 500\n"
+				"^348 - Ammo All: ^7Buy: 1450\n\n\"");
 		}
 		else if (Q_stricmp(arg1, "misc") == 0)
 		{
 			trap->SendServerCommand(ent - g_entities, "print \"\n"
-				"^314 - Ysalamiri: ^7Buy: 2000 - Sell: 50\n"
-				"^331 - Jetpack Fuel: ^7Buy: 500 - Sell: ^1no\n"
-				"^343 - Force Boon: ^7Buy: 2000 - Sell: 50\n"
-				"^349 - Saber Armor: ^7Buy: 20,000 - Sell: ^1no\n"
-				"^350 - Gun Armor: ^7Buy: 20,000 - Sell: ^1no\n\n\"");
+				"^314 - Ysalamiri: ^7Buy: 2000\n"
+				"^331 - Jetpack Fuel: ^7Buy: 500\n"
+				"^343 - Force Boon: ^7Buy: 2000\n\n\"");
 		}
-		/*else if (Q_stricmp(arg1, "weapons" ) == 0)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n"
-				"^317 - E11 Blaster Rifle: ^7Buy: 1 - Sell: ^1NO\n"
-				"^318 - Disruptor: ^7Buy: 1 - Sell: ^1NO\n"
-				"^319 - Repeater: ^7Buy: 1 - Sell: ^1NO\n"
-				"^320 - Rocket Launcher: ^7Buy: 1 - Sell: ^1NO\n"
-				"^321 - Bowcaster: ^7Buy: 1 - Sell: ^1NO\n"
-				"^322 - Blaster Pistol: ^7Buy: 1 - Sell: ^1NO\n"
-				"^323 - Flechette: ^7Buy: 1 - Sell: ^1NO\n"
-				"^324 - Concussion Rifle: ^7Buy: 1 - Sell: ^1NO\n"
-				"^332 - Stun Baton: ^7Buy: 1 - Sell: ^1NO\n"
-				"^336 - DEMP2: ^7Buy: 1 - Sell: ^1NO\n"
-				"^337 - Bryar Pistol: ^7Buy: 1 - Sell: ^1NO\n\n\"");
-		}*/
 		else if (Q_stricmp(arg1, "upgrades" ) == 0)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n"
 				"^315 - Impact Reducer: ^7Buy: 40000\n"
-				"^316 - Flame Thrower: ^7Buy: 30000\n"
 				"^325 - Power Cell Weapons Upgrade: ^7Buy: 2000\n"
 				"^326 - Blaster Pack Weapons Upgrade: ^7Buy: 18000\n"
 				"^327 - Metal Bolts Weapons Upgrade: ^7Buy: 22000\n"
 				"^328 - Rocket Upgrade: ^7Buy: 25000\n"
 				"^333 - Stun Baton Upgrade: ^7Buy: 15000\n"
-				"^340 - Holdable Items Upgrade: ^7Buy: 30000\n"
-				"^346 - Jetpack Upgrade: ^7Buy: 100000\n\n\"");
+				"^340 - Holdable Items Upgrade: ^7Buy: 30000\n\"");
 		}
 		else if (i == 1)
 		{
@@ -12090,22 +11207,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Shield Booster: ^7recovers 50 shield\n\n\"");
 		}
-		else if (i == 10)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Sentry Gun: ^7portable gun which is placed in the ground and shoots nearby enemies\n\n\"");
-		}
-		else if (i == 11)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Seeker Drone: ^7portable remote drone that shoots enemies at sight\n\n\"");
-		}
-		else if (i == 12)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Big Bacta: ^7recovers 50 HP\n\n\"");
-		}
-		else if (i == 13)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Force Field: ^7creates a force field wall in front of the player that can hold almost any attack, except the concussion rifle alternate fire, which can get through\n\n\"");
-		}
 		else if (i == 14)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Ysalamiri: ^7disables the player force powers but also protects the player from enemy force powers\n\n\"");
@@ -12113,10 +11214,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		else if (i == 15)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Impact Reducer: ^7reduces the knockback of some weapons attacks by 80 per cent\n\n\"");
-		}
-		else if (i == 16)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Flame Thrower: ^7gives you the flame thrower. To use it, get stun baton and use alternate fire\n\n\"");
 		}
 		else if (i == 17)
 		{
@@ -12202,10 +11299,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Bryar Pistol: ^7similar to blaster pistol, but has a faster fire rate with normal fire. Uses blaster pack ammo\n\n\"");
 		}
-		else if (i == 38)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Binoculars: ^7allows the player to see far things better with the zoom feature\n\n\"");
-		}
 		else if (i == 39)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Armored Soldier Upgrade: ^7increases damage resistance by 5 per cent, deflects some gun shots, cuts flame thrower fuel usage by half, has less chance of losing gun to force pull, has a chance of setting ysalamiri for some seconds if attacked by force powers. It also protects from drowning\n\n\"");
@@ -12213,10 +11306,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		else if (i == 40)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Holdable Items Upgrade: ^7Bacta Canister recovers more health, Big Bacta recovers more HP, Force Field resists more and Cloak Item will be able to cloak vehicles\n\n\"");
-		}
-		else if (i == 41)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Jetpack: ^7allows the player to fly. Jump and press Use Key to use it\n\n\"");
 		}
 		else if (i == 42)
 		{
@@ -12230,10 +11319,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Force Gunner Upgrade: ^7increases run speed by 20 per cent. Force power regens 2x faster. Unique Skill will restore 25 shield\n\n\"");
 		}
-		else if (i == 46)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Jetpack Upgrade: ^7decreases jetpack fuel consumption a bit and makes the jetpack more stable and faster\n\n\"");
-		}
 		else if (i == 47)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Force Guardian Upgrade: ^7increases damage resistance. Saber can no longer be dropped out of hand. Decreases knockback a bit\n\n\"");
@@ -12241,14 +11326,6 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 		else if (i == 48)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\n^3Ammo All: ^7recovers all ammo types, including flame thrower fuel\n\n\"");
-		}
-		else if (i == 49)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Saber Armor: ^7increases damage resistance to saber attacks. If the player dies, he loses the armor\n\n\"");
-		}
-		else if (i == 50)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"\n^3Gun Armor: ^7increases damage resistance to gun attacks and melee attacks. If the player dies, he loses the armor\n\n\"");
 		}
 		else if (i == 51)
 		{
@@ -12412,11 +11489,11 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		100,		// id:6
 		200,		// id:7
 		5000,		// id:8
-		1500,		// id:9
-		1700,		// id:10
-		1800,		// id:11
-		2000,		// id:12
-		3000,		// id:13
+		0,		// id:9
+		0,			// id:10
+		0,			// id:11
+		0,			// id:12
+		0,			// id:13
 		2000,		// id:14
 		40000,		// id:15
 		30000,		// id:16
@@ -12437,15 +11514,15 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		500,		// id:31
 		1,		// id:32
 		15000,		// id:33
-		1000,		// id:34
-		1500,		// id:35
+		0,		// id:34
+		0,		// id:35
 		1,		// id:36
 		1,		// id:37
 		100,		// id:38
 		5000,		// id:39
 		30000,		// id:40
 		2000,		// id:41
-		2000,		// id:42
+		0,		// id:42
 		2000,		// id:43
 		50,			// id:44
 		5000,		// id:45
@@ -12505,38 +11582,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		}
 	}
 
-	// zyk: class validations. Some items require certain conditions to be bought
-	if (ent->client->pers.rpg_class == 1 && ((value >= 1 && value <= 7) || (value >= 10 && value <= 13) || 
-		(value >= 17 && value <= 24) || (value >= 34 && value <= 38) || (value >= 41 && value <= 42) || value == 48))
-	{
-		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
-		return;
-	}
-	else if (ent->client->pers.rpg_class == 4 && ((value >= 1 && value <= 7) || (value >= 10 && value <= 13) || 
-			(value >= 17 && value <= 24) || (value >= 34 && value <= 38) || (value >= 41 && value <= 42) || value == 48))
-	{
-		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
-		return;
-	}
-	else if (ent->client->pers.rpg_class == 6 && ((value >= 1 && value <= 7) || (value >= 10 && value <= 13) || 
-			(value >= 17 && value <= 24) || (value >= 34 && value <= 38) || (value >= 41 && value <= 42) || value == 48))
-	{
-		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
-		return;
-	}
-	else if (ent->client->pers.rpg_class == 8 && ((value >= 1 && value <= 7) || (value >= 10 && value <= 13) || 
-			(value >= 17 && value <= 24) || (value >= 35 && value <= 38) || value == 48))
-	{
-		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
-		return;
-	}
-	else if (ent->client->pers.rpg_class == 9 && ((value >= 2 && value <= 7) || (value >= 10 && value <= 11) || value == 13 ||
-		(value >= 18 && value <= 24) || (value >= 34 && value <= 38) || value == 48))
-	{
-		trap->SendServerCommand(ent->s.number, va("print \"%s can't buy this item.\n\"", zyk_rpg_class(ent)));
-		return;
-	}
-
 	// zyk: general validations. Some items require certain conditions to be bought
 	if (value == 8 && ent->client->pers.secrets_found & (1 << 7))
 	{
@@ -12546,11 +11591,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 	else if (value == 15 && ent->client->pers.secrets_found & (1 << 9))
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"You already have the Impact Reducer.\n\"" );
-		return;
-	}
-	else if (value == 16 && ent->client->pers.secrets_found & (1 << 10))
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You already have the Flame Thrower.\n\"" );
 		return;
 	}
 	else if (value == 25 && ent->client->pers.secrets_found & (1 << 11))
@@ -12596,11 +11636,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 	else if (value == 45 && ent->client->pers.secrets_found & (1 << 8))
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"You already have the Force Gunner Upgrade.\n\"" );
-		return;
-	}
-	else if (value == 46 && ent->client->pers.secrets_found & (1 << 17))
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"You already have the Jetpack Upgrade.\n\"");
 		return;
 	}
 	else if (value == 47 && ent->client->pers.secrets_found & (1 << 19))
@@ -12665,34 +11700,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 			// zyk: update the rpg stuff info at the client-side game
 			send_rpg_events(10000);
 		}
-		else if (value == 9)
-		{
-			if (ent->client->ps.stats[STAT_ARMOR] < ent->client->pers.max_rpg_shield)
-			{ // zyk: RPG Mode has the Max Shield skill that doesnt allow someone to heal shields above this value
-				ent->client->ps.stats[STAT_ARMOR] += 50;
-			}
-
-			if (ent->client->ps.stats[STAT_ARMOR] > ent->client->pers.max_rpg_shield)
-				ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
-		}
-		else if (value == 10)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN);
-			if (ent->client->pers.rpg_class == 2 && ent->client->pers.bounty_hunter_sentries < MAX_BOUNTY_HUNTER_SENTRIES)
-				ent->client->pers.bounty_hunter_sentries++;
-		}
-		else if (value == 11)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SEEKER);
-		}
-		else if (value == 12)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_MEDPAC_BIG);
-		}
-		else if (value == 13)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SHIELD);
-		}
 		else if (value == 14)
 		{
 			if (ent->client->ps.powerups[PW_YSALAMIRI] < level.time)
@@ -12703,10 +11710,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		else if (value == 15)
 		{
 			ent->client->pers.secrets_found |= (1 << 9);
-		}
-		else if (value == 16)
-		{
-			ent->client->pers.secrets_found |= (1 << 10);
 		}
 		/*else if (value == 17)
 		{
@@ -12780,14 +11783,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		{
 			ent->client->pers.secrets_found |= (1 << 15);
 		}
-		else if (value == 34)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_MEDPAC);
-		}
-		else if (value == 35)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_EWEB);
-		}
 		else if (value == 36)
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DEMP2);
@@ -12796,10 +11791,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		{
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_OLD);
 		}*/
-		else if (value == 38)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_BINOCULARS);
-		}
 		else if (value == 39)
 		{
 			ent->client->pers.secrets_found |= (1 << 16);
@@ -12807,14 +11798,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		else if (value == 40)
 		{
 			ent->client->pers.secrets_found |= (1 << 0);
-		}
-		else if (value == 41)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-		}
-		else if (value == 42)
-		{
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_CLOAK);
 		}
 		else if (value == 43)
 		{
@@ -12832,13 +11815,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		else if (value == 45)
 		{
 			ent->client->pers.secrets_found |= (1 << 8);
-		}
-		else if (value == 46)
-		{
-			ent->client->pers.secrets_found |= (1 << 17);
-
-			// zyk: update the rpg stuff info at the client-side game
-			send_rpg_events(10000);
 		}
 		else if (value == 47)
 		{
@@ -12864,14 +11840,6 @@ void Cmd_Buy_f( gentity_t *ent ) {
 			Add_Ammo(ent,AMMO_DETPACK,2);
 
 			ent->client->ps.cloakFuel = 100;
-		}
-		else if (value == 49)
-		{
-			ent->client->pers.player_statuses |= (1 << 8);
-		}
-		else if (value == 50)
-		{
-			ent->client->pers.player_statuses |= (1 << 9);
 		}
 		else if (value == 51)
 		{
@@ -12909,19 +11877,10 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		ent->client->pers.credits -= item_costs[value-1];
 		save_account(ent, qtrue);
 
-		// zyk: setting the cooldown time to buy and sell stuff. Bounty Hunter remote buying system has its own cooldown time cvar
-		if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) && found == 0)
-		{
-			ent->client->pers.buy_sell_timer = level.time + zyk_bh_remote_buying_cooldown.integer;
-		}
-		else
-		{
-			ent->client->pers.buy_sell_timer = level.time + zyk_buying_selling_cooldown.integer;
-		}
+		ent->client->pers.buy_sell_timer = level.time + zyk_buying_selling_cooldown.integer;
 
 		trap->SendServerCommand( ent-g_entities, va("chat \"^3Jawa Seller: ^7Thanks %s^7!\n\"",ent->client->pers.netname) );
 
-		Cmd_ZykMod_f(ent);
 	}
 	else
 	{
@@ -12947,255 +11906,6 @@ void zyk_adjust_holdable_items(gentity_t *ent)
 		Jedi_Decloak(ent);
 }
 
-	/*
-==================
-Cmd_Sell_f
-==================
-*/
-void Cmd_Sell_f( gentity_t *ent ) {
-	char arg1[MAX_STRING_CHARS];
-	int value = 0;
-	int found = 0;
-	int sold = 0;
-	int items_costs[NUMBER_OF_SELLER_ITEMS] = {10,15,20,30,35,40,45,0,0,60,65,70,80,50,0,0,50,60,70,100,50,45,90,150,0,0,0,0,0,0,0,10,0,20,30,90,45,5,0,0,0,20,50,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
-	if (trap->Argc() == 1)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You must specify a product number.\n\"" );
-		return;
-	}
-
-	trap->Argv(1, arg1, sizeof( arg1 ));
-	value = atoi(arg1);
-
-	// zyk: tests the cooldown time to buy or sell
-	if (ent->client->pers.buy_sell_timer > level.time)
-	{
-		trap->SendServerCommand(ent->s.number, "print \"In Buy/Sell cooldown time.\n\"");
-		return;
-	}
-
-	if (value < 1 || value > NUMBER_OF_SELLER_ITEMS || items_costs[value-1] == 0)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Invalid product number.\n\"" );
-		return;
-	}
-	else
-	{ // zyk: searches for the jawa to see if we are near him to buy or sell to him
-		gentity_t *jawa_ent = NULL;
-		int j = 0;
-
-		for (j = MAX_CLIENTS; j < level.num_entities; j++)
-		{
-			jawa_ent = &g_entities[j];
-
-			if (jawa_ent && jawa_ent->client && jawa_ent->NPC && jawa_ent->health > 0 && Q_stricmp( jawa_ent->NPC_type, "jawa_seller" ) == 0 && (int)Distance(ent->client->ps.origin, jawa_ent->client->ps.origin) < 90)
-			{
-				found = 1;
-				break;
-			}
-		}
-
-		// zyk: Bounty Hunter Upgrade allows buying and selling without the need to call the jawa seller
-		if (found == 0 && !(ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1)))
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You must be near the jawa seller to sell to him.\n\"" );
-			return;
-		}
-	}
-
-	if (value == 1 && ent->client->ps.ammo[AMMO_BLASTER] >= 100)
-	{
-		ent->client->ps.ammo[AMMO_BLASTER] -= 100;
-		sold = 1;
-	}
-	else if (value == 2 && ent->client->ps.ammo[AMMO_POWERCELL] >= 100)
-	{
-		ent->client->ps.ammo[AMMO_POWERCELL] -= 100;
-		sold = 1;
-	}
-	else if (value == 3 && ent->client->ps.ammo[AMMO_METAL_BOLTS] >= 100)
-	{
-		ent->client->ps.ammo[AMMO_METAL_BOLTS] -= 100;
-		sold = 1;
-	}
-	else if (value == 4 && ent->client->ps.ammo[AMMO_ROCKETS] >= 10)
-	{
-		ent->client->ps.ammo[AMMO_ROCKETS] -= 10;
-		sold = 1;
-	}
-	else if (value == 5 && ent->client->ps.ammo[AMMO_THERMAL] >= 4)
-	{
-		ent->client->ps.ammo[AMMO_THERMAL] -= 4;
-		sold = 1;
-	}
-	else if (value == 6 && ent->client->ps.ammo[AMMO_TRIPMINE] >= 3)
-	{
-		ent->client->ps.ammo[AMMO_TRIPMINE] -= 3;
-		sold = 1;
-	}
-	else if (value == 7 && ent->client->ps.ammo[AMMO_DETPACK] >= 2)
-	{
-		ent->client->ps.ammo[AMMO_DETPACK] -= 2;
-		sold = 1;
-	}
-	else if (value == 10 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SENTRY_GUN))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_SENTRY_GUN);
-
-		if (ent->client->pers.rpg_class == 2 && ent->client->pers.bounty_hunter_sentries > 0)
-			ent->client->pers.bounty_hunter_sentries--;
-
-		sold = 1;
-	}
-	else if (value == 11 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SEEKER))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_SEEKER);
-		sold = 1;
-	}
-	else if (value == 12 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_MEDPAC_BIG))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_MEDPAC_BIG);
-		sold = 1;
-	}
-	else if (value == 13 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_SHIELD))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_SHIELD);
-		sold = 1;
-	}
-	else if (value == 14 && ent->client->ps.powerups[PW_YSALAMIRI])
-	{
-		ent->client->ps.powerups[PW_YSALAMIRI] = 0;
-		sold = 1;
-	}
-	else if (value == 17 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BLASTER)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BLASTER);
-		if (ent->client->ps.weapon == WP_BLASTER)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 18 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DISRUPTOR)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DISRUPTOR);
-		if (ent->client->ps.weapon == WP_DISRUPTOR)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 19 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_REPEATER)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_REPEATER);
-		if (ent->client->ps.weapon == WP_REPEATER)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 20 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_ROCKET_LAUNCHER)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_ROCKET_LAUNCHER);
-		if (ent->client->ps.weapon == WP_ROCKET_LAUNCHER)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 21 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BOWCASTER)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BOWCASTER);
-		if (ent->client->ps.weapon == WP_BOWCASTER)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 22 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BRYAR_PISTOL)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_PISTOL);
-		if (ent->client->ps.weapon == WP_BRYAR_PISTOL)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 23 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_FLECHETTE)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_FLECHETTE);
-		if (ent->client->ps.weapon == WP_FLECHETTE)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 24 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_CONCUSSION)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_CONCUSSION);
-		if (ent->client->ps.weapon == WP_CONCUSSION)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 32 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_STUN_BATON)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_STUN_BATON);
-		if (ent->client->ps.weapon == WP_STUN_BATON)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 34 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_MEDPAC))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_MEDPAC);
-		sold = 1;
-	}
-	else if (value == 35 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_EWEB))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_EWEB);
-		sold = 1;
-	}
-	else if (value == 36 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_DEMP2)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_DEMP2);
-		if (ent->client->ps.weapon == WP_DEMP2)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 37 && (ent->client->ps.stats[STAT_WEAPONS] & (1 << WP_BRYAR_OLD)))
-	{
-		ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_BRYAR_OLD);
-		if (ent->client->ps.weapon == WP_BRYAR_OLD)
-			ent->client->ps.weapon = WP_MELEE;
-		sold = 1;
-	}
-	else if (value == 38 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_BINOCULARS))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_BINOCULARS);
-		sold = 1;
-	}
-	else if (value == 42 && ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK))
-	{
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_CLOAK);
-		sold = 1;
-	}
-	else if (value == 43 && ent->client->ps.powerups[PW_FORCE_BOON])
-	{
-		ent->client->ps.powerups[PW_FORCE_BOON] = 0;
-		sold = 1;
-	}
-
-	zyk_adjust_holdable_items(ent);
-			
-	if (sold == 1)
-	{
-		add_credits(ent,items_costs[value-1]);
-		save_account(ent, qtrue);
-
-		// zyk: setting the cooldown time to buy and sell stuff. Bounty Hunter remote buying system has its own cooldown time cvar
-		if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) && found == 0)
-		{
-			ent->client->pers.buy_sell_timer = level.time + zyk_bh_remote_buying_cooldown.integer;
-		}
-		else
-		{
-			ent->client->pers.buy_sell_timer = level.time + zyk_buying_selling_cooldown.integer;
-		}
-
-		trap->SendServerCommand( ent-g_entities, va("chat \"^3Jawa Seller: ^7Thanks %s^7!\n\"",ent->client->pers.netname) );
-	}
-	else
-	{
-		trap->SendServerCommand( ent-g_entities, va("chat \"^3Jawa Seller: ^7You don't have this item.\n\"") );
-	}
-}
-
 /*
 ==================
 Cmd_ChangePassword_f
@@ -13204,15 +11914,9 @@ Cmd_ChangePassword_f
 void Cmd_ChangePassword_f( gentity_t *ent ) {
 	char arg1[1024];
 
-	if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You must be at Spectator Mode to change password.\n\"" );
-		return;
-	}
-
 	if (trap->Argc() != 2)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"Use ^3changepassword <new_password> ^7to change it.\n\"" );
+		trap->SendServerCommand( ent-g_entities, "print \"^1Command Usage: ^3/changepassword ^2<new_password>\n^1Example: ^3/changepassword ^2password123\n\"" );
 		return;
 	}
 
@@ -13221,14 +11925,15 @@ void Cmd_ChangePassword_f( gentity_t *ent ) {
 
 	if (strlen(arg1) > 30)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"The password must have a maximum of 30 characters.\n\"" );
+		trap->SendServerCommand( ent-g_entities, "print \"The password can only have a maximum of 30 characters.\n\"" );
 		return;
 	}
 
 	strcpy(ent->client->pers.password,arg1);
-	save_account(ent, qfalse);
 
-	trap->SendServerCommand( ent-g_entities, "print \"Your password was changed successfully.\n\"" );
+	update_accounts_table_row_with_current_values(ent);
+
+	trap->SendServerCommand( ent-g_entities, "print \"^3Your password was changed successfully.\n\"" );
 }
 
 void zyk_remove_configs(gentity_t *ent)
@@ -13238,127 +11943,6 @@ void zyk_remove_configs(gentity_t *ent)
 #else
 	system(va("DEL /F \"zykmod\\configs\\%s_%s_freewarrior.txt\" \"zykmod\\configs\\%s_%s_forceuser.txt\" \"zykmod\\configs\\%s_%s_bountyhunter.txt\" \"zykmod\\configs\\%s_%s_armoredsoldier.txt\" \"zykmod\\configs\\%s_%s_monk.txt\" \"zykmod\\configs\\%s_%s_stealthattacker.txt\" \"zykmod\\configs\\%s_%s_duelist.txt\" \"zykmod\\configs\\%s_%s_forcegunner.txt\" \"zykmod\\configs\\%s_%s_magicmaster.txt\" \"zykmod\\configs\\%s_%s_forcetank.txt\"", ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar, ent->client->sess.filename, ent->client->sess.rpgchar));
 #endif
-}
-
-/*
-==================
-Cmd_ResetAccount_f
-==================
-*/
-void Cmd_ResetAccount_f( gentity_t *ent ) {
-	char arg1[MAX_STRING_CHARS];
-			
-	if (trap->Argc() == 1)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"^2Choose one of the options below\n\n^3/resetaccount rpg: ^7resets your entire account except admin commands.\n^3/resetaccount quests: ^7resets your RPG quests.\n^3/resetaccount levels: ^7resets your levels and upgrades.\n\"" );
-		return;
-	}
-
-	trap->Argv( 1, arg1, sizeof( arg1 ) );
-
-	if (Q_stricmp( arg1, "rpg") == 0)
-	{
-		int i = 0;
-
-		for (i = 0; i < NUMBER_OF_SKILLS; i++)
-			ent->client->pers.skill_levels[i] = 0;
-
-		ent->client->pers.max_rpg_shield = 0;
-		ent->client->pers.secrets_found = 0;
-
-		ent->client->pers.defeated_guardians = 0;
-		ent->client->pers.hunter_quest_progress = 0;
-		ent->client->pers.eternity_quest_progress = 0;
-		ent->client->pers.universe_quest_progress = 0;
-		ent->client->pers.universe_quest_counter = 0;
-
-		// zyk: Challenge Mode, must keep the flag
-		if (ent->client->pers.player_settings & (1 << 15))
-			ent->client->pers.universe_quest_counter |= (1 << 29);
-
-		ent->client->pers.level = 1;
-		ent->client->pers.level_up_score = 0;
-		ent->client->pers.skillpoints = 1;
-
-		ent->client->pers.credits = 100;
-
-		ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
-		ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
-		ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
-		ent->client->sess.magic_fist_selection = 0;
-		ent->client->sess.magic_disabled_powers = 0;
-		ent->client->sess.magic_more_disabled_powers = 0;
-
-		save_account(ent, qtrue);
-
-		zyk_remove_configs(ent);
-
-		trap->SendServerCommand( ent-g_entities, "print \"Your entire account is reset.\n\"" );
-
-		if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
-		{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
-			G_Kill(ent);
-		}
-	}
-	else if (Q_stricmp( arg1, "quests") == 0)
-	{
-		ent->client->pers.defeated_guardians = 0;
-		ent->client->pers.hunter_quest_progress = 0;
-		ent->client->pers.eternity_quest_progress = 0;
-		ent->client->pers.universe_quest_progress = 0;
-		ent->client->pers.universe_quest_counter = 0;
-
-		// zyk: Challenge Mode, must keep the flag
-		if (ent->client->pers.player_settings & (1 << 15))
-			ent->client->pers.universe_quest_counter |= (1 << 29);
-
-		save_account(ent, qtrue);
-
-		trap->SendServerCommand( ent-g_entities, "print \"Your quests are reset.\n\"" );
-
-		if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
-		{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
-			G_Kill(ent);
-		}
-	}
-	else if (Q_stricmp( arg1, "levels") == 0)
-	{
-		int i = 0;
-
-		for (i = 0; i < NUMBER_OF_SKILLS; i++)
-			ent->client->pers.skill_levels[i] = 0;
-
-		ent->client->pers.max_rpg_shield = 0;
-		ent->client->pers.secrets_found = 0;
-
-		ent->client->pers.level = 1;
-		ent->client->pers.level_up_score = 0;
-		ent->client->pers.skillpoints = 1;
-
-		ent->client->pers.credits = 100;
-
-		ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
-		ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
-		ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
-		ent->client->sess.magic_fist_selection = 0;
-		ent->client->sess.magic_disabled_powers = 0;
-		ent->client->sess.magic_more_disabled_powers = 0;
-
-		save_account(ent, qtrue);
-
-		zyk_remove_configs(ent);
-
-		trap->SendServerCommand( ent-g_entities, "print \"Your levels are reset.\n\"" );
-
-		if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
-		{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
-			G_Kill(ent);
-		}
-	}
-	else
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Invalid option.\n\"" );
-	}
 }
 
 extern void zyk_TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles );
@@ -13375,9 +11959,8 @@ void Cmd_Teleport_f( gentity_t *ent )
 	char arg3[MAX_STRING_CHARS];
 	char arg4[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_TELE)))
-	{ // zyk: teleport admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_TELE))
+	{
 		return;
 	}
 
@@ -13395,7 +11978,7 @@ void Cmd_Teleport_f( gentity_t *ent )
 
 	if (trap->Argc() == 1)
 	{
-		zyk_TeleportPlayer(ent,ent->client->pers.teleport_point,ent->client->pers.teleport_angles);
+		zyk_TeleportPlayer(ent, ent->client->pers.saved_origin, ent->client->pers.saved_view_angles);
 	}
 	else if (trap->Argc() == 2)
 	{
@@ -13403,41 +11986,31 @@ void Cmd_Teleport_f( gentity_t *ent )
 
 		trap->Argv( 1,  arg1, sizeof( arg1 ) );
 
-		if (Q_stricmp(arg1, "point") == 0)
+		vec3_t target_origin;
+
+		client_id = ClientNumberFromString( ent, arg1, qfalse );
+
+		if (client_id == -1)
 		{
-			VectorCopy(ent->client->ps.origin,ent->client->pers.teleport_point);
-			VectorCopy(ent->client->ps.viewangles,ent->client->pers.teleport_angles);
-			trap->SendServerCommand( ent-g_entities, va("print \"Marked point %s with angles %s\n\"", vtos(ent->client->pers.teleport_point), vtos(ent->client->pers.teleport_angles)) );
 			return;
 		}
-		else
-		{
-			vec3_t target_origin;
 
-			client_id = ClientNumberFromString( ent, arg1, qfalse );
-
-			if (client_id == -1)
-			{
-				return;
-			}
-
-			if (g_entities[client_id].client->sess.amrpgmode > 0 && g_entities[client_id].client->pers.bitvalue & (1 << ADM_ADMPROTECT) && !(g_entities[client_id].client->pers.player_settings & (1 << 13)))
+		if (g_entities[client_id].client->sess.amrpgmode > 0 && g_entities[client_id].client->pers.bitvalue & (1 << ADM_ADMPROTECT) && !(g_entities[client_id].client->pers.player_settings & (1 << 13)))
 			{
 				trap->SendServerCommand( ent-g_entities, va("print \"Target player is adminprotected\n\"") );
 				return;
 			}
 
-			if (g_entities[client_id].client->sess.amrpgmode == 2 && g_entities[client_id].client->pers.guardian_mode > 0)
+		if (g_entities[client_id].client->sess.amrpgmode == 2 && g_entities[client_id].client->pers.guardian_mode > 0)
 			{
 				trap->SendServerCommand( ent-g_entities, "print \"Cannot teleport to a player in a guardian battle.\n\"" );
 				return;
 			}
 
-			VectorCopy(g_entities[client_id].client->ps.origin,target_origin);
-			target_origin[2] = target_origin[2] + 100;
+		VectorCopy(g_entities[client_id].client->ps.origin,target_origin);
+		target_origin[2] = target_origin[2] + 100;
 
-			zyk_TeleportPlayer(ent,target_origin,g_entities[client_id].client->ps.viewangles);
-		}
+		zyk_TeleportPlayer(ent,target_origin,g_entities[client_id].client->ps.viewangles);
 	}
 	else if (trap->Argc() == 3)
 	{
@@ -13544,18 +12117,31 @@ void Cmd_Teleport_f( gentity_t *ent )
 
 /*
 ==================
+Cmd_Telemark_f
+==================
+*/
+void Cmd_Telemark_f(gentity_t* ent)
+{
+	VectorCopy(ent->client->ps.origin, ent->client->pers.saved_origin);
+	VectorCopy(ent->client->ps.viewangles, ent->client->pers.saved_view_angles);
+
+	trap->SendServerCommand(ent - g_entities, va("print \"Marked point %s with angles %s\n\"", vtos(ent->client->pers.saved_origin), vtos(ent->client->pers.saved_view_angles)));
+
+	return;
+}
+
+/*
+==================
 Cmd_CreditSpend_f
 ==================
 */
 void Cmd_CreditSpend_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
-	char arg2[MAX_STRING_CHARS];
-	char arg3[MAX_STRING_CHARS];
 	long int value = 0;
 
 	if (trap->Argc() > 2)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Usage: /creditspend <value>\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^3/creditspend ^2<value>\n^1Example: ^3/creditspend ^2350\"");
 		return;
 	}
 
@@ -13576,13 +12162,13 @@ void Cmd_CreditSpend_f(gentity_t *ent) {
 
 	if ((ent->client->pers.credits - value) < 0)
 	{
-		trap->SendServerCommand(ent - g_entities, va("print \"You don't have this amount of credits\n\""));
+		trap->SendServerCommand(ent - g_entities, va("print \"^1You can\'t spend ^3%i ^1credits.\n^7You only have ^3%i ^7credits.\n\""), value, ent->client->pers.credits);
 		return;
 	}
 
 	remove_credits(ent, value);
 
-	save_account(ent, qtrue);
+	update_credits_value(ent);
 
 	trap->SendServerCommand(-1, va("chat \"^3Credit System: ^7%s ^7spent ^2%d ^7credits.\n\"", ent->client->pers.netname, value, g_entities));
 
@@ -13606,9 +12192,8 @@ void Cmd_CreditCreate_f(gentity_t *ent) {
 	}
 
 	// player must have adminup permissions
-	if (!(ent->client->pers.bitvalue & (1 << ADM_CREATECREDITS)))
+	if (!check_admin_command(ent, ADM_CREATECREDITS))
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"You do not have the correct admin permission to create credits.\n\"");
 		return;
 	}
 
@@ -13631,7 +12216,7 @@ void Cmd_CreditCreate_f(gentity_t *ent) {
 
 
 	add_credits(&g_entities[client_id], value);
-	save_account(&g_entities[client_id], qtrue);
+	update_credits_value(&g_entities[client_id]);
 
 	//broadcast the transaction to the whole server
 
@@ -13687,16 +12272,16 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 
 	if ((ent->client->pers.credits - value) < 0)
 	{
-		trap->SendServerCommand(ent - g_entities, va("print \"You don't have this amount of credits\n\""));
+		trap->SendServerCommand(ent - g_entities, va("print \"^1You can\'t give ^3%i ^1credits.\n^7You only have ^3%i ^7credits.\n\""), value, ent->client->pers.credits);
 		return;
 	}
 	
 	
 	add_credits(&g_entities[client_id], value);
-	save_account(&g_entities[client_id], qtrue);
+	update_credits_value(&g_entities[client_id]);
 
 	remove_credits(ent, value);
-	save_account(ent, qtrue);
+	update_credits_value(ent);
 
 	//broadcast the transaction to the whole server
 
@@ -13777,7 +12362,7 @@ Cmd_AllyAdd_f
 void Cmd_AllyAdd_f( gentity_t *ent ) {
 	if (trap->Argc() == 1)
 	{
-		trap->SendServerCommand(ent->s.number, va("print \"Use ^3/allyadd <player name or id> ^7to add an ally.\n\"") );
+		trap->SendServerCommand(ent->s.number, va("print \"^1Command Usage: ^3/allyadd ^2<player name or id>\n^1Example: ^3/allyadd ^2Alex\n\"") );
 	}
 	else
 	{
@@ -13856,7 +12441,7 @@ Cmd_AllyRemove_f
 void Cmd_AllyRemove_f( gentity_t *ent ) {
 	if (trap->Argc() == 1)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"Use ^3/allyremove <player name or id> ^7to remove an ally.\n\"") );
+		trap->SendServerCommand( ent-g_entities, va("print \"^1Command Usage: ^3/allyremove <player name or id>\n^1Example: ^3/allyremove ^2Alex\n\"") );
 	}
 	else
 	{
@@ -13890,10 +12475,10 @@ void Cmd_AllyRemove_f( gentity_t *ent ) {
 		G_AddEvent(ent, EV_USE_ITEM14, (client_id + MAX_CLIENTS));
 
 		trap->SendServerCommand( ent-g_entities, va("print \"Removed ally %s^7\n\"", g_entities[client_id].client->pers.netname) );
-		trap->SendServerCommand( client_id, va("print \"%s^7 removed you as ally\n\"", ent->client->pers.netname) );
+		trap->SendServerCommand( client_id, va("print \"%s^7 removed you as an ally\n\"", ent->client->pers.netname) );
 	}
 }
-
+// TODO: JLH start here
 /*
 ==================
 Cmd_Settings_f
@@ -14083,19 +12668,19 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			{
 				ent->client->pers.player_settings &= ~(1 << value);
 
-				if (value == 1 && ent->client->pers.defeated_guardians == NUMBER_OF_GUARDIANS && zyk_enable_light_power.integer == 1)
+				if (value == 1 && ent->client->pers.defeated_guardians == NUM_OF_GUARDIANS && zyk_enable_light_power.integer == 1)
 				{
 					ent->client->pers.magic_power--;
 					ent->client->pers.quest_power_status |= (1 << 14);
 					send_rpg_events(1000);
 				}
-				else if (value == 2 && ent->client->pers.hunter_quest_progress == NUMBER_OF_OBJECTIVES && zyk_enable_dark_power.integer == 1)
+				else if (value == 2 && ent->client->pers.hunter_quest_progress == NUM_OF_OBJECTIVES && zyk_enable_dark_power.integer == 1)
 				{
 					ent->client->pers.magic_power--;
 					ent->client->pers.quest_power_status |= (1 << 15);
 					send_rpg_events(1000);
 				}
-				else if (value == 3 && ent->client->pers.eternity_quest_progress == NUMBER_OF_ETERNITY_QUEST_OBJECTIVES && zyk_enable_eternity_power.integer == 1)
+				else if (value == 3 && ent->client->pers.eternity_quest_progress == NUM_OF_ETERNITY_QUEST_OBJ && zyk_enable_eternity_power.integer == 1)
 				{
 					ent->client->pers.magic_power--;
 					ent->client->pers.quest_power_status |= (1 << 16);
@@ -14164,7 +12749,7 @@ void Cmd_Settings_f( gentity_t *ent ) {
 				ent->client->pers.player_settings |= (1 << value);
 				ent->client->pers.universe_quest_counter |= (1 << 29);
 			}
-			else if (ent->client->pers.universe_quest_progress < NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES)
+			else if (ent->client->pers.universe_quest_progress < NUM_OF_UNIVERSE_QUEST_OBJ)
 			{ // zyk: setting Normal Mode removes the Challenge Mode flag. Cannot change after completing all quests
 				ent->client->pers.player_settings &= ~(1 << value);
 				ent->client->pers.universe_quest_counter &= ~(1 << 29);
@@ -14261,11 +12846,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Start With Saber %s\n\"", new_status) );
 		}
-		else if (value == 12)
-		{
-			zyk_jetpack(ent);
-			trap->SendServerCommand( ent-g_entities, va("print \"Jetpack %s\n\"", new_status) );
-		}
 		else if (value == 13)
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Admin Protect %s\n\"", new_status) );
@@ -14285,7 +12865,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			G_Kill(ent);
 		}
 
-		Cmd_ZykMod_f(ent);
 	}
 }
 
@@ -14341,72 +12920,6 @@ char *zyk_legacy_config_filename(gclient_t *client)
 		return "";
 }
 
-void load_config(gentity_t *ent)
-{
-	FILE *config_file = NULL;
-	gclient_t *client;
-	char content[32];
-	int value = 0;
-	int i = 0;
-	int unique_ability_flag = 0;
-
-	strcpy(content,"");
-	client = ent->client;
-
-	config_file = fopen(zyk_config_filename(client),"r");
-
-	if (config_file == NULL)
-	{ // zyk: if did not find file, try getting the legacy version
-		config_file = fopen(zyk_legacy_config_filename(client), "r");
-	}
-
-	if (config_file != NULL)
-	{
-		fscanf(config_file,"%s",content);
-		value = atoi(content);
-
-		if (client->pers.level >= value)
-		{ // zyk: only loads config if current level is at least the one read from the file
-		  // if the value is lower, it means the player reset his account. In this case, do not load anything
-			for (i = 1; i <= NUMBER_OF_SKILLS; i++)
-			{
-				fscanf(config_file,"%s",content);
-				value = atoi(content); // zyk: the skill levels the player has in this skill
-
-				while (value > 0)
-				{
-					rpg_upgrade_skill(ent, i, qtrue);
-					value--;
-				}
-			}
-
-			if (fscanf(config_file, "%s", content) != EOF)
-			{
-				unique_ability_flag = atoi(content);
-			}
-
-			// zyk: loading Unique Ability bought for this class
-			client->pers.secrets_found &= ~(1 << 2);
-			client->pers.secrets_found &= ~(1 << 3);
-			client->pers.secrets_found &= ~(1 << 4);
-			if (unique_ability_flag == 2)
-			{
-				client->pers.secrets_found |= (1 << 2);
-			}
-			else if (unique_ability_flag == 3)
-			{
-				client->pers.secrets_found |= (1 << 3);
-			}
-			else if (unique_ability_flag == 4)
-			{
-				client->pers.secrets_found |= (1 << 4);
-			}
-		}
-
-		fclose(config_file);
-	}
-}
-
 void save_config(gentity_t *ent)
 {
 	FILE *config_file = NULL;
@@ -14447,99 +12960,6 @@ void save_config(gentity_t *ent)
 		
 		fclose(config_file);
 	}
-}
-
-void do_change_class(gentity_t *ent, int value)
-{
-	int i = 0;
-	int old_class = ent->client->pers.rpg_class;
-
-	if (value < 0 || value > 9)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Invalid RPG Class.\n\"" );
-		return;
-	}
-
-	if (zyk_allow_class_change.integer != 1 && ent->client->pers.level > 1)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You cannot change class after level 1 in this server.\n\"" );
-		return;
-	}
-
-	// zyk validating the new class
-	ent->client->pers.rpg_class = value;
-	if (validate_rpg_class(ent) == qfalse)
-	{
-		ent->client->pers.rpg_class = old_class;
-		return;
-	}
-
-	ent->client->pers.rpg_class = old_class;
-
-	if (zyk_allow_class_change.integer == 1)
-	{
-		if (ent->client->pers.credits < 20)
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You don't have enough credits to change your class.\n\"" );
-			return;
-		}
-
-		remove_credits(ent, 20);
-	}
-
-	save_config(ent);
-
-	ent->client->pers.rpg_class = value;
-
-	// zyk: resetting skills
-	for (i = 0; i < NUMBER_OF_SKILLS; i++)
-	{
-		while (ent->client->pers.skill_levels[i] > 0)
-		{
-			ent->client->pers.skill_levels[i]--;
-			ent->client->pers.skillpoints++;
-		}
-	}
-
-	load_config(ent);
-
-	save_account(ent, qtrue);
-
-	trap->SendServerCommand( ent-g_entities, va("print \"You are now a %s\n\"", zyk_rpg_class(ent)) );
-
-	if (ent->client->sess.sessionTeam != TEAM_SPECTATOR)
-	{ // zyk: this command must kill the player if he is not in spectator mode to prevent exploits
-		G_Kill(ent);
-	}
-}
-
-/*
-==================
-Cmd_RpgClass_f
-==================
-*/
-void Cmd_RpgClass_f( gentity_t *ent ) {
-	char arg1[MAX_STRING_CHARS];
-	int value = 0;
-
-	return;
-
-	if (trap->Argc() == 1)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Look at ^3/list classes ^7to see the class number, then ^2/rpgclass <class number>^7\n\"" );
-		return;
-	}
-
-	trap->Argv(1, arg1, sizeof( arg1 ));
-	value = atoi(arg1);
-
-	if (zyk_rp_mode.integer == 1)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You can't change class when RP Mode is activated by an admin.\n\"" );
-		return;
-	}
-
-	do_change_class(ent, value);
 }
 
 /*
@@ -15251,7 +13671,7 @@ Cmd_Jetpack_f
 ==================
 */
 void Cmd_Jetpack_f( gentity_t *ent ) {
-	if (level.melee_mode > 1 && level.melee_players[ent->s.number] != -1)
+	if (level.melee_mode > 1 && level.melee_players[ent->s.number] != -1)//<-
 	{ // zyk: cannot get jetpack in Melee Battle
 		return;
 	}
@@ -15283,9 +13703,8 @@ void Cmd_Remap_f( gentity_t *ent ) {
 	char arg2[MAX_STRING_CHARS];
 	float f = level.time * 0.001;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15319,9 +13738,8 @@ void Cmd_RemapList_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15365,9 +13783,8 @@ void Cmd_RemapDeleteFile_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15413,9 +13830,8 @@ void Cmd_RemapSave_f( gentity_t *ent ) {
 	int i = 0;
 	FILE *remap_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15459,9 +13875,8 @@ void Cmd_RemapLoad_f( gentity_t *ent ) {
 	char time_offset[128];
 	FILE *remap_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15513,9 +13928,8 @@ Cmd_EntUndo_f
 ==================
 */
 void Cmd_EntUndo_f(gentity_t *ent) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15535,9 +13949,8 @@ Cmd_EntOrigin_f
 ==================
 */
 void Cmd_EntOrigin_f(gentity_t *ent) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15571,9 +13984,8 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 	qboolean has_origin_set = qfalse; // zyk: if player do not pass an origin key, use the one set with /entorigin
 	qboolean has_angles_set = qfalse; // zyk: if player do not pass an angles key, use the one set with /entorigin
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15693,9 +14105,8 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15789,9 +14200,8 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent->s.number, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15852,9 +14262,8 @@ void Cmd_EntLoad_f( gentity_t *ent ) {
 	int i = 0;
 	FILE *this_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15910,9 +14319,8 @@ void Cmd_EntDeleteFile_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -15960,9 +14368,8 @@ void Cmd_EntNear_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	gentity_t *this_ent = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent->s.number, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -16053,9 +14460,8 @@ void Cmd_EntList_f( gentity_t *ent ) {
 
 	strcpy(message,"");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -16118,9 +14524,8 @@ void Cmd_EntRemove_f( gentity_t *ent ) {
 	char   arg1[MAX_STRING_CHARS];
 	char   arg2[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -16188,6 +14593,116 @@ void Cmd_EntRemove_f( gentity_t *ent ) {
 	}
 }
 
+void Cmd_SpawnPlatform_f(gentity_t* ent) 
+{
+	gentity_t* new_ent = NULL;
+
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
+		return;
+	}
+
+	new_ent = G_Spawn();
+
+	if (new_ent)
+	{
+		zyk_main_set_entity_field(new_ent, "classname", "func_plat");
+		zyk_main_set_entity_field(new_ent, "origin", G_NewString(va("%f %f %f", ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2])));
+		zyk_main_set_entity_field(new_ent, "angles", "0 0 0");
+		zyk_main_set_entity_field(new_ent, "spawnflags", "1024");
+		zyk_main_set_entity_field(new_ent, "mins", "-64 -64 -8");
+		zyk_main_set_entity_field(new_ent, "maxs", "64 64 8");
+		zyk_main_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
+
+		zyk_main_spawn_entity(new_ent);
+
+		if (new_ent->s.number != 0)
+		{
+			level.last_spawned_entity = new_ent;
+		}
+	}
+
+}
+
+void Cmd_SpawnDummy_f(gentity_t* ent)
+{
+	gentity_t* new_ent = NULL;
+
+	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
+	{ // zyk: admin command
+		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+		return;
+	}
+
+	new_ent = G_Spawn();
+
+	if (new_ent)
+	{
+		zyk_main_set_entity_field(new_ent, "classname", "zyk_training_pole");
+		zyk_main_set_entity_field(new_ent, "origin", G_NewString(va("%f %f %f", ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2])));
+		zyk_main_set_entity_field(new_ent, "angles", "0 0 0");
+		zyk_main_set_entity_field(new_ent, "spawnflags", "1");
+
+		zyk_main_spawn_entity(new_ent);
+
+		if (new_ent->s.number != 0)
+		{
+			level.last_spawned_entity = new_ent;
+		}
+	}
+
+}
+
+qboolean is_entity_a_pickup(gentity_t* ent) {
+	char* output = NULL;
+
+	// GalaxyRP (Alex): [Entity System] Remove all weapon pickups
+	output = strstr(ent->classname, "weapon_");
+
+	if (output) {
+		return qtrue;
+	}
+
+	// GalaxyRP (Alex): [Entity System] Remove all ammo pickups
+	output = strstr(ent->classname, "ammo_");
+
+	if (output) {
+		return qtrue;
+	}
+
+	// GalaxyRP (Alex): [Entity System] Remove all item pickups
+	output = strstr(ent->classname, "item_");
+
+	if (output) {
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
+void Cmd_RemovePickups_f(gentity_t* ent) {
+
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
+		return;
+	}
+
+	gentity_t* target_ent;
+
+	for (int i = 0; i < level.num_entities; i++)
+	{
+		target_ent = &g_entities[i];
+
+		if (is_entity_a_pickup(target_ent) == qtrue) {
+			trap->SendServerCommand(ent - g_entities, va("print \"%s with id %d removed.\n\"", target_ent->classname, i));
+			G_FreeEntity(target_ent);
+		}
+	}
+
+	return;
+
+}
+
 /*
 ==================
 Cmd_ClientPrint_f
@@ -16198,9 +14713,8 @@ void Cmd_ClientPrint_f( gentity_t *ent ) {
 	char   arg1[MAX_STRING_CHARS];
 	char   arg2[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_CLIENTPRINT)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_CLIENTPRINT))
+	{
 		return;
 	}
 
@@ -16236,9 +14750,8 @@ void Cmd_Silence_f( gentity_t *ent ) {
 	int client_id = -1;
 	char   arg[MAX_STRING_CHARS];
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_SILENCE)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_SILENCE))
+	{
 		return;
 	}
 
@@ -16276,217 +14789,18 @@ void zyk_show_admin_commands(gentity_t *ent, gentity_t *target_ent)
 	int i = 0;
 	strcpy(message,"");
 
-	while (i < ADM_NUM_CMDS)
-	{
-		strcpy(message_content[i],"");
-		i++;
-	}
-	message_content[ADM_NUM_CMDS][0] = '\0';
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_NPC))) 
-	{
-		strcpy(message_content[0],va("^3  %d ^7- NPC: ^2yes\n",ADM_NPC));
-	}
-	else
-	{
-		strcpy(message_content[0],va("^3  %d ^7- NPC: ^1no\n",ADM_NPC));
+	for (int i = 0; i < ADM_NUM_CMDS; i++) {
+		if ((ent->client->pers.bitvalue & (1 << admin_commands[i].number)))
+		{
+			trap->SendServerCommand(target_ent - g_entities, va("print \"^3%d ^7- %s: ^2yes\n\"", admin_commands[i].number, admin_commands[i].title));
+		}
+		else
+		{
+			trap->SendServerCommand(target_ent - g_entities, va("print \"^3%d ^7- %s: ^1no\n\"", admin_commands[i].number, admin_commands[i].title));
+		}
 	}
 
-	if ((ent->client->pers.bitvalue & (1 << ADM_NOCLIP))) 
-	{
-		strcpy(message_content[1],va("^3  %d ^7- No Clip: ^2yes\n",ADM_NOCLIP));
-	}
-	else
-	{
-		strcpy(message_content[1],va("^3  %d ^7- No Clip: ^1no\n",ADM_NOCLIP));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_GIVEADM))) 
-	{
-		strcpy(message_content[2],va("^3  %d ^7- Give Admin: ^2yes\n",ADM_GIVEADM));
-	}
-	else
-	{
-		strcpy(message_content[2],va("^3  %d ^7- Give Admin: ^1no\n",ADM_GIVEADM));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_TELE))) 
-	{
-		strcpy(message_content[3],va("^3  %d ^7- Teleport: ^2yes\n",ADM_TELE));
-	}
-	else
-	{
-		strcpy(message_content[3],va("^3  %d ^7- Teleport: ^1no\n",ADM_TELE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_ADMPROTECT))) 
-	{
-		strcpy(message_content[4],va("^3  %d ^7- Admin Protect: ^2yes\n",ADM_ADMPROTECT));
-	}
-	else
-	{
-		strcpy(message_content[4],va("^3  %d ^7- Admin Protect: ^1no\n",ADM_ADMPROTECT));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM))) 
-	{
-		strcpy(message_content[5],va("^3  %d ^7- Entity System: ^2yes\n",ADM_ENTITYSYSTEM));
-	}
-	else
-	{
-		strcpy(message_content[5],va("^3  %d ^7- Entity System: ^1no\n",ADM_ENTITYSYSTEM));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_SILENCE))) 
-	{
-		strcpy(message_content[6],va("^3  %d ^7- Silence: ^2yes\n",ADM_SILENCE));
-	}
-	else
-	{
-		strcpy(message_content[6],va("^3  %d ^7- Silence: ^1no\n",ADM_SILENCE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_CLIENTPRINT))) 
-	{
-		strcpy(message_content[7],va("^3  %d ^7- Client Print: ^2yes\n",ADM_CLIENTPRINT));
-	}
-	else
-	{
-		strcpy(message_content[7],va("^3  %d ^7- Client Print: ^1no\n",ADM_CLIENTPRINT));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_RPMODE))) 
-	{
-		strcpy(message_content[8],va("^3  %d ^7- Placeholder: ^2yes\n",ADM_RPMODE));
-	}
-	else
-	{
-		strcpy(message_content[8],va("^3  %d ^7- Placeholder: ^1no\n",ADM_RPMODE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_KICK))) 
-	{
-		strcpy(message_content[9],va("^3  %d ^7- Kick: ^2yes\n",ADM_KICK));
-	}
-	else
-	{
-		strcpy(message_content[9],va("^3  %d ^7- Kick: ^1no\n",ADM_KICK));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_PARALYZE))) 
-	{
-		strcpy(message_content[10],va("^3 %d ^7- Paralyze: ^2yes\n",ADM_PARALYZE));
-	}
-	else
-	{
-		strcpy(message_content[10],va("^3 %d ^7- Paralyze: ^1no\n",ADM_PARALYZE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_GIVE))) 
-	{
-		strcpy(message_content[11],va("^3 %d ^7- Give: ^2yes\n",ADM_GIVE));
-	}
-	else
-	{
-		strcpy(message_content[11],va("^3 %d ^7- Give: ^1no\n",ADM_GIVE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_SCALE))) 
-	{
-		strcpy(message_content[12],va("^3 %d ^7- Scale: ^2yes\n",ADM_SCALE));
-	}
-	else
-	{
-		strcpy(message_content[12],va("^3 %d ^7- Scale: ^1no\n",ADM_SCALE));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_PLAYERS))) 
-	{
-		strcpy(message_content[13],va("^3 %d ^7- Players: ^2yes\n",ADM_PLAYERS));
-	}
-	else
-	{
-		strcpy(message_content[13],va("^3 %d ^7- Players: ^1no\n",ADM_PLAYERS));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
-	{
-		strcpy(message_content[14], va("^3 %d ^7- Duel Arena: ^2yes\n", ADM_DUELARENA));
-	}
-	else
-	{
-		strcpy(message_content[14], va("^3 %d ^7- Duel Arena: ^1no\n", ADM_DUELARENA));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
-	{
-		strcpy(message_content[15], va("^3 %d ^7- Placeholder: ^2yes\n", ADM_CUSTOMQUEST));
-	}
-	else
-	{
-		strcpy(message_content[15], va("^3 %d ^7- Placeholder: ^1no\n", ADM_CUSTOMQUEST));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_CREATEITEM)))
-	{
-		strcpy(message_content[16], va("^3 %d ^7- Create Items: ^2yes\n", ADM_CREATEITEM));
-	}
-	else
-	{
-		strcpy(message_content[16], va("^3 %d ^7- Create Items: ^1no\n", ADM_CREATEITEM));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_GOD)))
-	{
-		strcpy(message_content[17], va("^3 %d ^7- God Mode: ^2yes\n", ADM_GOD));
-	}
-	else
-	{
-		strcpy(message_content[17], va("^3 %d ^7- God Mode: ^1no\n", ADM_GOD));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_LEVELUP)))
-	{
-		strcpy(message_content[18], va("^3 %d ^7- Upgrade Level: ^2yes\n", ADM_LEVELUP));
-	}
-	else
-	{
-		strcpy(message_content[18], va("^3 %d ^7- Upgrade Level: ^1no\n", ADM_LEVELUP));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_SKILL)))
-	{
-		strcpy(message_content[19], va("^3 %d ^7- Change Skills: ^2yes\n", ADM_SKILL));
-	}
-	else
-	{
-		strcpy(message_content[19], va("^3 %d ^7- Change Skills: ^1no\n", ADM_SKILL));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_CREATECREDITS)))
-	{
-		strcpy(message_content[20], va("^3 %d ^7- Create Credits: ^2yes\n", ADM_CREATECREDITS));
-	}
-	else
-	{
-		strcpy(message_content[20], va("^3 %d ^7- Create Credits: ^1no\n", ADM_CREATECREDITS));
-	}
-
-	if ((ent->client->pers.bitvalue & (1 << ADM_IGNORECHATDISTANCE)))
-	{
-		strcpy(message_content[21], va("^3 %d ^7- Ignore Chat Distance: ^2yes\n", ADM_IGNORECHATDISTANCE));
-	}
-	else
-	{
-		strcpy(message_content[21], va("^3 %d ^7- Ignore Chat Distance: ^1no\n", ADM_IGNORECHATDISTANCE));
-	}
-
-	for (i = 0; i < ADM_NUM_CMDS; i++)
-	{
-		strcpy(message,va("%s%s",message,message_content[i]));
-	}
-
-	trap->SendServerCommand( target_ent-g_entities, va("print \"\n%s^7\n%s\n^7Use ^3/adminlist <number> ^7to see command info\n\n\"", ent->client->pers.netname, message) );
+	return;
 }
 
 /*
@@ -16539,9 +14853,9 @@ void Cmd_AdminList_f( gentity_t *ent ) {
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"\nUse ^3/clientprint <player name or ID, or -1 to show to all players> <message> ^7to print a message in the screen\n\n\"" );
 		}
-		else if (command_number == ADM_RPMODE)
+		else if (command_number == ADM_SHAKESCREEN)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\nUse ^3/rpmode ^7to make all players not able to use ^3/rpgclass ^7and level up. Admins can give levels by using ^3/levelgive <player name or ID>^7\n\n\"" );
+			trap->SendServerCommand( ent-g_entities, "print \"\nUse ^3/shakescreen ^7to shake people's screen.^7\n\n\"" );
 		}
 		else if (command_number == ADM_KICK)
 		{
@@ -16735,82 +15049,6 @@ void Cmd_AdminDown_f( gentity_t *ent ) {
 
 /*
 ==================
-Cmd_RpMode_f
-==================
-*/
-void Cmd_RpMode_f( gentity_t *ent ) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
-		return;
-	}
-
-	if (zyk_rp_mode.integer == 1)
-	{
-		int i = 0;
-
-		trap->Cvar_Set( "zyk_rp_mode", "0" );
-
-		for (i = 0; i < MAX_CLIENTS; i++)
-		{ // zyk: logout everyone in RPG Mode so they must reload their accounts
-			gentity_t *this_player = &g_entities[i];
-
-			if (this_player && this_player->client && this_player->client->sess.amrpgmode == 2)
-				this_player->client->sess.amrpgmode = 0;
-		}
-
-		trap->SendServerCommand( ent-g_entities, "print \"^3RPG System: ^7RP Mode ^1OFF^7\n\"" );
-	}
-	else
-	{
-		trap->Cvar_Set( "zyk_rp_mode", "1" );
-		trap->SendServerCommand( ent-g_entities, "print \"^3RPG System: ^7RP Mode ^2ON^7\n\"" );
-	}
-}
-
-/*
-==================
-Cmd_RpModeClass_f
-==================
-*/
-void Cmd_RpModeClass_f( gentity_t *ent ) {
-	char	arg1[MAX_STRING_CHARS];
-	char	arg2[MAX_STRING_CHARS];
-	int client_id = -1;
-
-	if (!(ent->client->pers.bitvalue & (1 << ADM_RPMODE)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
-		return;
-	}
-
-	if ( trap->Argc() != 3 )
-	{ 
-		trap->SendServerCommand( ent-g_entities, "print \"You must write a player name or ID and the class number.\n\"" ); 
-		return; 
-	}
-
-	trap->Argv( 1,  arg1, sizeof( arg1 ) );
-	trap->Argv( 2,  arg2, sizeof( arg2 ) );
-	client_id = ClientNumberFromString( ent, arg1, qfalse ); 
-				
-	if (client_id == -1)
-	{
-		return;
-	}
-
-	if (g_entities[client_id].client->sess.amrpgmode != 2)
-	{
-		trap->SendServerCommand( ent-g_entities, va("print \"Player is not in RPG Mode\n\"") );
-		return;
-	}
-
-	do_change_class(&g_entities[client_id], atoi(arg2));
-	trap->SendServerCommand( ent-g_entities, va("print \"Changed target player class\n\"") );
-}
-
-/*
-==================
 Cmd_RpModeUp_f
 ==================
 */
@@ -16819,9 +15057,8 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_SKILL)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_SKILL))
+	{
 		return;
 	}
 
@@ -16846,8 +15083,7 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 		return;
 	}
 
-	do_upgrade_skill(&g_entities[client_id], atoi(arg2), qfalse);
-	trap->SendServerCommand( ent-g_entities, va("print \"Upgraded target player skill\n\"") );
+	do_upgrade_skill(ent, &g_entities[client_id], atoi(arg2), qfalse);
 }
 
 /*
@@ -16860,9 +15096,8 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_SKILL)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_SKILL))
+	{
 		return;
 	}
 
@@ -16900,9 +15135,8 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_LEVELUP)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_LEVELUP))
+	{
 		return;
 	}
    
@@ -16935,11 +15169,11 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 			g_entities[client_id].client->pers.credits_modifier = -10;
 			rpg_score(&g_entities[client_id], qtrue);
 
-			trap->SendServerCommand( ent-g_entities, va("print \"Target player leveled up\n\"") );
+			trap->SendServerCommand( ent-g_entities, va("print \"^2Target player leveled up. Their current level is: ^3%i^2. Their skillpoint count is: ^3%i^2.\n\"", g_entities[client_id].client->pers.level, g_entities[client_id].client->pers.skillpoints) );
 		}
 		else
 		{
-			trap->SendServerCommand( ent-g_entities, va("print \"Target player is at the max rpg level\n\"") );
+			trap->SendServerCommand( ent-g_entities, va("print \"^1Target player is at the max level.\n\"") );
 		}
 	}
 	else
@@ -16948,15 +15182,113 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 	}
 }
 
+// GalaxyRP (Alex): [XP System] This method returns the amount of XP needed to get to the next level, based on a given level.
+int check_xp(int currentLevel) {
+	int expNeeded = (currentLevel / 10) + 2;
+	return expNeeded;
+}
+
+/*
+==================
+Cmd_GiveXp_f
+==================
+*/
+void Cmd_GiveXp_f(gentity_t* ent) {
+	char arg1[MAX_STRING_CHARS];
+	int client_id = -1;
+
+	if (!check_admin_command(ent, ADM_XP))
+	{
+		return;
+	}
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"You must specify the player name or ID.\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	client_id = ClientNumberFromString(ent, arg1, qfalse);
+
+	if (client_id == -1)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Player not found on server.\n\"");
+		return;
+	}
+
+	g_entities[client_id].client->pers.xp++;
+
+	trap->SendServerCommand(&g_entities[client_id] - g_entities, va("chat \"^2You were given XP! Your current XP is: ^3%i^2/^3%i^2\n\"", g_entities[client_id].client->pers.xp, check_xp(g_entities[client_id].client->pers.level)));
+	trap->SendServerCommand(ent - g_entities, va("print \"^2Target player was given XP. Their current XP is: ^3%i^2/^3%i^2\n\"", g_entities[client_id].client->pers.xp, check_xp(g_entities[client_id].client->pers.level)));
+
+	// GalaxyRP (Alex): [XP System] If player has reached max xp for this level, level them up.
+	if (g_entities[client_id].client->pers.xp == check_xp(g_entities[client_id].client->pers.level)) {
+
+		rpg_score(&g_entities[client_id], qtrue);
+		trap->SendServerCommand(ent - g_entities, va("print \"^2Target player leveled up. Their current level is: ^3%i^2. Their skillpoint count is: ^3%i^2.\n\"", g_entities[client_id].client->pers.level, g_entities[client_id].client->pers.skillpoints));
+		// GalaxyRP (Alex): [XP System] Player levelled up, so their xp is now 0.
+		g_entities[client_id].client->pers.xp = 0;
+	}
+
+	update_chars_table_row_with_current_values(&g_entities[client_id]);
+
+	return;
+}
+
+/*
+==================
+Cmd_RemoveXp_f
+==================
+*/
+void Cmd_RemoveXp_f(gentity_t* ent) {
+	char arg1[MAX_STRING_CHARS];
+	int client_id = -1;
+
+	if (!check_admin_command(ent, ADM_XP))
+	{
+		return;
+	}
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"You must specify the player name or ID.\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	client_id = ClientNumberFromString(ent, arg1, qfalse);
+
+	if (client_id == -1)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Player not found on server.\n\"");
+		return;
+	}
+
+	if(g_entities[client_id].client->pers.xp == 0) {
+		trap->SendServerCommand(ent - g_entities, va("print \"^2Target player's XP is already at 0. Nothing was done.\n\""));
+		return;
+	}
+
+	g_entities[client_id].client->pers.xp--;
+
+	trap->SendServerCommand(ent - g_entities, va("print \"^2Target player's XP was reduced with one point. Their current XP is: ^3%i^2/^3%i^2\n\"", g_entities[client_id].client->pers.xp, check_xp(g_entities[client_id].client->pers.level)));
+
+	update_chars_table_row_with_current_values(&g_entities[client_id]);
+
+	return;
+}
+
 /*
 ==================
 Cmd_EntitySystem_f
 ==================
 */
 void Cmd_EntitySystem_f( gentity_t *ent ) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_ENTITYSYSTEM)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	{
 		return;
 	}
 
@@ -16972,9 +15304,8 @@ void Cmd_AdmKick_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_KICK)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_KICK))
+	{
 		return;
 	}
    
@@ -17077,9 +15408,8 @@ void Cmd_Paralyze_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_PARALYZE)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_PARALYZE))
+	{
 		return;
 	}
    
@@ -17137,9 +15467,8 @@ void Cmd_Players_f( gentity_t *ent ) {
 
 	strcpy(content,"ID - Name - IP - Type\n");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_PLAYERS)))
-	{ // zyk: admin command
-		trap->SendServerCommand( ent-g_entities, "print \"You don't have this admin command.\n\"" );
+	if (!check_admin_command(ent, ADM_PLAYERS))
+	{
 		return;
 	}
 
@@ -17207,10 +15536,6 @@ void Cmd_Players_f( gentity_t *ent ) {
 				Q_stricmp(arg2, "ammo") == 0 || Q_stricmp(arg2, "items") == 0)
 			{ // zyk: show skills of the player
 				zyk_list_player_skills(player_ent, ent, G_NewString(arg2));
-			}
-			else if (Q_stricmp(arg2, "stuff") == 0)
-			{ // zyk: lists stuff bought by the player
-				zyk_list_stuff(player_ent, ent);
 			}
 			else
 			{
@@ -17474,7 +15799,7 @@ qboolean zyk_can_use_unique(gentity_t *ent)
 // zyk: Unique Boost, makes unique skill cooldown time lower
 void zyk_unique_boost(gentity_t *ent)
 {
-	if (ent->client->pers.unique_skill_timer > level.time && ent->client->pers.universe_quest_progress == NUMBER_OF_UNIVERSE_QUEST_OBJECTIVES &&
+	if (ent->client->pers.unique_skill_timer > level.time && ent->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ &&
 		ent->client->pers.universe_quest_counter & (1 << 2) && !(ent->client->sess.magic_more_disabled_powers & (1 << 1)))
 	{
 		ent->client->pers.unique_skill_timer -= ((ent->client->pers.unique_skill_timer - level.time) / 5);
@@ -17823,7 +16148,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 			}
 
 			zyk_unique_boost(ent);
-			Cmd_ZykMod_f(ent);
 		}
 		else
 		{
@@ -18148,7 +16472,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 			}
 
 			zyk_unique_boost(ent);
-			Cmd_ZykMod_f(ent);
 		}
 		else
 		{
@@ -18554,7 +16877,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 			}
 
 			zyk_unique_boost(ent);
-			Cmd_ZykMod_f(ent);
 		}
 		else
 		{
@@ -18565,82 +16887,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"You have no Unique Abilities to use this command\n\"");
 		return;
-	}
-}
-
-/*
-==================
-Cmd_Magic_f
-==================
-*/
-void Cmd_Magic_f( gentity_t *ent ) {
-	char arg1[MAX_STRING_CHARS];
-
-	if (trap->Argc() == 1)
-	{
-		trap->SendServerCommand( ent->s.number, va("print \" 0 Magic Sense - %s^7      31 Ultimate - %s^7        32 Final - %s^7\n 1 ^4Healing Water - %s^7     2 ^4Water Splash - %s^7     3 ^4Water Attack - %s^7\n 4 ^3Earthquake - %s^7        5 ^3Rockfall - %s^7         6 ^3Shifting Sand - %s^7\n 7 ^2Sleeping Flowers - %s^7  8 ^2Poison Mushrooms - %s^7 9 ^2Tree of Life - %s^7\n10 ^5Magic Shield - %s^7     11 ^5Dome of Damage - %s^7  12 ^5Magic Disable - %s^7\n13 ^6Ultra Speed - %s^7      14 ^6Slow Motion - %s^7     15 ^6Fast and Slow - %s^7\n16 ^1Flame Burst - %s^7      17 ^1Ultra Flame - %s^7     18 ^1Flaming Area - %s^7\n19 Blowing Wind - %s^7     20 Hurricane - %s^7       21 Reverse Wind - %s^7\n22 ^3Ultra Resistance - %s^7 23 ^3Ultra Strength - %s^7  24 ^3Enemy Weakening - %s^7\n25 ^5Ice Stalagmite - %s^7   26 ^5Ice Boulder - %s^7     27 ^5Ice Block - %s^7\n28 Healing Area - %s^7     29 Magic Explosion - %s^7 30 Lightning Dome - %s^7\n\"", 
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_MAGIC_SENSE)) ? "^2yes" : "^1no ", 
-			!(ent->client->sess.magic_more_disabled_powers & (1 << 0)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_more_disabled_powers & (1 << 1)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_HEALING_WATER)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_WATER_SPLASH)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_WATER_ATTACK)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_EARTHQUAKE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ROCKFALL)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_SHIFTING_SAND)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_SLEEPING_FLOWERS)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_POISON_MUSHROOMS)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_TREE_OF_LIFE)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_MAGIC_SHIELD)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_DOME_OF_DAMAGE)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_MAGIC_DISABLE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ULTRA_SPEED)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_SLOW_MOTION)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_FAST_AND_SLOW)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_FLAME_BURST)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ULTRA_FLAME)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_FLAMING_AREA)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_BLOWING_WIND)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_HURRICANE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_REVERSE_WIND)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ULTRA_RESISTANCE)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ULTRA_STRENGTH)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ENEMY_WEAKENING)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ICE_STALAGMITE)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ICE_BOULDER)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_ICE_BLOCK)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_HEALING_AREA)) ? "^2yes" : "^1no ", !(ent->client->sess.magic_disabled_powers & (1 << MAGIC_MAGIC_EXPLOSION)) ? "^2yes" : "^1no ",
-			!(ent->client->sess.magic_disabled_powers & (1 << MAGIC_LIGHTNING_DOME)) ? "^2yes" : "^1no ") );
-	}
-	else
-	{
-		int magic_power = 0;
-
-		trap->Argv( 1, arg1, sizeof( arg1 ) );
-
-		magic_power = atoi(arg1);
-
-		if (magic_power < MAGIC_MAGIC_SENSE || magic_power >= (MAX_MAGIC_POWERS + 2))
-		{
-			trap->SendServerCommand(ent->s.number, "print \"Invalid magic power.\n\"" );
-			return;
-		}
-
-		if (magic_power >= 31)
-		{
-			magic_power -= 31;
-
-			if (ent->client->sess.magic_more_disabled_powers & (1 << magic_power))
-			{
-				ent->client->sess.magic_more_disabled_powers &= ~(1 << magic_power);
-				save_account(ent, qtrue);
-				trap->SendServerCommand(ent->s.number, "print \"Enabled a magic power.\n\"");
-			}
-			else
-			{
-				ent->client->sess.magic_more_disabled_powers |= (1 << magic_power);
-				save_account(ent, qtrue);
-				trap->SendServerCommand(ent->s.number, "print \"Disabled a magic power.\n\"");
-			}
-		}
-		else if (ent->client->sess.magic_disabled_powers & (1 << magic_power))
-		{
-			ent->client->sess.magic_disabled_powers &= ~(1 << magic_power);
-			save_account(ent, qtrue);
-			trap->SendServerCommand(ent->s.number, "print \"Enabled a magic power.\n\"" );
-		}
-		else
-		{
-			ent->client->sess.magic_disabled_powers |= (1 << magic_power);
-			save_account(ent, qtrue);
-			trap->SendServerCommand(ent->s.number, "print \"Disabled a magic power.\n\"" );
-		}
 	}
 }
 
@@ -18944,9 +17190,8 @@ void Cmd_DuelArena_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_DUELARENA))
+	{
 		return;
 	}
 
@@ -18985,9 +17230,8 @@ Cmd_DuelPause_f
 ==================
 */
 void Cmd_DuelPause_f(gentity_t *ent) {
-	if (!(ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_DUELARENA))
+	{
 		return;
 	}
 
@@ -19203,9 +17447,8 @@ void Cmd_MeleeArena_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_DUELARENA)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_DUELARENA))
+	{
 		return;
 	}
 
@@ -19316,125 +17559,64 @@ void Cmd_RpgLmsTable_f(gentity_t *ent) {
 
 /*
 ==================
-Cmd_Tutorial_f
-==================
-*/
-void Cmd_Tutorial_f(gentity_t *ent) {
-	int page = 1; // zyk: page the user wants to see
-	int i = 0;
-	int results_per_page = zyk_list_cmds_results_per_page.integer; // zyk: number of results per page
-	char arg1[MAX_STRING_CHARS];
-	char file_content[MAX_STRING_CHARS * 4];
-	char content[MAX_STRING_CHARS];
-	FILE *tutorial_file = NULL;
-
-	if (trap->Argc() < 2)
-	{
-		trap->SendServerCommand(ent->s.number, "print \"You must pass a page number. Example: ^3/tutorial 1^7\n\"");
-		return;
-	}
-
-	strcpy(file_content, "");
-	strcpy(content, "");
-
-	trap->Argv(1, arg1, sizeof(arg1));
-	page = atoi(arg1);
-
-	tutorial_file = fopen("GalaxyRP/tutorial.txt", "r");
-	if (tutorial_file != NULL)
-	{
-		if (page > 0)
-		{ // zyk: show results of this page
-			while (i < (results_per_page * (page - 1)) && fgets(content, sizeof(content), tutorial_file) != NULL)
-			{ // zyk: reads the file until it reaches the position corresponding to the page number
-				i++;
-			}
-
-			while (i < (results_per_page * page) && fgets(content, sizeof(content), tutorial_file) != NULL)
-			{ // zyk: fgets returns NULL at EOF
-				strcpy(file_content, va("%s%s", file_content, content));
-				i++;
-			}
-		}
-		else
-		{ // zyk: search for the string
-			while (i < results_per_page && fgets(content, sizeof(content), tutorial_file) != NULL)
-			{ // zyk: fgets returns NULL at EOF
-				if (strstr(G_NewString(content), G_NewString(arg1)))
-				{
-					strcpy(file_content, va("%s%s", file_content, content));
-					i++;
-				}
-			}
-		}
-
-		fclose(tutorial_file);
-		trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\"", file_content));
-	}
-	else
-	{
-		trap->SendServerCommand(ent->s.number, "print \"Tutorial file does not exist\n\"");
-	}
-}
-
-/*
-==================
 Cmd_News_f
 ==================
 */
 void Cmd_News_f(gentity_t *ent) {
-	int page = 1; // zyk: page the user wants to see
-	int i = 0;
-	int results_per_page = zyk_list_cmds_results_per_page.integer; // zyk: number of results per page
-	char arg1[MAX_STRING_CHARS];
-	char file_content[MAX_STRING_CHARS * 4];
-	char content[MAX_STRING_CHARS];
-	FILE *news_file = NULL;
+	char arg1[MAX_STRING_CHARS], arg2[MAX_STRING_CHARS];
+	int numberOfEntries = 10;
 
-	if (trap->Argc() > 2)
+	if (trap->Argc() > 3 || trap->Argc() < 2)
 	{
-		trap->SendServerCommand(ent->s.number, "print \"Usage: /news <neutral/jedi/sith> (argument is optional)\n\"");
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /news <channel name> <number of entries>\n\"");
 		return;
 	}
 
-	if (trap->Argc() < 2)
+	if (trap->Argc() == 3)
 	{
-		news_file = fopen("GalaxyRP/news.txt", "r");
-	}
-	else {
-	
-		trap->Argv(1, arg1, sizeof(arg1));
-		if (strcmp(arg1, "republic") != 0 && strcmp(arg1, "sith") != 0 && strcmp(arg1, "jedi") != 0) {
-			trap->SendServerCommand(ent->s.number, "print \"Usage: /news <neutral/jedi/sith> (argument is optional)\n\"");
-			return;
-		}
-		if (strcmp(arg1, "republic") == 0) {
-			news_file = fopen("GalaxyRP/news_republic.txt", "r");
-		}
-		if (strcmp(arg1, "sith") == 0) {
-			news_file = fopen("GalaxyRP/news_sith.txt", "r");
-		}
-		if (strcmp(arg1, "jedi") == 0) {
-			news_file = fopen("GalaxyRP/news_jedi.txt", "r");
+		trap->Argv(2, arg2, sizeof(arg2));
+		numberOfEntries = atoi(arg2);
+		if (numberOfEntries < 1 || numberOfEntries > 10) {
+			trap->SendServerCommand(ent->s.number, "print \"Error: Can only display between one and ten entries at a time.\n\"");
 		}
 	}
 
-	strcpy(file_content, "");
-	strcpy(content, ""); 
-	
-	if (news_file != NULL)
-	{
+	trap->Argv(1, arg1, sizeof(arg1));
+	trap->SendServerCommand(ent->s.number, va("print \"^3Viewing entries in channel ^2%s^3:\n\"", arg1));
+	select_news_from_channel(ent, arg1, numberOfEntries);
+}
 
-		if (fgets(content, sizeof(content), news_file) != NULL) {
-			strcpy(file_content, va("%s%s", file_content, content));
-			fclose(news_file);
-			trap->SendServerCommand(ent->s.number, va("print \"\n^2NEWS: ^3%s\n\"", file_content));
-		}
-	}
-	else
+void Cmd_NewsChannels_f(gentity_t* ent) {
+	select_news_channels(ent);
+	return;
+}
+
+void Cmd_NewsRemove_f(gentity_t* ent) {
+	char arg1[MAX_STRING_CHARS];
+	int newsID;
+
+	if (!check_admin_command(ent, ADM_REMOVENEWS))
 	{
-		trap->SendServerCommand(ent->s.number, "print \"No important news.\n\"");
+		return;
 	}
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /newsremove <news id>\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+	newsID = atoi(arg1);
+	if (newsID < 0) {
+		trap->SendServerCommand(ent->s.number, "print \"ID must be positive.\n\"");
+		return;
+	}
+
+	delete_news_table_row_with_id(ent, newsID);
+	trap->SendServerCommand(ent->s.number, va("print \"Removed news entry with ID %i!\n\"", newsID));
+
+	return;
 }
 
 /*
@@ -19447,57 +17629,23 @@ void Cmd_UpdateNews_f(gentity_t *ent) {
 	char arg2[MAX_STRING_CHARS];
 	FILE *news_file = NULL;
 
-	if (!(ent->client->pers.bitvalue & (1 << ADM_GIVEADM)))
-	{ // admin command
-		trap->SendServerCommand(ent - g_entities, "print \"You don't have this admin command.\n\"");
+	if (!check_admin_command(ent, ADM_UPDATENEWS))
+	{
 		return;
 	}
 
-	if (trap->Argc() > 3)
+	if (trap->Argc() != 3)
 	{
-		trap->SendServerCommand(ent->s.number, "print \"Usage: /news <neutral/jedi/sith> (argument is optional) <news text>\n\"");
+		trap->SendServerCommand(ent->s.number, "print \"Usage: /news <channel> <news text>\n\"");
 		return;
 	}
+	trap->Argv(1, arg1, sizeof(arg1));
+	trap->Argv(2, arg2, sizeof(arg2));
 
-	if (trap->Argc() < 3)
-	{
-		news_file = fopen("GalaxyRP/news.txt", "w");
+	insert_news_table_row(ent, arg1, arg2);
 
-		trap->Argv(1, arg2, sizeof(arg2));
-
-		fprintf(news_file, "%s\n", arg2);
-		fclose(news_file);
-		return;
-	}
-	else {
-		trap->Argv(1, arg1, sizeof(arg1));
-		if (strcmp(arg1, "republic") != 0 && strcmp(arg1, "sith") != 0 && strcmp(arg1, "jedi") != 0) {
-			trap->SendServerCommand(ent->s.number, "print \"Usage: /news <neutral/jedi/sith> (argument is optional) <news text>\n\"");
-			return;
-		}
-		if (strcmp(arg1, "republic") == 0) {
-			news_file = fopen("GalaxyRP/news_republic.txt", "w");
-		}
-		if (strcmp(arg1, "sith") == 0) {
-			news_file = fopen("GalaxyRP/news_sith.txt", "w");
-		}
-		if (strcmp(arg1, "jedi") == 0) {
-			news_file = fopen("GalaxyRP/news_jedi.txt", "w");
-		}
-	}
-	trap->Argv(1, arg2, sizeof(arg2));
-
-	if (news_file != NULL)
-	{
-		trap->Argv(2, arg2, sizeof(arg2));
-
-		fprintf(news_file, "%s\n", arg2);
-		fclose(news_file);
-	}
-	else
-	{
-		trap->SendServerCommand(ent->s.number, "print \"File was not found.\n\"");
-	}
+	trap->SendServerCommand(ent->s.number, va("print \"Added news to channel %s\n\"", arg1));
+	
 }
 
 void description_display_beginning(gentity_t *ent, char netname[MAX_STRING_CHARS]) {
@@ -19534,9 +17682,6 @@ Cmd_Examine_f
 */
 void Cmd_Examine_f(gentity_t *ent) {
 	char player_name[MAX_STRING_CHARS];
-	char arg2[MAX_STRING_CHARS];
-	FILE *description_file = NULL;
-	char description[MAX_STRING_CHARS];
 
 	if (trap->Argc() != 2) {
 		trap->SendServerCommand(ent->s.number, "print \"Usage: /examine <playername>\n\"");
@@ -19585,156 +17730,52 @@ void Cmd_Attributes_f(gentity_t *ent) {
 
 	strcpy(ent->client->pers.description, arg1);
 
-	save_account(ent, qtrue);
+	update_chars_table_row_with_current_values(ent);
 
 	return;
 }
 
 /*
 ==================
-Cmd_QuestSkip_f
+Cmd_ShakeScreen_f
 ==================
 */
-void Cmd_QuestSkip_f(gentity_t *ent) {
-	if (ent->client->pers.can_play_quest == 1)
+void Cmd_ShakeScreen_f(gentity_t* ent)
+{
+	int i, distanceFromPlayer, intensity, duration;
+	char arg1[MAX_STRING_CHARS], arg2[MAX_STRING_CHARS], arg3[MAX_STRING_CHARS];
+	gentity_t *other;
+
+	if (!check_admin_command(ent, ADM_SHAKESCREEN))
 	{
-		if (ent->client->pers.universe_quest_progress == 1 && ent->client->pers.universe_quest_messages > 4)
+		return;
+	}
+
+	if (trap->Argc() != 4)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /shakeScreen <distance from player> <intensity> <length>\nExample: /shakeScreen 1 5 7\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+	distanceFromPlayer = atoi(arg1);
+	trap->Argv(2, arg2, sizeof(arg2));
+	intensity = atoi(arg2);
+	trap->Argv(3, arg3, sizeof(arg3));
+	duration = atoi(arg3) * 1000;
+
+	for (i = 0; i < level.maxclients; i++)
+	{
+		other = &g_entities[i];
+
+		if (g_entities[i].inuse && g_entities[i].client && g_entities[i].client->pers.connected == CON_CONNECTED && Distance(ent->client->ps.origin, other->client->ps.origin) <= distanceFromPlayer)
 		{
-			ent->client->pers.universe_quest_messages = 35;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 3 && ent->client->pers.universe_quest_messages > 0)
-		{
-			ent->client->pers.universe_quest_messages = 16;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 4 && ent->client->pers.universe_quest_messages > 5)
-		{
-			ent->client->pers.universe_quest_messages = 18;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 5 && number_of_amulets(ent) == 3 && ent->client->pers.universe_quest_messages > 205)
-		{
-			ent->client->pers.universe_quest_messages = 223;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 8 && ent->client->pers.universe_quest_messages > 1)
-		{
-			ent->client->pers.universe_quest_messages = 20;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 10 && ent->client->pers.universe_quest_messages > 1)
-		{
-			ent->client->pers.universe_quest_messages = 18;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 12 && ent->client->pers.universe_quest_messages > 1)
-		{
-			ent->client->pers.universe_quest_messages = 24;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 13 && ent->client->pers.universe_quest_messages > 1)
-		{
-			ent->client->pers.universe_quest_messages = 27;
-			ent->client->pers.universe_quest_timer = level.time;
-		}
-		else if (ent->client->pers.universe_quest_progress == 15)
-		{
-			if (ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Sages Sequel
-				ent->client->pers.universe_quest_messages = 30;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Guardians Sequel
-				ent->client->pers.universe_quest_messages = 19;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.universe_quest_messages >= 24)
-			{ // zyk: Thor Sequel
-				ent->client->pers.universe_quest_messages = 34;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Time Sequel
-				ent->client->pers.universe_quest_messages = 35;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-		}
-		else if (ent->client->pers.universe_quest_progress == 17)
-		{
-			if (ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Sages Sequel
-				ent->client->pers.universe_quest_messages = 28;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Guardians Sequel
-				ent->client->pers.universe_quest_messages = 9;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Thor Sequel
-				ent->client->pers.universe_quest_messages = 15;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.universe_quest_messages >= 14)
-			{ // zyk: Time Sequel
-				ent->client->pers.universe_quest_messages = 21;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-		}
-		else if (ent->client->pers.universe_quest_progress == 19)
-		{
-			if (ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.universe_quest_messages >= 10)
-			{ // zyk: Sages Sequel
-				ent->client->pers.universe_quest_messages = 26;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Guardians Sequel
-				ent->client->pers.universe_quest_messages = 8;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Thor Sequel
-				ent->client->pers.universe_quest_messages = 13;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.universe_quest_messages >= 53)
-			{ // zyk: Time Sequel
-				ent->client->pers.universe_quest_messages = 64;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-		}
-		else if (ent->client->pers.universe_quest_progress == 21)
-		{
-			if (ent->client->pers.universe_quest_counter & (1 << 0) && ent->client->pers.universe_quest_messages >= 10)
-			{ // zyk: Sages Sequel
-				ent->client->pers.universe_quest_messages = 30;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 1) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Guardians Sequel
-				ent->client->pers.universe_quest_messages = 12;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 2) && ent->client->pers.universe_quest_messages >= 1)
-			{ // zyk: Thor Sequel
-				ent->client->pers.universe_quest_messages = 10;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
-			else if (ent->client->pers.universe_quest_counter & (1 << 3) && ent->client->pers.universe_quest_messages >= 53)
-			{ // zyk: Time Sequel
-				ent->client->pers.universe_quest_messages = 70;
-				ent->client->pers.universe_quest_timer = level.time;
-			}
+			G_ScreenShake(g_entities[i].s.origin, &g_entities[i], intensity, duration, qtrue);
+			trap->SendServerCommand(i, "print \"^3An admin shook your screen.\n\"");
 		}
 	}
-	else
-	{
-		trap->SendServerCommand(ent->s.number, "chat \"^3Quest System: ^7Must be in a quest to use this command\"");
-	}
+	trap->SendServerCommand(ent - g_entities, "print \"^2You shook people's screen.\n\"");
+	return;
 }
 
 /*
@@ -19771,6 +17812,28 @@ void Cmd_ModVersion_f(gentity_t *ent) {
 	trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\n\"", GAMEVERSION));
 }
 
+typedef struct sound_channels_s {
+	const char* channel_name;
+	int			channel_code;
+} sound_channels_t;
+
+const sound_channels_t sound_channels[14] = {
+	{"auto",				CHAN_AUTO			},
+	{"local",				CHAN_LOCAL			},
+	{"weapon",				CHAN_WEAPON			},
+	{"voice",				CHAN_VOICE			},
+	{"voice_attenuate",		CHAN_VOICE_ATTEN	},
+	{"item",				CHAN_ITEM			},
+	{"body",				CHAN_BODY			},
+	{"ambient",				CHAN_AMBIENT		},
+	{"local_sound",			CHAN_LOCAL_SOUND	},
+	{"announcer",			CHAN_ANNOUNCER		},
+	{"less_attenuate",		CHAN_LESS_ATTEN		},
+	{"menu1",				CHAN_MENU1			},
+	{"voice_global",		CHAN_VOICE_GLOBAL	},
+	{"music",				CHAN_MUSIC			},
+};
+
 /*
 ==================
 Cmd_ZykSound_f
@@ -19778,6 +17841,7 @@ Cmd_ZykSound_f
 */
 void Cmd_ZykSound_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
+	char arg2[MAX_STRING_CHARS];
 
 	if (zyk_allow_zyksound_command.integer < 1)
 	{
@@ -19785,50 +17849,67 @@ void Cmd_ZykSound_f(gentity_t *ent) {
 		return;
 	}
 
-	if (trap->Argc() < 2)
+	if (trap->Argc() < 2 || trap->Argc() > 3)
 	{
-		trap->SendServerCommand(ent->s.number, "print \"Use ^3/zyksound <sound file path> ^7to play any sound file\n\"");
+		trap->SendServerCommand(ent->s.number, "print \"Usage: ^3/playsound <channel> <sound file path>\n ^2Sound channels available: \n\"");
+		for (int i = 0; i < 14; i++) {
+			trap->SendServerCommand(ent->s.number, va("print \"^3%s\n\"", sound_channels[i].channel_name));
+		}
 		return;
 	}
 
 	trap->Argv(1, arg1, sizeof(arg1));
 
-	G_Sound(ent, CHAN_VOICE, G_SoundIndex(G_NewString(arg1)));
-}
-
-// zyk: quantity of chars this player has
-int zyk_char_count(gentity_t *ent)
-{
-	FILE *chars_file;
-	char content[64];
-	int i = 0;
-	int count = 0;
-
-#if defined(__linux__)
-	system(va("cd GalaxyRP/accounts ; ls %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
-#else
-	system(va("cd \"GalaxyRP/accounts\" & dir /B %s_* > chars_%d.txt", ent->client->sess.filename, ent->s.number));
-#endif
-
-	chars_file = fopen(va("GalaxyRP/accounts/chars_%d.txt", ent->s.number), "r");
-	if (chars_file != NULL)
+	if (trap->Argc() == 3)
 	{
-		i = fscanf(chars_file, "%s", content);
-		while (i != EOF)
-		{
-			if (Q_stricmp(content, va("chars_%d.txt", ent->s.number)) != 0)
-			{ // zyk: counting this char
-				count++;
+		trap->Argv(2, arg2, sizeof(arg2));
+
+		for (int i = 0; i < 14; i++) {
+			if (strcmp(arg1, sound_channels[i].channel_name) == 0) {
+				G_Sound(ent, sound_channels[i].channel_code, G_SoundIndex(G_NewString(arg2)));
+
+				return;
 			}
-			i = fscanf(chars_file, "%s", content);
 		}
-		fclose(chars_file);
+
+		trap->SendServerCommand(ent->s.number, "print \"Channel not found! \n\"");
+		return;
 	}
 
-	return count;
+	if (trap->Argc() == 2)
+	{
+		G_Sound(ent, CHAN_AUTO, G_SoundIndex(G_NewString(arg1)));
+		return;
+	}
+
+	return;
 }
 
+/*
+==================
+Cmd_Music_f
+==================
+*/
+void Cmd_Music_f(gentity_t* ent) {
+	char audioPath[MAX_STRING_CHARS];
 
+	if (!check_admin_command(ent, ADM_MUSIC)) {
+		return;
+	}
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Usage: ^3/playmusic <sound file path>\n\"");
+		return;
+	}
+
+	trap->Argv(1, audioPath, sizeof(audioPath));
+
+	trap->SendServerCommand(ent - g_entities, va("print \"^2You started playing the music file: ^7%s\n\"", audioPath));
+	trap->SetConfigstring(CS_MUSIC, audioPath);
+
+	return;
+}
 
 qboolean Is_Char_Name_Valid(char charName[MAX_STRING_CHARS]) {
 
@@ -19844,7 +17925,6 @@ qboolean Is_Char_Name_Valid(char charName[MAX_STRING_CHARS]) {
 
 	return qtrue;
 }
-
 
 /*
 ==================
@@ -19877,545 +17957,6 @@ void save_quest_file(int quest_number)
 	}
 
 	fclose(quest_file);
-}
-
-// zyk: gets a key value for Custom Quest
-char *zyk_get_mission_value(int custom_quest, int mission, char *key)
-{
-	int i = 0;
-
-	for (i = 0; i < level.zyk_custom_quest_mission_values_count[custom_quest][mission]; i += 2)
-	{
-		if (Q_stricmp(level.zyk_custom_quest_missions[custom_quest][mission][i], key) == 0)
-		{
-			return G_NewString(level.zyk_custom_quest_missions[custom_quest][mission][i + 1]);
-		}
-	}
-
-	return "";
-}
-
-// zyk: set the magic powers and unique abilities that this npc can use in custom quest
-void zyk_set_quest_npc_abilities(gentity_t *zyk_npc)
-{
-	int j = 0;
-	int k = 0;
-	int zyk_power = 0;
-	char value[256];
-	char *zyk_magic = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcmagic%d", level.zyk_custom_quest_counter));
-
-	// zyk: magic powers
-	zyk_npc->client->sess.selected_left_special_power = 0;
-
-	// zyk: ultimate magic powers and quest powers
-	zyk_npc->client->sess.selected_right_special_power = 0;
-
-	// zyk: unique abilities
-	zyk_npc->client->sess.selected_special_power = 0;
-
-	// zyk: setting the timers
-	zyk_npc->client->pers.light_quest_messages = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcfirsttimer%d", level.zyk_custom_quest_counter)));
-	zyk_npc->client->pers.hunter_quest_messages = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcsecondtimer%d", level.zyk_custom_quest_counter)));
-	zyk_npc->client->pers.universe_quest_messages = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcthirdtimer%d", level.zyk_custom_quest_counter)));
-
-	// zyk: setting default values of these timers
-	if (zyk_npc->client->pers.light_quest_messages <= 0)
-	{
-		zyk_npc->client->pers.light_quest_messages = 5000;
-	}
-
-	if (zyk_npc->client->pers.hunter_quest_messages <= 0)
-	{
-		zyk_npc->client->pers.hunter_quest_messages = 7000;
-	}
-
-	if (zyk_npc->client->pers.universe_quest_messages <= 0)
-	{
-		zyk_npc->client->pers.universe_quest_messages = 9000;
-	}
-
-	zyk_npc->client->pers.light_quest_timer = level.time + zyk_npc->client->pers.light_quest_messages;
-	zyk_npc->client->pers.hunter_quest_timer = level.time + zyk_npc->client->pers.hunter_quest_messages;
-	zyk_npc->client->pers.universe_quest_timer = level.time + zyk_npc->client->pers.universe_quest_messages;
-
-	for (j = 0; j < 256; j++)
-	{
-		if (zyk_magic[j] != ',' && zyk_magic[j] != '\0')
-		{
-			value[k] = zyk_magic[j];
-			k++;
-		}
-		else
-		{
-			value[k] = '\0';
-			zyk_power = atoi(value);
-
-			if (zyk_power < MAX_MAGIC_POWERS)
-			{
-				zyk_npc->client->sess.selected_left_special_power |= (1 << zyk_power);
-			}
-			else if (zyk_power < MAX_MAGIC_POWERS + 8)
-			{
-				zyk_npc->client->sess.selected_right_special_power |= (1 << (zyk_power - MAX_MAGIC_POWERS));
-			}
-			else if (zyk_power < MAX_MAGIC_POWERS + 13)
-			{
-				zyk_npc->client->sess.selected_special_power |= (1 << (zyk_power - MAX_MAGIC_POWERS - 8));
-			}
-
-			k = 0;
-
-			if (zyk_magic[j] == '\0')
-			{ // zyk: no more values to parse
-				return;
-			}
-		}
-	}
-}
-
-void load_custom_quest_mission()
-{
-	int i = 0, j = 0;
-	int current_mission = 0;
-
-	for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
-	{
-		gentity_t *zyk_ent = &g_entities[i];
-
-		if (zyk_ent && zyk_ent->NPC && zyk_ent->client && zyk_ent->health > 0 && zyk_ent->client->pers.player_statuses & (1 << 28))
-		{ // zyk: kill any remaining quest npcs that may still be alive
-			G_FreeEntity(zyk_ent);
-		}
-
-		if (zyk_ent && zyk_ent->item && zyk_ent->spawnflags & 262144)
-		{ // zyk: remove quest items
-			G_FreeEntity(zyk_ent);
-		}
-	}
-
-	if (level.zyk_custom_quest_effect_id != -1)
-	{
-		G_FreeEntity(&g_entities[level.zyk_custom_quest_effect_id]);
-
-		level.zyk_custom_quest_effect_id = -1;
-	}
-
-	// zyk: reset this value and try to find a mission
-	level.custom_quest_map = -1;
-
-	for (i = 0; i < MAX_CUSTOM_QUESTS; i++)
-	{
-		if (level.zyk_custom_quest_mission_count[i] != -1 && Q_stricmp(level.zyk_custom_quest_main_fields[i][1], "on") == 0)
-		{ // zyk: only set the custom quest map if this is an active quest
-			current_mission = atoi(G_NewString(level.zyk_custom_quest_main_fields[i][2]));
-
-			for (j = 0; j < level.zyk_custom_quest_mission_values_count[i][current_mission]/2; j++)
-			{ // zyk: goes through all keys of this mission to find the map keys
-				char *zyk_map = zyk_get_mission_value(i, current_mission, va("map%d", j));
-
-				if (Q_stricmp(level.zykmapname, zyk_map) == 0 && Q_stricmp(zyk_get_mission_value(i, current_mission, va("donemap%d", j)), "") == 0)
-				{ // zyk: current mission of this quest is in the current map and the mission is not done yet
-					int radius = atoi(zyk_get_mission_value(i, current_mission, "radius"));
-					vec3_t vec;
-					gentity_t *effect_ent = NULL;
-					char *effect_path = zyk_get_mission_value(i, current_mission, "effect");
-
-					if (radius <= 0)
-					{ // zyk: default radius
-						radius = 500;
-					}
-
-					level.zyk_quest_radius = radius;
-
-					if (sscanf(zyk_get_mission_value(i, current_mission, "origin"), "%f %f %f", &vec[0], &vec[1], &vec[2]) == 3)
-					{ // zyk: parsing origin point of this mission
-						level.zyk_quest_test_origin = qtrue;
-						VectorCopy(vec, level.zyk_quest_mission_origin);
-					}
-					else
-					{
-						level.zyk_quest_test_origin = qfalse;
-						VectorSet(level.zyk_quest_mission_origin, 0, 0, 0);
-					}
-
-					// zyk: adding effect in custom quest origin
-					if (Q_stricmp(effect_path, "") != 0)
-					{
-						effect_ent = G_Spawn();
-
-						zyk_set_entity_field(effect_ent, "classname", "fx_runner");
-						zyk_set_entity_field(effect_ent, "spawnflags", "0");
-						zyk_set_entity_field(effect_ent, "origin", va("%f %f %f", level.zyk_quest_mission_origin[0], level.zyk_quest_mission_origin[1], level.zyk_quest_mission_origin[2]));
-
-						effect_ent->s.modelindex = G_EffectIndex(effect_path);
-
-						zyk_spawn_entity(effect_ent);
-
-						level.zyk_custom_quest_effect_id = effect_ent->s.number;
-					}
-
-					// zyk: setting default values for other control variables
-					level.zyk_hold_quest_mission = qfalse;
-
-					// zyk: add some time before starting the mission
-					level.zyk_custom_quest_timer = level.time + 2000;
-
-					level.zyk_custom_quest_counter = 0;
-					level.zyk_quest_npc_count = 0;
-					level.zyk_quest_ally_npc_count = 0;
-					level.zyk_quest_item_count = 0;
-					level.custom_quest_map = i;
-					level.zyk_custom_quest_current_mission = current_mission;
-					return;
-				}
-			}
-		}
-	}
-}
-
-void zyk_set_quest_field(int quest_number, int mission_number, char *key, char *value)
-{
-	int i = 0;
-
-	// zyk: new mission
-	if (mission_number == level.zyk_custom_quest_mission_count[quest_number])
-	{
-		level.zyk_custom_quest_mission_values_count[quest_number][mission_number] = 0;
-		level.zyk_custom_quest_mission_count[quest_number]++;
-	}
-
-	if (Q_stricmp(key, "zykremovemission") == 0)
-	{
-		// zyk: mission must be removed in this case
-		for (i = mission_number; i < (level.zyk_custom_quest_mission_count[quest_number] - 1); i++)
-		{
-			int j = 0;
-
-			for (j = 0; j < level.zyk_custom_quest_mission_values_count[quest_number][i + 1]; j += 2)
-			{ // zyk: save all key/value pairs from next mission to this one, it will move all mission by one position
-				level.zyk_custom_quest_missions[quest_number][i][j] = G_NewString(level.zyk_custom_quest_missions[quest_number][i + 1][j]);
-				level.zyk_custom_quest_missions[quest_number][i][j + 1] = G_NewString(level.zyk_custom_quest_missions[quest_number][i + 1][j + 1]);
-			}
-
-			level.zyk_custom_quest_mission_values_count[quest_number][i] = level.zyk_custom_quest_mission_values_count[quest_number][i + 1];
-		}
-
-		level.zyk_custom_quest_mission_values_count[quest_number][i] = 0;
-		level.zyk_custom_quest_mission_count[quest_number]--;
-
-		return;
-	}
-
-	// zyk: see if this key already exists to edit it. If not, add a new one
-	while (i < level.zyk_custom_quest_mission_values_count[quest_number][mission_number])
-	{
-		if (Q_stricmp(level.zyk_custom_quest_missions[quest_number][mission_number][i], key) == 0)
-		{ // zyk: found the key
-			if (Q_stricmp(value, "zykremovekey") == 0)
-			{ // zyk: remove the key
-			  // zyk: starts from the next key
-				i += 2;
-
-				// zyk: moves all keys after this one 2 positions to remove the key
-				while (i < level.zyk_custom_quest_mission_values_count[quest_number][mission_number])
-				{
-					level.zyk_custom_quest_missions[quest_number][mission_number][i - 2] = G_NewString(level.zyk_custom_quest_missions[quest_number][mission_number][i]);
-					level.zyk_custom_quest_missions[quest_number][mission_number][i - 1] = G_NewString(level.zyk_custom_quest_missions[quest_number][mission_number][i + 1]);
-
-					i += 2;
-				}
-
-				// zyk: decrease the counter
-				level.zyk_custom_quest_mission_values_count[quest_number][mission_number] -= 2;
-			}
-			else
-			{ // zyk: edit the key
-				level.zyk_custom_quest_missions[quest_number][mission_number][i] = G_NewString(key);
-				level.zyk_custom_quest_missions[quest_number][mission_number][i + 1] = G_NewString(value);
-			}
-
-			return;
-		}
-
-		i += 2;
-	}
-
-	// zyk: a new key. Add it
-	level.zyk_custom_quest_missions[quest_number][mission_number][i] = G_NewString(key);
-	level.zyk_custom_quest_missions[quest_number][mission_number][i + 1] = G_NewString(value);
-
-	// zyk: increases the counter
-	level.zyk_custom_quest_mission_values_count[quest_number][mission_number] += 2;
-}
-
-void Cmd_CustomQuest_f(gentity_t *ent) {
-	char arg1[MAX_STRING_CHARS];
-	char content[MAX_STRING_CHARS];
-	int i = 0;
-	int argc = trap->Argc();
-
-	if (!(ent->client->pers.bitvalue & (1 << ADM_CUSTOMQUEST)))
-	{ // zyk: admin command
-		trap->SendServerCommand(ent->s.number, "print \"You don't have this admin command.\n\"");
-		return;
-	}
-
-	strcpy(content, "");
-
-	if (argc == 1)
-	{
-		trap->SendServerCommand(ent->s.number, "print \"\n^3/customquest quests: ^7visualize custom quests\n^3/customquest new: ^7creates a new quest\n^3/customquest delete <quest number>: ^7removes the quest\n^3/customquest change <quest number> <field> <value>: ^7changes value of the main quest fields\n^3/customquest edit <quest number> [mission number] [field] [value]: ^7sets the value to the field of this quest mission. Can also be used to see quest info or mission info\n\"");
-	}
-	else
-	{
-		FILE *quest_file = NULL;
-		char arg2[MAX_STRING_CHARS];
-		char arg3[MAX_STRING_CHARS];
-		char arg4[MAX_STRING_CHARS];
-		char arg5[MAX_STRING_CHARS];
-		int quest_number = -1;
-		int mission_number = -1;
-
-		trap->Argv(1, arg1, sizeof(arg1));
-
-		if (Q_stricmp(arg1, "quests") == 0)
-		{
-			for (i = 0; i < MAX_CUSTOM_QUESTS; i++)
-			{
-				if (level.zyk_custom_quest_mission_count[i] != -1)
-				{ // zyk: quest exists
-					strcpy(content, va("%s%d - %s (%s)\n", content, i, level.zyk_custom_quest_main_fields[i][0], level.zyk_custom_quest_main_fields[i][1]));
-				}
-			}
-
-			trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\"", content));
-		}
-		else if (Q_stricmp(arg1, "new") == 0)
-		{
-			for (i = 0; i < MAX_CUSTOM_QUESTS; i++)
-			{
-				if (level.zyk_custom_quest_mission_count[i] == -1)
-				{ // zyk: found an empty position for the new quest
-					level.zyk_custom_quest_mission_count[i] = 0;
-					quest_number = i;
-					break;
-				}
-			}
-
-			if (quest_number == -1)
-			{ // zyk: did not find an empty position for new quest
-				trap->SendServerCommand(ent->s.number, "print \"Cannot create new quests. Max amount of quests reached.\n\"");
-				return;
-			}
-
-			// zyk: setting default values of the quest main fields and saving in the quest file
-			level.zyk_custom_quest_main_fields[quest_number][0] = G_NewString(va("Quest %d", quest_number));
-			level.zyk_custom_quest_main_fields[quest_number][1] = G_NewString("off");
-			level.zyk_custom_quest_main_fields[quest_number][2] = G_NewString("0");
-			level.zyk_custom_quest_main_fields[quest_number][3] = G_NewString("");
-
-			save_quest_file(quest_number);
-
-			trap->SendServerCommand(ent->s.number, "print \"Quest created.\n\"");
-		}
-		else if (Q_stricmp(arg1, "delete") == 0)
-		{
-			if (argc == 2)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Must pass the quest number.\n\"");
-				return;
-			}
-
-			trap->Argv(2, arg2, sizeof(arg2));
-
-			quest_number = atoi(arg2);
-
-			if (quest_number < 0 || quest_number >= MAX_CUSTOM_QUESTS || level.zyk_custom_quest_mission_count[quest_number] == -1)
-			{ // zyk: this position is already empty, there is no quest to be removed in this position
-				trap->SendServerCommand(ent->s.number, "print \"This quest does not exist.\n\"");
-				return;
-			}
-
-			// zyk: now it will be an empty position
-			level.zyk_custom_quest_mission_count[quest_number] = -1;
-
-			zyk_create_dir("customquests");
-
-			quest_file = fopen(va("GalaxyRP/customquests/%d.txt", quest_number), "r");
-			if (quest_file)
-			{
-				fclose(quest_file);
-
-				remove(va("GalaxyRP/customquests/%d.txt", quest_number));
-
-				// zyk: search for a new active quest in this map
-				if (level.custom_quest_map == quest_number)
-				{
-					load_custom_quest_mission();
-				}
-
-				trap->SendServerCommand(ent->s.number, "print \"Quest removed.\n\"");
-			}
-			else
-			{
-				trap->SendServerCommand(ent->s.number, "print \"File does not exist\n\"");
-			}
-		}
-		else if (Q_stricmp(arg1, "change") == 0)
-		{
-			if (argc < 5)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Must pass the quest number, field and value.\n\"");
-				return;
-			}
-
-			trap->Argv(2, arg2, sizeof(arg2));
-			trap->Argv(3, arg3, sizeof(arg3));
-			trap->Argv(4, arg4, sizeof(arg4));
-
-			quest_number = atoi(arg2);
-
-			if (quest_number < 0 || quest_number >= MAX_CUSTOM_QUESTS || level.zyk_custom_quest_mission_count[quest_number] == -1)
-			{ // zyk: this position is already empty, there is no quest to be removed in this position
-				trap->SendServerCommand(ent->s.number, "print \"This quest does not exist.\n\"");
-				return;
-			}
-
-			// zyk: changing the main quest fields
-			if (Q_stricmp(arg3, "name") == 0)
-			{
-				level.zyk_custom_quest_main_fields[quest_number][0] = G_NewString(arg4);
-			}
-			else if (Q_stricmp(arg3, "active") == 0)
-			{
-				if (Q_stricmp(level.zyk_custom_quest_main_fields[quest_number][1], "on") == 0)
-				{
-					level.zyk_custom_quest_main_fields[quest_number][1] = G_NewString("off");
-				}
-				else
-				{
-					level.zyk_custom_quest_main_fields[quest_number][1] = G_NewString("on");
-				}
-
-				// zyk: loads the quests in this map
-				load_custom_quest_mission();
-			}
-			else if (Q_stricmp(arg3, "count") == 0)
-			{
-				level.zyk_custom_quest_main_fields[quest_number][2] = G_NewString(va("%d", atoi(arg4)));
-			}
-			else
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Invalid field.\n\"");
-				return;
-			}
-
-			// zyk: saving info in the quest file
-			save_quest_file(quest_number);
-
-			trap->SendServerCommand(ent->s.number, "print \"Changes saved.\n\"");
-		}
-		else if (Q_stricmp(arg1, "edit") == 0)
-		{
-			int k = 0;
-
-			if (argc == 2)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Must pass at least the quest number\n\"");
-				return;
-			}
-			else if (argc == 3)
-			{ // zyk: quest info
-				trap->Argv(2, arg2, sizeof(arg2));
-
-				quest_number = atoi(arg2);
-
-				if (quest_number < 0 || quest_number >= MAX_CUSTOM_QUESTS || level.zyk_custom_quest_mission_count[quest_number] == -1)
-				{ // zyk: this position is already empty, there is no quest to be removed in this position
-					trap->SendServerCommand(ent->s.number, "print \"This quest does not exist.\n\"");
-					return;
-				}
-
-				trap->SendServerCommand(ent->s.number, va("print \"\n^3Name: ^7%s\n^3Status: ^7%s\n^3Number of missions: ^7%d\n^3Number of completed missions: ^7%s\n\"", level.zyk_custom_quest_main_fields[quest_number][0], level.zyk_custom_quest_main_fields[quest_number][1], level.zyk_custom_quest_mission_count[quest_number], level.zyk_custom_quest_main_fields[quest_number][2]));
-				return;
-			}
-			else if (argc == 4)
-			{ // zyk: mission info
-				trap->Argv(2, arg2, sizeof(arg2));
-				trap->Argv(3, arg3, sizeof(arg3));
-
-				ent->client->pers.custom_quest_quest_number = atoi(arg2);
-				ent->client->pers.custom_quest_mission_number = atoi(arg3);
-
-				quest_number = ent->client->pers.custom_quest_quest_number;
-				mission_number = ent->client->pers.custom_quest_mission_number;
-
-				if (quest_number < 0 || quest_number >= MAX_CUSTOM_QUESTS || level.zyk_custom_quest_mission_count[quest_number] == -1)
-				{ // zyk: this position is already empty, there is no quest to be removed in this position
-					trap->SendServerCommand(ent->s.number, "print \"This quest does not exist.\n\"");
-					return;
-				}
-
-				if (mission_number < 0 || mission_number >= MAX_CUSTOM_QUEST_MISSIONS || level.zyk_custom_quest_mission_count[quest_number] <= mission_number)
-				{ // zyk: mission number must be valid
-					trap->SendServerCommand(ent->s.number, "print \"This mission does not exist in this quest.\n\"");
-					return;
-				}
-
-				if (ent->client->pers.custom_quest_print > 0)
-				{
-					trap->SendServerCommand(ent->s.number, "print \"Still printing info. Please wait.\n\"");
-					return;
-				}
-
-				// zyk: starts printing info
-				ent->client->pers.custom_quest_print = 1;
-				ent->client->pers.custom_quest_print_timer = 0;
-
-				return;
-			}
-			else if (argc > 4 && (argc % 2) != 0)
-			{
-				trap->SendServerCommand(ent->s.number, "print \"Must pass an even number of arguments.\n\"");
-				return;
-			}
-
-			trap->Argv(2, arg2, sizeof(arg2));
-			trap->Argv(3, arg3, sizeof(arg3));
-
-			quest_number = atoi(arg2);
-			mission_number = atoi(arg3);
-
-			if (quest_number < 0 || quest_number >= MAX_CUSTOM_QUESTS || level.zyk_custom_quest_mission_count[quest_number] == -1)
-			{ // zyk: this position is already empty, there is no quest to be removed in this position
-				trap->SendServerCommand(ent->s.number, "print \"This quest does not exist.\n\"");
-				return;
-			}
-
-			if (mission_number < 0 || mission_number >= MAX_CUSTOM_QUEST_MISSIONS || mission_number > level.zyk_custom_quest_mission_count[quest_number])
-			{ // zyk: mission number must be valid
-				trap->SendServerCommand(ent->s.number, "print \"This mission does not exist in this quest.\n\"");
-				return;
-			}
-
-			for (k = 4; k < argc; k += 2)
-			{
-				trap->Argv(k, arg4, sizeof(arg4));
-				trap->Argv(k + 1, arg5, sizeof(arg5));
-
-				zyk_set_quest_field(quest_number, mission_number, G_NewString(arg4), G_NewString(arg5));
-			}
-
-			// zyk: saving info in the quest file
-			save_quest_file(quest_number);
-
-			trap->SendServerCommand(ent->s.number, "print \"Mission edited.\n\"");
-		}
-		else
-		{
-			trap->SendServerCommand(ent->s.number, "print \"Invalid option.\n\"");
-		}
-	}
 }
 
 /*
@@ -20529,148 +18070,147 @@ int cmdcmp( const void *a, const void *b ) {
 /* This array MUST be sorted correctly by alphabetical name field */
 command_t commands[] = {
 	{ "addbot",				Cmd_AddBot_f,				0 },
-	{ "admindown",			Cmd_AdminDown_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "adminlist",			Cmd_AdminList_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "adminup",			Cmd_AdminUp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "admkick",			Cmd_AdmKick_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "anim",				Cmd_Emote_f,				CMD_ALIVE | CMD_NOINTERMISSION },
-	{ "allyadd",			Cmd_AllyAdd_f,				CMD_NOINTERMISSION },
-	{ "allychat",			Cmd_AllyChat_f,				CMD_NOINTERMISSION },
-	{ "allylist",			Cmd_AllyList_f,				CMD_NOINTERMISSION },
-	{ "allyremove",			Cmd_AllyRemove_f,			CMD_NOINTERMISSION },
-	{ "attributes",			Cmd_Attributes_f,			CMD_LOGGEDIN },
-	//	{ "bountyquest",		Cmd_BountyQuest_f,			CMD_RPG|CMD_NOINTERMISSION },
-	{ "buy",				Cmd_Buy_f,					CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
-	{ "callseller",			Cmd_CallSeller_f,			CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "callteamvote",		Cmd_CallTeamVote_f,			CMD_NOINTERMISSION },
 	{ "callvote",			Cmd_CallVote_f,				CMD_NOINTERMISSION },
-	{ "changechar",			Cmd_ChangeChar_F,			0 },
-	{ "changepassword",		Cmd_ChangePassword_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "char",				Cmd_Char_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "clientprint",		Cmd_ClientPrint_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "createcredits",		Cmd_CreditCreate_f,			CMD_RPG | CMD_NOINTERMISSION },
-	{ "createitem",			Cmd_CreateItem_f,			CMD_LOGGEDIN},
-//	{ "customquest",		Cmd_CustomQuest_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "datetime",			Cmd_DateTime_f,				CMD_NOINTERMISSION },
 	{ "debugBMove_Back",	Cmd_BotMoveBack_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "debugBMove_Forward",	Cmd_BotMoveForward_f,		CMD_CHEAT|CMD_ALIVE },
 	{ "debugBMove_Left",	Cmd_BotMoveLeft_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "debugBMove_Right",	Cmd_BotMoveRight_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "debugBMove_Up",		Cmd_BotMoveUp_f,			CMD_CHEAT|CMD_ALIVE },
-	{ "down",				Cmd_DownSkill_f,			CMD_RPG|CMD_NOINTERMISSION },
 	{ "drop",				Cmd_Drop_f,					CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "duelarena",			Cmd_DuelArena_f,			CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "duelboard",			Cmd_DuelBoard_f,			CMD_NOINTERMISSION },
-	{ "duelmode",			Cmd_DuelMode_f,				CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "duelpause",			Cmd_DuelPause_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "dueltable",			Cmd_DuelTable_f,			CMD_NOINTERMISSION },
-	{ "duelteam",			Cmd_DuelTeam_f,				CMD_NOINTERMISSION },
-	{ "emote",				Cmd_Emote_f,				CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "entadd",				Cmd_EntAdd_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "entdeletefile",		Cmd_EntDeleteFile_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "entedit",			Cmd_EntEdit_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "entitysystem",		Cmd_EntitySystem_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "entlist",			Cmd_EntList_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "entload",			Cmd_EntLoad_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "entnear",			Cmd_EntNear_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "entorigin",			Cmd_EntOrigin_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "entremove",			Cmd_EntRemove_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "entsave",			Cmd_EntSave_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "entundo",			Cmd_EntUndo_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "ex",					Cmd_Examine_f,				CMD_LOGGEDIN },
-	{ "examine",			Cmd_Examine_f,				CMD_LOGGEDIN },
-	{ "flipcoin",			Cmd_FlipCoin_f,				0 },
 	{ "follow",				Cmd_Follow_f,				CMD_NOINTERMISSION },
 	{ "follownext",			Cmd_FollowNext_f,			CMD_NOINTERMISSION },
 	{ "followprev",			Cmd_FollowPrev_f,			CMD_NOINTERMISSION },
 	{ "forcechanged",		Cmd_ForceChanged_f,			0 },
 	{ "gc",					Cmd_GameCommand_f,			CMD_NOINTERMISSION },
 	{ "give",				Cmd_Give_f,					CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "givecredits",		Cmd_CreditGive_f,			CMD_RPG | CMD_NOINTERMISSION },
-	{ "giveitem",			Cmd_GiveItem_f,				CMD_LOGGEDIN},
-	{ "god",				Cmd_God_f,					CMD_ALIVE|CMD_NOINTERMISSION },
-//	{ "guardianquest",		Cmd_GuardianQuest_f,		CMD_ALIVE|CMD_RPG|CMD_NOINTERMISSION },
-	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
-	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
-	{ "inv",				Cmd_Inventory_f,			CMD_LOGGEDIN},
-	{ "inventory",				Cmd_Inventory_f,			CMD_LOGGEDIN},
 	{ "jetpack",			Cmd_Jetpack_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "kill",				Cmd_Kill_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "killother",			Cmd_KillOther_f,			CMD_NOINTERMISSION },
-//	{ "kylesmash",			TryGrapple,					0 },
 	{ "levelshot",			Cmd_LevelShot_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "levelup",			Cmd_LevelGive_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "list",				Cmd_ListAccount_f,			CMD_NOINTERMISSION },
-	{ "listaccount",		Cmd_ListAccount_f,			CMD_NOINTERMISSION },
-	{ "login",				Cmd_Login_F,			CMD_NOINTERMISSION },
-	{ "logout",				Cmd_LogoutAccount_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
-//	{ "magic",				Cmd_Magic_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "maplist",			Cmd_MapList_f,				CMD_NOINTERMISSION },
-//	{ "meleearena",			Cmd_MeleeArena_f,			CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "meleemode",			Cmd_MeleeMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "modversion",			Cmd_ModVersion_f,			CMD_NOINTERMISSION },
-	{ "new",				Cmd_Register_F,				CMD_NOINTERMISSION },
-	{ "news",				Cmd_News_f,					0 },
-	{ "noclip",				Cmd_Noclip_f,				CMD_LOGGEDIN|CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "nofight",			Cmd_NoFight_f,				CMD_NOINTERMISSION },
-	{ "notarget",			Cmd_Notarget_f,				CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "npc",				Cmd_NPC_f,					CMD_LOGGEDIN },
-	{ "order",				Cmd_Order_f,				CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "paralyze",			Cmd_Paralyze_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-//	{ "playermode",			Cmd_PlayerMode_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "players",			Cmd_Players_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-//	{ "questskip",			Cmd_QuestSkip_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "racemode",			Cmd_RaceMode_f,				CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "remap",				Cmd_Remap_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "remapdeletefile",	Cmd_RemapDeleteFile_f,		CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "remaplist",			Cmd_RemapList_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "remapload",			Cmd_RemapLoad_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "resetpassword",		Cmd_ResetPassword_F,		CMD_LOGGEDIN},
-//	{ "resetaccount",		Cmd_ResetAccount_f,			CMD_RPG|CMD_NOINTERMISSION },
-	{ "roll",				Cmd_Roll_f,					0 },
-//	{ "rpgclass",			Cmd_RpgClass_f,				CMD_RPG|CMD_NOINTERMISSION },
-	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "rpglmstable",		Cmd_RpgLmsTable_f,			CMD_NOINTERMISSION },
-//	{ "rpmode",				Cmd_RpMode_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-//	{ "rpmodeclass",		Cmd_RpModeClass_f,			CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "saber",				Cmd_Saber_f,				CMD_NOINTERMISSION },
 	{ "say",				Cmd_Say_f,					0 },
 	{ "say_team",			Cmd_SayTeam_f,				0 },
-	{ "scale",				Cmd_Scale_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "score",				Cmd_Score_f,				0 },
-	{ "sell",				Cmd_Sell_f,					CMD_RPG|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "settings",			Cmd_Settings_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
+	{ "shakescreen",		Cmd_ShakeScreen_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
-	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "skilldown",			Cmd_RpModeDown_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "skillup",			Cmd_RpModeUp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "snipermode",			Cmd_SniperMode_f,			CMD_ALIVE|CMD_NOINTERMISSION },
-	{ "snipertable",		Cmd_SniperTable_f,			CMD_NOINTERMISSION },
-	{ "spendcredits",		Cmd_CreditSpend_f,			CMD_RPG | CMD_NOINTERMISSION },
-	{ "stuff",				Cmd_Stuff_f,				CMD_RPG|CMD_NOINTERMISSION },
 	{ "team",				Cmd_Team_f,					CMD_NOINTERMISSION },
-//	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },
 	{ "teamvote",			Cmd_TeamVote_f,				CMD_NOINTERMISSION },
-	{ "tele",				Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "tell",				Cmd_Tell_f,					0 },
-	{ "test",				Cmd_Test_f,					0 },
-//	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
-//	{ "tutorial",			Cmd_Tutorial_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN},
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
-//	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
-	{ "up",					Cmd_UpSkill_f,				CMD_RPG|CMD_NOINTERMISSION },
-	{ "updatenews",			Cmd_UpdateNews_f,					0 },
 	{ "voice_cmd",			Cmd_VoiceCommand_f,			CMD_NOINTERMISSION },
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
+	/*
+	=============
+	GalaxyRP (Alex): [Commands] This is where GalaxyRP commands begin
+	=============
+	*/
+	{ "admindown",			Cmd_AdminDown_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "adminlist",			Cmd_AdminList_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "adminup",			Cmd_AdminUp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "anim",				Cmd_Emote_f,				CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "allyadd",			Cmd_AllyAdd_f,				CMD_NOINTERMISSION },
+	{ "allychat",			Cmd_AllyChat_f,				CMD_NOINTERMISSION },
+	{ "allylist",			Cmd_AllyList_f,				CMD_NOINTERMISSION },
+	{ "allyremove",			Cmd_AllyRemove_f,			CMD_NOINTERMISSION },
+	{ "attributes",			Cmd_Attributes_f,			CMD_LOGGEDIN },
+	{ "buy",				Cmd_Buy_f,					CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "callseller",			Cmd_CallSeller_f,			CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "changepassword",		Cmd_ChangePassword_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "char",				Cmd_Char_f,					CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "clientprint",		Cmd_ClientPrint_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "createcredits",		Cmd_CreditCreate_f,			CMD_RPG | CMD_NOINTERMISSION },
+	{ "createitem",			Cmd_CreateItem_f,			CMD_LOGGEDIN},
+	{ "duelarena",			Cmd_DuelArena_f,			CMD_LOGGEDIN | CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "duelboard",			Cmd_DuelBoard_f,			CMD_NOINTERMISSION },
+	{ "duelmode",			Cmd_DuelMode_f,				CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "duelpause",			Cmd_DuelPause_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "dueltable",			Cmd_DuelTable_f,			CMD_NOINTERMISSION },
+	{ "duelteam",			Cmd_DuelTeam_f,				CMD_NOINTERMISSION },
+	{ "emote",				Cmd_Emote_f,				CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "entadd",				Cmd_EntAdd_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "entdeletefile",		Cmd_EntDeleteFile_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "entedit",			Cmd_EntEdit_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "entitysystem",		Cmd_EntitySystem_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "entlist",			Cmd_EntList_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "entload",			Cmd_EntLoad_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "entnear",			Cmd_EntNear_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "entorigin",			Cmd_EntOrigin_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "entremove",			Cmd_EntRemove_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "entsave",			Cmd_EntSave_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "entundo",			Cmd_EntUndo_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "ex",					Cmd_Examine_f,				CMD_LOGGEDIN },
+	{ "examine",			Cmd_Examine_f,				CMD_LOGGEDIN },
+	{ "flipcoin",			Cmd_FlipCoin_f,				0 },
+	{ "givecredits",		Cmd_CreditGive_f,			CMD_RPG | CMD_NOINTERMISSION },
+	{ "giveitem",			Cmd_GiveItem_f,				CMD_LOGGEDIN},
+	{ "givexp",				Cmd_GiveXp_f,				CMD_LOGGEDIN},
+	{ "god",				Cmd_God_f,					CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
+	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
+	{ "inv",				Cmd_Inventory_f,			CMD_LOGGEDIN},
+	{ "inventory",			Cmd_Inventory_f,			CMD_LOGGEDIN},
+	{ "levelup",			Cmd_LevelGive_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "list",				Cmd_ListAccount_f,			CMD_NOINTERMISSION },
+	{ "listaccount",		Cmd_ListAccount_f,			CMD_NOINTERMISSION },
+	{ "login",				Cmd_Login_F,				CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "logout",				Cmd_LogoutAccount_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "meleemode",			Cmd_MeleeMode_f,			CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "modversion",			Cmd_ModVersion_f,			CMD_NOINTERMISSION },
+	{ "new",				Cmd_Register_F,				CMD_NOINTERMISSION },
+	{ "news",				Cmd_News_f,					0 },
+	{ "newsadd",			Cmd_UpdateNews_f,					0 },
+	{ "newschannels",		Cmd_NewsChannels_f,					0 },
+	{ "newsremove",			Cmd_NewsRemove_f,					0 },
+	{ "noclip",				Cmd_Noclip_f,				CMD_LOGGEDIN | CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "nofight",			Cmd_NoFight_f,				CMD_NOINTERMISSION },
+	{ "notarget",			Cmd_Notarget_f,				CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "npc",				Cmd_NPC_f,					CMD_LOGGEDIN },
+	{ "order",				Cmd_Order_f,				CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "paralyze",			Cmd_Paralyze_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "spawnplatform",		Cmd_SpawnPlatform_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "spawndummy",			Cmd_SpawnDummy_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "playsound",			Cmd_ZykSound_f,				CMD_NOINTERMISSION },
+	{ "playmusic",			Cmd_Music_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "players",			Cmd_Players_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "racemode",			Cmd_RaceMode_f,				CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "remap",				Cmd_Remap_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "remapdeletefile",	Cmd_RemapDeleteFile_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "remaplist",			Cmd_RemapList_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "remapload",			Cmd_RemapLoad_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "removexp",			Cmd_RemoveXp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "removepickups",		Cmd_RemovePickups_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "resetpassword",		Cmd_ResetPassword_F,		CMD_LOGGEDIN },
+	{ "roll",				Cmd_Roll_f,					0 },
+	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "rpglmstable",		Cmd_RpgLmsTable_f,			CMD_NOINTERMISSION },
+	{ "scale",				Cmd_Scale_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "skilldown",			Cmd_RpModeDown_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "skillup",			Cmd_RpModeUp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "snipermode",			Cmd_SniperMode_f,			CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "snipertable",		Cmd_SniperTable_f,			CMD_NOINTERMISSION },
+	{ "spendcredits",		Cmd_CreditSpend_f,			CMD_RPG | CMD_NOINTERMISSION },
+	{ "stuff",				Cmd_Stuff_f,				CMD_RPG | CMD_NOINTERMISSION },
+	{ "tele",				Cmd_Teleport_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "telemark",			Cmd_Telemark_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
-	{ "zykfile",			Cmd_ZykFile_f,				CMD_NOINTERMISSION },
-//	{ "zykchars",			Cmd_ZykChars_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-//	{ "zykmod",				Cmd_ZykMod_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
-	{ "zyksound",			Cmd_ZykSound_f,				CMD_NOINTERMISSION },
+	{ "zykfile",			Cmd_ZykFile_f,				CMD_NOINTERMISSION }
+//	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
+//	{ "meleearena",			Cmd_MeleeArena_f,			CMD_ALIVE|CMD_NOINTERMISSION },
+//	{ "bountyquest",		Cmd_BountyQuest_f,			CMD_RPG|CMD_NOINTERMISSION },
+//	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
+//	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },
+//	{ "kylesmash",			TryGrapple,					0 },
+
 };
 static const size_t numCommands = ARRAY_LEN( commands );
 

@@ -740,6 +740,7 @@ typedef struct skulltrail_s {
 
 #define MAX_PREDICTED_EVENTS	16
 
+#include "../../galaxyrp/cgame/rp_cg_local.h" // GalayRP: [CGameGeneral] Main header
 
 #define	MAX_CHATBOX_ITEMS		5
 typedef struct chatBoxItem_s
@@ -1659,6 +1660,12 @@ typedef struct cgs_s {
 
 	int					numMiscStaticModels;
 	cg_staticmodel_t	miscStaticModels[MAX_STATIC_MODELS];
+
+	// Tr!Force: [Plugin] Main cvar
+	int			pluginRequired;
+
+	// Tr!Force: [ModCheck] Server mod check
+	qboolean	modCheck;
 
 } cgs_t;
 

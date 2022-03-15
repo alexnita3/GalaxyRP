@@ -133,9 +133,7 @@ void CG_DrawInformation( void ) {
 	const char	*info;
 	const char	*sysInfo;
 	int			y;
-	int			value, valueNOFP;
 	qhandle_t	levelshot;
-	char		buf[1024];
 	int			iPropHeight = 18;	// I know, this is total crap, but as a post release asian-hack....  -Ste
 
 	info = CG_ConfigString( CS_SERVERINFO );

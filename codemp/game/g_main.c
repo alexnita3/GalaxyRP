@@ -28,6 +28,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "g_nav.h"
 #include "bg_saga.h"
 #include "b_local.h"
+#include "qcommon/q_version.h"
+#include "sqlite/sqlite3.h"
+
+NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
+void (*Com_Printf)( const char *msg, ... );
 
 level_locals_t	level;
 
@@ -157,6 +162,307 @@ void G_CacheMapname( const vmCvar_t *mapname )
 {
 	Com_sprintf( level.mapname, sizeof( level.mapname ), "maps/%s.bsp", mapname->string );
 	Com_sprintf( level.rawmapname, sizeof( level.rawmapname ), "maps/%s", mapname->string );
+}
+
+void RP_CVU_pluginRequired(void)
+{
+	if (rp_pluginRequired.integer == 2)
+	{
+		gentity_t *ent;
+		int i;
+
+		for (i = 0, ent = g_entities; i < MAX_CLIENTS; ++i, ++ent)
+		{
+			if (ent && ent->client && ent->client->pers.connected != CON_DISCONNECTED)
+			{
+				if (!ent->client->pers.clientPlugin) ClientBegin(ent->s.number, qfalse);
+			}
+		}
+	}
+}
+
+//alex: checks if an admin account exists
+qboolean admin_account_exists(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	int count = 0;
+
+	rc = sqlite3_prepare(db, "SELECT count(AccountID) FROM Accounts WHERE Username='admin'", -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return qfalse;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return qfalse;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		count = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	}
+
+	if (count == 0) {
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+//alex: creates an admin account with default values and highest admin authority possible
+void create_admin_account(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt)
+{
+	int accountID = 1;
+	char comparisonName[256] = { 0 };
+	char char_name[10] = "admin";
+
+	char statement_account_entry_creation[200] = "INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('admin','admin','66846719','0','admin')";
+	char statement_account_id_select[100] = "SELECT AccountID FROM Accounts WHERE Username='admin'";
+	char statement_character_entry_creation[207] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName, xp) VALUES('%i', '100', '1', '100', '%s', '1', 'Nothing to show.', 'DefaultName', 'kyle', 0)";
+	char statement_skill_entry_creation[1000] = "INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements, Armor, Flamethrower) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
+	char statement_weapon_entry_creation[200] = "INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')";
+
+	//alex: Create account record
+	rc = sqlite3_exec(db, statement_account_entry_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+
+	//alex: Get AccountID for later so we know which account the char is tied to
+	rc = sqlite3_prepare(db, statement_account_id_select, -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		accountID = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+	}
+
+
+	//alex: Create character record
+	rc = sqlite3_exec(db, va(statement_character_entry_creation, accountID, char_name), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
+	//alex: Create skill record
+	rc = sqlite3_exec(db, statement_skill_entry_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
+	//alex: Create ammo record
+	rc = sqlite3_exec(db, statement_weapon_entry_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+
+	return;
+}
+
+//alex: creates tables is they didn't exist, and admin account if it doesn't exist. This is the place to add things whenever the database structure changes (use UPDATE TABLE for further changes)
+void InitializeGalaxyRpTables(qboolean with_admin_account)
+{
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	char statement_account_table_creation[186] = "CREATE TABLE IF NOT EXISTS 'Accounts' ('AccountID' INTEGER, 'PlayerSettings' INTEGER, 'AdminLevel' INTEGER, 'Password' TEXT, 'Username' TEXT, 'DefaultChar' TEXT, PRIMARY KEY(AccountID))";
+	char statement_character_table_creation[249] = "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, 'Description' TEXT, 'NetName' TEXT, 'ModelName' TEXT, PRIMARY KEY(CharID))";
+	char statement_weapon_table_creation[244] = "CREATE TABLE IF NOT EXISTS 'Weapons' ('CharID' INTEGER, 'AmmoBlaster' INTEGER, 'AmmoPowercell' INTEGER, 'AmmoMetalBolts' INTEGER, 'AmmoRockets' INTEGER, 'AmmoThermal' INTEGER, 'AmmoTripmine' INTEGER, 'AmmoDetpack' INTEGER, PRIMARY KEY(CharID))";
+	char statement_skill_table_creation[1289] = "CREATE TABLE IF NOT EXISTS 'Skills' ('CharID' INTEGER, 'Jump' INTEGER, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER, PRIMARY KEY(CharID))";
+	char statement_item_table_creation[110] = "CREATE TABLE IF NOT EXISTS 'Items' ('ItemID' INTEGER, 'CharID' INTEGER, 'ItemName' TEXT, PRIMARY KEY(ItemID))";
+	char statement_news_table_creation[155] = "CREATE TABLE IF NOT EXISTS 'News' ('newsID' INTEGER, 'channel' TEXT, 'date' TEXT DEFAULT (strftime('%d-%m-%Y','now')), 'text' TEXT, PRIMARY KEY('newsID'))";
+
+	// GalaxyRP (Alex): [Database] New columns that are added as part of updates. If they were included in the previous columns, upgrading servers would have to redo their database from scratch.
+	char statement_xp_column_alter[110] = "ALTER TABLE Characters ADD COLUMN xp INTEGER DEFAULT 0";
+	char statement_armor_column_alter[110] = "ALTER TABLE Skills ADD COLUMN Armor INTEGER DEFAULT 0";
+	char statement_flamethrower_column_alter[110] = "ALTER TABLE Skills ADD COLUMN Flamethrower INTEGER DEFAULT 0";
+
+	//Alex: Create Account Table
+	trap->Print("Initializing Account table.\n");
+
+	rc = sqlite3_exec(db, statement_account_table_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Account table.\n");
+
+	//Alex: Create Character Table
+	trap->Print("Initializing Character Table.\n");
+
+	rc = sqlite3_exec(db, statement_character_table_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Character table.\n");
+
+	//Alex: Create Weapons Table
+	trap->Print("Initializing Weapons Table.\n");
+
+	rc = sqlite3_exec(db, statement_weapon_table_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Weapons table.\n");
+
+	//Alex: Create Skills Table
+	trap->Print("Initializing Skills Table.\n");
+
+	rc = sqlite3_exec(db, statement_skill_table_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Skills table.\n");
+
+	//Alex: Create Items Table
+	trap->Print("Initializing Items Table.\n");
+
+	rc = sqlite3_exec(db, statement_item_table_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with Items table.\n");
+
+	//Alex: Create News Table
+
+	trap->Print("Initializing News Table.\n");
+
+	rc = sqlite3_exec(db, statement_news_table_creation, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		sqlite3_close(db);
+		return;
+	}
+	trap->Print("Done with News table.\n");
+
+	trap->Print("All tables have been initialized.\n");
+
+	// GalaxyRP (Alex): [XP System] Add the XP column to the tables (done this way so that servers upgrading don't have to redo their database).
+	trap->Print("Initializing XP column.\n");
+
+	rc = sqlite3_exec(db, statement_xp_column_alter, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		if (strcmp(zErrMsg, "duplicate column name: xp") != 0) {
+			trap->Print("SQL error: %s\n", zErrMsg);
+			sqlite3_free(zErrMsg);
+			sqlite3_close(db);
+			return;
+		}
+		else {
+			trap->Print("XP column already exists, nothing to do here.\n");
+		}
+	}
+	trap->Print("Done with XP column.\n");
+
+	// GalaxyRP (Alex): [Armor Skill] Add the Armor Skill column to the tables (done this way so that servers upgrading don't have to redo their database).
+	trap->Print("Initializing Armor Skill column.\n");
+
+	rc = sqlite3_exec(db, statement_armor_column_alter, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		if (strcmp(zErrMsg, "duplicate column name: Armor") != 0) {
+			trap->Print("SQL error: %s\n", zErrMsg);
+			sqlite3_free(zErrMsg);
+			sqlite3_close(db);
+			return;
+		}
+		else {
+			trap->Print("Armor skill column already exists, nothing to do here.\n");
+		}
+	}
+	trap->Print("Done with Armor Skill column.\n");
+
+	// GalaxyRP (Alex): [Armor Skill] Add the Armor Skill column to the tables (done this way so that servers upgrading don't have to redo their database).
+	trap->Print("Initializing Flamethrower Skill column.\n");
+
+	rc = sqlite3_exec(db, statement_flamethrower_column_alter, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		if (strcmp(zErrMsg, "duplicate column name: Flamethrower") != 0) {
+			trap->Print("SQL error: %s\n", zErrMsg);
+			sqlite3_free(zErrMsg);
+			sqlite3_close(db);
+			return;
+		}
+		else {
+			trap->Print("Flamethrower skill column already exists, nothing to do here.\n");
+		}
+	}
+	trap->Print("Done with Flamethrower Skill column.\n");
+
+	if (with_admin_account == qtrue) {
+		trap->Print("Initializing admin account.\n");
+		if (admin_account_exists(db, zErrMsg, rc, stmt) == qfalse) {
+			create_admin_account(db, zErrMsg, rc, stmt);
+		}
+		else {
+			trap->Print("Admin account already exists, nothing to do here.\n");
+		}
+		trap->Print("Done with admin account.\n");
+	}
+
+	sqlite3_close(db);
 }
 
 // zyk: this function spawns an info_player_deathmatch entity in the map
@@ -327,10 +633,9 @@ G_InitGame
 */
 extern void RemoveAllWP(void);
 extern void BG_ClearVehicleParseParms(void);
-gentity_t *SelectRandomDeathmatchSpawnPoint( void );
+gentity_t *SelectRandomDeathmatchSpawnPoint( qboolean isbot );
 void SP_info_jedimaster_start( gentity_t *ent );
 extern void zyk_create_dir(char *file_path);
-extern void load_custom_quest_mission();
 void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	int					i;
 	vmCvar_t	mapname;
@@ -654,7 +959,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 		if ( i == level.num_entities ) {
 			// no JM saber found. drop one at one of the player spawnpoints
-			gentity_t *spawnpoint = SelectRandomDeathmatchSpawnPoint();
+			gentity_t *spawnpoint = SelectRandomDeathmatchSpawnPoint( qfalse );
 
 			if( !spawnpoint ) {
 				trap->Error( ERR_DROP, "Couldn't find an FFA spawnpoint to drop the jedimaster saber at!\n" );
@@ -779,8 +1084,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_CLIENTS; zyk_iterator++)
 		{
-			level.read_screen_message[zyk_iterator] = qfalse;
-			level.screen_message_timer[zyk_iterator] = 0;
 			level.ignored_players[zyk_iterator][0] = 0;
 			level.ignored_players[zyk_iterator][1] = 0;
 		}
@@ -1898,11 +2201,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		level.melee_arena_loaded = qtrue;
 	}
 
-	// zyk: setting map as a custom quest map if it has a mission
-	load_custom_quest_mission();
+	//alex: create tables required for storing stuff, and also create admin account. ONLY if those do not already exist.
+	InitializeGalaxyRpTables(qtrue);
 }
-
-
 
 /*
 =================
@@ -2035,6 +2336,10 @@ void AddTournamentPlayer( void ) {
 		// never select the dedicated follow or scoreboard clients
 		if ( client->sess.spectatorState == SPECTATOR_SCOREBOARD ||
 			client->sess.spectatorClient < 0  ) {
+			continue;
+		}
+		// Tr!Force: [Plugin] Don't allow
+		if (rp_pluginRequired.integer == 2 && !client->pers.clientPlugin) {
 			continue;
 		}
 
@@ -2188,6 +2493,10 @@ void AddPowerDuelPlayers( void )
 		// never select the dedicated follow or scoreboard clients
 		if ( client->sess.spectatorState == SPECTATOR_SCOREBOARD ||
 			client->sess.spectatorClient < 0  ) {
+			continue;
+		}
+		// Tr!Force: [Plugin] Don't allow
+		if (rp_pluginRequired.integer == 2 && !client->pers.clientPlugin) {
 			continue;
 		}
 
@@ -4332,7 +4641,7 @@ void CheckCvars( void ) {
 		}
 		trap->Cvar_Set("g_password", password );
 
-		if ( *g_password.string && Q_stricmp( g_password.string, "none" ) ) {
+		if (*g_password.string && Q_stricmp(g_password.string, "none")) {
 			trap->Cvar_Set( "g_needpass", "1" );
 		} else {
 			trap->Cvar_Set( "g_needpass", "0" );
@@ -6522,137 +6831,137 @@ void zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qbo
 qboolean magic_master_has_this_power(gentity_t *ent, int selected_power)
 {
 	if (selected_power == MAGIC_HEALING_WATER && !(ent->client->pers.defeated_guardians & (1 << 4)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_WATER_SPLASH && !(ent->client->pers.defeated_guardians & (1 << 4)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_WATER_ATTACK && !(ent->client->pers.defeated_guardians & (1 << 4)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_EARTHQUAKE && !(ent->client->pers.defeated_guardians & (1 << 5)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ROCKFALL && !(ent->client->pers.defeated_guardians & (1 << 5)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_SHIFTING_SAND && !(ent->client->pers.defeated_guardians & (1 << 5)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_SLEEPING_FLOWERS && !(ent->client->pers.defeated_guardians & (1 << 6)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_POISON_MUSHROOMS && !(ent->client->pers.defeated_guardians & (1 << 6)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_TREE_OF_LIFE && !(ent->client->pers.defeated_guardians & (1 << 6)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_MAGIC_SHIELD && !(ent->client->pers.defeated_guardians & (1 << 7)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_DOME_OF_DAMAGE && !(ent->client->pers.defeated_guardians & (1 << 7)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_MAGIC_DISABLE && !(ent->client->pers.defeated_guardians & (1 << 7)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ULTRA_SPEED && !(ent->client->pers.defeated_guardians & (1 << 8)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_SLOW_MOTION && !(ent->client->pers.defeated_guardians & (1 << 8)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_FAST_AND_SLOW && !(ent->client->pers.defeated_guardians & (1 << 8)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_FLAME_BURST && !(ent->client->pers.defeated_guardians & (1 << 9)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ULTRA_FLAME && !(ent->client->pers.defeated_guardians & (1 << 9)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_FLAMING_AREA && !(ent->client->pers.defeated_guardians & (1 << 9)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_BLOWING_WIND && !(ent->client->pers.defeated_guardians & (1 << 10)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_HURRICANE && !(ent->client->pers.defeated_guardians & (1 << 10)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_REVERSE_WIND && !(ent->client->pers.defeated_guardians & (1 << 10)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ULTRA_RESISTANCE && !(ent->client->pers.defeated_guardians & (1 << 11)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ULTRA_STRENGTH && !(ent->client->pers.defeated_guardians & (1 << 11)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ENEMY_WEAKENING && !(ent->client->pers.defeated_guardians & (1 << 11)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ICE_STALAGMITE && !(ent->client->pers.defeated_guardians & (1 << 12)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ICE_BOULDER && !(ent->client->pers.defeated_guardians & (1 << 12)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
 	else if (selected_power == MAGIC_ICE_BLOCK && !(ent->client->pers.defeated_guardians & (1 << 12)) &&
-		ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS)
+		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
 	{
 		return qfalse;
 	}
@@ -7571,8 +7880,6 @@ void universe_quest_artifacts_checker(gentity_t *ent)
 		ent->client->pers.universe_quest_timer = level.time + 1000;
 		ent->client->pers.universe_quest_objective_control = 4; // zyk: fourth Universe Quest objective
 		ent->client->pers.universe_quest_messages = 0;
-		
-		save_account(ent, qtrue);
 	}
 }
 
@@ -7592,26 +7899,20 @@ void universe_crystals_check(gentity_t *ent)
 		else
 			ent->client->pers.universe_quest_counter = 0;
 
-		save_account(ent, qtrue);
 		quest_get_new_player(ent);
-	}
-	else
-	{
-		save_account(ent, qtrue);
 	}
 }
 
 extern void clean_note_model();
 void zyk_try_get_dark_quest_note(gentity_t *ent, int note_bitvalue)
 {
-	if (ent->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && ent->client->pers.guardian_mode == 0 && 
+	if (ent->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && ent->client->pers.guardian_mode == 0 && 
 		!(ent->client->pers.hunter_quest_progress & (1 << note_bitvalue)) && ent->client->pers.can_play_quest == 1 &&
 		level.quest_note_id != -1 && (int)Distance(ent->client->ps.origin, g_entities[level.quest_note_id].r.currentOrigin) < 40)
 	{
 		zyk_text_message(ent, "dark/found_note", qtrue, qfalse);
 		ent->client->pers.hunter_quest_progress |= (1 << note_bitvalue);
 		clean_note_model();
-		save_account(ent, qtrue);
 		quest_get_new_player(ent);
 	}
 }
@@ -8122,21 +8423,21 @@ void duel_tournament_set_match_winner(gentity_t *winner)
 void duel_tournament_protect_duelists(gentity_t *duelist_1, gentity_t *duelist_2, gentity_t *duelist_1_ally, gentity_t *duelist_2_ally)
 {
 	duelist_1->client->ps.eFlags |= EF_INVULNERABLE;
-	duelist_1->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECTION_TIME;
+	duelist_1->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECT_TIME;
 
 	duelist_2->client->ps.eFlags |= EF_INVULNERABLE;
-	duelist_2->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECTION_TIME;
+	duelist_2->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECT_TIME;
 
 	if (duelist_1_ally)
 	{
 		duelist_1_ally->client->ps.eFlags |= EF_INVULNERABLE;
-		duelist_1_ally->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECTION_TIME;
+		duelist_1_ally->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECT_TIME;
 	}
 
 	if (duelist_2_ally)
 	{
 		duelist_2_ally->client->ps.eFlags |= EF_INVULNERABLE;
-		duelist_2_ally->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECTION_TIME;
+		duelist_2_ally->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECT_TIME;
 	}
 }
 
@@ -8739,7 +9040,6 @@ extern void WP_DisruptorAltFire(gentity_t *ent);
 extern int zyk_max_magic_power(gentity_t *ent);
 extern void G_Kill( gentity_t *ent );
 extern void save_quest_file(int quest_number);
-extern void zyk_set_quest_npc_abilities(gentity_t *zyk_npc);
 
 void G_RunFrame( int levelTime ) {
 	int			i;
@@ -9915,7 +10215,7 @@ void G_RunFrame( int levelTime ) {
 						jetpack_debounce_amount -= (ent->client->pers.skill_levels[34] * 3);
 					}
 
-					if (ent->client->pers.secrets_found & (1 << 17)) // zyk: Jetpack Upgrade decreases fuel usage
+					if (ent->client->pers.skill_levels[34] == 3) // zyk: Jetpack Upgrade decreases fuel usage
 						jetpack_debounce_amount -= 2;
 				}
 
@@ -10010,16 +10310,6 @@ void G_RunFrame( int levelTime ) {
 									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
 									trap->SendServerCommand(-1, va("chat \"^3Race System: ^7Winner: %s^7 - Prize: 2000 Credits!\"", ent->client->pers.netname));
 								}
-								else
-								{ // zyk: give him some stuff
-									ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
-									ent->client->ps.ammo[AMMO_BLASTER] = zyk_max_blaster_pack_ammo.integer;
-									ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
-									ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
-									ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN) | (1 << HI_SEEKER);
-									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
-									trap->SendServerCommand(-1, va("chat \"^3Race System: ^7Winner: %s^7 - Prize: Nice Stuff!\"", ent->client->pers.netname));
-								}
 							}
 							else if (level.race_last_player_position == 2)
 							{ // zyk: second place
@@ -10080,15 +10370,6 @@ void G_RunFrame( int levelTime ) {
 									save_account(ent, qtrue);
 									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
 									trap->SendServerCommand(-1, va("chat \"^3Race System: ^7Winner: %s^7 - Prize: 500 Credits!\"", ent->client->pers.netname));
-								}
-								else
-								{ // zyk: give him some stuff
-									ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
-									ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
-									ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
-									ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SEEKER);
-									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
-									trap->SendServerCommand(-1, va("chat \"^3Race System: ^7Winner: %s^7 - Prize: Nice Stuff!\"", ent->client->pers.netname));
 								}
 							}
 							else if (level.race_last_player_position == 2)
@@ -10160,8 +10441,6 @@ void G_RunFrame( int levelTime ) {
 				ent->client->pers.tutorial_step++;
 				ent->client->pers.tutorial_timer = level.time + 7000;
 			}
-
-			zyk_print_custom_quest_info(ent);
 
 			if (ent->client->sess.amrpgmode == 2 && ent->client->sess.sessionTeam != TEAM_SPECTATOR)
 			{ // zyk: RPG Mode skills and quests actions. Must be done if player is not at Spectator Mode
@@ -10341,5374 +10620,6 @@ void G_RunFrame( int levelTime ) {
 					ent->client->pers.vertical_dfa_timer = 0;
 
 					zyk_vertical_dfa_effect(ent);
-				}
-
-				if (level.quest_map > 0 && ent->client->ps.duelInProgress == qfalse && ent->health > 0)
-				{ // zyk: control the quest events which happen in the quest maps, if player can play quests now, is alive and is not in a private duel
-					// zyk: fixing exploit in boss battles. If player is in a vehicle, kill the player
-					if (ent->client->pers.guardian_mode > 0 && ent->client->ps.m_iVehicleNum > 0)
-						G_Kill( ent );
-
-					if (ent->client->pers.can_play_quest == 1 && ent->client->pers.quest_afk_timer < level.time)
-					{ // zyk: player afk in quest for this amount of time
-						ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
-
-						player_die(ent, ent, ent, 100000, MOD_SUICIDE);
-
-						trap->SendServerCommand(-1, va("chat \"^3Quest System: ^7%s ^7afk for %d seconds.\"", ent->client->pers.netname, (zyk_quest_afk_timer.integer/1000)));
-					}
-
-					if (level.quest_map == 1)
-					{
-						zyk_try_get_dark_quest_note(ent, 4);
-
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 4)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->r.currentOrigin[0] > 1962 && (int) ent->r.currentOrigin[0] < 2162 && (int) ent->r.currentOrigin[1] > 3989 && (int) ent->r.currentOrigin[1] < 4189 && (int) ent->r.currentOrigin[2] >= 360 && (int) ent->r.currentOrigin[2] <= 369)
-						{
-							if (ent->client->pers.light_quest_timer < level.time)
-							{
-								if (ent->client->pers.light_quest_messages == 0)
-								{
-									zyk_text_message(ent, "light/guardian_of_water", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.light_quest_messages == 1)
-								{
-									spawn_boss(ent,2062,4089,361,90,"guardian_boss_1",2062,4189,500,90,1);
-								}
-								ent->client->pers.light_quest_messages++;
-								ent->client->pers.light_quest_timer = level.time + 3000;
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 3 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_objective_control == 4 && 
-							ent->client->pers.universe_quest_timer < level.time && (int) ent->client->ps.origin[0] > 2720 && (int) ent->client->ps.origin[0] < 2840 && 
-							(int) ent->client->ps.origin[1] > 3944 && (int) ent->client->ps.origin[1] < 3988 && (int) ent->client->ps.origin[2] == 1432)
-						{ // zyk: fourth Universe Quest objective
-							if ((ent->client->pers.universe_quest_messages >= 0 && ent->client->pers.universe_quest_messages <= 3) || ent->client->pers.universe_quest_messages == 5 || 
-								 ent->client->pers.universe_quest_messages == 8 || (ent->client->pers.universe_quest_messages >= 14 && ent->client->pers.universe_quest_messages <= 16))
-							{
-								zyk_text_message(ent, va("universe/mission_3/mission_3_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-							}
-							else
-							{
-								zyk_text_message(ent, va("universe/mission_3/mission_3_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-							}
-
-							ent->client->pers.universe_quest_messages++;
-							ent->client->pers.universe_quest_timer = level.time + 5000;
-
-							if (ent->client->pers.universe_quest_messages == 17)
-							{ // zyk: complete the objective
-								ent->client->pers.universe_quest_objective_control = -1;
-								if (ent->client->pers.universe_quest_counter & (1 << 29))
-								{ // zyk: if player is in Challenge Mode, do not remove this bit value
-									ent->client->pers.universe_quest_counter = 0;
-									ent->client->pers.universe_quest_counter |= (1 << 29);
-								}
-								else
-									ent->client->pers.universe_quest_counter = 0;
-								ent->client->pers.universe_quest_progress = 4;
-								clean_note_model();
-								save_account(ent, qtrue);
-								quest_get_new_player(ent);
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 2 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_objective_control == 3 && ent->client->pers.universe_quest_timer < level.time)
-						{ // zyk: third Universe Quest objective, sages should appear in this map
-							gentity_t *npc_ent = NULL;
-							int change_player = 0;
-
-							if (ent->client->pers.universe_quest_messages == 0)
-							{
-								if (!(ent->client->pers.universe_quest_counter & (1 << 3)))
-								{
-									zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
-								}
-								
-								npc_ent = Zyk_NPC_SpawnType("sage_of_light",2780,4034,1583,0);
-							}
-							else if (ent->client->pers.universe_quest_messages == 1)
-								npc_ent = Zyk_NPC_SpawnType("sage_of_eternity",2780,3966,1583,0);
-							else if (ent->client->pers.universe_quest_messages == 2)
-								npc_ent = Zyk_NPC_SpawnType("sage_of_darkness",2780,3904,1583,0);
-							else if (ent->client->pers.universe_quest_messages == 6)
-								zyk_text_message(ent, "universe/mission_2/mission_2_sage_of_light", qtrue, qfalse);
-							else if (ent->client->pers.universe_quest_messages == 8)
-							{
-								ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 3000;
-
-								zyk_text_message(ent, "universe/mission_2/mission_2_sage_of_eternity", qtrue, qfalse, ent->client->pers.netname);
-								ent->client->pers.universe_quest_counter |= (1 << 1);
-								save_account(ent, qtrue);
-
-								universe_quest_artifacts_checker(ent);
-
-								change_player = 1;
-							}
-							else if (ent->client->pers.universe_quest_messages == 9)
-							{
-								zyk_text_message(ent, "universe/mission_2/mission_2_got_artifact_sage", qtrue, qfalse);
-								change_player = 1;
-							}
-							else if (ent->client->pers.universe_quest_messages == 12)
-							{
-								zyk_text_message(ent, "universe/mission_2/mission_2_sage_of_darkness", qtrue, qfalse, ent->client->pers.netname);
-							}
-							
-							if (npc_ent)
-							{
-								npc_ent->client->pers.universe_quest_objective_control = ent->client->pers.universe_quest_messages;
-							}
-
-							if (ent->client->pers.universe_quest_messages == 3 && ent->client->pers.universe_quest_artifact_holder_id == -1 && !(ent->client->pers.universe_quest_counter & (1 << 3)))
-							{
-								npc_ent = Zyk_NPC_SpawnType("quest_mage",-396,-287,-150,-153);
-								if (npc_ent)
-								{ // zyk: spawning the quest_mage artifact holder
-									npc_ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 5500;
-									npc_ent->client->pers.universe_quest_artifact_holder_id = ent-g_entities;
-
-									ent->client->pers.universe_quest_artifact_holder_id = 3;
-								}
-							}
-
-							if (ent->client->pers.universe_quest_messages < 3)
-								ent->client->pers.universe_quest_messages++;
-
-							// zyk: after displaying the message, sets this to 15 (above 12, the last message possible) so only when player talks to a sage the message appears again
-							if (ent->client->pers.universe_quest_messages > 3)
-								ent->client->pers.universe_quest_messages = 15;
-
-							ent->client->pers.universe_quest_timer = level.time + 1000;
-
-							if (change_player == 1)
-								quest_get_new_player(ent);
-						}
-					}
-					else if (level.quest_map == 2)
-					{
-						zyk_try_get_dark_quest_note(ent, 5);
-					}
-					else if (level.quest_map == 3)
-					{
-						zyk_try_get_dark_quest_note(ent, 6);
-					}
-					else if (level.quest_map == 4)
-					{
-						zyk_try_get_dark_quest_note(ent, 7);
-
-						if (level.chaos_portal_id != -1)
-						{ // zyk: portal to the Realm of Souls
-							gentity_t *chaos_portal = &g_entities[level.chaos_portal_id];
-
-							if (chaos_portal && (int)Distance(chaos_portal->s.origin, ent->client->ps.origin) < 40)
-							{
-								vec3_t origin;
-								vec3_t angles;
-
-								origin[0] = 2230.0f;
-								origin[1] = 3425.0f;
-								origin[2] = -9950.0f;
-								angles[0] = 0.0f;
-								angles[1] = 0.0f;
-								angles[2] = 0.0f;
-
-								zyk_TeleportPlayer(ent, origin, angles);
-							}
-
-							if ((ent->client->pers.can_play_quest == 0 || ent->client->pers.universe_quest_messages > 50) && (int)ent->client->ps.origin[2] < -11000)
-							{ // zyk: player cannot leave the arena
-								G_Kill(ent);
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 17 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.universe_quest_counter & (1 << 3))
-						{ // zyk: Universe Quest, third mission of Time Sequel
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								gentity_t *npc_ent = NULL;
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, 2077, 3425, 973);
-
-								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 400)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 1000;
-								}
-								else if (ent->client->pers.universe_quest_messages > 0 && ent->client->pers.universe_quest_messages < 10)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 1000;
-								}
-								else if (ent->client->pers.universe_quest_messages > 11)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages == 1)
-								{
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2200, 3374, 952, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 0;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 2)
-								{
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2200, 3482, 952, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 1;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 3)
-								{
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2077, 3294, 952, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 2;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 4)
-								{ // zyk: yellow crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2077, 3562, 952, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 3;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 5)
-								{ // zyk: yellow crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2077, 3562, 952, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 3;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 6)
-								{ // zyk: cyan crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 1945, 3374, 952, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 4;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 7)
-								{ // zyk: cyan crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 1945, 3374, 952, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 4;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 8)
-								{ // zyk: purple crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 1945, 3482, 952, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 5;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 9)
-								{ // zyk: purple crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 1945, 3482, 952, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 5;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 11)
-								{ // zyk: tests if player solved the puzzle correctly and opens the gate
-									zyk_quest_item("env/btend", 2336, 3425, 947, "", "");
-									zyk_quest_item("env/huge_lightning", 2336, 3425, 952, "", "");
-									zyk_quest_item("env/lbolt1", 2336, 3425, 952, "", "");
-
-									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/tractorbeam.mp3"));
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages == 13)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", 2200, 3425, 952, 0);
-								else if (ent->client->pers.universe_quest_messages >= 14 && ent->client->pers.universe_quest_messages <= 22)
-								{
-									if (ent->client->pers.universe_quest_messages == 14 || ent->client->pers.universe_quest_messages == 15 || ent->client->pers.universe_quest_messages == 18 ||
-										ent->client->pers.universe_quest_messages == 21)
-									{
-										zyk_text_message(ent, va("universe/mission_17_time/mission_17_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_17_time/mission_17_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 23)
-								{
-									ent->client->pers.universe_quest_progress = 18;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (npc_ent)
-								{
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 18 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.universe_quest_counter & (1 << 3))
-						{ // zyk: Universe Quest, fourth mission of Time Sequel
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								gentity_t *npc_ent = NULL;
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, 2336, 3425, -10000);
-
-								if (ent->client->pers.universe_quest_messages == 50 && Distance(ent->client->ps.origin, zyk_quest_point) < 500)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages > 50 && ent->client->pers.universe_quest_messages < 61)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages >= 61 && ent->client->pers.universe_quest_messages < 80)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 2000;
-								}
-
-								if (ent->client->pers.universe_quest_messages < 49)
-								{
-									zyk_quest_item("models/map_objects/factory/catw2_b.md3", 2336 + 192 * (ent->client->pers.hunter_quest_messages - 3), 3425 + 192 * ((ent->client->pers.universe_quest_messages / 7) - 3), -10000, "-96 -96 -8", "96 96 8");
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 100;
-
-									ent->client->pers.hunter_quest_messages = (ent->client->pers.hunter_quest_messages + 1) % 7;
-
-									// zyk: remapping the catwalk models to have a glass texture
-									if (ent->client->pers.universe_quest_messages == 2)
-									{
-										zyk_remap_quest_item("textures/factory/cat_floor_b", "textures/factory/env_glass");
-										zyk_remap_quest_item("textures/factory/basic2_tiled_b", "textures/factory/env_glass");
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 49)
-								{ // zyk: opens the gate to the Realm of Souls
-									gentity_t *zyk_portal_ent;
-
-									zyk_quest_item("env/btend", 2336, 3425, 947, "", "");
-									zyk_quest_item("env/huge_lightning", 2336, 3425, 952, "", "");
-									zyk_portal_ent = zyk_quest_item("env/lbolt1", 2336, 3425, 952, "", "");
-
-									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/tractorbeam.mp3"));
-
-									level.chaos_portal_id = zyk_portal_ent->s.number;
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
-								}
-								else if (ent->client->pers.universe_quest_messages == 52)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2336, 3425, -9950, 179);
-
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_objective_control = -200000;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 53)
-								{
-									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_53", qtrue, qfalse, ent->client->pers.netname);
-
-									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2073, 3140, -9950, 90);
-
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_objective_control = Q_irand(0, 2);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 54)
-								{
-									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_54", qtrue, qfalse, ent->client->pers.netname);
-
-									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2600, 3600, -9950, -135);
-
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_objective_control = Q_irand(0, 2);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 55)
-								{
-									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_55", qtrue, qfalse);
-
-									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2700, 3425, -9950, 179);
-
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_objective_control = Q_irand(0, 2);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 56)
-								{
-									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_56", qtrue, qfalse);
-
-									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 1900, 3800, -9950, 0);
-
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_objective_control = Q_irand(0, 2);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 57)
-								{
-									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_57", qtrue, qfalse, ent->client->pers.netname);
-
-									npc_ent = Zyk_NPC_SpawnType("quest_ragnos", 2336, 4000, -9950, 179);
-
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_objective_control = Q_irand(0, 2);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 58)
-								{
-									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_58", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 59)
-								{
-									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_59", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.universe_quest_messages == 60)
-								{
-									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_60", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 61)
-								{
-									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_61", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 62)
-								{
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2236, 3365, -9960, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 1;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 63)
-								{
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2236, 3485, -9960, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 2;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 64)
-								{
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2336, 3265, -9960, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 3;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 65)
-								{ // zyk: yellow crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2336, 3585, -9960, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 4;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 66)
-								{ // zyk: yellow crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2336, 3585, -9960, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 4;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 67)
-								{ // zyk: cyan crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_green.md3", 2436, 3365, -9960, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 5;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 68)
-								{ // zyk: cyan crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2436, 3365, -9960, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 5;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 69)
-								{ // zyk: purple crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_red.md3", 2436, 3485, -9960, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 6;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 70)
-								{ // zyk: purple crystal
-									gentity_t *crystal_ent = zyk_quest_item("models/map_objects/mp/crystal_blue.md3", 2436, 3485, -9960, "-16 -16 -16", "16 16 16");
-
-									if (crystal_ent)
-									{
-										crystal_ent->count = 6;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages > 70 && ent->client->pers.universe_quest_messages < 80)
-								{
-									int chosen_quest_item = Q_irand(1, 6);
-									gentity_t *effect_ent = NULL;
-
-									if (chosen_quest_item == 1)
-									{
-										effect_ent = zyk_quest_item("env/btend", 2236, 3365, -9960, "", "");
-									}
-									else if (chosen_quest_item == 2)
-									{
-										effect_ent = zyk_quest_item("env/btend", 2236, 3485, -9960, "", "");
-									}
-									else if (chosen_quest_item == 3)
-									{
-										effect_ent = zyk_quest_item("env/btend", 2336, 3265, -9960, "", "");
-									}
-									else if (chosen_quest_item == 4)
-									{
-										effect_ent = zyk_quest_item("env/btend", 2336, 3585, -9960, "", "");
-									}
-									else if (chosen_quest_item == 5)
-									{
-										effect_ent = zyk_quest_item("env/btend", 2436, 3365, -9960, "", "");
-									}
-									else if (chosen_quest_item == 6)
-									{
-										effect_ent = zyk_quest_item("env/btend", 2436, 3485, -9960, "", "");
-									}
-
-									// zyk: setting to 0 because it will be used to solve the puzzle
-									ent->client->pers.hunter_quest_messages = 0;
-
-									// zyk: setting the chosen crystal in the puzzle order
-									level.quest_puzzle_order[ent->client->pers.universe_quest_messages - 71] = chosen_quest_item;
-
-									if (effect_ent)
-									{
-										level.special_power_effects[effect_ent->s.number] = ent->s.number;
-										level.special_power_effects_timer[effect_ent->s.number] = level.time + 2000;
-
-										G_Sound(effect_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tram_boost.mp3"));
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 81)
-								{
-									gentity_t *effect_ent = zyk_quest_item("env/lbolt1", 2336, 3425, -9960, "", "");
-
-									if (effect_ent)
-									{
-										level.special_power_effects[effect_ent->s.number] = ent->s.number;
-										level.special_power_effects_timer[effect_ent->s.number] = level.time + 5000;
-
-										G_Sound(effect_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tram_boost.mp3"));
-									}
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 3000;
-								}
-								else if (ent->client->pers.universe_quest_messages == 82)
-								{
-									zyk_text_message(ent, "universe/mission_18_time/mission_18_time_82", qtrue, qfalse, ent->client->pers.netname);
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages == 83)
-								{
-									ent->client->pers.universe_quest_progress = 19;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (npc_ent)
-								{
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 19 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 3))
-						{ // zyk: Universe Quest, fifth mission of Time Sequel
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								gentity_t *npc_ent = NULL;
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, 2336, 3425, -10000);
-
-								if (ent->client->pers.universe_quest_messages == 50 && Distance(ent->client->ps.origin, zyk_quest_point) < 500)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages == 50 && (int)ent->client->ps.origin[2] < -5000)
-								{ // zyk: player passed the former mission and is falling
-									vec3_t origin;
-									vec3_t angles;
-
-									origin[0] = 2230.0f;
-									origin[1] = 3425.0f;
-									origin[2] = -9950.0f;
-									angles[0] = 0.0f;
-									angles[1] = 0.0f;
-									angles[2] = 0.0f;
-
-									// zyk: stopping the fall
-									VectorSet(ent->client->ps.velocity, 0, 0, 0);
-
-									zyk_TeleportPlayer(ent, origin, angles);
-								}
-								else if (ent->client->pers.universe_quest_messages > 50 && ent->client->pers.universe_quest_messages < 66)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages < 49)
-								{
-									zyk_quest_item("models/map_objects/factory/catw2_b.md3", 2336 + 192 * (ent->client->pers.hunter_quest_messages - 3), 3425 + 192 * ((ent->client->pers.universe_quest_messages / 7) - 3), -10000, "-96 -96 -8", "96 96 8");
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 100;
-
-									ent->client->pers.hunter_quest_messages = (ent->client->pers.hunter_quest_messages + 1) % 7;
-
-									// zyk: remapping the catwalk models to have a glass texture
-									if (ent->client->pers.universe_quest_messages == 2)
-									{
-										zyk_remap_quest_item("textures/factory/cat_floor_b", "textures/factory/env_glass");
-										zyk_remap_quest_item("textures/factory/basic2_tiled_b", "textures/factory/env_glass");
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 49)
-								{ // zyk: opens the gate to the Realm of Souls
-									gentity_t *zyk_portal_ent;
-
-									zyk_quest_item("env/btend", 2336, 3425, 947, "", "");
-									zyk_quest_item("env/huge_lightning", 2336, 3425, 952, "", "");
-									zyk_portal_ent = zyk_quest_item("env/lbolt1", 2336, 3425, 952, "", "");
-
-									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/tractorbeam.mp3"));
-
-									level.chaos_portal_id = zyk_portal_ent->s.number;
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
-								}
-								else if (ent->client->pers.universe_quest_messages == 52)
-									npc_ent = Zyk_NPC_SpawnType("soul_of_sorrow", 2336, 3425, -9950, 179);
-								else if (ent->client->pers.universe_quest_messages >= 53 && ent->client->pers.universe_quest_messages <= 65)
-								{
-									if (ent->client->pers.universe_quest_messages == 53 || ent->client->pers.universe_quest_messages == 54 || ent->client->pers.universe_quest_messages == 56 ||
-										ent->client->pers.universe_quest_messages == 64)
-									{
-										zyk_text_message(ent, va("universe/mission_19_time/mission_19_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_19_time/mission_19_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 66)
-								{
-									ent->client->pers.universe_quest_progress = 20;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (npc_ent)
-								{
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 20 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 3))
-						{ // zyk: Universe Quest, boss battle mission of Time Sequel
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, 2336, 3425, -10000);
-
-								if (ent->client->pers.universe_quest_messages == 50 && Distance(ent->client->ps.origin, zyk_quest_point) < 500)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages == 50 && (int)ent->client->ps.origin[2] < -5000)
-								{ // zyk: player passed the former mission and is falling
-									vec3_t origin;
-									vec3_t angles;
-
-									origin[0] = 2230.0f;
-									origin[1] = 3425.0f;
-									origin[2] = -9950.0f;
-									angles[0] = 0.0f;
-									angles[1] = 0.0f;
-									angles[2] = 0.0f;
-
-									// zyk: stopping the fall
-									VectorSet(ent->client->ps.velocity, 0, 0, 0);
-
-									zyk_TeleportPlayer(ent, origin, angles);
-								}
-								else if (ent->client->pers.universe_quest_messages > 50 && ent->client->pers.universe_quest_messages < 53)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages < 49)
-								{
-									zyk_quest_item("models/map_objects/factory/catw2_b.md3", 2336 + 192 * (ent->client->pers.hunter_quest_messages - 3), 3425 + 192 * ((ent->client->pers.universe_quest_messages / 7) - 3), -10000, "-96 -96 -8", "96 96 8");
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 100;
-
-									ent->client->pers.hunter_quest_messages = (ent->client->pers.hunter_quest_messages + 1) % 7;
-
-									// zyk: remapping the catwalk models to have a glass texture
-									if (ent->client->pers.universe_quest_messages == 2)
-									{
-										zyk_remap_quest_item("textures/factory/cat_floor_b", "textures/factory/env_glass");
-										zyk_remap_quest_item("textures/factory/basic2_tiled_b", "textures/factory/env_glass");
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 49)
-								{ // zyk: opens the gate to the Realm of Souls
-									gentity_t *zyk_portal_ent;
-
-									zyk_quest_item("env/btend", 2336, 3425, 947, "", "");
-									zyk_quest_item("env/huge_lightning", 2336, 3425, 952, "", "");
-									zyk_portal_ent = zyk_quest_item("env/lbolt1", 2336, 3425, 952, "", "");
-
-									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/tractorbeam.mp3"));
-
-									level.chaos_portal_id = zyk_portal_ent->s.number;
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
-								}
-								else if (ent->client->pers.universe_quest_messages == 52)
-								{
-									spawn_boss(ent, 2200, 3425, -9960, 0, "soul_of_sorrow", 2336, 3425, -9950, 179, 21);
-								}
-								else if (ent->client->pers.universe_quest_messages == 54)
-								{
-									ent->client->pers.universe_quest_progress = 21;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 21 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 3))
-						{ // zyk: Universe Quest, final mission of Time Sequel
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								gentity_t *npc_ent = NULL;
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, 2336, 3425, -10000);
-
-								if (ent->client->pers.universe_quest_messages == 50 && Distance(ent->client->ps.origin, zyk_quest_point) < 500)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages == 50 && (int)ent->client->ps.origin[2] < -5000)
-								{ // zyk: player passed the former mission and is falling
-									vec3_t origin;
-									vec3_t angles;
-
-									origin[0] = 2230.0f;
-									origin[1] = 3425.0f;
-									origin[2] = -9950.0f;
-									angles[0] = 0.0f;
-									angles[1] = 0.0f;
-									angles[2] = 0.0f;
-
-									// zyk: stopping the fall
-									VectorSet(ent->client->ps.velocity, 0, 0, 0);
-
-									zyk_TeleportPlayer(ent, origin, angles);
-								}
-								else if (ent->client->pers.universe_quest_messages > 50 && ent->client->pers.universe_quest_messages < 72)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages < 49)
-								{
-									zyk_quest_item("models/map_objects/factory/catw2_b.md3", 2336 + 192 * (ent->client->pers.hunter_quest_messages - 3), 3425 + 192 * ((ent->client->pers.universe_quest_messages / 7) - 3), -10000, "-96 -96 -8", "96 96 8");
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 100;
-
-									ent->client->pers.hunter_quest_messages = (ent->client->pers.hunter_quest_messages + 1) % 7;
-
-									// zyk: remapping the catwalk models to have a glass texture
-									if (ent->client->pers.universe_quest_messages == 2)
-									{
-										zyk_remap_quest_item("textures/factory/cat_floor_b", "textures/factory/env_glass");
-										zyk_remap_quest_item("textures/factory/basic2_tiled_b", "textures/factory/env_glass");
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 49)
-								{ // zyk: opens the gate to the Realm of Souls
-									gentity_t *zyk_portal_ent;
-
-									zyk_quest_item("env/btend", 2336, 3425, 947, "", "");
-									zyk_quest_item("env/huge_lightning", 2336, 3425, 952, "", "");
-									zyk_portal_ent = zyk_quest_item("env/lbolt1", 2336, 3425, 952, "", "");
-
-									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/tractorbeam.mp3"));
-
-									level.chaos_portal_id = zyk_portal_ent->s.number;
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
-								}
-								else if (ent->client->pers.universe_quest_messages == 52)
-									npc_ent = Zyk_NPC_SpawnType("soul_of_sorrow", 2336, 3425, -9950, 179);
-								else if (ent->client->pers.universe_quest_messages == 58)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", 2136, 3425, -9950, 0);
-								else if (ent->client->pers.universe_quest_messages >= 53 && ent->client->pers.universe_quest_messages != 58 && ent->client->pers.universe_quest_messages <= 71)
-								{
-									if (ent->client->pers.universe_quest_messages == 53 || ent->client->pers.universe_quest_messages == 54 || ent->client->pers.universe_quest_messages == 56 ||
-										ent->client->pers.universe_quest_messages == 59 || ent->client->pers.universe_quest_messages == 65 || ent->client->pers.universe_quest_messages == 67 || 
-										ent->client->pers.universe_quest_messages == 69)
-									{
-										zyk_text_message(ent, va("universe/mission_21_time/mission_21_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_21_time/mission_21_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 72)
-								{ // zyk: teleports the player outside the Realm of Souls
-									vec3_t origin;
-									vec3_t angles;
-
-									origin[0] = 2200.0f;
-									origin[1] = 3425.0f;
-									origin[2] = 952.0f;
-									angles[0] = 0.0f;
-									angles[1] = 0.0f;
-									angles[2] = 0.0f;
-
-									zyk_TeleportPlayer(ent, origin, angles);
-
-									ent->client->pers.universe_quest_progress = 22;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (npc_ent)
-								{
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-							}
-						}
-					}
-					else if (level.quest_map == 5)
-					{
-						// zyk: Dark Quest Note
-						zyk_try_get_dark_quest_note(ent, 8);
-
-						if (ent->client->pers.universe_quest_progress == 2 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_objective_control == 3 && !(ent->client->pers.universe_quest_counter & (1 << 9)) && ent->client->pers.universe_quest_timer < level.time)
-						{
-							gentity_t *npc_ent = NULL;
-							if (ent->client->pers.universe_quest_messages == 0)
-							{
-								zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
-
-								npc_ent = Zyk_NPC_SpawnType("quest_mage",724,5926,951,31);
-								if (npc_ent)
-								{
-									npc_ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 5500;
-
-									npc_ent->client->pers.universe_quest_artifact_holder_id = ent-g_entities;
-									ent->client->pers.universe_quest_artifact_holder_id = 9;
-								}
-							}
-
-							if (ent->client->pers.universe_quest_messages < 1)
-							{
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 5000;
-							}
-						}
-
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 12)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->r.currentOrigin[0] > -5648 && (int) ent->r.currentOrigin[0] < -5448 && (int) ent->r.currentOrigin[1] > 11448 && (int) ent->r.currentOrigin[1] < 11648 && (int) ent->r.currentOrigin[2] >= 980 && (int) ent->r.currentOrigin[2] <= 1000)
-						{
-							if (ent->client->pers.light_quest_timer < level.time)
-							{
-								if (ent->client->pers.light_quest_messages == 0)
-								{
-									zyk_text_message(ent, "light/guardian_of_ice", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.light_quest_messages == 1)
-								{
-									spawn_boss(ent,-4652,11607,991,179,"guardian_boss_10",-5623,11598,991,0,16);
-								}
-								ent->client->pers.light_quest_messages++;
-								ent->client->pers.light_quest_timer = level.time + 3000;
-							}
-						}
-					}
-					else if (level.quest_map == 6)
-					{
-						// zyk: Dark Quest Note
-						zyk_try_get_dark_quest_note(ent, 9);
-
-						if (ent->client->pers.universe_quest_progress == 2 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_objective_control == 3 && !(ent->client->pers.universe_quest_counter & (1 << 6)) && ent->client->pers.universe_quest_timer < level.time)
-						{ // zyk: Universe Quest artifact
-							gentity_t *npc_ent = NULL;
-							if (ent->client->pers.universe_quest_messages == 0)
-							{
-								zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
-								npc_ent = Zyk_NPC_SpawnType("quest_reborn_red",2120,-1744,39,90);
-							}
-							else if (ent->client->pers.universe_quest_messages == 1)
-								npc_ent = Zyk_NPC_SpawnType("quest_reborn_red",2318,-1744,39,90);
-							else if (ent->client->pers.universe_quest_messages == 2)
-							{
-								npc_ent = Zyk_NPC_SpawnType("quest_mage",2214,-1744,39,90);
-								if (npc_ent)
-								{
-									npc_ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 5500;
-
-									npc_ent->client->pers.universe_quest_artifact_holder_id = ent-g_entities;
-									ent->client->pers.universe_quest_artifact_holder_id = 6;
-								}
-							}
-
-							if (ent->client->pers.universe_quest_messages < 3)
-							{
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 5000;
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 18 && ent->client->pers.can_play_quest == 1 && 
-								 ent->client->pers.universe_quest_counter & (1 << 0))
-						{ // zyk: Universe Quest, Settle the Score mission
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.universe_quest_messages == 0)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -3263, 1330, 73, -90);
-								else if (ent->client->pers.universe_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -3139, 1330, 73, -90);
-								else if (ent->client->pers.universe_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4367, 1019, 73, 90);
-								else if (ent->client->pers.universe_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4304, 1019, 73, 90);
-								else if (ent->client->pers.universe_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4930, 1359, 57, -90);
-								else if (ent->client->pers.universe_quest_messages == 5)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4930, 1235, 73, 90);
-								else if (ent->client->pers.universe_quest_messages == 6)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -6697, 699, -38, 0);
-								else if (ent->client->pers.universe_quest_messages == 7)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -6697, 461, -38, 0);
-								else if (ent->client->pers.universe_quest_messages == 8)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -5160, 473, 25, -45);
-								else if (ent->client->pers.universe_quest_messages == 9)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -5236, 473, 25, -45);
-								else if (ent->client->pers.universe_quest_messages == 10)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -1193, -216, 37, 179);
-								else if (ent->client->pers.universe_quest_messages == 11)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -1193, -98, 37, 179);
-								else if (ent->client->pers.universe_quest_messages == 12)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2018, -526, 37, 90);
-								else if (ent->client->pers.universe_quest_messages == 13)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2121, -526, 37, 90);
-								else if (ent->client->pers.universe_quest_messages == 14)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 534, -513, 345, 90);
-								else if (ent->client->pers.universe_quest_messages == 15)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 651, -513, 345, 90);
-								else if (ent->client->pers.universe_quest_messages == 16)
-									npc_ent = Zyk_NPC_SpawnType("ymir_boss", -4193, 771, 401, 135);
-								else if (ent->client->pers.universe_quest_messages == 17)
-								{
-									vec3_t zyk_quest_point;
-
-									VectorSet(zyk_quest_point, -4193, 771, 401);
-
-									if (Distance(ent->client->ps.origin, zyk_quest_point) < 80)
-									{
-										int j = 0;
-
-										for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
-										{
-											npc_ent = &g_entities[j];
-
-											if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "quest_mage") == 0 && npc_ent->die)
-											{
-												npc_ent->health = 0;
-												npc_ent->client->ps.stats[STAT_HEALTH] = 0;
-												if (npc_ent->die)
-												{
-													npc_ent->die(npc_ent, npc_ent, npc_ent, 100, MOD_UNKNOWN);
-												}
-											}
-											else if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "ymir_boss") == 0)
-											{ // zyk: placing him in his original spot
-												vec3_t npc_origin, npc_angles;
-
-												VectorSet(npc_origin, -4193, 771, 401);
-												VectorSet(npc_angles, 0, 135, 0);
-
-												zyk_TeleportPlayer(npc_ent, npc_origin, npc_angles);
-											}
-										}
-
-										ent->client->pers.universe_quest_messages = 18;
-									}
-								}
-
-								if (ent->client->pers.universe_quest_messages == 18)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_light", -4328, 750, 401, 45);
-								}
-								else if (ent->client->pers.universe_quest_messages == 19)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", -4338, 705, 401, 45);
-								}
-								else if (ent->client->pers.universe_quest_messages == 20)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -4279, 646, 401, 45);
-								}
-								else if (ent->client->pers.universe_quest_messages == 21)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -4207, 631, 401, 45);
-								}
-								else if (ent->client->pers.universe_quest_messages == 22)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -4038, 807, 401, -135);
-								}
-								else if (ent->client->pers.universe_quest_messages == 23)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -4070, 843, 401, -135);
-								}
-								else if (ent->client->pers.universe_quest_messages == 24)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -4116, 881, 401, -135);
-								}
-								else if (ent->client->pers.universe_quest_messages == 25)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -4174, 920, 401, -135);
-								}
-
-								if (ent->client->pers.universe_quest_messages >= 26 && ent->client->pers.universe_quest_messages <= 28)
-								{
-									zyk_text_message(ent, va("universe/mission_18_sages/mission_18_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.universe_quest_messages == 29)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4185, 856, 451, -135);
-								else if (ent->client->pers.universe_quest_messages == 30)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4144, 804, 451, -135);
-								else if (ent->client->pers.universe_quest_messages == 31)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4103, 777, 451, -135);
-								else if (ent->client->pers.universe_quest_messages == 32)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4277, 757, 451, 45);
-								else if (ent->client->pers.universe_quest_messages == 33)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4236, 719, 451, 45);
-								else if (ent->client->pers.universe_quest_messages == 34)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4195, 685, 451, 45);
-								else if (ent->client->pers.universe_quest_messages == 35)
-									npc_ent = Zyk_NPC_SpawnType("thor_boss", -4300, 860, 451, -45);
-								else if (ent->client->pers.universe_quest_messages >= 36 && ent->client->pers.universe_quest_messages <= 45)
-								{
-									if (ent->client->pers.universe_quest_messages == 41)
-									{
-										npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -4122, 703, 451, 135);
-									}
-
-									if (ent->client->pers.universe_quest_messages == 36 || ent->client->pers.universe_quest_messages == 39)
-									{
-										zyk_text_message(ent, va("universe/mission_18_sages/mission_18_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_18_sages/mission_18_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 46)
-								{
-									int j = 0;
-
-									for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
-									{
-										npc_ent = &g_entities[j];
-
-										if (npc_ent && npc_ent->NPC && (Q_stricmp(npc_ent->NPC_type, "ymir_boss") == 0 || Q_stricmp(npc_ent->NPC_type, "thor_boss") == 0))
-										{
-											vec3_t npc_origin, npc_angles;
-
-											VectorSet(npc_origin, -5871, 1440, 150);
-											VectorSet(npc_angles, 0, 0, 0);
-
-											zyk_TeleportPlayer(npc_ent, npc_origin, npc_angles);
-										}
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 47)
-								{
-									ent->client->pers.universe_quest_progress = 19;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (ent->client->pers.universe_quest_messages < 16 && npc_ent)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 100;
-								}
-								else if (ent->client->pers.universe_quest_messages == 16 && npc_ent)
-								{ // zyk: try to spawn Ymir again if npc_ent is NULL
-									npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 100;
-								}
-								else if (ent->client->pers.universe_quest_messages > 17 && ent->client->pers.universe_quest_messages < 26 && npc_ent)
-								{
-									npc_ent->client->pers.universe_quest_messages = -2000;
-
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
-								}
-								else if (ent->client->pers.universe_quest_messages > 25 && ent->client->pers.universe_quest_messages < 29)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages > 28 && ent->client->pers.universe_quest_messages < 35 && npc_ent)
-								{
-									npc_ent->client->pers.universe_quest_messages = -2000;
-
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 200;
-								}
-								else if (ent->client->pers.universe_quest_messages == 35 && npc_ent)
-								{ // zyk: try to spawn Thor again if npc_ent is NULL
-									npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 100;
-								}
-								else if (ent->client->pers.universe_quest_messages > 35 && ent->client->pers.universe_quest_messages < 41)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages == 41 && npc_ent)
-								{ // zyk: try to spawn sage of universe again if npc_ent is NULL
-									int j = 0;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-
-									ultra_drain(npc_ent, 450, 30, 8000);
-
-									for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
-									{
-										npc_ent = &g_entities[j];
-
-										if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "quest_mage") == 0 && npc_ent->die)
-										{
-											npc_ent->health = 0;
-											npc_ent->client->ps.stats[STAT_HEALTH] = 0;
-											if (npc_ent->die)
-											{
-												npc_ent->die(npc_ent, npc_ent, npc_ent, 100, MOD_UNKNOWN);
-											}
-										}
-									}
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages > 41 && ent->client->pers.universe_quest_messages < 47)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 19 && ent->client->pers.can_play_quest == 1 &&
-								ent->client->pers.universe_quest_counter & (1 << 0))
-						{ // zyk: Universe Quest Sages Sequel, The Crystal of Magic mission
-							gentity_t *npc_ent = NULL;
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -4193, 771, 401);
-
-								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 80)
-								{
-									ent->client->pers.universe_quest_messages++;
-								}
-								else if (ent->client->pers.universe_quest_messages == 1)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_light", -4328, 750, 401, 45);
-								}
-								else if (ent->client->pers.universe_quest_messages == 2)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", -4338, 705, 401, 45);
-								}
-								else if (ent->client->pers.universe_quest_messages == 3)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -4279, 646, 401, 45);
-								}
-								else if (ent->client->pers.universe_quest_messages == 4)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -4207, 631, 401, 45);
-								}
-								else if (ent->client->pers.universe_quest_messages == 5)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -4038, 807, 401, -135);
-								}
-								else if (ent->client->pers.universe_quest_messages == 6)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -4070, 843, 401, -135);
-								}
-								else if (ent->client->pers.universe_quest_messages == 7)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -4116, 881, 401, -135);
-								}
-								else if (ent->client->pers.universe_quest_messages == 8)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -4174, 920, 401, -135);
-								}
-								else if (ent->client->pers.universe_quest_messages == 9)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -4122, 703, 451, 135);
-								}
-								else if (ent->client->pers.universe_quest_messages >= 10 && ent->client->pers.universe_quest_messages <= 26)
-								{
-									if (ent->client->pers.universe_quest_messages == 10 || ent->client->pers.universe_quest_messages == 16 || ent->client->pers.universe_quest_messages == 21 || 
-										ent->client->pers.universe_quest_messages == 25)
-									{
-										zyk_text_message(ent, va("universe/mission_19_sages/mission_19_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_19_sages/mission_19_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 27)
-								{
-									ent->client->pers.universe_quest_progress = 20;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (ent->client->pers.universe_quest_messages > 0 && npc_ent)
-								{
-									npc_ent->client->pers.universe_quest_messages = -2000;
-
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
-								}
-								else if (ent->client->pers.universe_quest_messages > 9 && ent->client->pers.universe_quest_messages < 27)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 20 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.universe_quest_counter & (1 << 0))
-						{ // zyk: Universe Quest Sages Sequel, boss battle
-							gentity_t *npc_ent = NULL;
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -5849, 1438, 57);
-
-								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 200)
-								{
-									ent->client->pers.universe_quest_messages++;
-								}
-								else if (ent->client->pers.universe_quest_messages == 1)
-								{
-									npc_ent = Zyk_NPC_SpawnType("ymir_boss", -5849, 1638, 57, -90);
-								}
-								else if (ent->client->pers.universe_quest_messages == 2)
-								{
-									npc_ent = Zyk_NPC_SpawnType("thor_boss", -5849, 1238, 57, 90);
-								}
-								else if (ent->client->pers.universe_quest_messages == 3)
-								{
-									zyk_text_message(ent, "universe/mission_20_sages/mission_20_sages_ymir", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 4)
-								{
-									zyk_text_message(ent, "universe/mission_20_sages/mission_20_sages_thor", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 5)
-								{
-									int j = 0;
-
-									gentity_t *new_ent = G_Spawn();
-
-									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-									zyk_set_entity_field(new_ent, "spawnflags", "65537");
-									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -5467, 1438, 70));
-
-									zyk_set_entity_field(new_ent, "angles", va("%d %d 0", 90, 0));
-
-									zyk_set_entity_field(new_ent, "mins", "-8 -64 -64");
-									zyk_set_entity_field(new_ent, "maxs", "8 64 64");
-
-									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-									zyk_spawn_entity(new_ent);
-
-									new_ent = G_Spawn();
-
-									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-									zyk_set_entity_field(new_ent, "spawnflags", "65537");
-									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -6248, 1438, 70));
-
-									zyk_set_entity_field(new_ent, "angles", va("%d %d 0", 90, 0));
-
-									zyk_set_entity_field(new_ent, "mins", "-8 -64 -64");
-									zyk_set_entity_field(new_ent, "maxs", "8 64 64");
-
-									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-									zyk_spawn_entity(new_ent);
-
-									for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
-									{
-										npc_ent = &g_entities[j];
-
-										if (npc_ent && npc_ent->NPC)
-										{
-											G_FreeEntity(npc_ent);
-										}
-									}
-
-									npc_ent = NULL;
-
-									spawn_boss(ent, -5849, 1438, 57, 179, "ymir_boss", -5849, 1638, 57, -90, 15);
-									spawn_boss(ent, -5849, 1438, 57, 179, "thor_boss", -5849, 1238, 57, 90, 15);
-								}
-								else if (ent->client->pers.universe_quest_messages == 6)
-								{ // zyk: sage of universe heals the hero during the battle
-									ent->health += 20;
-									ent->client->ps.stats[STAT_ARMOR] += 20;
-									ent->client->pers.magic_power += 20;
-
-									if (ent->health > ent->client->pers.max_rpg_health)
-										ent->health = ent->client->pers.max_rpg_health;
-
-									if (ent->client->ps.stats[STAT_ARMOR] > ent->client->pers.max_rpg_shield)
-										ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
-
-									if (ent->client->pers.magic_power > zyk_max_magic_power(ent))
-									{
-										ent->client->pers.magic_power = zyk_max_magic_power(ent);
-									}
-
-									send_rpg_events(2000);
-
-									G_Sound(ent, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav"));
-
-									zyk_text_message(ent, "universe/mission_20_sages/mission_20_sages_sage", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 7)
-								{ // zyk: Hero defeated both bosses
-									ent->client->pers.universe_quest_progress = 21;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (ent->client->pers.universe_quest_messages > 0 && npc_ent)
-								{
-									npc_ent->client->pers.universe_quest_messages = -2000;
-
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
-								}
-								else if (ent->client->pers.universe_quest_messages > 2 && ent->client->pers.universe_quest_messages < 6)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages == 6)
-								{
-									ent->client->pers.universe_quest_timer = level.time + 20000;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 21 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.universe_quest_counter & (1 << 0))
-						{ // zyk: Universe Quest Sages Sequel, final mission
-							gentity_t *npc_ent = NULL;
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -5849, 1438, 57);
-
-								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 100)
-								{
-									ent->client->pers.universe_quest_messages++;
-								}
-								else if (ent->client->pers.universe_quest_messages == 1)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_light", -6049, 1638, 57, -90);
-								}
-								else if (ent->client->pers.universe_quest_messages == 2)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", -5949, 1638, 57, -90);
-								}
-								else if (ent->client->pers.universe_quest_messages == 3)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -5849, 1638, 57, -90);
-								}
-								else if (ent->client->pers.universe_quest_messages == 4)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -5749, 1638, 57, -90);
-								}
-								else if (ent->client->pers.universe_quest_messages == 5)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -6049, 1238, 57, 90);
-								}
-								else if (ent->client->pers.universe_quest_messages == 6)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -5949, 1238, 57, 90);
-								}
-								else if (ent->client->pers.universe_quest_messages == 7)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -5849, 1238, 57, 90);
-								}
-								else if (ent->client->pers.universe_quest_messages == 8)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -5749, 1238, 57, 90);
-								}
-								else if (ent->client->pers.universe_quest_messages == 9)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -6049, 1438, 57, 0);
-								}
-								else if (ent->client->pers.universe_quest_messages >= 10 && ent->client->pers.universe_quest_messages <= 30)
-								{
-									if (ent->client->pers.universe_quest_messages == 10 || ent->client->pers.universe_quest_messages == 11 || ent->client->pers.universe_quest_messages == 17 ||
-										ent->client->pers.universe_quest_messages == 26 || ent->client->pers.universe_quest_messages == 27)
-									{
-										zyk_text_message(ent, va("universe/mission_21_sages/mission_21_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_21_sages/mission_21_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 31)
-								{
-									ent->client->pers.universe_quest_progress = 22;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (ent->client->pers.universe_quest_messages > 0 && npc_ent)
-								{
-									npc_ent->client->pers.universe_quest_messages = -2000;
-
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
-								}
-								else if (ent->client->pers.universe_quest_messages > 9 && ent->client->pers.universe_quest_messages < 31)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 16 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.universe_quest_counter & (1 << 1))
-						{ // zyk: Universe Quest, Confrontation mission
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.universe_quest_messages == 0)
-									npc_ent = Zyk_NPC_SpawnType("ymir_boss", -5849, 1638, 57, -90);
-								else if (ent->client->pers.universe_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("thor_boss", -5849, 1238, 57, 90);
-								else if (ent->client->pers.universe_quest_messages == 2)
-								{
-									vec3_t zyk_quest_point;
-
-									VectorSet(zyk_quest_point, -5849, 1438, 57);
-
-									if (Distance(ent->client->ps.origin, zyk_quest_point) < 500)
-									{
-										int j = 0;
-
-										for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
-										{
-											npc_ent = &g_entities[j];
-
-											if (npc_ent && npc_ent->client && npc_ent->NPC && (Q_stricmp(npc_ent->NPC_type, "ymir_boss") == 0 || Q_stricmp(npc_ent->NPC_type, "thor_boss") == 0))
-											{
-												npc_ent->client->pers.universe_quest_messages = -10000;
-											}
-										}
-
-										npc_ent = NULL;
-										ent->client->pers.universe_quest_messages = 3;
-									}
-								}
-
-								if (ent->client->pers.universe_quest_messages == 3)
-								{
-									zyk_text_message(ent, "universe/mission_16_guardians/mission_16_guardians_3", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.universe_quest_messages == 4)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -5849, 1438, 57, 0);
-									zyk_text_message(ent, "universe/mission_16_guardians/mission_16_guardians_4", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.universe_quest_messages == 5)
-								{
-									int j = 0;
-
-									Zyk_NPC_SpawnType("quest_mage", -5949, 1438, 57, 0);
-
-									for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
-									{
-										npc_ent = &g_entities[j];
-
-										if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "guardian_of_universe") == 0 && npc_ent->client && npc_ent->client->pers.guardian_timer < level.time)
-										{
-											ultra_drain(npc_ent, 450, 30, 8000);
-
-											npc_ent->client->pers.guardian_timer = level.time + 15000;
-										}
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages >= 6 && ent->client->pers.universe_quest_messages <= 13)
-								{
-									if (ent->client->pers.universe_quest_messages == 6 || ent->client->pers.universe_quest_messages == 12)
-									{
-										zyk_text_message(ent, va("universe/mission_16_guardians/mission_16_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_16_guardians/mission_16_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 14)
-								{
-									ent->client->pers.universe_quest_progress = 17;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (ent->client->pers.universe_quest_messages < 2 && npc_ent)
-								{ // zyk: try to spawn Ymir and Thor again if npc_ent is NULL
-									npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-
-									npc_ent->client->pers.universe_quest_objective_control = ent->s.number;
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 200;
-								}
-								else if (ent->client->pers.universe_quest_messages > 2 && ent->client->pers.universe_quest_messages < 5)
-								{
-									if (npc_ent)
-									{ // zyk: Guardian of Universe
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-										npc_ent->client->pers.universe_quest_messages = -10000;
-										npc_ent->client->pers.universe_quest_objective_control = ent->s.number;
-									}
-
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 3000;
-								}
-								else if (ent->client->pers.universe_quest_messages == 5)
-								{ // zyk: spawning mages to help Ymir and Thor
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages > 5 && ent->client->pers.universe_quest_messages < 14)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 15 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.universe_quest_counter & (1 << 2))
-						{ // zyk: Universe Quest, first mission in Thor Sequel
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.universe_quest_messages == 0)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -3263, 1330, 73, -90);
-								else if (ent->client->pers.universe_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -3139, 1330, 73, -90);
-								else if (ent->client->pers.universe_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4367, 1019, 73, 90);
-								else if (ent->client->pers.universe_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4304, 1019, 73, 90);
-								else if (ent->client->pers.universe_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4930, 1359, 57, -90);
-								else if (ent->client->pers.universe_quest_messages == 5)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -4930, 1235, 73, 90);
-								else if (ent->client->pers.universe_quest_messages == 6)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -6697, 699, -38, 0);
-								else if (ent->client->pers.universe_quest_messages == 7)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -6697, 461, -38, 0);
-								else if (ent->client->pers.universe_quest_messages == 8)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -5160, 473, 25, -45);
-								else if (ent->client->pers.universe_quest_messages == 9)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -5236, 473, 25, -45);
-								else if (ent->client->pers.universe_quest_messages == 10)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -1193, -216, 37, 179);
-								else if (ent->client->pers.universe_quest_messages == 11)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -1193, -98, 37, 179);
-								else if (ent->client->pers.universe_quest_messages == 12)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2018, -526, 37, 90);
-								else if (ent->client->pers.universe_quest_messages == 13)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2121, -526, 37, 90);
-								else if (ent->client->pers.universe_quest_messages == 14)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 534, -513, 345, 90);
-								else if (ent->client->pers.universe_quest_messages == 15)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 651, -513, 345, 90);
-								else if (ent->client->pers.universe_quest_messages == 16)
-									npc_ent = Zyk_NPC_SpawnType("ymir_boss", -5849, 1538, 57, -90);
-								else if (ent->client->pers.universe_quest_messages == 17)
-									npc_ent = Zyk_NPC_SpawnType("thor_boss", -5849, 1338, 57, 90);
-
-								if (npc_ent)
-								{
-									if (ent->client->pers.universe_quest_messages == 16 || ent->client->pers.universe_quest_messages == 17)
-									{
-										npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-									}
-									else
-									{ // zyk: a mage. Set a value that will be used for the sentences spoken from him
-										npc_ent->client->pers.universe_quest_objective_control = Q_irand(0, 3);
-									}
-
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-								
-								if (ent->client->pers.universe_quest_messages == 23)
-								{
-									vec3_t zyk_quest_point;
-
-									VectorSet(zyk_quest_point, -5849, 1538, 57);
-
-									if (Distance(ent->client->ps.origin, zyk_quest_point) < 200)
-									{
-										ent->client->pers.universe_quest_messages = 24;
-									}
-								}
-
-								if (ent->client->pers.universe_quest_messages >= 18 && ent->client->pers.universe_quest_messages != 23 && ent->client->pers.universe_quest_messages <= 34)
-								{
-									if (ent->client->pers.universe_quest_messages == 18 || ent->client->pers.universe_quest_messages == 19 || ent->client->pers.universe_quest_messages == 22 || 
-										ent->client->pers.universe_quest_messages == 28 || ent->client->pers.universe_quest_messages == 29 || ent->client->pers.universe_quest_messages == 32 || 
-										ent->client->pers.universe_quest_messages == 34)
-									{
-										zyk_text_message(ent, va("universe/mission_15_thor/mission_15_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_15_thor/mission_15_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 35)
-								{
-									ent->client->pers.universe_quest_progress = 16;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (ent->client->pers.universe_quest_messages < 18 && npc_ent)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 100;
-								}
-								else if (ent->client->pers.universe_quest_messages >= 18 && ent->client->pers.universe_quest_messages != 23 && ent->client->pers.universe_quest_messages < 35)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 16 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.universe_quest_counter & (1 << 2))
-						{ // zyk: Universe Quest Thor Sequel, Ymir boss battle
-							gentity_t *npc_ent = NULL;
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -5849, 1438, 57);
-
-								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 200)
-								{
-									ent->client->pers.universe_quest_messages++;
-								}
-								
-								if (ent->client->pers.universe_quest_messages == 1)
-								{
-									int j = 0;
-
-									gentity_t *new_ent = G_Spawn();
-
-									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-									zyk_set_entity_field(new_ent, "spawnflags", "65537");
-									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -5467, 1438, 70));
-
-									zyk_set_entity_field(new_ent, "angles", va("%d %d 0", 90, 0));
-
-									zyk_set_entity_field(new_ent, "mins", "-8 -64 -64");
-									zyk_set_entity_field(new_ent, "maxs", "8 64 64");
-
-									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-									zyk_spawn_entity(new_ent);
-
-									new_ent = G_Spawn();
-
-									zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-									zyk_set_entity_field(new_ent, "spawnflags", "65537");
-									zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -6248, 1438, 70));
-
-									zyk_set_entity_field(new_ent, "angles", va("%d %d 0", 90, 0));
-
-									zyk_set_entity_field(new_ent, "mins", "-8 -64 -64");
-									zyk_set_entity_field(new_ent, "maxs", "8 64 64");
-
-									zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-									zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-									zyk_spawn_entity(new_ent);
-
-									for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
-									{
-										npc_ent = &g_entities[j];
-
-										if (npc_ent && npc_ent->NPC)
-										{
-											G_FreeEntity(npc_ent);
-										}
-									}
-
-									npc_ent = NULL;
-
-									spawn_boss(ent, -5849, 1438, 57, 179, "ymir_boss", -6049, 1438, 57, 0, 19);
-								}
-								else if (ent->client->pers.universe_quest_messages == 3)
-								{ // zyk: Hero defeated boss
-									zyk_NPC_Kill_f("all");
-								}
-								else if (ent->client->pers.universe_quest_messages == 4)
-								{
-									ent->client->pers.universe_quest_progress = 17;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 3)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 3000;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 17 && ent->client->pers.can_play_quest == 1 &&
-								 ent->client->pers.universe_quest_counter & (1 << 2))
-						{ // zyk: Universe Quest, The New Leader mission of Thor Sequel
-							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 1)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 0)
-									npc_ent = Zyk_NPC_SpawnType("thor_boss", -5849, 1438, 57, 0);
-
-								if (npc_ent)
-								{
-									npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-
-								ent->client->pers.hunter_quest_messages++;
-								ent->client->pers.hunter_quest_timer = level.time + 1000;
-							}
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -5849, 1438, 57);
-
-								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 1 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 16)
-								{
-									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 4 || ent->client->pers.universe_quest_messages == 12 ||
-										ent->client->pers.universe_quest_messages == 15)
-									{
-										zyk_text_message(ent, va("universe/mission_17_thor/mission_17_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_17_thor/mission_17_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 17)
-								{
-									ent->client->pers.universe_quest_progress = 18;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-					}
-					else if (level.quest_map == 7)
-					{
-						zyk_try_get_dark_quest_note(ent, 10);
-
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 7)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > 1820 && (int) ent->client->ps.origin[0] < 2020 && (int) ent->client->ps.origin[1] > 1968 && (int) ent->client->ps.origin[1] < 2168 && (int) ent->client->ps.origin[2] == 728)
-						{
-							if (ent->client->pers.light_quest_timer < level.time)
-							{
-								if (ent->client->pers.light_quest_messages == 0)
-								{
-									zyk_text_message(ent, "light/guardian_of_intelligence", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.light_quest_messages == 1)
-								{
-									spawn_boss(ent,1920,2068,729,-90,"guardian_boss_4",1920,982,729,90,4);
-								}
-								ent->client->pers.light_quest_messages++;
-								ent->client->pers.light_quest_timer = level.time + 3000;
-							}
-						}
-					}
-					else if (level.quest_map == 8)
-					{
-						if (ent->client->pers.universe_quest_progress == 4 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_objective_control == 5 && ent->client->pers.universe_quest_timer < level.time)
-						{ // zyk: fifth mission of Universe Quest
-							gentity_t *npc_ent = NULL;
-							if (ent->client->pers.universe_quest_messages == 0)
-								Zyk_NPC_SpawnType("quest_reborn_red",785,-510,1177,-179);
-							else if (ent->client->pers.universe_quest_messages == 1)
-								Zyk_NPC_SpawnType("quest_reborn_red",253,-510,1177,-179);
-							else if (ent->client->pers.universe_quest_messages == 2)
-								Zyk_NPC_SpawnType("quest_reborn_boss",512,-315,1177,-90);
-							else if (ent->client->pers.universe_quest_messages == 3)
-								npc_ent = Zyk_NPC_SpawnType("sage_of_universe",507,-623,537,90);
-							else if (ent->client->pers.universe_quest_messages >= 5 && ent->client->pers.universe_quest_messages <= 17)
-							{
-								if (ent->client->pers.universe_quest_messages != 8 && ent->client->pers.universe_quest_messages != 10 && ent->client->pers.universe_quest_messages != 11 &&
-									ent->client->pers.universe_quest_messages != 16)
-								{
-									zyk_text_message(ent, va("universe/mission_4/mission_4_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-								}
-								else
-								{
-									zyk_text_message(ent, va("universe/mission_4/mission_4_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-								}
-							}
-							else if (ent->client->pers.universe_quest_messages == 18)
-							{
-								zyk_text_message(ent, "universe/mission_4/mission_4_end", qtrue, qfalse, ent->client->pers.netname);
-
-								if (ent->client->pers.universe_quest_counter & (1 << 29))
-								{ // zyk: if player is in Challenge Mode, do not remove this bit value
-									ent->client->pers.universe_quest_counter = 0;
-									ent->client->pers.universe_quest_counter |= (1 << 29);
-								}
-								else
-								{
-									ent->client->pers.universe_quest_counter = 0;
-								}
-
-								ent->client->pers.universe_quest_progress = 5;
-								ent->client->pers.universe_quest_objective_control = -1;
-								ent->client->pers.universe_quest_messages = 0;
-
-								save_account(ent, qtrue);
-
-								quest_get_new_player(ent);
-							}
-
-							if (npc_ent)
-							{ // zyk: Sage of Universe, set this player id on him so we can test it to see if the player found him
-								npc_ent->client->pers.universe_quest_objective_control = ent-g_entities;
-							}
-
-							if (ent->client->pers.universe_quest_messages != 4 && ent->client->pers.universe_quest_messages < 18)
-							{
-								ent->client->pers.universe_quest_messages++;
-							}
-
-							ent->client->pers.universe_quest_timer = level.time + 5000;
-						}
-					}
-					else if (level.quest_map == 9)
-					{
-						if (ent->client->pers.universe_quest_progress == 0 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_timer < level.time && ent->client->pers.universe_quest_objective_control != -1)
-						{ // zyk: first objective of Universe Quest
-							gentity_t *npc_ent = NULL;
-
-							if (ent->client->pers.universe_quest_messages == 0)
-							{
-								zyk_spawn_catwalk_prison(1803, -33, -3135, 90, 0);
-								zyk_text_message(ent, "universe/mission_0/mission_0_0", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 1)
-							{
-								zyk_validate_sages(ent);
-								zyk_text_message(ent, "universe/mission_0/mission_0_1", qtrue, qfalse, ent->client->pers.netname);
-							}
-							else if (ent->client->pers.universe_quest_messages == 2)
-							{
-								zyk_spawn_quest_reborns();
-								zyk_text_message(ent, "universe/mission_0/mission_0_2", qtrue, qfalse, ent->client->pers.netname);
-							}
-							else if (ent->client->pers.universe_quest_messages == 3)
-							{
-								zyk_spawn_catwalk_prison(1803, -33, -3135, 90, 0);
-								zyk_text_message(ent, "universe/mission_0/mission_0_3", qtrue, qfalse, ent->client->pers.netname);
-							}
-							else if (ent->client->pers.universe_quest_messages == 7)
-							{
-								zyk_validate_sages(ent);
-								zyk_text_message(ent, "universe/mission_0/mission_0_sage_0", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 8)
-							{
-								zyk_text_message(ent, "universe/mission_0/mission_0_sage_1", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 9)
-							{
-								zyk_text_message(ent, "universe/mission_0/mission_0_sage_2", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 10)
-							{ // zyk: battle against the red reborns
-								if (ent->client->pers.light_quest_messages > 1)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_reborn_red", 2467, -318 + (50 * ent->client->pers.light_quest_messages), -3800, 0);
-									ent->client->pers.light_quest_messages--;
-								}
-								else if (ent->client->pers.light_quest_messages == 1 && ent->client->pers.universe_quest_objective_control == 1)
-								{
-									ent->client->pers.universe_quest_messages = 9;
-									ent->client->pers.light_quest_messages = 0;
-									npc_ent = Zyk_NPC_SpawnType("quest_reborn_boss", 2467, -68, -3800, 0);
-								}
-							}
-							else if (ent->client->pers.universe_quest_messages == 12)
-							{
-								zyk_text_message(ent, "universe/mission_0/mission_0_end", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 13)
-							{
-								ent->client->pers.universe_quest_progress = 1;
-								save_account(ent, qtrue);
-								quest_get_new_player(ent);
-							}
-							else if (ent->client->pers.universe_quest_messages == 14)
-							{ // zyk: player failed mission
-								quest_get_new_player(ent);
-							}
-
-							if (ent->client->pers.universe_quest_progress == 0)
-							{
-								if (npc_ent && Q_stricmp(npc_ent->NPC_type, "quest_reborn") != 0 && 
-									Q_stricmp(npc_ent->NPC_type, "quest_reborn_blue") != 0)
-								{ // zyk: sets the player id who must kill this quest reborn
-									npc_ent->client->pers.universe_quest_objective_control = ent-g_entities;
-								}
-
-								if (ent->client->pers.universe_quest_messages == 4 && (int)ent->client->ps.origin[0] > 1400 &&
-									(int)ent->client->ps.origin[0] < 1800 && (int)ent->client->ps.origin[1] > -200 &&
-									(int)ent->client->ps.origin[1] < 200 && (int)ent->client->ps.origin[2] > -3200 &&
-									(int)ent->client->ps.origin[2] < -3100)
-								{ // zyk: player reached the prison gate, shows message
-									zyk_text_message(ent, "universe/mission_0/mission_0_prison_door", qtrue, qfalse, ent->client->pers.netname);
-									ent->client->pers.universe_quest_messages = 5;
-								}
-								else if (ent->client->pers.universe_quest_messages == 6 && (int)ent->client->ps.origin[0] > 1400 &&
-									(int)ent->client->ps.origin[0] < 1800 && (int)ent->client->ps.origin[1] > -200 &&
-									(int)ent->client->ps.origin[1] < 200 && (int)ent->client->ps.origin[2] > -3200 &&
-									(int)ent->client->ps.origin[2] < -3100)
-								{ // zyk: player reached the sages, remove door
-									int zyk_it = 0;
-									ent->client->pers.universe_quest_messages = 7;
-
-									for (zyk_it = (MAX_CLIENTS + BODY_QUEUE_SIZE); zyk_it < level.num_entities; zyk_it++)
-									{
-										gentity_t *catwalk_ent = &g_entities[zyk_it];
-
-										if (catwalk_ent && Q_stricmp(catwalk_ent->classname, "misc_model_breakable") == 0 && 
-											Q_stricmp(catwalk_ent->targetname, "zyk_sage_prison") == 0)
-										{ // zyk: removes prison door
-											G_FreeEntity(catwalk_ent);
-											break;
-										}
-									}
-								}
-								else if ((ent->client->pers.universe_quest_messages < 4 || ent->client->pers.universe_quest_messages > 6) && 
-										 ent->client->pers.universe_quest_messages != 10 && ent->client->pers.universe_quest_messages != 11)
-								{
-									ent->client->pers.universe_quest_messages++;
-								}
-
-								if (ent->client->pers.universe_quest_messages < 10)
-									ent->client->pers.universe_quest_timer = level.time + 3000;
-								else
-									ent->client->pers.universe_quest_timer = level.time + 1000;
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 1 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_timer < level.time && ent->client->pers.universe_quest_objective_control > -1)
-						{ // zyk: second Universe Quest mission
-							gentity_t *npc_ent = NULL;
-
-							if (ent->client->pers.universe_quest_messages == 3)
-							{ // zyk: starts conversation when player gets near the sages
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, 2750, -39, -3806);
-
-								if (Distance(ent->client->ps.origin, zyk_quest_point) < 300)
-								{
-									ent->client->pers.universe_quest_messages = 4;
-								}
-							}
-
-							if (ent->client->pers.universe_quest_messages == 0)
-							{
-								gentity_t *door_ent = &g_entities[109];
-
-								npc_ent = Zyk_NPC_SpawnType("sage_of_light", 2750, -115, -3806, 179);
-
-								if (door_ent && Q_stricmp(door_ent->classname, "func_static") == 0)
-								{ // zyk: removes the map last door
-									G_FreeEntity(door_ent);
-								}
-							}
-							else if (ent->client->pers.universe_quest_messages == 1)
-								npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", 2750, -39, -3806, 179);
-							else if (ent->client->pers.universe_quest_messages == 2)
-								npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", 2750, 39, -3806, 179);
-
-							if (ent->client->pers.universe_quest_messages > 3 && ent->client->pers.universe_quest_messages < 35)
-							{
-								if (ent->client->pers.universe_quest_messages == 4 || ent->client->pers.universe_quest_messages == 5 || ent->client->pers.universe_quest_messages == 6 || 
-									ent->client->pers.universe_quest_messages == 8 || ent->client->pers.universe_quest_messages == 16 || ent->client->pers.universe_quest_messages == 32)
-								{
-									zyk_text_message(ent, va("universe/mission_1/mission_1_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-								}
-								else
-								{
-									zyk_text_message(ent, va("universe/mission_1/mission_1_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-								}
-							}
-							else if (ent->client->pers.universe_quest_messages == 35)
-							{
-								zyk_text_message(ent, "universe/mission_1/mission_1_end", qtrue, qfalse);
-								
-								ent->client->pers.universe_quest_progress = 2;
-								
-								save_account(ent, qtrue);
-
-								quest_get_new_player(ent);
-							}
-
-							if (npc_ent)
-							{ // zyk: sages cannot be killed
-								npc_ent->client->pers.universe_quest_objective_control = -2000;
-							}
-
-							if (ent->client->pers.universe_quest_messages < 3)
-							{
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 1000;
-							}
-							else if (ent->client->pers.universe_quest_messages > 3)
-							{ // zyk: universe_quest_messages will be 4 or higher when player reaches and press USE key on one of the sages
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 4500;
-							}
-						}
-
-						if (ent->client->pers.universe_quest_messages < 7)
-						{ // zyk: universe_quest_messages must be less than 7. If it is at least 7, player is in the universe quest missions in this map
-							zyk_try_get_dark_quest_note(ent, 12);
-						}
-					}
-					else if (level.quest_map == 10)
-					{   
-						// zyk: battle against the Guardian of Light
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && light_quest_defeated_guardians(ent) == qtrue && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -1350 && (int) ent->client->ps.origin[0] < -630 && (int) ent->client->ps.origin[1] > -1900 && (int) ent->client->ps.origin[1] < -1400 && (int) ent->client->ps.origin[2] > 5 && (int) ent->client->ps.origin[2] < 56)
-						{
-							if (ent->client->pers.light_quest_timer < level.time)
-							{
-								if (ent->client->pers.light_quest_messages < 3)
-								{
-									zyk_text_message(ent, va("light/guardian_%d", ent->client->pers.light_quest_messages), qtrue, qfalse);
-								}
-								else if (ent->client->pers.light_quest_messages == 3)
-								{
-									spawn_boss(ent,-992,-1802,25,90,"guardian_boss_9",0,0,0,0,8);
-								}
-
-								ent->client->pers.light_quest_messages++;
-								ent->client->pers.light_quest_timer = level.time + 3000;
-							}
-						}
-
-						// zyk: battle against the Guardian of Darkness
-						if (ent->client->pers.hunter_quest_progress != NUMBER_OF_OBJECTIVES && dark_quest_collected_notes(ent) == qtrue && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -200 && (int) ent->client->ps.origin[0] < 100 && (int) ent->client->ps.origin[1] > 252 && (int) ent->client->ps.origin[1] < 552 && (int) ent->client->ps.origin[2] == -231)
-						{
-							if (ent->client->pers.hunter_quest_timer < level.time)
-							{
-								if (ent->client->pers.hunter_quest_messages < 3)
-								{
-									zyk_text_message(ent, va("dark/guardian_%d", ent->client->pers.hunter_quest_messages), qtrue, qfalse);
-								}
-								else if (ent->client->pers.hunter_quest_messages == 3)
-								{
-									spawn_boss(ent,-34,402,-231,90,"guardian_of_darkness",0,0,0,0,9);
-								}
-								ent->client->pers.hunter_quest_messages++;
-								ent->client->pers.hunter_quest_timer = level.time + 3000;
-							}
-						}
-
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 6)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > 412 && (int) ent->client->ps.origin[0] < 612 && (int) ent->client->ps.origin[1] > 4729 && (int) ent->client->ps.origin[1] < 4929 && (int) ent->client->ps.origin[2] >= 55 && (int) ent->client->ps.origin[2] <= 64)
-						{
-							if (ent->client->pers.light_quest_timer < level.time)
-							{
-								if (ent->client->pers.light_quest_messages == 0)
-								{
-									zyk_text_message(ent, "light/guardian_of_forest", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.light_quest_messages == 1)
-								{
-									spawn_boss(ent,119,4819,33,0,"guardian_boss_3",512,4829,62,179,3);
-								}
-								ent->client->pers.light_quest_messages++;
-								ent->client->pers.light_quest_timer = level.time + 3000;
-							}
-						}
-
-						if (ent->client->pers.eternity_quest_progress < NUMBER_OF_ETERNITY_QUEST_OBJECTIVES && ent->client->pers.eternity_quest_timer < level.time && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -676 && (int) ent->client->ps.origin[0] < -296 && (int) ent->client->ps.origin[1] > 1283 && (int) ent->client->ps.origin[1] < 1663 && (int) ent->client->ps.origin[2] > 60 && (int) ent->client->ps.origin[2] < 120)
-						{ // zyk: Eternity Quest
-							if (ent->client->pers.eternity_quest_progress < (NUMBER_OF_ETERNITY_QUEST_OBJECTIVES - 1))
-							{
-								zyk_text_message(ent, va("eternity/riddle_%d", ent->client->pers.eternity_quest_progress), qtrue, qfalse);
-
-								ent->client->pers.eternity_quest_timer = level.time + 30000;
-							}
-							else if (ent->client->pers.eternity_quest_progress == (NUMBER_OF_ETERNITY_QUEST_OBJECTIVES - 1))
-							{
-								if (ent->client->pers.eternity_quest_timer == 0)
-								{
-									zyk_text_message(ent, "eternity/answered_all", qtrue, qfalse);
-									ent->client->pers.eternity_quest_timer = level.time + 3000;
-								}
-								else
-								{ // zyk: Guardian of Eternity battle
-									spawn_boss(ent,-994,2975,25,90,"guardian_of_eternity",0,0,0,0,10);
-								}
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 2 && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_objective_control == 3 && ent->client->pers.universe_quest_timer < level.time && ent->client->pers.universe_quest_messages < 8 && !(ent->client->pers.universe_quest_counter & (1 << 8)))
-						{
-							gentity_t *npc_ent = NULL;
-							if (ent->client->pers.universe_quest_messages == 0)
-							{
-								zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
-							}
-							else if (ent->client->pers.universe_quest_messages > 0 && ent->client->pers.universe_quest_messages < 7)
-							{
-								zyk_text_message(ent, va("universe/mission_2/mission_2_artifact_guardian_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-							}
-							else if (ent->client->pers.universe_quest_messages == 7)
-							{
-								npc_ent = Zyk_NPC_SpawnType("quest_ragnos",-1462,1079,2062,0);
-								if (npc_ent)
-								{
-									npc_ent->client->pers.universe_quest_artifact_holder_id = ent-g_entities;
-									ent->client->pers.universe_quest_artifact_holder_id = npc_ent-g_entities;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-							}
-							ent->client->pers.universe_quest_messages++;
-							ent->client->pers.universe_quest_timer = level.time + 5000;
-						}
-
-						if (ent->client->pers.universe_quest_progress == 15 && ent->client->pers.can_play_quest == 1 && 
-							ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_counter & (1 << 0))
-						{ // zyk: first mission of Sages Sequel
-							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 4)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 1)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_light", -952, -1782, 25, -90);
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 2)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -992, -1782, 25, -90);
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 3)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", -1032, -1782, 25, -90);
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-
-								ent->client->pers.hunter_quest_messages++;
-								ent->client->pers.hunter_quest_timer = level.time + 1000;
-							}
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -992, -1782, 25);
-
-								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 4 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 31)
-								{
-									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 2 || ent->client->pers.universe_quest_messages == 7 || 
-										ent->client->pers.universe_quest_messages == 9 || ent->client->pers.universe_quest_messages == 10 || ent->client->pers.universe_quest_messages == 12 || 
-										ent->client->pers.universe_quest_messages == 24 || ent->client->pers.universe_quest_messages == 27 || ent->client->pers.universe_quest_messages == 28 || 
-										ent->client->pers.universe_quest_messages == 29 || ent->client->pers.universe_quest_messages == 31)
-									{
-										zyk_text_message(ent, va("universe/mission_15_sages/mission_15_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_15_sages/mission_15_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 32)
-								{
-									ent->client->pers.universe_quest_progress = 16;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 16 && ent->client->pers.can_play_quest == 1 &&
-								 ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_counter & (1 << 3))
-						{ // zyk: Universe Quest, second mission of Time Sequel
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								gentity_t *npc_ent = NULL;
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -769, -2590, 70);
-
-								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 150)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 2000;
-								}
-								else if (ent->client->pers.universe_quest_messages > 0 && ent->client->pers.universe_quest_messages < 18)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 2000;
-								}
-								else if (ent->client->pers.universe_quest_messages > 17 && ent->client->pers.universe_quest_messages < 30)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages == 1)
-									zyk_quest_item("models/map_objects/mp/crystal_red.md3", -755, -2500, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 2)
-									zyk_quest_item("models/map_objects/mp/crystal_green.md3", -755, -2530, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 3)
-									zyk_quest_item("models/map_objects/mp/crystal_blue.md3", -755, -2560, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 4) // zyk: yellow crystal
-									zyk_quest_item("models/map_objects/mp/crystal_green.md3", -755, -2590, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 5) // zyk: yellow crystal
-									zyk_quest_item("models/map_objects/mp/crystal_red.md3", -755, -2590, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 6)
-									zyk_quest_item("models/map_objects/mp/crystal_green.md3", -755, -2620, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 7)
-									zyk_quest_item("models/map_objects/mp/crystal_red.md3", -755, -2650, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 8)
-									zyk_quest_item("models/map_objects/mp/crystal_blue.md3", -755, -2680, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 9) // zyk: cyan crystal
-									zyk_quest_item("models/map_objects/mp/crystal_green.md3", -795, -2500, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 10) // zyk: cyan crystal
-									zyk_quest_item("models/map_objects/mp/crystal_blue.md3", -795, -2500, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 11)
-									zyk_quest_item("models/map_objects/mp/crystal_red.md3", -795, -2530, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 12)
-									zyk_quest_item("models/map_objects/mp/crystal_green.md3", -795, -2560, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 13) // zyk: purple crystal
-									zyk_quest_item("models/map_objects/mp/crystal_red.md3", -795, -2590, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 14) // zyk: purple crystal
-									zyk_quest_item("models/map_objects/mp/crystal_blue.md3", -795, -2590, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 15)
-									zyk_quest_item("models/map_objects/mp/crystal_red.md3", -795, -2620, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 16)
-									zyk_quest_item("models/map_objects/mp/crystal_green.md3", -795, -2650, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 17)
-									zyk_quest_item("models/map_objects/mp/crystal_blue.md3", -795, -2680, 60, "", "");
-								else if (ent->client->pers.universe_quest_messages == 18)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -700, -2590, 70, 179);
-								else if (ent->client->pers.universe_quest_messages >= 19 && ent->client->pers.universe_quest_messages <= 29)
-								{
-									if (ent->client->pers.universe_quest_messages == 19 || ent->client->pers.universe_quest_messages == 20 || ent->client->pers.universe_quest_messages == 22 ||
-										ent->client->pers.universe_quest_messages == 28)
-									{
-										zyk_text_message(ent, va("universe/mission_16_time/mission_16_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_16_time/mission_16_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 30)
-								{
-									VectorSet(zyk_quest_point, -700, -2590, 70);
-
-									if (Distance(ent->client->ps.origin, zyk_quest_point) < 70)
-									{
-										ent->client->pers.universe_quest_messages++;
-										ent->client->pers.universe_quest_timer = level.time + 5000;
-
-										zyk_text_message(ent, "universe/mission_16_time/mission_16_time_30", qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 31)
-								{
-									ent->client->pers.universe_quest_progress = 17;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (npc_ent)
-								{
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-							}
-						}
-
-						if (ent->client->pers.universe_quest_artifact_holder_id == -3 && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_timer < level.time && ent->client->ps.powerups[PW_FORCE_BOON])
-						{ // zyk: player got the artifact, save it to his account
-							ent->client->pers.universe_quest_artifact_holder_id = -1;
-							ent->client->pers.universe_quest_counter |= (1 << 8);
-							save_account(ent, qtrue);
-
-							zyk_text_message(ent, "universe/mission_2/mission_2_artifact_guardian_end", qtrue, qfalse, ent->client->pers.netname);
-
-							universe_quest_artifacts_checker(ent);
-
-							quest_get_new_player(ent);
-						}
-						else if (ent->client->pers.universe_quest_artifact_holder_id > -1 && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && ent->client->ps.hasLookTarget == qtrue && ent->client->ps.lookTarget == ent->client->pers.universe_quest_artifact_holder_id)
-						{ // zyk: found quest_ragnos npc, set artifact effect on player
-							ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 10000;
-							ent->client->pers.universe_quest_timer = level.time + 5000;
-
-							G_FreeEntity(&g_entities[ent->client->pers.universe_quest_artifact_holder_id]);
-
-							ent->client->pers.universe_quest_artifact_holder_id = -3;
-
-							zyk_text_message(ent, "universe/mission_2/mission_2_artifact_guardian_found", qtrue, qfalse, ent->client->pers.netname);
-						}
-					}
-					else if (level.quest_map == 11)
-					{   
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 9)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -100 && (int) ent->client->ps.origin[0] < 100 && (int) ent->client->ps.origin[1] > -95 && (int) ent->client->ps.origin[1] < 105 && (int) ent->client->ps.origin[2] == -375)
-						{
-							if (ent->client->pers.light_quest_timer < level.time)
-							{
-								if (ent->client->pers.light_quest_messages == 0)
-								{
-									zyk_text_message(ent, "light/guardian_of_fire", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.light_quest_messages == 1)
-								{
-									spawn_boss(ent,0,5,-374,-90,"guardian_boss_6",0,-269,-374,90,6);
-								}
-								ent->client->pers.light_quest_messages++;
-								ent->client->pers.light_quest_timer = level.time + 3000;
-							}
-						}
-					}
-					else if (level.quest_map == 12)
-					{
-						if (ent->client->pers.universe_quest_progress == 8 && ent->client->pers.can_play_quest == 1 && !(ent->client->pers.universe_quest_counter & (1 << 1)))
-						{ // zyk: Revelations mission of Universe Quest
-							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 8)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 0)
-									npc_ent = Zyk_NPC_SpawnType("sage_of_light", -1082, 4337, 505, 45);
-								else if (ent->client->pers.hunter_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", -912, 4503, 505, -135);
-								else if (ent->client->pers.hunter_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -892, 4340, 505, 135);
-								else if (ent->client->pers.hunter_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -1091, 4520, 505, -45);
-								else if (ent->client->pers.hunter_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -1112, 4418, 505, 0);
-								else if (ent->client->pers.hunter_quest_messages == 5)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -882, 4418, 505, 179);
-								else if (ent->client->pers.hunter_quest_messages == 6)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -993, 4273, 505, 90);
-								else if (ent->client->pers.hunter_quest_messages == 7)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -988, 4543, 505, -90);
-
-								if (npc_ent)
-								{
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-
-								ent->client->pers.hunter_quest_messages++;
-								ent->client->pers.hunter_quest_timer = level.time + 1000;
-							}
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -988, 4418, 525);
-
-								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 8 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 20)
-								{
-									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 2 || ent->client->pers.universe_quest_messages == 3 || 
-										ent->client->pers.universe_quest_messages == 7 || ent->client->pers.universe_quest_messages == 15 || ent->client->pers.universe_quest_messages == 20)
-									{
-										zyk_text_message(ent, va("universe/mission_8/mission_8_part_1_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_8/mission_8_part_1_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 21)
-								{
-									zyk_text_message(ent, "universe/mission_8/mission_8_part_1_21", qtrue, qfalse);
-
-									ent->client->pers.universe_quest_counter |= (1 << 1);
-									first_second_act_objective(ent);
-									save_account(ent, qtrue);
-									quest_get_new_player(ent);
-								}
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 15 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_counter & (1 << 1))
-						{ // zyk: Universe Quest, first mission of Guardians Sequel
-							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 5)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 0)
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -1112, 4418, 505, 0);
-								else if (ent->client->pers.hunter_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -882, 4418, 505, 179);
-								else if (ent->client->pers.hunter_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -993, 4273, 505, 90);
-								else if (ent->client->pers.hunter_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -988, 4543, 505, -90);
-								else if (ent->client->pers.hunter_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -1091, 4520, 505, -45);
-
-								if (npc_ent)
-								{
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-
-								ent->client->pers.hunter_quest_messages++;
-								ent->client->pers.hunter_quest_timer = level.time + 1000;
-							}
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -988, 4418, 525);
-
-								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 5 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 20)
-								{
-									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 2 || ent->client->pers.universe_quest_messages == 7 ||
-										ent->client->pers.universe_quest_messages == 12 || ent->client->pers.universe_quest_messages == 18 || ent->client->pers.universe_quest_messages == 20)
-									{
-										zyk_text_message(ent, va("universe/mission_15_guardians/mission_15_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_15_guardians/mission_15_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 21)
-								{
-									ent->client->pers.universe_quest_progress = 16;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 17 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_counter & (1 << 1))
-						{ // zyk: Universe Quest, trials mission of Guardians Sequel
-							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 5)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 0)
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -4270, 4684, -6, 45);
-								else if (ent->client->pers.hunter_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -4270, 5084, -6, -45);
-								else if (ent->client->pers.hunter_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -3870, 4684, -6, 135);
-								else if (ent->client->pers.hunter_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -3870, 5084, -6, -135);
-								else if (ent->client->pers.hunter_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -4270, 4884, -6, 0);
-
-								if (npc_ent)
-								{
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-
-								ent->client->pers.hunter_quest_messages++;
-								ent->client->pers.hunter_quest_timer = level.time + 1000;
-							}
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -4070, 4884, -6);
-
-								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 5 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 10)
-								{
-									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 2 || ent->client->pers.universe_quest_messages == 7)
-									{
-										zyk_text_message(ent, va("universe/mission_17_guardians/mission_17_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_17_guardians/mission_17_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 11)
-								{
-									ent->client->pers.universe_quest_progress = 18;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 18 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 1))
-						{ // zyk: Universe Quest, boss battle against light quest bosses in Guardians Sequel
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-								int amount_of_bosses_in_map = 1;
-
-								VectorSet(zyk_quest_point, -4070, 4884, -6);
-
-								if (ent->client->pers.universe_quest_counter & (1 << 29))
-								{ // zyk: Challenge Mode requires fighting more than one at once
-									amount_of_bosses_in_map = 2;
-								}
-
-								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 200)
-								{
-									ent->client->pers.hunter_quest_messages = 0;
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages > 0 && ent->client->pers.universe_quest_messages < 10 && 
-										 ent->client->pers.hunter_quest_messages < amount_of_bosses_in_map)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages == 1 && ent->client->pers.hunter_quest_messages < amount_of_bosses_in_map)
-								{ // zyk: closing the passage from where the player came so he cannot exit the trials room
-									zyk_trial_room_models();
-
-									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_boss_1", -4270, 4884, 150, 0, 17);
-
-									// zyk: counts how many bosses defeated
-									ent->client->pers.light_quest_messages = 0;
-
-									// zyk: counts how many bosses in the map
-									ent->client->pers.hunter_quest_messages = 1;
-								}
-								else if (ent->client->pers.universe_quest_messages == 2 && ent->client->pers.hunter_quest_messages < amount_of_bosses_in_map)
-								{
-									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_boss_2", -4270, 4884, 150, 0, 17);
-									ent->client->pers.hunter_quest_messages++;
-								}
-								else if (ent->client->pers.universe_quest_messages == 3 && ent->client->pers.hunter_quest_messages < amount_of_bosses_in_map)
-								{
-									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_boss_3", -4270, 4884, 150, 0, 17);
-									ent->client->pers.hunter_quest_messages++;
-								}
-								else if (ent->client->pers.universe_quest_messages == 4 && ent->client->pers.hunter_quest_messages < amount_of_bosses_in_map)
-								{
-									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_boss_4", -4270, 4884, 150, 0, 17);
-									ent->client->pers.hunter_quest_messages++;
-								}
-								else if (ent->client->pers.universe_quest_messages == 5 && ent->client->pers.hunter_quest_messages < amount_of_bosses_in_map)
-								{
-									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_boss_5", -4270, 4884, 150, 0, 17);
-									ent->client->pers.hunter_quest_messages++;
-								}
-								else if (ent->client->pers.universe_quest_messages == 6 && ent->client->pers.hunter_quest_messages < amount_of_bosses_in_map)
-								{
-									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_boss_6", -4270, 4884, 150, 0, 17);
-									ent->client->pers.hunter_quest_messages++;
-								}
-								else if (ent->client->pers.universe_quest_messages == 7 && ent->client->pers.hunter_quest_messages < amount_of_bosses_in_map)
-								{
-									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_boss_7", -4270, 4884, 150, 0, 17);
-									ent->client->pers.hunter_quest_messages++;
-								}
-								else if (ent->client->pers.universe_quest_messages == 8 && ent->client->pers.hunter_quest_messages < amount_of_bosses_in_map)
-								{
-									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_boss_8", -4270, 4884, 150, 0, 17);
-									ent->client->pers.hunter_quest_messages++;
-								}
-								else if (ent->client->pers.universe_quest_messages == 9 && ent->client->pers.hunter_quest_messages < amount_of_bosses_in_map)
-								{
-									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_boss_10", -4270, 4884, 150, 0, 17);
-									ent->client->pers.hunter_quest_messages++;
-								}
-								else if (ent->client->pers.universe_quest_messages == 11)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 2000;
-									zyk_text_message(ent, "universe/mission_18_guardians/mission_18_guardians_win", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.universe_quest_messages == 12)
-								{
-									ent->client->pers.universe_quest_progress = 19;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 19 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_counter & (1 << 1))
-						{ // zyk: Universe Quest, great moment mission of Guardians Sequel
-							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 5)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 0)
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -4270, 4684, -6, 45);
-								else if (ent->client->pers.hunter_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -4270, 5084, -6, -45);
-								else if (ent->client->pers.hunter_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -3870, 4684, -6, 135);
-								else if (ent->client->pers.hunter_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -3870, 5084, -6, -135);
-								else if (ent->client->pers.hunter_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -4270, 4884, -6, 0);
-
-								if (npc_ent)
-								{
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-
-								ent->client->pers.hunter_quest_messages++;
-								ent->client->pers.hunter_quest_timer = level.time + 1000;
-							}
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -4070, 4884, -6);
-
-								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 5 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 9)
-								{
-									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 2 || ent->client->pers.universe_quest_messages == 7 || 
-										ent->client->pers.universe_quest_messages == 8)
-									{
-										zyk_text_message(ent, va("universe/mission_19_guardians/mission_19_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_19_guardians/mission_19_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 10)
-								{
-									ent->client->pers.universe_quest_progress = 20;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 20 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 1))
-						{ // zyk: Universe Quest, final boss battle in Guardians Sequel
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -4070, 4884, -6);
-
-								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 200)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
-								}
-								else if (ent->client->pers.universe_quest_messages > 0 && ent->client->pers.universe_quest_messages < 5)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 500;
-								}
-
-								if (ent->client->pers.universe_quest_messages == 1)
-								{ // zyk: closing the passage from where the player came so he cannot exit the trials room
-									zyk_trial_room_models();
-
-									spawn_boss(ent, -3970, 4884, -5, 179, "guardian_of_universe", -4270, 4884, 150, 0, 18);
-
-									// zyk: counts how many bosses defeated
-									ent->client->pers.light_quest_messages = 0;
-								}
-								else if (ent->client->pers.universe_quest_messages == 2)
-								{
-									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_boss_9", -4270, 4784, 150, 0, 18);
-								}
-								else if (ent->client->pers.universe_quest_messages == 3)
-								{
-									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_of_darkness", -4270, 4984, 150, 0, 18);
-								}
-								else if (ent->client->pers.universe_quest_messages == 4)
-								{
-									spawn_boss(ent, -4070, 4884, -5, 179, "guardian_of_eternity", -4170, 4884, 150, 0, 18);
-								}
-								else if (ent->client->pers.universe_quest_messages == 6)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 2000;
-									zyk_text_message(ent, "universe/mission_20_guardians/mission_20_guardians_win", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.universe_quest_messages == 7)
-								{
-									ent->client->pers.universe_quest_progress = 21;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 21 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_counter & (1 << 1))
-						{ // zyk: Universe Quest, final mission of Guardians Sequel
-							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 5)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 0)
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -4270, 4684, -6, 45);
-								else if (ent->client->pers.hunter_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -4270, 5084, -6, -45);
-								else if (ent->client->pers.hunter_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -3870, 4684, -6, 135);
-								else if (ent->client->pers.hunter_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -3870, 5084, -6, -135);
-								else if (ent->client->pers.hunter_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -4270, 4884, -6, 0);
-
-								if (npc_ent)
-								{
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-
-								ent->client->pers.hunter_quest_messages++;
-								ent->client->pers.hunter_quest_timer = level.time + 1000;
-							}
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -4070, 4884, -6);
-
-								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 5 && Distance(ent->client->ps.origin, zyk_quest_point) < 200))
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 13)
-								{
-									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 9 || ent->client->pers.universe_quest_messages == 10 ||
-										ent->client->pers.universe_quest_messages == 11)
-									{
-										zyk_text_message(ent, va("universe/mission_21_guardians/mission_21_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_21_guardians/mission_21_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 14)
-								{
-									ent->client->pers.universe_quest_progress = 22;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 15 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.universe_quest_counter & (1 << 3))
-						{ // zyk: Universe Quest, first mission of Time Sequel
-							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 9)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 0)
-									npc_ent = Zyk_NPC_SpawnType("sage_of_light", -1082, 4337, 505, 45);
-								else if (ent->client->pers.hunter_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", -912, 4503, 505, -135);
-								else if (ent->client->pers.hunter_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -892, 4340, 505, 135);
-								else if (ent->client->pers.hunter_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -1091, 4520, 505, -45);
-								else if (ent->client->pers.hunter_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", -1112, 4418, 505, 0);
-								else if (ent->client->pers.hunter_quest_messages == 5)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", -882, 4418, 505, 179);
-								else if (ent->client->pers.hunter_quest_messages == 6)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -993, 4273, 505, 90);
-								else if (ent->client->pers.hunter_quest_messages == 7)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", -988, 4543, 505, -90);
-								else if (ent->client->pers.hunter_quest_messages == 8)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -988, 4393, 505, 90);
-
-								if (npc_ent)
-								{
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-
-								ent->client->pers.hunter_quest_messages++;
-								ent->client->pers.hunter_quest_timer = level.time + 1000;
-							}
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -988, 4393, 505);
-
-								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 9 && Distance(ent->client->ps.origin, zyk_quest_point) < 300))
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 36)
-								{
-									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 2 || ent->client->pers.universe_quest_messages == 5 || 
-										ent->client->pers.universe_quest_messages == 10 || ent->client->pers.universe_quest_messages == 13 || ent->client->pers.universe_quest_messages == 19 || 
-										ent->client->pers.universe_quest_messages == 20 || ent->client->pers.universe_quest_messages == 24 || ent->client->pers.universe_quest_messages == 33 || 
-										ent->client->pers.universe_quest_messages == 35)
-									{
-										zyk_text_message(ent, va("universe/mission_15_time/mission_15_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_15_time/mission_15_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 37)
-								{
-									ent->client->pers.universe_quest_progress = 16;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 7 && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && 
-								 ent->client->pers.universe_quest_timer < level.time)
-						{ // zyk: Guardian of Universe battle
-							if ((int) ent->client->ps.origin[0] > 2746 && (int) ent->client->ps.origin[0] < 3123 && (int) ent->client->ps.origin[1] > 4728 && (int) ent->client->ps.origin[1] < 4994 && (int) ent->client->ps.origin[2] == 24)
-							{
-								if (ent->client->pers.universe_quest_messages == 0)
-									zyk_text_message(ent, "universe/mission_7/mission_7_0", qtrue, qfalse, ent->client->pers.netname);
-								else if (ent->client->pers.universe_quest_messages == 1)
-									zyk_text_message(ent, "universe/mission_7/mission_7_1", qtrue, qfalse);
-								else if (ent->client->pers.universe_quest_messages == 2)
-									zyk_text_message(ent, "universe/mission_7/mission_7_2", qtrue, qfalse, ent->client->pers.netname);
-								else if (ent->client->pers.universe_quest_messages == 3)
-								{
-									spawn_boss(ent,2742,4863,25,0,"guardian_of_universe",0,0,0,0,13);
-								}
-
-								if (ent->client->pers.universe_quest_messages < 4)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-							}
-							
-							if (ent->client->pers.universe_quest_messages == 5)
-							{
-								zyk_NPC_Kill_f("all"); // zyk: killing the guardian spawns
-								zyk_text_message(ent, "universe/mission_7/mission_7_5", qtrue, qfalse, ent->client->pers.netname);
-							}
-							else if (ent->client->pers.universe_quest_messages == 6)
-							{
-								zyk_text_message(ent, "universe/mission_7/mission_7_6", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 7)
-							{
-								zyk_text_message(ent, "universe/mission_7/mission_7_7", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 8)
-							{
-								zyk_text_message(ent, "universe/mission_7/mission_7_8", qtrue, qfalse);
-								
-								ent->client->pers.universe_quest_progress = 8;
-								ent->client->pers.universe_quest_messages = 0;
-
-								save_account(ent, qtrue);
-
-								ent->client->pers.quest_power_status |= (1 << 13);
-
-								quest_get_new_player(ent);
-							}
-
-							if (ent->client->pers.universe_quest_messages > 4 && ent->client->pers.universe_quest_messages < 8)
-							{
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 5000;
-							}
-						}
-					}
-					else if (level.quest_map == 13)
-					{
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 5)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -2249 && (int) ent->client->ps.origin[0] < -2049 && (int) ent->client->ps.origin[1] > -4287 && (int) ent->client->ps.origin[1] < -4087 && (int) ent->client->ps.origin[2] == 3644)
-						{
-							if (ent->client->pers.light_quest_timer < level.time)
-							{
-								if (ent->client->pers.light_quest_messages == 0)
-								{
-									zyk_text_message(ent, "light/guardian_of_earth", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.light_quest_messages == 1)
-								{
-									spawn_boss(ent,-2149,-4387,3645,90,"guardian_boss_2",-2149,-4037,3645,-90,2);
-								}
-								ent->client->pers.light_quest_messages++;
-								ent->client->pers.light_quest_timer = level.time + 3000;
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 2 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_objective_control == 3 && ent->client->pers.universe_quest_timer < level.time && ent->client->pers.universe_quest_messages < 1 && !(ent->client->pers.universe_quest_counter & (1 << 5)))
-						{
-							gentity_t *npc_ent = NULL;
-							npc_ent = Zyk_NPC_SpawnType("quest_mage",-584,296,5977,0);
-							if (npc_ent)
-							{
-								npc_ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 5500;
-
-								npc_ent->client->pers.universe_quest_artifact_holder_id = ent-g_entities;
-								ent->client->pers.universe_quest_artifact_holder_id = 5;
-							}
-							zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
-						
-							ent->client->pers.universe_quest_messages++;
-							ent->client->pers.universe_quest_timer = level.time + 5000;
-						}
-					}
-					else if (level.quest_map == 14)
-					{
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 11)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -100 && (int) ent->client->ps.origin[0] < 100 && (int) ent->client->ps.origin[1] > 1035 && (int) ent->client->ps.origin[1] < 1235 && (int) ent->client->ps.origin[2] == 24)
-						{
-							if (ent->client->pers.light_quest_timer < level.time)
-							{
-								if (ent->client->pers.light_quest_messages == 0)
-								{
-									zyk_text_message(ent, "light/guardian_of_resistance", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.light_quest_messages == 1)
-								{
-									spawn_boss(ent,0,1135,25,-90,"guardian_boss_8",0,905,25,90,11);
-								}
-								ent->client->pers.light_quest_messages++;
-								ent->client->pers.light_quest_timer = level.time + 3000;
-							}
-						}
-					}
-					else if (level.quest_map == 15)
-					{
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 10)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > -253 && (int) ent->client->ps.origin[0] < -53 && (int) ent->client->ps.origin[1] > -555 && (int) ent->client->ps.origin[1] < -355 && (int) ent->client->ps.origin[2] == 216)
-						{
-							if (ent->client->pers.light_quest_timer < level.time)
-							{
-								if (ent->client->pers.light_quest_messages == 0)
-								{
-									zyk_text_message(ent, "light/guardian_of_wind", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.light_quest_messages == 1)
-								{
-									spawn_boss(ent,-156,-298,217,-90,"guardian_boss_7",-156,-584,300,90,7);
-								}
-								ent->client->pers.light_quest_messages++;
-								ent->client->pers.light_quest_timer = level.time + 3000;
-							}
-						}
-					}
-					else if (level.quest_map == 17)
-					{
-						if (ent->client->pers.universe_quest_progress == 8 && ent->client->pers.can_play_quest == 1 && !(ent->client->pers.universe_quest_counter & (1 << 2)) && ent->client->pers.universe_quest_timer < level.time && (int) ent->client->ps.origin[0] > -18684 && (int) ent->client->ps.origin[0] < -17485 && (int) ent->client->ps.origin[1] > 17652 && (int) ent->client->ps.origin[1] < 18781 && (int) ent->client->ps.origin[2] > 1505 && (int) ent->client->ps.origin[2] < 1850)
-						{ // zyk: nineth Universe Quest mission. Guardian of Time part
-							if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 19)
-							{
-								if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 2 || ent->client->pers.universe_quest_messages == 3)
-								{
-									zyk_text_message(ent, va("universe/mission_8/mission_8_part_2_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-								}
-								else
-								{
-									zyk_text_message(ent, va("universe/mission_8/mission_8_part_2_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-								}
-							}
-							else if (ent->client->pers.universe_quest_messages == 20)
-							{
-								zyk_text_message(ent, "universe/mission_8/mission_8_part_2_20", qtrue, qfalse, ent->client->pers.netname);
-
-								ent->client->pers.universe_quest_counter |= (1 << 2);
-								first_second_act_objective(ent);
-								save_account(ent, qtrue);
-								quest_get_new_player(ent);
-							}
-
-							if (ent->client->pers.universe_quest_messages < 20)
-							{
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 5000;
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 9 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_timer < level.time)
-						{ // zyk: Universe Quest crystals mission
-							gentity_t *npc_ent = NULL;
-
-							if (!(ent->client->pers.universe_quest_counter & (1 << 0)))
-							{ // zyk: Crystal of Destiny
-								if (ent->client->pers.universe_quest_messages == 0)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",-3702,-2251,2232,90);
-								else if (ent->client->pers.universe_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",-3697,-2191,2232,91);
-								else if (ent->client->pers.universe_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",-3692,-2335,2232,-91);
-								else if (ent->client->pers.universe_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",-3813,-2252,2488,179);
-								else if (ent->client->pers.universe_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",-2588,-2252,2488,4);
-								else if (ent->client->pers.universe_quest_messages == 5)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",-3702,-2252,2488,100);
-								else if (ent->client->pers.universe_quest_messages == 6)
-								{
-									load_crystal_model(-3702,-2251,2211,90,0);
-								}
-							}
-							else if (ent->client->pers.universe_quest_messages == 0)
-							{ // zyk: if player has this crystal, try the next one
-								ent->client->pers.universe_quest_messages = 6;
-							}
-
-							if (!(ent->client->pers.universe_quest_counter & (1 << 1)))
-							{ // zyk: Crystal of Truth
-								if (ent->client->pers.universe_quest_messages == 7)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",-14365,-696,1554,-179);
-								else if (ent->client->pers.universe_quest_messages == 8)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",-14358,-284,1565,-179);
-								else if (ent->client->pers.universe_quest_messages == 9)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",-13880,-520,1557,-179);
-								else if (ent->client->pers.universe_quest_messages == 10)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",-15361,-600,1851,-179);
-								else if (ent->client->pers.universe_quest_messages == 11)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",-14152,-523,1455,-179);
-								else if (ent->client->pers.universe_quest_messages == 12)
-								{
-									load_crystal_model(-14152,-523,1455,-179,1);
-								}
-							}
-							else if (ent->client->pers.universe_quest_messages == 6)
-							{ // zyk: if player has this crystal, try the next one
-								ent->client->pers.universe_quest_messages = 12;
-							}
-
-							if (!(ent->client->pers.universe_quest_counter & (1 << 2)))
-							{ // zyk: Crystal of Time
-								if (ent->client->pers.universe_quest_messages == 13)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",19904,-2740,1672,90);
-								else if (ent->client->pers.universe_quest_messages == 14)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",19903,-2684,1672,91);
-								else if (ent->client->pers.universe_quest_messages == 15)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",19751,-2669,1672,87);
-								else if (ent->client->pers.universe_quest_messages == 16)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",20039,-2674,1672,86);
-								else if (ent->client->pers.universe_quest_messages == 17)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",20073,-2326,1672,89);
-								else if (ent->client->pers.universe_quest_messages == 18)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",19713,-2316,1672,83);
-								else if (ent->client->pers.universe_quest_messages == 19)
-								{
-									load_crystal_model(19904,-2740,1651,90,2);
-								}
-							}
-							else if (ent->client->pers.universe_quest_messages == 12)
-							{ // zyk: if player has this crystal, do the crystal check
-								ent->client->pers.universe_quest_messages = 19;
-							}
-
-							if (ent->client->pers.universe_quest_messages < 20)
-							{ // zyk: only increments to next step if npc was properly placed in the map or a crystal was placed
-								if (npc_ent || ent->client->pers.universe_quest_messages == 6 || ent->client->pers.universe_quest_messages == 12 ||
-									ent->client->pers.universe_quest_messages == 19)
-								{
-									ent->client->pers.universe_quest_messages++;
-								}
-
-								ent->client->pers.universe_quest_timer = level.time + 1200;
-							}
-							else
-							{
-								ent->client->pers.universe_quest_timer = level.time + 200;
-
-								if (level.quest_crystal_id[0] != -1 && 
-									(int)Distance(ent->client->ps.origin,g_entities[level.quest_crystal_id[0]].r.currentOrigin) < 50)
-								{
-									ent->client->pers.universe_quest_counter |= (1 << 0);
-									zyk_text_message(ent, "universe/mission_9/mission_9_0", qtrue, qfalse);
-									clean_crystal_model(0);
-									universe_crystals_check(ent);
-								}
-								else if (level.quest_crystal_id[1] != -1 && 
-									(int)Distance(ent->client->ps.origin,g_entities[level.quest_crystal_id[1]].r.currentOrigin) < 50)
-								{
-									ent->client->pers.universe_quest_counter |= (1 << 1);
-									zyk_text_message(ent, "universe/mission_9/mission_9_1", qtrue, qfalse);
-									clean_crystal_model(1);
-									universe_crystals_check(ent);
-								}
-								else if (level.quest_crystal_id[2] != -1 && 
-									(int)Distance(ent->client->ps.origin,g_entities[level.quest_crystal_id[2]].r.currentOrigin) < 50)
-								{
-									ent->client->pers.universe_quest_counter |= (1 << 2);
-									zyk_text_message(ent, "universe/mission_9/mission_9_2", qtrue, qfalse);
-									clean_crystal_model(2);
-									universe_crystals_check(ent);
-								}
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 10 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_timer < level.time && 
-							(int) ent->client->ps.origin[0] > -18684 && (int) ent->client->ps.origin[0] < -17485 && (int) ent->client->ps.origin[1] > 17652 && 
-							(int) ent->client->ps.origin[1] < 18781 && (int) ent->client->ps.origin[2] > 1505 && (int) ent->client->ps.origin[2] < 1850)
-						{ // zyk: eleventh objective of Universe Quest. Setting Guardian of Time free
-							if (ent->client->pers.universe_quest_messages == 1)
-								zyk_text_message(ent, "universe/mission_10/mission_10_1", qtrue, qfalse, ent->client->pers.netname);
-							else if (ent->client->pers.universe_quest_messages == 2)
-								Zyk_NPC_SpawnType("guardian_of_time",-18084,17970,1658,-90);
-							else if (ent->client->pers.universe_quest_messages >= 3 && ent->client->pers.universe_quest_messages <= 17)
-							{
-								zyk_text_message(ent, va("universe/mission_10/mission_10_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 18)
-							{
-								zyk_text_message(ent, "universe/mission_10/mission_10_18", qtrue, qfalse, ent->client->pers.netname);
-
-								ent->client->pers.universe_quest_progress = 11;
-								save_account(ent, qtrue);
-								quest_get_new_player(ent);
-							}
-							
-							if (ent->client->pers.universe_quest_progress == 10 && ent->client->pers.universe_quest_messages < 18)
-							{
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 5000;
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 11 && ent->client->pers.can_play_quest == 1)
-						{ // zyk: mission of the battle for the temple in Universe Quest
-							if (ent->client->pers.universe_quest_timer < level.time && (int) ent->client->ps.origin[0] > 7658 && (int) ent->client->ps.origin[0] < 17707 && (int) ent->client->ps.origin[1] > 5160 && (int) ent->client->ps.origin[1] < 12097 && (int) ent->client->ps.origin[2] > 1450 && (int) ent->client->ps.origin[2] < 5190)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.universe_quest_messages == 0)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time",9869,11957,1593,-52);
-									zyk_text_message(ent, "universe/mission_11/mission_11_0", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 1)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_universe",9800,11904,1593,-52);
-									zyk_text_message(ent, "universe/mission_11/mission_11_1", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("sage_of_light",9744,11862,1593,-52);
-								else if (ent->client->pers.universe_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness",9687,11818,1593,-52);
-								else if (ent->client->pers.universe_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity",9626,11771,1593,-52);
-								else if (ent->client->pers.universe_quest_messages == 5)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe",9562,11722,1593,-52);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-									zyk_text_message(ent, "universe/mission_11/mission_11_2", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 6)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9",9498,11673,1593,-52);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 7)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness",9433,11623,1593,-52);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 8)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity",9335,11547,1593,-52);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-
-								if (npc_ent)
-									npc_ent->client->pers.universe_quest_objective_control = ent->s.number;
-
-								if (ent->client->pers.universe_quest_messages < 9)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 3000;
-								}
-							}
-
-							if (ent->client->pers.hunter_quest_timer < level.time)
-							{ // zyk: spawns the npcs at the temple
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 0)
-								{
-									int ent_iterator = 0;
-									gentity_t *this_ent = NULL;
-
-									// zyk: cleaning entities, except the spawn points. This will prevent server from crashing in this mission
-									for (ent_iterator = level.maxclients; ent_iterator < level.num_entities; ent_iterator++)
-									{
-										this_ent = &g_entities[ent_iterator];
-
-										if (this_ent && Q_stricmp( this_ent->classname, "info_player_deathmatch" ) != 0)
-											G_FreeEntity(this_ent);
-									}
-
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",10212,8937,1593,-179);
-								}
-								else if (ent->client->pers.hunter_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",10212,8828,1593,-179);
-								else if (ent->client->pers.hunter_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",10212,8680,1593,-179);
-								else if (ent->client->pers.hunter_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",10212,8550,1593,-179);
-								else if (ent->client->pers.hunter_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",10212,8355,1593,-179);
-								else if (ent->client->pers.hunter_quest_messages == 5)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",10212,8164,1593,-179);
-								else if (ent->client->pers.hunter_quest_messages == 6)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",9280,9246,1593,-179);
-								else if (ent->client->pers.hunter_quest_messages == 7)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",9528,9425,1593,-179);
-								else if (ent->client->pers.hunter_quest_messages == 8)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",9779,9426,1593,-179);
-								else if (ent->client->pers.hunter_quest_messages == 9)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",9954,10016,1800,-179);
-								else if (ent->client->pers.hunter_quest_messages == 10)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",9450,10524,1800,-179);
-								else if (ent->client->pers.hunter_quest_messages == 12)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",9294,10583,1800,-179);
-								else if (ent->client->pers.hunter_quest_messages == 13)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",9305,10418,1800,-179);
-								else if (ent->client->pers.hunter_quest_messages == 14)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",9065,10415,1800,-179);
-								else if (ent->client->pers.hunter_quest_messages == 15)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",9069,10244,1800,-179);
-								else if (ent->client->pers.hunter_quest_messages == 16)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",10094,9199,1800,-179);
-								else if (ent->client->pers.hunter_quest_messages == 17)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",10139,9282,1800,-179);
-								else if (ent->client->pers.hunter_quest_messages == 18)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",10199,9392,1800,-179);
-								else if (ent->client->pers.hunter_quest_messages == 19)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",10200,9777,1800,-179);
-								else if (ent->client->pers.hunter_quest_messages == 20)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",10220,8239,1800,-179);
-								else if (ent->client->pers.hunter_quest_messages == 21)
-									npc_ent = Zyk_NPC_SpawnType("quest_super_soldier",10123,8343,1800,-179);
-
-								if (npc_ent)
-									npc_ent->client->pers.universe_quest_objective_control = ent->s.number;
-
-								if (ent->client->pers.hunter_quest_messages < 11)
-								{
-									ent->client->pers.hunter_quest_messages++;
-									ent->client->pers.hunter_quest_timer = level.time + 1500;
-								}
-								else if (ent->client->pers.hunter_quest_messages > 11 && ent->client->pers.hunter_quest_messages < 22)
-								{
-									ent->client->pers.hunter_quest_messages++;
-									ent->client->pers.hunter_quest_timer = level.time + 2000;
-								}
-								else if (ent->client->pers.hunter_quest_messages == 40)
-								{ // zyk: completed the mission
-									ent->client->pers.universe_quest_progress = 12;
-									save_account(ent, qtrue);
-									quest_get_new_player(ent);
-								}
-								else if (ent->client->pers.hunter_quest_messages == 50)
-								{ // zyk: failed the mission
-									quest_get_new_player(ent);
-								}
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 12 && ent->client->pers.can_play_quest == 1)
-						{ // zyk: Universe Quest, The Final Revelation mission
-							if (ent->client->pers.universe_quest_timer < level.time && (int) ent->client->ps.origin[0] > 9658 && (int) ent->client->ps.origin[0] < 12707 && (int) ent->client->ps.origin[1] > 8160 && (int) ent->client->ps.origin[1] < 9097 && (int) ent->client->ps.origin[2] > 1450 && (int) ent->client->ps.origin[2] < 2190)
-							{
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 24)
-								{
-									if (ent->client->pers.universe_quest_messages == 3 || ent->client->pers.universe_quest_messages == 6 || ent->client->pers.universe_quest_messages == 15 || 
-										ent->client->pers.universe_quest_messages == 22)
-									{
-										zyk_text_message(ent, va("universe/mission_12/mission_12_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_12/mission_12_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 25)
-								{
-									ent->client->pers.universe_quest_progress = 13;
-									save_account(ent, qtrue);
-									quest_get_new_player(ent);
-								}
-
-								if (ent->client->pers.universe_quest_progress == 12 && ent->client->pers.universe_quest_messages < 26)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-							}
-
-							if (ent->client->pers.hunter_quest_timer < level.time)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 0)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time",10894,8521,1700,0);
-								}
-								else if (ent->client->pers.hunter_quest_messages == 1)
-								{
-									npc_ent = Zyk_NPC_SpawnType("master_of_evil",11433,8499,1700,179);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 2)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe",10840,8627,1700,-90);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 3)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity",10956,8627,1700,-90);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 4)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9",11085,8627,1700,-90);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 5)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness",11234,8627,1700,-90);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 6)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_universe",10840,8416,1700,90);
-								}
-								else if (ent->client->pers.hunter_quest_messages == 7)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_light",10956,8416,1700,90);
-								}
-								else if (ent->client->pers.hunter_quest_messages == 8)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness",11085,8416,1700,90);
-								}
-								else if (ent->client->pers.hunter_quest_messages == 9)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity",11234,8416,1700,90);
-								}
-
-								if (ent->client->pers.hunter_quest_messages < 10)
-								{
-									ent->client->pers.hunter_quest_messages++;
-									ent->client->pers.hunter_quest_timer = level.time + 1500;
-								}
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 13 && ent->client->pers.can_play_quest == 1)
-						{ // zyk: Universe Quest, the choosing mission
-							if (ent->client->pers.universe_quest_timer < level.time && (int) ent->client->ps.origin[0] > 9758 && (int) ent->client->ps.origin[0] < 14000 && (int) ent->client->ps.origin[1] > 8160 && (int) ent->client->ps.origin[1] < 9097 && (int) ent->client->ps.origin[2] > 1450 && (int) ent->client->ps.origin[2] < 2190)
-							{
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 27)
-								{
-									zyk_text_message(ent, va("universe/mission_13/mission_13_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 29)
-								{ // zyk: completed the mission
-									ent->client->pers.universe_quest_progress = 14;
-									save_account(ent, qtrue);
-									quest_get_new_player(ent);
-								}
-
-								if (ent->client->pers.universe_quest_progress == 13 && ent->client->pers.universe_quest_messages < 28)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-							}
-
-							if (ent->client->pers.hunter_quest_timer < level.time)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 0)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time",10894,8521,1700,0);
-								}
-								else if (ent->client->pers.hunter_quest_messages == 1)
-								{
-									npc_ent = Zyk_NPC_SpawnType("master_of_evil",11433,8499,1700,179);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 2)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe",10840,8627,1700,-90);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 3)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity",10956,8627,1700,-90);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 4)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9",11085,8627,1700,-90);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 5)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness",11234,8627,1700,-90);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 6)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_universe",10840,8416,1700,90);
-								}
-								else if (ent->client->pers.hunter_quest_messages == 7)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_light",10956,8416,1700,90);
-								}
-								else if (ent->client->pers.hunter_quest_messages == 8)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness",11085,8416,1700,90);
-								}
-								else if (ent->client->pers.hunter_quest_messages == 9)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity",11234,8416,1700,90);
-								}
-
-								if (ent->client->pers.hunter_quest_messages < 10)
-								{
-									ent->client->pers.hunter_quest_messages++;
-									ent->client->pers.hunter_quest_timer = level.time + 1500;
-								}
-
-								if (npc_ent)
-								{
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-							}
-						}
-
-						if (level.chaos_portal_id != -1)
-						{ // zyk: portal at the last universe quest mission. Teleports players to Sacred Dimension
-							gentity_t *chaos_portal = &g_entities[level.chaos_portal_id];
-
-							if (chaos_portal && (int)Distance(chaos_portal->s.origin,ent->client->ps.origin) < 40)
-							{
-								vec3_t origin;
-								vec3_t angles;
-								int npc_iterator = 0;
-								gentity_t *this_ent = NULL;
-
-								// zyk: cleaning vehicles to prevent some exploits
-								for (npc_iterator = level.maxclients; npc_iterator < level.num_entities; npc_iterator++)
-								{
-									this_ent = &g_entities[npc_iterator];
-
-									if (this_ent && this_ent->NPC && this_ent->client->NPC_class == CLASS_VEHICLE && this_ent->die)
-										this_ent->die(this_ent, this_ent, this_ent, 100, MOD_UNKNOWN);
-								}
-
-								origin[0] = -1915.0f;
-								origin[1] = -26945.0f;
-								origin[2] = 300.0f;
-								angles[0] = 0.0f;
-								angles[1] = -179.0f;
-								angles[2] = 0.0f;
-
-								zyk_TeleportPlayer(ent,origin,angles);
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 14 && ent->client->pers.can_play_quest == 1)
-						{ // zyk: Universe Quest final mission
-							if (ent->client->pers.guardian_mode == 0 && ent->client->pers.universe_quest_timer < level.time)
-							{
-								gentity_t *new_ent = NULL;
-
-								if (ent->client->pers.universe_quest_messages == 1)
-									new_ent = load_crystal_model(12614,8430,1497,179,0);
-								else if (ent->client->pers.universe_quest_messages == 2)
-									new_ent = load_crystal_model(12614,8570,1497,179,1);
-								else if (ent->client->pers.universe_quest_messages == 3)
-									new_ent = load_crystal_model(12734,8500,1497,179,2);
-								else if (ent->client->pers.universe_quest_messages == 4)
-								{
-									new_ent = load_effect(12614,8430,1512,0,"env/vbolt");
-									G_Sound(new_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tram_boost.mp3"));
-								}
-								else if (ent->client->pers.universe_quest_messages == 5)
-								{
-									new_ent = load_effect(12614,8570,1512,0,"env/vbolt");
-									G_Sound(new_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tram_boost.mp3"));
-								}
-								else if (ent->client->pers.universe_quest_messages == 6)
-								{
-									new_ent = load_effect(12734,8500,1512,0,"env/vbolt");
-									G_Sound(new_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tram_boost.mp3"));
-								}
-								else if (ent->client->pers.universe_quest_messages == 7)
-									new_ent = load_effect(12668,8500,1510,0,"env/btend");
-								else if (ent->client->pers.universe_quest_messages == 8)
-								{
-									new_ent = load_effect(12668,8500,1512,0,"env/hevil_bolt");
-									G_Sound(new_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tractorbeam.mp3"));
-
-									level.chaos_portal_id = new_ent->s.number;
-								}
-								else if (ent->client->pers.universe_quest_messages == 9)
-								{ // zyk: teleports the quest player to the Sacred Dimension
-									if ((int) ent->client->ps.origin[0] > -2415 && (int) ent->client->ps.origin[0] < -1415 && (int) ent->client->ps.origin[1] > -27445 && (int) ent->client->ps.origin[1] < -26445 && (int) ent->client->ps.origin[2] > 100 && (int) ent->client->ps.origin[2] < 400)
-									{
-										ent->client->pers.universe_quest_messages = 10;
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages >= 11 && ent->client->pers.universe_quest_messages <= 17)
-								{
-									if (ent->client->pers.universe_quest_messages == 12)
-									{
-										zyk_text_message(ent, va("universe/mission_14/mission_14_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_14/mission_14_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 18)
-								{ // zyk: here starts the battle against the Guardian of Chaos
-									int npc_iterator = 0;
-									gentity_t *this_ent = NULL;
-
-									// zyk: cleaning npcs that are not the quest ones
-									for (npc_iterator = MAX_CLIENTS; npc_iterator < level.num_entities; npc_iterator++)
-									{
-										this_ent = &g_entities[npc_iterator];
-
-										if (this_ent && this_ent->NPC && this_ent->die && Q_stricmp( this_ent->NPC_type, "sage_of_light" ) != 0 && Q_stricmp( this_ent->NPC_type, "sage_of_darkness" ) != 0 && Q_stricmp( this_ent->NPC_type, "sage_of_eternity" ) != 0 && Q_stricmp( this_ent->NPC_type, "sage_of_universe" ) != 0 && Q_stricmp( this_ent->NPC_type, "guardian_of_time" ) != 0 && Q_stricmp( this_ent->NPC_type, "guardian_boss_9" ) != 0 && Q_stricmp( this_ent->NPC_type, "guardian_of_darkness" ) != 0 && Q_stricmp( this_ent->NPC_type, "guardian_of_eternity" ) != 0 && Q_stricmp( this_ent->NPC_type, "guardian_of_universe" ) != 0 && Q_stricmp( this_ent->NPC_type, "master_of_evil" ) != 0 && Q_stricmp( this_ent->NPC_type, "jawa_seller" ) != 0)
-											this_ent->die(this_ent, this_ent, this_ent, 100, MOD_UNKNOWN);
-									}
-
-									spawn_boss(ent,-3136,-26946,200,179,"guardian_of_chaos",-4228,-26946,393,0,14);
-								}
-								else if (ent->client->pers.universe_quest_messages == 20)
-								{
-									vec3_t origin;
-									vec3_t angles;
-
-									int npc_iterator = 0;
-									char npc_name[128];
-									gentity_t *npc_ent = NULL;
-
-									origin[0] = -1915.0f;
-									origin[1] = -26945.0f;
-									origin[2] = 300.0f;
-									angles[0] = 0.0f;
-									angles[1] = -179.0f;
-									angles[2] = 0.0f;
-
-									strcpy(npc_name,"");
-
-									if (ent->client->pers.universe_quest_counter & (1 << 0))
-										strcpy(npc_name,"sage_of_universe");
-									else if (ent->client->pers.universe_quest_counter & (1 << 1))
-										strcpy(npc_name,"guardian_of_universe");
-									else if (ent->client->pers.universe_quest_counter & (1 << 2))
-										strcpy(npc_name,"master_of_evil");
-									else if (ent->client->pers.universe_quest_counter & (1 << 3))
-										strcpy(npc_name,"guardian_of_time");
-
-									for (npc_iterator = 0; npc_iterator < level.num_entities; npc_iterator++)
-									{
-										npc_ent = &g_entities[npc_iterator];
-
-										if (Q_stricmp( npc_ent->NPC_type, npc_name ) == 0)
-										{
-											zyk_TeleportPlayer(npc_ent,origin,angles);
-											break;
-										}
-									}
-
-									zyk_text_message(ent, "universe/mission_14/mission_14_boss_defeated", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages >= 21 && ent->client->pers.universe_quest_messages <= 25)
-								{
-									if (ent->client->pers.universe_quest_counter & (1 << 0))
-										zyk_text_message(ent, va("universe/mission_14/mission_14_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									else if (ent->client->pers.universe_quest_counter & (1 << 1))
-										zyk_text_message(ent, va("universe/mission_14/mission_14_guardians_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									else if (ent->client->pers.universe_quest_counter & (1 << 2))
-										zyk_text_message(ent, va("universe/mission_14/mission_14_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									else if (ent->client->pers.universe_quest_counter & (1 << 3))
-										zyk_text_message(ent, va("universe/mission_14/mission_14_time_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 26)
-								{ // zyk: enf of this mission
-									vec3_t origin;
-									vec3_t angles;
-
-									origin[0] = 12500.0f;
-									origin[1] = 8500.0f;
-									origin[2] = 1520.0f;
-									angles[0] = 0.0f;
-									angles[1] = 179.0f;
-									angles[2] = 0.0f;
-
-									zyk_TeleportPlayer(ent,origin,angles);
-
-									ent->client->pers.universe_quest_progress = 15;
-									save_account(ent, qtrue);
-									quest_get_new_player(ent);
-								}
-
-								if (new_ent)
-								{
-									new_ent->targetname = "zyk_quest_models";
-									new_ent = NULL;
-								}
-
-								if (ent->client->pers.universe_quest_messages > 0 && ent->client->pers.universe_quest_messages < 9)
-								{
-									ent->client->pers.universe_quest_messages++;
-
-									// zyk: teleport can instantly teleport player, so no delay should be added
-									if (ent->client->pers.universe_quest_messages < 9)
-										ent->client->pers.universe_quest_timer = level.time + 2000;
-								}
-								else if (ent->client->pers.universe_quest_messages > 9 && ent->client->pers.universe_quest_messages < 19)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages > 19 && ent->client->pers.universe_quest_messages < 26)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-							}
-
-							if (ent->client->pers.guardian_mode == 0 && ent->client->pers.hunter_quest_timer < level.time && (int) ent->client->ps.origin[0] > 10000 && (int) ent->client->ps.origin[0] < 14000 && (int) ent->client->ps.origin[1] > 8160 && (int) ent->client->ps.origin[1] < 9097 && (int) ent->client->ps.origin[2] > 1450 && (int) ent->client->ps.origin[2] < 2000)
-							{
-								gentity_t *npc_ent = NULL;
-								
-								if (ent->client->pers.hunter_quest_messages == 0)
-								{
-									int effect_iterator = 0;
-									gentity_t *this_ent = NULL;
-
-									// zyk: cleaning the crystals and effects if they are already spawned
-									for (effect_iterator = (MAX_CLIENTS + BODY_QUEUE_SIZE); effect_iterator < level.num_entities; effect_iterator++)
-									{
-										this_ent = &g_entities[effect_iterator];
-
-										if (this_ent && (this_ent->NPC || Q_stricmp(this_ent->targetname, "zyk_quest_models") == 0 || 
-											Q_stricmp(this_ent->classname, "npc_spawner") == 0 || Q_stricmp(this_ent->classname, "npc_vehicle") == 0 || 
-											Q_stricmp(this_ent->classname, "npc_human_merc") == 0))
-										{ // zyk: cleaning quest models, npcs and vehicles
-											G_FreeEntity(this_ent);
-										}
-									}
-
-									if (ent->client->pers.universe_quest_counter & (1 << 3))
-									{
-										npc_ent = Zyk_NPC_SpawnType("guardian_of_time",12834,8500,1700,179);
-										zyk_text_message(ent, "universe/mission_14/mission_14_time", qtrue, qfalse);
-									}
-									else
-										npc_ent = Zyk_NPC_SpawnType("guardian_of_time",10894,8521,1700,0);
-
-									if (npc_ent)
-										npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-								else if (ent->client->pers.hunter_quest_messages == 1)
-								{
-									if (ent->client->pers.universe_quest_counter & (1 << 2))
-									{
-										npc_ent = Zyk_NPC_SpawnType("master_of_evil",12834,8500,1700,179);
-										zyk_text_message(ent, "universe/mission_14/mission_14_thor", qtrue, qfalse);
-									}
-									else
-										npc_ent = Zyk_NPC_SpawnType("master_of_evil",11433,8499,1700,179);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 2)
-								{
-									if (ent->client->pers.universe_quest_counter & (1 << 1))
-									{
-										npc_ent = Zyk_NPC_SpawnType("guardian_of_universe",12834,8500,1700,179);
-										zyk_text_message(ent, "universe/mission_14/mission_14_guardians", qtrue, qfalse);
-									}
-									else
-										npc_ent = Zyk_NPC_SpawnType("guardian_of_universe",10840,8627,1700,-90);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 3)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity",10956,8627,1700,-90);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 4)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9",11085,8627,1700,-90);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 5)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness",11234,8627,1700,-90);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 6)
-								{
-									if (ent->client->pers.universe_quest_counter & (1 << 0))
-									{
-										npc_ent = Zyk_NPC_SpawnType("sage_of_universe",12834,8500,1700,179);
-										zyk_text_message(ent, "universe/mission_14/mission_14_sages", qtrue, qfalse);
-									}
-									else
-										npc_ent = Zyk_NPC_SpawnType("sage_of_universe",10840,8416,1700,90);
-
-									if (npc_ent)
-										npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-								else if (ent->client->pers.hunter_quest_messages == 7)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_light",10956,8416,1700,90);
-									if (npc_ent)
-										npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-								else if (ent->client->pers.hunter_quest_messages == 8)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness",11085,8416,1700,90);
-									if (npc_ent)
-										npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-								else if (ent->client->pers.hunter_quest_messages == 9)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity",11234,8416,1700,90);
-									ent->client->pers.universe_quest_messages = 1;
-									if (npc_ent)
-										npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-
-								if (ent->client->pers.hunter_quest_messages < 10)
-								{
-									ent->client->pers.hunter_quest_messages++;
-									ent->client->pers.hunter_quest_timer = level.time + 1200;
-								}
-							}
-						}
-					}
-					else if (level.quest_map == 18)
-					{ 
-						zyk_try_get_dark_quest_note(ent, 11);
-
-						// zyk: Universe Quest artifact
-						if (ent->client->pers.universe_quest_progress == 2 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_objective_control == 3 && !(ent->client->pers.universe_quest_counter & (1 << 4)) && ent->client->pers.universe_quest_timer < level.time)
-						{
-							gentity_t *npc_ent = NULL;
-							if (ent->client->pers.universe_quest_messages == 0)
-							{
-								zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
-								npc_ent = Zyk_NPC_SpawnType("quest_reborn",-3703,-3575,1121,90);
-							}
-							else if (ent->client->pers.universe_quest_messages == 1)
-								npc_ent = Zyk_NPC_SpawnType("quest_reborn_blue",-1796,-802,1353,-90);
-							else if (ent->client->pers.universe_quest_messages == 2)
-								npc_ent = Zyk_NPC_SpawnType("quest_reborn_red",-730,-1618,729,179);
-							else if (ent->client->pers.universe_quest_messages == 3)
-								npc_ent = Zyk_NPC_SpawnType("quest_reborn_red",-735,-1380,729,179);
-							else if (ent->client->pers.universe_quest_messages == 4)
-								npc_ent = Zyk_NPC_SpawnType("quest_reborn_boss",-792,-1504,729,179);
-							else if (ent->client->pers.universe_quest_messages == 5)
-							{
-								npc_ent = Zyk_NPC_SpawnType("quest_mage",-120,-1630,857,179);
-								if (npc_ent)
-								{
-									npc_ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 5500;
-
-									npc_ent->client->pers.universe_quest_artifact_holder_id = ent-g_entities;
-									ent->client->pers.universe_quest_artifact_holder_id = 4;
-								}
-							}
-
-							if (ent->client->pers.universe_quest_messages < 6)
-							{
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 1200;
-							}
-						}
-					}
-					else if (level.quest_map == 20)
-					{
-						// zyk: Guardian of Agility
-						if (ent->client->pers.defeated_guardians != NUMBER_OF_GUARDIANS && !(ent->client->pers.defeated_guardians & (1 << 8)) && ent->client->pers.can_play_quest == 1 && ent->client->pers.guardian_mode == 0 && (int) ent->client->ps.origin[0] > 8374 && (int) ent->client->ps.origin[0] < 8574 && (int) ent->client->ps.origin[1] > -1422 && (int) ent->client->ps.origin[1] < -1222 && (int) ent->client->ps.origin[2] > -165 && (int) ent->client->ps.origin[2] < -160)
-						{
-							if (ent->client->pers.light_quest_timer < level.time)
-							{
-								if (ent->client->pers.light_quest_messages == 0)
-								{
-									zyk_text_message(ent, "light/guardian_of_agility", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.light_quest_messages == 1)
-								{
-									spawn_boss(ent,9773,-1779,-162,90,"guardian_boss_5",9773,-1199,-162,90,5);
-								}
-								ent->client->pers.light_quest_messages++;
-								ent->client->pers.light_quest_timer = level.time + 3000;
-							}
-						}
-
-						// zyk: Universe Quest artifact
-						if (ent->client->pers.universe_quest_progress == 2 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_objective_control == 3 && !(ent->client->pers.universe_quest_counter & (1 << 7)) && ent->client->pers.universe_quest_timer < level.time)
-						{
-							gentity_t *npc_ent = NULL;
-							if (ent->client->pers.universe_quest_messages == 0)
-							{
-								zyk_text_message(ent, "universe/mission_2/mission_2_artifact_presence", qtrue, qfalse, ent->client->pers.netname);
-								npc_ent = Zyk_NPC_SpawnType("quest_mage",8480,-1084,-90,90);
-								if (npc_ent)
-								{
-									npc_ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 5500;
-
-									npc_ent->client->pers.universe_quest_artifact_holder_id = ent-g_entities;
-									ent->client->pers.universe_quest_artifact_holder_id = 7;
-								}
-							}
-
-							if (ent->client->pers.universe_quest_messages < 1)
-							{
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 5000;
-							}
-						}
-					}
-					else if (level.quest_map == 24)
-					{
-						if (ent->client->pers.universe_quest_progress == 5 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_objective_control != -1 && ent->client->pers.universe_quest_timer < level.time)
-						{ // zyk: amulets objective of Universe Quest in mp/siege_desert
-							gentity_t *npc_ent = NULL;
-							if (ent->client->pers.universe_quest_messages == 0)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",9102,2508,-358,-179);
-							else if (ent->client->pers.universe_quest_messages == 1)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",9290,2236,-486,-84);
-							else if (ent->client->pers.universe_quest_messages == 2)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",10520,1236,-486,-174);
-							else if (ent->client->pers.universe_quest_messages == 3)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",11673,751,-486,175);
-							else if (ent->client->pers.universe_quest_messages == 4)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",12570,-860,-486,177);
-							else if (ent->client->pers.universe_quest_messages == 5)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",11540,-1677,-486,179);
-							else if (ent->client->pers.universe_quest_messages == 6)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",11277,-2915,-486,179);
-							else if (ent->client->pers.universe_quest_messages == 7)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",10386,-3408,-486,2);
-							else if (ent->client->pers.universe_quest_messages == 8)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",9906,-2373,-487,2);
-							else if (ent->client->pers.universe_quest_messages == 9)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",9097,-919,-486,-176);
-							else if (ent->client->pers.universe_quest_messages == 10)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",6732,-1208,-486,-174);
-							else if (ent->client->pers.universe_quest_messages == 11)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",6802,-654,-486,-60);
-							else if (ent->client->pers.universe_quest_messages == 12)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",5734,-2395,-486,92);
-							else if (ent->client->pers.universe_quest_messages == 13)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",4594,-1727,-486,173);
-							else if (ent->client->pers.universe_quest_messages == 14)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",2505,-1616,-486,170);
-							else if (ent->client->pers.universe_quest_messages == 15)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",3298,-564,-486,-86);
-							else if (ent->client->pers.universe_quest_messages == 16)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",3532,231,-486,-8);
-							else if (ent->client->pers.universe_quest_messages == 17)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",1832,-1103,-486,6);
-							else if (ent->client->pers.universe_quest_messages == 18)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",1727,-480,-486,7);
-							else if (ent->client->pers.universe_quest_messages == 19)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",2653,1014,-486,0);
-							else if (ent->client->pers.universe_quest_messages == 20)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",4346,-1209,-486,-177);
-							else if (ent->client->pers.universe_quest_messages == 21)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",2372,-2413,-486,90);
-							else if (ent->client->pers.universe_quest_messages == 22)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-5549,-841,57,178);
-							else if (ent->client->pers.universe_quest_messages == 23)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-6035,-2285,-486,-179);
-							else if (ent->client->pers.universe_quest_messages == 24)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-7149,-2482,-486,176);
-							else if (ent->client->pers.universe_quest_messages == 25)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-7304,-1155,-486,-177);
-							else if (ent->client->pers.universe_quest_messages == 26)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-8071,-381,-486,-1);
-							else if (ent->client->pers.universe_quest_messages == 27)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-9596,-1116,-486,1);
-							else if (ent->client->pers.universe_quest_messages == 28)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-9762,-191,-486,5);
-							else if (ent->client->pers.universe_quest_messages == 29)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-11311,-638,9,-1);
-							else if (ent->client->pers.universe_quest_messages == 30)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-11437,-662,-486,179);
-							else if (ent->client->pers.universe_quest_messages == 31)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-9344,837,-66,90);
-							else if (ent->client->pers.universe_quest_messages == 32)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-7710,-1665,-358,178);
-							else if (ent->client->pers.universe_quest_messages == 33)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-8724,-1275,-486,176);
-							else if (ent->client->pers.universe_quest_messages == 34)
-								npc_ent = Zyk_NPC_SpawnType("quest_protocol_imp",-12810,325,-422,-90);
-							else if (ent->client->pers.universe_quest_messages == 35)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",10350,-357,-486,179);
-							else if (ent->client->pers.universe_quest_messages == 36)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",5935,-1304,-486,125);
-							else if (ent->client->pers.universe_quest_messages == 37)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",4516,-679,-486,-144);
-							else if (ent->client->pers.universe_quest_messages == 38)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-6327,-1071,-486,-179);
-							else if (ent->client->pers.universe_quest_messages == 39)
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-8120,781,-486,-96);
-							else if (ent->client->pers.universe_quest_messages == 60)
-							{
-								npc_ent = Zyk_NPC_SpawnType("quest_sand_raider_green",12173,-304,-486,-179);
-								zyk_text_message(ent, "universe/mission_5/mission_5_raider_0", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 61)
-							{
-								npc_ent = Zyk_NPC_SpawnType("quest_sand_raider_brown",12173,-225,-486,-179);
-								zyk_text_message(ent, "universe/mission_5/mission_5_raider_1", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 62)
-							{
-								npc_ent = Zyk_NPC_SpawnType("quest_sand_raider_blue",12173,-137,-486,-179);
-								zyk_text_message(ent, "universe/mission_5/mission_5_raider_2", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 63)
-							{
-								npc_ent = Zyk_NPC_SpawnType("quest_sand_raider_red",12173,-41,-486,-179);
-								zyk_text_message(ent, "universe/mission_5/mission_5_raider_3", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 199)
-							{
-								npc_ent = Zyk_NPC_SpawnType("quest_jawa",-7710,-1665,-358,178);
-								if (npc_ent)
-									npc_ent->client->pers.universe_quest_objective_control = -330;
-
-								npc_ent = NULL;
-							}
-							else if (ent->client->pers.universe_quest_messages == 200)
-							{
-								npc_ent = Zyk_NPC_SpawnType("sage_of_light",-7867,-1484,-358,-90);
-								zyk_text_message(ent, "universe/mission_5/mission_5_sage_0", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 201)
-							{
-								npc_ent = Zyk_NPC_SpawnType("sage_of_darkness",-7867,-1759,-358,90);
-								zyk_text_message(ent, "universe/mission_5/mission_5_sage_1", qtrue, qfalse, ent->client->pers.netname);
-							}
-							else if (ent->client->pers.universe_quest_messages == 202)
-							{
-								npc_ent = Zyk_NPC_SpawnType("sage_of_eternity",-7746,-1782,-358,90);
-								zyk_text_message(ent, "universe/mission_5/mission_5_sage_2", qtrue, qfalse, ent->client->pers.netname);
-							}
-							else if (ent->client->pers.universe_quest_messages == 203)
-							{
-								npc_ent = Zyk_NPC_SpawnType("sage_of_universe",-7775,-1492,-358,-90);
-							}
-							else if (ent->client->pers.universe_quest_messages >= 205 && ent->client->pers.universe_quest_messages <= 222)
-							{
-								if (ent->client->pers.universe_quest_messages == 205 || ent->client->pers.universe_quest_messages == 206 || ent->client->pers.universe_quest_messages == 209 || 
-									ent->client->pers.universe_quest_messages == 210 || ent->client->pers.universe_quest_messages == 213 || ent->client->pers.universe_quest_messages == 215 || 
-									ent->client->pers.universe_quest_messages == 219 || ent->client->pers.universe_quest_messages == 222)
-								{
-									zyk_text_message(ent, va("universe/mission_5/mission_5_sage_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-								}
-								else
-								{
-									zyk_text_message(ent, va("universe/mission_5/mission_5_sage_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-								}
-							}
-							else if (ent->client->pers.universe_quest_messages == 223)
-							{
-								zyk_text_message(ent, "universe/mission_5/mission_5_sage_223", qtrue, qfalse);
-
-								ent->client->pers.universe_quest_progress = 6;
-								if (ent->client->pers.universe_quest_counter & (1 << 29))
-								{ // zyk: if player is in Challenge Mode, do not remove this bit value
-									ent->client->pers.universe_quest_counter = 0;
-									ent->client->pers.universe_quest_counter |= (1 << 29);
-								}
-								else
-									ent->client->pers.universe_quest_counter = 0;
-								ent->client->pers.universe_quest_objective_control = -1;
-
-								save_account(ent, qtrue);
-
-								quest_get_new_player(ent);
-							}
-
-							if (ent->client->pers.universe_quest_messages < 40 && npc_ent)
-							{ // zyk: tests npc_ent so if for some reason the npc dont get spawned, the server tries to spawn it again
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 200;
-
-								// zyk: sets the universe_quest_objective_control based in universe_quest_messages value so each npc can say a different message. If its 35 (protocol npc), sets the player id
-								if (ent->client->pers.universe_quest_messages == 35)
-									npc_ent->client->pers.universe_quest_objective_control = ent-g_entities;
-								else
-									npc_ent->client->pers.universe_quest_objective_control = ent->client->pers.universe_quest_messages * (-10);
-							}
-							else if (ent->client->pers.universe_quest_messages >= 60 && ent->client->pers.universe_quest_messages <= 63 && npc_ent)
-							{ // zyk: invoking the sand raiders
-								npc_ent->client->pers.universe_quest_objective_control = ent-g_entities;
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 2000;
-							}
-							else if (ent->client->pers.universe_quest_messages >= 199 && ent->client->pers.universe_quest_messages <= 203)
-							{ // zyk: invoking the sages
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 3000;
-
-								if (npc_ent)
-									npc_ent->client->pers.universe_quest_objective_control = -205; // zyk: flag to set this npc as a sage in this map
-							}
-							else if (ent->client->pers.universe_quest_messages >= 205 && ent->client->pers.universe_quest_messages <= 223)
-							{ // zyk: talking to the sages
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 5000;
-							}
-							else
-							{
-								ent->client->pers.universe_quest_timer = level.time + 1000;
-							}
-						}
-
-						if (ent->client->pers.universe_quest_progress == 16 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 0))
-						{ // zyk: Save the City mission in Sages Sequel
-							gentity_t *npc_ent = NULL;
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								if (ent->client->pers.universe_quest_messages == 0)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 9102, 2508, -358, -179);
-								else if (ent->client->pers.universe_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 9290, 2236, -486, -84);
-								else if (ent->client->pers.universe_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 10520, 1236, -486, -174);
-								else if (ent->client->pers.universe_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 11673, 751, -486, 175);
-								else if (ent->client->pers.universe_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 12570, -860, -486, 177);
-								else if (ent->client->pers.universe_quest_messages == 5)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 11540, -1677, -486, 179);
-								else if (ent->client->pers.universe_quest_messages == 6)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 11277, -2915, -486, 179);
-								else if (ent->client->pers.universe_quest_messages == 7)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 10386, -3408, -486, 2);
-								else if (ent->client->pers.universe_quest_messages == 8)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 9906, -2373, -487, 2);
-								else if (ent->client->pers.universe_quest_messages == 9)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 9097, -919, -486, -176);
-								else if (ent->client->pers.universe_quest_messages == 10)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 6732, -1208, -486, -174);
-								else if (ent->client->pers.universe_quest_messages == 11)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 6802, -654, -486, -60);
-								else if (ent->client->pers.universe_quest_messages == 12)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 5734, -2395, -486, 92);
-								else if (ent->client->pers.universe_quest_messages == 13)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 4594, -1727, -486, 173);
-								else if (ent->client->pers.universe_quest_messages == 14)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2505, -1616, -486, 170);
-								else if (ent->client->pers.universe_quest_messages == 15)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 3298, -564, -486, -86);
-								else if (ent->client->pers.universe_quest_messages == 16)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 3532, 231, -486, -8);
-								else if (ent->client->pers.universe_quest_messages == 17)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 1832, -1103, -486, 6);
-								else if (ent->client->pers.universe_quest_messages == 18)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 1727, -480, -486, 7);
-								else if (ent->client->pers.universe_quest_messages == 19)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2653, 1014, -486, 0);
-								else if (ent->client->pers.universe_quest_messages == 20)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 4346, -1209, -486, -177);
-								else if (ent->client->pers.universe_quest_messages == 21)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 2372, -2413, -486, 90);
-								else if (ent->client->pers.universe_quest_messages == 22)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -5549, -841, 57, 178);
-								else if (ent->client->pers.universe_quest_messages == 23)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -6035, -2285, -486, -179);
-								else if (ent->client->pers.universe_quest_messages == 24)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -7149, -2482, -486, 176);
-								else if (ent->client->pers.universe_quest_messages == 25)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -7304, -1155, -486, -177);
-								else if (ent->client->pers.universe_quest_messages == 26)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -8071, -381, -486, -1);
-								else if (ent->client->pers.universe_quest_messages == 27)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -9596, -1116, -486, 1);
-								else if (ent->client->pers.universe_quest_messages == 28)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -9762, -191, -486, 5);
-								else if (ent->client->pers.universe_quest_messages == 29)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -11311, -638, 9, -1);
-								else if (ent->client->pers.universe_quest_messages == 30)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -11437, -662, -486, 179);
-								else if (ent->client->pers.universe_quest_messages == 31)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -9344, 837, -66, 90);
-								else if (ent->client->pers.universe_quest_messages == 32)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -7710, -1665, -358, 178);
-								else if (ent->client->pers.universe_quest_messages == 33)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -8724, -1275, -486, 176);
-								else if (ent->client->pers.universe_quest_messages == 34)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -12810, 325, -422, -90);
-								else if (ent->client->pers.universe_quest_messages == 35)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 10350, -357, -486, 179);
-								else if (ent->client->pers.universe_quest_messages == 36)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 5935, -1304, -486, 125);
-								else if (ent->client->pers.universe_quest_messages == 37)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 4516, -679, -486, -144);
-								else if (ent->client->pers.universe_quest_messages == 38)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -6327, -1071, -486, -179);
-								else if (ent->client->pers.universe_quest_messages == 39)
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -8120, 781, -486, -96);
-								else if (ent->client->pers.universe_quest_messages == 40)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", -8171, -381, -486, -179);
-								}
-								else if (ent->client->pers.universe_quest_messages == 41)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 12173, -225, -486, -179);
-								}
-								else if (ent->client->pers.universe_quest_messages == 42)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", 12173, -137, -486, -179);
-								}
-								else if (ent->client->pers.universe_quest_messages == 43)
-								{
-									zyk_text_message(ent, "universe/mission_16_sages/mission_16_sages_citizen", qtrue, qfalse);
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12173, -41, -486, -179);
-								}
-								else if (ent->client->pers.universe_quest_messages == 44)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", -7710, -1665, -358, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 45)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", -11361, -638, 29, 50);
-								}
-								else if (ent->client->pers.universe_quest_messages == 46)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 2555, -1616, -476, 170);
-								}
-								else if (ent->client->pers.universe_quest_messages == 47)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12173, -600, -348, -179);
-								}
-								else if (ent->client->pers.universe_quest_messages == 48)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12173, -500, -456, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 49)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", -7760, -1665, -348, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 50)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12023, -600, -348, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 51)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12073, -600, -348, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 52)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12223, -600, -348, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 53)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", 12373, -600, -348, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 54)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", -7760, -1725, -348, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 55)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", -7304, -1155, -486, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 100)
-								{
-									ent->client->pers.universe_quest_progress = 17;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (ent->client->pers.universe_quest_messages < 56 && npc_ent)
-								{ // zyk: tests npc_ent so if for some reason the npc dont get spawned, the server tries to spawn it again
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 100;
-
-									if (npc_ent)
-										npc_ent->client->pers.universe_quest_objective_control = ent->s.number; // zyk: flag to set this npc as a mage or sage in this map
-
-									if (npc_ent && ent->client->pers.universe_quest_messages > 42)
-									{ // zyk: giving guns to quest_jawa citizens
-										npc_ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BLASTER);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages < 56)
-								{
-									ent->client->pers.universe_quest_timer = level.time + 500;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 17 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 0))
-						{ // zyk: third Sages Sequel mission
-							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 6)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 1)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_light", -7867, -1484, -358, -90);
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 2)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -7746, -1782, -358, 90);
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 3)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", -7867, -1759, -358, 90);
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 4)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_jawa", -7710, -1665, -358, 179);
-									if (npc_ent)
-									{ // zyk: Samir, the mayor
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-								else if (ent->client->pers.hunter_quest_messages == 5)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", -7775, -1492, -358, -90);
-									if (npc_ent)
-									{
-										npc_ent->client->pers.universe_quest_messages = -2000;
-									}
-								}
-
-								ent->client->pers.hunter_quest_messages++;
-								ent->client->pers.hunter_quest_timer = level.time + 1000;
-							}
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -7710, -1665, -358);
-
-								if (ent->client->pers.universe_quest_messages == 0 && ent->client->pers.hunter_quest_messages == 6 && Distance(ent->client->ps.origin, zyk_quest_point) < 200)
-								{
-									ent->client->pers.universe_quest_messages++;
-								}
-								
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 28)
-								{
-									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 2 || ent->client->pers.universe_quest_messages == 4 || 
-										ent->client->pers.universe_quest_messages == 7 || ent->client->pers.universe_quest_messages == 19 || ent->client->pers.universe_quest_messages == 24 || 
-										ent->client->pers.universe_quest_messages == 28)
-									{
-										zyk_text_message(ent, va("universe/mission_17_sages/mission_17_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_17_sages/mission_17_sages_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 29)
-								{
-									ent->client->pers.universe_quest_progress = 18;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (ent->client->pers.universe_quest_messages > 0)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 18 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_counter & (1 << 2))
-						{ // zyk: War at the City mission in Thor Sequel
-							gentity_t *npc_ent = NULL;
-
-							if (ent->client->pers.hunter_quest_timer < level.time)
-							{ // zyk: calls mages to help the player
-								if (ent->client->pers.hunter_quest_messages > 0)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_mage", (int)ent->client->ps.origin[0], (int)ent->client->ps.origin[1], (int)ent->client->ps.origin[2], (int)ent->client->ps.viewangles[1]);
-									if (npc_ent)
-									{
-										npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-										npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-									}
-
-									ent->client->pers.hunter_quest_messages = 0;
-
-									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_mage", qtrue, qfalse);
-								}
-
-								ent->client->pers.hunter_quest_timer = level.time + 1000;
-							}
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								if (ent->client->pers.universe_quest_messages == 0)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 9102, 2508, -358, -179);
-								}
-								else if (ent->client->pers.universe_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 9290, 2236, -486, -84);
-								else if (ent->client->pers.universe_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 10520, 1236, -486, -174);
-								else if (ent->client->pers.universe_quest_messages == 3)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 11673, 751, -486, 175);
-								else if (ent->client->pers.universe_quest_messages == 4)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 12570, -860, -486, 177);
-								else if (ent->client->pers.universe_quest_messages == 5)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 11540, -1677, -486, 179);
-								else if (ent->client->pers.universe_quest_messages == 6)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 11277, -2915, -486, 179);
-								else if (ent->client->pers.universe_quest_messages == 7)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 10386, -3408, -486, 2);
-								else if (ent->client->pers.universe_quest_messages == 8)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 9906, -2373, -487, 2);
-								else if (ent->client->pers.universe_quest_messages == 9)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 9097, -919, -486, -176);
-								else if (ent->client->pers.universe_quest_messages == 10)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 6732, -1208, -486, -174);
-								else if (ent->client->pers.universe_quest_messages == 11)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 6802, -654, -486, -60);
-								else if (ent->client->pers.universe_quest_messages == 12)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 5734, -2395, -486, 92);
-								else if (ent->client->pers.universe_quest_messages == 13)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 4594, -1727, -486, 173);
-								else if (ent->client->pers.universe_quest_messages == 14)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 2505, -1616, -486, 170);
-								else if (ent->client->pers.universe_quest_messages == 15)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 3298, -564, -486, -86);
-								else if (ent->client->pers.universe_quest_messages == 16)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 3532, 231, -486, -8);
-								else if (ent->client->pers.universe_quest_messages == 17)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 1832, -1103, -486, 6);
-								else if (ent->client->pers.universe_quest_messages == 18)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 1727, -480, -486, 7);
-								else if (ent->client->pers.universe_quest_messages == 19)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 2653, 1014, -486, 0);
-								else if (ent->client->pers.universe_quest_messages == 20)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 4346, -1209, -486, -177);
-								else if (ent->client->pers.universe_quest_messages == 21)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_universe", 2372, -2413, -486, 90);
-								else if (ent->client->pers.universe_quest_messages == 22)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -5549, -841, 57, 178);
-								else if (ent->client->pers.universe_quest_messages == 23)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -6035, -2285, -486, -179);
-								else if (ent->client->pers.universe_quest_messages == 24)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7149, -2482, -486, 176);
-								else if (ent->client->pers.universe_quest_messages == 25)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7304, -1155, -486, -177);
-								else if (ent->client->pers.universe_quest_messages == 26)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -8071, -381, -486, -1);
-								else if (ent->client->pers.universe_quest_messages == 27)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -9596, -1116, -486, 1);
-								else if (ent->client->pers.universe_quest_messages == 28)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -9762, -191, -486, 5);
-								else if (ent->client->pers.universe_quest_messages == 29)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -11311, -638, 9, -1);
-								else if (ent->client->pers.universe_quest_messages == 30)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -11437, -662, -486, 179);
-								else if (ent->client->pers.universe_quest_messages == 31)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -9344, 837, -66, 90);
-								else if (ent->client->pers.universe_quest_messages == 32)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7710, -1665, -358, 178);
-								else if (ent->client->pers.universe_quest_messages == 33)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -8724, -1275, -486, 176);
-								else if (ent->client->pers.universe_quest_messages == 34)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -12810, 325, -422, -90);
-								else if (ent->client->pers.universe_quest_messages == 35)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 10350, -357, -486, 179);
-								else if (ent->client->pers.universe_quest_messages == 36)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 5935, -1304, -486, 125);
-								else if (ent->client->pers.universe_quest_messages == 37)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 4516, -679, -486, -144);
-								else if (ent->client->pers.universe_quest_messages == 38)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -6327, -1071, -486, -179);
-								else if (ent->client->pers.universe_quest_messages == 39)
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -8120, 781, -486, -96);
-								else if (ent->client->pers.universe_quest_messages == 40)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_eternity", -8171, -381, -486, -179);
-								}
-								else if (ent->client->pers.universe_quest_messages == 41)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 12173, -225, -486, -179);
-								}
-								else if (ent->client->pers.universe_quest_messages == 42)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 12173, -137, -486, -179);
-								}
-								else if (ent->client->pers.universe_quest_messages == 43)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 12173, -41, -486, -179);
-								}
-								else if (ent->client->pers.universe_quest_messages == 44)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7710, -1665, -358, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 45)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -11361, -638, 29, 50);
-								}
-								else if (ent->client->pers.universe_quest_messages == 46)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_light", 2555, -1616, -476, 170);
-								}
-								else if (ent->client->pers.universe_quest_messages == 47)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_boss_9", 12173, -600, -348, -179);
-								}
-								else if (ent->client->pers.universe_quest_messages == 48)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", 12173, -500, -456, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 49)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", -7760, -1665, -348, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 50)
-								{
-									npc_ent = Zyk_NPC_SpawnType("sage_of_universe", 12023, -600, -348, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 51)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 12073, -600, -348, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 52)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", 12223, -600, -348, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 53)
-								{
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_darkness", 12373, -600, -348, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 54)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7760, -1725, -348, 178);
-								}
-								else if (ent->client->pers.universe_quest_messages == 55)
-								{
-									npc_ent = Zyk_NPC_SpawnType("quest_citizen_warrior", -7304, -1155, -486, 178);
-									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_citizen", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 56)
-								{
-									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_56", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.universe_quest_messages == 57)
-								{
-									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_57", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 58)
-								{
-									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_58", qtrue, qfalse, ent->client->pers.netname);
-								}
-								else if (ent->client->pers.universe_quest_messages == 100)
-								{
-									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_100", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 101)
-								{
-									zyk_text_message(ent, "universe/mission_18_thor/mission_18_thor_101", qtrue, qfalse);
-								}
-								else if (ent->client->pers.universe_quest_messages == 102)
-								{
-									ent->client->pers.universe_quest_progress = 19;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-
-								if (ent->client->pers.universe_quest_messages < 56 && npc_ent)
-								{ // zyk: tests npc_ent so if for some reason the npc dont get spawned, the server tries to spawn it again
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 100;
-
-									npc_ent->client->pers.universe_quest_objective_control = ent->s.number; // zyk: flag to set this npc as a citizen in this map
-
-									npc_ent->client->playerTeam = NPCTEAM_ENEMY;
-									npc_ent->client->enemyTeam = NPCTEAM_PLAYER;
-								}
-								else if (ent->client->pers.universe_quest_messages < 56)
-								{
-									ent->client->pers.universe_quest_timer = level.time + 500;
-								}
-								else if (ent->client->pers.universe_quest_messages > 55 && ent->client->pers.universe_quest_messages < 59)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-								else if (ent->client->pers.universe_quest_messages >= 100 && ent->client->pers.universe_quest_messages < 102)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 19 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.universe_quest_counter & (1 << 2))
-						{ // zyk: Universe Quest, The Path of Evil mission of Thor Sequel
-							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 3)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 0)
-									zyk_NPC_Kill_f("all");
-								else if (ent->client->pers.hunter_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("guardian_of_time", -2000, -800, -470, 0);
-								else if (ent->client->pers.hunter_quest_messages == 2)
-									npc_ent = Zyk_NPC_SpawnType("thor_boss", -1900, -800, -470, 179);
-
-								if (npc_ent)
-								{
-									if (ent->client->pers.hunter_quest_messages == 2)
-										npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-
-								ent->client->pers.hunter_quest_messages++;
-								ent->client->pers.hunter_quest_timer = level.time + 1000;
-							}
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -2000, -800, -470);
-
-								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 3 && Distance(ent->client->ps.origin, zyk_quest_point) < 300))
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 14)
-								{
-									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 4 || ent->client->pers.universe_quest_messages == 6 ||
-										ent->client->pers.universe_quest_messages == 9 || ent->client->pers.universe_quest_messages == 11)
-									{
-										zyk_text_message(ent, va("universe/mission_19_thor/mission_19_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_19_thor/mission_19_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 15)
-								{
-									ent->client->pers.universe_quest_progress = 20;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 20 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.universe_quest_counter & (1 << 2))
-						{ // zyk: Universe Quest Thor Sequel, Guardian of Time boss battle
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -2000, -800, -470);
-
-								if (ent->client->pers.universe_quest_messages == 0 && Distance(ent->client->ps.origin, zyk_quest_point) < 300)
-								{
-									ent->client->pers.universe_quest_messages++;
-								}
-
-								if (ent->client->pers.universe_quest_messages == 1)
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 3000;
-
-									spawn_boss(ent, -1900, -800, -470, 179, "guardian_of_time_boss", -2000, -800, -470, 0, 20);
-								}
-								else if (ent->client->pers.universe_quest_messages == 3)
-								{
-									ent->client->pers.universe_quest_progress = 21;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-						else if (ent->client->pers.universe_quest_progress == 21 && ent->client->pers.can_play_quest == 1 &&
-							ent->client->pers.universe_quest_counter & (1 << 2))
-						{ // zyk: Universe Quest, final mission of Thor Sequel
-							if (ent->client->pers.hunter_quest_timer < level.time && ent->client->pers.hunter_quest_messages < 2)
-							{
-								gentity_t *npc_ent = NULL;
-
-								if (ent->client->pers.hunter_quest_messages == 0)
-									zyk_NPC_Kill_f("all");
-								else if (ent->client->pers.hunter_quest_messages == 1)
-									npc_ent = Zyk_NPC_SpawnType("thor_boss", -1900, -800, -470, 179);
-
-								if (npc_ent)
-								{
-									npc_ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-
-									npc_ent->client->playerTeam = NPCTEAM_PLAYER;
-									npc_ent->client->enemyTeam = NPCTEAM_ENEMY;
-
-									npc_ent->client->pers.universe_quest_messages = -2000;
-								}
-
-								ent->client->pers.hunter_quest_messages++;
-								ent->client->pers.hunter_quest_timer = level.time + 1000;
-							}
-
-							if (ent->client->pers.universe_quest_timer < level.time)
-							{
-								vec3_t zyk_quest_point;
-
-								VectorSet(zyk_quest_point, -1900, -800, -470);
-
-								if (ent->client->pers.universe_quest_messages > 0 || (ent->client->pers.hunter_quest_messages == 2 && Distance(ent->client->ps.origin, zyk_quest_point) < 300))
-								{
-									ent->client->pers.universe_quest_messages++;
-									ent->client->pers.universe_quest_timer = level.time + 5000;
-								}
-
-								if (ent->client->pers.universe_quest_messages >= 1 && ent->client->pers.universe_quest_messages <= 11)
-								{
-									if (ent->client->pers.universe_quest_messages == 1 || ent->client->pers.universe_quest_messages == 10)
-									{
-										zyk_text_message(ent, va("universe/mission_21_thor/mission_21_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-									}
-									else
-									{
-										zyk_text_message(ent, va("universe/mission_21_thor/mission_21_thor_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-									}
-								}
-								else if (ent->client->pers.universe_quest_messages == 12)
-								{
-									ent->client->pers.universe_quest_progress = 22;
-
-									save_account(ent, qtrue);
-
-									quest_get_new_player(ent);
-								}
-							}
-						}
-					}
-					else if (level.quest_map == 25)
-					{ // zyk: seventh objective of Universe Quest
-						if (ent->client->pers.universe_quest_progress == 6 && ent->client->pers.can_play_quest == 1 && ent->client->pers.universe_quest_timer < level.time)
-						{
-							gentity_t *npc_ent = NULL;
-							if (ent->client->pers.universe_quest_messages == 0)
-							{
-								zyk_text_message(ent, "universe/mission_6/mission_6_arrival", qtrue, qfalse, ent->client->pers.netname);
-								npc_ent = Zyk_NPC_SpawnType("quest_reborn_boss",1800,-2900,2785,90);
-							}
-							else if (ent->client->pers.universe_quest_messages >= 2 && ent->client->pers.universe_quest_messages <= 9)
-							{
-								if (ent->client->pers.universe_quest_messages == 5 || ent->client->pers.universe_quest_messages == 6)
-								{
-									zyk_text_message(ent, va("universe/mission_6/mission_6_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse);
-								}
-								else
-								{
-									zyk_text_message(ent, va("universe/mission_6/mission_6_%d", ent->client->pers.universe_quest_messages), qtrue, qfalse, ent->client->pers.netname);
-								}
-							}
-							else if (ent->client->pers.universe_quest_messages == 10)
-							{
-								spawn_boss(ent,2135,-2857,2620,-90,"master_of_evil",0,0,0,0,12);
-
-								npc_ent = NULL;
-							}
-							else if (ent->client->pers.universe_quest_messages == 12)
-							{ // zyk: defeated Master of Evil
-								zyk_NPC_Kill_f("all"); // zyk: killing the guardian spawns
-								zyk_text_message(ent, "universe/mission_6/mission_6_12", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 13)
-							{ // zyk: defeated Master of Evil
-								zyk_text_message(ent, "universe/mission_6/mission_6_13", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 14)
-							{ // zyk: defeated Master of Evil
-								zyk_text_message(ent, "universe/mission_6/mission_6_14", qtrue, qfalse, ent->client->pers.netname);
-							}
-							else if (ent->client->pers.universe_quest_messages == 15)
-							{ // zyk: defeated Master of Evil
-								zyk_text_message(ent, "universe/mission_6/mission_6_15", qtrue, qfalse);
-							}
-							else if (ent->client->pers.universe_quest_messages == 16)
-							{ // zyk: defeated Master of Evil
-								zyk_text_message(ent, "universe/mission_6/mission_6_16", qtrue, qfalse, ent->client->pers.netname);
-
-								ent->client->pers.universe_quest_progress = 7;
-								if (ent->client->pers.universe_quest_counter & (1 << 29))
-								{ // zyk: if player is in Challenge Mode, do not remove this bit value
-									ent->client->pers.universe_quest_counter = 0;
-									ent->client->pers.universe_quest_counter |= (1 << 29);
-								}
-								else
-									ent->client->pers.universe_quest_counter = 0;
-
-								save_account(ent, qtrue);
-
-								quest_get_new_player(ent);
-							}
-
-							if (ent->client->pers.universe_quest_messages < 1)
-							{ // zyk: spawning the reborn npcs
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 1500;
-							}
-							else if (ent->client->pers.universe_quest_messages > 1 && ent->client->pers.universe_quest_messages < 11)
-							{ // zyk: talking to the Master of Evil
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 5000;
-							}
-							else if (ent->client->pers.universe_quest_messages == 11)
-							{ // zyk: fighting the Master of Evil
-								ent->client->pers.universe_quest_timer = level.time + 2000;
-							}
-							else if (ent->client->pers.universe_quest_messages > 11)
-							{ // zyk: defeated the Master of Evil
-								ent->client->pers.universe_quest_messages++;
-								ent->client->pers.universe_quest_timer = level.time + 5000;
-							}
-
-							if (npc_ent)
-							{ // zyk: setting the player who invoked this npc
-								npc_ent->client->pers.universe_quest_objective_control = ent-g_entities;
-							}
-						}
-					}
-				}
-
-				if (level.custom_quest_map > -1 && level.zyk_custom_quest_timer < level.time && ent->client->ps.duelInProgress == qfalse && ent->health > 0 && 
-					(level.zyk_quest_test_origin == qfalse || Distance(ent->client->ps.origin, level.zyk_quest_mission_origin) < level.zyk_quest_radius))
-				{ // zyk: Custom Quest map
-					char *zyk_keys[5] = {"text", "npc", "item", "entfile", "" };
-					int j = 0;
-					qboolean still_has_keys = qfalse;
-
-					for (j = 0; j < 5; j++)
-					{ // zyk: testing each key and processing them when found in this mission
-						char *zyk_value = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("%s%d", zyk_keys[j], level.zyk_custom_quest_counter));
-
-						if (Q_stricmp(zyk_value, "") != 0)
-						{ // zyk: there is a value for this key
-							char *zyk_map = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("map%d", level.zyk_custom_quest_counter));
-
-							still_has_keys = qtrue;
-
-							if (Q_stricmp(level.zykmapname, zyk_map) == 0)
-							{ // zyk: this mission step is in this map
-								if (Q_stricmp(zyk_keys[j], "text") == 0)
-								{ // zyk: a text message
-									int zyk_timer = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("texttimer%d", level.zyk_custom_quest_counter)));
-
-									if (zyk_timer <= 0)
-									{
-										zyk_timer = 5000;
-									}
-
-									trap->SendServerCommand(-1, va("chat \"%s\n\"", zyk_value));
-									level.zyk_custom_quest_timer = level.time + zyk_timer;
-									level.zyk_custom_quest_counter++;
-
-									// zyk: increasing the number of steps done in this mission
-									zyk_set_quest_field(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done", va("%d", atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done")) + 1));
-								}
-								else if (Q_stricmp(zyk_keys[j], "entfile") == 0)
-								{
-									char zykserverinfo[MAX_INFO_STRING] = { 0 };
-									char zyk_mapname[128] = { 0 };
-									int k = 0;
-
-									// zyk: getting mapname
-									trap->GetServerinfo(zykserverinfo, sizeof(zykserverinfo));
-									Q_strncpyz(zyk_mapname, Info_ValueForKey(zykserverinfo, "mapname"), sizeof(zyk_mapname));
-									strcpy(level.load_entities_file, va("GalaxyRP/entities/%s/%s.txt", zyk_mapname, zyk_value));
-
-									// zyk: cleaning entities. Only the ones from the file will be in the map
-									for (k = (MAX_CLIENTS + BODY_QUEUE_SIZE); k < level.num_entities; k++)
-									{
-										gentity_t *target_ent = &g_entities[k];
-
-										if (target_ent)
-											G_FreeEntity(target_ent);
-									}
-
-									level.load_entities_timer = level.time + 1050;
-									level.zyk_custom_quest_counter++;
-									level.zyk_custom_quest_timer = level.time + 2000;
-
-									// zyk: increasing the number of steps done in this mission
-									zyk_set_quest_field(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done", va("%d", atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done")) + 1));
-								}
-								else if (Q_stricmp(zyk_keys[j], "npc") == 0)
-								{ // zyk: npc battle
-									int zyk_timer = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npctimer%d", level.zyk_custom_quest_counter)));
-									int npc_count = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npccount%d", level.zyk_custom_quest_counter)));
-									int npc_yaw = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcyaw%d", level.zyk_custom_quest_counter)));
-									int k = 0;
-
-									if (zyk_timer <= 0)
-									{
-										zyk_timer = 1000;
-									}
-
-									if (npc_count <= 0)
-									{
-										npc_count = 1;
-									}
-
-									for (k = 0; k < npc_count; k++)
-									{
-										gentity_t *zyk_npc = NULL;
-										vec3_t zyk_vec;
-
-										if (sscanf(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcorigin%d", level.zyk_custom_quest_counter)), "%f %f %f", &zyk_vec[0], &zyk_vec[1], &zyk_vec[2]) != 3)
-										{ // zyk: if there was not a valid npcorigin, use the mission origin instead
-											VectorCopy(level.zyk_quest_mission_origin, zyk_vec);
-										}
-
-										zyk_npc = Zyk_NPC_SpawnType(zyk_value, zyk_vec[0], zyk_vec[1], zyk_vec[2], npc_yaw);
-
-										if (zyk_npc)
-										{
-											int zyk_enemy = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcenemy%d", level.zyk_custom_quest_counter)));
-											int zyk_ally = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npcally%d", level.zyk_custom_quest_counter)));
-											int zyk_health = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("npchealth%d", level.zyk_custom_quest_counter)));
-
-											zyk_npc->client->pers.player_statuses |= (1 << 28);
-
-											if (zyk_health > 0)
-											{ // zyk: custom npc health
-												zyk_npc->NPC->stats.health = zyk_health;
-												zyk_npc->client->ps.stats[STAT_MAX_HEALTH] = zyk_health;
-												zyk_npc->health = zyk_health;
-											}
-
-											if (zyk_enemy > 0)
-											{ // zyk: force it to be enemy
-												zyk_npc->client->playerTeam = NPCTEAM_ENEMY;
-												zyk_npc->client->enemyTeam = NPCTEAM_PLAYER;
-											}
-
-											if (zyk_ally > 0)
-											{ // zyk: force it to be ally
-												zyk_npc->client->playerTeam = NPCTEAM_PLAYER;
-												zyk_npc->client->enemyTeam = NPCTEAM_ENEMY;
-											}
-
-											if (zyk_npc->client->playerTeam == NPCTEAM_PLAYER)
-											{ // zyk: if ally, must count this npc in the counter until mission ends
-												level.zyk_quest_ally_npc_count++;
-											}
-											else
-											{ // zyk: if any non-ally team, must count this npc in the counter and hold mission until all npcs are defeated
-												level.zyk_hold_quest_mission = qtrue;
-												level.zyk_quest_npc_count++;
-											}
-
-											zyk_set_quest_npc_abilities(zyk_npc);
-										}
-									}
-
-									level.zyk_custom_quest_timer = level.time + zyk_timer;
-									level.zyk_custom_quest_counter++;
-								}
-								else if (Q_stricmp(zyk_keys[j], "item") == 0)
-								{ // zyk: items to find
-									char *zyk_item_origin = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("itemorigin%d", level.zyk_custom_quest_counter));
-									gentity_t *new_ent = G_Spawn();
-
-									zyk_set_entity_field(new_ent, "classname", G_NewString(zyk_value));
-									zyk_set_entity_field(new_ent, "spawnflags", "262144");
-									zyk_set_entity_field(new_ent, "origin", zyk_item_origin);
-
-									zyk_spawn_entity(new_ent);
-
-									level.zyk_quest_item_count++;
-
-									level.zyk_custom_quest_timer = level.time + 1000;
-									level.zyk_custom_quest_counter++;
-									level.zyk_hold_quest_mission = qtrue;
-								}
-							}
-							else
-							{ // zyk: will test map in the next step
-								level.zyk_custom_quest_counter++;
-							}
-						}
-					}
-
-					// zyk: no more fields to test, pass the mission
-					if (still_has_keys == qfalse && level.zyk_hold_quest_mission == qfalse)
-					{
-						int zyk_steps = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "steps"));
-						int zyk_done = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done"));
-						int k = 0;
-						int zyk_prize = atoi(zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, "prize"));
-
-						if (zyk_done >= zyk_steps)
-						{ // zyk: completed all steps of this mission
-							if (zyk_prize > 0)
-							{ // zyk: add this amount of credits to all players in quest area
-								for (k = 0; k < level.maxclients; k++)
-								{
-									gentity_t *zyk_ent = &g_entities[k];
-
-									if (zyk_ent && zyk_ent->client && zyk_ent->client->sess.amrpgmode == 2 && zyk_ent->client->sess.sessionTeam != TEAM_SPECTATOR && 
-										(level.zyk_quest_test_origin == qfalse || Distance(zyk_ent->client->ps.origin, level.zyk_quest_mission_origin) < level.zyk_quest_radius))
-									{ // zyk: only players in the quest area can receive the prize
-										add_credits(ent, zyk_prize);
-										trap->SendServerCommand(zyk_ent->s.number, va("chat \"^3Custom Quest: ^7Got ^2%d ^7credits\n\"", zyk_prize));
-									}
-								}
-							}
-
-							if ((level.zyk_custom_quest_current_mission + 1) >= level.zyk_custom_quest_mission_count[level.custom_quest_map])
-							{ // zyk: completed all missions, reset quest to the first mission
-								level.zyk_custom_quest_main_fields[level.custom_quest_map][2] = "0";
-							}
-							else
-							{
-								level.zyk_custom_quest_main_fields[level.custom_quest_map][2] = G_NewString(va("%d", level.zyk_custom_quest_current_mission + 1));
-							}
-
-							// zyk: reset the steps done for this mission
-							zyk_set_quest_field(level.custom_quest_map, level.zyk_custom_quest_current_mission, "done", "0");
-
-							for (k = 0; k < level.zyk_custom_quest_mission_values_count[level.custom_quest_map][level.zyk_custom_quest_current_mission] / 2; k++)
-							{ // zyk: goes through all keys of this mission to find the map keys with the current map and reset them
-								char *zyk_map = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("donemap%d", k));
-
-								if (Q_stricmp(zyk_map, "") != 0)
-								{
-									zyk_set_quest_field(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("donemap%d", k), "zykremovekey");
-								}
-							}
-
-							trap->SendServerCommand(-1, "chat \"^3Custom Quest: ^7Mission complete\n\"");
-						}
-						else
-						{ // zyk: completed a step but not the entire mission yet, because some steps are in other maps
-							for (k = 0; k < level.zyk_custom_quest_mission_values_count[level.custom_quest_map][level.zyk_custom_quest_current_mission] / 2; k++)
-							{ // zyk: goes through all keys of this mission to find the map keys with the current map and set them as done
-								char *zyk_map = zyk_get_mission_value(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("map%d", k));
-
-								if (Q_stricmp(level.zykmapname, zyk_map) == 0)
-								{
-									zyk_set_quest_field(level.custom_quest_map, level.zyk_custom_quest_current_mission, va("donemap%d", k), "yes");
-								}
-							}
-
-							trap->SendServerCommand(-1, "chat \"^3Custom Quest: ^7Objectives complete\n\"");
-						}
-
-						save_quest_file(level.custom_quest_map);
-
-						load_custom_quest_mission();
-					}
 				}
 			}
 

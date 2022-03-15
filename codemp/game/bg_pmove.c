@@ -110,7 +110,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		//NUM_FORCE_POWERS
 	},
 	{
-		65,//FP_HEAL,//instant //was 25, but that was way too little
+		30,//FP_HEAL,//instant //was 25, but that was way too little
 		10,//FP_LEVITATION,//hold/duration
 		50,//FP_SPEED,//duration
 		20,//FP_PUSH,//hold/duration
@@ -120,13 +120,13 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		1,//FP_LIGHTNING,//hold/duration
 		50,//FP_RAGE,//duration
 		50,//FP_PROTECT,//duration
-		50,//FP_ABSORB,//duration
-		50,//FP_TEAM_HEAL,//instant
+		40,//FP_ABSORB,//duration
+		30,//FP_TEAM_HEAL,//instant
 		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
 		0,//FP_SABER_OFFENSE,
-		2,//FP_SABER_DEFENSE,
+		4,//FP_SABER_DEFENSE,
 		20//FP_SABERTHROW,
 		//NUM_FORCE_POWERS
 	},
@@ -140,19 +140,19 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		30,//FP_GRIP,//hold/duration
 		1,//FP_LIGHTNING,//hold/duration
 		50,//FP_RAGE,//duration
-		25,//FP_PROTECT,//duration
-		25,//FP_ABSORB,//duration
-		33,//FP_TEAM_HEAL,//instant
-		33,//FP_TEAM_FORCE,//instant
+		40,//FP_PROTECT,//duration
+		30,//FP_ABSORB,//duration
+		60,//FP_TEAM_HEAL,//instant
+		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
 		0,//FP_SABER_OFFENSE,
-		1,//FP_SABER_DEFENSE,
+		3,//FP_SABER_DEFENSE,
 		20//FP_SABERTHROW,
 		//NUM_FORCE_POWERS
 	},
 	{
-		50,//FP_HEAL,//instant //You get 5 points of health.. for 50 force points!
+		70,//FP_HEAL,//instant //You get 5 points of health.. for 50 force points!
 		10,//FP_LEVITATION,//hold/duration
 		50,//FP_SPEED,//duration
 		20,//FP_PUSH,//hold/duration
@@ -161,57 +161,57 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		60,//FP_GRIP,//hold/duration
 		1,//FP_LIGHTNING,//hold/duration
 		50,//FP_RAGE,//duration
-		10,//FP_PROTECT,//duration
-		10,//FP_ABSORB,//duration
-		25,//FP_TEAM_HEAL,//instant
-		25,//FP_TEAM_FORCE,//instant
+		30,//FP_PROTECT,//duration
+		20,//FP_ABSORB,//duration
+		70,//FP_TEAM_HEAL,//instant
+		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
 		0,//FP_SABER_OFFENSE,
-		0,//FP_SABER_DEFENSE,
+		2,//FP_SABER_DEFENSE,
 		20//FP_SABERTHROW,
 		//NUM_FORCE_POWERS
 	},
 	{ // zyk: level 4
-		999,//FP_HEAL,//instant
+		80,//FP_HEAL,//instant
 		10,//FP_LEVITATION,//hold/duration
 		50,//FP_SPEED,//duration
-		999,//FP_PUSH,//hold/duration
-		999,//FP_PULL,//hold/duration
-		999,//FP_TELEPATHY,//instant
-		999,//FP_GRIP,//hold/duration
-		999,//FP_LIGHTNING,//hold/duration
-		999,//FP_RAGE,//duration
-		999,//FP_PROTECT,//duration
-		999,//FP_ABSORB,//duration
-		999,//FP_TEAM_HEAL,//instant
-		999,//FP_TEAM_FORCE,//instant
-		999,//FP_DRAIN,//hold/duration
-		999,//FP_SEE,//duration
+		20,//FP_PUSH,//hold/duration
+		20,//FP_PULL,//hold/duration
+		20,//FP_TELEPATHY,//instant
+		60,//FP_GRIP,//hold/duration
+		1,//FP_LIGHTNING,//hold/duration
+		100,//FP_RAGE,//duration
+		20,//FP_PROTECT,//duration
+		10,//FP_ABSORB,//duration
+		80,//FP_TEAM_HEAL,//instant
+		50,//FP_TEAM_FORCE,//instant
+		20,//FP_DRAIN,//hold/duration
+		30,//FP_SEE,//duration
 		999,//FP_SABER_OFFENSE,
-		999,//FP_SABER_DEFENSE,
+		1,//FP_SABER_DEFENSE,
 		20//FP_SABERTHROW,
 		//NUM_FORCE_POWERS
 	},
 	{ // zyk: level 5
-		999,//FP_HEAL,//instant
+		90,//FP_HEAL,//instant
 		10,//FP_LEVITATION,//hold/duration
-		999,//FP_SPEED,//duration
-		999,//FP_PUSH,//hold/duration
-		999,//FP_PULL,//hold/duration
-		999,//FP_TELEPATHY,//instant
-		999,//FP_GRIP,//hold/duration
-		999,//FP_LIGHTNING,//hold/duration
-		999,//FP_RAGE,//duration
-		999,//FP_PROTECT,//duration
-		999,//FP_ABSORB,//duration
-		999,//FP_TEAM_HEAL,//instant
-		999,//FP_TEAM_FORCE,//instant
-		999,//FP_DRAIN,//hold/duration
-		999,//FP_SEE,//duration
+		50,//FP_SPEED,//duration
+		20,//FP_PUSH,//hold/duration
+		20,//FP_PULL,//hold/duration
+		20,//FP_TELEPATHY,//instant
+		80,//FP_GRIP,//hold/duration
+		1,//FP_LIGHTNING,//hold/duration
+		100,//FP_RAGE,//duration
+		20,//FP_PROTECT,//duration
+		5,//FP_ABSORB,//duration
+		90,//FP_TEAM_HEAL,//instant
+		50,//FP_TEAM_FORCE,//instant
+		20,//FP_DRAIN,//hold/duration
+		30,//FP_SEE,//duration
 		999,//FP_SABER_OFFENSE,
-		999,//FP_SABER_DEFENSE,
-		999//FP_SABERTHROW,
+		0,//FP_SABER_DEFENSE,
+		30//FP_SABERTHROW,
 		//NUM_FORCE_POWERS
 	}
 };
@@ -3304,7 +3304,7 @@ static void PM_AirMove( void ) {
 		{ // zyk: added the Jetpack Upgrade test, in this case, player can have more control
 #if defined (_GAME)
 			gentity_t *player_ent = &g_entities[pm->ps->clientNum];
-			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.secrets_found & (1 << 17))
+			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.skill_levels[34] == 3)
 				VectorScale(wishvel, 1.2f, wishvel);
 			else
 				VectorScale(wishvel, 0.8f, wishvel);
@@ -3316,7 +3316,7 @@ static void PM_AirMove( void ) {
 		{ //if we are jetting then we have more control than usual
 #if defined (_GAME) // zyk: added the Jetpack Upgrade test, in this case, player can have more control
 			gentity_t *player_ent = &g_entities[pm->ps->clientNum];
-			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.secrets_found & (1 << 17))
+			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.skill_levels[34] == 3)
 				VectorScale(wishvel, 3.0f, wishvel);
 			else
 				VectorScale(wishvel, 2.0f, wishvel);
@@ -6424,9 +6424,15 @@ int PM_ItemUsable(playerState_t *ps, int forcedUse)
 		return 0;
 	}
 
-	if (ps->duelInProgress)
+	// GalaxyRP (Alex): [Dueling] Characters should be able to use holdables while dueling
+	/*if (ps->duelInProgress)
 	{ //not allowed to use holdables while in a private duel.
 		return 0;
+	}*/
+
+	if (!forcedUse)
+	{
+		forcedUse = bg_itemlist[ps->stats[STAT_HOLDABLE_ITEM]].giTag;
 	}
 
 	if (!BG_IsItemSelectable(ps, forcedUse))
@@ -7960,8 +7966,9 @@ static void PM_Weapon( void )
 							//it's silly to be able to do them right as you land.
 							//also looks wrong to transition from a non-complete flip anim...
 							if ((!BG_FlippingAnim( pm->ps->legsAnim ) || pm->ps->legsTimer <= 0) &&
-								gDist > 64.0f && //strict minimum
-								gDist > (-pm->ps->velocity[2])-64.0f //make sure we are high to ground relative to downward velocity as well
+								// GalaxyRP [Melee]: Kick in the air distance reduced from 64.
+								gDist > 32.0f && //strict minimum
+								gDist > (-pm->ps->velocity[2])-32.0f //make sure we are high to ground relative to downward velocity as well
 								)
 							{
 								switch ( kickMove )
@@ -8843,6 +8850,9 @@ void BG_AdjustClientSpeed(playerState_t *ps, usercmd_t *cmd, int svTime)
 		}
 		else if (ps->fd.forcePowerLevel[FP_SPEED] == FORCE_LEVEL_4){
 			ps->speed *= 2.9f; // zyk: changed speed value
+		}
+		else if (ps->fd.forcePowerLevel[FP_SPEED] == FORCE_LEVEL_5) {
+			ps->speed *= 3.3f; // GalaxyRP (Alex): [Force Powers] Moar speed!
 		}
 	}
 	else if (ps->fd.forcePowersActive & (1 << FP_RAGE))
@@ -11001,7 +11011,7 @@ void PmoveSingle (pmove_t *pmove) {
 		stiffenedUp = qtrue;
 	}
 	else if (level.duel_tournament_mode == 4 && player_ent && player_ent->s.number < MAX_CLIENTS && duel_tournament_is_duelist(player_ent) == qtrue && 
-			 (level.duel_tournament_timer - level.time) > (zyk_duel_tournament_duel_time.integer - DUEL_TOURNAMENT_PROTECTION_TIME))
+			 (level.duel_tournament_timer - level.time) > (zyk_duel_tournament_duel_time.integer - DUEL_TOURNAMENT_PROTECT_TIME))
 	{ // zyk: Duel Tournament duelist that has just been placed in arena. Wait some time before moving
 		stiffenedUp = qtrue;
 	}
@@ -11287,7 +11297,7 @@ void PmoveSingle (pmove_t *pmove) {
 		gentity_t *player_ent = &g_entities[pm->ps->clientNum];
 
 		// zyk: if player has the Jetpack Upgrade, increase max velocity
-		if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.secrets_found & (1 << 17))
+		if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.skill_levels[34] == 3)
 			zyk_jetpack_max_vel = 704;
 #endif
 

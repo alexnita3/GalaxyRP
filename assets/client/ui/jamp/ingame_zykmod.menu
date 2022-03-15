@@ -1,0 +1,8715 @@
+//----------------------------------------------------------------------------------------------
+// INGAME ZYK MOD BOX 
+//----------------------------------------------------------------------------------------------
+{
+	menuDef  
+	{
+		name					"ingame_zykmod"
+		visible					0
+		fullscreen				0
+		outOfBoundsClick									// this closes the window if it gets a click out of the rectangle
+		rect					30 35 570 400
+		focusColor				1 1 1 1								// Focus color for text and items
+		style					1
+		border					1
+		descX					305
+		descY					400
+		descScale				1
+		descColor				1 .682 0 .8					// Focus color for text and items
+		descAlignment				ITEM_ALIGN_CENTER		
+
+		onClose 
+		{
+			hide	mainButtons ;
+		}
+
+		onESC 
+		{ 
+			play				"sound/interface/button1.wav" ;
+			close				ingame_zykmod
+		}
+
+		onopen 
+		{ 
+			show mainButtons ;
+			exec "zykmod" ;
+		}
+
+		itemDef 
+		{
+			name				zyk_background_pic
+			group				mainButtons
+			style				WINDOW_STYLE_SHADER
+			rect				0 0 570 400
+			background			"gfx/menus/menu_box_ingame"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				zyk_playerconfigtitle
+			group				mainButtons
+			style				WINDOW_STYLE_SHADER
+			background			"gfx/menus/menu_blendbox"
+			text				"^6Galaxy ^4RP^3 Mod Management"
+			rect				20 5 510 28
+			textalign			ITEM_ALIGN_CENTER		
+			textalignx			255
+			textaligny			2
+			outlinecolor			1 .5 .5 .5
+			backcolor			0 0 0 0
+			font				3
+			textscale			0.9
+			forecolor			.549 .854 1 1
+			border				0
+			bordercolor			0 0 0 0
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				accountButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 38 140 30
+			background			"gfx/menus/menu_blendbox2"			// Frame around button
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				accountButton
+			group				mainButtons
+			text				"Account"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				10 38 140 30
+			font				3
+			textscale			0.8
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Create an account, login an existing one, change password, logout"
+
+			mouseEnter 
+			{ 
+				show			accountButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			accountButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			accountControls ;
+				hide			charControls ;
+				hide 			newAccountControls ;
+				hide			loginAccountControls ;
+				hide			changePassControls ;
+				hide 			rpgClassControls ;
+				hide 			upControls ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			questControls ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				hide 			listControls ;
+				hide 			commandsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide 			settingsControls ;
+				hide 			stuffControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyItemsControls ;
+				hide 			buyMiscControls ;
+				hide 			cameraControls ;
+				hide 			gamesControls ;
+				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
+				setitemcolor		accountButton 		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				newAccountButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				140 38 120 30
+			background			"gfx/menus/menu_blendbox2"			// Frame around button
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				newAccountButton
+			group				accountControls
+			text				"New"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				140 38 120 30
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Create a new account"
+
+			mouseEnter 
+			{ 
+				show			newAccountButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			newAccountButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			newAccountControls ;
+				hide			loginAccountControls ;
+				hide			changePassControls ;
+				setitemcolor		accountControls 		forecolor 1 .682 0 1 ;
+				setitemcolor		newAccountButton 		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				accloginEntry
+			group				newAccountControls
+			style				1
+			descText			"Enter the login"
+			text				""
+			maxchars			30
+			font				2
+			textscale			.6
+			TYPE				4
+			cvar				"accLogin" 
+			rect				260 50 300 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			5
+			textaligny			3
+			forecolor			1 1 1 1
+			backcolor			.25 .25 .25 .5
+			visible				0
+			border				1
+			bordercolor			.79 .64 .22 1
+			mouseenter 
+			{ 
+				setitemcolor	accloginEntry backcolor .25 .25 .25 .75 
+			}
+			mouseexit 
+			{ 
+				setitemcolor	accloginEntry backcolor .25 .25 .25 .5 
+			}
+		}
+
+		itemDef 
+		{
+			name				accPassEntry
+			group				newAccountControls
+			style				1
+			descText			"Enter the password"
+			text				""
+			maxchars			30
+			font				2
+			textscale			.6
+			TYPE				4
+			cvar				"accPassword" 
+			rect				260 100 300 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			5
+			textaligny			3
+			forecolor			1 1 1 1
+			backcolor			.25 .25 .25 .5
+			visible				0
+			border				1
+			bordercolor			.79 .64 .22 1
+			mouseenter 
+			{ 
+				setitemcolor	accPassEntry backcolor .25 .25 .25 .75 
+			}
+			mouseexit 
+			{ 
+				setitemcolor	accPassEntry backcolor .25 .25 .25 .5 
+			}
+		}
+
+		itemDef 
+		{
+			name				doneButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				260 145 60 30
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				doneText
+			group				newAccountControls
+			text				@MENUS_DONE
+			descText			"Finished creating new account"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				260 145 50 30
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykmod "new"
+				play			"sound/interface/button1.wav" ;
+				hide			doneButton_glow ;
+				hide			doneText ;
+				close			ingame_zykmod
+			}
+			mouseEnter 
+			{ 
+				show			doneButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			doneButton_glow
+			}	  	  
+		}
+
+		itemDef 
+		{
+			name				loginAccountButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				140 68 120 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				loginAccountButton
+			group				accountControls
+			text				"Login"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				140 68 120 30
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Login your account"
+
+			mouseEnter 
+			{ 
+				show			loginAccountButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			loginAccountButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			loginAccountControls ;
+				hide			newAccountControls ;
+				hide			changePassControls ;
+				setitemcolor		accountControls 		forecolor 1 .682 0 1 ;
+				setitemcolor		loginAccountButton 		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				loginEntry
+			group				loginAccountControls
+			style				1
+			descText			"Enter the login"
+			text				""
+			maxchars			30
+			font				2
+			textscale			.6
+			TYPE				4
+			cvar				"accLogin" 
+			rect				260 50 300 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			5
+			textaligny			3
+			forecolor			1 1 1 1
+			backcolor			.25 .25 .25 .5
+			visible				0
+			border				1
+			bordercolor			.79 .64 .22 1
+			mouseenter 
+			{ 
+				setitemcolor	loginEntry backcolor .25 .25 .25 .75 
+			}
+			mouseexit 
+			{ 
+				setitemcolor	loginEntry backcolor .25 .25 .25 .5 
+			}
+		}
+
+		itemDef 
+		{
+			name				passEntry
+			group				loginAccountControls
+			style				1
+			descText			"Enter the password"
+			text				""
+			maxchars			30
+			font				2
+			textscale			.6
+			TYPE				4
+			cvar				"accPassword" 
+			rect				260 100 300 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			5
+			textaligny			3
+			forecolor			1 1 1 1
+			backcolor			.25 .25 .25 .5
+			visible				0
+			border				1
+			bordercolor			.79 .64 .22 1
+			mouseenter 
+			{ 
+				setitemcolor	passEntry backcolor .25 .25 .25 .75 
+			}
+			mouseexit 
+			{ 
+				setitemcolor	passEntry backcolor .25 .25 .25 .5 
+			}
+		}
+
+		itemDef 
+		{
+			name				loginDoneButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				260 145 60 30
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				loginDoneText
+			group				loginAccountControls
+			text				@MENUS_DONE
+			descText			"Finished logging in account"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				260 145 50 30
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykmod "login"
+				play			"sound/interface/button1.wav" ;
+				hide			loginDoneButton_glow ;
+				hide			loginDoneText ;
+				close			ingame_zykmod
+			}
+			mouseEnter 
+			{ 
+				show			loginDoneButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			loginDoneButton_glow
+			}	  	  
+		}
+
+		itemDef 
+		{
+			name				changePassButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				140 98 120 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				changePassButton
+			group				accountControls
+			text				"Password"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				140 98 120 30
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Change password of your account"
+
+			mouseEnter 
+			{ 
+				show			changePassButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			changePassButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			changePassControls ;
+				hide			newAccountControls ;
+				hide			loginAccountControls ;
+				setitemcolor		accountControls 		forecolor 1 .682 0 1 ;
+				setitemcolor		changePassButton 		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				passEntry
+			group				changePassControls
+			style				1
+			descText			"Enter the new password"
+			text				""
+			maxchars			30
+			font				2
+			textscale			.6
+			TYPE				4
+			cvar				"accPassword" 
+			rect				260 100 300 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			5
+			textaligny			3
+			forecolor			1 1 1 1
+			backcolor			.25 .25 .25 .5
+			visible				0
+			border				1
+			bordercolor			.79 .64 .22 1
+			mouseenter 
+			{ 
+				setitemcolor	passEntry backcolor .25 .25 .25 .75 
+			}
+			mouseexit 
+			{ 
+				setitemcolor	passEntry backcolor .25 .25 .25 .5 
+			}
+		}
+
+		itemDef 
+		{
+			name				changePassDoneButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				260 145 60 30
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				changePassDoneText
+			group				changePassControls
+			text				@MENUS_DONE
+			descText			"Finished changing account password"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				260 145 50 30
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykmod "changepassword"
+				play			"sound/interface/button1.wav" ;
+				hide			changePassDoneButton_glow ;
+				hide			changePassDoneText ;
+				close			ingame_zykmod
+			}
+			mouseEnter 
+			{ 
+				show			changePassDoneButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			changePassDoneButton_glow
+			}	  	  
+		}
+
+		itemDef 
+		{
+			name				tutorialButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				140 128 120 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				tutorialButton
+			group				accountControls
+			text				"Tutorial"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				140 128 120 30
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Shows the tutorial to explain features of the mod"
+  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec			"tutorial" ;
+				hide 			loginAccountControls ;
+				hide			newAccountControls ;
+				hide			changePassControls ;
+				close			ingame_zykmod
+			}
+			mouseEnter 
+			{ 
+				show			tutorialButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			tutorialButton_glow
+			}	
+		}
+
+		itemDef 
+		{
+			name				logoutButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				140 158 120 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				logoutButton
+			group				accountControls
+			text				"Logout"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				140 158 120 30
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Logout your account"
+  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec			"logout" ;
+				hide 			loginAccountControls ;
+				hide			newAccountControls ;
+				hide			changePassControls ;
+				close			ingame_zykmod
+			}
+			mouseEnter 
+			{ 
+				show			logoutButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			logoutButton_glow
+			}
+		}
+
+		itemDef 
+		{
+			name				rpgClassButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 68 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				freeWarriorButton
+			group				rpgClassControls
+			text				"Free Warrior"
+			descText			"Can have all 56 skills. All-round class"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				180 50 140 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec "rpgclass 0"
+				play			"sound/interface/button1.wav" ;
+				hide			rpgClassControls ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				forceUserButton
+			group				rpgClassControls
+			text				"Force User"
+			descText			"Saber/force class. Force powers use less force. Regens force faster"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				180 80 120 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec "rpgclass 1"
+				play			"sound/interface/button1.wav" ;
+				hide			rpgClassControls ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				bountyHunterButton
+			group				rpgClassControls
+			text				"Bounty Hunter"
+			descText			"Gun class. Higher max ammo, stronger items and more credits in battles"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				180 110 150 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec "rpgclass 2"
+				play			"sound/interface/button1.wav" ;
+				hide			rpgClassControls ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				armoredSoldierButton
+			group				rpgClassControls
+			text				"Armored Soldier"
+			descText			"Gun class. High resistance to damage, shot deflection and auto-shield-heal"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				180 140 170 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec "rpgclass 3"
+				play			"sound/interface/button1.wav" ;
+				hide			rpgClassControls ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				monkButton
+			group				rpgClassControls
+			text				"Monk"
+			descText			"Force class. Highest melee damage and faster run speed. Has auto-hp-heal"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				180 170 70 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec "rpgclass 4"
+				play			"sound/interface/button1.wav" ;
+				hide			rpgClassControls ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				stealthAttackerButton
+			group				rpgClassControls
+			text				"Stealth Attacker"
+			descText			"Gun class. Highest gun damage. Resistant to electric attacks"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				180 200 180 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec "rpgclass 5"
+				play			"sound/interface/button1.wav" ;
+				hide			rpgClassControls ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				duelistButton
+			group				rpgClassControls
+			text				"Duelist"
+			descText			"Saber/force class. Highest saber damage. Regens force faster"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				180 230 80 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec "rpgclass 6"
+				play			"sound/interface/button1.wav" ;
+				hide			rpgClassControls ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				forceGunnerButton
+			group				rpgClassControls
+			text				"Force Gunner"
+			descText			"Gun/force class. Can do acrobatic moves (like wall run) while holding guns and shooting"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				180 260 140 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec "rpgclass 7"
+				play			"sound/interface/button1.wav" ;
+				hide			rpgClassControls ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				magicMasterButton
+			group				rpgClassControls
+			text				"Magic Master"
+			descText			"Has no saber/force/guns. Shoots magic bolts from melee. Learns all magic powers"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				180 290 130 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec "rpgclass 8"
+				play			"sound/interface/button1.wav" ;
+				hide			rpgClassControls ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				forceTankButton
+			group				rpgClassControls
+			text				"Force Guardian"
+			descText			"Saber/force class. High resistance to damage. Can grab some guns and items on map"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				180 320 130 30
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			20
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec "rpgclass 9"
+				play			"sound/interface/button1.wav" ;
+				hide			rpgClassControls ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				listButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 68 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				listButton
+			group				mainButtons
+			text				"List"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				10 68 140 30
+			font				3
+			textscale			0.8
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Lists RPG info"
+
+			mouseEnter 
+			{ 
+				show			listButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			listButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec 			"zykmod" ;
+				show 			listControls ;
+				hide			charControls ;
+				hide 			accountControls ;
+				hide 			loginAccountControls ;
+				hide			newAccountControls ;
+				hide			changePassControls ;
+				hide 			rpgClassControls ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			questControls ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				hide 			upControls ;
+				hide 			commandsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide 			settingsControls ;
+				hide 			stuffControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyItemsControls ;
+				hide 			buyMiscControls ;
+				hide 			cameraControls ;
+				hide 			gamesControls ;
+				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
+				setitemcolor		listButton		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				listLevel
+			group				listControls
+			rect				170 50 120 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_TEXT
+			text				"Level"
+			textscale			0.8
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 .682 0 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				listLevelUpScore
+			group				listControls
+			rect				170 70 120 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_TEXT
+			text				"Level Up Score"
+			textscale			0.8
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 .682 0 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				listSkillPoints
+			group				listControls
+			rect				170 90 120 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_TEXT
+			text				"Skill Points"
+			textscale			0.8
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 .682 0 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				listSkillCounter
+			group				listControls
+			rect				170 110 120 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_TEXT
+			text				"Skill Counter"
+			textscale			0.8
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 .682 0 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				listCredits
+			group				listControls
+			rect				170 130 120 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_TEXT
+			text				"Credits"
+			textscale			0.8
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 .682 0 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				listLevelValue
+			group				listControls
+			rect				300 50 120 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.8
+			cvar				"ui_zyk_rpg_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				listLevelUpScoreValue
+			group				listControls
+			rect				300 70 120 20
+			style				WINDOW_STYLE_EMPTY
+			background			"gfx/menus/menu_blendbox"
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.8
+			cvar				"ui_zyk_rpg_level_up_score" 
+			textalign			ITEM_ALIGN_LEFT	 
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				listSkillPointsValue
+			group				listControls
+			rect				300 90 120 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.8
+			cvar				"ui_zyk_rpg_skillpoints" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				listSkillCounterValue
+			group				listControls
+			rect				300 110 120 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.8
+			cvar				"ui_zyk_rpg_skillcounter" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				listCreditsValue
+			group				listControls
+			rect				300 130 120 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.8
+			cvar				"ui_zyk_rpg_credits" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				upButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 98 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				upButton
+			group				mainButtons
+			text				"Skills"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				10 98 140 30
+			font				3
+			textscale			0.8
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Upgrade or downgrade a skill"
+
+			mouseEnter 
+			{ 
+				show			upButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			upButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec 			"zykmod" ;
+				show 			upControls ;
+				hide			charControls ;
+				hide 			accountControls ;
+				hide 			loginAccountControls ;
+				hide			newAccountControls ;
+				hide			changePassControls ;
+				hide 			rpgClassControls ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			questControls ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				hide 			listControls ;
+				hide 			commandsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide 			settingsControls ;
+				hide 			stuffControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyItemsControls ;
+				hide 			buyMiscControls ;
+				hide 			cameraControls ;
+				hide 			gamesControls ;
+				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
+				setitemcolor		upButton		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				upSkillPoints
+			group				upControls
+			rect				175 75 120 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_TEXT
+			text				"Skill Points"
+			textscale			0.7
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			forecolor			1 .682 0 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				upSkillPointsValue
+			group				upControls
+			rect				300 75 120 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.7
+			cvar				"ui_zyk_rpg_skillpoints" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				forceSkillsButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				160 100 100 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				forceSkillsButton
+			group				upControls
+			text				"Force"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 100 100 30
+			font				3
+			textscale			0.7
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Force power skills"
+
+			mouseEnter 
+			{ 
+				show			forceSkillsButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			forceSkillsButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				show			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				setitemcolor		upControls		forecolor 1 .682 0 1 ;
+				setitemcolor		forceSkillsButton	forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				jumpSkillButton
+			group				forceSkillsControls
+			text				"Jump"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 100 50 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "1"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				pushSkillButton
+			group				forceSkillsControls
+			text				"Push"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 120 50 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "2"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				pullSkillButton
+			group				forceSkillsControls
+			text				"Pull"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 140 50 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "3"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				speedSkillButton
+			group				forceSkillsControls
+			text				"Speed"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 160 50 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "4"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				senseSkillButton
+			group				forceSkillsControls
+			text				"Sense"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 180 50 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "5"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				saberAttackSkillButton
+			group				forceSkillsControls
+			text				"Saber Attack"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 200 100 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "6"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				saberDefenseSkillButton
+			group				forceSkillsControls
+			text				"Saber Defense"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 220 105 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "7"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				saberThrowSkillButton
+			group				forceSkillsControls
+			text				"Saber Throw"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 240 90 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "8"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				absorbSkillButton
+			group				forceSkillsControls
+			text				"Absorb"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 260 60 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "9"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				healSkillButton
+			group				forceSkillsControls
+			text				"Heal"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 100 50 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "10"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				protectSkillButton
+			group				forceSkillsControls
+			text				"Protect"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 120 60 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "11"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				mindTrickSkillButton
+			group				forceSkillsControls
+			text				"Mind Trick"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 140 90 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "12"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				teamHealSkillButton
+			group				forceSkillsControls
+			text				"Team Heal"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 160 90 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "13"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				lightningSkillButton
+			group				forceSkillsControls
+			text				"Lightning"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 180 90 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "14"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				gripSkillButton
+			group				forceSkillsControls
+			text				"Grip"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 200 50 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "15"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				drainSkillButton
+			group				forceSkillsControls
+			text				"Drain"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 220 50 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "16"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				rageSkillButton
+			group				forceSkillsControls
+			text				"Rage"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 240 50 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "17"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				teamEnergizeSkillButton
+			group				forceSkillsControls
+			text				"Team Energize"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 260 100 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "18"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				weaponSkillsButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				160 130 100 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				weaponSkillsButton
+			group				upControls
+			text				"Weapons"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 130 100 30
+			font				3
+			textscale			0.7
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Weapons skills"
+
+			mouseEnter 
+			{ 
+				show			weaponSkillsButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			weaponSkillsButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				hide 			forceSkillsControls ;
+				show			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			levelforce ;
+				show			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				setitemcolor		upControls		forecolor 1 .682 0 1 ;
+				setitemcolor		weaponSkillsButton	forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				stunBatonSkillButton
+			group				weaponSkillsControls
+			text				"Stun Baton"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 100 90 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "19"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				blasterPistolSkillButton
+			group				weaponSkillsControls
+			text				"Blaster Pistol"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 120 110 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "20"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				blasterRifleSkillButton
+			group				weaponSkillsControls
+			text				"E11 Blaster Rifle"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 140 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "21"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				disruptorSkillButton
+			group				weaponSkillsControls
+			text				"Disruptor"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 160 90 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "22"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				bowcasterSkillButton
+			group				weaponSkillsControls
+			text				"Bowcaster"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 180 90 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "23"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				repeaterSkillButton
+			group				weaponSkillsControls
+			text				"Repeater"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 200 90 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "24"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				demp2SkillButton
+			group				weaponSkillsControls
+			text				"DEMP2"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 100 70 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "25"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				flechetteSkillButton
+			group				weaponSkillsControls
+			text				"Flechette"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 120 80 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "26"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				rocketSkillButton
+			group				weaponSkillsControls
+			text				"Rocket Launcher"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 140 110 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "27"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				concussionSkillButton
+			group				weaponSkillsControls
+			text				"Concussion Rifle"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 160 120 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "28"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				bryarPistolSkillButton
+			group				weaponSkillsControls
+			text				"Bryar Pistol"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 180 100 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "29"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				meleeSkillButton
+			group				weaponSkillsControls
+			text				"Melee"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				420 200 60 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "30"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				otherSkillsButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				160 160 100 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				otherSkillsButton
+			group				upControls
+			text				"Other"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 160 100 30
+			font				3
+			textscale			0.7
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Other skills"
+
+			mouseEnter 
+			{ 
+				show			otherSkillsButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			otherSkillsButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				show			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				show			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				setitemcolor		upControls		forecolor 1 .682 0 1 ;
+				setitemcolor		otherSkillsButton	forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				maxShieldSkillButton
+			group				otherSkillsControls
+			text				"Max Shield"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 100 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "31"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				shieldStrengthSkillButton
+			group				otherSkillsControls
+			text				"Shield Strength"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 120 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "32"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				healthStrengthSkillButton
+			group				otherSkillsControls
+			text				"Health Strength"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 140 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "33"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				drainShieldSkillButton
+			group				otherSkillsControls
+			text				"Drain Shield"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 160 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "34"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				jetpackSkillButton
+			group				otherSkillsControls
+			text				"Jetpack"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 180 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "35"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				senseHealthSkillButton
+			group				otherSkillsControls
+			text				"Sense Health"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 200 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "36"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				shieldHealSkillButton
+			group				otherSkillsControls
+			text				"Shield Heal"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 220 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "37"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				teamShieldHealSkillButton
+			group				otherSkillsControls
+			text				"Team Shield Heal"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 240 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "38"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				uniqueSkillButton
+			group				otherSkillsControls
+			text				"Unique Skill"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 260 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "39"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				forcePowerSkillButton
+			group				otherSkillsControls
+			text				"Force Power"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 280 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "55"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				improvementsSkillButton
+			group				otherSkillsControls
+			text				"Improvements"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 300 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "56"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				ammoSkillsButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				160 190 100 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				ammoSkillsButton
+			group				upControls
+			text				"Ammo"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 190 100 30
+			font				3
+			textscale			0.7
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Ammo skills"
+
+			mouseEnter 
+			{ 
+				show			ammoSkillsButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			ammoSkillsButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				show			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				show			levelammo ;
+				hide			levelitem ;
+				setitemcolor		upControls		forecolor 1 .682 0 1 ;
+				setitemcolor		ammoSkillsButton	forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				blasterPackSkillButton
+			group				ammoSkillsControls
+			text				"Blaster Pack"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 100 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "40"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				powerCellSkillButton
+			group				ammoSkillsControls
+			text				"Power Cell"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 120 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "41"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				metalBoltsSkillButton
+			group				ammoSkillsControls
+			text				"Metal Bolts"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 140 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "42"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				rocketsSkillButton
+			group				ammoSkillsControls
+			text				"Rockets"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 160 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "43"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				thermalsSkillButton
+			group				ammoSkillsControls
+			text				"Thermals"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 180 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "44"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				tripMinesSkillButton
+			group				ammoSkillsControls
+			text				"Trip Mines"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 200 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "45"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				detPacksSkillButton
+			group				ammoSkillsControls
+			text				"Det Packs"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 220 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "46"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				itemsSkillsButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				160 220 100 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				itemsSkillsButton
+			group				upControls
+			text				"Items"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 220 100 30
+			font				3
+			textscale			0.7
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Items skills"
+
+			mouseEnter 
+			{ 
+				show			itemsSkillsButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			itemsSkillsButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				show			itemsSkillsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				show			levelitem ;
+				setitemcolor		upControls		forecolor 1 .682 0 1 ;
+				setitemcolor		itemsSkillsButton	forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				binocularsSkillButton
+			group				itemsSkillsControls
+			text				"Binoculars"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 100 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "47"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				bactaCanisterSkillButton
+			group				itemsSkillsControls
+			text				"Bacta Canister"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 120 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "48"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				sentryGunSkillButton
+			group				itemsSkillsControls
+			text				"Sentry Gun"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 140 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "49"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				seekerDroneSkillButton
+			group				itemsSkillsControls
+			text				"Seeker Drone"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 160 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "50"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				ewebSkillButton
+			group				itemsSkillsControls
+			text				"E-Web"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 180 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "51"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				bigBactaSkillButton
+			group				itemsSkillsControls
+			text				"Big Bacta"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 200 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "52"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				forceFieldSkillButton
+			group				itemsSkillsControls
+			text				"Force Field"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 220 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "53"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				cloakSkillButton
+			group				itemsSkillsControls
+			text				"Cloak Item"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 240 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykup "54"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				skill1Value
+			group				levelforce
+			rect				380 100 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_1_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill2Value
+			group				levelforce
+			rect				380 120 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_2_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill3Value
+			group				levelforce
+			rect				380 140 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_3_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill4Value
+			group				levelforce
+			rect				380 160 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_4_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill5Value
+			group				levelforce
+			rect				380 180 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_5_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill6Value
+			group				levelforce
+			rect				380 200 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_6_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill7Value
+			group				levelforce
+			rect				380 220 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_7_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill8Value
+			group				levelforce
+			rect				380 240 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_8_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill9Value
+			group				levelforce
+			rect				380 260 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_9_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill10Value
+			group				levelforce
+			rect				530 100 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_10_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill11Value
+			group				levelforce
+			rect				530 120 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_11_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill12Value
+			group				levelforce
+			rect				530 140 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_12_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill13Value
+			group				levelforce
+			rect				530 160 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_13_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill14Value
+			group				levelforce
+			rect				530 180 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_14_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill15Value
+			group				levelforce
+			rect				530 200 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_15_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill16Value
+			group				levelforce
+			rect				530 220 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_16_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill17Value
+			group				levelforce
+			rect				530 240 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_17_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill18Value
+			group				levelforce
+			rect				530 260 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_18_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill19Value
+			group				levelweapon
+			rect				380 100 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_19_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill20Value
+			group				levelweapon
+			rect				380 120 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_20_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill21Value
+			group				levelweapon
+			rect				380 140 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_21_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill22Value
+			group				levelweapon
+			rect				380 160 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_22_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill23Value
+			group				levelweapon
+			rect				380 180 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_23_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill24Value
+			group				levelweapon
+			rect				380 200 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_24_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill25Value
+			group				levelweapon
+			rect				530 100 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_25_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill26Value
+			group				levelweapon
+			rect				530 120 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_26_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill27Value
+			group				levelweapon
+			rect				530 140 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_27_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill28Value
+			group				levelweapon
+			rect				530 160 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_28_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill29Value
+			group				levelweapon
+			rect				530 180 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_29_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill30Value
+			group				levelweapon
+			rect				530 200 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_30_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill31Value
+			group				levelother
+			rect				390 100 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_31_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill32Value
+			group				levelother
+			rect				390 120 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_32_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill33Value
+			group				levelother
+			rect				390 140 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_33_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill34Value
+			group				levelother
+			rect				390 160 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_34_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill35Value
+			group				levelother
+			rect				390 180 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_35_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill36Value
+			group				levelother
+			rect				390 200 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_36_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill37Value
+			group				levelother
+			rect				390 220 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_37_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill38Value
+			group				levelother
+			rect				390 240 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_38_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill39Value
+			group				levelother
+			rect				390 260 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_39_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill40Value
+			group				levelammo
+			rect				380 100 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_40_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill41Value
+			group				levelammo
+			rect				380 120 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_41_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill42Value
+			group				levelammo
+			rect				380 140 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_42_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill43Value
+			group				levelammo
+			rect				380 160 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_43_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill44Value
+			group				levelammo
+			rect				380 180 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_44_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill45Value
+			group				levelammo
+			rect				380 200 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_45_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill46Value
+			group				levelammo
+			rect				380 220 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_46_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill47Value
+			group				levelitem
+			rect				380 100 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_47_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill48Value
+			group				levelitem
+			rect				380 120 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_48_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill49Value
+			group				levelitem
+			rect				380 140 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_49_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill50Value
+			group				levelitem
+			rect				380 160 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_50_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill51Value
+			group				levelitem
+			rect				380 180 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_51_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill52Value
+			group				levelitem
+			rect				380 200 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_52_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill53Value
+			group				levelitem
+			rect				380 220 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_53_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill54Value
+			group				levelitem
+			rect				380 240 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_54_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill55Value
+			group				levelother
+			rect				390 280 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_55_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				skill56Value
+			group				levelother
+			rect				390 300 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_56_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				upAllSkillsButton
+			group				upControls
+			text				"All"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				160 250 100 30
+			font				3
+			textscale			0.7
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Upgrades all skills"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec 			"up all" ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide			upControls ;
+			}
+		}
+
+		itemDef 
+		{
+			name				charButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 128 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				charButton
+			group				mainButtons
+			text				"Chars"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				10 128 140 30
+			font				3
+			textscale			0.8
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Manage RPG Chars. To migrate chars, use /rpgchar on console"
+
+			mouseEnter 
+			{ 
+				show			charButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			charButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec 			"zykchars" ;
+				show 			charControls ;
+				hide			upControls ;
+				hide 			accountControls ;
+				hide 			loginAccountControls ;
+				hide			newAccountControls ;
+				hide			changePassControls ;
+				hide 			rpgClassControls ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			questControls ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				hide 			listControls ;
+				hide 			commandsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide 			settingsControls ;
+				hide 			stuffControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyItemsControls ;
+				hide 			buyMiscControls ;
+				hide 			cameraControls ;
+				hide 			gamesControls ;
+				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
+				setitemcolor		charButton		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				currentCharValue
+			group				charControls
+			rect				160 40 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.7
+			cvar				"ui_zyk_rpg_current_char" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char1Value
+			group				charControls
+			rect				160 70 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_1" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char1UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 70 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "1"
+			}
+		}
+
+		itemDef 
+		{
+			name				char2Value
+			group				charControls
+			rect				160 85 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_2" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char2UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 85 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "2"
+			}
+		}
+
+		itemDef 
+		{
+			name				char3Value
+			group				charControls
+			rect				160 100 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_3" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char3UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 100 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "3"
+			}
+		}
+
+		itemDef 
+		{
+			name				char4Value
+			group				charControls
+			rect				160 115 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_4" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char4UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 115 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "4"
+			}
+		}
+
+		itemDef 
+		{
+			name				char5Value
+			group				charControls
+			rect				160 130 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_5" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char5UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 130 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "5"
+			}
+		}
+
+		itemDef 
+		{
+			name				char6Value
+			group				charControls
+			rect				160 145 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_6" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char6UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 145 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "6"
+			}
+		}
+
+		itemDef 
+		{
+			name				char7Value
+			group				charControls
+			rect				160 160 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_7" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char7UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 160 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "7"
+			}
+		}
+
+		itemDef 
+		{
+			name				char8Value
+			group				charControls
+			rect				160 175 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_8" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char8UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 175 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "8"
+			}
+		}
+
+		itemDef 
+		{
+			name				char9Value
+			group				charControls
+			rect				160 190 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_9" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char9UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 190 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "9"
+			}
+		}
+
+		itemDef 
+		{
+			name				char10Value
+			group				charControls
+			rect				160 205 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_10" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char10UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 205 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "10"
+			}
+		}
+
+		itemDef 
+		{
+			name				char11Value
+			group				charControls
+			rect				160 220 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_11" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char11UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 220 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "11"
+			}
+		}
+
+		itemDef 
+		{
+			name				char12Value
+			group				charControls
+			rect				160 235 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_12" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char12UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 235 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "12"
+			}
+		}
+
+		itemDef 
+		{
+			name				char13Value
+			group				charControls
+			rect				160 250 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_13" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char13UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 250 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "13"
+			}
+		}
+
+		itemDef 
+		{
+			name				char14Value
+			group				charControls
+			rect				160 265 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_14" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char14UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 265 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "14"
+			}
+		}
+
+		itemDef 
+		{
+			name				char15Value
+			group				charControls
+			rect				160 280 210 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.6
+			cvar				"ui_zyk_rpg_char_15" 
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				char15UseButton
+			group				charControls
+			text				"Use"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 280 40 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Use this char"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharuse "15"
+			}
+		}
+
+		itemDef 
+		{
+			name				charEntry
+			group				charControls
+			style				1
+			descText			"Enter Char Name"
+			text				""
+			maxchars			30
+			font				2
+			textscale			.5
+			TYPE				4
+			cvar				"zykCharName" 
+			rect				160 330 190 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 1 1 1
+			backcolor			.25 .25 .25 .5
+			visible				0
+			border				1
+			bordercolor			.79 .64 .22 1
+			mouseenter 
+			{ 
+				setitemcolor	passEntry backcolor .25 .25 .25 .75 
+			}
+			mouseexit 
+			{ 
+				setitemcolor	passEntry backcolor .25 .25 .25 .5 
+			}
+		}
+
+		itemDef 
+		{
+			name				newCharDone
+			group				charControls
+			text				"Done"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				370 330 80 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Finished writing new char name"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykcharnew "" ;
+			}
+		}
+
+		itemDef 
+		{
+			name				questButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 188 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				universeButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				145 38 160 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				universeButton
+			group				questControls
+			text				"Universe (Main)"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				145 38 160 30
+			font				3
+			textscale			0.7
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Shows missions of the Universe (Main) Quest"
+
+			mouseEnter 
+			{ 
+				show			universeButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			universeButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				setitemcolor		questControls		forecolor 1 .682 0 1 ;
+				setitemcolor		universeButton		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				lightButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				145 68 160 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				lightButton
+			group				questControls
+			text				"Light"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				145 68 160 30
+			font				3
+			textscale			0.7
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Shows missions of the Light Quest"
+
+			mouseEnter 
+			{ 
+				show			lightButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			lightButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				hide			universeControls ;
+				show			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				setitemcolor		questControls		forecolor 1 .682 0 1 ;
+				setitemcolor		lightButton		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				darkButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				145 98 160 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				darkButton
+			group				questControls
+			text				"Dark"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				145 98 160 30
+			font				3
+			textscale			0.7
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Shows missions of the Dark Quest"
+
+			mouseEnter 
+			{ 
+				show			darkButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			darkButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				hide			universeControls ;
+				hide			lightControls ;
+				show			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				setitemcolor		questControls		forecolor 1 .682 0 1 ;
+				setitemcolor		darkButton		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				eternityButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				145 128 160 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				eternityButton
+			group				questControls
+			text				"Eternity"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				145 128 160 30
+			font				3
+			textscale			0.7
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Shows missions of the Eternity Quest"
+
+			mouseEnter 
+			{ 
+				show			eternityButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			eternityButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				show			eternityControls ;
+				hide			questMapsControls ;
+				setitemcolor		questControls		forecolor 1 .682 0 1 ;
+				setitemcolor		eternityButton		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				questMapsButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				145 158 160 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				questMapsButton
+			group				questControls
+			text				"Quest Maps"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				145 158 160 30
+			font				3
+			textscale			0.7
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Allows calling a vote to go to a quest map"
+
+			mouseEnter 
+			{ 
+				show			questMapsButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			questMapsButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				show			questMapsControls ;
+				setitemcolor		questControls		forecolor 1 .682 0 1 ;
+				setitemcolor		questMapsButton		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				universeQuestTitle
+			group				universeControls
+			text				"Universe Quest"
+			descText			"Shows missions of the Universe Quest"
+			type				0
+			font				3
+			textscale			.6
+			style				WINDOW_STYLE_FILLED
+			rect				310 38 110 20
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0	  
+		}
+
+		itemDef 
+		{
+			name				universeQuestChapter
+			group				universeControls
+			rect				310 68 260 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_universe_chapter" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				universeQuestText
+			group				universeControls
+			rect				310 88 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_universe_text" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				universeQuestText2
+			group				universeControls
+			rect				310 103 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_universe_text2" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				universeQuestText3
+			group				universeControls
+			rect				310 118 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_universe_text3" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				universeQuestText4
+			group				universeControls
+			rect				310 133 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_universe_text4" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				lightQuestTitle
+			group				lightControls
+			text				"Light Quest"
+			descText			"Shows missions of the Light Quest"
+			type				0
+			font				3
+			textscale			.6
+			style				WINDOW_STYLE_FILLED
+			rect				310 38 110 20
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0	  
+		}
+
+		itemDef 
+		{
+			name				lightQuestText
+			group				lightControls
+			rect				310 68 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_light_text" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				lightQuestText2
+			group				lightControls
+			rect				310 83 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_light_text2" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				lightQuestText3
+			group				lightControls
+			rect				310 98 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_light_text3" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				lightQuestText4
+			group				lightControls
+			rect				310 113 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_light_text4" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				lightQuestText5
+			group				lightControls
+			rect				310 128 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_light_text5" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				lightQuestText6
+			group				lightControls
+			rect				310 143 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_light_text6" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				lightQuestText7
+			group				lightControls
+			rect				310 158 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_light_text7" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				lightQuestText8
+			group				lightControls
+			rect				310 173 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_light_text8" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				lightQuestText9
+			group				lightControls
+			rect				310 188 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_light_text9" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				lightQuestText10
+			group				lightControls
+			rect				310 203 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_light_text10" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				lightQuestText11
+			group				lightControls
+			rect				310 218 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_light_text11" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				darkQuestTitle
+			group				darkControls
+			text				"Dark Quest"
+			descText			"Shows missions of the Dark Quest"
+			type				0
+			font				3
+			textscale			.6
+			style				WINDOW_STYLE_FILLED
+			rect				310 38 110 20
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0	  
+		}
+
+		itemDef 
+		{
+			name				darkQuestText
+			group				darkControls
+			rect				310 68 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_dark_text" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				darkQuestText2
+			group				darkControls
+			rect				310 83 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_dark_text2" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				darkQuestText3
+			group				darkControls
+			rect				310 98 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_dark_text3" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				darkQuestText4
+			group				darkControls
+			rect				310 113 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_dark_text4" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				darkQuestText5
+			group				darkControls
+			rect				310 128 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_dark_text5" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				darkQuestText6
+			group				darkControls
+			rect				310 143 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_dark_text6" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				darkQuestText7
+			group				darkControls
+			rect				310 158 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_dark_text7" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				darkQuestText8
+			group				darkControls
+			rect				310 173 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_dark_text8" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				darkQuestText9
+			group				darkControls
+			rect				310 188 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_dark_text9" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				darkQuestText10
+			group				darkControls
+			rect				310 203 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_dark_text10" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				darkQuestText11
+			group				darkControls
+			rect				310 218 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_dark_text11" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				eternityQuestTitle
+			group				eternityControls
+			text				"Eternity Quest"
+			descText			"Shows missions of the Eternity Quest"
+			type				0
+			font				3
+			textscale			.6
+			style				WINDOW_STYLE_FILLED
+			rect				310 38 110 20
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0	  
+		}
+
+		itemDef 
+		{
+			name				eternityQuestText
+			group				eternityControls
+			rect				310 68 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_eternity_text" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				eternityQuestText2
+			group				eternityControls
+			rect				310 83 260 15
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_eternity_text2" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				questmap1Button
+			group				questMapsControls
+			text				"yavin1b"
+			descText			"Change to yavin1b map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 38 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map yavin1b"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap2Button
+			group				questMapsControls
+			text				"yavin2"
+			descText			"Change to yavin2 map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 53 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map yavin2"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap3Button
+			group				questMapsControls
+			text				"t1_danger"
+			descText			"Change to t1_danger map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 68 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map t1_danger"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap4Button
+			group				questMapsControls
+			text				"t1_fatal"
+			descText			"Change to t1_fatal map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 83 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map t1_fatal"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap5Button
+			group				questMapsControls
+			text				"t1_sour"
+			descText			"Change to t1_sour map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 98 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map t1_sour"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap6Button
+			group				questMapsControls
+			text				"t1_surprise"
+			descText			"Change to t1_surprise map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 113 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map t1_surprise"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap7Button
+			group				questMapsControls
+			text				"hoth2"
+			descText			"Change to hoth2 map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 128 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map hoth2"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap8Button
+			group				questMapsControls
+			text				"hoth3"
+			descText			"Change to hoth3 map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 143 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map hoth3"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap9Button
+			group				questMapsControls
+			text				"t2_rogue"
+			descText			"Change to t2_rogue map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 158 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map t2_rogue"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap10Button
+			group				questMapsControls
+			text				"t2_trip"
+			descText			"Change to t2_trip map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 173 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map t2_trip"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap11Button
+			group				questMapsControls
+			text				"t3_bounty"
+			descText			"Change to t3_bounty map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 188 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map t3_bounty"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap12Button
+			group				questMapsControls
+			text				"t3_hevil"
+			descText			"Change to t3_hevil map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 203 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map t3_hevil"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap13Button
+			group				questMapsControls
+			text				"t3_rift"
+			descText			"Change to t3_rift map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 218 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map t3_rift"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap14Button
+			group				questMapsControls
+			text				"taspir1"
+			descText			"Change to taspir1 map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 233 140 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map taspir1"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap15Button
+			group				questMapsControls
+			text				"kor1"
+			descText			"Change to kor1 map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 248 140 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map kor1"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap16Button
+			group				questMapsControls
+			text				"mp/siege_korriban"
+			descText			"Change to mp/siege_korriban map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 263 140 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map mp/siege_korriban"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap17Button
+			group				questMapsControls
+			text				"mp/siege_desert"
+			descText			"Change to mp/siege_desert map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 278 140 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map mp/siege_desert"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap18Button
+			group				questMapsControls
+			text				"mp/duel5"
+			descText			"Change to mp/duel5 map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 293 140 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map mp/duel5"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap19Button
+			group				questMapsControls
+			text				"mp/duel8"
+			descText			"Change to mp/duel8 map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 308 140 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map mp/duel8"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				questmap20Button
+			group				questMapsControls
+			text				"mp/duel9"
+			descText			"Change to mp/duel9 map"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				310 323 110 15
+			textalign			ITEM_ALIGN_LEFT
+			textaligny			5
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"callvote map mp/duel9"
+				play			"sound/interface/button1.wav" ;
+				hide			questMapsControls ;
+				close			ingame_zykmod
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				commandsButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 158 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				commandsButton
+			group				mainButtons
+			text				"Buy/Sell"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				10 158 140 30
+			font				3
+			textscale			0.8
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Buy and Sell stuff"
+
+			mouseEnter 
+			{ 
+				show			commandsButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			commandsButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			commandsControls ;
+				hide			charControls ;
+				hide 			accountControls ;
+				hide 			loginAccountControls ;
+				hide			newAccountControls ;
+				hide			changePassControls ;
+				hide 			rpgClassControls ;
+				hide 			upControls ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			questControls ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				hide 			listControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide 			settingsControls ;
+				hide 			stuffControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyItemsControls ;
+				hide 			buyMiscControls ;
+				hide 			cameraControls ;
+				hide 			gamesControls ;
+				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
+				setitemcolor		commandsButton		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				buyActionButton
+			group				commandsControls
+			text				"Action"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				160 50 100 30
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Stuff will be bought or sold based on the action"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				uiScript		zykmod "buyaction"
+			}
+		}
+
+		itemDef 
+		{
+			name				buyActionValue
+			group				commandsControls
+			rect				240 56 100 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_buy_action_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				callsellerButton
+			group				commandsControls
+			text				"Call Seller"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 75 150 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Call the jawa seller to buy and sell stuff"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec			"callseller" ;
+				close			ingame_zykmod
+			}
+		}
+
+		itemDef 
+		{
+			name				stuffButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				160 100 150 24
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				stuffButton
+			group				commandsControls
+			text				"Stuff"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 100 150 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Shows upgrades bought from the jawa seller"
+
+			mouseEnter 
+			{ 
+				show			stuffButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			stuffButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			stuffControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyItemsControls ;
+				hide 			buyMiscControls ;
+				setitemcolor		commandsControls forecolor 1 .682 0 1 ;
+				setitemcolor		stuffButton forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				stuff0infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_0_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 50 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff1infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_1_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 65 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff2infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_2_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 80 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff3infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_3_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 95 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff4infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_4_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 110 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff5infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_5_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 125 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff6infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_6_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 140 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff7infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_7_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 155 190 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff8infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_8_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 170 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff9infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_9_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 185 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff10infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_10_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 200 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff11infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_11_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 215 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff12infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_12_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 230 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff13infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_13_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 245 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff14infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_14_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 260 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff15infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_15_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 275 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				stuff16infoValue
+			group				stuffControls
+			text				""
+			cvar				"ui_zyk_upgrade_16_value"
+			descText			""
+			type				ITEM_TYPE_EDITFIELD
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 290 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0  
+		}
+
+		itemDef 
+		{
+			name				buyButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				160 125 150 24
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				buyButton
+			group				commandsControls
+			text				"Upgrades"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 125 150 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Buy upgrades from the jawa seller"
+
+			mouseEnter 
+			{ 
+				show			buyButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			buyButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyItemsControls ;
+				hide 			buyMiscControls ;
+				hide 			stuffControls ;
+				setitemcolor		commandsControls forecolor 1 .682 0 1 ;
+				setitemcolor		buyButton forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				buy0Button
+			group				buyControls
+			text				"Holdable Items Upgrade - 3000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 50 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 40"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy1Button
+			group				buyControls
+			text				"Bounty Hunter Upgrade - 5000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 65 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 29"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy2Button
+			group				buyControls
+			text				"Stealth Attacker Upgrade - 5000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 80 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 8"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy3Button
+			group				buyControls
+			text				"Force Gunner Upgrade - 5000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 95 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 45"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy4Button
+			group				buyControls
+			text				"Impact Reducer - 4000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 110 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 15"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy5Button
+			group				buyControls
+			text				"Flame Thrower - 3000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 125 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 16"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy6Button
+			group				buyControls
+			text				"Power Cell Weapons Upgrade - 2000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 140 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 25"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy7Button
+			group				buyControls
+			text				"Blaster Pack Weapons Upgrade - 1800"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 155 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 26"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy8Button
+			group				buyControls
+			text				"Metal Bolts Weapons Upgrade - 2200"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 170 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 27"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy9Button
+			group				buyControls
+			text				"Rocket Upgrade - 2500"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 185 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 28"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy10Button
+			group				buyControls
+			text				"Stun Baton Upgrade - 1500"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 200 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 33"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy11Button
+			group				buyControls
+			text				"Armored Soldier Upgrade - 5000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 215 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 39"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy12Button
+			group				buyControls
+			text				"Jetpack Upgrade - 10000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 230 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 46"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy46Button
+			group				buyControls
+			text				"Force Guardian Upgrade - 5000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 245 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 47"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy53Button
+			group				buyControls
+			text				"Unique Ability 1 - 7000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 260 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 53"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy54Button
+			group				buyControls
+			text				"Unique Ability 2 - 7000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 275 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 54"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy55Button
+			group				buyControls
+			text				"Unique Ability 3 - 7000"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 290 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"buy 55"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buyAmmoButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				160 150 150 24
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				buyAmmoButton
+			group				commandsControls
+			text				"Ammo"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 150 150 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Buy or sell ammo from the jawa seller"
+
+			mouseEnter 
+			{ 
+				show			buyAmmoButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			buyAmmoButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			buyAmmoControls ;
+				hide 			buyControls ;
+				hide 			stuffControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyItemsControls ;
+				hide 			buyMiscControls ;
+				setitemcolor		commandsControls forecolor 1 .682 0 1 ;
+				setitemcolor		buyAmmoButton forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				buy13Button
+			group				buyAmmoControls
+			text				"Blaster Pack: Buy: 15 - Sell: 10"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 50 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "1"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy14Button
+			group				buyAmmoControls
+			text				"Power Cell: Buy: 20 - Sell: 15"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 65 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "2"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy15Button
+			group				buyAmmoControls
+			text				"Metal Bolts: Buy: 25 - Sell: 20"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 80 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "3"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy16Button
+			group				buyAmmoControls
+			text				"Rockets: Buy: 40 - Sell: 30"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 95 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "4"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy17Button
+			group				buyAmmoControls
+			text				"Thermals: Buy: 80 - Sell: 35"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 110 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "5"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy18Button
+			group				buyAmmoControls
+			text				"Trip Mines: Buy: 120 - Sell: 40"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 125 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "6"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy19Button
+			group				buyAmmoControls
+			text				"Det Packs: Buy: 150 - Sell: 45"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 140 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "7"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy45Button
+			group				buyAmmoControls
+			text				"Flame Thrower Fuel: Buy: 200 - Sell: no"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 155 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "30"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy47Button
+			group				buyAmmoControls
+			text				"Ammo All: Buy: 700 - Sell: no"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 170 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "48"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buyWeaponsButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				160 175 150 24
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				buyWeaponsButton
+			group				commandsControls
+			text				"Weapons"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 175 150 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Buy or sell weapons from the jawa seller"
+
+			mouseEnter 
+			{ 
+				show			buyWeaponsButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			buyWeaponsButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			buyWeaponsControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyItemsControls ;
+				hide 			buyMiscControls ;
+				hide 			stuffControls ;
+				setitemcolor		commandsControls forecolor 1 .682 0 1 ;
+				setitemcolor		buyWeaponsButton forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				buy20Button
+			group				buyWeaponsControls
+			text				"E11 Blaster Rifle: Buy: 100 - Sell: 50"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 50 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "17"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy21Button
+			group				buyWeaponsControls
+			text				"Disruptor: Buy: 120 - Sell: 60"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 65 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "18"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy22Button
+			group				buyWeaponsControls
+			text				"Repeater: Buy: 150 - Sell: 70"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 80 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "19"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy23Button
+			group				buyWeaponsControls
+			text				"Rocket Launcher: Buy: 200 - Sell: 100"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 95 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "20"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy24Button
+			group				buyWeaponsControls
+			text				"Bowcaster: Buy: 110 - Sell: 50"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 110 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "21"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy25Button
+			group				buyWeaponsControls
+			text				"Blaster Pistol: Buy: 90 - Sell: 45"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 125 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "22"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy26Button
+			group				buyWeaponsControls
+			text				"Flechette: Buy: 170 - Sell: 90"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 140 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "23"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy27Button
+			group				buyWeaponsControls
+			text				"Concussion Rifle: Buy: 300 - Sell: 150"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 155 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "24"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy28Button
+			group				buyWeaponsControls
+			text				"Stun Baton: Buy: 20 - Sell: 10"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 170 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "32"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy29Button
+			group				buyWeaponsControls
+			text				"DEMP2: Buy: 150 - Sell: 90"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 185 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "36"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy30Button
+			group				buyWeaponsControls
+			text				"Bryar Pistol: Buy: 90 - Sell: 45"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 200 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "37"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buyItemsButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				160 200 150 24
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				buyItemsButton
+			group				commandsControls
+			text				"Items"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 200 150 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Buy or sell items from the jawa seller"
+
+			mouseEnter 
+			{ 
+				show			buyItemsButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			buyItemsButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			buyItemsControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyMiscControls ;
+				hide 			stuffControls ;
+				setitemcolor		commandsControls forecolor 1 .682 0 1 ;
+				setitemcolor		buyItemsButton forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				buy31Button
+			group				buyItemsControls
+			text				"Shield Booster: Buy: 150 - Sell: no"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 50 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "9"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy32Button
+			group				buyItemsControls
+			text				"Sentry Gun: Buy: 170 - Sell: 60"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 65 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "10"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy33Button
+			group				buyItemsControls
+			text				"Seeker Drone: Buy: 180 - Sell: 65"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 80 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "11"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy34Button
+			group				buyItemsControls
+			text				"Big Bacta: Buy: 200 - Sell: 70"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 95 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "12"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy35Button
+			group				buyItemsControls
+			text				"Force Field: Buy: 300 - Sell: 80"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 110 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "13"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy38Button
+			group				buyItemsControls
+			text				"Bacta Canister: Buy: 100 - Sell: 20"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 125 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "34"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy39Button
+			group				buyItemsControls
+			text				"E-Web: Buy: 150 - Sell: 30"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 140 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "35"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy40Button
+			group				buyItemsControls
+			text				"Binoculars: Buy: 10 - Sell: 5"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 155 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "38"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy41Button
+			group				buyItemsControls
+			text				"Jetpack: Buy: 50 - Sell: no"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 170 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "41"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy42Button
+			group				buyItemsControls
+			text				"Cloak Item: Buy: 50 - Sell: 20"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 185 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "42"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buyMiscButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				160 225 150 24
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				buyMiscButton
+			group				commandsControls
+			text				"Misc"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 225 150 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Buy or sell misc items from the jawa seller"
+
+			mouseEnter 
+			{ 
+				show			buyMiscButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			buyMiscButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			buyMiscControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyItemsControls ;
+				hide 			stuffControls ;
+				setitemcolor		commandsControls forecolor 1 .682 0 1 ;
+				setitemcolor		buyMiscButton forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				buy36Button
+			group				buyMiscControls
+			text				"Ysalamiri: Buy: 200 - Sell: 50"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 50 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "14"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy37Button
+			group				buyMiscControls
+			text				"Jetpack Fuel: Buy: 200 - Sell: no"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 65 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "31"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy43Button
+			group				buyMiscControls
+			text				"Force Boon: Buy: 200 - Sell: 50"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 80 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "43"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy44Button
+			group				buyMiscControls
+			text				"Magic Potion: Buy: 50 - Sell: no"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 95 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "44"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy48Button
+			group				buyMiscControls
+			text				"Saber Armor: Buy: 2000 - Sell: no"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 110 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "49"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy49Button
+			group				buyMiscControls
+			text				"Gun Armor: Buy: 2000 - Sell: no"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 125 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "50"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy50Button
+			group				buyMiscControls
+			text				"Healing Crystal: Buy: 2000 - Sell: no"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 140 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "51"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy51Button
+			group				buyMiscControls
+			text				"Energy Crystal: Buy: 2000 - Sell: no"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 155 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "52"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				buy56Button
+			group				buyMiscControls
+			text				"Book of Riddles: Buy: 100000 - Sell: no"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				320 170 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				uiScript		zykbuy "56"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				gamesButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 188 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				gamesButton
+			group				mainButtons
+			text				"Games"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				10 188 140 30
+			font				3
+			textscale			0.8
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Play mini-games"
+
+			mouseEnter 
+			{ 
+				show			gamesButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			gamesButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			gamesControls ;
+				hide			charControls ;
+				hide 			accountControls ;
+				hide 			loginAccountControls ;
+				hide			newAccountControls ;
+				hide			changePassControls ;
+				hide 			rpgClassControls ;
+				hide 			upControls ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			questControls ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				hide 			listControls ;
+				hide 			commandsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide 			stuffControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyItemsControls ;
+				hide 			buyMiscControls ;
+				hide 			cameraControls ;
+				hide 			settingsControls ;
+				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
+				setitemcolor		gamesButton 		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				guardianButton
+			group				gamesControls
+			text				"Guardian Quest"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 50 160 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Starts mini-quest against the Guardian of Map"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec			"guardianquest" ;
+				close			ingame_zykmod ;
+			}
+		}
+
+		itemDef 
+		{
+			name				bountyButton
+			group				gamesControls
+			text				"Bounty Quest"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 75 160 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Starts the bounty mini-quest by setting the target player"
+  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec			"bountyquest" ;
+				close			ingame_zykmod ;
+			}
+		}
+
+		itemDef 
+		{
+			name				rpgLmsButton
+			group				gamesControls
+			text				"RPG LMS"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 100 160 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Last Man Standing battle with RPG players"
+  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec			"rpglmsmode" ;
+				close			ingame_zykmod ;
+			}
+		}
+
+		itemDef 
+		{
+			name				racemodeButton
+			group				gamesControls
+			text				"Racing Mode"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 125 150 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Race with swoops at t2_trip map or with tauntauns at t3_stamp map"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec			"racemode" ;
+				close			ingame_zykmod ;
+			}
+		}
+
+		itemDef 
+		{
+			name				duelTournamentButton
+			group				gamesControls
+			text				"Duel Tournament"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 150 150 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Joins the Duel Tournament"
+  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec			"duelmode" ;
+				close			ingame_zykmod ;
+			}
+		}
+
+		itemDef 
+		{
+			name				sniperBattleButton
+			group				gamesControls
+			text				"Sniper Battle"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 175 150 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Joins the Sniper Battle"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec			"snipermode" ;
+				close			ingame_zykmod ;
+			}
+		}
+
+		itemDef 
+		{
+			name				meleeBattleButton
+			group				gamesControls
+			text				"Melee Battle"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				160 200 150 24
+			font				3
+			textscale			0.6
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Joins the Melee Battle"
+	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec			"meleemode" ;
+				close			ingame_zykmod ;
+			}
+		}
+
+		itemDef 
+		{
+			name				settingsButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 278 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				setting0Value
+			group				settingsControls
+			rect				410 50 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_0_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting1Value
+			group				settingsControls
+			rect				410 65 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_1_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting2Value
+			group				settingsControls
+			rect				410 80 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_2_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting3Value
+			group				settingsControls
+			rect				410 95 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_3_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting4Value
+			group				settingsControls
+			rect				410 110 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_4_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting5Value
+			group				settingsControls
+			rect				410 125 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_5_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting6Button
+			group				settingsControls
+			text				"Allow Force Powers from allies"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				180 140 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"settings 6"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				setting6Value
+			group				settingsControls
+			rect				410 140 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_6_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting7Button
+			group				settingsControls
+			text				"Show magic cast in chat"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				180 155 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"settings 7"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				setting7Value
+			group				settingsControls
+			rect				410 155 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_7_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting8Button
+			group				settingsControls
+			text				"Starting Single Saber Style"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				180 170 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"settings 8"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				setting8Value
+			group				settingsControls
+			rect				410 170 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_8_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting9Button
+			group				settingsControls
+			text				"Allow Screen Message"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				180 185 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"settings 9"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				setting9Value
+			group				settingsControls
+			rect				410 185 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_9_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting10Button
+			group				settingsControls
+			text				"Use healing force only at allied players"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				180 200 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"settings 10"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				setting10Value
+			group				settingsControls
+			rect				410 200 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_10_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting11Button
+			group				settingsControls
+			text				"Start With Saber"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				180 215 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"settings 11"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				setting11Value
+			group				settingsControls
+			rect				410 215 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_11_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting12Button
+			group				settingsControls
+			text				"Jetpack"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				180 230 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"settings 12"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				setting12Value
+			group				settingsControls
+			rect				410 230 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_12_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting13Button
+			group				settingsControls
+			text				"Admin Protect"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				180 245 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"settings 13"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				setting13Value
+			group				settingsControls
+			rect				410 245 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_13_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting14Button
+			group				settingsControls
+			text				"Boss Battle Music"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				180 260 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"settings 14"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				setting14Value
+			group				settingsControls
+			rect				410 260 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_14_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				setting15Button
+			group				settingsControls
+			text				"Difficulty"
+			descText			""
+			type				1
+			font				3
+			textscale			.4
+			style				WINDOW_STYLE_FILLED
+			rect				180 275 180 12
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"settings 15"
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				setting15Value
+			group				settingsControls
+			rect				410 275 140 12
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_setting_15_value" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.4
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				cameraButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 218 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				cameraButton
+			group				mainButtons
+			text				"Camera"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				10 218 140 30
+			font				3
+			textscale			0.8
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Camera controls"
+
+			mouseEnter 
+			{ 
+				show			cameraButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			cameraButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			cameraControls ;
+				hide			charControls ;
+				hide 			accountControls ;
+				hide 			loginAccountControls ;
+				hide			newAccountControls ;
+				hide			changePassControls ;
+				hide 			rpgClassControls ;
+				hide 			upControls ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			questControls ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				hide 			listControls ;
+				hide 			commandsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide 			stuffControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyItemsControls ;
+				hide 			buyMiscControls ;
+				hide 			settingsControls ;
+				hide 			gamesControls ;
+				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
+				setitemcolor		cameraButton	forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				cameraFov
+			group				cameraControls
+			type				ITEM_TYPE_SLIDER
+			text				"FOV                       "
+			cvarfloat			"cg_fov" 80 10 130
+			rect				180 50 200 25
+	   		textalign			ITEM_ALIGN_LEFT
+			font 				4
+			textscale 			1
+			forecolor		.615 .615 .956 1
+			visible			0
+			descText			""
+			action 
+			{ 
+				play			"sound/interface/button1"
+			}
+		}
+
+		itemDef 
+		{
+			name				cameraFovDefault
+			group				cameraControls
+			text				"Default"
+			descText			"Reset FOV value to default"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				390 50 90 25
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"cg_fov 80" ;
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				cameraRange
+			group				cameraControls
+			type				ITEM_TYPE_SLIDER
+			text				"Range                   "
+			cvarfloat			"cg_thirdpersonrange" 80 20 960
+			rect				180 80 200 25
+	   		textalign			ITEM_ALIGN_LEFT
+			font 				4
+			textscale 			1
+			forecolor		.615 .615 .956 1
+			visible			0
+			descText			""
+			action 
+			{ 
+				play			"sound/interface/button1"
+			}
+		}
+
+		itemDef 
+		{
+			name				cameraRangeDefault
+			group				cameraControls
+			text				"Default"
+			descText			"Reset Range value to default"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				390 80 90 25
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"cg_thirdpersonrange 80" ;
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				cameraAngle
+			group				cameraControls
+			type				ITEM_TYPE_SLIDER
+			text				"Angle                    "
+			cvarfloat			"cg_thirdpersonangle" 0 0 360
+			rect				180 110 200 25
+	   		textalign			ITEM_ALIGN_LEFT
+			font 				4
+			textscale 			1
+			forecolor		.615 .615 .956 1
+			visible			0
+			descText			""
+			action 
+			{ 
+				play			"sound/interface/button1"
+			}
+		}
+
+		itemDef 
+		{
+			name				cameraAngleDefault
+			group				cameraControls
+			text				"Default"
+			descText			"Reset Angle value to default"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				390 110 90 25
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"cg_thirdpersonangle 0" ;
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				cameraPitchOffset
+			group				cameraControls
+			type				ITEM_TYPE_SLIDER
+			text				"Pitch Offset          "
+			cvarfloat			"cg_thirdpersonpitchoffset" 0 -180 180
+			rect				180 140 200 25
+	   		textalign			ITEM_ALIGN_LEFT
+			font 				4
+			textscale 			1
+			forecolor		.615 .615 .956 1
+			visible			0
+			descText			""
+			action 
+			{ 
+				play			"sound/interface/button1"
+			}
+		}
+
+		itemDef 
+		{
+			name				cameraPitchDefault
+			group				cameraControls
+			text				"Default"
+			descText			"Reset Pitch Offset value to default"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				390 140 90 25
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"cg_thirdpersonpitchoffset 0" ;
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				cameraHorizontalOffset
+			group				cameraControls
+			type				ITEM_TYPE_SLIDER
+			text				"Horizontal Offset"
+			cvarfloat			"cg_thirdpersonhorzoffset" 0 -35 35
+			rect				180 170 200 25
+	   		textalign			ITEM_ALIGN_LEFT
+			font 				4
+			textscale 			1
+			forecolor		.615 .615 .956 1
+			visible			0
+			descText			""
+			action 
+			{ 
+				play			"sound/interface/button1"
+			}
+		}
+
+		itemDef 
+		{
+			name				cameraHorzDefault
+			group				cameraControls
+			text				"Default"
+			descText			"Reset Horizontal Offset value to default"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				390 170 90 25
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"cg_thirdpersonhorzoffset 0" ;
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				cameraVerticalOffset
+			group				cameraControls
+			type				ITEM_TYPE_SLIDER
+			text				"Vertical Offset     "
+			cvarfloat			"cg_thirdpersonvertoffset" 16 -64 128
+			rect				180 200 200 25
+	   		textalign			ITEM_ALIGN_LEFT
+			font 				4
+			textscale 			1
+			forecolor		.615 .615 .956 1
+			visible			0
+			descText			""
+			action 
+			{ 
+				play			"sound/interface/button1"
+			}
+		}
+
+		itemDef 
+		{
+			name				cameraVertDefault
+			group				cameraControls
+			text				"Default"
+			descText			"Reset Vertical Offset value to default"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				390 200 90 25
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"cg_thirdpersonvertoffset 16" ;
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				cameraDamp
+			group				cameraControls
+			type				ITEM_TYPE_SLIDER
+			text				"Camera Damp      "
+			cvarfloat			"cg_thirdpersoncameradamp" 0.3 0 1
+			rect				180 230 200 25
+	   		textalign			ITEM_ALIGN_LEFT
+			font 				4
+			textscale 			1
+			forecolor		.615 .615 .956 1
+			visible			0
+			descText			""
+			action 
+			{ 
+				play			"sound/interface/button1"
+			}
+		}
+
+		itemDef 
+		{
+			name				cameraDampDefault
+			group				cameraControls
+			text				"Default"
+			descText			"Reset Camera Damp value to default"
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				390 230 90 25
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{
+				exec			"cg_thirdpersoncameradamp 0.3" ;
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+
+		itemDef 
+		{
+			name				cameraDefault
+			group				cameraControls
+			text				"Default"
+			descText			"Reset camera values to default"
+			type				1
+			font				3
+			textscale			.7
+			style				WINDOW_STYLE_FILLED
+			rect				180 280 90 30
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+			action 
+			{ 
+				exec			"cg_fov 80" ;
+				exec			"cg_thirdpersonrange 80" ;
+				exec			"cg_thirdpersonangle 0" ;
+				exec			"cg_thirdpersonpitchoffset 0" ;
+				exec			"cg_thirdpersonhorzoffset 0" ;
+				exec			"cg_thirdpersonvertoffset 16" ;
+				exec			"cg_thirdpersoncameradamp 0.3" ;
+				play			"sound/interface/button1.wav" ;
+			}  	  
+		}
+	}
+}

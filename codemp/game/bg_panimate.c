@@ -2882,6 +2882,10 @@ setAnimLegs:
 					else if (ps->fd.forcePowerLevel[FP_SPEED] == FORCE_LEVEL_4){
 						ps->legsTimer /= 2.9;
 					}
+					else if (ps->fd.forcePowerLevel[FP_SPEED] == FORCE_LEVEL_5) {
+						// GalaxyRP (Alex): [Force Powers] Running faster, so move legs faster.
+						ps->legsTimer /= 3.3;
+					}
 				}
 			}
 		}

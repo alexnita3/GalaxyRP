@@ -1148,7 +1148,6 @@ void finish_spawning_turretG2( gentity_t *base )
 	}
 
 	G_SpawnFloat( "shotspeed", "0", &base->mass );
-
 	if ( (base->spawnflags&SPF_TURRETG2_TURBO) )
 	{
 		if ( !base->random )

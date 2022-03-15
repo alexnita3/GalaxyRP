@@ -1211,8 +1211,7 @@ qboolean NPC_ValidEnemy( gentity_t *ent )
 
 	//if haven't seen him in a while, give up
 	//if ( NPCInfo->enemyLastSeenTime != 0 && level.time - NPCInfo->enemyLastSeenTime > 7000 )//FIXME: make a stat?
-		//return qfalse;
-
+	//	return qfalse;
 	if ( entTeam == NPCS.NPC->client->enemyTeam //simplest case: they're on my enemy team
 		|| (NPCS.NPC->client->enemyTeam == NPCTEAM_FREE && ent->client->NPC_class != NPCS.NPC->client->NPC_class )//I get mad at anyone and this guy isn't the same class as me
 		|| (ent->client->NPC_class == CLASS_WAMPA && ent->enemy )//a rampaging wampa

@@ -1,0 +1,429 @@
+
+player
+{
+	playerModel	jedi_hm
+	weapon	WP_NONE
+	FP_LEVITATION	3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	scale 		90
+	health		100
+	snd		jaden_male
+	sndcombat	jaden_male
+	sndjedi	jaden_male
+	rank		crewman
+	playerTeam	TEAM_PLAYER
+	enemyTeam	TEAM_ENEMY
+	class		CLASS_PLAYER
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	150
+}
+
+assassin_droid
+{
+	playerModel rockettrooper
+	weapon		WP_BLASTER
+	health		150
+	headPitchRangeDown 30
+	reactions	3
+	aim			1
+	move		3
+	aggression	3
+	evasion		1
+	intelligence	5
+	rank		crewman
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_STORMTROOPER
+	height		64
+	crouchheight 48
+	walkSpeed	51
+	runSpeed	200
+	snd		probe
+	yawspeed	70
+	walkSpeed	55
+	runSpeed	200
+}
+
+old_assassin_droid
+{
+	playerModel assassin_droid
+	weapon	WP_BLASTER
+	health		150
+	headPitchRangeDown 30
+	reactions	3
+	aim			1
+	move		3
+	aggression	3
+	evasion		1
+	intelligence	5
+	rank		crewman
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_STORMTROOPER
+	height		64
+	crouchheight 48
+	walkSpeed	51
+	runSpeed	200
+	snd		shadow1
+	yawspeed	70
+	walkSpeed	55
+	runSpeed	200
+}
+
+hazardtrooper
+{
+	playerModel 	rockettrooper
+	weapon		WP_REPEATER
+	health		150
+	headPitchRangeDown 30
+	reactions	3
+	aim			1
+	move		3
+	aggression	3
+	evasion		1
+	intelligence	5
+	rank		crewman
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_HAZARD_TROOPER
+	height		80
+	crouchheight 48
+	snd			st1
+	sndcombat	st1
+	sndextra	st1
+	yawspeed	100
+	walkSpeed	55
+	runSpeed	65
+}
+
+hazardtrooperconcussion
+{
+	playerModel 	rockettrooper
+	weapon		WP_CONCUSSION
+	health		150
+	headPitchRangeDown 30
+	reactions	3
+	aim			1
+	move		3
+	aggression	3
+	evasion		1
+	intelligence	5
+	rank		crewman
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_HAZARD_TROOPER
+	height		80
+	crouchheight 48
+	snd			st1
+	sndcombat	st1
+	sndextra	st1
+	yawspeed	100
+	walkSpeed	55
+	runSpeed	65
+}
+
+hazardtrooperofficer
+{
+	playerModel 	rockettrooper
+	weapon		WP_FLECHETTE
+	health		150
+	headPitchRangeDown 30
+	reactions	4
+	aim			3
+	move		4
+	aggression	5
+	evasion		2
+	intelligence	5
+	rank		lt
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_HAZARD_TROOPER
+	height		64
+	crouchheight 48
+	snd			stofficer1
+	sndcombat	stofficer1
+	sndextra	stofficer1
+	yawspeed	100
+	walkSpeed	55
+	runSpeed	65
+}
+
+old_hazardtrooper
+{
+	playerModel 	hazardtrooper
+	weapon		WP_REPEATER
+	health		150
+	headPitchRangeDown 30
+	reactions	3
+	aim			1
+	move		3
+	aggression	3
+	evasion		1
+	intelligence	5
+	rank		crewman
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_HAZARD_TROOPER
+	height		80
+	crouchheight 48
+	snd			st1
+	sndcombat	st1
+	sndextra	st1
+	yawspeed	100
+	walkSpeed	55
+	runSpeed	65
+}
+
+old_hazardtrooperconcussion
+{
+	playerModel 	hazardtrooper
+	weapon		WP_CONCUSSION
+	health		150
+	headPitchRangeDown 30
+	reactions	3
+	aim			1
+	move		3
+	aggression	3
+	evasion		1
+	intelligence	5
+	rank		crewman
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_HAZARD_TROOPER
+	height		80
+	crouchheight 48
+	snd			st1
+	sndcombat	st1
+	sndextra	st1
+	yawspeed	100
+	walkSpeed	55
+	runSpeed	65
+}
+
+old_hazardtrooperofficer
+{
+	playerModel 	hazardtrooper
+	weapon		WP_FLECHETTE
+	health		150
+	headPitchRangeDown 30
+	reactions	4
+	aim			3
+	move		4
+	aggression	5
+	evasion		2
+	intelligence	5
+	rank		lt
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_HAZARD_TROOPER
+	height		64
+	crouchheight 48
+	snd			stofficer1
+	sndcombat	stofficer1
+	sndextra	stofficer1
+	yawspeed	100
+	walkSpeed	55
+	runSpeed	65
+}
+
+saber_droid_training
+{
+	playerModel	shadowtrooper
+	saber		droid
+	weapon	WP_SABER
+	saberStyle	1
+	FP_SABER_DEFENSE 1
+	FP_SABER_OFFENSE 1
+	reactions	1
+	aim			1
+	move		1
+	aggression	1
+	evasion		1
+	intelligence	1
+	hfov		120
+	vfov		120
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_SHADOWTROOPER
+	snd			saber_droid
+	sndcombat	saber_droid
+	sndjedi		saber_droid
+	yawSpeed	100
+	walkSpeed	60
+	runSpeed	200
+	health		50
+}
+
+saber_droid
+{
+	playerModel	shadowtrooper
+	saber		droid
+	weapon	WP_SABER
+	saberStyle	1
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	rank		ensign
+	reactions	1
+	aim			1
+	move		1
+	aggression	1
+	evasion		1
+	intelligence	1
+	hfov		120
+	vfov		120
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_SHADOWTROOPER
+	snd			saber_droid
+	sndcombat	saber_droid
+	sndjedi		saber_droid
+	yawSpeed	100
+	walkSpeed	60
+	runSpeed	200
+	health		300
+}
+
+tusken
+{
+	playerModel	tusken
+	weapon		WP_STUN_BATON
+	weapon		WP_MELEE
+	reactions	3
+	aim			1
+	move		3
+	aggression	3
+	evasion		1
+	intelligence	5
+	health 		50
+	rank		crewman
+	playerTeam	TEAM_FREE
+	enemyTeam	TEAM_FREE
+	class		CLASS_TUSKEN
+	snd			tusken
+	sndcombat	tusken
+	sndextra	tusken
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	200
+}
+
+tuskensniper
+{
+	playerModel	tusken
+	weapon		WP_DISRUPTOR
+	altFire		1
+	reactions	3
+	aim			1
+	move		3
+	aggression	3
+	evasion		1
+	intelligence	5
+	health 		50
+	rank		crewman
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_TUSKEN
+	snd			tusken
+	sndcombat	tusken
+	sndextra	tusken
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	200
+	visRange	3000
+}
+
+Noghri
+{
+	playerModel	noghri
+	weapon	WP_REPEATER
+	reactions	4
+	aim		3
+	move		5
+	aggression	3
+	evasion	5
+	intelligence	3
+	rank		crewman
+	health 	100
+	playerTeam	TEAM_FREE
+	enemyTeam	TEAM_FREE
+	class		CLASS_NOGHRI
+	snd		noghri1
+	sndcombat	noghri1
+	sndextra	noghri1
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	200
+	dismemberProbHead	0
+	dismemberProbArms	10
+	dismemberProbLegs	1
+	dismemberProbHands	20
+	dismemberProbWaist	0
+}
+
+saboteur
+{
+	playerModel	saboteur
+	weapon	WP_BLASTER
+	altFire	1
+	rank		crewman
+	reactions	5
+	aim		3
+	move		5
+	aggression	5
+	evasion		4
+	intelligence	5
+	hfov		160
+	vfov		160
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_SABOTEUR
+	snd		sab1
+	sndcombat	sab1
+	sndextra	sab1
+	yawSpeed	140
+	walkSpeed	55
+	runSpeed	200
+	health	200
+	dismemberProbHead	0
+	dismemberProbArms	10
+	dismemberProbLegs	0
+	dismemberProbHands	20
+	dismemberProbWaist	0
+}
+
+saboteurcommando
+{
+	playerModel	saboteur
+	weapon	WP_BLASTER
+	altFire	1
+	rank		crewman
+	reactions	5
+	aim		3
+	move		5
+	aggression	5
+	evasion		4
+	intelligence	5
+	hfov		160
+	vfov		160
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_SABOTEUR
+	snd		sab2
+	sndcombat	sab2
+	sndextra	sab2
+	yawSpeed	140
+	walkSpeed	55
+	runSpeed	200
+	health	200
+	dismemberProbHead	0
+	dismemberProbArms	10
+	dismemberProbLegs	0
+	dismemberProbHands	20
+	dismemberProbWaist	0
+}

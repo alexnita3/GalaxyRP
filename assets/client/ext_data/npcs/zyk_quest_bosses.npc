@@ -1,0 +1,642 @@
+
+guardian_boss_1
+{
+	playerModel	noghri
+	weapon		WP_SABER
+	saber		single_1
+	saberStyle	2
+	saberStyle	3
+	saberStyle	5
+	FP_LEVITATION	3
+	FP_PUSH			3
+	FP_PULL			3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	health 		4000
+	rank		captain
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		noghri1
+	sndcombat	noghri1
+	sndjedi		noghri1
+	sndextra	noghri1
+	yawspeed	90
+	walkSpeed	80
+	runSpeed	270
+}
+
+guardian_boss_2
+{
+	playerModel	rockettrooper
+	weapon	WP_FLECHETTE
+	weapon	WP_DEMP2
+	weapon	WP_REPEATER
+	altFire		1
+	rank		captain
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	hfov		160
+	vfov		160
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_STORMTROOPER
+	snd		st1
+	height		80
+	crouchheight 48
+	yawSpeed	140
+	walkSpeed	80
+	runSpeed	250
+	health		7000
+}
+
+guardian_boss_3
+{
+	playerModel howler
+	weapon		WP_MELEE
+	height		48
+	crouchheight	48
+	width 16
+	scale		150
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_FREE
+	class		CLASS_WAMPA
+	yawSpeed	100
+	runSpeed	320
+	walkSpeed	140
+	hFOV		120
+	vfov		45
+	snd		howler
+	sndjedi		howler
+	sndcombat	howler
+	sndextra	howler
+	health		6000
+}
+
+guardian_boss_4
+{
+	playerModel	human_merc
+	customSkin	racto
+	weapon	WP_DISRUPTOR
+	weapon	WP_FLECHETTE
+	weapon	WP_CONCUSSION
+	altFire		1
+	health		6000
+	headPitchRangeDown 30
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_STORMTROOPER
+	height		64
+	crouchheight 48
+	snd		racto
+	sndcombat	racto
+	sndextra	racto
+	yawspeed	120
+	walkSpeed	100
+	runSpeed	270
+}
+
+guardian_boss_5
+{
+	playerModel	boba_fett
+	altFire		1
+	weapon		WP_DISRUPTOR
+	weapon		WP_FLECHETTE
+	weapon		WP_CONCUSSION
+	FP_LEVITATION	3
+	health		5000
+	headPitchRangeDown 30
+	reactions		5
+	aim			5
+	move			5
+	aggression		5
+	evasion			5
+	intelligence	5
+	earshot			2048
+	visrange		4096
+	hfov			120
+	vfov			100
+	rank			commander
+	playerTeam		TEAM_ENEMY
+	enemyTeam		TEAM_PLAYER
+	class			CLASS_BOBAFETT
+	walkSpeed		80
+	runSpeed		250
+	snd			boba
+	sndcombat		boba
+	sndextra		boba
+	yawspeed		180
+}
+
+guardian_boss_6
+{
+	playerModel	tusken
+	customSkin	red
+	weapon	WP_SABER
+	weapon	WP_FLECHETTE
+	saber		desann
+	saberStyle	4
+	saberStyle	2
+	saberStyle	3
+	FP_LEVITATION	3
+	FP_PUSH		3
+	FP_PULL		3
+	FP_LIGHTNING	3
+	FP_GRIP		3
+	FP_RAGE		3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	health	4000
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		tusken
+	sndcombat	tusken
+	sndjedi		tusken
+	sndextra	tusken
+	yawspeed	140
+	walkSpeed	100
+	runSpeed	270
+}
+
+guardian_boss_7
+{
+	playermodel	sentry
+	weapon		WP_NONE
+	health 		7000
+	scale		150
+	height		72
+	width		36
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_SENTRY
+	yawSpeed	120
+	runSpeed	500
+	walkSpeed	250
+	hFOV		120
+	vfov		160
+	snd		sentry
+}
+
+guardian_boss_8
+{
+	playerModel	human_merc
+	weapon		WP_DISRUPTOR
+	weapon		WP_FLECHETTE
+	weapon		WP_CONCUSSION
+	altFire		1
+	health		7000
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	height		64
+	crouchheight 48
+	snd		humanmerc2
+	sndcombat	humanmerc2
+	sndjedi		humanmerc2
+	sndextra	humanmerc2
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	90
+}
+
+guardian_boss_9
+{
+	playerModel	monmothma
+	weapon	WP_SABER
+	saber	kyle
+	saber2	kyle
+	saberStyle	6
+	FP_HEAL			3
+	FP_LEVITATION	3
+	FP_SPEED		2
+	FP_PUSH			3
+	FP_PULL			3
+	FP_PROTECT		3
+	FP_ABSORB		3
+	FP_TELEPATHY	3
+	FP_SEE			3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	health	5000
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		monmothma
+	sndcombat	monmothma
+	sndjedi		monmothma
+	sndextra	monmothma
+	yawspeed	150
+	walkSpeed	140
+	runSpeed	280
+}
+
+guardian_boss_10
+{
+	playerModel	tusken
+	customSkin	blue
+	weapon	WP_BOWCASTER
+	FP_LEVITATION	3
+	FP_PUSH		3
+	FP_PULL		3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	health	4000
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		tusken
+	sndcombat	tusken
+	sndjedi		tusken
+	sndextra	tusken
+	yawspeed	90
+	walkSpeed	70
+	runSpeed	190
+}
+
+guardian_of_darkness
+{
+	playerModel	jedi_zf
+	customSkin	head_B1|torso_A1|lower_D1
+	customRGBA	30 30 40
+	weapon	WP_SABER
+	saber	tavion
+	saber2	tavion
+	saberStyle	6
+	FP_DRAIN		3
+	FP_LEVITATION	3
+	FP_SPEED		2
+	FP_PUSH			3
+	FP_PULL			3
+	FP_GRIP	3
+	FP_RAGE		3
+	FP_LIGHTNING		3
+	FP_SEE			3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	health	5000
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		tavion
+	sndcombat	tavion
+	sndjedi		tavion
+	sndextra	tavion
+	yawspeed	140
+	walkSpeed	120
+	runSpeed	250
+}
+
+guardian_of_eternity
+{
+	playerModel	jedi_tf
+	customSkin	head_A2|torso_B1|lower_A1
+	customRGBA	255 255 255
+	weapon	WP_SABER
+	saber	dual_1
+	saberStyle	7
+	FP_LEVITATION	3
+	FP_SPEED		2
+	FP_PUSH			3
+	FP_PULL			3
+	FP_RAGE		3
+	FP_LIGHTNING		3
+	FP_SEE			3
+	FP_ABSORB		3
+	FP_PROTECT	3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	health	5000
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		female_jedi2
+	sndcombat	female_jedi2
+	sndjedi		female_jedi2
+	sndextra	female_jedi2
+	yawspeed	140
+	walkSpeed	120
+	runSpeed	260
+}
+
+guardian_of_universe
+{
+	playerModel	jedi_tf
+	customSkin	head_A2|torso_A1|lower_A1
+	customRGBA	30 30 40
+	weapon	WP_SABER
+	saber	desann
+	saber2	desann
+	saberStyle	6
+	FP_LEVITATION	3
+	FP_SPEED		3
+	FP_PUSH			3
+	FP_PULL			3
+	FP_DRAIN		3
+	FP_RAGE		3
+	FP_LIGHTNING		3
+	FP_GRIP		3
+	FP_SEE			3
+	FP_ABSORB		3
+	FP_HEAL			3
+	FP_PROTECT	3
+	FP_TELEPATHY	3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	health	7000
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		female_jedi2
+	sndcombat	female_jedi2
+	sndjedi		female_jedi2
+	sndextra	female_jedi2
+	yawspeed	140
+	walkSpeed	110
+	runSpeed	260
+}
+
+master_of_evil
+{
+	playerModel	saboteur
+	weapon		WP_DISRUPTOR
+	weapon		WP_FLECHETTE
+	weapon		WP_CONCUSSION
+	weapon	WP_SABER
+	saber	desann
+	saberStyle	2
+	saberStyle	3
+	saberStyle	4
+	FP_LEVITATION	3
+	FP_PUSH			3
+	FP_PULL			3
+	FP_RAGE		3
+	FP_LIGHTNING		3
+	FP_GRIP		3
+	FP_SEE			3
+	FP_PROTECT	3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	health	7000
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		sab1
+	sndcombat	sab1
+	sndjedi		sab1
+	sndextra	sab1
+	yawspeed	140
+	walkSpeed	90
+	runSpeed	200
+}
+
+guardian_of_chaos
+{
+	playerModel	jedi_kdm
+	customSkin	head_B1|torso_F1|lower_D1
+	customRGBA	30 30 40
+	weapon		WP_CONCUSSION
+	weapon	WP_SABER
+	saber	dual_1
+	saberStyle	7
+	FP_LEVITATION	3
+	FP_SPEED		3
+	FP_PUSH			3
+	FP_PULL			3
+	FP_DRAIN		3
+	FP_RAGE		3
+	FP_LIGHTNING		3
+	FP_GRIP		3
+	FP_SEE			3
+	FP_ABSORB		3
+	FP_HEAL			3
+	FP_PROTECT	3
+	FP_TELEPATHY	3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	health	8000
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		ragnos
+	sndcombat	ragnos
+	sndjedi		ragnos
+	sndextra	ragnos
+	yawspeed	120
+	walkSpeed	120
+	runSpeed	270
+}
+
+ymir_boss
+{
+	playerModel	jawa
+	scale 		100
+	FP_LEVITATION	3
+	FP_PUSH			3
+	FP_PULL			3
+	FP_PROTECT		3
+	FP_ABSORB		3
+	FP_SEE			3
+	health		4000
+	snd		ragnos
+	sndcombat	ragnos
+	sndjedi		ragnos
+	sndextra	ragnos
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_BOBAFETT
+	yawspeed	100
+	walkSpeed	70
+	runSpeed	170
+}
+
+thor_boss
+{
+	playerModel	jawa
+	scale 		100
+	FP_LEVITATION	3
+	FP_PUSH			3
+	FP_PULL			3
+	FP_PROTECT		3
+	FP_ABSORB		3
+	FP_SEE			3
+	health		4000
+	snd		ragnos
+	sndcombat	ragnos
+	sndjedi		ragnos
+	sndextra	ragnos
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		captain
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	yawspeed	100
+	walkSpeed	70
+	runSpeed	170
+}
+
+guardian_of_time_boss
+{
+	playerModel	jedi_tf
+	customSkin	head_A2|torso_A1|lower_A1
+	customRGBA	120 120 120
+	weapon	WP_SABER
+	saber	dual_2
+	saberStyle	7
+	FP_LEVITATION	3
+	FP_PUSH			3
+	FP_PULL			3
+	FP_SEE			3
+	FP_SABERTHROW	3
+	FP_SABER_DEFENSE 3
+	FP_SABER_OFFENSE 3
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	health	12000
+	rank		captain
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_REBORN
+	snd		female_jedi2
+	sndcombat	female_jedi2
+	sndjedi		female_jedi2
+	sndextra	female_jedi2
+	yawspeed	100
+	walkSpeed	90
+	runSpeed	250
+}
+
+soul_of_sorrow
+{
+	playerModel	marka_ragnos
+	weapon	WP_NONE
+        health 22000
+	scale 		150
+	snd		ragnos
+	reactions	5
+	aim		5
+	move		5
+	aggression	5
+	evasion		5
+	intelligence	5
+	rank		ltcomm
+	playerTeam	TEAM_ENEMY
+	enemyTeam	TEAM_PLAYER
+	class		CLASS_STORMTROOPER
+	yawspeed	90
+	walkSpeed	55
+	runSpeed	200
+}

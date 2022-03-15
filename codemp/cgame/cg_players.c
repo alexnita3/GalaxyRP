@@ -10203,7 +10203,7 @@ stillDoSaber:
 					}
 					else
 					{
-						trap->G2API_InitGhoul2Model(&saberEnt->ghoul2, "models/weapons2/saber/saber_w.glm", 0, 0, 0, 0, 0);
+						trap->G2API_InitGhoul2Model(&saberEnt->ghoul2, DEFAULT_SABER_MODEL, 0, 0, 0, 0, 0);
 					}
 					//trap->G2API_DuplicateGhoul2Instance(cent->ghoul2, &saberEnt->ghoul2);
 
@@ -10645,7 +10645,7 @@ stillDoSaber:
 		legs.renderfx |= RF_MINLIGHT;
 	}
 
-	if (cg.snap->ps.duelInProgress/*&& cent->currentState.number != cg.snap->ps.clientNum*/)
+	if (cg.snap->ps.duelInProgress /*&& cent->currentState.number != cg.snap->ps.clientNum*/)
 	{ //I guess go ahead and glow your own client too in a duel
 		if (cent->currentState.number != cg.snap->ps.duelIndex &&
 			cent->currentState.number != cg.snap->ps.clientNum) 
@@ -10660,7 +10660,7 @@ stillDoSaber:
 				legs.shaderRGBA[0] /= 5.0f;
 				legs.shaderRGBA[1] /= 5.0f;
 				legs.shaderRGBA[2] /= 5.0f;
-				legs.shaderRGBA[3] /= 100.0f; //make them invisible??
+				legs.shaderRGBA[3] /= 3.0f; //make them see through
 				legs.renderfx |= RF_FORCE_ENT_ALPHA;
 			}
 		}
@@ -10854,7 +10854,13 @@ stillDoSaber:
 				if (cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer)
 				{
 					trap->R_SetRefractionProperties(1.0f, 0.0f, qfalse, qfalse); //don't need to do this every frame.. but..
-					legs.customShader = 2; //crazy "refractive" shader
+					// GalaxyRP (Alex): [Items] Instead of applying a hardcoded, make them fully invisible to any other player.
+					//legs.customShader = 2; //crazy "refractive" shader
+					legs.shaderRGBA[0] /= 5.0f;
+					legs.shaderRGBA[1] /= 5.0f;
+					legs.shaderRGBA[2] /= 5.0f;
+					legs.shaderRGBA[3] /= 255.0f; //make them invisible
+					legs.renderfx |= RF_FORCE_ENT_ALPHA;
 					trap->R_AddRefEntityToScene( &legs );
 					legs.customShader = 0;
 				}

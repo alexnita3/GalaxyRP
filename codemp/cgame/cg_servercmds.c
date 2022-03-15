@@ -182,6 +182,17 @@ void CG_ParseServerinfo( void ) {
 	cgs.timelimit = i;
 
 	cgs.maxclients = Com_Clampi( 0, MAX_CLIENTS, atoi( Info_ValueForKey( info, "sv_maxclients" ) ) );
+
+	// Tr!Force: [Plugin] Main cvar
+	cgs.pluginRequired = atoi(Info_ValueForKey(info, "rp_pluginRequired"));	
+	
+	// Tr!Force: [CGameGeneral] Mod Check
+	if (!cgs.modCheck) 
+	{
+		char *gamename = Info_ValueForKey(info, "gamename");
+		cgs.modCheck = (qboolean)strstr(gamename, "GalaxyRP Mod");
+	}
+
 	mapname = Info_ValueForKey( info, "mapname" );
 
 	//rww - You must do this one here, Info_ValueForKey always uses the same memory pointer.
@@ -1586,17 +1597,17 @@ static void CG_ClientLevelShot_f( void ) {
 
 static qboolean light_quest_defeated_guardians(int light_quest_progress)
 {
-	int j = 0, number_of_guardians_defeated = 0;
+	int j = 0, defeated_guardians = 0;
 
 	for (j = 4; j <= 12; j++)
 	{
 		if (light_quest_progress & (1 << j))
 		{
-			number_of_guardians_defeated++;
+			defeated_guardians++;
 		}
 	}
 
-	if (number_of_guardians_defeated == 9)
+	if (defeated_guardians == 9)
 		return qtrue;
 	else
 		return qfalse;
