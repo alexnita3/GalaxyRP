@@ -571,7 +571,8 @@ const admin_command_description_t admin_commands[ADM_NUM_CMDS] = {
 	{ "Give XP",				ADM_XP					},
 	{ "Update News",			ADM_UPDATENEWS			},
 	{ "Remove News",			ADM_REMOVENEWS			},
-	{ "Play Music",				ADM_MUSIC				}
+	{ "Play Music",				ADM_MUSIC				},
+	{ "Instant Revive",			ADM_GETUP				}
 };
 
 qboolean check_admin_command(gentity_t* ent, int admin_command) {
@@ -1298,13 +1299,130 @@ void G_Kill( gentity_t *ent ) {
 	}
 }
 
+void paralyze_player(int client_id) {
+	if (client_id == -1)
+	{
+		return;
+	}
+
+	if (!(g_entities[client_id].flags & FL_NOTARGET)) {
+		g_entities[client_id].flags ^= FL_NOTARGET;
+	}
+
+	//GalaxyRP (Alex): [Death System] Paralyze the target player.
+	g_entities[client_id].client->pers.player_statuses |= (1 << 6);
+
+	g_entities[client_id].client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
+	g_entities[client_id].client->ps.forceHandExtendTime = level.time + 500;
+	g_entities[client_id].client->ps.velocity[2] += 150;
+	g_entities[client_id].client->ps.forceDodgeAnim = 0;
+	g_entities[client_id].client->ps.quickerGetup = qtrue;
+
+	//GalaxyRP (Alex): [Death System] Set their HP to 50 so they don't die the old way instantly.
+	g_entities[client_id].client->ps.stats[STAT_HEALTH] = 50;
+	g_entities[client_id].health = 50;
+
+}
+
+void help_up(int client_id) {
+	if (client_id == -1)
+	{
+		return;
+	}
+
+	//GalaxyRP (Alex): [Death System] No longer paralyzed.
+	g_entities[client_id].client->pers.player_statuses &= ~(1 << 6);
+
+	if (g_entities[client_id].flags & FL_NOTARGET) {
+		g_entities[client_id].flags ^= FL_NOTARGET;
+	}
+
+	g_entities[client_id].client->invulnerableTimer = level.time + rp_downed_invulnerability_timer.integer * 1000;
+	g_entities[client_id].client->ps.eFlags |= EF_INVULNERABLE;
+}
+
 /*
 =================
 Cmd_Kill_f
 =================
 */
 void Cmd_Kill_f( gentity_t *ent ) {
-	G_Kill( ent );
+	G_Kill(ent);
+}
+
+void Cmd_Helpup_f(gentity_t* ent) {
+	char otherindex[MAX_TOKEN_CHARS];
+
+	if (trap->Argc() < 2) {
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: helpup <player>\n\"");
+		return;
+	}
+
+	trap->Argv(1, otherindex, sizeof(otherindex));
+	int i = ClientNumberFromString(ent, otherindex, qfalse);
+	if (i == -1) {
+		return;
+	}
+
+	if (i == ent->client->ps.clientNum) {
+		//GalaxyRP (Alex): [Death System] If player's timer is done or he is an admin, allow them to get up.
+		if (ent->client->downedTime == 0 || check_admin_command(ent, 26)) {
+			trap->SendServerCommand(ent - g_entities, "print \"^2You got up!\n\"");
+			help_up(i);
+			return;
+		}
+		else {
+			trap->SendServerCommand(ent - g_entities, "print \"^1You cannot get up until the timer is finished!\n\"");
+			return;
+		}
+	}
+	else {
+		//GalaxyRP (Alex): [Death System] Can't help someone else get up if you're also down.
+		if (ent->client->pers.player_statuses & (1 << 6)){
+			trap->SendServerCommand(ent - g_entities, "print \"^1You cannot help someone else while you're downed!\n\"");
+			
+			return;
+		}
+	}
+
+	//GalaxyRP (Alex): [Death System] If player is close enough or has admin permission, allow them to help someone up.
+	if (Distance(ent->client->ps.origin, g_entities[i].client->ps.origin) <= 65 || check_admin_command(ent, 26)) {
+		trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", g_entities[i].client->pers.netname));
+		trap->SendServerCommand(i, va("cp \"^2 %s helped you up!.\"", ent->client->pers.netname));
+
+		help_up(i);
+	}
+	else {
+		trap->SendServerCommand(ent - g_entities, va("cp \"^1You are too far away to help them up!\"", g_entities[i].client->pers.netname));
+		return;
+	}
+	
+	return;
+}
+
+void Cmd_Getup_f(gentity_t* ent) {
+	char otherindex[MAX_TOKEN_CHARS];
+
+	if (trap->Argc() < 1) {
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: /getup\n\"");
+		return;
+	}
+
+	//GalaxyRP (Alex): [Death System] If player's timer is done or he is an admin, allow them to get up.
+	if (ent->client->downedTime == 0 || check_admin_command(ent, 26)) {
+		trap->SendServerCommand(ent - g_entities, "print \"^2You got up!\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^2You got up!\n\"");
+		help_up(ent->client->ps.clientNum);
+		return;
+	}
+	else {
+		trap->SendServerCommand(ent - g_entities, "print \"^1You cannot get up until the timer is finished!\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot get up until the timer is finished!\n\"");
+		return;
+	}
+	
+
+	return;
 }
 
 /*
@@ -15434,7 +15552,7 @@ void Cmd_Paralyze_f( gentity_t *ent ) {
 		g_entities[client_id].client->pers.player_statuses &= ~(1 << 6);
 
 		// zyk: kill the target player to prevent exploits with RPG Mode commands
-		G_Kill(&g_entities[client_id]);
+		//G_Kill(&g_entities[client_id]);
 
 		trap->SendServerCommand( ent-g_entities, va("print \"Target player %s ^7is no longer paralyzed\n\"", g_entities[client_id].client->pers.netname) );
 		trap->SendServerCommand( client_id, va("print \"You are no longer paralyzed\n\"") );
@@ -18152,6 +18270,8 @@ command_t commands[] = {
 	{ "giveitem",			Cmd_GiveItem_f,				CMD_LOGGEDIN},
 	{ "givexp",				Cmd_GiveXp_f,				CMD_LOGGEDIN},
 	{ "god",				Cmd_God_f,					CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "helpup",				Cmd_Helpup_f,				CMD_ALIVE | CMD_NOINTERMISSION},
+	{ "getup",				Cmd_Getup_f,				CMD_ALIVE | CMD_NOINTERMISSION},
 	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
 	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
 	{ "inv",				Cmd_Inventory_f,			CMD_LOGGEDIN},

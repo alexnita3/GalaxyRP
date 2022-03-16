@@ -77,6 +77,7 @@ typedef enum {
 	ADM_UPDATENEWS,
 	ADM_REMOVENEWS,
 	ADM_MUSIC,
+	ADM_GETUP,
 	ADM_NUM_CMDS
 
 } zyk_admin_t;
