@@ -8376,7 +8376,7 @@ static void CG_Draw2D( void ) {
 	// Tr!Force: [CGameGeneral] Server mod check
 	if (!cgs.modCheck)
 	{
-		CG_CenterPrint(CG_GetStringEdString("RP_INGAME", "MOD_ALERT"), SCREEN_HEIGHT * .30, 0);
+		CG_CenterPrint("^1ALERT\nIncomplete mod detected\nDownload the full mod at:\n^5https://www.galaxyrp.uk", SCREEN_HEIGHT * .30, 0); // WIP
 	}
 
 	if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_SPECTATOR)
