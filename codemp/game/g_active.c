@@ -856,6 +856,23 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 			client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_TRIP_MINE);
 		}
 
+		if (zyk_chat_protection_timer.integer > 0)
+		{ // zyk: chat protection. If 0, it is off. If greater than 0, set the timer to protect the player
+			if (client->ps.eFlags & EF_TALK && client->pers.chat_protection_timer == 0)
+			{
+				client->pers.chat_protection_timer = level.time + zyk_chat_protection_timer.integer;
+			}
+			else if (ent->client->ps.eFlags & EF_TALK && client->pers.chat_protection_timer < level.time)
+			{
+				client->pers.player_statuses |= (1 << 5);
+			}
+			else if (client->pers.chat_protection_timer != 0 && !(client->ps.eFlags & EF_TALK))
+			{
+				client->pers.player_statuses &= ~(1 << 5);
+				client->pers.chat_protection_timer = 0;
+			}
+		}
+
 		if ((ent->NPC || client->sess.amrpgmode == 2) && client->pers.quest_power_status & (1 << 14) && ent->health > 0)
 		{ // zyk: Light Power
 			if (ent->NPC)

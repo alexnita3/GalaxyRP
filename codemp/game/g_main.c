@@ -10408,23 +10408,6 @@ void G_RunFrame( int levelTime ) {
 			quest_power_events(ent);
 			poison_dart_hits(ent);
 
-			if (zyk_chat_protection_timer.integer > 0)
-			{ // zyk: chat protection. If 0, it is off. If greater than 0, set the timer to protect the player
-				if (ent->client->ps.eFlags & EF_TALK && ent->client->pers.chat_protection_timer == 0)
-				{
-					ent->client->pers.chat_protection_timer = level.time + zyk_chat_protection_timer.integer;
-				}
-				else if (ent->client->ps.eFlags & EF_TALK && ent->client->pers.chat_protection_timer < level.time)
-				{
-					ent->client->pers.player_statuses |= (1 << 5);
-				}
-				else if (ent->client->pers.chat_protection_timer != 0 && !(ent->client->ps.eFlags & EF_TALK))
-				{
-					ent->client->pers.player_statuses &= ~(1 << 5);
-					ent->client->pers.chat_protection_timer = 0;
-				}
-			}
-
 			// zyk: tutorial, which teaches the player the RPG Mode features
 			if (ent->client->pers.player_statuses & (1 << 25) && ent->client->pers.tutorial_timer < level.time)
 			{
