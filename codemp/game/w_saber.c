@@ -9510,6 +9510,11 @@ int WP_SaberCanBlock(gentity_t *self, vec3_t point, int dflags, int mod, qboolea
 	}
 	*/
 
+	// GalaxyRP (Alex): [Combat] If player has reticule on attacker, block it.
+	if (self->client->ps.hasLookTarget) {
+		return 1;
+	}
+
 	if (SaberAttacking(self))
 	{ //attacking, can't block now
 		return 0;
