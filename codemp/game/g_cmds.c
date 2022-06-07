@@ -105,7 +105,7 @@ const skill_t skills[] = {
 	{2, "Flame Thrower",		"Allows you to use a flamethrower. Used by alt-firing with a stun baton.",																																																										"items",	"merc"		}
 };
 
-#define MAX_WORDED_EMOTES 97
+#define MAX_WORDED_EMOTES 98
 //alex: type for storing worde animations wo use with the emote system
 typedef struct worded_animation_s {
 	const char* animation_name;
@@ -118,7 +118,7 @@ alex: list of all worded emotes, ids, and categories, these are to be stored alp
 the animation code is to be exactly the same as the correcponding id in anims.h
 */
 const worded_animation_t animations[MAX_WORDED_EMOTES] = {
-	{"aim",				1581,	"Blaster"},
+	{"aim",				931,	"Blaster"},
 	{"aim2",			936,	"Blaster"},
 	{"aim3",			114,	"Blaster"},
 	{"aim4",			1407,	"Blaster"},
@@ -139,6 +139,7 @@ const worded_animation_t animations[MAX_WORDED_EMOTES] = {
 	{"cufffront",		1544,	"Body" },
 	{"cuffknees",		1545,	"Body" },
 	{"cup",				1580,	"Body" },
+	{"cupsip",			1581,	"Body" },
 	{"die",				1097,	"Body"},
 	{"djemso",			1563,	"Saber"},
 	{"drainloop",		1360,	"Force"},
