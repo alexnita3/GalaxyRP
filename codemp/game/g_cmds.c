@@ -575,10 +575,12 @@ const admin_command_description_t admin_commands[ADM_NUM_CMDS] = {
 	{ "Instant Revive",			ADM_GETUP				}
 };
 
-qboolean check_admin_command(gentity_t* ent, int admin_command) {
+qboolean check_admin_command(gentity_t* ent, int admin_command, qboolean with_message) {
 	if (!(ent->client->pers.bitvalue & (1 << admin_command)))
 	{
-		trap->SendServerCommand(ent - g_entities, va("print \"^1You don't have the necessary admin command to execute this.\n^1You need the ^3%s ^1admin command.\n\"", admin_commands[admin_command].title));
+		if (with_message) {
+			trap->SendServerCommand(ent - g_entities, va("print \"^1You don't have the necessary admin command to execute this.\n^1You need the ^3%s ^1admin command.\n\"", admin_commands[admin_command].title));
+		}
 		return qfalse;
 	}
 	
@@ -886,7 +888,7 @@ void Cmd_Give_f( gentity_t *ent )
 	char arg2[MAX_TOKEN_CHARS] = {0};
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_GIVE))
+	if (!check_admin_command(ent, ADM_GIVE, qtrue))
 	{
 		return;
 	}
@@ -1073,7 +1075,7 @@ void Cmd_Scale_f( gentity_t *ent ) {
 	//only ask for admin permissions when scaling someone else
 	if (g_entities[client_id].client->pers.netname != ent->client->pers.netname) {
 
-		if (!check_admin_command(ent, ADM_SCALE))
+		if (!check_admin_command(ent, ADM_SCALE, qtrue))
 		{
 			return;
 		}
@@ -1123,7 +1125,7 @@ argv(0) god
 void Cmd_God_f( gentity_t *ent ) {
 	char *msg = NULL;
 
-	if (!check_admin_command(ent, ADM_GOD))
+	if (!check_admin_command(ent, ADM_GOD, qtrue))
 	{
 		return;
 	}
@@ -1174,7 +1176,7 @@ argv(0) noclip
 void Cmd_Noclip_f( gentity_t *ent ) {
 	char *msg = NULL;
 
-	if (!check_admin_command(ent, ADM_NOCLIP))
+	if (!check_admin_command(ent, ADM_NOCLIP, qtrue))
 	{
 		return;
 	}
@@ -1324,21 +1326,93 @@ void paralyze_player(int client_id) {
 
 }
 
-void help_up(int client_id) {
-	if (client_id == -1)
-	{
-		return;
+qboolean can_player_get_up(gentity_t* ent, gentity_t target) {
+	
+	if (!(target.client->pers.player_statuses & (1 << 6))) {
+		trap->SendServerCommand(ent - g_entities, "print \"^1You cannot help them because they're not downed!\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot help them because they're not downed!\n\"");
+
+		return qfalse;
 	}
 
-	//GalaxyRP (Alex): [Death System] No longer paralyzed.
-	g_entities[client_id].client->pers.player_statuses &= ~(1 << 6);
+	//GalaxyRP (Alex): [Death System] Ent has permission, they can revive anyone.
+	if (check_admin_command(ent, ADM_GETUP, qfalse)) {
+		trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target.client->pers.netname));
+		trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target.client->pers.netname));
 
-	if (g_entities[client_id].flags & FL_NOTARGET) {
-		g_entities[client_id].flags ^= FL_NOTARGET;
+		return qtrue;
 	}
 
-	g_entities[client_id].client->invulnerableTimer = level.time + rp_downed_invulnerability_timer.integer * 1000;
-	g_entities[client_id].client->ps.eFlags |= EF_INVULNERABLE;
+	//GalaxyRP (Alex): [Death System] Ent and target are the same, player tries to get up by themselves.
+	if (ent->client->ps.clientNum == target.client->ps.clientNum) {
+		//GalaxyRP (Alex): [Death System] If player's timer is done, allow them to get up.
+		if (ent->client->downedTime == 0) {
+			trap->SendServerCommand(ent - g_entities, "print \"^2You got up!\n\"");
+			trap->SendServerCommand(ent - g_entities, "cp \"^2You got up!\n\"");
+			return qtrue;
+		}
+		else {
+			trap->SendServerCommand(ent - g_entities, "print \"^1You cannot get up until the timer is finished!\n\"");
+			trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot get up until the timer is finished!\n\"");
+			return qfalse;
+		}
+	}
+	//GalaxyRP (Alex): [Death System] Ent and target are different.
+	else {
+		if (target.client->downedTime == 0) {
+			trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target.client->pers.netname));
+			trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target.client->pers.netname));
+			trap->SendServerCommand(target.client->ps.clientNum, va("cp \"^2 %s helped you up!.\"", ent->client->pers.netname));
+			trap->SendServerCommand(target.client->ps.clientNum, va("print \"^2 %s helped you up!.\"", ent->client->pers.netname));
+
+			return qtrue;
+		}
+		else {
+			trap->SendServerCommand(ent - g_entities, "print \"^1You cannot help them until the timer is finished!\n\"");
+			trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot help them until the timer is finished!\n\"");
+			return qfalse;
+		}
+
+		//GalaxyRP (Alex): [Death System] Can't help someone else get up if you're also down.
+		if (ent->client->pers.player_statuses & (1 << 6)) {
+			trap->SendServerCommand(ent - g_entities, "print \"^1You cannot help someone else while you're downed!\n\"");
+			trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot help someone else while you're downed!\n\"");
+
+			return qfalse;
+		}
+	}
+
+	//GalaxyRP (Alex): [Death System] If player is close enough or has admin permission, allow them to help someone up.
+	if (Distance(ent->client->ps.origin, target.client->ps.origin) <= 65 || check_admin_command(ent, ADM_GETUP, qfalse)) {
+		trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target.client->pers.netname));
+		trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target.client->pers.netname));
+		trap->SendServerCommand(target.client->ps.clientNum, va("cp \"^2 %s helped you up!.\"", ent->client->pers.netname));
+		trap->SendServerCommand(target.client->ps.clientNum, va("print \"^2 %s helped you up!.\"", ent->client->pers.netname));
+
+		return qtrue;
+	}
+	else {
+		trap->SendServerCommand(ent - g_entities, va("cp \"^1You are too far away to help them up!\"", target.client->pers.netname));
+		trap->SendServerCommand(ent - g_entities, va("print \"^1You are too far away to help them up!\"", target.client->pers.netname));
+		return qfalse;
+	}
+}
+
+void help_up(gentity_t* ent, gentity_t target) {
+
+	if (can_player_get_up(ent, target)) {
+		//GalaxyRP (Alex): [Death System] No longer paralyzed.
+		target.client->pers.player_statuses &= ~(1 << 6);
+
+		if (target.flags & FL_NOTARGET) {
+			target.flags ^= FL_NOTARGET;
+		}
+
+		target.client->invulnerableTimer = level.time + rp_downed_invulnerability_timer.integer * 1000;
+		target.client->ps.eFlags |= EF_INVULNERABLE;
+	}
+
+	return;
 }
 
 /*
@@ -1351,51 +1425,20 @@ void Cmd_Kill_f( gentity_t *ent ) {
 }
 
 void Cmd_Helpup_f(gentity_t* ent) {
-	char otherindex[MAX_TOKEN_CHARS];
+	char targetIndex[MAX_TOKEN_CHARS];
 
 	if (trap->Argc() < 2) {
 		trap->SendServerCommand(ent - g_entities, "print \"Usage: helpup <player>\n\"");
 		return;
 	}
 
-	trap->Argv(1, otherindex, sizeof(otherindex));
-	int i = ClientNumberFromString(ent, otherindex, qfalse);
+	trap->Argv(1, targetIndex, sizeof(targetIndex));
+	int i = ClientNumberFromString(ent, targetIndex, qfalse);
 	if (i == -1) {
 		return;
 	}
 
-	if (i == ent->client->ps.clientNum) {
-		//GalaxyRP (Alex): [Death System] If player's timer is done or he is an admin, allow them to get up.
-		if (ent->client->downedTime == 0 || check_admin_command(ent, 26)) {
-			trap->SendServerCommand(ent - g_entities, "print \"^2You got up!\n\"");
-			help_up(i);
-			return;
-		}
-		else {
-			trap->SendServerCommand(ent - g_entities, "print \"^1You cannot get up until the timer is finished!\n\"");
-			return;
-		}
-	}
-	else {
-		//GalaxyRP (Alex): [Death System] Can't help someone else get up if you're also down.
-		if (ent->client->pers.player_statuses & (1 << 6)){
-			trap->SendServerCommand(ent - g_entities, "print \"^1You cannot help someone else while you're downed!\n\"");
-			
-			return;
-		}
-	}
-
-	//GalaxyRP (Alex): [Death System] If player is close enough or has admin permission, allow them to help someone up.
-	if (Distance(ent->client->ps.origin, g_entities[i].client->ps.origin) <= 65 || check_admin_command(ent, 26)) {
-		trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", g_entities[i].client->pers.netname));
-		trap->SendServerCommand(i, va("cp \"^2 %s helped you up!.\"", ent->client->pers.netname));
-
-		help_up(i);
-	}
-	else {
-		trap->SendServerCommand(ent - g_entities, va("cp \"^1You are too far away to help them up!\"", g_entities[i].client->pers.netname));
-		return;
-	}
+	help_up(ent, g_entities[i]);
 	
 	return;
 }
@@ -1409,18 +1452,10 @@ void Cmd_Getup_f(gentity_t* ent) {
 	}
 
 	//GalaxyRP (Alex): [Death System] If player's timer is done or he is an admin, allow them to get up.
-	if (ent->client->downedTime == 0 || check_admin_command(ent, 26)) {
-		trap->SendServerCommand(ent - g_entities, "print \"^2You got up!\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^2You got up!\n\"");
-		help_up(ent->client->ps.clientNum);
+	if (ent->client->downedTime == 0 || check_admin_command(ent, ADM_GETUP, qfalse)) {
+		help_up(ent, g_entities[ent->client->ps.clientNum]);
 		return;
 	}
-	else {
-		trap->SendServerCommand(ent - g_entities, "print \"^1You cannot get up until the timer is finished!\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot get up until the timer is finished!\n\"");
-		return;
-	}
-	
 
 	return;
 }
@@ -3147,7 +3182,7 @@ Cmd_CreateItem_f
 void Cmd_CreateItem_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_CREATEITEM))
+	if (!check_admin_command(ent, ADM_CREATEITEM, qtrue))
 	{
 		return;
 	}
@@ -12078,7 +12113,7 @@ void Cmd_Teleport_f( gentity_t *ent )
 	char arg3[MAX_STRING_CHARS];
 	char arg4[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_TELE))
+	if (!check_admin_command(ent, ADM_TELE, qtrue))
 	{
 		return;
 	}
@@ -12311,7 +12346,7 @@ void Cmd_CreditCreate_f(gentity_t *ent) {
 	}
 
 	// player must have adminup permissions
-	if (!check_admin_command(ent, ADM_CREATECREDITS))
+	if (!check_admin_command(ent, ADM_CREATECREDITS, qtrue))
 	{
 		return;
 	}
@@ -13822,7 +13857,7 @@ void Cmd_Remap_f( gentity_t *ent ) {
 	char arg2[MAX_STRING_CHARS];
 	float f = level.time * 0.001;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -13857,7 +13892,7 @@ void Cmd_RemapList_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -13902,7 +13937,7 @@ void Cmd_RemapDeleteFile_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -13949,7 +13984,7 @@ void Cmd_RemapSave_f( gentity_t *ent ) {
 	int i = 0;
 	FILE *remap_file = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -13994,7 +14029,7 @@ void Cmd_RemapLoad_f( gentity_t *ent ) {
 	char time_offset[128];
 	FILE *remap_file = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14047,7 +14082,7 @@ Cmd_EntUndo_f
 ==================
 */
 void Cmd_EntUndo_f(gentity_t *ent) {
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14068,7 +14103,7 @@ Cmd_EntOrigin_f
 ==================
 */
 void Cmd_EntOrigin_f(gentity_t *ent) {
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14103,7 +14138,7 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 	qboolean has_origin_set = qfalse; // zyk: if player do not pass an origin key, use the one set with /entorigin
 	qboolean has_angles_set = qfalse; // zyk: if player do not pass an angles key, use the one set with /entorigin
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14224,7 +14259,7 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14319,7 +14354,7 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14381,7 +14416,7 @@ void Cmd_EntLoad_f( gentity_t *ent ) {
 	int i = 0;
 	FILE *this_file = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14438,7 +14473,7 @@ void Cmd_EntDeleteFile_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14487,7 +14522,7 @@ void Cmd_EntNear_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	gentity_t *this_ent = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14579,7 +14614,7 @@ void Cmd_EntList_f( gentity_t *ent ) {
 
 	strcpy(message,"");
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14643,7 +14678,7 @@ void Cmd_EntRemove_f( gentity_t *ent ) {
 	char   arg1[MAX_STRING_CHARS];
 	char   arg2[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14716,7 +14751,7 @@ void Cmd_SpawnPlatform_f(gentity_t* ent)
 {
 	gentity_t* new_ent = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14801,7 +14836,7 @@ qboolean is_entity_a_pickup(gentity_t* ent) {
 
 void Cmd_RemovePickups_f(gentity_t* ent) {
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14832,7 +14867,7 @@ void Cmd_ClientPrint_f( gentity_t *ent ) {
 	char   arg1[MAX_STRING_CHARS];
 	char   arg2[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_CLIENTPRINT))
+	if (!check_admin_command(ent, ADM_CLIENTPRINT, qtrue))
 	{
 		return;
 	}
@@ -14869,7 +14904,7 @@ void Cmd_Silence_f( gentity_t *ent ) {
 	int client_id = -1;
 	char   arg[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_SILENCE))
+	if (!check_admin_command(ent, ADM_SILENCE, qtrue))
 	{
 		return;
 	}
@@ -15176,7 +15211,7 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_SKILL))
+	if (!check_admin_command(ent, ADM_SKILL, qtrue))
 	{
 		return;
 	}
@@ -15215,7 +15250,7 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_SKILL))
+	if (!check_admin_command(ent, ADM_SKILL, qtrue))
 	{
 		return;
 	}
@@ -15254,7 +15289,7 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_LEVELUP))
+	if (!check_admin_command(ent, ADM_LEVELUP, qtrue))
 	{
 		return;
 	}
@@ -15316,7 +15351,7 @@ void Cmd_GiveXp_f(gentity_t* ent) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_XP))
+	if (!check_admin_command(ent, ADM_XP, qtrue))
 	{
 		return;
 	}
@@ -15365,7 +15400,7 @@ void Cmd_RemoveXp_f(gentity_t* ent) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_XP))
+	if (!check_admin_command(ent, ADM_XP, qtrue))
 	{
 		return;
 	}
@@ -15406,7 +15441,7 @@ Cmd_EntitySystem_f
 ==================
 */
 void Cmd_EntitySystem_f( gentity_t *ent ) {
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -15423,7 +15458,7 @@ void Cmd_AdmKick_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_KICK))
+	if (!check_admin_command(ent, ADM_KICK, qtrue))
 	{
 		return;
 	}
@@ -15527,7 +15562,7 @@ void Cmd_Paralyze_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_PARALYZE))
+	if (!check_admin_command(ent, ADM_PARALYZE, qtrue))
 	{
 		return;
 	}
@@ -15586,7 +15621,7 @@ void Cmd_Players_f( gentity_t *ent ) {
 
 	strcpy(content,"ID - Name - IP - Type\n");
 
-	if (!check_admin_command(ent, ADM_PLAYERS))
+	if (!check_admin_command(ent, ADM_PLAYERS, qtrue))
 	{
 		return;
 	}
@@ -17309,7 +17344,7 @@ void Cmd_DuelArena_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!check_admin_command(ent, ADM_DUELARENA))
+	if (!check_admin_command(ent, ADM_DUELARENA, qtrue))
 	{
 		return;
 	}
@@ -17349,7 +17384,7 @@ Cmd_DuelPause_f
 ==================
 */
 void Cmd_DuelPause_f(gentity_t *ent) {
-	if (!check_admin_command(ent, ADM_DUELARENA))
+	if (!check_admin_command(ent, ADM_DUELARENA, qtrue))
 	{
 		return;
 	}
@@ -17566,7 +17601,7 @@ void Cmd_MeleeArena_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!check_admin_command(ent, ADM_DUELARENA))
+	if (!check_admin_command(ent, ADM_DUELARENA, qtrue))
 	{
 		return;
 	}
@@ -17714,7 +17749,7 @@ void Cmd_NewsRemove_f(gentity_t* ent) {
 	char arg1[MAX_STRING_CHARS];
 	int newsID;
 
-	if (!check_admin_command(ent, ADM_REMOVENEWS))
+	if (!check_admin_command(ent, ADM_REMOVENEWS, qtrue))
 	{
 		return;
 	}
@@ -17748,7 +17783,7 @@ void Cmd_UpdateNews_f(gentity_t *ent) {
 	char arg2[MAX_STRING_CHARS];
 	FILE *news_file = NULL;
 
-	if (!check_admin_command(ent, ADM_UPDATENEWS))
+	if (!check_admin_command(ent, ADM_UPDATENEWS, qtrue))
 	{
 		return;
 	}
@@ -17865,7 +17900,7 @@ void Cmd_ShakeScreen_f(gentity_t* ent)
 	char arg1[MAX_STRING_CHARS], arg2[MAX_STRING_CHARS], arg3[MAX_STRING_CHARS];
 	gentity_t *other;
 
-	if (!check_admin_command(ent, ADM_SHAKESCREEN))
+	if (!check_admin_command(ent, ADM_SHAKESCREEN, qtrue))
 	{
 		return;
 	}
@@ -18012,7 +18047,7 @@ Cmd_Music_f
 void Cmd_Music_f(gentity_t* ent) {
 	char audioPath[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_MUSIC)) {
+	if (!check_admin_command(ent, ADM_MUSIC, qtrue)) {
 		return;
 	}
 
