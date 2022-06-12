@@ -302,6 +302,7 @@ qboolean BG_SaberInAttack( int move )
 	case LS_DUAL_FB:
 	case LS_DUAL_LR:
 	case LS_HILT_BASH:
+	//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
 	case LS_ANAKINKATA:
 		return qtrue;
 		break;
@@ -392,6 +393,7 @@ qboolean BG_SaberInSpecial( int move )
 	case LS_DUAL_FB:
 	case LS_DUAL_LR:
 	case LS_HILT_BASH:
+	//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
 	case LS_ANAKINKATA:
 		return qtrue;
 	}

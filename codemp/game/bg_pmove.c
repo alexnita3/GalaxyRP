@@ -10800,7 +10800,7 @@ void PmoveSingle (pmove_t *pmove) {
 		}
 	}
 	else if (pm->ps->saberMove == LS_PULL_ATTACK_STAB ||
-		pm->ps->saberMove == LS_PULL_ATTACK_SWING)
+		pm->ps->saberMove == LS_PULL_ATTACK_SWING || pm->ps->saberMove == LS_ANAKINKATA)
 	{
 		stiffenedUp = qtrue;
 	}

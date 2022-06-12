@@ -128,6 +128,7 @@ stringID_table_t saberMoveTable[] = {
 	ENUM2STRING( LS_DUAL_FB ),
 	ENUM2STRING( LS_DUAL_LR ),
 	ENUM2STRING( LS_HILT_BASH ),
+	//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
 	ENUM2STRING( LS_ANAKINKATA ),
 	{ "", -1 }
 };
@@ -445,6 +446,7 @@ void WP_SaberSetDefaults( saberInfo_t *saber ) {
 	saber->moveSpeedScale		= 1.0f;			// 1.0 - you move faster/slower when using this saber
 	saber->animSpeedScale		= 1.0f;			// 1.0 - plays normal attack animations faster/slower
 
+	//GalaxyRP (Alex): [New Combat Animations] Katas for all style can now be changed independently.
 	saber->kataMove				= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
 	saber->kataMoveYellow		= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
 	saber->kataMoveRed			= LS_INVALID;
@@ -1059,6 +1061,7 @@ static void Saber_ParseKataMove( saberInfo_t *saber, const char **p ) {
 	if ( saberMove >= LS_INVALID && saberMove < LS_MOVE_MAX )
 		saber->kataMove = saberMove; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
 }
+//GalaxyRP (Alex): [New Combat Animations] These methods parse the extra kata parameters from the .sab file.
 static void Saber_ParseKataMoveYellow(saberInfo_t* saber, const char** p) {
 	const char* value;
 	int saberMoveYellow = LS_INVALID;
@@ -1967,6 +1970,7 @@ static keywordHash_t saberParseKeywords[] = {
 	{ "bounceOnWalls",			Saber_ParseBounceOnWalls,		NULL	},
 	{ "boltToWrist",			Saber_ParseBoltToWrist,			NULL	},
 	{ "kataMove",				Saber_ParseKataMove,			NULL	},
+	//GalaxyRP (Alex): [New Combat Animations] Parameters for the extra kata customisation.
 	{ "kataMoveYellow",			Saber_ParseKataMoveYellow,		NULL	},
 	{ "kataMoveRed",			Saber_ParseKataMoveRed,			NULL	},
 	{ "kataMovePurple",			Saber_ParseKataMovePurple,		NULL	},

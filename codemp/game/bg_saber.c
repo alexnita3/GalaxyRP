@@ -348,7 +348,7 @@ saberMoveData_t	saberMoveData[LS_MOVE_MAX] = {//							NB:randomized
 	{"Reflect LR",	BOTH_P1_S1_BR,		Q_R,	Q_BL,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_TR2BL,		LS_A_BL2TR,		300	},	// LS_PARRY_LR
 	{"Reflect LL",	BOTH_P1_S1_BL,		Q_R,	Q_BR,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_TL2BR,		LS_A_BR2TL,		300	},	// LS_PARRY_LL,
 
-	// New Attack Animations
+	//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
 	{ "anakinkata",	BOTH_ANAKINKATA,	Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,		LS_READY,		200 },	// LS_PULL_ATTACK_STAB
 };
 
@@ -2534,6 +2534,7 @@ qboolean PM_SaberMoveOkayForKata( void )
 	}
 }
 
+//GalaxyRP (Alex): [New Combat Animations] This method returns the correct parameter from the .sab file depending on the style the player is currently using.
 int getCorrectKata(saberInfo_t* saber ) {
 	switch (pm->ps->fd.saberAnimLevel)
 	{
@@ -3844,6 +3845,7 @@ void PM_SetSaberMove(short newMove)
 				|| newMove == LS_UPSIDE_DOWN_ATTACK
 				|| newMove == LS_PULL_ATTACK_STAB
 				|| newMove == LS_PULL_ATTACK_SWING
+				//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
 				|| newMove == LS_ANAKINKATA
 				|| BG_KickMove( newMove ) )
 		{
