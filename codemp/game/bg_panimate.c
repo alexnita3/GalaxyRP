@@ -59,6 +59,22 @@ qboolean BG_SaberStanceAnim( int anim )
 	case BOTH_SABERSLOW_STANCE://single-saber, strong style
 	case BOTH_SABERSTAFF_STANCE://saber staff style
 	case BOTH_SABERDUAL_STANCE://dual saber style
+	case BOTH_ATARU:
+	case BOTH_DJEMSO:
+	case BOTH_JARKAI:
+	case BOTH_JARKAIREVERSE:
+	case BOTH_MAKASHI:
+	case BOTH_SABERIDLE:
+	case BOTH_SABERSTANCE:
+	case BOTH_SHIEN:
+	case BOTH_SORESU:
+	case BOTH_SHIEN2:
+	case BOTH_NIMAN:
+	case BOTH_SHIICHO:
+	case BOTH_JUYO:
+	case BOTH_SABERPOINT:
+	case BOTH_SABERPOINT2:
+	case BOTH_GUARD:
 		return qtrue;
 		break;
 	}
@@ -159,6 +175,22 @@ qboolean BG_InSaberStandAnim( int anim )
 	case BOTH_SABERSLOW_STANCE:
 	case BOTH_SABERDUAL_STANCE:
 	case BOTH_SABERSTAFF_STANCE:
+	case BOTH_ATARU:
+	case BOTH_DJEMSO:
+	case BOTH_JARKAI:
+	case BOTH_JARKAIREVERSE:
+	case BOTH_MAKASHI:
+	case BOTH_SABERIDLE:
+	case BOTH_SABERSTANCE:
+	case BOTH_SHIEN:
+	case BOTH_SORESU:
+	case BOTH_SHIEN2:
+	case BOTH_NIMAN:
+	case BOTH_SHIICHO:
+	case BOTH_JUYO:
+	case BOTH_SABERPOINT:
+	case BOTH_SABERPOINT2:
+	case BOTH_GUARD:
 		return qtrue;
 	default:
 		return qfalse;

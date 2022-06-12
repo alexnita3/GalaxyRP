@@ -5003,6 +5003,22 @@ qboolean PM_AdjustStandAnimForSlope( void )
 	case BOTH_STAND2:
 	case BOTH_SABERFAST_STANCE:
 	case BOTH_SABERSLOW_STANCE:
+	case BOTH_ATARU:
+	case BOTH_DJEMSO:
+	case BOTH_JARKAI:
+	case BOTH_JARKAIREVERSE:
+	case BOTH_MAKASHI:
+	case BOTH_SABERIDLE:
+	case BOTH_SABERSTANCE:
+	case BOTH_SHIEN:
+	case BOTH_SORESU:
+	case BOTH_SHIEN2:
+	case BOTH_NIMAN:
+	case BOTH_SHIICHO:
+	case BOTH_JUYO:
+	case BOTH_SABERPOINT:
+	case BOTH_SABERPOINT2:
+	case BOTH_GUARD:
 	case BOTH_CROUCH1IDLE:
 	case BOTH_CROUCH1:
 	case LEGS_LEFTUP1:			//# On a slope with left foot 4 higher than right
@@ -5139,6 +5155,22 @@ qboolean PM_AdjustStandAnimForSlope( void )
 		case BOTH_SABERFAST_STANCE:
 		case BOTH_SABERSLOW_STANCE:
 		case BOTH_CROUCH1IDLE:
+		case BOTH_ATARU:
+		case BOTH_DJEMSO:
+		case BOTH_JARKAI:
+		case BOTH_JARKAIREVERSE:
+		case BOTH_MAKASHI:
+		case BOTH_SABERIDLE:
+		case BOTH_SABERSTANCE:
+		case BOTH_SHIEN:
+		case BOTH_SORESU:
+		case BOTH_SHIEN2:
+		case BOTH_NIMAN:
+		case BOTH_SHIICHO:
+		case BOTH_JUYO:
+		case BOTH_SABERPOINT:
+		case BOTH_SABERPOINT2:
+		case BOTH_GUARD:
 			if ( destAnim >= LEGS_LEFTUP1 && destAnim <= LEGS_LEFTUP5 )
 			{//going into left side up
 				destAnim = LEGS_LEFTUP1;
@@ -5298,6 +5330,22 @@ static void PM_Footsteps( void ) {
 		|| (pm->ps->legsAnim) == BOTH_STAND2
 		|| (pm->ps->legsAnim) == BOTH_SABERFAST_STANCE
 		|| (pm->ps->legsAnim) == BOTH_SABERSLOW_STANCE
+		|| (pm->ps->legsAnim) == BOTH_ATARU
+		|| (pm->ps->legsAnim) == BOTH_DJEMSO
+		|| (pm->ps->legsAnim) == BOTH_JARKAI
+		|| (pm->ps->legsAnim) == BOTH_JARKAIREVERSE
+		|| (pm->ps->legsAnim) == BOTH_MAKASHI
+		|| (pm->ps->legsAnim) == BOTH_SABERIDLE
+		|| (pm->ps->legsAnim) == BOTH_SABERSTANCE
+		|| (pm->ps->legsAnim) == BOTH_SHIEN
+		|| (pm->ps->legsAnim) == BOTH_SORESU
+		|| (pm->ps->legsAnim) == BOTH_SHIEN2
+		|| (pm->ps->legsAnim) == BOTH_NIMAN
+		|| (pm->ps->legsAnim) == BOTH_SHIICHO
+		|| (pm->ps->legsAnim) == BOTH_JUYO
+		|| (pm->ps->legsAnim) == BOTH_SABERPOINT
+		|| (pm->ps->legsAnim) == BOTH_SABERPOINT2
+		|| (pm->ps->legsAnim) == BOTH_GUARD
 		|| (pm->ps->legsAnim) == BOTH_BUTTON_HOLD
 		|| (pm->ps->legsAnim) == BOTH_BUTTON_RELEASE
 		|| PM_LandingAnim( (pm->ps->legsAnim) )
