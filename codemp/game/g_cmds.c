@@ -1328,9 +1328,9 @@ void paralyze_player(int client_id) {
 
 }
 
-qboolean can_player_get_up(gentity_t* ent, gentity_t target) {
+qboolean can_player_get_up(gentity_t* ent, gentity_t* target) {
 	
-	if (!(target.client->pers.player_statuses & (1 << 6))) {
+	if (!(target->client->pers.player_statuses & (1 << 6))) {
 		trap->SendServerCommand(ent - g_entities, "print \"^1You cannot help them because they're not downed!\n\"");
 		trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot help them because they're not downed!\n\"");
 
@@ -1339,14 +1339,14 @@ qboolean can_player_get_up(gentity_t* ent, gentity_t target) {
 
 	//GalaxyRP (Alex): [Death System] Ent has permission, they can revive anyone.
 	if (check_admin_command(ent, ADM_GETUP, qfalse)) {
-		trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target.client->pers.netname));
-		trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target.client->pers.netname));
+		trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target->client->pers.netname));
+		trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target->client->pers.netname));
 
 		return qtrue;
 	}
 
 	//GalaxyRP (Alex): [Death System] Ent and target are the same, player tries to get up by themselves.
-	if (ent->client->ps.clientNum == target.client->ps.clientNum) {
+	if (ent->client->ps.clientNum == target->client->ps.clientNum) {
 		//GalaxyRP (Alex): [Death System] If player's timer is done, allow them to get up.
 		if (ent->client->downedTime == 0) {
 			trap->SendServerCommand(ent - g_entities, "print \"^2You got up!\n\"");
@@ -1361,11 +1361,11 @@ qboolean can_player_get_up(gentity_t* ent, gentity_t target) {
 	}
 	//GalaxyRP (Alex): [Death System] Ent and target are different.
 	else {
-		if (target.client->downedTime == 0) {
-			trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target.client->pers.netname));
-			trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target.client->pers.netname));
-			trap->SendServerCommand(target.client->ps.clientNum, va("cp \"^2 %s helped you up!.\"", ent->client->pers.netname));
-			trap->SendServerCommand(target.client->ps.clientNum, va("print \"^2 %s helped you up!.\"", ent->client->pers.netname));
+		if (target->client->downedTime == 0) {
+			trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target->client->pers.netname));
+			trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target->client->pers.netname));
+			trap->SendServerCommand(target->client->ps.clientNum, va("cp \"^2 %s helped you up!.\"", ent->client->pers.netname));
+			trap->SendServerCommand(target->client->ps.clientNum, va("print \"^2 %s helped you up!.\"", ent->client->pers.netname));
 
 			return qtrue;
 		}
@@ -1385,33 +1385,36 @@ qboolean can_player_get_up(gentity_t* ent, gentity_t target) {
 	}
 
 	//GalaxyRP (Alex): [Death System] If player is close enough or has admin permission, allow them to help someone up.
-	if (Distance(ent->client->ps.origin, target.client->ps.origin) <= 65 || check_admin_command(ent, ADM_GETUP, qfalse)) {
-		trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target.client->pers.netname));
-		trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target.client->pers.netname));
-		trap->SendServerCommand(target.client->ps.clientNum, va("cp \"^2 %s helped you up!.\"", ent->client->pers.netname));
-		trap->SendServerCommand(target.client->ps.clientNum, va("print \"^2 %s helped you up!.\"", ent->client->pers.netname));
+	if (Distance(ent->client->ps.origin, target->client->ps.origin) <= 65 || check_admin_command(ent, ADM_GETUP, qfalse)) {
+		trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target->client->pers.netname));
+		trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target->client->pers.netname));
+		trap->SendServerCommand(target->client->ps.clientNum, va("cp \"^2 %s helped you up!.\"", ent->client->pers.netname));
+		trap->SendServerCommand(target->client->ps.clientNum, va("print \"^2 %s helped you up!.\"", ent->client->pers.netname));
 
 		return qtrue;
 	}
 	else {
-		trap->SendServerCommand(ent - g_entities, va("cp \"^1You are too far away to help them up!\"", target.client->pers.netname));
-		trap->SendServerCommand(ent - g_entities, va("print \"^1You are too far away to help them up!\"", target.client->pers.netname));
+		trap->SendServerCommand(ent - g_entities, va("cp \"^1You are too far away to help them up!\"", target->client->pers.netname));
+		trap->SendServerCommand(ent - g_entities, va("print \"^1You are too far away to help them up!\"", target->client->pers.netname));
 		return qfalse;
 	}
 }
 
-void help_up(gentity_t* ent, gentity_t target) {
+void help_up(gentity_t* ent, gentity_t* target) {
 
 	if (can_player_get_up(ent, target)) {
 		//GalaxyRP (Alex): [Death System] No longer paralyzed.
-		target.client->pers.player_statuses &= ~(1 << 6);
+		
+		target->client->pers.player_statuses &= ~(1 << 6);
 
-		if (target.flags & FL_NOTARGET) {
-			target.flags ^= FL_NOTARGET;
+		if (target->flags & FL_NOTARGET) {
+			target->flags ^= FL_NOTARGET;
 		}
 
-		target.client->invulnerableTimer = level.time + rp_downed_invulnerability_timer.integer * 1000;
-		target.client->ps.eFlags |= EF_INVULNERABLE;
+		if (rp_downed_invulnerability_timer.integer) {
+			target->client->invulnerableTimer = level.time + rp_downed_invulnerability_timer.integer * 1000;
+			target->client->ps.eFlags |= EF_INVULNERABLE;
+		}
 	}
 
 	return;
@@ -1440,7 +1443,11 @@ void Cmd_Helpup_f(gentity_t* ent) {
 		return;
 	}
 
-	help_up(ent, g_entities[i]);
+	gentity_t* target;
+
+	target = &g_entities[i];
+
+	help_up(ent, target);
 	
 	return;
 }
@@ -1455,7 +1462,7 @@ void Cmd_Getup_f(gentity_t* ent) {
 
 	//GalaxyRP (Alex): [Death System] If player's timer is done or he is an admin, allow them to get up.
 	if (ent->client->downedTime == 0 || check_admin_command(ent, ADM_GETUP, qfalse)) {
-		help_up(ent, g_entities[ent->client->ps.clientNum]);
+		help_up(ent, ent);
 		return;
 	}
 
