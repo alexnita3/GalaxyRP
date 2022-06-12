@@ -1646,6 +1646,14 @@ typedef struct saberInfo_s {
 	int				jumpAtkRightMove;						// LS_INVALID - if set, player will execute this move when they jump+rightattack
 	int				jumpAtkLeftMove;						// LS_INVALID - if set, player will execute this move when they jump+left+attack
 	int				readyAnim;								// -1 - anim to use when standing idle
+	//GalaxyRP (Alex): [New Combat Animations] New animation fields, one for each style.
+	int				readyAnimYellow;						// -1 - anim to use when standing idle
+	int				readyAnimRed;							// -1 - anim to use when standing idle
+	int				readyAnimPurple;						// -1 - anim to use when standing idle
+	int				readyAnimGreen;							// -1 - anim to use when standing idle
+	int				readyAnimStaff;							// -1 - anim to use when standing idle
+	int				readyAnimDual;							// -1 - anim to use when standing idle
+	
 	int				drawAnim;								// -1 - anim to use when drawing weapon
 	int				putawayAnim;							// -1 - anim to use when putting weapon away
 	int				tauntAnim;								// -1 - anim to use when hit "taunt"

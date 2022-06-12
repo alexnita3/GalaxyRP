@@ -319,6 +319,29 @@ static QINLINE qboolean PM_IsRocketTrooper(void)
 	return qfalse;
 }
 
+//GalaxyRP (Alex): [New Combat Animations] This method returns the overriden saber stance depending on the current style.
+int getOverridenAnimationByStyle(saberInfo_t* saber) {
+	switch (pm->ps->fd.saberAnimLevel)
+	{
+	case SS_FAST:
+		return saber->readyAnim;
+	case SS_MEDIUM:
+		return saber->readyAnimYellow;
+	case SS_STRONG:
+		return saber->readyAnimRed;
+	case SS_TAVION:
+		return saber->readyAnimPurple;
+	case SS_DESANN:
+		return saber->readyAnimGreen;
+	case SS_STAFF:
+		return saber->readyAnimStaff;
+	case SS_DUAL:
+		return saber->readyAnimDual;
+	default:
+		return -1;
+	}
+}
+
 int PM_GetSaberStance(void)
 {
 	int anim = BOTH_STAND2;
@@ -336,15 +359,15 @@ int PM_GetSaberStance(void)
 	}
 
 	if ( saber1
-		&& saber1->readyAnim != -1 )
+		&& getOverridenAnimationByStyle(saber1) != -1 )
 	{
-		return saber1->readyAnim;
+		return getOverridenAnimationByStyle(saber1);
 	}
 
 	if ( saber2
-		&& saber2->readyAnim != -1 )
+		&& getOverridenAnimationByStyle(saber2) != -1 )
 	{
-		return saber2->readyAnim;
+		return getOverridenAnimationByStyle(saber2);
 	}
 
 	if ( saber1
