@@ -136,6 +136,12 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_public.h"
 	"${MPDir}/game/g_team.h"
 	"${RPDir}/game/rp_version.h" # GalaxyRP headers
+	"${RPDir}/game/g_lua.c" 		# GalaxyRP LUA Scripting
+	"${RPDir}/game/g_lua.h" 		# GalaxyRP LUA Scripting
+	"${RPDir}/game/lua_game.c" 		# GalaxyRP LUA Scripting
+	"${RPDir}/game/lua_gentity.c" 	# GalaxyRP LUA Scripting
+	"${RPDir}/game/lua_qmath.c" 	# GalaxyRP LUA Scripting
+	"${RPDir}/game/lua_vector.c" 	# GalaxyRP LUA Scripting
 	"${MPDir}/game/g_xcvar.h"
 	"${MPDir}/game/inv.h"
 	"${MPDir}/game/match.h"
