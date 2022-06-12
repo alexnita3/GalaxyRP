@@ -128,6 +128,7 @@ stringID_table_t saberMoveTable[] = {
 	ENUM2STRING( LS_DUAL_FB ),
 	ENUM2STRING( LS_DUAL_LR ),
 	ENUM2STRING( LS_HILT_BASH ),
+	ENUM2STRING( LS_ANAKINKATA ),
 	{ "", -1 }
 };
 

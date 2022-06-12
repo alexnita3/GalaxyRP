@@ -1453,6 +1453,9 @@ typedef enum {
 	LS_REFLECT_LR,
 	LS_REFLECT_LL,
 
+	//new moves
+	LS_ANAKINKATA,
+
 	LS_MOVE_MAX//
 } saberMoveName_t;
 

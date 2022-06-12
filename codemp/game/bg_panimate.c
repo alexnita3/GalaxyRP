@@ -302,6 +302,7 @@ qboolean BG_SaberInAttack( int move )
 	case LS_DUAL_FB:
 	case LS_DUAL_LR:
 	case LS_HILT_BASH:
+	case LS_ANAKINKATA:
 		return qtrue;
 		break;
 	}
@@ -391,6 +392,7 @@ qboolean BG_SaberInSpecial( int move )
 	case LS_DUAL_FB:
 	case LS_DUAL_LR:
 	case LS_HILT_BASH:
+	case LS_ANAKINKATA:
 		return qtrue;
 	}
 	return qfalse;
@@ -656,6 +658,7 @@ qboolean BG_SaberInSpecialAttack( int anim )
 	case BOTH_A6_FB:
 	case BOTH_A6_LR:
 	case BOTH_A7_HILT:
+	case BOTH_ANAKINKATA:
 		return qtrue;
 	}
 	return qfalse;
