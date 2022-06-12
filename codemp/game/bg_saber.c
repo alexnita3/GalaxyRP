@@ -2534,6 +2534,28 @@ qboolean PM_SaberMoveOkayForKata( void )
 	}
 }
 
+int getCorrectKata(saberInfo_t* saber ) {
+	switch (pm->ps->fd.saberAnimLevel)
+	{
+	case SS_FAST:
+		return saber->kataMove;
+	case SS_MEDIUM:
+		return saber->kataMoveYellow;
+	case SS_STRONG:
+		return saber->kataMoveRed;
+	case SS_TAVION:
+		return saber->kataMovePurple;
+	case SS_DESANN:
+		return saber->kataMoveGreen;
+	case SS_DUAL:
+		return saber->kataMoveDual;
+	case SS_STAFF:
+		return saber->kataMoveStaff;
+	default:
+		return LS_INVALID;
+	}
+}
+
 qboolean PM_CanDoKata( void )
 {
 	if ( PM_InSecondaryStyle() )
@@ -2560,13 +2582,13 @@ qboolean PM_CanDoKata( void )
 	{//FIXME: check rage, etc...
 		saberInfo_t *saber = BG_MySaber( pm->ps->clientNum, 0 );
 		if ( saber
-			&& saber->kataMove == LS_NONE )
+			&& getCorrectKata(saber) == LS_NONE )
 		{//kata move has been overridden in a way that should stop you from doing it at all
 			return qfalse;
 		}
 		saber = BG_MySaber( pm->ps->clientNum, 1 );
 		if ( saber
-			&& saber->kataMove == LS_NONE )
+			&& getCorrectKata(saber) == LS_NONE )
 		{//kata move has been overridden in a way that should stop you from doing it at all
 			return qfalse;
 		}
@@ -3174,21 +3196,21 @@ weapChecks:
 		saberInfo_t *saber1 = BG_MySaber( pm->ps->clientNum, 0 );
 		saberInfo_t *saber2 = BG_MySaber( pm->ps->clientNum, 1 );
 		//see if we have an overridden (or cancelled) kata move
-		if ( saber1 && saber1->kataMove != LS_INVALID )
+		if ( saber1 && getCorrectKata(saber1) != LS_INVALID )
 		{
-			if ( saber1->kataMove != LS_NONE )
+			if ( getCorrectKata(saber1) != LS_NONE )
 			{
-				overrideMove = (saberMoveName_t)saber1->kataMove;
+				overrideMove = (saberMoveName_t)getCorrectKata(saber1);
 			}
 		}
 		if ( overrideMove == LS_INVALID )
 		{//not overridden by first saber, check second
 			if ( saber2
-				&& saber2->kataMove != LS_INVALID )
+				&& getCorrectKata(saber2) != LS_INVALID )
 			{
-				if ( saber2->kataMove != LS_NONE )
+				if ( getCorrectKata(saber2) != LS_NONE )
 				{
-					overrideMove = (saberMoveName_t)saber2->kataMove;
+					overrideMove = (saberMoveName_t)getCorrectKata(saber2);
 				}
 			}
 		}
@@ -3196,12 +3218,12 @@ weapChecks:
 		if ( overrideMove == LS_INVALID )
 		{
 			if ( saber2
-				&& saber2->kataMove == LS_NONE )
+				&& getCorrectKata(saber2) == LS_NONE )
 			{
 				overrideMove = LS_NONE;
 			}
 			else if ( saber2
-				&& saber2->kataMove == LS_NONE )
+				&& getCorrectKata(saber2) == LS_NONE )
 			{
 				overrideMove = LS_NONE;
 			}

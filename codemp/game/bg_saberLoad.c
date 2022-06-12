@@ -446,6 +446,12 @@ void WP_SaberSetDefaults( saberInfo_t *saber ) {
 	saber->animSpeedScale		= 1.0f;			// 1.0 - plays normal attack animations faster/slower
 
 	saber->kataMove				= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+	saber->kataMoveYellow		= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+	saber->kataMoveRed			= LS_INVALID;
+	saber->kataMovePurple		= LS_INVALID;
+	saber->kataMoveGreen		= LS_INVALID;
+	saber->kataMoveDual			= LS_INVALID;
+	saber->kataMoveStaff		= LS_INVALID;
 	saber->lungeAtkMove			= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they crouch+fwd+attack
 	saber->jumpAtkUpMove		= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they jump+attack
 	saber->jumpAtkFwdMove		= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they jump+fwd+attack
@@ -1052,6 +1058,60 @@ static void Saber_ParseKataMove( saberInfo_t *saber, const char **p ) {
 	saberMove = GetIDForString( saberMoveTable, value );
 	if ( saberMove >= LS_INVALID && saberMove < LS_MOVE_MAX )
 		saber->kataMove = saberMove; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+}
+static void Saber_ParseKataMoveYellow(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int saberMoveYellow = LS_INVALID;
+	if (COM_ParseString(p, &value))
+		return;
+	saberMoveYellow = GetIDForString(saberMoveTable, value);
+	if (saberMoveYellow >= LS_INVALID && saberMoveYellow < LS_MOVE_MAX)
+		saber->kataMoveYellow = saberMoveYellow; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+}
+static void Saber_ParseKataMoveRed(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int saberMoveRed = LS_INVALID;
+	if (COM_ParseString(p, &value))
+		return;
+	saberMoveRed = GetIDForString(saberMoveTable, value);
+	if (saberMoveRed >= LS_INVALID && saberMoveRed < LS_MOVE_MAX)
+		saber->kataMoveRed = saberMoveRed; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+}
+static void Saber_ParseKataMovePurple(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int saberMovePurple = LS_INVALID;
+	if (COM_ParseString(p, &value))
+		return;
+	saberMovePurple = GetIDForString(saberMoveTable, value);
+	if (saberMovePurple >= LS_INVALID && saberMovePurple < LS_MOVE_MAX)
+		saber->kataMovePurple = saberMovePurple; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+}
+static void Saber_ParseKataMoveGreen(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int saberMoveGreen = LS_INVALID;
+	if (COM_ParseString(p, &value))
+		return;
+	saberMoveGreen = GetIDForString(saberMoveTable, value);
+	if (saberMoveGreen >= LS_INVALID && saberMoveGreen < LS_MOVE_MAX)
+		saber->kataMoveGreen = saberMoveGreen; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+}
+static void Saber_ParseKataMoveStaff(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int saberMoveStaff = LS_INVALID;
+	if (COM_ParseString(p, &value))
+		return;
+	saberMoveStaff = GetIDForString(saberMoveTable, value);
+	if (saberMoveStaff >= LS_INVALID && saberMoveStaff < LS_MOVE_MAX)
+		saber->kataMoveStaff = saberMoveStaff; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+}
+static void Saber_ParseKataMoveDual(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int saberMoveDual = LS_INVALID;
+	if (COM_ParseString(p, &value))
+		return;
+	saberMoveDual = GetIDForString(saberMoveTable, value);
+	if (saberMoveDual >= LS_INVALID && saberMoveDual < LS_MOVE_MAX)
+		saber->kataMoveDual = saberMoveDual; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
 }
 static void Saber_ParseLungeAtkMove( saberInfo_t *saber, const char **p ) {
 	const char *value;
@@ -1907,6 +1967,12 @@ static keywordHash_t saberParseKeywords[] = {
 	{ "bounceOnWalls",			Saber_ParseBounceOnWalls,		NULL	},
 	{ "boltToWrist",			Saber_ParseBoltToWrist,			NULL	},
 	{ "kataMove",				Saber_ParseKataMove,			NULL	},
+	{ "kataMoveYellow",			Saber_ParseKataMoveYellow,		NULL	},
+	{ "kataMoveRed",			Saber_ParseKataMoveRed,			NULL	},
+	{ "kataMovePurple",			Saber_ParseKataMovePurple,		NULL	},
+	{ "kataMoveGreen",			Saber_ParseKataMoveGreen,		NULL	},
+	{ "kataMoveStaff",			Saber_ParseKataMoveStaff,		NULL	},
+	{ "kataMoveDual",			Saber_ParseKataMoveDual,		NULL	},
 	{ "lungeAtkMove",			Saber_ParseLungeAtkMove,		NULL	},
 	{ "jumpAtkUpMove",			Saber_ParseJumpAtkUpMove,		NULL	},
 	{ "jumpAtkFwdMove",			Saber_ParseJumpAtkFwdMove,		NULL	},
