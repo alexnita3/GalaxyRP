@@ -75,6 +75,11 @@ qboolean BG_SaberStanceAnim( int anim )
 	case BOTH_SABERPOINT:
 	case BOTH_SABERPOINT2:
 	case BOTH_GUARD:
+	case BOTH_DJEMSO2:
+	case BOTH_SHIEN3:
+	case BOTH_SORESU2:
+	case BOTH_SABERSTANCE2:
+	case BOTH_SABERSTANCE3:
 		return qtrue;
 		break;
 	}
@@ -191,6 +196,11 @@ qboolean BG_InSaberStandAnim( int anim )
 	case BOTH_SABERPOINT:
 	case BOTH_SABERPOINT2:
 	case BOTH_GUARD:
+	case BOTH_DJEMSO2:
+	case BOTH_SHIEN3:
+	case BOTH_SORESU2:
+	case BOTH_SABERSTANCE2:
+	case BOTH_SABERSTANCE3:
 		return qtrue;
 	default:
 		return qfalse;
@@ -336,6 +346,8 @@ qboolean BG_SaberInAttack( int move )
 	case LS_HILT_BASH:
 	//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
 	case LS_ANAKINKATA:
+	case LS_ANAKINKATA2:
+	case LS_ANAKINKATA3:
 		return qtrue;
 		break;
 	}
@@ -427,6 +439,8 @@ qboolean BG_SaberInSpecial( int move )
 	case LS_HILT_BASH:
 	//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
 	case LS_ANAKINKATA:
+	case LS_ANAKINKATA2:
+	case LS_ANAKINKATA3:
 		return qtrue;
 	}
 	return qfalse;
@@ -693,6 +707,8 @@ qboolean BG_SaberInSpecialAttack( int anim )
 	case BOTH_A6_LR:
 	case BOTH_A7_HILT:
 	case BOTH_ANAKINKATA:
+	case BOTH_ANAKINKATA2:
+	case BOTH_ANAKINKATA3:
 		return qtrue;
 	}
 	return qfalse;

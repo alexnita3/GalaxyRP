@@ -130,6 +130,8 @@ stringID_table_t saberMoveTable[] = {
 	ENUM2STRING( LS_HILT_BASH ),
 	//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
 	ENUM2STRING( LS_ANAKINKATA ),
+	ENUM2STRING( LS_ANAKINKATA2 ),
+	ENUM2STRING( LS_ANAKINKATA3 ),
 	{ "", -1 }
 };
 

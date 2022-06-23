@@ -5041,6 +5041,11 @@ qboolean PM_AdjustStandAnimForSlope( void )
 	case BOTH_JUYO:
 	case BOTH_SABERPOINT:
 	case BOTH_SABERPOINT2:
+	case BOTH_DJEMSO2:
+	case BOTH_SHIEN3:
+	case BOTH_SORESU2:
+	case BOTH_SABERSTANCE2:
+	case BOTH_SABERSTANCE3:
 	case BOTH_GUARD:
 	case BOTH_CROUCH1IDLE:
 	case BOTH_CROUCH1:
@@ -5194,6 +5199,11 @@ qboolean PM_AdjustStandAnimForSlope( void )
 		case BOTH_SABERPOINT:
 		case BOTH_SABERPOINT2:
 		case BOTH_GUARD:
+		case BOTH_DJEMSO2:
+		case BOTH_SHIEN3:
+		case BOTH_SORESU2:
+		case BOTH_SABERSTANCE2:
+		case BOTH_SABERSTANCE3:
 			if ( destAnim >= LEGS_LEFTUP1 && destAnim <= LEGS_LEFTUP5 )
 			{//going into left side up
 				destAnim = LEGS_LEFTUP1;
@@ -5347,34 +5357,44 @@ static void PM_Footsteps( void ) {
 	int			setAnimFlags = 0;
 
 	if ( (PM_InSaberAnim( (pm->ps->legsAnim) ) && !BG_SpinningSaberAnim( (pm->ps->legsAnim) ))
-		|| (pm->ps->legsAnim) == BOTH_STAND1
-		|| (pm->ps->legsAnim) == BOTH_STAND1TO2
-		|| (pm->ps->legsAnim) == BOTH_STAND2TO1
-		|| (pm->ps->legsAnim) == BOTH_STAND2
-		|| (pm->ps->legsAnim) == BOTH_SABERFAST_STANCE
-		|| (pm->ps->legsAnim) == BOTH_SABERSLOW_STANCE
-		|| (pm->ps->legsAnim) == BOTH_ATARU
-		|| (pm->ps->legsAnim) == BOTH_DJEMSO
-		|| (pm->ps->legsAnim) == BOTH_JARKAI
-		|| (pm->ps->legsAnim) == BOTH_JARKAIREVERSE
-		|| (pm->ps->legsAnim) == BOTH_MAKASHI
-		|| (pm->ps->legsAnim) == BOTH_SABERIDLE
-		|| (pm->ps->legsAnim) == BOTH_SABERSTANCE
-		|| (pm->ps->legsAnim) == BOTH_SHIEN
-		|| (pm->ps->legsAnim) == BOTH_SORESU
-		|| (pm->ps->legsAnim) == BOTH_SHIEN2
-		|| (pm->ps->legsAnim) == BOTH_NIMAN
-		|| (pm->ps->legsAnim) == BOTH_SHIICHO
-		|| (pm->ps->legsAnim) == BOTH_JUYO
-		|| (pm->ps->legsAnim) == BOTH_SABERPOINT
-		|| (pm->ps->legsAnim) == BOTH_SABERPOINT2
-		|| (pm->ps->legsAnim) == BOTH_GUARD
-		|| (pm->ps->legsAnim) == BOTH_BUTTON_HOLD
-		|| (pm->ps->legsAnim) == BOTH_BUTTON_RELEASE
 		|| PM_LandingAnim( (pm->ps->legsAnim) )
 		|| PM_PainAnim( (pm->ps->legsAnim) ))
 	{//legs are in a saber anim, and not spinning, be sure to override it
 		setAnimFlags |= SETANIM_FLAG_OVERRIDE;
+	}
+
+	switch (pm->ps->legsAnim)
+	{
+		case BOTH_STAND1:
+		case BOTH_STAND1TO2:
+		case BOTH_STAND2TO1:
+		case BOTH_STAND2:
+		case BOTH_SABERFAST_STANCE:
+		case BOTH_SABERSLOW_STANCE:
+		case BOTH_ATARU:
+		case BOTH_DJEMSO:
+		case BOTH_JARKAI:
+		case BOTH_JARKAIREVERSE:
+		case BOTH_MAKASHI:
+		case BOTH_SABERIDLE:
+		case BOTH_SABERSTANCE:
+		case BOTH_SHIEN:
+		case BOTH_SORESU:
+		case BOTH_SHIEN2:
+		case BOTH_NIMAN:
+		case BOTH_SHIICHO:
+		case BOTH_JUYO:
+		case BOTH_SABERPOINT:
+		case BOTH_SABERPOINT2:
+		case BOTH_GUARD:
+		case BOTH_DJEMSO2:
+		case BOTH_SHIEN3:
+		case BOTH_SORESU2:
+		case BOTH_SABERSTANCE2:
+		case BOTH_SABERSTANCE3:
+		case BOTH_BUTTON_HOLD:
+		case BOTH_BUTTON_RELEASE:
+			setAnimFlags |= SETANIM_FLAG_OVERRIDE;
 	}
 
 	//
@@ -10796,6 +10816,16 @@ void PmoveSingle (pmove_t *pmove) {
 	}
 #endif
 
+	switch (pm->ps->saberMove)
+	{
+		case LS_PULL_ATTACK_STAB:
+		case LS_PULL_ATTACK_SWING:
+		case LS_ANAKINKATA:
+		case LS_ANAKINKATA2:
+		case LS_ANAKINKATA3:
+			stiffenedUp = qtrue;
+	}
+
 	if (pm->ps->pm_type == PM_FLOAT)
 	{ //You get no control over where you go in grip movement
 		stiffenedUp = qtrue;
@@ -10869,11 +10899,6 @@ void PmoveSingle (pmove_t *pmove) {
 			pm->cmd.upmove = 0;
 			pm->cmd.forwardmove = 64;
 		}
-	}
-	else if (pm->ps->saberMove == LS_PULL_ATTACK_STAB ||
-		pm->ps->saberMove == LS_PULL_ATTACK_SWING || pm->ps->saberMove == LS_ANAKINKATA)
-	{
-		stiffenedUp = qtrue;
 	}
 	else if (BG_SaberInKata(pm->ps->saberMove) ||
 			 BG_InKataAnim(pm->ps->torsoAnim) ||

@@ -1455,6 +1455,8 @@ typedef enum {
 
 	//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
 	LS_ANAKINKATA,
+	LS_ANAKINKATA2,
+	LS_ANAKINKATA3,
 
 	LS_MOVE_MAX//
 } saberMoveName_t;

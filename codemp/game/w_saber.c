@@ -3287,6 +3287,8 @@ static QINLINE int G_PowerLevelForSaberAnim( gentity_t *ent, int saberNum, qbool
 			return FORCE_LEVEL_3;
 			break;
 		case BOTH_ANAKINKATA:
+		case BOTH_ANAKINKATA2:
+		case BOTH_ANAKINKATA3:
 			if (mySaberHit)
 			{//someone else hit my saber, not asking for damage level, but defense strength
 				return FORCE_LEVEL_1;

@@ -350,6 +350,8 @@ saberMoveData_t	saberMoveData[LS_MOVE_MAX] = {//							NB:randomized
 
 	//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
 	{ "anakinkata",	BOTH_ANAKINKATA,	Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,		LS_READY,		200 },	// LS_PULL_ATTACK_STAB
+	{ "anakinkata2",BOTH_ANAKINKATA2,	Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,		LS_READY,		200 },	// LS_PULL_ATTACK_STAB
+	{ "anakinkata3",BOTH_ANAKINKATA3,	Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,		LS_READY,		200 },	// LS_PULL_ATTACK_STAB
 };
 
 int transitionMove[Q_NUM_QUADS][Q_NUM_QUADS] =
@@ -3847,6 +3849,8 @@ void PM_SetSaberMove(short newMove)
 				|| newMove == LS_PULL_ATTACK_SWING
 				//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
 				|| newMove == LS_ANAKINKATA
+				|| newMove == LS_ANAKINKATA2
+				|| newMove == LS_ANAKINKATA3
 				|| BG_KickMove( newMove ) )
 		{
 			parts = SETANIM_BOTH;
