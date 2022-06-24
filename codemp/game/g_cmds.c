@@ -105,7 +105,7 @@ const skill_t skills[] = {
 	{2, "Flame Thrower",		"Allows you to use a flamethrower. Used by alt-firing with a stun baton.",																																																										"items",	"merc"		}
 };
 
-#define MAX_WORDED_EMOTES 97
+#define MAX_WORDED_EMOTES 132
 //alex: type for storing worde animations wo use with the emote system
 typedef struct worded_animation_s {
 	const char* animation_name;
@@ -118,103 +118,138 @@ alex: list of all worded emotes, ids, and categories, these are to be stored alp
 the animation code is to be exactly the same as the correcponding id in anims.h
 */
 const worded_animation_t animations[MAX_WORDED_EMOTES] = {
-	{"aim",				1581,	"Blaster"},
-	{"aim2",			936,	"Blaster"},
-	{"aim3",			114,	"Blaster"},
-	{"aim4",			1407,	"Blaster"},
-	{"aim5",			1406,	"Blaster"},
-	{"ataru",			1562,	"Saber" },
-	{"beg",				1099,	"Body"},
-	{"beg2",			1098,	"Body"},
-	{"beg3",			1321,	"Body"},
-	{"bow",				1188,	"Body"},
-	{"bump",			1546,	"Body"},
-	{"carry",			1584,	"Movement" },
-	{"choked",			1322,	"Body"},
-	{"commlinkdown",	970,	"Body"},
-	{"commlinkup",		968,	"Body"},
-	{"cover",			1181,	"Movement"},
-	{"cross",			1543,	"Body"},
-	{"cuffed",			922,	"Body"},
-	{"cufffront",		1544,	"Body" },
-	{"cuffknees",		1545,	"Body" },
-	{"cup",				1580,	"Body" },
-	{"die",				1097,	"Body"},
-	{"djemso",			1563,	"Saber"},
-	{"drainloop",		1360,	"Force"},
-	{"drink",			1581,	"Body" },
-	{"fear",			1380,	"Body"},
-	{"flourish",		1191,	"Saber"},
-	{"flourish2",		1192,	"Saber"},
-	{"flourish3",		1193,	"Saber"},
-	{"flourish4",		1194,	"Saber"},
-	{"flourish5",		1195,	"Saber"},
-	{"force",			1573,	"Force"},
-	{"forcechoke",		1344,	"Force"},
-	{"forcelightning",	1337,	"Force"},
-	{"guard",			1586,	"Saber" },
-	{"handsback",		1547,	"Body"},
-	{"handsfront",		1548,	"Body"},
-	{"handstand",		1578,	"Body" },
-	{"handstand2",		1552,	"Body"},
-	{"headhold",		1549,	"Body"},
-	{"heroic",			939,	"Body"},
-	{"hips",			1550,	"Body"},
-	{"hips2",			1551,	"Body"},
-	{"holddetonator",	1404,	"Body"},
-	{"holdobject",		1587,	"Body"},
-	{"hug",				989,	"Body"},
-	{"hurt",			1554,	"Body"},
-	{"hurt2",			1555,	"Body"},
-	{"idle",			1567,	"Saber"},
-	{"jarkai",			1564,	"Saber"},
-	{"jarkai2",			1565,	"Saber"},
-	{"juyo",			1577,	"Saber" },
-	{"kneel",			1010,	"Body"},
-	{"lean",			1382,	"Body"},
-	{"leanback",		1557,	"Body"},
-	{"leanfront",		1585,	"Body" },
-	{"leantable",		940,	"Body"},
-	{"makashi",			1566,	"Saber"},
-	{"meditate",		1001,	"Body"},
-	{"meditate2",		1572,	"Force"},
-	{"meditate3",		1571,	"Force"},
-	{"mindtrick",		1333,	"Force"},
-	{"niman",			1575,	"Saber" },
-	{"point",			936,	"Body"},
-	{"ponder",			1558,	"Body"},
-	{"ponder2",			1559,	"Body"},
-	{"pressbutton",		1328,	"Body"},
-	{"relax",			1556,	"Body"},
-	{"saberpoint",		1582,	"Saber" },
-	{"saberpoint2",		1583,	"Saber" },
-	{"saberthrow",		993,	"Saber"},
-	{"salute",			1560,	"Body"},
-	{"scratch",			1553,	"Body"},
-	{"shien",			1569,	"Saber"},
-	{"shien2",			1574,	"Saber" },
-	{"shiicho",			1576,	"Saber" },
-	{"sit",				998,	"Body"},
-	{"sit2",			999,	"Body"},
-	{"sit3",			1394,	"Body"},
-	{"sitfeet",			1579,	"Body" },
-	{"sitpilot",		1014,	"Body"},
-	{"situp",			1561,	"Body"},
-	{"sleep",			1313,	"Body"},
-	{"sneak",			1004,	"Movement"},
-	{"soresu",			1570,	"Saber"},
-	{"spreadlegs",		1370,	"Body"},
-	{"stance",			1568,	"Saber"},
-	{"surrender",		1409,	"Body"},
-	{"tossleft",		1348,	"Force"},
-	{"tossright",		1349,	"Force"},
-	{"type",			954,	"Body"},
-	{"victory",			1196,	"Saber"},
-	{"victory2",		1197,	"Saber"},
-	{"victory3",		1198,	"Saber"},
-	{"victory4",		1200,	"Saber"},
-	{"wave",			985,	"Body"},
-	{"windy",			1368,	"Movement"},
+	{"aim",				931,				"Blaster"},
+	{"aim2",			936,				"Blaster"},
+	{"aim3",			114,				"Blaster"},
+	{"aim4",			1407,				"Blaster"},
+	{"aim5",			1406,				"Blaster"},
+	{"anikata",			BOTH_ANAKINKATA,	"Saber"},
+	{"anikata2",		BOTH_ANAKINKATA2,	"Saber"},
+	{"anikata3",		BOTH_ANAKINKATA3,	"Saber"},
+	{"ataru",			1562,				"Saber" },
+	{"beg",				1099,				"Body"},
+	{"beg2",			1098,				"Body"},
+	{"beg3",			1321,				"Body"},
+	{"bow",				1188,				"Body"},
+	{"bump",			1546,				"Body"},
+	{"carry",			1584,				"Movement" },
+	{"choked",			1322,				"Body"},
+	{"commlinkdown",	970,				"Body"},
+	{"commlinkup",		968,				"Body"},
+	{"cover",			1181,				"Movement"},
+	{"cross",			1543,				"Body"},
+	{"cuffed",			922,				"Body"},
+	{"cufffront",		1544,				"Body" },
+	{"cuffknees",		1545,				"Body" },
+	{"cup",				1580,				"Body" },
+	{"cupsip",			1581,				"Body" },
+	{"datapad",			BOTH_DATAPAD,		"Body" },
+	{"datapad2",		BOTH_DATAPAD2,		"Body" },
+	{"die",				1097,				"Body"},
+	{"djemso",			1563,				"Saber"},
+	{"djemso2",			BOTH_DJEMSO2,		"Saber" },
+	{"drainloop",		1360,				"Force"},
+	{"drink",			1581,				"Body" },
+	{"facepalm",		BOTH_FACEPALM,		"Body" },
+	{"facepalm2",		BOTH_FACEPALM2,		"Body" },
+	{"fear",			1380,				"Body"},
+	{"flourish",		1191,				"Saber"},
+	{"flourish2",		1192,				"Saber"},
+	{"flourish3",		1193,				"Saber"},
+	{"flourish4",		1194,				"Saber"},
+	{"flourish5",		1195,				"Saber"},
+	{"force",			1573,				"Force"},
+	{"forcecasual",		BOTH_FORCECASUAL,	"Force" },
+	{"forcechoke",		1344,				"Force"},
+	{"forcelightning",	1337,				"Force"},
+	{"guard",			1586,				"Saber" },
+	{"gunspin1",		BOTH_GUNSPINB,		"Blaster" },
+	{"gunspin2",		BOTH_GUNSPINF,		"Blaster" },
+	{"gunspin3",		BOTH_GUNSPINS,		"Blaster" },
+	{"handsback",		1547,				"Body"},
+	{"handsfront",		1548,				"Body"},
+	{"handstand",		1578,				"Body" },
+	{"handstand2",		1552,				"Body"},
+	{"headhold",		1549,				"Body"},
+	{"helpedup",		BOTH_HELPEDUP,		"Body" },
+	{"helpup",			BOTH_HELPUP,		"Body" },
+	{"heroic",			939,				"Body"},
+	{"hips",			1550,				"Body"},
+	{"hips2",			1551,				"Body"},
+	{"holddetonator",	1404,				"Body"},
+	{"holdobject",		1587,				"Body"},
+	{"hug",				989,				"Body"},
+	{"hurt",			1554,				"Body"},
+	{"hurt2",			1555,				"Body"},
+	{"idle",			1567,				"Saber"},
+	{"jarkai",			1564,				"Saber"},
+	{"jarkai2",			1565,				"Saber"},
+	{"juyo",			1577,				"Saber" },
+	{"kneel",			1010,				"Body"},
+	{"lean",			1382,				"Body"},
+	{"leanback",		1557,				"Body"},
+	{"leanfront",		1585,				"Body" },
+	{"leantable",		940,				"Body"},
+	{"makashi",			1566,				"Saber"},
+	{"meditate",		1001,				"Body"},
+	{"meditate2",		1572,				"Force"},
+	{"meditate3",		1571,				"Force"},
+	{"mindtrick",		1333,				"Force"},
+	{"niman",			1575,				"Saber" },
+	{"pistol",			BOTH_PISTOLREADY,	"Blaster" },
+	{"point",			936,				"Body"},
+	{"ponder",			1558,				"Body"},
+	{"ponder2",			1559,				"Body"},
+	{"pressbutton",		1328,				"Body"},
+	{"pushup",			BOTH_PUSHUP,		"Body" },
+	{"quickdraw",		BOTH_QUICKDRAW,		"Blaster" },
+	{"quickdraw2",		BOTH_QUICKDRAW2,	"Blaster" },
+	{"read",			BOTH_READ,			"Body" },
+	{"relax",			1556,				"Body"},
+	{"saberdraw1",		BOTH_SABERDRAW1,	"Saber" },
+	{"saberdraw2",		BOTH_SABERDRAW2,	"Saber" },
+	{"saberdraw3",		BOTH_SABERDRAW3,	"Saber" },
+	{"saberdraw4",		BOTH_SABERDRAW4,	"Saber" },
+	{"saberdraw5",		BOTH_SABERDRAW5,	"Saber" },
+	{"saberpoint",		1582,				"Saber" },
+	{"saberpoint2",		1583,				"Saber" },
+	{"saberthrow",		993,				"Saber"},
+	{"salute",			1560,				"Body"},
+	{"scratch",			1553,				"Body"},
+	{"shien",			1569,				"Saber"},
+	{"shien2",			1574,				"Saber" },
+	{"shien3",			BOTH_SHIEN3,		"Saber" },
+	{"shiicho",			1576,				"Saber" },
+	{"sit",				998,				"Body"},
+	{"sit2",			999,				"Body"},
+	{"sit3",			1394,				"Body"},
+	{"sit4",			BOTH_SITARMS,		"Body" },
+	{"sit5",			BOTH_SITCROSS,		"Body" },
+	{"sit6",			BOTH_SITCROSS2,		"Body" },
+	{"sit7",			BOTH_SITLEAN,		"Body" },
+	{"sitfeet",			1579,				"Body" },
+	{"sitpalm",			BOTH_SITPALM,		"Body" },
+	{"sitpalm2",		BOTH_SITPALM2,		"Body" },
+	{"sitpilot",		1014,				"Body"},
+	{"situp",			1561,				"Body"},
+	{"sleep",			1313,				"Body"},
+	{"sneak",			1004,				"Movement"},
+	{"soresu",			1570,				"Saber"},
+	{"soresu2",			BOTH_SORESU2,		"Saber" },
+	{"spreadlegs",		1370,				"Body"},
+	{"stance",			1568,				"Saber"},
+	{"stance2",			BOTH_SABERSTANCE2,	"Saber" },
+	{"stance3",			BOTH_SABERSTANCE3,	"Saber" },
+	{"surrender",		1409,				"Body"},
+	{"tossleft",		1348,				"Force"},
+	{"tossright",		1349,				"Force"},
+	{"type",			954,				"Body"},
+	{"victory",			1196,				"Saber"},
+	{"victory2",		1197,				"Saber"},
+	{"victory3",		1198,				"Saber"},
+	{"victory4",		1200,				"Saber"},
+	{"wave",			985,				"Body"},
+	{"windy",			1368,				"Movement"},
 };
 
 #define MAX_EMOTE_CATEGORIES 5
@@ -570,17 +605,36 @@ const admin_command_description_t admin_commands[ADM_NUM_CMDS] = {
 	{ "Give XP",				ADM_XP					},
 	{ "Update News",			ADM_UPDATENEWS			},
 	{ "Remove News",			ADM_REMOVENEWS			},
-	{ "Play Music",				ADM_MUSIC				}
+	{ "Play Music",				ADM_MUSIC				},
+	{ "Instant Revive",			ADM_GETUP				}
 };
 
-qboolean check_admin_command(gentity_t* ent, int admin_command) {
+qboolean check_admin_command(gentity_t* ent, int admin_command, qboolean with_message) {
 	if (!(ent->client->pers.bitvalue & (1 << admin_command)))
 	{
-		trap->SendServerCommand(ent - g_entities, va("print \"^1You don't have the necessary admin command to execute this.\n^1You need the ^3%s ^1admin command.\n\"", admin_commands[admin_command].title));
+		if (with_message) {
+			trap->SendServerCommand(ent - g_entities, va("print \"^1You don't have the necessary admin command to execute this.\n^1You need the ^3%s ^1admin command.\n\"", admin_commands[admin_command].title));
+		}
 		return qfalse;
 	}
 	
 	return qtrue;
+}
+
+void show_animation_list(gentity_t* ent, int beginning_index, int end_index) {
+	for (int i = beginning_index; i < end_index; i++) {
+		print_header(ent, anim_headers[i]);
+		for (int j = 0; j < MAX_WORDED_EMOTES; j++) {
+			//alex: if animation is in that category
+			if (stricmp(animations[j].animation_category, anim_headers[i]) == 0) {
+				print_row(ent, animations[j].animation_name);
+			}
+		}
+	}
+	//alex: end the table
+	print_table_horizontal_line(ent);
+
+	return;
 }
 
 // alex: plays an animation from anims.h by id OR a word (look for animation_t)
@@ -666,19 +720,24 @@ void Cmd_Emote_f( gentity_t *ent )
 
 	if (strcmp(anim_id, "list") == 0)
 	{
-		trap->SendServerCommand(ent - g_entities,"print \"Usage: the following animations are available:\n\"");
+		if (trap->Argc() == 3) {
+			trap->Argv(2, arg, sizeof(arg));
+			int page = atoi(arg);
 
-		for (int i = 0; i < MAX_EMOTE_CATEGORIES; i++) {
-			print_header(ent, anim_headers[i]);
-			for (int j = 0; j < MAX_WORDED_EMOTES; j++) {
-				//alex: if animation is in that category
-				if (strcmp(animations[j].animation_category, anim_headers[i]) == 0) {
-					print_row(ent, animations[j].animation_name);
-				}
+			if (page == 2) {
+				show_animation_list(ent, 3, MAX_EMOTE_CATEGORIES);
+
+				return;
+			}
+			else {
+				trap->SendServerCommand(ent - g_entities, "print \"That is not a valid emote category!\n\"");
 			}
 		}
-		//alex: end the table
-		print_table_horizontal_line(ent);
+		else {
+			show_animation_list(ent, 0, 3);
+			trap->SendServerCommand(ent - g_entities, "print \"^3Page 1/2. To see the rest of the animations, do /emote list 2\n\"");
+			return;
+		}
 	}
 }
 
@@ -884,7 +943,7 @@ void Cmd_Give_f( gentity_t *ent )
 	char arg2[MAX_TOKEN_CHARS] = {0};
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_GIVE))
+	if (!check_admin_command(ent, ADM_GIVE, qtrue))
 	{
 		return;
 	}
@@ -1071,7 +1130,7 @@ void Cmd_Scale_f( gentity_t *ent ) {
 	//only ask for admin permissions when scaling someone else
 	if (g_entities[client_id].client->pers.netname != ent->client->pers.netname) {
 
-		if (!check_admin_command(ent, ADM_SCALE))
+		if (!check_admin_command(ent, ADM_SCALE, qtrue))
 		{
 			return;
 		}
@@ -1121,7 +1180,7 @@ argv(0) god
 void Cmd_God_f( gentity_t *ent ) {
 	char *msg = NULL;
 
-	if (!check_admin_command(ent, ADM_GOD))
+	if (!check_admin_command(ent, ADM_GOD, qtrue))
 	{
 		return;
 	}
@@ -1172,7 +1231,7 @@ argv(0) noclip
 void Cmd_Noclip_f( gentity_t *ent ) {
 	char *msg = NULL;
 
-	if (!check_admin_command(ent, ADM_NOCLIP))
+	if (!check_admin_command(ent, ADM_NOCLIP, qtrue))
 	{
 		return;
 	}
@@ -1297,13 +1356,170 @@ void G_Kill( gentity_t *ent ) {
 	}
 }
 
+void paralyze_player(int client_id) {
+	if (client_id == -1)
+	{
+		return;
+	}
+
+	if (!(g_entities[client_id].flags & FL_NOTARGET)) {
+		g_entities[client_id].flags ^= FL_NOTARGET;
+	}
+
+	//GalaxyRP (Alex): [Death System] Paralyze the target player.
+	g_entities[client_id].client->pers.player_statuses |= (1 << 6);
+
+	g_entities[client_id].client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
+	g_entities[client_id].client->ps.forceHandExtendTime = level.time + 500;
+	g_entities[client_id].client->ps.velocity[2] += 150;
+	g_entities[client_id].client->ps.forceDodgeAnim = 0;
+	g_entities[client_id].client->ps.quickerGetup = qtrue;
+
+	//GalaxyRP (Alex): [Death System] Set their HP to 50 so they don't die the old way instantly.
+	g_entities[client_id].client->ps.stats[STAT_HEALTH] = 50;
+	g_entities[client_id].health = 50;
+
+}
+
+qboolean can_player_get_up(gentity_t* ent, gentity_t* target) {
+	
+	if (!(target->client->pers.player_statuses & (1 << 6))) {
+		trap->SendServerCommand(ent - g_entities, "print \"^1You cannot help them because they're not downed!\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot help them because they're not downed!\n\"");
+
+		return qfalse;
+	}
+
+	//GalaxyRP (Alex): [Death System] Ent has permission, they can revive anyone.
+	if (check_admin_command(ent, ADM_GETUP, qfalse)) {
+		trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target->client->pers.netname));
+		trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target->client->pers.netname));
+
+		return qtrue;
+	}
+
+	//GalaxyRP (Alex): [Death System] Ent and target are the same, player tries to get up by themselves.
+	if (ent->client->ps.clientNum == target->client->ps.clientNum) {
+		//GalaxyRP (Alex): [Death System] If player's timer is done, allow them to get up.
+		if (ent->client->downedTime == 0) {
+			trap->SendServerCommand(ent - g_entities, "print \"^2You got up!\n\"");
+			trap->SendServerCommand(ent - g_entities, "cp \"^2You got up!\n\"");
+			return qtrue;
+		}
+		else {
+			trap->SendServerCommand(ent - g_entities, "print \"^1You cannot get up until the timer is finished!\n\"");
+			trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot get up until the timer is finished!\n\"");
+			return qfalse;
+		}
+	}
+	//GalaxyRP (Alex): [Death System] Ent and target are different.
+	else {
+		if (target->client->downedTime == 0) {
+			trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target->client->pers.netname));
+			trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target->client->pers.netname));
+			trap->SendServerCommand(target->client->ps.clientNum, va("cp \"^2 %s helped you up!.\"", ent->client->pers.netname));
+			trap->SendServerCommand(target->client->ps.clientNum, va("print \"^2 %s helped you up!.\"", ent->client->pers.netname));
+
+			return qtrue;
+		}
+		else {
+			trap->SendServerCommand(ent - g_entities, "print \"^1You cannot help them until the timer is finished!\n\"");
+			trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot help them until the timer is finished!\n\"");
+			return qfalse;
+		}
+
+		//GalaxyRP (Alex): [Death System] Can't help someone else get up if you're also down.
+		if (ent->client->pers.player_statuses & (1 << 6)) {
+			trap->SendServerCommand(ent - g_entities, "print \"^1You cannot help someone else while you're downed!\n\"");
+			trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot help someone else while you're downed!\n\"");
+
+			return qfalse;
+		}
+	}
+
+	//GalaxyRP (Alex): [Death System] If player is close enough or has admin permission, allow them to help someone up.
+	if (Distance(ent->client->ps.origin, target->client->ps.origin) <= 65 || check_admin_command(ent, ADM_GETUP, qfalse)) {
+		trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target->client->pers.netname));
+		trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target->client->pers.netname));
+		trap->SendServerCommand(target->client->ps.clientNum, va("cp \"^2 %s helped you up!.\"", ent->client->pers.netname));
+		trap->SendServerCommand(target->client->ps.clientNum, va("print \"^2 %s helped you up!.\"", ent->client->pers.netname));
+
+		return qtrue;
+	}
+	else {
+		trap->SendServerCommand(ent - g_entities, va("cp \"^1You are too far away to help them up!\"", target->client->pers.netname));
+		trap->SendServerCommand(ent - g_entities, va("print \"^1You are too far away to help them up!\"", target->client->pers.netname));
+		return qfalse;
+	}
+}
+
+void help_up(gentity_t* ent, gentity_t* target) {
+
+	if (can_player_get_up(ent, target)) {
+		//GalaxyRP (Alex): [Death System] No longer paralyzed.
+		
+		target->client->pers.player_statuses &= ~(1 << 6);
+
+		if (target->flags & FL_NOTARGET) {
+			target->flags ^= FL_NOTARGET;
+		}
+
+		if (rp_downed_invulnerability_timer.integer) {
+			target->client->invulnerableTimer = level.time + rp_downed_invulnerability_timer.integer * 1000;
+			target->client->ps.eFlags |= EF_INVULNERABLE;
+		}
+	}
+
+	return;
+}
+
 /*
 =================
 Cmd_Kill_f
 =================
 */
 void Cmd_Kill_f( gentity_t *ent ) {
-	G_Kill( ent );
+	G_Kill(ent);
+}
+
+void Cmd_Helpup_f(gentity_t* ent) {
+	char targetIndex[MAX_TOKEN_CHARS];
+
+	if (trap->Argc() < 2) {
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: helpup <player>\n\"");
+		return;
+	}
+
+	trap->Argv(1, targetIndex, sizeof(targetIndex));
+	int i = ClientNumberFromString(ent, targetIndex, qfalse);
+	if (i == -1) {
+		return;
+	}
+
+	gentity_t* target;
+
+	target = &g_entities[i];
+
+	help_up(ent, target);
+	
+	return;
+}
+
+void Cmd_Getup_f(gentity_t* ent) {
+	char otherindex[MAX_TOKEN_CHARS];
+
+	if (trap->Argc() < 1) {
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: /getup\n\"");
+		return;
+	}
+
+	//GalaxyRP (Alex): [Death System] If player's timer is done or he is an admin, allow them to get up.
+	if (ent->client->downedTime == 0 || check_admin_command(ent, ADM_GETUP, qfalse)) {
+		help_up(ent, ent);
+		return;
+	}
+
+	return;
 }
 
 /*
@@ -3028,7 +3244,7 @@ Cmd_CreateItem_f
 void Cmd_CreateItem_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_CREATEITEM))
+	if (!check_admin_command(ent, ADM_CREATEITEM, qtrue))
 	{
 		return;
 	}
@@ -11959,7 +12175,7 @@ void Cmd_Teleport_f( gentity_t *ent )
 	char arg3[MAX_STRING_CHARS];
 	char arg4[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_TELE))
+	if (!check_admin_command(ent, ADM_TELE, qtrue))
 	{
 		return;
 	}
@@ -12192,7 +12408,7 @@ void Cmd_CreditCreate_f(gentity_t *ent) {
 	}
 
 	// player must have adminup permissions
-	if (!check_admin_command(ent, ADM_CREATECREDITS))
+	if (!check_admin_command(ent, ADM_CREATECREDITS, qtrue))
 	{
 		return;
 	}
@@ -13703,7 +13919,7 @@ void Cmd_Remap_f( gentity_t *ent ) {
 	char arg2[MAX_STRING_CHARS];
 	float f = level.time * 0.001;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -13738,7 +13954,7 @@ void Cmd_RemapList_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -13783,7 +13999,7 @@ void Cmd_RemapDeleteFile_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -13830,7 +14046,7 @@ void Cmd_RemapSave_f( gentity_t *ent ) {
 	int i = 0;
 	FILE *remap_file = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -13875,7 +14091,7 @@ void Cmd_RemapLoad_f( gentity_t *ent ) {
 	char time_offset[128];
 	FILE *remap_file = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -13928,7 +14144,7 @@ Cmd_EntUndo_f
 ==================
 */
 void Cmd_EntUndo_f(gentity_t *ent) {
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -13949,7 +14165,7 @@ Cmd_EntOrigin_f
 ==================
 */
 void Cmd_EntOrigin_f(gentity_t *ent) {
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -13984,7 +14200,7 @@ void Cmd_EntAdd_f( gentity_t *ent ) {
 	qboolean has_origin_set = qfalse; // zyk: if player do not pass an origin key, use the one set with /entorigin
 	qboolean has_angles_set = qfalse; // zyk: if player do not pass an angles key, use the one set with /entorigin
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14105,7 +14321,7 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14200,7 +14416,7 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14262,7 +14478,7 @@ void Cmd_EntLoad_f( gentity_t *ent ) {
 	int i = 0;
 	FILE *this_file = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14319,7 +14535,7 @@ void Cmd_EntDeleteFile_f( gentity_t *ent ) {
 	char zyk_mapname[128] = {0};
 	FILE *this_file = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14368,7 +14584,7 @@ void Cmd_EntNear_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	gentity_t *this_ent = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14460,7 +14676,7 @@ void Cmd_EntList_f( gentity_t *ent ) {
 
 	strcpy(message,"");
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14524,7 +14740,7 @@ void Cmd_EntRemove_f( gentity_t *ent ) {
 	char   arg1[MAX_STRING_CHARS];
 	char   arg2[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14597,7 +14813,7 @@ void Cmd_SpawnPlatform_f(gentity_t* ent)
 {
 	gentity_t* new_ent = NULL;
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14682,7 +14898,7 @@ qboolean is_entity_a_pickup(gentity_t* ent) {
 
 void Cmd_RemovePickups_f(gentity_t* ent) {
 
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -14713,7 +14929,7 @@ void Cmd_ClientPrint_f( gentity_t *ent ) {
 	char   arg1[MAX_STRING_CHARS];
 	char   arg2[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_CLIENTPRINT))
+	if (!check_admin_command(ent, ADM_CLIENTPRINT, qtrue))
 	{
 		return;
 	}
@@ -14738,7 +14954,8 @@ void Cmd_ClientPrint_f( gentity_t *ent ) {
 
 	trap->Argv( 2, arg2, sizeof( arg2 ) );
 
-	trap->SendServerCommand( client_id, va("cp \"%s\"", arg2) ); 
+	trap->SendServerCommand( client_id, va("cp \"%s\"", arg2) );
+	trap->SendServerCommand( client_id, va("print \"^3* %s ^3*\"", arg2) );
 }
 
 /*
@@ -14750,7 +14967,7 @@ void Cmd_Silence_f( gentity_t *ent ) {
 	int client_id = -1;
 	char   arg[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_SILENCE))
+	if (!check_admin_command(ent, ADM_SILENCE, qtrue))
 	{
 		return;
 	}
@@ -15057,7 +15274,7 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_SKILL))
+	if (!check_admin_command(ent, ADM_SKILL, qtrue))
 	{
 		return;
 	}
@@ -15096,7 +15313,7 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 	char	arg2[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_SKILL))
+	if (!check_admin_command(ent, ADM_SKILL, qtrue))
 	{
 		return;
 	}
@@ -15135,7 +15352,7 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_LEVELUP))
+	if (!check_admin_command(ent, ADM_LEVELUP, qtrue))
 	{
 		return;
 	}
@@ -15197,7 +15414,7 @@ void Cmd_GiveXp_f(gentity_t* ent) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_XP))
+	if (!check_admin_command(ent, ADM_XP, qtrue))
 	{
 		return;
 	}
@@ -15246,7 +15463,7 @@ void Cmd_RemoveXp_f(gentity_t* ent) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_XP))
+	if (!check_admin_command(ent, ADM_XP, qtrue))
 	{
 		return;
 	}
@@ -15287,7 +15504,7 @@ Cmd_EntitySystem_f
 ==================
 */
 void Cmd_EntitySystem_f( gentity_t *ent ) {
-	if (!check_admin_command(ent, ADM_ENTITYSYSTEM))
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 	{
 		return;
 	}
@@ -15304,7 +15521,7 @@ void Cmd_AdmKick_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_KICK))
+	if (!check_admin_command(ent, ADM_KICK, qtrue))
 	{
 		return;
 	}
@@ -15408,7 +15625,7 @@ void Cmd_Paralyze_f( gentity_t *ent ) {
 	char arg1[MAX_STRING_CHARS];
 	int client_id = -1;
 
-	if (!check_admin_command(ent, ADM_PARALYZE))
+	if (!check_admin_command(ent, ADM_PARALYZE, qtrue))
 	{
 		return;
 	}
@@ -15433,7 +15650,7 @@ void Cmd_Paralyze_f( gentity_t *ent ) {
 		g_entities[client_id].client->pers.player_statuses &= ~(1 << 6);
 
 		// zyk: kill the target player to prevent exploits with RPG Mode commands
-		G_Kill(&g_entities[client_id]);
+		//G_Kill(&g_entities[client_id]);
 
 		trap->SendServerCommand( ent-g_entities, va("print \"Target player %s ^7is no longer paralyzed\n\"", g_entities[client_id].client->pers.netname) );
 		trap->SendServerCommand( client_id, va("print \"You are no longer paralyzed\n\"") );
@@ -15467,7 +15684,7 @@ void Cmd_Players_f( gentity_t *ent ) {
 
 	strcpy(content,"ID - Name - IP - Type\n");
 
-	if (!check_admin_command(ent, ADM_PLAYERS))
+	if (!check_admin_command(ent, ADM_PLAYERS, qtrue))
 	{
 		return;
 	}
@@ -17190,7 +17407,7 @@ void Cmd_DuelArena_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!check_admin_command(ent, ADM_DUELARENA))
+	if (!check_admin_command(ent, ADM_DUELARENA, qtrue))
 	{
 		return;
 	}
@@ -17230,7 +17447,7 @@ Cmd_DuelPause_f
 ==================
 */
 void Cmd_DuelPause_f(gentity_t *ent) {
-	if (!check_admin_command(ent, ADM_DUELARENA))
+	if (!check_admin_command(ent, ADM_DUELARENA, qtrue))
 	{
 		return;
 	}
@@ -17447,7 +17664,7 @@ void Cmd_MeleeArena_f(gentity_t *ent) {
 
 	strcpy(content, "");
 
-	if (!check_admin_command(ent, ADM_DUELARENA))
+	if (!check_admin_command(ent, ADM_DUELARENA, qtrue))
 	{
 		return;
 	}
@@ -17595,7 +17812,7 @@ void Cmd_NewsRemove_f(gentity_t* ent) {
 	char arg1[MAX_STRING_CHARS];
 	int newsID;
 
-	if (!check_admin_command(ent, ADM_REMOVENEWS))
+	if (!check_admin_command(ent, ADM_REMOVENEWS, qtrue))
 	{
 		return;
 	}
@@ -17629,7 +17846,7 @@ void Cmd_UpdateNews_f(gentity_t *ent) {
 	char arg2[MAX_STRING_CHARS];
 	FILE *news_file = NULL;
 
-	if (!check_admin_command(ent, ADM_UPDATENEWS))
+	if (!check_admin_command(ent, ADM_UPDATENEWS, qtrue))
 	{
 		return;
 	}
@@ -17746,7 +17963,7 @@ void Cmd_ShakeScreen_f(gentity_t* ent)
 	char arg1[MAX_STRING_CHARS], arg2[MAX_STRING_CHARS], arg3[MAX_STRING_CHARS];
 	gentity_t *other;
 
-	if (!check_admin_command(ent, ADM_SHAKESCREEN))
+	if (!check_admin_command(ent, ADM_SHAKESCREEN, qtrue))
 	{
 		return;
 	}
@@ -17893,7 +18110,7 @@ Cmd_Music_f
 void Cmd_Music_f(gentity_t* ent) {
 	char audioPath[MAX_STRING_CHARS];
 
-	if (!check_admin_command(ent, ADM_MUSIC)) {
+	if (!check_admin_command(ent, ADM_MUSIC, qtrue)) {
 		return;
 	}
 
@@ -18151,6 +18368,8 @@ command_t commands[] = {
 	{ "giveitem",			Cmd_GiveItem_f,				CMD_LOGGEDIN},
 	{ "givexp",				Cmd_GiveXp_f,				CMD_LOGGEDIN},
 	{ "god",				Cmd_God_f,					CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "helpup",				Cmd_Helpup_f,				CMD_ALIVE | CMD_NOINTERMISSION},
+	{ "getup",				Cmd_Getup_f,				CMD_ALIVE | CMD_NOINTERMISSION},
 	{ "ignore",				Cmd_Ignore_f,				CMD_NOINTERMISSION },
 	{ "ignorelist",			Cmd_IgnoreList_f,			CMD_NOINTERMISSION },
 	{ "inv",				Cmd_Inventory_f,			CMD_LOGGEDIN},

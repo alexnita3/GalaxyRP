@@ -1296,6 +1296,8 @@ struct gclient_s {
 	} force;
 
 	int	motdTime; // Tr!Force: [Motd] Server motd time
+
+	int downedTime;
 };
 
 //Interest points

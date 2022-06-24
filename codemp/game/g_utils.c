@@ -2195,6 +2195,13 @@ void TryUse( gentity_t *ent )
 		}
 	}
 
+	extern void help_up(gentity_t* ent, gentity_t target);
+
+	//GalaxyRP (Alex): [Death System] If the target player is downed, help them up.
+	if (!target->NPC && target->client) {
+		help_up(ent, g_entities[target->client->ps.clientNum]);
+	}
+
 #if 0 //ye olde method
 	if (ent->client->ps.stats[STAT_HOLDABLE_ITEM] > 0 &&
 		bg_itemlist[ent->client->ps.stats[STAT_HOLDABLE_ITEM]].giType == IT_HOLDABLE)

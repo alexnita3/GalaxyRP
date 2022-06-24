@@ -128,6 +128,10 @@ stringID_table_t saberMoveTable[] = {
 	ENUM2STRING( LS_DUAL_FB ),
 	ENUM2STRING( LS_DUAL_LR ),
 	ENUM2STRING( LS_HILT_BASH ),
+	//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
+	ENUM2STRING( LS_ANAKINKATA ),
+	ENUM2STRING( LS_ANAKINKATA2 ),
+	ENUM2STRING( LS_ANAKINKATA3 ),
 	{ "", -1 }
 };
 
@@ -444,7 +448,14 @@ void WP_SaberSetDefaults( saberInfo_t *saber ) {
 	saber->moveSpeedScale		= 1.0f;			// 1.0 - you move faster/slower when using this saber
 	saber->animSpeedScale		= 1.0f;			// 1.0 - plays normal attack animations faster/slower
 
+	//GalaxyRP (Alex): [New Combat Animations] Katas for all style can now be changed independently.
 	saber->kataMove				= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+	saber->kataMoveYellow		= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+	saber->kataMoveRed			= LS_INVALID;
+	saber->kataMovePurple		= LS_INVALID;
+	saber->kataMoveGreen		= LS_INVALID;
+	saber->kataMoveDual			= LS_INVALID;
+	saber->kataMoveStaff		= LS_INVALID;
 	saber->lungeAtkMove			= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they crouch+fwd+attack
 	saber->jumpAtkUpMove		= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they jump+attack
 	saber->jumpAtkFwdMove		= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they jump+fwd+attack
@@ -452,6 +463,14 @@ void WP_SaberSetDefaults( saberInfo_t *saber ) {
 	saber->jumpAtkRightMove		= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they jump+rightattack
 	saber->jumpAtkLeftMove		= LS_INVALID;	// LS_INVALID - if set, player will execute this move when they jump+left+attack
 	saber->readyAnim			= -1;			// -1 - anim to use when standing idle
+	//GalaxyRP (Alex): [New Combat Animations] New animation fields, one for each style.
+	saber->readyAnimYellow		= -1;			// -1 - anim to use when standing idle
+	saber->readyAnimRed			= -1;			// -1 - anim to use when standing idle
+	saber->readyAnimPurple		= -1;			// -1 - anim to use when standing idle
+	saber->readyAnimGreen		= -1;			// -1 - anim to use when standing idle
+	saber->readyAnimStaff		= -1;			// -1 - anim to use when standing idle
+	saber->readyAnimDual		= -1;			// -1 - anim to use when standing idle
+	
 	saber->drawAnim				= -1;			// -1 - anim to use when drawing weapon
 	saber->putawayAnim			= -1;			// -1 - anim to use when putting weapon away
 	saber->tauntAnim			= -1;			// -1 - anim to use when hit "taunt"
@@ -1052,6 +1071,61 @@ static void Saber_ParseKataMove( saberInfo_t *saber, const char **p ) {
 	if ( saberMove >= LS_INVALID && saberMove < LS_MOVE_MAX )
 		saber->kataMove = saberMove; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
 }
+//GalaxyRP (Alex): [New Combat Animations] These methods parse the extra kata parameters from the .sab file.
+static void Saber_ParseKataMoveYellow(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int saberMoveYellow = LS_INVALID;
+	if (COM_ParseString(p, &value))
+		return;
+	saberMoveYellow = GetIDForString(saberMoveTable, value);
+	if (saberMoveYellow >= LS_INVALID && saberMoveYellow < LS_MOVE_MAX)
+		saber->kataMoveYellow = saberMoveYellow; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+}
+static void Saber_ParseKataMoveRed(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int saberMoveRed = LS_INVALID;
+	if (COM_ParseString(p, &value))
+		return;
+	saberMoveRed = GetIDForString(saberMoveTable, value);
+	if (saberMoveRed >= LS_INVALID && saberMoveRed < LS_MOVE_MAX)
+		saber->kataMoveRed = saberMoveRed; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+}
+static void Saber_ParseKataMovePurple(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int saberMovePurple = LS_INVALID;
+	if (COM_ParseString(p, &value))
+		return;
+	saberMovePurple = GetIDForString(saberMoveTable, value);
+	if (saberMovePurple >= LS_INVALID && saberMovePurple < LS_MOVE_MAX)
+		saber->kataMovePurple = saberMovePurple; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+}
+static void Saber_ParseKataMoveGreen(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int saberMoveGreen = LS_INVALID;
+	if (COM_ParseString(p, &value))
+		return;
+	saberMoveGreen = GetIDForString(saberMoveTable, value);
+	if (saberMoveGreen >= LS_INVALID && saberMoveGreen < LS_MOVE_MAX)
+		saber->kataMoveGreen = saberMoveGreen; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+}
+static void Saber_ParseKataMoveStaff(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int saberMoveStaff = LS_INVALID;
+	if (COM_ParseString(p, &value))
+		return;
+	saberMoveStaff = GetIDForString(saberMoveTable, value);
+	if (saberMoveStaff >= LS_INVALID && saberMoveStaff < LS_MOVE_MAX)
+		saber->kataMoveStaff = saberMoveStaff; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+}
+static void Saber_ParseKataMoveDual(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int saberMoveDual = LS_INVALID;
+	if (COM_ParseString(p, &value))
+		return;
+	saberMoveDual = GetIDForString(saberMoveTable, value);
+	if (saberMoveDual >= LS_INVALID && saberMoveDual < LS_MOVE_MAX)
+		saber->kataMoveDual = saberMoveDual; //LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+}
 static void Saber_ParseLungeAtkMove( saberInfo_t *saber, const char **p ) {
 	const char *value;
 	int saberMove = LS_INVALID;
@@ -1114,6 +1188,61 @@ static void Saber_ParseReadyAnim( saberInfo_t *saber, const char **p ) {
 	anim = GetIDForString( animTable, value );
 	if ( anim >= 0 && anim < MAX_ANIMATIONS )
 		saber->readyAnim = anim;
+}
+//GalaxyRP (Alex): [New Combat Animations] Parsing the new .sab fields.
+static void Saber_ParseReadyAnimYellow(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->readyAnimYellow = anim;
+}
+static void Saber_ParseReadyAnimRed(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->readyAnimRed = anim;
+}
+static void Saber_ParseReadyAnimPurple(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->readyAnimPurple = anim;
+}
+static void Saber_ParseReadyAnimGreen(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->readyAnimGreen = anim;
+}
+static void Saber_ParseReadyAnimStaff(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->readyAnimStaff = anim;
+}
+static void Saber_ParseReadyAnimDual(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->readyAnimDual = anim;
 }
 static void Saber_ParseDrawAnim( saberInfo_t *saber, const char **p ) {
 	const char *value;
@@ -1906,6 +2035,13 @@ static keywordHash_t saberParseKeywords[] = {
 	{ "bounceOnWalls",			Saber_ParseBounceOnWalls,		NULL	},
 	{ "boltToWrist",			Saber_ParseBoltToWrist,			NULL	},
 	{ "kataMove",				Saber_ParseKataMove,			NULL	},
+	//GalaxyRP (Alex): [New Combat Animations] Parameters for the extra kata customisation.
+	{ "kataMoveYellow",			Saber_ParseKataMoveYellow,		NULL	},
+	{ "kataMoveRed",			Saber_ParseKataMoveRed,			NULL	},
+	{ "kataMovePurple",			Saber_ParseKataMovePurple,		NULL	},
+	{ "kataMoveGreen",			Saber_ParseKataMoveGreen,		NULL	},
+	{ "kataMoveStaff",			Saber_ParseKataMoveStaff,		NULL	},
+	{ "kataMoveDual",			Saber_ParseKataMoveDual,		NULL	},
 	{ "lungeAtkMove",			Saber_ParseLungeAtkMove,		NULL	},
 	{ "jumpAtkUpMove",			Saber_ParseJumpAtkUpMove,		NULL	},
 	{ "jumpAtkFwdMove",			Saber_ParseJumpAtkFwdMove,		NULL	},
@@ -1913,6 +2049,13 @@ static keywordHash_t saberParseKeywords[] = {
 	{ "jumpAtkRightMove",		Saber_ParseJumpAtkRightMove,	NULL	},
 	{ "jumpAtkLeftMove",		Saber_ParseJumpAtkLeftMove,		NULL	},
 	{ "readyAnim",				Saber_ParseReadyAnim,			NULL	},
+	//GalaxyRP (Alex): [New Combat Animations] Parameters for the extra ready animation customisation.
+	{ "readyAnimYellow",		Saber_ParseReadyAnimYellow,		NULL	},
+	{ "readyAnimRed",			Saber_ParseReadyAnimRed,		NULL	},
+	{ "readyAnimPurple",		Saber_ParseReadyAnimPurple,		NULL	},
+	{ "readyAnimGreen",			Saber_ParseReadyAnimGreen,		NULL	},
+	{ "readyAnimStaff",			Saber_ParseReadyAnimStaff,		NULL	},
+	{ "readyAnimDual",			Saber_ParseReadyAnimDual,		NULL	},
 	{ "drawAnim",				Saber_ParseDrawAnim,			NULL	},
 	{ "putawayAnim",			Saber_ParsePutawayAnim,			NULL	},
 	{ "tauntAnim",				Saber_ParseTauntAnim,			NULL	},

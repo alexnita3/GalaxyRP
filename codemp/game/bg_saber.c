@@ -347,6 +347,11 @@ saberMoveData_t	saberMoveData[LS_MOVE_MAX] = {//							NB:randomized
 	{"Reflect UL",	BOTH_P1_S1_TR,		Q_R,	Q_TL,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_BL2TR,		LS_A_TR2BL,		300	},	// LS_PARRY_UL,
 	{"Reflect LR",	BOTH_P1_S1_BR,		Q_R,	Q_BL,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_TR2BL,		LS_A_BL2TR,		300	},	// LS_PARRY_LR
 	{"Reflect LL",	BOTH_P1_S1_BL,		Q_R,	Q_BR,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_TL2BR,		LS_A_BR2TL,		300	},	// LS_PARRY_LL,
+
+	//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
+	{ "anakinkata",	BOTH_ANAKINKATA,	Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,		LS_READY,		200 },	// LS_PULL_ATTACK_STAB
+	{ "anakinkata2",BOTH_ANAKINKATA2,	Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,		LS_READY,		200 },	// LS_PULL_ATTACK_STAB
+	{ "anakinkata3",BOTH_ANAKINKATA3,	Q_R,	Q_R,	AFLAG_ACTIVE,	100,	BLK_TIGHT,	LS_READY,		LS_READY,		200 },	// LS_PULL_ATTACK_STAB
 };
 
 int transitionMove[Q_NUM_QUADS][Q_NUM_QUADS] =
@@ -2531,6 +2536,29 @@ qboolean PM_SaberMoveOkayForKata( void )
 	}
 }
 
+//GalaxyRP (Alex): [New Combat Animations] This method returns the correct parameter from the .sab file depending on the style the player is currently using.
+int getCorrectKata(saberInfo_t* saber ) {
+	switch (pm->ps->fd.saberAnimLevel)
+	{
+	case SS_FAST:
+		return saber->kataMove;
+	case SS_MEDIUM:
+		return saber->kataMoveYellow;
+	case SS_STRONG:
+		return saber->kataMoveRed;
+	case SS_TAVION:
+		return saber->kataMovePurple;
+	case SS_DESANN:
+		return saber->kataMoveGreen;
+	case SS_DUAL:
+		return saber->kataMoveDual;
+	case SS_STAFF:
+		return saber->kataMoveStaff;
+	default:
+		return LS_INVALID;
+	}
+}
+
 qboolean PM_CanDoKata( void )
 {
 	if ( PM_InSecondaryStyle() )
@@ -2557,13 +2585,13 @@ qboolean PM_CanDoKata( void )
 	{//FIXME: check rage, etc...
 		saberInfo_t *saber = BG_MySaber( pm->ps->clientNum, 0 );
 		if ( saber
-			&& saber->kataMove == LS_NONE )
+			&& getCorrectKata(saber) == LS_NONE )
 		{//kata move has been overridden in a way that should stop you from doing it at all
 			return qfalse;
 		}
 		saber = BG_MySaber( pm->ps->clientNum, 1 );
 		if ( saber
-			&& saber->kataMove == LS_NONE )
+			&& getCorrectKata(saber) == LS_NONE )
 		{//kata move has been overridden in a way that should stop you from doing it at all
 			return qfalse;
 		}
@@ -3171,21 +3199,21 @@ weapChecks:
 		saberInfo_t *saber1 = BG_MySaber( pm->ps->clientNum, 0 );
 		saberInfo_t *saber2 = BG_MySaber( pm->ps->clientNum, 1 );
 		//see if we have an overridden (or cancelled) kata move
-		if ( saber1 && saber1->kataMove != LS_INVALID )
+		if ( saber1 && getCorrectKata(saber1) != LS_INVALID )
 		{
-			if ( saber1->kataMove != LS_NONE )
+			if ( getCorrectKata(saber1) != LS_NONE )
 			{
-				overrideMove = (saberMoveName_t)saber1->kataMove;
+				overrideMove = (saberMoveName_t)getCorrectKata(saber1);
 			}
 		}
 		if ( overrideMove == LS_INVALID )
 		{//not overridden by first saber, check second
 			if ( saber2
-				&& saber2->kataMove != LS_INVALID )
+				&& getCorrectKata(saber2) != LS_INVALID )
 			{
-				if ( saber2->kataMove != LS_NONE )
+				if ( getCorrectKata(saber2) != LS_NONE )
 				{
-					overrideMove = (saberMoveName_t)saber2->kataMove;
+					overrideMove = (saberMoveName_t)getCorrectKata(saber2);
 				}
 			}
 		}
@@ -3193,12 +3221,12 @@ weapChecks:
 		if ( overrideMove == LS_INVALID )
 		{
 			if ( saber2
-				&& saber2->kataMove == LS_NONE )
+				&& getCorrectKata(saber2) == LS_NONE )
 			{
 				overrideMove = LS_NONE;
 			}
 			else if ( saber2
-				&& saber2->kataMove == LS_NONE )
+				&& getCorrectKata(saber2) == LS_NONE )
 			{
 				overrideMove = LS_NONE;
 			}
@@ -3819,6 +3847,10 @@ void PM_SetSaberMove(short newMove)
 				|| newMove == LS_UPSIDE_DOWN_ATTACK
 				|| newMove == LS_PULL_ATTACK_STAB
 				|| newMove == LS_PULL_ATTACK_SWING
+				//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
+				|| newMove == LS_ANAKINKATA
+				|| newMove == LS_ANAKINKATA2
+				|| newMove == LS_ANAKINKATA3
 				|| BG_KickMove( newMove ) )
 		{
 			parts = SETANIM_BOTH;

@@ -978,6 +978,31 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 			client->sess.vote_timer--;
 		}
 
+		//GalaxyRP (Alex): [Death System] This timer represents the time that a player has left until they can get up from being downed.
+		if (client->downedTime)
+		{
+			char serverMotd[MAX_STRING_CHARS];
+
+			if (client->downedTime <= rp_downed_timer.integer)
+			{
+				trap->SendServerCommand(ent->s.number, va("cp \"^1You are downed.\nTime Remaining: %d\"", client->downedTime));
+			}
+
+
+			client->downedTime--;
+
+			//GalaxyRP (Alex): [Death System] Not paralyzed anymore, means someone else helped you (or you helped yourself with admin permission. Set downed timer to 0 to remove message.
+			if (!(ent->client->pers.player_statuses & (1 << 6))) {
+				client->downedTime = 0;
+			}
+		}
+		else {
+			//GalaxyRP (Alex): [Death System] Can get up by themselves, but haven't yet.
+			if (ent->client->pers.player_statuses & (1 << 6)){
+				trap->SendServerCommand(ent->s.number, va("cp \"^1You are downed.\n^2You may get up by using ^3/getup\n^2Alternatively, someone else can do ^3/helpup ^3%s.\"", client->pers.netname_nocolor));
+			}
+		}
+
 		// Tr!Force: [Motd] Show server motd
 		if (client->motdTime)
 		{
@@ -1523,7 +1548,7 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 	qboolean actionPressed;
 	int buttons;
 
-	if ( !ent || !ent->client || ent->health <= 0 || ent->client->ps.stats[STAT_HEALTH] <= 0 ||
+	if ( !ent || !ent->client || ent->health <= 0 || (ent->client->ps.stats[STAT_HEALTH] <= 0 && !(ent->client->pers.player_statuses & (1 << 6))) ||
 		ent->client->sess.sessionTeam == TEAM_SPECTATOR || (ent->client->ps.pm_flags & PMF_FOLLOW))
 	{
 		return;
@@ -2478,7 +2503,7 @@ void ClientThink_real( gentity_t *ent ) {
 		client->ps.pm_type = PM_NOCLIP;
 	} else if ( client->ps.eFlags & EF_DISINTEGRATION ) {
 		client->ps.pm_type = PM_NOCLIP;
-	} else if ( client->ps.stats[STAT_HEALTH] <= 0 ) {
+	} else if ( client->ps.stats[STAT_HEALTH] <= 0 && !(ent->client->pers.player_statuses & (1 << 6))) {
 		client->ps.pm_type = PM_DEAD;
 	} else {
 		if (client->ps.forceGripChangeMovetype)
@@ -2952,7 +2977,7 @@ void ClientThink_real( gentity_t *ent ) {
 			ent->client->ps.duelInProgress = 0;
 			G_AddEvent(ent, EV_PRIVATE_DUEL, 0);
 		}
-		else if (duelAgainst->health < 1 || duelAgainst->client->ps.stats[STAT_HEALTH] < 1)
+		else if (duelAgainst->health < 1 || duelAgainst->client->ps.stats[STAT_HEALTH] < 1 || duelAgainst->client->pers.player_statuses & (1 << 6))
 		{
 			int old_health = ent->health;
 			int old_shield = ent->client->ps.stats[STAT_ARMOR];
@@ -2982,7 +3007,7 @@ void ClientThink_real( gentity_t *ent ) {
 			*/
 			//Private duel announcements are now made globally because we only want one duel at a time.
 			// zyk: now announce in console
-			if (ent->health > 0 && ent->client->ps.stats[STAT_HEALTH] > 0)
+			if (ent->health > 0 && ent->client->ps.stats[STAT_HEALTH] > 0 && !(client->pers.player_statuses & (1 << 6)))
 			{
 				trap->SendServerCommand( -1, va("print \"%s ^7%s %s^7, ending with ^1%d^7/^2%d^7!\n\"", ent->client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLDUELWINNER"), duelAgainst->client->pers.netname, old_health, old_shield) );
 			}
@@ -4414,7 +4439,7 @@ void ClientThink_real( gentity_t *ent ) {
 	// check for respawning
 	if ( client->ps.stats[STAT_HEALTH] <= 0
 		&& !(client->ps.eFlags2&EF2_HELD_BY_MONSTER)//can't respawn while being eaten
-		&& ent->s.eType != ET_NPC && level.load_entities_timer == 0) { // zyk: cannot respawn while entities are being loaded
+		&& ent->s.eType != ET_NPC && level.load_entities_timer == 0 && !(ent->client->pers.player_statuses & (1 << 6))) { // zyk: cannot respawn while entities are being loaded
 		// wait for the attack button to be pressed
 		if ( level.time > client->respawnTime && !gDoSlowMoDuel ) {
 			// forcerespawn is to prevent users from waiting out powerups

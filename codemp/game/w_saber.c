@@ -3286,6 +3286,19 @@ static QINLINE int G_PowerLevelForSaberAnim( gentity_t *ent, int saberNum, qbool
 			}
 			return FORCE_LEVEL_3;
 			break;
+		case BOTH_ANAKINKATA:
+		case BOTH_ANAKINKATA2:
+		case BOTH_ANAKINKATA3:
+			if (mySaberHit)
+			{//someone else hit my saber, not asking for damage level, but defense strength
+				return FORCE_LEVEL_1;
+			}
+			if (animTimer < 1000)
+			{//end of anim
+				return FORCE_LEVEL_0;
+			}
+			return FORCE_LEVEL_3;
+			break;
 		case BOTH_PULL_IMPALE_SWING:
 			if ( animTimer < 500 )
 			{//end of anim
@@ -9509,6 +9522,11 @@ int WP_SaberCanBlock(gentity_t *self, vec3_t point, int dflags, int mod, qboolea
 		return 0;
 	}
 	*/
+
+	// GalaxyRP (Alex): [Combat] If player has reticule on attacker, block it.
+	if (self->client->ps.hasLookTarget) {
+		return 1;
+	}
 
 	if (SaberAttacking(self))
 	{ //attacking, can't block now

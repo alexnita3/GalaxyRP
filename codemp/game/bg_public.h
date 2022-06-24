@@ -1453,6 +1453,11 @@ typedef enum {
 	LS_REFLECT_LR,
 	LS_REFLECT_LL,
 
+	//GalaxyRP (Alex): [New Combat Animations] From this point, all animations are custom.
+	LS_ANAKINKATA,
+	LS_ANAKINKATA2,
+	LS_ANAKINKATA3,
+
 	LS_MOVE_MAX//
 } saberMoveName_t;
 
@@ -1627,6 +1632,15 @@ typedef struct saberInfo_s {
 
 	//done in both cgame and game (BG code)
 	int				kataMove;								// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
+	
+	//GalaxyRP (Alex): [New Combat Animations] Katas for all style can now be changed independently.
+	int				kataMoveYellow;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR YELLOW STYLE
+	int				kataMoveRed;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR YELLOW STYLE
+	int				kataMovePurple;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR YELLOW STYLE
+	int				kataMoveGreen;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR YELLOW STYLE
+	int				kataMoveDual;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR YELLOW STYLE
+	int				kataMoveStaff;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR YELLOW STYLE
+	
 	int				lungeAtkMove;							// LS_INVALID - if set, player will execute this move when they crouch+fwd+attack
 	int				jumpAtkUpMove;							// LS_INVALID - if set, player will execute this move when they jump+attack
 	int				jumpAtkFwdMove;							// LS_INVALID - if set, player will execute this move when they jump+fwd+attack
@@ -1634,6 +1648,14 @@ typedef struct saberInfo_s {
 	int				jumpAtkRightMove;						// LS_INVALID - if set, player will execute this move when they jump+rightattack
 	int				jumpAtkLeftMove;						// LS_INVALID - if set, player will execute this move when they jump+left+attack
 	int				readyAnim;								// -1 - anim to use when standing idle
+	//GalaxyRP (Alex): [New Combat Animations] New animation fields, one for each style.
+	int				readyAnimYellow;						// -1 - anim to use when standing idle
+	int				readyAnimRed;							// -1 - anim to use when standing idle
+	int				readyAnimPurple;						// -1 - anim to use when standing idle
+	int				readyAnimGreen;							// -1 - anim to use when standing idle
+	int				readyAnimStaff;							// -1 - anim to use when standing idle
+	int				readyAnimDual;							// -1 - anim to use when standing idle
+	
 	int				drawAnim;								// -1 - anim to use when drawing weapon
 	int				putawayAnim;							// -1 - anim to use when putting weapon away
 	int				tauntAnim;								// -1 - anim to use when hit "taunt"

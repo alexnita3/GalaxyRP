@@ -2156,6 +2156,8 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	// GalaxyRP (Alex): [Database] Update just the ammo table with the current values on death.
 	update_weapons_table_row_with_current_values(self);
 
+	self->client->pers.player_statuses &= ~(1 << 6);
+
 	// zyk: remove any quest_power status from this player
 	self->client->pers.quest_power_status = 0;
 	self->client->pers.player_statuses &= ~(1 << 20);
@@ -4828,6 +4830,7 @@ vec3_t gPainPoint;
 
 extern void Jedi_Decloak( gentity_t *self );
 extern void Boba_FlyStop( gentity_t *self );
+extern void paralyze_player(int client_id);
 extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
 void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t dir, vec3_t point, int damage, int dflags, int mod ) {
 	gclient_t	*client;
@@ -4868,10 +4871,6 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 	// zyk: target has chat protection
 	if (targ && targ->client && !targ->NPC && targ->client->pers.player_statuses & (1 << 5))
-		return;
-
-	// zyk: target has been paralyzed by an admin
-	if (targ && targ->client && !targ->NPC && targ->client->pers.player_statuses & (1 << 6))
 		return;
 
 	// zyk: players with noclip cannot damage
@@ -6410,8 +6409,33 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			}
 
 			targ->enemy = attacker;
-			targ->die (targ, inflictor, attacker, take, mod);
-			G_ActivateBehavior( targ, BSET_DEATH );
+
+			//GalaxyRP (Alex): [New Death System] Only down non-npcs, and only people who aren't already dead.
+			if (!targ->NPC && targ->client && !(targ->s.eFlags & EF_DEAD)) {
+				//GalaxyRP (Alex): [New Death System] If player is paralyzed and was attacked fuirther, kill them permanently.
+				if (targ->client->pers.player_statuses & (1 << 6)) {
+					targ->client->pers.player_statuses &= ~(1 << 6);
+
+					targ->die(targ, inflictor, attacker, take, mod);
+					G_ActivateBehavior(targ, BSET_DEATH);
+				}
+				//GalaxyRP (Alex): [New Death System] Player was alive, so down them instead of killing them.
+				else {
+					int client_id = -1;
+					client_id = ClientNumberFromString(targ, targ->client->pers.netname, qfalse);
+
+					targ->client->downedTime = rp_downed_timer.integer;
+
+					paralyze_player(client_id);
+				}
+			}
+			else {
+				targ->die(targ, inflictor, attacker, take, mod);
+				G_ActivateBehavior(targ, BSET_DEATH);
+			}
+
+			
+			
 			return;
 		}
 		else
