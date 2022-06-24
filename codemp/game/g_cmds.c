@@ -1242,6 +1242,13 @@ void Cmd_Noclip_f( gentity_t *ent ) {
 		return;
 	}
 
+	if (ent->client->pers.player_statuses & (1 << 6)) {
+		trap->SendServerCommand(ent - g_entities, "print \"^1You cannot noClip while downed!\n\"");
+		trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot noClip while downed!\n\"");
+
+		return qfalse;
+	}
+
 	if (ent->client->ps.eFlags2 & EF2_HELD_BY_MONSTER)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"Cannot noclip while being eaten by a rancor.\n\"" );
