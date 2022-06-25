@@ -1421,26 +1421,20 @@ qboolean can_player_get_up(gentity_t* ent, gentity_t* target) {
 	}
 	//GalaxyRP (Alex): [Death System] Ent and target are different.
 	else {
-		if (target->client->downedTime == 0) {
-			trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target->client->pers.netname));
-			trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target->client->pers.netname));
-			trap->SendServerCommand(target->client->ps.clientNum, va("cp \"^2 %s helped you up!.\"", ent->client->pers.netname));
-			trap->SendServerCommand(target->client->ps.clientNum, va("print \"^2 %s helped you up!.\"", ent->client->pers.netname));
-
-			return qtrue;
-		}
-		else {
-			trap->SendServerCommand(ent - g_entities, "print \"^1You cannot help them until the timer is finished!\n\"");
-			trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot help them until the timer is finished!\n\"");
-			return qfalse;
-		}
-
 		//GalaxyRP (Alex): [Death System] Can't help someone else get up if you're also down.
 		if (ent->client->pers.player_statuses & (1 << 6)) {
 			trap->SendServerCommand(ent - g_entities, "print \"^1You cannot help someone else while you're downed!\n\"");
 			trap->SendServerCommand(ent - g_entities, "cp \"^1You cannot help someone else while you're downed!\n\"");
 
 			return qfalse;
+		}
+		else {
+			trap->SendServerCommand(ent - g_entities, va("cp \"^2You helped %s up.\"", target->client->pers.netname));
+			trap->SendServerCommand(ent - g_entities, va("print \"^2You helped %s up.\"", target->client->pers.netname));
+			trap->SendServerCommand(target->client->ps.clientNum, va("cp \"^2 %s helped you up!.\"", ent->client->pers.netname));
+			trap->SendServerCommand(target->client->ps.clientNum, va("print \"^2 %s helped you up!.\"", ent->client->pers.netname));
+
+			return qtrue;
 		}
 	}
 
