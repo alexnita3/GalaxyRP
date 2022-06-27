@@ -1376,6 +1376,9 @@ void paralyze_player(int client_id) {
 	//GalaxyRP (Alex): [Death System] Paralyze the target player.
 	g_entities[client_id].client->pers.player_statuses |= (1 << 6);
 
+	g_entities[client_id].client->invulnerableTimer = level.time + 3000;
+	g_entities[client_id].client->ps.eFlags |= EF_INVULNERABLE;
+
 	g_entities[client_id].client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
 	g_entities[client_id].client->ps.forceHandExtendTime = level.time + 500;
 	g_entities[client_id].client->ps.velocity[2] += 150;
