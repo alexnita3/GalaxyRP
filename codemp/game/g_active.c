@@ -973,6 +973,35 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 			}
 		}
 
+		//GalaxyRP (Alex): [Stat Regen] Regen some stats every second. In certain animations the regen will be higher.
+		int health_regen_amount = 1 + ent->client->pers.skill_levels[59];
+		int shield_regen_amount = 1 + ent->client->pers.skill_levels[58];
+		int force_regen_amount = 0;
+		//GalaxyRP (Alex): [Stat Regen] Never regen while downed or dead.
+		if (ent->health > 0 && !(ent->client->pers.player_statuses & (1 << 6))) {
+			if ((ent->health + health_regen_amount) <= client->pers.max_rpg_health) {
+				if (client->ps.legsAnim == BOTH_MEDITATE) {
+					ent->health += health_regen_amount*2;
+				}
+				else {
+					if (rp_allow_passive_regen.integer) {
+						ent->health += health_regen_amount;
+					}
+				}
+			}
+			if ((client->ps.stats[STAT_ARMOR] + shield_regen_amount) <= client->pers.max_rpg_shield){
+				if (client->ps.legsAnim == BOTH_MEDITATE) {
+					client->ps.stats[STAT_ARMOR] += shield_regen_amount * 2;
+				}
+				else {
+					if (rp_allow_passive_regen.integer) {
+						client->ps.stats[STAT_ARMOR] += shield_regen_amount;
+					}
+				}
+			}
+		}
+
+
 		if (zyk_vote_timer.integer > 0 && client->sess.vote_timer > 0)
 		{ // zyk: countdown of the vote timer
 			client->sess.vote_timer--;

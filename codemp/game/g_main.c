@@ -223,7 +223,7 @@ void create_admin_account(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt
 	char statement_account_entry_creation[200] = "INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('admin','admin','66846719','0','admin')";
 	char statement_account_id_select[100] = "SELECT AccountID FROM Accounts WHERE Username='admin'";
 	char statement_character_entry_creation[207] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName, xp) VALUES('%i', '100', '1', '100', '%s', '1', 'Nothing to show.', 'DefaultName', 'kyle', 0)";
-	char statement_skill_entry_creation[1000] = "INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements, Armor, Flamethrower) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
+	char statement_skill_entry_creation[1000] = "INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements, Armor, Flamethrower, ShieldRegen, HealthRegen) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
 	char statement_weapon_entry_creation[200] = "INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')";
 
 	//alex: Create account record
@@ -315,6 +315,8 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 	char statement_xp_column_alter[110] = "ALTER TABLE Characters ADD COLUMN xp INTEGER DEFAULT 0";
 	char statement_armor_column_alter[110] = "ALTER TABLE Skills ADD COLUMN Armor INTEGER DEFAULT 0";
 	char statement_flamethrower_column_alter[110] = "ALTER TABLE Skills ADD COLUMN Flamethrower INTEGER DEFAULT 0";
+	char statement_shieldregen_columns_alter[110] = "ALTER TABLE Skills ADD COLUMN ShieldRegen INTEGER DEFAULT 0";
+	char statement_heathregen_columns_alter[110] = "ALTER TABLE Skills ADD COLUMN HealthRegen INTEGER DEFAULT 0";
 
 	//Alex: Create Account Table
 	trap->Print("Initializing Account table.\n");
@@ -450,6 +452,36 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 		}
 	}
 	trap->Print("Done with Flamethrower Skill column.\n");
+
+	rc = sqlite3_exec(db, statement_shieldregen_columns_alter, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		if (strcmp(zErrMsg, "duplicate column name: ShieldRegen") != 0) {
+			trap->Print("SQL error: %s\n", zErrMsg);
+			sqlite3_free(zErrMsg);
+			sqlite3_close(db);
+			return;
+		}
+		else {
+			trap->Print("ShieldRegen skill column already exists, nothing to do here.\n");
+		}
+	}
+	trap->Print("Done with HealthRegen Skill column.\n");
+
+	rc = sqlite3_exec(db, statement_heathregen_columns_alter, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		if (strcmp(zErrMsg, "duplicate column name: HealthRegen") != 0) {
+			trap->Print("SQL error: %s\n", zErrMsg);
+			sqlite3_free(zErrMsg);
+			sqlite3_close(db);
+			return;
+		}
+		else {
+			trap->Print("HealthRegen skill column already exists, nothing to do here.\n");
+		}
+	}
+	trap->Print("Done with HealthRegen Skill column.\n");
 
 	if (with_admin_account == qtrue) {
 		trap->Print("Initializing admin account.\n");
