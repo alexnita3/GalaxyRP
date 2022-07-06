@@ -976,7 +976,7 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 		//GalaxyRP (Alex): [Stat Regen] Regen some stats every second. In certain animations the regen will be higher.
 		int health_regen_amount = 1 + ent->client->pers.skill_levels[59];
 		int shield_regen_amount = 1 + ent->client->pers.skill_levels[58];
-		int force_regen_amount = 0;
+
 		//GalaxyRP (Alex): [Stat Regen] Never regen while downed or dead.
 		if (ent->health > 0 && !(ent->client->pers.player_statuses & (1 << 6))) {
 			if ((ent->health + health_regen_amount) <= client->pers.max_rpg_health) {
