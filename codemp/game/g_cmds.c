@@ -2490,8 +2490,8 @@ void select_player_character(gentity_t* ent, char *character_name, sqlite3* db, 
 	numberOfChars = select_number_of_characters_with_name(ent, character_name, db, zErrMsg, rc, stmt);
 
 	if (numberOfChars != 1) {
-		trap->SendServerCommand(ent - g_entities, "print \"^2Character does not exist.\n\"");
-		trap->SendServerCommand(ent - g_entities, "cp \"^2Character does not exist.\n\"");
+		trap->SendServerCommand(ent - g_entities, va("print \"^2Character %s ^2does not exist.\n\"", character_name));
+		trap->SendServerCommand(ent - g_entities, va("cp \"^2Character %s ^2does not exist.\n\"", character_name));
 
 		return;
 	}
