@@ -18335,6 +18335,36 @@ void Cmd_DuelBoard_f(gentity_t *ent) {
 	}
 }
 
+void Cmd_GalaxyRpUi_f(gentity_t* ent) {
+	// zyk: sends info to the client-side menu if player has the client-side plugin
+	int universe_quest_counter_value = 0;
+
+	if (Q_stricmp(ent->client->pers.guid, "NOGUID") == 0)
+	{
+		return;
+	}
+
+	if (ent->client->sess.loggedin == qtrue)
+	{
+		char content[1024];
+
+		strcpy(content, "");
+
+		strcpy(content, va("%s%d-%d-%d-%d-", content, ent->client->pers.level, ent->client->pers.xp, ent->client->pers.skillpoints, ent->client->pers.credits));
+
+		for (int i = 0; i < ARRAY_LEN(skills); i++) {
+			strcpy(content, va("%s%d-%d-", content, ent->client->pers.skill_levels[i], skills[i].max_level));
+		}
+
+		trap->SendServerCommand(ent - g_entities, va("print \"%s\n\"", content));
+		trap->SendServerCommand(ent->s.number, va("zykmod \"%s\"", content));
+	}
+	else
+	{
+		return;
+	}
+}
+
 /*
 =================
 ClientCommand
@@ -18496,6 +18526,7 @@ command_t commands[] = {
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
+	{"zykmod",				Cmd_GalaxyRpUi_f,			CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "zykfile",			Cmd_ZykFile_f,				CMD_NOINTERMISSION }
 //	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 //	{ "meleearena",			Cmd_MeleeArena_f,			CMD_ALIVE|CMD_NOINTERMISSION },
