@@ -1649,6 +1649,7 @@ static void CG_ZykChars(void)
 	}
 
 	// zyk: cleaning cvars that will not render a charname
+	char_count--;
 	while (char_count < 15)
 	{
 		trap->Cvar_Set(va("ui_zyk_rpg_char_%d", char_count + 1), "");
@@ -1716,14 +1717,20 @@ char ui_cvars_in_order[100][100] = {
 	"ui_zyk_skill_53_level",
 	"ui_zyk_skill_54_level",
 	"ui_zyk_skill_55_level",
-	"ui_zyk_skill_56_level"
+	"ui_zyk_skill_56_level",
+	"ui_rp_skill_57_level",
+	"ui_rp_skill_58_level",
+	"ui_rp_skill_59_level",
+	"ui_rp_skill_60_level",
+	"ui_rp_skill_61_level",
+	"ui_rp_skill_62_level"
 };
 
 
 
 static void CG_ZykMod( void )
 { // zyk: receives account info of logged players
-	char arg[512] = {0};
+	char arg[1024] = {0};
 
 	trap->Cmd_Argv(1, arg, sizeof(arg));
 

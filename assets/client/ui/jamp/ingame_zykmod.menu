@@ -2061,6 +2061,38 @@
 
 		itemDef 
 		{
+			name				shieldRegenSkillButton
+			group				otherSkillsControls
+			text				"Shield Regen"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 320 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0 
+		}
+
+		itemDef 
+		{
+			name				healthRegenSkillButton
+			group				otherSkillsControls
+			text				"Health Regen"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 340 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0 
+		}
+
+		itemDef 
+		{
 			name				ammoSkillsButton_glow
 			style				WINDOW_STYLE_SHADER
 			rect				160 190 100 30
@@ -2404,6 +2436,38 @@
 			textscale			.5
 			style				WINDOW_STYLE_FILLED
 			rect				270 240 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				armorSkillButton
+			group				itemsSkillsControls
+			text				"Armor"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 260 130 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				flameThrowerSkillButton
+			group				itemsSkillsControls
+			text				"FlameThrower"
+			descText			""
+			type				1
+			font				3
+			textscale			.5
+			style				WINDOW_STYLE_FILLED
+			rect				270 280 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
@@ -3275,6 +3339,38 @@
 
 		itemDef 
 		{
+			name				armorSkillValue
+			group				levelitem
+			rect				380 260 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_rp_skill_57_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				flameThrowerSkillValue
+			group				levelitem
+			rect				380 280 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_rp_skill_58_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
 			name				forcePowerSkillValue
 			group				levelother
 			rect				390 280 30 30
@@ -3298,6 +3394,38 @@
 			type				ITEM_TYPE_EDITFIELD
 			text				""
 			cvar				"ui_zyk_skill_56_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				shieldRegenSkillValue
+			group				levelother
+			rect				390 320 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_rp_skill_61_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				healthRegenSkillValue
+			group				levelother
+			rect				390 340 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_rp_skill_62_level" 
 			textalign			ITEM_ALIGN_LEFT
 			font				3
 			textscale			.5
@@ -5503,7 +5631,7 @@
 			font				3
 			textscale			.4
 			style				WINDOW_STYLE_FILLED
-			rect				320 110 180 12
+			rect				320 65 180 12
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
@@ -5524,7 +5652,7 @@
 			font				3
 			textscale			.4
 			style				WINDOW_STYLE_FILLED
-			rect				320 140 180 12
+			rect				320 80 180 12
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
@@ -5545,7 +5673,7 @@
 			font				3
 			textscale			.4
 			style				WINDOW_STYLE_FILLED
-			rect				320 155 180 12
+			rect				320 95 180 12
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
@@ -5566,7 +5694,7 @@
 			font				3
 			textscale			.4
 			style				WINDOW_STYLE_FILLED
-			rect				320 170 180 12
+			rect				320 110 180 12
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
@@ -5587,7 +5715,7 @@
 			font				3
 			textscale			.4
 			style				WINDOW_STYLE_FILLED
-			rect				320 185 180 12
+			rect				320 125 180 12
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
@@ -5608,7 +5736,7 @@
 			font				3
 			textscale			.4
 			style				WINDOW_STYLE_FILLED
-			rect				320 200 180 12
+			rect				320 140 180 12
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0

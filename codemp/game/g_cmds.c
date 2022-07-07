@@ -42,6 +42,8 @@ void Cmd_NPC_f( gentity_t *ent );
 void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin);
 
 extern int check_xp(int currentLevel);
+extern void Cmd_GalaxyRpUi_f(gentity_t* ent);
+extern void Cmd_ZykChars_f(gentity_t* ent);
 
 // GalaxyRP (Alex): [Skills] This is used to display everything about a skill in various places throughout the mod.
 const skill_t skills[] = {
@@ -2992,6 +2994,10 @@ void Cmd_Login_F(gentity_t * ent)
 	trap->SendServerCommand(ent - g_entities, "print \"^2You have sucessfully logged in.\n\"");
 
 	sqlite3_close(db);
+
+	Cmd_ZykChars_f(ent);
+	Cmd_GalaxyRpUi_f(ent);
+
 	return;
 }
 
@@ -13513,73 +13519,6 @@ void Cmd_PlayerMode_f( gentity_t *ent ) {
 	}
 }
 
-/*
-==================
-Cmd_ZykFile_f
-==================
-*/
-void Cmd_ZykFile_f(gentity_t *ent) {
-	int page = 1; // zyk: page the user wants to see
-	char arg1[MAX_STRING_CHARS];
-	char arg2[MAX_STRING_CHARS];
-	char file_content[MAX_STRING_CHARS * 4];
-	char content[MAX_STRING_CHARS];
-	int i = 0;
-	int results_per_page = zyk_list_cmds_results_per_page.integer; // zyk: number of results per page
-	FILE *server_file = NULL;
-	strcpy(file_content, "");
-	strcpy(content, "");
-
-	if (trap->Argc() < 3)
-	{
-		trap->SendServerCommand(ent->s.number, "print \"Use ^3/zykfile <filename> <page number> ^7to see the results of this page or a search string. Example: ^3/zykfile npclist 1 ^7or to do a search ^3/zykfile npclist reborn^7\n\"");
-		return;
-	}
-
-	// zyk: filename
-	trap->Argv(1, arg1, sizeof(arg1));
-
-	// zyk: page number or search string
-	trap->Argv(2, arg2, sizeof(arg2));
-	page = atoi(arg2);
-
-	server_file = fopen(va("GalaxyRP/%s.txt", arg1), "r");
-	if (server_file != NULL)
-	{
-		if (page > 0)
-		{ // zyk: show results of this page
-			while (i < (results_per_page * (page - 1)) && fgets(content, sizeof(content), server_file) != NULL)
-			{ // zyk: reads the file until it reaches the position corresponding to the page number
-				i++;
-			}
-
-			while (i < (results_per_page * page) && fgets(content, sizeof(content), server_file) != NULL)
-			{ // zyk: fgets returns NULL at EOF
-				strcpy(file_content, va("%s%s", file_content, content));
-				i++;
-			}
-		}
-		else
-		{ // zyk: search for the string
-			while (i < results_per_page && fgets(content, sizeof(content), server_file) != NULL)
-			{ // zyk: fgets returns NULL at EOF
-				if (strstr(G_NewString(content), G_NewString(arg2)))
-				{
-					strcpy(file_content, va("%s%s", file_content, content));
-					i++;
-				}
-			}
-		}
-
-		fclose(server_file);
-		trap->SendServerCommand(ent->s.number, va("print \"\n%s\n\"", file_content));
-	}
-	else
-	{
-		trap->SendServerCommand(ent->s.number, "print \"This file does not exist\n\"");
-	}
-}
-
 void zyk_spawn_race_line(int x, int y, int z, int yaw)
 {
 	gentity_t *new_ent_line = G_Spawn();
@@ -18395,6 +18334,7 @@ void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 			strcpy(content, va("%s%d/%d-", content, ent->client->pers.skill_levels[i], skills[i].max_level));
 		}
 
+		trap->SendServerCommand(ent->s.number, va("print \"%s\"", content));
 		trap->SendServerCommand(ent->s.number, va("zykmod \"%s\"", content));
 	}
 	else
@@ -18428,6 +18368,7 @@ void Cmd_ZykChars_f(gentity_t* ent) {
 		return;
 	}
 
+	trap->SendServerCommand(ent->s.number, va("print \"%s\"", select_character_list_for_ui(ent, db, zErrMsg, rc, stmt)));
 	trap->SendServerCommand(ent->s.number, va("zykchars \"%s\"", select_character_list_for_ui(ent, db, zErrMsg, rc, stmt)));
 }
 
@@ -18592,9 +18533,8 @@ command_t commands[] = {
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
-	{"zykmod",				Cmd_GalaxyRpUi_f,			CMD_ALIVE | CMD_NOINTERMISSION },
-	{ "zykchars",			Cmd_ZykChars_f,			CMD_ALIVE | CMD_NOINTERMISSION },
-	{ "zykfile",			Cmd_ZykFile_f,				CMD_NOINTERMISSION }
+	{ "zykmod",				Cmd_GalaxyRpUi_f,			CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "zykchars",			Cmd_ZykChars_f,			CMD_ALIVE | CMD_NOINTERMISSION }
 //	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 //	{ "meleearena",			Cmd_MeleeArena_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "bountyquest",		Cmd_BountyQuest_f,			CMD_RPG|CMD_NOINTERMISSION },
