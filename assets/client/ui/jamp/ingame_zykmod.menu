@@ -2448,7 +2448,7 @@
 
 		itemDef 
 		{
-			name				skill1Value
+			name				jumpSkillValue
 			group				levelforce
 			rect				380 100 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2464,7 +2464,7 @@
 
 		itemDef 
 		{
-			name				skill2Value
+			name				pushSkillValue
 			group				levelforce
 			rect				380 120 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2480,7 +2480,7 @@
 
 		itemDef 
 		{
-			name				skill3Value
+			name				pullSkillValue
 			group				levelforce
 			rect				380 140 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2496,7 +2496,7 @@
 
 		itemDef 
 		{
-			name				skill4Value
+			name				speedSkillValue
 			group				levelforce
 			rect				380 160 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2512,7 +2512,7 @@
 
 		itemDef 
 		{
-			name				skill5Value
+			name				senseSkillValue
 			group				levelforce
 			rect				380 180 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2528,7 +2528,7 @@
 
 		itemDef 
 		{
-			name				skill6Value
+			name				saberAttackSkillValue
 			group				levelforce
 			rect				380 200 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2544,7 +2544,7 @@
 
 		itemDef 
 		{
-			name				skill7Value
+			name				saberDefenseSkillValue
 			group				levelforce
 			rect				380 220 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2560,7 +2560,7 @@
 
 		itemDef 
 		{
-			name				skill8Value
+			name				saberThrowSkillValue
 			group				levelforce
 			rect				380 240 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2576,7 +2576,7 @@
 
 		itemDef 
 		{
-			name				skill9Value
+			name				absorbSkillValue
 			group				levelforce
 			rect				380 260 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2592,7 +2592,7 @@
 
 		itemDef 
 		{
-			name				skill10Value
+			name				healSkillValue
 			group				levelforce
 			rect				530 100 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2608,7 +2608,7 @@
 
 		itemDef 
 		{
-			name				skill11Value
+			name				protectSkillValue
 			group				levelforce
 			rect				530 120 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2624,7 +2624,7 @@
 
 		itemDef 
 		{
-			name				skill12Value
+			name				mindTrickSkillValue
 			group				levelforce
 			rect				530 140 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2640,7 +2640,7 @@
 
 		itemDef 
 		{
-			name				skill13Value
+			name				teamHealSkillValue
 			group				levelforce
 			rect				530 160 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2656,7 +2656,7 @@
 
 		itemDef 
 		{
-			name				skill14Value
+			name				lightningSkillValue
 			group				levelforce
 			rect				530 180 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2672,7 +2672,7 @@
 
 		itemDef 
 		{
-			name				skill15Value
+			name				gripSkillValue
 			group				levelforce
 			rect				530 200 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2688,7 +2688,7 @@
 
 		itemDef 
 		{
-			name				skill16Value
+			name				drainSkillValue
 			group				levelforce
 			rect				530 220 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2704,7 +2704,7 @@
 
 		itemDef 
 		{
-			name				skill17Value
+			name				rageSkillValue
 			group				levelforce
 			rect				530 240 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2720,7 +2720,7 @@
 
 		itemDef 
 		{
-			name				skill18Value
+			name				teamEnergizeSkillValue
 			group				levelforce
 			rect				530 260 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2736,7 +2736,7 @@
 
 		itemDef 
 		{
-			name				skill19Value
+			name				stunBatonSkillValue
 			group				levelweapon
 			rect				380 100 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2752,7 +2752,7 @@
 
 		itemDef 
 		{
-			name				skill20Value
+			name				blasterPistolSkillValue
 			group				levelweapon
 			rect				380 120 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2768,7 +2768,7 @@
 
 		itemDef 
 		{
-			name				skill21Value
+			name				blasterRifleSkillValue
 			group				levelweapon
 			rect				380 140 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2784,7 +2784,7 @@
 
 		itemDef 
 		{
-			name				skill22Value
+			name				disruptorSkillValue
 			group				levelweapon
 			rect				380 160 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2800,7 +2800,7 @@
 
 		itemDef 
 		{
-			name				skill23Value
+			name				bowcasterSkillValue
 			group				levelweapon
 			rect				380 180 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2816,7 +2816,7 @@
 
 		itemDef 
 		{
-			name				skill24Value
+			name				repeaterSkillValue
 			group				levelweapon
 			rect				380 200 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2832,7 +2832,7 @@
 
 		itemDef 
 		{
-			name				skill25Value
+			name				dempSkillValue
 			group				levelweapon
 			rect				530 100 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2848,7 +2848,7 @@
 
 		itemDef 
 		{
-			name				skill26Value
+			name				flachetteSkillValue
 			group				levelweapon
 			rect				530 120 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2864,7 +2864,7 @@
 
 		itemDef 
 		{
-			name				skill27Value
+			name				rocketLauncherskillValue
 			group				levelweapon
 			rect				530 140 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2880,7 +2880,7 @@
 
 		itemDef 
 		{
-			name				skill28Value
+			name				concussionRifleSkillValue
 			group				levelweapon
 			rect				530 160 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2896,7 +2896,7 @@
 
 		itemDef 
 		{
-			name				skill29Value
+			name				bryarPistolSkillValue
 			group				levelweapon
 			rect				530 180 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2912,7 +2912,7 @@
 
 		itemDef 
 		{
-			name				skill30Value
+			name				meleeSkillValue
 			group				levelweapon
 			rect				530 200 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2928,7 +2928,7 @@
 
 		itemDef 
 		{
-			name				skill31Value
+			name				maxShieldSkillValue
 			group				levelother
 			rect				390 100 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2944,7 +2944,7 @@
 
 		itemDef 
 		{
-			name				skill32Value
+			name				shieldStrengthSkillValue
 			group				levelother
 			rect				390 120 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2960,7 +2960,7 @@
 
 		itemDef 
 		{
-			name				skill33Value
+			name				healthStrengthskillValue
 			group				levelother
 			rect				390 140 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2976,7 +2976,7 @@
 
 		itemDef 
 		{
-			name				skill34Value
+			name				drainShieldSkillValue
 			group				levelother
 			rect				390 160 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -2992,7 +2992,7 @@
 
 		itemDef 
 		{
-			name				skill35Value
+			name				jetpackSkillValue
 			group				levelother
 			rect				390 180 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3008,7 +3008,7 @@
 
 		itemDef 
 		{
-			name				skill36Value
+			name				senseHealthSkillValue
 			group				levelother
 			rect				390 200 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3024,7 +3024,7 @@
 
 		itemDef 
 		{
-			name				skill37Value
+			name				shieldHealSkillValue
 			group				levelother
 			rect				390 220 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3040,7 +3040,7 @@
 
 		itemDef 
 		{
-			name				skill38Value
+			name				teamShieldHealSkillValue
 			group				levelother
 			rect				390 240 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3056,7 +3056,7 @@
 
 		itemDef 
 		{
-			name				skill39Value
+			name				uniqueSkillValue
 			group				levelother
 			rect				390 260 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3072,7 +3072,7 @@
 
 		itemDef 
 		{
-			name				skill40Value
+			name				blasterPackSkillValue
 			group				levelammo
 			rect				380 100 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3088,7 +3088,7 @@
 
 		itemDef 
 		{
-			name				skill41Value
+			name				powercellSkillValue
 			group				levelammo
 			rect				380 120 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3104,7 +3104,7 @@
 
 		itemDef 
 		{
-			name				skill42Value
+			name				metalBoltsSkillValue
 			group				levelammo
 			rect				380 140 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3120,7 +3120,7 @@
 
 		itemDef 
 		{
-			name				skill43Value
+			name				rocketsSkillValue
 			group				levelammo
 			rect				380 160 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3136,7 +3136,7 @@
 
 		itemDef 
 		{
-			name				skill44Value
+			name				thermalsSkillValue
 			group				levelammo
 			rect				380 180 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3152,7 +3152,7 @@
 
 		itemDef 
 		{
-			name				skill45Value
+			name				tripMinesSkillValue
 			group				levelammo
 			rect				380 200 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3168,7 +3168,7 @@
 
 		itemDef 
 		{
-			name				skill46Value
+			name				detpacksSkillValue
 			group				levelammo
 			rect				380 220 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3184,7 +3184,7 @@
 
 		itemDef 
 		{
-			name				skill47Value
+			name				binocularsSkillValue
 			group				levelitem
 			rect				380 100 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3200,7 +3200,7 @@
 
 		itemDef 
 		{
-			name				skill48Value
+			name				bactaCanisterSkillValue
 			group				levelitem
 			rect				380 120 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3216,7 +3216,7 @@
 
 		itemDef 
 		{
-			name				skill49Value
+			name				sentryGunSkillValue
 			group				levelitem
 			rect				380 140 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3232,7 +3232,7 @@
 
 		itemDef 
 		{
-			name				skill50Value
+			name				seekerDroneSkillValue
 			group				levelitem
 			rect				380 160 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3248,7 +3248,7 @@
 
 		itemDef 
 		{
-			name				skill51Value
+			name				eWebSkillValue
 			group				levelitem
 			rect				380 180 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3264,7 +3264,7 @@
 
 		itemDef 
 		{
-			name				skill52Value
+			name				bigBactaSkillValue
 			group				levelitem
 			rect				380 200 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3280,7 +3280,7 @@
 
 		itemDef 
 		{
-			name				skill53Value
+			name				forceFieldSkillValue
 			group				levelitem
 			rect				380 220 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3296,7 +3296,7 @@
 
 		itemDef 
 		{
-			name				skill54Value
+			name				cloakItemSkillValue
 			group				levelitem
 			rect				380 240 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3312,7 +3312,7 @@
 
 		itemDef 
 		{
-			name				skill55Value
+			name				forcePowerSkillValue
 			group				levelother
 			rect				390 280 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3328,7 +3328,7 @@
 
 		itemDef 
 		{
-			name				skill56Value
+			name				improvementsSkillValue
 			group				levelother
 			rect				390 300 30 30
 			style				WINDOW_STYLE_EMPTY
@@ -3340,42 +3340,6 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
-		}
-
-		itemDef 
-		{
-			name				upAllSkillsButton
-			group				upControls
-			text				"All"
-			type				1
-			style				WINDOW_STYLE_EMPTY
-			rect				160 250 100 30
-			font				3
-			textscale			0.7
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Upgrades all skills"
-	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				exec 			"up all" ;
-				hide 			forceSkillsControls ;
-				hide			weaponSkillsControls ;
-				hide			otherSkillsControls ;
-				hide			ammoSkillsControls ;
-				hide			itemsSkillsControls ;
-				hide			levelforce ;
-				hide			levelweapon ;
-				hide			levelother ;
-				hide			levelammo ;
-				hide			levelitem ;
-				hide			upControls ;
-			}
 		}
 
 		itemDef 
