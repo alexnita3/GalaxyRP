@@ -1025,12 +1025,27 @@
 
 		itemDef 
 		{
-			name				listLevelUpScore
+			name				listXpPoints
 			group				listControls
 			rect				170 70 120 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_TEXT
-			text				"Level Up Score"
+			text				"XP"
+			textscale			0.8
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 .682 0 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				listXpSlash
+			group				listControls
+			rect				320 70 120 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_TEXT
+			text				"/"
 			textscale			0.8
 			textalign			ITEM_ALIGN_LEFT
 			font				2
@@ -1055,24 +1070,9 @@
 
 		itemDef 
 		{
-			name				listSkillCounter
-			group				listControls
-			rect				170 110 120 20
-			style				WINDOW_STYLE_EMPTY
-			type				ITEM_TYPE_TEXT
-			text				"Skill Counter"
-			textscale			0.8
-			textalign			ITEM_ALIGN_LEFT
-			font				2
-			forecolor			1 .682 0 1
-			visible				0
-		}
-
-		itemDef 
-		{
 			name				listCredits
 			group				listControls
-			rect				170 130 120 20
+			rect				170 110 120 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_TEXT
 			text				"Credits"
@@ -1101,7 +1101,7 @@
 
 		itemDef 
 		{
-			name				listLevelUpScoreValue
+			name				listXpPointsValue
 			group				listControls
 			rect				300 70 120 20
 			style				WINDOW_STYLE_EMPTY
@@ -1109,8 +1109,24 @@
 			type				ITEM_TYPE_EDITFIELD
 			text				""
 			textscale			0.8
-			cvar				"ui_zyk_rpg_level_up_score" 
+			cvar				"ui_rp_xp_value" 
 			textalign			ITEM_ALIGN_LEFT	 
+			font				2
+			forecolor			1 1 1 1
+			visible				0
+		}
+
+		itemDef 
+		{
+			name				listMaxXpPointsValue
+			group				listControls
+			rect				330 70 120 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			textscale			0.8
+			cvar				"ui_rp_max_xp" 
+			textalign			ITEM_ALIGN_LEFT
 			font				2
 			forecolor			1 1 1 1
 			visible				0
@@ -1134,25 +1150,9 @@
 
 		itemDef 
 		{
-			name				listSkillCounterValue
-			group				listControls
-			rect				300 110 120 20
-			style				WINDOW_STYLE_EMPTY
-			type				ITEM_TYPE_EDITFIELD
-			text				""
-			textscale			0.8
-			cvar				"ui_zyk_rpg_skillcounter" 
-			textalign			ITEM_ALIGN_LEFT
-			font				2
-			forecolor			1 1 1 1
-			visible				0
-		}
-
-		itemDef 
-		{
 			name				listCreditsValue
 			group				listControls
-			rect				300 130 120 20
+			rect				300 110 120 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""

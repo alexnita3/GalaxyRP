@@ -18347,10 +18347,15 @@ void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 	if (ent->client->sess.loggedin == qtrue)
 	{
 		char content[1024];
+		int level = ent->client->pers.level;
+		int xp = ent->client->pers.xp;
+		int xpToLevel = check_xp(level);
+		int skillpoints = ent->client->pers.skillpoints;
+		int credits = ent->client->pers.credits;
 
 		strcpy(content, "");
 
-		strcpy(content, va("%s%d-%d-%d-%d-", content, ent->client->pers.level, ent->client->pers.xp, ent->client->pers.skillpoints, ent->client->pers.credits));
+		strcpy(content, va("%s%d-%d-%d-%d-%d-", content, level, xp, xpToLevel, skillpoints, credits));
 
 		for (int i = 0; i < ARRAY_LEN(skills); i++) {
 			strcpy(content, va("%s%d-%d-", content, ent->client->pers.skill_levels[i], skills[i].max_level));

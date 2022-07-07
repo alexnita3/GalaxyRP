@@ -1671,9 +1671,10 @@ static void CG_ZykChars(void)
 	}
 }
 
-char cvar_order[100][100] = { 
+char ui_cvars_in_order[100][100] = { 
 	"ui_zyk_rpg_level", 
 	"ui_rp_xp_value", 
+	"ui_rp_max_xp",
 	"ui_zyk_rpg_skillpoints", 
 	"ui_zyk_rpg_credits"
 };
@@ -1693,9 +1694,9 @@ static void CG_ZykMod( void )
 	while (value != NULL)
 	{
 		trap->SendClientCommand(va("%s", value));
-		trap->Cvar_Set(cvar_order[i], va("%s", value));
+		trap->Cvar_Set(ui_cvars_in_order[i], va("%s", value));
 		i++;
-		if (i >= ARRAY_LEN(cvar_order)) {
+		if (i >= ARRAY_LEN(ui_cvars_in_order)) {
 			return;
 		}
 		value = strtok(NULL, " ,.-");

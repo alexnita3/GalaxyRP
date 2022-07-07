@@ -286,7 +286,8 @@ XCVAR_DEF( ui_zyk_rpg_char_13,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_rpg_char_14,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_rpg_char_15,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_rpg_current_char,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_rp_xp_value,					"0",					NULL, CVAR_ARCHIVE | CVAR_INTERNAL)
-XCVAR_DEF( ui_rp_xp_max_value,				"0",					NULL, CVAR_ARCHIVE | CVAR_INTERNAL)
+XCVAR_DEF( ui_rp_xp_value,					"0",					NULL,				CVAR_ARCHIVE | CVAR_INTERNAL)
+XCVAR_DEF( ui_rp_xp_max_value,				"0",					NULL,				CVAR_ARCHIVE | CVAR_INTERNAL)
+XCVAR_DEF(ui_rp_max_xp,			"0",					NULL,				CVAR_ARCHIVE | CVAR_INTERNAL)
 
 #undef XCVAR_DEF
