@@ -6449,7 +6449,7 @@ static void UI_RunMenuScript(char **args)
 					i++;
 				}
 
-				trap->Cmd_ExecuteText(EXEC_APPEND, va("rpgchar use \"%s\"\n", zyk_char));
+				trap->Cmd_ExecuteText(EXEC_APPEND, va("char use \"%s\"\n", zyk_char));
 			}
 		}
 		else if (Q_stricmp(name, "zykchardelete") == 0)
