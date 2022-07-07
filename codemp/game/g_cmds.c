@@ -2601,6 +2601,39 @@ void select_character_list(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, s
 	sqlite3_finalize(stmt);
 }
 
+// GalaxyRP (Alex): [Database] This method returns a list of character names readable by the UI.
+char *select_character_list_for_ui(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt)
+{
+	char CharName[MAX_STRING_CHARS];
+	int charLevel;
+	char CharString[MAX_STRING_CHARS];
+
+	// GalaxyRP (Alex): [Database] Get list of char names.
+	rc = sqlite3_prepare(db, va("SELECT Name, Level FROM Characters WHERE AccountID='%i'", ent->client->sess.accountID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	while (rc == SQLITE_ROW) {
+		strcpy(CharName, sqlite3_column_text(stmt, 0));
+		charLevel = sqlite3_column_int(stmt, 1);
+		strcpy(CharString, va("%s&%s", CharString, CharName));
+		rc = sqlite3_step(stmt);
+	}
+
+	sqlite3_finalize(stmt);
+	return CharString;
+}
+
 // GalaxyRP (Alex): [Database] This method loads the account information, as well as the information related to the default character, and assigns it to the entity.
 void select_account_and_default_character_data(gentity_t* ent, char username[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	char password[256], name[256], description[MAX_STRING_CHARS], netName[MAX_STRING_CHARS], modelName[MAX_STRING_CHARS];
@@ -18362,13 +18395,40 @@ void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 			strcpy(content, va("%s%d/%d-", content, ent->client->pers.skill_levels[i], skills[i].max_level));
 		}
 
-		trap->SendServerCommand(ent - g_entities, va("print \"%s\n\"", content));
 		trap->SendServerCommand(ent->s.number, va("zykmod \"%s\"", content));
 	}
 	else
 	{
 		return;
 	}
+}
+
+/*
+==================
+Cmd_ZykChars_f
+==================
+*/
+void Cmd_ZykChars_f(gentity_t* ent) {
+	// zyk: sends info to the client-side menu if player has the client-side plugin
+	if (Q_stricmp(ent->client->pers.guid, "NOGUID") == 0)
+	{
+		return;
+	}
+
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = 0;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	trap->SendServerCommand(ent->s.number, va("zykchars \"%s\"", select_character_list_for_ui(ent, db, zErrMsg, rc, stmt)));
 }
 
 /*
@@ -18533,6 +18593,7 @@ command_t commands[] = {
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
 	{"zykmod",				Cmd_GalaxyRpUi_f,			CMD_ALIVE | CMD_NOINTERMISSION },
+	{ "zykchars",			Cmd_ZykChars_f,			CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "zykfile",			Cmd_ZykFile_f,				CMD_NOINTERMISSION }
 //	{ "unique",				Cmd_Unique_f,				CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 //	{ "meleearena",			Cmd_MeleeArena_f,			CMD_ALIVE|CMD_NOINTERMISSION },

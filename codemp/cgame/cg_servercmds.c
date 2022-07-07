@@ -1630,37 +1630,22 @@ static qboolean dark_quest_collected_notes(int dark_quest_progress)
 static void CG_ZykChars(void)
 {
 	char arg[1024] = { 0 };
-	int i = 0, j = 0;
-	char value[64] = { 0 };
 	int char_count = 0;
 
 	trap->Cmd_Argv(1, arg, sizeof(arg));
 
-	while (arg[i] != '\0')
+	char* value;
+	value = strtok(arg, "&");
+
+	while (value != NULL)
 	{
-		if (arg[i] == '<' && arg[i + 1] == 'z' && arg[i + 2] == 'y' && arg[i + 3] == 'k' && arg[i + 4] == 'c' && arg[i + 5] == '>')
-		{ // zyk: current char
-			value[j] = '\0';
-			j = 0;
-			i += 5;
-
-			trap->Cvar_Set("ui_zyk_rpg_current_char", va("Using %s", value));
+		if (char_count >= 15) {
+			break;
 		}
-		else if (arg[i] == '<' && arg[i + 1] == 'z' && arg[i + 2] == 'y' && arg[i + 3] == 'k' && arg[i + 4] == '>')
-		{ // zyk: got the separator, finish processing this char name
-			value[j] = '\0';
-			j = 0;
-			i += 5;
-			char_count++;
-
-			trap->Cvar_Set(va("ui_zyk_rpg_char_%d", char_count), va("%s", value));
-		}
-		else
-		{
-			value[j] = arg[i];
-			j++;
-			i++;
-		}
+		trap->Cvar_Set(va("ui_zyk_rpg_char_%d", char_count), va("%s", value));
+		char_count++;
+		
+		value = strtok(NULL, "&");
 	}
 
 	// zyk: cleaning cvars that will not render a charname
@@ -1754,7 +1739,7 @@ static void CG_ZykMod( void )
 		if (i >= ARRAY_LEN(ui_cvars_in_order)) {
 			return;
 		}
-		value = strtok(NULL, " ,.-");
+		value = strtok(NULL, "-");
 	}
 	
 }
