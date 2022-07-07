@@ -5388,53 +5388,12 @@
 
 		itemDef 
 		{
-			name				buyActionButton
-			group				commandsControls
-			text				"Action"
-			type				1
-			style				WINDOW_STYLE_EMPTY
-			rect				160 50 100 30
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Stuff will be bought or sold based on the action"
-	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				uiScript		zykmod "buyaction"
-			}
-		}
-
-		itemDef 
-		{
-			name				buyActionValue
-			group				commandsControls
-			rect				240 56 100 30
-			style				WINDOW_STYLE_EMPTY
-			type				ITEM_TYPE_EDITFIELD
-			text				""
-			cvar				"ui_zyk_buy_action_value" 
-			textalign			ITEM_ALIGN_LEFT
-			font				3
-			textscale			.5
-			forecolor			1 1 1 1
-			visible				0
-		}
-
-		itemDef 
-		{
 			name				callsellerButton
 			group				commandsControls
 			text				"Call Seller"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				160 75 150 24
+			rect				160 50 150 24
 			font				3
 			textscale			0.6
 			textalignx			15
@@ -5468,7 +5427,7 @@
 		{
 			name				buyButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				160 125 150 24
+			rect				160 100 150 24
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -5482,7 +5441,7 @@
 			text				"Upgrades"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				160 125 150 24
+			rect				160 100 150 24
 			font				3
 			textscale			0.6
 			textalignx			15
@@ -5664,7 +5623,7 @@
 		{
 			name				buyAmmoButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				160 150 150 24
+			rect				160 125 150 24
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -5678,7 +5637,7 @@
 			text				"Ammo"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				160 150 150 24
+			rect				160 125 150 24
 			font				3
 			textscale			0.6
 			textalignx			15
@@ -5713,7 +5672,7 @@
 		{
 			name				buy13Button
 			group				buyAmmoControls
-			text				"Blaster Pack: Buy: 150"
+			text				"Blaster Pack - 150"
 			descText			""
 			type				1
 			font				3
@@ -5734,7 +5693,7 @@
 		{
 			name				buy14Button
 			group				buyAmmoControls
-			text				"Power Cell: Buy: 200"
+			text				"Power Cell - 200"
 			descText			""
 			type				1
 			font				3
@@ -5755,7 +5714,7 @@
 		{
 			name				buy15Button
 			group				buyAmmoControls
-			text				"Metal Bolts: Buy: 250"
+			text				"Metal Bolts - 250"
 			descText			""
 			type				1
 			font				3
@@ -5776,7 +5735,7 @@
 		{
 			name				buy16Button
 			group				buyAmmoControls
-			text				"Rockets: Buy: 500"
+			text				"Rockets - 500"
 			descText			""
 			type				1
 			font				3
@@ -5797,7 +5756,7 @@
 		{
 			name				buy17Button
 			group				buyAmmoControls
-			text				"Thermals: Buy: 50"
+			text				"Thermals - 50"
 			descText			""
 			type				1
 			font				3
@@ -5818,7 +5777,7 @@
 		{
 			name				buy18Button
 			group				buyAmmoControls
-			text				"Trip Mines: Buy: 100"
+			text				"Trip Mines - 100"
 			descText			""
 			type				1
 			font				3
@@ -5839,7 +5798,7 @@
 		{
 			name				buy19Button
 			group				buyAmmoControls
-			text				"Det Packs: Buy: 200"
+			text				"Det Packs - 200"
 			descText			""
 			type				1
 			font				3
@@ -5860,7 +5819,7 @@
 		{
 			name				buy45Button
 			group				buyAmmoControls
-			text				"Flame Thrower Fuel: Buy: 500"
+			text				"Flame Thrower Fuel - 500"
 			descText			""
 			type				1
 			font				3
@@ -5881,7 +5840,7 @@
 		{
 			name				buy47Button
 			group				buyAmmoControls
-			text				"Ammo All: Buy: 1450"
+			text				"Ammo All - 1450"
 			descText			""
 			type				1
 			font				3
@@ -5924,7 +5883,7 @@
 		{
 			name				buyMiscButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				160 225 150 24
+			rect				160 150 150 24
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -5938,7 +5897,7 @@
 			text				"Misc"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				160 225 150 24
+			rect				160 150 150 24
 			font				3
 			textscale			0.6
 			textalignx			15
@@ -5973,7 +5932,7 @@
 		{
 			name				buy36Button
 			group				buyMiscControls
-			text				"Ysalamiri: Buy: 200 - Sell: 50"
+			text				"Ysalamiri - 2000"
 			descText			""
 			type				1
 			font				3
@@ -5994,7 +5953,7 @@
 		{
 			name				buy37Button
 			group				buyMiscControls
-			text				"Jetpack Fuel: Buy: 200 - Sell: no"
+			text				"Jetpack Fuel - 500"
 			descText			""
 			type				1
 			font				3
@@ -6015,7 +5974,7 @@
 		{
 			name				buy43Button
 			group				buyMiscControls
-			text				"Force Boon: Buy: 200 - Sell: 50"
+			text				"Force Boon - 2000"
 			descText			""
 			type				1
 			font				3
@@ -6028,132 +5987,6 @@
 			action 
 			{ 
 				uiScript		zykbuy "43"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy44Button
-			group				buyMiscControls
-			text				"Magic Potion: Buy: 50 - Sell: no"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 95 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "44"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy48Button
-			group				buyMiscControls
-			text				"Saber Armor: Buy: 2000 - Sell: no"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 110 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "49"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy49Button
-			group				buyMiscControls
-			text				"Gun Armor: Buy: 2000 - Sell: no"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 125 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "50"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy50Button
-			group				buyMiscControls
-			text				"Healing Crystal: Buy: 2000 - Sell: no"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 140 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "51"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy51Button
-			group				buyMiscControls
-			text				"Energy Crystal: Buy: 2000 - Sell: no"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 155 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "52"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy56Button
-			group				buyMiscControls
-			text				"Book of Riddles: Buy: 100000 - Sell: no"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 170 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "56"
 				play			"sound/interface/button1.wav" ;
 			}  	  
 		}
@@ -6237,64 +6070,12 @@
 
 		itemDef 
 		{
-			name				guardianButton
-			group				gamesControls
-			text				"Guardian Quest"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				160 50 160 24
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Starts mini-quest against the Guardian of Map"
-	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				exec			"guardianquest" ;
-				close			ingame_zykmod ;
-			}
-		}
-
-		itemDef 
-		{
-			name				bountyButton
-			group				gamesControls
-			text				"Bounty Quest"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				160 75 160 24
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Starts the bounty mini-quest by setting the target player"
-  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				exec			"bountyquest" ;
-				close			ingame_zykmod ;
-			}
-		}
-
-		itemDef 
-		{
 			name				rpgLmsButton
 			group				gamesControls
 			text				"RPG LMS"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				160 100 160 24
+			rect				160 50 160 24
 			font				3
 			textscale			0.6
 			textalignx			15
@@ -6320,7 +6101,7 @@
 			text				"Racing Mode"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				160 125 150 24
+			rect				160 75 150 24
 			font				3
 			textscale			0.6
 			textalignx			15
@@ -6346,7 +6127,7 @@
 			text				"Duel Tournament"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				160 150 150 24
+			rect				160 100 150 24
 			font				3
 			textscale			0.6
 			textalignx			15
@@ -6372,7 +6153,7 @@
 			text				"Sniper Battle"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				160 175 150 24
+			rect				160 125 150 24
 			font				3
 			textscale			0.6
 			textalignx			15
@@ -6398,7 +6179,7 @@
 			text				"Melee Battle"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				160 200 150 24
+			rect				160 150 150 24
 			font				3
 			textscale			0.6
 			textalignx			15
