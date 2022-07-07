@@ -18358,7 +18358,7 @@ void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 		strcpy(content, va("%s%d-%d-%d-%d-%d-", content, level, xp, xpToLevel, skillpoints, credits));
 
 		for (int i = 0; i < ARRAY_LEN(skills); i++) {
-			strcpy(content, va("%s%d-%d-", content, ent->client->pers.skill_levels[i], skills[i].max_level));
+			strcpy(content, va("%s%d-", content, ent->client->pers.skill_levels[i]));
 		}
 
 		trap->SendServerCommand(ent - g_entities, va("print \"%s\n\"", content));

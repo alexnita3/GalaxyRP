@@ -1344,11 +1344,6 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
-			action 
-			{ 
-				uiScript		zykup "1"
-				play			"sound/interface/button1.wav" ;
-			}  	  
 		}
 
 		itemDef 
@@ -1364,12 +1359,7 @@
 			rect				270 120 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "2"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -1385,12 +1375,7 @@
 			rect				270 140 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "3"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 	  
 		}
 
 		itemDef 
@@ -1406,12 +1391,7 @@
 			rect				270 160 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "4"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 	  
 		}
 
 		itemDef 
@@ -1427,12 +1407,7 @@
 			rect				270 180 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "5"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 	  
 		}
 
 		itemDef 
@@ -1448,12 +1423,7 @@
 			rect				270 200 100 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "6"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -1470,11 +1440,6 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
-			action 
-			{ 
-				uiScript		zykup "7"
-				play			"sound/interface/button1.wav" ;
-			}  	  
 		}
 
 		itemDef 
@@ -1491,11 +1456,6 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
-			action 
-			{ 
-				uiScript		zykup "8"
-				play			"sound/interface/button1.wav" ;
-			}  	  
 		}
 
 		itemDef 
@@ -1511,12 +1471,7 @@
 			rect				270 260 60 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "9"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -1532,12 +1487,7 @@
 			rect				420 100 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "10"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -1553,12 +1503,7 @@
 			rect				420 120 60 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "11"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 	  
 		}
 
 		itemDef 
@@ -1574,12 +1519,7 @@
 			rect				420 140 90 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "12"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -1595,12 +1535,7 @@
 			rect				420 160 90 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "13"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -1616,12 +1551,7 @@
 			rect				420 180 90 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "14"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 	  
 		}
 
 		itemDef 
@@ -1637,12 +1567,7 @@
 			rect				420 200 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "15"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -1658,12 +1583,7 @@
 			rect				420 220 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "16"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -1679,12 +1599,7 @@
 			rect				420 240 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "17"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -1700,12 +1615,7 @@
 			rect				420 260 100 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "18"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  	  
 		}
 
 		itemDef 
@@ -1776,12 +1686,7 @@
 			rect				270 100 90 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "19"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 	  
 		}
 
 		itemDef 
@@ -1798,11 +1703,6 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
-			action 
-			{ 
-				uiScript		zykup "20"
-				play			"sound/interface/button1.wav" ;
-			}  	  
 		}
 
 		itemDef 
@@ -1818,12 +1718,7 @@
 			rect				270 140 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "21"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -1839,12 +1734,7 @@
 			rect				270 160 90 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "22"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -1860,12 +1750,7 @@
 			rect				270 180 90 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "23"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 	  
 		}
 
 		itemDef 
@@ -1881,12 +1766,7 @@
 			rect				270 200 90 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "24"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -1902,12 +1782,7 @@
 			rect				420 100 70 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "25"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -1923,12 +1798,7 @@
 			rect				420 120 80 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "26"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -1944,12 +1814,7 @@
 			rect				420 140 110 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "27"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 
 		}
 
 		itemDef 
@@ -1965,12 +1830,7 @@
 			rect				420 160 120 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "28"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -1986,12 +1846,7 @@
 			rect				420 180 100 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "29"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -2007,12 +1862,7 @@
 			rect				420 200 60 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "30"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 
 		}
 
 		itemDef 
@@ -2083,12 +1933,7 @@
 			rect				270 100 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "31"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -2104,12 +1949,7 @@
 			rect				270 120 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "32"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -2125,12 +1965,7 @@
 			rect				270 140 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "33"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -2146,12 +1981,7 @@
 			rect				270 160 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "34"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -2167,12 +1997,7 @@
 			rect				270 180 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "35"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 	  
 		}
 
 		itemDef 
@@ -2188,12 +2013,7 @@
 			rect				270 200 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "36"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -2210,11 +2030,6 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
-			action 
-			{ 
-				uiScript		zykup "37"
-				play			"sound/interface/button1.wav" ;
-			}  	  
 		}
 
 		itemDef 
@@ -2230,12 +2045,7 @@
 			rect				270 240 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "38"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -2251,12 +2061,7 @@
 			rect				270 260 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "39"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -2272,12 +2077,7 @@
 			rect				270 280 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "55"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 	  
 		}
 
 		itemDef 
@@ -2293,12 +2093,7 @@
 			rect				270 300 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "56"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 
 		}
 
 		itemDef 
@@ -2369,12 +2164,7 @@
 			rect				270 100 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "40"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -2390,12 +2180,7 @@
 			rect				270 120 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "41"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -2411,12 +2196,7 @@
 			rect				270 140 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "42"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -2432,12 +2212,7 @@
 			rect				270 160 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "43"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 
 		}
 
 		itemDef 
@@ -2453,12 +2228,7 @@
 			rect				270 180 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "44"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0  
 		}
 
 		itemDef 
@@ -2474,12 +2244,7 @@
 			rect				270 200 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "45"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -2495,12 +2260,7 @@
 			rect				270 220 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "46"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 	  
 		}
 
 		itemDef 
@@ -2571,12 +2331,7 @@
 			rect				270 100 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "47"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -2592,12 +2347,7 @@
 			rect				270 120 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "48"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 
 		}
 
 		itemDef 
@@ -2613,12 +2363,7 @@
 			rect				270 140 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "49"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 
 		}
 
 		itemDef 
@@ -2634,12 +2379,7 @@
 			rect				270 160 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "50"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0 	  
 		}
 
 		itemDef 
@@ -2655,12 +2395,7 @@
 			rect				270 180 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykup "51"
-				play			"sound/interface/button1.wav" ;
-			}  	  
+			visible				0	  
 		}
 
 		itemDef 
@@ -2677,11 +2412,6 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
-			action 
-			{ 
-				uiScript		zykup "52"
-				play			"sound/interface/button1.wav" ;
-			}  	  
 		}
 
 		itemDef 
@@ -2698,11 +2428,6 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
-			action 
-			{ 
-				uiScript		zykup "53"
-				play			"sound/interface/button1.wav" ;
-			}  	  
 		}
 
 		itemDef 
@@ -2719,11 +2444,6 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
-			action 
-			{ 
-				uiScript		zykup "54"
-				play			"sound/interface/button1.wav" ;
-			}  	  
 		}
 
 		itemDef 
