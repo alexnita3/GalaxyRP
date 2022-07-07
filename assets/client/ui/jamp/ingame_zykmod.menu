@@ -134,11 +134,9 @@
 				hide			levelammo ;
 				hide			levelitem ;
 				hide 			settingsControls ;
-				hide 			stuffControls ;
 				hide 			buyControls ;
 				hide 			buyAmmoControls ;
 				hide 			buyWeaponsControls ;
-				hide 			buyItemsControls ;
 				hide 			buyMiscControls ;
 				hide 			cameraControls ;
 				hide 			gamesControls ;
@@ -995,11 +993,9 @@
 				hide			levelammo ;
 				hide			levelitem ;
 				hide 			settingsControls ;
-				hide 			stuffControls ;
 				hide 			buyControls ;
 				hide 			buyAmmoControls ;
 				hide 			buyWeaponsControls ;
-				hide 			buyItemsControls ;
 				hide 			buyMiscControls ;
 				hide 			cameraControls ;
 				hide 			gamesControls ;
@@ -1031,21 +1027,6 @@
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_TEXT
 			text				"XP"
-			textscale			0.8
-			textalign			ITEM_ALIGN_LEFT
-			font				2
-			forecolor			1 .682 0 1
-			visible				0
-		}
-
-		itemDef 
-		{
-			name				listXpSlash
-			group				listControls
-			rect				320 70 120 20
-			style				WINDOW_STYLE_EMPTY
-			type				ITEM_TYPE_TEXT
-			text				"/"
 			textscale			0.8
 			textalign			ITEM_ALIGN_LEFT
 			font				2
@@ -1111,22 +1092,6 @@
 			textscale			0.8
 			cvar				"ui_rp_xp_value" 
 			textalign			ITEM_ALIGN_LEFT	 
-			font				2
-			forecolor			1 1 1 1
-			visible				0
-		}
-
-		itemDef 
-		{
-			name				listMaxXpPointsValue
-			group				listControls
-			rect				330 70 120 20
-			style				WINDOW_STYLE_EMPTY
-			type				ITEM_TYPE_EDITFIELD
-			text				""
-			textscale			0.8
-			cvar				"ui_rp_max_xp" 
-			textalign			ITEM_ALIGN_LEFT
 			font				2
 			forecolor			1 1 1 1
 			visible				0
@@ -1231,11 +1196,9 @@
 				hide			levelammo ;
 				hide			levelitem ;
 				hide 			settingsControls ;
-				hide 			stuffControls ;
 				hide 			buyControls ;
 				hide 			buyAmmoControls ;
 				hide 			buyWeaponsControls ;
-				hide 			buyItemsControls ;
 				hide 			buyMiscControls ;
 				hide 			cameraControls ;
 				hide 			gamesControls ;
@@ -3409,11 +3372,9 @@
 				hide			levelammo ;
 				hide			levelitem ;
 				hide 			settingsControls ;
-				hide 			stuffControls ;
 				hide 			buyControls ;
 				hide 			buyAmmoControls ;
 				hide 			buyWeaponsControls ;
-				hide 			buyItemsControls ;
 				hide 			buyMiscControls ;
 				hide 			cameraControls ;
 				hide 			gamesControls ;
@@ -5414,11 +5375,9 @@
 				hide			levelammo ;
 				hide			levelitem ;
 				hide 			settingsControls ;
-				hide 			stuffControls ;
 				hide 			buyControls ;
 				hide 			buyAmmoControls ;
 				hide 			buyWeaponsControls ;
-				hide 			buyItemsControls ;
 				hide 			buyMiscControls ;
 				hide 			cameraControls ;
 				hide 			gamesControls ;
@@ -5507,335 +5466,6 @@
 
 		itemDef 
 		{
-			name				stuffButton
-			group				commandsControls
-			text				"Stuff"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				160 100 150 24
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Shows upgrades bought from the jawa seller"
-
-			mouseEnter 
-			{ 
-				show			stuffButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			stuffButton_glow
-			}	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				show 			stuffControls ;
-				hide 			buyControls ;
-				hide 			buyAmmoControls ;
-				hide 			buyWeaponsControls ;
-				hide 			buyItemsControls ;
-				hide 			buyMiscControls ;
-				setitemcolor		commandsControls forecolor 1 .682 0 1 ;
-				setitemcolor		stuffButton forecolor 1 1 1 1 ;
-			}
-		}
-
-		itemDef 
-		{
-			name				stuff0infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_0_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 50 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff1infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_1_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 65 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff2infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_2_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 80 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff3infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_3_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 95 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff4infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_4_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 110 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff5infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_5_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 125 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff6infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_6_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 140 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff7infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_7_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 155 190 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff8infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_8_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 170 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff9infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_9_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 185 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff10infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_10_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 200 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff11infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_11_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 215 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff12infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_12_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 230 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff13infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_13_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 245 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff14infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_14_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 260 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff15infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_15_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 275 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
-			name				stuff16infoValue
-			group				stuffControls
-			text				""
-			cvar				"ui_zyk_upgrade_16_value"
-			descText			""
-			type				ITEM_TYPE_EDITFIELD
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 290 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0  
-		}
-
-		itemDef 
-		{
 			name				buyButton_glow
 			style				WINDOW_STYLE_SHADER
 			rect				160 125 150 24
@@ -5877,9 +5507,7 @@
 				show 			buyControls ;
 				hide 			buyAmmoControls ;
 				hide 			buyWeaponsControls ;
-				hide 			buyItemsControls ;
 				hide 			buyMiscControls ;
-				hide 			stuffControls ;
 				setitemcolor		commandsControls forecolor 1 .682 0 1 ;
 				setitemcolor		buyButton forecolor 1 1 1 1 ;
 			}
@@ -5889,7 +5517,7 @@
 		{
 			name				buy0Button
 			group				buyControls
-			text				"Holdable Items Upgrade - 3000"
+			text				"Holdable Items Upgrade - 30000"
 			descText			""
 			type				1
 			font				3
@@ -5905,75 +5533,12 @@
 				play			"sound/interface/button1.wav" ;
 			}  	  
 		}
-
-		itemDef 
-		{
-			name				buy1Button
-			group				buyControls
-			text				"Bounty Hunter Upgrade - 5000"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 65 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec			"buy 29"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy2Button
-			group				buyControls
-			text				"Stealth Attacker Upgrade - 5000"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 80 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec			"buy 8"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy3Button
-			group				buyControls
-			text				"Force Gunner Upgrade - 5000"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 95 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec			"buy 45"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
+		
 		itemDef 
 		{
 			name				buy4Button
 			group				buyControls
-			text				"Impact Reducer - 4000"
+			text				"Impact Reducer - 40000"
 			descText			""
 			type				1
 			font				3
@@ -5986,27 +5551,6 @@
 			action 
 			{ 
 				exec			"buy 15"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy5Button
-			group				buyControls
-			text				"Flame Thrower - 3000"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 125 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec			"buy 16"
 				play			"sound/interface/button1.wav" ;
 			}  	  
 		}
@@ -6036,7 +5580,7 @@
 		{
 			name				buy7Button
 			group				buyControls
-			text				"Blaster Pack Weapons Upgrade - 1800"
+			text				"Blaster Pack Weapons Upgrade - 18000"
 			descText			""
 			type				1
 			font				3
@@ -6057,7 +5601,7 @@
 		{
 			name				buy8Button
 			group				buyControls
-			text				"Metal Bolts Weapons Upgrade - 2200"
+			text				"Metal Bolts Weapons Upgrade - 22000"
 			descText			""
 			type				1
 			font				3
@@ -6078,7 +5622,7 @@
 		{
 			name				buy9Button
 			group				buyControls
-			text				"Rocket Upgrade - 2500"
+			text				"Rocket Upgrade - 25000"
 			descText			""
 			type				1
 			font				3
@@ -6099,7 +5643,7 @@
 		{
 			name				buy10Button
 			group				buyControls
-			text				"Stun Baton Upgrade - 1500"
+			text				"Stun Baton Upgrade - 15000"
 			descText			""
 			type				1
 			font				3
@@ -6112,132 +5656,6 @@
 			action 
 			{ 
 				exec			"buy 33"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy11Button
-			group				buyControls
-			text				"Armored Soldier Upgrade - 5000"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 215 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec			"buy 39"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy12Button
-			group				buyControls
-			text				"Jetpack Upgrade - 10000"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 230 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec			"buy 46"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy46Button
-			group				buyControls
-			text				"Force Guardian Upgrade - 5000"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 245 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec			"buy 47"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy53Button
-			group				buyControls
-			text				"Unique Ability 1 - 7000"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 260 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec			"buy 53"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy54Button
-			group				buyControls
-			text				"Unique Ability 2 - 7000"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 275 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec			"buy 54"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy55Button
-			group				buyControls
-			text				"Unique Ability 3 - 7000"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 290 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec			"buy 55"
 				play			"sound/interface/button1.wav" ;
 			}  	  
 		}
@@ -6284,9 +5702,7 @@
 				play			"sound/interface/button1.wav" ;
 				show 			buyAmmoControls ;
 				hide 			buyControls ;
-				hide 			stuffControls ;
 				hide 			buyWeaponsControls ;
-				hide 			buyItemsControls ;
 				hide 			buyMiscControls ;
 				setitemcolor		commandsControls forecolor 1 .682 0 1 ;
 				setitemcolor		buyAmmoButton forecolor 1 1 1 1 ;
@@ -6297,7 +5713,7 @@
 		{
 			name				buy13Button
 			group				buyAmmoControls
-			text				"Blaster Pack: Buy: 15 - Sell: 10"
+			text				"Blaster Pack: Buy: 150"
 			descText			""
 			type				1
 			font				3
@@ -6318,7 +5734,7 @@
 		{
 			name				buy14Button
 			group				buyAmmoControls
-			text				"Power Cell: Buy: 20 - Sell: 15"
+			text				"Power Cell: Buy: 200"
 			descText			""
 			type				1
 			font				3
@@ -6339,7 +5755,7 @@
 		{
 			name				buy15Button
 			group				buyAmmoControls
-			text				"Metal Bolts: Buy: 25 - Sell: 20"
+			text				"Metal Bolts: Buy: 250"
 			descText			""
 			type				1
 			font				3
@@ -6360,7 +5776,7 @@
 		{
 			name				buy16Button
 			group				buyAmmoControls
-			text				"Rockets: Buy: 40 - Sell: 30"
+			text				"Rockets: Buy: 500"
 			descText			""
 			type				1
 			font				3
@@ -6381,7 +5797,7 @@
 		{
 			name				buy17Button
 			group				buyAmmoControls
-			text				"Thermals: Buy: 80 - Sell: 35"
+			text				"Thermals: Buy: 50"
 			descText			""
 			type				1
 			font				3
@@ -6402,7 +5818,7 @@
 		{
 			name				buy18Button
 			group				buyAmmoControls
-			text				"Trip Mines: Buy: 120 - Sell: 40"
+			text				"Trip Mines: Buy: 100"
 			descText			""
 			type				1
 			font				3
@@ -6423,7 +5839,7 @@
 		{
 			name				buy19Button
 			group				buyAmmoControls
-			text				"Det Packs: Buy: 150 - Sell: 45"
+			text				"Det Packs: Buy: 200"
 			descText			""
 			type				1
 			font				3
@@ -6444,7 +5860,7 @@
 		{
 			name				buy45Button
 			group				buyAmmoControls
-			text				"Flame Thrower Fuel: Buy: 200 - Sell: no"
+			text				"Flame Thrower Fuel: Buy: 500"
 			descText			""
 			type				1
 			font				3
@@ -6465,7 +5881,7 @@
 		{
 			name				buy47Button
 			group				buyAmmoControls
-			text				"Ammo All: Buy: 700 - Sell: no"
+			text				"Ammo All: Buy: 1450"
 			descText			""
 			type				1
 			font				3
@@ -6495,277 +5911,6 @@
 
 		itemDef 
 		{
-			name				buyWeaponsButton
-			group				commandsControls
-			text				"Weapons"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				160 175 150 24
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Buy or sell weapons from the jawa seller"
-
-			mouseEnter 
-			{ 
-				show			buyWeaponsButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			buyWeaponsButton_glow
-			}	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				show 			buyWeaponsControls ;
-				hide 			buyControls ;
-				hide 			buyAmmoControls ;
-				hide 			buyItemsControls ;
-				hide 			buyMiscControls ;
-				hide 			stuffControls ;
-				setitemcolor		commandsControls forecolor 1 .682 0 1 ;
-				setitemcolor		buyWeaponsButton forecolor 1 1 1 1 ;
-			}
-		}
-
-		itemDef 
-		{
-			name				buy20Button
-			group				buyWeaponsControls
-			text				"E11 Blaster Rifle: Buy: 100 - Sell: 50"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 50 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "17"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy21Button
-			group				buyWeaponsControls
-			text				"Disruptor: Buy: 120 - Sell: 60"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 65 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "18"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy22Button
-			group				buyWeaponsControls
-			text				"Repeater: Buy: 150 - Sell: 70"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 80 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "19"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy23Button
-			group				buyWeaponsControls
-			text				"Rocket Launcher: Buy: 200 - Sell: 100"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 95 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "20"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy24Button
-			group				buyWeaponsControls
-			text				"Bowcaster: Buy: 110 - Sell: 50"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 110 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "21"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy25Button
-			group				buyWeaponsControls
-			text				"Blaster Pistol: Buy: 90 - Sell: 45"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 125 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "22"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy26Button
-			group				buyWeaponsControls
-			text				"Flechette: Buy: 170 - Sell: 90"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 140 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "23"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy27Button
-			group				buyWeaponsControls
-			text				"Concussion Rifle: Buy: 300 - Sell: 150"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 155 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "24"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy28Button
-			group				buyWeaponsControls
-			text				"Stun Baton: Buy: 20 - Sell: 10"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 170 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "32"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy29Button
-			group				buyWeaponsControls
-			text				"DEMP2: Buy: 150 - Sell: 90"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 185 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "36"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy30Button
-			group				buyWeaponsControls
-			text				"Bryar Pistol: Buy: 90 - Sell: 45"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 200 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "37"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
 			name				buyItemsButton_glow
 			style				WINDOW_STYLE_SHADER
 			rect				160 200 150 24
@@ -6773,256 +5918,6 @@
 			forecolor			1 1 1 1
 			visible				0
 			decoration
-		}
-
-		itemDef 
-		{
-			name				buyItemsButton
-			group				commandsControls
-			text				"Items"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				160 200 150 24
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Buy or sell items from the jawa seller"
-
-			mouseEnter 
-			{ 
-				show			buyItemsButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			buyItemsButton_glow
-			}	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				show 			buyItemsControls ;
-				hide 			buyControls ;
-				hide 			buyAmmoControls ;
-				hide 			buyWeaponsControls ;
-				hide 			buyMiscControls ;
-				hide 			stuffControls ;
-				setitemcolor		commandsControls forecolor 1 .682 0 1 ;
-				setitemcolor		buyItemsButton forecolor 1 1 1 1 ;
-			}
-		}
-
-		itemDef 
-		{
-			name				buy31Button
-			group				buyItemsControls
-			text				"Shield Booster: Buy: 150 - Sell: no"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 50 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "9"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy32Button
-			group				buyItemsControls
-			text				"Sentry Gun: Buy: 170 - Sell: 60"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 65 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "10"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy33Button
-			group				buyItemsControls
-			text				"Seeker Drone: Buy: 180 - Sell: 65"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 80 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "11"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy34Button
-			group				buyItemsControls
-			text				"Big Bacta: Buy: 200 - Sell: 70"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 95 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "12"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy35Button
-			group				buyItemsControls
-			text				"Force Field: Buy: 300 - Sell: 80"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 110 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "13"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy38Button
-			group				buyItemsControls
-			text				"Bacta Canister: Buy: 100 - Sell: 20"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 125 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "34"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy39Button
-			group				buyItemsControls
-			text				"E-Web: Buy: 150 - Sell: 30"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 140 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "35"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy40Button
-			group				buyItemsControls
-			text				"Binoculars: Buy: 10 - Sell: 5"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 155 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "38"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy41Button
-			group				buyItemsControls
-			text				"Jetpack: Buy: 50 - Sell: no"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 170 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "41"
-				play			"sound/interface/button1.wav" ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				buy42Button
-			group				buyItemsControls
-			text				"Cloak Item: Buy: 50 - Sell: 20"
-			descText			""
-			type				1
-			font				3
-			textscale			.4
-			style				WINDOW_STYLE_FILLED
-			rect				320 185 180 12
-			textalign			ITEM_ALIGN_LEFT
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykbuy "42"
-				play			"sound/interface/button1.wav" ;
-			}  	  
 		}
 
 		itemDef 
@@ -7069,8 +5964,6 @@
 				hide 			buyControls ;
 				hide 			buyAmmoControls ;
 				hide 			buyWeaponsControls ;
-				hide 			buyItemsControls ;
-				hide 			stuffControls ;
 				setitemcolor		commandsControls forecolor 1 .682 0 1 ;
 				setitemcolor		buyMiscButton forecolor 1 1 1 1 ;
 			}
@@ -7331,11 +6224,9 @@
 				hide			levelother ;
 				hide			levelammo ;
 				hide			levelitem ;
-				hide 			stuffControls ;
 				hide 			buyControls ;
 				hide 			buyAmmoControls ;
 				hide 			buyWeaponsControls ;
-				hide 			buyItemsControls ;
 				hide 			buyMiscControls ;
 				hide 			cameraControls ;
 				hide 			settingsControls ;
@@ -8069,11 +6960,9 @@
 				hide			levelother ;
 				hide			levelammo ;
 				hide			levelitem ;
-				hide 			stuffControls ;
 				hide 			buyControls ;
 				hide 			buyAmmoControls ;
 				hide 			buyWeaponsControls ;
-				hide 			buyItemsControls ;
 				hide 			buyMiscControls ;
 				hide 			settingsControls ;
 				hide 			gamesControls ;

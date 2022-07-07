@@ -6419,14 +6419,7 @@ static void UI_RunMenuScript(char **args)
 
 			if (String_Parse(args, &arg))
 			{
-				char zyk_action[512];
-
-				trap->Cvar_VariableStringBuffer("ui_zyk_buy_action_value", zyk_action, sizeof(zyk_action));
-
-				if (Q_stricmp(zyk_action, "^2buy") == 0)
-					trap->Cmd_ExecuteText(EXEC_APPEND, va("buy %s\n", arg));
-				else
-					trap->Cmd_ExecuteText(EXEC_APPEND, va("sell %s\n", arg));
+				trap->Cmd_ExecuteText(EXEC_APPEND, va("buy %s\n", arg));
 			}
 		}
 		else if (Q_stricmp(name, "zykcharuse") == 0)
@@ -6455,16 +6448,9 @@ static void UI_RunMenuScript(char **args)
 				int zyk_size = 0;
 
 				trap->Cvar_VariableStringBuffer(va("ui_zyk_rpg_char_%s", arg), zyk_char, sizeof(zyk_char));
-
-				zyk_size = strlen(zyk_char);
-
-				while (i < zyk_size)
-				{
-					zyk_char[i] = zyk_char[i + 2];
-					i++;
-				}
-
-				trap->Cmd_ExecuteText(EXEC_APPEND, va("rpgchar delete \"%s\"\n", zyk_char));
+				
+				trap->Cmd_ExecuteText(EXEC_APPEND, va("char delete \"%s\"\n", zyk_char));
+				trap->Cvar_Set(va("ui_zyk_rpg_char_%s", arg), "");
 			}
 		}
 		else if (Q_stricmp(name, "zykcharnew") == 0)
