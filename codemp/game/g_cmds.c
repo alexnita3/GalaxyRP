@@ -18333,8 +18333,6 @@ void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 		for (int i = 0; i < ARRAY_LEN(skills); i++) {
 			strcpy(content, va("%s%d/%d-", content, ent->client->pers.skill_levels[i], skills[i].max_level));
 		}
-
-		trap->SendServerCommand(ent->s.number, va("print \"%s\"", content));
 		trap->SendServerCommand(ent->s.number, va("zykmod \"%s\"", content));
 	}
 	else
@@ -18367,8 +18365,6 @@ void Cmd_ZykChars_f(gentity_t* ent) {
 		sqlite3_close(db);
 		return;
 	}
-
-	trap->SendServerCommand(ent->s.number, va("print \"%s\"", select_character_list_for_ui(ent, db, zErrMsg, rc, stmt)));
 	trap->SendServerCommand(ent->s.number, va("zykchars \"%s\"", select_character_list_for_ui(ent, db, zErrMsg, rc, stmt)));
 }
 
