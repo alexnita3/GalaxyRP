@@ -816,6 +816,7 @@ extern int zyk_max_magic_power(gentity_t *ent);
 extern void Add_Ammo (gentity_t *ent, int weapon, int count);
 void ClientTimerActions( gentity_t *ent, int msec ) {
 	gclient_t	*client;
+     	char 		serverMotd[MAX_STRING_CHARS];
 
 	client = ent->client;
 	client->timeResidual += msec;
@@ -1010,8 +1011,6 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 		//GalaxyRP (Alex): [Death System] This timer represents the time that a player has left until they can get up from being downed.
 		if (client->downedTime)
 		{
-			char serverMotd[MAX_STRING_CHARS];
-
 			if (client->downedTime <= rp_downed_timer.integer)
 			{
 				trap->SendServerCommand(ent->s.number, va("cp \"^1You are downed.\nTime Remaining: %d\"", client->downedTime));
@@ -1035,8 +1034,6 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 		// Tr!Force: [Motd] Show server motd
 		if (client->motdTime)
 		{
-			char serverMotd[MAX_STRING_CHARS];
-
 			if (client->motdTime <= zyk_screen_message_timer.integer)
 			{
 				RPMod_StringEscape(zyk_screen_message.string, serverMotd, MAX_STRING_CHARS);
