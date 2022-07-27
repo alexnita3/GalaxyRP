@@ -12492,7 +12492,7 @@ void Cmd_CreditSpend_f(gentity_t *ent) {
 
 	if ((ent->client->pers.credits - value) < 0)
 	{
-		trap->SendServerCommand(ent - g_entities, va("print \"^1You can\'t spend ^3%i ^1credits.\n^7You only have ^3%i ^7credits.\n\""), value, ent->client->pers.credits);
+		trap->SendServerCommand(ent - g_entities, va(("print \"^1You can\'t spend ^3%i ^1credits.\n^7You only have ^3%i ^7credits.\n\""), value, ent->client->pers.credits));
 		return;
 	}
 
@@ -12602,7 +12602,7 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 
 	if ((ent->client->pers.credits - value) < 0)
 	{
-		trap->SendServerCommand(ent - g_entities, va("print \"^1You can\'t give ^3%i ^1credits.\n^7You only have ^3%i ^7credits.\n\""), value, ent->client->pers.credits);
+		trap->SendServerCommand(ent - g_entities, va(("print \"^1You can\'t give ^3%i ^1credits.\n^7You only have ^3%i ^7credits.\n\""), value, ent->client->pers.credits));
 		return;
 	}
 	
