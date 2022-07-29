@@ -630,7 +630,7 @@ void show_animation_list(gentity_t* ent, int beginning_index, int end_index) {
 		print_header(ent, anim_headers[i]);
 		for (int j = 0; j < MAX_WORDED_EMOTES; j++) {
 			//alex: if animation is in that category
-			if (stricmp(animations[j].animation_category, anim_headers[i]) == 0) {
+			if (Q_stricmp(animations[j].animation_category, anim_headers[i]) == 0) {
 				print_row(ent, animations[j].animation_name);
 			}
 		}
