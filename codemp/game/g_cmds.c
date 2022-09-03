@@ -1217,11 +1217,12 @@ void Cmd_Notarget_f( gentity_t *ent ) {
 
 	ent->flags ^= FL_NOTARGET;
 	if ( !(ent->flags & FL_NOTARGET) )
-		msg = "notarget OFF";
+		msg = "^1OFF";
 	else
-		msg = "notarget ON";
+		msg = "^2ON";
 
-	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", msg ) );
+	trap->SendServerCommand( ent-g_entities, va( "print \"notarget %s\n\"", msg ) );
+	trap->SendServerCommand(-1, va("chat \"^7%s ^7turned notarget %s\n\"", ent->client->pers.netname, msg));
 }
 
 
