@@ -1658,6 +1658,7 @@ static void CG_ZykChars(void)
 }
 
 char ui_cvars_in_order[100][100] = { 
+	"name",
 	"ui_zyk_rpg_level", 
 	"ui_rp_xp_value", 
 	"ui_zyk_rpg_skillpoints", 

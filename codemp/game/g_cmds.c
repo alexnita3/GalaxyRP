@@ -18328,7 +18328,7 @@ void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 
 		strcpy(content, "");
 
-		strcpy(content, va("%s%d-%d/%d-%d-%d-", content, level, xp, xpToLevel, skillpoints, credits));
+		strcpy(content, va("%s%s-%d-%d/%d-%d-%d-", content, ent->client->pers.netname, level, xp, xpToLevel, skillpoints, credits));
 
 		for (int i = 0; i < ARRAY_LEN(skills); i++) {
 			strcpy(content, va("%s%d/%d-", content, ent->client->pers.skill_levels[i], skills[i].max_level));
