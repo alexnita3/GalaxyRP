@@ -7560,24 +7560,6 @@ void rpg_score(gentity_t *ent, qboolean admin_rp_mode)
 	}
 }
 
-// zyk: increases the RPG skill counter by this amount
-void rpg_skill_counter(gentity_t *ent, int amount)
-{
-	if (ent && ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.level < zyk_rpg_max_level.integer)
-	{ // zyk: now RPG mode increases level up score after a certain amount of attacks
-		ent->client->pers.skill_counter += amount;
-		if (ent->client->pers.skill_counter >= zyk_max_skill_counter.integer)
-		{
-			ent->client->pers.skill_counter = 0;
-
-			// zyk: skill counter does not give credits, only Level Up Score
-			ent->client->pers.credits_modifier = -10;
-
-			rpg_score(ent, qfalse);
-		}
-	}
-}
-
 // zyk: number of artifacts collected by the player in Universe Quest
 int number_of_artifacts(gentity_t *ent)
 {
@@ -16091,8 +16073,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					send_rpg_events(2000);
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 50000;
 				}
 				else
@@ -16135,8 +16115,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.unique_skill_duration = level.time + 4000;
 
 					ent->client->pers.player_statuses |= (1 << 21);
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 50000;
 				}
@@ -16187,8 +16165,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->pers.player_statuses |= (1 << 21);
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 35000;
 				}
 				else
@@ -16208,8 +16184,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.unique_skill_duration = level.time + 8000;
 
 					ent->client->pers.player_statuses |= (1 << 21);
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 30000;
 				}
@@ -16232,8 +16206,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.unique_skill_duration = level.time + 3500;
 
 					ent->client->pers.player_statuses |= (1 << 21);
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 30000;
 				}
@@ -16269,8 +16241,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					Jedi_Cloak(ent);
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 45000;
 				}
 				else
@@ -16290,8 +16260,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.unique_skill_duration = level.time + 2500;
 
 					ent->client->ps.weaponTime = 1500;
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 45000;
 				}
@@ -16323,8 +16291,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 40000;
 				}
 				else
@@ -16345,8 +16311,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					send_rpg_events(2000);
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 50000;
 				}
 				else
@@ -16364,8 +16328,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.unique_skill_duration = level.time + 10000;
 
 					ent->client->pers.player_statuses |= (1 << 21);
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 50000;
 				}
@@ -16431,8 +16393,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					zyk_super_beam(ent, ent->client->ps.viewangles[1]);
 
 					send_rpg_events(2000);
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 50000;
 				}
@@ -16502,8 +16462,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.powerups[PW_DISINT_4] = level.time + 1100;
 					ent->client->ps.powerups[PW_PULL] = 0;
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 50000;
 				}
 				else
@@ -16525,8 +16483,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					// zyk: can shoot 5 times
 					ent->client->pers.wrist_shot_counter = 5;
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 35000;
 				}
 				else
@@ -16545,8 +16501,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					Add_Ammo(ent, AMMO_POWERCELL, 200);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 30000;
 
@@ -16572,8 +16526,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->pers.player_statuses |= (1 << 22);
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 30000;
 				}
 				else
@@ -16591,8 +16543,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					zyk_add_bomb_model(ent);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 45000;
 				}
@@ -16620,8 +16570,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->pers.player_statuses |= (1 << 22);
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 45000;
 				}
 				else
@@ -16638,8 +16586,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					zyk_no_attack(ent);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 40000;
 				}
@@ -16667,8 +16613,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					display_yellow_bar(ent, (ent->client->pers.quest_power_usage_timer - level.time));
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 50000;
 				}
 				else
@@ -16688,8 +16632,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.unique_skill_duration = level.time + 6000;
 
 					ent->client->pers.player_statuses |= (1 << 22);
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 50000;
 				}
@@ -16797,8 +16739,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					send_rpg_events(2000);
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 50000;
 				}
 				else
@@ -16822,8 +16762,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->ps.forceHandExtendTime = level.time + 3000;
 
 					zyk_force_storm(ent);
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 50000;
 				}
@@ -16852,8 +16790,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					zyk_ice_bomb(ent);
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 35000;
 				}
 				else
@@ -16871,8 +16807,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.unique_skill_duration = level.time + 8000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 30000;
 				}
@@ -16895,8 +16829,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					ent->client->pers.unique_skill_duration = level.time + 3000;
 
 					ent->client->pers.player_statuses |= (1 << 23);
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 30000;
 				}
@@ -16953,8 +16885,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->pers.monk_unique_timer = level.time + 750;
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 45000;
 				}
 				else
@@ -16976,8 +16906,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					G_SetAnim(ent, NULL, SETANIM_BOTH, BOTH_ALORA_SPIN_THROW, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
 
 					ent->client->pers.player_statuses |= (1 << 23);
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 45000;
 				}
@@ -17002,8 +16930,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					send_rpg_events(2000);
 
-					rpg_skill_counter(ent, 200);
-
 					ent->client->pers.unique_skill_timer = level.time + 40000;
 				}
 				else
@@ -17025,8 +16951,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					healing_area(ent, 3, 8000);
 
 					send_rpg_events(2000);
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.quest_power_usage_timer = level.time + 5000;
 
@@ -17093,8 +17017,6 @@ void Cmd_Unique_f(gentity_t *ent) {
 					}
 					ent->client->ps.powerups[PW_DISINT_4] = ent->client->ps.forceHandExtendTime + 200;
 					ent->client->ps.powerups[PW_PULL] = ent->client->ps.powerups[PW_DISINT_4];
-
-					rpg_skill_counter(ent, 200);
 
 					ent->client->pers.unique_skill_timer = level.time + 50000;
 				}

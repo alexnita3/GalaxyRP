@@ -1826,7 +1826,6 @@ PM_CheckJump
 =============
 */
 #if defined( _GAME )
-extern void rpg_skill_counter(gentity_t *ent, int amount);
 extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 #endif
 static qboolean PM_CheckJump( void )
@@ -1904,10 +1903,6 @@ static qboolean PM_CheckJump( void )
 		{
 #if defined (_GAME)
 			gentity_t *player_ent = &g_entities[pm->ps->clientNum];
-			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2)
-			{
-				rpg_skill_counter(player_ent, 5);
-			}
 #endif
 
 			if ( pm->gametype == GT_DUEL
@@ -2847,17 +2842,6 @@ static qboolean PM_CheckJump( void )
 		PM_JumpForDir();
 	}
 
-#if defined (_GAME)
-	if (1)
-	{
-		gentity_t *player_ent = &g_entities[pm->ps->clientNum];
-		if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2)
-		{
-			rpg_skill_counter(player_ent, 5);
-		}
-	}
-#endif
-
 	return qtrue;
 }
 /*
@@ -3780,11 +3764,6 @@ static int PM_TryRoll( void )
 		{
 #if defined( _GAME )
 			gentity_t *player_ent = &g_entities[pm->ps->clientNum];
-
-			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2)
-			{ // zyk: rolling increases skill counter
-				rpg_skill_counter(player_ent, 20);
-			}
 #endif
 			pm->ps->saberMove = LS_NONE;
 			return anim;

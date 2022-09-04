@@ -138,7 +138,6 @@ qboolean G_CanBeEnemy( gentity_t *self, gentity_t *enemy )
 //This function gets the attack power which is used to decide broken parries,
 //knockaways, and numerous other things. It is not directly related to the
 //actual amount of damage done, however. -rww
-extern void rpg_skill_counter(gentity_t *ent, int amount);
 static QINLINE int G_SaberAttackPower(gentity_t *ent, qboolean attacking)
 {
 	int baseLevel;
@@ -159,8 +158,6 @@ static QINLINE int G_SaberAttackPower(gentity_t *ent, qboolean attacking)
 	if (attacking)
 	{ //the attacker gets a boost to help penetrate defense.
 		//General boost up so the individual levels make a bigger difference.
-		// zyk: saber counter
-		rpg_skill_counter(ent,1);
 
 		baseLevel *= 2;
 
@@ -4236,9 +4233,6 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 							{ //staff kata
 								dmg = G_GetAttackDamage(self, 60, 70, 0.5f);
 							}
-
-							// zyk: katas increase skill_counter
-							rpg_skill_counter(self,1);
 						}
 						else
 						{
@@ -8081,9 +8075,6 @@ static void G_KickSomeMofos(gentity_t *ent)
 	{
 //		G_KickTrace( ent, kickDir, kickDist, kickEnd, kickDamage, kickPush );
 		G_KickTrace( ent, kickDir, kickDist, NULL, kickDamage, kickPush );
-
-		// zyk: melee kick counter
-		rpg_skill_counter(ent,8);
 	}
 }
 
@@ -8111,9 +8102,6 @@ static void G_GrabSomeMofos(gentity_t *self)
 	{ //no good
 		return;
 	}
-
-	// zyk: melee grab increases skill_counter
-	rpg_skill_counter(self,2);
 
     VectorSet(flatAng, 0.0f, self->client->ps.viewangles[1], 0.0f);
 	trap->G2API_GetBoltMatrix(self->ghoul2, 0, ri->handRBolt, &boltMatrix, flatAng, self->client->ps.origin,

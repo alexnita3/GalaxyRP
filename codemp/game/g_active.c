@@ -1214,8 +1214,6 @@ void G_CheapWeaponFire(int entNum, int ev)
 	}
 }
 
-extern void rpg_skill_counter(gentity_t *ent, int amount);
-
 /*
 ================
 ClientEvents
@@ -1333,31 +1331,24 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 		//rww - Note that these must be in the same order (ITEM#-wise) as they are in holdable_t
 		case EV_USE_ITEM1: //seeker droid
 			ItemUse_Seeker(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM2: //shield
 			ItemUse_Shield(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM3: //medpack
 			ItemUse_MedPack(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM4: //big medpack
 			ItemUse_MedPack_Big(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM5: //binoculars
 			ItemUse_Binoculars(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM6: //sentry gun
 			ItemUse_Sentry(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM7: //jetpack
 			ItemUse_Jetpack(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM8: //health disp
 			//ItemUse_UseDisp(ent, HI_HEALTHDISP);
@@ -1367,11 +1358,9 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 			break;
 		case EV_USE_ITEM10: //eweb
 			ItemUse_UseEWeb(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM11: //cloak
 			ItemUse_UseCloak(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		default:
 			break;
@@ -3721,8 +3710,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								send_rpg_events(2000);
 
-								rpg_skill_counter(ent, 200);
-
 								ent->client->pers.unique_skill_timer = level.time + 50000;
 							}
 							else
@@ -3738,8 +3725,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 10000;
 								ent->client->pers.unique_skill_duration = level.time + 10000;
-
-								rpg_skill_counter(ent, 200);
 
 								ent->client->pers.unique_skill_timer = level.time + 50000;
 							}
@@ -3757,8 +3742,6 @@ void ClientThink_real( gentity_t *ent ) {
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
 								ent->client->pers.unique_skill_duration = level.time + 25000;
 
-								rpg_skill_counter(ent, 200);
-
 								ent->client->pers.unique_skill_timer = level.time + 35000;
 							}
 							else
@@ -3774,8 +3757,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
 								ent->client->pers.unique_skill_duration = level.time + 15000;
-
-								rpg_skill_counter(ent, 200);
 
 								ent->client->pers.unique_skill_timer = level.time + 30000;
 							}
@@ -3809,8 +3790,6 @@ void ClientThink_real( gentity_t *ent ) {
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
 								ent->client->pers.unique_skill_duration = level.time + 15000;
 
-								rpg_skill_counter(ent, 200);
-
 								ent->client->pers.unique_skill_timer = level.time + 30000;
 							}
 							else
@@ -3826,8 +3805,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
 								ent->client->pers.unique_skill_duration = level.time + 10000;
-
-								rpg_skill_counter(ent, 200);
 
 								ent->client->pers.unique_skill_timer = level.time + 45000;
 							}
@@ -3912,8 +3889,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								send_rpg_events(2000);
 
-								rpg_skill_counter(ent, 200);
-
 								ent->client->pers.unique_skill_timer = level.time + 45000;
 							}
 							else
@@ -3994,8 +3969,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1000;
 
-								rpg_skill_counter(ent, 200);
-
 								ent->client->pers.unique_skill_timer = level.time + 40000;
 							}
 							else
@@ -4014,8 +3987,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								send_rpg_events(2000);
 
-								rpg_skill_counter(ent, 200);
-
 								ent->client->pers.unique_skill_timer = level.time + 50000;
 							}
 							else
@@ -4031,8 +4002,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
 								ent->client->pers.unique_skill_duration = level.time + 15000;
-
-								rpg_skill_counter(ent, 200);
 
 								ent->client->pers.unique_skill_timer = level.time + 50000;
 							}
