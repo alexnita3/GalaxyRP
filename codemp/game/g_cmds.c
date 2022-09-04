@@ -14944,7 +14944,7 @@ void Cmd_ClientPrint_f( gentity_t *ent ) {
 	trap->Argv( 2, arg2, sizeof( arg2 ) );
 
 	trap->SendServerCommand( client_id, va("cp \"%s\"", arg2) );
-	trap->SendServerCommand( client_id, va("print \"^3* %s ^3*\"", arg2) );
+	trap->SendServerCommand( client_id, va("print \"^3* %s ^3*\n\"", arg2) );
 }
 
 /*
