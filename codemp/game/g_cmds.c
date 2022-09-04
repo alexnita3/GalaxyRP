@@ -1731,11 +1731,12 @@ void update_accounts_table_row_with_current_values(gentity_t* ent) {
 		return;
 	}
 	
-	char update_account_query[95] = "UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s' WHERE AccountID='%i'";
+	char update_account_query[110] = "UPDATE Accounts SET PlayerSettings='0', AdminLevel='%i', DefaultChar='%s', Password='%s' WHERE AccountID='%i'";
 
 	run_db_query(va(update_account_query,
 		ent->client->pers.bitvalue,
 		ent->client->sess.rpgchar,
+		ent->client->pers.password,
 		ent->client->sess.accountID
 	), db, zErrMsg, rc, stmt);
 
@@ -3055,44 +3056,6 @@ void Cmd_Char_f(gentity_t *ent) {
 			return;
 		}
 	}
-}
-
-void Cmd_ResetPassword_F(gentity_t * ent)
-{
-	sqlite3 *db;
-	char *zErrMsg = 0;
-	int rc;
-	char newpassword[256] = { 0 };
-
-	rc = sqlite3_open(DB_PATH, &db);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		return;
-	}
-
-	if (trap->Argc() != 2)
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"^2Command Usage: /resetpassword <newpassword>\n\"");
-		sqlite3_close(db);
-		return;
-	}
-
-	trap->Argv(1, newpassword, sizeof(newpassword));
-
-	rc = sqlite3_exec(db, va("UPDATE Accounts SET Password=\"%s\" WHERE AccountID='%i'", newpassword, ent->client->sess.accountID), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-
-	trap->SendServerCommand(ent - g_entities, va("print \"^2You have sucessfully reset your password to: %s.\n\"", newpassword));
-
-	sqlite3_close(db);
-	return;
 }
 
 //INVENTORY
@@ -18513,7 +18476,6 @@ command_t commands[] = {
 	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "removexp",			Cmd_RemoveXp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "removepickups",		Cmd_RemovePickups_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "resetpassword",		Cmd_ResetPassword_F,		CMD_LOGGEDIN },
 	{ "roll",				Cmd_Roll_f,					0 },
 	{ "rpglmsmode",			Cmd_RpgLmsMode_f,			CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "rpglmstable",		Cmd_RpgLmsTable_f,			CMD_NOINTERMISSION },
