@@ -453,7 +453,6 @@ Adds score to both the client and his team
 ============
 */
 extern qboolean g_dontPenalizeTeam; //g_cmds.c
-extern void rpg_score(gentity_t *ent, qboolean admin_rp_mode);
 void AddScore( gentity_t *ent, vec3_t origin, int score )
 {
 	/*
@@ -474,11 +473,6 @@ void AddScore( gentity_t *ent, vec3_t origin, int score )
 	//ScorePlum(ent, origin, score);
 	//
 	ent->client->ps.persistant[PERS_SCORE] += score;
-
-	if (!ent->NPC && ent->client->sess.amrpgmode == 2 && score > 0)
-	{
-		rpg_score(ent, qfalse);
-	}
 
 	if ( level.gametype == GT_TEAM && !g_dontPenalizeTeam )
 		level.teamScores[ ent->client->ps.persistant[PERS_TEAM] ] += score;
