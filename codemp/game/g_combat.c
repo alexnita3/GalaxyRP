@@ -472,7 +472,7 @@ void AddScore( gentity_t *ent, vec3_t origin, int score )
 	// show score plum
 	//ScorePlum(ent, origin, score);
 	//
-	ent->client->ps.persistant[PERS_SCORE] += score;
+	//ent->client->ps.persistant[PERS_SCORE] += score;
 
 	if ( level.gametype == GT_TEAM && !g_dontPenalizeTeam )
 		level.teamScores[ ent->client->ps.persistant[PERS_TEAM] ] += score;
@@ -2874,8 +2874,6 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 	}
 
 	self->enemy = attacker;
-
-	self->client->ps.persistant[PERS_KILLED]++;
 
 	if (self == attacker)
 	{

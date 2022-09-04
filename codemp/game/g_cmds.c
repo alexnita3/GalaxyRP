@@ -359,7 +359,7 @@ void DeathmatchScoreboardMessage( gentity_t *ent ) {
 
 		Com_sprintf (entry, sizeof(entry),
 			" %i %i %i %i %i %i %i %i %i %i %i %i %i %i", level.sortedClients[i],
-			cl->pers.level, ping, (level.time - cl->pers.enterTime)/60000,
+			cl->pers.level, cl->ps.persistant[PERS_KILLED], ping,
 			scoreFlags, g_entities[level.sortedClients[i]].s.powerups, accuracy,
 			cl->ps.persistant[PERS_IMPRESSIVE_COUNT],
 			cl->ps.persistant[PERS_EXCELLENT_COUNT],
@@ -1394,6 +1394,7 @@ void paralyze_player(int client_id) {
 	g_entities[client_id].client->ps.stats[STAT_HEALTH] = 50;
 	g_entities[client_id].health = 50;
 
+	g_entities[client_id].client->ps.persistant[PERS_KILLED]++;
 }
 
 qboolean can_player_get_up(gentity_t* ent, gentity_t* target) {

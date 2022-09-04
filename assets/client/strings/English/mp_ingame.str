@@ -473,7 +473,7 @@ REFERENCE           ROUNDBEGINSIN
 LANG_ENGLISH        "Round begins in"
 
 REFERENCE           SCORE
-LANG_ENGLISH        "Level"
+LANG_ENGLISH        "Score"
 
 REFERENCE           NAME
 LANG_ENGLISH        "Name"
@@ -534,6 +534,9 @@ LANG_ENGLISH        "Warning: Too many info changes, last info ignored"
 
 REFERENCE           LEVEL
 LANG_ENGLISH        "Level"
+
+REFERENCE           DEATH_COUNT
+LANG_ENGLISH        "Deaths"
 
 ENDMARKER
 
