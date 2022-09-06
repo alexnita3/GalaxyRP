@@ -4886,7 +4886,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	{
 		if (mod == MOD_SABER)
 		{ // zyk: player in RPG mode, with duals or staff, has a better damage depending on Saber Attack level
-			if (attacker->client->saber[0].saberFlags&SFL_TWO_HANDED || (attacker->client->saber[0].model[0] && attacker->client->saber[1].model[0]))
+			/*if (attacker->client->saber[0].saberFlags&SFL_TWO_HANDED || (attacker->client->saber[0].model[0] && attacker->client->saber[1].model[0]))
 			{
 				if (attacker->client->pers.skill_levels[5] <= FORCE_LEVEL_1)
 				{
@@ -4904,7 +4904,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 				{
 					damage = (int)ceil(damage * 1.4);
 				}
-			}
+			}*/
 			if (attacker->client->ps.fd.saberAnimLevel == SS_FAST)
 			{
 				if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_2)
