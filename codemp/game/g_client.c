@@ -2621,7 +2621,7 @@ and on transition between teams, but doesn't happen on respawns
 extern qboolean	gSiegeRoundBegun;
 extern qboolean	gSiegeRoundEnded;
 extern qboolean g_dontPenalizeTeam; //g_cmds.c
-extern void load_account_from_db_with_default_char(gentity_t *ent);
+extern void select_account_and_default_character_data(gentity_t* ent, char username[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 extern void initialize_rpg_skills(gentity_t *ent);
 void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin);
 void ClientBegin( int clientNum, qboolean allowTeamReset ) {
@@ -2742,24 +2742,6 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 
 	VectorSet(client->pers.saved_origin, 0, 0, 0);
 	VectorSet(client->pers.saved_view_angles, 0, 0, 0);
-
-	if (ent->client->sess.amrpgmode > 0)
-	{
-		// zyk: if the target goes to spec or something, then the server must choose another target
-		if (level.bounty_quest_choose_target == qfalse && level.bounty_quest_target_id == (ent-g_entities))
-			level.bounty_quest_choose_target = qtrue;
-
-		// zyk: load account again
-
-		ent->client->sess.accountID = -1;
-		ent->client->sess.loggedin = qfalse;
-		ent->client->sess.amrpgmode = 0;
-
-		//TODO: find a way to bring this back in (server doesn't like loading the db while it's changing maps)
-		//load_account_from_db_with_default_char(ent);
-
-		initialize_rpg_skills(ent);
-	}
 
 	client->pers.connected = CON_CONNECTED;
 	client->pers.enterTime = level.time;
@@ -2908,6 +2890,40 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 				client->sess.motdSeen = qtrue;
 			}
 		}
+	}
+
+	if (ent->client->sess.amrpgmode > 0)
+	{
+		// zyk: if the target goes to spec or something, then the server must choose another target
+		if (level.bounty_quest_choose_target == qfalse && level.bounty_quest_target_id == (ent - g_entities))
+			level.bounty_quest_choose_target = qtrue;
+
+		// zyk: load account again
+
+		//ent->client->sess.accountID = -1;
+		ent->client->sess.loggedin = qtrue;
+		//ent->client->sess.amrpgmode = 0;
+
+		//TODO: find a way to bring this back in (server doesn't like loading the db while it's changing maps)
+
+		sqlite3* db;
+		char* zErrMsg = 0;
+		int rc;
+		sqlite3_stmt* stmt;
+
+		rc = sqlite3_open(DB_PATH, &db);
+		if (rc != SQLITE_OK)
+		{
+			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+			sqlite3_close(db);
+			return;
+		}
+
+		select_account_and_default_character_data(ent, ent->client->sess.filename, db, zErrMsg, rc, stmt);
+
+		sqlite3_close(db);
+
+		//initialize_rpg_skills(ent);
 	}
 }
 
