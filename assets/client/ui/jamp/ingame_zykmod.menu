@@ -34,6 +34,38 @@
 			show mainButtons ;
 			uiScript			update "ui_GetName"
 			exec "zykmod" ;
+			hide 			accountControls ;
+			hide			charControls ;
+			hide 			newAccountControls ;
+			hide			loginAccountControls ;
+			hide			changePassControls ;
+			hide 			rpgClassControls ;
+			hide 			upControls ;
+			hide 			forceSkillsControls ;
+			hide			weaponSkillsControls ;
+			hide			otherSkillsControls ;
+			hide			ammoSkillsControls ;
+			hide			itemsSkillsControls ;
+			hide			questControls ;
+			hide			universeControls ;
+			hide			lightControls ;
+			hide			darkControls ;
+			hide			eternityControls ;
+			hide			questMapsControls ;
+			hide 			listControls ;
+			hide 			commandsControls ;
+			hide			levelforce ;
+			hide			levelweapon ;
+			hide			levelother ;
+			hide			levelammo ;
+			hide			levelitem ;
+			hide 			settingsControls ;
+			hide 			buyControls ;
+			hide 			buyAmmoControls ;
+			hide 			buyWeaponsControls ;
+			hide 			buyMiscControls ;
+			hide 			cameraControls ;
+			hide 			gamesControls ;
 		}
 
 		itemDef 
@@ -942,7 +974,7 @@
 		{
 			name				listButton
 			group				mainButtons
-			text				"List"
+			text				"Character"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
 			rect				10 68 140 30
@@ -1065,24 +1097,135 @@
 			}
 		}
 
-		itemDef
+//------------------------------------------------------------------------------------------------
+// Custom skin
+//------------------------------------------------------------------------------------------------
+		itemDef 
 		{
-			name				character
+			name				customtitle
 			group				listControls
-			type 				ITEM_TYPE_MODEL
-			rect				400 50 200 200
-			model_g2anim 		"BOTH_WALK1"
-			asset_model			"ui_char_model"
-			model_angle			180
-			model_g2mins		-10 -15 -10
-			model_g2maxs		20 15 30
-			model_rotation		50
-			model_fovx			50
-			model_fovy			50
-			isCharacter			1
-			visible			1
+			style				0	
+			text				@MENUS_CUSTOM
+			rect				425 80 150 26
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			75
+			textaligny			-3
+			outlinecolor		1 .5 .5 .5
+			backcolor			0 0 0 0
+			font				2
+			textscale			1
+			forecolor			.549 .854 1 1
+			visible			1 
 			decoration
 		}
+
+		itemDef 
+		{
+			name				custom
+			group				listControls
+			background			"gfx/mp/custom_mp_default"
+			descText			@MENUS_CUSTOMPLAYER_DESC
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_SHADER
+			rect				465 110 75 75
+			font				3
+			textscale			1
+			textaligny			-1
+			textalign			ITEM_ALIGN_CENTER
+			textstyle			3
+			forecolor			.5 .5 .5 1
+			visible			1
+			mouseEnter 
+			{ 
+				setitemcolor		custom	forecolor	1 1 1 1
+			}
+			mouseExit 
+			{ 
+				setitemcolor		custom	forecolor	.5 .5 .5 1
+			}	  	  
+	     		action 
+			{ 
+				play			"sound/interface/button1.wav" 
+				uiScript				updateForceStatus
+				close			ingame_zykmod
+				open			ingame_player2
+			}  	  
+		}
+
+//------------------------------------------------------------------------------------------------
+//	Saber Setup
+//------------------------------------------------------------------------------------------------
+		
+		itemDef 
+		{
+			name				sabertitle
+			group				listControls
+			style				0	
+			text				@MENUS_SABER_TITLE
+			rect				430 247 150 26
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			75
+			textaligny			-3
+			outlinecolor			1 .5 .5 .5
+			backcolor			0 0 0 0
+			font				2
+			textscale			1
+			forecolor			.549 .854 1 1
+			visible				1 
+			decoration
+		}
+
+		itemDef 
+		{
+			name				saber
+			group				listControls
+			background			"gfx/menus/saberonly"
+			descText			@MENUS_SABER_TITLE_DESC
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_SHADER
+			rect				465 272 75 75
+			font				3
+			textscale			1
+			textalignx			65
+			textaligny			-1
+			textalign			ITEM_ALIGN_CENTER
+			textstyle			3
+			forecolor			.5 .5 .5 1
+			visible			1
+			mouseEnter 
+			{ 
+				setitemcolor		saber	forecolor	1 1 1 1
+			}
+			mouseExit 
+			{ 
+				setitemcolor		saber	forecolor	.5 .5 .5 1
+			}	  	  
+	     		action 
+			{ 
+				play			"sound/interface/button1.wav" 
+				close			ingame_zykmod 
+				open			ingame_saber 
+			}  	  
+		}
+
+		//itemDef
+		//{
+		//	name				character
+		//	group				listControls
+		//	type 				ITEM_TYPE_MODEL
+		//	rect				400 50 200 200
+		//	model_g2anim 		"BOTH_WALK1"
+		//	asset_model			"ui_char_model"
+		//	model_angle			180
+		//	model_g2mins		-10 -15 -10
+		//	model_g2maxs		20 15 30
+		//	model_rotation		50
+		//	model_fovx			50
+		//	model_fovy			50
+		//	isCharacter			1
+		//	visible			1
+		//	decoration
+		//}
 
 		itemDef 
 		{
@@ -5556,7 +5699,7 @@
 		{
 			name				commandsButton
 			group				mainButtons
-			text				"Buy/Sell"
+			text				"Shop"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
 			rect				10 158 140 30
