@@ -101,6 +101,10 @@
 			visible				0
 		}
 
+//----------------------------------------------------------------------------------------------
+// Account Tab Beginning
+//----------------------------------------------------------------------------------------------
+
 		itemDef 
 		{
 			name				accountButton_glow
@@ -708,256 +712,9 @@
 			}
 		}
 
-		itemDef 
-		{
-			name				rpgClassButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				5 68 140 30
-			background			"gfx/menus/menu_blendbox2"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				freeWarriorButton
-			group				rpgClassControls
-			text				"Free Warrior"
-			descText			"Can have all 56 skills. All-round class"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				180 50 140 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec "rpgclass 0"
-				play			"sound/interface/button1.wav" ;
-				hide			rpgClassControls ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				forceUserButton
-			group				rpgClassControls
-			text				"Force User"
-			descText			"Saber/force class. Force powers use less force. Regens force faster"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				180 80 120 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec "rpgclass 1"
-				play			"sound/interface/button1.wav" ;
-				hide			rpgClassControls ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				bountyHunterButton
-			group				rpgClassControls
-			text				"Bounty Hunter"
-			descText			"Gun class. Higher max ammo, stronger items and more credits in battles"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				180 110 150 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec "rpgclass 2"
-				play			"sound/interface/button1.wav" ;
-				hide			rpgClassControls ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				armoredSoldierButton
-			group				rpgClassControls
-			text				"Armored Soldier"
-			descText			"Gun class. High resistance to damage, shot deflection and auto-shield-heal"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				180 140 170 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec "rpgclass 3"
-				play			"sound/interface/button1.wav" ;
-				hide			rpgClassControls ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				monkButton
-			group				rpgClassControls
-			text				"Monk"
-			descText			"Force class. Highest melee damage and faster run speed. Has auto-hp-heal"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				180 170 70 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec "rpgclass 4"
-				play			"sound/interface/button1.wav" ;
-				hide			rpgClassControls ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				stealthAttackerButton
-			group				rpgClassControls
-			text				"Stealth Attacker"
-			descText			"Gun class. Highest gun damage. Resistant to electric attacks"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				180 200 180 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec "rpgclass 5"
-				play			"sound/interface/button1.wav" ;
-				hide			rpgClassControls ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				duelistButton
-			group				rpgClassControls
-			text				"Duelist"
-			descText			"Saber/force class. Highest saber damage. Regens force faster"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				180 230 80 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec "rpgclass 6"
-				play			"sound/interface/button1.wav" ;
-				hide			rpgClassControls ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				forceGunnerButton
-			group				rpgClassControls
-			text				"Force Gunner"
-			descText			"Gun/force class. Can do acrobatic moves (like wall run) while holding guns and shooting"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				180 260 140 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec "rpgclass 7"
-				play			"sound/interface/button1.wav" ;
-				hide			rpgClassControls ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				magicMasterButton
-			group				rpgClassControls
-			text				"Magic Master"
-			descText			"Has no saber/force/guns. Shoots magic bolts from melee. Learns all magic powers"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				180 290 130 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec "rpgclass 8"
-				play			"sound/interface/button1.wav" ;
-				hide			rpgClassControls ;
-			}  	  
-		}
-
-		itemDef 
-		{
-			name				forceTankButton
-			group				rpgClassControls
-			text				"Force Guardian"
-			descText			"Saber/force class. High resistance to damage. Can grab some guns and items on map"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				180 320 130 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				exec "rpgclass 9"
-				play			"sound/interface/button1.wav" ;
-				hide			rpgClassControls ;
-			}  	  
-		}
+//----------------------------------------------------------------------------------------------
+// List Tab Beginning
+//----------------------------------------------------------------------------------------------
 
 		itemDef 
 		{
@@ -1097,9 +854,6 @@
 			}
 		}
 
-//------------------------------------------------------------------------------------------------
-// Custom skin
-//------------------------------------------------------------------------------------------------
 		itemDef 
 		{
 			name				customtitle
@@ -1151,10 +905,6 @@
 				open			ingame_player2
 			}  	  
 		}
-
-//------------------------------------------------------------------------------------------------
-//	Saber Setup
-//------------------------------------------------------------------------------------------------
 		
 		itemDef 
 		{
@@ -1375,6 +1125,10 @@
 			forecolor			1 1 1 1
 			visible				0
 		}
+
+//----------------------------------------------------------------------------------------------
+// Skills Tab Beginning
+//----------------------------------------------------------------------------------------------
 
 		itemDef 
 		{
@@ -3680,6 +3434,10 @@
 			visible				0
 		}
 
+//----------------------------------------------------------------------------------------------
+// Characters Tab Beginning
+//----------------------------------------------------------------------------------------------
+
 		itemDef 
 		{
 			name				charButton_glow
@@ -3695,7 +3453,7 @@
 		{
 			name				charButton
 			group				mainButtons
-			text				"Chars"
+			text				"Characters"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
 			rect				10 128 140 30
@@ -5684,6 +5442,10 @@
 			}  	  
 		}
 
+//----------------------------------------------------------------------------------------------
+// Shop Tab Beginning
+//----------------------------------------------------------------------------------------------
+
 		itemDef 
 		{
 			name				commandsButton_glow
@@ -6365,6 +6127,10 @@
 				play			"sound/interface/button1.wav" ;
 			}  	  
 		}
+
+//----------------------------------------------------------------------------------------------
+// Games Tab Beginning
+//----------------------------------------------------------------------------------------------
 
 		itemDef 
 		{
@@ -7049,6 +6815,10 @@
 			forecolor			1 1 1 1
 			visible				0
 		}
+
+//----------------------------------------------------------------------------------------------
+// List Tab Beginning
+//----------------------------------------------------------------------------------------------
 
 		itemDef 
 		{
