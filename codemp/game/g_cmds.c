@@ -3045,6 +3045,9 @@ void Cmd_Char_f(gentity_t *ent) {
 		if (Q_stricmp(command, "use") == 0) {
 			select_player_character(ent, charName, db, zErrMsg, rc, stmt);
 			sqlite3_close(db);
+
+			Cmd_GalaxyRpUi_f(ent);
+
 			return;
 
 		}
