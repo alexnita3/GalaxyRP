@@ -118,52 +118,52 @@
 //------------------------------------------------------------------------------------------------
 // Name entry field
 //------------------------------------------------------------------------------------------------
-		itemDef 
-		{
-			name				nameglow
-			group				mods
-			style				WINDOW_STYLE_SHADER
-			rect				25 31 300 24
-			background			"gfx/menus/menu_buttonback"			// Frame around button
-			forecolor			1 1 1 1
-			visible			0
-			decoration
-		}
-		
-		itemDef 
-		{
-			name 				namefield
-			type 				ITEM_TYPE_EDITFIELD
-			style 				0
-			text 				@MENUS_NAME1
-			cvar 				"ui_Name"
-			maxchars 			26
-			rect 				20 33 300 20
-			textalign			ITEM_ALIGN_LEFT		
-			textalignx 			0
-			textaligny 			-5
-			font				2
-			textscale			1
-			forecolor			1 .682 0 1
-			outlinecolor 			1 .5 .5 .5
-			backcolor 			0 0 0 0
-			border 				0
-			bordercolor 			0 0 0 0
-			descText			@MENUS_ENTER_YOUR_NAME_HERE
-			visible 			1 
-			action 
-			{ 
-				play			"sound/interface/button1"
-			}
-			mouseenter 
-			{ 
-				show			nameglow
-			}
-			mouseexit 
-			{ 
-				hide			nameglow
-			}
-		}
+		//itemDef 
+		//{
+		//	name				nameglow
+		//	group				mods
+		//	style				WINDOW_STYLE_SHADER
+		//	rect				25 31 300 24
+		//	background			"gfx/menus/menu_buttonback"			// Frame around button
+		//	forecolor			1 1 1 1
+		//	visible			0
+		//	decoration
+		//}
+		//
+		//itemDef 
+		//{
+		//	name 				namefield
+		//	type 				ITEM_TYPE_EDITFIELD
+		//	style 				0
+		//	text 				@MENUS_NAME1
+		//	cvar 				"ui_Name"
+		//	maxchars 			26
+		//	rect 				20 33 300 20
+		//	textalign			ITEM_ALIGN_LEFT		
+		//	textalignx 			0
+		//	textaligny 			-5
+		//	font				2
+		//	textscale			1
+		//	forecolor			1 .682 0 1
+		//	outlinecolor 			1 .5 .5 .5
+		//	backcolor 			0 0 0 0
+		//	border 				0
+		//	bordercolor 			0 0 0 0
+		//	descText			@MENUS_ENTER_YOUR_NAME_HERE
+		//	visible 			1 
+		//	action 
+		//	{ 
+		//		play			"sound/interface/button1"
+		//	}
+		//	mouseenter 
+		//	{ 
+		//		show			nameglow
+		//	}
+		//	mouseexit 
+		//	{ 
+		//		hide			nameglow
+		//	}
+		//}
 
 //------------------------------------------------------------------------------------------------
 // Player Model label		
