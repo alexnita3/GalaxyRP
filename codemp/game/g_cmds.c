@@ -18207,7 +18207,14 @@ void Cmd_DuelBoard_f(gentity_t *ent) {
 
 void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 	// zyk: sends info to the client-side menu if player has the client-side plugin
-	int universe_quest_counter_value = 0;
+	char userinfo[MAX_INFO_STRING];
+	char modelname[MAX_STRING_CHARS];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+
+	//Alex: this is how u get the current model
+	Q_strncpyz(modelname, Info_ValueForKey(userinfo, "model"), sizeof(modelname));
 
 	if (Q_stricmp(ent->client->pers.guid, "NOGUID") == 0)
 	{
@@ -18225,10 +18232,10 @@ void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 
 		strcpy(content, "");
 
-		strcpy(content, va("%s%s-%d-%d/%d-%d-%d-", content, ent->client->pers.netname, level, xp, xpToLevel, skillpoints, credits));
+		strcpy(content, va("%s%s~%s~%d~%d/%d~%d~%d~", content, ent->client->pers.netname, modelname, level, xp, xpToLevel, skillpoints, credits));
 
 		for (int i = 0; i < ARRAY_LEN(skills); i++) {
-			strcpy(content, va("%s%d/%d-", content, ent->client->pers.skill_levels[i], skills[i].max_level));
+			strcpy(content, va("%s%d/%d~", content, ent->client->pers.skill_levels[i], skills[i].max_level));
 		}
 		trap->SendServerCommand(ent->s.number, va("zykmod \"%s\"", content));
 	}

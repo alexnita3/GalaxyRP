@@ -1659,6 +1659,7 @@ static void CG_ZykChars(void)
 
 char ui_cvars_in_order[100][100] = { 
 	"name",
+	"model",
 	"ui_zyk_rpg_level", 
 	"ui_rp_xp_value", 
 	"ui_zyk_rpg_skillpoints", 
@@ -1727,8 +1728,6 @@ char ui_cvars_in_order[100][100] = {
 	"ui_rp_skill_62_level"
 };
 
-
-
 static void CG_ZykMod( void )
 { // zyk: receives account info of logged players
 	char arg[1024] = {0};
@@ -1736,18 +1735,17 @@ static void CG_ZykMod( void )
 	trap->Cmd_Argv(1, arg, sizeof(arg));
 
 	char *value;
-	value = strtok(arg, "-");
+	value = strtok(arg, "~");
 
 	int i = 0;
 	while (value != NULL)
 	{
-		trap->SendClientCommand(va("%s", value));
 		trap->Cvar_Set(ui_cvars_in_order[i], va("%s", value));
 		i++;
 		if (i >= ARRAY_LEN(ui_cvars_in_order)) {
 			return;
 		}
-		value = strtok(NULL, "-");
+		value = strtok(NULL, "~");
 	}
 	
 }
