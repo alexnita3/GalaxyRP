@@ -34,11 +34,7 @@
 			show mainButtons ;
 			uiScript			update "ui_GetName"
 			exec "zykmod" ;
-			hide 			accountControls ;
 			hide			charControls ;
-			hide 			newAccountControls ;
-			hide			loginAccountControls ;
-			hide			changePassControls ;
 			hide 			rpgClassControls ;
 			hide 			upControls ;
 			hide 			forceSkillsControls ;
@@ -52,7 +48,7 @@
 			hide			darkControls ;
 			hide			eternityControls ;
 			hide			questMapsControls ;
-			hide 			listControls ;
+			show 			listControls ;
 			hide 			commandsControls ;
 			hide			levelforce ;
 			hide			levelweapon ;
@@ -148,9 +144,6 @@
 				exec 			"zykmod" ;
 				show 			listControls ;
 				hide			charControls ;
-				hide 			accountControls ;
-				hide 			loginAccountControls ;
-				hide			newAccountControls ;
 				hide			changePassControls ;
 				hide 			rpgClassControls ;
 				hide 			forceSkillsControls ;
@@ -562,9 +555,6 @@
 				exec 			"zykmod" ;
 				show 			upControls ;
 				hide			charControls ;
-				hide 			accountControls ;
-				hide 			loginAccountControls ;
-				hide			newAccountControls ;
 				hide			changePassControls ;
 				hide 			rpgClassControls ;
 				hide 			forceSkillsControls ;
@@ -2870,9 +2860,6 @@
 				exec 			"zykchars" ;
 				show 			charControls ;
 				hide			upControls ;
-				hide 			accountControls ;
-				hide 			loginAccountControls ;
-				hide			newAccountControls ;
 				hide			changePassControls ;
 				hide 			rpgClassControls ;
 				hide 			forceSkillsControls ;
@@ -4877,9 +4864,6 @@
 				play			"sound/interface/button1.wav" ;
 				show 			commandsControls ;
 				hide			charControls ;
-				hide 			accountControls ;
-				hide 			loginAccountControls ;
-				hide			newAccountControls ;
 				hide			changePassControls ;
 				hide 			rpgClassControls ;
 				hide 			upControls ;
@@ -4914,46 +4898,9 @@
 
 		itemDef 
 		{
-			name				callsellerButton
-			group				commandsControls
-			text				"Call Seller"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				160 50 150 24
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Call the jawa seller to buy and sell stuff"
-	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				exec			"callseller" ;
-				close			ingame_zykmod
-			}
-		}
-
-		itemDef 
-		{
-			name				stuffButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				160 100 150 24
-			background			"gfx/menus/menu_blendbox2"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
 			name				buyButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				160 100 150 24
+			rect				160 50 150 24
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -4967,7 +4914,7 @@
 			text				"Upgrades"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				160 100 150 24
+			rect				160 50 150 24
 			font				3
 			textscale			0.6
 			textalignx			15
@@ -5149,7 +5096,7 @@
 		{
 			name				buyAmmoButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				160 125 150 24
+			rect				160 75 150 24
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -5163,7 +5110,7 @@
 			text				"Ammo"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				160 125 150 24
+			rect				160 75 150 24
 			font				3
 			textscale			0.6
 			textalignx			15
@@ -5409,7 +5356,7 @@
 		{
 			name				buyMiscButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				160 150 150 24
+			rect				160 100 150 24
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -5423,7 +5370,7 @@
 			text				"Misc"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				160 150 150 24
+			rect				160 100 150 24
 			font				3
 			textscale			0.6
 			textalignx			15
@@ -5563,9 +5510,6 @@
 				play			"sound/interface/button1.wav" ;
 				show 			gamesControls ;
 				hide			charControls ;
-				hide 			accountControls ;
-				hide 			loginAccountControls ;
-				hide			newAccountControls ;
 				hide			changePassControls ;
 				hide 			rpgClassControls ;
 				hide 			upControls ;
@@ -6251,9 +6195,6 @@
 				play			"sound/interface/button1.wav" ;
 				show 			cameraControls ;
 				hide			charControls ;
-				hide 			accountControls ;
-				hide 			loginAccountControls ;
-				hide			newAccountControls ;
 				hide			changePassControls ;
 				hide 			rpgClassControls ;
 				hide 			upControls ;
