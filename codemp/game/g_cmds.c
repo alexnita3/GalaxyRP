@@ -3099,6 +3099,7 @@ void Cmd_Char_f(gentity_t *ent) {
 		if (Q_stricmp(command, "new") == 0) {
 			create_new_character(ent, charName, db, zErrMsg, rc, stmt);
 			sqlite3_close(db);
+			Cmd_ZykChars_f(ent);
 			return;
 		}
 
@@ -3107,6 +3108,7 @@ void Cmd_Char_f(gentity_t *ent) {
 			select_player_character(ent, charName, db, zErrMsg, rc, stmt);
 			sqlite3_close(db);
 
+			Cmd_ZykChars_f(ent);
 			Cmd_GalaxyRpUi_f(ent);
 
 			return;
