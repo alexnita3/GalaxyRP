@@ -2107,6 +2107,8 @@ char *G_ValidateUserinfo( const char *userinfo ) {
 	return NULL;
 }
 
+
+extern void update_current_character_name_and_model(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 qboolean ClientUserinfoChanged( int clientNum ) {
 	gentity_t *ent = g_entities + clientNum;
 	gclient_t *client = ent->client;
@@ -2383,6 +2385,26 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 			G_LogPrintf( "ClientUserinfoChanged: %i %s\n", clientNum, buf );
 		else
 			G_LogPrintf( "ClientUserinfoChanged: %i <no change>\n", clientNum );
+	}
+
+	// GalaxyRP (Alex): [Database] Save character's stuff as soon as they change them.
+	if (client->sess.sessionTeam == TEAM_FREE) {
+		sqlite3* db;
+		char* zErrMsg = 0;
+		int rc;
+		sqlite3_stmt* stmt;
+
+		rc = sqlite3_open(DB_PATH, &db);
+		if (rc != SQLITE_OK)
+		{
+			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+			sqlite3_close(db);
+			return;
+		}
+
+		update_current_character_name_and_model(ent, db, zErrMsg, rc, stmt);
+
+		sqlite3_close(db);
 	}
 
 	return qtrue;

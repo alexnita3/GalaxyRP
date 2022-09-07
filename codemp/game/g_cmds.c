@@ -1089,6 +1089,7 @@ void display_scale_help(gentity_t *ent) {
 	return;
 }
 
+extern void update_current_character_scale(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 void Cmd_Scale_f( gentity_t *ent ) {
 	char arg1[MAX_TOKEN_CHARS] = {0};
 	char arg2[MAX_TOKEN_CHARS] = {0};
@@ -1169,6 +1170,23 @@ void Cmd_Scale_f( gentity_t *ent ) {
 
 	do_scale(&g_entities[client_id], new_size);
 	
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt;
+
+	rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	update_current_character_scale(ent, db, zErrMsg, rc, stmt);
+
+	sqlite3_close(db);
+
 	trap->SendServerCommand( -1, va("print \"Scaled player %s ^7to ^3%d^7\n\"", g_entities[client_id].client->pers.netname, new_size) );
 }
 
@@ -2389,7 +2407,44 @@ The methods do broader actions, which are a combination of multiple actions that
 =================
 */
 
-// GalaxyRP (Alex): [Database] This method saves all of the player's character attributes to the database. All the information is taken from ent. (Weapons, Skills and Characters tables)
+// GalaxyRP (Alex): [Database] This method saves the player's name, scale and model to the database. All the information is taken from ent. (Characters tables)
+void update_current_character_name_and_model(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
+
+	char update_character_query[1248] = "UPDATE Characters SET ModelScale='%i', NetName=\"%s\", ModelName='%s' WHERE CharID='%i';";
+
+	run_db_query(va(update_character_query,
+		ent->client->ps.iModelScale,
+		ent->client->pers.netname,
+		modelName,
+		ent->client->pers.CharID
+	), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] This method saves the player's scale to the database. All the information is taken from ent. (Characters tables)
+void update_current_character_scale(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
+	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
+
+	char update_character_query[1248] = "UPDATE Characters SET ModelScale='%i' WHERE CharID='%i';";
+
+	run_db_query(va(update_character_query,
+		ent->client->ps.iModelScale,
+		ent->client->pers.CharID
+	), db, zErrMsg, rc, stmt);
+
+	return;
+}
+
 void update_current_character(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
 	int clientNum = ClientNumberFromString(ent, ent->client->pers.netname, qfalse);
