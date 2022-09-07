@@ -2388,7 +2388,7 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	}
 
 	// GalaxyRP (Alex): [Database] Save character's stuff as soon as they change them.
-	if (client->sess.sessionTeam == TEAM_FREE) {
+	if (client->sess.sessionTeam == TEAM_FREE && client->sess.loggedin == qtrue) {
 		sqlite3* db;
 		char* zErrMsg = 0;
 		int rc;
