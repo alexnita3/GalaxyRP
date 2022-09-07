@@ -11900,7 +11900,7 @@ void Cmd_Buy_f( gentity_t *ent ) {
 		trap->SendServerCommand( ent-g_entities, "print \"Invalid product number.\n\"" );
 		return;
 	}
-	else
+	/*else
 	{ // zyk: searches for the jawa to see if we are near him to buy or sell to him
 		gentity_t *jawa_ent = NULL;
 		int j = 0;
@@ -11921,7 +11921,7 @@ void Cmd_Buy_f( gentity_t *ent ) {
 			trap->SendServerCommand(ent->s.number, "print \"You must be near the jawa seller to buy from him.\n\"" );
 			return;
 		}
-	}
+	}*/
 
 	// zyk: general validations. Some items require certain conditions to be bought
 	if (value == 8 && ent->client->pers.secrets_found & (1 << 7))
