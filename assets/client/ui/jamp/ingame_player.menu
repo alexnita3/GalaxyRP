@@ -160,7 +160,6 @@
 			action 
 			{ 
 				play			"sound/interface/button1"
-				uiScript 		setForce "s"
 				open			ingame_login
 				close 			ingame_player
 			}
