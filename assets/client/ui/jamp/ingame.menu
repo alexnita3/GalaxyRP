@@ -205,7 +205,7 @@
 		itemDef 
 		{
 			name				player
-			text				@MENUS_PROFILE_LOWER
+			text				"Account"
 			type				1
 			style				WINDOW_STYLE_FILLED
 			rect				135 0 70 32

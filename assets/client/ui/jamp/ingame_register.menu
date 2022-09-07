@@ -1,0 +1,217 @@
+//------------------------------------------------------------------------------------------------
+// PLAYER SETUP MENU  - ingame_register
+//
+//	Choose player skin, name
+//	Choose light saber
+//	Allocate force powers
+//
+//	g_gametypes
+//		"Free For All" 		0
+//		"Duel" 			3
+//		"Power Duel" 		4
+//		"Team FFA" 		6 
+//		"Siege" 		7
+//		"Capture the Flag" 	8
+//
+//	ui_net_gametype
+//		0 = FFA
+//		1 = DUEL
+//		2 = POWER DUEL
+//		3 = TEAM FFA
+//		4 = SIEGE
+//		5 = CTF
+//------------------------------------------------------------------------------------------------
+{
+	menuDef 
+	{
+		name						"ingame_register"
+		visible						0
+		fullscreen					0
+		outOfBoundsClick										// this closes the window if it gets a click out of the rectangle
+		rect						195 140 250 180
+		focusColor					1 1 1 1					// Focus color for text and items
+		style						1
+		border						1
+		descX						320
+		descY						428
+		descScale					1
+		descColor				1 .682 0 .8
+		descAlignment					ITEM_ALIGN_CENTER		
+		onOpen  
+		{ 
+			uiScript				update "ui_GetName"
+			uiScript				updateForceStatus
+			hide					highlights
+		}
+		onClose 
+		{ 
+			uiScript				update "ui_SetName"
+			uiScript				updateForceStatus
+			hide					highlights
+		}
+
+//------------------------------------------------------------------------------------------------
+// Overall window backdrop
+//------------------------------------------------------------------------------------------------
+		itemDef 
+		{
+			name				background_pic
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				0 0 250 180
+			background			"gfx/menus/menu_box_ingame"
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+
+
+		// Button background at bottom of screen
+		itemDef 
+		{
+			name				background
+			group				none
+			style				WINDOW_STYLE_FILLED
+			rect				0 420 600 20
+			backcolor			.298 .305 .690 1
+			forecolor			.549 .854 1 1
+			visible				1
+			decoration
+		}
+
+        itemDef 
+		{
+			name				loginText
+			group				loginAccountControls
+			text				"Username:"
+			descText			""
+			type				1
+			font				2
+			style				WINDOW_STYLE_FILLED
+			rect				20 40 90 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				1  
+		}
+
+        itemDef 
+		{
+			name				loginEntry
+			group				loginAccountControls
+			style				1
+			descText			"Enter the login"
+			text				""
+			maxchars			30
+			font				2
+			textscale			.6
+			TYPE				4
+			cvar				"accLogin" 
+			rect				70 35 170 25
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			5
+			textaligny			3
+			forecolor			1 1 1 1
+			backcolor			.25 .25 .25 .5
+			visible				1
+			border				1
+			bordercolor			.79 .64 .22 1
+			mouseenter 
+			{ 
+				setitemcolor	loginEntry backcolor .25 .25 .25 .75 
+			}
+			mouseexit 
+			{ 
+				setitemcolor	loginEntry backcolor .25 .25 .25 .5 
+			}
+		}
+
+        itemDef 
+		{
+			name				passText
+			group				loginAccountControls
+			text				"Password:"
+			descText			""
+			type				1
+			font				2
+			style				WINDOW_STYLE_FILLED
+			rect				20 80 90 15
+			textalign			ITEM_ALIGN_LEFT
+			forecolor			1 .682 0 1
+			visible				1  
+		}
+
+		itemDef 
+		{
+			name				passEntry
+			group				loginAccountControls
+			style				1
+			descText			"Enter the password"
+			text				""
+			maxchars			30
+			font				2
+			textscale			.6
+			TYPE				4
+			cvar				"accPassword" 
+			rect				70 75 170 25
+			textalign			ITEM_ALIGN_LEFT
+			textalignx			5
+			textaligny			3
+			forecolor			1 1 1 1
+			backcolor			.25 .25 .25 .5
+			visible				1
+			border				1
+			bordercolor			.79 .64 .22 1
+			mouseenter 
+			{ 
+				setitemcolor	passEntry backcolor .25 .25 .25 .75 
+			}
+			mouseexit 
+			{ 
+				setitemcolor	passEntry backcolor .25 .25 .25 .5 
+			}
+		}
+
+		itemDef 
+		{
+			name				registerDoneButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				73 120 105 32
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				registerDoneText
+			group				loginAccountControls
+			text				"Register"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				73 120 105 32
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			52
+			textaligny			2
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			descText			"Register a new account"
+			visible			1
+			action 
+			{ 
+				uiScript		zykmod "new"
+				play			"sound/interface/button1.wav" ;
+				close			ingame_register
+			}
+			mouseEnter 
+			{ 
+				show			registerDoneButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			registerDoneButton_glow
+			}	  	
+		}
+	}
+}

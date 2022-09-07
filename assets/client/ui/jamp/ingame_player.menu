@@ -87,7 +87,7 @@
 			name				nameglow
 			group				mods
 			style				WINDOW_STYLE_SHADER
-			rect				25 31 300 24
+			rect				25 11 250 24
 			background			"gfx/menus/menu_buttonback"			// Frame around button
 			forecolor			1 1 1 1
 			visible			0
@@ -102,7 +102,7 @@
 			text 				@MENUS_NAME1
 			cvar 				"ui_Name"
 			maxchars 			26
-			rect 				20 33 300 20
+			rect 				20 13 170 20
 			textalign			ITEM_ALIGN_LEFT		
 			textalignx 			0
 			textaligny 			-5
@@ -128,17 +128,154 @@
 				hide			nameglow
 			}
 		}
+//LOG IN BUTTONS
+		itemDef 
+		{
+			name				loginButton
+			group				highlights 
+			style				WINDOW_STYLE_SHADER
+			rect				73 70 105 32
+			background			"gfx/menus/menu_buttonback"			// Frame around button
+			forecolor			1 1 1 1
+			decoration
+			visible			0
+		}
+
+		itemDef 
+		{
+			name				login
+			group				"playerforcespectate"
+			text				"Log in"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				73 70 105 32
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			52
+			textaligny			2
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			descText			@MENUS_APPLY_CHANGES_BUT_REMAIN
+			visible			1
+			action 
+			{ 
+				play			"sound/interface/button1"
+				uiScript 		setForce "s"
+				open			ingame_login
+				close 			ingame_player
+			}
+			mouseEnter 
+			{ 
+				show			loginButton
+			}
+			mouseExit 
+			{ 
+				hide			loginButton
+			}
+		}
+
+//REGISTER BUTTONS
+
+		itemDef 
+		{
+			name				registerButton
+			group				highlights 
+			style				WINDOW_STYLE_SHADER
+			rect				73 40 105 32
+			background			"gfx/menus/menu_buttonback"			// Frame around button
+			forecolor			1 1 1 1
+			decoration
+			visible			0
+		}
+
+		itemDef 
+		{
+			name				register
+			group				"playerforcespectate"
+			text				"Register"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				73 40 105 32
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			52
+			textaligny			2
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			descText			@MENUS_APPLY_CHANGES_BUT_REMAIN
+			visible			1
+			action 
+			{ 
+				play			"sound/interface/button1"
+				open			ingame_register
+				close 			ingame_player
+			}
+			mouseEnter 
+			{ 
+				show			registerButton
+			}
+			mouseExit 
+			{ 
+				hide			registerButton
+			}
+		}
+
+//REGISTER BUTTONS
+
+		itemDef 
+		{
+			name				changepassButton
+			group				highlights 
+			style				WINDOW_STYLE_SHADER
+			rect				73 100 105 32
+			background			"gfx/menus/menu_buttonback"			// Frame around button
+			forecolor			1 1 1 1
+			decoration
+			visible			0
+		}
+
+		itemDef 
+		{
+			name				changepass
+			group				"playerforcespectate"
+			text				"Change Pass"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				73 100 105 32
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			52
+			textaligny			2
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			descText			@MENUS_APPLY_CHANGES_BUT_REMAIN
+			visible			1
+			action 
+			{ 
+				play			"sound/interface/button1"
+				open			ingame_passchange
+				close 			ingame_player
+			}
+			mouseEnter 
+			{ 
+				show			changepassButton
+			}
+			mouseExit 
+			{ 
+				hide			changepassButton
+			}
+		}
 
 //---------------------------------------------
 //	APPLY BUTTON
 //---------------------------------------------
-// APPLY, already on a team
+// JOIN BUTTONS
 		itemDef 
 		{
 			name				applyjoinButton
 			group				highlights 
 			style				WINDOW_STYLE_SHADER
-			rect				20 110 105 32
+			rect				5 140 105 32
 			background			"gfx/menus/menu_buttonback"			// Frame around button
 			forecolor			1 1 1 1
 			decoration
@@ -150,10 +287,10 @@
 		{
 			name				applycurrent
 			group				"playerapply"
-			text				@MENUS_APPLY
+			text				"Join Game"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				20 110 105 32
+			rect				5 140 105 32
 			textalign			ITEM_ALIGN_CENTER
 			textalignx			52
 			textaligny			2
@@ -179,15 +316,14 @@
 			}
 		}
 
-// APPLY Free
 		itemDef 
 		{
 			name				applyjoin
 			group				"playerforcejoin"
-			text				@MENUS_JOIN_GAME
+			text				"Join Game"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				20 110 105 32
+			rect				5 140 105 32
 			textalign			ITEM_ALIGN_CENTER
 			textalignx			52
 			textaligny			2
@@ -219,7 +355,7 @@
 			name				applyspectateButton
 			group				highlights 
 			style				WINDOW_STYLE_SHADER
-			rect				145 110 105 32
+			rect				150 140 105 32
 			background			"gfx/menus/menu_buttonback"			// Frame around button
 			forecolor			1 1 1 1
 			decoration
@@ -233,7 +369,7 @@
 			text				@MENUS_SPECTATE
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				145 110 105 32
+			rect				150 140 105 32
 			textalign			ITEM_ALIGN_CENTER
 			textalignx			52
 			textaligny			2

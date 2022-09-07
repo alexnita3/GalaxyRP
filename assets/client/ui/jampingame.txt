@@ -33,5 +33,8 @@
 	loadMenu { "ui/jamp/ingame_objectives.menu" 		}
 
 	loadMenu { "ui/jamp/ingame_zykmod.menu" 		}
+	loadMenu { "ui/jamp/ingame_login.menu" 		}
+	loadMenu { "ui/jamp/ingame_register.menu" 		}
+loadMenu { "ui/jamp/ingame_passchange.menu" 		}
 }
 

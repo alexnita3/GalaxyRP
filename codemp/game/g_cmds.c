@@ -2560,7 +2560,10 @@ void select_player_character(gentity_t* ent, char *character_name, sqlite3* db, 
 	}	
 
 	// GalaxyRP (Alex): [Database] Kill the tntity to allow everything to take effect.
-	G_Kill(ent);
+	if (ent->client->sess.sessionTeam != TEAM_SPECTATOR) {
+		trap->SendServerCommand(ent - g_entities, va("print \"%s\n\"", ent->team));
+		G_Kill(ent);
+	}
 
 	// GalaxyRP (Alex): [Database] Assign the player the info from Accounts table.
 	update_accounts_table_row_with_default_char(ent, character_name, db, zErrMsg, rc, stmt);
@@ -2990,11 +2993,14 @@ void Cmd_Login_F(gentity_t * ent)
 		return;
 	}
 
-	G_Kill(ent);
+	if (ent->client->sess.sessionTeam != TEAM_SPECTATOR) {
+		G_Kill(ent);
+	}
 
 	select_account_and_default_character_data(ent, username, db, zErrMsg, rc, stmt);
 
 	trap->SendServerCommand(ent - g_entities, "print \"^2You have sucessfully logged in.\n\"");
+	trap->SendServerCommand(ent - g_entities, "cp \"^2You have sucessfully logged in.\n\"");
 
 	sqlite3_close(db);
 
@@ -8662,6 +8668,9 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 	send_rpg_events(10000);
 			
 	trap->SendServerCommand(-1, va("chat \"^3%s ^2logged out\n\"", ent->client->pers.netname));
+
+	trap->SendServerCommand(ent - g_entities, "print \"^2You have sucessfully logged out.\n\"");
+	trap->SendServerCommand(ent - g_entities, "cp \"^2You have sucessfully logged out.\n\"");
 }
 
 qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, qboolean dont_show_message)

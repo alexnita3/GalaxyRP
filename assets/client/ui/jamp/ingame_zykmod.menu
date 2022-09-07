@@ -102,617 +102,6 @@
 		}
 
 //----------------------------------------------------------------------------------------------
-// Account Tab Beginning
-//----------------------------------------------------------------------------------------------
-
-		itemDef 
-		{
-			name				accountButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				5 38 140 30
-			background			"gfx/menus/menu_blendbox2"			// Frame around button
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				accountButton
-			group				mainButtons
-			text				"Account"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				10 38 140 30
-			font				3
-			textscale			0.8
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Create an account, login an existing one, change password, logout"
-
-			mouseEnter 
-			{ 
-				show			accountButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			accountButton_glow
-			}	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				show 			accountControls ;
-				hide			charControls ;
-				hide 			newAccountControls ;
-				hide			loginAccountControls ;
-				hide			changePassControls ;
-				hide 			rpgClassControls ;
-				hide 			upControls ;
-				hide 			forceSkillsControls ;
-				hide			weaponSkillsControls ;
-				hide			otherSkillsControls ;
-				hide			ammoSkillsControls ;
-				hide			itemsSkillsControls ;
-				hide			questControls ;
-				hide			universeControls ;
-				hide			lightControls ;
-				hide			darkControls ;
-				hide			eternityControls ;
-				hide			questMapsControls ;
-				hide 			listControls ;
-				hide 			commandsControls ;
-				hide			levelforce ;
-				hide			levelweapon ;
-				hide			levelother ;
-				hide			levelammo ;
-				hide			levelitem ;
-				hide 			settingsControls ;
-				hide 			buyControls ;
-				hide 			buyAmmoControls ;
-				hide 			buyWeaponsControls ;
-				hide 			buyMiscControls ;
-				hide 			cameraControls ;
-				hide 			gamesControls ;
-				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
-				setitemcolor		accountButton 		forecolor 1 1 1 1 ;
-			}
-		}
-
-		itemDef 
-		{
-			name				newAccountButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				140 38 120 30
-			background			"gfx/menus/menu_blendbox2"			// Frame around button
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				newAccountButton
-			group				accountControls
-			text				"New"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				140 38 120 30
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Create a new account"
-
-			mouseEnter 
-			{ 
-				show			newAccountButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			newAccountButton_glow
-			}	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				show 			newAccountControls ;
-				hide			loginAccountControls ;
-				hide			changePassControls ;
-				setitemcolor		accountControls 		forecolor 1 .682 0 1 ;
-				setitemcolor		newAccountButton 		forecolor 1 1 1 1 ;
-			}
-		}
-
-		itemDef 
-		{
-			name				accloginEntry
-			group				newAccountControls
-			style				1
-			descText			"Enter the login"
-			text				""
-			maxchars			30
-			font				2
-			textscale			.6
-			TYPE				4
-			cvar				"accLogin" 
-			rect				260 50 300 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			5
-			textaligny			3
-			forecolor			1 1 1 1
-			backcolor			.25 .25 .25 .5
-			visible				0
-			border				1
-			bordercolor			.79 .64 .22 1
-			mouseenter 
-			{ 
-				setitemcolor	accloginEntry backcolor .25 .25 .25 .75 
-			}
-			mouseexit 
-			{ 
-				setitemcolor	accloginEntry backcolor .25 .25 .25 .5 
-			}
-		}
-
-		itemDef 
-		{
-			name				accPassEntry
-			group				newAccountControls
-			style				1
-			descText			"Enter the password"
-			text				""
-			maxchars			30
-			font				2
-			textscale			.6
-			TYPE				4
-			cvar				"accPassword" 
-			rect				260 100 300 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			5
-			textaligny			3
-			forecolor			1 1 1 1
-			backcolor			.25 .25 .25 .5
-			visible				0
-			border				1
-			bordercolor			.79 .64 .22 1
-			mouseenter 
-			{ 
-				setitemcolor	accPassEntry backcolor .25 .25 .25 .75 
-			}
-			mouseexit 
-			{ 
-				setitemcolor	accPassEntry backcolor .25 .25 .25 .5 
-			}
-		}
-
-		itemDef 
-		{
-			name				doneButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				260 145 60 30
-			background			"gfx/menus/menu_buttonback"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				doneText
-			group				newAccountControls
-			text				@MENUS_DONE
-			descText			"Finished creating new account"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				260 145 50 30
-			textalign			ITEM_ALIGN_CENTER
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykmod "new"
-				play			"sound/interface/button1.wav" ;
-				hide			doneButton_glow ;
-				hide			doneText ;
-				close			ingame_zykmod
-			}
-			mouseEnter 
-			{ 
-				show			doneButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			doneButton_glow
-			}	  	  
-		}
-
-		itemDef 
-		{
-			name				loginAccountButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				140 68 120 30
-			background			"gfx/menus/menu_blendbox2"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				loginAccountButton
-			group				accountControls
-			text				"Login"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				140 68 120 30
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Login your account"
-
-			mouseEnter 
-			{ 
-				show			loginAccountButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			loginAccountButton_glow
-			}	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				show 			loginAccountControls ;
-				hide			newAccountControls ;
-				hide			changePassControls ;
-				setitemcolor		accountControls 		forecolor 1 .682 0 1 ;
-				setitemcolor		loginAccountButton 		forecolor 1 1 1 1 ;
-			}
-		}
-
-		itemDef 
-		{
-			name				loginEntry
-			group				loginAccountControls
-			style				1
-			descText			"Enter the login"
-			text				""
-			maxchars			30
-			font				2
-			textscale			.6
-			TYPE				4
-			cvar				"accLogin" 
-			rect				260 50 300 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			5
-			textaligny			3
-			forecolor			1 1 1 1
-			backcolor			.25 .25 .25 .5
-			visible				0
-			border				1
-			bordercolor			.79 .64 .22 1
-			mouseenter 
-			{ 
-				setitemcolor	loginEntry backcolor .25 .25 .25 .75 
-			}
-			mouseexit 
-			{ 
-				setitemcolor	loginEntry backcolor .25 .25 .25 .5 
-			}
-		}
-
-		itemDef 
-		{
-			name				passEntry
-			group				loginAccountControls
-			style				1
-			descText			"Enter the password"
-			text				""
-			maxchars			30
-			font				2
-			textscale			.6
-			TYPE				4
-			cvar				"accPassword" 
-			rect				260 100 300 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			5
-			textaligny			3
-			forecolor			1 1 1 1
-			backcolor			.25 .25 .25 .5
-			visible				0
-			border				1
-			bordercolor			.79 .64 .22 1
-			mouseenter 
-			{ 
-				setitemcolor	passEntry backcolor .25 .25 .25 .75 
-			}
-			mouseexit 
-			{ 
-				setitemcolor	passEntry backcolor .25 .25 .25 .5 
-			}
-		}
-
-		itemDef 
-		{
-			name				loginDoneButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				260 145 60 30
-			background			"gfx/menus/menu_buttonback"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				loginDoneText
-			group				loginAccountControls
-			text				@MENUS_DONE
-			descText			"Finished logging in account"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				260 145 50 30
-			textalign			ITEM_ALIGN_CENTER
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykmod "login"
-				play			"sound/interface/button1.wav" ;
-				hide			loginDoneButton_glow ;
-				hide			loginDoneText ;
-				close			ingame_zykmod
-			}
-			mouseEnter 
-			{ 
-				show			loginDoneButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			loginDoneButton_glow
-			}	  	  
-		}
-
-		itemDef 
-		{
-			name				changePassButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				140 98 120 30
-			background			"gfx/menus/menu_blendbox2"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				changePassButton
-			group				accountControls
-			text				"Password"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				140 98 120 30
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Change password of your account"
-
-			mouseEnter 
-			{ 
-				show			changePassButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			changePassButton_glow
-			}	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				show 			changePassControls ;
-				hide			newAccountControls ;
-				hide			loginAccountControls ;
-				setitemcolor		accountControls 		forecolor 1 .682 0 1 ;
-				setitemcolor		changePassButton 		forecolor 1 1 1 1 ;
-			}
-		}
-
-		itemDef 
-		{
-			name				passEntry
-			group				changePassControls
-			style				1
-			descText			"Enter the new password"
-			text				""
-			maxchars			30
-			font				2
-			textscale			.6
-			TYPE				4
-			cvar				"accPassword" 
-			rect				260 100 300 30
-			textalign			ITEM_ALIGN_LEFT
-			textalignx			5
-			textaligny			3
-			forecolor			1 1 1 1
-			backcolor			.25 .25 .25 .5
-			visible				0
-			border				1
-			bordercolor			.79 .64 .22 1
-			mouseenter 
-			{ 
-				setitemcolor	passEntry backcolor .25 .25 .25 .75 
-			}
-			mouseexit 
-			{ 
-				setitemcolor	passEntry backcolor .25 .25 .25 .5 
-			}
-		}
-
-		itemDef 
-		{
-			name				changePassDoneButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				260 145 60 30
-			background			"gfx/menus/menu_buttonback"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				changePassDoneText
-			group				changePassControls
-			text				@MENUS_DONE
-			descText			"Finished changing account password"
-			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				260 145 50 30
-			textalign			ITEM_ALIGN_CENTER
-			textalignx			20
-			textaligny			5
-			forecolor			1 .682 0 1
-			visible				0
-			action 
-			{ 
-				uiScript		zykmod "changepassword"
-				play			"sound/interface/button1.wav" ;
-				hide			changePassDoneButton_glow ;
-				hide			changePassDoneText ;
-				close			ingame_zykmod
-			}
-			mouseEnter 
-			{ 
-				show			changePassDoneButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			changePassDoneButton_glow
-			}	  	  
-		}
-
-		itemDef 
-		{
-			name				tutorialButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				140 128 120 30
-			background			"gfx/menus/menu_blendbox2"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				tutorialButton
-			group				accountControls
-			text				"Tutorial"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				140 128 120 30
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Shows the tutorial to explain features of the mod"
-  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				exec			"tutorial" ;
-				hide 			loginAccountControls ;
-				hide			newAccountControls ;
-				hide			changePassControls ;
-				close			ingame_zykmod
-			}
-			mouseEnter 
-			{ 
-				show			tutorialButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			tutorialButton_glow
-			}	
-		}
-
-		itemDef 
-		{
-			name				logoutButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				140 158 120 30
-			background			"gfx/menus/menu_blendbox2"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				logoutButton
-			group				accountControls
-			text				"Logout"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				140 158 120 30
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Logout your account"
-  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				exec			"logout" ;
-				hide 			loginAccountControls ;
-				hide			newAccountControls ;
-				hide			changePassControls ;
-				close			ingame_zykmod
-			}
-			mouseEnter 
-			{ 
-				show			logoutButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			logoutButton_glow
-			}
-		}
-
-//----------------------------------------------------------------------------------------------
 // List Tab Beginning
 //----------------------------------------------------------------------------------------------
 
@@ -720,7 +109,7 @@
 		{
 			name				listButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				5 68 140 30
+			rect				5 38 140 30
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -734,7 +123,7 @@
 			text				"Character"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				10 68 140 30
+			rect				10 38 140 30
 			font				3
 			textscale			0.8
 			textalignx			15
@@ -1134,7 +523,7 @@
 		{
 			name				upButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				5 98 140 30
+			rect				5 68 140 30
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -1148,7 +537,7 @@
 			text				"Skills"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				10 98 140 30
+			rect				10 68 140 30
 			font				3
 			textscale			0.8
 			textalignx			15
@@ -3442,7 +2831,7 @@
 		{
 			name				charButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				5 128 140 30
+			rect				5 98 140 30
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -3456,7 +2845,7 @@
 			text				"Characters"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				10 128 140 30
+			rect				10 98 140 30
 			font				3
 			textscale			0.8
 			textalignx			15
@@ -5450,7 +4839,7 @@
 		{
 			name				commandsButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				5 158 140 30
+			rect				5 128 140 30
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -5464,7 +4853,7 @@
 			text				"Shop"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				10 158 140 30
+			rect				10 128 140 30
 			font				3
 			textscale			0.8
 			textalignx			15
@@ -6136,7 +5525,7 @@
 		{
 			name				gamesButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				5 188 140 30
+			rect				5 158 140 30
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -6150,7 +5539,7 @@
 			text				"Games"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				10 188 140 30
+			rect				10 158 140 30
 			font				3
 			textscale			0.8
 			textalignx			15
@@ -6824,7 +6213,7 @@
 		{
 			name				cameraButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				5 218 140 30
+			rect				5 188 140 30
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -6838,7 +6227,7 @@
 			text				"Camera"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				10 218 140 30
+			rect				10 188 140 30
 			font				3
 			textscale			0.8
 			textalignx			15
