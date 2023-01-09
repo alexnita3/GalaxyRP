@@ -7622,6 +7622,50 @@ void increase_level(gentity_t *ent, qboolean admin_rp_mode, int number_of_levels
 	trap->SendServerCommand(ent - g_entities, va("chat \"^3New Level: ^7%d^3, Skillpoints: ^7%d\n\"", ent->client->pers.level, ent->client->pers.skillpoints));
 }
 
+void decrease_level(gentity_t* ent, qboolean admin_rp_mode, int number_of_levels)
+{
+	int send_message = 0; // zyk: if its 1, sends the message in player console
+	char message[128];
+
+	strcpy(message, "");
+
+	if (admin_rp_mode == qfalse && zyk_rp_mode.integer == 1)
+	{ // zyk: in RP Mode, only admins can give levels to RPG players
+		return;
+	}
+
+	for (int i = ent->client->pers.level; i >= ent->client->pers.level - number_of_levels; i--) {
+		if (ent->client->pers.level > 1)
+		{
+			if (ent->client->pers.level % 10 == 0) // zyk: every level divisible by 10 the player will get bonus skillpoints
+				ent->client->pers.skillpoints -= (ent->client->pers.level / 10) + 1;
+			else
+				ent->client->pers.skillpoints--;
+
+			ent->client->pers.level--;
+
+			strcpy(message, va("^3New Level: ^7%d^3, Skillpoints: ^7%d\n", ent->client->pers.level, ent->client->pers.skillpoints));
+
+			// zyk: got a new level, so change the max health and max shield
+			set_max_health(ent);
+			set_max_shield(ent);
+
+			send_message = 1;
+
+		}
+	}
+
+	if (ent->client->pers.level == zyk_rpg_max_level.integer) {
+		trap->SendServerCommand(ent - g_entities, va("chat \"^3You have reached maximum level!\n\""));
+	}
+
+	if (ent->client->pers.level == 1) {
+		trap->SendServerCommand(ent - g_entities, va("chat \"^3You have reached minimum level!\n\""));
+	}
+
+	trap->SendServerCommand(ent - g_entities, va("chat \"^3New Level: ^7%d^3, Skillpoints: ^7%d\n\"", ent->client->pers.level, ent->client->pers.skillpoints));
+}
+
 // zyk: number of artifacts collected by the player in Universe Quest
 int number_of_artifacts(gentity_t *ent)
 {
@@ -15469,6 +15513,105 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 	}
 }
 
+// GalaxyRP (Alex): [Levelling] Check to see if there's enough free skillpoints to level down. (prevents skillpoints going negative).
+qboolean check_if_player_can_level_down(gentity_t* ent, gentity_t target, int number_of_levels) {
+	int skillpoints_needed = 0;
+	int level = target.client->pers.level;
+
+	for(int i = level; i >= level - number_of_levels; i--) {
+		if (level > 1)
+		{
+			if (level % 10 == 0) // zyk: every level divisible by 10 the player will get bonus skillpoints
+				skillpoints_needed += (level / 10) + 1;
+			else
+				skillpoints_needed++;
+
+			level--;
+		}
+	}
+
+	if (target.client->pers.skillpoints < skillpoints_needed) {
+		trap->SendServerCommand(ent - g_entities, va("print \"^1Operation could not be done. Player needs %d skillpoints, but only has %d available.\n\"", skillpoints_needed, target.client->pers.skillpoints));
+
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+/*
+==================
+Cmd_LevelTake_f
+==================
+*/
+void Cmd_LevelTake_f(gentity_t* ent) {
+	char arg1[MAX_STRING_CHARS];
+	char arg2[MAX_STRING_CHARS];
+	int client_id = -1;
+	int number_of_levels = 1;
+
+	if (!check_admin_command(ent, ADM_LEVELUP, qtrue))
+	{
+		return;
+	}
+
+	if (trap->Argc() < 2 || trap->Argc() > 3)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"^1Usage: ^2/leveldown <player> <no of levels>(optional)\n\"");
+		return;
+	}
+	else {
+		if (trap->Argc() == 3) {
+			trap->Argv(2, arg2, sizeof(arg2));
+
+			number_of_levels = atoi(arg2);
+		}
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+
+	client_id = ClientNumberFromString(ent, arg1, qfalse);
+
+	if (client_id == -1)
+	{
+		return;
+	}
+
+	if (zyk_rp_mode.integer != 1)
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"The server is not at RP Mode\n\""));
+		return;
+	}
+
+	if (g_entities[client_id].client->pers.level - number_of_levels < 1) {
+		int min_possible_value = g_entities[client_id].client->pers.level - 1;
+		trap->SendServerCommand(ent - g_entities, va("print \"^1Too many levels selected, operation not done. Cannot lower someone's level below 1. Maximum allowed: %d\n\"", min_possible_value));
+		return;
+	}
+
+	if (check_if_player_can_level_down(ent, g_entities[client_id],number_of_levels) == qfalse) {
+		trap->SendServerCommand(ent - g_entities, va("print \"no\n\""));
+		return;
+	}
+
+	if (g_entities[client_id].client->sess.amrpgmode == 2)
+	{
+		g_entities[client_id].client->pers.score_modifier = g_entities[client_id].client->pers.level;
+		g_entities[client_id].client->pers.credits_modifier = -10;
+		decrease_level(&g_entities[client_id], qtrue, number_of_levels);
+
+		trap->SendServerCommand(ent - g_entities, va("print \"^2Target player leveled down. Their current level is: ^3%i^2. Their skillpoint count is: ^3%i^2.\n\"", g_entities[client_id].client->pers.level, g_entities[client_id].client->pers.skillpoints));
+
+		update_chars_table_row_with_current_values(ent);
+
+		return;
+	}
+	else
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"^1The player must be logged in!\n\""));
+	}
+}
+
 // GalaxyRP (Alex): [XP System] This method returns the amount of XP needed to get to the next level, based on a given level.
 int check_xp(int currentLevel) {
 	int expNeeded = (currentLevel / 10) + 2;
@@ -18452,6 +18595,7 @@ command_t commands[] = {
 	{ "inv",				Cmd_Inventory_f,			CMD_LOGGEDIN},
 	{ "inventory",			Cmd_Inventory_f,			CMD_LOGGEDIN},
 	{ "levelup",			Cmd_LevelGive_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "leveldown",			Cmd_LevelTake_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "list",				Cmd_ListAccount_f,			CMD_NOINTERMISSION },
 	{ "listaccount",		Cmd_ListAccount_f,			CMD_NOINTERMISSION },
 	{ "login",				Cmd_Login_F,				0 },
