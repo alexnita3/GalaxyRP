@@ -66,7 +66,7 @@ const skill_t skills[] = {
 	{5, "Rage",					"makes you 1.3 times faster, increases your saber attack speed and damage and makes you get less damage. Force Guardian class, with Improvements skill at least on level 1, can regen some force when taking damage on health while Rage is active",															"force",	"dark",		FP_RAGE},
 	{5, "Team Energize",		"restores some force power to players near you. If Improvements skill is at least at level 1, regens blaster pack and power cell ammo of the target players",																																					"force",	"dark",		FP_TEAM_FORCE},
 	{4, "Stun Baton",			"attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. With Stun Baton Upgrade, can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds",																	"weapons",	"merc",		0},
-	{2, "Blaster Pistol",		"the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The charged shot causes a lot more damage depending on how much it was charged",																	"weapons",	"merc",		0},
+	{2, "Blaster Pistol",		"the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The charged shot causes a lot more damage depending on how much it was charged",																	"weapons",	"merc",		WP_BRYAR_PISTOL},
 	{2, "E11 Blaster Rifle",	"the rifle used by the Storm Troopers. E11 shots do %d damage. Normal fire is a single shot, while the alternate fire is the rapid fire",																																										"weapons",	"merc",		0},
 	{2, "Disruptor",			"the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged",																																					"weapons",	"merc",		0},
 	{2, "Bowcaster",			"the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once.",																																																				"weapons",	"merc",		0},
@@ -8774,11 +8774,59 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 	trap->SendServerCommand(ent - g_entities, "cp \"^2You have sucessfully logged out.\n\"");
 }
 
+void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgrade, qboolean success, char* skill_name[256]) {
+	char success_message[256];
+
+	if (downgrade == qtrue) {
+		if (success == qtrue) {
+
+			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+
+				strcpy(success_message, "print \"^2You downgraded the target's ^3%s ^2skill.\n\"");
+			}
+			else {
+				strcpy(success_message, "print \"^2You downgraded the ^3%s ^2skill.\n\"");
+			}
+		}
+		else {
+			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+
+				strcpy(success_message, "print \"^1Target already reached the minimum level of ^3%s ^1skill. Nothing was updated\n\"");
+			}
+			else {
+				strcpy(success_message, "print \"^1You reached the minimum level of ^3%s ^1skill. Nothing was updated.\n\"");
+			}
+		}
+	}
+	else {
+		if (success == qtrue) {
+
+			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+
+				strcpy(success_message, "print \"^2You upgraded the target's ^3%s ^2skill.\n\"");
+			}
+			else {
+				strcpy(success_message, "print \"^2You upgraded the ^3%s ^2skill.\n\"");
+			}
+
+
+		}
+		else {
+			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+
+				strcpy(success_message, "print \"^1Target already reached the maximum level of ^3%s ^1skill. Nothing was updated\n\"");
+			}
+			else {
+				strcpy(success_message, "print \"^1You reached the maximum level of ^3%s ^1skill. Nothing was updated.\n\"");
+			}
+		}
+	}
+
+	trap->SendServerCommand(ent - g_entities, va(success_message, skill_name));
+}
+
 qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, qboolean dont_show_message)
 {
-	char maximum_skill_message[256] = "print \"^1You reached the maximum level of ^3%s ^1skill. Nothing was updated.\n\"";
-	char maximum_skill_message_other[256] = "print \"^1Target already reached the maximum level of ^3%s ^1skill. Nothing was updated\n\"";
-
 	//max shield is special
 	if (upgrade_value == 30)
 	{
@@ -8787,15 +8835,12 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 			ent->client->pers.skill_levels[upgrade_value]++;
 			set_max_shield(ent);
 			ent->client->pers.skillpoints--;
+
+			show_skill_change_message(ent, ent2, qfalse, qtrue, skills[upgrade_value].skill_name);
 		}
 		else
 		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, ent->client->pers.skill_levels[30]));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, ent->client->pers.skill_levels[30]));
-				}
-			}
+			show_skill_change_message(ent, ent2, qfalse, qfalse, skills[upgrade_value].skill_name);
 			return qfalse;
 		}
 		return qtrue;
@@ -8810,15 +8855,12 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 			ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent->client->pers.skill_levels[upgrade_value]);
 			ent->client->ps.fd.forcePowerMax = ent->client->pers.max_force_power;
 			ent->client->pers.skillpoints--;
+
+			show_skill_change_message(ent, ent2, qfalse, qtrue, skills[upgrade_value].skill_name);
 		}
 		else
 		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, ent->client->pers.skill_levels[54]));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, ent->client->pers.skill_levels[54]));
-				}
-			}
+			show_skill_change_message(ent, ent2, qfalse, qfalse, skills[upgrade_value].skill_name);
 			return qfalse;
 		}
 		return qtrue;
@@ -8835,16 +8877,12 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 			ent->client->ps.fd.forcePowerLevel[skills[upgrade_value].force_power_internal] = ent->client->pers.skill_levels[upgrade_value];
 			ent->client->pers.skillpoints--;
 
+			show_skill_change_message(ent, ent2, qfalse, qtrue, skills[upgrade_value].skill_name);
 			return qtrue;
 		}
 		else
 		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, skills[upgrade_value].skill_name));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, skills[upgrade_value].skill_name));
-				}
-			}
+			show_skill_change_message(ent, ent2, qfalse, qfalse, skills[upgrade_value].skill_name);
 			return qfalse;
 		}
 	}
@@ -8855,16 +8893,12 @@ qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, q
 			ent->client->pers.skill_levels[upgrade_value]++;
 			ent->client->pers.skillpoints--;
 
+			show_skill_change_message(ent, ent2, qfalse, qtrue, skills[upgrade_value].skill_name);
 			return qtrue;
 		}
 		else
 		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, skills[upgrade_value].skill_name));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, skills[upgrade_value].skill_name));
-				}
-			}
+			show_skill_change_message(ent, ent2, qfalse, qfalse, skills[upgrade_value].skill_name);
 			return qfalse;
 		}
 	}
@@ -9088,9 +9122,6 @@ void do_upgrade_skill(gentity_t *ent, gentity_t *target_ent, int upgrade_value, 
 
 		// GalaxyRP (Alex): [Database] Only update the skills table. Also update the characters table to save the skill point
 		update_skills_table_row_with_current_values(target_ent);
-
-		trap->SendServerCommand(target_ent -g_entities, "print \"^2Skill upgraded successfully.\n\"" );
-		trap->SendServerCommand(ent - g_entities, "print \"^2Target skill upgraded successfully.\n\"");
 	}
 	else
 	{ // zyk: update all skills
@@ -9166,9 +9197,6 @@ void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
 		return qfalse;
 	}
 
-	char minimum_skill_message[256] = "print \"^1You reached the minimum level of ^3%s ^1skill. Nothing was updated.\n\"";
-	char minimum_skill_message_other[256] = "print \"^1Target already reached the minimum level of ^3%s ^1skill. Nothing was updated\n\"";
-
 	//max shield is special
 	if (downgrade_value == 30)
 	{
@@ -9177,15 +9205,11 @@ void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
 			ent->client->pers.skill_levels[downgrade_value]--;
 			set_max_shield(ent);
 			ent->client->pers.skillpoints++;
+			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
 		}
 		else
 		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(minimum_skill_message, ent->client->pers.skill_levels[30]));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(minimum_skill_message_other, ent->client->pers.skill_levels[30]));
-				}
-			}
+			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
 			return qfalse;
 		}
 		return qtrue;
@@ -9200,15 +9224,11 @@ void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
 			ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent->client->pers.skill_levels[downgrade_value]);
 			ent->client->ps.fd.forcePowerMax = ent->client->pers.max_force_power;
 			ent->client->pers.skillpoints++;
+			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
 		}
 		else
 		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(minimum_skill_message, ent->client->pers.skill_levels[54]));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(minimum_skill_message_other, ent->client->pers.skill_levels[54]));
-				}
-			}
+			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
 			return qfalse;
 		}
 		return qtrue;
@@ -9227,16 +9247,12 @@ void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
 			}
 			ent->client->pers.skillpoints++;
 
+			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
 			return qtrue;
 		}
 		else
 		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(minimum_skill_message, skills[downgrade_value].skill_name));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(minimum_skill_message_other, skills[downgrade_value].skill_name));
-				}
-			}
+			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
 			return qfalse;
 		}
 	}
@@ -9247,16 +9263,12 @@ void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
 			ent->client->pers.skill_levels[downgrade_value]--;
 			ent->client->pers.skillpoints++;
 
+			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
 			return qtrue;
 		}
 		else
 		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(minimum_skill_message, skills[downgrade_value].skill_name));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(minimum_skill_message_other, skills[downgrade_value].skill_name));
-				}
-			}
+			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
 			return qfalse;
 		}
 	}
@@ -13445,8 +13457,6 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 
 	// GalaxyRP (Alex): [Database] Only update the skills table.
 	update_skills_table_row_with_current_values(&g_entities[client_id]);
-
-	trap->SendServerCommand( ent-g_entities, va("print \"Downgraded target player skill\n\"") );
 }
 
 /*
