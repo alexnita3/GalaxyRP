@@ -47,66 +47,66 @@ extern void Cmd_ZykChars_f(gentity_t* ent);
 
 // GalaxyRP (Alex): [Skills] This is used to display everything about a skill in various places throughout the mod.
 const skill_t skills[] = {
-	{5, "Jump",					"makes you use the force to jump higher. Level 5 has no height limit, you can continue jumping up until you run out of force, and it also lets you jump out of water",																																			"force",	"neutral"	},
-	{5, "Push",					"pushes the opponent forward",																																																																					"force",	"neutral"	},
-	{5, "Pull",					"pulls the opponent towards you",																																																																				"force",	"neutral"	},
-	{5, "Speed",				"increases your speed. Level 1 is 1.5 times normal speed. Level 2 is 2.0, level 3 is 2.5 times and level 4 is 3.0 times",																																														"force",	"neutral"	},
-	{3, "Sense",				"allows you to see people through walls, invisible people or cloaked people and you can dodge disruptor shots. Represents your mind strength to resist Mind Control if your sense level is equal or higher than the enemy's mind trick level",																	"force",	"neutral"	},
-	{5, "Saber Attack",			"gives you the saber. If you are using Single Saber, gives you the saber styles. If using duals or staff, increases saber damage, which is increased by 20 per cent for each level.",																															"force",	"neutral"	},
-	{5, "Saber Defense",		"increases your ability to block, parry enemy saber attacks or enemy shots",																																																									"force",	"neutral"	},
-	{5, "Saber Throw",			"throws your saber at enemy and gets it back. Each level increases max distance and saber throw speed.",																																																		"force",	"neutral"	},
-	{5, "Absorb",				"allows you to absorb force power attacks done to you",																																																															"force",	"light"		},
-	{5, "Heal",					"recover some Health. Level 1 restores 5 hp, level 2 restores 10 hp and level 3 restores 25 hp",																																																				"force",	"light"		},
-	{5, "Protect",				"decreases damage done to you by non-force power attacks. At level 4 decreases force consumption when receiving damage",																																														"force",	"light"		},
-	{5, "Mind Trick",			"makes yourself invisible to the players affected by this force power. Force User class can mind control a player or npc. Level 1 has a duration of 20 seconds, level 2 is 25 seconds and level 3 is 30 seconds",																								"force",	"neutral"	},
-	{5, "Team Heal",			"restores some health to players near you",																																																																		"force",	"light"		},
-	{5, "Lightning",			"attacks with a powerful electric attack at players near you. At level 4, does more damage and pushes the enemy back",																																															"force",	"dark"		},
-	{5, "Grip",					"attacks a player by holding and damaging him",																																																																	"force",	"dark"		},
-	{5, "Drain",				"drains force power from a player to restore your health",																																																														"force",	"dark"		},
-	{5, "Rage",					"makes you 1.3 times faster, increases your saber attack speed and damage and makes you get less damage. Force Guardian class, with Improvements skill at least on level 1, can regen some force when taking damage on health while Rage is active",															"force",	"dark"		},
-	{5, "Team Energize",		"restores some force power to players near you. If Improvements skill is at least at level 1, regens blaster pack and power cell ammo of the target players",																																					"force",	"dark"		},
-	{4, "Stun Baton",			"attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. With Stun Baton Upgrade, can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds",																	"weapons",	"merc"		},
-	{2, "Blaster Pistol",		"the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The charged shot causes a lot more damage depending on how much it was charged",																	"weapons",	"merc"		},
-	{2, "E11 Blaster Rifle",	"the rifle used by the Storm Troopers. E11 shots do %d damage. Normal fire is a single shot, while the alternate fire is the rapid fire",																																										"weapons",	"merc"		},
-	{2, "Disruptor",			"the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged",																																					"weapons",	"merc"		},
-	{2, "Bowcaster",			"the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once.",																																																				"weapons",	"merc"		},
-	{2, "Repeater",				"a powerful weapon with a rapid fire and a plasma bomb. Normal fire shoots the rapid fire, and does %d damage. Alt fire fires the plasma bomb",																																									"weapons",	"merc"		},
-	{2, "DEMP2",				"a very powerful weapon against machine npc and some vehicles, causing more damage to them and stunning them. Normal fire does %d damage and alt fire can be charged",																																			"weapons",	"merc"		},
-	{2, "Flechette",			"this weapon is similar to a shotgun. Normal fire causes %d damage. Alt fire shoots 2 bombs",																																																					"weapons",	"merc"		},
-	{2, "Rocket Launcher",		"a powerful explosive weapon. Normal fire shoots a rocket causing %d damage. Alt fire shoots a homing missile",																																																	"weapons",	"merc"		},
-	{2, "Concussion Rifle",		"it shoots a powerful shot that has a big damage area. Alt fire shoots a ray similar to disruptor shots, but it can go through force fields and can throw the enemy on the ground.",																															"weapons",	"merc"		},
-	{2, "Bryar Pistol",			"very similar to the blaster pistol, but this one has a better fire rate with normal shot.",																																																					"weapons",	"merc"		},
-	{3, "Melee",				"allows you to attack with your fists and legs. You can punch, kick or do a special melee attack by holding both Attack and Alt Attack buttons (usually the mouse buttons).",																																	"weapons",	"merc"		},
-	{5, "Max Shield",			"The max shield (armor) the player can have. Each level increases 20 per cent of max shield the player can have",																																																"other",	"merc"		},
-	{4, "Shield Strength",		"Each level increases your shield resistance by 7 per cent",																																																													"other",	"merc"		},
-	{4, "Health Strength",		"Each level increases your health resistance by 7 per cent",																																																													"other",	"merc"		},
-	{1, "Drain Shield",			"When using Drain force power, and your health is full, restores some shield. It also makes Drain suck hp/shield from the enemy to restore your hp/shield",																																						"other",	"merc"		},
-	{3, "Jetpack",				"the jetpack, used by Boba Fett. Allows you to fly. To use it, jump and press the Use key (usually R) while in the middle of the jump. Each level uses less fuel, allowing you to fly for a longer time",																										"items",	"merc"		},
-	{3, "Sense Health",			"allows you to see info about someone, including npcs. Level 1 shows current health. Level 2 shows name, health and shield. Level 3 shows name, health and max health, shield and max shield, force and max force, mp and max mp. To use it, when you are near a player or npc, use ^3Sense ^7force power",		"force",	"light"		},
-	{3, "Shield Heal",			"recovers 4 shield at level 1, 8 shield at level 2 and 12 shield at level 3. To use it, use Heal force power when you have full HP.",																																											"other",	"merc"		},
-	{3, "Team Shield Heal",		"recovers 3 shield at level 1, 6 shield at level 2 and 9 shield at level 3 to players near you. To use it, when near players, use Team Heal force power. It will heal their shield after they have full HP",																									"other",	"merc"		},
-	{1, "Unique Skill",			"placeholder, does nothing",																																																																									"other",	"merc"		},
-	{3, "Blaster Pack",			"used as ammo for Blaster Pistol, Bryar Pistol and E11 Blaster Rifle.",																																																											"ammo",		"merc"		},
-	{3, "Powercell",			"used as ammo for Disruptor, Bowcaster and DEMP2.",																																																																"ammo",		"merc"		},
-	{3, "Metal Bolts",			"used as ammo for Repeater, Flechette and Concussion Rifle.",																																																													"ammo",		"merc"		},
-	{3, "Rockets",				"used as ammo for Rocket Launcher.",																																																																			"ammo",		"merc"		},
-	{3, "Thermals",				"the famous detonator used by Leia in Ep 6 at the Jabba Palace. Normal fire throws it, which explodes after some seconds. Alt fire throws it and it explodes as soon as it touches something.",																													"ammo",		"merc"		},
-	{3, "Trip Mines",			"a mine that can be planted somewhere. Normal fire plants a mine with a laser that when touched makes the mine explode. Alt fire plants proximity mines",																																						"ammo",		"merc"		},
-	{3, "Detpacks",				"a very powerful explosive, which you can detonate remotely with the alt fire button.",																																																							"ammo",		"merc"		},
-	{1, "Binoculars",			"this item allows you to see distant things better with its zoom.",																																																												"items",	"merc"		},
-	{1, "Bacta Canister",		"allows you to recover 25 HP",																																																																					"items",	"merc"		},
-	{1, "Sentry Gun",			"after placed on the ground, shoots at any nearby enemy",																																																														"items",	"merc"		},
-	{1, "Seeker Drone",			"a flying ball that flies around you, shooting anyone in its range",																																																											"items",	"merc"		},
-	{1, "E-Web",				"allows you to shoot at people with it, it has a good fire rate",																																																												"items",	"merc"		},
-	{1, "Big Bacta",			"allows you to recover 50 HP",																																																																					"items",	"merc"		},
-	{1, "Force Field",			"a powerful shield that protects you from enemy attacks, it can resist a lot against any weapon",																																																				"items",	"merc"		},
-	{1, "Cloak Item",			"makes you almost invisible to players and invisible to npcs.",																																																													"items",	"merc"		},
-	{5, "Force Power",			"increases the max force power you have. Necessary to allow you to use force powers and force-based skills",																																																	"force",	"neutral"	},
-	{3, "Improvements",			"placeholder",																																																																									"items",	"merc"		},
-	{5, "Armor",				"Each level increases your damage resistance by 10 percent, but also decreases your movement speed by 10 percent.",																																																"items",	"merc"		},
-	{2, "Flame Thrower",		"Allows you to use a flamethrower. Used by alt-firing with a stun baton.",																																																										"items",	"merc"		},
-	{5, "Shield Regeneration",	"Increases the rate at which shield is regenerated by one per second for each point. Meditating will make it faster.",																																															"other",	"merc"		},
-	{5, "Health Regeneration",	"Increases the rate at which health is regenerated by one per second for each point. Meditating will make it faster.",																																															"other",	"merc"		},
+	{5, "Jump",					"makes you use the force to jump higher. Level 5 has no height limit, you can continue jumping up until you run out of force, and it also lets you jump out of water",																																			"force",	"neutral",	FP_LEVITATION},
+	{5, "Push",					"pushes the opponent forward",																																																																					"force",	"neutral",	FP_PUSH},
+	{5, "Pull",					"pulls the opponent towards you",																																																																				"force",	"neutral",	FP_PULL},
+	{5, "Speed",				"increases your speed. Level 1 is 1.5 times normal speed. Level 2 is 2.0, level 3 is 2.5 times and level 4 is 3.0 times",																																														"force",	"neutral",	FP_SPEED},
+	{3, "Sense",				"allows you to see people through walls, invisible people or cloaked people and you can dodge disruptor shots. Represents your mind strength to resist Mind Control if your sense level is equal or higher than the enemy's mind trick level",																	"force",	"neutral",	FP_SEE},
+	{5, "Saber Attack",			"gives you the saber. If you are using Single Saber, gives you the saber styles. If using duals or staff, increases saber damage, which is increased by 20 per cent for each level.",																															"force",	"neutral",	FP_SABER_OFFENSE},
+	{5, "Saber Defense",		"increases your ability to block, parry enemy saber attacks or enemy shots",																																																									"force",	"neutral",	FP_SABER_DEFENSE},
+	{5, "Saber Throw",			"throws your saber at enemy and gets it back. Each level increases max distance and saber throw speed.",																																																		"force",	"neutral",	FP_SABERTHROW},
+	{5, "Absorb",				"allows you to absorb force power attacks done to you",																																																															"force",	"light",	FP_ABSORB},
+	{5, "Heal",					"recover some Health. Level 1 restores 5 hp, level 2 restores 10 hp and level 3 restores 25 hp",																																																				"force",	"light",	FP_HEAL},
+	{5, "Protect",				"decreases damage done to you by non-force power attacks. At level 4 decreases force consumption when receiving damage",																																														"force",	"light",	FP_PROTECT},
+	{5, "Mind Trick",			"makes yourself invisible to the players affected by this force power. Force User class can mind control a player or npc. Level 1 has a duration of 20 seconds, level 2 is 25 seconds and level 3 is 30 seconds",																								"force",	"neutral",	FP_TELEPATHY},
+	{5, "Team Heal",			"restores some health to players near you",																																																																		"force",	"light",	FP_TEAM_HEAL},
+	{5, "Lightning",			"attacks with a powerful electric attack at players near you. At level 4, does more damage and pushes the enemy back",																																															"force",	"dark",		FP_LIGHTNING},
+	{5, "Grip",					"attacks a player by holding and damaging him",																																																																	"force",	"dark",		FP_GRIP},
+	{5, "Drain",				"drains force power from a player to restore your health",																																																														"force",	"dark",		FP_DRAIN},
+	{5, "Rage",					"makes you 1.3 times faster, increases your saber attack speed and damage and makes you get less damage. Force Guardian class, with Improvements skill at least on level 1, can regen some force when taking damage on health while Rage is active",															"force",	"dark",		FP_RAGE},
+	{5, "Team Energize",		"restores some force power to players near you. If Improvements skill is at least at level 1, regens blaster pack and power cell ammo of the target players",																																					"force",	"dark",		FP_TEAM_FORCE},
+	{4, "Stun Baton",			"attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. With Stun Baton Upgrade, can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds",																	"weapons",	"merc",		0},
+	{2, "Blaster Pistol",		"the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The charged shot causes a lot more damage depending on how much it was charged",																	"weapons",	"merc",		0},
+	{2, "E11 Blaster Rifle",	"the rifle used by the Storm Troopers. E11 shots do %d damage. Normal fire is a single shot, while the alternate fire is the rapid fire",																																										"weapons",	"merc",		0},
+	{2, "Disruptor",			"the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged",																																					"weapons",	"merc",		0},
+	{2, "Bowcaster",			"the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once.",																																																				"weapons",	"merc",		0},
+	{2, "Repeater",				"a powerful weapon with a rapid fire and a plasma bomb. Normal fire shoots the rapid fire, and does %d damage. Alt fire fires the plasma bomb",																																									"weapons",	"merc",		0},
+	{2, "DEMP2",				"a very powerful weapon against machine npc and some vehicles, causing more damage to them and stunning them. Normal fire does %d damage and alt fire can be charged",																																			"weapons",	"merc",		0},
+	{2, "Flechette",			"this weapon is similar to a shotgun. Normal fire causes %d damage. Alt fire shoots 2 bombs",																																																					"weapons",	"merc",		0},
+	{2, "Rocket Launcher",		"a powerful explosive weapon. Normal fire shoots a rocket causing %d damage. Alt fire shoots a homing missile",																																																	"weapons",	"merc",		0},
+	{2, "Concussion Rifle",		"it shoots a powerful shot that has a big damage area. Alt fire shoots a ray similar to disruptor shots, but it can go through force fields and can throw the enemy on the ground.",																															"weapons",	"merc",		0},
+	{2, "Bryar Pistol",			"very similar to the blaster pistol, but this one has a better fire rate with normal shot.",																																																					"weapons",	"merc",		0},
+	{3, "Melee",				"allows you to attack with your fists and legs. You can punch, kick or do a special melee attack by holding both Attack and Alt Attack buttons (usually the mouse buttons).",																																	"weapons",	"merc",		0},
+	{5, "Max Shield",			"The max shield (armor) the player can have. Each level increases 20 per cent of max shield the player can have",																																																"other",	"merc",		0},
+	{4, "Shield Strength",		"Each level increases your shield resistance by 7 per cent",																																																													"other",	"merc",		0},
+	{4, "Health Strength",		"Each level increases your health resistance by 7 per cent",																																																													"other",	"merc",		0},
+	{1, "Drain Shield",			"When using Drain force power, and your health is full, restores some shield. It also makes Drain suck hp/shield from the enemy to restore your hp/shield",																																						"other",	"merc",		0},
+	{3, "Jetpack",				"the jetpack, used by Boba Fett. Allows you to fly. To use it, jump and press the Use key (usually R) while in the middle of the jump. Each level uses less fuel, allowing you to fly for a longer time",																										"items",	"merc",		0},
+	{3, "Sense Health",			"allows you to see info about someone, including npcs. Level 1 shows current health. Level 2 shows name, health and shield. Level 3 shows name, health and max health, shield and max shield, force and max force, mp and max mp. To use it, when you are near a player or npc, use ^3Sense ^7force power",		"force",	"light",	0},
+	{3, "Shield Heal",			"recovers 4 shield at level 1, 8 shield at level 2 and 12 shield at level 3. To use it, use Heal force power when you have full HP.",																																											"other",	"merc",		0},
+	{3, "Team Shield Heal",		"recovers 3 shield at level 1, 6 shield at level 2 and 9 shield at level 3 to players near you. To use it, when near players, use Team Heal force power. It will heal their shield after they have full HP",																									"other",	"merc",		0},
+	{1, "Unique Skill",			"placeholder, does nothing",																																																																					"other",	"merc",		0},
+	{3, "Blaster Pack",			"used as ammo for Blaster Pistol, Bryar Pistol and E11 Blaster Rifle.",																																																											"ammo",		"merc",		0},
+	{3, "Powercell",			"used as ammo for Disruptor, Bowcaster and DEMP2.",																																																																"ammo",		"merc",		0},
+	{3, "Metal Bolts",			"used as ammo for Repeater, Flechette and Concussion Rifle.",																																																													"ammo",		"merc",		0},
+	{3, "Rockets",				"used as ammo for Rocket Launcher.",																																																																			"ammo",		"merc",		0},
+	{3, "Thermals",				"the famous detonator used by Leia in Ep 6 at the Jabba Palace. Normal fire throws it, which explodes after some seconds. Alt fire throws it and it explodes as soon as it touches something.",																													"ammo",		"merc",		0},
+	{3, "Trip Mines",			"a mine that can be planted somewhere. Normal fire plants a mine with a laser that when touched makes the mine explode. Alt fire plants proximity mines",																																						"ammo",		"merc",		0},
+	{3, "Detpacks",				"a very powerful explosive, which you can detonate remotely with the alt fire button.",																																																							"ammo",		"merc",		0},
+	{1, "Binoculars",			"this item allows you to see distant things better with its zoom.",																																																												"items",	"merc",		0},
+	{1, "Bacta Canister",		"allows you to recover 25 HP",																																																																					"items",	"merc",		0},
+	{1, "Sentry Gun",			"after placed on the ground, shoots at any nearby enemy",																																																														"items",	"merc",		0},
+	{1, "Seeker Drone",			"a flying ball that flies around you, shooting anyone in its range",																																																											"items",	"merc",		0},
+	{1, "E-Web",				"allows you to shoot at people with it, it has a good fire rate",																																																												"items",	"merc",		0},
+	{1, "Big Bacta",			"allows you to recover 50 HP",																																																																					"items",	"merc",		0},
+	{1, "Force Field",			"a powerful shield that protects you from enemy attacks, it can resist a lot against any weapon",																																																				"items",	"merc",		0},
+	{1, "Cloak Item",			"makes you almost invisible to players and invisible to npcs.",																																																													"items",	"merc",		0},
+	{5, "Force Power",			"increases the max force power you have. Necessary to allow you to use force powers and force-based skills",																																																	"force",	"neutral",	0},
+	{3, "Improvements",			"placeholder",																																																																									"items",	"merc",		0},
+	{5, "Armor",				"Each level increases your damage resistance by 10 percent, but also decreases your movement speed by 10 percent.",																																																"items",	"merc",		0},
+	{2, "Flame Thrower",		"Allows you to use a flamethrower. Used by alt-firing with a stun baton.",																																																										"items",	"merc",		0},
+	{5, "Shield Regeneration",	"Increases the rate at which shield is regenerated by one per second for each point. Meditating will make it faster.",																																															"other",	"merc",		0},
+	{5, "Health Regeneration",	"Increases the rate at which health is regenerated by one per second for each point. Meditating will make it faster.",																																															"other",	"merc",		0},
 };
 
 #define MAX_WORDED_EMOTES 132
@@ -8776,1236 +8776,93 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 
 qboolean rpg_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, qboolean dont_show_message)
 {
-	char maximum_skill_message[256] = "print \"^1You reached the maximum level of %s ^1skill. Nothing was updated.\n\"";
-	char maximum_skill_message_other[256] = "print \"^1Target already reached the maximum level of %s ^1skill. Nothing was updated\n\"";
+	char maximum_skill_message[256] = "print \"^1You reached the maximum level of ^3%s ^1skill. Nothing was updated.\n\"";
+	char maximum_skill_message_other[256] = "print \"^1Target already reached the maximum level of ^3%s ^1skill. Nothing was updated\n\"";
 
-	if (upgrade_value == 1)
-	{
-		if (ent->client->pers.skill_levels[0] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_LEVITATION)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_LEVITATION);
-			ent->client->pers.skill_levels[0]++;
-			ent->client->ps.fd.forcePowerLevel[FP_LEVITATION] = ent->client->pers.skill_levels[0];
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse){
-				trap->SendServerCommand( ent-g_entities, va(maximum_skill_message, "^3Jump"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Jump"));
-				}
-			}
-			return qfalse;
-		}
-	}
-			
-	if (upgrade_value == 2)
-	{
-		if (ent->client->pers.skill_levels[1] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_PUSH)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_PUSH);
-			ent->client->pers.skill_levels[1]++;
-			ent->client->ps.fd.forcePowerLevel[FP_PUSH] = ent->client->pers.skill_levels[1];
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Push"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Push"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 3)
-	{
-		if (ent->client->pers.skill_levels[2] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_PULL)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_PULL);
-			ent->client->pers.skill_levels[2]++;
-			ent->client->ps.fd.forcePowerLevel[FP_PULL] = ent->client->pers.skill_levels[2];
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Pull"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Pull"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 4)
-	{
-		if (ent->client->pers.skill_levels[3] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SPEED)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_SPEED);
-			ent->client->pers.skill_levels[3]++;
-			ent->client->ps.fd.forcePowerLevel[FP_SPEED] = ent->client->pers.skill_levels[3];
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Speed"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Speed"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 5)
-	{
-		if (ent->client->pers.skill_levels[4] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[4]++;
-			ent->client->pers.skillpoints--;
-
-			if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 8)
-			{ // zyk: these classes have no force, so they do not need Sense (although they can have the skill to resist Mind Control)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SEE);
-				ent->client->ps.fd.forcePowerLevel[FP_SEE] = FORCE_LEVEL_0;
-			}
-			else
-			{
-				if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SEE)))
-					ent->client->ps.fd.forcePowersKnown |= (1 << FP_SEE);
-				ent->client->ps.fd.forcePowerLevel[FP_SEE] = ent->client->pers.skill_levels[4];
-			}
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Sense"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Sense"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 6)
-	{
-		if (ent->client->pers.skill_levels[5] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SABER_OFFENSE)))
-			{
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_SABER_OFFENSE);
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
-			}
-			ent->client->pers.skill_levels[5]++;
-			ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] = ent->client->pers.skill_levels[5];
-			if (ent->client->saber[0].type == SABER_SINGLE && ent->client->saber[1].type == SABER_NONE)
-			{
-				ent->client->ps.fd.saberAnimLevel = ent->client->pers.skill_levels[5];
-			}
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Saber Attack"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Saber Attack"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 7)
-	{
-		if (ent->client->pers.skill_levels[6] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SABER_DEFENSE)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_SABER_DEFENSE);
-			ent->client->pers.skill_levels[6]++;
-			ent->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] = ent->client->pers.skill_levels[6];
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Saber Defense"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Saber Defense"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 8)
-	{
-		if (ent->client->pers.skill_levels[7] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_SABERTHROW)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_SABERTHROW);
-			ent->client->pers.skill_levels[7]++;
-			ent->client->ps.fd.forcePowerLevel[FP_SABERTHROW] = ent->client->pers.skill_levels[7];
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Saber Throw"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Saber Throw"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 9)
-	{
-		if (ent->client->pers.skill_levels[8] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_ABSORB)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_ABSORB);
-			ent->client->pers.skill_levels[8]++;
-
-			if (ent->client->pers.skill_levels[8] < 4)
-				ent->client->ps.fd.forcePowerLevel[FP_ABSORB] = ent->client->pers.skill_levels[8];
-			else
-				ent->client->ps.fd.forcePowerLevel[FP_ABSORB] = FORCE_LEVEL_3;
-
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Absorb"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Absorb"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 10)
-	{
-		if (ent->client->pers.skill_levels[9] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_HEAL)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_HEAL);
-			ent->client->pers.skill_levels[9]++;
-			ent->client->ps.fd.forcePowerLevel[FP_HEAL] = ent->client->pers.skill_levels[9];
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Heal"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Heal"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 11)
-	{
-		if (ent->client->pers.skill_levels[10] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_PROTECT)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_PROTECT);
-			ent->client->pers.skill_levels[10]++;
-
-			if (ent->client->pers.skill_levels[10] < 4)
-				ent->client->ps.fd.forcePowerLevel[FP_PROTECT] = ent->client->pers.skill_levels[10];
-			else
-				ent->client->ps.fd.forcePowerLevel[FP_PROTECT] = FORCE_LEVEL_3;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Protect"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Protect"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 12)
-	{
-		if (ent->client->pers.skill_levels[11] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_TELEPATHY)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_TELEPATHY);
-			ent->client->pers.skill_levels[11]++;
-			ent->client->ps.fd.forcePowerLevel[FP_TELEPATHY] = ent->client->pers.skill_levels[11];
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Mind Trick"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Mind Trick"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 13)
-	{
-		if (ent->client->pers.skill_levels[12] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_TEAM_HEAL)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_TEAM_HEAL);
-			ent->client->pers.skill_levels[12]++;
-			ent->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] = ent->client->pers.skill_levels[12];
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Team Heal"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Team Heal"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 14)
-	{
-		if (ent->client->pers.skill_levels[13] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_LIGHTNING)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_LIGHTNING);
-			ent->client->pers.skill_levels[13]++;
-
-			if (ent->client->pers.skill_levels[13] < 4)
-				ent->client->ps.fd.forcePowerLevel[FP_LIGHTNING] = ent->client->pers.skill_levels[13];
-			else
-				ent->client->ps.fd.forcePowerLevel[FP_LIGHTNING] = FORCE_LEVEL_3;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Lightning"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Lightning"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 15)
-	{
-		if (ent->client->pers.skill_levels[14] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_GRIP)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_GRIP);
-			ent->client->pers.skill_levels[14]++;
-			ent->client->ps.fd.forcePowerLevel[FP_GRIP] = ent->client->pers.skill_levels[14];
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Grip"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Grip"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 16)
-	{
-		if (ent->client->pers.skill_levels[15] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_DRAIN)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_DRAIN);
-			ent->client->pers.skill_levels[15]++;
-			ent->client->ps.fd.forcePowerLevel[FP_DRAIN] = ent->client->pers.skill_levels[15];
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Drain"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Drain"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 17)
-	{
-		if (ent->client->pers.skill_levels[16] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_RAGE)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_RAGE);
-			ent->client->pers.skill_levels[16]++;
-
-			if (ent->client->pers.skill_levels[16] < 4)
-				ent->client->ps.fd.forcePowerLevel[FP_RAGE] = ent->client->pers.skill_levels[16];
-			else
-				ent->client->ps.fd.forcePowerLevel[FP_RAGE] = FORCE_LEVEL_3;
-
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Rage"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Rage"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 18)
-	{
-		if (ent->client->pers.skill_levels[17] < skills[upgrade_value - 1].max_level)
-		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << FP_TEAM_FORCE)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << FP_TEAM_FORCE);
-			ent->client->pers.skill_levels[17]++;
-			ent->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] = ent->client->pers.skill_levels[17];
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Team Energize"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Team Energize"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 19)
-	{
-		if (ent->client->pers.skill_levels[18] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[18]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Stun Baton"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Stun Baton"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 20)
-	{
-		if (ent->client->pers.skill_levels[19] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[19]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Blaster Pistol"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Blaster Pistol"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 21)
-	{
-		if (ent->client->pers.skill_levels[20] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[20]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3E11 Blaster Rifle"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3E11 Blaster Rifle"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 22)
-	{
-		if (ent->client->pers.skill_levels[21] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[21]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Disruptor"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Disruptor"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 23)
-	{
-		if (ent->client->pers.skill_levels[22] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[22]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Bowcaster"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Bowcaster"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 24)
-	{
-		if (ent->client->pers.skill_levels[23] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[23]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Repeater"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Repeater"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 25)
-	{
-		if (ent->client->pers.skill_levels[24] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[24]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3DEMP2"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3DEMP2"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 26)
-	{
-		if (ent->client->pers.skill_levels[25] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[25]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Flechette"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Flechette"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 27)
-	{
-		if (ent->client->pers.skill_levels[26] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[26]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Rocket Launcher"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Rocket Launcher"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 28)
-	{
-		if (ent->client->pers.skill_levels[27] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[27]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Concussion Rifle"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Concussion Rifle"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 29)
-	{
-		if (ent->client->pers.skill_levels[28] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[28]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Bryar Pistol"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Bryar Pistol"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
+	//max shield is special
 	if (upgrade_value == 30)
 	{
-		if (ent->client->pers.skill_levels[29] < skills[upgrade_value - 1].max_level)
+		if (ent->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
 		{
-			ent->client->pers.skill_levels[29]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Melee"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Melee"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 31)
-	{
-		if (ent->client->pers.skill_levels[30] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[30]++;
+			ent->client->pers.skill_levels[upgrade_value]++;
 			set_max_shield(ent);
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Max Shield"));
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, ent->client->pers.skill_levels[30]));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Max Shield"));
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, ent->client->pers.skill_levels[30]));
 				}
 			}
 			return qfalse;
 		}
+		return qtrue;
 	}
 
-	if (upgrade_value == 32)
-	{
-		if (ent->client->pers.skill_levels[31] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[31]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Shield Strength"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Shield Strength"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 33)
-	{
-		if (ent->client->pers.skill_levels[32] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[32]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Health Strength"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Health Strength"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 34)
-	{
-		if (ent->client->pers.skill_levels[33] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[33]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Drain Shield"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Drain Shield"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 35)
-	{
-		if (ent->client->pers.skill_levels[34] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[34]++;
-			if (!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_JETPACK)))
-				ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Jetpack"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Jetpack"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 36)
-	{
-		if (ent->client->pers.skill_levels[35] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[35]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Sense Health"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Sense Health"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 37)
-	{
-		if (ent->client->pers.skill_levels[36] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[36]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Shield Heal"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Shield Heal"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 38)
-	{
-		if (ent->client->pers.skill_levels[37] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[37]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Team Shield"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Team Shield"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 39)
-	{
-		if (ent->client->pers.skill_levels[38] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[38]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Unique Skill"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Unique Skill"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 40)
-	{
-		if (ent->client->pers.skill_levels[39] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[39]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Blaster Pack"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Blaster Pack"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 41)
-	{
-		if (ent->client->pers.skill_levels[40] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[40]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Power Cell"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Power Cell"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 42)
-	{
-		if (ent->client->pers.skill_levels[41] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[41]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Metallic Bolts"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Metallic Bolts"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 43)
-	{
-		if (ent->client->pers.skill_levels[42] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[42]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Rockets"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Rockets"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 44)
-	{
-		if (ent->client->pers.skill_levels[43] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[43]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Thermals"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Thermals"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 45)
-	{
-		if (ent->client->pers.skill_levels[44] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[44]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Trip Mines"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Trip Mines"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 46)
-	{
-		if (ent->client->pers.skill_levels[45] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[45]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Det Packs"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Det Packs"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 47)
-	{
-		if (ent->client->pers.skill_levels[46] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[46]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Binoculars"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Binoculars"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 48)
-	{
-		if (ent->client->pers.skill_levels[47] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[47]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Bacta Canister"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Bacta Canister"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 49)
-	{
-		if (ent->client->pers.skill_levels[48] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[48]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Sentry Gun"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Sentry Gun"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 50)
-	{
-		if (ent->client->pers.skill_levels[49] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[49]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Seeker Drone"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Seeker Drone"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 51)
-	{
-		if (ent->client->pers.skill_levels[50] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[50]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3E-Web"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3E-Web"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 52)
-	{
-		if (ent->client->pers.skill_levels[51] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[51]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Big Bacta"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Big Bacta"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 53)
-	{
-		if (ent->client->pers.skill_levels[52] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[52]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Force Field"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Force Field"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
+	//max force power is special
 	if (upgrade_value == 54)
 	{
-		if (ent->client->pers.skill_levels[53] < skills[upgrade_value - 1].max_level)
+		if (ent->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
 		{
-			ent->client->pers.skill_levels[53]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Cloak Item"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Cloak Item"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 55)
-	{
-		if (ent->client->pers.skill_levels[54] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[54]++;
-			ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value/4.0) * ent->client->pers.skill_levels[54]);
+			ent->client->pers.skill_levels[upgrade_value]++;
+			ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent->client->pers.skill_levels[upgrade_value]);
 			ent->client->ps.fd.forcePowerMax = ent->client->pers.max_force_power;
 			ent->client->pers.skillpoints--;
 		}
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Force Power"));
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, ent->client->pers.skill_levels[54]));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Force Power"));
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, ent->client->pers.skill_levels[54]));
+				}
+			}
+			return qfalse;
+		}
+		return qtrue;
+	}
+
+
+	//only for proper force powers
+	if (skills[upgrade_value].force_power_internal != 0) {
+		if (ent->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
+		{
+			if (!(ent->client->ps.fd.forcePowersKnown & (1 << skills[upgrade_value].force_power_internal)))
+				ent->client->ps.fd.forcePowersKnown |= (1 << skills[upgrade_value].force_power_internal);
+			ent->client->pers.skill_levels[upgrade_value]++;
+			ent->client->ps.fd.forcePowerLevel[skills[upgrade_value].force_power_internal] = ent->client->pers.skill_levels[upgrade_value];
+			ent->client->pers.skillpoints--;
+
+			return qtrue;
+		}
+		else
+		{
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, skills[upgrade_value].skill_name));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, skills[upgrade_value].skill_name));
 				}
 			}
 			return qfalse;
 		}
 	}
-
-	if (upgrade_value == 56)
-	{
-		if (ent->client->pers.skill_levels[55] < skills[upgrade_value - 1].max_level)
+	//other kind of powers
+	else {
+		if (ent->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
 		{
-			ent->client->pers.skill_levels[55]++;
+			ent->client->pers.skill_levels[upgrade_value]++;
 			ent->client->pers.skillpoints--;
+
+			return qtrue;
 		}
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Improvements"));
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, skills[upgrade_value].skill_name));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Improvements"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 57)
-	{
-		if (ent->client->pers.skill_levels[56] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[56]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Armor"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Armor"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 58)
-	{
-		if (ent->client->pers.skill_levels[57] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[57]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Flame Thrower"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Flame Thrower"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 59)
-	{
-		if (ent->client->pers.skill_levels[58] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[58]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Shield Regeneration"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Shield Regeneration"));
-				}
-			}
-			return qfalse;
-		}
-	}
-
-	if (upgrade_value == 60)
-	{
-		if (ent->client->pers.skill_levels[59] < skills[upgrade_value - 1].max_level)
-		{
-			ent->client->pers.skill_levels[59]++;
-			ent->client->pers.skillpoints--;
-		}
-		else
-		{
-			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, "^3Health Regeneration"));
-				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, "^3Health Regeneration"));
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, skills[upgrade_value].skill_name));
 				}
 			}
 			return qfalse;
@@ -10111,7 +8968,7 @@ char *zyk_get_settings_values(gentity_t *ent)
 qboolean validate_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, qboolean dont_show_message)
 {
 	// zyk: validation on the upgrade level, which must be in the range of valid skills.
-	if (upgrade_value < 1 || upgrade_value > NUM_OF_SKILLS)
+	if (upgrade_value < 0 || upgrade_value >= NUM_OF_SKILLS)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"Invalid skill number.\n\"" );
 		return qfalse;
@@ -10294,7 +9151,7 @@ void Cmd_UpSkill_f( gentity_t *ent ) {
 	}
 	else
 	{
-		do_upgrade_skill(ent, ent, upgrade_value, qfalse);
+		do_upgrade_skill(ent, ent, upgrade_value - 1, qfalse);
 	}
 }
 
@@ -15402,7 +14259,7 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 		return;
 	}
 
-	do_upgrade_skill(ent, &g_entities[client_id], atoi(arg2), qfalse);
+	do_upgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1, qfalse);
 }
 
 /*

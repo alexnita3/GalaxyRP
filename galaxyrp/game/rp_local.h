@@ -146,6 +146,7 @@ typedef struct skill_s {
 	const char* skill_description;
 	const char* category;
 	const char* alignment;
+	int force_power_internal;
 } skill_t;
 
 /*
