@@ -9155,114 +9155,113 @@ void Cmd_UpSkill_f( gentity_t *ent ) {
 	}
 }
 
-void do_downgrade_skill(gentity_t *ent, int downgrade_value)
+void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
 {
-	// zyk: validation on the downgrade level, which must be in the range of valid skills.
-	if (downgrade_value < 1 || downgrade_value > NUM_OF_SKILLS)
+	qboolean dont_show_message = qfalse;
+
+	// zyk: validation on the upgrade level, which must be in the range of valid skills.
+	if (downgrade_value < 0 || downgrade_value >= NUM_OF_SKILLS)
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"^1Invalid skill number.\n\"" );
-		return;
+		trap->SendServerCommand(ent - g_entities, "print \"Invalid skill number.\n\"");
+		return qfalse;
 	}
 
-	if (validate_rpg_class(ent) == qfalse)
-		return;
+	char maximum_skill_message[256] = "print \"^1You reached the minimum level of ^3%s ^1skill. Nothing was updated.\n\"";
+	char maximum_skill_message_other[256] = "print \"^1Target already reached the minimum level of ^3%s ^1skill. Nothing was updated\n\"";
 
-	// zyk: the downgrade is done if it doesnt go below the minimum level of the skill
-	if (downgrade_value == 1)
+	//max shield is special
+	if (downgrade_value == 30)
 	{
-		if (ent->client->pers.skill_levels[0] > 0)
+		if (ent->client->pers.skill_levels[downgrade_value] > 0)
 		{
-			ent->client->pers.skill_levels[0]--;
-			ent->client->ps.fd.forcePowerLevel[FP_LEVITATION] = ent->client->pers.skill_levels[0];
-			if (ent->client->ps.fd.forcePowerLevel[FP_LEVITATION] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_LEVITATION);
+			ent->client->pers.skill_levels[downgrade_value]--;
+			set_max_shield(ent);
 			ent->client->pers.skillpoints++;
 		}
 		else
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Jump ^7skill.\n\"" );
-			return;
-		}
-	}
-			
-	if (downgrade_value == 2)
-	{
-		if (ent->client->pers.skill_levels[1] > 0)
-		{
-			ent->client->pers.skill_levels[1]--;
-			ent->client->ps.fd.forcePowerLevel[FP_PUSH] = ent->client->pers.skill_levels[1];
-			if (ent->client->ps.fd.forcePowerLevel[FP_PUSH] == 0)
-				ent->client->ps.fd.forcePowersKnown  &= ~(1 << FP_PUSH);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Push ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 3)
-	{
-		if (ent->client->pers.skill_levels[2] > 0)
-		{
-			ent->client->pers.skill_levels[2]--;
-			ent->client->ps.fd.forcePowerLevel[FP_PULL] = ent->client->pers.skill_levels[2];
-			if (ent->client->ps.fd.forcePowerLevel[FP_PULL] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PULL);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Pull ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 4)
-	{
-		if (ent->client->pers.skill_levels[3] > 0)
-		{
-			ent->client->pers.skill_levels[3]--;
-			ent->client->ps.fd.forcePowerLevel[FP_SPEED] = ent->client->pers.skill_levels[3];
-			if (ent->client->ps.fd.forcePowerLevel[FP_SPEED] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SPEED);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Speed ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 5)
-	{
-		if (ent->client->pers.skill_levels[4] > 0)
-		{
-			ent->client->pers.skill_levels[4]--;
-			ent->client->pers.skillpoints++;
-
-			if (ent->client->pers.rpg_class == 2 || ent->client->pers.rpg_class == 3 || ent->client->pers.rpg_class == 5 || ent->client->pers.rpg_class == 8)
-			{ // zyk: these classes have no force, so they do not need Sense (although they can have the skill to resist Mind Control)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SEE);
-				ent->client->ps.fd.forcePowerLevel[FP_SEE] = FORCE_LEVEL_0;
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, ent->client->pers.skill_levels[30]));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, ent->client->pers.skill_levels[30]));
+				}
 			}
-			else
+			return qfalse;
+		}
+		return qtrue;
+	}
+
+	//max force power is special
+	if (downgrade_value == 54)
+	{
+		if (ent->client->pers.skill_levels[downgrade_value] > 0)
+		{
+			ent->client->pers.skill_levels[downgrade_value]--;
+			ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent->client->pers.skill_levels[downgrade_value]);
+			ent->client->ps.fd.forcePowerMax = ent->client->pers.max_force_power;
+			ent->client->pers.skillpoints++;
+		}
+		else
+		{
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, ent->client->pers.skill_levels[54]));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, ent->client->pers.skill_levels[54]));
+				}
+			}
+			return qfalse;
+		}
+		return qtrue;
+	}
+
+
+	//only for proper force powers
+	if (skills[downgrade_value].force_power_internal != 0) {
+		if (ent->client->pers.skill_levels[downgrade_value] > 0)
+		{
+			ent->client->pers.skill_levels[downgrade_value]--;
+			ent->client->ps.fd.forcePowerLevel[skills[downgrade_value].force_power_internal] = ent->client->pers.skill_levels[downgrade_value];
+			if (ent->client->ps.fd.forcePowerLevel[skills[downgrade_value].force_power_internal] == 0) 
 			{
-				ent->client->ps.fd.forcePowerLevel[FP_SEE] = ent->client->pers.skill_levels[4];
-				if (ent->client->ps.fd.forcePowerLevel[FP_SEE] == 0)
-					ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SEE);
+				ent->client->ps.fd.forcePowersKnown &= ~(1 << skills[downgrade_value].force_power_internal);
 			}
+			ent->client->pers.skillpoints++;
+
+			return qtrue;
 		}
 		else
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Sense ^7skill.\n\"" );
-			return;
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, skills[downgrade_value].skill_name));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, skills[downgrade_value].skill_name));
+				}
+			}
+			return qfalse;
+		}
+	}
+	//other kind of powers
+	else {
+		if (ent->client->pers.skill_levels[downgrade_value] > 0)
+		{
+			ent->client->pers.skill_levels[downgrade_value]--;
+			ent->client->pers.skillpoints++;
+
+			return qtrue;
+		}
+		else
+		{
+			if (dont_show_message == qfalse) {
+				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, skills[downgrade_value].skill_name));
+				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, skills[downgrade_value].skill_name));
+				}
+			}
+			return qfalse;
 		}
 	}
 
-	if (downgrade_value == 6)
+	/*if (downgrade_value == 6)
 	{
 		if (ent->client->pers.skill_levels[5] > 0)
 		{
@@ -9286,863 +9285,12 @@ void do_downgrade_skill(gentity_t *ent, int downgrade_value)
 			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Saber Attack ^7skill.\n\"" );
 			return;
 		}
-	}
-
-	if (downgrade_value == 7)
-	{
-		if (ent->client->pers.skill_levels[6] > 0)
-		{
-			ent->client->pers.skill_levels[6]--;
-			ent->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] = ent->client->pers.skill_levels[6];
-			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SABER_DEFENSE);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Saber Defense ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 8)
-	{
-		if (ent->client->pers.skill_levels[7] > 0)
-		{
-			ent->client->pers.skill_levels[7]--;
-			ent->client->ps.fd.forcePowerLevel[FP_SABERTHROW] = ent->client->pers.skill_levels[7];
-			if (ent->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SABERTHROW);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Saber Throw ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 9)
-	{
-		if (ent->client->pers.skill_levels[8] > 0)
-		{
-			ent->client->pers.skill_levels[8]--;
-			ent->client->ps.fd.forcePowerLevel[FP_ABSORB] = ent->client->pers.skill_levels[8];
-			if (ent->client->ps.fd.forcePowerLevel[FP_ABSORB] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_ABSORB);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Absorb ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 10)
-	{
-		if (ent->client->pers.skill_levels[9] > 0)
-		{
-			ent->client->pers.skill_levels[9]--;
-			ent->client->ps.fd.forcePowerLevel[FP_HEAL] = ent->client->pers.skill_levels[9];
-			if (ent->client->ps.fd.forcePowerLevel[FP_HEAL] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_HEAL);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Heal ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 11)
-	{
-		if (ent->client->pers.skill_levels[10] > 0)
-		{
-			ent->client->pers.skill_levels[10]--;
-			ent->client->ps.fd.forcePowerLevel[FP_PROTECT] = ent->client->pers.skill_levels[10];
-			if (ent->client->ps.fd.forcePowerLevel[FP_PROTECT] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PROTECT);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Protect ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 12)
-	{
-		if (ent->client->pers.skill_levels[11] > 0)
-		{
-			ent->client->pers.skill_levels[11]--;
-			ent->client->ps.fd.forcePowerLevel[FP_TELEPATHY] = ent->client->pers.skill_levels[11];
-			if (ent->client->ps.fd.forcePowerLevel[FP_TELEPATHY] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TELEPATHY);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Mind Trick ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 13)
-	{
-		if (ent->client->pers.skill_levels[12] > 0)
-		{
-			ent->client->pers.skill_levels[12]--;
-			ent->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] = ent->client->pers.skill_levels[12];
-			if (ent->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_HEAL);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Team Heal ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 14)
-	{
-		if (ent->client->pers.skill_levels[13] > 0)
-		{
-			ent->client->pers.skill_levels[13]--;
-			ent->client->ps.fd.forcePowerLevel[FP_LIGHTNING] = ent->client->pers.skill_levels[13];
-			if (ent->client->ps.fd.forcePowerLevel[FP_LIGHTNING] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_LIGHTNING);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Lightning ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 15)
-	{
-		if (ent->client->pers.skill_levels[14] > 0)
-		{
-			ent->client->pers.skill_levels[14]--;
-			ent->client->ps.fd.forcePowerLevel[FP_GRIP] = ent->client->pers.skill_levels[14];
-			if (ent->client->ps.fd.forcePowerLevel[FP_GRIP] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_GRIP);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Grip ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 16)
-	{
-		if (ent->client->pers.skill_levels[15] > 0)
-		{
-			ent->client->pers.skill_levels[15]--;
-			ent->client->ps.fd.forcePowerLevel[FP_DRAIN] = ent->client->pers.skill_levels[15];
-			if (ent->client->ps.fd.forcePowerLevel[FP_DRAIN] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_DRAIN);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Drain ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 17)
-	{
-		if (ent->client->pers.skill_levels[16] > 0)
-		{
-			ent->client->pers.skill_levels[16]--;
-			ent->client->ps.fd.forcePowerLevel[FP_RAGE] = ent->client->pers.skill_levels[16];
-			if (ent->client->ps.fd.forcePowerLevel[FP_RAGE] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_RAGE);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Rage ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 18)
-	{
-		if (ent->client->pers.skill_levels[17] > 0)
-		{
-			ent->client->pers.skill_levels[17]--;
-			ent->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] = ent->client->pers.skill_levels[17];
-			if (ent->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == 0)
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_FORCE);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Team Energize ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 19)
-	{
-		if (ent->client->pers.skill_levels[18] > 0)
-		{
-			ent->client->pers.skill_levels[18]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Stun Baton ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 20)
-	{
-		if (ent->client->pers.skill_levels[19] > 0)
-		{
-			ent->client->pers.skill_levels[19]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Blaster Pistol ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 21)
-	{
-		if (ent->client->pers.skill_levels[20] > 0)
-		{
-			ent->client->pers.skill_levels[20]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3E11 Blaster Rifle ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 22)
-	{
-		if (ent->client->pers.skill_levels[21] > 0)
-		{
-			ent->client->pers.skill_levels[21]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Disruptor ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 23)
-	{
-		if (ent->client->pers.skill_levels[22] > 0)
-		{
-			ent->client->pers.skill_levels[22]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Bowcaster ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 24)
-	{
-		if (ent->client->pers.skill_levels[23] > 0)
-		{
-			ent->client->pers.skill_levels[23]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Repeater ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 25)
-	{
-		if (ent->client->pers.skill_levels[24] > 0)
-		{
-			ent->client->pers.skill_levels[24]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3DEMP2 ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 26)
-	{
-		if (ent->client->pers.skill_levels[25] > 0)
-		{
-			ent->client->pers.skill_levels[25]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Flechette ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 27)
-	{
-		if (ent->client->pers.skill_levels[26] > 0)
-		{
-			ent->client->pers.skill_levels[26]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Rocket Launcher ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 28)
-	{
-		if (ent->client->pers.skill_levels[27] > 0)
-		{
-			ent->client->pers.skill_levels[27]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Concussion Rifle ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 29)
-	{
-		if (ent->client->pers.skill_levels[28] > 0)
-		{
-			ent->client->pers.skill_levels[28]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Bryar Pistol ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 30)
-	{
-		if (ent->client->pers.skill_levels[29] > 0)
-		{
-			ent->client->pers.skill_levels[29]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Melee ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 31)
-	{
-		if (ent->client->pers.skill_levels[30] > 0)
-		{
-			ent->client->pers.skill_levels[30]--;
-			set_max_shield(ent);
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Max Shield ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 32)
-	{
-		if (ent->client->pers.skill_levels[31] > 0)
-		{
-			ent->client->pers.skill_levels[31]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Shield Strength ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 33)
-	{
-		if (ent->client->pers.skill_levels[32] > 0)
-		{
-			ent->client->pers.skill_levels[32]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Health Strength ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 34)
-	{
-		if (ent->client->pers.skill_levels[33] > 0)
-		{
-			ent->client->pers.skill_levels[33]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Drain Shield ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 35)
-	{
-		if (ent->client->pers.skill_levels[34] > 0)
-		{
-			ent->client->pers.skill_levels[34]--;
-			if (ent->client->pers.skill_levels[34] == 0)
-			{
-				ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_JETPACK);
-				if (ent->client->jetPackOn)
-				{
-					Jetpack_Off(ent);
-				}
-			}
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Jetpack ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 36)
-	{
-		if (ent->client->pers.skill_levels[35] > 0)
-		{
-			ent->client->pers.skill_levels[35]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Sense Health ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 37)
-	{
-		if (ent->client->pers.skill_levels[36] > 0)
-		{
-			ent->client->pers.skill_levels[36]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Shield Heal ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 38)
-	{
-		if (ent->client->pers.skill_levels[37] > 0)
-		{
-			ent->client->pers.skill_levels[37]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Team Shield Heal ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 39)
-	{
-		if (ent->client->pers.skill_levels[38] > 0)
-		{
-			ent->client->pers.skill_levels[38]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Unique Skill ^7.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 40)
-	{
-		if (ent->client->pers.skill_levels[39] > 0)
-		{
-			ent->client->pers.skill_levels[39]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Blaster Pack ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 41)
-	{
-		if (ent->client->pers.skill_levels[40] > 0)
-		{
-			ent->client->pers.skill_levels[40]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Power Cell ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 42)
-	{
-		if (ent->client->pers.skill_levels[41] > 0)
-		{
-			ent->client->pers.skill_levels[41]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Metallic Bolts ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 43)
-	{
-		if (ent->client->pers.skill_levels[42] > 0)
-		{
-			ent->client->pers.skill_levels[42]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Rockets ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 44)
-	{
-		if (ent->client->pers.skill_levels[43] > 0)
-		{
-			ent->client->pers.skill_levels[43]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Thermals ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 45)
-	{
-		if (ent->client->pers.skill_levels[44] > 0)
-		{
-			ent->client->pers.skill_levels[44]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Trip Mines ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 46)
-	{
-		if (ent->client->pers.skill_levels[45] > 0)
-		{
-			ent->client->pers.skill_levels[45]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Det Packs ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 47)
-	{
-		if (ent->client->pers.skill_levels[46] > 0)
-		{
-			ent->client->pers.skill_levels[46]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Binoculars ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 48)
-	{
-		if (ent->client->pers.skill_levels[47] > 0)
-		{
-			ent->client->pers.skill_levels[47]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Bacta Canister ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 49)
-	{
-		if (ent->client->pers.skill_levels[48] > 0)
-		{
-			ent->client->pers.skill_levels[48]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Sentry Gun ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 50)
-	{
-		if (ent->client->pers.skill_levels[49] > 0)
-		{
-			ent->client->pers.skill_levels[49]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Seeker Drone ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 51)
-	{
-		if (ent->client->pers.skill_levels[50] > 0)
-		{
-			ent->client->pers.skill_levels[50]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3E-Web ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 52)
-	{
-		if (ent->client->pers.skill_levels[51] > 0)
-		{
-			ent->client->pers.skill_levels[51]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Big Bacta ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 53)
-	{
-		if (ent->client->pers.skill_levels[52] > 0)
-		{
-			ent->client->pers.skill_levels[52]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Force Field ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 54)
-	{
-		if (ent->client->pers.skill_levels[53] > 0)
-		{
-			ent->client->pers.skill_levels[53]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Cloak Item ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 55)
-	{
-		if (ent->client->pers.skill_levels[54] > 0)
-		{
-			ent->client->pers.skill_levels[54]--;
-			ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value/4.0) * ent->client->pers.skill_levels[54]);
-			ent->client->ps.fd.forcePowerMax = ent->client->pers.max_force_power;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Force Power ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 56)
-	{
-		if (ent->client->pers.skill_levels[55] > 0)
-		{
-			ent->client->pers.skill_levels[55]--;
-			ent->client->pers.skillpoints++;
-
-			if (ent->client->pers.rpg_class == 8)
-			{ // zyk: resetting selected powers
-				ent->client->sess.selected_special_power = 1;
-				ent->client->sess.selected_left_special_power = 1;
-				ent->client->sess.selected_right_special_power = 1;
-			}
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Improvements ^7skill.\n\"" );
-			return;
-		}
-	}
-
-	if (downgrade_value == 57)
-	{
-		if (ent->client->pers.skill_levels[56] > 0)
-		{
-			ent->client->pers.skill_levels[56]--;
-			ent->client->pers.skillpoints++;
-
-			if (ent->client->pers.rpg_class == 8)
-			{ // zyk: resetting selected powers
-				ent->client->sess.selected_special_power = 1;
-				ent->client->sess.selected_left_special_power = 1;
-				ent->client->sess.selected_right_special_power = 1;
-			}
-		}
-		else
-		{
-			trap->SendServerCommand(ent - g_entities, "print \"You reached the minimum level of ^3Armor ^7skill.\n\"");
-			return;
-		}
-	}
-
-	if (downgrade_value == 58)
-	{
-		if (ent->client->pers.skill_levels[57] > 0)
-		{
-			ent->client->pers.skill_levels[57]--;
-			ent->client->pers.skillpoints++;
-
-			if (ent->client->pers.rpg_class == 8)
-			{ // zyk: resetting selected powers
-				ent->client->sess.selected_special_power = 1;
-				ent->client->sess.selected_left_special_power = 1;
-				ent->client->sess.selected_right_special_power = 1;
-			}
-		}
-		else
-		{
-			trap->SendServerCommand(ent - g_entities, "print \"You reached the minimum level of ^3Flame Thrower ^7skill.\n\"");
-			return;
-		}
-	}
-
-	if (downgrade_value == 59)
-	{
-		if (ent->client->pers.skill_levels[58] > 0)
-		{
-			ent->client->pers.skill_levels[58]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand(ent - g_entities, "print \"You reached the minimum level of ^3Health Regeneration ^7skill.\n\"");
-			return;
-		}
-	}
-
-	if (downgrade_value == 60)
-	{
-		if (ent->client->pers.skill_levels[59] > 0)
-		{
-			ent->client->pers.skill_levels[59]--;
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand(ent - g_entities, "print \"You reached the minimum level of ^3Shield Regeneration ^7skill.\n\"");
-			return;
-		}
-	}
+	}*/
 
 	// GalaxyRP (Alex): [Database] Only update the skills table.
 	update_skills_table_row_with_current_values(ent);
 
 	trap->SendServerCommand( ent-g_entities, "print \"Skill downgraded successfully.\n\"" );
-}
-
-/*
-==================
-Cmd_DownSkill_f
-==================
-*/
-void Cmd_DownSkill_f( gentity_t *ent ) {
-	char arg1[MAX_STRING_CHARS]; // zyk: value the user sends as an arg which is the skill to be downgraded
-	int downgrade_value; // zyk: the integer value of arg1
-
-	if ( trap->Argc() != 2) 
-	{ 
-		trap->SendServerCommand( ent-g_entities, "print \"You must specify the number of the skill to be downgraded.\n\"" ); 
-		return;
-	}
-
-	trap->Argv( 1, arg1, sizeof( arg1 ) );
-	downgrade_value = atoi(arg1);
-
-	if (zyk_rp_mode.integer == 1)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You can't downgrade skill when RP Mode is activated by an admin.\n\"" );
-		return;
-	}
-
-	do_downgrade_skill(ent, downgrade_value);
 }
 
 // GalaxyRP (Alex): [Skill Display] This method returns a color string based on the ability alignment. Used in displaying the skill to the user.
@@ -14298,7 +13446,7 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 		return;
 	}
 
-	do_downgrade_skill(&g_entities[client_id], atoi(arg2));
+	do_downgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1);
 	trap->SendServerCommand( ent-g_entities, va("print \"Downgraded target player skill\n\"") );
 }
 
