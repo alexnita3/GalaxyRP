@@ -9166,8 +9166,8 @@ void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
 		return qfalse;
 	}
 
-	char maximum_skill_message[256] = "print \"^1You reached the minimum level of ^3%s ^1skill. Nothing was updated.\n\"";
-	char maximum_skill_message_other[256] = "print \"^1Target already reached the minimum level of ^3%s ^1skill. Nothing was updated\n\"";
+	char minimum_skill_message[256] = "print \"^1You reached the minimum level of ^3%s ^1skill. Nothing was updated.\n\"";
+	char minimum_skill_message_other[256] = "print \"^1Target already reached the minimum level of ^3%s ^1skill. Nothing was updated\n\"";
 
 	//max shield is special
 	if (downgrade_value == 30)
@@ -9181,9 +9181,9 @@ void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, ent->client->pers.skill_levels[30]));
+				trap->SendServerCommand(ent - g_entities, va(minimum_skill_message, ent->client->pers.skill_levels[30]));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, ent->client->pers.skill_levels[30]));
+					trap->SendServerCommand(ent2 - g_entities, va(minimum_skill_message_other, ent->client->pers.skill_levels[30]));
 				}
 			}
 			return qfalse;
@@ -9204,9 +9204,9 @@ void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, ent->client->pers.skill_levels[54]));
+				trap->SendServerCommand(ent - g_entities, va(minimum_skill_message, ent->client->pers.skill_levels[54]));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, ent->client->pers.skill_levels[54]));
+					trap->SendServerCommand(ent2 - g_entities, va(minimum_skill_message_other, ent->client->pers.skill_levels[54]));
 				}
 			}
 			return qfalse;
@@ -9232,9 +9232,9 @@ void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, skills[downgrade_value].skill_name));
+				trap->SendServerCommand(ent - g_entities, va(minimum_skill_message, skills[downgrade_value].skill_name));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, skills[downgrade_value].skill_name));
+					trap->SendServerCommand(ent2 - g_entities, va(minimum_skill_message_other, skills[downgrade_value].skill_name));
 				}
 			}
 			return qfalse;
@@ -9252,9 +9252,9 @@ void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
 		else
 		{
 			if (dont_show_message == qfalse) {
-				trap->SendServerCommand(ent - g_entities, va(maximum_skill_message, skills[downgrade_value].skill_name));
+				trap->SendServerCommand(ent - g_entities, va(minimum_skill_message, skills[downgrade_value].skill_name));
 				if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-					trap->SendServerCommand(ent2 - g_entities, va(maximum_skill_message_other, skills[downgrade_value].skill_name));
+					trap->SendServerCommand(ent2 - g_entities, va(minimum_skill_message_other, skills[downgrade_value].skill_name));
 				}
 			}
 			return qfalse;
@@ -9286,11 +9286,6 @@ void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
 			return;
 		}
 	}*/
-
-	// GalaxyRP (Alex): [Database] Only update the skills table.
-	update_skills_table_row_with_current_values(ent);
-
-	trap->SendServerCommand( ent-g_entities, "print \"Skill downgraded successfully.\n\"" );
 }
 
 // GalaxyRP (Alex): [Skill Display] This method returns a color string based on the ability alignment. Used in displaying the skill to the user.
@@ -13447,6 +13442,10 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 	}
 
 	do_downgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1);
+
+	// GalaxyRP (Alex): [Database] Only update the skills table.
+	update_skills_table_row_with_current_values(&g_entities[client_id]);
+
 	trap->SendServerCommand( ent-g_entities, va("print \"Downgraded target player skill\n\"") );
 }
 
