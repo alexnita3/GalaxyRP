@@ -8999,307 +8999,6 @@ char *zyk_get_settings_values(gentity_t *ent)
 	return G_NewString(content);
 }
 
-qboolean validate_upgrade_skill(gentity_t *ent, gentity_t *ent2, int upgrade_value, qboolean dont_show_message)
-{
-	// zyk: validation on the upgrade level, which must be in the range of valid skills.
-	if (upgrade_value < 0 || upgrade_value >= NUM_OF_SKILLS)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Invalid skill number.\n\"" );
-		return qfalse;
-	}
-
-	// zyk: the user must have skillpoints to get a new skill level
-	if (ent->client->pers.skillpoints == 0)
-	{
-		if (dont_show_message == qfalse) {
-			trap->SendServerCommand(ent - g_entities, "print \"^1You don't have enough skillpoints.\n\"");
-			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-				trap->SendServerCommand(ent2 - g_entities, "print \"^1Target player doesn't have enough skillpoints.\n\"");
-			}
-		}
-		return qfalse;
-	}
-
-	// zyk: validation on skills that require certain conditions to be upgraded
-	if (upgrade_value == 20 && ent->client->pers.skill_levels[19] == 1 && !(ent->client->pers.secrets_found & (1 << 12)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"You must buy the Blaster Pack Weapons Upgrade to get 2/2 in Blaster Pistol.\n\"" );
-		return qfalse;
-	}
-
-	if (upgrade_value == 21 && ent->client->pers.skill_levels[20] == 1 && !(ent->client->pers.secrets_found & (1 << 12)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"You must buy the Blaster Pack Weapons Upgrade to get 2/2 in E11 Blaster Rifle.\n\"" );
-		return qfalse;
-	}
-
-	if (upgrade_value == 22 && ent->client->pers.skill_levels[21] == 1 && !(ent->client->pers.secrets_found & (1 << 11)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"You must buy the Power Cell Weapons Upgrade to get 2/2 in Disruptor.\n\"" );
-		return qfalse;
-	}
-
-	if (upgrade_value == 23 && ent->client->pers.skill_levels[22] == 1 && !(ent->client->pers.secrets_found & (1 << 11)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"You must buy the Power Cell Weapons Upgrade to get 2/2 in Bowcaster.\n\"" );
-		return qfalse;
-	}
-
-	if (upgrade_value == 24 && ent->client->pers.skill_levels[23] == 1 && !(ent->client->pers.secrets_found & (1 << 13)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"You must buy the Metal Bolts Weapons Upgrade to get 2/2 in Repeater.\n\"" );
-		return qfalse;
-	}
-
-	if (upgrade_value == 25 && ent->client->pers.skill_levels[24] == 1 && !(ent->client->pers.secrets_found & (1 << 11)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"You must buy the Power Cell Weapons Upgrade to get 2/2 in DEMP2.\n\"" );
-		return qfalse;
-	}
-
-	if (upgrade_value == 26 && ent->client->pers.skill_levels[25] == 1 && !(ent->client->pers.secrets_found & (1 << 13)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"You must buy the Metal Bolts Weapons Upgrade to get 2/2 in Flechette.\n\"" );
-		return qfalse;
-	}
-
-	if (upgrade_value == 27 && ent->client->pers.skill_levels[26] == 1 && !(ent->client->pers.secrets_found & (1 << 14)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"You must buy the Rocket Upgrade to get 2/2 in Rocket Launcher.\n\"" );
-		return qfalse;
-	}
-
-	if (upgrade_value == 28 && ent->client->pers.skill_levels[27] == 1 && !(ent->client->pers.secrets_found & (1 << 13)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"You must buy the Metal Bolts Weapons Upgrade to get 2/2 in Concussion Rifle.\n\"" );
-		return qfalse;
-	}
-
-	if (upgrade_value == 29 && ent->client->pers.skill_levels[28] == 1 && !(ent->client->pers.secrets_found & (1 << 12)))
-	{
-		if (dont_show_message == qfalse)
-			trap->SendServerCommand( ent-g_entities, "print \"You must buy the Blaster Pack Weapons Upgrade to get 2/2 in Bryar Pistol.\n\"" );
-		return qfalse;
-	}
-
-	if (upgrade_value == 58 && ent->client->pers.skill_levels[57] == 0 && ent->client->pers.skill_levels[18] == 0)
-	{
-		if (dont_show_message == qfalse) {
-			trap->SendServerCommand(ent - g_entities, "print \"^1You must have the ^3Stun baton ^1skill first.\n\"");
-			trap->SendServerCommand(ent2 - g_entities, "print \"^1Player must have the ^3Stun baton ^1skill first\n\"");
-		}
-		return qfalse;
-	}
-
-	return qtrue;
-}
-
-void do_upgrade_skill(gentity_t *ent, gentity_t *target_ent, int upgrade_value, qboolean update_all)
-{
-	if (update_all == qfalse)
-	{ // zyk: update a single skill
-		qboolean is_upgraded = qfalse;
-
-		if (validate_upgrade_skill(target_ent, ent, upgrade_value, qfalse) == qfalse)
-		{
-			return;
-		}
-
-		// zyk: the upgrade is done if it doesnt go above the maximum level of the skill
-		is_upgraded = rpg_upgrade_skill(target_ent, ent, upgrade_value, qfalse);
-
-		if (is_upgraded == qfalse)
-			return;
-
-		// GalaxyRP (Alex): [Database] Only update the skills table. Also update the characters table to save the skill point
-		update_skills_table_row_with_current_values(target_ent);
-	}
-	else
-	{ // zyk: update all skills
-		int i = 0;
-
-		for (i = 1; i <= NUM_OF_SKILLS; i++)
-		{
-			int j = 0;
-
-			for (j = 0; j < 5; j++)
-			{
-				if (validate_upgrade_skill(target_ent, ent, i, qtrue) == qtrue)
-				{
-					// zyk: the upgrade is done if it doesnt go above the maximum level of the skill
-					rpg_upgrade_skill(target_ent, ent, i, qtrue);
-				}
-			}
-		}
-
-		// GalaxyRP (Alex): [Database] Only update the skills table.
-		update_skills_table_row_with_current_values(target_ent);
-
-		trap->SendServerCommand( ent-g_entities, "print \"Skills upgraded successfully.\n\"" );
-		trap->SendServerCommand(ent - g_entities, "print \"Target skill upgraded successfully.\n\"");
-	}
-}
-
-/*
-==================
-Cmd_UpSkill_f
-==================
-*/
-void Cmd_UpSkill_f( gentity_t *ent ) {
-	char arg1[MAX_STRING_CHARS]; // zyk: value the user sends as an arg which is the skill to be upgraded
-	int upgrade_value; // zyk: the integer value of arg1
-		    
-	if ( trap->Argc() != 2) 
-	{ 
-		trap->SendServerCommand( ent-g_entities, "print \"You must specify the number of the skill to be upgraded.\n\"" ); 
-		return;
-	}
-
-	trap->Argv( 1, arg1, sizeof( arg1 ) );
-	upgrade_value = atoi(arg1);
-
-	if (zyk_rp_mode.integer == 1)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"You can't upgrade skill when RP Mode is activated by an admin.\n\"" );
-		return;
-	}
-
-	if (validate_rpg_class(ent) == qfalse)
-		return;
-
-	if (Q_stricmp(arg1, "all") == 0)
-	{ // zyk: upgrade all skills of this class
-		do_upgrade_skill(ent, ent, 0, qtrue);
-	}
-	else
-	{
-		do_upgrade_skill(ent, ent, upgrade_value - 1, qfalse);
-	}
-}
-
-void do_downgrade_skill(gentity_t *ent, gentity_t *ent2, int downgrade_value)
-{
-	qboolean dont_show_message = qfalse;
-
-	// zyk: validation on the upgrade level, which must be in the range of valid skills.
-	if (downgrade_value < 0 || downgrade_value >= NUM_OF_SKILLS)
-	{
-		trap->SendServerCommand(ent - g_entities, "print \"Invalid skill number.\n\"");
-		return qfalse;
-	}
-
-	//max shield is special
-	if (downgrade_value == 30)
-	{
-		if (ent->client->pers.skill_levels[downgrade_value] > 0)
-		{
-			ent->client->pers.skill_levels[downgrade_value]--;
-			set_max_shield(ent);
-			ent->client->pers.skillpoints++;
-			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
-		}
-		else
-		{
-			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
-			return qfalse;
-		}
-		return qtrue;
-	}
-
-	//max force power is special
-	if (downgrade_value == 54)
-	{
-		if (ent->client->pers.skill_levels[downgrade_value] > 0)
-		{
-			ent->client->pers.skill_levels[downgrade_value]--;
-			ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent->client->pers.skill_levels[downgrade_value]);
-			ent->client->ps.fd.forcePowerMax = ent->client->pers.max_force_power;
-			ent->client->pers.skillpoints++;
-			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
-		}
-		else
-		{
-			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
-			return qfalse;
-		}
-		return qtrue;
-	}
-
-
-	//only for proper force powers
-	if (skills[downgrade_value].force_power_internal != 0) {
-		if (ent->client->pers.skill_levels[downgrade_value] > 0)
-		{
-			ent->client->pers.skill_levels[downgrade_value]--;
-			ent->client->ps.fd.forcePowerLevel[skills[downgrade_value].force_power_internal] = ent->client->pers.skill_levels[downgrade_value];
-			if (ent->client->ps.fd.forcePowerLevel[skills[downgrade_value].force_power_internal] == 0) 
-			{
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << skills[downgrade_value].force_power_internal);
-			}
-			ent->client->pers.skillpoints++;
-
-			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
-			return qtrue;
-		}
-		else
-		{
-			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
-			return qfalse;
-		}
-	}
-	//other kind of powers
-	else {
-		if (ent->client->pers.skill_levels[downgrade_value] > 0)
-		{
-			ent->client->pers.skill_levels[downgrade_value]--;
-			ent->client->pers.skillpoints++;
-
-			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
-			return qtrue;
-		}
-		else
-		{
-			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
-			return qfalse;
-		}
-	}
-
-	/*if (downgrade_value == 6)
-	{
-		if (ent->client->pers.skill_levels[5] > 0)
-		{
-			ent->client->pers.skill_levels[5]--;
-			ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] = ent->client->pers.skill_levels[5];
-			if (ent->client->saber[0].model[0] && !ent->client->saber[1].model[0])
-			{
-				ent->client->ps.fd.saberAnimLevelBase = ent->client->ps.fd.saberAnimLevel = ent->client->ps.fd.saberDrawAnimLevel = ent->client->sess.saberLevel = ent->client->pers.skill_levels[5];
-				ent->client->ps.fd.saberAnimLevel = ent->client->pers.skill_levels[5];
-			}
-			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] == 0)
-			{
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SABER_OFFENSE);
-				ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_SABER);
-				ent->client->ps.weapon = WP_MELEE;
-			}
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Saber Attack ^7skill.\n\"" );
-			return;
-		}
-	}*/
-}
-
 // GalaxyRP (Alex): [Skill Display] This method returns a color string based on the ability alignment. Used in displaying the skill to the user.
 char *color_ability(skill_t skill) {
 	if (strcmp(skill.alignment, "light") == 0) {
@@ -13376,6 +13075,270 @@ void Cmd_AdminDown_f( gentity_t *ent ) {
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"You can't use this command.\n\"" );
 	}
+}
+
+qboolean validate_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qboolean dont_show_message)
+{
+	// zyk: validation on the upgrade level, which must be in the range of valid skills.
+	if (upgrade_value < 0 || upgrade_value >= NUM_OF_SKILLS)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Invalid skill number.\n\"");
+		return qfalse;
+	}
+
+	// zyk: the user must have skillpoints to get a new skill level
+	if (ent->client->pers.skillpoints == 0)
+	{
+		if (dont_show_message == qfalse) {
+			trap->SendServerCommand(ent - g_entities, "print \"^1You don't have enough skillpoints.\n\"");
+			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
+				trap->SendServerCommand(ent2 - g_entities, "print \"^1Target player doesn't have enough skillpoints.\n\"");
+			}
+		}
+		return qfalse;
+	}
+
+	// zyk: validation on skills that require certain conditions to be upgraded
+	if (upgrade_value == 20 && ent->client->pers.skill_levels[19] == 1 && !(ent->client->pers.secrets_found & (1 << 12)))
+	{
+		if (dont_show_message == qfalse)
+			trap->SendServerCommand(ent - g_entities, "print \"You must buy the Blaster Pack Weapons Upgrade to get 2/2 in Blaster Pistol.\n\"");
+		return qfalse;
+	}
+
+	if (upgrade_value == 21 && ent->client->pers.skill_levels[20] == 1 && !(ent->client->pers.secrets_found & (1 << 12)))
+	{
+		if (dont_show_message == qfalse)
+			trap->SendServerCommand(ent - g_entities, "print \"You must buy the Blaster Pack Weapons Upgrade to get 2/2 in E11 Blaster Rifle.\n\"");
+		return qfalse;
+	}
+
+	if (upgrade_value == 22 && ent->client->pers.skill_levels[21] == 1 && !(ent->client->pers.secrets_found & (1 << 11)))
+	{
+		if (dont_show_message == qfalse)
+			trap->SendServerCommand(ent - g_entities, "print \"You must buy the Power Cell Weapons Upgrade to get 2/2 in Disruptor.\n\"");
+		return qfalse;
+	}
+
+	if (upgrade_value == 23 && ent->client->pers.skill_levels[22] == 1 && !(ent->client->pers.secrets_found & (1 << 11)))
+	{
+		if (dont_show_message == qfalse)
+			trap->SendServerCommand(ent - g_entities, "print \"You must buy the Power Cell Weapons Upgrade to get 2/2 in Bowcaster.\n\"");
+		return qfalse;
+	}
+
+	if (upgrade_value == 24 && ent->client->pers.skill_levels[23] == 1 && !(ent->client->pers.secrets_found & (1 << 13)))
+	{
+		if (dont_show_message == qfalse)
+			trap->SendServerCommand(ent - g_entities, "print \"You must buy the Metal Bolts Weapons Upgrade to get 2/2 in Repeater.\n\"");
+		return qfalse;
+	}
+
+	if (upgrade_value == 25 && ent->client->pers.skill_levels[24] == 1 && !(ent->client->pers.secrets_found & (1 << 11)))
+	{
+		if (dont_show_message == qfalse)
+			trap->SendServerCommand(ent - g_entities, "print \"You must buy the Power Cell Weapons Upgrade to get 2/2 in DEMP2.\n\"");
+		return qfalse;
+	}
+
+	if (upgrade_value == 26 && ent->client->pers.skill_levels[25] == 1 && !(ent->client->pers.secrets_found & (1 << 13)))
+	{
+		if (dont_show_message == qfalse)
+			trap->SendServerCommand(ent - g_entities, "print \"You must buy the Metal Bolts Weapons Upgrade to get 2/2 in Flechette.\n\"");
+		return qfalse;
+	}
+
+	if (upgrade_value == 27 && ent->client->pers.skill_levels[26] == 1 && !(ent->client->pers.secrets_found & (1 << 14)))
+	{
+		if (dont_show_message == qfalse)
+			trap->SendServerCommand(ent - g_entities, "print \"You must buy the Rocket Upgrade to get 2/2 in Rocket Launcher.\n\"");
+		return qfalse;
+	}
+
+	if (upgrade_value == 28 && ent->client->pers.skill_levels[27] == 1 && !(ent->client->pers.secrets_found & (1 << 13)))
+	{
+		if (dont_show_message == qfalse)
+			trap->SendServerCommand(ent - g_entities, "print \"You must buy the Metal Bolts Weapons Upgrade to get 2/2 in Concussion Rifle.\n\"");
+		return qfalse;
+	}
+
+	if (upgrade_value == 29 && ent->client->pers.skill_levels[28] == 1 && !(ent->client->pers.secrets_found & (1 << 12)))
+	{
+		if (dont_show_message == qfalse)
+			trap->SendServerCommand(ent - g_entities, "print \"You must buy the Blaster Pack Weapons Upgrade to get 2/2 in Bryar Pistol.\n\"");
+		return qfalse;
+	}
+
+	if (upgrade_value == 58 && ent->client->pers.skill_levels[57] == 0 && ent->client->pers.skill_levels[18] == 0)
+	{
+		if (dont_show_message == qfalse) {
+			trap->SendServerCommand(ent - g_entities, "print \"^1You must have the ^3Stun baton ^1skill first.\n\"");
+			trap->SendServerCommand(ent2 - g_entities, "print \"^1Player must have the ^3Stun baton ^1skill first\n\"");
+		}
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+void do_upgrade_skill(gentity_t* ent, gentity_t* target_ent, int upgrade_value, qboolean update_all)
+{
+	if (update_all == qfalse)
+	{ // zyk: update a single skill
+		qboolean is_upgraded = qfalse;
+
+		if (validate_upgrade_skill(target_ent, ent, upgrade_value, qfalse) == qfalse)
+		{
+			return;
+		}
+
+		// zyk: the upgrade is done if it doesnt go above the maximum level of the skill
+		is_upgraded = rpg_upgrade_skill(target_ent, ent, upgrade_value, qfalse);
+
+		if (is_upgraded == qfalse)
+			return;
+
+		// GalaxyRP (Alex): [Database] Only update the skills table. Also update the characters table to save the skill point
+		update_skills_table_row_with_current_values(target_ent);
+	}
+	else
+	{ // zyk: update all skills
+		int i = 0;
+
+		for (i = 1; i <= NUM_OF_SKILLS; i++)
+		{
+			int j = 0;
+
+			for (j = 0; j < 5; j++)
+			{
+				if (validate_upgrade_skill(target_ent, ent, i, qtrue) == qtrue)
+				{
+					// zyk: the upgrade is done if it doesnt go above the maximum level of the skill
+					rpg_upgrade_skill(target_ent, ent, i, qtrue);
+				}
+			}
+		}
+
+		// GalaxyRP (Alex): [Database] Only update the skills table.
+		update_skills_table_row_with_current_values(target_ent);
+
+		trap->SendServerCommand(ent - g_entities, "print \"Skills upgraded successfully.\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"Target skill upgraded successfully.\n\"");
+	}
+}
+
+void do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int downgrade_value)
+{
+	qboolean dont_show_message = qfalse;
+
+	// zyk: validation on the upgrade level, which must be in the range of valid skills.
+	if (downgrade_value < 0 || downgrade_value >= NUM_OF_SKILLS)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Invalid skill number.\n\"");
+		return qfalse;
+	}
+
+	//max shield is special
+	if (downgrade_value == 30)
+	{
+		if (ent->client->pers.skill_levels[downgrade_value] > 0)
+		{
+			ent->client->pers.skill_levels[downgrade_value]--;
+			set_max_shield(ent);
+			ent->client->pers.skillpoints++;
+			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
+		}
+		else
+		{
+			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
+			return qfalse;
+		}
+		return qtrue;
+	}
+
+	//max force power is special
+	if (downgrade_value == 54)
+	{
+		if (ent->client->pers.skill_levels[downgrade_value] > 0)
+		{
+			ent->client->pers.skill_levels[downgrade_value]--;
+			ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent->client->pers.skill_levels[downgrade_value]);
+			ent->client->ps.fd.forcePowerMax = ent->client->pers.max_force_power;
+			ent->client->pers.skillpoints++;
+			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
+		}
+		else
+		{
+			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
+			return qfalse;
+		}
+		return qtrue;
+	}
+
+
+	//only for proper force powers
+	if (skills[downgrade_value].force_power_internal != 0) {
+		if (ent->client->pers.skill_levels[downgrade_value] > 0)
+		{
+			ent->client->pers.skill_levels[downgrade_value]--;
+			ent->client->ps.fd.forcePowerLevel[skills[downgrade_value].force_power_internal] = ent->client->pers.skill_levels[downgrade_value];
+			if (ent->client->ps.fd.forcePowerLevel[skills[downgrade_value].force_power_internal] == 0)
+			{
+				ent->client->ps.fd.forcePowersKnown &= ~(1 << skills[downgrade_value].force_power_internal);
+			}
+			ent->client->pers.skillpoints++;
+
+			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
+			return qtrue;
+		}
+		else
+		{
+			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
+			return qfalse;
+		}
+	}
+	//other kind of powers
+	else {
+		if (ent->client->pers.skill_levels[downgrade_value] > 0)
+		{
+			ent->client->pers.skill_levels[downgrade_value]--;
+			ent->client->pers.skillpoints++;
+
+			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
+			return qtrue;
+		}
+		else
+		{
+			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
+			return qfalse;
+		}
+	}
+
+	/*if (downgrade_value == 6)
+	{
+		if (ent->client->pers.skill_levels[5] > 0)
+		{
+			ent->client->pers.skill_levels[5]--;
+			ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] = ent->client->pers.skill_levels[5];
+			if (ent->client->saber[0].model[0] && !ent->client->saber[1].model[0])
+			{
+				ent->client->ps.fd.saberAnimLevelBase = ent->client->ps.fd.saberAnimLevel = ent->client->ps.fd.saberDrawAnimLevel = ent->client->sess.saberLevel = ent->client->pers.skill_levels[5];
+				ent->client->ps.fd.saberAnimLevel = ent->client->pers.skill_levels[5];
+			}
+			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] == 0)
+			{
+				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SABER_OFFENSE);
+				ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_SABER);
+				ent->client->ps.weapon = WP_MELEE;
+			}
+			ent->client->pers.skillpoints++;
+		}
+		else
+		{
+			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Saber Attack ^7skill.\n\"" );
+			return;
+		}
+	}*/
 }
 
 /*
