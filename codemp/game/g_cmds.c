@@ -13015,7 +13015,7 @@ qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qb
 		return qfalse;
 	}
 
-	//max shield is special
+	//GalaxyRP (Alex): [Skill] The max shield skill goes here.
 	if (upgrade_value == 30)
 	{
 		if (ent2->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
@@ -13034,7 +13034,7 @@ qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qb
 		return qtrue;
 	}
 
-	//max force power is special
+	//GalaxyRP (Alex): [Skill] The Max force power skill goes here.
 	if (upgrade_value == 54)
 	{
 		if (ent2->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
@@ -13055,7 +13055,7 @@ qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qb
 	}
 
 
-	//only for proper force powers
+	//GalaxyRP (Alex): [Skill] Only Force powers with associated abilities go here.
 	if (skills[upgrade_value].force_power_internal != 0) {
 		if (ent2->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
 		{
@@ -13074,7 +13074,7 @@ qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qb
 			return qfalse;
 		}
 	}
-	//other kind of powers
+	//GalaxyRP (Alex): [Skill] All other skills fall into this.
 	else {
 		if (ent2->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
 		{
@@ -13105,7 +13105,7 @@ void do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int downgrade_value)
 		return qfalse;
 	}
 
-	//max shield is special
+	//GalaxyRP (Alex): [Skill] The max shield skill goes here.
 	if (downgrade_value == 30)
 	{
 		if (ent2->client->pers.skill_levels[downgrade_value] > 0)
@@ -13123,7 +13123,7 @@ void do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int downgrade_value)
 		return qtrue;
 	}
 
-	//max force power is special
+	//GalaxyRP (Alex): [Skill] The Max force power skill goes here.
 	if (downgrade_value == 54)
 	{
 		if (ent2->client->pers.skill_levels[downgrade_value] > 0)
@@ -13143,7 +13143,7 @@ void do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int downgrade_value)
 	}
 
 
-	//only for proper force powers
+	//GalaxyRP (Alex): [Skill] Only Force powers with associated abilities go here.
 	if (skills[downgrade_value].force_power_internal != 0) {
 		if (ent2->client->pers.skill_levels[downgrade_value] > 0)
 		{
@@ -13164,7 +13164,7 @@ void do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int downgrade_value)
 			return qfalse;
 		}
 	}
-	//other kind of powers
+	//GalaxyRP (Alex): [Skill] All other skills fall into this.
 	else {
 		if (ent2->client->pers.skill_levels[downgrade_value] > 0)
 		{
@@ -13181,7 +13181,8 @@ void do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int downgrade_value)
 		}
 	}
 
-	/*if (downgrade_value == 6)
+	/* GalaxyRP (Alex): [Skill]:
+	if (downgrade_value == 6)
 	{
 		if (ent->client->pers.skill_levels[5] > 0)
 		{
