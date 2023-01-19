@@ -12945,7 +12945,7 @@ void Cmd_AdminDown_f( gentity_t *ent ) {
 	}
 }
 
-void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgrade, qboolean success, char* skill_name[256]) {
+void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgrade, qboolean success, int skill_id) {
 	char success_message[256];
 
 	if (downgrade == qtrue) {
@@ -12953,19 +12953,19 @@ void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgra
 
 			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
 
-				strcpy(success_message, "print \"^2You downgraded the target's ^3%s ^2skill.\n\"");
+				strcpy(success_message, "print \"^2You downgraded the target's ^3%s ^2skill. Current value: ^3%d^2.\n\"");
 			}
 			else {
-				strcpy(success_message, "print \"^2You downgraded the ^3%s ^2skill.\n\"");
+				strcpy(success_message, "print \"^2You downgraded the ^3%s ^2skill. Current value: ^3%d^2.\n\"");
 			}
 		}
 		else {
 			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
 
-				strcpy(success_message, "print \"^1Target already reached the minimum level of ^3%s ^1skill. Nothing was updated\n\"");
+				strcpy(success_message, "print \"^1Target already reached the minimum level of ^3%s ^1skill. Nothing was updated. Current value: ^3%d^2.\n\"");
 			}
 			else {
-				strcpy(success_message, "print \"^1You reached the minimum level of ^3%s ^1skill. Nothing was updated.\n\"");
+				strcpy(success_message, "print \"^1You reached the minimum level of ^3%s ^1skill. Nothing was updated. Current value: ^3%d^2.\n\"");
 			}
 		}
 	}
@@ -12974,10 +12974,10 @@ void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgra
 
 			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
 
-				strcpy(success_message, "print \"^2You upgraded the target's ^3%s ^2skill.\n\"");
+				strcpy(success_message, "print \"^2You upgraded the target's ^3%s ^2skill. Current value: ^3%d^2.\n\"");
 			}
 			else {
-				strcpy(success_message, "print \"^2You upgraded the ^3%s ^2skill.\n\"");
+				strcpy(success_message, "print \"^2You upgraded the ^3%s ^2skill. Current value: ^3%d^2.\n\"");
 			}
 
 
@@ -12985,18 +12985,18 @@ void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgra
 		else {
 			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
 
-				strcpy(success_message, "print \"^1Target already reached the maximum level of ^3%s ^1skill. Nothing was updated\n\"");
+				strcpy(success_message, "print \"^1Target already reached the maximum level of ^3%s ^1skill. Nothing was updated. Current value: ^3%d^2.\n\"");
 			}
 			else {
-				strcpy(success_message, "print \"^1You reached the maximum level of ^3%s ^1skill. Nothing was updated.\n\"");
+				strcpy(success_message, "print \"^1You reached the maximum level of ^3%s ^1skill. Nothing was updated. Current value: ^3%d^2.\n\"");
 			}
 		}
 	}
 
-	trap->SendServerCommand(ent - g_entities, va(success_message, skill_name));
+	trap->SendServerCommand(ent - g_entities, va(success_message, skills[skill_id].skill_name, ent2->client->pers.skill_levels[skill_id]));
 }
 
-qboolean rpg_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qboolean dont_show_message)
+qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qboolean dont_show_message)
 {
 	if (upgrade_value < 0 || upgrade_value >= NUM_OF_SKILLS)
 	{
@@ -13018,17 +13018,17 @@ qboolean rpg_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, q
 	//max shield is special
 	if (upgrade_value == 30)
 	{
-		if (ent->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
+		if (ent2->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
 		{
-			ent->client->pers.skill_levels[upgrade_value]++;
+			ent2->client->pers.skill_levels[upgrade_value]++;
 			set_max_shield(ent);
-			ent->client->pers.skillpoints--;
+			ent2->client->pers.skillpoints--;
 
-			show_skill_change_message(ent, ent2, qfalse, qtrue, skills[upgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qfalse, qtrue, upgrade_value);
 		}
 		else
 		{
-			show_skill_change_message(ent, ent2, qfalse, qfalse, skills[upgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qfalse, qfalse, upgrade_value);
 			return qfalse;
 		}
 		return qtrue;
@@ -13037,18 +13037,18 @@ qboolean rpg_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, q
 	//max force power is special
 	if (upgrade_value == 54)
 	{
-		if (ent->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
+		if (ent2->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
 		{
-			ent->client->pers.skill_levels[upgrade_value]++;
-			ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent->client->pers.skill_levels[upgrade_value]);
-			ent->client->ps.fd.forcePowerMax = ent->client->pers.max_force_power;
-			ent->client->pers.skillpoints--;
+			ent2->client->pers.skill_levels[upgrade_value]++;
+			ent2->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent2->client->pers.skill_levels[upgrade_value]);
+			ent2->client->ps.fd.forcePowerMax = ent2->client->pers.max_force_power;
+			ent2->client->pers.skillpoints--;
 
-			show_skill_change_message(ent, ent2, qfalse, qtrue, skills[upgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qfalse, qtrue, upgrade_value);
 		}
 		else
 		{
-			show_skill_change_message(ent, ent2, qfalse, qfalse, skills[upgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qfalse, qfalse, upgrade_value);
 			return qfalse;
 		}
 		return qtrue;
@@ -13057,36 +13057,36 @@ qboolean rpg_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, q
 
 	//only for proper force powers
 	if (skills[upgrade_value].force_power_internal != 0) {
-		if (ent->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
+		if (ent2->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
 		{
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << skills[upgrade_value].force_power_internal)))
-				ent->client->ps.fd.forcePowersKnown |= (1 << skills[upgrade_value].force_power_internal);
-			ent->client->pers.skill_levels[upgrade_value]++;
-			ent->client->ps.fd.forcePowerLevel[skills[upgrade_value].force_power_internal] = ent->client->pers.skill_levels[upgrade_value];
-			ent->client->pers.skillpoints--;
+			if (!(ent2->client->ps.fd.forcePowersKnown & (1 << skills[upgrade_value].force_power_internal)))
+				ent2->client->ps.fd.forcePowersKnown |= (1 << skills[upgrade_value].force_power_internal);
+			ent2->client->pers.skill_levels[upgrade_value]++;
+			ent2->client->ps.fd.forcePowerLevel[skills[upgrade_value].force_power_internal] = ent2->client->pers.skill_levels[upgrade_value];
+			ent2->client->pers.skillpoints--;
 
-			show_skill_change_message(ent, ent2, qfalse, qtrue, skills[upgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qfalse, qtrue, upgrade_value);
 			return qtrue;
 		}
 		else
 		{
-			show_skill_change_message(ent, ent2, qfalse, qfalse, skills[upgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qfalse, qfalse, upgrade_value);
 			return qfalse;
 		}
 	}
 	//other kind of powers
 	else {
-		if (ent->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
+		if (ent2->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
 		{
-			ent->client->pers.skill_levels[upgrade_value]++;
-			ent->client->pers.skillpoints--;
+			ent2->client->pers.skill_levels[upgrade_value]++;
+			ent2->client->pers.skillpoints--;
 
-			show_skill_change_message(ent, ent2, qfalse, qtrue, skills[upgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qfalse, qtrue, upgrade_value);
 			return qtrue;
 		}
 		else
 		{
-			show_skill_change_message(ent, ent2, qfalse, qfalse, skills[upgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qfalse, qfalse, upgrade_value);
 			return qfalse;
 		}
 	}
@@ -13108,16 +13108,16 @@ void do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int downgrade_value)
 	//max shield is special
 	if (downgrade_value == 30)
 	{
-		if (ent->client->pers.skill_levels[downgrade_value] > 0)
+		if (ent2->client->pers.skill_levels[downgrade_value] > 0)
 		{
-			ent->client->pers.skill_levels[downgrade_value]--;
+			ent2->client->pers.skill_levels[downgrade_value]--;
 			set_max_shield(ent);
-			ent->client->pers.skillpoints++;
-			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
+			ent2->client->pers.skillpoints++;
+			show_skill_change_message(ent, ent2, qtrue, qtrue, downgrade_value);
 		}
 		else
 		{
-			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qtrue, qfalse, downgrade_value);
 			return qfalse;
 		}
 		return qtrue;
@@ -13126,17 +13126,17 @@ void do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int downgrade_value)
 	//max force power is special
 	if (downgrade_value == 54)
 	{
-		if (ent->client->pers.skill_levels[downgrade_value] > 0)
+		if (ent2->client->pers.skill_levels[downgrade_value] > 0)
 		{
-			ent->client->pers.skill_levels[downgrade_value]--;
-			ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent->client->pers.skill_levels[downgrade_value]);
-			ent->client->ps.fd.forcePowerMax = ent->client->pers.max_force_power;
-			ent->client->pers.skillpoints++;
-			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
+			ent2->client->pers.skill_levels[downgrade_value]--;
+			ent2->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent2->client->pers.skill_levels[downgrade_value]);
+			ent2->client->ps.fd.forcePowerMax = ent2->client->pers.max_force_power;
+			ent2->client->pers.skillpoints++;
+			show_skill_change_message(ent, ent2, qtrue, qtrue, downgrade_value);
 		}
 		else
 		{
-			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qtrue, qfalse, downgrade_value);
 			return qfalse;
 		}
 		return qtrue;
@@ -13145,38 +13145,38 @@ void do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int downgrade_value)
 
 	//only for proper force powers
 	if (skills[downgrade_value].force_power_internal != 0) {
-		if (ent->client->pers.skill_levels[downgrade_value] > 0)
+		if (ent2->client->pers.skill_levels[downgrade_value] > 0)
 		{
-			ent->client->pers.skill_levels[downgrade_value]--;
-			ent->client->ps.fd.forcePowerLevel[skills[downgrade_value].force_power_internal] = ent->client->pers.skill_levels[downgrade_value];
-			if (ent->client->ps.fd.forcePowerLevel[skills[downgrade_value].force_power_internal] == 0)
+			ent2->client->pers.skill_levels[downgrade_value]--;
+			ent2->client->ps.fd.forcePowerLevel[skills[downgrade_value].force_power_internal] = ent2->client->pers.skill_levels[downgrade_value];
+			if (ent2->client->ps.fd.forcePowerLevel[skills[downgrade_value].force_power_internal] == 0)
 			{
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << skills[downgrade_value].force_power_internal);
+				ent2->client->ps.fd.forcePowersKnown &= ~(1 << skills[downgrade_value].force_power_internal);
 			}
-			ent->client->pers.skillpoints++;
+			ent2->client->pers.skillpoints++;
 
-			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qtrue, qtrue, downgrade_value);
 			return qtrue;
 		}
 		else
 		{
-			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qtrue, qfalse, downgrade_value);
 			return qfalse;
 		}
 	}
 	//other kind of powers
 	else {
-		if (ent->client->pers.skill_levels[downgrade_value] > 0)
+		if (ent2->client->pers.skill_levels[downgrade_value] > 0)
 		{
-			ent->client->pers.skill_levels[downgrade_value]--;
-			ent->client->pers.skillpoints++;
+			ent2->client->pers.skill_levels[downgrade_value]--;
+			ent2->client->pers.skillpoints++;
 
-			show_skill_change_message(ent, ent2, qtrue, qtrue, skills[downgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qtrue, qtrue, downgrade_value);
 			return qtrue;
 		}
 		else
 		{
-			show_skill_change_message(ent, ent2, qtrue, qfalse, skills[downgrade_value].skill_name);
+			show_skill_change_message(ent, ent2, qtrue, qfalse, downgrade_value);
 			return qfalse;
 		}
 	}
@@ -13247,7 +13247,7 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 	qboolean is_upgraded = qfalse;
 
 	// zyk: the upgrade is done if it doesnt go above the maximum level of the skill
-	is_upgraded = rpg_upgrade_skill(&g_entities[client_id], ent, atoi(arg2) - 1, qfalse);
+	is_upgraded = do_upgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1, qfalse);
 
 	if (is_upgraded == qfalse)
 		return;
