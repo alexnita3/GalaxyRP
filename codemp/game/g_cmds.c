@@ -13094,7 +13094,7 @@ qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qb
 	return qtrue;
 }
 
-void do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int downgrade_value)
+qboolean do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int downgrade_value)
 {
 	qboolean dont_show_message = qfalse;
 
@@ -13250,11 +13250,10 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 	// zyk: the upgrade is done if it doesnt go above the maximum level of the skill
 	is_upgraded = do_upgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1, qfalse);
 
-	if (is_upgraded == qfalse)
-		return;
-
-	// GalaxyRP (Alex): [Database] Only update the skills table. Also update the characters table to save the skill point
-	update_skills_table_row_with_current_values(&g_entities[client_id]);
+	if (is_upgraded == qtrue) {
+		// GalaxyRP (Alex): [Database] Only update the skills table. Also update the characters table to save the skill point
+		update_skills_table_row_with_current_values(&g_entities[client_id]);
+	}
 }
 
 /*
@@ -13293,10 +13292,15 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 		return;
 	}
 
-	do_downgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1);
+	qboolean is_upgraded = qfalse;
 
-	// GalaxyRP (Alex): [Database] Only update the skills table.
-	update_skills_table_row_with_current_values(&g_entities[client_id]);
+	// zyk: the upgrade is done if it doesnt go above the maximum level of the skill
+	is_upgraded = do_downgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1);
+
+	if (is_upgraded == qtrue) {
+		// GalaxyRP (Alex): [Database] Only update the skills table.
+		update_skills_table_row_with_current_values(&g_entities[client_id]);
+	}
 }
 
 /*
