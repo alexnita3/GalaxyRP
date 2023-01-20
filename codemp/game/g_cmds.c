@@ -12945,7 +12945,7 @@ void Cmd_AdminDown_f( gentity_t *ent ) {
 	}
 }
 
-void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgrade, qboolean success, int skill_id) {
+void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgrade, qboolean success, int skill_id, int number_of_changes) {
 	char success_message[256];
 
 	if (downgrade == qtrue) {
@@ -12953,10 +12953,10 @@ void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgra
 
 			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
 
-				strcpy(success_message, "print \"^2You downgraded the target's ^3%s ^2skill. Current value: ^3%d^2.\n\"");
+				strcpy(success_message, "print \"^2You downgraded the target's ^3%s ^2skill by ^3%d ^2points. Current value: ^3%d^2.\n\"");
 			}
 			else {
-				strcpy(success_message, "print \"^2You downgraded the ^3%s ^2skill. Current value: ^3%d^2.\n\"");
+				strcpy(success_message, "print \"^2You downgraded the ^3%s ^2skill by ^3%d ^2points. Current value: ^3%d^2.\n\"");
 			}
 		}
 		else {
@@ -12974,10 +12974,10 @@ void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgra
 
 			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
 
-				strcpy(success_message, "print \"^2You upgraded the target's ^3%s ^2skill. Current value: ^3%d^2.\n\"");
+				strcpy(success_message, "print \"^2You upgraded the target's ^3%s ^2skill by ^3%d ^2points. Current value: ^3%d^2.\n\"");
 			}
 			else {
-				strcpy(success_message, "print \"^2You upgraded the ^3%s ^2skill. Current value: ^3%d^2.\n\"");
+				strcpy(success_message, "print \"^2You upgraded the ^3%s ^2skill by ^3%d ^2points. Current value: ^3%d^2.\n\"");
 			}
 
 
@@ -12985,15 +12985,15 @@ void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgra
 		else {
 			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
 
-				strcpy(success_message, "print \"^1Target already reached the maximum level of ^3%s ^1skill. Nothing was updated. Current value: ^3%d^2.\n\"");
+				strcpy(success_message, "print \"^1Target already reached the maximum level of ^3%s ^1skill. You can only upgrade by ^3%d ^1points. Nothing was updated. Current value: ^3%d^2.\n\"");
 			}
 			else {
-				strcpy(success_message, "print \"^1You reached the maximum level of ^3%s ^1skill. Nothing was updated. Current value: ^3%d^2.\n\"");
+				strcpy(success_message, "print \"^1You already reached the maximum level of ^3%s ^1skill. Nothing was updated. Current value: ^3%d^2.\n\"");
 			}
 		}
 	}
 
-	trap->SendServerCommand(ent - g_entities, va(success_message, skills[skill_id].skill_name, ent2->client->pers.skill_levels[skill_id]));
+	trap->SendServerCommand(ent - g_entities, va(success_message, skills[skill_id].skill_name, number_of_changes, ent2->client->pers.skill_levels[skill_id]));
 }
 
 void apply_skill_change_in_game(gentity_t* ent, int skill_id) {
@@ -13014,24 +13014,39 @@ void apply_skill_change_in_game(gentity_t* ent, int skill_id) {
 
 	//GalaxyRP (Alex): [Skill] Give them the Force Ability.
 	if (skills[skill_id].force_power_internal != 0) {
-		if (!(ent->client->ps.fd.forcePowersKnown & (1 << skills[skill_id].force_power_internal))) {
-			ent->client->ps.fd.forcePowersKnown |= (1 << skills[skill_id].force_power_internal);
-		}
 		ent->client->ps.fd.forcePowerLevel[skills[skill_id].force_power_internal] = ent->client->pers.skill_levels[skill_id];
+		
+		if (ent->client->pers.skill_levels[skill_id] > 0) {
+			if (!(ent->client->ps.fd.forcePowersKnown & (1 << skills[skill_id].force_power_internal))) {
+				ent->client->ps.fd.forcePowersKnown |= (1 << skills[skill_id].force_power_internal);
+			}
+		}
+		else {
+			if (ent->client->ps.fd.forcePowerLevel[skills[skill_id].force_power_internal] == 0)
+			{
+				ent->client->ps.fd.forcePowersKnown &= ~(1 << skills[skill_id].force_power_internal);
+			}
+		}
 	}
 }
 
-qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qboolean dont_show_message, int number_of_upgrades)
+qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int skill_id, qboolean dont_show_message, int number_of_upgrades)
 {
-	if (upgrade_value < 0 || upgrade_value >= NUM_OF_SKILLS)
+	if (skill_id < 0 || skill_id >= NUM_OF_SKILLS)
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"Invalid skill number.\n\"");
 		return qfalse;
 	}
 
-	int number_of_possible_upgrades = skills[upgrade_value].max_level - ent2->client->pers.skill_levels[upgrade_value];
+	int number_of_possible_upgrades = skills[skill_id].max_level - ent2->client->pers.skill_levels[skill_id];
 	if (number_of_possible_upgrades < number_of_upgrades) {
 		number_of_upgrades = number_of_possible_upgrades;
+	}
+
+	if (number_of_possible_upgrades == 0) {
+		show_skill_change_message(ent, ent2, qfalse, qfalse, skill_id, number_of_upgrades);
+
+		return qfalse;
 	}
 
 	if (ent->client->pers.skillpoints < number_of_upgrades)
@@ -13045,106 +13060,55 @@ qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qb
 		return qfalse;
 	}
 
-	if (ent2->client->pers.skill_levels[upgrade_value] == skills[upgrade_value].max_level) {
-		show_skill_change_message(ent, ent2, qfalse, qfalse, upgrade_value);
-		return qfalse;
+	for (int i = 0; i < number_of_upgrades; i++) {
+		ent2->client->pers.skill_levels[skill_id]++;
+		ent2->client->pers.skillpoints--;
 	}
 
-	ent2->client->pers.skill_levels[upgrade_value]++;
-	ent2->client->pers.skillpoints--;
-
-	apply_skill_change_in_game(ent2, upgrade_value);
-	show_skill_change_message(ent, ent2, qfalse, qtrue, upgrade_value);
+	apply_skill_change_in_game(ent2, skill_id);
+	show_skill_change_message(ent, ent2, qfalse, qtrue, skill_id, number_of_upgrades);
 
 	return qtrue;
 }
 
-qboolean do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int downgrade_value)
+qboolean do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int skill_id, int number_of_downgrades)
 {
 	qboolean dont_show_message = qfalse;
 
 	// zyk: validation on the upgrade level, which must be in the range of valid skills.
-	if (downgrade_value < 0 || downgrade_value >= NUM_OF_SKILLS)
+	if (skill_id < 0 || skill_id >= NUM_OF_SKILLS)
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"Invalid skill number.\n\"");
 		return qfalse;
 	}
 
-	//GalaxyRP (Alex): [Skill] The max shield skill goes here.
-	if (downgrade_value == 30)
-	{
-		if (ent2->client->pers.skill_levels[downgrade_value] > 0)
-		{
-			ent2->client->pers.skill_levels[downgrade_value]--;
-			set_max_shield(ent);
-			ent2->client->pers.skillpoints++;
-			show_skill_change_message(ent, ent2, qtrue, qtrue, downgrade_value);
-		}
-		else
-		{
-			show_skill_change_message(ent, ent2, qtrue, qfalse, downgrade_value);
-			return qfalse;
-		}
-		return qtrue;
+	int number_of_possible_downgrades = ent2->client->pers.skill_levels[skill_id];
+	trap->SendServerCommand(ent - g_entities, va("print \"number_of_possible_downgrades: %d.\n\"", number_of_possible_downgrades));
+	trap->SendServerCommand(ent - g_entities, va("print \"number_of_downgrades: %d.\n\"", number_of_downgrades));
+	if (number_of_possible_downgrades < number_of_downgrades) {
+		number_of_downgrades = number_of_possible_downgrades;
+		trap->SendServerCommand(ent - g_entities, va("print \"number_of_possible_downgrades: %d.\n\"", number_of_possible_downgrades));
+		trap->SendServerCommand(ent - g_entities, va("print \"number_of_downgrades: %d.\n\"", number_of_downgrades));
+	}
+	trap->SendServerCommand(ent - g_entities, va("print \"number_of_possible_downgrades: %d.\n\"", number_of_possible_downgrades));
+	trap->SendServerCommand(ent - g_entities, va("print \"number_of_downgrades: %d.\n\"", number_of_downgrades));
+
+	if (number_of_possible_downgrades == 0) {
+		show_skill_change_message(ent, ent2, qtrue, qfalse, skill_id, number_of_downgrades);
+
+		return qfalse;
 	}
 
-	//GalaxyRP (Alex): [Skill] The Max force power skill goes here.
-	if (downgrade_value == 54)
-	{
-		if (ent2->client->pers.skill_levels[downgrade_value] > 0)
-		{
-			ent2->client->pers.skill_levels[downgrade_value]--;
-			ent2->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent2->client->pers.skill_levels[downgrade_value]);
-			ent2->client->ps.fd.forcePowerMax = ent2->client->pers.max_force_power;
-			ent2->client->pers.skillpoints++;
-			show_skill_change_message(ent, ent2, qtrue, qtrue, downgrade_value);
-		}
-		else
-		{
-			show_skill_change_message(ent, ent2, qtrue, qfalse, downgrade_value);
-			return qfalse;
-		}
-		return qtrue;
+	for (int i = 0; i < number_of_downgrades; i++) {
+		ent2->client->pers.skill_levels[skill_id]--;
+		ent2->client->pers.skillpoints++;
 	}
 
+	apply_skill_change_in_game(ent2, skill_id);
+	show_skill_change_message(ent, ent2, qtrue, qtrue, skill_id, number_of_downgrades);
 
-	//GalaxyRP (Alex): [Skill] Only Force powers with associated abilities go here.
-	if (skills[downgrade_value].force_power_internal != 0) {
-		if (ent2->client->pers.skill_levels[downgrade_value] > 0)
-		{
-			ent2->client->pers.skill_levels[downgrade_value]--;
-			ent2->client->ps.fd.forcePowerLevel[skills[downgrade_value].force_power_internal] = ent2->client->pers.skill_levels[downgrade_value];
-			if (ent2->client->ps.fd.forcePowerLevel[skills[downgrade_value].force_power_internal] == 0)
-			{
-				ent2->client->ps.fd.forcePowersKnown &= ~(1 << skills[downgrade_value].force_power_internal);
-			}
-			ent2->client->pers.skillpoints++;
-
-			show_skill_change_message(ent, ent2, qtrue, qtrue, downgrade_value);
-			return qtrue;
-		}
-		else
-		{
-			show_skill_change_message(ent, ent2, qtrue, qfalse, downgrade_value);
-			return qfalse;
-		}
-	}
-	//GalaxyRP (Alex): [Skill] All other skills fall into this.
-	else {
-		if (ent2->client->pers.skill_levels[downgrade_value] > 0)
-		{
-			ent2->client->pers.skill_levels[downgrade_value]--;
-			ent2->client->pers.skillpoints++;
-
-			show_skill_change_message(ent, ent2, qtrue, qtrue, downgrade_value);
-			return qtrue;
-		}
-		else
-		{
-			show_skill_change_message(ent, ent2, qtrue, qfalse, downgrade_value);
-			return qfalse;
-		}
-	}
+	return qtrue;
+	
 
 	/* GalaxyRP (Alex): [Skill]:
 	if (downgrade_value == 6)
@@ -13182,14 +13146,16 @@ Cmd_RpModeUp_f
 void Cmd_RpModeUp_f( gentity_t *ent ) {
 	char	arg1[MAX_STRING_CHARS];
 	char	arg2[MAX_STRING_CHARS];
+	char	arg3[MAX_STRING_CHARS];
 	int client_id = -1;
+	int number_of_upgrades = 1;
 
 	if (!check_admin_command(ent, ADM_SKILL, qtrue))
 	{
 		return;
 	}
 
-	if ( trap->Argc() != 3 )
+	if ( trap->Argc() < 3 || trap->Argc() > 4)
 	{ 
 		trap->SendServerCommand( ent-g_entities, "print \"You must write a player name or ID and the skill number.\n\"" ); 
 		return; 
@@ -13197,8 +13163,14 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 
 	trap->Argv( 1,  arg1, sizeof( arg1 ) );
 	trap->Argv( 2,  arg2, sizeof( arg2 ) );
+	trap->Argv( 3,  arg3, sizeof( arg3 ) );
+
 	client_id = ClientNumberFromString( ent, arg1, qfalse ); 
-				
+
+	if (trap->Argc() == 4) {
+		number_of_upgrades = atoi(arg3);
+	}
+
 	if (client_id == -1)
 	{
 		return;
@@ -13213,7 +13185,7 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 	qboolean is_upgraded = qfalse;
 
 	// zyk: the upgrade is done if it doesnt go above the maximum level of the skill
-	is_upgraded = do_upgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1, qfalse, 1);
+	is_upgraded = do_upgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1, qfalse, number_of_upgrades);
 
 	if (is_upgraded == qtrue) {
 		// GalaxyRP (Alex): [Database] Only update the skills table. Also update the characters table to save the skill point
@@ -13229,22 +13201,30 @@ Cmd_RpModeDown_f
 void Cmd_RpModeDown_f( gentity_t *ent ) {
 	char	arg1[MAX_STRING_CHARS];
 	char	arg2[MAX_STRING_CHARS];
+	char	arg3[MAX_STRING_CHARS];
 	int client_id = -1;
+	int number_of_downgrades = 1;
 
 	if (!check_admin_command(ent, ADM_SKILL, qtrue))
 	{
 		return;
 	}
 
-	if ( trap->Argc() != 3 )
-	{ 
-		trap->SendServerCommand( ent-g_entities, "print \"You must write a player name or ID and the skill number.\n\"" ); 
-		return; 
+	if (trap->Argc() < 3 || trap->Argc() > 4)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"You must write a player name or ID and the skill number.\n\"");
+		return;
 	}
 
 	trap->Argv( 1,  arg1, sizeof( arg1 ) );
 	trap->Argv( 2,  arg2, sizeof( arg2 ) );
+	trap->Argv( 3,  arg3, sizeof( arg3 ) );
+
 	client_id = ClientNumberFromString( ent, arg1, qfalse ); 
+
+	if (trap->Argc() == 4) {
+		number_of_downgrades = atoi(arg3);
+	}
 				
 	if (client_id == -1)
 	{
@@ -13260,7 +13240,7 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 	qboolean is_upgraded = qfalse;
 
 	// zyk: the upgrade is done if it doesnt go above the maximum level of the skill
-	is_upgraded = do_downgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1);
+	is_upgraded = do_downgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1, number_of_downgrades);
 
 	if (is_upgraded == qtrue) {
 		// GalaxyRP (Alex): [Database] Only update the skills table.
