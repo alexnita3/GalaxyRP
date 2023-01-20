@@ -12996,7 +12996,32 @@ void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgra
 	trap->SendServerCommand(ent - g_entities, va(success_message, skills[skill_id].skill_name, ent2->client->pers.skill_levels[skill_id]));
 }
 
-qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qboolean dont_show_message)
+void apply_skill_change_in_game(gentity_t* ent, int skill_id) {
+	switch (skill_id) {
+	case 30:
+		//GalaxyRP (Alex): [Skill] Reset max shield immediately.
+		set_max_shield(ent);
+		break;
+	case 54:
+		//GalaxyRP (Alex): [Skill] Reset max force power immediately.
+		ent->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent->client->pers.skill_levels[skill_id]);
+		ent->client->ps.fd.forcePowerMax = ent->client->pers.max_force_power;
+		break;
+	default:
+		//GalaxyRP (Alex): [Skill] Do nothing for standard skills.
+		break;
+	}
+
+	//GalaxyRP (Alex): [Skill] Give them the Force Ability.
+	if (skills[skill_id].force_power_internal != 0) {
+		if (!(ent->client->ps.fd.forcePowersKnown & (1 << skills[skill_id].force_power_internal))) {
+			ent->client->ps.fd.forcePowersKnown |= (1 << skills[skill_id].force_power_internal);
+		}
+		ent->client->ps.fd.forcePowerLevel[skills[skill_id].force_power_internal] = ent->client->pers.skill_levels[skill_id];
+	}
+}
+
+qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qboolean dont_show_message, int number_of_upgrades)
 {
 	if (upgrade_value < 0 || upgrade_value >= NUM_OF_SKILLS)
 	{
@@ -13004,7 +13029,12 @@ qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qb
 		return qfalse;
 	}
 
-	if (ent->client->pers.skillpoints == 0)
+	int number_of_possible_upgrades = skills[upgrade_value].max_level - ent2->client->pers.skill_levels[upgrade_value];
+	if (number_of_possible_upgrades < number_of_upgrades) {
+		number_of_upgrades = number_of_possible_upgrades;
+	}
+
+	if (ent->client->pers.skillpoints < number_of_upgrades)
 	{
 		if (dont_show_message == qfalse) {
 			trap->SendServerCommand(ent - g_entities, "print \"^1You don't have enough skillpoints.\n\"");
@@ -13015,81 +13045,16 @@ qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int upgrade_value, qb
 		return qfalse;
 	}
 
-	//GalaxyRP (Alex): [Skill] The max shield skill goes here.
-	if (upgrade_value == 30)
-	{
-		if (ent2->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
-		{
-			ent2->client->pers.skill_levels[upgrade_value]++;
-			set_max_shield(ent);
-			ent2->client->pers.skillpoints--;
-
-			show_skill_change_message(ent, ent2, qfalse, qtrue, upgrade_value);
-		}
-		else
-		{
-			show_skill_change_message(ent, ent2, qfalse, qfalse, upgrade_value);
-			return qfalse;
-		}
-		return qtrue;
+	if (ent2->client->pers.skill_levels[upgrade_value] == skills[upgrade_value].max_level) {
+		show_skill_change_message(ent, ent2, qfalse, qfalse, upgrade_value);
+		return qfalse;
 	}
 
-	//GalaxyRP (Alex): [Skill] The Max force power skill goes here.
-	if (upgrade_value == 54)
-	{
-		if (ent2->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
-		{
-			ent2->client->pers.skill_levels[upgrade_value]++;
-			ent2->client->pers.max_force_power = (int)ceil((zyk_max_force_power.value / 4.0) * ent2->client->pers.skill_levels[upgrade_value]);
-			ent2->client->ps.fd.forcePowerMax = ent2->client->pers.max_force_power;
-			ent2->client->pers.skillpoints--;
+	ent2->client->pers.skill_levels[upgrade_value]++;
+	ent2->client->pers.skillpoints--;
 
-			show_skill_change_message(ent, ent2, qfalse, qtrue, upgrade_value);
-		}
-		else
-		{
-			show_skill_change_message(ent, ent2, qfalse, qfalse, upgrade_value);
-			return qfalse;
-		}
-		return qtrue;
-	}
-
-
-	//GalaxyRP (Alex): [Skill] Only Force powers with associated abilities go here.
-	if (skills[upgrade_value].force_power_internal != 0) {
-		if (ent2->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
-		{
-			if (!(ent2->client->ps.fd.forcePowersKnown & (1 << skills[upgrade_value].force_power_internal)))
-				ent2->client->ps.fd.forcePowersKnown |= (1 << skills[upgrade_value].force_power_internal);
-			ent2->client->pers.skill_levels[upgrade_value]++;
-			ent2->client->ps.fd.forcePowerLevel[skills[upgrade_value].force_power_internal] = ent2->client->pers.skill_levels[upgrade_value];
-			ent2->client->pers.skillpoints--;
-
-			show_skill_change_message(ent, ent2, qfalse, qtrue, upgrade_value);
-			return qtrue;
-		}
-		else
-		{
-			show_skill_change_message(ent, ent2, qfalse, qfalse, upgrade_value);
-			return qfalse;
-		}
-	}
-	//GalaxyRP (Alex): [Skill] All other skills fall into this.
-	else {
-		if (ent2->client->pers.skill_levels[upgrade_value] < skills[upgrade_value].max_level)
-		{
-			ent2->client->pers.skill_levels[upgrade_value]++;
-			ent2->client->pers.skillpoints--;
-
-			show_skill_change_message(ent, ent2, qfalse, qtrue, upgrade_value);
-			return qtrue;
-		}
-		else
-		{
-			show_skill_change_message(ent, ent2, qfalse, qfalse, upgrade_value);
-			return qfalse;
-		}
-	}
+	apply_skill_change_in_game(ent2, upgrade_value);
+	show_skill_change_message(ent, ent2, qfalse, qtrue, upgrade_value);
 
 	return qtrue;
 }
@@ -13248,7 +13213,7 @@ void Cmd_RpModeUp_f( gentity_t *ent ) {
 	qboolean is_upgraded = qfalse;
 
 	// zyk: the upgrade is done if it doesnt go above the maximum level of the skill
-	is_upgraded = do_upgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1, qfalse);
+	is_upgraded = do_upgrade_skill(ent, &g_entities[client_id], atoi(arg2) - 1, qfalse, 1);
 
 	if (is_upgraded == qtrue) {
 		// GalaxyRP (Alex): [Database] Only update the skills table. Also update the characters table to save the skill point
