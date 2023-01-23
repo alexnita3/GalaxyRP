@@ -12962,10 +12962,10 @@ void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgra
 		else {
 			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
 
-				strcpy(success_message, "print \"^1Target already reached the minimum level of ^3%s ^1skill. Nothing was updated. Current value: ^3%d^2.\n\"");
+				strcpy(success_message, "print \"^1Target already reached the minimum level of ^3%s ^1skill. You can only downgrade by ^3%d ^1points. Nothing was updated. Current value: ^3%d^2.\n\"");
 			}
 			else {
-				strcpy(success_message, "print \"^1You reached the minimum level of ^3%s ^1skill. Nothing was updated. Current value: ^3%d^2.\n\"");
+				strcpy(success_message, "print \"^1You reached the minimum level of ^3%s ^1skill. You can only downgrade by ^3%d ^1points. Nothing was updated. Current value: ^3%d^2.\n\"");
 			}
 		}
 	}
@@ -12988,7 +12988,7 @@ void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgra
 				strcpy(success_message, "print \"^1Target already reached the maximum level of ^3%s ^1skill. You can only upgrade by ^3%d ^1points. Nothing was updated. Current value: ^3%d^2.\n\"");
 			}
 			else {
-				strcpy(success_message, "print \"^1You already reached the maximum level of ^3%s ^1skill. Nothing was updated. Current value: ^3%d^2.\n\"");
+				strcpy(success_message, "print \"^1You already reached the maximum level of ^3%s ^1skill. You can only upgrade by ^3%d ^1points. Nothing was updated. Current value: ^3%d^2.\n\"");
 			}
 		}
 	}
@@ -13083,16 +13083,9 @@ qboolean do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int skill_id, int n
 	}
 
 	int number_of_possible_downgrades = ent2->client->pers.skill_levels[skill_id];
-	trap->SendServerCommand(ent - g_entities, va("print \"number_of_possible_downgrades: %d.\n\"", number_of_possible_downgrades));
-	trap->SendServerCommand(ent - g_entities, va("print \"number_of_downgrades: %d.\n\"", number_of_downgrades));
 	if (number_of_possible_downgrades < number_of_downgrades) {
 		number_of_downgrades = number_of_possible_downgrades;
-		trap->SendServerCommand(ent - g_entities, va("print \"number_of_possible_downgrades: %d.\n\"", number_of_possible_downgrades));
-		trap->SendServerCommand(ent - g_entities, va("print \"number_of_downgrades: %d.\n\"", number_of_downgrades));
 	}
-	trap->SendServerCommand(ent - g_entities, va("print \"number_of_possible_downgrades: %d.\n\"", number_of_possible_downgrades));
-	trap->SendServerCommand(ent - g_entities, va("print \"number_of_downgrades: %d.\n\"", number_of_downgrades));
-
 	if (number_of_possible_downgrades == 0) {
 		show_skill_change_message(ent, ent2, qtrue, qfalse, skill_id, number_of_downgrades);
 
