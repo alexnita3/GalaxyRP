@@ -65,23 +65,23 @@ const skill_t skills[] = {
 	{5, "Drain",				"drains force power from a player to restore your health",																																																														"force",	"dark",		FP_DRAIN},
 	{5, "Rage",					"makes you 1.3 times faster, increases your saber attack speed and damage and makes you get less damage. Force Guardian class, with Improvements skill at least on level 1, can regen some force when taking damage on health while Rage is active",															"force",	"dark",		FP_RAGE},
 	{5, "Team Energize",		"restores some force power to players near you. If Improvements skill is at least at level 1, regens blaster pack and power cell ammo of the target players",																																					"force",	"dark",		FP_TEAM_FORCE},
-	{4, "Stun Baton",			"attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. With Stun Baton Upgrade, can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds",																	"weapons",	"merc",		0},
+	{4, "Stun Baton",			"attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. With Stun Baton Upgrade, can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds",																	"weapons",	"merc",		WP_STUN_BATON},
 	{2, "Blaster Pistol",		"the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The charged shot causes a lot more damage depending on how much it was charged",																	"weapons",	"merc",		WP_BRYAR_PISTOL},
-	{2, "E11 Blaster Rifle",	"the rifle used by the Storm Troopers. E11 shots do %d damage. Normal fire is a single shot, while the alternate fire is the rapid fire",																																										"weapons",	"merc",		0},
-	{2, "Disruptor",			"the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged",																																					"weapons",	"merc",		0},
-	{2, "Bowcaster",			"the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once.",																																																				"weapons",	"merc",		0},
-	{2, "Repeater",				"a powerful weapon with a rapid fire and a plasma bomb. Normal fire shoots the rapid fire, and does %d damage. Alt fire fires the plasma bomb",																																									"weapons",	"merc",		0},
-	{2, "DEMP2",				"a very powerful weapon against machine npc and some vehicles, causing more damage to them and stunning them. Normal fire does %d damage and alt fire can be charged",																																			"weapons",	"merc",		0},
-	{2, "Flechette",			"this weapon is similar to a shotgun. Normal fire causes %d damage. Alt fire shoots 2 bombs",																																																					"weapons",	"merc",		0},
-	{2, "Rocket Launcher",		"a powerful explosive weapon. Normal fire shoots a rocket causing %d damage. Alt fire shoots a homing missile",																																																	"weapons",	"merc",		0},
-	{2, "Concussion Rifle",		"it shoots a powerful shot that has a big damage area. Alt fire shoots a ray similar to disruptor shots, but it can go through force fields and can throw the enemy on the ground.",																															"weapons",	"merc",		0},
-	{2, "Bryar Pistol",			"very similar to the blaster pistol, but this one has a better fire rate with normal shot.",																																																					"weapons",	"merc",		0},
+	{2, "E11 Blaster Rifle",	"the rifle used by the Storm Troopers. E11 shots do %d damage. Normal fire is a single shot, while the alternate fire is the rapid fire",																																										"weapons",	"merc",		WP_BLASTER},
+	{2, "Disruptor",			"the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged",																																					"weapons",	"merc",		WP_DISRUPTOR},
+	{2, "Bowcaster",			"the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once.",																																																				"weapons",	"merc",		WP_BOWCASTER},
+	{2, "Repeater",				"a powerful weapon with a rapid fire and a plasma bomb. Normal fire shoots the rapid fire, and does %d damage. Alt fire fires the plasma bomb",																																									"weapons",	"merc",		WP_REPEATER},
+	{2, "DEMP2",				"a very powerful weapon against machine npc and some vehicles, causing more damage to them and stunning them. Normal fire does %d damage and alt fire can be charged",																																			"weapons",	"merc",		WP_DEMP2},
+	{2, "Flechette",			"this weapon is similar to a shotgun. Normal fire causes %d damage. Alt fire shoots 2 bombs",																																																					"weapons",	"merc",		WP_FLECHETTE},
+	{2, "Rocket Launcher",		"a powerful explosive weapon. Normal fire shoots a rocket causing %d damage. Alt fire shoots a homing missile",																																																	"weapons",	"merc",		WP_ROCKET_LAUNCHER},
+	{2, "Concussion Rifle",		"it shoots a powerful shot that has a big damage area. Alt fire shoots a ray similar to disruptor shots, but it can go through force fields and can throw the enemy on the ground.",																															"weapons",	"merc",		WP_CONCUSSION},
+	{2, "Bryar Pistol",			"very similar to the blaster pistol, but this one has a better fire rate with normal shot.",																																																					"weapons",	"merc",		WP_BRYAR_OLD},
 	{3, "Melee",				"allows you to attack with your fists and legs. You can punch, kick or do a special melee attack by holding both Attack and Alt Attack buttons (usually the mouse buttons).",																																	"weapons",	"merc",		0},
 	{5, "Max Shield",			"The max shield (armor) the player can have. Each level increases 20 per cent of max shield the player can have",																																																"other",	"merc",		0},
 	{4, "Shield Strength",		"Each level increases your shield resistance by 7 per cent",																																																													"other",	"merc",		0},
 	{4, "Health Strength",		"Each level increases your health resistance by 7 per cent",																																																													"other",	"merc",		0},
 	{1, "Drain Shield",			"When using Drain force power, and your health is full, restores some shield. It also makes Drain suck hp/shield from the enemy to restore your hp/shield",																																						"other",	"merc",		0},
-	{3, "Jetpack",				"the jetpack, used by Boba Fett. Allows you to fly. To use it, jump and press the Use key (usually R) while in the middle of the jump. Each level uses less fuel, allowing you to fly for a longer time",																										"items",	"merc",		0},
+	{3, "Jetpack",				"the jetpack, used by Boba Fett. Allows you to fly. To use it, jump and press the Use key (usually R) while in the middle of the jump. Each level uses less fuel, allowing you to fly for a longer time",																										"items",	"merc",		HI_JETPACK},
 	{3, "Sense Health",			"allows you to see info about someone, including npcs. Level 1 shows current health. Level 2 shows name, health and shield. Level 3 shows name, health and max health, shield and max shield, force and max force, mp and max mp. To use it, when you are near a player or npc, use ^3Sense ^7force power",		"force",	"light",	0},
 	{3, "Shield Heal",			"recovers 4 shield at level 1, 8 shield at level 2 and 12 shield at level 3. To use it, use Heal force power when you have full HP.",																																											"other",	"merc",		0},
 	{3, "Team Shield Heal",		"recovers 3 shield at level 1, 6 shield at level 2 and 9 shield at level 3 to players near you. To use it, when near players, use Team Heal force power. It will heal their shield after they have full HP",																									"other",	"merc",		0},
@@ -90,17 +90,17 @@ const skill_t skills[] = {
 	{3, "Powercell",			"used as ammo for Disruptor, Bowcaster and DEMP2.",																																																																"ammo",		"merc",		0},
 	{3, "Metal Bolts",			"used as ammo for Repeater, Flechette and Concussion Rifle.",																																																													"ammo",		"merc",		0},
 	{3, "Rockets",				"used as ammo for Rocket Launcher.",																																																																			"ammo",		"merc",		0},
-	{3, "Thermals",				"the famous detonator used by Leia in Ep 6 at the Jabba Palace. Normal fire throws it, which explodes after some seconds. Alt fire throws it and it explodes as soon as it touches something.",																													"ammo",		"merc",		0},
-	{3, "Trip Mines",			"a mine that can be planted somewhere. Normal fire plants a mine with a laser that when touched makes the mine explode. Alt fire plants proximity mines",																																						"ammo",		"merc",		0},
-	{3, "Detpacks",				"a very powerful explosive, which you can detonate remotely with the alt fire button.",																																																							"ammo",		"merc",		0},
-	{1, "Binoculars",			"this item allows you to see distant things better with its zoom.",																																																												"items",	"merc",		0},
-	{1, "Bacta Canister",		"allows you to recover 25 HP",																																																																					"items",	"merc",		0},
-	{1, "Sentry Gun",			"after placed on the ground, shoots at any nearby enemy",																																																														"items",	"merc",		0},
-	{1, "Seeker Drone",			"a flying ball that flies around you, shooting anyone in its range",																																																											"items",	"merc",		0},
-	{1, "E-Web",				"allows you to shoot at people with it, it has a good fire rate",																																																												"items",	"merc",		0},
-	{1, "Big Bacta",			"allows you to recover 50 HP",																																																																					"items",	"merc",		0},
+	{3, "Thermals",				"the famous detonator used by Leia in Ep 6 at the Jabba Palace. Normal fire throws it, which explodes after some seconds. Alt fire throws it and it explodes as soon as it touches something.",																													"ammo",		"merc",		WP_THERMAL},
+	{3, "Trip Mines",			"a mine that can be planted somewhere. Normal fire plants a mine with a laser that when touched makes the mine explode. Alt fire plants proximity mines",																																						"ammo",		"merc",		WP_TRIP_MINE},
+	{3, "Detpacks",				"a very powerful explosive, which you can detonate remotely with the alt fire button.",																																																							"ammo",		"merc",		WP_DET_PACK},
+	{1, "Binoculars",			"this item allows you to see distant things better with its zoom.",																																																												"items",	"merc",		HI_BINOCULARS},
+	{1, "Bacta Canister",		"allows you to recover 25 HP",																																																																					"items",	"merc",		HI_MEDPAC},
+	{1, "Sentry Gun",			"after placed on the ground, shoots at any nearby enemy",																																																														"items",	"merc",		HI_SENTRY_GUN},
+	{1, "Seeker Drone",			"a flying ball that flies around you, shooting anyone in its range",																																																											"items",	"merc",		HI_SEEKER},
+	{1, "E-Web",				"allows you to shoot at people with it, it has a good fire rate",																																																												"items",	"merc",		HI_EWEB},
+	{1, "Big Bacta",			"allows you to recover 50 HP",																																																																					"items",	"merc",		HI_MEDPAC_BIG},
 	{1, "Force Field",			"a powerful shield that protects you from enemy attacks, it can resist a lot against any weapon",																																																				"items",	"merc",		0},
-	{1, "Cloak Item",			"makes you almost invisible to players and invisible to npcs.",																																																													"items",	"merc",		0},
+	{1, "Cloak Item",			"makes you almost invisible to players and invisible to npcs.",																																																													"items",	"merc",		HI_CLOAK},
 	{5, "Force Power",			"increases the max force power you have. Necessary to allow you to use force powers and force-based skills",																																																	"force",	"neutral",	0},
 	{3, "Improvements",			"placeholder",																																																																									"items",	"merc",		0},
 	{5, "Armor",				"Each level increases your damage resistance by 10 percent, but also decreases your movement speed by 10 percent.",																																																"items",	"merc",		0},
@@ -12996,7 +12996,7 @@ void show_skill_change_message(gentity_t* ent, gentity_t* ent2, qboolean downgra
 	trap->SendServerCommand(ent - g_entities, va(success_message, skills[skill_id].skill_name, number_of_changes, ent2->client->pers.skill_levels[skill_id]));
 }
 
-void apply_skill_change_in_game(gentity_t* ent, int skill_id) {
+void apply_skill_change_in_game(gentity_t* ent, int skill_id, qboolean upgrade) {
 	switch (skill_id) {
 	case 30:
 		//GalaxyRP (Alex): [Skill] Reset max shield immediately.
@@ -13065,7 +13065,7 @@ qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int skill_id, qboolea
 		ent2->client->pers.skillpoints--;
 	}
 
-	apply_skill_change_in_game(ent2, skill_id);
+	apply_skill_change_in_game(ent2, skill_id, qtrue);
 	show_skill_change_message(ent, ent2, qfalse, qtrue, skill_id, number_of_upgrades);
 
 	return qtrue;
@@ -13097,7 +13097,7 @@ qboolean do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int skill_id, int n
 		ent2->client->pers.skillpoints++;
 	}
 
-	apply_skill_change_in_game(ent2, skill_id);
+	apply_skill_change_in_game(ent2, skill_id, qfalse);
 	show_skill_change_message(ent, ent2, qtrue, qtrue, skill_id, number_of_downgrades);
 
 	return qtrue;
