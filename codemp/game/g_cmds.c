@@ -16349,7 +16349,7 @@ command_t commands[] = {
 	{ "allyremove",			Cmd_AllyRemove_f,			CMD_NOINTERMISSION },
 	{ "attributes",			Cmd_Attributes_f,			CMD_LOGGEDIN },
 	{ "buy",				Cmd_Buy_f,					CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
-	{ "callseller",			Cmd_CallSeller_f,			CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
+	//{ "callseller",			Cmd_CallSeller_f,			CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "changepassword",		Cmd_ChangePassword_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "char",				Cmd_Char_f,					CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "clientprint",		Cmd_ClientPrint_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
