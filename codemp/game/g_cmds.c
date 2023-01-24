@@ -13013,10 +13013,10 @@ void apply_skill_change_in_game(gentity_t* ent, int skill_id, qboolean upgrade) 
 	}
 
 	//GalaxyRP (Alex): [Skill] Give them the Force Ability.
-	if (skills[skill_id].force_power_internal != 0) {
+	if (strcmp(skills[skill_id].category,"force") == 0 && skills[skill_id].force_power_internal != 0) {
 		ent->client->ps.fd.forcePowerLevel[skills[skill_id].force_power_internal] = ent->client->pers.skill_levels[skill_id];
 		
-		if (ent->client->pers.skill_levels[skill_id] > 0) {
+		if (upgrade) {
 			if (!(ent->client->ps.fd.forcePowersKnown & (1 << skills[skill_id].force_power_internal))) {
 				ent->client->ps.fd.forcePowersKnown |= (1 << skills[skill_id].force_power_internal);
 			}
@@ -13025,6 +13025,30 @@ void apply_skill_change_in_game(gentity_t* ent, int skill_id, qboolean upgrade) 
 			if (ent->client->ps.fd.forcePowerLevel[skills[skill_id].force_power_internal] == 0)
 			{
 				ent->client->ps.fd.forcePowersKnown &= ~(1 << skills[skill_id].force_power_internal);
+			}
+		}
+	}
+
+	//GalaxyRP (Alex): [Skill] Give them the weapon.
+	if ((strcmp(skills[skill_id].category, "weapons") == 0 || strcmp(skills[skill_id].category, "ammo") == 0) && skills[skill_id].force_power_internal != 0) {
+		if (upgrade) {
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << skills[skill_id].force_power_internal);
+		}
+		else {
+			if (ent->client->pers.skill_levels[skill_id] == 0) {
+				ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << skills[skill_id].force_power_internal);
+			}
+		}
+	}
+
+	//GalaxyRP (Alex): [Skill] Give them the item.
+	if (strcmp(skills[skill_id].category, "items") == 0 && skills[skill_id].force_power_internal != 0) {
+		if (upgrade) {
+			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << skills[skill_id].force_power_internal);
+		}
+		else {
+			if (ent->client->pers.skill_levels[skill_id] == 0) {
+				ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << skills[skill_id].force_power_internal);
 			}
 		}
 	}
@@ -13101,34 +13125,6 @@ qboolean do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int skill_id, int n
 	show_skill_change_message(ent, ent2, qtrue, qtrue, skill_id, number_of_downgrades);
 
 	return qtrue;
-	
-
-	/* GalaxyRP (Alex): [Skill]:
-	if (downgrade_value == 6)
-	{
-		if (ent->client->pers.skill_levels[5] > 0)
-		{
-			ent->client->pers.skill_levels[5]--;
-			ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] = ent->client->pers.skill_levels[5];
-			if (ent->client->saber[0].model[0] && !ent->client->saber[1].model[0])
-			{
-				ent->client->ps.fd.saberAnimLevelBase = ent->client->ps.fd.saberAnimLevel = ent->client->ps.fd.saberDrawAnimLevel = ent->client->sess.saberLevel = ent->client->pers.skill_levels[5];
-				ent->client->ps.fd.saberAnimLevel = ent->client->pers.skill_levels[5];
-			}
-			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] == 0)
-			{
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SABER_OFFENSE);
-				ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_SABER);
-				ent->client->ps.weapon = WP_MELEE;
-			}
-			ent->client->pers.skillpoints++;
-		}
-		else
-		{
-			trap->SendServerCommand( ent-g_entities, "print \"You reached the minimum level of ^3Saber Attack ^7skill.\n\"" );
-			return;
-		}
-	}*/
 }
 
 /*
