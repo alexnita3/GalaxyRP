@@ -283,6 +283,33 @@ static void CG_LoadHud_f( void ) {
 	CG_LoadMenus( hudSet );
 }
 
+static void CG_Sabercolor_f(void)
+{
+	char redStr[8], blueStr[8], greenStr[8];
+	int red, blue, green;
+	if (trap->Cmd_Argc() != 4)
+	{
+		Com_Printf("Usage: /saberColor <red> <green> <blue> e.g. /saberColor 255 255 0\n");
+		return;
+	}
+
+	//Ideally this should also take saber # into account and let them specify different colors for each saber if using duals but whatever.
+
+	trap->Cmd_Argv(1, redStr, sizeof(redStr));
+	trap->Cmd_Argv(2, greenStr, sizeof(greenStr));
+	trap->Cmd_Argv(3, blueStr, sizeof(blueStr));
+
+	red = atoi(redStr);
+	blue = atoi(blueStr);
+	green = atoi(greenStr);
+
+	trap->Cvar_Set("color1", va("%i", SABER_RGB));
+	trap->Cvar_Set("cp_sbRGB1", va("%i", red | ((green | (blue << 8)) << 8)));
+	trap->Cvar_Set("color2", va("%i", SABER_RGB));
+	trap->Cvar_Set("cp_sbRGB2", va("%i", red | ((green | (blue << 8)) << 8)));
+
+}
+
 typedef struct consoleCommand_s {
 	const char	*cmd;
 	void		(*func)(void);
@@ -308,6 +335,7 @@ static consoleCommand_t	commands[] = {
 	{ "nextskin",					CG_TestModelNextSkin_f },
 	{ "prevframe",					CG_TestModelPrevFrame_f },
 	{ "prevskin",					CG_TestModelPrevSkin_f },
+	{ "saberColor",					CG_Sabercolor_f },
 	{ "siegeCompleteCvarUpdate",	CG_SiegeCompleteCvarUpdate_f },
 	{ "siegeCvarUpdate",			CG_SiegeCvarUpdate_f },
 	{ "sizedown",					CG_SizeDown_f },
@@ -377,7 +405,8 @@ static const char *gcmds[] = {
 	"voice_cmd",
 	"vote",
 	"where",
-	"zoom"
+	"zoom",
+	"saberColor",
 };
 static const size_t numgcmds = ARRAY_LEN( gcmds );
 

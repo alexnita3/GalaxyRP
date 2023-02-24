@@ -52,6 +52,8 @@ static qhandle_t blueSaberGlowShader;
 static qhandle_t blueSaberCoreShader;
 static qhandle_t purpleSaberGlowShader;
 static qhandle_t purpleSaberCoreShader;
+static qhandle_t rgbSaberGlowShader;
+static qhandle_t rgbSaberCoreShader;
 
 void UI_CacheSaberGlowGraphics( void )
 {//FIXME: these get fucked by vid_restarts
@@ -67,6 +69,8 @@ void UI_CacheSaberGlowGraphics( void )
 	blueSaberCoreShader			= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/blue_line" );
 	purpleSaberGlowShader		= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/purple_glow" );
 	purpleSaberCoreShader		= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/purple_line" );
+	rgbSaberGlowShader			= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/RGBglow1" );
+	rgbSaberCoreShader			= trap->R_RegisterShaderNoMip( "gfx/effects/sabers/RGBcore1" );
 }
 
 qboolean UI_SaberModelForSaber( const char *saberName, char *saberModel )
@@ -241,20 +245,57 @@ void UI_SaberLoadParms( void )
 	WP_SaberLoadParms();
 }
 
-void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color )
-{
-	vec3_t		mid, rgb={1,1,1};
-	qhandle_t	blade = 0, glow = 0;
-	refEntity_t saber;
-	float radiusmult;
-	float radiusRange;
-	float radiusStart;
+static void UI_RGBForSaberColor(saber_colors_t color, vec3_t rgb, int bnum) {
+	int i;
 
-	if ( length < 0.5f )
-	{
-		// if the thing is so short, just forget even adding me.
-		return;
+	switch (color) {
+	case SABER_RED:
+		VectorSet(rgb, 1.0f, 0.2f, 0.2f);
+		break;
+	case SABER_ORANGE:
+		VectorSet(rgb, 1.0f, 0.5f, 0.1f);
+		break;
+	case SABER_YELLOW:
+		VectorSet(rgb, 1.0f, 1.0f, 0.2f);
+		break;
+	case SABER_GREEN:
+		VectorSet(rgb, 0.2f, 1.0f, 0.2f);
+		break;
+	case SABER_BLUE:
+		VectorSet(rgb, 0.2f, 0.4f, 1.0f);
+		break;
+	case SABER_PURPLE:
+		VectorSet(rgb, 0.9f, 0.2f, 1.0f);
+		break;
+	default:
+	case SABER_RGB:
+		if (bnum == 0) {
+			rgb[0] = atoi(UI_Cvar_VariableString("ui_sab1_r"));
+			rgb[1] = atoi(UI_Cvar_VariableString("ui_sab1_g"));
+			rgb[2] = atoi(UI_Cvar_VariableString("ui_sab1_b"));
+		}
+		else {
+			rgb[0] = atoi(UI_Cvar_VariableString("ui_sab2_r"));
+			rgb[1] = atoi(UI_Cvar_VariableString("ui_sab2_g"));
+			rgb[2] = atoi(UI_Cvar_VariableString("ui_sab2_b"));
+		}
+		for (i = 0; i < 3; i++)
+			rgb[i] /= 255;
+		break;
 	}
+}
+
+void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int rfx, qboolean doLight, int cnum, int bnum )
+{
+	vec3_t		mid, rgb = { 1,1,1 };
+	qhandle_t	blade = 0, glow = 0;
+	refEntity_t saber, sbak;
+	float radiusmult, radiusRange, radiusStart, pulse;
+	int i;
+
+	// if the thing is so short, just forget even adding me.
+	if ( length < 0.5f )
+		return;
 
 	// Find the midpoint of the saber for lighting purposes
 	VectorMA( origin, length * 0.5f, dir, mid );
@@ -264,36 +305,35 @@ void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 		case SABER_RED:
 			glow = redSaberGlowShader;
 			blade = redSaberCoreShader;
-			VectorSet( rgb, 1.0f, 0.2f, 0.2f );
 			break;
 		case SABER_ORANGE:
 			glow = orangeSaberGlowShader;
 			blade = orangeSaberCoreShader;
-			VectorSet( rgb, 1.0f, 0.5f, 0.1f );
 			break;
 		case SABER_YELLOW:
 			glow = yellowSaberGlowShader;
 			blade = yellowSaberCoreShader;
-			VectorSet( rgb, 1.0f, 1.0f, 0.2f );
 			break;
 		case SABER_GREEN:
 			glow = greenSaberGlowShader;
 			blade = greenSaberCoreShader;
-			VectorSet( rgb, 0.2f, 1.0f, 0.2f );
 			break;
 		case SABER_BLUE:
 			glow = blueSaberGlowShader;
 			blade = blueSaberCoreShader;
-			VectorSet( rgb, 0.2f, 0.4f, 1.0f );
 			break;
 		case SABER_PURPLE:
 			glow = purpleSaberGlowShader;
 			blade = purpleSaberCoreShader;
-			VectorSet( rgb, 0.9f, 0.2f, 1.0f );
 			break;
+		case SABER_RGB:
 		default:
+			glow = rgbSaberGlowShader;
+			blade = rgbSaberCoreShader;
 			break;
 	}
+
+	UI_RGBForSaberColor( color, rgb, bnum );
 
 	memset( &saber, 0, sizeof( refEntity_t ));
 
@@ -304,13 +344,12 @@ void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	// Jeff, I did this because I foolishly wished to have a bright halo as the saber is unleashed.
 	// It's not quite what I'd hoped tho.  If you have any ideas, go for it!  --Pat
 	if (length < lengthMax )
-	{
 		radiusmult = 1.0 + (2.0 / length);		// Note this creates a curve, and length cannot be < 0.5.
-	}
 	else
-	{
 		radiusmult = 1.0;
-	}
+
+	for ( i = 0; i < 3; i++ )
+		rgb[i] *= 255;
 
 	radiusRange = radius * 0.075f;
 	radiusStart = radius-radiusRange;
@@ -322,10 +361,16 @@ void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	VectorCopy( dir, saber.axis[0] );
 	saber.reType = RT_SABER_GLOW;
 	saber.customShader = glow;
-	saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
-	//saber.renderfx = rfx;
+	if ( color < SABER_RGB )
+		saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
+	else {
+		for ( i = 0; i < 3; i++ )
+			saber.shaderRGBA[i] = rgb[i];
+		saber.shaderRGBA[3] = 0xff;
+	}
 
 	trap->R_AddRefEntityToScene( &saber );
+	saber.renderfx = rfx;
 
 	// Do the hot core
 	VectorMA( origin, length, dir, saber.origin );
@@ -336,7 +381,25 @@ void UI_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	saber.radius = (radiusStart + Q_flrand(-1.0f, 1.0f) * radiusRange)*radiusmult;
 //	saber.radius = (1.0 + Q_flrand(-1.0f, 1.0f) * 0.2f)*radiusmult;
 
-	trap->R_AddRefEntityToScene( &saber );
+	saber.shaderTexCoord[0] = saber.shaderTexCoord[1] = 1.0f;
+
+	memcpy( &sbak, &saber, sizeof(sbak) );
+
+	if ( color >= SABER_RGB ) {
+		switch ( color ) {
+		default:
+		case SABER_RGB:
+			sbak.customShader = rgbSaberCoreShader;
+			break;
+		}
+	}
+
+	sbak.shaderRGBA[0] = sbak.shaderRGBA[1] = sbak.shaderRGBA[2] = sbak.shaderRGBA[3] = 0xff;
+
+	pulse = Q_fabs(sinf((float)trap->Milliseconds() / 400.0f)) * 0.1f;
+	sbak.radius = pulse + 1.0f;
+
+	trap->R_AddRefEntityToScene( &sbak );
 }
 
 void UI_SaberDrawBlade( itemDef_t *item, char *saberName, int saberModel, saberType_t saberType, vec3_t origin, vec3_t angles, int bladeNum )
@@ -349,6 +412,7 @@ void UI_SaberDrawBlade( itemDef_t *item, char *saberName, int saberModel, saberT
 //	vec3_t	angles={0};
 	mdxaBone_t	boltMatrix;
 	qboolean tagHack = qfalse;
+	int snum;
 	char *tagName;
 	int bolt;
 	float scale;
@@ -357,10 +421,12 @@ void UI_SaberDrawBlade( itemDef_t *item, char *saberName, int saberModel, saberT
 
 	if ( (item->flags&ITF_ISSABER) && saberModel < 2 )
 	{
+		snum = 0;
 		trap->Cvar_VariableStringBuffer("ui_saber_color", bladeColorString, sizeof(bladeColorString) );
 	}
 	else//if ( item->flags&ITF_ISSABER2 ) - presumed
 	{
+		snum = 1;
 		trap->Cvar_VariableStringBuffer("ui_saber2_color", bladeColorString, sizeof(bladeColorString) );
 	}
 
@@ -572,7 +638,7 @@ void UI_SaberDrawBlade( itemDef_t *item, char *saberName, int saberModel, saberT
 		return;
 	}
 
-	UI_DoSaber( bladeOrigin, axis[0], bladeLength, bladeLength, bladeRadius, bladeColor );
+	UI_DoSaber( bladeOrigin, axis[0], bladeLength, bladeLength, bladeRadius, bladeColor, 0, qfalse, 0, snum );
 }
 
 void UI_GetSaberForMenu( char *saber, int saberNum )

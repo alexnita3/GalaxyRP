@@ -313,6 +313,8 @@ typedef struct clientInfo_s {
 
 	int			superSmoothTime; //do crazy amount of smoothing
 
+	vec3_t		rgb1, rgb2;//rgb sabers, use different ones for strafetrails. oh no.
+
 } clientInfo_t;
 
 //rww - cheap looping sound struct
@@ -1174,6 +1176,11 @@ typedef struct cgMedia_s {
 	qhandle_t	blueSaberCoreShader;
 	qhandle_t	purpleSaberGlowShader;
 	qhandle_t	purpleSaberCoreShader;
+
+	//rgb
+	qhandle_t	rgbSaberGlowShader;
+	qhandle_t	rgbSaberCoreShader;
+
 	qhandle_t	saberBlurShader;
 	qhandle_t	swordTrailShader;
 
