@@ -499,7 +499,7 @@
 			{ 
 				play			"sound/interface/esc.wav" ; 
 				close			ingame_player2 ;
-				open			ingame_zykmod ;
+				open			ingame_galaxyRP ;
 			}
 
 		}
@@ -542,7 +542,7 @@
 				uiScript		"updatecharmodel"
 				hide			highlights
 				close			ingame_player2
-				open			ingame_player
+				open			ingame_galaxyRP
 			}
 			mouseEnter 
 			{ 

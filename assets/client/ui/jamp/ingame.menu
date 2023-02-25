@@ -316,7 +316,7 @@
 			action 
 			{ 
 				play			"sound/interface/button1.wav" ;
-				open			ingame_zykmod 
+				open			ingame_galaxyrp
 			}
 			mouseenter 
 			{ 
