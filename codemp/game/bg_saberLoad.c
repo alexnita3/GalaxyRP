@@ -1465,6 +1465,74 @@ static void Saber_ParseTrailStyle( saberInfo_t *saber, const char **p ) {
 	}
 	saber->trailStyle = n;
 }
+// Tr!Force: [RGBSabers] Parse stuff
+#if NEW_SABER_PARMS
+static void Saber_ParseCustomBladeShader(saberInfo_t *saber, const char **p) {
+	const char *s;
+	if (COM_ParseString(p, &s)) {
+		SkipRestOfLine(p);
+		return;
+	}
+#ifdef _CGAME
+	if (s)
+		saber->customBladeShader = trap->R_RegisterShader(s);
+	else
+#endif
+		saber->customBladeShader = 0;
+}
+static void Saber_ParseCustomTrailShader(saberInfo_t *saber, const char **p) {
+	const char *s;
+	if (COM_ParseString(p, &s)) {
+		SkipRestOfLine(p);
+		return;
+	}
+#ifdef _CGAME
+	if (s)
+		saber->customTrailShader = trap->R_RegisterShader(s);
+	else
+#endif
+		saber->customTrailShader = 0;
+}
+static void Saber_ParseCustomGlowShader(saberInfo_t *saber, const char **p) {
+	const char *s;
+	if (COM_ParseString(p, &s)) {
+		SkipRestOfLine(p);
+		return;
+	}
+#ifdef _CGAME
+	if (s)
+		saber->customGlowShader = trap->R_RegisterShader(s);
+	else
+#endif
+		saber->customGlowShader = 0;
+}
+static void Saber_ParseCustomRGBLight(saberInfo_t *saber, const char **p) {
+#ifdef _CGAME
+	int i;
+	float f;
+#endif
+	saber->useCustomRGBColor = qfalse;
+	saber->customRGB[0] = 0.0f;
+	saber->customRGB[1] = 0.0f;
+	saber->customRGB[2] = 0.0f;
+
+#ifdef _CGAME
+	for (i = 0; i < 3; i++)
+	{
+		if (COM_ParseFloat(p, &f)) {
+			Com_Printf("WARNING: Parsed incomplete customRGB key!\n");
+			SkipRestOfLine(p);
+			return;
+		}
+		saber->customRGB[i] = f / 255.0f;
+	}
+
+	if (saber->customRGB[0] != 0.0f || saber->customRGB[1] != 0.0f || saber->customRGB[2] != 0.0f)
+		saber->useCustomRGBColor = qtrue;
+#endif
+}
+#endif
+// Tr!Force: [RGBSabers] Parse stuff
 static void Saber_ParseG2MarksShader( saberInfo_t *saber, const char **p ) {
 	const char *value;
 	if ( COM_ParseString( p, &value ) ) {

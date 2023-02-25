@@ -358,6 +358,13 @@ typedef enum
 	SABER_GREEN,
 	SABER_BLUE,
 	SABER_PURPLE,
+	// Tr!Force: [RGBSabers] Saber colors
+	SABER_RGB,
+	SABER_FLAME1,
+	SABER_ELEC1,
+	SABER_FLAME2,
+	SABER_ELEC2,
+	SABER_BLACK,
 	NUM_SABER_COLORS
 } saber_colors_t;
 
