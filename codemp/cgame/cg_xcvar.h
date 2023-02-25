@@ -115,6 +115,8 @@ XCVAR_DEF( cg_saberDynamicMarks,				"0",					NULL,					CVAR_NONE )
 XCVAR_DEF( cg_saberDynamicMarkTime,				"60000",				NULL,					CVAR_NONE )
 XCVAR_DEF( cg_saberModelTraceEffect,			"0",					NULL,					CVAR_NONE )
 XCVAR_DEF( cg_saberTrail,						"1",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cg_shaderSaberCore,					"0.625",				NULL,					CVAR_NONE )
+XCVAR_DEF( cg_shaderSaberGlow,					"0.625",				NULL,					CVAR_NONE )//1.25?
 XCVAR_DEF( cg_scoreboardBots,					"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_scorePlums,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_stereoSeparation,					"0.4",					NULL,					CVAR_ARCHIVE )
