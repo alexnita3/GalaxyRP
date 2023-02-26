@@ -827,6 +827,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -844,6 +845,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -860,6 +862,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -876,6 +879,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -956,6 +960,7 @@
 			font				3
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2207,6 +2212,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2223,6 +2229,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2239,6 +2246,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2255,6 +2263,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2271,6 +2280,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2287,6 +2297,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2303,6 +2314,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2319,6 +2331,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2335,6 +2348,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2351,6 +2365,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2367,6 +2382,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2383,6 +2399,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2399,6 +2416,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2415,6 +2433,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2431,6 +2450,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2447,6 +2467,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2463,6 +2484,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2479,6 +2501,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2495,6 +2518,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2511,6 +2535,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2527,6 +2552,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2543,6 +2569,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2559,6 +2586,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2575,6 +2603,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2591,6 +2620,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2607,6 +2637,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2623,6 +2654,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2639,6 +2671,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2655,6 +2688,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2671,6 +2705,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2687,6 +2722,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2703,6 +2739,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2719,6 +2756,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2735,6 +2773,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2751,6 +2790,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2767,6 +2807,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2783,6 +2824,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2799,6 +2841,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2815,6 +2858,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2831,6 +2875,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2847,6 +2892,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2863,6 +2909,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2879,6 +2926,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2895,6 +2943,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2911,6 +2960,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2927,6 +2977,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2943,6 +2994,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2959,6 +3011,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2975,6 +3028,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2991,6 +3045,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3007,6 +3062,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3023,6 +3079,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3039,6 +3096,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3055,6 +3113,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3071,6 +3130,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3087,6 +3147,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3103,6 +3164,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3119,6 +3181,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3135,6 +3198,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3151,6 +3215,7 @@
 			textscale			.5
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 //----------------------------------------------------------------------------------------------
