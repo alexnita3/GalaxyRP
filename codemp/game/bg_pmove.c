@@ -330,9 +330,9 @@ int getOverridenAnimationByStyle(saberInfo_t* saber) {
 	case SS_STRONG:
 		return saber->readyAnimRed;
 	case SS_TAVION:
-		return saber->readyAnimPurple;
-	case SS_DESANN:
 		return saber->readyAnimGreen;
+	case SS_DESANN:
+		return saber->readyAnimPurple;
 	case SS_STAFF:
 		return saber->readyAnimStaff;
 	case SS_DUAL:

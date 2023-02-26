@@ -1664,6 +1664,7 @@ char ui_cvars_in_order[100][100] = {
 	"ui_rp_xp_value", 
 	"ui_zyk_rpg_skillpoints", 
 	"ui_zyk_rpg_credits",
+	"ui_zyk_rpg_current_char",
 	"ui_zyk_skill_1_level",
 	"ui_zyk_skill_2_level",
 	"ui_zyk_skill_3_level",
