@@ -3762,6 +3762,21 @@
 
 		itemDef 
 		{
+			name				newCharText
+			group				charControls
+			text				"Create a new character"
+			style				WINDOW_STYLE_EMPTY
+			rect				200 300 190 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+		}
+
+		itemDef 
+		{
 			name				charEntry
 			group				charControls
 			style				1
@@ -3793,7 +3808,7 @@
 		{
 			name				newCharDone
 			group				charControls
-			text				"Done"
+			text				"Create"
 			type				1
 			style				WINDOW_STYLE_EMPTY
 			rect				370 330 80 15
