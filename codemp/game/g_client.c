@@ -2914,6 +2914,10 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 		}
 	}
 
+	//GalaxyRP (Alex): [Ammo Recharge] Ammo recharge variables init.
+	ent->client->sess.explosive_recharge_timer = 0;
+	ent->client->sess.weapon_recharge_timer = 0;
+
 	if (ent->client->sess.amrpgmode > 0)
 	{
 		// zyk: if the target goes to spec or something, then the server must choose another target

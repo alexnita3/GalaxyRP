@@ -534,6 +534,10 @@ typedef struct clientSession_s {
 	// zyk: vote timer, used to avoid vote spam
 	int vote_timer;
 
+	//GalaxyRP (Alex): [Ammo Recharge] Ammo recharge timers. These get incremented every second and checked against the cvars.
+	int weapon_recharge_timer;
+	int explosive_recharge_timer;
+
 	// zyk: used to set the ally ids. The allies dont receive damage from this player
 	int ally1;
 	int ally2;

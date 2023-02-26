@@ -805,6 +805,58 @@ qboolean ClientInactivityTimer( gclient_t *client ) {
 	return qtrue;
 }
 
+//GalaxyRP (Alex): [Ammo Recharge] Recharge player's ammo based on a timer. Bases on rp_ammo_regen_timer and rp_explosives_recharge_timer cvars.
+extern void Add_Ammo (gentity_t *ent, int weapon, int count);
+void RegenerateAmmo(gentity_t* ent, gclient_t* client) {
+	if (ent->client->sess.loggedin == qtrue) {
+		if (ent->client->sess.weapon_recharge_timer >= rp_ammo_regen_timer.integer) {
+			for (int i = 39; i <= 41; i++) {
+
+				switch (i)
+				{
+				case 39:
+					Add_Ammo(ent, AMMO_BLASTER, 1 * ent->client->pers.skill_levels[i]);
+					break;
+				case 40:
+					Add_Ammo(ent, AMMO_POWERCELL, 1 * ent->client->pers.skill_levels[i]);
+					break;
+				case 41:
+					Add_Ammo(ent, AMMO_METAL_BOLTS, 1 * ent->client->pers.skill_levels[i]);
+					break;
+				default:
+					break;
+				}
+			}
+			ent->client->sess.weapon_recharge_timer = 0;
+		}
+		if (ent->client->sess.explosive_recharge_timer >= rp_explosives_recharge_timer.integer) {
+			for (int i = 42; i <= 45; i++) {
+				switch (i)
+				{
+				case 42:
+					Add_Ammo(ent, AMMO_ROCKETS, 1 * ent->client->pers.skill_levels[i]);
+					break;
+				case 43:
+					Add_Ammo(ent, AMMO_THERMAL, 1 * ent->client->pers.skill_levels[i]);
+					break;
+				case 44:
+					Add_Ammo(ent, AMMO_TRIPMINE, 1 * ent->client->pers.skill_levels[i]);
+					break;
+				case 45:
+					Add_Ammo(ent, AMMO_DETPACK, 1 * ent->client->pers.skill_levels[i]);
+					break;
+				default:
+					break;
+				}
+
+			}
+			ent->client->sess.explosive_recharge_timer = 0;
+		}
+		ent->client->sess.weapon_recharge_timer++;
+		ent->client->sess.explosive_recharge_timer++;
+	}
+}
+
 /*
 ==================
 ClientTimerActions
@@ -812,8 +864,7 @@ ClientTimerActions
 Actions that happen once a second
 ==================
 */
-extern int zyk_max_magic_power(gentity_t *ent);
-extern void Add_Ammo (gentity_t *ent, int weapon, int count);
+extern int zyk_max_magic_power(gentity_t* ent);
 void ClientTimerActions( gentity_t *ent, int msec ) {
 	gclient_t	*client;
      	char 		serverMotd[MAX_STRING_CHARS];
@@ -846,16 +897,8 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 	{
 		client->timeResidual -= 1000;
 
-		// zyk: if out of trip mines or thermals, remove them from weapon selection
-		if (client->ps.ammo[AMMO_THERMAL] == 0)
-		{
-			client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_THERMAL);
-		}
-
-		if (client->ps.ammo[AMMO_TRIPMINE] == 0)
-		{
-			client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_TRIP_MINE);
-		}
+		//GalaxyRP (Alex): [Ammo Recharge] Go check if player can recharge ammo, do it if they can.
+		RegenerateAmmo(ent, client);
 
 		if (zyk_chat_protection_timer.integer > 0)
 		{ // zyk: chat protection. If 0, it is off. If greater than 0, set the timer to protect the player

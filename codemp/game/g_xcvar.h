@@ -382,5 +382,7 @@ XCVAR_DEF( rp_pluginRequired,					"1",	RP_CVU_pluginRequired,	CVAR_ARCHIVE | CVA
 XCVAR_DEF( rp_downed_timer,						"30",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART,					qtrue )
 XCVAR_DEF( rp_downed_invulnerability_timer,		"10",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART,					qtrue)
 XCVAR_DEF( rp_allow_passive_regen,				"1",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART,					qtrue)
+XCVAR_DEF( rp_ammo_regen_timer,					"1",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART,					qtrue)
+XCVAR_DEF( rp_explosives_recharge_timer,		"5",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART,					qtrue)
 
 #undef XCVAR_DEF
