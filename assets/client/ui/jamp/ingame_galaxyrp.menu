@@ -116,7 +116,7 @@
 		{
 			name				listButton
 			group				mainButtons
-			text				"Info"
+			text				"Customize"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
 			rect				10 48 140 30
@@ -901,6 +901,7 @@
 				play			"sound/interface/button1"
 				uiScript		setForce "none"
 				uiScript 		update "ui_SetName"
+				uiScript		updatecharmodel
 				hide			highlights
 				uiScript		closeingame
 			}
@@ -935,11 +936,11 @@
 		{
 			name				upSkillPoints
 			group				upControls
-			rect				175 75 120 30
+			rect				175 50 120 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_TEXT
 			text				"Skill Points"
-			textscale			0.7
+			textscale			1
 			textalign			ITEM_ALIGN_LEFT
 			font				3
 			forecolor			1 .682 0 1
@@ -950,15 +951,15 @@
 		{
 			name				upSkillPointsValue
 			group				upControls
-			rect				300 75 120 20
+			rect				350 50 120 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
-			textscale			0.7
+			textscale			1
 			cvar				"ui_zyk_rpg_skillpoints" 
 			textalign			ITEM_ALIGN_LEFT
 			font				3
-			forecolor			1 1 1 1
+			forecolor			1 .682 0 1
 			visible				0
 			decoration
 		}
@@ -1032,6 +1033,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -1047,7 +1049,8 @@
 			rect				270 120 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0	  
+			visible				0	
+			decoration  
 		}
 
 		itemDef 
@@ -1063,7 +1066,8 @@
 			rect				270 140 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0 	  
+			visible				0 	
+			decoration  
 		}
 
 		itemDef 
@@ -1079,7 +1083,8 @@
 			rect				270 160 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0 	  
+			visible				0 	
+			decoration  
 		}
 
 		itemDef 
@@ -1095,7 +1100,8 @@
 			rect				270 180 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0 	  
+			visible				0 	
+			decoration  
 		}
 
 		itemDef 
@@ -1112,6 +1118,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1128,6 +1135,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -1144,6 +1152,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -1159,7 +1168,8 @@
 			rect				270 260 60 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0	  
+			visible				0	
+			decoration  
 		}
 
 		itemDef 
@@ -1175,7 +1185,8 @@
 			rect				420 100 50 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0	  
+			visible				0
+			decoration	  
 		}
 
 		itemDef 
@@ -1191,7 +1202,8 @@
 			rect				420 120 60 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0 	  
+			visible				0 	 
+			decoration 
 		}
 
 		itemDef 
@@ -1208,6 +1220,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1224,6 +1237,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0	  
+			decoration
 		}
 
 		itemDef 
@@ -1239,7 +1253,8 @@
 			rect				420 180 90 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0 	  
+			visible				0 	
+			decoration  
 		}
 
 		itemDef 
@@ -1256,6 +1271,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0	  
+			decoration
 		}
 
 		itemDef 
@@ -1272,6 +1288,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0	  
+			decoration
 		}
 
 		itemDef 
@@ -1288,6 +1305,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1303,7 +1321,8 @@
 			rect				420 260 100 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0  	  
+			visible				0  	
+			decoration  
 		}
 
 		itemDef 
@@ -1375,6 +1394,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0 	  
+			decoration
 		}
 
 		itemDef 
@@ -1391,6 +1411,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -1407,6 +1428,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1423,6 +1445,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1438,7 +1461,8 @@
 			rect				270 180 90 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0 	  
+			visible				0 
+			decoration	  
 		}
 
 		itemDef 
@@ -1455,6 +1479,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1471,6 +1496,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0	  
+			decoration
 		}
 
 		itemDef 
@@ -1487,6 +1513,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1503,6 +1530,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0 
+			decoration
 		}
 
 		itemDef 
@@ -1519,6 +1547,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1534,7 +1563,8 @@
 			rect				420 180 100 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0	  
+			visible				0	
+			decoration  
 		}
 
 		itemDef 
@@ -1551,6 +1581,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0 
+			decoration
 		}
 
 		itemDef 
@@ -1621,7 +1652,8 @@
 			rect				270 100 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0	  
+			visible				0	
+			decoration  
 		}
 
 		itemDef 
@@ -1638,6 +1670,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1653,7 +1686,8 @@
 			rect				270 140 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0	  
+			visible				0	
+			decoration  
 		}
 
 		itemDef 
@@ -1670,6 +1704,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1685,7 +1720,8 @@
 			rect				270 180 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0 	  
+			visible				0 	
+			decoration  
 		}
 
 		itemDef 
@@ -1702,6 +1738,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1718,6 +1755,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -1734,6 +1772,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1750,6 +1789,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1765,7 +1805,8 @@
 			rect				270 280 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0 	  
+			visible				0 	
+			decoration  
 		}
 
 		itemDef 
@@ -1782,6 +1823,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0 
+			decoration
 		}
 
 		itemDef 
@@ -1798,6 +1840,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0 
+			decoration
 		}
 
 		itemDef 
@@ -1814,6 +1857,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0 
+			decoration
 		}
 
 		itemDef 
@@ -1884,7 +1928,8 @@
 			rect				270 100 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0	  
+			visible				0	
+			decoration  
 		}
 
 		itemDef 
@@ -1901,6 +1946,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1917,6 +1963,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1933,6 +1980,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0 
+			decoration
 		}
 
 		itemDef 
@@ -1949,6 +1997,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
+			decoration
 		}
 
 		itemDef 
@@ -1965,6 +2014,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0	  
+			decoration
 		}
 
 		itemDef 
@@ -1980,7 +2030,8 @@
 			rect				270 220 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0 	  
+			visible				0 	
+			decoration  
 		}
 
 		itemDef 
@@ -2051,7 +2102,8 @@
 			rect				270 100 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0	  
+			visible				0	
+			decoration  
 		}
 
 		itemDef 
@@ -2068,6 +2120,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0 
+			decoration
 		}
 
 		itemDef 
@@ -2084,6 +2137,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0 
+			decoration
 		}
 
 		itemDef 
@@ -2099,7 +2153,8 @@
 			rect				270 160 130 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
-			visible				0 	  
+			visible				0 	
+			decoration  
 		}
 
 		itemDef 
@@ -2116,6 +2171,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0	  
+			decoration
 		}
 
 		itemDef 
@@ -2132,6 +2188,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2148,6 +2205,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2164,6 +2222,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2180,6 +2239,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -2196,6 +2256,7 @@
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3225,34 +3286,52 @@
 
 		itemDef 
 		{
+			name				currentCharLabel
+			group				charControls
+			rect				160 40 100 20
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_TEXT
+			text				"Current Character:"
+			textscale			0.7
+			textalign			ITEM_ALIGN_LEFT
+			font				2
+			forecolor			1 .682 0 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
 			name				currentCharValue
 			group				charControls
-			rect				160 40 210 20
+			rect				265 40 210 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
-			text				""
+			text				"CURRENT CHAR"
 			textscale			0.7
 			cvar				"ui_zyk_rpg_current_char" 
 			textalign			ITEM_ALIGN_LEFT
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
 		{
 			name				char1Value
 			group				charControls
-			rect				160 70 210 20
+			rect				160 68 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
 			textscale			0.6
 			cvar				"ui_zyk_rpg_char_1" 
-			textalign			ITEM_ALIGN_LEFT
+			textalign			ITEM_ALIGN_RIGHT
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3262,14 +3341,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 70 40 15
+			rect				300 70 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3282,7 +3361,7 @@
 		{
 			name				char2Value
 			group				charControls
-			rect				160 85 210 20
+			rect				360 68 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3292,6 +3371,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3301,14 +3381,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 85 40 15
+			rect				500 70 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3321,7 +3401,7 @@
 		{
 			name				char3Value
 			group				charControls
-			rect				160 100 210 20
+			rect				160 98 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3331,6 +3411,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3340,14 +3421,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 100 40 15
+			rect				300 100 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3360,7 +3441,7 @@
 		{
 			name				char4Value
 			group				charControls
-			rect				160 115 210 20
+			rect				360 98 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3370,6 +3451,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3379,14 +3461,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 115 40 15
+			rect				500 100 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3399,7 +3481,7 @@
 		{
 			name				char5Value
 			group				charControls
-			rect				160 130 210 20
+			rect				160 128 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3409,6 +3491,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3418,14 +3501,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 130 40 15
+			rect				300 130 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3438,7 +3521,7 @@
 		{
 			name				char6Value
 			group				charControls
-			rect				160 145 210 20
+			rect				360 128 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3448,6 +3531,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3457,14 +3541,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 145 40 15
+			rect				500 130 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3477,7 +3561,7 @@
 		{
 			name				char7Value
 			group				charControls
-			rect				160 160 210 20
+			rect				160 158 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3487,6 +3571,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3496,14 +3581,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 160 40 15
+			rect				300 160 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3516,7 +3601,7 @@
 		{
 			name				char8Value
 			group				charControls
-			rect				160 175 210 20
+			rect				360 158 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3526,6 +3611,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3535,14 +3621,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 175 40 15
+			rect				500 160 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3555,7 +3641,7 @@
 		{
 			name				char9Value
 			group				charControls
-			rect				160 190 210 20
+			rect				160 188 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3565,6 +3651,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3574,14 +3661,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 190 40 15
+			rect				300 190 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3594,7 +3681,7 @@
 		{
 			name				char10Value
 			group				charControls
-			rect				160 205 210 20
+			rect				360 188 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3604,6 +3691,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3613,14 +3701,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 205 40 15
+			rect				500 190 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3633,7 +3721,7 @@
 		{
 			name				char11Value
 			group				charControls
-			rect				160 220 210 20
+			rect				160 218 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3643,6 +3731,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3652,14 +3741,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 220 40 15
+			rect				300 220 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3672,7 +3761,7 @@
 		{
 			name				char12Value
 			group				charControls
-			rect				160 235 210 20
+			rect				360 218 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3682,6 +3771,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3691,14 +3781,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 235 40 15
+			rect				500 220 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3711,7 +3801,7 @@
 		{
 			name				char13Value
 			group				charControls
-			rect				160 250 210 20
+			rect				160 248 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3721,6 +3811,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3730,14 +3821,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 250 40 15
+			rect				300 250 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3750,7 +3841,7 @@
 		{
 			name				char14Value
 			group				charControls
-			rect				160 265 210 20
+			rect				360 248 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3760,6 +3851,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3769,14 +3861,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 265 40 15
+			rect				500 250 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3789,7 +3881,7 @@
 		{
 			name				char15Value
 			group				charControls
-			rect				160 280 210 20
+			rect				160 278 140 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3799,6 +3891,7 @@
 			font				2
 			forecolor			1 1 1 1
 			visible				0
+			decoration
 		}
 
 		itemDef 
@@ -3808,14 +3901,14 @@
 			text				"Use"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 280 40 15
+			rect				300 280 40 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Use this char"
+			descText			"Use this character"
 	  	  
 			action 
 			{ 
@@ -3826,17 +3919,32 @@
 
 		itemDef 
 		{
+			name				newCharText
+			group				charControls
+			text				"Create a new character"
+			style				WINDOW_STYLE_EMPTY
+			rect				200 320 190 15
+			font				3
+			textscale			0.6
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+		}
+
+		itemDef 
+		{
 			name				charEntry
 			group				charControls
 			style				1
-			descText			"Enter Char Name"
+			descText			"Enter your new character name"
 			text				""
 			maxchars			30
 			font				2
 			textscale			.5
 			TYPE				4
 			cvar				"zykCharName" 
-			rect				160 330 190 15
+			rect				160 340 190 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 1 1 1
 			backcolor			.25 .25 .25 .5
@@ -3857,17 +3965,17 @@
 		{
 			name				newCharDone
 			group				charControls
-			text				"Done"
+			text				"Create"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				370 330 80 15
+			rect				370 340 80 15
 			font				3
 			textscale			0.6
 			textalign			ITEM_ALIGN_LEFT
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Finished writing new char name"
+			descText			""
 	  	  
 			action 
 			{ 
