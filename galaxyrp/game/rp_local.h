@@ -146,7 +146,9 @@ typedef struct skill_s {
 	const char* skill_description;
 	const char* category;
 	const char* alignment;
-	int force_power_internal;
+
+	//GalaxyRP (Alex): [Skills] Value to be used for internal code stuff. (such as force power enums, weapon enums etc..)
+	int value_internal;
 } skill_t;
 
 /*

@@ -13013,30 +13013,30 @@ void apply_skill_change_in_game(gentity_t* ent, int skill_id, qboolean upgrade) 
 	}
 
 	//GalaxyRP (Alex): [Skill] Give them the Force Ability.
-	if (strcmp(skills[skill_id].category,"force") == 0 && skills[skill_id].force_power_internal != 0) {
-		ent->client->ps.fd.forcePowerLevel[skills[skill_id].force_power_internal] = ent->client->pers.skill_levels[skill_id];
+	if (strcmp(skills[skill_id].category,"force") == 0 && skills[skill_id].value_internal != 0) {
+		ent->client->ps.fd.forcePowerLevel[skills[skill_id].value_internal] = ent->client->pers.skill_levels[skill_id];
 		
 		if (upgrade) {
-			if (!(ent->client->ps.fd.forcePowersKnown & (1 << skills[skill_id].force_power_internal))) {
-				ent->client->ps.fd.forcePowersKnown |= (1 << skills[skill_id].force_power_internal);
+			if (!(ent->client->ps.fd.forcePowersKnown & (1 << skills[skill_id].value_internal))) {
+				ent->client->ps.fd.forcePowersKnown |= (1 << skills[skill_id].value_internal);
 			}
 		}
 		else {
-			if (ent->client->ps.fd.forcePowerLevel[skills[skill_id].force_power_internal] == 0)
+			if (ent->client->ps.fd.forcePowerLevel[skills[skill_id].value_internal] == 0)
 			{
-				ent->client->ps.fd.forcePowersKnown &= ~(1 << skills[skill_id].force_power_internal);
+				ent->client->ps.fd.forcePowersKnown &= ~(1 << skills[skill_id].value_internal);
 			}
 		}
 	}
 
 	//GalaxyRP (Alex): [Skill] Give them the weapon.
-	if ((strcmp(skills[skill_id].category, "weapons") == 0 || strcmp(skills[skill_id].category, "ammo") == 0) && skills[skill_id].force_power_internal != 0) {
+	if ((strcmp(skills[skill_id].category, "weapons") == 0 || strcmp(skills[skill_id].category, "ammo") == 0) && skills[skill_id].value_internal != 0) {
 		if (upgrade) {
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << skills[skill_id].force_power_internal);
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << skills[skill_id].value_internal);
 		}
 		else {
 			if (ent->client->pers.skill_levels[skill_id] == 0) {
-				ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << skills[skill_id].force_power_internal);
+				ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << skills[skill_id].value_internal);
 			}
 		}
 	}
@@ -13054,13 +13054,13 @@ void apply_skill_change_in_game(gentity_t* ent, int skill_id, qboolean upgrade) 
 	}
 
 	//GalaxyRP (Alex): [Skill] Give them the item.
-	if (strcmp(skills[skill_id].category, "items") == 0 && skills[skill_id].force_power_internal != 0) {
+	if (strcmp(skills[skill_id].category, "items") == 0 && skills[skill_id].value_internal != 0) {
 		if (upgrade) {
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << skills[skill_id].force_power_internal);
+			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << skills[skill_id].value_internal);
 		}
 		else {
 			if (ent->client->pers.skill_levels[skill_id] == 0) {
-				ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << skills[skill_id].force_power_internal);
+				ent->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << skills[skill_id].value_internal);
 			}
 		}
 	}
