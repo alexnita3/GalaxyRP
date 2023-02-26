@@ -1,10 +1,10 @@
 //----------------------------------------------------------------------------------------------
-// INGAME ZYK MOD BOX 
+// INGAME GALAXY RP BOX 
 //----------------------------------------------------------------------------------------------
 {
 	menuDef  
 	{
-		name					"ingame_zykmod"
+		name					"ingame_galaxyrp"
 		visible					0
 		fullscreen				0
 		outOfBoundsClick									// this closes the window if it gets a click out of the rectangle
@@ -26,7 +26,7 @@
 		onESC 
 		{ 
 			play				"sound/interface/button1.wav" ;
-			close				ingame_zykmod
+			close				ingame_galaxyrp
 		}
 
 		onopen 
@@ -98,14 +98,14 @@
 		}
 
 //----------------------------------------------------------------------------------------------
-// List Tab Beginning
+// Leftside Menu Items
 //----------------------------------------------------------------------------------------------
-
+		
 		itemDef 
 		{
 			name				listButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				5 38 140 30
+			rect				5 48 140 30
 			background			"gfx/menus/menu_blendbox2"
 			forecolor			1 1 1 1
 			visible				0
@@ -116,10 +116,10 @@
 		{
 			name				listButton
 			group				mainButtons
-			text				"Character"
+			text				"Info"
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_EMPTY
-			rect				10 38 140 30
+			rect				10 48 140 30
 			font				3
 			textscale			0.8
 			textalignx			15
@@ -128,7 +128,7 @@
 			textstyle			3
 			forecolor			1 .682 0 1
 			visible				0
-			descText			"Lists RPG info"
+			descText			"Shows the information about your current character"
 
 			mouseEnter 
 			{ 
@@ -175,6 +175,384 @@
 				setitemcolor		listButton		forecolor 1 1 1 1 ;
 			}
 		}
+
+				itemDef 
+		{
+			name				upButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 78 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				upButton
+			group				mainButtons
+			text				"Skills"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				10 78 140 30
+			font				3
+			textscale			0.8
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Check your character's skill levels"
+
+			mouseEnter 
+			{ 
+				show			upButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			upButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec 			"zykmod" ;
+				show 			upControls ;
+				hide			charControls ;
+				hide			changePassControls ;
+				hide 			rpgClassControls ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			questControls ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				hide 			listControls ;
+				hide 			commandsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide 			settingsControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyMiscControls ;
+				hide 			cameraControls ;
+				hide 			gamesControls ;
+				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
+				setitemcolor		upButton		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				charButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 108 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				charButton
+			group				mainButtons
+			text				"Characters"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				10 108 140 30
+			font				3
+			textscale			0.8
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Manage your characters. You can also change via /char in console"
+
+			mouseEnter 
+			{ 
+				show			charButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			charButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				exec 			"zykchars" ;
+				show 			charControls ;
+				hide			upControls ;
+				hide			changePassControls ;
+				hide 			rpgClassControls ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			questControls ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				hide 			listControls ;
+				hide 			commandsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide 			settingsControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyMiscControls ;
+				hide 			cameraControls ;
+				hide 			gamesControls ;
+				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
+				setitemcolor		charButton		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				commandsButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 138 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				commandsButton
+			group				mainButtons
+			text				"Shop"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				10 138 140 30
+			font				3
+			textscale			0.8
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Buy and sell gear, ammunition, and upgrades"
+
+			mouseEnter 
+			{ 
+				show			commandsButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			commandsButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			commandsControls ;
+				hide			charControls ;
+				hide			changePassControls ;
+				hide 			rpgClassControls ;
+				hide 			upControls ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			questControls ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				hide 			listControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide 			settingsControls ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyMiscControls ;
+				hide 			cameraControls ;
+				hide 			gamesControls ;
+				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
+				setitemcolor		commandsButton		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				gamesButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 168 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				gamesButton
+			group				mainButtons
+			text				"Games"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				10 168 140 30
+			font				3
+			textscale			0.8
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Play mini-games"
+
+			mouseEnter 
+			{ 
+				show			gamesButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			gamesButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			gamesControls ;
+				hide			charControls ;
+				hide			changePassControls ;
+				hide 			rpgClassControls ;
+				hide 			upControls ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			questControls ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				hide 			listControls ;
+				hide 			commandsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyMiscControls ;
+				hide 			cameraControls ;
+				hide 			settingsControls ;
+				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
+				setitemcolor		gamesButton 		forecolor 1 1 1 1 ;
+			}
+		}
+
+		itemDef 
+		{
+			name				cameraButton_glow
+			style				WINDOW_STYLE_SHADER
+			rect				5 198 140 30
+			background			"gfx/menus/menu_blendbox2"
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				cameraButton
+			group				mainButtons
+			text				"Camera"
+			type				ITEM_TYPE_BUTTON
+			style				WINDOW_STYLE_EMPTY
+			rect				10 198 140 30
+			font				3
+			textscale			0.8
+			textalignx			15
+			textaligny			5
+			textalign			ITEM_ALIGN_LEFT
+			textstyle			3
+			forecolor			1 .682 0 1
+			visible				0
+			descText			"Alter some of your camera settings"
+
+			mouseEnter 
+			{ 
+				show			cameraButton_glow
+			}
+			mouseExit 
+			{ 
+				hide			cameraButton_glow
+			}	  	  
+			action 
+			{ 
+				play			"sound/interface/button1.wav" ;
+				show 			cameraControls ;
+				hide			charControls ;
+				hide			changePassControls ;
+				hide 			rpgClassControls ;
+				hide 			upControls ;
+				hide 			forceSkillsControls ;
+				hide			weaponSkillsControls ;
+				hide			otherSkillsControls ;
+				hide			ammoSkillsControls ;
+				hide			itemsSkillsControls ;
+				hide			questControls ;
+				hide			universeControls ;
+				hide			lightControls ;
+				hide			darkControls ;
+				hide			eternityControls ;
+				hide			questMapsControls ;
+				hide 			listControls ;
+				hide 			commandsControls ;
+				hide			levelforce ;
+				hide			levelweapon ;
+				hide			levelother ;
+				hide			levelammo ;
+				hide			levelitem ;
+				hide 			buyControls ;
+				hide 			buyAmmoControls ;
+				hide 			buyWeaponsControls ;
+				hide 			buyMiscControls ;
+				hide 			settingsControls ;
+				hide 			gamesControls ;
+				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
+				setitemcolor		cameraButton	forecolor 1 1 1 1 ;
+			}
+		}
+
+//----------------------------------------------------------------------------------------------
+// List Tab Beginning
+//----------------------------------------------------------------------------------------------
+
+
 		
 		itemDef 
 		{
@@ -185,7 +563,7 @@
 			text 				@MENUS_NAME1
 			cvar 				"ui_Name"
 			maxchars 			26
-			rect 				170 50 120 20
+			rect 				170 50 300 20
 			textalign			ITEM_ALIGN_LEFT		
 			textalignx 			0
 			textaligny 			-5
@@ -242,7 +620,7 @@
 			group				listControls
 			style				0	
 			text				@MENUS_CUSTOM
-			rect				425 80 150 26
+			rect				425 50 150 26
 			textalign			ITEM_ALIGN_CENTER
 			textalignx			75
 			textaligny			-3
@@ -263,7 +641,7 @@
 			descText			@MENUS_CUSTOMPLAYER_DESC
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_SHADER
-			rect				465 110 75 75
+			rect				465 75 75 75
 			font				3
 			textscale			1
 			textaligny			-1
@@ -283,7 +661,7 @@
 			{ 
 				play			"sound/interface/button1.wav" 
 				uiScript				updateForceStatus
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 				open			ingame_player2
 			}  	  
 		}
@@ -294,7 +672,7 @@
 			group				listControls
 			style				0	
 			text				@MENUS_SABER_TITLE
-			rect				430 247 150 26
+			rect				425 165 150 26
 			textalign			ITEM_ALIGN_CENTER
 			textalignx			75
 			textaligny			-3
@@ -315,7 +693,7 @@
 			descText			@MENUS_SABER_TITLE_DESC
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_SHADER
-			rect				465 272 75 75
+			rect				465 190 75 75
 			font				3
 			textscale			1
 			textalignx			65
@@ -335,7 +713,7 @@
 	     		action 
 			{ 
 				play			"sound/interface/button1.wav" 
-				close			ingame_zykmod 
+				close			ingame_galaxyrp 
 				open			ingame_saber 
 			}  	  
 		}
@@ -359,28 +737,20 @@
 		//	decoration
 		//}
 
+
 		itemDef 
 		{
-			name				applycurrent
+			name				listCharacterInfo
 			group				listControls
-			text				@MENUS_APPLY
-			type				1
+			rect				170 200 200 20
 			style				WINDOW_STYLE_EMPTY
-			rect				170 200 60 32
+			type				ITEM_TYPE_TEXT
+			text				"Character Information"
+			textscale			1
 			textalign			ITEM_ALIGN_LEFT
 			font				2
-			textscale			1
 			forecolor			1 .682 0 1
-			descText			@MENUS_APPLY_CHANGES_AND_JOIN
-			visible			1
-			action 
-			{ 
-				play			"sound/interface/button1"
-				uiScript		setForce "none"
-				uiScript 		update "ui_SetName"
-				hide			highlights
-				uiScript		closeingame
-			}
+			visible				0
 		}
 
 		itemDef 
@@ -508,84 +878,54 @@
 			visible				0
 		}
 
-//----------------------------------------------------------------------------------------------
-// Skills Tab Beginning
-//----------------------------------------------------------------------------------------------
-
 		itemDef 
 		{
-			name				upButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				5 68 140 30
-			background			"gfx/menus/menu_blendbox2"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				upButton
-			group				mainButtons
-			text				"Skills"
-			type				ITEM_TYPE_BUTTON
+			name				applycurrent
+			group				listControls
+			text				@MENUS_APPLY
+			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				10 68 140 30
-			font				3
-			textscale			0.8
-			textalignx			15
-			textaligny			5
+			rect				280 330 60 32
 			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
+			font				2
+			textscale			1
 			forecolor			1 .682 0 1
-			visible				0
-			descText			"Upgrade or downgrade a skill"
+			descText			@MENUS_APPLY_CHANGES_AND_JOIN
+			visible			1
+			action 
+			{ 
+				play			"sound/interface/button1"
+				uiScript		setForce "none"
+				uiScript 		update "ui_SetName"
+				hide			highlights
+				uiScript		closeingame
+			}
 
 			mouseEnter 
 			{ 
-				show			upButton_glow
+				show			applybut_glow 
 			}
 			mouseExit 
 			{ 
-				hide			upButton_glow
-			}	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				exec 			"zykmod" ;
-				show 			upControls ;
-				hide			charControls ;
-				hide			changePassControls ;
-				hide 			rpgClassControls ;
-				hide 			forceSkillsControls ;
-				hide			weaponSkillsControls ;
-				hide			otherSkillsControls ;
-				hide			ammoSkillsControls ;
-				hide			itemsSkillsControls ;
-				hide			questControls ;
-				hide			universeControls ;
-				hide			lightControls ;
-				hide			darkControls ;
-				hide			eternityControls ;
-				hide			questMapsControls ;
-				hide 			listControls ;
-				hide 			commandsControls ;
-				hide			levelforce ;
-				hide			levelweapon ;
-				hide			levelother ;
-				hide			levelammo ;
-				hide			levelitem ;
-				hide 			settingsControls ;
-				hide 			buyControls ;
-				hide 			buyAmmoControls ;
-				hide 			buyWeaponsControls ;
-				hide 			buyMiscControls ;
-				hide 			cameraControls ;
-				hide 			gamesControls ;
-				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
-				setitemcolor		upButton		forecolor 1 1 1 1 ;
-			}
+				hide			applybut_glow
+			}	  	
 		}
+
+		itemDef 
+		{
+			name				applybut_glow
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				268 330 70 32
+			background			"gfx/menus/menu_buttonback"
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+
+//----------------------------------------------------------------------------------------------
+// Skills Tab Beginning
+//----------------------------------------------------------------------------------------------
 
 		itemDef 
 		{
@@ -2817,80 +3157,6 @@
 // Characters Tab Beginning
 //----------------------------------------------------------------------------------------------
 
-		itemDef 
-		{
-			name				charButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				5 98 140 30
-			background			"gfx/menus/menu_blendbox2"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				charButton
-			group				mainButtons
-			text				"Characters"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				10 98 140 30
-			font				3
-			textscale			0.8
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Manage RPG Chars. To migrate chars, use /rpgchar on console"
-
-			mouseEnter 
-			{ 
-				show			charButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			charButton_glow
-			}	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				exec 			"zykchars" ;
-				show 			charControls ;
-				hide			upControls ;
-				hide			changePassControls ;
-				hide 			rpgClassControls ;
-				hide 			forceSkillsControls ;
-				hide			weaponSkillsControls ;
-				hide			otherSkillsControls ;
-				hide			ammoSkillsControls ;
-				hide			itemsSkillsControls ;
-				hide			questControls ;
-				hide			universeControls ;
-				hide			lightControls ;
-				hide			darkControls ;
-				hide			eternityControls ;
-				hide			questMapsControls ;
-				hide 			listControls ;
-				hide 			commandsControls ;
-				hide			levelforce ;
-				hide			levelweapon ;
-				hide			levelother ;
-				hide			levelammo ;
-				hide			levelitem ;
-				hide 			settingsControls ;
-				hide 			buyControls ;
-				hide 			buyAmmoControls ;
-				hide 			buyWeaponsControls ;
-				hide 			buyMiscControls ;
-				hide 			cameraControls ;
-				hide 			gamesControls ;
-				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
-				setitemcolor		charButton		forecolor 1 1 1 1 ;
-			}
-		}
 
 		itemDef 
 		{
@@ -4358,7 +4624,7 @@
 				exec			"callvote map yavin1b"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4382,7 +4648,7 @@
 				exec			"callvote map yavin2"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4406,7 +4672,7 @@
 				exec			"callvote map t1_danger"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4430,7 +4696,7 @@
 				exec			"callvote map t1_fatal"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4454,7 +4720,7 @@
 				exec			"callvote map t1_sour"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4478,7 +4744,7 @@
 				exec			"callvote map t1_surprise"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4502,7 +4768,7 @@
 				exec			"callvote map hoth2"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4526,7 +4792,7 @@
 				exec			"callvote map hoth3"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4550,7 +4816,7 @@
 				exec			"callvote map t2_rogue"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4574,7 +4840,7 @@
 				exec			"callvote map t2_trip"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4598,7 +4864,7 @@
 				exec			"callvote map t3_bounty"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4622,7 +4888,7 @@
 				exec			"callvote map t3_hevil"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4646,7 +4912,7 @@
 				exec			"callvote map t3_rift"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4670,7 +4936,7 @@
 				exec			"callvote map taspir1"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4694,7 +4960,7 @@
 				exec			"callvote map kor1"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4718,7 +4984,7 @@
 				exec			"callvote map mp/siege_korriban"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4742,7 +5008,7 @@
 				exec			"callvote map mp/siege_desert"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4766,7 +5032,7 @@
 				exec			"callvote map mp/duel5"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4790,7 +5056,7 @@
 				exec			"callvote map mp/duel8"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
@@ -4814,87 +5080,13 @@
 				exec			"callvote map mp/duel9"
 				play			"sound/interface/button1.wav" ;
 				hide			questMapsControls ;
-				close			ingame_zykmod
+				close			ingame_galaxyrp
 			}  	  
 		}
 
 //----------------------------------------------------------------------------------------------
 // Shop Tab Beginning
 //----------------------------------------------------------------------------------------------
-
-		itemDef 
-		{
-			name				commandsButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				5 128 140 30
-			background			"gfx/menus/menu_blendbox2"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				commandsButton
-			group				mainButtons
-			text				"Shop"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				10 128 140 30
-			font				3
-			textscale			0.8
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Buy and Sell stuff"
-
-			mouseEnter 
-			{ 
-				show			commandsButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			commandsButton_glow
-			}	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				show 			commandsControls ;
-				hide			charControls ;
-				hide			changePassControls ;
-				hide 			rpgClassControls ;
-				hide 			upControls ;
-				hide 			forceSkillsControls ;
-				hide			weaponSkillsControls ;
-				hide			otherSkillsControls ;
-				hide			ammoSkillsControls ;
-				hide			itemsSkillsControls ;
-				hide			questControls ;
-				hide			universeControls ;
-				hide			lightControls ;
-				hide			darkControls ;
-				hide			eternityControls ;
-				hide			questMapsControls ;
-				hide 			listControls ;
-				hide			levelforce ;
-				hide			levelweapon ;
-				hide			levelother ;
-				hide			levelammo ;
-				hide			levelitem ;
-				hide 			settingsControls ;
-				hide 			buyControls ;
-				hide 			buyAmmoControls ;
-				hide 			buyWeaponsControls ;
-				hide 			buyMiscControls ;
-				hide 			cameraControls ;
-				hide 			gamesControls ;
-				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
-				setitemcolor		commandsButton		forecolor 1 1 1 1 ;
-			}
-		}
 
 		itemDef 
 		{
@@ -5470,80 +5662,6 @@
 
 		itemDef 
 		{
-			name				gamesButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				5 158 140 30
-			background			"gfx/menus/menu_blendbox2"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				gamesButton
-			group				mainButtons
-			text				"Games"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				10 158 140 30
-			font				3
-			textscale			0.8
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Play mini-games"
-
-			mouseEnter 
-			{ 
-				show			gamesButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			gamesButton_glow
-			}	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				show 			gamesControls ;
-				hide			charControls ;
-				hide			changePassControls ;
-				hide 			rpgClassControls ;
-				hide 			upControls ;
-				hide 			forceSkillsControls ;
-				hide			weaponSkillsControls ;
-				hide			otherSkillsControls ;
-				hide			ammoSkillsControls ;
-				hide			itemsSkillsControls ;
-				hide			questControls ;
-				hide			universeControls ;
-				hide			lightControls ;
-				hide			darkControls ;
-				hide			eternityControls ;
-				hide			questMapsControls ;
-				hide 			listControls ;
-				hide 			commandsControls ;
-				hide			levelforce ;
-				hide			levelweapon ;
-				hide			levelother ;
-				hide			levelammo ;
-				hide			levelitem ;
-				hide 			buyControls ;
-				hide 			buyAmmoControls ;
-				hide 			buyWeaponsControls ;
-				hide 			buyMiscControls ;
-				hide 			cameraControls ;
-				hide 			settingsControls ;
-				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
-				setitemcolor		gamesButton 		forecolor 1 1 1 1 ;
-			}
-		}
-
-		itemDef 
-		{
 			name				rpgLmsButton
 			group				gamesControls
 			text				"RPG LMS"
@@ -5564,7 +5682,7 @@
 			{ 
 				play			"sound/interface/button1.wav" ;
 				exec			"rpglmsmode" ;
-				close			ingame_zykmod ;
+				close			ingame_galaxyrp ;
 			}
 		}
 
@@ -5590,7 +5708,7 @@
 			{ 
 				play			"sound/interface/button1.wav" ;
 				exec			"racemode" ;
-				close			ingame_zykmod ;
+				close			ingame_galaxyrp ;
 			}
 		}
 
@@ -5616,7 +5734,7 @@
 			{ 
 				play			"sound/interface/button1.wav" ;
 				exec			"duelmode" ;
-				close			ingame_zykmod ;
+				close			ingame_galaxyrp ;
 			}
 		}
 
@@ -5642,7 +5760,7 @@
 			{ 
 				play			"sound/interface/button1.wav" ;
 				exec			"snipermode" ;
-				close			ingame_zykmod ;
+				close			ingame_galaxyrp ;
 			}
 		}
 
@@ -5668,7 +5786,7 @@
 			{ 
 				play			"sound/interface/button1.wav" ;
 				exec			"meleemode" ;
-				close			ingame_zykmod ;
+				close			ingame_galaxyrp ;
 			}
 		}
 
@@ -6153,79 +6271,6 @@
 // List Tab Beginning
 //----------------------------------------------------------------------------------------------
 
-		itemDef 
-		{
-			name				cameraButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				5 188 140 30
-			background			"gfx/menus/menu_blendbox2"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				cameraButton
-			group				mainButtons
-			text				"Camera"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				10 188 140 30
-			font				3
-			textscale			0.8
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-			descText			"Camera controls"
-
-			mouseEnter 
-			{ 
-				show			cameraButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			cameraButton_glow
-			}	  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				show 			cameraControls ;
-				hide			charControls ;
-				hide			changePassControls ;
-				hide 			rpgClassControls ;
-				hide 			upControls ;
-				hide 			forceSkillsControls ;
-				hide			weaponSkillsControls ;
-				hide			otherSkillsControls ;
-				hide			ammoSkillsControls ;
-				hide			itemsSkillsControls ;
-				hide			questControls ;
-				hide			universeControls ;
-				hide			lightControls ;
-				hide			darkControls ;
-				hide			eternityControls ;
-				hide			questMapsControls ;
-				hide 			listControls ;
-				hide 			commandsControls ;
-				hide			levelforce ;
-				hide			levelweapon ;
-				hide			levelother ;
-				hide			levelammo ;
-				hide			levelitem ;
-				hide 			buyControls ;
-				hide 			buyAmmoControls ;
-				hide 			buyWeaponsControls ;
-				hide 			buyMiscControls ;
-				hide 			settingsControls ;
-				hide 			gamesControls ;
-				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
-				setitemcolor		cameraButton	forecolor 1 1 1 1 ;
-			}
-		}
 
 		itemDef 
 		{
