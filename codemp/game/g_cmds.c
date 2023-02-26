@@ -13040,6 +13040,18 @@ void apply_skill_change_in_game(gentity_t* ent, int skill_id, qboolean upgrade) 
 			}
 		}
 	}
+	
+	//GalaxyRP (Alex): [Skill] Give or take away a lightsaber if they got the skill for it.
+	if (skill_id == 5) {
+		if (upgrade) {
+			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
+		}
+		else {
+			if (ent->client->pers.skill_levels[skill_id] == 0) {
+				ent->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_SABER);
+			}
+		}
+	}
 
 	//GalaxyRP (Alex): [Skill] Give them the item.
 	if (strcmp(skills[skill_id].category, "items") == 0 && skills[skill_id].force_power_internal != 0) {
