@@ -3307,7 +3307,7 @@
 			rect				265 40 210 20
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
-			text				"CURRENT CHAR"
+			text				""
 			textscale			0.7
 			cvar				"ui_zyk_rpg_current_char" 
 			textalign			ITEM_ALIGN_LEFT
