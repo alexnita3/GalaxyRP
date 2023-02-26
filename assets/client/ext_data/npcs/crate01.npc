@@ -1,0 +1,27 @@
+crate01
+{
+	playerModel	crate01
+	weapon		WP_NONE
+	reactions	1
+	aim			1
+	move		1
+	aggression	1
+	evasion		1
+	intelligence	5
+	rank		crewman
+	playerTeam	TEAM_PLAYER
+	enemyTeam	TEAM_ENEMY
+	class		CLASS_PRISONER
+	snd			prisoner1
+	sndcombat	prisoner1
+	sndextra	prisoner1
+	walkSpeed	55
+	runSpeed	200
+	yawspeed	110
+	health		1000
+	dismemberProbHead	0
+	dismemberProbArms	5
+	dismemberProbLegs	0
+	dismemberProbHands	10
+	dismemberProbWaist	0
+}
