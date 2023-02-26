@@ -637,7 +637,7 @@
 		{
 			name				custom
 			group				listControls
-			background			"gfx/mp/custom_mp_default"
+			background			"gfx/menus/custombtn"
 			descText			@MENUS_CUSTOMPLAYER_DESC
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_SHADER
@@ -689,7 +689,7 @@
 		{
 			name				saber
 			group				listControls
-			background			"gfx/menus/saberonly"
+			background			"gfx/menus/saberbtn"
 			descText			@MENUS_SABER_TITLE_DESC
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_SHADER
@@ -897,7 +897,6 @@
 				play			"sound/interface/button1"
 				uiScript		setForce "none"
 				uiScript 		update "ui_SetName"
-				uiScript 		updatecharmodel
 				hide			highlights
 				uiScript		closeingame
 			}
@@ -3762,21 +3761,6 @@
 
 		itemDef 
 		{
-			name				newCharText
-			group				charControls
-			text				"Create a new character"
-			style				WINDOW_STYLE_EMPTY
-			rect				200 300 190 15
-			font				3
-			textscale			0.6
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				0
-		}
-
-		itemDef 
-		{
 			name				charEntry
 			group				charControls
 			style				1
@@ -3808,7 +3792,7 @@
 		{
 			name				newCharDone
 			group				charControls
-			text				"Create"
+			text				"Done"
 			type				1
 			style				WINDOW_STYLE_EMPTY
 			rect				370 330 80 15
