@@ -54,6 +54,7 @@ const char *HolocronIcons[NUM_FORCE_POWERS] = {
 	"gfx/mp/f_icon_dk_forceother",	//FP_TEAM_FORCE,
 	"gfx/mp/f_icon_dk_drain",		//FP_DRAIN,
 	"gfx/mp/f_icon_sight",			//FP_SEE,
+	"gfx/mp/f_icon_push",			//FP_TELEKINESIS,
 	"gfx/mp/f_icon_saber_attack",	//FP_SABER_OFFENSE,
 	"gfx/mp/f_icon_saber_defend",	//FP_SABER_DEFENSE,
 	"gfx/mp/f_icon_saber_throw"		//FP_SABERTHROW

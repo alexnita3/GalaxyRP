@@ -1199,6 +1199,10 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 		break;
 	case FP_SABERTHROW:
 		break;
+	case FP_TELEKINESIS:
+		hearable = qtrue;
+		hearDist = 256;
+		break;
 	default:
 		break;
 	}
@@ -3279,6 +3283,11 @@ void ForceTelepathy(gentity_t *self)
 
 }
 
+void ForceTelekinesis(gentity_t* self)
+{
+	//more to come
+}
+
 void GEntity_UseFunc( gentity_t *self, gentity_t *other, gentity_t *activator )
 {
 	GlobalUse(self, other, activator);
@@ -5301,6 +5310,9 @@ int WP_DoSpecificPower( gentity_t *self, usercmd_t *ucmd, forcePowers_t forcepow
 	case FP_SABER_DEFENSE:
 		break;
 	case FP_SABERTHROW:
+		break;
+	case FP_TELEKINESIS:
+		ForceTelekinesis(self);
 		break;
 	default:
 		break;

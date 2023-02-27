@@ -104,6 +104,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		999,//FP_TEAM_FORCE,//instant
 		999,//FP_DRAIN,//hold/duration
 		999,//FP_SEE,//duration
+		999,//FP_TELEKINESIS,//duration
 		999,//FP_SABER_OFFENSE,
 		999,//FP_SABER_DEFENSE,
 		999//FP_SABERTHROW,
@@ -125,6 +126,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
+		30,//FP_TELEKINESIS,//hold/duration
 		0,//FP_SABER_OFFENSE,
 		4,//FP_SABER_DEFENSE,
 		20//FP_SABERTHROW,
@@ -146,6 +148,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
+		30,//FP_TELEKINESIS,//hold/duration
 		0,//FP_SABER_OFFENSE,
 		3,//FP_SABER_DEFENSE,
 		20//FP_SABERTHROW,
@@ -167,6 +170,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
+		60,//FP_TELEKINESIS,//hold/duration
 		0,//FP_SABER_OFFENSE,
 		2,//FP_SABER_DEFENSE,
 		20//FP_SABERTHROW,
@@ -188,6 +192,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		30,//FP_SEE,//duration
+		60,//FP_TELEKINESIS,//hold/duration
 		999,//FP_SABER_OFFENSE,
 		1,//FP_SABER_DEFENSE,
 		20//FP_SABERTHROW,
@@ -209,6 +214,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		30,//FP_SEE,//duration
+		80,//FP_TELEKINESIS,//hold/duration
 		999,//FP_SABER_OFFENSE,
 		0,//FP_SABER_DEFENSE,
 		30//FP_SABERTHROW,

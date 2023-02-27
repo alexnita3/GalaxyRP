@@ -63,6 +63,7 @@ qboolean uiForcePowersDisabled[NUM_FORCE_POWERS] = {
 	qfalse,//FP_TEAM_FORCE,
 	qfalse,//FP_DRAIN,
 	qfalse,//FP_SEE,
+	qfalse,//FP_TELEKINESIS,//hold/duration
 	qfalse,//FP_SABER_OFFENSE,
 	qfalse,//FP_SABER_DEFENSE,
 	qfalse//FP_SABERTHROW,
@@ -84,6 +85,7 @@ int uiForcePowersRank[NUM_FORCE_POWERS] = {
 	0,//FP_TEAM_FORCE,
 	0,//FP_DRAIN,
 	0,//FP_SEE,
+	0,//FP_TELEKINESIS,//hold/duration
 	1,//FP_SABER_OFFENSE, //default to 1 point in attack
 	1,//FP_SABER_DEFENSE, //defualt to 1 point in defense
 	0//FP_SABERTHROW,
@@ -106,6 +108,7 @@ int uiForcePowerDarkLight[NUM_FORCE_POWERS] = //0 == neutral
 	FORCE_DARKSIDE,//FP_TEAM_FORCE,//instant
 	FORCE_DARKSIDE,//FP_DRAIN,//hold/duration
 	0,//FP_SEE,//duration
+	0,//FP_TELEKINESIS,//hold/duration
 	0,//FP_SABER_OFFENSE,
 	0,//FP_SABER_DEFENSE,
 	0//FP_SABERTHROW,
@@ -1115,6 +1118,7 @@ int gCustPowersRank[NUM_FORCE_POWERS] = {
 	0,//FP_TEAM_FORCE,
 	0,//FP_DRAIN,
 	0,//FP_SEE,
+	0,//FP_TELEKINESIS,
 	0,//FP_SABER_OFFENSE,
 	0,//FP_SABER_DEFENSE,
 	0//FP_SABERTHROW,

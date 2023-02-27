@@ -2155,6 +2155,7 @@ void ForceTeamForceReplenish( gentity_t *self );
 void ForceSeeing( gentity_t *self );
 void ForceThrow( gentity_t *self, qboolean pull );
 void ForceTelepathy(gentity_t *self);
+void ForceTelekinesis(gentity_t* self);
 qboolean Jedi_DodgeEvasion( gentity_t *self, gentity_t *shooter, trace_t *tr, int hitLoc );
 
 // g_log.c
