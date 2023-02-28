@@ -470,6 +470,13 @@ void WP_SaberSetDefaults( saberInfo_t *saber ) {
 	saber->readyAnimGreen		= -1;			// -1 - anim to use when standing idle
 	saber->readyAnimStaff		= -1;			// -1 - anim to use when standing idle
 	saber->readyAnimDual		= -1;			// -1 - anim to use when standing idle
+	saber->idleAnimBlue			= -1;			// -1 - anim to use when standing in place for an extended period of time
+	saber->idleAnimYellow		= -1;			// -1 - anim to use when standing in place for an extended period of time
+	saber->idleAnimRed			= -1;			// -1 - anim to use when standing in place for an extended period of time
+	saber->idleAnimPurple		= -1;			// -1 - anim to use when standing in place for an extended period of time
+	saber->idleAnimGreen		= -1;			// -1 - anim to use when standing in place for an extended period of time
+	saber->idleAnimDual			= -1;			// -1 - anim to use when standing in place for an extended period of time
+	saber->idleAnimStaff		= -1;			// -1 - anim to use when standing in place for an extended period of time
 	
 	saber->drawAnim				= -1;			// -1 - anim to use when drawing weapon
 	saber->putawayAnim			= -1;			// -1 - anim to use when putting weapon away
@@ -1243,6 +1250,69 @@ static void Saber_ParseReadyAnimDual(saberInfo_t* saber, const char** p) {
 	anim = GetIDForString(animTable, value);
 	if (anim >= 0 && anim < MAX_ANIMATIONS)
 		saber->readyAnimDual = anim;
+}
+static void Saber_ParseIdleAnimBlue(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->idleAnimBlue = anim;
+}
+static void Saber_ParseIdleAnimYellow(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->idleAnimYellow = anim;
+}
+static void Saber_ParseIdleAnimRed(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->idleAnimRed = anim;
+}
+static void Saber_ParseIdleAnimPurple(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->idleAnimPurple = anim;
+}
+static void Saber_ParseIdleAnimGreen(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->idleAnimGreen = anim;
+}
+static void Saber_ParseIdleAnimDual(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->idleAnimDual = anim;
+}
+static void Saber_ParseIdleAnimStaff(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->idleAnimStaff = anim;
 }
 static void Saber_ParseDrawAnim( saberInfo_t *saber, const char **p ) {
 	const char *value;
@@ -2056,6 +2126,13 @@ static keywordHash_t saberParseKeywords[] = {
 	{ "readyAnimGreen",			Saber_ParseReadyAnimGreen,		NULL	},
 	{ "readyAnimStaff",			Saber_ParseReadyAnimStaff,		NULL	},
 	{ "readyAnimDual",			Saber_ParseReadyAnimDual,		NULL	},
+	{ "idleAnimBlue",			Saber_ParseIdleAnimBlue,		NULL	},
+	{ "idleAnimYellow",			Saber_ParseIdleAnimYellow,		NULL	},
+	{ "idleAnimRed",			Saber_ParseIdleAnimRed,			NULL	},
+	{ "idleAnimPurple",			Saber_ParseIdleAnimPurple,		NULL	},
+	{ "idleAnimGreen",			Saber_ParseIdleAnimGreen,		NULL	},
+	{ "idleAnimDual",			Saber_ParseIdleAnimDual,		NULL	},
+	{ "idleAnimStaff",			Saber_ParseIdleAnimStaff,		NULL	},
 	{ "drawAnim",				Saber_ParseDrawAnim,			NULL	},
 	{ "putawayAnim",			Saber_ParsePutawayAnim,			NULL	},
 	{ "tauntAnim",				Saber_ParseTauntAnim,			NULL	},

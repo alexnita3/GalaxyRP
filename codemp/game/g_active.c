@@ -1600,6 +1600,45 @@ qboolean G_ActionButtonPressed(int buttons)
 	return qfalse;
 }
 
+int return_idle_animation(int animation) {
+	if (animation > 0) {
+		return animation;
+	}
+	return BOTH_STAND1IDLE1;
+}
+
+int get_idle_animation_for_style(gentity_t *ent) {
+	int idle_anim = 0;
+
+	switch (ent->client->ps.fd.saberAnimLevel)
+	{
+	case SS_FAST:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimBlue);
+		break;
+	case SS_MEDIUM:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimYellow);
+		break;
+	case SS_STRONG:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimRed);
+		break;
+	case SS_DESANN:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimPurple);
+		break;
+	case SS_TAVION:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimGreen);
+		break;
+	case SS_DUAL:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimDual);
+		break;
+	case SS_STAFF:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimStaff);
+		break;
+	}
+
+	return idle_anim;
+
+}
+
 void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 {
 	vec3_t viewChange;
@@ -1739,6 +1778,10 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 		if (idleAnim == BOTH_STAND2IDLE1 && Q_irand(1, 10) <= 5)
 		{
 			idleAnim = BOTH_STAND2IDLE2;
+		}
+
+		if (ent->s.weapon == WP_SABER && ent->client->ps.saberHolstered == 2) {
+			idleAnim = get_idle_animation_for_style(ent);
 		}
 
 		if ( /*PM_HasAnimation( ent, idleAnim )*/idleAnim > 0 && idleAnim < MAX_ANIMATIONS )
