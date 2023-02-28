@@ -1023,7 +1023,7 @@
 		{
 			name				jumpSkillButton
 			group				forceSkillsControls
-			text				"Jump"
+			text				"[1] Jump"
 			descText			""
 			type				1
 			font				3
@@ -1040,7 +1040,7 @@
 		{
 			name				pushSkillButton
 			group				forceSkillsControls
-			text				"Push"
+			text				"[2] Push"
 			descText			""
 			type				1
 			font				3
@@ -1057,7 +1057,7 @@
 		{
 			name				pullSkillButton
 			group				forceSkillsControls
-			text				"Pull"
+			text				"[3] Pull"
 			descText			""
 			type				1
 			font				3
@@ -1074,7 +1074,7 @@
 		{
 			name				speedSkillButton
 			group				forceSkillsControls
-			text				"Speed"
+			text				"[4] Speed"
 			descText			""
 			type				1
 			font				3
@@ -1091,7 +1091,7 @@
 		{
 			name				senseSkillButton
 			group				forceSkillsControls
-			text				"Sense"
+			text				"[5] Sense"
 			descText			""
 			type				1
 			font				3
@@ -1108,7 +1108,7 @@
 		{
 			name				saberAttackSkillButton
 			group				forceSkillsControls
-			text				"Saber Attack"
+			text				"[6] Saber Attack"
 			descText			""
 			type				1
 			font				3
@@ -1125,7 +1125,7 @@
 		{
 			name				saberDefenseSkillButton
 			group				forceSkillsControls
-			text				"Saber Defense"
+			text				"[7] Saber Defense"
 			descText			""
 			type				1
 			font				3
@@ -1142,7 +1142,7 @@
 		{
 			name				saberThrowSkillButton
 			group				forceSkillsControls
-			text				"Saber Throw"
+			text				"[8] Saber Throw"
 			descText			""
 			type				1
 			font				3
@@ -1159,7 +1159,7 @@
 		{
 			name				absorbSkillButton
 			group				forceSkillsControls
-			text				"Absorb"
+			text				"[9] Absorb"
 			descText			""
 			type				1
 			font				3
@@ -1176,7 +1176,7 @@
 		{
 			name				healSkillButton
 			group				forceSkillsControls
-			text				"Heal"
+			text				"[10] Heal"
 			descText			""
 			type				1
 			font				3
@@ -1193,7 +1193,7 @@
 		{
 			name				protectSkillButton
 			group				forceSkillsControls
-			text				"Protect"
+			text				"[11] Protect"
 			descText			""
 			type				1
 			font				3
@@ -1210,7 +1210,7 @@
 		{
 			name				mindTrickSkillButton
 			group				forceSkillsControls
-			text				"Mind Trick"
+			text				"[12] Mind Trick"
 			descText			""
 			type				1
 			font				3
@@ -1227,7 +1227,7 @@
 		{
 			name				teamHealSkillButton
 			group				forceSkillsControls
-			text				"Team Heal"
+			text				"[13] Team Heal"
 			descText			""
 			type				1
 			font				3
@@ -1244,7 +1244,7 @@
 		{
 			name				lightningSkillButton
 			group				forceSkillsControls
-			text				"Lightning"
+			text				"[14] Lightning"
 			descText			""
 			type				1
 			font				3
@@ -1261,7 +1261,7 @@
 		{
 			name				gripSkillButton
 			group				forceSkillsControls
-			text				"Grip"
+			text				"[15] Grip"
 			descText			""
 			type				1
 			font				3
@@ -1278,7 +1278,7 @@
 		{
 			name				drainSkillButton
 			group				forceSkillsControls
-			text				"Drain"
+			text				"[16] Drain"
 			descText			""
 			type				1
 			font				3
@@ -1295,7 +1295,7 @@
 		{
 			name				rageSkillButton
 			group				forceSkillsControls
-			text				"Rage"
+			text				"[17] Rage"
 			descText			""
 			type				1
 			font				3
@@ -1312,7 +1312,7 @@
 		{
 			name				teamEnergizeSkillButton
 			group				forceSkillsControls
-			text				"Team Energize"
+			text				"[18] Team Energize"
 			descText			""
 			type				1
 			font				3
@@ -1384,7 +1384,7 @@
 		{
 			name				stunBatonSkillButton
 			group				weaponSkillsControls
-			text				"Stun Baton"
+			text				"[19] Stun Baton"
 			descText			""
 			type				1
 			font				3
@@ -1401,7 +1401,7 @@
 		{
 			name				blasterPistolSkillButton
 			group				weaponSkillsControls
-			text				"Blaster Pistol"
+			text				"[20] Blaster Pistol"
 			descText			""
 			type				1
 			font				3
@@ -1418,7 +1418,7 @@
 		{
 			name				blasterRifleSkillButton
 			group				weaponSkillsControls
-			text				"E11 Blaster Rifle"
+			text				"[21] E-11 Blaster Rifle"
 			descText			""
 			type				1
 			font				3
@@ -1435,7 +1435,7 @@
 		{
 			name				disruptorSkillButton
 			group				weaponSkillsControls
-			text				"Disruptor"
+			text				"[22] Disruptor"
 			descText			""
 			type				1
 			font				3
@@ -1452,7 +1452,7 @@
 		{
 			name				bowcasterSkillButton
 			group				weaponSkillsControls
-			text				"Bowcaster"
+			text				"[23] Bowcaster"
 			descText			""
 			type				1
 			font				3
@@ -1469,7 +1469,7 @@
 		{
 			name				repeaterSkillButton
 			group				weaponSkillsControls
-			text				"Repeater"
+			text				"[24] Repeater"
 			descText			""
 			type				1
 			font				3
@@ -1486,13 +1486,13 @@
 		{
 			name				demp2SkillButton
 			group				weaponSkillsControls
-			text				"DEMP2"
+			text				"[25] DEMP2"
 			descText			""
 			type				1
 			font				3
 			textscale			.5
 			style				WINDOW_STYLE_FILLED
-			rect				420 100 70 15
+			rect				270 220 70 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0	  
@@ -1503,13 +1503,13 @@
 		{
 			name				flechetteSkillButton
 			group				weaponSkillsControls
-			text				"Flechette"
+			text				"[26] Flechette"
 			descText			""
 			type				1
 			font				3
 			textscale			.5
 			style				WINDOW_STYLE_FILLED
-			rect				420 120 80 15
+			rect				270 240 80 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
@@ -1520,13 +1520,13 @@
 		{
 			name				rocketSkillButton
 			group				weaponSkillsControls
-			text				"Rocket Launcher"
+			text				"[27] Rocket Launcher"
 			descText			""
 			type				1
 			font				3
 			textscale			.5
 			style				WINDOW_STYLE_FILLED
-			rect				420 140 110 15
+			rect				270 260 110 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0 
@@ -1537,13 +1537,13 @@
 		{
 			name				concussionSkillButton
 			group				weaponSkillsControls
-			text				"Concussion Rifle"
+			text				"[28] Concussion Rifle"
 			descText			""
 			type				1
 			font				3
 			textscale			.5
 			style				WINDOW_STYLE_FILLED
-			rect				420 160 120 15
+			rect				270 280 120 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0  
@@ -1554,13 +1554,13 @@
 		{
 			name				bryarPistolSkillButton
 			group				weaponSkillsControls
-			text				"Bryar Pistol"
+			text				"[29] Bryar Pistol"
 			descText			""
 			type				1
 			font				3
 			textscale			.5
 			style				WINDOW_STYLE_FILLED
-			rect				420 180 100 15
+			rect				270 300 100 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0	
@@ -1571,13 +1571,13 @@
 		{
 			name				meleeSkillButton
 			group				weaponSkillsControls
-			text				"Melee"
+			text				"[30] Melee"
 			descText			""
 			type				1
 			font				3
 			textscale			.5
 			style				WINDOW_STYLE_FILLED
-			rect				420 200 60 15
+			rect				270 320 60 15
 			textalign			ITEM_ALIGN_LEFT
 			forecolor			1 .682 0 1
 			visible				0 
@@ -1643,7 +1643,7 @@
 		{
 			name				maxShieldSkillButton
 			group				otherSkillsControls
-			text				"Max Shield"
+			text				"[31] Max Shield"
 			descText			""
 			type				1
 			font				3
@@ -1660,7 +1660,7 @@
 		{
 			name				shieldStrengthSkillButton
 			group				otherSkillsControls
-			text				"Shield Strength"
+			text				"[32] Shield Strength"
 			descText			""
 			type				1
 			font				3
@@ -1677,7 +1677,7 @@
 		{
 			name				healthStrengthSkillButton
 			group				otherSkillsControls
-			text				"Health Strength"
+			text				"[33] Health Strength"
 			descText			""
 			type				1
 			font				3
@@ -1694,7 +1694,7 @@
 		{
 			name				drainShieldSkillButton
 			group				otherSkillsControls
-			text				"Drain Shield"
+			text				"[34] Drain Shield"
 			descText			""
 			type				1
 			font				3
@@ -1711,7 +1711,7 @@
 		{
 			name				jetpackSkillButton
 			group				otherSkillsControls
-			text				"Jetpack"
+			text				"[35] Jetpack"
 			descText			""
 			type				1
 			font				3
@@ -1728,7 +1728,7 @@
 		{
 			name				senseHealthSkillButton
 			group				otherSkillsControls
-			text				"Sense Health"
+			text				"[36] Sense Health"
 			descText			""
 			type				1
 			font				3
@@ -1745,7 +1745,7 @@
 		{
 			name				shieldHealSkillButton
 			group				otherSkillsControls
-			text				"Shield Heal"
+			text				"[37] Shield Heal"
 			descText			""
 			type				1
 			font				3
@@ -1762,7 +1762,7 @@
 		{
 			name				teamShieldHealSkillButton
 			group				otherSkillsControls
-			text				"Team Shield Heal"
+			text				"[38] Team Shield Heal"
 			descText			""
 			type				1
 			font				3
@@ -1779,7 +1779,7 @@
 		{
 			name				uniqueSkillButton
 			group				otherSkillsControls
-			text				"Unique Skill"
+			text				"[39] Unique Skill"
 			descText			""
 			type				1
 			font				3
@@ -1796,7 +1796,7 @@
 		{
 			name				forcePowerSkillButton
 			group				otherSkillsControls
-			text				"Force Power"
+			text				"[55] Force Power"
 			descText			""
 			type				1
 			font				3
@@ -1813,7 +1813,7 @@
 		{
 			name				improvementsSkillButton
 			group				otherSkillsControls
-			text				"Improvements"
+			text				"[56] Improvements"
 			descText			""
 			type				1
 			font				3
@@ -1830,7 +1830,7 @@
 		{
 			name				shieldRegenSkillButton
 			group				otherSkillsControls
-			text				"Shield Regen"
+			text				"[61] Shield Regen"
 			descText			""
 			type				1
 			font				3
@@ -1847,7 +1847,7 @@
 		{
 			name				healthRegenSkillButton
 			group				otherSkillsControls
-			text				"Health Regen"
+			text				"[62] Health Regen"
 			descText			""
 			type				1
 			font				3
@@ -1919,7 +1919,7 @@
 		{
 			name				blasterPackSkillButton
 			group				ammoSkillsControls
-			text				"Blaster Pack"
+			text				"[40] Blaster Pack"
 			descText			""
 			type				1
 			font				3
@@ -1936,7 +1936,7 @@
 		{
 			name				powerCellSkillButton
 			group				ammoSkillsControls
-			text				"Power Cell"
+			text				"[41] Power Cell"
 			descText			""
 			type				1
 			font				3
@@ -1953,7 +1953,7 @@
 		{
 			name				metalBoltsSkillButton
 			group				ammoSkillsControls
-			text				"Metal Bolts"
+			text				"[42] Metal Bolts"
 			descText			""
 			type				1
 			font				3
@@ -1970,7 +1970,7 @@
 		{
 			name				rocketsSkillButton
 			group				ammoSkillsControls
-			text				"Rockets"
+			text				"[43] Rockets"
 			descText			""
 			type				1
 			font				3
@@ -1987,7 +1987,7 @@
 		{
 			name				thermalsSkillButton
 			group				ammoSkillsControls
-			text				"Thermals"
+			text				"[44] Thermals"
 			descText			""
 			type				1
 			font				3
@@ -2004,7 +2004,7 @@
 		{
 			name				tripMinesSkillButton
 			group				ammoSkillsControls
-			text				"Trip Mines"
+			text				"[45] Trip Mines"
 			descText			""
 			type				1
 			font				3
@@ -2021,7 +2021,7 @@
 		{
 			name				detPacksSkillButton
 			group				ammoSkillsControls
-			text				"Det Packs"
+			text				"[46] Det Packs"
 			descText			""
 			type				1
 			font				3
@@ -2093,7 +2093,7 @@
 		{
 			name				binocularsSkillButton
 			group				itemsSkillsControls
-			text				"Binoculars"
+			text				"[47] Binoculars"
 			descText			""
 			type				1
 			font				3
@@ -2110,7 +2110,7 @@
 		{
 			name				bactaCanisterSkillButton
 			group				itemsSkillsControls
-			text				"Bacta Canister"
+			text				"[48] Bacta Canister"
 			descText			""
 			type				1
 			font				3
@@ -2127,7 +2127,7 @@
 		{
 			name				sentryGunSkillButton
 			group				itemsSkillsControls
-			text				"Sentry Gun"
+			text				"[49] Sentry Gun"
 			descText			""
 			type				1
 			font				3
@@ -2144,7 +2144,7 @@
 		{
 			name				seekerDroneSkillButton
 			group				itemsSkillsControls
-			text				"Seeker Drone"
+			text				"[50] Seeker Drone"
 			descText			""
 			type				1
 			font				3
@@ -2161,7 +2161,7 @@
 		{
 			name				ewebSkillButton
 			group				itemsSkillsControls
-			text				"E-Web"
+			text				"[51] E-Web"
 			descText			""
 			type				1
 			font				3
@@ -2178,7 +2178,7 @@
 		{
 			name				bigBactaSkillButton
 			group				itemsSkillsControls
-			text				"Big Bacta"
+			text				"[52] Big Bacta"
 			descText			""
 			type				1
 			font				3
@@ -2195,7 +2195,7 @@
 		{
 			name				forceFieldSkillButton
 			group				itemsSkillsControls
-			text				"Force Field"
+			text				"[53] Force Field"
 			descText			""
 			type				1
 			font				3
@@ -2212,7 +2212,7 @@
 		{
 			name				cloakSkillButton
 			group				itemsSkillsControls
-			text				"Cloak Item"
+			text				"[54] Cloak Item"
 			descText			""
 			type				1
 			font				3
@@ -2229,7 +2229,7 @@
 		{
 			name				armorSkillButton
 			group				itemsSkillsControls
-			text				"Armor"
+			text				"[57] Armor"
 			descText			""
 			type				1
 			font				3
@@ -2246,7 +2246,7 @@
 		{
 			name				flameThrowerSkillButton
 			group				itemsSkillsControls
-			text				"FlameThrower"
+			text				"[58] FlameThrower"
 			descText			""
 			type				1
 			font				3
@@ -2569,7 +2569,7 @@
 		{
 			name				stunBatonSkillValue
 			group				levelweapon
-			rect				380 100 30 30
+			rect				400 100 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2586,7 +2586,7 @@
 		{
 			name				blasterPistolSkillValue
 			group				levelweapon
-			rect				380 120 30 30
+			rect				400 120 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2603,7 +2603,7 @@
 		{
 			name				blasterRifleSkillValue
 			group				levelweapon
-			rect				380 140 30 30
+			rect				400 140 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2620,7 +2620,7 @@
 		{
 			name				disruptorSkillValue
 			group				levelweapon
-			rect				380 160 30 30
+			rect				400 160 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2637,7 +2637,7 @@
 		{
 			name				bowcasterSkillValue
 			group				levelweapon
-			rect				380 180 30 30
+			rect				400 180 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2654,7 +2654,7 @@
 		{
 			name				repeaterSkillValue
 			group				levelweapon
-			rect				380 200 30 30
+			rect				400 200 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2671,7 +2671,7 @@
 		{
 			name				dempSkillValue
 			group				levelweapon
-			rect				530 100 30 30
+			rect				400 220 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2688,7 +2688,7 @@
 		{
 			name				flachetteSkillValue
 			group				levelweapon
-			rect				530 120 30 30
+			rect				400 240 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2705,7 +2705,7 @@
 		{
 			name				rocketLauncherskillValue
 			group				levelweapon
-			rect				530 140 30 30
+			rect				400 260 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2722,7 +2722,7 @@
 		{
 			name				concussionRifleSkillValue
 			group				levelweapon
-			rect				530 160 30 30
+			rect				400 280 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2739,7 +2739,7 @@
 		{
 			name				bryarPistolSkillValue
 			group				levelweapon
-			rect				530 180 30 30
+			rect				400 300 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2756,7 +2756,7 @@
 		{
 			name				meleeSkillValue
 			group				levelweapon
-			rect				530 200 30 30
+			rect				400 320 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2773,7 +2773,7 @@
 		{
 			name				maxShieldSkillValue
 			group				levelother
-			rect				390 100 30 30
+			rect				410 100 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2790,7 +2790,7 @@
 		{
 			name				shieldStrengthSkillValue
 			group				levelother
-			rect				390 120 30 30
+			rect				410 120 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2807,7 +2807,7 @@
 		{
 			name				healthStrengthskillValue
 			group				levelother
-			rect				390 140 30 30
+			rect				410 140 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2824,7 +2824,7 @@
 		{
 			name				drainShieldSkillValue
 			group				levelother
-			rect				390 160 30 30
+			rect				410 160 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2841,7 +2841,7 @@
 		{
 			name				jetpackSkillValue
 			group				levelother
-			rect				390 180 30 30
+			rect				410 180 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2858,7 +2858,7 @@
 		{
 			name				senseHealthSkillValue
 			group				levelother
-			rect				390 200 30 30
+			rect				410 200 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2875,7 +2875,7 @@
 		{
 			name				shieldHealSkillValue
 			group				levelother
-			rect				390 220 30 30
+			rect				410 220 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2892,7 +2892,7 @@
 		{
 			name				teamShieldHealSkillValue
 			group				levelother
-			rect				390 240 30 30
+			rect				410 240 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -2909,11 +2909,79 @@
 		{
 			name				uniqueSkillValue
 			group				levelother
-			rect				390 260 30 30
+			rect				410 260 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
 			cvar				"ui_zyk_skill_39_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				forcePowerSkillValue
+			group				levelother
+			rect				410 280 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_55_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				improvementsSkillValue
+			group				levelother
+			rect				410 300 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_zyk_skill_56_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				shieldRegenSkillValue
+			group				levelother
+			rect				410 320 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_rp_skill_61_level" 
+			textalign			ITEM_ALIGN_LEFT
+			font				3
+			textscale			.5
+			forecolor			1 1 1 1
+			visible				0
+			decoration
+		}
+
+		itemDef 
+		{
+			name				healthRegenSkillValue
+			group				levelother
+			rect				410 340 30 30
+			style				WINDOW_STYLE_EMPTY
+			type				ITEM_TYPE_EDITFIELD
+			text				""
+			cvar				"ui_rp_skill_62_level" 
 			textalign			ITEM_ALIGN_LEFT
 			font				3
 			textscale			.5
@@ -3045,7 +3113,7 @@
 		{
 			name				binocularsSkillValue
 			group				levelitem
-			rect				380 100 30 30
+			rect				400 100 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3062,7 +3130,7 @@
 		{
 			name				bactaCanisterSkillValue
 			group				levelitem
-			rect				380 120 30 30
+			rect				400 120 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3079,7 +3147,7 @@
 		{
 			name				sentryGunSkillValue
 			group				levelitem
-			rect				380 140 30 30
+			rect				400 140 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3096,7 +3164,7 @@
 		{
 			name				seekerDroneSkillValue
 			group				levelitem
-			rect				380 160 30 30
+			rect				400 160 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3113,7 +3181,7 @@
 		{
 			name				eWebSkillValue
 			group				levelitem
-			rect				380 180 30 30
+			rect				400 180 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3130,7 +3198,7 @@
 		{
 			name				bigBactaSkillValue
 			group				levelitem
-			rect				380 200 30 30
+			rect				400 200 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3147,7 +3215,7 @@
 		{
 			name				forceFieldSkillValue
 			group				levelitem
-			rect				380 220 30 30
+			rect				400 220 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3164,7 +3232,7 @@
 		{
 			name				cloakItemSkillValue
 			group				levelitem
-			rect				380 240 30 30
+			rect				400 240 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3181,7 +3249,7 @@
 		{
 			name				armorSkillValue
 			group				levelitem
-			rect				380 260 30 30
+			rect				400 260 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
@@ -3198,79 +3266,11 @@
 		{
 			name				flameThrowerSkillValue
 			group				levelitem
-			rect				380 280 30 30
+			rect				400 280 30 30
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
 			cvar				"ui_rp_skill_58_level" 
-			textalign			ITEM_ALIGN_LEFT
-			font				3
-			textscale			.5
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				forcePowerSkillValue
-			group				levelother
-			rect				390 280 30 30
-			style				WINDOW_STYLE_EMPTY
-			type				ITEM_TYPE_EDITFIELD
-			text				""
-			cvar				"ui_zyk_skill_55_level" 
-			textalign			ITEM_ALIGN_LEFT
-			font				3
-			textscale			.5
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				improvementsSkillValue
-			group				levelother
-			rect				390 300 30 30
-			style				WINDOW_STYLE_EMPTY
-			type				ITEM_TYPE_EDITFIELD
-			text				""
-			cvar				"ui_zyk_skill_56_level" 
-			textalign			ITEM_ALIGN_LEFT
-			font				3
-			textscale			.5
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				shieldRegenSkillValue
-			group				levelother
-			rect				390 320 30 30
-			style				WINDOW_STYLE_EMPTY
-			type				ITEM_TYPE_EDITFIELD
-			text				""
-			cvar				"ui_rp_skill_61_level" 
-			textalign			ITEM_ALIGN_LEFT
-			font				3
-			textscale			.5
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				healthRegenSkillValue
-			group				levelother
-			rect				390 340 30 30
-			style				WINDOW_STYLE_EMPTY
-			type				ITEM_TYPE_EDITFIELD
-			text				""
-			cvar				"ui_rp_skill_62_level" 
 			textalign			ITEM_ALIGN_LEFT
 			font				3
 			textscale			.5
@@ -6456,8 +6456,8 @@
 	   		textalign			ITEM_ALIGN_LEFT
 			font 				4
 			textscale 			1
-			forecolor		.615 .615 .956 1
-			visible			0
+			forecolor			.615 .615 .956 1
+			visible				0
 			descText			""
 			action 
 			{ 
