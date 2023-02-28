@@ -5682,7 +5682,7 @@ static void PM_Footsteps( void ) {
 				switch (pm->ps->fd.saberAnimLevel)
 				{
 				case SS_STAFF:
-					if ( pm->ps->saberHolstered > 1 )
+					if ( pm->ps->saberHolstered == 2 )
 					{//blades off
 						desiredAnim = BOTH_RUN1;
 					}
@@ -5698,7 +5698,12 @@ static void PM_Footsteps( void ) {
 						}
 						else
 						{
-							desiredAnim = BOTH_RUN_STAFF;
+							if (pm->ps->weapon == WP_SABER) {
+								desiredAnim = BOTH_RUN_STAFF;
+							}
+							else{
+								desiredAnim = BOTH_RUN1;
+							}
 						}
 					}
 					break;
