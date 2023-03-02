@@ -901,8 +901,6 @@
 				play			"sound/interface/button1"
 				uiScript		setForce "none"
 				uiScript 		update "ui_SetName"
-				uiScript		updatecharcvars
-				uiScript		updatecharmodel
 				hide			highlights
 				uiScript		closeingame
 			}
