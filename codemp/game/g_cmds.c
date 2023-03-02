@@ -12083,6 +12083,11 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 	}
 }
 
+// GalaxyRP (Alex): Builds an npc spawner string based on an npc entity.
+char *create_npc_spawner_for_npc(gentity_t *ent) {
+	return va("classname;npc_spawner;npc_type;%s;origin;%f %f %f;angles;%f %f %f;\n", ent->NPC_type, ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2], ent->client->ps.viewangles[0], ent->client->ps.viewangles[1], ent->client->ps.viewangles[2]);
+}
+
 /*
 ==================
 Cmd_EntSave_f
@@ -12138,6 +12143,10 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 			{ // zyk: break line only if the entity had keys and values to save
 				fprintf(this_file, "\n");
 			}
+		}
+		// GalaxyRP (Alex): NPCs should be saved as NPC spawners instead. So do the conversion.
+		if (strcmp(this_ent->classname, "NPC") == 0) {
+			fprintf(this_file, create_npc_spawner_for_npc(this_ent));
 		}
 	}
 
