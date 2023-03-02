@@ -16,7 +16,7 @@
 		descY					400
 		descScale				1
 		descColor				1 .682 0 .8					// Focus color for text and items
-		descAlignment				ITEM_ALIGN_CENTER		
+		descAlignment			ITEM_ALIGN_CENTER		
 
 		onClose 
 		{
@@ -31,9 +31,9 @@
 
 		onopen 
 		{ 
-			show mainButtons ;
-			uiScript			update "ui_GetName"
-			exec "zykmod" ;
+			show 			mainButtons ;
+			uiScript		update "ui_GetName"
+			exec 			"zykmod" ;
 			hide			charControls ;
 			hide 			rpgClassControls ;
 			hide 			upControls ;
@@ -66,7 +66,7 @@
 
 		itemDef 
 		{
-			name				zyk_background_pic
+			name				galaxyrp_mainwindowbackground
 			group				mainButtons
 			style				WINDOW_STYLE_SHADER
 			rect				0 0 570 400
@@ -513,36 +513,36 @@
 			}	  	  
 			action 
 			{ 
-				play			"sound/interface/button1.wav" ;
-				show 			cameraControls ;
-				hide			charControls ;
-				hide			changePassControls ;
-				hide 			rpgClassControls ;
-				hide 			upControls ;
-				hide 			forceSkillsControls ;
-				hide			weaponSkillsControls ;
-				hide			otherSkillsControls ;
-				hide			ammoSkillsControls ;
-				hide			itemsSkillsControls ;
-				hide			questControls ;
-				hide			universeControls ;
-				hide			lightControls ;
-				hide			darkControls ;
-				hide			eternityControls ;
-				hide			questMapsControls ;
-				hide 			listControls ;
-				hide 			commandsControls ;
-				hide			levelforce ;
-				hide			levelweapon ;
-				hide			levelother ;
-				hide			levelammo ;
-				hide			levelitem ;
-				hide 			buyControls ;
-				hide 			buyAmmoControls ;
-				hide 			buyWeaponsControls ;
-				hide 			buyMiscControls ;
-				hide 			settingsControls ;
-				hide 			gamesControls ;
+				play				"sound/interface/button1.wav" ;
+				show 				cameraControls ;
+				hide				charControls ;
+				hide				changePassControls ;
+				hide 				rpgClassControls ;
+				hide 				upControls ;
+				hide 				forceSkillsControls ;
+				hide				weaponSkillsControls ;
+				hide				otherSkillsControls ;
+				hide				ammoSkillsControls ;
+				hide				itemsSkillsControls ;
+				hide				questControls ;
+				hide				universeControls ;
+				hide				lightControls ;
+				hide				darkControls ;
+				hide				eternityControls ;
+				hide				questMapsControls ;
+				hide 				listControls ;
+				hide 				commandsControls ;
+				hide				levelforce ;
+				hide				levelweapon ;
+				hide				levelother ;
+				hide				levelammo ;
+				hide				levelitem ;
+				hide 				buyControls ;
+				hide 				buyAmmoControls ;
+				hide 				buyWeaponsControls ;
+				hide 				buyMiscControls ;
+				hide 				settingsControls ;
+				hide 				gamesControls ;
 				setitemcolor		mainButtons 		forecolor 1 .682 0 1 ;
 				setitemcolor		cameraButton	forecolor 1 1 1 1 ;
 			}
@@ -588,13 +588,13 @@
 			group				listControls
 			rect 				170 70 274 130			
 			type 				ITEM_TYPE_LISTBOX
-			style 			WINDOW_STYLE_FILLED
+			style 				WINDOW_STYLE_FILLED
 			elementwidth 		64
 			elementheight 		64
 			elementtype 		LISTBOX_IMAGE
-			feeder 			FEEDER_Q3HEADS
+			feeder 				FEEDER_Q3HEADS
 			backcolor 			0 0 0 1
-			border 			1
+			border 				1
 			bordercolor 		1 .682 0 1
 			forecolor 			1 1 1 1
 			descText			@MENUS_CHOOSE_THE_MODEL_FOR
@@ -901,6 +901,7 @@
 				play			"sound/interface/button1"
 				uiScript		setForce "none"
 				uiScript 		update "ui_SetName"
+				uiScript		updatecharcvars
 				uiScript		updatecharmodel
 				hide			highlights
 				uiScript		closeingame
