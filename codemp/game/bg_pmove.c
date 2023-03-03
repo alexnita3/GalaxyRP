@@ -5718,7 +5718,12 @@ static void PM_Footsteps( void ) {
 					}
 					else
 					{
-						desiredAnim = BOTH_RUN_DUAL;
+						if (pm->ps->weapon == WP_SABER) {
+							desiredAnim = BOTH_RUN_DUAL;
+						}
+						else {
+							desiredAnim = BOTH_RUN1;
+						}
 					}
 					break;
 				default:
@@ -5728,7 +5733,12 @@ static void PM_Footsteps( void ) {
 					}
 					else
 					{
-						desiredAnim = BOTH_RUN2;
+						if (pm->ps->weapon == WP_SABER) {
+							desiredAnim = BOTH_RUN2;
+						}
+						else {
+							desiredAnim = BOTH_RUN1;
+						}
 					}
 					break;
 				}
