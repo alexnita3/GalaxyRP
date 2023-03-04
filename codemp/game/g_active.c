@@ -809,51 +809,55 @@ qboolean ClientInactivityTimer( gclient_t *client ) {
 extern void Add_Ammo (gentity_t *ent, int weapon, int count);
 void RegenerateAmmo(gentity_t* ent, gclient_t* client) {
 	if (ent->client->sess.loggedin == qtrue) {
-		if (ent->client->sess.weapon_recharge_timer >= rp_ammo_regen_timer.integer) {
-			for (int i = 39; i <= 41; i++) {
+		if (rp_allow_ammo_regen.integer > 0) {
+			if (ent->client->sess.weapon_recharge_timer >= rp_ammo_regen_timer.integer) {
+				for (int i = 39; i <= 41; i++) {
 
-				switch (i)
-				{
-				case 39:
-					Add_Ammo(ent, AMMO_BLASTER, 1 * ent->client->pers.skill_levels[i]);
-					break;
-				case 40:
-					Add_Ammo(ent, AMMO_POWERCELL, 1 * ent->client->pers.skill_levels[i]);
-					break;
-				case 41:
-					Add_Ammo(ent, AMMO_METAL_BOLTS, 1 * ent->client->pers.skill_levels[i]);
-					break;
-				default:
-					break;
+					switch (i)
+					{
+					case 39:
+						Add_Ammo(ent, AMMO_BLASTER, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					case 40:
+						Add_Ammo(ent, AMMO_POWERCELL, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					case 41:
+						Add_Ammo(ent, AMMO_METAL_BOLTS, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					default:
+						break;
+					}
 				}
+				ent->client->sess.weapon_recharge_timer = 0;
 			}
-			ent->client->sess.weapon_recharge_timer = 0;
+			ent->client->sess.weapon_recharge_timer++;
 		}
-		if (ent->client->sess.explosive_recharge_timer >= rp_explosives_recharge_timer.integer) {
-			for (int i = 42; i <= 45; i++) {
-				switch (i)
-				{
-				case 42:
-					Add_Ammo(ent, AMMO_ROCKETS, 1 * ent->client->pers.skill_levels[i]);
-					break;
-				case 43:
-					Add_Ammo(ent, AMMO_THERMAL, 1 * ent->client->pers.skill_levels[i]);
-					break;
-				case 44:
-					Add_Ammo(ent, AMMO_TRIPMINE, 1 * ent->client->pers.skill_levels[i]);
-					break;
-				case 45:
-					Add_Ammo(ent, AMMO_DETPACK, 1 * ent->client->pers.skill_levels[i]);
-					break;
-				default:
-					break;
-				}
+		if (rp_allow_explosives_regen.integer > 0) {
+			if (ent->client->sess.explosive_recharge_timer >= rp_explosives_recharge_timer.integer) {
+				for (int i = 42; i <= 45; i++) {
+					switch (i)
+					{
+					case 42:
+						Add_Ammo(ent, AMMO_ROCKETS, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					case 43:
+						Add_Ammo(ent, AMMO_THERMAL, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					case 44:
+						Add_Ammo(ent, AMMO_TRIPMINE, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					case 45:
+						Add_Ammo(ent, AMMO_DETPACK, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					default:
+						break;
+					}
 
+				}
+				ent->client->sess.explosive_recharge_timer = 0;
 			}
-			ent->client->sess.explosive_recharge_timer = 0;
+			ent->client->sess.explosive_recharge_timer++;
 		}
-		ent->client->sess.weapon_recharge_timer++;
-		ent->client->sess.explosive_recharge_timer++;
 	}
 }
 
