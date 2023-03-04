@@ -1065,7 +1065,7 @@ void display_scale_help(gentity_t *ent) {
 	int i;
 	int scale_table_min = 30;			// start scale
 	int scale_table_max = 150;			// final scale
-	float scale_table_meters = 0.53;	// start meters
+	float scale_table_meters = 0.35;	// start meters
 	float scale_table_steps = 0.02;		// increased by
 
 	trap->SendServerCommand(ent->s.number, "print \""
