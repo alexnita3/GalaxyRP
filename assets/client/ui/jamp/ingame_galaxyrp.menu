@@ -1829,7 +1829,7 @@
 		{
 			name				shieldRegenSkillButton
 			group				otherSkillsControls
-			text				"[61] Shield Regen"
+			text				"[59] Shield Regen"
 			descText			""
 			type				1
 			font				3
@@ -1846,7 +1846,7 @@
 		{
 			name				healthRegenSkillButton
 			group				otherSkillsControls
-			text				"[62] Health Regen"
+			text				"[60] Health Regen"
 			descText			""
 			type				1
 			font				3
@@ -2963,7 +2963,7 @@
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
-			cvar				"ui_rp_skill_61_level" 
+			cvar				"ui_rp_skill_59_level" 
 			textalign			ITEM_ALIGN_LEFT
 			font				3
 			textscale			.5
@@ -2980,7 +2980,7 @@
 			style				WINDOW_STYLE_EMPTY
 			type				ITEM_TYPE_EDITFIELD
 			text				""
-			cvar				"ui_rp_skill_62_level" 
+			cvar				"ui_rp_skill_60_level" 
 			textalign			ITEM_ALIGN_LEFT
 			font				3
 			textscale			.5
