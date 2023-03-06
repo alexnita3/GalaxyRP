@@ -7154,7 +7154,76 @@ backAgain:
 		PM_SetAnim(SETANIM_BOTH, Anim, iFlags);
 	}
 }
-
+#ifdef _GAME
+qboolean canAltFireWeapon(gentity_t* ent) {
+	if (ent->NPC) {
+		return qtrue;
+	}
+	if (ent->client->sess.loggedin == 0) {
+		return qfalse;
+	}
+	switch (ent->client->ps.weapon)
+	{
+	case WP_BRYAR_PISTOL:
+		if (ent->client->pers.skill_levels[19] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_BLASTER:
+		if (ent->client->pers.skill_levels[20] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_DISRUPTOR:
+		if (ent->client->pers.skill_levels[21] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_BOWCASTER:
+		if (ent->client->pers.skill_levels[22] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_REPEATER:
+		if (ent->client->pers.skill_levels[23] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_FLECHETTE:
+		if (ent->client->pers.skill_levels[25] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_ROCKET_LAUNCHER:
+		if (ent->client->pers.skill_levels[26] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_CONCUSSION:
+		if (ent->client->pers.skill_levels[27] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_BRYAR_OLD:
+		if (ent->client->pers.skill_levels[28] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	default:
+		return qtrue;
+		break;
+	}
+}
+#endif
 /*
 ==============
 PM_Weapon
@@ -7184,6 +7253,13 @@ static void PM_Weapon( void )
 			pm->ps->torsoAnim = pm->ps->legsAnim;
 			pm->ps->torsoTimer = pm->ps->legsTimer;
 			return;
+		}
+	}
+	gentity_t* test_ent = &g_entities[pm->ps->clientNum];
+	if (pm->cmd.buttons & BUTTON_ALT_ATTACK) {
+		if (!canAltFireWeapon(test_ent)) {
+			pm->cmd.buttons &= ~BUTTON_ALT_ATTACK;
+			pm->cmd.buttons |= ~BUTTON_ATTACK;
 		}
 	}
 #endif
