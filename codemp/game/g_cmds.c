@@ -67,15 +67,15 @@ const skill_t skills[] = {
 	{5, "Team Energize",		"restores some force power to players near you. If Improvements skill is at least at level 1, regens blaster pack and power cell ammo of the target players",																																					"force",	"dark",		FP_TEAM_FORCE},
 	{4, "Stun Baton",			"attacks someone with a small electric charge. Has %d damage multiplied by the stun baton level. With Stun Baton Upgrade, can destroy or move some other objects, and also decloaks enemies and decrease their moving speed for some seconds",																	"weapons",	"merc",		WP_STUN_BATON},
 	{2, "Blaster Pistol",		"the popular Star Wars pistol used by Han Solo in the movies. Normal fire is a single blaster shot, alternate fire allows you to fire a powerful charged shot. The charged shot causes a lot more damage depending on how much it was charged",																	"weapons",	"merc",		WP_BRYAR_PISTOL},
-	{2, "E11 Blaster Rifle",	"the rifle used by the Storm Troopers. E11 shots do %d damage. Normal fire is a single shot, while the alternate fire is the rapid fire",																																										"weapons",	"merc",		WP_BLASTER},
-	{2, "Disruptor",			"the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged",																																					"weapons",	"merc",		WP_DISRUPTOR},
-	{2, "Bowcaster",			"the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once.",																																																				"weapons",	"merc",		WP_BOWCASTER},
-	{2, "Repeater",				"a powerful weapon with a rapid fire and a plasma bomb. Normal fire shoots the rapid fire, and does %d damage. Alt fire fires the plasma bomb",																																									"weapons",	"merc",		WP_REPEATER},
-	{2, "DEMP2",				"a very powerful weapon against machine npc and some vehicles, causing more damage to them and stunning them. Normal fire does %d damage and alt fire can be charged",																																			"weapons",	"merc",		WP_DEMP2},
-	{2, "Flechette",			"this weapon is similar to a shotgun. Normal fire causes %d damage. Alt fire shoots 2 bombs",																																																					"weapons",	"merc",		WP_FLECHETTE},
-	{2, "Rocket Launcher",		"a powerful explosive weapon. Normal fire shoots a rocket causing %d damage. Alt fire shoots a homing missile",																																																	"weapons",	"merc",		WP_ROCKET_LAUNCHER},
-	{2, "Concussion Rifle",		"it shoots a powerful shot that has a big damage area. Alt fire shoots a ray similar to disruptor shots, but it can go through force fields and can throw the enemy on the ground.",																															"weapons",	"merc",		WP_CONCUSSION},
-	{2, "Bryar Pistol",			"very similar to the blaster pistol, but this one has a better fire rate with normal shot.",																																																					"weapons",	"merc",		WP_BRYAR_OLD},
+	{2, "E11 Blaster Rifle",	"the rifle used by the Storm Troopers. Normal fire is a single shot, while the alternate fire is the rapid fire. Level 2 unlocks the alternate fire mode.",																																										"weapons",	"merc",		WP_BLASTER},
+	{2, "Disruptor",			"the sniper, used by the rodians ingame. Normal fire is a shot that causes %d damage, alternate fire allows zoom and a charged shot that when fully charged. Level 2 unlocks the alternate fire mode.",																																					"weapons",	"merc",		WP_DISRUPTOR},
+	{2, "Bowcaster",			"the famous weapon used by Chewbacca. Normal fire can be charged to fire up to 5 shots at once. Level 2 unlocks the alternate fire mode.",																																																				"weapons",	"merc",		WP_BOWCASTER},
+	{2, "Repeater",				"a powerful weapon with a rapid fire and a plasma bomb. Normal fire shoots the rapid fire, and does %d damage. Alt fire fires the plasma bomb. Level 2 unlocks the alternate fire mode.",																																									"weapons",	"merc",		WP_REPEATER},
+	{2, "DEMP2",				"a very powerful weapon against machine npc and some vehicles, causing more damage to them and stunning them. Normal fire does %d damage and alt fire can be charged. Level 2 unlocks the alternate fire mode.",																																			"weapons",	"merc",		WP_DEMP2},
+	{2, "Flechette",			"this weapon is similar to a shotgun. Normal fire causes %d damage. Alt fire shoots 2 bombs. Level 2 unlocks the alternate fire mode.",																																																					"weapons",	"merc",		WP_FLECHETTE},
+	{2, "Rocket Launcher",		"a powerful explosive weapon. Normal fire shoots a rocket causing %d damage. Alt fire shoots a homing missile. Level 2 unlocks the alternate fire mode.",																																																	"weapons",	"merc",		WP_ROCKET_LAUNCHER},
+	{2, "Concussion Rifle",		"it shoots a powerful shot that has a big damage area. Alt fire shoots a ray similar to disruptor shots, but it can go through force fields and can throw the enemy on the ground. Level 2 unlocks the alternate fire mode.",																															"weapons",	"merc",		WP_CONCUSSION},
+	{2, "Bryar Pistol",			"very similar to the blaster pistol, but this one has a better fire rate with normal shot. Level 2 unlocks the alternate fire mode.",																																																					"weapons",	"merc",		WP_BRYAR_OLD},
 	{3, "Melee",				"allows you to attack with your fists and legs. You can punch, kick or do a special melee attack by holding both Attack and Alt Attack buttons (usually the mouse buttons).",																																	"weapons",	"merc",		0},
 	{5, "Max Shield",			"The max shield (armor) the player can have. Each level increases 20 per cent of max shield the player can have",																																																"other",	"merc",		0},
 	{4, "Shield Strength",		"Each level increases your shield resistance by 7 per cent",																																																													"other",	"merc",		0},
@@ -8979,11 +8979,11 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 ^3/adminup <player name> <command number>: ^7gives the player an admin command.\n\
 ^3/admindown <player name> <command number>: ^7removes an admin command from a player.\n\
 ^3/music <path>: ^7Replaces the current map music with the song given.\n\
-^3/levelup <player name>: ^7Levels the player up by one.\n\
-^3/leveldown <player name>: ^7Brings the player's level down by one.\n\
+^3/levelup <player name> <number of levels>(optional): ^7Levels the player up by one.\n\
+^3/leveldown <player name> <number of levels>(optional): ^7Brings the player's level down by one.\n\
 ^3/givexp <player name>: ^7Gives the player one xp.\n\
-^3/skillup <player name> <skill number>: ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n\"");
-				trap->SendServerCommand(ent - g_entities, "print \"^3/skildown <player name> <skill number>: ^7downgrades a skill.\n\
+^3/skillup <player name> <skill number> <number of levels>(optional): ^7upgrades a skill. Passing ^3all ^7as parameter upgrades all skills.\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"^3/skildown <player name> <skill number> <number of levels>(optional): ^7downgrades a skill.\n\
 ^3/god: ^7Makes you invincible.\n\
 ^3/players <player name> <force/weapons/orther/ammo/items/stuff (optional)>: ^7Checks a player's abilities and stats.\n\
 ^3/telemark: ^7Sets a marker you can teleport to later.\n\
