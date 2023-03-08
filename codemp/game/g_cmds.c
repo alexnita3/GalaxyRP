@@ -1492,6 +1492,38 @@ void help_up(gentity_t* ent, gentity_t* target) {
 			target->flags ^= FL_NOTARGET;
 		}
 
+		if (ent != target) {
+			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			ent->client->ps.forceDodgeAnim = BOTH_HELPUP;
+			ent->client->ps.forceHandExtendTime = level.time + 1000;
+
+			target->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			target->client->ps.forceDodgeAnim = BOTH_HELPEDUP;
+			target->client->ps.forceHandExtendTime = level.time + 1000;
+		}
+		else {
+			int anim_to_play;
+			switch (ent->client->pers.skill_levels[0])
+			{
+			case FORCE_LEVEL_0:
+				anim_to_play = BOTH_GETUP1;
+				break;
+			case FORCE_LEVEL_1:
+			case FORCE_LEVEL_2:
+			case FORCE_LEVEL_3:
+			case FORCE_LEVEL_4:
+			case FORCE_LEVEL_5:
+				anim_to_play = BOTH_BACK_FLIP_UP;
+			default:
+				anim_to_play = BOTH_GETUP1;
+				break;
+			}
+			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+			ent->client->ps.forceDodgeAnim = anim_to_play;
+			ent->client->ps.forceHandExtendTime = level.time + 1000;
+		}
+
+
 		if (rp_downed_invulnerability_timer.integer) {
 			target->client->invulnerableTimer = level.time + rp_downed_invulnerability_timer.integer * 1000;
 			target->client->ps.eFlags |= EF_INVULNERABLE;
