@@ -312,6 +312,12 @@ const chat_modifiers_t chat_modifiers[] = {
 	{"/thought",	"chat \"%s ^7is thinking: %s\n\"",					BROADCAST_DISTANCE	},
 };
 
+void play_animation(gentity_t *ent, int animation, int time) {
+	ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
+	ent->client->ps.forceDodgeAnim = animation;
+	ent->client->ps.forceHandExtendTime = level.time + 1000;
+}
+
 /*
 ==================
 DeathmatchScoreboardMessage
@@ -700,9 +706,7 @@ void Cmd_Emote_f( gentity_t *ent )
 		//alex: here, the anim_id is the worded animation name
 		if (strcmp(anim_id, animations[i].animation_name) == 0)
 		{
-			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-			ent->client->ps.forceDodgeAnim = animations[i].animation_code;
-			ent->client->ps.forceHandExtendTime = level.time + 1000;
+			play_animation(ent, animations[i].animation_code, 1000);
 
 			ent->client->pers.player_statuses |= (1 << 1);
 
@@ -713,9 +717,7 @@ void Cmd_Emote_f( gentity_t *ent )
 	// alex: player can select animation id
 	if (anim_id_int > 0 && anim_id_int < MAX_ANIMATIONS)
 	{
-		ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-		ent->client->ps.forceDodgeAnim = anim_id_int;
-		ent->client->ps.forceHandExtendTime = level.time + 1000;
+		play_animation(ent, anim_id_int, 1000);
 
 		ent->client->pers.player_statuses |= (1 << 1);
 
@@ -1493,13 +1495,8 @@ void help_up(gentity_t* ent, gentity_t* target) {
 		}
 
 		if (ent != target) {
-			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-			ent->client->ps.forceDodgeAnim = BOTH_HELPUP;
-			ent->client->ps.forceHandExtendTime = level.time + 1000;
-
-			target->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-			target->client->ps.forceDodgeAnim = BOTH_HELPEDUP;
-			target->client->ps.forceHandExtendTime = level.time + 1000;
+			play_animation(ent, BOTH_HELPUP, 1000);
+			play_animation(target, BOTH_HELPEDUP, 1000);
 		}
 		else {
 			int anim_to_play;
@@ -1518,9 +1515,7 @@ void help_up(gentity_t* ent, gentity_t* target) {
 				anim_to_play = BOTH_GETUP1;
 				break;
 			}
-			ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-			ent->client->ps.forceDodgeAnim = anim_to_play;
-			ent->client->ps.forceHandExtendTime = level.time + 1000;
+			play_animation(target, anim_to_play, 1000);
 		}
 
 
@@ -14263,9 +14258,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				{
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/4);
 
-					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-					ent->client->ps.forceDodgeAnim = BOTH_MEDITATE;
-					ent->client->ps.forceHandExtendTime = level.time + 3500;
+					play_animation(ent, BOTH_MEDITATE, 3500);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 3500;
 					ent->client->pers.unique_skill_duration = level.time + 3500;
@@ -14350,9 +14343,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 					zyk_yaw += 40;
 					zyk_WP_FireThermalDetonator(ent, zyk_yaw);
 
-					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-					ent->client->ps.forceDodgeAnim = BOTH_K1_S1_BL;
-					ent->client->ps.forceHandExtendTime = level.time + 500;
+					play_animation(ent, BOTH_K1_S1_BL, 500);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
 
@@ -14427,9 +14418,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 				zyk_WP_FireBryarPistol(ent);
 
-				ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-				ent->client->ps.forceDodgeAnim = BOTH_FORCELIGHTNING_START;
-				ent->client->ps.forceHandExtendTime = level.time + 500;
+				play_animation(ent, BOTH_FORCELIGHTNING_START, 500);
 
 				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/weapons/bryar/alt_fire.mp3"));
 			}
@@ -14451,9 +14440,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->pers.player_statuses |= (1 << 22);
 
-					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-					ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
-					ent->client->ps.forceHandExtendTime = level.time + 2000;
+					play_animation(ent, BOTH_FORCE_DRAIN_START, 2000);
 
 					zyk_super_beam(ent, ent->client->ps.viewangles[1]);
 
@@ -14582,9 +14569,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				{
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 
-					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-					ent->client->ps.forceDodgeAnim = BOTH_A7_KICK_S;
-					ent->client->ps.forceHandExtendTime = level.time + 1500;
+					play_animation(ent, BOTH_A7_KICK_S, 1500);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
 					ent->client->pers.unique_skill_duration = level.time + 500;
@@ -14783,9 +14768,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
-					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-					ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
-					ent->client->ps.forceHandExtendTime = level.time + 700;
+					play_animation(ent, BOTH_FORCE_DRAIN_START, 700);
 
 					zyk_set_entity_field(new_ent, "classname", "fx_runner");
 					zyk_set_entity_field(new_ent, "spawnflags", "0");
@@ -14822,9 +14805,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 
 					ent->client->pers.player_statuses |= (1 << 23);
 
-					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-					ent->client->ps.forceDodgeAnim = BOTH_FORCE_RAGE;
-					ent->client->ps.forceHandExtendTime = level.time + 3000;
+					play_animation(ent, BOTH_FORCE_RAGE, 3000);
 
 					zyk_force_storm(ent);
 
@@ -14886,9 +14867,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 				{
 					ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer / 4);
 
-					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-					ent->client->ps.forceDodgeAnim = BOTH_MEDITATE;
-					ent->client->ps.forceHandExtendTime = level.time + 3000;
+					play_animation(ent, BOTH_MEDITATE, 3000);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 3000;
 					ent->client->pers.unique_skill_duration = level.time + 3000;
@@ -14939,9 +14918,7 @@ void Cmd_Unique_f(gentity_t *ent) {
 						ent->client->pers.unique_skill_user_id = -1;
 					}
 
-					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-					ent->client->ps.forceDodgeAnim = TORSO_WEAPONREADY4;
-					ent->client->ps.forceHandExtendTime = level.time + 1500;
+					play_animation(ent, TORSO_WEAPONREADY4, 1500);
 
 					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1500;
 					ent->client->pers.unique_skill_duration = level.time + 1500;
