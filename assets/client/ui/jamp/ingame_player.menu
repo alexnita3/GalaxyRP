@@ -1,0 +1,397 @@
+//------------------------------------------------------------------------------------------------
+// PLAYER SETUP MENU  - ingame_player
+//
+//	Choose player skin, name
+//	Choose light saber
+//	Allocate force powers
+//
+//	g_gametypes
+//		"Free For All" 		0
+//		"Duel" 			3
+//		"Power Duel" 		4
+//		"Team FFA" 		6 
+//		"Siege" 		7
+//		"Capture the Flag" 	8
+//
+//	ui_net_gametype
+//		0 = FFA
+//		1 = DUEL
+//		2 = POWER DUEL
+//		3 = TEAM FFA
+//		4 = SIEGE
+//		5 = CTF
+//------------------------------------------------------------------------------------------------
+{
+	menuDef 
+	{
+		name						"ingame_player"
+		visible						0
+		fullscreen					0
+		outOfBoundsClick										// this closes the window if it gets a click out of the rectangle
+		rect						195 140 250 180
+		focusColor					1 1 1 1					// Focus color for text and items
+		style						1
+		border						1
+		descX						320
+		descY						428
+		descScale					1
+		descColor				1 .682 0 .8
+		descAlignment					ITEM_ALIGN_CENTER		
+		onOpen  
+		{ 
+			uiScript				update "ui_GetName"
+			uiScript				updateForceStatus
+			hide					highlights
+		}
+		onClose 
+		{ 
+			uiScript				update "ui_SetName"
+			uiScript				updateForceStatus
+			hide					highlights
+		}
+
+//------------------------------------------------------------------------------------------------
+// Overall window backdrop
+//------------------------------------------------------------------------------------------------
+		itemDef 
+		{
+			name				background_pic
+			group				none
+			style				WINDOW_STYLE_SHADER
+			rect				0 0 250 180
+			background			"gfx/menus/menu_box_ingame"
+			forecolor			1 1 1 1
+			visible				1
+			decoration
+		}
+
+
+		// Button background at bottom of screen
+		itemDef 
+		{
+			name				background
+			group				none
+			style				WINDOW_STYLE_FILLED
+			rect				0 420 600 20
+			backcolor			.298 .305 .690 1
+			forecolor			.549 .854 1 1
+			visible				1
+			decoration
+		}
+
+//------------------------------------------------------------------------------------------------
+// Name entry field
+//------------------------------------------------------------------------------------------------
+		itemDef 
+		{
+			name				nameglow
+			group				mods
+			style				WINDOW_STYLE_SHADER
+			rect				25 11 250 24
+			background			"gfx/menus/menu_buttonback"			// Frame around button
+			forecolor			1 1 1 1
+			visible			0
+			decoration
+		}
+		
+		itemDef 
+		{
+			name 				namefield
+			type 				ITEM_TYPE_EDITFIELD
+			style 				0
+			text 				@MENUS_NAME1
+			cvar 				"ui_Name"
+			maxchars 			26
+			rect 				20 13 170 20
+			textalign			ITEM_ALIGN_LEFT		
+			textalignx 			0
+			textaligny 			-5
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			outlinecolor 			1 .5 .5 .5
+			backcolor 			0 0 0 0
+			border 				0
+			bordercolor 			0 0 0 0
+			descText			@MENUS_ENTER_YOUR_NAME_HERE
+			visible 			1 
+			action 
+			{ 
+				play			"sound/interface/button1"
+			}
+			mouseenter 
+			{ 
+				show			nameglow
+			}
+			mouseexit 
+			{ 
+				hide			nameglow
+			}
+		}
+//LOG IN BUTTONS
+		itemDef 
+		{
+			name				loginButton
+			group				highlights 
+			style				WINDOW_STYLE_SHADER
+			rect				73 70 105 32
+			background			"gfx/menus/menu_buttonback"			// Frame around button
+			forecolor			1 1 1 1
+			decoration
+			visible			0
+		}
+
+		itemDef 
+		{
+			name				login
+			group				"playerforcespectate"
+			text				"Log in"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				73 70 105 32
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			52
+			textaligny			2
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			descText			@MENUS_APPLY_CHANGES_BUT_REMAIN
+			visible			1
+			action 
+			{ 
+				play			"sound/interface/button1"
+				open			ingame_login
+				close 			ingame_player
+			}
+			mouseEnter 
+			{ 
+				show			loginButton
+			}
+			mouseExit 
+			{ 
+				hide			loginButton
+			}
+		}
+
+//REGISTER BUTTONS
+
+		itemDef 
+		{
+			name				registerButton
+			group				highlights 
+			style				WINDOW_STYLE_SHADER
+			rect				73 40 105 32
+			background			"gfx/menus/menu_buttonback"			// Frame around button
+			forecolor			1 1 1 1
+			decoration
+			visible			0
+		}
+
+		itemDef 
+		{
+			name				register
+			group				"playerforcespectate"
+			text				"Register"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				73 40 105 32
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			52
+			textaligny			2
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			descText			@MENUS_APPLY_CHANGES_BUT_REMAIN
+			visible			1
+			action 
+			{ 
+				play			"sound/interface/button1"
+				open			ingame_register
+				close 			ingame_player
+			}
+			mouseEnter 
+			{ 
+				show			registerButton
+			}
+			mouseExit 
+			{ 
+				hide			registerButton
+			}
+		}
+
+//REGISTER BUTTONS
+
+		itemDef 
+		{
+			name				changepassButton
+			group				highlights 
+			style				WINDOW_STYLE_SHADER
+			rect				73 100 105 32
+			background			"gfx/menus/menu_buttonback"			// Frame around button
+			forecolor			1 1 1 1
+			decoration
+			visible			0
+		}
+
+		itemDef 
+		{
+			name				changepass
+			group				"playerforcespectate"
+			text				"Change Pass"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				73 100 105 32
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			52
+			textaligny			2
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			descText			@MENUS_APPLY_CHANGES_BUT_REMAIN
+			visible			1
+			action 
+			{ 
+				play			"sound/interface/button1"
+				open			ingame_passchange
+				close 			ingame_player
+			}
+			mouseEnter 
+			{ 
+				show			changepassButton
+			}
+			mouseExit 
+			{ 
+				hide			changepassButton
+			}
+		}
+
+//---------------------------------------------
+//	APPLY BUTTON
+//---------------------------------------------
+// JOIN BUTTONS
+		itemDef 
+		{
+			name				applyjoinButton
+			group				highlights 
+			style				WINDOW_STYLE_SHADER
+			rect				5 140 105 32
+			background			"gfx/menus/menu_buttonback"			// Frame around button
+			forecolor			1 1 1 1
+			decoration
+			visible			0
+			appearance_slot		3
+		}
+
+		itemDef 
+		{
+			name				applycurrent
+			group				"playerapply"
+			text				"Join Game"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				5 140 105 32
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			52
+			textaligny			2
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			descText			@MENUS_APPLY_CHANGES_AND_JOIN
+			visible			1
+			action 
+			{ 
+				play			"sound/interface/button1"
+				uiScript		setForce "none"
+				hide			highlights
+				uiScript		closeingame
+			}
+			mouseEnter 
+			{ 
+				show			applyjoinButton
+			}
+			mouseExit 
+			{ 
+				hide			applyjoinButton
+			}
+		}
+
+		itemDef 
+		{
+			name				applyjoin
+			group				"playerforcejoin"
+			text				"Join Game"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				5 140 105 32
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			52
+			textaligny			2
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			descText			@MENUS_APPLY_CHANGES_AND_JOIN
+			visible			1
+			action 
+			{ 
+				play			"sound/interface/button1"
+				uiScript 		setForce "free"
+				hide			highlights
+				uiScript 		closeingame
+			}
+			mouseEnter 
+			{ 
+				show			applyjoinButton
+			}
+			mouseExit 
+			{ 
+				hide			applyjoinButton
+			}
+		}
+
+// APPLY SPECTATOR
+		itemDef 
+		{
+			name				applyspectateButton
+			group				highlights 
+			style				WINDOW_STYLE_SHADER
+			rect				150 140 105 32
+			background			"gfx/menus/menu_buttonback"			// Frame around button
+			forecolor			1 1 1 1
+			decoration
+			visible			0
+		}
+
+		itemDef 
+		{
+			name				applyspectate
+			group				"playerforcespectate"
+			text				@MENUS_SPECTATE
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				150 140 105 32
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			52
+			textaligny			2
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			descText			@MENUS_APPLY_CHANGES_BUT_REMAIN
+			visible			1
+			action 
+			{ 
+				play			"sound/interface/button1"
+				uiScript 		setForce "s"
+				hide			highlights
+				uiScript 		closeingame
+			}
+			mouseEnter 
+			{ 
+				show			applyspectateButton
+			}
+			mouseExit 
+			{ 
+				hide			applyspectateButton
+			}
+		}
+	}
+}

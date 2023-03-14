@@ -453,7 +453,6 @@ Adds score to both the client and his team
 ============
 */
 extern qboolean g_dontPenalizeTeam; //g_cmds.c
-extern void rpg_score(gentity_t *ent, qboolean admin_rp_mode);
 void AddScore( gentity_t *ent, vec3_t origin, int score )
 {
 	/*
@@ -473,12 +472,7 @@ void AddScore( gentity_t *ent, vec3_t origin, int score )
 	// show score plum
 	//ScorePlum(ent, origin, score);
 	//
-	ent->client->ps.persistant[PERS_SCORE] += score;
-
-	if (!ent->NPC && ent->client->sess.amrpgmode == 2 && score > 0)
-	{
-		rpg_score(ent, qfalse);
-	}
+	//ent->client->ps.persistant[PERS_SCORE] += score;
 
 	if ( level.gametype == GT_TEAM && !g_dontPenalizeTeam )
 		level.teamScores[ ent->client->ps.persistant[PERS_TEAM] ] += score;
@@ -2881,8 +2875,6 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 
 	self->enemy = attacker;
 
-	self->client->ps.persistant[PERS_KILLED]++;
-
 	if (self == attacker)
 	{
 		self->client->ps.fd.suicides++;
@@ -4894,7 +4886,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	{
 		if (mod == MOD_SABER)
 		{ // zyk: player in RPG mode, with duals or staff, has a better damage depending on Saber Attack level
-			if (attacker->client->saber[0].saberFlags&SFL_TWO_HANDED || (attacker->client->saber[0].model[0] && attacker->client->saber[1].model[0]))
+			/*if (attacker->client->saber[0].saberFlags&SFL_TWO_HANDED || (attacker->client->saber[0].model[0] && attacker->client->saber[1].model[0]))
 			{
 				if (attacker->client->pers.skill_levels[5] <= FORCE_LEVEL_1)
 				{
@@ -4912,7 +4904,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 				{
 					damage = (int)ceil(damage * 1.4);
 				}
-			}
+			}*/
 			if (attacker->client->ps.fd.saberAnimLevel == SS_FAST)
 			{
 				if (attacker->client->pers.skill_levels[5] == FORCE_LEVEL_2)

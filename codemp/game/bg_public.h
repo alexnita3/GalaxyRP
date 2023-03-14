@@ -1655,6 +1655,14 @@ typedef struct saberInfo_s {
 	int				readyAnimGreen;							// -1 - anim to use when standing idle
 	int				readyAnimStaff;							// -1 - anim to use when standing idle
 	int				readyAnimDual;							// -1 - anim to use when standing idle
+	int				idleAnimBlue;							// -1 - anim to use when standing in place for an extended period of time
+	int				idleAnimYellow;							// -1 - anim to use when standing in place for an extended period of time
+	int				idleAnimRed;							// -1 - anim to use when standing in place for an extended period of time
+	int				idleAnimPurple;							// -1 - anim to use when standing in place for an extended period of time
+	int				idleAnimGreen;							// -1 - anim to use when standing in place for an extended period of time
+	int				idleAnimDual;							// -1 - anim to use when standing in place for an extended period of time
+	int				idleAnimStaff;							// -1 - anim to use when standing in place for an extended period of time
+
 	
 	int				drawAnim;								// -1 - anim to use when drawing weapon
 	int				putawayAnim;							// -1 - anim to use when putting weapon away

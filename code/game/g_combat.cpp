@@ -4030,7 +4030,6 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 	self->enemy = attacker;
 	self->client->renderInfo.lookTarget = ENTITYNUM_NONE;
 
-	self->client->ps.persistant[PERS_KILLED]++;
 	if ( self->client->playerTeam == TEAM_PLAYER )
 	{//FIXME: just HazTeam members in formation on away missions?
 		//or more controlled- via deathscripts?

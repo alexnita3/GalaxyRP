@@ -1630,40 +1630,26 @@ static qboolean dark_quest_collected_notes(int dark_quest_progress)
 static void CG_ZykChars(void)
 {
 	char arg[1024] = { 0 };
-	int i = 0, j = 0;
-	char value[64] = { 0 };
 	int char_count = 0;
 
 	trap->Cmd_Argv(1, arg, sizeof(arg));
 
-	while (arg[i] != '\0')
+	char* value;
+	value = strtok(arg, "&");
+
+	while (value != NULL)
 	{
-		if (arg[i] == '<' && arg[i + 1] == 'z' && arg[i + 2] == 'y' && arg[i + 3] == 'k' && arg[i + 4] == 'c' && arg[i + 5] == '>')
-		{ // zyk: current char
-			value[j] = '\0';
-			j = 0;
-			i += 5;
-
-			trap->Cvar_Set("ui_zyk_rpg_current_char", va("Using %s", value));
+		if (char_count >= 15) {
+			break;
 		}
-		else if (arg[i] == '<' && arg[i + 1] == 'z' && arg[i + 2] == 'y' && arg[i + 3] == 'k' && arg[i + 4] == '>')
-		{ // zyk: got the separator, finish processing this char name
-			value[j] = '\0';
-			j = 0;
-			i += 5;
-			char_count++;
-
-			trap->Cvar_Set(va("ui_zyk_rpg_char_%d", char_count), va("%s", value));
-		}
-		else
-		{
-			value[j] = arg[i];
-			j++;
-			i++;
-		}
+		trap->Cvar_Set(va("ui_zyk_rpg_char_%d", char_count), va("%s", value));
+		char_count++;
+		
+		value = strtok(NULL, "&");
 	}
 
 	// zyk: cleaning cvars that will not render a charname
+	char_count--;
 	while (char_count < 15)
 	{
 		trap->Cvar_Set(va("ui_zyk_rpg_char_%d", char_count + 1), "");
@@ -1671,932 +1657,98 @@ static void CG_ZykChars(void)
 	}
 }
 
+char ui_cvars_in_order[100][100] = { 
+	"name",
+	"model",
+	"ui_zyk_rpg_level", 
+	"ui_rp_xp_value", 
+	"ui_zyk_rpg_skillpoints", 
+	"ui_zyk_rpg_credits",
+	"ui_zyk_rpg_current_char",
+	"ui_zyk_skill_1_level",
+	"ui_zyk_skill_2_level",
+	"ui_zyk_skill_3_level",
+	"ui_zyk_skill_4_level",
+	"ui_zyk_skill_5_level",
+	"ui_zyk_skill_6_level",
+	"ui_zyk_skill_7_level",
+	"ui_zyk_skill_8_level",
+	"ui_zyk_skill_9_level",
+	"ui_zyk_skill_10_level",
+	"ui_zyk_skill_11_level",
+	"ui_zyk_skill_12_level",
+	"ui_zyk_skill_13_level",
+	"ui_zyk_skill_14_level",
+	"ui_zyk_skill_15_level",
+	"ui_zyk_skill_16_level",
+	"ui_zyk_skill_17_level",
+	"ui_zyk_skill_18_level",
+	"ui_zyk_skill_19_level",
+	"ui_zyk_skill_20_level",
+	"ui_zyk_skill_21_level",
+	"ui_zyk_skill_22_level",
+	"ui_zyk_skill_23_level",
+	"ui_zyk_skill_24_level",
+	"ui_zyk_skill_25_level",
+	"ui_zyk_skill_26_level",
+	"ui_zyk_skill_27_level",
+	"ui_zyk_skill_28_level",
+	"ui_zyk_skill_29_level",
+	"ui_zyk_skill_30_level",
+	"ui_zyk_skill_31_level",
+	"ui_zyk_skill_32_level",
+	"ui_zyk_skill_33_level",
+	"ui_zyk_skill_34_level",
+	"ui_zyk_skill_35_level",
+	"ui_zyk_skill_36_level",
+	"ui_zyk_skill_37_level",
+	"ui_zyk_skill_38_level",
+	"ui_zyk_skill_39_level",
+	"ui_zyk_skill_40_level",
+	"ui_zyk_skill_41_level",
+	"ui_zyk_skill_42_level",
+	"ui_zyk_skill_43_level",
+	"ui_zyk_skill_44_level",
+	"ui_zyk_skill_45_level",
+	"ui_zyk_skill_46_level",
+	"ui_zyk_skill_47_level",
+	"ui_zyk_skill_48_level",
+	"ui_zyk_skill_49_level",
+	"ui_zyk_skill_50_level",
+	"ui_zyk_skill_51_level",
+	"ui_zyk_skill_52_level",
+	"ui_zyk_skill_53_level",
+	"ui_zyk_skill_54_level",
+	"ui_zyk_skill_55_level",
+	"ui_zyk_skill_56_level",
+	"ui_rp_skill_57_level",
+	"ui_rp_skill_58_level",
+	"ui_rp_skill_59_level",
+	"ui_rp_skill_60_level",
+	"ui_rp_skill_61_level",
+	"ui_rp_skill_62_level"
+};
+
 static void CG_ZykMod( void )
 { // zyk: receives account info of logged players
-	char arg[512] = {0};
-	char value[64] = {0};
-	char rpg_class[32] = {0};
-	int i = 0, j = 0, k = 0;
-	int light_quest_progress = 0;
-	int dark_quest_progress = 0;
-	int eternity_quest_progress = 0;
-	int universe_quest_progress = 0;
+	char arg[1024] = {0};
 
-	trap->Cmd_Argv( 1, arg, sizeof( arg ) );
+	trap->Cmd_Argv(1, arg, sizeof(arg));
 
-	while (j < 89)
-	{ // zyk: parsing info from the server and setting the respective cvars
-		k = 0;
+	char *value;
+	value = strtok(arg, "~");
 
-		while(arg[i] != '-' && arg[i] != '\0')
-		{
-			value[k] = arg[i];
-			i++;
-			k++;
-		}
-
+	int i = 0;
+	while (value != NULL)
+	{
+		trap->Cvar_Set(ui_cvars_in_order[i], va("%s", value));
 		i++;
-
-		value[k] = '\0';
-
-		if (j == 0)
-			trap->Cvar_Set("ui_zyk_rpg_level", va("%s",value));
-		else if (j == 1)
-			trap->Cvar_Set("ui_zyk_rpg_level_up_score", va("%s",value));
-		else if (j == 2)
-			trap->Cvar_Set("ui_zyk_rpg_skillpoints", va("%s",value));
-		else if (j == 3)
-			trap->Cvar_Set("ui_zyk_rpg_skillcounter", va("%s",value));
-		else if (j == 4)
-			trap->Cvar_Set("ui_zyk_rpg_magic_power", va("%s",value));
-		else if (j == 5)
-			trap->Cvar_Set("ui_zyk_rpg_credits", va("%s",value));
-		else if (j == 6)
-		{
-			trap->Cvar_Set("ui_zyk_rpg_rpgclass", va("%s",value));
-			strcpy(rpg_class, value);
+		if (i >= ARRAY_LEN(ui_cvars_in_order)) {
+			return;
 		}
-		else if (j < 63)
-		{
-			int skill_number = j-6;
-
-			if (Q_stricmp(rpg_class, "Free Warrior") == 0)
-			{
-				trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), va("%s",value));
-			}
-			else if (Q_stricmp(rpg_class, "Force User") == 0)
-			{
-				if ((skill_number > 19 && skill_number < 30) || (skill_number == 35) || (skill_number > 39 && skill_number < 55))
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), "");
-				else
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), va("%s",value));
-			}
-			else if (Q_stricmp(rpg_class, "Bounty Hunter") == 0)
-			{
-				if ((skill_number > 0 && skill_number < 5) || (skill_number > 5 && skill_number < 19) || skill_number == 34 || 
-					(skill_number > 35 && skill_number < 39) || skill_number == 55)
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), "");
-				else
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), va("%s",value));
-			}
-			else if (Q_stricmp(rpg_class, "Armored Soldier") == 0)
-			{
-				if ((skill_number > 0 && skill_number < 5) || (skill_number > 5 && skill_number < 19) || skill_number == 34 || 
-					(skill_number > 35 && skill_number < 39) || skill_number == 49 || (skill_number > 51 && skill_number < 56))
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), "");
-				else
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), va("%s",value));
-			}
-			else if (Q_stricmp(rpg_class, "Monk") == 0)
-			{
-				if (skill_number == 4 || (skill_number > 5 && skill_number < 10) || skill_number == 11 || skill_number == 14 || skill_number == 17 ||
-					(skill_number > 19 && skill_number < 30) || skill_number == 35 || (skill_number > 39 && skill_number < 55))
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), "");
-				else
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), va("%s",value));
-			}
-			else if (Q_stricmp(rpg_class, "Stealth Attacker") == 0)
-			{
-				if ((skill_number > 0 && skill_number < 5) || (skill_number > 5 && skill_number < 19) || (skill_number > 19 && skill_number < 22) ||
-					skill_number == 23 || (skill_number > 25 && skill_number < 28) || skill_number == 29 || skill_number == 34 || 
-					(skill_number > 35 && skill_number < 39) || skill_number == 40 || (skill_number > 42 && skill_number < 45) || (skill_number > 47 && skill_number < 50) || 
-					(skill_number > 50 && skill_number < 54) || skill_number == 55)
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), "");
-				else
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), va("%s",value));
-			}
-			else if (Q_stricmp(rpg_class, "Duelist") == 0)
-			{
-				if ((skill_number > 11 && skill_number < 14) || (skill_number > 16 && skill_number < 19) || 
-					(skill_number > 19 && skill_number < 30) || skill_number == 35 || skill_number == 38 || (skill_number > 39 && skill_number < 55))
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), "");
-				else
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), va("%s",value));
-			}
-			else if (Q_stricmp(rpg_class, "Force Gunner") == 0)
-			{
-				if (skill_number == 4 || (skill_number > 5 && skill_number < 9) || (skill_number > 10 && skill_number < 13) || skill_number == 15 ||
-					skill_number == 17 || skill_number == 20 || skill_number == 23 || (skill_number > 24 && skill_number < 27) || 
-					(skill_number > 27 && skill_number < 30) || (skill_number > 44 && skill_number < 47) ||
-					skill_number == 48 || skill_number == 51 || (skill_number > 52 && skill_number < 55))
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), "");
-				else
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), va("%s",value));
-			}
-			else if (Q_stricmp(rpg_class, "Magic Master") == 0)
-			{
-				if ((skill_number > 0 && skill_number < 5) || (skill_number > 5 && skill_number < 19) || (skill_number > 19 && skill_number < 30) || 
-					skill_number == 34 || (skill_number > 36 && skill_number < 39) || (skill_number > 39 && skill_number < 48) || 
-					(skill_number > 48 && skill_number < 56))
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), "");
-				else
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), va("%s",value));
-			}
-			else if (Q_stricmp(rpg_class, "Force Guardian") == 0)
-			{
-				if (skill_number == 4 || skill_number == 10 || (skill_number > 11 && skill_number < 15) || skill_number == 16 || 
-					skill_number == 18 || skill_number == 20 || (skill_number > 21 && skill_number < 30) ||
-					(skill_number > 33 && skill_number < 39) || (skill_number > 40 && skill_number < 52) || 
-					(skill_number > 52 && skill_number < 55))
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), "");
-				else
-					trap->Cvar_Set(va("ui_zyk_skill_%d_level", skill_number), va("%s",value));
-			}
-		}
-		else if (j < 80)
-		{
-			int setting_value = j-63;
-
-			if (setting_value != 16) // zyk: for compability with older versions, keeping the 16 value but not using it
-				trap->Cvar_Set(va("ui_zyk_setting_%d_value", setting_value), va("%s",value));
-		}
-		else if (j < 81)
-		{ // zyk: receive the Upgrades bought from the seller
-			int secrets_found = atoi(value);
-
-			if (secrets_found & (1 << 0))
-				trap->Cvar_Set("ui_zyk_upgrade_0_value", "Holdable Items Upgrade - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_0_value", "Holdable Items Upgrade - no");
-
-			if (secrets_found & (1 << 1))
-				trap->Cvar_Set("ui_zyk_upgrade_1_value","Bounty Hunter Upgrade - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_1_value","Bounty Hunter Upgrade - no");
-
-			if (secrets_found & (1 << 2))
-				trap->Cvar_Set("ui_zyk_upgrade_14_value", "Unique Ability 1 - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_14_value", "Unique Ability 1 - no");
-
-			if (secrets_found & (1 << 3))
-				trap->Cvar_Set("ui_zyk_upgrade_15_value", "Unique Ability 2 - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_15_value", "Unique Ability 2 - no");
-
-			if (secrets_found & (1 << 4))
-				trap->Cvar_Set("ui_zyk_upgrade_16_value", "Unique Ability 3 - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_16_value", "Unique Ability 3 - no");
-
-			if (secrets_found & (1 << 7))
-				trap->Cvar_Set("ui_zyk_upgrade_2_value","Stealth Attacker Upgrade - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_2_value","Stealth Attacker Upgrade - no");
-
-			if (secrets_found & (1 << 8))
-				trap->Cvar_Set("ui_zyk_upgrade_3_value","Force Gunner Upgrade - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_3_value","Force Gunner Upgrade - no");
-
-			if (secrets_found & (1 << 9))
-				trap->Cvar_Set("ui_zyk_upgrade_4_value","Impact Reducer - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_4_value","Impact Reducer - no");
-
-			if (secrets_found & (1 << 10))
-				trap->Cvar_Set("ui_zyk_upgrade_5_value","Flame Thrower - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_5_value","Flame Thrower - no");
-
-			if (secrets_found & (1 << 11))
-				trap->Cvar_Set("ui_zyk_upgrade_6_value","Power Cell Weapons Upgrade - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_6_value","Power Cell Weapons Upgrade - no");
-
-			if (secrets_found & (1 << 12))
-				trap->Cvar_Set("ui_zyk_upgrade_7_value","Blaster Pack Weapons Upgrade - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_7_value","Blaster Pack Weapons Upgrade - no");
-
-			if (secrets_found & (1 << 13))
-				trap->Cvar_Set("ui_zyk_upgrade_8_value","Metal Bolts Weapons Upgrade - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_8_value","Metal Bolts Weapons Upgrade - no");
-
-			if (secrets_found & (1 << 14))
-				trap->Cvar_Set("ui_zyk_upgrade_9_value","Rocket Upgrade - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_9_value","Rocket Upgrade - no");
-
-			if (secrets_found & (1 << 15))
-				trap->Cvar_Set("ui_zyk_upgrade_10_value","Stun Baton Upgrade - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_10_value","Stun Baton Upgrade - no");
-
-			if (secrets_found & (1 << 16))
-				trap->Cvar_Set("ui_zyk_upgrade_11_value","Armored Soldier Upgrade - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_11_value","Armored Soldier Upgrade - no");
-
-			if (secrets_found & (1 << 17))
-				trap->Cvar_Set("ui_zyk_upgrade_12_value","Jetpack Upgrade - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_12_value","Jetpack Upgrade - no");
-
-			if (secrets_found & (1 << 19))
-				trap->Cvar_Set("ui_zyk_upgrade_13_value","Force Guardian Upgrade - yes");
-			else
-				trap->Cvar_Set("ui_zyk_upgrade_13_value","Force Guardian Upgrade - no");
-		}
-		else if (j == 81)
-		{
-			light_quest_progress = atoi(value);
-
-			if (light_quest_progress == 10)
-				trap->Cvar_Set("ui_zyk_light_power","Light Power - yes");
-			else
-				trap->Cvar_Set("ui_zyk_light_power","Light Power - no");
-
-			if (light_quest_progress == 10)
-				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
-			else if (Q_stricmp(rpg_class, "Free Warrior") == 0 && light_quest_progress & (1 << 11))
-				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
-			else if (Q_stricmp(rpg_class, "Force User") == 0 && light_quest_progress & (1 << 6))
-				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
-			else if (Q_stricmp(rpg_class, "Bounty Hunter") == 0 && light_quest_progress & (1 << 10))
-				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
-			else if (Q_stricmp(rpg_class, "Armored Soldier") == 0 && light_quest_progress & (1 << 5))
-				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
-			else if (Q_stricmp(rpg_class, "Monk") == 0 && light_quest_progress & (1 << 9))
-				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
-			else if (Q_stricmp(rpg_class, "Stealth Attacker") == 0 && light_quest_progress & (1 << 4))
-				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
-			else if (Q_stricmp(rpg_class, "Duelist") == 0 && light_quest_progress & (1 << 7))
-				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
-			else if (Q_stricmp(rpg_class, "Force Gunner") == 0 && light_quest_progress & (1 << 8))
-				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
-			else if (Q_stricmp(rpg_class, "Force Guardian") == 0 && light_quest_progress & (1 << 12))
-				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
-			else if (Q_stricmp(rpg_class, "Magic Master") == 0)
-				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - yes");
-			else
-				trap->Cvar_Set("ui_zyk_special_powers","Magic Powers - no");
-
-			if (light_quest_progress != 10)
-			{
-				// zyk: Setting the mission the player must complete
-				if (light_quest_defeated_guardians(light_quest_progress) == qtrue)
-				{
-					trap->Cvar_Set("ui_zyk_light_text", "Go to the sacred monument in ^3yavin2");
-					trap->Cvar_Set("ui_zyk_light_text2","and defeat the Guardian of Light");
-					trap->Cvar_Set("ui_zyk_light_text3","");
-					trap->Cvar_Set("ui_zyk_light_text4","");
-					trap->Cvar_Set("ui_zyk_light_text5","");
-					trap->Cvar_Set("ui_zyk_light_text6","");
-					trap->Cvar_Set("ui_zyk_light_text7","");
-					trap->Cvar_Set("ui_zyk_light_text8","");
-					trap->Cvar_Set("ui_zyk_light_text9","");
-					trap->Cvar_Set("ui_zyk_light_text10","");
-					trap->Cvar_Set("ui_zyk_light_text11","");
-				}
-				else
-				{
-					trap->Cvar_Set("ui_zyk_light_text", "Defeat the guardians in their respective maps");
-					trap->Cvar_Set("ui_zyk_light_text2","");
-
-					if (light_quest_progress & (1 << 4))
-						trap->Cvar_Set("ui_zyk_light_text3", "^4Guardian of Water ^7(yavin1b) - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_light_text3", "^4Guardian of Water ^7(yavin1b) - ^1no");
-
-					if (light_quest_progress & (1 << 5))
-						trap->Cvar_Set("ui_zyk_light_text4", "^3Guardian of Earth ^7(t1_fatal) - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_light_text4", "^3Guardian of Earth ^7(t1_fatal) - ^1no");
-
-					if (light_quest_progress & (1 << 6))
-						trap->Cvar_Set("ui_zyk_light_text5", "^2Guardian of Forest ^7(yavin2) - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_light_text5", "^2Guardian of Forest ^7(yavin2) - ^1no");
-
-					if (light_quest_progress & (1 << 7))
-						trap->Cvar_Set("ui_zyk_light_text6", "^5Guardian of Intelligence ^7(t2_rogue) - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_light_text6", "^5Guardian of Intelligence ^7(t2_rogue) - ^1no");
-
-					if (light_quest_progress & (1 << 8))
-						trap->Cvar_Set("ui_zyk_light_text7", "^6Guardian of Agility ^7(hoth3) - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_light_text7", "^6Guardian of Agility ^7(hoth3) - ^1no");
-
-					if (light_quest_progress & (1 << 9))
-						trap->Cvar_Set("ui_zyk_light_text8", "^1Guardian of Fire ^7(mp/duel5) - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_light_text8", "^1Guardian of Fire ^7(mp/duel5) - ^1no");
-
-					if (light_quest_progress & (1 << 10))
-						trap->Cvar_Set("ui_zyk_light_text9", "^7Guardian of Wind ^7(mp/duel9) - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_light_text9", "^7Guardian of Wind ^7(mp/duel9) - ^1no");
-
-					if (light_quest_progress & (1 << 11))
-						trap->Cvar_Set("ui_zyk_light_text10", "^3Guardian of Resistance ^7(mp/duel8) - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_light_text10", "^3Guardian of Resistance ^7(mp/duel8) - ^1no");
-
-					if (light_quest_progress & (1 << 12))
-						trap->Cvar_Set("ui_zyk_light_text11", "^5Guardian of Ice ^7(hoth2) - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_light_text11", "^5Guardian of Ice ^7(hoth2) - ^1no");
-				}
-			}
-			else
-			{
-				trap->Cvar_Set("ui_zyk_light_text","Completed");
-				trap->Cvar_Set("ui_zyk_light_text2","");
-				trap->Cvar_Set("ui_zyk_light_text3","");
-				trap->Cvar_Set("ui_zyk_light_text4","");
-				trap->Cvar_Set("ui_zyk_light_text5","");
-				trap->Cvar_Set("ui_zyk_light_text6","");
-				trap->Cvar_Set("ui_zyk_light_text7","");
-				trap->Cvar_Set("ui_zyk_light_text8","");
-				trap->Cvar_Set("ui_zyk_light_text9","");
-				trap->Cvar_Set("ui_zyk_light_text10","");
-				trap->Cvar_Set("ui_zyk_light_text11","");
-			}
-		}
-		else if (j == 82)
-		{
-			dark_quest_progress = atoi(value);
-
-			if (dark_quest_progress == 10)
-				trap->Cvar_Set("ui_zyk_dark_power","Dark Power - yes");
-			else
-				trap->Cvar_Set("ui_zyk_dark_power","Dark Power - no");
-
-			if (dark_quest_progress != 10)
-			{
-				// zyk: Setting the mission the player must complete
-				if (dark_quest_collected_notes(dark_quest_progress) == qtrue)
-				{
-					trap->Cvar_Set("ui_zyk_dark_text", "Defeat the Guardian of Darkness");
-					trap->Cvar_Set("ui_zyk_dark_text2","in the dark room in ^3yavin2");
-					trap->Cvar_Set("ui_zyk_dark_text3","");
-					trap->Cvar_Set("ui_zyk_dark_text4","");
-					trap->Cvar_Set("ui_zyk_dark_text5","");
-					trap->Cvar_Set("ui_zyk_dark_text6","");
-					trap->Cvar_Set("ui_zyk_dark_text7","");
-					trap->Cvar_Set("ui_zyk_dark_text8","");
-					trap->Cvar_Set("ui_zyk_dark_text9","");
-					trap->Cvar_Set("ui_zyk_dark_text10","");
-					trap->Cvar_Set("ui_zyk_dark_text11","");
-				}
-				else
-				{
-					trap->Cvar_Set("ui_zyk_dark_text", "Find the notes in their respective maps");
-					trap->Cvar_Set("ui_zyk_dark_text2","");
-
-					if (dark_quest_progress & (1 << 4))
-						trap->Cvar_Set("ui_zyk_dark_text3", "in the temple of the forest - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_dark_text3", "in the temple of the forest - ^1no");
-
-					if (dark_quest_progress & (1 << 5))
-						trap->Cvar_Set("ui_zyk_dark_text4", "in a spaceport of a desert planet - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_dark_text4", "in a spaceport of a desert planet - ^1no");
-
-					if (dark_quest_progress & (1 << 6))
-						trap->Cvar_Set("ui_zyk_dark_text5", "in the desert with the sand people - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_dark_text5", "in the desert with the sand people - ^1no");
-
-					if (dark_quest_progress & (1 << 7))
-						trap->Cvar_Set("ui_zyk_dark_text6", "in a very deep burial location - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_dark_text6", "in a very deep burial location - ^1no");
-
-					if (dark_quest_progress & (1 << 8))
-						trap->Cvar_Set("ui_zyk_dark_text7", "in a very cold place - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_dark_text7", "in a very cold place - ^1no");
-
-					if (dark_quest_progress & (1 << 9))
-						trap->Cvar_Set("ui_zyk_dark_text8", "in an abandoned and forgotten city - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_dark_text8", "in an abandoned and forgotten city - ^1no");
-
-					if (dark_quest_progress & (1 << 10))
-						trap->Cvar_Set("ui_zyk_dark_text9", "in the office of a crime lord - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_dark_text9", "in the office of a crime lord - ^1no");
-
-					if (dark_quest_progress & (1 << 11))
-						trap->Cvar_Set("ui_zyk_dark_text10", "in the sand worm desert - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_dark_text10", "in the sand worm desert - ^1no");
-
-					if (dark_quest_progress & (1 << 12))
-						trap->Cvar_Set("ui_zyk_dark_text11", "in the sith tombs - ^2yes");
-					else
-						trap->Cvar_Set("ui_zyk_dark_text11", "in the sith tombs - ^1no");
-				}
-			}
-			else
-			{
-				trap->Cvar_Set("ui_zyk_dark_text","Completed");
-				trap->Cvar_Set("ui_zyk_dark_text2","");
-				trap->Cvar_Set("ui_zyk_dark_text3","");
-				trap->Cvar_Set("ui_zyk_dark_text4","");
-				trap->Cvar_Set("ui_zyk_dark_text5","");
-				trap->Cvar_Set("ui_zyk_dark_text6","");
-				trap->Cvar_Set("ui_zyk_dark_text7","");
-				trap->Cvar_Set("ui_zyk_dark_text8","");
-				trap->Cvar_Set("ui_zyk_dark_text9","");
-				trap->Cvar_Set("ui_zyk_dark_text10","");
-				trap->Cvar_Set("ui_zyk_dark_text11","");
-			}
-		}
-		else if (j == 83)
-		{
-			eternity_quest_progress = atoi(value);
-
-			if (eternity_quest_progress == 11)
-				trap->Cvar_Set("ui_zyk_eternity_power","Eternity Power - yes");
-			else
-				trap->Cvar_Set("ui_zyk_eternity_power","Eternity Power - no");
-
-			// zyk: Setting the mission the player must complete
-			if (eternity_quest_progress < 10)
-			{
-				trap->Cvar_Set("ui_zyk_eternity_text", "Find the ^3riddles ^7near the waterfall");
-				trap->Cvar_Set("ui_zyk_eternity_text2",va("in ^3yavin2^7. Use chat to answer. Answered: ^3%d", eternity_quest_progress));
-			}
-			else if (eternity_quest_progress == 10)
-			{
-				trap->Cvar_Set("ui_zyk_eternity_text","Defeat the ^3Guardian of Eternity ^7near");
-				trap->Cvar_Set("ui_zyk_eternity_text2","the waterfall in ^3yavin2");
-			}
-			else
-			{
-				trap->Cvar_Set("ui_zyk_eternity_text","Completed");
-				trap->Cvar_Set("ui_zyk_eternity_text2","");
-			}
-		}
-		else if (j == 84)
-		{
-			universe_quest_progress = atoi(value);
-
-			if (universe_quest_progress >= 8)
-				trap->Cvar_Set("ui_zyk_universe_power","Universe Power - yes");
-			else
-				trap->Cvar_Set("ui_zyk_universe_power","Universe Power - no");
-
-			if (universe_quest_progress >= 14)
-				trap->Cvar_Set("ui_zyk_ultimate_power","Ultimate Power - yes");
-			else
-				trap->Cvar_Set("ui_zyk_ultimate_power","Ultimate Power - no");
-
-			if (universe_quest_progress == 22)
-				trap->Cvar_Set("ui_zyk_resurrection_power","Final Power - yes");
-			else
-				trap->Cvar_Set("ui_zyk_resurrection_power","Final Power - no");
-
-			// zyk: setting the Universe Quest mission that the player must complete
-			if (universe_quest_progress < 22)
-			{
-				if (universe_quest_progress == 0)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^31. The Hero's Quest Begins");
-					trap->Cvar_Set("ui_zyk_universe_text","Go to ^3kor1 ^7to save the Guardian Sages");
-					trap->Cvar_Set("ui_zyk_universe_text2","");
-					trap->Cvar_Set("ui_zyk_universe_text3","");
-					trap->Cvar_Set("ui_zyk_universe_text4","");
-				}
-				else if (universe_quest_progress == 1)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^32. The Rise of an Evil Force");
-					trap->Cvar_Set("ui_zyk_universe_text","Talk to the sages at ^3kor1");
-					trap->Cvar_Set("ui_zyk_universe_text2","to know more about your quest");
-					trap->Cvar_Set("ui_zyk_universe_text3","");
-					trap->Cvar_Set("ui_zyk_universe_text4","");
-				}
-				else if (universe_quest_progress == 2)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^33. The Life-Force Artifacts");
-					trap->Cvar_Set("ui_zyk_universe_text","Find the 8 artifacts in SP maps. One of them");
-					trap->Cvar_Set("ui_zyk_universe_text3","");
-					trap->Cvar_Set("ui_zyk_universe_text4","");
-				}
-				else if (universe_quest_progress == 3)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^34. In Search for Answers");
-					trap->Cvar_Set("ui_zyk_universe_text","Go to ^3yavin1b ^7to talk to the sages about the");
-					trap->Cvar_Set("ui_zyk_universe_text2","mysterious voice at the");
-					trap->Cvar_Set("ui_zyk_universe_text3","beginning of the quest");
-					trap->Cvar_Set("ui_zyk_universe_text4","");
-				}
-				else if (universe_quest_progress == 4)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^35. The Hidden Sage");
-					trap->Cvar_Set("ui_zyk_universe_text","Find the Sage of Universe at ^3t3_hevil");
-					trap->Cvar_Set("ui_zyk_universe_text2","");
-					trap->Cvar_Set("ui_zyk_universe_text3","");
-					trap->Cvar_Set("ui_zyk_universe_text4","");
-				}
-				else if (universe_quest_progress == 5)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^36. The Guardian Amulets");
-					trap->Cvar_Set("ui_zyk_universe_text","Find the three guardian amulets");
-					trap->Cvar_Set("ui_zyk_universe_text2","at the City of the Merchants");
-					trap->Cvar_Set("ui_zyk_universe_text4","");
-				}
-				else if (universe_quest_progress == 6)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^37. The Decisive Battle");
-					trap->Cvar_Set("ui_zyk_universe_text","Defeat the ^1Master of Evil ^7at ^3taspir1");
-					trap->Cvar_Set("ui_zyk_universe_text2","");
-					trap->Cvar_Set("ui_zyk_universe_text3","");
-					trap->Cvar_Set("ui_zyk_universe_text4","");
-				}
-				else if (universe_quest_progress == 7)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^38. The Guardian of Universe");
-					trap->Cvar_Set("ui_zyk_universe_text","Defeat the ^2Guardian of Universe");
-					trap->Cvar_Set("ui_zyk_universe_text2","at ^3mp/siege_korriban");
-					trap->Cvar_Set("ui_zyk_universe_text3","");
-					trap->Cvar_Set("ui_zyk_universe_text4","");
-				}
-				else if (universe_quest_progress == 8)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^39. Revelations");
-					trap->Cvar_Set("ui_zyk_universe_text","You had a vision of a calling from a sacred place");
-					trap->Cvar_Set("ui_zyk_universe_text2","Talk to sages and guardians and go there");
-				}
-				else if (universe_quest_progress == 9)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^310. The Sacred Crystals");
-					trap->Cvar_Set("ui_zyk_universe_text","Find the sacred crystals in ^3t2_trip");
-					trap->Cvar_Set("ui_zyk_universe_text2","You need them to free the Guardian of Time");
-					trap->Cvar_Set("ui_zyk_universe_text4","");
-				}
-				else if (universe_quest_progress == 10)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^311. Finally Free");
-					trap->Cvar_Set("ui_zyk_universe_text","You have the sacred crystals. Go to ^3t2_trip");
-					trap->Cvar_Set("ui_zyk_universe_text2","and free the Guardian of Time");
-					trap->Cvar_Set("ui_zyk_universe_text3","");
-					trap->Cvar_Set("ui_zyk_universe_text4","");
-				}
-				else if (universe_quest_progress == 11)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^312. Battle for the Temple");
-					trap->Cvar_Set("ui_zyk_universe_text","Master of Evil sent his entire army");
-					trap->Cvar_Set("ui_zyk_universe_text2","to the temple. Defeat all of them");
-					trap->Cvar_Set("ui_zyk_universe_text3","with the help of your allies");
-					trap->Cvar_Set("ui_zyk_universe_text4","");
-				}
-				else if (universe_quest_progress == 12)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^313. The Final Revelation");
-					trap->Cvar_Set("ui_zyk_universe_text","Listen to the revelation that will be");
-					trap->Cvar_Set("ui_zyk_universe_text2","decisive to the fate of the Universe");
-					trap->Cvar_Set("ui_zyk_universe_text3","");
-					trap->Cvar_Set("ui_zyk_universe_text4","");
-				}
-				else if (universe_quest_progress == 13)
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter","^314. The Hero's Choice");
-					trap->Cvar_Set("ui_zyk_universe_text","Listen to sages, guardians,");
-					trap->Cvar_Set("ui_zyk_universe_text2","Guardian of Time and Master of Evil");
-					trap->Cvar_Set("ui_zyk_universe_text3","After that, press the Use key");
-					trap->Cvar_Set("ui_zyk_universe_text4","on the one you choose");
-				}
-				else if (universe_quest_progress == 14)
-				{
-					if (light_quest_progress == 10 && dark_quest_progress == 10 && eternity_quest_progress == 11)
-					{
-						trap->Cvar_Set("ui_zyk_universe_chapter","^315. The Fate of the Universe");
-						trap->Cvar_Set("ui_zyk_universe_text","Go to the Sacred Dimension in ^3t2_trip");
-						trap->Cvar_Set("ui_zyk_universe_text2","to fight the ^1Guardian of Chaos");
-						trap->Cvar_Set("ui_zyk_universe_text3","");
-						trap->Cvar_Set("ui_zyk_universe_text4","");
-					}
-					else
-					{
-						trap->Cvar_Set("ui_zyk_universe_chapter","^3Requirements");
-						trap->Cvar_Set("ui_zyk_universe_text","Complete Light, Dark");
-						trap->Cvar_Set("ui_zyk_universe_text2","and Eternity quests");
-						trap->Cvar_Set("ui_zyk_universe_text3","");
-						trap->Cvar_Set("ui_zyk_universe_text4","");
-					}
-				}
-			}
-			else
-			{
-				trap->Cvar_Set("ui_zyk_universe_chapter","Completed");
-				trap->Cvar_Set("ui_zyk_universe_text","");
-				trap->Cvar_Set("ui_zyk_universe_text2","");
-				trap->Cvar_Set("ui_zyk_universe_text3","");
-				trap->Cvar_Set("ui_zyk_universe_text4","");
-			}
-		}
-		else if (j == 85)
-		{ // zyk: Universe Quest counter, has the amount of artifacts, amulets and crystals
-			int universe_quest_counter = atoi(value);
-
-			if (universe_quest_counter & (1 << 30) && cg.using_unique_boost == 0)
-			{
-				cg.using_unique_boost = 1;
-			}
-
-			if (universe_quest_progress == 2)
-			{
-				trap->Cvar_Set("ui_zyk_universe_text2",va("is with the sages at ^3yavin1b. ^7Artifacts: ^3%d", universe_quest_counter));
-			}
-			else if (universe_quest_progress == 5)
-			{
-				trap->Cvar_Set("ui_zyk_universe_text3",va("in ^3mp/siege_desert. ^7Amulets: ^3%d", universe_quest_counter));
-			}
-			else if (universe_quest_progress == 8)
-			{
-				if (universe_quest_counter & (1 << 1))
-					trap->Cvar_Set("ui_zyk_universe_text3", "^3Guardians/Sages at ^3mp/siege_korriban ^7- ^2yes");
-				else
-					trap->Cvar_Set("ui_zyk_universe_text3", "^3Guardians/Sages at ^3mp/siege_korriban ^7- ^1no");
-
-				if (universe_quest_counter & (1 << 2))
-					trap->Cvar_Set("ui_zyk_universe_text4", "^3Sacred obelisk at ^3t2_trip ^7- ^2yes");
-				else
-					trap->Cvar_Set("ui_zyk_universe_text4", "^3Sacred obelisk at ^3t2_trip ^7- ^1no");
-			}
-			else if (universe_quest_progress == 9)
-			{
-				trap->Cvar_Set("ui_zyk_universe_text3",va("Crystals: ^3%d", universe_quest_counter));
-			}
-			else if (universe_quest_progress == 15)
-			{
-				if (universe_quest_counter & (1 << 0))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^316. Sages Sequel: The Ancient Threat");
-					trap->Cvar_Set("ui_zyk_universe_text", "Sage of Universe telepathically asks you");
-					trap->Cvar_Set("ui_zyk_universe_text2", "to talk to the sages at the");
-					trap->Cvar_Set("ui_zyk_universe_text3", "sacred monument in ^3yavin2");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 1))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^316. Guardians Sequel: A Smart Move");
-					trap->Cvar_Set("ui_zyk_universe_text", "Guardian of Universe telepathically asks you");
-					trap->Cvar_Set("ui_zyk_universe_text2", "to talk to the guardians at the");
-					trap->Cvar_Set("ui_zyk_universe_text3", "central area in ^3mp/siege_korriban");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 2))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^316. Thor Sequel: The Betrayal");
-					trap->Cvar_Set("ui_zyk_universe_text", "Thor (Master of Evil) telepathically asks you");
-					trap->Cvar_Set("ui_zyk_universe_text2", "to go to ^3t3_bounty");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 3))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^316. Time Sequel: The Most Important Task");
-					trap->Cvar_Set("ui_zyk_universe_text", "Guardian of Time telepathically asks you");
-					trap->Cvar_Set("ui_zyk_universe_text2", "to go to ^3mp/siege_korriban");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-			}
-			else if (universe_quest_progress == 16)
-			{
-				if (universe_quest_counter & (1 << 0))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^317. Sages Sequel: Save the City!");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3mp/siege_desert^7 and defeat all mages");
-					trap->Cvar_Set("ui_zyk_universe_text2", "with the help from some citizens");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 1))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^317. Guardians Sequel: The Confrontation");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3t3_bounty^7 and defeat Ymir and Thor");
-					trap->Cvar_Set("ui_zyk_universe_text2", "");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 2))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^317. Thor Sequel: Survival of the Strongest");
-					trap->Cvar_Set("ui_zyk_universe_text", "Defeat Ymir in ^3t3_bounty^7 water arena");
-					trap->Cvar_Set("ui_zyk_universe_text2", "");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 3))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^317. Time Sequel: The Well of Truth");
-					trap->Cvar_Set("ui_zyk_universe_text", "'The Well of truth, surrounded by the forest and");
-					trap->Cvar_Set("ui_zyk_universe_text2", "the sacred monument...shall contain");
-					trap->Cvar_Set("ui_zyk_universe_text3", "the answers to the Universe salvation'");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-					
-			}
-			else if (universe_quest_progress == 17)
-			{
-				if (universe_quest_counter & (1 << 0))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^318. Sages Sequel: The Terrible Truth");
-					trap->Cvar_Set("ui_zyk_universe_text", "Talk to the sages inside the mayor's house");
-					trap->Cvar_Set("ui_zyk_universe_text2", "in ^3mp/siege_desert");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 1))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^318. Guardians Sequel: The Hero's Destiny");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3mp/siege_korriban^7 and talk to the");
-					trap->Cvar_Set("ui_zyk_universe_text2", "guardians in the blue crystal room");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 2))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^318. Thor Sequel: The New Leader");
-					trap->Cvar_Set("ui_zyk_universe_text", "Talk to Thor in ^3t3_bounty^7 water arena");
-					trap->Cvar_Set("ui_zyk_universe_text2", "");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 3))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^318. Time Sequel: The Legendary Puzzle");
-					trap->Cvar_Set("ui_zyk_universe_text", "'The hero shall stand in the buried deep sanctuary...");
-					trap->Cvar_Set("ui_zyk_universe_text2", "and solve the puzzle to enter the Realm of Souls'");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-			}
-			else if (universe_quest_progress == 18)
-			{
-				if (universe_quest_counter & (1 << 0))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^319. Sages Sequel: To Settle the Score");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3t3_bounty^7 and find Ymir");
-					trap->Cvar_Set("ui_zyk_universe_text2", "");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 1))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^319. Guardians Sequel: The Guardian Trials");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3mp/siege_korriban^7 and win the");
-					trap->Cvar_Set("ui_zyk_universe_text2", "Guardian Trials battle");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 2))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^319. Thor Sequel: War at the City");
-					trap->Cvar_Set("ui_zyk_universe_text", "Defeat the citizens, sages and guardians");
-					trap->Cvar_Set("ui_zyk_universe_text2", "in ^3mp/siege_desert");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 3))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^319. Time Sequel: The Realm of Souls");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go through the gate in ^3t3_rift^7 sanctuary");
-					trap->Cvar_Set("ui_zyk_universe_text2", "which leads to the Realm of Souls");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-			}
-			else if (universe_quest_progress == 19)
-			{
-				if (universe_quest_counter & (1 << 0))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^320. Sages Sequel: The Crystal of Magic");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3t3_bounty^7 and talk to the");
-					trap->Cvar_Set("ui_zyk_universe_text2", "sages and guardians where Ymir was");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 1))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^320. Guardians Sequel: The Great Moment");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3mp/siege_korriban^7 and talk to the");
-					trap->Cvar_Set("ui_zyk_universe_text2", "guardians in the blue crystal room");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 2))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^320. Thor Sequel: The Path of Evil");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to the rancor arena in ^3mp/siege_desert");
-					trap->Cvar_Set("ui_zyk_universe_text2", "");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 3))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^320. Time Sequel: The Soul of Sorrow");
-					trap->Cvar_Set("ui_zyk_universe_text", "Speak to the Soul of Sorrow in the");
-					trap->Cvar_Set("ui_zyk_universe_text2", "Realm of Souls in ^3t3_rift");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-			}
-			else if (universe_quest_progress == 20)
-			{
-				if (universe_quest_counter & (1 << 0))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^321. Sages Sequel: Wrath of the Mages");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3t3_bounty^7 and defeat");
-					trap->Cvar_Set("ui_zyk_universe_text2", "Ymir and Thor in water arena");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 1))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^321. Guardians Sequel: The Final Challenge");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3mp/siege_korriban^7 and");
-					trap->Cvar_Set("ui_zyk_universe_text2", "win the battle");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 2))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^321. Thor Sequel: Victory!");
-					trap->Cvar_Set("ui_zyk_universe_text", "Defeat the Guardian of Time in the");
-					trap->Cvar_Set("ui_zyk_universe_text2", "rancor arena in ^3mp/siege_desert");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 3))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^321. Time Sequel: The Hero's Test");
-					trap->Cvar_Set("ui_zyk_universe_text", "Defeat the Soul of Sorrow in the");
-					trap->Cvar_Set("ui_zyk_universe_text2", "Realm of Souls in ^3t3_rift");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-			}
-			else if (universe_quest_progress == 21)
-			{
-				if (universe_quest_counter & (1 << 0))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^322. Sages Sequel: A New Prosperous Age");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3t3_bounty^7 and talk to the");
-					trap->Cvar_Set("ui_zyk_universe_text2", "sages and guardians in water arena");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 1))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^322. Guardians Sequel: The Guardian of Peace");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to ^3mp/siege_korriban^7 and talk to the");
-					trap->Cvar_Set("ui_zyk_universe_text2", "guardians in the blue crystal room");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 2))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^322. Thor Sequel: Full Power");
-					trap->Cvar_Set("ui_zyk_universe_text", "Go to the rancor arena in ^3mp/siege_desert^7 and");
-					trap->Cvar_Set("ui_zyk_universe_text2", "talk to Thor");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-				else if (universe_quest_counter & (1 << 3))
-				{
-					trap->Cvar_Set("ui_zyk_universe_chapter", "^322. Time Sequel: Salvation of the Universe");
-					trap->Cvar_Set("ui_zyk_universe_text", "Speak to the Soul of Sorrow in the");
-					trap->Cvar_Set("ui_zyk_universe_text2", "Realm of Souls in ^3t3_rift");
-					trap->Cvar_Set("ui_zyk_universe_text3", "");
-					trap->Cvar_Set("ui_zyk_universe_text4", "");
-				}
-			}
-		}
-		else if (j == 86)
-		{ // zyk: quest player
-			int quest_player_id = atoi(value);
-
-			if (quest_player_id < MAX_CLIENTS)
-			{
-				trap->Cvar_Set("ui_zyk_quest_player", va("Quest Player - %s", cgs.clientinfo[quest_player_id].name));
-			}
-			else
-			{
-				trap->Cvar_Set("ui_zyk_quest_player", "Quest Player - ");
-			}
-		}
-		else if (j == 87)
-		{ // zyk: duration of Unique Skills and Unique Abilities
-			if (cg.unique_duration_control == 0)
-			{
-				cg.unique_duration = atoi(value);
-				cg.unique_duration_timer = cg.time + cg.unique_duration;
-				cg.unique_duration_control = 1;
-			}
-		}
-
-		j++;
+		value = strtok(NULL, "~");
 	}
+	
 }
 
 typedef struct serverCommand_s {

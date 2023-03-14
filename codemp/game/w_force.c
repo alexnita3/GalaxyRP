@@ -983,7 +983,6 @@ void WP_ForcePowerRegenerate( gentity_t *self, int overrideAmt )
 	}
 }
 
-extern void rpg_skill_counter(gentity_t *ent, int amount);
 void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int overrideAmt )
 { //activate the given force power
 	int	duration = 0;
@@ -1221,9 +1220,6 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 
 	self->client->ps.fd.forcePowerDebounce[forcePower] = 0;
 
-	// zyk: force skill counter
-	rpg_skill_counter(self,100);
-
 	if ((int)forcePower == FP_SPEED && overrideAmt)
 	{
 		// zyk: Force User class spends less force
@@ -1267,8 +1263,6 @@ void ForceHeal( gentity_t *self )
 			self->client->ps.fd.forcePower -= zyk_max_force_power.integer/2;
 
 			G_Sound(self, CHAN_AUTO, G_SoundIndex("sound/player/pickupshield.wav"));
-
-			rpg_skill_counter(self, 100);
 		}
 		return;
 	}
@@ -1328,8 +1322,6 @@ void ForceHeal( gentity_t *self )
 
 	// zyk: now heal force power requires force based on the force power max cvar
 	self->client->ps.fd.forcePower -= (zyk_max_force_power.integer/2);
-
-	rpg_skill_counter(self, 100);
 
 	G_Sound( self, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav") );
 }
@@ -1490,8 +1482,6 @@ void ForceTeamHeal( gentity_t *self )
 			}
 
 			g_entities[pl[i]].client->ps.stats[STAT_HEALTH] += healthadd;
-
-			rpg_skill_counter(self, 20);
 
 			if (g_entities[pl[i]].client->ps.stats[STAT_HEALTH] > g_entities[pl[i]].client->ps.stats[STAT_MAX_HEALTH])
 			{
@@ -1668,8 +1658,6 @@ void ForceTeamForceReplenish( gentity_t *self )
 				g_entities[pl[i]].client->ps.fd.forcePower = g_entities[pl[i]].client->pers.max_force_power;
 			else if (g_entities[pl[i]].client->sess.amrpgmode < 2 && g_entities[pl[i]].client->ps.fd.forcePower > zyk_max_force_power.integer) // zyk: now it must be the cvar, because this cvar is the max force
 				g_entities[pl[i]].client->ps.fd.forcePower = zyk_max_force_power.integer;
-
-			rpg_skill_counter(self, 20);
 		}
 
 		//At this point we know we got one, so add him into the collective event client bitflag
@@ -6301,10 +6289,6 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 		self->client->force.drainDebounce = level.time;
 	if ( !(self->client->ps.fd.forcePowersActive & (1<<FP_LIGHTNING)) )
 		self->client->force.lightningDebounce = level.time;
-
-	// zyk: saber throw now increases skill counter
-	if (self->client->ps.saberInFlight && self->client->ps.saberEntityNum != 0)
-		rpg_skill_counter(self,1);
 
 	if ( (!self->client->ps.fd.forcePowersActive || self->client->ps.fd.forcePowersActive == (1 << FP_DRAIN)) &&
 		(!self->client->ps.saberInFlight || self->client->ps.saberEntityNum == 0) && // zyk: now force regenerates if saber is dropped in the ground after being thrown

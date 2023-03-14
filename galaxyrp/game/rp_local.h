@@ -23,7 +23,7 @@ Global definitions
 #define NUM_OF_OBJECTIVES				10 // zyk: number of Dark Quest objectives
 #define NUM_OF_ETERNITY_QUEST_OBJ		11 // zyk: number of Eternity Quest objectives
 #define NUM_OF_UNIVERSE_QUEST_OBJ		22 // zyk: number of Universe Quest objectives
-#define NUM_OF_SKILLS					58 // zyk: number of RPG Mode skills
+#define NUM_OF_SKILLS					60 // zyk: number of RPG Mode skills
 
 #define MAX_SHADER_REMAPS				128
 #define MAX_RACERS						16 // zyk: Max racers in the map
@@ -128,7 +128,11 @@ typedef struct shaderRemap_s {
 
 } shaderRemap_t;
 
+#ifdef __linux__
+extern shaderRemap_t remappedShaders[MAX_SHADER_REMAPS];
+#else
 shaderRemap_t remappedShaders[MAX_SHADER_REMAPS];
+#endif
 
 typedef struct chat_modifiers_s {
 	const char* chat_modifier;
@@ -142,6 +146,9 @@ typedef struct skill_s {
 	const char* skill_description;
 	const char* category;
 	const char* alignment;
+
+	//GalaxyRP (Alex): [Skills] Value to be used for internal code stuff. (such as force power enums, weapon enums etc..)
+	int value_internal;
 } skill_t;
 
 /*

@@ -4061,7 +4061,6 @@ int magic_fist_velocity(gentity_t *ent)
 //---------------------------------------------------------
 // FireMelee
 //---------------------------------------------------------
-extern void rpg_skill_counter(gentity_t *ent, int amount);
 void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 {
 	gentity_t	*tr_ent;
@@ -4132,7 +4131,6 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				// we don't want it to bounce
 				missile->bounceCount = 0;
 
-				rpg_skill_counter(ent, 10);
 				ent->client->pers.magic_power -= zyk_magic_fist_mp_cost.integer;
 
 				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/weapons/noghri/fire.mp3"));
@@ -4181,7 +4179,6 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				// we don't want it to ever bounce
 				missile->bounceCount = 0;
 
-				rpg_skill_counter(ent, 20);
 				ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 2);
 
 				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/weapons/demp2/fire.mp3"));
@@ -4398,7 +4395,6 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				VectorCopy(origin, tent->s.origin2);
 				VectorCopy(forward, tent->s.angles2);
 
-				rpg_skill_counter(ent, 20);
 				ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 2);
 
 				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/movers/objects/green_beam_start.mp3"));
@@ -4452,7 +4448,6 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 				// we don't want it to ever bounce
 				missile->bounceCount = 0;
 
-				rpg_skill_counter(ent, 20);
 				ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 2);
 
 				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/weapons/concussion/fire.mp3"));
@@ -5581,9 +5576,6 @@ void FireWeapon( gentity_t *ent, qboolean altFire ) {
 		}
 
 		CalcMuzzlePoint ( ent, forward, vright, up, muzzle );
-
-		// zyk: weapon counter
-		rpg_skill_counter(ent,50);
 
 		// fire the specific weapon
 		switch( ent->s.weapon ) {

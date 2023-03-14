@@ -805,6 +805,62 @@ qboolean ClientInactivityTimer( gclient_t *client ) {
 	return qtrue;
 }
 
+//GalaxyRP (Alex): [Ammo Recharge] Recharge player's ammo based on a timer. Bases on rp_ammo_regen_timer and rp_explosives_recharge_timer cvars.
+extern void Add_Ammo (gentity_t *ent, int weapon, int count);
+void RegenerateAmmo(gentity_t* ent, gclient_t* client) {
+	if (ent->client->sess.loggedin == qtrue) {
+		if (rp_allow_ammo_regen.integer > 0) {
+			if (ent->client->sess.weapon_recharge_timer >= rp_ammo_regen_timer.integer) {
+				for (int i = 39; i <= 41; i++) {
+
+					switch (i)
+					{
+					case 39:
+						Add_Ammo(ent, AMMO_BLASTER, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					case 40:
+						Add_Ammo(ent, AMMO_POWERCELL, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					case 41:
+						Add_Ammo(ent, AMMO_METAL_BOLTS, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					default:
+						break;
+					}
+				}
+				ent->client->sess.weapon_recharge_timer = 0;
+			}
+			ent->client->sess.weapon_recharge_timer++;
+		}
+		if (rp_allow_explosives_regen.integer > 0) {
+			if (ent->client->sess.explosive_recharge_timer >= rp_explosives_recharge_timer.integer) {
+				for (int i = 42; i <= 45; i++) {
+					switch (i)
+					{
+					case 42:
+						Add_Ammo(ent, AMMO_ROCKETS, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					case 43:
+						Add_Ammo(ent, AMMO_THERMAL, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					case 44:
+						Add_Ammo(ent, AMMO_TRIPMINE, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					case 45:
+						Add_Ammo(ent, AMMO_DETPACK, 1 * ent->client->pers.skill_levels[i]);
+						break;
+					default:
+						break;
+					}
+
+				}
+				ent->client->sess.explosive_recharge_timer = 0;
+			}
+			ent->client->sess.explosive_recharge_timer++;
+		}
+	}
+}
+
 /*
 ==================
 ClientTimerActions
@@ -812,10 +868,10 @@ ClientTimerActions
 Actions that happen once a second
 ==================
 */
-extern int zyk_max_magic_power(gentity_t *ent);
-extern void Add_Ammo (gentity_t *ent, int weapon, int count);
+extern int zyk_max_magic_power(gentity_t* ent);
 void ClientTimerActions( gentity_t *ent, int msec ) {
 	gclient_t	*client;
+     	char 		serverMotd[MAX_STRING_CHARS];
 
 	client = ent->client;
 	client->timeResidual += msec;
@@ -845,16 +901,8 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 	{
 		client->timeResidual -= 1000;
 
-		// zyk: if out of trip mines or thermals, remove them from weapon selection
-		if (client->ps.ammo[AMMO_THERMAL] == 0)
-		{
-			client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_THERMAL);
-		}
-
-		if (client->ps.ammo[AMMO_TRIPMINE] == 0)
-		{
-			client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_TRIP_MINE);
-		}
+		//GalaxyRP (Alex): [Ammo Recharge] Go check if player can recharge ammo, do it if they can.
+		RegenerateAmmo(ent, client);
 
 		if (zyk_chat_protection_timer.integer > 0)
 		{ // zyk: chat protection. If 0, it is off. If greater than 0, set the timer to protect the player
@@ -973,6 +1021,35 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 			}
 		}
 
+		//GalaxyRP (Alex): [Stat Regen] Regen some stats every second. In certain animations the regen will be higher.
+		int health_regen_amount = 1 + ent->client->pers.skill_levels[59];
+		int shield_regen_amount = 1 + ent->client->pers.skill_levels[58];
+
+		//GalaxyRP (Alex): [Stat Regen] Never regen while downed or dead.
+		if (ent->health > 0 && !(ent->client->pers.player_statuses & (1 << 6))) {
+			if ((ent->health + health_regen_amount) <= client->pers.max_rpg_health) {
+				if (client->ps.legsAnim == BOTH_MEDITATE) {
+					ent->health += health_regen_amount*2;
+				}
+				else {
+					if (rp_allow_passive_regen.integer) {
+						ent->health += health_regen_amount;
+					}
+				}
+			}
+			if ((client->ps.stats[STAT_ARMOR] + shield_regen_amount) <= client->pers.max_rpg_shield){
+				if (client->ps.legsAnim == BOTH_MEDITATE) {
+					client->ps.stats[STAT_ARMOR] += shield_regen_amount * 2;
+				}
+				else {
+					if (rp_allow_passive_regen.integer) {
+						client->ps.stats[STAT_ARMOR] += shield_regen_amount;
+					}
+				}
+			}
+		}
+
+
 		if (zyk_vote_timer.integer > 0 && client->sess.vote_timer > 0)
 		{ // zyk: countdown of the vote timer
 			client->sess.vote_timer--;
@@ -981,8 +1058,6 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 		//GalaxyRP (Alex): [Death System] This timer represents the time that a player has left until they can get up from being downed.
 		if (client->downedTime)
 		{
-			char serverMotd[MAX_STRING_CHARS];
-
 			if (client->downedTime <= rp_downed_timer.integer)
 			{
 				trap->SendServerCommand(ent->s.number, va("cp \"^1You are downed.\nTime Remaining: %d\"", client->downedTime));
@@ -1006,8 +1081,6 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 		// Tr!Force: [Motd] Show server motd
 		if (client->motdTime)
 		{
-			char serverMotd[MAX_STRING_CHARS];
-
 			if (client->motdTime <= zyk_screen_message_timer.integer)
 			{
 				RPMod_StringEscape(zyk_screen_message.string, serverMotd, MAX_STRING_CHARS);
@@ -1188,8 +1261,6 @@ void G_CheapWeaponFire(int entNum, int ev)
 	}
 }
 
-extern void rpg_skill_counter(gentity_t *ent, int amount);
-
 /*
 ================
 ClientEvents
@@ -1307,31 +1378,24 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 		//rww - Note that these must be in the same order (ITEM#-wise) as they are in holdable_t
 		case EV_USE_ITEM1: //seeker droid
 			ItemUse_Seeker(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM2: //shield
 			ItemUse_Shield(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM3: //medpack
 			ItemUse_MedPack(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM4: //big medpack
 			ItemUse_MedPack_Big(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM5: //binoculars
 			ItemUse_Binoculars(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM6: //sentry gun
 			ItemUse_Sentry(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM7: //jetpack
 			ItemUse_Jetpack(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM8: //health disp
 			//ItemUse_UseDisp(ent, HI_HEALTHDISP);
@@ -1341,11 +1405,9 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 			break;
 		case EV_USE_ITEM10: //eweb
 			ItemUse_UseEWeb(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		case EV_USE_ITEM11: //cloak
 			ItemUse_UseCloak(ent);
-			rpg_skill_counter(ent, 10);
 			break;
 		default:
 			break;
@@ -1542,6 +1604,45 @@ qboolean G_ActionButtonPressed(int buttons)
 	return qfalse;
 }
 
+int return_idle_animation(int animation) {
+	if (animation > 0) {
+		return animation;
+	}
+	return BOTH_STAND1IDLE1;
+}
+
+int get_idle_animation_for_style(gentity_t *ent) {
+	int idle_anim = 0;
+
+	switch (ent->client->ps.fd.saberAnimLevel)
+	{
+	case SS_FAST:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimBlue);
+		break;
+	case SS_MEDIUM:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimYellow);
+		break;
+	case SS_STRONG:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimRed);
+		break;
+	case SS_DESANN:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimPurple);
+		break;
+	case SS_TAVION:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimGreen);
+		break;
+	case SS_DUAL:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimDual);
+		break;
+	case SS_STAFF:
+		idle_anim = return_idle_animation(ent->client->saber->idleAnimStaff);
+		break;
+	}
+
+	return idle_anim;
+
+}
+
 void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 {
 	vec3_t viewChange;
@@ -1681,6 +1782,10 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 		if (idleAnim == BOTH_STAND2IDLE1 && Q_irand(1, 10) <= 5)
 		{
 			idleAnim = BOTH_STAND2IDLE2;
+		}
+
+		if (ent->s.weapon == WP_SABER && ent->client->ps.saberHolstered == 2) {
+			idleAnim = get_idle_animation_for_style(ent);
 		}
 
 		if ( /*PM_HasAnimation( ent, idleAnim )*/idleAnim > 0 && idleAnim < MAX_ANIMATIONS )
@@ -3695,8 +3800,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								send_rpg_events(2000);
 
-								rpg_skill_counter(ent, 200);
-
 								ent->client->pers.unique_skill_timer = level.time + 50000;
 							}
 							else
@@ -3712,8 +3815,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 10000;
 								ent->client->pers.unique_skill_duration = level.time + 10000;
-
-								rpg_skill_counter(ent, 200);
 
 								ent->client->pers.unique_skill_timer = level.time + 50000;
 							}
@@ -3731,8 +3832,6 @@ void ClientThink_real( gentity_t *ent ) {
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
 								ent->client->pers.unique_skill_duration = level.time + 25000;
 
-								rpg_skill_counter(ent, 200);
-
 								ent->client->pers.unique_skill_timer = level.time + 35000;
 							}
 							else
@@ -3748,8 +3847,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
 								ent->client->pers.unique_skill_duration = level.time + 15000;
-
-								rpg_skill_counter(ent, 200);
 
 								ent->client->pers.unique_skill_timer = level.time + 30000;
 							}
@@ -3783,8 +3880,6 @@ void ClientThink_real( gentity_t *ent ) {
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
 								ent->client->pers.unique_skill_duration = level.time + 15000;
 
-								rpg_skill_counter(ent, 200);
-
 								ent->client->pers.unique_skill_timer = level.time + 30000;
 							}
 							else
@@ -3800,8 +3895,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
 								ent->client->pers.unique_skill_duration = level.time + 10000;
-
-								rpg_skill_counter(ent, 200);
 
 								ent->client->pers.unique_skill_timer = level.time + 45000;
 							}
@@ -3886,8 +3979,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								send_rpg_events(2000);
 
-								rpg_skill_counter(ent, 200);
-
 								ent->client->pers.unique_skill_timer = level.time + 45000;
 							}
 							else
@@ -3968,8 +4059,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1000;
 
-								rpg_skill_counter(ent, 200);
-
 								ent->client->pers.unique_skill_timer = level.time + 40000;
 							}
 							else
@@ -3988,8 +4077,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								send_rpg_events(2000);
 
-								rpg_skill_counter(ent, 200);
-
 								ent->client->pers.unique_skill_timer = level.time + 50000;
 							}
 							else
@@ -4005,8 +4092,6 @@ void ClientThink_real( gentity_t *ent ) {
 
 								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
 								ent->client->pers.unique_skill_duration = level.time + 15000;
-
-								rpg_skill_counter(ent, 200);
 
 								ent->client->pers.unique_skill_timer = level.time + 50000;
 							}

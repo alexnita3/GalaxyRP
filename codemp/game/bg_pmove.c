@@ -330,9 +330,9 @@ int getOverridenAnimationByStyle(saberInfo_t* saber) {
 	case SS_STRONG:
 		return saber->readyAnimRed;
 	case SS_TAVION:
-		return saber->readyAnimPurple;
-	case SS_DESANN:
 		return saber->readyAnimGreen;
+	case SS_DESANN:
+		return saber->readyAnimPurple;
 	case SS_STAFF:
 		return saber->readyAnimStaff;
 	case SS_DUAL:
@@ -1826,7 +1826,6 @@ PM_CheckJump
 =============
 */
 #if defined( _GAME )
-extern void rpg_skill_counter(gentity_t *ent, int amount);
 extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 #endif
 static qboolean PM_CheckJump( void )
@@ -1904,10 +1903,6 @@ static qboolean PM_CheckJump( void )
 		{
 #if defined (_GAME)
 			gentity_t *player_ent = &g_entities[pm->ps->clientNum];
-			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2)
-			{
-				rpg_skill_counter(player_ent, 5);
-			}
 #endif
 
 			if ( pm->gametype == GT_DUEL
@@ -2847,17 +2842,6 @@ static qboolean PM_CheckJump( void )
 		PM_JumpForDir();
 	}
 
-#if defined (_GAME)
-	if (1)
-	{
-		gentity_t *player_ent = &g_entities[pm->ps->clientNum];
-		if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2)
-		{
-			rpg_skill_counter(player_ent, 5);
-		}
-	}
-#endif
-
 	return qtrue;
 }
 /*
@@ -3780,11 +3764,6 @@ static int PM_TryRoll( void )
 		{
 #if defined( _GAME )
 			gentity_t *player_ent = &g_entities[pm->ps->clientNum];
-
-			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2)
-			{ // zyk: rolling increases skill counter
-				rpg_skill_counter(player_ent, 20);
-			}
 #endif
 			pm->ps->saberMove = LS_NONE;
 			return anim;
@@ -5703,7 +5682,7 @@ static void PM_Footsteps( void ) {
 				switch (pm->ps->fd.saberAnimLevel)
 				{
 				case SS_STAFF:
-					if ( pm->ps->saberHolstered > 1 )
+					if ( pm->ps->saberHolstered == 2 )
 					{//blades off
 						desiredAnim = BOTH_RUN1;
 					}
@@ -5719,7 +5698,12 @@ static void PM_Footsteps( void ) {
 						}
 						else
 						{
-							desiredAnim = BOTH_RUN_STAFF;
+							if (pm->ps->weapon == WP_SABER) {
+								desiredAnim = BOTH_RUN_STAFF;
+							}
+							else{
+								desiredAnim = BOTH_RUN1;
+							}
 						}
 					}
 					break;
@@ -5734,7 +5718,12 @@ static void PM_Footsteps( void ) {
 					}
 					else
 					{
-						desiredAnim = BOTH_RUN_DUAL;
+						if (pm->ps->weapon == WP_SABER) {
+							desiredAnim = BOTH_RUN_DUAL;
+						}
+						else {
+							desiredAnim = BOTH_RUN1;
+						}
 					}
 					break;
 				default:
@@ -5744,7 +5733,12 @@ static void PM_Footsteps( void ) {
 					}
 					else
 					{
-						desiredAnim = BOTH_RUN2;
+						if (pm->ps->weapon == WP_SABER) {
+							desiredAnim = BOTH_RUN2;
+						}
+						else {
+							desiredAnim = BOTH_RUN1;
+						}
 					}
 					break;
 				}
@@ -7160,7 +7154,76 @@ backAgain:
 		PM_SetAnim(SETANIM_BOTH, Anim, iFlags);
 	}
 }
-
+#ifdef _GAME
+qboolean canAltFireWeapon(gentity_t* ent) {
+	if (ent->NPC) {
+		return qtrue;
+	}
+	if (ent->client->sess.loggedin == 0) {
+		return qfalse;
+	}
+	switch (ent->client->ps.weapon)
+	{
+	case WP_BRYAR_PISTOL:
+		if (ent->client->pers.skill_levels[19] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_BLASTER:
+		if (ent->client->pers.skill_levels[20] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_DISRUPTOR:
+		if (ent->client->pers.skill_levels[21] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_BOWCASTER:
+		if (ent->client->pers.skill_levels[22] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_REPEATER:
+		if (ent->client->pers.skill_levels[23] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_FLECHETTE:
+		if (ent->client->pers.skill_levels[25] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_ROCKET_LAUNCHER:
+		if (ent->client->pers.skill_levels[26] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_CONCUSSION:
+		if (ent->client->pers.skill_levels[27] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	case WP_BRYAR_OLD:
+		if (ent->client->pers.skill_levels[28] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	default:
+		return qtrue;
+		break;
+	}
+}
+#endif
 /*
 ==============
 PM_Weapon
@@ -7190,6 +7253,13 @@ static void PM_Weapon( void )
 			pm->ps->torsoAnim = pm->ps->legsAnim;
 			pm->ps->torsoTimer = pm->ps->legsTimer;
 			return;
+		}
+	}
+	gentity_t* test_ent = &g_entities[pm->ps->clientNum];
+	if (pm->cmd.buttons & BUTTON_ALT_ATTACK) {
+		if (!canAltFireWeapon(test_ent)) {
+			pm->cmd.buttons &= ~BUTTON_ALT_ATTACK;
+			pm->cmd.buttons |= ~BUTTON_ATTACK;
 		}
 	}
 #endif

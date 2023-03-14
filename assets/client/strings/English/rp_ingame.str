@@ -16,4 +16,7 @@ FILENOTES           "In-game text for various events"
 REFERENCE           MOD_ALERT
 LANG_ENGLISH 		"^1ALERT\nIncomplete mod detected\nDownload the full mod at:\n^5https://www.galaxyrp.uk"
 
+REFERENCE           LEVEL
+LANG_ENGLISH 		"Level"
+
 ENDMARKER

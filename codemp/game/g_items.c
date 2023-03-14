@@ -1374,7 +1374,6 @@ void Jetpack_On(gentity_t *ent)
 	ent->client->jetPackOn = qtrue;
 }
 
-extern void rpg_skill_counter(gentity_t *ent, int amount);
 extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 void ItemUse_Jetpack( gentity_t *ent )
 {
@@ -1410,8 +1409,6 @@ void ItemUse_Jetpack( gentity_t *ent )
 	{ // zyk: added this condition, cannot activate jetpack in private duel or in a Duel Tournament match
 		Jetpack_On(ent);
 	}
-
-	rpg_skill_counter(ent, 10);
 
 	// zyk: Jetpack Upgrade decreases jetpack toggle time
 	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[34] == 3)
