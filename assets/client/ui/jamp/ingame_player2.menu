@@ -539,10 +539,11 @@
 			action 
 			{ 
 				play			"sound/interface/button1"
+				uiScript		updatecharcvars
 				uiScript		"updatecharmodel"
 				hide			highlights
 				close			ingame_player2
-				open			ingame_galaxyRP
+				close 			ingame
 			}
 			mouseEnter 
 			{ 
