@@ -312,7 +312,7 @@ typedef enum
 	FOOTSTEP_HEAVY_L,
 	NUM_FOOTSTEP_TYPES
 } footstepType_t;
-
+/*
 extern stringID_table_t animEventTypeTable[MAX_ANIM_EVENTS+1];
 extern stringID_table_t footstepTypeTable[NUM_FOOTSTEP_TYPES+1];
 
@@ -371,6 +371,7 @@ typedef struct animevent_s
 	signed short	eventData[AED_ARRAY_SIZE];	//Unique IDs, can be soundIndex of sound file to play OR effect index or footstep type, etc.
 	char			*stringData;		//we allow storage of one string, temporarily (in case we have to look up an index later, then make sure to set stringData to NULL so we only do the look-up once)
 } animevent_t;
+*/
 
 typedef struct bgLoadedAnim_s {
 	char			filename[MAX_QPATH];
@@ -380,15 +381,7 @@ typedef struct bgLoadedAnim_s {
 //	qboolean		soundsCached;
 } bgLoadedAnim_t;
 
-typedef struct bgLoadedEvents_s {
-	char			filename[MAX_QPATH];
-	animevent_t		torsoAnimEvents[MAX_ANIM_EVENTS];
-	animevent_t		legsAnimEvents[MAX_ANIM_EVENTS];
-	qboolean		eventsParsed;
-} bgLoadedEvents_t;
 
-
-extern bgLoadedAnim_t bgAllAnims[MAX_ANIM_FILES];
 
 //In SP this is shared in with the anim stuff, and humanoid anim sets can be loaded
 //multiple times just for the sake of sounds being different. We probably wouldn't
@@ -396,10 +389,8 @@ extern bgLoadedAnim_t bgAllAnims[MAX_ANIM_FILES];
 //cut memory cost.
 //On the bright side this also means we're cutting a rather large size out of
 //required game-side memory.
-#ifndef _GAME
-extern bgLoadedEvents_t bgAllEvents[MAX_ANIM_FILES];
-extern int bgNumAnimEvents;
-#endif
+
+extern bgLoadedAnim_t bgAllAnims[MAX_ANIM_FILES];
 
 
 typedef enum {
