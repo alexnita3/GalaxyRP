@@ -7608,91 +7608,6 @@ qboolean validate_rpg_class(gentity_t *ent)
 	return qtrue;
 }
 
-// zyk: gives rpg score to the player
-void increase_level(gentity_t *ent, qboolean admin_rp_mode, int number_of_levels)
-{
-	int send_message = 0; // zyk: if its 1, sends the message in player console
-	char message[128];
-
-	strcpy(message,"");
-
-	if (admin_rp_mode == qfalse && zyk_rp_mode.integer == 1)
-	{ // zyk: in RP Mode, only admins can give levels to RPG players
-		return;
-	}
-
-	for (int i = 1; i <= number_of_levels; i++) {
-		if (ent->client->pers.level < zyk_rpg_max_level.integer)
-		{
-			ent->client->pers.level++;
-
-			if (ent->client->pers.level % 10 == 0) // zyk: every level divisible by 10 the player will get bonus skillpoints
-				ent->client->pers.skillpoints += (ent->client->pers.level / 10) + 1;
-			else
-				ent->client->pers.skillpoints++;
-
-			strcpy(message, va("^3New Level: ^7%d^3, Skillpoints: ^7%d\n", ent->client->pers.level, ent->client->pers.skillpoints));
-
-			// zyk: got a new level, so change the max health and max shield
-			set_max_health(ent);
-			set_max_shield(ent);
-
-			send_message = 1;
-
-		}
-	}
-
-	if (ent->client->pers.level == zyk_rpg_max_level.integer) {
-		trap->SendServerCommand(ent - g_entities, va("chat \"^3You have reached maximum level!\n\""));
-	}
-
-	trap->SendServerCommand(ent - g_entities, va("chat \"^3New Level: ^7%d^3, Skillpoints: ^7%d\n\"", ent->client->pers.level, ent->client->pers.skillpoints));
-}
-
-void decrease_level(gentity_t* ent, qboolean admin_rp_mode, int number_of_levels)
-{
-	int send_message = 0; // zyk: if its 1, sends the message in player console
-	char message[128];
-
-	strcpy(message, "");
-
-	if (admin_rp_mode == qfalse && zyk_rp_mode.integer == 1)
-	{ // zyk: in RP Mode, only admins can give levels to RPG players
-		return;
-	}
-
-	for (int i = ent->client->pers.level; i >= ent->client->pers.level - number_of_levels; i--) {
-		if (ent->client->pers.level > 1)
-		{
-			if (ent->client->pers.level % 10 == 0) // zyk: every level divisible by 10 the player will get bonus skillpoints
-				ent->client->pers.skillpoints -= (ent->client->pers.level / 10) + 1;
-			else
-				ent->client->pers.skillpoints--;
-
-			ent->client->pers.level--;
-
-			strcpy(message, va("^3New Level: ^7%d^3, Skillpoints: ^7%d\n", ent->client->pers.level, ent->client->pers.skillpoints));
-
-			// zyk: got a new level, so change the max health and max shield
-			set_max_health(ent);
-			set_max_shield(ent);
-
-			send_message = 1;
-
-		}
-	}
-
-	if (ent->client->pers.level == zyk_rpg_max_level.integer) {
-		trap->SendServerCommand(ent - g_entities, va("chat \"^3You have reached maximum level!\n\""));
-	}
-
-	if (ent->client->pers.level == 1) {
-		trap->SendServerCommand(ent - g_entities, va("chat \"^3You have reached minimum level!\n\""));
-	}
-
-	trap->SendServerCommand(ent - g_entities, va("chat \"^3New Level: ^7%d^3, Skillpoints: ^7%d\n\"", ent->client->pers.level, ent->client->pers.skillpoints));
-}
-
 // zyk: number of artifacts collected by the player in Universe Quest
 int number_of_artifacts(gentity_t *ent)
 {
@@ -13287,6 +13202,55 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 	}
 }
 
+int calculate_skillpoints_for_level(int level) {
+	int skillpoints = 0;
+
+	if (level % 10 == 0) // zyk: every level divisible by 10 the player will get bonus skillpoints
+		skillpoints += (level / 10) + 1;
+	else
+		skillpoints++;
+
+	return skillpoints;
+}
+
+// zyk: gives rpg score to the player
+void increase_level(gentity_t* ent, qboolean admin_rp_mode, int number_of_levels)
+{
+	int send_message = 0; // zyk: if its 1, sends the message in player console
+	char message[128];
+
+	strcpy(message, "");
+
+	if (admin_rp_mode == qfalse && zyk_rp_mode.integer == 1)
+	{ // zyk: in RP Mode, only admins can give levels to RPG players
+		return;
+	}
+
+	for (int i = 1; i <= number_of_levels; i++) {
+		if (ent->client->pers.level < zyk_rpg_max_level.integer)
+		{
+			ent->client->pers.level++;
+
+			ent->client->pers.skillpoints += calculate_skillpoints_for_level(ent->client->pers.level);
+
+			strcpy(message, va("^3New Level: ^7%d^3, Skillpoints: ^7%d\n", ent->client->pers.level, ent->client->pers.skillpoints));
+
+			// zyk: got a new level, so change the max health and max shield
+			set_max_health(ent);
+			set_max_shield(ent);
+
+			send_message = 1;
+
+		}
+	}
+
+	if (ent->client->pers.level == zyk_rpg_max_level.integer) {
+		trap->SendServerCommand(ent - g_entities, va("chat \"^3You have reached maximum level!\n\""));
+	}
+
+	trap->SendServerCommand(ent - g_entities, va("chat \"^3New Level: ^7%d^3, Skillpoints: ^7%d\n\"", ent->client->pers.level, ent->client->pers.skillpoints));
+}
+
 /*
 ==================
 Cmd_LevelGive_f
@@ -13358,17 +13322,15 @@ void Cmd_LevelGive_f( gentity_t *ent ) {
 // GalaxyRP (Alex): [Levelling] Check to see if there's enough free skillpoints to level down. (prevents skillpoints going negative).
 qboolean check_if_player_can_level_down(gentity_t* ent, gentity_t target, int number_of_levels) {
 	int skillpoints_needed = 0;
-	int level = target.client->pers.level;
+	int current_level = target.client->pers.level;
 
-	for(int i = level; i >= level - number_of_levels; i--) {
-		if (level > 1)
+	int level_at_end = current_level - number_of_levels;
+
+	for(int i = current_level; i > level_at_end; i--) {
+		if (current_level > 1)
 		{
-			if (level % 10 == 0) // zyk: every level divisible by 10 the player will get bonus skillpoints
-				skillpoints_needed += (level / 10) + 1;
-			else
-				skillpoints_needed++;
-
-			level--;
+			skillpoints_needed += calculate_skillpoints_for_level(current_level);
+			current_level--;
 		}
 	}
 
@@ -13379,6 +13341,52 @@ qboolean check_if_player_can_level_down(gentity_t* ent, gentity_t target, int nu
 	}
 
 	return qtrue;
+}
+
+void decrease_level(gentity_t* ent, qboolean admin_rp_mode, int number_of_levels)
+{
+	int send_message = 0; // zyk: if its 1, sends the message in player console
+	char message[128];
+
+	strcpy(message, "");
+
+	if (admin_rp_mode == qfalse && zyk_rp_mode.integer == 1)
+	{ // zyk: in RP Mode, only admins can give levels to RPG players
+		return;
+	}
+
+	int final_level = ent->client->pers.level - number_of_levels;
+
+	for (int i = ent->client->pers.level; i > final_level; i--) {
+		if (ent->client->pers.level > 1)
+		{
+			if (ent->client->pers.level % 10 == 0) // zyk: every level divisible by 10 the player will get bonus skillpoints
+				ent->client->pers.skillpoints -= (ent->client->pers.level / 10) + 1;
+			else
+				ent->client->pers.skillpoints--;
+
+			ent->client->pers.level--;
+
+			strcpy(message, va("^3New Level: ^7%d^3, Skillpoints: ^7%d\n", ent->client->pers.level, ent->client->pers.skillpoints));
+
+			// zyk: got a new level, so change the max health and max shield
+			set_max_health(ent);
+			set_max_shield(ent);
+
+			send_message = 1;
+
+		}
+	}
+
+	if (ent->client->pers.level == zyk_rpg_max_level.integer) {
+		trap->SendServerCommand(ent - g_entities, va("chat \"^3You have reached maximum level!\n\""));
+	}
+
+	if (ent->client->pers.level == 1) {
+		trap->SendServerCommand(ent - g_entities, va("chat \"^3You have reached minimum level!\n\""));
+	}
+
+	trap->SendServerCommand(ent - g_entities, va("chat \"^3New Level: ^7%d^3, Skillpoints: ^7%d\n\"", ent->client->pers.level, ent->client->pers.skillpoints));
 }
 
 /*
@@ -13430,9 +13438,7 @@ void Cmd_LevelTake_f(gentity_t* ent) {
 		trap->SendServerCommand(ent - g_entities, va("print \"^1Too many levels selected, operation not done. Cannot lower someone's level below 1. Maximum allowed: %d\n\"", min_possible_value));
 		return;
 	}
-
-	if (check_if_player_can_level_down(ent, g_entities[client_id],number_of_levels) == qfalse) {
-		trap->SendServerCommand(ent - g_entities, va("print \"no\n\""));
+	if (check_if_player_can_level_down(ent, g_entities[client_id], number_of_levels) == qfalse) {
 		return;
 	}
 
