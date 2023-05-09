@@ -13102,43 +13102,43 @@ void apply_skill_change_in_game(gentity_t* ent, int skill_id, qboolean upgrade) 
 	}
 }
 
-qboolean do_upgrade_skill(gentity_t* ent, gentity_t* ent2, int skill_id, qboolean dont_show_message, int number_of_upgrades)
+qboolean do_upgrade_skill(gentity_t* upgrader, gentity_t* upgradee, int skill_id, qboolean dont_show_message, int number_of_upgrades)
 {
 	if (skill_id < 0 || skill_id >= NUM_OF_SKILLS)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Invalid skill number.\n\"");
+		trap->SendServerCommand(upgrader - g_entities, "print \"Invalid skill number.\n\"");
 		return qfalse;
 	}
 
-	int number_of_possible_upgrades = skills[skill_id].max_level - ent2->client->pers.skill_levels[skill_id];
+	int number_of_possible_upgrades = skills[skill_id].max_level - upgradee->client->pers.skill_levels[skill_id];
 	if (number_of_possible_upgrades < number_of_upgrades) {
 		number_of_upgrades = number_of_possible_upgrades;
 	}
 
 	if (number_of_possible_upgrades == 0) {
-		show_skill_change_message(ent, ent2, qfalse, qfalse, skill_id, number_of_upgrades);
+		show_skill_change_message(upgrader, upgradee, qfalse, qfalse, skill_id, number_of_upgrades);
 
 		return qfalse;
 	}
 
-	if (ent->client->pers.skillpoints < number_of_upgrades)
+	if (upgradee->client->pers.skillpoints < number_of_upgrades)
 	{
 		if (dont_show_message == qfalse) {
-			trap->SendServerCommand(ent - g_entities, "print \"^1You don't have enough skillpoints.\n\"");
-			if (ent->client->ps.clientNum != ent2->client->ps.clientNum) {
-				trap->SendServerCommand(ent2 - g_entities, "print \"^1Target player doesn't have enough skillpoints.\n\"");
+			trap->SendServerCommand(upgradee - g_entities, "print \"^1You don't have enough skillpoints.\n\"");
+			if (upgrader->client->ps.clientNum != upgradee->client->ps.clientNum) {
+				trap->SendServerCommand(upgrader - g_entities, "print \"^1Target player doesn't have enough skillpoints.\n\"");
 			}
 		}
 		return qfalse;
 	}
 
 	for (int i = 0; i < number_of_upgrades; i++) {
-		ent2->client->pers.skill_levels[skill_id]++;
-		ent2->client->pers.skillpoints--;
+		upgradee->client->pers.skill_levels[skill_id]++;
+		upgradee->client->pers.skillpoints--;
 	}
 
-	apply_skill_change_in_game(ent2, skill_id, qtrue);
-	show_skill_change_message(ent, ent2, qfalse, qtrue, skill_id, number_of_upgrades);
+	apply_skill_change_in_game(upgradee, skill_id, qtrue);
+	show_skill_change_message(upgrader, upgradee, qfalse, qtrue, skill_id, number_of_upgrades);
 
 	return qtrue;
 }
