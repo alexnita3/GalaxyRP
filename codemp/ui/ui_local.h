@@ -40,7 +40,7 @@ void UI_RegisterCvars( void );
 void UI_UpdateCvars( void );
 
 #define MAX_FORCE_CONFIGS		128
-#define MAX_SABER_HILTS			256 //64
+#define MAX_SABER_HILTS			512 //64
 
 //
 // ui_main.c
