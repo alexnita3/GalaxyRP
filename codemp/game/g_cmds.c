@@ -13143,34 +13143,36 @@ qboolean do_upgrade_skill(gentity_t* upgrader, gentity_t* upgradee, int skill_id
 	return qtrue;
 }
 
-qboolean do_downgrade_skill(gentity_t* ent, gentity_t* ent2, int skill_id, int number_of_downgrades)
+qboolean do_downgrade_skill(gentity_t* downgrader, gentity_t* downgradee, int skill_id, int number_of_downgrades)
 {
 	qboolean dont_show_message = qfalse;
 
 	// zyk: validation on the upgrade level, which must be in the range of valid skills.
 	if (skill_id < 0 || skill_id >= NUM_OF_SKILLS)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Invalid skill number.\n\"");
+		trap->SendServerCommand(downgrader - g_entities, "print \"Invalid skill number.\n\"");
 		return qfalse;
 	}
 
-	int number_of_possible_downgrades = ent2->client->pers.skill_levels[skill_id];
+	int number_of_possible_downgrades = downgradee->client->pers.skill_levels[skill_id];
+
 	if (number_of_possible_downgrades < number_of_downgrades) {
 		number_of_downgrades = number_of_possible_downgrades;
 	}
+
 	if (number_of_possible_downgrades == 0) {
-		show_skill_change_message(ent, ent2, qtrue, qfalse, skill_id, number_of_downgrades);
+		show_skill_change_message(downgrader, downgradee, qtrue, qfalse, skill_id, number_of_downgrades);
 
 		return qfalse;
 	}
 
 	for (int i = 0; i < number_of_downgrades; i++) {
-		ent2->client->pers.skill_levels[skill_id]--;
-		ent2->client->pers.skillpoints++;
+		downgradee->client->pers.skill_levels[skill_id]--;
+		downgradee->client->pers.skillpoints++;
 	}
 
-	apply_skill_change_in_game(ent2, skill_id, qfalse);
-	show_skill_change_message(ent, ent2, qtrue, qtrue, skill_id, number_of_downgrades);
+	apply_skill_change_in_game(downgradee, skill_id, qfalse);
+	show_skill_change_message(downgrader, downgradee, qtrue, qtrue, skill_id, number_of_downgrades);
 
 	return qtrue;
 }
