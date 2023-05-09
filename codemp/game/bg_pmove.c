@@ -5325,6 +5325,105 @@ int PM_LegsSlopeBackTransition(int desiredAnim)
 	return resultingAnim;
 }
 
+//GalaxyRP (Alex): [Walk/Run animations] This method returns the correct animation that needs playing depending on the state of the player. This is meant to be used only with staff and dual saber stances.
+int return_correct_walking_anim_for_special_sabers(pmove_t* pm, qboolean backwards, qboolean staff, qboolean walking) {
+	int desiredAnim = -1;
+	int saberSpecificAnim = -1;
+	int default_first = -1;
+	int default_second = -1;
+
+	if (staff) {
+		if (walking) {
+			if (backwards) {
+				saberSpecificAnim = BOTH_WALKBACK_STAFF;
+			}
+			else {
+				saberSpecificAnim = BOTH_WALK_STAFF;
+			}
+		}
+		else {
+			if (backwards) {
+				//saberSpecificAnim = BOTH_RUNBACK_STAFF;
+				saberSpecificAnim = BOTH_RUNBACK1;
+			}
+			else {
+				saberSpecificAnim = BOTH_RUN_STAFF;
+			}
+		}
+	}
+	else {
+		if (walking) {
+			if (backwards) {
+				saberSpecificAnim = BOTH_WALKBACK_DUAL;
+			}
+			else {
+				saberSpecificAnim = BOTH_WALK_DUAL;
+			}
+		}
+		else {
+			if (backwards) {
+				//saberSpecificAnim = BOTH_RUNBACK_DUAL;
+				saberSpecificAnim = BOTH_RUNBACK1;
+
+			}
+			else {
+				saberSpecificAnim = BOTH_RUN_DUAL;
+			}
+		}
+	}
+
+	if (walking) {
+		if (backwards) {
+			default_first = BOTH_WALKBACK1;
+			default_second = BOTH_WALKBACK2;
+		}
+		else {
+			default_first = BOTH_WALK1;
+			default_second = BOTH_WALK2;
+		}
+	}
+	else {
+		if (backwards) {
+			default_first = BOTH_RUNBACK1;
+			default_second = BOTH_RUNBACK2;
+		}
+		else {
+			default_first = BOTH_RUN1;
+			default_second = BOTH_RUN2;
+		}
+	}
+
+	if (pm->ps->saberHolstered == 2)
+	{
+		//GalaxyRP (Alex): [Walk/Run animations] No saber is selected.
+		desiredAnim = default_first;
+	}
+	else if (pm->ps->saberHolstered == 1)
+	{
+		//GalaxyRP (Alex): [Walk/Run animations] Saber is selected but the blade is turned off.
+		desiredAnim = default_second;
+	}
+	else
+	{
+		if (pm->ps->fd.forcePowersActive & (1 << FP_SPEED))
+		{
+			desiredAnim = default_first;
+		}
+		else
+		{
+			if (pm->ps->weapon == WP_SABER) {
+				//GalaxyRP (Alex): [Walk/Run animations] Saber is selected and the blade is on.
+				desiredAnim = saberSpecificAnim;
+			}
+			else {
+				desiredAnim = default_first;
+			}
+		}
+	}
+	
+	return desiredAnim;
+}
+
 /*
 ===============
 PM_Footsteps
@@ -5631,28 +5730,10 @@ static void PM_Footsteps( void ) {
 				switch (pm->ps->fd.saberAnimLevel)
 				{
 				case SS_STAFF:
-					if ( pm->ps->saberHolstered > 1 )
-					{//saber off
-						desiredAnim = BOTH_RUNBACK1;
-					}
-					else
-					{
-						//desiredAnim = BOTH_RUNBACK_STAFF;
-						//hmm.. stuff runback anim is pretty messed up for some reason.
-						desiredAnim = BOTH_RUNBACK2;
-					}
+					desiredAnim = return_correct_walking_anim_for_special_sabers(pm, qtrue, qtrue, qfalse);
 					break;
 				case SS_DUAL:
-					if ( pm->ps->saberHolstered > 1 )
-					{//sabers off
-						desiredAnim = BOTH_RUNBACK1;
-					}
-					else
-					{
-						//desiredAnim = BOTH_RUNBACK_DUAL;
-						//and so is the dual
-						desiredAnim = BOTH_RUNBACK2;
-					}
+					desiredAnim = return_correct_walking_anim_for_special_sabers(pm, qtrue, qfalse, qfalse);
 					break;
 				default:
 					if ( pm->ps->saberHolstered )
@@ -5682,49 +5763,10 @@ static void PM_Footsteps( void ) {
 				switch (pm->ps->fd.saberAnimLevel)
 				{
 				case SS_STAFF:
-					if ( pm->ps->saberHolstered == 2 )
-					{//blades off
-						desiredAnim = BOTH_RUN1;
-					}
-					else if ( pm->ps->saberHolstered == 1 )
-					{//1 blade on
-						desiredAnim = BOTH_RUN2;
-					}
-					else
-					{
-						if (pm->ps->fd.forcePowersActive & (1<<FP_SPEED))
-						{
-							desiredAnim = BOTH_RUN1;
-						}
-						else
-						{
-							if (pm->ps->weapon == WP_SABER) {
-								desiredAnim = BOTH_RUN_STAFF;
-							}
-							else{
-								desiredAnim = BOTH_RUN1;
-							}
-						}
-					}
+					desiredAnim = return_correct_walking_anim_for_special_sabers(pm, qfalse, qtrue, qfalse);
 					break;
 				case SS_DUAL:
-					if ( pm->ps->saberHolstered > 1 )
-					{//blades off
-						desiredAnim = BOTH_RUN1;
-					}
-					else if ( pm->ps->saberHolstered == 1 )
-					{//1 saber on
-						desiredAnim = BOTH_RUN2;
-					}
-					else
-					{
-						if (pm->ps->weapon == WP_SABER) {
-							desiredAnim = BOTH_RUN_DUAL;
-						}
-						else {
-							desiredAnim = BOTH_RUN1;
-						}
-					}
+					desiredAnim = return_correct_walking_anim_for_special_sabers(pm, qfalse, qfalse, qfalse);
 					break;
 				default:
 					if ( pm->ps->saberHolstered )
@@ -5763,32 +5805,10 @@ static void PM_Footsteps( void ) {
 				switch (pm->ps->fd.saberAnimLevel)
 				{
 				case SS_STAFF:
-					if ( pm->ps->saberHolstered > 1 )
-					{
-						desiredAnim = BOTH_WALKBACK1;
-					}
-					else if ( pm->ps->saberHolstered )
-					{
-						desiredAnim = BOTH_WALKBACK2;
-					}
-					else
-					{
-						desiredAnim = BOTH_WALKBACK_STAFF;
-					}
+					desiredAnim = return_correct_walking_anim_for_special_sabers(pm, qtrue, qtrue, qtrue);
 					break;
 				case SS_DUAL:
-					if ( pm->ps->saberHolstered > 1 )
-					{
-						desiredAnim = BOTH_WALKBACK1;
-					}
-					else if ( pm->ps->saberHolstered )
-					{
-						desiredAnim = BOTH_WALKBACK2;
-					}
-					else
-					{
-						desiredAnim = BOTH_WALKBACK_DUAL;
-					}
+					desiredAnim = return_correct_walking_anim_for_special_sabers(pm, qtrue, qfalse, qtrue);
 					break;
 				default:
 					if ( pm->ps->saberHolstered )
@@ -5826,32 +5846,10 @@ static void PM_Footsteps( void ) {
 					switch (pm->ps->fd.saberAnimLevel)
 					{
 					case SS_STAFF:
-						if ( pm->ps->saberHolstered > 1 )
-						{
-							desiredAnim = BOTH_WALK1;
-						}
-						else if ( pm->ps->saberHolstered )
-						{
-							desiredAnim = BOTH_WALK2;
-						}
-						else
-						{
-							desiredAnim = BOTH_WALK_STAFF;
-						}
+						desiredAnim = return_correct_walking_anim_for_special_sabers(pm, qfalse, qtrue, qtrue);
 						break;
 					case SS_DUAL:
-						if ( pm->ps->saberHolstered > 1 )
-						{
-							desiredAnim = BOTH_WALK1;
-						}
-						else if ( pm->ps->saberHolstered )
-						{
-							desiredAnim = BOTH_WALK2;
-						}
-						else
-						{
-							desiredAnim = BOTH_WALK_DUAL;
-						}
+						desiredAnim = return_correct_walking_anim_for_special_sabers(pm, qfalse, qfalse, qtrue);
 						break;
 					default:
 						if ( pm->ps->saberHolstered )
