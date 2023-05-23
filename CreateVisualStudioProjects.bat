@@ -15,6 +15,8 @@ if "%proj_option%" == "2013" (
 	set proj_ver="Visual Studio 15 2017"
 ) else if "%proj_option%" == "2019" ( 
 	set proj_ver="Visual Studio 16 2019"
+) else if "%proj_option%" == "2022" ( 
+	set proj_ver="Visual Studio 17 2022"
 ) else ( 
 	echo Invalid option!
 	pause
