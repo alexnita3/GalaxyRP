@@ -1660,6 +1660,8 @@ static void CG_ZykChars(void)
 char ui_cvars_in_order[100][100] = { 
 	"name",
 	"model",
+	"ui_saber",
+	"ui_saber2",
 	"ui_zyk_rpg_level", 
 	"ui_rp_xp_value", 
 	"ui_zyk_rpg_skillpoints", 
@@ -1748,7 +1750,6 @@ static void CG_ZykMod( void )
 		}
 		value = strtok(NULL, "~");
 	}
-	
 }
 
 typedef struct serverCommand_s {

@@ -2392,7 +2392,7 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 		sqlite3* db;
 		char* zErrMsg = 0;
 		int rc;
-		sqlite3_stmt* stmt;
+		sqlite3_stmt* stmt = 0;
 
 		rc = sqlite3_open(DB_PATH, &db);
 		if (rc != SQLITE_OK)
@@ -3298,6 +3298,7 @@ after the first ClientBegin, and after each respawn
 Initializes all non-persistant parts of playerState
 ============
 */
+extern saber_db_info_t select_saber_info_using_char_id(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 extern qboolean WP_HasForcePowers( const playerState_t *ps );
 extern void quest_get_new_player(gentity_t *ent);
 extern void clean_guardians(gentity_t *ent);
@@ -3329,6 +3330,28 @@ void ClientSpawn(gentity_t *ent) {
 
 	//first we want the userinfo so we can see if we should update this client's saber -rww
 	trap->GetUserinfo( index, userinfo, sizeof( userinfo ) );
+
+	if (ent->client->sess.loggedin) {
+		sqlite3* db;
+		char* zErrMsg = 0;
+		int rc;
+		sqlite3_stmt* stmt = 0;
+
+		rc = sqlite3_open(DB_PATH, &db);
+		if (rc != SQLITE_OK)
+		{
+			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+			sqlite3_close(db);
+			return;
+		}
+
+		saber_db_info_t saber_info = select_saber_info_using_char_id(ent, db, zErrMsg, rc, stmt);
+
+		Info_SetValueForKey(userinfo, "saber1", saber_info.saber1Model);
+		Info_SetValueForKey(userinfo, "saber2", saber_info.saber2Model);
+
+		sqlite3_close(db);
+	}
 
 	for ( i=0; i<MAX_SABERS; i++ )
 	{

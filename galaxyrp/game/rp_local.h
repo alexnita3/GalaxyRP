@@ -134,6 +134,13 @@ extern shaderRemap_t remappedShaders[MAX_SHADER_REMAPS];
 shaderRemap_t remappedShaders[MAX_SHADER_REMAPS];
 #endif
 
+typedef struct saber_db_info_s {
+	const char saber1Model[50];
+	int			saber1Color;
+	const char saber2Model[50];
+	int			saber2Color;
+} saber_db_info_t;
+
 typedef struct chat_modifiers_s {
 	const char* chat_modifier;
 	const char* chat_format;

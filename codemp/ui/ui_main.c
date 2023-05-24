@@ -897,6 +897,8 @@ static void UI_BuildPlayerList() {
 	}
 }
 
+static void UI_UpdateSaberCvars(void);
+
 void UI_SetActiveMenu( uiMenuCommand_t menu ) {
 	char buf[256];
 
@@ -1014,6 +1016,7 @@ void UI_SetActiveMenu( uiMenuCommand_t menu ) {
 			trap->Key_SetCatcher( KEYCATCH_UI );
 			Menus_CloseAll();
 			Menus_ActivateByName("ingame_galaxyrp");
+			UI_UpdateSaberCvars();
 			return;
 		}
 	}

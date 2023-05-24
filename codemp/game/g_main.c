@@ -317,6 +317,10 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 	char statement_flamethrower_column_alter[110] = "ALTER TABLE Skills ADD COLUMN Flamethrower INTEGER DEFAULT 0";
 	char statement_shieldregen_columns_alter[110] = "ALTER TABLE Skills ADD COLUMN ShieldRegen INTEGER DEFAULT 0";
 	char statement_heathregen_columns_alter[110] = "ALTER TABLE Skills ADD COLUMN HealthRegen INTEGER DEFAULT 0";
+	char statement_saber_columns_alter[310] = "ALTER TABLE Characters ADD COLUMN saberOneModel TEXT DEFAULT 'saber_1';\
+												ALTER TABLE Characters ADD COLUMN saberOneColor INTEGER DEFAULT 1;\
+												ALTER TABLE Characters ADD COLUMN saberTwoModel TEXT DEFAULT 'saber_1';\
+												ALTER TABLE Characters ADD COLUMN saberTwoColor INTEGER DEFAULT 1";
 
 	//Alex: Create Account Table
 	trap->Print("Initializing Account table.\n");
@@ -482,6 +486,21 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 		}
 	}
 	trap->Print("Done with HealthRegen Skill column.\n");
+
+	rc = sqlite3_exec(db, statement_saber_columns_alter, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		if (strcmp(zErrMsg, "duplicate column name: HealthRegen") != 0) {
+			trap->Print("SQL error: %s\n", zErrMsg);
+			sqlite3_free(zErrMsg);
+			sqlite3_close(db);
+			return;
+		}
+		else {
+			trap->Print("Saber columns already exists, nothing to do here.\n");
+		}
+	}
+	trap->Print("Done with Saber columns.\n");
 
 	if (with_admin_account == qtrue) {
 		trap->Print("Initializing admin account.\n");
