@@ -16244,6 +16244,38 @@ void Cmd_DuelBoard_f(gentity_t *ent) {
 	}
 }
 
+//GalaxyRP (Alex): [Training Saber] This method activates and deactivates the training saber, making it so that when active, you do very little damage.
+
+void Cmd_TrainingMode_f(gentity_t* ent) {
+	if (trap->Argc() != 1)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"Usage: ^3/training\n\"");
+		return;
+	}
+
+	ent->client->pers.training_mode = !ent->client->pers.training_mode;
+
+	char message[20] = "";
+
+	if (ent->client->pers.training_mode) {
+		strcpy(message, "^2ACTIVE");
+		//GalaxyRP (Alex): [Training Saber] Save old values and set the new ones to 0;
+		ent->client->pers.saber_stored_damage = ent->client->saber->damageScale;
+		ent->client->pers.saber2_stored_damage = ent->client->saber->damageScale2;
+		ent->client->saber->damageScale = 0;
+		ent->client->saber->damageScale2 = 0;
+	}
+	else {
+		strcpy(message, "^1INACTIVE");
+		ent->client->saber->damageScale = ent->client->pers.saber_stored_damage;
+		ent->client->saber->damageScale2 = ent->client->pers.saber2_stored_damage;
+	}
+
+	trap->SendServerCommand(ent->s.number, va("print \"Training saber is %s\n\"", message));
+
+	return;
+}
+
 void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 	// zyk: sends info to the client-side menu if player has the client-side plugin
 	char userinfo[MAX_INFO_STRING];
@@ -16470,6 +16502,7 @@ command_t commands[] = {
 	{ "tele",				Cmd_Teleport_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "telemark",			Cmd_Telemark_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "teleport",			Cmd_Teleport_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "training",			Cmd_TrainingMode_f,			CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
 	{ "zykmod",				Cmd_GalaxyRpUi_f,			CMD_ALIVE | CMD_NOINTERMISSION },

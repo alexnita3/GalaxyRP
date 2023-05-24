@@ -2918,6 +2918,11 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	ent->client->sess.explosive_recharge_timer = 0;
 	ent->client->sess.weapon_recharge_timer = 0;
 
+	//GalaxyRP (Alex): [Training Saber] Initialise values for training saber.
+	ent->client->pers.training_mode = qfalse;
+	ent->client->pers.saber_stored_damage = 0;
+	ent->client->pers.saber2_stored_damage = 0;
+
 	if (ent->client->sess.amrpgmode > 0)
 	{
 		// zyk: if the target goes to spec or something, then the server must choose another target

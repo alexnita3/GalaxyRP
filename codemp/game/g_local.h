@@ -668,6 +668,11 @@ typedef struct clientPersistant_s {
 	char description[MAX_STRING_CHARS];
 	char password[32]; // zyk: account password
 
+	//GalaxyRP (Alex): [Training Saber] Values for training saber.
+	qboolean training_mode;
+	int saber_stored_damage;
+	int saber2_stored_damage;
+
 	// zyk: turn on or off features of this player in his account file. It is a bit value attribute
 	// Possible bit values are:
 	// 0 - RPG quests
