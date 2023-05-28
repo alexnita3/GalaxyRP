@@ -1977,10 +1977,10 @@ int select_char_id_using_char_name(gentity_t* ent, char* character_name, sqlite3
 // GalaxyRP (Alex): [Database] SELECT This method returns the character ID associated with the character name given, AND which belongs to the account the player is currently logged in with.
 saber_db_info_t select_saber_info_using_char_id(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	char saber1Model[50] = "";
-	int saber1Color = 0;
+	char saber1Color[2] = "";
 	char saber2Model[50] = "";
-	int saber2Color = 0;
-	saber_db_info_t saber_info = {"none", 0, "none", 0};
+	char saber2Color[2] = "";
+	saber_db_info_t saber_info = {"none", "none"};
 
 	rc = sqlite3_prepare(db, va("SELECT saberOneModel, saberOneColor, saberTwoColor, saberTwoModel FROM Characters WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
@@ -2000,16 +2000,14 @@ saber_db_info_t select_saber_info_using_char_id(gentity_t* ent, sqlite3* db, cha
 	{
 
 		strcpy(saber1Model, sqlite3_column_text(stmt, 0));
-		saber1Color = sqlite3_column_int(stmt, 1);
-		saber2Color = sqlite3_column_int(stmt, 2);
+		strcpy(saber1Color, sqlite3_column_text(stmt, 1));
+		strcpy(saber2Color, sqlite3_column_text(stmt, 2));
 		strcpy(saber2Model, sqlite3_column_text(stmt, 3));
 
 		sqlite3_finalize(stmt);
 	}
 
-	saber_info.saber1Color = saber1Color;
 	strcpy(saber_info.saber1Model, saber1Model);
-	saber_info.saber2Color = saber2Color;
 	strcpy(saber_info.saber2Model, saber2Model);
 
 	return saber_info;
@@ -2522,7 +2520,7 @@ void update_current_character(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc
 	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
 	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
 
-	char update_character_query[1300] = "UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s', saberOneModel='%s', saberTwoModel='%s' WHERE CharID='%i';\
+	char update_character_query[1300] = "UPDATE Characters SET Credits='%i', Level='%i', ModelScale='%i', Skillpoints='%i', Description=\"%s\", NetName=\"%s\", ModelName='%s' WHERE CharID='%i';\
 		UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i' WHERE CharID='%i';\
 		UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'";
 
@@ -2534,8 +2532,6 @@ void update_current_character(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc
 		ent->client->pers.description,
 		ent->client->pers.netname,
 		modelName,
-		ent->client->pers.saber1,
-		ent->client->pers.saber2,
 		ent->client->pers.CharID,
 		ent->client->pers.skill_levels[0],	//Jump
 		ent->client->pers.skill_levels[1],	//Push
@@ -2754,11 +2750,11 @@ void select_character_list(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, s
 }
 
 // GalaxyRP (Alex): [Database] This method returns a list of character names readable by the UI.
-char *select_character_list_for_ui(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt)
+void select_character_list_for_ui(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt, char* CharString)
 {
-	char CharName[MAX_STRING_CHARS];
-	int charLevel;
-	char CharString[MAX_STRING_CHARS];
+	char CharName[MAX_STRING_CHARS] = "";
+	int charLevel = 0;
+	//char CharString[MAX_STRING_CHARS] = "";
 
 	// GalaxyRP (Alex): [Database] Get list of char names.
 	rc = sqlite3_prepare(db, va("SELECT Name, Level FROM Characters WHERE AccountID='%i'", ent->client->sess.accountID), -1, &stmt, NULL);
@@ -2783,7 +2779,7 @@ char *select_character_list_for_ui(gentity_t* ent, sqlite3* db, char* zErrMsg, i
 	}
 
 	sqlite3_finalize(stmt);
-	return CharString;
+	//return CharString;
 }
 
 // GalaxyRP (Alex): [Database] This method loads the account information, as well as the information related to the default character, and assigns it to the entity.
@@ -14019,10 +14015,7 @@ void update_saber(gentity_t* ent, char* saber1Model, char* saber2Model, int numb
 	saber = ent->client->pers.saber1;
 	value = G_NewString(saber1Model);
 
-	if (Q_stricmp(value, saber))
-	{
-		Info_SetValueForKey(userinfo, "saber1", value);
-	}
+	Info_SetValueForKey(userinfo, "saber1", value);
 
 	saber = ent->client->pers.saber2;
 
@@ -14035,10 +14028,7 @@ void update_saber(gentity_t* ent, char* saber1Model, char* saber2Model, int numb
 		value = G_NewString(saber2Model);
 	}
 
-	if (Q_stricmp(value, saber))
-	{
-		Info_SetValueForKey(userinfo, "saber2", value);
-	}
+	Info_SetValueForKey(userinfo, "saber2", value);
 
 	trap->SetUserinfo(ent->s.number, userinfo);
 
@@ -16373,6 +16363,7 @@ void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 	Q_strncpyz(saber1Model, Info_ValueForKey(userinfo, "saber1"), sizeof(saber1Model));
 	Q_strncpyz(saber2Model, Info_ValueForKey(userinfo, "saber2"), sizeof(saber2Model));
 
+
 	if (Q_stricmp(ent->client->pers.guid, "NOGUID") == 0)
 	{
 		return;
@@ -16418,6 +16409,7 @@ void Cmd_ZykChars_f(gentity_t* ent) {
 	char* zErrMsg = 0;
 	int rc;
 	sqlite3_stmt* stmt = 0;
+	char char_string[MAX_STRING_CHARS] = "";
 
 	rc = sqlite3_open(DB_PATH, &db);
 	if (rc != SQLITE_OK)
@@ -16426,7 +16418,12 @@ void Cmd_ZykChars_f(gentity_t* ent) {
 		sqlite3_close(db);
 		return;
 	}
-	trap->SendServerCommand(ent->s.number, va("zykchars \"%s\"", select_character_list_for_ui(ent, db, zErrMsg, rc, stmt)));
+
+	select_character_list_for_ui(ent, db, zErrMsg, rc, stmt, char_string);
+
+	trap->SendServerCommand(ent->s.number, va("zykchars \"%s\"", char_string));
+	sqlite3_close(db);
+	return;
 }
 
 /*
