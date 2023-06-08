@@ -2053,6 +2053,14 @@ void CG_LoadClientInfo( clientInfo_t *ci ) {
 		//[/ANIMEVENTS]
 	}
 
+	//GalaxyRP (Alex): [Model Customization] Here is where the model config file is loaded.
+	FILE* testFile_;
+	char buffer[2048];
+	testFile_ = fopen(va("base/models/players/%s/player.cfg", ci->modelName), "r");
+	if (testFile_ != NULL) {
+		testFile_ = fread(buffer, sizeof(buffer), 1, testFile_);
+	}
+
 	ci->newAnims = qfalse;
 	if ( ci->torsoModel ) {
 		orientation_t tag;
