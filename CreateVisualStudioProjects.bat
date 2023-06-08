@@ -4,7 +4,7 @@
 cls
 echo OpenJK VS Project Generator
 echo ---------------------------
-echo Options available: 2013, 2015, 2017, 2019
+echo Options available: 2013, 2015, 2017, 2019, 2022
 set /p proj_option=Type your option: 
 
 if "%proj_option%" == "2013" ( 
