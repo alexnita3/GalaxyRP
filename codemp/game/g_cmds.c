@@ -7603,8 +7603,7 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 	}
 }
 
-int* roll_dice(int number_of_dice, int max_value) {
-	int results[10];
+int roll_dice(int number_of_dice, int max_value, int *results) {
 	
 	for (int i = 0; i < number_of_dice; i++)
 	{
@@ -7642,40 +7641,35 @@ Cmd_Roll_f
 */
 
 void Cmd_Roll_f(gentity_t *ent) {
-
+	char command_usage_string = "print \"^1Command Usage: ^2/roll ^3<number of dice>d<max roll>^1. Alternatively, you can use ^2/roll ^3<number> ^1To roll one die only.\n^1Example: ^2/roll ^32d4 ^1Example: ^2/roll ^310\n\"";
 	char arg1[MAX_STRING_CHARS];
 
 	if (trap->Argc() != 2)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^2/roll ^3<number of dice>d<max roll>^1. Alternatively, you can use ^2/roll ^3<number> ^1To roll one die only.\n^1Example: ^2/roll ^32d4 ^1Example: ^2/roll ^310\n\"");
+		trap->SendServerCommand(ent - g_entities, command_usage_string);
 		return;
 	}
 
 	trap->Argv(1, arg1, sizeof(arg1));
 
-	
-
+	// GalaxyRP (Alex): [Dice] Separate the first number in the sequence.
 	const char delimiter[2] = "d";
 	char* token[1000];
 
-	/* get the first token */
 	strcpy(token, strtok(arg1, delimiter));
 
-	if (token == NULL || StringIsInteger(token) == qfalse) {
-
-		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^2/roll ^3<number of dice>d<max roll>^1. Alternatively, you can use ^2/roll ^3<number> ^1To roll one die only.\n^1Example: ^2/roll ^32d4 ^1Example: ^2/roll ^310\n\"");
-
+	if (StringIsInteger(token) == qfalse) {
+		trap->SendServerCommand(ent - g_entities, command_usage_string);
 		return;
 	}
 
 	int number_of_dice = atoi(token);
 
+	// GalaxyRP (Alex): [Dice] Separate the second number in the sequence.
 	strcpy(token, strtok(NULL, delimiter));
 
-	if (token == NULL || StringIsInteger(token) == qfalse) {
-
-		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^2/roll ^3<number of dice>d<max roll>^1. Alternatively, you can use ^2/roll ^3<number> ^1To roll one die only.\n^1Example: ^2/roll ^32d4 ^1Example: ^2/roll ^310\n\"");
-
+	if (StringIsInteger(token) == qfalse) {
+		trap->SendServerCommand(ent - g_entities, command_usage_string);
 		return;
 	}
 
@@ -7691,17 +7685,16 @@ void Cmd_Roll_f(gentity_t *ent) {
 		return;
 	}
 
-	int* rolls = roll_dice(number_of_dice, max_value);
-
+	// GalaxyRP (Alex): [Dice] Roll all the dice.
 	int results[10];
-
 	int total = 0;
+	roll_dice(number_of_dice, max_value, results);
 
 	for (int i = 0; i < number_of_dice; i++) {
-		results[i] = rolls[i];
 		total += results[i];
 	}
 
+	// GalaxyRP (Alex): [Dice] Generate the message to show in chat.
 	char chat_string[MAX_STRING_CHARS]; 
 	strcpy(chat_string, build_roll_string(results, number_of_dice, max_value, ent->client->pers.netname, total));
 
@@ -7724,7 +7717,11 @@ void Cmd_FlipCoin_f(gentity_t *ent) {
 		return;
 	}
 
-	int result = roll_dice(1, 2);
+	int results[1];
+
+	roll_dice(1, 2, results);
+
+	int result = results[0];
 
 	if (result == 1) {
 		trap->SendServerCommand(-1, va("chat \"^3%s^2 flipped a coin that landed on ^3HEADS.\n\"", ent->client->pers.netname));
