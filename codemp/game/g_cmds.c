@@ -7603,13 +7603,36 @@ void save_account(gentity_t *ent, qboolean save_char_file)
 	}
 }
 
-int roll_dice(max_value) {
-	int result = rand() % (max_value + 1);
-	while (result == 0) {
-		result = rand() % (max_value + 1);
+int* roll_dice(int number_of_dice, int max_value) {
+	int results[10];
+	
+	for (int i = 0; i < number_of_dice; i++)
+	{
+		results[i] = (rand() % max_value) + 1;
 	}
 
-	return result;
+	return results;
+}
+
+char* build_roll_string(int results[], int number_of_dice, int max_roll, char netname[], int total) {
+
+	char chat_string[MAX_STRING_CHARS];
+
+	strcpy(chat_string, va("chat \"^3<Dice Roll> %s^2 rolled", netname));
+
+	if (number_of_dice == 1) {
+		strcat(chat_string, va("^2 a ^3%d^2 out of ^3%d\n\"", results[0], max_roll));
+
+		return chat_string;
+	}
+
+	for (int i = 0; i < number_of_dice; i++) {
+		strcat(chat_string, va("^3 %d^2,", results[i]));
+	}
+
+	strcat(chat_string, va(" ^2out of %dd%d. TOTAL= ^3%d^2.\n\"", number_of_dice, max_roll, total));
+
+	return chat_string;
 }
 
 /*
@@ -7624,27 +7647,65 @@ void Cmd_Roll_f(gentity_t *ent) {
 
 	if (trap->Argc() != 2)
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^2/roll ^3<max roll>.\n^1Example: ^2/roll ^320\n\"");
+		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^2/roll ^3<number of dice>d<max roll>^1. Alternatively, you can use ^2/roll ^3<number> ^1To roll one die only.\n^1Example: ^2/roll ^32d4 ^1Example: ^2/roll ^310\n\"");
 		return;
 	}
 
 	trap->Argv(1, arg1, sizeof(arg1));
 
-	if (StringIsInteger(arg1) == qfalse) {
-		trap->SendServerCommand(ent - g_entities, "print \"Argument must be an integer.\n\"");
+	
+
+	const char delimiter[2] = "d";
+	char* token[1000];
+
+	/* get the first token */
+	strcpy(token, strtok(arg1, delimiter));
+
+	if (token == NULL || StringIsInteger(token) == qfalse) {
+
+		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^2/roll ^3<number of dice>d<max roll>^1. Alternatively, you can use ^2/roll ^3<number> ^1To roll one die only.\n^1Example: ^2/roll ^32d4 ^1Example: ^2/roll ^310\n\"");
+
 		return;
 	}
 
-	int max_value = atoi(arg1);
+	int number_of_dice = atoi(token);
+
+	strcpy(token, strtok(NULL, delimiter));
+
+	if (token == NULL || StringIsInteger(token) == qfalse) {
+
+		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^2/roll ^3<number of dice>d<max roll>^1. Alternatively, you can use ^2/roll ^3<number> ^1To roll one die only.\n^1Example: ^2/roll ^32d4 ^1Example: ^2/roll ^310\n\"");
+
+		return;
+	}
+
+	int max_value = atoi(token);
 
 	if (max_value < 2) {
 		trap->SendServerCommand(ent - g_entities, "print \"Maximum value must be at least two.\n\"");
 		return;
 	}
 
-	int result = roll_dice(max_value);
+	if (number_of_dice > 10) {
+		trap->SendServerCommand(ent - g_entities, "print \"You can only roll up to 10 dice at once.\n\"");
+		return;
+	}
 
-	trap->SendServerCommand(-1, va("chat \"^3<Dice Roll> %s^2 rolled a ^3%d^2 out of ^3%d\n\"", ent->client->pers.netname, result, max_value));
+	int* rolls = roll_dice(number_of_dice, max_value);
+
+	int results[10];
+
+	int total = 0;
+
+	for (int i = 0; i < number_of_dice; i++) {
+		results[i] = rolls[i];
+		total += results[i];
+	}
+
+	char chat_string[MAX_STRING_CHARS]; 
+	strcpy(chat_string, build_roll_string(results, number_of_dice, max_value, ent->client->pers.netname, total));
+
+	trap->SendServerCommand(-1, chat_string);
 
 	return;
 }
@@ -7663,7 +7724,7 @@ void Cmd_FlipCoin_f(gentity_t *ent) {
 		return;
 	}
 
-	int result = roll_dice(2);
+	int result = roll_dice(1, 2);
 
 	if (result == 1) {
 		trap->SendServerCommand(-1, va("chat \"^3%s^2 flipped a coin that landed on ^3HEADS.\n\"", ent->client->pers.netname));
