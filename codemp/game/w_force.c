@@ -2032,6 +2032,17 @@ void ForceGrip( gentity_t *self )
 		return;
 	}
 
+	// DAJ_RP: [Force] no grip while you are being gripped yourself -- the same "being gripped" test this
+	// function already applies to the target below, and that ItemUse_Jetpack() (g_items.c) uses to refuse the
+	// jetpack in a grip. Stock let a held player grip back for the first seconds of a hold (until the choke at
+	// grip level 2 or 3 stopped him, never at level 1), so both ended up lifting each other and floating. A
+	// refused grip costs nothing: the power never starts, like a grip at empty air. Breaking free with
+	// Push or Pull clears the mark at once (ForceThrow()); a grip that simply ends leaves it up to a second.
+	if (self->client->ps.fd.forceGripBeingGripped >= level.time)
+	{
+		return;
+	}
+
 	if ( !WP_ForcePowerUsable( self, FP_GRIP ) )
 	{
 		return;
@@ -2051,6 +2062,12 @@ void ForceGrip( gentity_t *self )
 		g_entities[tr.entityNum].client &&
 		!g_entities[tr.entityNum].client->ps.fd.forceGripCripple &&
 		g_entities[tr.entityNum].client->ps.fd.forceGripBeingGripped < level.time &&
+		// DAJ_RP: [Force] ...nor grip the one gripping you. Covers the gap the test above cannot: the target's
+		// grip on you is active from the moment it starts (WP_DoSpecificPower()), while your "being gripped"
+		// mark only comes with its first update -- so two players gripping each other on the same frame
+		// cannot both get through, the first one handled wins.
+		!( g_entities[tr.entityNum].client->ps.fd.forceGripEntityNum == self->s.number &&
+		   ( g_entities[tr.entityNum].client->ps.fd.forcePowersActive & ( 1 << FP_GRIP ) ) ) &&
 		ForcePowerUsableOn(self, &g_entities[tr.entityNum], FP_GRIP) &&
 		(g_friendlyFire.integer || !OnSameTeam(self, &g_entities[tr.entityNum])) ) //don't grip someone who's still crippled
 	{
