@@ -12139,13 +12139,14 @@ stillDoSaber:
 				if (cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer)
 				{
 					trap->R_SetRefractionProperties(1.0f, 0.0f, qfalse, qfalse); //don't need to do this every frame.. but..
-					// GalaxyRP (Alex): [Items] Instead of applying a hardcoded, make them fully invisible to any other player.
-					//legs.customShader = 2; //crazy "refractive" shader
-					legs.shaderRGBA[0] /= 5.0f;
-					legs.shaderRGBA[1] /= 5.0f;
-					legs.shaderRGBA[2] /= 5.0f;
-					legs.shaderRGBA[3] /= 255.0f; //make them invisible
-					legs.renderfx |= RF_FORCE_ENT_ALPHA;
+					// DAJ_RP: [Cloak Item] the stock refraction again, as TaystJK's own cgame draws it. Handle 2 is every
+					// renderer's "internal_distortion" shader -- the third it makes, after <default> and <stencil
+					// shadow>: rd-vanilla's stencil refraction, rend2's GLSL refraction pass, rd-vulkan's refraction
+					// pass (or, where the device has none, its faint translucent shell). It replaces a GalaxyRP
+					// "fully invisible" pass -- the model's colour divided by 5, its alpha by 255, with
+					// RF_FORCE_ENT_ALPHA -- which each renderer took its own way: no trace at all where the forced
+					// alpha reached every stage, a black model where a stage ignored it (vehicles, rd-vulkan).
+					legs.customShader = 2; //crazy "refractive" shader
 					trap->R_AddRefEntityToScene( &legs );
 					legs.customShader = 0;
 				}
