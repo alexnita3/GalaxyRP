@@ -12663,7 +12663,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				// discards the backslash and keeps the literal ^3, so this is a no-op for the text
 				// actually produced -- just spelled correctly now.
 			trap->SendServerCommand(ent - g_entities, "print \"\n^2Commands\n\n^3--------Account--------\n\
-^3/new <login> <password>: ^7Creates a new account.\n\
+^3/new ^7or ^3/register <login> <password>: ^7Creates a new account.\n\
 ^3/login <login> <password>: ^7Loads the account.\n\
 ^3/logout: ^7Logs out the account.\n\
 ^3/changepassword <new password>: ^7Changes the account password.\n\
@@ -12926,7 +12926,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 		// one screen a returning player is most likely to hit first. Both are spelled out now, and the
 		// placeholder is "account name" rather than "login" so it does not read as a second command.
 		trap->SendServerCommand( ent-g_entities, "print \"\n^1Account System\n\
-^7Create a new account with ^3/new <account name> <password> ^7where account name and password are of your choice.\n\
+^7Create a new account with ^3/new ^7or ^3/register <account name> <password>^7, where account name and password are of your choice.\n\
 ^7Use ^3/login <account name> <password> ^7if you already have an account.\n\n\"" );
 	}
 }
@@ -25025,6 +25025,7 @@ command_t commands[] = {
 	{ "meleetable",			Cmd_MeleeTable_f,			CMD_NOINTERMISSION },
 	{ "modversion",			Cmd_ModVersion_f,			CMD_NOINTERMISSION },
 	{ "new",				Cmd_Register_F,				CMD_NOINTERMISSION },
+	{ "register",			Cmd_Register_F,				CMD_NOINTERMISSION },	// DAJ_RP: [Account] an alias of /new, as /anim is of /emote
 	{ "news",				Cmd_News_f,					0 },
 	// GalaxyRP fix: [Admin] both news-writing commands gain CMD_NOINTERMISSION, matching the 121
 	// other rows in this table that carry it -- writing to the news table during intermission served
