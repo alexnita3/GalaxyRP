@@ -445,8 +445,12 @@ static void RP_EntBoundsMarkers( const gentity_t *viewer, int aimed )
 		// zyk: one an admin is holding with /entcopy or /entcut has a preview of its own (g_entgrab.c)
 		if ( e->rpHeldBy )
 			continue;
+		// DAJ_RP: [Entity Bounds] a client of the weapon shooters' pool is no player or NPC: a misc_weapon_shooter
+		// borrows one only so the weapon code can fire for it (G_ClientForShooter(), g_misc.c), so it is let
+		// through, and gets the cross shooter_blaster gets. It has no size and is never linked, so without the
+		// cross it showed nowhere at all. Every other client still means a player or an NPC.
 		if ( e->s.eType >= ET_EVENTS || e->freeAfterEvent || e->s.eType == ET_MISSILE || e->s.eType == ET_NPC ||
-			e->s.eType == ET_ITEM || e->client || e->isSaberEntity )
+			e->s.eType == ET_ITEM || ( e->client && !G_IsShooterClient( e->client ) ) || e->isSaberEntity )
 			continue;
 		if ( !e->isLogical && ( !VectorCompare( e->r.mins, vec3_origin ) || !VectorCompare( e->r.maxs, vec3_origin ) ) )
 			continue;
