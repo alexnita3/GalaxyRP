@@ -6482,17 +6482,21 @@ extern void Jedi_DecloakPair(gentity_t *self);
 // DAJ_RP: [Flame Thrower] where the flame leaves the stun baton, and which way it goes: start is the player's
 // right hand -- the stun baton's -- on the server's own copy of the player's model (players have "*r_hand" from
 // spawn, and the saber code keeps that skeleton animated every frame: WP_SaberPositionUpdate()), pushed
-// RP_FLAME_FROM_HAND along the aim to the baton's tip; angles is the aim, pitch and yaw. Without a model or the
-// bolt, the start is the stun baton's own point -- the one WP_FireStunBaton() traces from.
+// RP_FLAME_FROM_HAND along the aim to the baton's tip. Without a model or the bolt, the start is the stun baton's
+// own point -- the one WP_FireStunBaton() traces from. angles is the effect's: the aim REVERSED, ( -pitch,
+// yaw + 180, 0 ). boba/fthrw sends its fire against the direction it is given -- given the aim, it burnt
+// straight behind the player -- so it is given the opposite of the aim, and the fire goes along it, up and
+// down too. zyk's ( -pitch, roll, yaw - 180 ) was this reversal with the yaw and roll slots swapped.
 #define RP_FLAME_FROM_HAND	12.0f
 
 static void RP_FlameThrowerStart( gentity_t *self, vec3_t start, vec3_t angles )
 {
-	vec3_t	forward, right;
+	vec3_t	aim, forward, right;
 	int		bolt = -1;
 
-	VectorSet( angles, self->client->ps.viewangles[PITCH], self->client->ps.viewangles[YAW], 0.0f );
-	AngleVectors( angles, forward, right, NULL );
+	VectorSet( aim, self->client->ps.viewangles[PITCH], self->client->ps.viewangles[YAW], 0.0f );
+	AngleVectors( aim, forward, right, NULL );
+	VectorSet( angles, AngleNormalize180( -aim[PITCH] ), AngleNormalize360( aim[YAW] + 180.0f ), 0.0f );
 
 	if ( self->ghoul2 && trap->G2API_HaveWeGhoul2Models( self->ghoul2 ) )
 	{
@@ -6546,7 +6550,8 @@ void Player_FireFlameThrower( gentity_t *self )
 	// came from the torso (the origin + 20) and went the same way whatever way the player faced: the angles
 	// were ( -pitch, roll, yaw - 180 ), and the client makes a direction of an effect's angles from its pitch
 	// and yaw (AngleVectors, EV_PLAY_EFFECT_ID) -- the yaw slot held the roll, near 0, so every burst went along
-	// the same world axis. The damage below was always the aim's; now the flame is where it lands.
+	// the same world axis. The damage below was always the aim's; now the flame is where it lands. The angles
+	// are the aim reversed, as the effect fires against its direction -- see RP_FlameThrowerStart().
 	RP_FlameThrowerStart( self, origin, angles );
 
 	if ((self->client->pers.flame_thrower - level.time) > 500)
