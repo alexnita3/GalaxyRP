@@ -2590,7 +2590,7 @@ Ported from TaystJK's CG_GrappleTrail / CG_GrappleEndpoint / CG_GrappleStartpoin
 draw JAPro's hook. The hook arrives as an ordinary missile in the snapshot -- ET_MISSILE, weapon
 WP_BRYAR_PISTOL, saberInFlight set: the JAPro wire signature, chosen so a TaystJK client that learns
 to honour TAYSTJK_INFO_GRAPPLE draws it too -- and CG_Missile() hands it here before it could draw a
-blaster bolt. A beam from the owner's right hand to the hook, the hook model at the far end, and a
+blaster bolt. A beam from the owner's left hand to the hook, the hook model at the far end, and a
 small glow at the hand. Nothing here is predicted: the missile's position comes from the snapshot,
 the hand from the owner's model, so the rope is right for every viewer including the owner.
 ===============
@@ -2614,14 +2614,18 @@ static void CG_GrappleTrail( centity_t *cent )
 
 	owner = &cg_entities[es->clientNum];
 
-	// the near end: the owner's right hand, or their chest if the model is not there to ask
-	if ( owner->ghoul2 && cgs.clientinfo[es->clientNum].bolt_rhand )
+	// the near end: the owner's left hand, or their chest if the model is not there to ask
+	// DAJ_RP: [Grapple Hook] the left hand, as TaystJK draws it (its bolt 1, *l_hand). This asked for the right
+	// hand, and tested it for truth: the right hand is the first bolt every client model gets (CG_LoadClientInfo),
+	// so its index is 0 and the test always failed -- the rope left from the chest fallback, never a hand. A
+	// bolt index is valid from 0 up; -1 is "no such bolt".
+	if ( owner->ghoul2 && cgs.clientinfo[es->clientNum].bolt_lhand >= 0 )
 	{
 		mdxaBone_t	boltMatrix;
 		vec3_t		tAng;
 
 		VectorSet( tAng, owner->turAngles[PITCH], owner->turAngles[YAW], owner->turAngles[ROLL] );
-		trap->G2API_GetBoltMatrix( owner->ghoul2, 0, cgs.clientinfo[es->clientNum].bolt_rhand, &boltMatrix, tAng,
+		trap->G2API_GetBoltMatrix( owner->ghoul2, 0, cgs.clientinfo[es->clientNum].bolt_lhand, &boltMatrix, tAng,
 			owner->lerpOrigin, cg.time, cgs.gameModels, owner->modelScale );
 
 		handPos[0] = boltMatrix.matrix[0][3];

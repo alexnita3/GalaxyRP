@@ -6479,6 +6479,47 @@ extern void Jedi_DecloakPair(gentity_t *self);
 // creates the "zyk_effect_force_dash" targetname; the two sites in g_misc.c that still test for
 // it are left alone here, with the rest of that list.
 
+// DAJ_RP: [Flame Thrower] where the flame leaves the stun baton, and which way it goes: start is the player's
+// right hand -- the stun baton's -- on the server's own copy of the player's model (players have "*r_hand" from
+// spawn, and the saber code keeps that skeleton animated every frame: WP_SaberPositionUpdate()), pushed
+// RP_FLAME_FROM_HAND along the aim to the baton's tip; angles is the aim, pitch and yaw. Without a model or the
+// bolt, the start is the stun baton's own point -- the one WP_FireStunBaton() traces from.
+#define RP_FLAME_FROM_HAND	12.0f
+
+static void RP_FlameThrowerStart( gentity_t *self, vec3_t start, vec3_t angles )
+{
+	vec3_t	forward, right;
+	int		bolt = -1;
+
+	VectorSet( angles, self->client->ps.viewangles[PITCH], self->client->ps.viewangles[YAW], 0.0f );
+	AngleVectors( angles, forward, right, NULL );
+
+	if ( self->ghoul2 && trap->G2API_HaveWeGhoul2Models( self->ghoul2 ) )
+	{
+		bolt = trap->G2API_AddBolt( self->ghoul2, 0, "*r_hand" );	// the one it has: 0 on a player
+	}
+
+	if ( bolt >= 0 )
+	{
+		mdxaBone_t	boltMatrix;
+		vec3_t		yaw;
+
+		VectorSet( yaw, 0.0f, self->client->ps.viewangles[YAW], 0.0f );	// as the saber code turns it
+		if ( trap->G2API_GetBoltMatrix( self->ghoul2, 0, bolt, &boltMatrix, yaw, self->client->ps.origin, level.time,
+			NULL, self->modelScale ) )
+		{
+			BG_GiveMeVectorFromMatrix( &boltMatrix, ORIGIN, start );
+			VectorMA( start, RP_FLAME_FROM_HAND, forward, start );
+			return;
+		}
+	}
+
+	VectorCopy( self->client->ps.origin, start );
+	start[2] += self->client->ps.viewheight - 6;
+	VectorMA( start, 20.0f, forward, start );
+	VectorMA( start, 4.0f, right, start );
+}
+
 // zyk: fires the Boba Fett flame thrower
 void Player_FireFlameThrower( gentity_t *self )
 {
@@ -6493,7 +6534,7 @@ void Player_FireFlameThrower( gentity_t *self )
 	vec3_t	tfrom, tto, fwd;
 	vec3_t thispush_org, a;
 	vec3_t mins, maxs, fwdangles, forward, right, center;
-	vec3_t		origin, dir;
+	vec3_t		origin, angles;
 
 	int i;
 	float visionArc = 120;
@@ -6501,16 +6542,15 @@ void Player_FireFlameThrower( gentity_t *self )
 
 	self->client->cloakDebReduce = level.time + rp_flame_thrower_cooldown.integer;
 
-	origin[0] = self->r.currentOrigin[0];
-	origin[1] = self->r.currentOrigin[1];
-	origin[2] = self->r.currentOrigin[2] + 20.0f;
-
-	dir[0] = (-1) * self->client->ps.viewangles[0];
-	dir[2] = self->client->ps.viewangles[2];
-	dir[1] = (-1) * (180 - self->client->ps.viewangles[1]);
+	// DAJ_RP: [Flame Thrower] from the stun baton, and where the player aims (RP_FlameThrowerStart above). It
+	// came from the torso (the origin + 20) and went the same way whatever way the player faced: the angles
+	// were ( -pitch, roll, yaw - 180 ), and the client makes a direction of an effect's angles from its pitch
+	// and yaw (AngleVectors, EV_PLAY_EFFECT_ID) -- the yaw slot held the roll, near 0, so every burst went along
+	// the same world axis. The damage below was always the aim's; now the flame is where it lands.
+	RP_FlameThrowerStart( self, origin, angles );
 
 	if ((self->client->pers.flame_thrower - level.time) > 500)
-		G_PlayEffectID( G_EffectIndex("boba/fthrw"), origin, dir);
+		G_PlayEffectID( G_EffectIndex("boba/fthrw"), origin, angles);
 
 	if ((self->client->pers.flame_thrower - level.time) > 1250)
 		G_Sound( self, CHAN_WEAPON, G_SoundIndex("sound/effects/fire_lp") );
