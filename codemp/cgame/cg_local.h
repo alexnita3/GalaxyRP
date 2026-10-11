@@ -300,6 +300,8 @@ typedef struct clientInfo_s {
 
 	qhandle_t		bolt_llumbar;
 
+	qhandle_t		bolt_jet[2];	// DAJ_RP: NPCs only -- a model's *jet1 / *jet2 (Boba Fett's exhaust, CG_BobaJetFlames()), -1 when it has none
+
 	int				siegeIndex;
 	int				siegeDesiredTeam;
 

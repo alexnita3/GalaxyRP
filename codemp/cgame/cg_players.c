@@ -9740,6 +9740,39 @@ qboolean CG_AddPhasedPlayerModel( centity_t *cent, const refEntity_t *legs, qboo
 	return qtrue;
 }
 
+// DAJ_RP: [NPCs] Boba Fett's jet exhaust while he flies. Single-player plays boba/jetSP on his model's *jet1 and
+// *jet2 bolts from take-off to landing (Boba_FlyStart() / Boba_FlyStop()); the MP port of his AI kept the flight,
+// the take-off sound and the hover loop but dropped the effect, and no cgame drew one -- stock, TaystJK and JA++
+// alike. This draws the MP jetpack's own flame (effects/boba/jet.efx, played every frame like the jetpack's, once
+// per nozzle as the jetpack does when idling) at each bolt, pointed along the bolt's -X axis. *jet1 is his left
+// nozzle, *jet2 his right. Checked in-game: a flame sent along *jet1's +X went straight up, and one sent along
+// +Y went out to his left from both bolts, so the two share a frame and -X is down on both; the flame follows
+// his torso as he leans. The bolts are looked up with the NPC's other bolts, once per model
+// (npcClient->bolt_jet[]); a model without one (a custom one) gets no flame from that nozzle.
+static void CG_BobaJetFlames( centity_t *cent )
+{
+	mdxaBone_t	mat;
+	vec3_t		flamePos, flameDir;
+	int			n;
+
+	if ( !cent->npcClient )
+	{
+		return;
+	}
+	for ( n = 0; n < 2; n++ )
+	{
+		if ( cent->npcClient->bolt_jet[n] == -1 )
+		{
+			continue;
+		}
+		trap->G2API_GetBoltMatrix( cent->ghoul2, 0, cent->npcClient->bolt_jet[n], &mat, cent->turAngles, cent->lerpOrigin,
+			cg.time, cgs.gameModels, cent->modelScale );
+		BG_GiveMeVectorFromMatrix( &mat, ORIGIN, flamePos );
+		BG_GiveMeVectorFromMatrix( &mat, NEGATIVE_X, flameDir );
+		trap->FX_PlayEffectID( cgs.effects.mBobaJet, flamePos, flameDir, -1, -1, qfalse );
+	}
+}
+
 void CG_Player( centity_t *cent ) {
 	clientInfo_t	*ci;
 	refEntity_t		legs;
@@ -9954,6 +9987,10 @@ void CG_Player( centity_t *cent ) {
 				}
 				cent->npcClient->bolt_motion = trap->G2API_AddBolt(cent->npcClient->ghoul2Model, 0, "Motion");
 				cent->npcClient->bolt_llumbar = trap->G2API_AddBolt(cent->npcClient->ghoul2Model, 0, "lower_lumbar");
+				// DAJ_RP: [NPCs] Boba Fett's jets (CG_BobaJetFlames()), looked up once per model like the bolts above; a
+				// model without them gets -1 and no bolt is added
+				cent->npcClient->bolt_jet[0] = trap->G2API_AddBolt(cent->npcClient->ghoul2Model, 0, "*jet1");
+				cent->npcClient->bolt_jet[1] = trap->G2API_AddBolt(cent->npcClient->ghoul2Model, 0, "*jet2");
 			}
 			else
 			{
@@ -9962,6 +9999,7 @@ void CG_Player( centity_t *cent ) {
 				cent->npcClient->bolt_head = -1;
 				cent->npcClient->bolt_motion = -1;
 				cent->npcClient->bolt_llumbar = -1;
+				cent->npcClient->bolt_jet[0] = cent->npcClient->bolt_jet[1] = -1;
 			}
 			cent->npcClient->team = TEAM_FREE;
 			cent->npcClient->infoValid = qtrue;
@@ -10142,6 +10180,14 @@ void CG_Player( centity_t *cent ) {
 	else if (trap->G2API_HasGhoul2ModelOnIndex(&(cent->ghoul2), 3))
 	{ //fixme: would be good if this could be done not every frame
 		trap->G2API_RemoveGhoul2Model(&(cent->ghoul2), 3);
+	}
+
+	// DAJ_RP: [NPCs] a flying Boba Fett NPC's jet exhaust (see CG_BobaJetFlames()); his class and the flying flag
+	// both come with his entity state.
+	if ( cent->currentState.eType == ET_NPC && cent->currentState.NPC_class == CLASS_BOBAFETT &&
+		( cent->currentState.eFlags2 & EF2_FLYING ) && !( cent->currentState.eFlags & EF_DEAD ) )
+	{
+		CG_BobaJetFlames( cent );
 	}
 
 	g2HasWeapon = trap->G2API_HasGhoul2ModelOnIndex(&(cent->ghoul2), 1);
