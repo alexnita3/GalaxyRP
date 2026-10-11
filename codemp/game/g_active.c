@@ -4521,6 +4521,7 @@ void ClientThink_real( gentity_t *ent ) {
 				// when the saber-equipped guard was lifted). Vehicle-cloak is now its own dedicated
 				// "/vehicle_cloak" console command (Cmd_VehicleCloak_f in g_cmds.c) instead, which has no
 				// overlap with saber styles, weapon selection, or vehicle weapon-link toggling.
+				// DAJ_RP: [Cloak Item] that command is gated on Cloak Item level 2 now, not the upgrade.
 
 				// GalaxyRP fix: [Skills] removed the GENCMD_ENGAGE_DUEL Unique Skill (skill index 38) heal
 				// branch that used to be here -- skill 38 is being removed the same way as 39-42 (see the

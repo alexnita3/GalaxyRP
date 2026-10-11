@@ -255,7 +255,7 @@ const skill_t skills[] = {
 	// exactly why the item only ever showed up after a /kill or respawn, never immediately. Corrected
 	// to HI_SHIELD, matching every other items-category skill in this table.
 	{1, "Force Field",			"a powerful shield that protects you from enemy attacks, it can resist a lot against any weapon",																																																				"items",	"merc",		HI_SHIELD},
-	{1, "Cloak Item",			"makes you almost invisible to players and invisible to npcs.",																																																													"items",	"merc",		HI_CLOAK},
+	{2, "Cloak Item",			"makes you almost invisible to players and invisible to npcs. Level 2 also lets you cloak the vehicle you ride, together with yourself (/vehicle_cloak).",																																																													"items",	"merc",		HI_CLOAK},
 	{5, "Force Power",			"increases the max force power you have. Necessary to allow you to use force powers and force-based skills",																																																	"force",	"neutral",	0},
 	// GalaxyRP: [Grapple Hook] index 55, the former "Improvements" placeholder, is the Grapple Hook
 	// skill now. One level: 0 no hook, 1 hook. The database column keeps the name Improvements --
@@ -12817,7 +12817,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				// "print \"...\"" string exceeds it), so appending /use_cloak's description to that block
 				// directly would have pushed it over and made the whole Misc section vanish for players.
 				trap->SendServerCommand(ent - g_entities, "print \"^3/use_cloak: ^7Activates or deactivates your Cloak Item, on foot or while riding a vehicle. Never cloaks the vehicle itself.\n\
-^3/vehicle_cloak: ^7While riding a vehicle with the Cloak Item and Holdable Items Upgrade, cloaks or decloaks the vehicle together with you.\n\
+^3/vehicle_cloak: ^7While riding a vehicle with the Cloak Item at level 2, cloaks or decloaks the vehicle together with you.\n\
 ^3/updateforce: ^7Applies your force power menu pick instantly, no respawn needed (logged-out players only).\n\"");
 				trap->SendServerCommand(ent - g_entities, "print \"^3/maplist <page (optional)>: ^7Lists the maps you can vote for in the current gametype, for /callvote map.\n\
 ^3/saber <saber1> <saber2>: ^7Changes lightsabers of the player.\n\
@@ -13059,7 +13059,7 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 
 			if (value == 1)
 			{
-				trap->SendServerCommand( ent-g_entities, "print \"\n^3Holdable Items Upgrade: ^7Bacta Canister recovers more health, Big Bacta recovers more HP, Force Field resists more and Cloak Item will be able to cloak vehicles\n\n\"");
+				trap->SendServerCommand( ent-g_entities, "print \"\n^3Holdable Items Upgrade: ^7Bacta Canister recovers more health, Big Bacta recovers more HP and Force Field resists more\n\n\"");
 			}
 			else if (value == 2)
 			{
@@ -14941,16 +14941,21 @@ VEHICLE's own PW_CLOAKED:
   - vehicle cloaked, rider NOT cloaked (shouldn't happen in normal play, but a stray one-sided decloak
     from somewhere could leave this state) -> cloak the rider instead of decloaking, to resync toward
     paired rather than toward off.
-Possession/upgrade requirements only gate the two cloak/resync directions -- decloaking the pair is
-never blocked by missing item/upgrade, so a player can never get stuck cloaked just because they later
-lost the item or upgrade (matches how zyk_adjust_holdable_items already forces a decloak on item loss
-elsewhere). The manual-use cooldown (vehicleCloakToggleTime) still applies to all three directions, so
+Possession/skill requirements only gate the two cloak/resync directions -- decloaking the pair is
+never blocked by a missing item or skill level, so a player can never get stuck cloaked just because
+they later lost the item or dropped the Cloak Item skill below level 2 (matches how
+zyk_adjust_holdable_items already forces a decloak on item loss elsewhere). The manual-use cooldown
+(vehicleCloakToggleTime) still applies to all three directions, so
 rapid re-issuing the command is debounced consistently regardless of direction. Deliberately registered
 below with CMD_ALIVE. That was deliberately absent at first, to mirror the original generic_cmd
 switch, which never gated on aliveness -- but a following spectator has the followed player's
 playerState copied over their own, so without the flag a spectator could cloak or decloak a stranger's
 vehicle. The flag costs nothing real: a dead player's vehicle is already decloaked by player_die's own
 Jedi_DecloakPair, so the decloak direction has nothing left to do by the time CMD_ALIVE would block it.
+
+DAJ_RP: [Cloak Item] the requirement is the Cloak Item in the inventory plus the Cloak Item skill at
+level 2. It used to be the item plus the Holdable Items Upgrade, which keeps its other bonuses. A
+forward-only change: no character's skill level or upgrade is migrated.
 ==================
 */
 void Cmd_VehicleCloak_f( gentity_t *ent ) {
@@ -14982,9 +14987,9 @@ void Cmd_VehicleCloak_f( gentity_t *ent ) {
 				ent->client->ps.stats[STAT_HEALTH] > 0 && !(ent->client->ps.eFlags & EF_DEAD) &&
 				ent->client->ps.pm_type != PM_DEAD &&
 				!(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DOWNED)) &&
-				// GalaxyRP fix: [Shop] Holdable Items Upgrade check moved from player_settings
-				// (account-wide) to skill_levels[38] (per-character) -- see g_local.h.
-				(ent->client->pers.skill_levels[38] & (1 << 0)) &&
+				// DAJ_RP: [Cloak Item] Cloak Item level 2 cloaks the vehicle, in place of the Holdable
+				// Items Upgrade (skill_levels[38] bit 0) that used to -- see the skills[] row.
+				ent->client->pers.skill_levels[53] >= 2 &&
 				(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK)) )
 			{//safeguard: vehicle cloaked but rider isn't -- resync by cloaking the rider too
 				Jedi_Cloak( ent );
@@ -14996,9 +15001,8 @@ void Cmd_VehicleCloak_f( gentity_t *ent ) {
 			ent->client->ps.stats[STAT_HEALTH] > 0 && !(ent->client->ps.eFlags & EF_DEAD) &&
 			ent->client->ps.pm_type != PM_DEAD &&
 			!(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DOWNED)) &&
-			// GalaxyRP fix: [Shop] Holdable Items Upgrade check moved from player_settings
-			// (account-wide) to skill_levels[38] (per-character) -- see g_local.h.
-			(ent->client->pers.skill_levels[38] & (1 << 0)) &&
+			// DAJ_RP: [Cloak Item] Cloak Item level 2, as above.
+			ent->client->pers.skill_levels[53] >= 2 &&
 			(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK)) )
 		{//vehicle not cloaked -- cloak vehicle + rider together
 			Jedi_Cloak( veh );
