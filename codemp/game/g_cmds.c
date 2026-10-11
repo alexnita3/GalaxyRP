@@ -10005,7 +10005,10 @@ void G_LeaveVehicle( gentity_t* ent, qboolean ConCheck ) {
 			// they were never on. r.ownerNum is the right discriminator: boarding sets it to the
 			// vehicle's entity number and ejecting resets it, and unlike ps it is never copied to a
 			// follower. Eject() below already ignores a non-occupant, so only this call needed the guard.
-			if ( ent->r.ownerNum == veh->s.number )
+			// DAJ_RP: [Cloak Item] and only for the PILOT, as in Eject(): a passenger who disconnected took
+			// the cloak off the vehicle the pilot had cloaked (only a pilot can -- Cmd_VehicleCloak_f).
+			// m_pPilot is never a follower either, so it keeps the guard above.
+			if ( ent->r.ownerNum == veh->s.number && veh->m_pVehicle->m_pPilot == (bgEntity_t *)ent )
 			{
 				Jedi_Decloak( veh );
 			}
@@ -12817,7 +12820,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				// "print \"...\"" string exceeds it), so appending /use_cloak's description to that block
 				// directly would have pushed it over and made the whole Misc section vanish for players.
 				trap->SendServerCommand(ent - g_entities, "print \"^3/use_cloak: ^7Activates or deactivates your Cloak Item, on foot or while riding a vehicle. Never cloaks the vehicle itself.\n\
-^3/vehicle_cloak: ^7While riding a vehicle with the Cloak Item at level 2, cloaks or decloaks the vehicle together with you.\n\
+^3/vehicle_cloak: ^7While piloting a vehicle with the Cloak Item at level 2, cloaks or decloaks the vehicle together with you.\n\
 ^3/updateforce: ^7Applies your force power menu pick instantly, no respawn needed (logged-out players only).\n\"");
 				trap->SendServerCommand(ent - g_entities, "print \"^3/maplist <page (optional)>: ^7Lists the maps you can vote for in the current gametype, for /callvote map.\n\
 ^3/saber <saber1> <saber2>: ^7Changes lightsabers of the player.\n\
@@ -14932,8 +14935,8 @@ from any client that can type, no engine-side cooperation required. Solo "/use_c
 still in g_active.c) is untouched -- it's a real, pre-existing native TaystJK command and keeps working
 exactly as it did before.
 
-Pairs vehicle+rider cloak. Only usable while mounted (no-op otherwise). Toggle direction reads the
-VEHICLE's own PW_CLOAKED:
+Pairs vehicle+pilot cloak. Only usable by the vehicle's pilot (no-op otherwise -- on foot, or as a
+passenger; see the DAJ_RP note at the end). Toggle direction reads the VEHICLE's own PW_CLOAKED:
   - vehicle not cloaked -> cloak the vehicle AND unconditionally cloak the rider too (Jedi_Cloak is
     idempotent, so this is safe even if the rider is already solo-cloaked from a prior "/use_cloak" --
     it just upgrades them to paired).
@@ -14956,6 +14959,13 @@ Jedi_DecloakPair, so the decloak direction has nothing left to do by the time CM
 DAJ_RP: [Cloak Item] the requirement is the Cloak Item in the inventory plus the Cloak Item skill at
 level 2. It used to be the item plus the Holdable Items Upgrade, which keeps its other bonuses. A
 forward-only change: no character's skill level or upgrade is migrated.
+
+DAJ_RP: [Cloak Item] pilot only, so a cloaked vehicle is always its pilot's doing. The vehicle loses its
+cloak when that pilot gets off (Eject(), g_vehicles.c, and G_LeaveVehicle() above), even when a passenger
+is promoted to pilot. A passenger still decloaks it by firing (his own weapon, or a turret --
+VEH_TurretCheckFire(), g_vehicleTurret.c), swinging a saber, being hit or switching his own cloak off:
+each goes through Jedi_DecloakPair() on the passenger, which reaches the vehicle and never the pilot or
+another passenger.
 ==================
 */
 void Cmd_VehicleCloak_f( gentity_t *ent ) {
@@ -14965,6 +14975,17 @@ void Cmd_VehicleCloak_f( gentity_t *ent ) {
 	if ( ent->client->ps.m_iVehicleNum )
 	{
 		gentity_t *veh = &g_entities[ent->client->ps.m_iVehicleNum];
+
+		// DAJ_RP: [Cloak Item] the pilot only. The cloak pair is the vehicle and its pilot -- the vehicle's
+		// partner is m_pPilot (Jedi_CloakPartner) -- so a passenger who cloaked it was left out of every
+		// pair path: his "off" decloaked the vehicle and the PILOT but not himself, damage, fire and the
+		// vehicle's death took the vehicle and pilot down but left him cloaked, and the pilot stayed visible
+		// on an invisible vehicle that his own /vehicle_cloak could not switch off. Refused silently in all
+		// three directions, like every other refusal here; passengers keep /use_cloak for themselves.
+		if ( !veh->m_pVehicle || veh->m_pVehicle->m_pPilot != (bgEntity_t *)ent )
+		{
+			return;
+		}
 
 		if ( veh->client && veh->client->ps.powerups[PW_CLOAKED] )
 		{

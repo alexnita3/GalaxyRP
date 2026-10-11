@@ -29,6 +29,9 @@ extern void WP_CalcVehMuzzle(gentity_t *ent, int muzzleNum);
 extern gentity_t *WP_FireVehicleWeapon( gentity_t *ent, vec3_t start, vec3_t dir, vehWeaponInfo_t *vehWeapon, qboolean alt_fire, qboolean isTurretWeap );
 
 extern void G_VehMuzzleFireFX( gentity_t *ent, gentity_t *broadcaster, int muzzlesFired );
+extern void Jedi_Decloak( gentity_t *self );
+extern void Jedi_DecloakPair( gentity_t *self );
+extern qboolean Jedi_PairIsCloaked( gentity_t *self );
 //-----------------------------------------------------
 void VEH_TurretCheckFire( Vehicle_t *pVeh,
 						 gentity_t *parent,
@@ -65,6 +68,34 @@ void VEH_TurretCheckFire( Vehicle_t *pVeh,
 
 		//play the weapon's muzzle effect if we have one
 		G_VehMuzzleFireFX(parent, missile, muzzlesFired );
+
+		// DAJ_RP: [Cloak Item] a turret shot gives the vehicle away, as its pilot's guns already do (the
+		// decloak hook in FireWeapon(), g_weapon.c). Turrets never reached that hook -- both callers come
+		// here and fire through WP_FireVehicleWeapon() directly -- so a cloaked fighter or walker stayed
+		// invisible while they shot. A passenger at the controls (the one VEH_TurretThink() hands the
+		// turret to) goes through Jedi_DecloakPair() on himself: him and the vehicle, never the pilot or
+		// another passenger, exactly as when he fires his own weapon. A turret aiming and firing by itself
+		// takes only the vehicle's cloak off.
+		{
+			gentity_t *gunner = NULL;
+
+			if ( turretStats->passengerNum && pVeh->m_iNumPassengers >= turretStats->passengerNum )
+			{
+				gunner = (gentity_t *)pVeh->m_ppPassengers[turretStats->passengerNum-1];
+			}
+
+			if ( gunner && gunner->client )
+			{
+				if ( Jedi_PairIsCloaked( gunner ) )
+				{
+					Jedi_DecloakPair( gunner );
+				}
+			}
+			else if ( parent->client && parent->client->ps.powerups[PW_CLOAKED] )
+			{
+				Jedi_Decloak( parent );
+			}
+		}
 
 		//take the ammo away
 		pVeh->turretStatus[turretNum].ammo -= vehWeapon->iAmmoPerShot;

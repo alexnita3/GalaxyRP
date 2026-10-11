@@ -646,6 +646,7 @@ qboolean Eject( Vehicle_t *pVeh, bgEntity_t *pEnt, qboolean forceEject )
 
 	qboolean	taintedRider = qfalse;
 	qboolean	deadRider = qfalse;
+	qboolean	wasPilot;
 
 	if ( pEnt == pVeh->m_pDroidUnit )
 	{
@@ -730,6 +731,9 @@ qboolean Eject( Vehicle_t *pVeh, bgEntity_t *pEnt, qboolean forceEject )
 	}
 
 getItOutOfMe:
+	// DAJ_RP: [Cloak Item] who is getting off, before the pilot's seat is cleared or handed on -- see the
+	// cloak check further down.
+	wasPilot = ( (gentity_t *)pVeh->m_pPilot == ent ) ? qtrue : qfalse;
 
 	// If he's the pilot...
 	if ( (gentity_t *)pVeh->m_pPilot == ent )
@@ -869,14 +873,19 @@ getItOutOfMe:
 		// into this one -- so a single check here covers all of them. G_LeaveVehicle() (g_cmds.c) was
 		// where this fix originally lived, on the assumption it was the shared dismount chokepoint, but
 		// it's actually only ever reached from StopFollowing() and client disconnect, so the vehicle was
-		// staying cloaked and invisible with nobody aboard on every normal dismount. Gated on "no pilot"
-		// (not "this specific rider left") so a passenger being promoted to pilot just above correctly
-		// leaves a still-manned vehicle cloaked. Deliberately a plain Jedi_Decloak, not Jedi_DecloakPair
-		// -- the rider (or new pilot) keeps their own cloak state; only the vehicle's cloak is forced off.
-		if ( parent->client && parent->client->ps.powerups[PW_CLOAKED] )
-		{
-			Jedi_Decloak( parent );
-		}
+		// staying cloaked and invisible with nobody aboard on every normal dismount.
+	}
+
+	// DAJ_RP: [Cloak Item] ...and the pilot getting off takes the vehicle's cloak with him, whether or not a
+	// passenger is promoted to pilot above. Only a pilot can cloak a vehicle (Cmd_VehicleCloak_f), so a
+	// cloaked vehicle is the leaving pilot's doing; the old "no pilot left" test kept it cloaked under a
+	// promoted passenger who never cloaked it and could not switch it off -- visible himself, on the radar
+	// and named on the crosshair over an invisible vehicle. That test stays as a backstop. Still a plain
+	// Jedi_Decloak, not Jedi_DecloakPair: the leaving pilot, the new pilot and every passenger keep their
+	// own cloak state; only the vehicle's is forced off. A passenger getting off changes nothing.
+	if ( ( wasPilot || pVeh->m_pPilot == NULL ) && parent->client && parent->client->ps.powerups[PW_CLOAKED] )
+	{
+		Jedi_Decloak( parent );
 	}
 
 	if (taintedRider)
