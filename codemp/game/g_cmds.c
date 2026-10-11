@@ -3731,10 +3731,49 @@ void zyk_stop_active_holdables( gentity_t *ent )
 // Call it BEFORE player_backup_loadout(), and only on a living player: EWebDisattach() gives the
 // mask back only when health is above zero. Both prepares respawn the dead first. The seeker drone
 // is not in here because both prepares already wind it down a few lines further on.
+// DAJ_RP: [Minigames] step 0 below: off a vehicle the player is riding. Both prepares teleport the player
+// into the arena straight after, and a vehicle puts its rider back on board every frame
+// (AttachRidersGeneric() in bg_vehicleLoad.c), so a rider was left on the vehicle outside the arena. The
+// vehicle's own forced eject does it -- what a death-eject and /paralyze use: the player is put down beside
+// the vehicle, a passenger takes over from a pilot, a hidden rider is shown again and an empty cloaked
+// vehicle decloaks. It gives up on a living rider when every way out is blocked, so it is then asked again
+// the way it takes a dead rider off, in place -- health held at 0 for that one call, as G_LeaveVehicle()
+// holds the connection state -- and the teleport that follows takes them out of the vehicle's box. Only a
+// player actually aboard (r.ownerNum, as in G_LeaveVehicle()): a non-occupant would be moved and then
+// refused.
+static void RP_RideOffForMinigame( gentity_t *ent )
+{
+	gentity_t *veh;
+
+	if ( !ent->client->ps.m_iVehicleNum || ent->client->sess.sessionTeam == TEAM_SPECTATOR )
+		return;
+
+	veh = &g_entities[ent->client->ps.m_iVehicleNum];
+	if ( !veh->inuse || !veh->client || !veh->m_pVehicle || !veh->m_pVehicle->m_pVehicleInfo || ent->r.ownerNum != veh->s.number )
+		return;
+
+	if ( !veh->m_pVehicle->m_pVehicleInfo->Eject( veh->m_pVehicle, (bgEntity_t *)ent, qtrue ) && ent->r.ownerNum == veh->s.number )
+	{
+		const int health = ent->health;
+
+		ent->health = 0;
+		veh->m_pVehicle->m_pVehicleInfo->Eject( veh->m_pVehicle, (bgEntity_t *)ent, qtrue );
+		ent->health = health;
+	}
+
+	if ( !ent->client->ps.m_iVehicleNum )
+	{
+		trap->SendServerCommand( ent->s.number, "print \"You were taken off your vehicle.\n\"" );
+	}
+}
+
 void zyk_release_mounts_for_minigame( gentity_t *ent )
 {
 	if (!ent || !ent->client)
 		return;
+
+	// 0. a vehicle -- see RP_RideOffForMinigame() above
+	RP_RideOffForMinigame(ent);
 
 	// 1. the e-web, put away rather than freed -- see above
 	if (ent->client->ewebIndex)
@@ -9928,6 +9967,13 @@ void Cmd_SetViewpos_f( gentity_t *ent ) {
 	trap->Argv( 4, buffer, sizeof( buffer ) );
 	angles[YAW] = atof( buffer );
 
+	// DAJ_RP: [Admin] not a rider, as /teleport (RP_TeleRiderRefused() below): the vehicle would put them
+	// straight back
+	if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->ps.m_iVehicleNum ) {
+		trap->SendServerCommand( ent-g_entities, va("print \"%s ^7is riding a vehicle.\n\"", ent->client->pers.netname) );
+		return;
+	}
+
 	TeleportPlayer( ent, origin, angles );
 }
 
@@ -13362,6 +13408,26 @@ extern void zyk_TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles 
 
 /*
 ==================
+RP_TeleRiderRefused
+
+DAJ_RP: [Admin] qtrue, with the message /teleaim gives, when the player a command would teleport is riding
+a vehicle: the vehicle puts its rider back on board every frame (AttachRidersGeneric() in bg_vehicleLoad.c),
+so the teleport would only play its effects, telefrag whoever stands at the destination (G_KillBox()) and
+turn the rider's view, leaving them where they were. A spectator is never refused: one following a rider
+carries a copy of the rider's playerState, vehicle number included (g_active.c).
+==================
+*/
+static qboolean RP_TeleRiderRefused( gentity_t *ent, gentity_t *target )
+{
+	if ( target->client->sess.sessionTeam == TEAM_SPECTATOR || !target->client->ps.m_iVehicleNum )
+		return qfalse;
+
+	trap->SendServerCommand( ent-g_entities, va("print \"%s ^7is riding a vehicle.\n\"", target->client->pers.netname) );
+	return qtrue;
+}
+
+/*
+==================
 Cmd_Teleport_f
 ==================
 */
@@ -13399,6 +13465,11 @@ void Cmd_Teleport_f( gentity_t *ent )
 			return;
 		}
 
+		if (RP_TeleRiderRefused(ent, ent))
+		{
+			return;
+		}
+
 		zyk_TeleportPlayer(ent, ent->client->pers.saved_origin, ent->client->pers.saved_view_angles);
 	}
 	else if (trap->Argc() == 2)
@@ -13427,6 +13498,11 @@ void Cmd_Teleport_f( gentity_t *ent )
 		// GalaxyRP fix: [Guardian] a guardian_mode>0 guard blocking teleport-to-player while the target
 		// was in a guardian battle used to be here. guardian_mode is permanently 0 now, so it was
 		// unreachable.
+
+		if (RP_TeleRiderRefused(ent, ent))
+		{
+			return;
+		}
 
 		VectorCopy(g_entities[client_id].client->ps.origin,target_origin);
 		target_origin[2] = target_origin[2] + 100;
@@ -13481,6 +13557,11 @@ void Cmd_Teleport_f( gentity_t *ent )
 		// the second target was in a guardian battle used to be here. guardian_mode is permanently 0
 		// now, so it was unreachable.
 
+		if (RP_TeleRiderRefused(ent, &g_entities[client1_id]))
+		{
+			return;
+		}
+
 		VectorCopy(g_entities[client2_id].client->ps.origin,target_origin);
 		target_origin[2] = target_origin[2] + 100;
 
@@ -13496,6 +13577,11 @@ void Cmd_Teleport_f( gentity_t *ent )
 		trap->Argv( 3,  arg3, sizeof( arg3 ) );
 
 		VectorSet(target_origin,atoi(arg1),atoi(arg2),atoi(arg3));
+
+		if (RP_TeleRiderRefused(ent, ent))
+		{
+			return;
+		}
 
 		zyk_TeleportPlayer(ent,target_origin,ent->client->ps.viewangles);
 	}
@@ -13531,6 +13617,11 @@ void Cmd_Teleport_f( gentity_t *ent )
 		trap->Argv( 4,  arg4, sizeof( arg4 ) );
 
 		VectorSet(target_origin,atoi(arg2),atoi(arg3),atoi(arg4));
+
+		if (RP_TeleRiderRefused(ent, &g_entities[client_id]))
+		{
+			return;
+		}
 
 		zyk_TeleportPlayer(&g_entities[client_id],target_origin,g_entities[client_id].client->ps.viewangles);
 	}
@@ -18843,7 +18934,7 @@ void Cmd_AdminList_f( gentity_t *ent ) {
 		}
 		else if (command_number == ADM_TELE)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\nThis command can be ^3/teleport^7 or ^3/tele^7. Use ^3/telemark ^7to mark a spot in map, then use ^3/teleport ^7to go there. Use ^3/teleport <player name or ID> ^7to teleport to a player. \nUse ^3/teleport <player name or ID> <player name or ID> ^7to teleport a player to another. Use ^3/teleport <x> <y> <z> ^7to teleport to coordinates. Use ^3/teleport <player name or ID> <x> <y> <z> ^7to teleport a player to coordinates. Use ^3/teleportaim ^7or ^3/teleaim <player name or ID (optional)> ^7to teleport yourself, or the player, to where you aim\n\n\"" );
+			trap->SendServerCommand( ent-g_entities, "print \"\nThis command can be ^3/teleport^7 or ^3/tele^7. Use ^3/telemark ^7to mark a spot in map, then use ^3/teleport ^7to go there. Use ^3/teleport <player name or ID> ^7to teleport to a player. \nUse ^3/teleport <player name or ID> <player name or ID> ^7to teleport a player to another. Use ^3/teleport <x> <y> <z> ^7to teleport to coordinates. Use ^3/teleport <player name or ID> <x> <y> <z> ^7to teleport a player to coordinates. Use ^3/teleportaim ^7or ^3/teleaim <player name or ID (optional)> ^7to teleport yourself, or the player, to where you aim. A player riding a vehicle is refused.\n\n\"" );
 		}
 		else if (command_number == ADM_ADMPROTECT)
 		{
