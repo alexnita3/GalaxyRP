@@ -853,7 +853,7 @@ void CG_AddRadarEnt(centity_t *cent)
 		return;
 	}
 	// GalaxyRP: [Phase] Force ghosts and holograms stay off the radar and automap too, by the same
-	// reasoning. A player who is only non-solid (/admsolid) still shows.
+	// reasoning. A player who is only walk-through (/admwalkthrough) still shows.
 	{
 		const int phase = RP_PHASE_FROM_EFLAGS( cent->currentState.eFlags );
 
@@ -861,6 +861,21 @@ void CG_AddRadarEnt(centity_t *cent)
 		{
 			return;
 		}
+	}
+	// DAJ_RP: [Phase] and so does a player (or NPC) who is not drawn for you because he is Mind Tricking
+	// you -- which is also how /admhidden hides a player from everyone (RP_HiddenApplyState(), g_active.c).
+	// The same test CG_Player() uses, so the radar agrees with the screen: a viewer with Force Sight active
+	// sees him on both. Only for ET_PLAYER and ET_NPC, whose trickedentindex fields come from their Force
+	// state; other entity types reuse those fields for unrelated things.
+	if (cg.snap &&
+		(cent->currentState.eType == ET_PLAYER || cent->currentState.eType == ET_NPC) &&
+		CG_IsMindTricked(cent->currentState.trickedentindex,
+			cent->currentState.trickedentindex2,
+			cent->currentState.trickedentindex3,
+			cent->currentState.trickedentindex4,
+			cg.snap->ps.clientNum))
+	{
+		return;
 	}
 	if (cg.radarEntityCount >= numRadarEnts)
 	{

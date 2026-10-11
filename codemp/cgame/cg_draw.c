@@ -6256,7 +6256,7 @@ CG_`Entity
 =================
 CG_PhaseCrosshairTrace
 
-GalaxyRP: [Phase] players under /admsolid, /admghost or /admholo arrive with no collision box
+GalaxyRP: [Phase] players under /admwalkthrough, /admghost, /admholo or /admhidden arrive with no collision box
 (s.solid 0 -- see ClientEndFrame in g_active.c), so the crosshair traces, which only test the solid
 list, go straight through them and their name never shows. This tests the segment start->end
 against a standard player box around each of them, scaled by the model scale they send, and takes
@@ -6499,7 +6499,8 @@ static void CG_ScanForCrosshairEntity( void ) {
 			ignore, CONTENTS_SOLID|CONTENTS_BODY );
 	}
 
-	// GalaxyRP: [Phase] let the name of a phased player show -- see CG_PhaseCrosshairTrace()
+	// GalaxyRP: [Phase] let the name of a phased player show -- see CG_PhaseCrosshairTrace(). A hidden one
+	// (/admhidden) is found too, and the stock Mind Trick test just below then keeps his name off.
 	CG_PhaseCrosshairTrace( &trace, start, end, ignore );
 
 	if (trace.entityNum < MAX_CLIENTS)

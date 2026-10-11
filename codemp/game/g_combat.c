@@ -3750,6 +3750,13 @@ void G_Dismember( gentity_t *ent, gentity_t *enemy, vec3_t point, int limbType, 
 	// CG_General(), cg_ents.c). The owner -- a player, an NPC or a player's corpse (ET_BODY, see
 	// CopyToBodyQue) -- already carries the mode in s.eFlags; purely visual on a limb.
 	limb->s.eFlags |= ( ent->s.eFlags & EF_RP_PHASE_MASK );
+	// DAJ_RP: [Phase] a limb cut from a player under /admhidden, or from his corpse (CopyToBodyQue(), g_client.c),
+	// is not sent to anyone: it would otherwise fly out of thin air. Done with SVF_NOCLIENT rather than the Mind
+	// Trick bits, because CG_General() draws limbs without reading those.
+	if ( RP_PlayerIsHidden( ent ) || ( ent->s.eType == ET_BODY && ent->rpHiddenCorpse ) )
+	{
+		limb->r.svFlags |= SVF_NOCLIENT;
+	}
 	limb->s.modelindex = ent->s.number;
 	if (!ent->client)
 	{

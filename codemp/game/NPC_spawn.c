@@ -5744,7 +5744,7 @@ static void RP_NpcKillAim_f( gentity_t *ent )
 RP_NpcEffect_f
 
 GalaxyRP: [NPC System] /npc effect <holo|ghost|walkthrough|clear> on the NPC in the crosshair -- the
-NPC side of /admholo, /admghost and /admsolid (g_cmds.c), and the same pers.phase_mode underneath,
+NPC side of /admholo, /admghost and /admwalkthrough (g_cmds.c), and the same pers.phase_mode underneath,
 so an NPC in a mode behaves exactly like a phased player: hit, damaged and targeted like any other,
 only movement passes through (RP_PhasePassesThrough(), g_active.c), and ghost/holo get the client
 plugin's look and stay off the radar.
@@ -5765,13 +5765,15 @@ starts with a zeroed client.
 
 DAJ_RP: [NPC System] the walk-through mode is "walkthrough", and is named so in the replies: it was "nonsolid"
 ("is now non-solid"), which read as the NOTSOLID spawnflag -- an NPC nothing touches at all -- when this one is
-hit like any other. /admsolid on a player keeps its own word (RP_PhaseModeName(), g_cmds.c).
+hit like any other. /admwalkthrough on a player (was /admsolid) uses the same word (RP_PhaseModeName(), g_cmds.c).
+There is no /npc effect for /admhidden: an NPC cannot be hidden.
 ==================
 */
-// DAJ_RP: [NPC System] what /npc effect calls a mode in its replies
+// DAJ_RP: [NPC System] what /npc effect calls a mode in its replies -- since /admsolid became /admwalkthrough,
+// the same word a player's mode is given
 static const char *RP_NpcEffectName( int mode )
 {
-	return ( mode == RP_PHASE_NONSOLID ) ? "walk-through" : RP_PhaseModeName( mode );
+	return RP_PhaseModeName( mode );
 }
 
 static void RP_NpcEffect_f( gentity_t *ent )

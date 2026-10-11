@@ -719,8 +719,8 @@ typedef enum {
 #define	EF_NOT_USED_3			(1<<17)		// claimed by GalaxyRP -- see EF_RP_PHASE_MASK below
 #define	EF_NOT_USED_4			(1<<18)		// claimed by GalaxyRP -- see EF_RP_PHASE_MASK below
 
-// GalaxyRP: [Phase] the /admsolid, /admghost and /admholo state of a player, as a two-bit number in
-// bits 17-18 (read it with RP_PHASE_FROM_EFLAGS, never bit by bit): 0 normal, 1 non-solid, 2 Force
+// GalaxyRP: [Phase] the /admwalkthrough, /admghost and /admholo state of a player, as a two-bit number in
+// bits 17-18 (read it with RP_PHASE_FROM_EFLAGS, never bit by bit): 0 normal, 1 walk-through, 2 Force
 // ghost, 3 hologram. Every non-zero value means the player does not collide with other players and
 // NPCs; 2 and 3 also select the look the plugin draws and keep the player off the radar. The server
 // (ClientEndFrame, g_active.c) writes it into ps.eFlags every frame from pers.phase_mode, so it
@@ -735,9 +735,14 @@ typedef enum {
 
 typedef enum {
 	RP_PHASE_NONE = 0,		// normal
-	RP_PHASE_NONSOLID,		// /admsolid: passes through players and NPCs, looks normal
-	RP_PHASE_GHOST,			// /admghost: non-solid, drawn as a Force ghost, off the radar
-	RP_PHASE_HOLO			// /admholo: non-solid, drawn as a hologram, off the radar
+	RP_PHASE_NONSOLID,		// /admwalkthrough: passes through players and NPCs, looks normal
+	RP_PHASE_GHOST,			// /admghost: walk-through, drawn as a Force ghost, off the radar
+	RP_PHASE_HOLO,			// /admholo: walk-through, drawn as a hologram, off the radar
+	// DAJ_RP: [Phase] /admhidden: walk-through and not drawn at all. Server-only -- the two bits above are
+	// full, so it goes out as RP_PHASE_NONSOLID (RP_PhaseUpdate, g_active.c), which is all a client needs
+	// to predict walking through the player. The hiding is done with the Mind Trick fields of the
+	// player's entityState instead (RP_HiddenApplyState, g_active.c), which every client honours.
+	RP_PHASE_HIDDEN
 } rpPhaseMode_t;
 
 #define	EF_BODYPUSH				(1<<19)		//rww - claiming this for fullbody push effect

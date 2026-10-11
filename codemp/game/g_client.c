@@ -1331,6 +1331,17 @@ static qboolean CopyToBodyQue( gentity_t *ent ) {
 	trap->SendServerCommand(-1, va("ircg %i %i %i %i", ent->s.number, body->s.number, body->s.weapon, islight));
 
 	body->r.svFlags = ent->r.svFlags | SVF_BROADCAST;
+
+	// DAJ_RP: [Phase] the corpse of a player under /admhidden stays hidden: it is not sent to anyone at all.
+	// The Mind Trick bits that hide the living player (RP_HiddenApplyState(), g_active.c) cannot do it here,
+	// because a corpse is drawn by CG_General(), which never reads them. rpHiddenCorpse also keeps its
+	// severed limbs from being sent (G_Dismember(), g_combat.c). svFlags and the flag are both rewritten on
+	// every copy, so a body-queue slot reused for somebody else's corpse is sent as usual.
+	body->rpHiddenCorpse = RP_PlayerIsHidden( ent );
+	if ( body->rpHiddenCorpse )
+	{
+		body->r.svFlags |= SVF_NOCLIENT;
+	}
 	VectorCopy (ent->r.mins, body->r.mins);
 	VectorCopy (ent->r.maxs, body->r.maxs);
 	VectorCopy (ent->r.absmin, body->r.absmin);
@@ -4674,6 +4685,8 @@ void ClientSpawn(gentity_t *ent) {
 
 	// clear entity state values
 	BG_PlayerStateToEntityState( &client->ps, &ent->s, qtrue );
+	// DAJ_RP: [Phase] /admhidden -- the copy above rebuilt s from ps
+	RP_HiddenApplyState( ent, &ent->s );
 
 	//rww - make sure client has a valid icarus instance
 	trap->ICARUS_FreeEnt( (sharedEntity_t *)ent );

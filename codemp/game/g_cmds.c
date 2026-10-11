@@ -930,7 +930,7 @@ const admin_command_description_t admin_commands[ADM_NUM_CMDS] = {
 	{ "Play Music",				ADM_MUSIC				},
 	{ "Instant Revive",			ADM_GETUP				},
 	{ "Weather",				ADM_WEATHER				},
-	{ "Ghost/Holo/Non-solid",	ADM_PHASE				}
+	{ "Player effects",			ADM_PHASE				}
 };
 
 qboolean check_admin_command(gentity_t* ent, int admin_command, qboolean with_message) {
@@ -5045,8 +5045,8 @@ qboolean select_player_character(gentity_t* ent, char *character_name, sqlite3* 
 	// and with the same ordering requirement -- see zyk_stop_active_holdables().
 	zyk_stop_active_holdables(ent);
 
-	// GalaxyRP: [Phase] a new login, a logout or another character ends any /admsolid, /admghost or
-	// /admholo mode -- see RP_ClearPhaseMode().
+	// GalaxyRP: [Phase] a new login, a logout or another character ends any /admwalkthrough, /admghost,
+	// /admholo or /admhidden mode -- see RP_ClearPhaseMode().
 	RP_ClearPhaseMode(ent);
 
 	// GalaxyRP fix: [Account] through the wrapper, so switching character while dead no longer
@@ -6487,8 +6487,8 @@ void Cmd_Login_F(gentity_t * ent)
 	// skills load for the same reason -- see zyk_stop_active_holdables().
 	zyk_stop_active_holdables(ent);
 
-	// GalaxyRP: [Phase] a new login, a logout or another character ends any /admsolid, /admghost or
-	// /admholo mode -- see RP_ClearPhaseMode().
+	// GalaxyRP: [Phase] a new login, a logout or another character ends any /admwalkthrough, /admghost,
+	// /admholo or /admhidden mode -- see RP_ClearPhaseMode().
 	RP_ClearPhaseMode(ent);
 
 	// GalaxyRP fix: [Account] through the wrapper, so /login while dead no longer resurrects the
@@ -12390,8 +12390,8 @@ void Cmd_LogoutAccount_f( gentity_t *ent ) {
 	// call assigns STAT_WEAPONS wholesale, so the e-web could not corrupt it from here either way.
 	zyk_stop_active_holdables(ent);
 
-	// GalaxyRP: [Phase] a new login, a logout or another character ends any /admsolid, /admghost or
-	// /admholo mode -- see RP_ClearPhaseMode().
+	// GalaxyRP: [Phase] a new login, a logout or another character ends any /admwalkthrough, /admghost,
+	// /admholo or /admhidden mode -- see RP_ClearPhaseMode().
 	RP_ClearPhaseMode(ent);
 
 	zyk_remove_guns(ent);
@@ -12710,10 +12710,13 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				// /admweather line to the block above took it to 1093.
 				trap->SendServerCommand(ent - g_entities, "print \"^3/admweather <effect (optional)>: ^7Sets the weather for everyone on the server. Run with no arguments to see the current weather, or ^3/admweather list ^7for the effects.\n\
 ^3/admweather add <effect>: ^7Layers another effect on top of the current weather. ^3/admweather remove <number> ^7drops one, ^3/admweather default ^7restores the map's own and ^3/admweather clear ^7switches it all off.\n\
-^3/noclip: ^7Makes you able to go through walls.\n\
-^3/admghost <player name (optional)>: ^7Turns a player (or you) into a Force ghost: see-through, glowing, passes through people, off the radar. Again to turn it off.\n\
+^3/noclip: ^7Makes you able to go through walls.\n\" ");
+				// DAJ_RP: [Phase] the Player effects commands get a message of their own: with /admhidden added
+				// to the one above it would pass SV_SendServerCommand's 1022 characters and be dropped whole.
+				trap->SendServerCommand(ent - g_entities, "print \"^3/admghost <player name (optional)>: ^7Turns a player (or you) into a Force ghost: see-through, glowing, passes through people, off the radar. Again to turn it off.\n\
 ^3/admholo <player name (optional)>: ^7Turns a player (or you) into a hologram: blue, scanlines, passes through people, off the radar. Again to turn it off.\n\
-^3/admsolid <player name (optional)>: ^7Lets a player (or you) pass through other players and NPCs, with no change in look. Again to turn it off.\n\n\" ");
+^3/admwalkthrough <player name (optional)>: ^7Lets a player (or you) walk through other players and NPCs, with no change in look. Again to turn it off.\n\
+^3/admhidden <player name (optional)>: ^7Makes a player (or you) invisible to everyone else and walk-through, off the radar. They can still be hit and targeted; Force Sight sees them. Again to turn it off.\n\n\" ");
 				trap->SendServerCommand(ent - g_entities, "print \"^3--------RP Inventory System--------\n\
 ^3/inventory ^7or ^3/inv: ^7Displays player's RP inventory.\n\
 ^3/createitem <itemname>: ^7Creates an item with a given name. Items containing more than one word need double quotes around the argument. ^1(Admin only)\n\
@@ -19066,9 +19069,9 @@ Run ^3/admweather ^7on its own to see the current weather, or ^3/admweather list
 		}
 		else if (command_number == ADM_PHASE)
 		{
-			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/admghost^7, ^3/admholo ^7or ^3/admsolid <player name (optional)> ^7to make a player a Force ghost, a hologram or just non-solid. Without a name it applies to you.\n\
-All three let the player pass through other players and NPCs; the ghost and hologram also change how they look and hide them from the radar. The same command again turns it off, and each one replaces the others.\n\
-Damage and targeting are not affected. The ghost and hologram look is only seen by players with the client plugin.\n\n\"");
+			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/admghost^7, ^3/admholo^7, ^3/admwalkthrough ^7or ^3/admhidden <player name (optional)> ^7to make a player a Force ghost, a hologram, just walk-through, or hidden. Without a name it applies to you.\n\
+All four let the player pass through other players and NPCs. The ghost and hologram also change how they look and hide them from the radar; a hidden player is not drawn at all and is off the radar too, though Force Sight still sees them. The same command again turns it off, and each one replaces the others.\n\
+Damage and targeting are not affected. The ghost and hologram look is only seen by players with the client plugin; hidden works for everyone.\n\n\"");
 		}
 		else
 		{
@@ -21676,19 +21679,24 @@ void Cmd_AdmWeather_f( gentity_t *ent )
 
 /*
 ==================
-/admsolid, /admghost, /admholo
+/admwalkthrough, /admghost, /admholo, /admhidden
 
-GalaxyRP: [Phase] three admin commands sharing one admin power (ADM_PHASE) and one per-player field
-(pers.phase_mode). Each toggles its own mode on the named player, or on the admin with no name: the
-same command again turns it off, a different one switches straight over, so the three are mutually
-exclusive by construction.
+GalaxyRP: [Phase] four admin commands sharing one admin power (ADM_PHASE, "Player effects") and one
+per-player field (pers.phase_mode). Each toggles its own mode on the named player, or on the admin with
+no name: the same command again turns it off, a different one switches straight over, so the four are
+mutually exclusive by construction.
 
 Every mode is movement-only non-solidity -- the player walks through players and NPCs and they walk
 through the player (see RP_PhasePassesThrough() in g_active.c) -- and nothing else: a phased player
 is hit, damaged, targeted by NPCs and deals damage exactly like anyone else. /admghost and /admholo
 add the Force-ghost or hologram look and keep the player off the radar, both drawn by the client
-plugin; a client without the plugin sees a normal player. Cloak and noclip are untouched and work on
-top of any mode.
+plugin; a client without the plugin sees a normal player. /admhidden keeps the player from being drawn
+for anyone but himself, on every client, the way Force Mind Trick does (RP_HiddenApplyState() in
+g_active.c): a viewer with Force Sight active still sees him, and his corpse and severed limbs are not
+sent at all. Cloak and noclip are untouched and work on top of any mode.
+
+DAJ_RP: [Phase] /admwalkthrough was /admsolid, renamed outright (the mod is not released yet); the mode is
+"walk-through" in every message, as it is for /npc effect walkthrough.
 
 The mode survives death and respawn (it lives in pers), and is cleared by a map change or reconnect
 (ClientConnect zeroes the client) and by /login, /logout, /new and /char (RP_ClearPhaseMode()).
@@ -21699,11 +21707,13 @@ const char *RP_PhaseModeName( int mode )
 	switch ( mode )
 	{
 	case RP_PHASE_NONSOLID:
-		return "non-solid";
+		return "walk-through";
 	case RP_PHASE_GHOST:
 		return "a Force ghost";
 	case RP_PHASE_HOLO:
 		return "a hologram";
+	case RP_PHASE_HIDDEN:
+		return "hidden";
 	default:
 		return "back to normal";
 	}
@@ -21806,9 +21816,15 @@ static void RP_PhaseCommand( gentity_t *ent, int mode, const char *cmdName )
 		(newMode == RP_PHASE_NONE) ? "normal" : RP_PhaseModeName( newMode ) );
 }
 
-void Cmd_AdmSolid_f( gentity_t *ent )
+// DAJ_RP: [Phase] was /admsolid
+void Cmd_AdmWalkthrough_f( gentity_t *ent )
 {
-	RP_PhaseCommand( ent, RP_PHASE_NONSOLID, "admsolid" );
+	RP_PhaseCommand( ent, RP_PHASE_NONSOLID, "admwalkthrough" );
+}
+
+void Cmd_AdmHidden_f( gentity_t *ent )
+{
+	RP_PhaseCommand( ent, RP_PHASE_HIDDEN, "admhidden" );
 }
 
 void Cmd_AdmGhost_f( gentity_t *ent )
@@ -24935,7 +24951,8 @@ command_t commands[] = {
 	{ "admweather",			Cmd_AdmWeather_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "admghost",			Cmd_AdmGhost_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "admholo",			Cmd_AdmHolo_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "admsolid",			Cmd_AdmSolid_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "admwalkthrough",		Cmd_AdmWalkthrough_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "admhidden",			Cmd_AdmHidden_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "anim",				Cmd_Emote_f,				CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "allyadd",			Cmd_AllyAdd_f,				CMD_NOINTERMISSION },
 	{ "allychat",			Cmd_AllyChat_f,				0 },					// GalaxyRP: [Chat] a say mode, so no flags -- see Cmd_AllyChat_f

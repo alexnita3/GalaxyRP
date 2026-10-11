@@ -3267,8 +3267,8 @@ that for free -- the victim died and a corpse blocks nobody -- but here three th
     solid body in the spot, and its call here only comes after that check has passed, so a newly
     spawned NPC never lands on a live player. An NPC spawned not-solid, spawnflag 64, skips both.)
 
-And a body already passing through bodies -- /admsolid, /admghost, /admholo, /npc effect, or the
-tail of a release -- on either side cannot get stuck, so it is neither telefragged nor released.
+And a body already passing through bodies -- /admwalkthrough, /admghost, /admholo, /admhidden, /npc effect,
+or the tail of a release -- on either side cannot get stuck, so it is neither telefragged nor released.
 =================
 */
 extern qboolean duel_tournament_is_duelist(gentity_t *ent);

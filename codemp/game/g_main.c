@@ -6017,6 +6017,9 @@ void zyk_TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
 		player->s.eType = ET_NPC;
 	}
 
+	// DAJ_RP: [Phase] /admhidden -- the copy above rebuilt s from ps
+	RP_HiddenApplyState( player, &player->s );
+
 	// use the precise origin for linking
 	VectorCopy( player->client->ps.origin, player->r.currentOrigin );
 

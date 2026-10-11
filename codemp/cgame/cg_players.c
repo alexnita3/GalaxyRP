@@ -9645,7 +9645,7 @@ CG_AddPhasedPlayerModel
 
 GalaxyRP: [Phase] draws a player whom /admholo or /admghost has turned into a hologram or a Force
 ghost, in place of the plain model. Returns qfalse, drawing nothing, for anyone else -- including a
-player who is only non-solid (/admsolid), who looks normal -- so every caller can fall back to its
+player who is only walk-through (/admwalkthrough), who looks normal -- so every caller can fall back to its
 own R_AddRefEntityToScene. The mode comes from the two phase bits of eFlags (bg_public.h).
 
 The effect has to work on any player model, and a customShader replaces every surface of a model

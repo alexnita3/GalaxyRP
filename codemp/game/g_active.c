@@ -753,7 +753,7 @@ static void SV_PMTrace( trace_t *results, const vec3_t start, const vec3_t mins,
 
 /*
 =================
-GalaxyRP: [Phase] movement-only non-solidity for /admsolid, /admghost and /admholo
+GalaxyRP: [Phase] movement-only non-solidity for /admwalkthrough, /admghost, /admholo and /admhidden
 
 A phased player keeps r.contents CONTENTS_BODY. That is the whole point of doing it this way rather
 than zeroing contents: every weapon trace, saber hit, Force power, grapple and NPC still finds a
@@ -782,6 +782,72 @@ qboolean RP_PhasePassesThrough( const gentity_t *ent )
 	}
 
 	return ( ent->client->pers.phase_mode != RP_PHASE_NONE || ent->client->pers.phase_releasing ) ? qtrue : qfalse;
+}
+
+/*
+=================
+RP_PlayerIsHidden / RP_HiddenApplyState
+
+DAJ_RP: [Phase] /admhidden. A hidden player is walk-through like the other modes (RP_PhasePassesThrough()
+above) and, on top of that, not drawn for anyone but himself -- done with Force Mind Trick's own fields.
+A Mind Tricking player's entityState carries one bit per client he has tricked (trickedentindex for
+clients 0-15, trickedentindex2 for 16-31, and so on), and every client -- the stock cgame included --
+skips drawing him, his weapon, his saber, his shadow and the icons over his head, and the crosshair
+name, when its own bit is set (CG_IsMindTricked(), cg_players.c). A viewer with Force Sight active
+still sees him, by the same stock rule.
+
+So a hidden player's s gets every client's bit except his own, so he still sees himself in third
+person (and a spectator following him sees through his eyes as usual). Only s is touched, never
+ps.fd.forceMindtrickTargetIndex*: his own Mind Trick keeps working and ending it cannot wipe these
+bits, and bots -- which read the ps fields (BotMindTricked(), ai_main.c) -- keep targeting him. Nothing
+on the server reads a player's s.trickedentindex*, so damage, targeting and collision are untouched.
+
+s is rebuilt from ps by every BG_PlayerStateToEntityState*() call on a player, so this runs straight
+after each of those: ClientThink_real() and ClientEndFrame() here, ClientSpawn() (g_client.c) and both
+teleports (TeleportPlayer() in g_misc.c, zyk_TeleportPlayer() in g_main.c). CopyToBodyQue() uses it
+for the corpse too. Players only; NPCs cannot be hidden. Not while spectating, when nothing is drawn.
+=================
+*/
+qboolean RP_PlayerIsHidden( const gentity_t *ent )
+{
+	if ( !ent || !ent->client || ent->s.number < 0 || ent->s.number >= MAX_CLIENTS )
+	{
+		return qfalse;
+	}
+
+	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR )
+	{
+		return qfalse;
+	}
+
+	return ( ent->client->pers.phase_mode == RP_PHASE_HIDDEN ) ? qtrue : qfalse;
+}
+
+void RP_HiddenApplyState( const gentity_t *player, entityState_t *s )
+{
+	int i;
+
+	if ( !s || !RP_PlayerIsHidden( player ) )
+	{
+		return;
+	}
+
+	for ( i = 0; i < MAX_CLIENTS; i++ )
+	{
+		if ( i == player->s.number )
+		{ // he sees himself
+			continue;
+		}
+
+		if ( i < 16 )
+			s->trickedentindex |= ( 1 << i );
+		else if ( i < 32 )
+			s->trickedentindex2 |= ( 1 << ( i - 16 ) );
+		else if ( i < 48 )
+			s->trickedentindex3 |= ( 1 << ( i - 32 ) );
+		else
+			s->trickedentindex4 |= ( 1 << ( i - 48 ) );
+	}
 }
 
 static int rp_phaseHidden[MAX_GENTITIES];
@@ -998,6 +1064,13 @@ static void RP_PhaseUpdate( gentity_t *ent )
 	}
 
 	sentMode = client->pers.phase_mode;
+
+	// DAJ_RP: [Phase] hidden has no value of its own on the wire (the two bits are full): clients only
+	// need to know to walk through the player, and the hiding goes by RP_HiddenApplyState() instead
+	if ( sentMode == RP_PHASE_HIDDEN )
+	{
+		sentMode = RP_PHASE_NONSOLID;
+	}
 
 	if ( sentMode == RP_PHASE_NONE && client->pers.phase_releasing )
 	{
@@ -4798,6 +4871,9 @@ void ClientThink_real( gentity_t *ent ) {
 		ent->s.eType = ET_NPC;
 	}
 
+	// DAJ_RP: [Phase] /admhidden -- the copy above rebuilt s from ps
+	RP_HiddenApplyState( ent, &ent->s );
+
 	SendPendingPredictableEvents( &ent->client->ps );
 
 	// GalaxyRP fix: [Grapple Hook] the Quake 3 line that used to be here --
@@ -5354,6 +5430,9 @@ void ClientEndFrame( gentity_t *ent ) {
 	else {
 		BG_PlayerStateToEntityState( &ent->client->ps, &ent->s, qfalse );
 	}
+
+	// DAJ_RP: [Phase] /admhidden -- the copy above rebuilt s from ps
+	RP_HiddenApplyState( ent, &ent->s );
 
 	// GalaxyRP: [Phase] no collision box in the snapshot for a live phased body. SV_LinkEntity packs
 	// s.solid from r.contents, which stays CONTENTS_BODY so that shots and powers still hit; clients
