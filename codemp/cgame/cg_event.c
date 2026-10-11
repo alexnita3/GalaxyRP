@@ -598,62 +598,9 @@ static void CG_ItemPickup( int itemNum ) {
 	cg.itemPickup = itemNum;
 	cg.itemPickupTime = cg.time;
 	cg.itemPickupBlendTime = cg.time;
-	// see if it should be the grabbed weapon
-	if ( cg.snap && bg_itemlist[itemNum].giType == IT_WEAPON ) {
-
-		// 0 == no switching
-		// 1 == automatically switch to best SAFE weapon
-		// 2 == automatically switch to best weapon, safe or otherwise
-		// 3 == if not saber, automatically switch to best weapon, safe or otherwise
-
-		if (0 == cg_autoSwitch.integer)
-		{
-			// don't switch
-		}
-		else if ( cg_autoSwitch.integer == 1)
-		{ //only autoselect if not explosive ("safe")
-			if (bg_itemlist[itemNum].giTag != WP_TRIP_MINE &&
-				bg_itemlist[itemNum].giTag != WP_DET_PACK &&
-				bg_itemlist[itemNum].giTag != WP_THERMAL &&
-				bg_itemlist[itemNum].giTag != WP_ROCKET_LAUNCHER &&
-				bg_itemlist[itemNum].giTag > cg.snap->ps.weapon &&
-				cg.snap->ps.weapon != WP_SABER)
-			{
-				if (!cg.snap->ps.emplacedIndex)
-				{
-					cg.weaponSelectTime = cg.time;
-				}
-				cg.weaponSelect = bg_itemlist[itemNum].giTag;
-			}
-		}
-		else if ( cg_autoSwitch.integer == 2)
-		{ //autoselect if better
-			if (bg_itemlist[itemNum].giTag > cg.snap->ps.weapon &&
-				cg.snap->ps.weapon != WP_SABER)
-			{
-				if (!cg.snap->ps.emplacedIndex)
-				{
-					cg.weaponSelectTime = cg.time;
-				}
-				cg.weaponSelect = bg_itemlist[itemNum].giTag;
-			}
-		}
-		/*
-		else if ( cg_autoswitch.integer == 3)
-		{ //autoselect if better and not using the saber as a weapon
-			if (bg_itemlist[itemNum].giTag > cg.snap->ps.weapon &&
-				cg.snap->ps.weapon != WP_SABER)
-			{
-				if (!cg.snap->ps.emplacedIndex)
-				{
-					cg.weaponSelectTime = cg.time;
-				}
-				cg.weaponSelect = bg_itemlist[itemNum].giTag;
-			}
-		}
-		*/
-		//No longer required - just not switching ever if using saber
-	}
+	// DAJ_RP: [Weapons] picking up a weapon never selects it, whatever cg_autoSwitch says. The GalaxyRP
+	// client does no weapon autoswitch at all (see CG_WeaponSelectable() in cg_weapons.c): the cvar stays
+	// registered, since the engine and the base game's menus know it, but nothing here reads it.
 
 	//rww - print pickup messages
 	if (bg_itemlist[itemNum].classname && bg_itemlist[itemNum].classname[0] &&
@@ -2109,7 +2056,21 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 //		trap->S_StartSound (NULL, es->number, CHAN_AUTO, cgs.media.noAmmoSound );
 		if ( es->number == cg.snap->ps.clientNum )
 		{
-			if ( CG_InFighter() || CG_InATST() || cg.snap->ps.weapon == WP_NONE )
+			if ( !cg.snap->ps.m_iVehicleNum && es->eventParm > WP_NONE && es->eventParm < WP_NUM_WEAPONS )
+			{
+				// DAJ_RP: [Weapons] the server took the weapon in hand away (a Force Pull disarm, a skill
+				// lowered: TossClientWeapon() in g_combat.c, zyk_deselect_weapon_if_active() in g_cmds.c) and
+				// has already put the player on one they still own, or on none. Select that one too -- not an
+				// autoswitch but following the server -- or the client went on asking for the weapon that is
+				// gone, and took it up again the moment one was picked up. Tested first: with no weapon left in
+				// hand the vehicle branch below would swallow it. Not on a vehicle, whose own weapons' events
+				// (g_weapon.c) number them from 0 and come only to its riders.
+				cg.snap->ps.stats[STAT_WEAPONS] &= ~(1 << es->eventParm);
+				cg.weaponSelect = cg.snap->ps.weapon;
+				cg.weaponSelectTime = cg.time;
+				trap->S_MuteSound(cg.snap->ps.clientNum, CHAN_WEAPON);	// as the switch away always did
+			}
+			else if ( CG_InFighter() || CG_InATST() || cg.snap->ps.weapon == WP_NONE )
 			{//just letting us know our vehicle is out of ammo
 				//FIXME: flash something on HUD or give some message so we know we have no ammo
 				centity_t *localCent = &cg_entities[cg.snap->ps.clientNum];
@@ -2135,21 +2096,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			{
 				cg.forceHUDTotalFlashTime = cg.time + 1000;
 			}
-			else
-			{
-				int weap = 0;
-
-				if (es->eventParm && es->eventParm < WP_NUM_WEAPONS)
-				{
-					cg.snap->ps.stats[STAT_WEAPONS] &= ~(1 << es->eventParm);
-					weap = cg.snap->ps.weapon;
-				}
-				else if (es->eventParm)
-				{
-					weap = (es->eventParm-WP_NUM_WEAPONS);
-				}
-				CG_OutOfAmmoChange(weap);
-			}
+			// DAJ_RP: [Weapons] otherwise (a weapon out of ammo) nothing: the GalaxyRP client never switches
+			// weapon by itself -- see CG_WeaponSelectable() in cg_weapons.c
 		}
 		break;
 	case EV_CHANGE_WEAPON:
@@ -2254,15 +2202,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 		CG_FireWeapon( cent, qtrue );
 
-		//if you just exploded your detpacks and you have no ammo left for them, autoswitch
-		if ( cg.snap->ps.clientNum == cent->currentState.number &&
-			cg.snap->ps.weapon == WP_DET_PACK )
-		{
-			if (cg.snap->ps.ammo[weaponData[WP_DET_PACK].ammoIndex] == 0)
-			{
-				CG_OutOfAmmoChange(WP_DET_PACK);
-			}
-		}
+		// DAJ_RP: [Weapons] detonating the last det packs used to switch weapon here; the GalaxyRP client
+		// never switches by itself -- the det pack stays in hand, as the server keeps it (PM_DryFire())
 
 		break;
 

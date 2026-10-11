@@ -1630,27 +1630,10 @@ static void UI_DrawNetGameType(rectDef_t *rect, float scale, vec4_t color, int t
 	Text_Paint(rect->x, rect->y, scale, color, UI_GetGameTypeName(uiInfo.gameTypes[ui_netGametype.integer].gtEnum) , 0, 0, textStyle, iMenuFont);
 }
 
+// DAJ_RP: [Weapons] the GalaxyRP client does no weapon autoswitch and ignores cg_autoswitch (CG_WeaponSelectable()
+// in cg_weapons.c), so the setup menu's option always reads as off, whatever the cvar holds
 static void UI_DrawAutoSwitch(rectDef_t *rect, float scale, vec4_t color, int textStyle, int iMenuFont) {
-	int switchVal = trap->Cvar_VariableValue("cg_autoswitch");
-	const char *switchString = "AUTOSWITCH1";
-	const char *stripString = NULL;
-
-	switch(switchVal)
-	{
-	case 2:
-		switchString = "AUTOSWITCH2";
-		break;
-	case 3:
-		switchString = "AUTOSWITCH3";
-		break;
-	case 0:
-		switchString = "AUTOSWITCH0";
-		break;
-	default:
-		break;
-	}
-
-	stripString = UI_GetStringEdString("MP_INGAME", (char *)switchString);
+	const char *stripString = UI_GetStringEdString("MP_INGAME", "AUTOSWITCH0");
 
 	if (stripString)
 	{
@@ -3844,26 +3827,10 @@ static qboolean UI_NetGameType_HandleKey(int flags, float *special, int key)
 	return qfalse;
 }
 
+// DAJ_RP: [Weapons] the click is taken and does nothing: the option is always off here (UI_DrawAutoSwitch() above),
+// and the player's own cg_autoswitch is left as it is for anything else they play
 static qboolean UI_AutoSwitch_HandleKey(int flags, float *special, int key) {
 	if (key == A_MOUSE1 || key == A_MOUSE2 || key == A_ENTER || key == A_KP_ENTER) {
-		int switchVal = trap->Cvar_VariableValue("cg_autoswitch");
-
-		if (key == A_MOUSE2) {
-			switchVal--;
-		} else {
-			switchVal++;
-		}
-
-		if (switchVal < 0)
-		{
-			switchVal = 2;
-		}
-		else if (switchVal >= 3)
-		{
-			switchVal = 0;
-		}
-
-		trap->Cvar_Set( "cg_autoswitch", va("%i", switchVal));
 		return qtrue;
 	}
 	return qfalse;

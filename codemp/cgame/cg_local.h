@@ -2049,7 +2049,6 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
 void CG_DrawWeaponSelect( void );
 void CG_DrawIconBackground(void);
 
-void CG_OutOfAmmoChange( int oldWeapon );	// should this be in pmove?
 
 //
 // cg_marks.c

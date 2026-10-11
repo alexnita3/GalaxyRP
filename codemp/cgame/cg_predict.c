@@ -692,6 +692,8 @@ static void CG_TouchItem( centity_t *cent ) {
 	cent->miscTime = cg.time;
 
 	// if its a weapon, give them some predicted ammo so the autoswitch will work
+	// DAJ_RP: [Weapons] there is no autoswitch any more (CG_WeaponSelectable() in cg_weapons.c); this keeps
+	// the weapon bar and the HUD right until the server's snapshot confirms the pickup
 	if ( item->giType == IT_WEAPON ) {
 		cg.predictedPlayerState.stats[ STAT_WEAPONS ] |= 1 << item->giTag;
 		if ( !cg.predictedPlayerState.ammo[ item->giTag ] ) {

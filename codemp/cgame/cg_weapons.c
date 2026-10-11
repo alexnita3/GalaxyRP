@@ -1093,13 +1093,13 @@ static qboolean CG_WeaponSelectable( int i ) {
 		return qfalse;
 	}
 
-	// zyk: if autoswitch is 0, allow player do get any weapon even if out of ammo
-	if (cg_autoSwitch.integer != 0 && 
-		cg.predictedPlayerState.ammo[weaponData[i].ammoIndex] < weaponData[i].energyPerShot &&
-		cg.predictedPlayerState.ammo[weaponData[i].ammoIndex] < weaponData[i].altEnergyPerShot)
-	{
-		return qfalse;
-	}
+	// DAJ_RP: [Weapons] a weapon with no ammo can be selected: the GalaxyRP client does no weapon autoswitch
+	// and ignores cg_autoSwitch, behaving always as zyk made it behave with 0 -- picking up a weapon does not
+	// select it (CG_ItemPickup() in cg_event.c), running out of ammo or detonating the last det packs keeps
+	// the weapon in hand (the server dry-fires it: PM_DryFire() in bg_pmove.c), and an empty one stays on the
+	// weapon keys (drawn with its no-ammo icon). The cvar is still registered -- the engine and the base
+	// game's menus know it -- but nothing reads it; the setup menu shows it off (ui_main.c). A weapon the
+	// server takes away is the one exception: the client follows the server's choice (EV_NOAMMO).
 
 	if (i == WP_DET_PACK && cg.predictedPlayerState.ammo[weaponData[i].ammoIndex] < 1 &&
 		!cg.predictedPlayerState.hasDetPackPlanted)
@@ -1785,45 +1785,8 @@ void CG_WeaponClean_f( void ) {
 
 
 
-/*
-===================
-CG_OutOfAmmoChange
-
-The current weapon has just run out of ammo
-===================
-*/
-void CG_OutOfAmmoChange( int oldWeapon )
-{
-	int		i;
-
-	// zyk: if autoswitch is 0, allow player do get any weapon even if out of ammo
-	if (cg_autoSwitch.integer == 0)
-		return;
-
-	cg.weaponSelectTime = cg.time;
-
-	for ( i = LAST_USEABLE_WEAPON ; i > 0 ; i-- )	//We don't want the emplaced or turret
-	{
-		if ( CG_WeaponSelectable( i ) )
-		{
-			/*
-			if ( 1 == cg_autoswitch.integer &&
-				( i == WP_TRIP_MINE || i == WP_DET_PACK || i == WP_THERMAL || i == WP_ROCKET_LAUNCHER) ) // safe weapon switch
-			*/
-			//rww - Don't we want to make sure i != one of these if autoswitch is 1 (safe)?
-			if (cg_autoSwitch.integer != 1 || (i != WP_TRIP_MINE && i != WP_DET_PACK && i != WP_THERMAL && i != WP_ROCKET_LAUNCHER))
-			{
-				if (i != oldWeapon)
-				{ //don't even do anything if we're just selecting the weapon we already have/had
-					cg.weaponSelect = i;
-					break;
-				}
-			}
-		}
-	}
-
-	trap->S_MuteSound(cg.snap->ps.clientNum, CHAN_WEAPON);
-}
+// DAJ_RP: [Weapons] CG_OutOfAmmoChange(), which switched to the best weapon with ammo left when the one in
+// hand ran out, is gone: the GalaxyRP client does no weapon autoswitch -- see CG_WeaponSelectable() above
 
 
 
