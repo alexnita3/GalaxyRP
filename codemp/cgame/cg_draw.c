@@ -1958,7 +1958,11 @@ qboolean CG_CheckTargetVehicle( centity_t **pTargetVeh, float *alpha )
 	{
 		//centity_t *targetVeh = &cg_entities[targetNum];
 		targetVeh = &cg_entities[targetNum];
+		// DAJ_RP: [Cloak Item] ...and not a cloaked one: its damage readout ("enemyvehicledamagehud") gave it away,
+		// from a lock or the crosshair, as the brackets did (CG_AddBracketedEnt(), cg_ents.c). Not taken as the
+		// target, it is not remembered either, so one that cloaks while aimed at drops out at once.
 		if ( targetVeh->currentState.NPC_class == CLASS_VEHICLE
+			&& !(targetVeh->currentState.powerups & (1 << PW_CLOAKED))
 			&& targetVeh->m_pVehicle
 			&& targetVeh->m_pVehicle->m_pVehicleInfo
 			&& targetVeh->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER )

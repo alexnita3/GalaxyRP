@@ -875,6 +875,16 @@ void CG_AddRadarEnt(centity_t *cent)
 void CG_AddBracketedEnt(centity_t *cent)
 {
 	static const size_t numBracketEnts = ARRAY_LEN( cg.bracketedEntities );
+
+	// DAJ_RP: [Cloak Item] a cloaked vehicle (or anything else cloaked) gets no brackets, and so no lead indicator
+	// either -- CG_BracketEntity() (cg_draw.c) draws both, from this list only. One gate here for every source:
+	// the vehicles around a fighter's pilot (CG_Player(), cg_players.c) and EF2_BRACKET_ENTITY (CG_General()). The
+	// same reading of PW_CLOAKED as the radar's (CG_AddRadarEnt() above), and as there it hides the vehicle from
+	// this HUD only: the entity is still in the snapshot. Back on the frame the cloak drops.
+	if (cent->currentState.powerups & (1 << PW_CLOAKED))
+	{
+		return;
+	}
 	if (cg.bracketedEntityCount >= numBracketEnts)
 	{
 #ifdef _DEBUG
