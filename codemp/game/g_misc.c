@@ -6573,6 +6573,16 @@ qboolean G_IsShooterClient(const gclient_t *cl)
 	return (cl && g_shooterClientInit && cl >= &g_shooterClients[0].cl && cl <= &g_shooterClients[MAX_SHOOTERS - 1].cl) ? qtrue : qfalse;
 }
 
+// DAJ_RP: [Entity System] whether this entity is a character -- a player, an NPC or a vehicle -- which is what
+// "it has a client" was taken to mean all through the Entity System. A misc_weapon_shooter has one too, from
+// the pool above, only so the weapon code can fire for it: it is map logic, like a shooter_blaster, and was
+// called "a player" by /enthelp, skipped by /entuse, refused by /enttrigger and /entlockset, and turned away
+// by a lock as if it were an NPC when its shot opened a locked door.
+qboolean RP_EntityIsCharacter(const gentity_t *e)
+{
+	return (e && e->client && !G_IsShooterClient(e->client)) ? qtrue : qfalse;
+}
+
 void G_FreeClientForShooter(gclient_t *cl)
 {
 	int i = 0;

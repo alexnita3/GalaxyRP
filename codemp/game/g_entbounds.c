@@ -112,7 +112,7 @@ static int RP_EntBoundsColor( const gentity_t *e )
 	if ( e->r.contents & CONTENTS_TRIGGER )
 		return SABER_YELLOW;
 
-	if ( e->s.eType == ET_NPC || e->s.eType == ET_ITEM || e->client )
+	if ( e->s.eType == ET_NPC || e->s.eType == ET_ITEM || RP_EntityIsCharacter( e ) )
 		return SABER_PURPLE;
 
 	if ( e->r.bmodel )
@@ -448,9 +448,10 @@ static void RP_EntBoundsMarkers( const gentity_t *viewer, int aimed )
 		// DAJ_RP: [Entity Bounds] a client of the weapon shooters' pool is no player or NPC: a misc_weapon_shooter
 		// borrows one only so the weapon code can fire for it (G_ClientForShooter(), g_misc.c), so it is let
 		// through, and gets the cross shooter_blaster gets. It has no size and is never linked, so without the
-		// cross it showed nowhere at all. Every other client still means a player or an NPC.
+		// cross it showed nowhere at all. Every other client still means a player or an NPC
+		// (RP_EntityIsCharacter, g_misc.c).
 		if ( e->s.eType >= ET_EVENTS || e->freeAfterEvent || e->s.eType == ET_MISSILE || e->s.eType == ET_NPC ||
-			e->s.eType == ET_ITEM || ( e->client && !G_IsShooterClient( e->client ) ) || e->isSaberEntity )
+			e->s.eType == ET_ITEM || RP_EntityIsCharacter( e ) || e->isSaberEntity )
 			continue;
 		if ( !e->isLogical && ( !VectorCompare( e->r.mins, vec3_origin ) || !VectorCompare( e->r.maxs, vec3_origin ) ) )
 			continue;

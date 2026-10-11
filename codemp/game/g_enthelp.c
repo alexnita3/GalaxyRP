@@ -707,7 +707,9 @@ static void RP_EhShowEntity( rpEhOut_t *o, gentity_t *target )
 		return;
 	}
 
-	if ( target->client )
+	// DAJ_RP: [Entity System] a character -- not a misc_weapon_shooter, whose client is only its pool's
+	// (RP_EntityIsCharacter, g_misc.c); it is shown as the entity it is, below
+	if ( RP_EntityIsCharacter( target ) )
 	{
 		if ( target->s.eType == ET_NPC )
 			RP_EhLine( o, va( "Entity %d is an NPC: npc_ classes and npc_spawner place them -- ^3/enthelp npc^7.", target->s.number ) );
@@ -724,7 +726,9 @@ static void RP_EhShowEntity( rpEhOut_t *o, gentity_t *target )
 
 		RP_EhLine( o, va( "Entity %d (%s) was made by the game, not placed, so it has no keys to set.", target->s.number,
 			target->classname ? RP_EhSafe( target->classname ) : "no class" ) );
-		if ( maker && maker != target && maker->inuse && maker->classname && !maker->client )
+		// DAJ_RP: [Entity System] a shooter's bolt points back to the shooter, as other made things do to their
+		// maker; a player's or an NPC's things still do not
+		if ( maker && maker != target && maker->inuse && maker->classname && !RP_EntityIsCharacter( maker ) )
 			RP_EhLine( o, va( "It belongs to entity %d (%s): ^3/enthelp %d^7.", maker->s.number, RP_EhSafe( maker->classname ), maker->s.number ) );
 		else if ( known && ( isClass || isItem ) )
 			RP_EhShowClass( o, known );

@@ -756,7 +756,9 @@ static qboolean RP_LockCheck( gentity_t *ent, gentity_t *activator )
 	if ( !name )
 		return qtrue;
 
-	if ( !player || !player->inuse || !player->client )
+	// DAJ_RP: [Entity System] a misc_weapon_shooter is map logic too -- its client is only its pool's
+	// (RP_EntityIsCharacter, g_misc.c); its bolt opening a locked door was refused as an NPC's
+	if ( !player || !player->inuse || !RP_EntityIsCharacter( player ) )
 		return qtrue;	// map logic, a timer, a script
 
 	if ( player->s.number >= MAX_CLIENTS )
@@ -1267,7 +1269,9 @@ void Cmd_EntLockSet_f( gentity_t *ent )
 		return;
 	}
 
-	if ( target->client )
+	// DAJ_RP: [Entity System] a character; a misc_weapon_shooter, whose client is only its pool's, can carry a
+	// lock as /entedit's "lock" key always let it (RP_EntityIsCharacter, g_misc.c)
+	if ( RP_EntityIsCharacter( target ) )
 	{
 		trap->SendServerCommand( ent - g_entities, va( "print \"Entity %d is a player, an NPC or a vehicle: it cannot carry a lock.\n\"", id ) );
 		return;
@@ -1440,7 +1444,8 @@ void Cmd_EntTrigger_f( gentity_t *ent )
 		target = &g_entities[id];
 	}
 
-	if ( target->client )
+	// DAJ_RP: [Entity System] a character; a misc_weapon_shooter is used, and fires (RP_EntityIsCharacter)
+	if ( RP_EntityIsCharacter( target ) )
 	{
 		trap->SendServerCommand( ent - g_entities, va( "print \"Entity %d is a player, an NPC or a vehicle: it is left alone.\n\"", id ) );
 		return;

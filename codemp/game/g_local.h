@@ -2776,6 +2776,7 @@ void		RP_SpawnerClampCount( gentity_t *self );
 // GalaxyRP: [Entity System] misc_weapon_shooter's client pool (g_misc.c)
 qboolean	G_IsShooterClient( const gclient_t *cl );
 void		G_FreeClientForShooter( gclient_t *cl );
+qboolean	RP_EntityIsCharacter( const gentity_t *e );	// DAJ_RP: [Entity System] a player, NPC or vehicle (g_misc.c)
 gentity_t *G_TempEntity( vec3_t origin, int event );
 gentity_t	*G_PlayEffect(int fxID, vec3_t org, vec3_t ang);
 gentity_t	*G_PlayEffectID(const int fxID, vec3_t org, vec3_t ang);

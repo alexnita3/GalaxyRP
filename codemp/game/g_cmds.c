@@ -15568,7 +15568,9 @@ void Cmd_EntUse_f( gentity_t *ent ) {
 		{
 			continue;	// gone, or another entity now, since the search
 		}
-		if (e->client)
+		// DAJ_RP: [Entity System] NPCs and vehicles -- a misc_weapon_shooter's client is only its pool's, and it
+		// fires when used (RP_EntityIsCharacter, g_misc.c)
+		if (RP_EntityIsCharacter(e))
 		{
 			npcs++;
 			continue;
