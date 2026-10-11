@@ -2452,11 +2452,9 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 		if ( self->m_pVehicle->m_pVehicleInfo->hideRider )
 		{//pilot is *inside* me, so kill him, too
-			killEnt = (gentity_t *)self->m_pVehicle->m_pPilot;
-			if (killEnt && killEnt->inuse && killEnt->client)
-			{
-				G_Damage(killEnt, murderer, murderer, NULL, killEnt->client->ps.origin, 99999, DAMAGE_NO_PROTECTION, MOD_BLASTER);
-			}
+			// DAJ_RP: [Vehicles] after the passengers (below), not before: a pilot killed while there are
+			// passengers is taken off (player_die()), and that makes the first passenger the pilot (Eject()),
+			// whom the passengers' loop then no longer counts -- he alone came out of the wreck alive
 			if ( self->m_pVehicle->m_pVehicleInfo )
 			{//FIXME: this wile got stuck in an endless loop, that's BAD!!  This method SUCKS (not initting "i", not incrementing it or using it directly, all sorts of badness), so I'm rewriting it
 				//while (i < self->m_pVehicle->m_iNumPassengers)
@@ -2473,6 +2471,11 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 						}
 					}
 				}
+			}
+			killEnt = (gentity_t *)self->m_pVehicle->m_pPilot;
+			if (killEnt && killEnt->inuse && killEnt->client)
+			{
+				G_Damage(killEnt, murderer, murderer, NULL, killEnt->client->ps.origin, 99999, DAMAGE_NO_PROTECTION, MOD_BLASTER);
 			}
 		}
 		killEnt = (gentity_t *)self->m_pVehicle->m_pDroidUnit;

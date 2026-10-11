@@ -923,7 +923,10 @@ qboolean CG_UsingEWeb(void)
 
 /*
 =================
-CG_PredictPlayerState
+CG_RpPredictPlayerState
+
+The stock CG_PredictPlayerState(), renamed (DAJ_RP: [Vehicles]): the one at the end of this file runs it and then
+CG_RpPassengerState().
 
 Generates cg.predictedPlayerState for the current cg.time
 cg.predictedPlayerState is guaranteed to be valid after exiting.
@@ -990,7 +993,7 @@ static void CG_RpDryFireClick( qboolean dry )
 	held = qtrue;
 }
 
-void CG_PredictPlayerState( void ) {
+static void CG_RpPredictPlayerState( void ) {
 	int			cmdNum, current, i;
 	qboolean	rpDryFire = qfalse;	// DAJ_RP: [Weapons] see CG_RpDryFireClick()
 	playerState_t	oldPlayerState;
@@ -1519,13 +1522,8 @@ void CG_PredictPlayerState( void ) {
 		}
 	}
 
-	if (cg.predictedPlayerState.m_iVehicleNum &&
-		!CG_Piloting(cg.predictedPlayerState.m_iVehicleNum))
-	{ //a passenger on this vehicle, bolt them in
-		centity_t *veh = &cg_entities[cg.predictedPlayerState.m_iVehicleNum];
-		VectorCopy(veh->lerpAngles, cg.predictedPlayerState.viewangles);
-		VectorCopy(veh->lerpOrigin, cg.predictedPlayerState.origin);
-	}
+	// DAJ_RP: [Vehicles] a passenger's view and vehicle state are set after all this, on every way out of
+	// here: CG_RpPassengerState(), called by CG_PredictPlayerState() below
 
 revertES:
 	if (CG_Piloting(cg.predictedPlayerState.m_iVehicleNum))
@@ -1554,4 +1552,108 @@ revertES:
 			cg_entities[i].currentState.saberMove = cgSendPS[i]->saberMove;
 		}
 	}
+}
+
+/*
+=================
+CG_RpPassengerState
+
+DAJ_RP: [Vehicles] the local player -- or the player followed -- riding a vehicle he does not pilot. Two things
+the prediction does only for a pilot (CG_Piloting()), done for a passenger here, after it, on every path it takes:
+
+1. The vehicle's playerState for the HUD (health, shields, ammo, speed, damage: CG_DrawVehicleHud(), cg_draw.c),
+   the hyperspace effect and the fighter view. The server sends it to every rider (the snapshot's vps); it was
+   only ever read for a pilot, so a passenger saw zeros, or what was left from the last vehicle he drove.
+   Interpolated between snapshots, as for a spectator following a pilot -- not predicted, being only shown.
+2. The view, as the pilot's: from the vehicle's seat -- the vehicle's position now plus where the server put the
+   passenger relative to it (AttachRiders(), g_vehicles.c: the driver tag), turned with it -- looking the
+   vehicle's way. Yaw and roll are the vehicle's; the pitch is the player's own, held within the vehicle's
+   lookPitch as a pilot's is (PM_VehicleViewAngles()), or the vehicle's when it has none, and a fighter's
+   passenger takes all three. This used to be set only at the end of a prediction that ran a command: on a
+   frame with none to run (a fresh snapshot already holding the newest one, common on a near server) the view
+   was the passenger's own server angles from the seat -- looking down, the camera went over the vehicle -- and
+   the prediction-error smoothing between the two jolted it. That smoothing is off for a passenger. A turret
+   gunner's view is the turret's (CG_CheckPassengerTurretView(), cg_view.c) and is not touched by this.
+=================
+*/
+extern void CG_CalcEntityLerpPositions( centity_t *cent );
+
+#define RP_PASSENGER_SEAT_MAX	256.0f	// a seat further from the vehicle than this is not one: its origin is used
+
+static void CG_RpPassengerState( void )
+{
+	playerState_t	*ps = &cg.predictedPlayerState;
+	centity_t		*veh;
+	vec3_t			seat;
+	float			turn, sn, cs, x, y;
+
+	if ( !cg.snap || !ps->m_iVehicleNum || ps->m_iVehicleNum >= ENTITYNUM_WORLD ||
+		ps->m_iVehicleNum != cg.snap->ps.m_iVehicleNum || CG_Piloting( ps->m_iVehicleNum ) )
+	{
+		return;
+	}
+
+	veh = &cg_entities[ps->m_iVehicleNum];
+	if ( !veh->currentValid )
+	{
+		return;
+	}
+
+	// 1. the vehicle's state, from the snapshots
+	CG_InterpolateVehiclePlayerState( qfalse );
+
+	// 2. the seat, now: the snapshot's offset of the passenger from the vehicle, turned as the vehicle has turned since
+	CG_CalcEntityLerpPositions( veh );
+	VectorSubtract( cg.snap->ps.origin, cg.snap->vps.origin, seat );
+	if ( VectorLengthSquared( seat ) > RP_PASSENGER_SEAT_MAX * RP_PASSENGER_SEAT_MAX )
+	{
+		VectorClear( seat );
+	}
+	turn = DEG2RAD( AngleSubtract( veh->lerpAngles[YAW], cg.snap->vps.viewangles[YAW] ) );
+	sn = sin( turn );
+	cs = cos( turn );
+	x = seat[0] * cs - seat[1] * sn;
+	y = seat[0] * sn + seat[1] * cs;
+	seat[0] = x;
+	seat[1] = y;
+	VectorAdd( veh->lerpOrigin, seat, ps->origin );
+
+	// 3. the view angles
+	if ( veh->m_pVehicle && veh->m_pVehicle->m_pVehicleInfo && veh->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER )
+	{
+		VectorCopy( veh->lerpAngles, ps->viewangles );
+	}
+	else
+	{
+		const float lookPitch = ( veh->m_pVehicle && veh->m_pVehicle->m_pVehicleInfo ) ? veh->m_pVehicle->m_pVehicleInfo->lookPitch : 0.0f;
+		float pitch = veh->lerpAngles[PITCH];
+
+		if ( lookPitch > 0.0f )
+		{
+			pitch = AngleNormalize180( ps->viewangles[PITCH] );
+			if ( pitch > lookPitch )
+				pitch = lookPitch;
+			else if ( pitch < -lookPitch )
+				pitch = -lookPitch;
+		}
+
+		ps->viewangles[PITCH] = pitch;
+		ps->viewangles[YAW] = veh->lerpAngles[YAW];
+		ps->viewangles[ROLL] = veh->lerpAngles[ROLL];
+	}
+
+	cg.predictedErrorTime = 0;
+}
+
+/*
+=================
+CG_PredictPlayerState
+
+Generates cg.predictedPlayerState for the current cg.time -- CG_RpPredictPlayerState() above, the stock prediction --
+and then a vehicle passenger's (CG_RpPassengerState()).
+=================
+*/
+void CG_PredictPlayerState( void ) {
+	CG_RpPredictPlayerState();
+	CG_RpPassengerState();
 }

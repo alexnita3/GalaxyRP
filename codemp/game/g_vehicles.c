@@ -578,7 +578,18 @@ qboolean VEH_TryEject( Vehicle_t *pVeh,
 	VectorSet(vEntMaxs, 15.0f, 15.0f, DEFAULT_MAXS_2);
 	oldOwner = ent->r.ownerNum;
 	ent->r.ownerNum = ENTITYNUM_NONE;
-	G_VehicleTrace( &m_ExitTrace, ent->r.currentOrigin, vEntMins, vEntMaxs, vExitPos, ent->s.number, ent->clipmask );
+	// DAJ_RP: [Vehicles] and the vehicle as the leaving rider's own, for this trace only. The trace starts
+	// at the rider's seat, inside the vehicle's box, and the engine leaves out of a trace only what the
+	// tracing entity owns (sv_world.cpp): the vehicle is its pilot's, so a passenger's trace started in
+	// solid every way and a passenger could not get off at all until promoted to pilot. Nothing of this
+	// reaches a client: only r.ownerNum changes, and it is put back straight after.
+	{
+		const int oldVehOwner = parent->r.ownerNum;
+
+		parent->r.ownerNum = ent->s.number;
+		G_VehicleTrace( &m_ExitTrace, ent->r.currentOrigin, vEntMins, vEntMaxs, vExitPos, ent->s.number, ent->clipmask );
+		parent->r.ownerNum = oldVehOwner;
+	}
 	ent->r.ownerNum = oldOwner;
 
 	if ( m_ExitTrace.allsolid//in solid
@@ -798,6 +809,29 @@ getItOutOfMe:
 #endif
 				pVeh->m_ppPassengers[i] = NULL;
 				pVeh->m_iNumPassengers--;
+
+				// DAJ_RP: [Vehicles] the passengers behind him move down a seat, and are told their new one
+				// (ps.generic1, which also says which turret is theirs), as the promotion to pilot above
+				// already does. Everything that goes through the passengers stops at m_iNumPassengers --
+				// AttachRiders(), the UpdateRider() loop in bg_pmove.c, the promotion above, the vehicle's
+				// death (g_combat.c), the turrets (g_vehicleTurret.c) -- so a passenger left behind an
+				// empty seat was not carried along, could not jump or roll off, was never made pilot and
+				// stayed aboard a destroyed vehicle.
+				{
+					int k;
+
+					for ( k = i + 1; k < pVeh->m_pVehicleInfo->maxPassengers; k++ )
+					{
+						pVeh->m_ppPassengers[k-1] = pVeh->m_ppPassengers[k];
+						pVeh->m_ppPassengers[k] = NULL;
+#ifdef _GAME
+						if ( pVeh->m_ppPassengers[k-1] && ((gentity_t *)pVeh->m_ppPassengers[k-1])->client )
+						{
+							((gentity_t *)pVeh->m_ppPassengers[k-1])->client->ps.generic1 = k;
+						}
+#endif
+					}
+				}
 				break;
 			}
 		}
@@ -939,6 +973,34 @@ qboolean EjectAll( Vehicle_t *pVeh )
 	pVeh->m_iBoarding = 0;
 	pVeh->m_bWasBoarding = qfalse;
 
+	// DAJ_RP: [Vehicles] the passengers first, from the last seat down. The pilot used to go first, and a pilot
+	// leaving makes the first passenger the pilot (Eject()), whom nothing here then took off; and a passenger
+	// leaving now moves those behind him down a seat (Eject()), which a loop going up the seats would step over.
+	if ( pVeh->m_iNumPassengers )
+	{
+		int i;
+
+		for ( i = pVeh->m_pVehicleInfo->maxPassengers - 1; i >= 0; i-- )
+		{
+			if ( pVeh->m_ppPassengers[i] )
+			{
+#ifdef _GAME
+				gentity_t *rider = (gentity_t*)pVeh->m_ppPassengers[i];
+#endif
+				pVeh->m_pVehicleInfo->Eject( pVeh, pVeh->m_ppPassengers[i], qtrue );
+#ifdef _GAME
+				if ( pVeh->m_pVehicleInfo->killRiderOnDeath && rider )
+				{//Kill them, too
+					//FIXME: proper origin, MOD and attacker (for credit/death message)?  Get from vehicle?
+					G_MuteSound(rider->s.number, CHAN_VOICE);
+					G_Damage( rider, NULL, NULL, NULL, rider->s.origin, 10000, 0, MOD_SUICIDE );//FIXME: proper MOD?  Get from vehicle?
+				}
+#endif
+			}
+		}
+		pVeh->m_iNumPassengers = 0;
+	}
+
 	// Throw them off.
 	if ( pVeh->m_pPilot )
 	{
@@ -969,30 +1031,6 @@ qboolean EjectAll( Vehicle_t *pVeh )
 			G_Damage( pilot, NULL, NULL, NULL, pilot->s.origin, 10000, 0, MOD_SUICIDE );
 		}
 #endif
-	}
-	if ( pVeh->m_iNumPassengers )
-	{
-		int i;
-
-		for ( i = 0; i < pVeh->m_pVehicleInfo->maxPassengers; i++ )
-		{
-			if ( pVeh->m_ppPassengers[i] )
-			{
-#ifdef _GAME
-				gentity_t *rider = (gentity_t*)pVeh->m_ppPassengers[i];
-#endif
-				pVeh->m_pVehicleInfo->Eject( pVeh, pVeh->m_ppPassengers[i], qtrue );
-#ifdef _GAME
-				if ( pVeh->m_pVehicleInfo->killRiderOnDeath && rider )
-				{//Kill them, too
-					//FIXME: proper origin, MOD and attacker (for credit/death message)?  Get from vehicle?
-					G_MuteSound(rider->s.number, CHAN_VOICE);
-					G_Damage( rider, NULL, NULL, NULL, rider->s.origin, 10000, 0, MOD_SUICIDE );//FIXME: proper MOD?  Get from vehicle?
-				}
-#endif
-			}
-		}
-		pVeh->m_iNumPassengers = 0;
 	}
 
 	if ( pVeh->m_pDroidUnit )
@@ -1463,7 +1501,11 @@ static qboolean Update( Vehicle_t *pVeh, const usercmd_t *pUmcd )
 	{
 		gentity_t *psngr;
 		// See if any of these suckers are dead.
-		for ( i = 0; i < pVeh->m_pVehicleInfo->maxPassengers; i++ )
+		// DAJ_RP: [Vehicles] from the last seat down -- a passenger leaving moves those behind him down a seat
+		// (Eject()), which a loop going up would step over -- and without the "m_iNumPassengers--" that stood
+		// after the Eject(): Eject() counts him off itself, so every passenger removed here took one more off
+		// the count, and the passengers past it were left out of everything that goes by the count.
+		for ( i = pVeh->m_pVehicleInfo->maxPassengers - 1; i >= 0; i-- )
 		{
 			psngr = (gentity_t *)pVeh->m_ppPassengers[i];
 
@@ -1471,7 +1513,6 @@ static qboolean Update( Vehicle_t *pVeh, const usercmd_t *pUmcd )
 				(!psngr->inuse || !psngr->client || psngr->health <= 0 || psngr->client->pers.connected != CON_CONNECTED) )
 			{
 				pVeh->m_pVehicleInfo->Eject( pVeh, pVeh->m_ppPassengers[i], qtrue );
-				pVeh->m_iNumPassengers--;
 			}
 		}
 	}
