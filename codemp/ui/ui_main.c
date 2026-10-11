@@ -10396,6 +10396,60 @@ void UI_Init( qboolean inGameLoad ) {
 }
 
 #define	UI_FPS_FRAMES	4
+
+/*
+=================
+UI_WidthRatioCoef
+
+DAJ_RP: [Menus] how much narrower than 4:3 the screen is: the 640x480 virtual screen's aspect over the real
+one, so 1 on 4:3, 0.75 on 16:9, about 0.83 on 16:10, above 1 on 5:4. The ui draws everything in that virtual
+640x480 and the engine stretches it to the window, so a width multiplied by this comes out at its intended
+proportions. 1 with cl_ratioFix off -- the TaystJK engine's own widescreen switch, registered here with its
+default and flags, as jaPRO's and TaystJK's ui do, so it reads the same setting there and still exists on
+another engine -- or before the video size is known. Same formula as TaystJK's UI_Set2DRatio().
+=================
+*/
+static float UI_WidthRatioCoef( void )
+{
+	const glconfig_t *gl = &uiInfo.uiDC.glconfig;
+
+	if ( !cl_ratioFix.integer || gl->vidWidth <= 0 || gl->vidHeight <= 0 )
+	{
+		return 1.0f;
+	}
+
+	return (float)( SCREEN_WIDTH * gl->vidHeight ) / (float)( SCREEN_HEIGHT * gl->vidWidth );
+}
+
+// DAJ_RP: [Menus] 16:9 (0.75) and wider gets the 16:9 art; 16:10 (0.83) keeps the 4:3 one, as in TaystJK
+#define UI_WIDESCREEN_RATIO		0.76f
+
+// DAJ_RP: [Menus] the connect screen's background menu: its 16:9 version (connect_16_9.menu) on a wide screen, as in
+// TaystJK; the 4:3 one otherwise, or if that menu is not loaded. NULL if neither is.
+static menuDef_t *UI_ConnectMenu( void )
+{
+	menuDef_t *menu = NULL;
+
+	if ( UI_WidthRatioCoef() <= UI_WIDESCREEN_RATIO )
+	{
+		menu = Menus_FindByName( "Connect_16_9" );
+	}
+
+	if ( !menu )
+	{
+		menu = Menus_FindByName( "Connect" );
+	}
+
+	return menu;
+}
+
+// DAJ_RP: [Menus] the menu cursor, narrowed on a wide screen so the stretch to the window gives it back its own
+// shape, as in TaystJK; its tip, at the top left, stays on the cursor position
+static void UI_DrawCursor( void )
+{
+	UI_DrawHandlePic( (float)uiInfo.uiDC.cursorx, (float)uiInfo.uiDC.cursory, 40.0f * UI_WidthRatioCoef(), 40.0f, uiInfo.uiDC.Assets.cursor );
+}
+
 void UI_Refresh( int realtime )
 {
 	static int index;
@@ -10442,7 +10496,7 @@ void UI_Refresh( int realtime )
 	// draw cursor
 	UI_SetColor( NULL );
 	if (Menu_Count() > 0 && (trap->Key_GetCatcher() & KEYCATCH_UI)) {
-		UI_DrawHandlePic( (float)uiInfo.uiDC.cursorx, (float)uiInfo.uiDC.cursory, 40.0f, 40.0f, uiInfo.uiDC.Assets.cursor);
+		UI_DrawCursor();	// DAJ_RP: [Menus] was a 40x40 pic here -- see UI_DrawCursor()
 		//UI_DrawHandlePic( uiInfo.uiDC.cursorx, uiInfo.uiDC.cursory, 48, 48, uiInfo.uiDC.Assets.cursor);
 	}
 
@@ -10759,7 +10813,7 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 
 	char sStringEdTemp[256];
 
-	menuDef_t *menu = Menus_FindByName("Connect");
+	menuDef_t *menu = UI_ConnectMenu();	// DAJ_RP: [Menus] was the "Connect" menu always -- 16:9 aware now
 
 
 	if ( !overlay && menu ) {
