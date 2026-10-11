@@ -904,7 +904,7 @@ protection, a private duel, the arena rules, noclip, an invulnerable NPC...). Wi
 stood inside each other and neither could move.
 
 It is the tail end of a phase mode (RP_ClearPhaseMode, g_cmds.c) with no mode in front of it: the
-arriver passes through bodies and is sent non-solid while it overlaps anyone, looks normal
+arriver passes through bodies and is sent as walk-through while it overlaps anyone, looks normal
 throughout, and RP_PhaseUpdate() ends the release by itself on the first end of frame that finds
 nothing solid overlapping it. An NPC is added to the phased-NPC list, which is what runs that
 check for it. A body already in a phase mode passes through anyway and is left exactly as it is.

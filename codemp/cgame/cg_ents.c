@@ -1767,7 +1767,7 @@ Ghoul2 Insert End
 	// GalaxyRP: [Phase] a severed limb (G_Dismember) or a player's corpse (CopyToBodyQue) of a Force
 	// ghost or a hologram carries its owner's phase bits, and is drawn the way the owner was: the two
 	// passes of CG_AddPhasedPlayerModel() in place of this one add, and everything after it runs as
-	// before. Anything else -- including a non-solid-only owner's parts -- gets the plain add. A
+	// before. Anything else -- including a walk-through-only owner's parts -- gets the plain add. A
 	// fading or disintegrating corpse has returned above and keeps its own effect.
 	if ( !( ( cent->currentState.eType == ET_BODY ||
 			( cent->currentState.weapon == G2_MODEL_PART &&
