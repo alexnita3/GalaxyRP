@@ -12761,7 +12761,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 ^3/npc kill team <player/enemy/neutral/free or nonally>: ^7Kills a whole team, or ^3nonally ^7for every npc but your allies.\n\
 ^3/npc killaim: ^7Kills the npc or vehicle in your crosshair.\n\
 ^3/npc team <player/enemy/neutral/free>: ^7Sets the team of the npc in your crosshair.\n\
-^3/npc effect <holo/ghost/nonsolid/clear>: ^7Hologram, Force ghost or walk-through npc in your crosshair; ^3clear ^7undoes it.\n\
+^3/npc effect <holo/ghost/walkthrough/clear>: ^7Hologram, Force ghost or walk-through npc in your crosshair; ^3clear ^7undoes it.\n\
 ^3/npc freeze: ^7Freezes the npc in your crosshair in place, or unfreezes it.\n\" ");
 				trap->SendServerCommand(ent - g_entities, "print \"^3/order <follow/guard/cover>: ^7Orders your NPCs to follow you, stand and fight, or follow and fight. Press ^3Use ^7on a friendly NPC to make it follow commands and press again to dismiss it.\n\n\" ");
 				// GalaxyRP: [Mini-Games] /duelmode and /meleemode were documented nowhere at all -- not
@@ -15663,7 +15663,7 @@ static const char *zyk_spawner_effect_problem( qboolean vehicle, const char *val
 
 	if ( RP_NpcEffectFromName( value ) < 0 )
 	{
-		Com_sprintf( problem, sizeof( problem ), "^3%s^7 is not an NPC effect: ^3npceffect^7 takes ^3holo^7, ^3ghost^7 or ^3nonsolid^7.", zyk_shown_name( value ) );
+		Com_sprintf( problem, sizeof( problem ), "^3%s^7 is not an NPC effect: ^3npceffect^7 takes ^3holo^7, ^3ghost^7 or ^3walkthrough^7.", zyk_shown_name( value ) );
 		return problem;
 	}
 
@@ -16999,7 +16999,7 @@ static const char *zyk_entsave_effect_word(int mode)
 	{
 	case RP_PHASE_HOLO:		return "holo";
 	case RP_PHASE_GHOST:	return "ghost";
-	case RP_PHASE_NONSOLID:	return "nonsolid";
+	case RP_PHASE_NONSOLID:	return "walkthrough";	// DAJ_RP: [NPC System] was "nonsolid" -- RP_NpcEffectFromName()
 	default:				return NULL;
 	}
 }
@@ -18948,7 +18948,7 @@ void Cmd_AdminList_f( gentity_t *ent ) {
 ^3/npc kill team <player/enemy/neutral/free or nonally>^7: kills a whole team, or ^3nonally ^7for every npc but your allies.\n\
 ^3/npc killaim^7: kills the npc or vehicle in your crosshair (not one with a player aboard).\n\
 ^3/npc team <player/enemy/neutral/free>^7: sets the team of the npc in your crosshair.\n\
-^3/npc effect <holo/ghost/nonsolid/clear>^7: gives the npc in your crosshair a hologram or Force ghost look (both walk-through) or makes it walk-through only; ^3clear ^7restores it, and makes an npc that spawned non-solid solid.\n\
+^3/npc effect <holo/ghost/walkthrough/clear>^7: gives the npc in your crosshair a hologram or Force ghost look (both walk-through) or makes it walk-through only; ^3clear ^7restores it, and makes an npc that spawned non-solid solid.\n\
 ^3/npc freeze^7: freezes the npc in your crosshair in place (no moving, attacking or defending; it can still be hurt), or unfreezes it.\n\n\"" );
 		}
 		else if (command_number == ADM_NOCLIP)
@@ -20436,7 +20436,7 @@ void Cmd_EntitiesAndRemaps_f( gentity_t *ent ) {
 	lines[n++] = "^3/entaddaim <classname> <key> <value>...: ^7Like /entadd, but puts the entity on the surface you aim at (through players and NPCs); ^3aimoffset <units>^7 puts it that far out from the surface.\n";
 	lines[n++] = "^3/entorigin: ^7Sets your position as origin for new entities. Use again to unset.\n";
 	lines[n++] = "^3/entundo: ^7Removes last added entity; a spawner takes the NPCs it made with it. Only works once.\n";
-	lines[n++] = "^7NPC spawners: ^3npc_spawner^7 and ^3NPC_Vehicle^7 (npc_type) need a ^3targetname^7, the name they are fired by; ^3spawnnow 1^7 also spawns one at once, ^3respawn 1^7 fires it again when one it made dies, ^3count -1^7 is no limit; ^3npceffect holo^7, ^3ghost^7 or ^3nonsolid^7 spawns NPCs with that ^3/npc effect^7; ^3npcteam player^7, ^3enemy^7, ^3neutral^7 or ^3free^7 sets their side, as ^3/npc team^7 does; ^3npcfreeze 1^7 spawns them frozen, as ^3/npc freeze^7 leaves them.\n";
+	lines[n++] = "^7NPC spawners: ^3npc_spawner^7 and ^3NPC_Vehicle^7 (npc_type) need a ^3targetname^7, the name they are fired by; ^3spawnnow 1^7 also spawns one at once, ^3respawn 1^7 fires it again when one it made dies, ^3count -1^7 is no limit; ^3npceffect holo^7, ^3ghost^7 or ^3walkthrough^7 spawns NPCs with that ^3/npc effect^7; ^3npcteam player^7, ^3enemy^7, ^3neutral^7 or ^3free^7 sets their side, as ^3/npc team^7 does; ^3npcfreeze 1^7 spawns them frozen, as ^3/npc freeze^7 leaves them.\n";
 	lines[n++] = "^7NPC kill rewards: on an ^3npc_spawner^7, ^3npccredits <0-100000>^7 and ^3npcxp <0-100>^7 are paid to the logged-in player who kills one of its NPCs. Vehicles pay nothing.\n";
 
 	lines[n++] = "^5Finding and changing\n";

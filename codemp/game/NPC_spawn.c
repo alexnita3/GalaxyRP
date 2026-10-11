@@ -2421,12 +2421,15 @@ int RP_SpawnerRemoveChildren( gentity_t *spawner, int *ridden )
 ==================
 RP_NpcEffectFromName
 
-GalaxyRP: [Entity System] an npc_spawner's "npceffect" key: "holo", "ghost" or "nonsolid" -- the words
+GalaxyRP: [Entity System] an npc_spawner's "npceffect" key: "holo", "ghost" or "walkthrough" -- the words
 /npc effect takes -- gives every NPC it makes that mode from the start (NPC_Spawn_Do()). This is the
 walk-through kind of non-solid: the NPC stays a body that is hit and damaged, only movement passes
 through it. The NOTSOLID spawnflag (64) is the other kind -- nothing touches it at all -- and the two
 can be combined, NOTSOLID winning. Returns the RP_PHASE_* mode, RP_PHASE_NONE for an empty value, and -1
 for anything else, which /entadd and /entedit refuse (g_cmds.c) and a map's spawner just ignores.
+DAJ_RP: [NPC System] the walk-through mode's word is "walkthrough". It was "nonsolid", which read as the
+NOTSOLID spawnflag beside it -- the very confusion above; renamed before any release, so "nonsolid" is
+simply not a value any more.
 ==================
 */
 int RP_NpcEffectFromName( const char *name )
@@ -2437,7 +2440,7 @@ int RP_NpcEffectFromName( const char *name )
 		return RP_PHASE_HOLO;
 	if ( !Q_stricmp( name, "ghost" ) )
 		return RP_PHASE_GHOST;
-	if ( !Q_stricmp( name, "nonsolid" ) )
+	if ( !Q_stricmp( name, "walkthrough" ) )
 		return RP_PHASE_NONSOLID;
 	return -1;
 }
@@ -5740,27 +5743,37 @@ static void RP_NpcKillAim_f( gentity_t *ent )
 ==================
 RP_NpcEffect_f
 
-GalaxyRP: [NPC System] /npc effect <holo|ghost|nonsolid|clear> on the NPC in the crosshair -- the
+GalaxyRP: [NPC System] /npc effect <holo|ghost|walkthrough|clear> on the NPC in the crosshair -- the
 NPC side of /admholo, /admghost and /admsolid (g_cmds.c), and the same pers.phase_mode underneath,
 so an NPC in a mode behaves exactly like a phased player: hit, damaged and targeted like any other,
 only movement passes through (RP_PhasePassesThrough(), g_active.c), and ghost/holo get the client
 plugin's look and stay off the radar.
 
-Not a toggle: holo, ghost and nonsolid set that mode (switching straight from one to another is
+Not a toggle: holo, ghost and walkthrough set that mode (switching straight from one to another is
 fine), and only clear takes it off. Clearing goes through the same release as a player's, so an NPC
 cleared while standing inside somebody stays walk-through until the two are apart.
 
 An NPC can also be non-solid from the map, outside this system: the NOTSOLID spawnflag gives it
 contents 0 (nothing can hit it either), and a script's SET_SOLID false gives it CONTENTS_CORPSE.
-Any of these commands makes it a normal CONTENTS_BODY again -- holo/ghost/nonsolid into this
+Any of these commands makes it a normal CONTENTS_BODY again -- holo/ghost/walkthrough into this
 system's walk-through-but-hittable body, clear into a plain solid one (through the release, so it
 cannot trap anyone). A script that later sets it non-solid again wins, as it would have anyway.
 
 Vehicles are refused -- their physics and riders are a different beast -- and so is an NPC riding
 one. The mode lasts until clear, the NPC's removal, or a map change; the next NPC in that slot
 starts with a zeroed client.
+
+DAJ_RP: [NPC System] the walk-through mode is "walkthrough", and is named so in the replies: it was "nonsolid"
+("is now non-solid"), which read as the NOTSOLID spawnflag -- an NPC nothing touches at all -- when this one is
+hit like any other. /admsolid on a player keeps its own word (RP_PhaseModeName(), g_cmds.c).
 ==================
 */
+// DAJ_RP: [NPC System] what /npc effect calls a mode in its replies
+static const char *RP_NpcEffectName( int mode )
+{
+	return ( mode == RP_PHASE_NONSOLID ) ? "walk-through" : RP_PhaseModeName( mode );
+}
+
 static void RP_NpcEffect_f( gentity_t *ent )
 {
 	char arg[MAX_STRING_CHARS];
@@ -5777,7 +5790,7 @@ static void RP_NpcEffect_f( gentity_t *ent )
 		mode = RP_PHASE_HOLO;
 	else if ( !Q_stricmp( arg, "ghost" ) )
 		mode = RP_PHASE_GHOST;
-	else if ( !Q_stricmp( arg, "nonsolid" ) )
+	else if ( !Q_stricmp( arg, "walkthrough" ) )
 		mode = RP_PHASE_NONSOLID;
 	else if ( !Q_stricmp( arg, "clear" ) )
 		mode = RP_PHASE_NONE;
@@ -5786,7 +5799,7 @@ static void RP_NpcEffect_f( gentity_t *ent )
 
 	if ( mode == -1 )
 	{
-		trap->SendServerCommand( ent-g_entities, "print \"^1Command Usage: ^3/npc effect ^2<holo/ghost/nonsolid/clear>\n^7Aim at the NPC. The effect stays until ^3/npc effect clear^7, which also makes an NPC that spawned non-solid solid.\n\"" );
+		trap->SendServerCommand( ent-g_entities, "print \"^1Command Usage: ^3/npc effect ^2<holo/ghost/walkthrough/clear>\n^7Aim at the NPC. The effect stays until ^3/npc effect clear^7, which also makes an NPC that spawned non-solid solid.\n\"" );
 		return;
 	}
 
@@ -5830,7 +5843,7 @@ static void RP_NpcEffect_f( gentity_t *ent )
 	{
 		if ( npc->client->pers.phase_mode == mode && !mapNonSolid )
 		{
-			trap->SendServerCommand( ent-g_entities, va( "print \"%s ^7is already %s.\n\"", label, RP_PhaseModeName( mode ) ) );
+			trap->SendServerCommand( ent-g_entities, va( "print \"%s ^7is already %s.\n\"", label, RP_NpcEffectName( mode ) ) );
 			return;
 		}
 
@@ -5853,13 +5866,13 @@ static void RP_NpcEffect_f( gentity_t *ent )
 	}
 	else
 	{
-		trap->SendServerCommand( ent-g_entities, va( "print \"%s ^7is now %s%s.\n\"", label, RP_PhaseModeName( mode ),
+		trap->SendServerCommand( ent-g_entities, va( "print \"%s ^7is now %s%s.\n\"", label, RP_NpcEffectName( mode ),
 			mapNonSolid ? " ^7(it spawned non-solid; it can be hit now)" : "" ) );
 	}
 
 	G_LogPrintf( "npc effect: %s ^7made NPC %s (%d) %s\n", ent->client->pers.netname,
 		( npc->NPC_type && npc->NPC_type[0] ) ? npc->NPC_type : "npc", npc->s.number,
-		( mode == RP_PHASE_NONE ) ? "normal" : RP_PhaseModeName( mode ) );
+		( mode == RP_PHASE_NONE ) ? "normal" : RP_NpcEffectName( mode ) );
 }
 
 /*
@@ -6156,7 +6169,7 @@ void Cmd_NPC_f( gentity_t *ent )
  kill [NPC targetname] or [all(kills all NPCs)] or 'team [teamname]'\n\
  killaim (kills the NPC or vehicle in your crosshair)\n\
  team [team (player or enemy or neutral or free)] (the NPC in your crosshair)\n\
- effect [holo or ghost or nonsolid or clear] (the NPC in your crosshair)\n\
+ effect [holo or ghost or walkthrough or clear] (the NPC in your crosshair)\n\
  freeze (freezes the NPC in your crosshair, or unfreezes it)\n\"" );
 	}
 }

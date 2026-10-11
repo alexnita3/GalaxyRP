@@ -3140,7 +3140,7 @@ qboolean RP_PhasePassesThrough( const gentity_t *ent );
 void RP_ClearPhaseMode( gentity_t *ent );
 const char *RP_PhaseModeName( int mode );
 void RP_PhaseTrackNpc( gentity_t *npc );
-// GalaxyRP: [Entity System] an npc_spawner's "npceffect" value: RP_PHASE_* for holo/ghost/nonsolid,
+// GalaxyRP: [Entity System] an npc_spawner's "npceffect" value: RP_PHASE_* for holo/ghost/walkthrough,
 // RP_PHASE_NONE for an empty one, -1 for anything else -- see NPC_spawn.c
 int RP_NpcEffectFromName( const char *name );
 // GalaxyRP: [Entity System] an npc_spawner's or NPC_Vehicle's "npcteam" value, the words /npc team takes:

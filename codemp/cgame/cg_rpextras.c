@@ -900,7 +900,7 @@ static void RPX_SpawnSpawner( void ) {
 			Q_strcat( cmd, sizeof( cmd ), " npceffect \"ghost\"" );
 			break;
 		case 3:
-			Q_strcat( cmd, sizeof( cmd ), " npceffect \"nonsolid\"" );
+			Q_strcat( cmd, sizeof( cmd ), " npceffect \"walkthrough\"" );	// DAJ_RP: [NPC System] was "nonsolid"
 			break;
 		default:
 			break;
