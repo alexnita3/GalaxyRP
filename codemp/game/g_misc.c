@@ -771,7 +771,10 @@ void SP_misc_model_breakable( gentity_t *ent )
 		// origin2, flagged (EF2_RP_VECTOR_SCALE, bg_public.h); iModelScale stays 0, so every other client
 		// draws the model unscaled as before. "zykmodelscale", when given, decides the drawn size instead.
 		// Undone when the key is gone, as above: /entedit spawns the entity again without clearing it.
-		if (vecScale && !percentGiven && ent->modelScale[0] > 0.0f && ent->modelScale[1] > 0.0f && ent->modelScale[2] > 0.0f)
+		// Never once a script has played a ROFF on it (roffid, set only by Q3_Play and cleared only when the
+		// entity is freed): origin2 is the ROFF's then -- where a "loop" notetrack puts it back -- and a
+		// respawn (/entedit, /entrotate, a dropped /entcut) must not overwrite it, so it is drawn unscaled.
+		if (vecScale && !percentGiven && !ent->roffid && ent->modelScale[0] > 0.0f && ent->modelScale[1] > 0.0f && ent->modelScale[2] > 0.0f)
 		{
 			ent->s.eFlags2 |= EF2_RP_VECTOR_SCALE;
 			VectorCopy(ent->modelScale, ent->s.origin2);

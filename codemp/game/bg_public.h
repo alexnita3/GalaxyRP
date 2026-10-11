@@ -769,10 +769,10 @@ typedef enum {
 #define	EF2_BRACKET_ENTITY		(1<<6)		// Draw as bracketed
 #define	EF2_SHIP_DEATH			(1<<7)		// "died in ship" mode
 // DAJ_RP: [Static Models] a misc_model_breakable with "modelscale_vec": its three scales are in
-// entityState_t::origin2, which nothing else uses on one (a script's ROFF takes it, and Q3_Play drops the
-// bit), and the GalaxyRP client draws the model scaled per axis (CG_General). Other clients do not know the
-// bit and draw it as before, unscaled. Unused by the stock game, TaystJK and JA++ (which takes the next bit
-// for its grapple).
+// entityState_t::origin2, which nothing else uses on one (a script's ROFF takes it: Q3_Play drops the bit,
+// and the spawn does not set it again until the entity is freed), and the GalaxyRP client draws the model
+// scaled per axis (CG_General). Other clients do not know the bit and draw it as before, unscaled. Unused by
+// the stock game, TaystJK, EternalJK and JA++ (which takes the next bit for its grapple).
 #define	EF2_RP_VECTOR_SCALE		(1<<8)
 
 #include "../../galaxyrp/game/rp_public.h" // Tr!Force: [GameGeneral] Public header
