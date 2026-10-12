@@ -9133,12 +9133,13 @@ void CG_InitJetpackGhoul2(void)
 	trap->G2API_SetBoltInfo(cg_g2JetpackInstance, 0, 2);
 
 	//Add the bolts jet effects will be played from
-	// DAJ_RP fix: [Jetpack] the pack's own bone, bolt 0: its origin and its axes (+X the wearer's left, +Y back, +Z up),
-	// which the flames are placed from (CG_JetpackFlame). Stock bolted to the surfaces "torso_ljet" and "torso_rjet",
-	// which are not tags in either model: the engine makes a frame of a mesh surface's first three vertices, and the
-	// flames' offsets were tuned by hand to the vanilla pack's. Our pack's vertices give other frames, and its flames
-	// came out tilted and off the pack.
-	trap->G2API_AddBolt(cg_g2JetpackInstance, 0, "model_root");
+	// DAJ_RP fix: [Jetpack] the pack's own tag, *chestg, bolt 0: its origin and its axes, which the flames are placed
+	// from (CG_JetpackFlame). Stock bolted to the surfaces "torso_ljet" and "torso_rjet", which are not tags in either
+	// model: the engine makes a frame of a mesh surface's first three vertices, and the flames' offsets were tuned by
+	// hand to the vanilla pack's. Our pack's vertices give other frames, and its flames came out tilted and off the pack.
+	// The tag sits at the pack's origin, in both packs. In game its frame -- as the pack's bone's (model_root), tried
+	// first -- is a quarter turn about the up axis from the pack's drawn axes; CG_JetpackFlame turns its offsets to suit.
+	trap->G2API_AddBolt(cg_g2JetpackInstance, 0, "*chestg");
 }
 
 /*
@@ -9146,24 +9147,39 @@ void CG_InitJetpackGhoul2(void)
 CG_JetpackFlame
 
 DAJ_RP fix: [Jetpack] where nozzle n (0 left, 1 right) of the pack bolted to this player fires from, and the
-direction to give the effect. Measured from our pack (models/weapons2/jetpack/model.glm) in its own units --
-the units it is drawn in, the frame of its bone: each nozzle's exit, and a flame going mostly down and a little
-back (CG_JETPACK_FLAME_BACK degrees), from a little inside the nozzle (jet.efx starts its flame 4 units out).
-The effect is handed the way up the flame, as the stock code did (the flame runs the other way). Scaled with
-the player's model scale, which the stock offsets were not.
+direction to give the effect. Measured from our pack (models/weapons2/jetpack/model.glm) in its own units and axes
+(+X the wearer's left, +Y back, +Z up): each nozzle's exit, and a flame going mostly down and a little back
+(CG_JETPACK_FLAME_BACK degrees), from a little inside the nozzle (jet.efx starts its flame 4 units out). The effect
+is handed the way up the flame, as the stock code did (the flame runs the other way). Scaled with the player's model
+scale, which the stock offsets were not.
+
+They are applied along the axes of the pack's *chestg bolt (CG_InitJetpackGhoul2), turned a quarter turn first
+(CG_JetpackTurn): in game that bolt's frame has its +X forward and +Y to the wearer's left, a quarter turn about its
+up axis from the pack's drawn axes -- tested with our pack and the vanilla one, and with the pack's bone (model_root)
+as the bolt too; its origin and its up axis are the pack's. The engine's Ghoul2 code is the same here as OpenJK's
+and TaystJK's, so this is not ours. The stock offsets along "torso_ljet" and "torso_rjet" were tuned by hand in game
+and never came from the model either.
 ===============
 */
 #define CG_JETPACK_FLAME_BACK	20.0f	// degrees back from straight down
 #define CG_JETPACK_FLAME_INSET	3.0f	// the flame starts this far back up its line from the nozzle's exit
 static const vec3_t cg_jetpackNozzle[2] = {
-	{ 6.43f, 8.17f, -0.30f },	// left: its +X
+	{ 6.43f, 8.17f, -0.30f },	// left: the pack's +X
 	{ -6.59f, 8.14f, -0.31f }	// right
 };
+
+// DAJ_RP: [Jetpack] from the pack's axes (left, back, up) to the bolt's (forward, left, up) -- see CG_JetpackFlame
+static void CG_JetpackTurn( const vec3_t packAxes, vec3_t boltAxes )
+{
+	boltAxes[0] = -packAxes[1];	// back -> -forward
+	boltAxes[1] = packAxes[0];	// left
+	boltAxes[2] = packAxes[2];	// up
+}
 
 static void CG_JetpackFlame( centity_t *cent, int n, vec3_t flamePos, vec3_t flameDir )
 {
 	mdxaBone_t	mat;
-	vec3_t		axis[3], local;
+	vec3_t		axis[3], packUp, local;
 	float		scale = 1.0f, back = DEG2RAD( CG_JETPACK_FLAME_BACK );
 	int			k;
 
@@ -9177,10 +9193,11 @@ static void CG_JetpackFlame( centity_t *cent, int n, vec3_t flamePos, vec3_t fla
 		scale = cent->modelScale[0];
 	}
 
-	// up the flame's line, in the pack's frame: the flame itself runs down and back (+Y)
-	local[0] = 0.0f;
-	local[1] = -sinf( back );
-	local[2] = cosf( back );
+	// up the flame's line, in the pack's axes: the flame itself runs down and back (+Y)
+	packUp[0] = 0.0f;
+	packUp[1] = -sinf( back );
+	packUp[2] = cosf( back );
+	CG_JetpackTurn( packUp, local );
 	VectorClear( flameDir );
 	for ( k = 0; k < 3; k++ )
 	{
@@ -9188,9 +9205,10 @@ static void CG_JetpackFlame( centity_t *cent, int n, vec3_t flamePos, vec3_t fla
 	}
 	VectorNormalize( flameDir );
 
+	CG_JetpackTurn( cg_jetpackNozzle[n], local );
 	for ( k = 0; k < 3; k++ )
 	{
-		VectorMA( flamePos, scale * cg_jetpackNozzle[n][k], axis[k], flamePos );
+		VectorMA( flamePos, scale * local[k], axis[k], flamePos );
 	}
 	VectorMA( flamePos, scale * CG_JETPACK_FLAME_INSET, flameDir, flamePos );
 }
