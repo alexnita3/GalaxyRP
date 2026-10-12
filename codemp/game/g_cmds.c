@@ -15955,7 +15955,7 @@ static int zyk_args_bytes( int first, int count )
 	return bytes;
 }
 
-static void zyk_entadd( gentity_t *ent, qboolean aim ) {
+static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 	gentity_t *new_ent = NULL;
 	int number_of_args = trap->Argc();
 	int i = 0;
@@ -15989,7 +15989,11 @@ static void zyk_entadd( gentity_t *ent, qboolean aim ) {
 
 	if ( number_of_args < 2)
 	{
-		if (aim)
+		// DAJ_RP: [Entity System] /entaddgrab with nothing typed and nothing held (a held one is placed by
+		// Cmd_EntAddGrab_f before this)
+		if (grab)
+			trap->SendServerCommand( ent-g_entities, "print \"Usage: ^3/entaddgrab <classname> <key> <value> <key> <value>^7. Picks up a new entity, not spawned yet; aim where it should go and use ^3/entaddgrab^7 again to place it there. ^3aimoffset <units>^7 (0 to 512) puts it that far out from the surface.\n\"" );
+		else if (aim)
 			trap->SendServerCommand( ent-g_entities, "print \"Usage: ^3/entaddaim <classname> <key> <value> <key> <value>^7. Adds the entity on the surface you are aiming at; ^3aimoffset <units>^7 (0 to 512) puts it that far out from the surface.\n\"" );
 		else
 		trap->SendServerCommand( ent-g_entities, va("print \"Usage: ^3/entadd <classname> <key> <value> <key> <value>^7. You must specify at least the entity class.\n\
@@ -16075,7 +16079,8 @@ static void zyk_entadd( gentity_t *ent, qboolean aim ) {
 
 		// GalaxyRP: [Entity System] across any map, and through the players and NPCs in the way -- see
 		// RP_EntAddAimPoint() in g_entgrab.c
-		if (RP_EntAddAimPoint(ent, aim_point, aim_normal) == qfalse)
+		// DAJ_RP: [Entity System] /entaddgrab is placed later, by where the admin aims then, as the other holds are
+		if (!grab && RP_EntAddAimPoint(ent, aim_point, aim_normal) == qfalse)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"You are not aiming at a surface.\n\"" );
 			return;
@@ -16083,7 +16088,7 @@ static void zyk_entadd( gentity_t *ent, qboolean aim ) {
 
 		// GalaxyRP: [Entity System] aimoffset: the point moves out from the surface, and everything after --
 		// the placement, and the second one once the entity's box is known -- works from there
-		if (aim_offset > 0.0f)
+		if (!grab && aim_offset > 0.0f)
 			VectorMA(aim_point, aim_offset, aim_normal, aim_point);
 	}
 	else
@@ -16205,6 +16210,15 @@ static void zyk_entadd( gentity_t *ent, qboolean aim ) {
 			}
 		}
 
+		// DAJ_RP: [Entity System] /entaddgrab: not spawned, but held -- RP_EntAddGrabStart() in g_entgrab.c. Its
+		// record has the classname and the keys typed, no origin (given later, where it is placed) and no aimoffset
+		// (kept with the hold).
+		if (grab)
+		{
+			RP_EntAddGrabStart(ent, new_ent, aim_offset, aim_origin_ignored);
+			return;
+		}
+
 		if (aim)
 		{ // GalaxyRP: [Entity System] /entaddaim: on the surface aimed at, by the box its class is placed by
 			vec3_t mins, maxs, origin;
@@ -16303,11 +16317,37 @@ static void zyk_entadd( gentity_t *ent, qboolean aim ) {
 }
 
 void Cmd_EntAdd_f( gentity_t *ent ) {
-	zyk_entadd( ent, qfalse );
+	zyk_entadd( ent, qfalse, qfalse );
 }
 
 void Cmd_EntAddAim_f( gentity_t *ent ) {
-	zyk_entadd( ent, qtrue );
+	zyk_entadd( ent, qtrue, qfalse );
+}
+
+/*
+==================
+Cmd_EntAddGrab_f
+
+DAJ_RP: [Entity System] /entaddgrab <classname> <key> <value>...: /entaddaim's arguments and every check /entadd
+and /entaddaim make, but the new entity is picked up rather than added -- held unspawned, with a preview where it
+would land -- and /entaddgrab again places it where the admin aims, spawning it there as /entaddaim would. See
+RP_EntAddGrabStart() and RP_EntAddGrabHeld() in g_entgrab.c. /entcancel lets it go, and nothing is added.
+==================
+*/
+void Cmd_EntAddGrab_f( gentity_t *ent ) {
+	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
+	{
+		return;
+	}
+
+	// zyk: holding one already: placed, or refused if another is typed (the other holds refuse in zyk_entadd)
+	if (ent->client->pers.entHoldNum && ent->client->pers.entHoldMode == RP_HOLD_ADD)
+	{
+		RP_EntAddGrabHeld(ent);
+		return;
+	}
+
+	zyk_entadd( ent, qtrue, qtrue );
 }
 
 /*
@@ -17263,7 +17303,8 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 
 		// DAJ_RP: [Static Models] nor the copy /entcopystatic made that an admin still holds: it is not
 		// placed yet, and written it would load as a prop on top of the static model it copies (g_entgrab.c)
-		if (RP_EntHeldAsStaticCopy(this_ent))
+		// DAJ_RP: [Entity System] and /entaddgrab's new entity, held: not placed yet, its record has no origin
+		if (RP_EntHeldUnplaced(this_ent))
 		{
 			continue;
 		}
@@ -20424,7 +20465,7 @@ static void zyk_print_lines( gentity_t *ent, const char * const *lines, int coun
 
 void Cmd_EntitiesAndRemaps_f( gentity_t *ent ) {
 	static char entlist_line[512];
-	const char *lines[64];	// 49 now
+	const char *lines[64];	// 50 now
 	int n = 0;
 
 	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
@@ -20458,7 +20499,8 @@ void Cmd_EntitiesAndRemaps_f( gentity_t *ent ) {
 	lines[n++] = "^3/entcut <entity id (optional)>: ^7Picks up the entity itself; it is gone until /entcut again drops it where you aim. Map entities (^3M^7) and brush entities cannot be cut.\n";
 	lines[n++] = "^3/entrotate <yaw> or <pitch> <yaw> <roll> (optional): ^7Turns what you hold, or the entity you aim at: 45 degrees of yaw, that much yaw, or exactly those angles. Not ^3M^7 or brush entities in place.\n";
 	lines[n++] = "^3/entcopystatic <#number (optional)>: ^7Picks up a solid misc_model_breakable copy of the static model you aim at (^1red^7 in Entity Bounds), or of that number; use it again to drop it. The static model stays, and the copy's model takes a model slot until the map changes.\n";
-	lines[n++] = "^3/entcancel: ^7Lets go of what you hold; a cut entity goes back where it was, a copy of a static model is deleted. While you hold one, commands that add, change, use or remove entities are refused.\n";
+	lines[n++] = "^3/entaddgrab <classname> <key> <value>...: ^7Like /entaddaim, but picks the new entity up instead, not spawned yet; use /entaddgrab again to place it where you aim. Takes ^3aimoffset <units>^7 too.\n";
+	lines[n++] = "^3/entcancel: ^7Lets go of what you hold; a cut entity goes back where it was, a copy of a static model or a new /entaddgrab entity is deleted. While you hold one, commands that add, change, use or remove entities are refused.\n";
 
 	lines[n++] = "^5Saving\n";
 	lines[n++] = "^3/entsave <filename>: ^7Saves current entities into a preset file. Use ^3default ^7name to make it load with the map.\n";
@@ -24977,6 +25019,7 @@ command_t commands[] = {
 	{ "engage_fullforceduel",	Cmd_ForceDuel_f,		CMD_ALIVE | CMD_NOINTERMISSION },	// GalaxyRP: [Force Duel] the ordinary duel has no row here -- it arrives as GENCMD_ENGAGE_DUEL
 	{ "entadd",				Cmd_EntAdd_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "entaddaim",			Cmd_EntAddAim_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "entaddgrab",			Cmd_EntAddGrab_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },	// DAJ_RP: [Entity System]
 	{ "entcancel",			Cmd_EntCancel_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "entcopy",			Cmd_EntCopy_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "entcopystatic",		Cmd_EntCopyStatic_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },	// DAJ_RP: [Static Models] g_entgrab.c

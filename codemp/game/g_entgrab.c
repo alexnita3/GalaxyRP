@@ -16,6 +16,11 @@ GalaxyRP: [Entity System] picking entities up, turning them and putting them dow
                    it where the admin is aiming. The static model itself stays: each client draws it.
   /entaddaim       is /entadd placing the new entity on the surface aimed at (Cmd_EntAddAim_f, g_cmds.c,
                    through RP_EntAddAimPoint() and RP_EntGrabPlace() below).
+  /entaddgrab <classname> <key> <value>...  DAJ_RP: /entadd's arguments and checks (aimoffset as /entaddaim
+                   takes it), but the new entity is held instead: its record is written and its slot taken, and
+                   nothing is spawned until /entaddgrab again places it where the admin is aiming -- what
+                   /entaddaim would do there (RP_EntAddGrabStart, RP_GrabDropNew). /entcancel lets it go, and
+                   nothing was added. Its preview is the box it is placed by, green: there is no model to show.
 
 Adapted from Lugormod's grab and clone tools, with the guards this mod's entity system needs:
 
@@ -30,7 +35,9 @@ Adapted from Lugormod's grab and clone tools, with the guards this mod's entity 
   - an entity from a misc_bsp's sub-BSP goes with its misc_bsp, and a permanent (neverFree) entity is
     the game's, so neither is picked up;
   - one hold per admin, and an entity one admin holds is refused to every other entity command
-    (gentity_t::rpHeldBy), so nothing edits, removes or picks up an entity out from under a hold;
+    (gentity_t::rpHeldBy), so nothing edits, removes or picks up an entity out from under a hold; the four
+    commands that pick something up -- /entcopy, /entcut, /entcopystatic, /entaddgrab -- each refuse while
+    another of them holds, and only the one that picked it up puts it down;
   - and while an admin holds one, that admin's commands that add, change, use or remove entities wait
     until it is dropped or let go of (RP_EntRefuseWhileHolding): the aim is where it is to land then.
 
@@ -67,9 +74,14 @@ extern qboolean StringIsInteger( const char *s );	// g_cmds.c
 #define RP_GRAB_COLOR_COPY		SABER_BLUE
 #define RP_GRAB_COLOR_CUT		SABER_ORANGE
 #define RP_GRAB_COLOR_STATIC	RP_LINE_RED	// DAJ_RP: [Static Models] as Entity Bounds draws static models
+#define RP_GRAB_COLOR_ADD		SABER_GREEN	// DAJ_RP: [Entity System] /entaddgrab's new entity
 
 // zyk: the preview entity's classname. Compared by address, so nothing else can pass for one.
 static char rp_hold_ghost_classname[] = "rp_hold_ghost";
+// DAJ_RP: [Entity System] and /entaddgrab's new entity's until it is placed: its record holds the class it will
+// be, but not spawned it is none of them -- a spawn point that is not one would be found by G_Find() and
+// chosen, say. The spawn gives it its real classname, from the record.
+static char rp_hold_new_classname[] = "rp_hold_new";
 
 /*
 =============================================================================
@@ -941,6 +953,7 @@ static void RP_GrabClear( gentity_t *ent )
 	pers->entHoldNextBox = 0;
 	pers->entHoldGhost = 0;
 	pers->entHoldStatic = 0;
+	pers->entHoldOffset = 0.0f;
 }
 
 /*
@@ -967,6 +980,28 @@ qboolean RP_EntHeldAsStaticCopy( const gentity_t *e )
 	client = g_entities[holder].client;
 
 	return ( client->pers.entHoldMode == RP_HOLD_STATIC && client->pers.entHoldNum == e->s.number ) ? qtrue : qfalse;
+}
+
+// DAJ_RP: [Entity System] that, or /entaddgrab's new entity still held: neither is placed yet, so /entsave
+// leaves both out (g_cmds.c) -- the new entity's record has no origin until it is placed
+qboolean RP_EntHeldUnplaced( const gentity_t *e )
+{
+	int holder;
+	const gclient_t *client;
+
+	if ( RP_EntHeldAsStaticCopy( e ) )
+		return qtrue;
+
+	if ( !e || !e->inuse || !e->rpHeldBy )
+		return qfalse;
+
+	holder = e->rpHeldBy - 1;
+	if ( holder < 0 || holder >= MAX_CLIENTS || !g_entities[holder].client )
+		return qfalse;
+
+	client = g_entities[holder].client;
+
+	return ( client->pers.entHoldMode == RP_HOLD_ADD && client->pers.entHoldNum == e->s.number ) ? qtrue : qfalse;
 }
 
 /*
@@ -1091,15 +1126,34 @@ static void RP_GrabDrawPreview( gentity_t *ent, const vec3_t origin, const vec3_
 }
 
 // zyk: where the held entity would land now -- the ghost is moved there, and the lines redrawn when due
+// DAJ_RP: [Entity System] where /entaddgrab's new entity would land: the aim moved out along the surface by its
+// aimoffset, and the box its class is placed by -- a player's for a spawn point or NPC spawner, else none, as
+// /entaddaim places a new entity before its own box is known (zyk_entadd(), g_cmds.c)
+static void RP_GrabNewLanding( gentity_t *ent, const gentity_t *held, vec3_t point, vec3_t normal, vec3_t mins, vec3_t maxs, vec3_t origin )
+{
+	RP_EntGrabAimPoint( ent, point, normal );
+	if ( ent->client->pers.entHoldOffset > 0.0f )
+		VectorMA( point, ent->client->pers.entHoldOffset, normal, point );	// no surface hit: no normal, no offset
+	RP_EntGrabPlaceBox( RP_GrabRecordValue( held->s.number, "classname" ), NULL, mins, maxs );
+	RP_EntGrabPlace( point, normal, mins, maxs, origin );
+}
+
 static void RP_GrabUpdate( gentity_t *ent, gentity_t *held )
 {
 	clientPersistant_t *pers = &ent->client->pers;
 	vec3_t point, normal, mins, maxs, origin;
 	gentity_t *ghost;
 
-	RP_EntGrabAimPoint( ent, point, normal );
-	RP_EntGrabPlaceBox( held->classname, held, mins, maxs );
-	RP_EntGrabPlace( point, normal, mins, maxs, origin );
+	if ( pers->entHoldMode == RP_HOLD_ADD )
+	{
+		RP_GrabNewLanding( ent, held, point, normal, mins, maxs, origin );
+	}
+	else
+	{
+		RP_EntGrabAimPoint( ent, point, normal );
+		RP_EntGrabPlaceBox( held->classname, held, mins, maxs );
+		RP_EntGrabPlace( point, normal, mins, maxs, origin );
+	}
 	VectorCopy( origin, pers->entHoldOrigin );
 
 	ghost = RP_GrabGhost( ent );
@@ -1119,7 +1173,8 @@ static void RP_GrabUpdate( gentity_t *ent, gentity_t *held )
 	if ( level.time >= pers->entHoldNextBox )
 	{
 		RP_GrabDrawPreview( ent, origin, mins, maxs, pers->entHoldAngles,
-			pers->entHoldMode == RP_HOLD_CUT ? RP_GRAB_COLOR_CUT : pers->entHoldMode == RP_HOLD_STATIC ? RP_GRAB_COLOR_STATIC : RP_GRAB_COLOR_COPY );
+			pers->entHoldMode == RP_HOLD_CUT ? RP_GRAB_COLOR_CUT : pers->entHoldMode == RP_HOLD_STATIC ? RP_GRAB_COLOR_STATIC :
+			pers->entHoldMode == RP_HOLD_ADD ? RP_GRAB_COLOR_ADD : RP_GRAB_COLOR_COPY );
 		pers->entHoldNextBox = level.time + RP_GRAB_PREVIEW_MSEC;
 	}
 }
@@ -1130,8 +1185,8 @@ RP_EntGrabCancel
 
 Let go of whatever this client holds: a copy is simply not made, a cut entity is spawned again from its
 record -- where it was, as it was -- and the copy of a static model (/entcopystatic), which nothing was
-taken from, is deleted. With tell, the client is told. Called by /entcancel, and when the
-holder logs out, disconnects (quietly) or loses the Entity System power.
+taken from, is deleted, as is /entaddgrab's new entity, never spawned. With tell, the client is told.
+Called by /entcancel, and when the holder logs out, disconnects (quietly) or loses the Entity System power.
 ==================
 */
 void RP_EntGrabCancel( gentity_t *ent, qboolean tell )
@@ -1163,6 +1218,18 @@ void RP_EntGrabCancel( gentity_t *ent, qboolean tell )
 
 		if ( tell )
 			trap->SendServerCommand( ent->s.number, va( "print \"Let go of the copy of %s.\n\"", RP_StaticLabel( staticNum ) ) );
+	}
+	else if ( mode == RP_HOLD_ADD )
+	{
+		// DAJ_RP: [Entity System] never spawned, so nothing of it is anywhere else
+		char classname[MAX_QPATH];
+		const char *recorded = RP_GrabRecordValue( num, "classname" );
+
+		Q_strncpyz( classname, recorded ? RP_ShownText( recorded ) : "entity", sizeof( classname ) );
+		G_FreeEntity( held );
+
+		if ( tell )
+			trap->SendServerCommand( ent->s.number, va( "print \"Let go of the new %s: nothing was added.\n\"", classname ) );
 	}
 	else if ( mode == RP_HOLD_CUT )
 	{
@@ -1197,7 +1264,8 @@ what the admin means, and the rest waits for the hold to end too, so nothing is 
 of one. qtrue, and said, when refused. A hold whose entity is gone is forgotten here and said, and the
 command goes on. /entcopy, /entcut, /entrotate, /entcancel and /entsave are made for a hold; the
 commands that only show or list are left alone. /entcopystatic refuses through this while a copy or a cut
-entity is held, and drops its own copy of a static model.
+entity is held, and drops its own copy of a static model; /entcopy, /entcut and /entaddgrab refuse through
+it while another of the four holds.
 ==================
 */
 qboolean RP_EntRefuseWhileHolding( gentity_t *ent )
@@ -1222,6 +1290,13 @@ qboolean RP_EntRefuseWhileHolding( gentity_t *ent )
 		trap->SendServerCommand( ent->s.number, va( "print \"You are holding entity %d (cut): drop it with ^3/entcut^7 or put it back with ^3/entcancel^7 first.\n\"", num ) );
 	else if ( pers->entHoldMode == RP_HOLD_STATIC )
 		trap->SendServerCommand( ent->s.number, va( "print \"You are holding a copy of %s: drop it with ^3/entcopystatic^7 or let go with ^3/entcancel^7 first.\n\"", RP_StaticLabel( pers->entHoldStatic ) ) );
+	else if ( pers->entHoldMode == RP_HOLD_ADD )
+	{
+		const char *recorded = RP_GrabRecordValue( num, "classname" );
+
+		trap->SendServerCommand( ent->s.number, va( "print \"You are holding a new %s: place it with ^3/entaddgrab^7 or let go with ^3/entcancel^7 first.\n\"",
+			recorded ? RP_ShownText( recorded ) : "entity" ) );
+	}
 	else
 		trap->SendServerCommand( ent->s.number, va( "print \"You are holding a copy of entity %d: drop it with ^3/entcopy^7 or let go with ^3/entcancel^7 first.\n\"", num ) );
 
@@ -1262,7 +1337,8 @@ void RP_EntGrabFrame( gentity_t *ent )
 
 	// zyk: a script, or a team of movers, can link an entity again; a held cut one stays out, and so does
 	// DAJ_RP: [Static Models] the copy of a static model, hidden until it is dropped
-	if ( ( client->pers.entHoldMode == RP_HOLD_CUT || client->pers.entHoldMode == RP_HOLD_STATIC ) && !held->isLogical && held->r.linked )
+	if ( ( client->pers.entHoldMode == RP_HOLD_CUT || client->pers.entHoldMode == RP_HOLD_STATIC || client->pers.entHoldMode == RP_HOLD_ADD ) &&
+		!held->isLogical && held->r.linked )
 		trap->UnlinkEntity( (sharedEntity_t *)held );
 
 	if ( RP_GrabFollowing( ent ) || level.intermissiontime )
@@ -1575,6 +1651,112 @@ static void RP_GrabWarnMapLinks( gentity_t *ent, gentity_t *copy )
 
 /*
 ==================
+RP_GrabDropNew
+
+DAJ_RP: [Entity System] the second /entaddgrab: the new entity is placed where the admin is aiming now, and
+spawned -- for the first time, as /entaddaim spawns one there (zyk_entadd(), g_cmds.c). The room it needs is
+asked again first, as time has passed since it was picked up; then the origin goes into its record (and its
+angles, when it was turned), it spawns, and an entity with a box of its own is set against the surface by
+that box (RP_EntGrabSettle). Reported as /entadd reports a new entity, and /entundo can take it away. Refused
+for room, it stays held; refused by its spawn, or gone in it, the hold is over: there is nothing left to hold.
+==================
+*/
+static void RP_GrabDropNew( gentity_t *ent, gentity_t *held )
+{
+	clientPersistant_t *pers = &ent->client->pers;
+	vec3_t point, normal, mins, maxs, origin;
+	char classname[MAX_QPATH];
+	const char *recorded;
+	rpSpawnRoute_t route;
+	int num = held->s.number;
+	int count, i, freeBefore;
+
+	recorded = RP_GrabRecordValue( num, "classname" );
+	Q_strncpyz( classname, recorded ? RP_ShownText( recorded ) : "entity", sizeof( classname ) );
+
+	RP_GrabNewLanding( ent, held, point, normal, mins, maxs, origin );
+
+	// zyk: the room /entadd asks for, again
+	count = level.zyk_spawn_strings_values_count[num];
+	if ( count > ZYK_MAX_SPAWN_STRING_SLOTS )
+		count = ZYK_MAX_SPAWN_STRING_SLOTS;
+	RP_SpawnRouteInit( &route );
+	for ( i = 0; i + 1 < count; i += 2 )
+		RP_SpawnRouteNoteKey( &route, level.zyk_spawn_strings[num][i], level.zyk_spawn_strings[num][i + 1] );
+
+	if ( !RP_SpawnRouteHasRoom( &route ) )
+	{
+		if ( RP_SpawnRouteIsLogical( &route ) )
+			trap->SendServerCommand( ent->s.number, va( "print \"Cannot place the new %s: the server is near its logical entity limit. %d logical slots free, %d held in reserve. It is still held: ^3/entcancel^7 lets it go.\n\"",
+				classname, G_FreeLogicalEntityCount(), ZYK_LOGICAL_ENTITY_RESERVE ) );
+		else
+			trap->SendServerCommand( ent->s.number, va( "print \"Cannot place the new %s: the server is near its entity limit. %d slots free, %d held in reserve. It is still held: ^3/entcancel^7 lets it go.\n\"",
+				classname, G_FreeEntityCount(), ZYK_ENTITY_RESERVE ) );
+		return;
+	}
+
+	// zyk: and in the game's memory pool, for its spawn and, if its box has to be settled, a second one
+	if ( !G_AllocRoomFor( RP_EntityRecordBytes( held ) * 2 ) )
+	{
+		trap->SendServerCommand( ent->s.number, va( "print \"Cannot place the new %s: the game's memory pool is nearly full (%d KB free). It is still held: ^3/entcancel^7 lets it go.\n\"",
+			classname, G_AllocRemaining() / 1024 ) );
+		return;
+	}
+
+	// zyk: its record had room for both when it was picked up (RP_EntAddGrabStart)
+	if ( !RP_GrabSetKey( held, "origin", va( "%i %i %i", (int)origin[0], (int)origin[1], (int)origin[2] ) ) ||
+		( pers->entHoldRotated && !RP_GrabWriteAngles( held, RP_GrabAnglesKey( held ), pers->entHoldAngles ) ) )
+	{
+		trap->SendServerCommand( ent->s.number, va( "print \"Cannot place the new %s: its record has no room for its origin and angles. It is still held: ^3/entcancel^7 lets it go.\n\"", classname ) );
+		return;
+	}
+
+	RP_GrabClear( ent );
+
+	level.rp_spawn_refusal[0] = '\0';
+	freeBefore = G_FreeEntityCount();
+	zyk_main_spawn_entity( held );
+
+	// zyk: now its box is known: set against the surface by it, unless a player's box placed it already
+	if ( held->inuse && VectorCompare( mins, vec3_origin ) && VectorCompare( maxs, vec3_origin ) )
+	{
+		gentity_t *settled = RP_EntGrabSettle( held, point, normal, freeBefore );
+
+		if ( !settled )
+		{
+			G_LogPrintf( "%s placed a new %s with /entaddgrab, which could not be placed\n", pers->netname, classname );
+			trap->SendServerCommand( ent->s.number, va( "print \"The new %s could not be placed%s%s.\n\"", classname,
+				level.rp_spawn_refusal[0] ? ": " : " (no free entity slot, or it did not survive being spawned again)", level.rp_spawn_refusal ) );
+			return;
+		}
+		held = settled;
+	}
+
+	if ( !held->inuse )
+	{
+		G_LogPrintf( "%s placed a new %s with /entaddgrab, which did not survive being spawned\n", pers->netname, classname );
+		if ( level.rp_spawn_refusal[0] )
+			trap->SendServerCommand( ent->s.number, va( "print \"The new %s was refused: %s.\n\"", classname, level.rp_spawn_refusal ) );
+		else
+			trap->SendServerCommand( ent->s.number, va( "print \"The new %s did not survive being spawned (a class that removes itself, or a spawn its spawn function refused).\n\"", classname ) );
+		return;
+	}
+
+	if ( held->s.number != 0 )
+		level.last_spawned_entity = held;
+
+	G_LogPrintf( "%s placed a new %s with /entaddgrab as entity %d at %i %i %i\n", pers->netname, classname, held->s.number,
+		(int)held->s.origin[0], (int)held->s.origin[1], (int)held->s.origin[2] );
+	trap->SendServerCommand( ent->s.number, va( "print \"Entity %d spawned at (%i %i %i)%s\n\"", held->s.number,
+		(int)held->s.origin[0], (int)held->s.origin[1], (int)held->s.origin[2], held->isLogical ? " (logical, not networked)" : "" ) );
+	if ( RP_EntitySolidAroundSomeone( held ) )
+		trap->SendServerCommand( ent->s.number, "print \"^3It is solid and someone is inside it: step away, or ^7/entundo^3.\n\"" );
+	if ( level.rp_spawn_note[0] )
+		trap->SendServerCommand( ent->s.number, va( "print \"^3%s\n\"", level.rp_spawn_note ) );
+}
+
+/*
+==================
 RP_GrabDrop
 
 The second /entcopy or /entcut: the held entity lands where the admin is aiming now. A copy is a new
@@ -1597,6 +1779,13 @@ static void RP_GrabDrop( gentity_t *ent, gentity_t *held )
 	int num = held->s.number;
 	int mode = pers->entHoldMode;
 	int staticNum = pers->entHoldStatic;
+
+	// DAJ_RP: [Entity System] /entaddgrab's new entity is spawned here for the first time
+	if ( mode == RP_HOLD_ADD )
+	{
+		RP_GrabDropNew( ent, held );
+		return;
+	}
 
 	RP_EntGrabAimPoint( ent, point, normal );
 	RP_EntGrabPlaceBox( held->classname, held, mins, maxs );
@@ -1822,8 +2011,9 @@ static void RP_GrabCommand( gentity_t *ent, int mode )
 			return;
 		}
 
-		// DAJ_RP: [Static Models] a copy of a static model is /entcopystatic's to drop, in every form
-		if ( pers->entHoldMode == RP_HOLD_STATIC )
+		// DAJ_RP: [Static Models] a copy of a static model is /entcopystatic's to drop, in every form, and
+		// DAJ_RP: [Entity System] a new entity /entaddgrab's
+		if ( pers->entHoldMode == RP_HOLD_STATIC || pers->entHoldMode == RP_HOLD_ADD )
 		{
 			RP_EntRefuseWhileHolding( ent );
 			return;
@@ -1899,6 +2089,97 @@ void Cmd_EntCopy_f( gentity_t *ent )
 void Cmd_EntCut_f( gentity_t *ent )
 {
 	RP_GrabCommand( ent, RP_HOLD_CUT );
+}
+
+/*
+==================
+RP_EntAddGrabStart / RP_EntAddGrabHeld
+
+DAJ_RP: [Entity System] /entaddgrab <classname> <key> <value>... -- zyk_entadd() (g_cmds.c) has run every check
+/entadd and /entaddaim run, taken the entity's slot and written its record (the classname and the pairs typed,
+but no origin and no aimoffset), and hands it over here instead of spawning it: it is held, unspawned, until a
+second /entaddgrab places it where the admin aims (RP_GrabDropNew). Nothing it does when it spawns happens
+before then -- an NPC spawner with spawnnow makes no NPC, a misc_bsp loads nothing. Its record has to have room
+for an origin and angles, as a cut entity's must. Its facing starts from the angles typed, else none.
+
+RP_EntAddGrabHeld is the command while one is held: with nothing more typed it is placed, with a classname it is
+refused (one at a time).
+==================
+*/
+void RP_EntAddGrabStart( gentity_t *ent, gentity_t *pending, float offset, qboolean originIgnored )
+{
+	clientPersistant_t *pers = &ent->client->pers;
+	char classname[MAX_QPATH];
+	const char *recorded = RP_GrabRecordValue( pending->s.number, "classname" );
+	int i;
+
+	Q_strncpyz( classname, recorded ? RP_ShownText( recorded ) : "entity", sizeof( classname ) );
+
+	if ( !RP_GrabRecordHasRoom( pending ) )
+	{
+		G_FreeEntity( pending );
+		trap->SendServerCommand( ent->s.number, va( "print \"The new %s would have no room left in its record for the origin and angles it is placed with: give it fewer keys.\n\"",
+			classname ) );
+		return;
+	}
+
+	pending->classname = rp_hold_new_classname;
+
+	pers->entHoldNum = pending->s.number;
+	pers->entHoldMode = RP_HOLD_ADD;
+	pers->entHoldStatic = 0;
+	pers->entHoldOffset = offset;
+	pers->entHoldRotated = qfalse;
+	RP_GrabRecordAngles( pending, RP_GrabAnglesKey( pending ), pers->entHoldAngles );
+	for ( i = 0; i < 3; i++ )
+		pers->entHoldAngles[i] = RP_GrabNormalizeAngle( pers->entHoldAngles[i] );
+	pers->entHoldNextBox = 0;
+	pers->entHoldGhost = 0;
+	pending->rpHeldBy = ent->s.number + 1;
+
+	RP_GrabUpdate( ent, pending );
+
+	G_LogPrintf( "%s picked up a new %s with /entaddgrab (entity %d, not spawned yet)\n", pers->netname, classname, pending->s.number );
+	trap->SendServerCommand( ent->s.number, va( "print \"Holding a new %s (entity %d, not spawned yet). Aim where it should go and use ^3/entaddgrab^7 again to place it, ^3/entrotate^7 to turn it, ^3/entcancel^7 to let go.%s\n\"",
+		classname, pending->s.number, originIgnored ? " /entaddgrab places it where you aim: the origin typed is not used." : "" ) );
+}
+
+void RP_EntAddGrabHeld( gentity_t *ent )
+{
+	clientPersistant_t *pers = &ent->client->pers;
+	gentity_t *held = RP_GrabHeld( ent );
+
+	if ( !held )
+	{
+		int num = pers->entHoldNum;
+
+		RP_GrabClear( ent );
+		trap->SendServerCommand( ent->s.number, va( "print \"The entity you were holding (%d) is gone.\n\"", num ) );
+		return;
+	}
+
+	if ( pers->entHoldMode != RP_HOLD_ADD )
+	{
+		RP_EntRefuseWhileHolding( ent );
+		return;
+	}
+
+	if ( trap->Argc() >= 2 )
+	{
+		const char *recorded = RP_GrabRecordValue( held->s.number, "classname" );
+
+		trap->SendServerCommand( ent->s.number, va( "print \"You are already holding a new %s: place it with ^3/entaddgrab^7 first, or ^3/entcancel^7.\n\"",
+			recorded ? RP_ShownText( recorded ) : "entity" ) );
+		return;
+	}
+
+	if ( RP_GrabFollowing( ent ) )
+	{
+		trap->SendServerCommand( ent->s.number, "print \"You are following another player. Stop following first.\n\"" );
+		return;
+	}
+
+	RP_GrabDrop( ent, held );
 }
 
 // DAJ_RP: [Static Models] three numbers as a key's value, each in the fewest digits that read back as the
@@ -2214,7 +2495,9 @@ void Cmd_EntRotate_f( gentity_t *ent )
 			return;
 		}
 
-		if ( held->r.bmodel )
+		// DAJ_RP: [Entity System] /entaddgrab's new entity is not spawned yet: a brush entity by the model it names
+		if ( held->r.bmodel || ( pers->entHoldMode == RP_HOLD_ADD && RP_GrabRecordValue( held->s.number, "model" ) &&
+			RP_GrabRecordValue( held->s.number, "model" )[0] == '*' ) )
 		{
 			trap->SendServerCommand( ent->s.number, va( "print \"Entity %d is a brush entity: its angles are the direction it moves in, so it cannot be rotated.\n\"", held->s.number ) );
 			return;
@@ -2233,6 +2516,10 @@ void Cmd_EntRotate_f( gentity_t *ent )
 
 		if ( pers->entHoldMode == RP_HOLD_STATIC )
 			trap->SendServerCommand( ent->s.number, va( "print \"The copy of %s will be dropped at angles (%g %g %g).\n\"", RP_StaticLabel( pers->entHoldStatic ),
+				pers->entHoldAngles[0], pers->entHoldAngles[1], pers->entHoldAngles[2] ) );
+		else if ( pers->entHoldMode == RP_HOLD_ADD )
+			trap->SendServerCommand( ent->s.number, va( "print \"The new %s will be placed at angles (%g %g %g).\n\"",
+				RP_ShownText( RP_GrabRecordValue( held->s.number, "classname" ) ? RP_GrabRecordValue( held->s.number, "classname" ) : "entity" ),
 				pers->entHoldAngles[0], pers->entHoldAngles[1], pers->entHoldAngles[2] ) );
 		else
 			trap->SendServerCommand( ent->s.number, va( "print \"Entity %d will be dropped at angles (%g %g %g).\n\"", held->s.number,

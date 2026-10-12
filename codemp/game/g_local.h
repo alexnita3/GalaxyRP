@@ -1344,13 +1344,14 @@ typedef struct clientPersistant_s {
 	// pers so dying and respawning does not drop it; a map change clears it with the rest of pers (and
 	// frees every entity anyway). The held entity's own rpHeldBy is what is checked every frame.
 	int			entHoldNum;				// entity number held, 0 for none
-	int			entHoldMode;			// RP_HOLD_COPY, RP_HOLD_CUT or RP_HOLD_STATIC
+	int			entHoldMode;			// RP_HOLD_COPY, RP_HOLD_CUT, RP_HOLD_STATIC or RP_HOLD_ADD
 	qboolean	entHoldRotated;			// entHoldAngles differs from what the record holds
 	vec3_t		entHoldAngles;			// the orientation it will be dropped with
 	vec3_t		entHoldOrigin;			// where it is now (moved live) or would land (preview only)
 	int			entHoldNextBox;			// level.time the preview is redrawn
 	int			entHoldGhost;			// entity number of the preview model, 0 for none
 	int			entHoldStatic;			// DAJ_RP: [Static Models] RP_HOLD_STATIC: the static model it copies
+	float		entHoldOffset;			// DAJ_RP: [Entity System] RP_HOLD_ADD: /entaddgrab's aimoffset, out from the surface
 
 	// GalaxyRP: [Listings] level.time before which this player's next /list or /maplist listing is
 	// refused -- see RP_ListCooldown() in g_rplist.c
@@ -2541,6 +2542,7 @@ qboolean	RP_EntAimFollowing( const gentity_t *ent );
 #define RP_HOLD_COPY	1
 #define RP_HOLD_CUT		2
 #define RP_HOLD_STATIC	3	// DAJ_RP: [Static Models] /entcopystatic's copy of a static model
+#define RP_HOLD_ADD		4	// DAJ_RP: [Entity System] /entaddgrab's new entity: its record, spawned when it is placed
 // DAJ_RP: [Static Models] the EV_TESTLINE colour that is drawn red. CG_TestLine() (cg_effects.c, the stock
 // client's too) draws 0 white, and SABER_RED is 0; a value past the saber colours is taken as an RGB of its
 // own (CGDEBUG_SaberColor), red in the low byte. The line's colour travels in entityState weapon, 8 bits.
@@ -2587,6 +2589,9 @@ int			RP_StaticAim( const vec3_t eye, const vec3_t dir, float maxDist, float *di
 const char	*RP_StaticLabel( int n );
 int			RP_EntBoundsAimStatic( const gentity_t *viewer );	// g_entbounds.c: the static model the display shows
 qboolean	RP_EntHeldAsStaticCopy( const gentity_t *e );	// g_entgrab.c: /entcopystatic's copy, not dropped yet
+qboolean	RP_EntHeldUnplaced( const gentity_t *e );		// DAJ_RP: that, or /entaddgrab's new entity: /entsave leaves both out
+void		RP_EntAddGrabStart( gentity_t *ent, gentity_t *pending, float offset, qboolean originIgnored );	// DAJ_RP: /entaddgrab, g_entgrab.c
+void		RP_EntAddGrabHeld( gentity_t *ent );
 int			RP_PackConstantLight( float light, const vec3_t color );
 gentity_t	*RP_EntGrabSettle( gentity_t *e, const vec3_t point, const vec3_t normal, int freeBefore );
 void		RP_EntGrabFrame( gentity_t *ent );
