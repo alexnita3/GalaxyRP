@@ -228,16 +228,111 @@ fend:
 	return flagstr;
 }
 
-void G_TestLine(vec3_t start, vec3_t end, int color, int time)
+/*
+===========================================================================
+DAJ_RP fix: [NPC Debug] the debug lines -- d_npcai's squads, d_JediAI's blocks, g_saberDebugBox and the
+bot waypoint editor (bot_wp_edit) -- go through RP_DebugLines() now, which can refuse them.
+
+Each line is an EV_TESTLINE temporary entity sent to every player: it holds an entity slot for
+EVENT_VALID_MSEC (300 ms) and the freed slot is not given out again for a second (G_Spawn()). Nothing
+counted them, and nothing can refuse a G_TempEntity(): d_npcai alone drew a line per squad member every
+server frame, some 13 slots per NPC alive at once and 53 tied up, so a large squad filled the snapshots
+(256 entities) and then the entity table, which ends a dedicated server. In single player these lines are
+drawn by the client and cost no entities.
+
+So at most RP_DEBUGLINE_MAX_PER_WINDOW lines are drawn per RP_DEBUGLINE_WINDOW_MSEC, whatever sv_fps is,
+and none while fewer than RP_DEBUGLINE_SLOT_MARGIN slots are free above the entity reserve (checked once a
+frame). A batch is drawn whole or not at all; one that alone is larger than the cap is still drawn when it
+opens a window, so a full squad is never refused for ever. The first line refused on a map, for each
+reason, is logged.
+===========================================================================
+*/
+static void RP_DrawDebugLine( const vec3_t start, const vec3_t end, int color, int time )
 {
 	gentity_t *te;
+	vec3_t org;
 
-	te = G_TempEntity( start, EV_TESTLINE );
+	VectorCopy( start, org );
+	te = G_TempEntity( org, EV_TESTLINE );
 	VectorCopy(start, te->s.origin);
 	VectorCopy(end, te->s.origin2);
 	te->s.time2 = time;
 	te->s.weapon = color;
 	te->r.svFlags |= SVF_BROADCAST;
+}
+
+static qboolean RP_DebugLinesAllowed( int count )
+{
+	if ( count < 1 )
+	{
+		count = 1;
+	}
+
+	if ( level.time < level.rp_debugline_window || level.time - level.rp_debugline_window >= RP_DEBUGLINE_WINDOW_MSEC )
+	{//a new window
+		level.rp_debugline_window = level.time;
+		level.rp_debugline_count = 0;
+	}
+
+	if ( !level.rp_debugline_slot_checked || level.rp_debugline_slot_time != level.time )
+	{//once a frame: a batch drawn in this frame takes at most a few dozen of the margin
+		level.rp_debugline_slot_checked = qtrue;
+		level.rp_debugline_slot_time = level.time;
+		level.rp_debugline_slots_ok = G_EntitySlotsAvailable( RP_DEBUGLINE_SLOT_MARGIN );
+	}
+
+	if ( !level.rp_debugline_slots_ok )
+	{
+		if ( !level.rp_debugline_slots_warned )
+		{
+			level.rp_debugline_slots_warned = qtrue;
+			G_LogPrintf( "debug lines (d_npcai, d_JediAI, g_saberDebugBox, bot_wp_edit) not drawn: fewer than %d entity slots free "
+				"(%d). Logged once per map.\n", RP_DEBUGLINE_SLOT_MARGIN + ZYK_ENTITY_RESERVE, G_FreeEntityCount() );
+		}
+		return qfalse;
+	}
+
+	if ( level.rp_debugline_count > 0 && level.rp_debugline_count + count > RP_DEBUGLINE_MAX_PER_WINDOW )
+	{
+		if ( !level.rp_debugline_capped_warned )
+		{
+			level.rp_debugline_capped_warned = qtrue;
+			G_LogPrintf( "debug lines (d_npcai, d_JediAI, g_saberDebugBox, bot_wp_edit) capped at %d per %d ms: the rest are "
+				"not drawn. Logged once per map.\n", RP_DEBUGLINE_MAX_PER_WINDOW, RP_DEBUGLINE_WINDOW_MSEC );
+		}
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+qboolean RP_DebugLines( const vec3_t start, const vec3_t *ends, int count, int color, int time )
+{
+	int i;
+
+	if ( !ends || count < 1 )
+	{
+		return qfalse;
+	}
+	if ( !RP_DebugLinesAllowed( count ) )
+	{
+		return qfalse;
+	}
+
+	level.rp_debugline_count += count;
+	for ( i = 0; i < count; i++ )
+	{
+		RP_DrawDebugLine( start, ends[i], color, time );
+	}
+	return qtrue;
+}
+
+void G_TestLine(vec3_t start, vec3_t end, int color, int time)
+{
+	vec3_t ends[1];
+
+	VectorCopy( end, ends[0] );
+	RP_DebugLines( start, (const vec3_t *)ends, 1, color, time );
 }
 
 void BotWaypointRender(void)

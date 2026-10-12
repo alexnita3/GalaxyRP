@@ -5774,7 +5774,7 @@ void NPC_Jedi_Pain(gentity_t *self, gentity_t *attacker, int damage)
 		// Figure out what quadrant the hit was in.
 		if ( d_JediAI.integer )
 		{
-			vec3_t	diff, fwdangles, right;
+			vec3_t	diff, fwdangles = { 0, 0, 0 }, right;	// DAJ_RP fix: [NPC Debug] pitch and roll were never set
 			float rightdot, zdiff;
 
 			VectorSubtract( point, self->client->renderInfo.eyePoint, diff );

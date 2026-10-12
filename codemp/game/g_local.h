@@ -2223,6 +2223,15 @@ typedef struct level_locals_s {
 													// (or, for sounds, /playsound's): a slot it makes is reusable
 	qboolean rp_shipboundary_logical_warned;	// shipboundary_touch reports a logical target once per map
 	qboolean rp_shipboundary_target_warned;		// ...and a missing one, likewise once per map
+	// DAJ_RP: [NPC Debug] the AI debug lines (RP_DebugLines, ai_wpnav.c): the current window and its count,
+	// this frame's check of free entity slots, and the refusals logged once per map
+	int rp_debugline_window;
+	int rp_debugline_count;
+	int rp_debugline_slot_time;
+	qboolean rp_debugline_slot_checked;
+	qboolean rp_debugline_slots_ok;
+	qboolean rp_debugline_slots_warned;
+	qboolean rp_debugline_capped_warned;
 	qboolean rp_hyperspace_target_warned;		// hyperspace_touch, same idea for its two targets
 
 	int zyk_weather_slot;			// first CS_EFFECTS index of the block, 0 while unclaimed
@@ -2532,6 +2541,14 @@ void	G_ResetGamestateEstimate( void );
 // by an older "is there at least one free slot" predicate, which this does not replace.)
 int		G_FreeEntityCount( void );
 qboolean G_EntitySlotsAvailable( int needed );
+// DAJ_RP: [NPC Debug] the AI debug lines -- d_npcai, d_JediAI, g_saberDebugBox, bot_wp_edit -- each a temporary
+// entity sent to every player: at most this many per window, none while fewer than the margin are free above the
+// reserve, and a batch drawn whole or not at all (ai_wpnav.c)
+#define RP_DEBUGLINE_WINDOW_MSEC	100
+#define RP_DEBUGLINE_MAX_PER_WINDOW	24
+#define RP_DEBUGLINE_SLOT_MARGIN	128
+qboolean RP_DebugLines( const vec3_t start, const vec3_t *ends, int count, int color, int time );
+void	G_TestLine( vec3_t start, vec3_t end, int color, int time );
 void		RP_EntBoundsFrame( gentity_t *ent );
 // DAJ_RP: [Entity Bounds] the drawing and aiming helpers, shared with /entcopy and /entcut's preview
 void		RP_EntBoundsLine( vec3_t start, vec3_t end, int color, int msec, int clientNum );

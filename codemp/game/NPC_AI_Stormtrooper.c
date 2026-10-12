@@ -1627,6 +1627,12 @@ void ST_TransferTimers( gentity_t *self, gentity_t *other )
 
 void ST_TransferMoveGoal( gentity_t *self, gentity_t *other )
 {
+	// DAJ_RP fix: [NPC] the one blocking is found by number in the squad: a member removed since the squad was last
+	// refreshed, its slot taken by something that is not an NPC, would be handed the goal (AI_GroupMemberValid)
+	if ( !self || !self->NPC || !AI_GroupMemberValid( other ) )
+	{
+		return;
+	}
 	if ( trap->ICARUS_TaskIDPending( (sharedEntity_t *)self, TID_MOVE_NAV ) )
 	{//can't transfer movegoal when a script we're running is waiting to complete
 		return;
@@ -1790,6 +1796,10 @@ void ST_Commander( void )
 		for ( i = 0; i < group->numGroup; i++ )
 		{
 			member = &g_entities[group->member[i].number];
+			if ( !AI_GroupMemberValid( member ) )
+			{//DAJ_RP fix: [NPC] removed since the squad was last refreshed (AI_GroupMemberValid, NPC_AI_Utils.c)
+				continue;
+			}
 			SetNPCGlobals( member );
 			if ( trap->ICARUS_TaskIDPending( (sharedEntity_t *)NPCS.NPC, TID_MOVE_NAV ) )
 			{//running somewhere that a script requires us to go, don't break from that
@@ -1906,6 +1916,11 @@ void ST_Commander( void )
 
 		//get the next guy
 		member = &g_entities[group->member[i].number];
+		if ( !AI_GroupMemberValid( member ) )
+		{//DAJ_RP fix: [NPC] removed since the squad was last refreshed -- a slot taken by a turret, say, has an
+			//enemy too, and was given orders as an NPC (AI_GroupMemberValid, NPC_AI_Utils.c)
+			continue;
+		}
 		if ( !member->enemy )
 		{//don't include guys that aren't angry
 			continue;
