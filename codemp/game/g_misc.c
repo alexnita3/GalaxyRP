@@ -1196,6 +1196,50 @@ void SP_misc_model_cargo_small( gentity_t *ent )
 	}
 }
 
+// DAJ_RP fix: [Entity System] a thrown misc_model_breakable (target4, throwtarget) moves on the server too. Single
+// player gives such an object the G_RunObject think; the multiplayer port kept the "set up for object thinking"
+// comment but not the think, so the throw was a trajectory only clients drew -- the server's copy stayed solid
+// where it was. It runs G_RunObject() while it flies, bouncing off walls at half speed (single player's
+// EF_BOUNCE_HALF) and hurting what it hits as a hard landing would, and stops thinking once it rests on a floor
+// or after RP_THROWN_MAX_MSEC; a gas tank then goes back to its gas jets.
+#define RP_THROWN_MAX_MSEC	10000
+void gas_random_jet( gentity_t *self );
+void G_StopObjectMoving( gentity_t *object );
+
+static void misc_model_thrown_touch( gentity_t *self, gentity_t *other, trace_t *trace )
+{ // G_RunObject() calls touch without a test
+	(void)self; (void)other; (void)trace;
+}
+
+static void misc_model_thrown_think( gentity_t *self )
+{
+	G_RunObject( self );
+
+	if ( !self->inuse || self->think != misc_model_thrown_think )
+	{ // broken by its landing, or taken over
+		return;
+	}
+
+	if ( self->s.pos.trType == TR_STATIONARY || level.time >= self->genericValue10 )
+	{
+		if ( self->s.pos.trType != TR_STATIONARY )
+		{
+			G_StopObjectMoving( self );
+		}
+
+		if ( self->classname && !Q_stricmp( self->classname, "misc_gas_tank" ) )
+		{
+			self->think = gas_random_jet;
+			self->nextthink = level.time + Q_flrand(0.0f, 1.0f) * 12000 + 6000;
+		}
+		else
+		{
+			self->think = NULL;
+			self->nextthink = 0;
+		}
+	}
+}
+
 void misc_model_throw_at_target4( gentity_t *self, gentity_t *activator )
 {
 	vec3_t	pushDir, kvel;
@@ -1252,6 +1296,20 @@ void misc_model_throw_at_target4( gentity_t *self, gentity_t *activator )
 		VectorClear( self->s.apos.trDelta );
 		self->s.apos.trDelta[1] = Q_irand( -800, 800 );
 	}
+
+	// DAJ_RP fix: [Entity System] and the server moves it (see misc_model_thrown_think above)
+	if ( !self->clipmask )
+	{ // a target4 throw without the gravity key: as gravity's set-up gives
+		self->clipmask = MASK_SOLID|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;
+	}
+	if ( !self->touch )
+	{
+		self->touch = misc_model_thrown_touch;
+	}
+	self->flags |= FL_BOUNCE_HALF;
+	self->genericValue10 = level.time + RP_THROWN_MAX_MSEC;
+	self->think = misc_model_thrown_think;
+	self->nextthink = level.time + FRAMETIME;
 }
 
 void misc_model_use (gentity_t *self, gentity_t *other, gentity_t *activator)
@@ -4150,11 +4208,8 @@ void fx_runner_use( gentity_t *self, gentity_t *other, gentity_t *activator )
 			self->s.modelindex2 = FX_STATE_ONE_SHOT;
 		}
 
-		if ( self->target2 )
-		{
-			// let our target know that we have spawned an effect
-			G_UseTargets2( self, self, self->target2 );
-		}
+		// DAJ_RP fix: [Entity System] target2 is fired by fx_runner_think() just above: firing it again here (stock
+		// single player and multiplayer both did) used it twice per use -- a toggle undone, a counter counted twice
 
 		if ( self->soundSet && self->soundSet[0] )
 		{

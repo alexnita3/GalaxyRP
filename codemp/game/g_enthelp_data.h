@@ -383,7 +383,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"random|0|Up to this many milliseconds added to each delay.\n"
 		"angles|-90 0 0|Direction it plays in (the default is straight up).\n"
 		"target||An entity to aim at (an info_notnull, say), instead of angles.\n"
-		"target2||Fired each time the effect plays. Currently fired twice per use with ONESHOT.\n"
+		"target2||Fired each time the effect plays (once per use with ONESHOT).\n"
 		"targetname||Needed to use it at all.\n"
 		"splashDamage|5|With DAMAGE: damage each time. Absent: 5. 0 still does 1 damage a time.\n"
 		"splashRadius|16|With DAMAGE: radius, in units. Absent: 16. Under 1 counts as 1: only what touches its spot is hit.\n"
@@ -787,7 +787,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"radius|1|Scales how many chunks it throws.\n"
 		"target||Fired when it is destroyed.\n"
 		"targetname||Using it blows it up.\n"
-		"target4||Any use throws it toward the entity with this targetname instead of blowing it up (drawn by clients only, as on misc_model_breakable).",
+		"target4||Any use throws it toward the entity with this targetname instead of blowing it up: it flies and lands as a thrown misc_model_breakable does.",
 		"misc_exploding_crate health 60 splashdamage 80",
 		"common misc_gas_tank misc_model_breakable" },
 	{ "misc_faller", 0, NULL,
@@ -817,7 +817,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"radius|1|Scales how many chunks it throws.\n"
 		"target||Fired when it is destroyed.\n"
 		"targetname||Using it blows it up.\n"
-		"target4||Any use throws it toward the entity with this targetname instead of blowing it up (drawn by clients only, as on misc_model_breakable).",
+		"target4||Any use throws it toward the entity with this targetname instead of blowing it up: it flies and lands as a thrown misc_model_breakable does.",
 		"misc_gas_tank health 30",
 		"common misc_exploding_crate misc_model_breakable" },
 	{ "misc_holocron", RP_EH_GAMETYPE, "Holocron gametype only: in any other it removes itself.",
@@ -901,7 +901,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"light||Radius of a light on the model (100 when only color is given). It goes out when the model breaks.\n"
 		"color||Light colour, red green blue from 0 to 1 (default white).\n"
 		"gravity|0|Non-zero: set down on the floor below it when it spawns.\n"
-		"target4||Any use throws it toward the entity with this targetname instead of breaking it. Ignored when gravity is set: use throwtarget then. Currently the throw is drawn by clients only: the server keeps it where it was.\n"
+		"target4||Any use throws it toward the entity with this targetname instead of breaking it. Ignored when gravity is set: use throwtarget then. It flies, bounces off walls, hurts what it hits as a hard landing would (itself too) and comes to rest on the floor.\n"
 		"throwtarget||With gravity: the target it is thrown at, replacing target4 (with gravity and no throwtarget, nothing is thrown).\n"
 		"teamnodmg|0|Siege only (and only with g_ff_objectives 0): 1 or 2, that team cannot damage it.",
 		"misc_model_breakable model models/map_objects/kejim/cargo_small.md3 spawnflags 1 health 50 material 11",
@@ -1138,8 +1138,8 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"TURBO makes it the big Death Star turbolaser with heavier defaults. Using it (targetname) switches it off and on.",
 		"1|START_OFF|Starts off: using it switches it on.\n"
 		"2|UPSIDE_DOWN|Stands on a floor instead of hanging (placed 22 units lower).\n"
-		"4|CANRESPAWN|Comes back count ms after it is destroyed. Currently not with TURBO.\n"
-		"8|TURBO|The big turbolaser: defaults radius 32768, wait 1000, dmg 500, health 2000, splash 200 in 500, shotspeed 20000. Currently it has no damaged model: destroyed, it fires its target and is removed for good.\n"
+		"4|CANRESPAWN|Comes back count ms after it is destroyed.\n"
+		"8|TURBO|The big turbolaser: defaults radius 32768, wait 1000, dmg 500, health 2000, splash 200 in 500, shotspeed 20000. It has no damaged model: destroyed, it fires its target and is gone, for good or, with CANRESPAWN, until it comes back.\n"
 		"16|LEAD|Aims ahead of moving targets.\n"
 		"32|SHOWRADAR|Shows on the radar.\n"
 		"32768|NO_DROP|With UPSIDE_DOWN: not placed 22 units lower.",
@@ -1150,8 +1150,8 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"count|20000|With CANRESPAWN: ms before it comes back.\n"
 		"random|2|Aim error, in degrees.\n"
 		"shotspeed|1100|Speed of its bolts (under 100: the default).\n"
-		"splashdamage|10|Splash damage of each bolt and of its explosion when destroyed. Without TURBO, currently also each bolt's splash radius.\n"
-		"splashradius|25|Radius of its explosion when destroyed, and of a TURBO's bolts.\n"
+		"splashdamage|10|Splash damage of each bolt and of its explosion when destroyed.\n"
+		"splashradius|25|Radius of each bolt's splash and of its explosion when destroyed.\n"
 		"target||Fired when it is destroyed.\n"
 		"target2||Fired when it picks up a target.\n"
 		"paintarget||Fired when it is hurt.\n"

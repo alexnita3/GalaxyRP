@@ -318,6 +318,27 @@ void turretG2_die ( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, 
 			}
 		}
 	}
+	// DAJ_RP fix: [Entity System] a TURBO turret has no damaged model (none exists for it, single player the same), so
+	// it went to ObjectDie() and was freed, and CANRESPAWN -- whose timer is only set above -- never brought it back.
+	// With CANRESPAWN it is kept now, hidden and not solid until turretG2_respawn() brings it back.
+	else if ( ( self->spawnflags & SPF_TURRETG2_TURBO ) && ( self->spawnflags & SPF_TURRETG2_CANRESPAWN ) )
+	{
+		turretG2_set_models( self, qtrue );	// drops its ghoul2 model: turretG2_respawn() builds it again
+		self->s.eFlags |= EF_NODRAW;
+		self->r.svFlags |= SVF_NOCLIENT;
+		self->r.contents = 0;
+		trap->LinkEntity( (sharedEntity_t *)self );
+
+		if ( self->target )
+		{
+			G_UseTargets( self, attacker );
+		}
+
+		if ( !self->genericValue5 )
+		{
+			self->genericValue5 = level.time + self->count;
+		}
+	}
 	else
 	{
 		ObjectDie( self, inflictor, attacker, damage, meansOfDeath );
@@ -409,7 +430,9 @@ static void turretG2_fire ( gentity_t *ent, vec3_t start, vec3_t dir )
 		bolt->teamnodmg = ent->teamnodmg;
 		bolt->dflags = (DAMAGE_NO_KNOCKBACK|DAMAGE_HEAVY_WEAP_CLASS);		// Don't push them around, or else we are constantly re-aiming
 		bolt->splashDamage = ent->splashDamage;
-		bolt->splashRadius = ent->splashDamage;
+		// DAJ_RP fix: [Entity System] was ent->splashDamage (stock multiplayer too), a copy slip: splashradius is the
+		// radius, as it already is for a TURBO's bolts (WP_FireTurboLaserMissile) and for the death explosion
+		bolt->splashRadius = ent->splashRadius;
 		bolt->methodOfDeath = MOD_TARGET_LASER;//MOD_ENERGY;
 		bolt->splashMethodOfDeath = MOD_TARGET_LASER;//MOD_ENERGY;
 		bolt->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
@@ -441,6 +464,14 @@ void turretG2_respawn( gentity_t *self )
 	self->s.weapon = WP_TURRET; // crosshair code uses this to mark crosshair red
 
 	turretG2_set_models( self, qfalse );
+	// DAJ_RP fix: [Entity System] a TURBO one was hidden and not solid while dead (turretG2_die())
+	if ( self->spawnflags & SPF_TURRETG2_TURBO )
+	{
+		self->s.eFlags &= ~EF_NODRAW;
+		self->r.svFlags &= ~SVF_NOCLIENT;
+		self->r.contents = CONTENTS_BODY|CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP|CONTENTS_SHOTCLIP;	// as it spawns
+		trap->LinkEntity( (sharedEntity_t *)self );
+	}
 	self->s.health = self->health = self->genericValue6;
 	if (self->maxHealth) {
 		G_ScaleNetHealth(self);
