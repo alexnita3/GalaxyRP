@@ -270,11 +270,36 @@ own look; their view is the vehicle's.
 The riders no longer teleport themselves (TeleportPlayer() refuses a rider): each one used to, from his seat, and
 cleared the destination as he arrived (G_KillBox()) -- of whichever fellow rider the vehicle had already seated there,
 all of them at its one driver tag. The vehicle then pulled him back to his seat anyway.
+
+A solid rider -- one the vehicle shows, not one it hides (Ghost(), contents 0) -- still clears his seat at the
+destination once seated there: a seat can stand out of the vehicle's own box, a swoop rider's over it, and the
+vehicle's G_KillBox() clears only that box. His fellow riders are spared (G_KillBox(), RP_VehicleOf()).
+
+The vehicle's droid unit (an astromech in its socket) goes with it too, seated and marked teleported the same way,
+with or without riders aboard. It sits in the hull and clears nothing, as stock.
 =================
 */
+// DAJ_RP: [Vehicles] one carried along, seated already: marked teleported, published, linked (RP_CarryRiders)
+static void RP_CarryMark( gentity_t *ent )
+{
+	const qboolean isNPC = ( ent->s.eType == ET_NPC ) ? qtrue : qfalse;
+
+	ent->client->ps.eFlags ^= EF_TELEPORT_BIT;
+
+	BG_PlayerStateToEntityState( &ent->client->ps, &ent->s, qtrue );
+	if ( isNPC )
+	{
+		ent->s.eType = ET_NPC;
+	}
+	RP_HiddenApplyState( ent, &ent->s );
+	VectorCopy( ent->client->ps.origin, ent->r.currentOrigin );
+	trap->LinkEntity( (sharedEntity_t *)ent );
+}
+
 void RP_CarryRiders( gentity_t *veh, vec3_t angles )
 {
 	gentity_t	*riders[1 + VEH_MAX_PASSENGERS];
+	gentity_t	*droid = NULL;
 	Vehicle_t	*pVeh;
 	int			n = 0, i;
 
@@ -300,7 +325,16 @@ void RP_CarryRiders( gentity_t *veh, vec3_t angles )
 			riders[n++] = (gentity_t *)pVeh->m_ppPassengers[i];
 		}
 	}
-	if ( !n )
+	// the droid, while it is still this vehicle's and has its socket to sit in (AttachRiders())
+	if ( pVeh->m_pDroidUnit && pVeh->m_iDroidUnitTag != -1 && veh->ghoul2 )
+	{
+		droid = (gentity_t *)pVeh->m_pDroidUnit;
+		if ( !droid->inuse || !droid->client || droid->client->ps.m_iVehicleNum != veh->s.number )
+		{
+			droid = NULL;
+		}
+	}
+	if ( !n && !droid )
 	{
 		return;
 	}
@@ -312,8 +346,7 @@ void RP_CarryRiders( gentity_t *veh, vec3_t angles )
 
 	for ( i = 0; i < n; i++ )
 	{
-		gentity_t		*rider = riders[i];
-		const qboolean	riderNPC = ( rider->s.eType == ET_NPC ) ? qtrue : qfalse;
+		gentity_t *rider = riders[i];
 
 		if ( !rider->inuse || !rider->client || rider->client->ps.m_iVehicleNum != veh->s.number )
 		{
@@ -327,16 +360,28 @@ void RP_CarryRiders( gentity_t *veh, vec3_t angles )
 		{
 			SetClientViewAngle( rider, angles );
 		}
-		rider->client->ps.eFlags ^= EF_TELEPORT_BIT;
+		RP_CarryMark( rider );
+	}
 
-		BG_PlayerStateToEntityState( &rider->client->ps, &rider->s, qtrue );
-		if ( riderNPC )
+	// a solid rider clears his own seat, now that every one of them is in his
+	for ( i = 0; i < n; i++ )
+	{
+		gentity_t *rider = riders[i];
+
+		if ( !rider->inuse || !rider->client || rider->client->ps.m_iVehicleNum != veh->s.number )
 		{
-			rider->s.eType = ET_NPC;
+			continue;
 		}
-		RP_HiddenApplyState( rider, &rider->s );
-		VectorCopy( rider->client->ps.origin, rider->r.currentOrigin );
-		trap->LinkEntity( (sharedEntity_t *)rider );
+		if ( !( rider->r.contents & CONTENTS_BODY ) || rider->client->sess.sessionTeam == TEAM_SPECTATOR )
+		{
+			continue;
+		}
+		G_KillBox( rider );
+	}
+
+	if ( droid && droid->inuse && droid->client )
+	{
+		RP_CarryMark( droid );
 	}
 }
 
