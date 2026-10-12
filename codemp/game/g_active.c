@@ -5350,6 +5350,23 @@ void ClientEndFrame( gentity_t *ent ) {
 		ent->client->ps.stats[STAT_ALT_FIRE_OK] = canAltFireWeapon( ent ) ? 1 : 0;
 	}
 
+	// DAJ_RP: [Phase] tell a hidden player he is hidden -- his own client draws the Force Push body blur on
+	// him in third person (CG_Player(), cg_players.c). Through stats[], so no other client is told; see
+	// STAT_RP_SELF_FX in bg_public.h. Every frame, above the spectator split like the two above: it drops at
+	// once on /admhidden off, and a spectator (whom RP_PlayerIsHidden() never counts) gets 0. A spectator
+	// following a hidden player is copied his playerState, bit and all; his client does not draw for him.
+	if ( ent->client )
+	{
+		if ( RP_PlayerIsHidden( ent ) )
+		{
+			ent->client->ps.stats[STAT_RP_SELF_FX] |= RP_SELF_FX_HIDDEN;
+		}
+		else
+		{
+			ent->client->ps.stats[STAT_RP_SELF_FX] &= ~RP_SELF_FX_HIDDEN;
+		}
+	}
+
 	// GalaxyRP fix: [Death System] serve a downed player's countdown, here for the same structural
 	// reason the block above is here: this runs for every client every server frame, and it runs
 	// ABOVE the spectator split below. ClientTimerActions() reaches neither a spectator nor a client

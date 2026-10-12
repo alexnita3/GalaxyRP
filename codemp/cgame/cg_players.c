@@ -10912,6 +10912,17 @@ void CG_Player( centity_t *cent ) {
 	{
 		CG_ForcePushBodyBlur(cent);
 	}
+	// DAJ_RP: [Phase] /admhidden -- the hidden player sees the same body blur on himself, as feedback that he is
+	// hidden (JA++'s /amempower look). The server tells only him, in his own playerState (STAT_RP_SELF_FX,
+	// bg_public.h), so nobody else can draw it. Only on his own body: a spectator following him is copied his
+	// playerState, bit and all, but cg.clientNum is the spectator's own number, which no drawn player has. Not
+	// in first person, where the blur would sit around the camera, and not twice while a real push blur is
+	// already running on him.
+	else if (cent->currentState.number == cg.clientNum && cg.snap &&
+		(cg.snap->ps.stats[STAT_RP_SELF_FX] & RP_SELF_FX_HIDDEN) && cg.renderingThirdPerson)
+	{
+		CG_ForcePushBodyBlur(cent);
+	}
 
 	if ( cent->currentState.powerups & (1 << PW_DISINT_4) )
 	{

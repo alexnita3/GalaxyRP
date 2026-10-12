@@ -629,8 +629,15 @@ typedef enum {
 	// window -- the change costs 200ms of weaponTime and the raise another 250ms -- and the melee and
 	// saber carve-outs are repeated in PM_Weapon() itself so a kick or a throw never waits on it.
 	// Slot 12 was free.
-	STAT_ALT_FIRE_OK
+	STAT_ALT_FIRE_OK,
+	// DAJ_RP: [Phase] effects a player is shown on himself and nobody else, RP_SELF_FX_* bits. Private for the
+	// same reason as the slots above: stats[] goes to the owning client's own playerState only, never into the
+	// entityState the other clients get. Written every frame in ClientEndFrame(); slot 13 was free.
+	STAT_RP_SELF_FX
 } statIndex_t;
+
+// DAJ_RP: [Phase] STAT_RP_SELF_FX bits
+#define RP_SELF_FX_HIDDEN		(1<<0)	// /admhidden: he sees the Force Push body blur on himself (CG_Player(), cg_players.c)
 
 
 // playerState_t->persistant[] indexes
