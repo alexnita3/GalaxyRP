@@ -1343,6 +1343,39 @@ void zyk_add_guns( gentity_t *ent )
 // file, beside the account-change guards that were its first callers; declared here rather than
 // moved so those callers keep it in view.
 static const char *zyk_minigame_name( gentity_t *ent );
+// DAJ_RP: [Admin] defined further down, beside zyk_stop_active_force_powers(); see Cmd_Give_f().
+void zyk_stop_active_holdables( gentity_t *ent );
+
+// DAJ_RP: [Admin] what every /give toggle does first, on or off: end whatever the target has running --
+// zyk_stop_active_force_powers() and zyk_stop_active_holdables(), the pair /logout, /login and /char
+// use before they load a new loadout. Without it a power from the old force set kept going on the new
+// one (a level-3 Rage, Protect or Grip outlived "force off", the gripped victim with it), and so did
+// an active holdable: a seeker kept shooting, and an E-Web handed a stripped player the full gun set
+// back when he got off it. Must run before the remove/add helpers write the new weapon set.
+//
+// The E-Web needs one step more here. While its owner mans it, EWebThink() keeps his weapons down to
+// the emplaced-gun bit, and his own weapon set waits in the e-web (genericValue11) for EWebDisattach()
+// to hand back. zyk_stop_active_holdables() frees it without handing it back, on purpose -- for a
+// character switch that old set is the wrong one. Three of the four toggles do not care: they write a
+// whole new weapon set afterwards. "force off" does not -- zyk_remove_force_powers() only takes the
+// saber away and gives the Bryar -- so without this the player would come off the e-web with nothing
+// but the Bryar: no melee, and none of the weapons he picked up. So it goes back first, as getting off
+// would have done (and only for a live owner, as there).
+static void rp_give_reset_active( gentity_t *ent )
+{
+	if (ent->client->ewebIndex && ent->health > 0)
+	{
+		gentity_t *eweb = &g_entities[ent->client->ewebIndex];
+
+		if (eweb->inuse && eweb->r.ownerNum == ent->s.number)
+		{
+			ent->client->ps.stats[STAT_WEAPONS] = eweb->genericValue11;
+		}
+	}
+
+	zyk_stop_active_force_powers(ent);
+	zyk_stop_active_holdables(ent);
+}
 
 void Cmd_Give_f( gentity_t *ent )
 {
@@ -1427,14 +1460,20 @@ void Cmd_Give_f( gentity_t *ent )
 		return;
 	}
 
+	// DAJ_RP: [Admin] every toggle below, on or off, first ends whatever the target has running (see
+	// rp_give_reset_active() above). The target alone is also told on screen what happened; the
+	// console line to everybody stays as it was.
 	if (Q_stricmp(arg2, "force") == 0)
 	{
+		rp_give_reset_active(&g_entities[client_id]);
+
 		if (g_entities[client_id].client->pers.player_statuses & (1 << PLAYER_STATUS_ADM_GIVE_FORCE))
 		{ // zyk: remove force powers
 			zyk_remove_force_powers(&g_entities[client_id]);
 
 			g_entities[client_id].client->pers.player_statuses &= ~(1 << PLAYER_STATUS_ADM_GIVE_FORCE);
 			trap->SendServerCommand( -1, va("print \"Removed force powers from %s^7\n\"", g_entities[client_id].client->pers.netname) );
+			trap->SendServerCommand( client_id, "cp \"^7Your Force powers have been taken away\n\"" );
 		}
 		else
 		{ // zyk: add force powers
@@ -1444,16 +1483,20 @@ void Cmd_Give_f( gentity_t *ent )
 			g_entities[client_id].client->pers.player_statuses &= ~(1 << PLAYER_STATUS_ADM_GIVE_GUNS);
 			g_entities[client_id].client->pers.player_statuses |= (1 << PLAYER_STATUS_ADM_GIVE_FORCE);
 			trap->SendServerCommand( -1, va("print \"Added force powers to %s^7\n\"", g_entities[client_id].client->pers.netname) );
+			trap->SendServerCommand( client_id, "cp \"^7You have been given full Force powers\n\"" );
 		}
 	}
 	else if (Q_stricmp(arg2, "guns") == 0)
 	{
+		rp_give_reset_active(&g_entities[client_id]);
+
 		if (g_entities[client_id].client->pers.player_statuses & (1 << PLAYER_STATUS_ADM_GIVE_GUNS))
 		{ // zyk: remove guns
 			zyk_remove_guns(&g_entities[client_id]);
 
 			g_entities[client_id].client->pers.player_statuses &= ~(1 << PLAYER_STATUS_ADM_GIVE_GUNS);
 			trap->SendServerCommand( -1, va("print \"Removed guns from %s^7\n\"", g_entities[client_id].client->pers.netname) );
+			trap->SendServerCommand( client_id, "cp \"^7Your weapons have been taken away\n\"" );
 		}
 		else
 		{ // zyk: add guns
@@ -1463,6 +1506,7 @@ void Cmd_Give_f( gentity_t *ent )
 			g_entities[client_id].client->pers.player_statuses &= ~(1 << PLAYER_STATUS_ADM_GIVE_FORCE);
 			g_entities[client_id].client->pers.player_statuses |= (1 << PLAYER_STATUS_ADM_GIVE_GUNS);
 			trap->SendServerCommand( -1, va("print \"Added guns to %s^7\n\"", g_entities[client_id].client->pers.netname) );
+			trap->SendServerCommand( client_id, "cp \"^7You have been given a full arsenal\n\"" );
 		}
 	}
 	else
