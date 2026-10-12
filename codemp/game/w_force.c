@@ -612,6 +612,36 @@ void WP_SpawnInitForcePowers( gentity_t *ent )
 
 extern qboolean BG_InKnockDown( int anim ); //bg_pmove.c
 extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
+
+// DAJ_RP: [Force] who Grip may not take hold of: any vehicle (fighter, walker, speeder or animal, empty or
+// ridden) and the three NPC classes Push and Pull already refuse in ForceThrow() below -- Galak's mech, the
+// non-vehicle AT-ST and the Rancor. Stock refused every force power but Lightning on vehicles (the block
+// commented out in ForcePowerUsableOn()); zyk opened them all up, which let a player lift and choke a
+// fighter or a walker. The other powers stay open on vehicles; Grip alone is refused again. Asked by
+// ForcePowerUsableOn() for every caster -- player, NPC Jedi or bot -- and by the NPC Jedi's own grip
+// decisions (NPC_AI_Jedi.c), so the AI picks something else instead of a grip that cannot land.
+qboolean RP_GripRefused( const gentity_t *target )
+{
+	if (!target || !target->client)
+	{
+		return qfalse;
+	}
+
+	if (target->s.eType == ET_NPC && target->s.NPC_class == CLASS_VEHICLE)
+	{
+		return qtrue;
+	}
+
+	if (target->client->NPC_class == CLASS_GALAKMECH ||
+		target->client->NPC_class == CLASS_ATST ||
+		target->client->NPC_class == CLASS_RANCOR)
+	{
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
 int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forcePower)
 {
 	if (other && other->client && BG_HasYsalamiri(level.gametype, &other->client->ps))
@@ -675,7 +705,11 @@ int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forc
 
 	if (forcePower == FP_GRIP)
 	{
-		if (other && other->client &&
+		if (RP_GripRefused(other))
+		{ // DAJ_RP: [Force] no gripping vehicles, Galak's mech, the AT-ST or the Rancor (see RP_GripRefused())
+			return 0;
+		}
+		else if (other && other->client &&
 			(other->client->ps.fd.forcePowersActive & (1<<FP_ABSORB)))
 		{ //don't allow gripping to begin with if they are absorbing
 			//play sound indicating that attack was absorbed

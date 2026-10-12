@@ -2032,6 +2032,7 @@ static void Jedi_CombatDistance( int enemy_dist )
 			NPCS.NPC->enemy->client->ps.saberInFlight && /*NPC->enemy->client->ps.saber[0].Active()*/ NPCS.NPC->enemy->client->ps.saberEntityNum && //enemy throwing saber
 			NPCS.NPC->client->ps.weaponTime <= 0 && //I'm not busy
 			WP_ForcePowerAvailable( NPCS.NPC, FP_GRIP, 0 ) && //I can use the power
+			!RP_GripRefused( NPCS.NPC->enemy ) && // DAJ_RP: [Force] not one Grip may not take hold of (w_force.c)
 			!Q_irand( 0, 10 ) && //don't do it all the time, averages to 1 check a second
 			Q_irand( 0, 6 ) < g_npcspskill.integer && //more likely on harder diff
 			Q_irand( RANK_CIVILIAN, RANK_CAPTAIN ) < NPCS.NPCInfo->rank )//more likely against harder enemies
@@ -2121,7 +2122,10 @@ static void Jedi_CombatDistance( int enemy_dist )
 							TIMER_Set( NPCS.NPC, "attackDelay", NPCS.NPC->client->ps.weaponTime );
 						}
 						else if ( WP_ForcePowerUsable( NPCS.NPC, FP_GRIP )
-							&& NPCS.NPC->enemy && InFOV( NPCS.NPC->enemy, NPCS.NPC, 20, 30 ) )
+							&& NPCS.NPC->enemy && InFOV( NPCS.NPC->enemy, NPCS.NPC, 20, 30 )
+							// DAJ_RP: [Force] not a vehicle, Galak's mech, the AT-ST or the Rancor: the grip
+							// would only fail (RP_GripRefused(), w_force.c), so try something else instead
+							&& !RP_GripRefused( NPCS.NPC->enemy ) )
 						{
 							//taunt
 							if ( TIMER_Done( NPCS.NPC, "chatter" ) && jediSpeechDebounceTime[NPCS.NPC->client->playerTeam] < level.time && NPCS.NPCInfo->blockedSpeechDebounceTime < level.time )

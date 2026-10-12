@@ -3273,6 +3273,8 @@ void zyk_stop_active_force_powers( gentity_t *ent );
 void WP_SpawnInitForcePowers( gentity_t *ent );
 void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd );
 int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forcePower);
+// DAJ_RP: [Force] Grip may not take hold of this one: a vehicle, Galak's mech, the AT-ST or the Rancor
+qboolean RP_GripRefused( const gentity_t *target );
 void ForceHeal( gentity_t *self );
 void ForceSpeed( gentity_t *self, int forceDuration );
 void ForceRage( gentity_t *self );
