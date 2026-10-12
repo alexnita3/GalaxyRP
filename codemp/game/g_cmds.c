@@ -19107,7 +19107,10 @@ void Cmd_AdminList_f( gentity_t *ent ) {
 		}
 		else if (command_number == ADM_GETUP)
 		{
-			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/getup ^7and ^3/helpup <player name> ^7to revive yourself and other players from downed state\n\n\"");
+			// DAJ_RP: [Admin] what the flag adds -- /getup and /helpup are everyone's: the countdown skipped, and /helpup's
+			// reach (65 units) and its "not while downed yourself" lifted (can_player_get_up(), Cmd_Getup_f()). An admin
+			// paralysis is still not lifted by either.
+			trap->SendServerCommand(ent - g_entities, "print \"\nThis flag lifts two limits: ^3/getup ^7gets you up at once without waiting for the countdown, and ^3/helpup <player name> ^7works on other players from any distance, even while you are downed yourself.\n\n\"");
 		}
 		else if (command_number == ADM_WEATHER)
 		{
