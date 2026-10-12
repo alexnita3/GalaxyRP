@@ -148,7 +148,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"func_bobbing model *1 height 16 speed 3",
 		"common mover" },
 	{ "func_breakable", 0, NULL,
-		"A brush or .md3 model that breaks into chunks when its health runs out or when it is used, fires its target and is removed. Bryar pistol, DEMP2 and plain melee do not hurt it (heavy melee does). One with 10 health or less, or THIN, or of material 1, 6 or 12, also breaks when a player runs into it hard. Its spawnflags are not the other movers': 128 is PLAYER_USE and there is no INACTIVE.",
+		"A brush or .md3 model that breaks into chunks when its health runs out or when it is used, fires its target and is removed. Bryar pistol, DEMP2 and plain melee do not hurt it (heavy melee does). One with 10 health or less, or THIN, or of material 1, 6 or 12, also breaks when a player or NPC runs into it hard. Its spawnflags are not the other movers': 128 is PLAYER_USE and there is no INACTIVE.",
 		"1|INVINCIBLE|No default health: with no health key it takes no damage and only breaks when used.\n"
 		"8|THIN|Breaks easily when a player runs into it, like glass.\n"
 		"16|SABERONLY|Only sabers damage it.\n"
@@ -169,17 +169,17 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"paintarget||Fired when a player damages it without breaking it.\n"
 		"wait|0|Milliseconds before paintarget can fire again. -1: paintarget fires once only.\n"
 		"showhealth|0|Non-0: a health bar shows under the crosshair of a player aiming at it.\n"
-		"team||Siege only: 1 or 2, that team cannot damage it (as teamnodmg).\n"
+		"team||Siege only (with g_ff_objectives 0, and no teamnodmg given): 1 or 2, that team cannot damage it.\n"
 		"teamnodmg|0|Siege only (and only with g_ff_objectives 0): 1 or 2, that team cannot damage it.",
 		"func_breakable model *1 health 50 material 4",
 		"common mover func_glass" },
 	{ "func_button", 0, NULL,
 		"A brush or .md3 model that, touched by a player or NPC, slides in the direction of its angle by its own size minus lip, fires its target as it starts, waits, and goes back. With health it is pressed by shooting it instead of touching. Being used by a trigger or another entity presses it the same way.",
 		"2|FORCE_PUSH|Force Push also presses it.\n"
-		"8|TOGGLE|Stays pressed: touching it, the use key and Force Push only press it from rest, so only a use from a trigger or another entity releases it.\n"
+		"8|TOGGLE|Stays pressed: touching it, the use key and Force Push only press it from rest (a button without health), so only a use from a trigger or another entity, or a level 5 Stun Baton, releases it. With health, the use key also releases it.\n"
 		"16|LOCKED|Starts locked: its first use only unlocks it (and, unless TOGGLE, drops its targetname), later uses work.\n"
 		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of being blocked. Needs dmg: a button has none by default.\n"
-		"64|PLAYER_USE|Players can press it with the use key, from rest only (an .md3 one needs SOLID to be aimed at).\n"
+		"64|PLAYER_USE|Players can press it with the use key, from rest only for a button without health (an .md3 one needs SOLID to be aimed at).\n"
 		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
 		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"angle||Direction it moves when pressed (-1 up, -2 down).\n"
@@ -195,12 +195,12 @@ static const rpEntHelp_t rp_ent_help[] = {
 	{ "func_door", 0, NULL,
 		"A brush or .md3 model that slides in the direction of its angle by its own size minus lip, waits, and closes again. With no targetname, health, PLAYER_USE or FORCE_ACTIVATE it opens by itself when someone walks up (its trigger reaches 120 units out on each side of its thinnest axis). With a targetname it opens only when used. Blocked, it hurts the blocker by dmg and goes back.",
 		"1|START_OPEN|Spawns open and closes when used (its two positions are swapped).\n"
-		"2|FORCE_ACTIVATE|Force Push or Pull aimed at it while it is at rest moves it: Push away from you, Pull toward you. It gets no walk-up trigger, but a targetname, PLAYER_USE or the Stun Baton still use it.\n"
+		"2|FORCE_ACTIVATE|Force Push or Pull aimed at it while it is at rest moves it: Push away from you, Pull toward you. It gets no walk-up trigger (unless LOCKED), but a targetname, PLAYER_USE or the Stun Baton still use it.\n"
 		"4|CRUSHER|Does not go back when blocked: it keeps hurting what blocks it.\n"
 		"8|TOGGLE|Stays open until used again (wait is not used).\n"
 		"16|LOCKED|Starts locked, its shader on the first frame: walking up does nothing until it is used once, which unlocks it. A non-TOGGLE door then also drops its targetname and opens by walking up.\n"
-		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of going back. On by default: dmg is 2 unless set.\n"
-		"64|PLAYER_USE|Players open it with the use key (an .md3 one needs SOLID to be aimed at). It then gets no walk-up trigger.\n"
+		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of going back. Works without a dmg key: dmg is 2 unless set.\n"
+		"64|PLAYER_USE|Players open it with the use key (an .md3 one needs SOLID to be aimed at). It then gets no walk-up trigger, unless LOCKED.\n"
 		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
 		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"angle||Direction it opens in (-1 up, -2 down).\n"
@@ -210,7 +210,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"lip|8|Units of it left showing when open.\n"
 		"dmg|2|Damage to what blocks it. Negative: none.\n"
 		"delay|0|Whole seconds between being used and moving.\n"
-		"health|0|Non-0: shooting it while it is closed opens it (it takes no real damage), and it gets no walk-up trigger.\n"
+		"health|0|Non-0: shooting it while it is at rest where it started opens it (on a START_OPEN door, closes it). It takes no real damage, and it gets no walk-up trigger unless LOCKED.\n"
 		"targetname||Using it opens it, and it gets no walk-up trigger.\n"
 		"teamallow|0|Team (1 red, 2 blue) whose players still open it by walking up while it is LOCKED.\n"
 		"vehopen|0|Non-0: vehicles and their riders can open it by walking up.",
@@ -227,7 +227,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"func_glass model *1 health 10",
 		"common mover func_breakable" },
 	{ "func_goodie_panel", 0, NULL,
-		"A brush or .md3 panel a player uses with the use key (PLAYER_USE is not needed). Only a player can open it: a use from a trigger passes its player on and works, one from map logic with no player (a timer, a relay chain) does nothing. If they carry a goodie key, one is used up, it plays the pass sound, fires its target and is spent for good. Without one it plays the fail sound and fires target2. It does not move. A player gets goodie keys (up to 5) from a dead NPC whose message is goodie, and loses them on death or disconnect.",
+		"A brush or .md3 panel a player uses with the use key (PLAYER_USE is not needed). Only a player can open it: a use passes on whoever started the chain, so one no player started (a START_ON func_timer, say) does nothing. If they carry a goodie key, one is used up, it plays the pass sound, fires its target and is spent for good. Without one it plays the fail sound and fires target2. It does not move. A player gets goodie keys (up to 5) from a dead NPC whose message is goodie, and loses them on death or disconnect.",
 		"128|INACTIVE|Cannot be used until a target_activate activates it.\n"
 		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"target||Fired when a player with a goodie key uses it.\n"
@@ -258,7 +258,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"4|CRUSHER|Does not reverse when blocked: it keeps hurting what blocks it.\n"
 		"8|TOGGLE|Stays up until used again. A live rider at the top still sends it down 1 second after stepping off, unless NO_RIDER_WAIT.\n"
 		"16|LOCKED|Starts locked: its first use only unlocks it (and, unless TOGGLE, drops its targetname), later uses work.\n"
-		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of reversing. On by default: dmg is 2 unless set.\n"
+		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of reversing. Works without a dmg key: dmg is 2 unless set.\n"
 		"64|PLAYER_USE|Players can use it with the use key (an .md3 one needs SOLID to be aimed at).\n"
 		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
 		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.\n"
@@ -273,13 +273,13 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"func_plat model *1 height 128",
 		"common mover" },
 	{ "func_rotating", 0, NULL,
-		"A brush or .md3 model that spins around its origin (a map's one needs an origin brush), around Z unless X_AXIS or Y_AXIS is set. Blocked, it stops until the way is clear, unless IMPACT. Using it (targetname, PLAYER_USE, the Stun Baton) stops it where it is, and the next use starts it again, with its soundSet's start, loop and stop sounds. One with a targetname starts still unless START_ON, one without spins from spawn. With health it can be broken instead (the func_breakable keys apply): it always spins, using it breaks it (with 64, fires its target instead), the use key cannot use it, and 128, 1024, a soundSet and a team do nothing.",
+		"A brush or .md3 model that spins around its origin (a map's one needs an origin brush), around Z unless X_AXIS or Y_AXIS is set. Blocked, it stops until the way is clear, unless IMPACT. Using it (targetname, PLAYER_USE, the Stun Baton) stops it where it is, and the next use starts it again, with its soundSet's start, loop and stop sounds. One with a targetname starts still unless START_ON, one without spins from spawn. With health it can be broken instead (the func_breakable keys apply): it always spins, using it breaks it (with 64, fires its target instead), the use key cannot use it, 128, 1024 and a soundSet do nothing, and team is func_breakable's Siege key (it joins no mover team).",
 		"1|START_ON|With a targetname: spins from spawn (without it, the first use starts it). One without a targetname always does.\n"
 		"2|RADAR|Shown on the radar, as Siege asteroids are.\n"
 		"4|X_AXIS|Spins around the X axis (roll) instead of Z.\n"
 		"8|Y_AXIS|Spins around the Y axis (pitch) instead of Z.\n"
 		"16|IMPACT|Hurts anything it touches while spinning by dmg (10000 when not given) instead of being blocked.\n"
-		"32|CRUSH_THROUGH|Without health: a player or NPC in its way takes dmg and it keeps turning.\n"
+		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps turning.\n"
 		"64|PLAYER_USE|Without health: players can use it with the use key (an .md3 one needs SOLID to be aimed at). With health: USE_NOT_BREAK, a use fires its target instead of breaking it.\n"
 		"128|INACTIVE|Without health: ignores every use until a target_activate activates it.\n"
 		"1024|SOLID|Without health: with an .md3 model it is solid, by its mins and maxs.",
@@ -292,7 +292,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"func_rotating model *1 speed 45",
 		"common mover func_breakable" },
 	{ "func_security_panel", 0, NULL,
-		"A brush or .md3 panel a player uses with the use key (PLAYER_USE is not needed). Only a player can open it: a use from a trigger passes its player on and works, one from map logic with no player does nothing. If they carry the security key its message names (or it has no message), the key is taken, it plays the pass sound, fires its target and is spent for good. Otherwise it plays the fail sound and fires target2. It does not move. A player carries one security key at a time, from an item_security_key or a dead NPC, and loses it on death or disconnect.",
+		"A brush or .md3 panel a player uses with the use key (PLAYER_USE is not needed). Only a player can open it: a use passes on whoever started the chain, so one no player started (a START_ON func_timer, say) does nothing. If they carry the security key its message names (or it has no message), the key is taken, it plays the pass sound, fires its target and is spent for good. Otherwise it plays the fail sound and fires target2. It does not move. A player carries one security key at a time, from an item_security_key or a dead NPC, and loses it on death or disconnect.",
 		"128|INACTIVE|Cannot be used until a target_activate activates it.\n"
 		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"message||Name of the security key it needs. Empty: anyone opens it (and loses any key they carry).\n"
@@ -328,8 +328,8 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"1|START_ON|Runs from spawn even with a targetname.\n"
 		"2|TOGGLE|Not used. Any use of a moving train (targetname, PLAYER_USE, the Stun Baton) sends it back toward the corner it left: getting there, it jumps to the corner it was heading for and carries on.\n"
 		"4|BLOCK_STOPS|Sets dmg to 0 (a blocked train always waits).\n"
-		"16|LOCKED|Starts locked: its first use only unlocks it (and, unless TOGGLE, drops its targetname), later uses work.\n"
-		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of waiting. On by default unless BLOCK_STOPS: dmg is 2 unless set.\n"
+		"16|LOCKED|Starts locked: its first use only unlocks it and drops its targetname (kept only with spawnflag 8), later uses work.\n"
+		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of waiting. Works without a dmg key: dmg is 2 unless set (0 with BLOCK_STOPS).\n"
 		"64|PLAYER_USE|Players can use it with the use key (an .md3 one needs SOLID to be aimed at).\n"
 		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
 		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
@@ -349,12 +349,12 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"target||Fired when it goes (and on every use with endframe or ALWAYS_ON).\n"
 		"target2||Fired when it comes back, with no activator: targets that need a player get none.\n"
 		"wait|0|With ALWAYS_ON: seconds before it can be used again. 0: once only.\n"
-		"health|0|Currently does nothing: every hit just uses it, the health never goes down and it never ends.\n"
+		"health|0|Non-0: every hit uses it. The amount currently does nothing: it never goes down and it never ends.\n"
 		"endframe|0|Frames of its shader animation minus 1: each use steps one frame, back to 0 after the last.",
 		"func_usable model *1 targetname wall1",
 		"common mover func_wall" },
 	{ "func_wall", 0, NULL,
-		"A brush or .md3 model that each use switches between there (solid and visible) and gone, also opening or closing the map's area portal it sits in, unless it started gone. It fires no targets. An .md3 wall without SOLID (1024) counts as gone: its first use only makes it solid.",
+		"A brush or .md3 model that each use switches between there (solid and visible) and gone, also opening or closing the map's area portal it sits in, unless it started gone. It fires no targets. An .md3 wall without SOLID (1024) counts as gone: its first use only makes it solid (and closes its area portal).",
 		"1|START_OFF|Starts gone (and then never touches area portals).\n"
 		"64|PLAYER_USE|Players can use it with the use key while it is there (an .md3 one needs SOLID to be aimed at). Gone, it cannot be aimed at.\n"
 		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
@@ -385,8 +385,8 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"target||An entity to aim at (an info_notnull, say), instead of angles.\n"
 		"target2||Fired each time the effect plays. Currently fired twice per use with ONESHOT.\n"
 		"targetname||Needed to use it at all.\n"
-		"splashDamage|5|With DAMAGE: damage each time (0 gives the default).\n"
-		"splashRadius|16|With DAMAGE: radius, in units (0 gives the default).\n"
+		"splashDamage|5|With DAMAGE: damage each time. Absent: 5. 0 still does 1 damage a time.\n"
+		"splashRadius|16|With DAMAGE: radius, in units. Absent: 16. Under 1 counts as 1: only what touches its spot is hit.\n"
 		"soundset||An ambient sound set: start sound when switched on, a loop while on, stop sound when switched off.",
 		"fx_runner fxFile env/small_fire",
 		"common info_notnull" },
@@ -728,8 +728,8 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"wait|0|Seconds before it comes back once taken. 0: the server's time for its kind (weapons g_weaponRespawn, ammo and "
 		"the thermal, trip mine and det pack weapons rp_ammo_respawn_time, shields rp_shield_respawn_time, health "
 		"rp_health_respawn_time, holdables rp_holdable_item_respawn_time, powerups rp_powerup_respawn_time). -1: it never comes "
-		"back on its own, and nor does any other wait below 1 (0.5, -2) unless random is set. Also how long an item Force "
-		"Pushed or Pulled away stays gone.\n"
+		"back on its own, and nor does any other wait below 1 (0.5, -2) unless random is set. A wait above 0 (whole seconds, at least 1) is also how "
+		"long an item pushed or pulled by the Force stays where it went before going back to its spot.\n"
 		"random|0|Seconds added or taken at random from the respawn time (never under 1).\n"
 		"count|0|Overrides what it gives: ammo for a weapon (any negative value: none) or an ammo pack, health for "
 		"item_medpak_instant (the bacta holdables ignore it), seconds for a powerup. Ammo is scaled by rp_add_ammo_scale and capped by the rp_max_ cvars. Shields and holdables ignore it.\n"
@@ -763,7 +763,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 	{ "misc_bsp", 0, NULL,
 		"Places another BSP (a sub-BSP) as solid geometry, turned by its angle (yaw only), with that BSP's own entities, drawn for every client. "
 		"After map load only a sub-BSP this map already loaded is accepted (others are refused and logged), so in practice it copies or moves the map's own misc_bsp. "
-		"Its sub-BSP entities are rebuilt with it, go with it on /entremove and /entedit, and are not saved by /entsave. Their targetnames and targets get the instance number in front (door becomes 1-door), so link to them by that name.",
+		"Its sub-BSP entities are rebuilt with it, go with it on /entremove and /entedit, and are not saved by /entsave. Their targetname, target and killtarget (not target2 to target6) get the instance number in front (door becomes 1-door), so link to them by that name.",
 		NULL,
 		"bspmodel||The sub-BSP, maps/NAME.bsp given as NAME: after map load the bspmodel of one of the map's own misc_bsp.\n"
 		"angle|0|Yaw. Other rotations are not supported.",
@@ -901,8 +901,8 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"light||Radius of a light on the model (100 when only color is given). It goes out when the model breaks.\n"
 		"color||Light colour, red green blue from 0 to 1 (default white).\n"
 		"gravity|0|Non-zero: set down on the floor below it when it spawns.\n"
-		"target4||Any use throws it toward the entity with this targetname instead of breaking it. Currently the throw is drawn by clients only: the server keeps it where it was.\n"
-		"throwtarget||With gravity: the same as target4 (read only when gravity is set).\n"
+		"target4||Any use throws it toward the entity with this targetname instead of breaking it. Ignored when gravity is set: use throwtarget then. Currently the throw is drawn by clients only: the server keeps it where it was.\n"
+		"throwtarget||With gravity: the target it is thrown at, replacing target4 (with gravity and no throwtarget, nothing is thrown).\n"
 		"teamnodmg|0|Siege only (and only with g_ff_objectives 0): 1 or 2, that team cannot damage it.",
 		"misc_model_breakable model models/map_objects/kejim/cargo_small.md3 spawnflags 1 health 50 material 11",
 		"common misc_model_ghoul misc_model_cargo_small" },
@@ -1113,7 +1113,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"On a single-player map it is single player's small ceiling turret instead: a misc_turretG2 with single player's team rule.",
 		"1|START_OFF|Starts off (on ordinary maps it never comes on).\n"
 		"2|UPSIDE_DOWN|Single-player maps only: stands on a floor, as misc_turretG2's.\n"
-		"4|TURBO|Jedi Academy single-player maps only: misc_turretG2's TURBO turbolaser.",
+		"4|TURBO|Jedi Academy single-player maps only: misc_turretG2's TURBO turbolaser, with single player's defaults (dmg 10, wait 500, shotspeed 4000, double size, takes no damage).",
 		"radius|1024|How far away it picks up a target.\n"
 		"wait|300|Ms between shots (300 to 355 when 0 or under 100).\n"
 		"dmg|100|Damage per shot.\n"
@@ -1127,7 +1127,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"showhealth|0|1: shows its health bar under the crosshair.\n"
 		"alliedteam|0|Team it does not shoot: 1 red, 2 blue (team games).\n"
 		"teamnodmg|0|Siege only (and only with g_ff_objectives 0): team it takes no damage from, 1 red, 2 blue.\n"
-		"teamowner|alliedteam|Team its crosshair shows as friendly in team games: 1 red, 2 blue.\n"
+		"teamowner||Ignored on ordinary maps: its crosshair shows friendly to the alliedteam team (team games). On single-player maps as misc_turretG2's.\n"
 		"team||On a single-player map: the team it leaves alone and takes no damage from (player, enemy by default, neutral, free). Elsewhere, Siege only: as teamnodmg.\n"
 		"customscale|0|Single-player maps only, with the other misc_turretG2 keys: size in percent.",
 		"misc_turret radius 800 dmg 20 health 500",
@@ -1150,8 +1150,8 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"count|20000|With CANRESPAWN: ms before it comes back.\n"
 		"random|2|Aim error, in degrees.\n"
 		"shotspeed|1100|Speed of its bolts (under 100: the default).\n"
-		"splashdamage|10|Splash damage of each bolt and of its explosion when destroyed. Currently also each bolt's splash radius.\n"
-		"splashradius|25|Radius of its explosion when destroyed (not of its bolts).\n"
+		"splashdamage|10|Splash damage of each bolt and of its explosion when destroyed. Without TURBO, currently also each bolt's splash radius.\n"
+		"splashradius|25|Radius of its explosion when destroyed, and of a TURBO's bolts.\n"
 		"target||Fired when it is destroyed.\n"
 		"target2||Fired when it picks up a target.\n"
 		"paintarget||Fired when it is hurt.\n"
@@ -1207,11 +1207,11 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"What the func_ mover classes share. Each takes a model: *N, one of the current map's inline brush models from *1 (*0, the map itself, and a number this map does not have are refused), or an .md3 file, refused if the server lacks it. A *N model is drawn shifted by the origin from where the map built it unless it was built around an origin brush, so origin 0 0 0 puts a plain one back in place. An .md3 one has no size or collision of its own: give mins and maxs, and spawnflag 1024.",
 		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving. dmg is 2 unless set on doors, plats, trains, bobbing, pendulums and rotating ones, 0 on buttons. On func_breakable 32 is HEAVY_WEAP.\n"
 		"64|PLAYER_USE|Players can use it with the use key (an .md3 one must be SOLID to be aimed at). Not on func_glass, func_timer or a func_rotating with health. func_breakable uses 128 for this.\n"
-		"128|INACTIVE|Ignores every use until a target_activate activates it. Not on func_breakable, func_timer or a func_rotating with health. On func_usable it comes back each time it returns. A level 5 Stun Baton clears it for good on doors, plats and buttons. In a team only the leader counts.\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it. Not on func_breakable, func_timer or a func_rotating with health. On func_usable it comes back each time it returns. A level 5 Stun Baton (with rp_stun_baton_door_unlock 1) clears it on doors, plats and buttons (a later target_deactivate can set it again). In a team, a use reaching the leader follows the leader's state, but a member's own 128 still refuses the use key and shots aimed at it, and target_activate cannot clear it (its name moved to the leader).\n"
 		"1024|SOLID|With an .md3 model: it is solid, by its mins and maxs. A *N model collides as its brushes were built, without it.",
 		"model||*N: an inline brush model of the map, #name: a sub-BSP the map loaded, anything else: an .md3 path (tried as typed, then under models/ with .md3 added).\n"
-		"model2||An extra .md3 model drawn with it (.glm is ignored, except on func_breakable and a func_rotating with health). It collides by model, not model2.\n"
-		"zykmodelscale||Size of model2 in percent (100 normal, up to 1023). The main model is not scaled. On func_static and func_rotating use model2scale (it takes over).\n"
+		"model2||An extra .md3 model drawn with it (.glm is never drawn: func_breakable and a func_rotating with health still load it, using up a model slot). It collides by model, not model2.\n"
+		"zykmodelscale||Size of model2 in percent (100 normal, up to 1023). The main model is not scaled. Ignored on func_static and func_rotating: their model2scale (default 0) always overwrites it.\n"
 		"mins||With an .md3 model: the lower corner of its box (x y z), which sets what it blocks and how far a door, button or plat moves.\n"
 		"maxs||With an .md3 model: the upper corner of its box.\n"
 		"angles2||The facing of an .md3 model (pitch yaw roll). Not on func_static and func_pendulum: they face by angles.\n"
@@ -1247,11 +1247,11 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"health|0|Health of each NPC, 0 for the NPC type's own.\n"
 		"npc_targetname||targetname and script_targetname given to each NPC: using it uses the NPC.\n"
 		"npc_target||Fired by each NPC when it dies.\n"
-		"paintarget||Fired by each NPC every time it is hurt.\n"
+		"paintarget||Fired by each NPC when it is hurt (not by rancors, wampas, howlers or mine monsters, not always by Galak mechs, nor on most hits from its own side).\n"
 		"npcteam||player, enemy, neutral or free: the side of each NPC, as /npc team sets it.\n"
 		"team|0|1 red or 2 blue: the game team each NPC counts as in team games (not its side: that is npcteam).\n"
-		"teamowner|0|1 red or 2 blue: the game team each NPC counts as when team is not given, and its crosshair shows friendly to that team.\n"
-		"teamuser|0|1 red or 2 blue: in team games its NPCs do not hurt that team's players (unless g_friendlyFire), and only that team can board its vehicles.\n"
+		"teamowner|0|1 red or 2 blue: the game team each NPC counts as when team is not given. In Siege its crosshair shows friendly to that team, in other gametypes 2 shows friendly and 1 hostile to everyone.\n"
+		"teamuser|0|1 red or 2 blue: in team games its NPCs do not hurt that team's players or NPCs (unless g_friendlyFire), and only that team can board its vehicles.\n"
 		"npceffect||holo, ghost or walkthrough: each NPC starts in that /npc effect mode (walkthrough: walked through but still hit). Not on npc_vehicle.\n"
 		"npcfreeze|0|1: each NPC starts frozen, as /npc freeze leaves it, and its spawnscript waits until it is unfrozen. Not on npc_vehicle.\n"
 		"npccredits|0|Credits paid to the logged-in player who kills one of its NPCs, 0 to 100000. Not on npc_vehicle.\n"
@@ -1758,7 +1758,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"npc_snowtrooper targetname snow1 spawnnow 1",
 		"npc common" },
 	{ "npc_spawner", 0, NULL,
-		"The general NPC spawner: spawns the NPC type named in npc_type (see /list npcs) each time it is fired by its targetname. /entadd and /entedit refuse it without a targetname or an npc_type, with a type the server does not have, or with a vehicle type (use npc_vehicle). Refused too when the server has g_allowNPC 0. On single-player maps, with rp_sp_npc_fix 1, it is removed at once for the types the named classes say so for (player, kyle, luke, chewie, r2d2, protocol, gonk, merchant and others). All the shared keys and spawnflags are under npc.",
+		"The general NPC spawner: spawns the NPC type named in npc_type (see /list npcs) each time it is fired by its targetname. /entadd and /entedit refuse it without a targetname or an npc_type, with a type the server does not have, or with a vehicle type (use npc_vehicle). Refused too when the server has g_allowNPC 0. On single-player maps, with rp_sp_npc_fix 1, it is removed at once for the types the named classes say so for (player, kyle, luke, chewie, r2d2, protocol, gonk, merchant, elder and others). All the shared keys and spawnflags are under npc.",
 		NULL,
 		"npc_type||Required. The NPC type to spawn, e.g. stormtrooper, reborn, jawa.",
 		"npc_spawner targetname guard1 npc_type stormtrooper spawnnow 1",
@@ -2072,7 +2072,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"common target" },
 	{ "target_scriptrunner", 0, NULL,
 		"Runs its usescript (an ICARUS script) when used, on itself or, with RUNONACTIVATOR, on whoever used it. It runs count times at most, can wait delay seconds before running, and ignores uses during its wait.",
-		"1|RUNONACTIVATOR|Runs the script on the activator instead of on the scriptrunner. Works on players and NPCs. Currently another entity as the activator is not prepared for scripts, so the script may do nothing.\n"
+		"1|RUNONACTIVATOR|Runs the script on the activator instead of on the scriptrunner. Works on players, NPCs and any entity with a script_targetname or a script key. Currently it does nothing on any other activator (it is not prepared for scripts).\n"
 		"128|INACTIVE|Starts inactive: other entities cannot use it until a target_activate names it.",
 		"usescript||The script to run, given without the scripts/ folder (it is added).\n"
 		"count|1|How many times it can run. -1 means no limit.\n"
@@ -2120,7 +2120,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"it was dropped sends it home. In CTY whoever carries a flag is under a ysalamiri's effect. Do not give it wait or "
 		"random: they make the flag come back to its base while it is being carried.",
 		NULL,
-		"speed|0|Non-0: the flag taken sound is played to the taker only, not to everyone.",
+		"speed|0|Non-0: the flag's pickup sound is played to the taker only, not to everyone.",
 		"team_CTF_blueflag",
 		"items common team_CTF_redflag" },
 	{ "team_CTF_blueplayer", 0, NULL,
@@ -2150,7 +2150,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"it was dropped sends it home. In CTY whoever carries a flag is under a ysalamiri's effect. Do not give it wait or "
 		"random: they make the flag come back to its base while it is being carried.",
 		NULL,
-		"speed|0|Non-0: the flag taken sound is played to the taker only, not to everyone.",
+		"speed|0|Non-0: the flag's pickup sound is played to the taker only, not to everyone.",
 		"team_CTF_redflag",
 		"items common team_CTF_blueflag" },
 	{ "team_CTF_redplayer", 0, NULL,
@@ -2178,7 +2178,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"Triggers are invisible volumes that react to what is inside them. The volume is a brush model (model *N) or, with no model, the box mins/maxs around the origin. Living players and NPCs touch triggers (not while in noclip), spectators only teleporters. The activator handed to the targets is whoever touched it, or whoever used it. target_deactivate switches most triggers off and target_activate on, and an off trigger also ignores being used. /entedit switches a deactivated trigger back on unless it has INACTIVE.",
 		"128|INACTIVE|Starts off until target_activate (or a script) switches it on. Honoured by trigger_once, trigger_multiple, trigger_hurt, trigger_push, trigger_teleport and trigger_visible. On trigger_lightningstrike it does not stop the strikes, it only blocks the use that switches them.\n"
 		"2048|MULTIPLE|trigger_once, trigger_multiple and a LINEAR or RELATIVE trigger_push: several entities can set it off in the same frame.",
-		"model||*N, one of this map's inline models from *1 (*0, the map itself, and a number this map does not have are refused), or #name, an inline model of a sub-BSP the map loaded. An .md3 is refused. Its shape is the model's own moved by the origin, so with /entadd it is offset by where you stand. /entaddaim sets it on the surface aimed at.\n"
+		"model||*N, one of this map's inline models from *1 (*0, the map itself, and a number this map does not have are refused), or #name, the whole sub-BSP the map loaded under that name. An .md3 is ignored (logged): the trigger is then just its mins/maxs box. Its shape is the model's own moved by the origin, so with /entadd it is offset by where you stand. /entaddaim sets it on the surface aimed at.\n"
 		"mins|0 0 0|With no model: lower corner of the box relative to the origin, e.g. -64 -64 0. The console logs a missing brush model but the box works.\n"
 		"maxs|0 0 0|With no model: upper corner of the box relative to the origin, e.g. 64 64 128.\n"
 		"wait|0|trigger_multiple: seconds before it can fire again. -1 fires once only, 0 fires again every frame while touched.\n"
@@ -2213,7 +2213,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"8|NO_PROTECTION|The damage ignores armor, shields, god mode and spawn protection.\n"
 		"16|SLOW|Hurts once a second instead of every 0.1 seconds.\n"
 		"128|INACTIVE|Starts off: target_activate switches it on.",
-		"dmg|5|Damage per tick. -1 is a fall to death: a player ragdolls, screams and dies 3 seconds later (credited to whoever pushed them in), an NPC dies at once, and a dead player who touches it respawns at once.\n"
+		"dmg|5|Damage per tick. -1 is a fall to death: a player ragdolls, screams and dies 3 seconds later (credited to whoever pushed them in), an NPC dies at once.\n"
 		"targetname||With CAN_TARGET: using it switches it on or off.\n"
 		"team||Siege only: 1 or 2, only that team is hurt.",
 		"trigger_hurt model *1 dmg 10 spawnflags 16",
