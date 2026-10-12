@@ -273,7 +273,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"func_plat model *1 height 128",
 		"common mover" },
 	{ "func_rotating", 0, NULL,
-		"A brush or .md3 model that spins around its origin (a map's one needs an origin brush), around Z unless X_AXIS or Y_AXIS is set. Blocked, it stops until the way is clear, unless IMPACT. Using it (targetname, PLAYER_USE, the Stun Baton) stops it where it is, and the next use starts it again, with its soundSet's start, loop and stop sounds. One with a targetname starts still unless START_ON, one without spins from spawn. With health it can be broken instead (the func_breakable keys apply): it always spins, using it breaks it (with 64, fires its target instead), the use key cannot use it, 128, 1024 and a soundSet do nothing, and team is func_breakable's Siege key (it joins no mover team).",
+		"A brush or .md3 model that spins around its origin (a map's one needs an origin brush), around Z unless X_AXIS or Y_AXIS is set. Blocked, it stops until the way is clear, unless IMPACT. Using it (targetname, PLAYER_USE, the Stun Baton) stops it where it is, and the next use starts it again, with its soundSet's start, loop and stop sounds. One with a targetname starts still unless START_ON, one without spins from spawn. With health it can be broken instead (the func_breakable keys apply): it always spins, using it breaks it (with 64, fires its target instead), the use key cannot use it, 128 and a soundSet do nothing, and team is func_breakable's Siege key (it joins no mover team).",
 		"1|START_ON|With a targetname: spins from spawn (without it, the first use starts it). One without a targetname always does.\n"
 		"2|RADAR|Shown on the radar, as Siege asteroids are.\n"
 		"4|X_AXIS|Spins around the X axis (roll) instead of Z.\n"
@@ -282,7 +282,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps turning.\n"
 		"64|PLAYER_USE|Without health: players can use it with the use key (an .md3 one needs SOLID to be aimed at). With health: USE_NOT_BREAK, a use fires its target instead of breaking it.\n"
 		"128|INACTIVE|Without health: ignores every use until a target_activate activates it.\n"
-		"1024|SOLID|Without health: with an .md3 model it is solid, by its mins and maxs.",
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs, with or without health (with health it must be, to be shot at all). A *N model needs no flag: it collides as built.",
 		"speed|100|Degrees per second.\n"
 		"spinangles||Degrees per second on pitch, yaw and roll at once, in place of speed and the axis flags.\n"
 		"trdelta||As spinangles, but then the axis chosen by the flags is set to speed.\n"
@@ -344,12 +344,12 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"8|ALWAYS_ON|Never switches: a use fires its target, and it cannot be used again until wait has passed (never, without wait).\n"
 		"16|BLOCKCHECK|Coming back, it waits until nobody stands inside it.\n"
 		"64|PLAYER_USE|Players can use it with the use key while it is there (an .md3 one needs SOLID to be aimed at). With ALWAYS_ON and wait, the use key works again after the wait even without 64.\n"
-		"128|INACTIVE|Ignores every use until a target_activate activates it. Currently it comes back each time it returns: after going and coming back it ignores uses again.\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
 		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"target||Fired when it goes (and on every use with endframe or ALWAYS_ON).\n"
 		"target2||Fired when it comes back, with no activator: targets that need a player get none.\n"
 		"wait|0|With ALWAYS_ON: seconds before it can be used again. 0: once only.\n"
-		"health|0|Non-0: every hit uses it. The amount currently does nothing: it never goes down and it never ends.\n"
+		"health|0|Non-0: every hit uses it, and the hit that takes the last of its health uses it a last time: after that, hits do nothing (health 1: used once by shooting). The use key and targetname still work.\n"
 		"endframe|0|Frames of its shader animation minus 1: each use steps one frame, back to 0 after the last.",
 		"func_usable model *1 targetname wall1",
 		"common mover func_wall" },
@@ -720,7 +720,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"An item falls to the floor below its origin (one starting inside something solid is removed) and comes back after being "
 		"taken. Gametype and server settings remove some: powerups in siege and Jedi Master, ammo and some holdables on "
 		"saber-only servers, health, shields and bacta in duels, weapons in g_weaponDisable, any item whose disable_<classname> "
-		"cvar is 1 (such an item currently stays as an inert entity that still takes an entity slot). A class the map had not precached shows as a placeholder to players with an older client until the map "
+		"cvar is 1 (/entadd says so). A class the map had not precached shows as a placeholder to players with an older client until the map "
 		"restarts. The map's own pickups that nothing links to are tagged E in /entlist and can be edited like placed ones.",
 		"1|SUSPENDED|Stays where it is placed instead of falling to the floor.\n"
 		"4|ALLOWNPC|NPCs can pick it up too (never droids, AT-STs, rancors, wampas or ugnaughts).\n"
@@ -1207,7 +1207,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"What the func_ mover classes share. Each takes a model: *N, one of the current map's inline brush models from *1 (*0, the map itself, and a number this map does not have are refused), or an .md3 file, refused if the server lacks it. A *N model is drawn shifted by the origin from where the map built it unless it was built around an origin brush, so origin 0 0 0 puts a plain one back in place. An .md3 one has no size or collision of its own: give mins and maxs, and spawnflag 1024.",
 		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving. dmg is 2 unless set on doors, plats, trains, bobbing, pendulums and rotating ones, 0 on buttons. On func_breakable 32 is HEAVY_WEAP.\n"
 		"64|PLAYER_USE|Players can use it with the use key (an .md3 one must be SOLID to be aimed at). Not on func_glass, func_timer or a func_rotating with health. func_breakable uses 128 for this.\n"
-		"128|INACTIVE|Ignores every use until a target_activate activates it. Not on func_breakable, func_timer or a func_rotating with health. On func_usable it comes back each time it returns. A level 5 Stun Baton (with rp_stun_baton_door_unlock 1) clears it on doors, plats and buttons (a later target_deactivate can set it again). In a team, a use reaching the leader follows the leader's state, but a member's own 128 still refuses the use key and shots aimed at it, and target_activate cannot clear it (its name moved to the leader).\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it. Not on func_breakable, func_timer or a func_rotating with health. A level 5 Stun Baton (with rp_stun_baton_door_unlock 1) clears it on doors, plats and buttons (a later target_deactivate can set it again). In a team, a use reaching the leader follows the leader's state, but a member's own 128 still refuses the use key and shots aimed at it, and target_activate cannot clear it (its name moved to the leader).\n"
 		"1024|SOLID|With an .md3 model: it is solid, by its mins and maxs. A *N model collides as its brushes were built, without it.",
 		"model||*N: an inline brush model of the map, #name: a sub-BSP the map loaded, anything else: an .md3 path (tried as typed, then under models/ with .md3 added).\n"
 		"model2||An extra .md3 model drawn with it (.glm is never drawn: func_breakable and a func_rotating with health still load it, using up a model slot). It collides by model, not model2.\n"
@@ -2176,7 +2176,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"common" },
 	{ "trigger", RP_EH_TOPIC, NULL,
 		"Triggers are invisible volumes that react to what is inside them. The volume is a brush model (model *N) or, with no model, the box mins/maxs around the origin. Living players and NPCs touch triggers (not while in noclip), spectators only teleporters. The activator handed to the targets is whoever touched it, or whoever used it. target_deactivate switches most triggers off and target_activate on, and an off trigger also ignores being used. /entedit switches a deactivated trigger back on unless it has INACTIVE.",
-		"128|INACTIVE|Starts off until target_activate (or a script) switches it on. Honoured by trigger_once, trigger_multiple, trigger_hurt, trigger_push, trigger_teleport and trigger_visible. On trigger_lightningstrike it does not stop the strikes, it only blocks the use that switches them.\n"
+		"128|INACTIVE|Starts off until target_activate (or a script) switches it on. Honoured by trigger_once, trigger_multiple, trigger_hurt, trigger_push, trigger_teleport, trigger_visible and trigger_lightningstrike (no strikes while off).\n"
 		"2048|MULTIPLE|trigger_once, trigger_multiple and a LINEAR or RELATIVE trigger_push: several entities can set it off in the same frame.",
 		"model||*N, one of this map's inline models from *1 (*0, the map itself, and a number this map does not have are refused), or #name, the whole sub-BSP the map loaded under that name. An .md3 is ignored (logged): the trigger is then just its mins/maxs box. Its shape is the model's own moved by the origin, so with /entadd it is offset by where you stand. /entaddaim sets it on the surface aimed at.\n"
 		"mins|0 0 0|With no model: lower corner of the box relative to the origin, e.g. -64 -64 0. The console logs a missing brush model but the box works.\n"
@@ -2228,7 +2228,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 	{ "trigger_lightningstrike", 0, NULL,
 		"Lightning strikes a random point of its volume every wait plus up to random milliseconds. The effect plays from just under the top of the volume and the strike runs down to its bottom: the first thing it hits takes dmg, or, with radius, everything near the impact point. Using it switches it on and off. Without lightningfx it is not spawned (logged).",
 		"1|START_OFF|Starts off: using it switches it on.\n"
-		"128|INACTIVE|Currently does not stop the strikes: it only stops other entities from using it, so they cannot switch it on or off until a target_activate. target_deactivate does the same.",
+		"128|INACTIVE|Starts off: no strikes, and other entities cannot switch it on or off, until a target_activate. target_deactivate does the same to a running one, and target_activate lets it strike again.",
 		"lightningfx||Required: the effect, e.g. env/huge_lightning. One starting with * is a weather command and is refused (a map's own trigger is not spawned, logged).\n"
 		"wait|1000|Milliseconds between strikes, at least 100.\n"
 		"random|2000|Up to this many milliseconds added at random each time.\n"

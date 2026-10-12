@@ -3981,6 +3981,10 @@ void G_SpawnItem (gentity_t *ent, gitem_t *item) {
 	{
 		if (level.gametype != GT_JEDIMASTER)
 		{
+			// DAJ_RP: [Entity System] /entadd and the rest say why, as for the disable_ cvar below
+			Q_strncpyz( level.rp_spawn_refusal, va( "%s is switched off on this server (%s)", item->classname,
+				( level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL ) ? "g_duelWeaponDisable" : "g_weaponDisable" ),
+				sizeof( level.rp_spawn_refusal ) );
 			G_FreeEntity( ent );
 			return;
 		}
@@ -4012,8 +4016,15 @@ void G_SpawnItem (gentity_t *ent, gitem_t *item) {
 	}
 
 	RegisterItem( item );
+	// DAJ_RP fix: [Entity System] freed, as a weapon g_weaponDisable switches off is above: it used to stay as an inert
+	// entity with no item -- an entity slot held for nothing, shown in /entlist, and reported by /entadd as spawned
+	// (stock multiplayer is the same). Every caller already handles a freed entity (G_CallSpawn, the gun rack).
 	if ( G_ItemDisabled(item) )
+	{
+		Q_strncpyz( level.rp_spawn_refusal, va( "disable_%s is 1 on this server", item->classname ), sizeof( level.rp_spawn_refusal ) );
+		G_FreeEntity( ent );
 		return;
+	}
 
 	ent->item = item;
 	// some movers spawn on the second frame, so delay item

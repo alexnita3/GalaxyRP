@@ -2692,7 +2692,11 @@ void SP_func_rotating (gentity_t *ent) {
 	if ( breakable )
 	{
 		int sav_spawnflags = ent->spawnflags;
-		ent->spawnflags = 0;
+		// DAJ_RP fix: [Entity System] all but SOLID (1024): func_rotating's flags mean other things to a breakable
+		// (16 IMPACT would be SABERONLY), which is why stock clears them here -- but SOLID is what makes an .md3
+		// model collide at all (zyk_set_brush_model()), and the same on both: without it an .md3 func_rotating with
+		// health could not be shot, so it could never break
+		ent->spawnflags = sav_spawnflags & 1024;
 		SP_func_breakable( ent );
 		// GalaxyRP fix: [Entity System] SP_func_breakable() frees an entity with no brush model
 		// instead of ending the server; everything below would then be written into a freed slot.
@@ -3644,9 +3648,14 @@ void func_wait_return_solid( gentity_t *self )
 	self->clipmask = CONTENTS_BODY;
 	if ( !(self->spawnflags&16) || G_TestEntityPosition( self ) == NULL )
 	{
+		// DAJ_RP fix: [Entity System] InitMover() sets FL_INACTIVE again from spawnflag 128: one target_activate'd
+		// and then switched off and on was inactive again (stock multiplayer is the same). It keeps the state it had.
+		const int inactive = self->flags & FL_INACTIVE;
+
 		zyk_set_brush_model( self );
 
 		InitMover( self );
+		self->flags = ( self->flags & ~FL_INACTIVE ) | inactive;
 		VectorCopy( self->s.origin, self->s.pos.trBase );
 		VectorCopy( self->s.origin, self->r.currentOrigin );
 		self->r.svFlags &= ~SVF_NOCLIENT;
@@ -3832,6 +3841,13 @@ void SP_func_usable( gentity_t *self )
 	*/
 
 	self->use = func_usable_use;
+
+	// DAJ_RP fix: [Entity System] "if it has health, it will be used whenever shot at/killed - if you want it to only
+	// be used once this way, set health to 1" (its QUAKED), and func_usable_pain/func_usable_die below do that. But
+	// G_Damage() treats every mover as a shootable door -- uses it and returns before any health is taken -- unless
+	// genericValue4 is 1, which only func_breakable and func_glass set: so every shot used it, forever, and its health
+	// did nothing (stock multiplayer is the same). 0 without health: an entity respawned in place keeps the field.
+	self->genericValue4 = self->health ? 1 : 0;
 
 	if ( self->health )
 	{

@@ -884,6 +884,15 @@ void Think_Strike(gentity_t *ent)
 	}
 
 	ent->nextthink = level.time + ent->wait + Q_irand(0, ent->random);
+
+	// DAJ_RP fix: [Entity System] inactive (spawnflag 128, target_deactivate): no strike, as every other trigger
+	// does nothing while inactive. The loop keeps going, so it strikes again on its own once a target_activate
+	// (which only clears the flag) switches it back on. Stock multiplayer struck on regardless.
+	if (ent->flags & FL_INACTIVE)
+	{
+		return;
+	}
+
 	Do_Strike(ent);
 }
 
