@@ -256,6 +256,90 @@ TELEPORTERS
 =================================================================================
 */
 
+/*
+=================
+RP_CarryRiders
+
+DAJ_RP fix: [Vehicles] a vehicle just teleported (TeleportPlayer() below, zyk_TeleportPlayer() in g_main.c) takes its
+pilot and passengers with it: they are seated at its new place at once, by the vehicle's own seating (AttachRiders(),
+g_vehicles.c, as at the end of its every move), and marked as teleported, so no client draws them sliding across the
+map. The pilot is given the destination's angles when the teleport has any (angles NULL when not) -- the view a
+fighter's heading follows -- as a pilot used to get them by setting the teleporter off himself. Passengers keep their
+own look; their view is the vehicle's.
+
+The riders no longer teleport themselves (TeleportPlayer() refuses a rider): each one used to, from his seat, and
+cleared the destination as he arrived (G_KillBox()) -- of whichever fellow rider the vehicle had already seated there,
+all of them at its one driver tag. The vehicle then pulled him back to his seat anyway.
+=================
+*/
+void RP_CarryRiders( gentity_t *veh, vec3_t angles )
+{
+	gentity_t	*riders[1 + VEH_MAX_PASSENGERS];
+	Vehicle_t	*pVeh;
+	int			n = 0, i;
+
+	// a vehicle: its own (non-zero) number -- 0 is "none", and also client 0's number
+	if ( !veh || !RP_VehicleOf( veh ) || RP_VehicleOf( veh ) != veh->s.number || !veh->m_pVehicle )
+	{
+		return;
+	}
+	pVeh = veh->m_pVehicle;
+	if ( !pVeh->m_pVehicleInfo )
+	{
+		return;
+	}
+
+	if ( pVeh->m_pPilot )
+	{
+		riders[n++] = (gentity_t *)pVeh->m_pPilot;
+	}
+	for ( i = 0; i < VEH_MAX_PASSENGERS; i++ )
+	{
+		if ( pVeh->m_ppPassengers[i] )
+		{
+			riders[n++] = (gentity_t *)pVeh->m_ppPassengers[i];
+		}
+	}
+	if ( !n )
+	{
+		return;
+	}
+
+	if ( veh->ghoul2 && pVeh->m_pVehicleInfo->AttachRiders )
+	{
+		pVeh->m_pVehicleInfo->AttachRiders( pVeh );
+	}
+
+	for ( i = 0; i < n; i++ )
+	{
+		gentity_t		*rider = riders[i];
+		const qboolean	riderNPC = ( rider->s.eType == ET_NPC ) ? qtrue : qfalse;
+
+		if ( !rider->inuse || !rider->client || rider->client->ps.m_iVehicleNum != veh->s.number )
+		{
+			continue;
+		}
+		if ( !veh->ghoul2 )
+		{//no seat to be had: the vehicle's own place, until its next move seats him
+			VectorCopy( veh->client->ps.origin, rider->client->ps.origin );
+		}
+		if ( angles && (bgEntity_t *)rider == pVeh->m_pPilot )
+		{
+			SetClientViewAngle( rider, angles );
+		}
+		rider->client->ps.eFlags ^= EF_TELEPORT_BIT;
+
+		BG_PlayerStateToEntityState( &rider->client->ps, &rider->s, qtrue );
+		if ( riderNPC )
+		{
+			rider->s.eType = ET_NPC;
+		}
+		RP_HiddenApplyState( rider, &rider->s );
+		VectorCopy( rider->client->ps.origin, rider->r.currentOrigin );
+		trap->LinkEntity( (sharedEntity_t *)rider );
+	}
+}
+
 void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
 	gentity_t	*tent;
 	qboolean	isNPC = qfalse;
@@ -263,6 +347,15 @@ void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
 	if (player->s.eType == ET_NPC)
 	{
 		isNPC = qtrue;
+	}
+
+	// DAJ_RP fix: [Vehicles] a pilot or passenger goes where his vehicle goes: when it is teleported, it takes him
+	// along (RP_CarryRiders() above). On his own -- a trigger_teleport touched from his seat, a target_teleporter
+	// he set off, a door -- he was moved and then put straight back in his seat, after killing whoever stood at the
+	// destination, a fellow rider included.
+	if ( RP_IsVehicleRider( player ) )
+	{
+		return;
 	}
 
 	noAngles = (angles[0] > 999999.0) ? qtrue : qfalse;
@@ -325,6 +418,9 @@ void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
 	if ( player->client->sess.sessionTeam != TEAM_SPECTATOR ) {
 		trap->LinkEntity ((sharedEntity_t *)player);
 	}
+
+	// DAJ_RP fix: [Vehicles] a vehicle takes its riders along
+	RP_CarryRiders( player, noAngles ? NULL : angles );
 }
 
 

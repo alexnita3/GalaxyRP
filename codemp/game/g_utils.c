@@ -3245,6 +3245,45 @@ Kill box
 
 /*
 =================
+RP_VehicleOf
+
+DAJ_RP: [Vehicles] the vehicle an entity is part of: a vehicle itself, or the one a pilot or passenger (a player or an
+NPC) rides; 0 for anyone else. A spectator is never part of one -- one following a rider carries a copy of the rider's
+playerState, vehicle number and all. A vehicle's own ps.m_iVehicleNum is something else (its pilot, plus one), so a
+vehicle is known by its class and its Vehicle_t.
+=================
+*/
+int RP_VehicleOf( const gentity_t *ent )
+{
+	if ( !ent || !ent->inuse || !ent->client )
+	{
+		return 0;
+	}
+	if ( ent->s.NPC_class == CLASS_VEHICLE && ent->m_pVehicle )
+	{
+		return ent->s.number;
+	}
+	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR || ( ent->client->ps.pm_flags & PMF_FOLLOW ) )
+	{
+		return 0;
+	}
+	if ( ent->client->ps.m_iVehicleNum > 0 && ent->client->ps.m_iVehicleNum < ENTITYNUM_WORLD )
+	{
+		return ent->client->ps.m_iVehicleNum;
+	}
+	return 0;
+}
+
+// DAJ_RP: [Vehicles] a pilot or passenger, a player or an NPC -- not the vehicle itself
+qboolean RP_IsVehicleRider( const gentity_t *ent )
+{
+	const int veh = RP_VehicleOf( ent );
+
+	return ( veh && veh != ent->s.number ) ? qtrue : qfalse;
+}
+
+/*
+=================
 G_KillBox
 
 Kills all entities that would touch the proposed new positioning
@@ -3269,6 +3308,9 @@ that for free -- the victim died and a corpse blocks nobody -- but here three th
 
 And a body already passing through bodies -- /admwalkthrough, /admghost, /admholo, /admhidden, /npc effect,
 or the tail of a release -- on either side cannot get stuck, so it is neither telefragged nor released.
+
+DAJ_RP: [Vehicles] nor is anyone aboard the same vehicle (RP_VehicleOf() above): its riders all sit at its one driver
+tag, so a vehicle arriving lands on its own pilot and passengers, and they on each other.
 =================
 */
 extern qboolean duel_tournament_is_duelist(gentity_t *ent);
@@ -3296,6 +3338,15 @@ void G_KillBox (gentity_t *ent) {
 
 		if (ent->r.ownerNum == hit->s.number)
 		{ //don't telefrag your vehicle!
+			continue;
+		}
+
+		// DAJ_RP fix: [Vehicles] nor anyone else aboard it: a fellow pilot or passenger, or -- for a vehicle arriving --
+		// its own riders. Neither damage nor a walk-out: the vehicle seats its riders itself, every one of them at its
+		// driver tag. The skip above only spared a rider's vehicle and a vehicle's pilot, so a teleport could kill a
+		// passenger, whoever reached the destination first (RP_VehicleOf)
+		if ( RP_VehicleOf( ent ) && RP_VehicleOf( ent ) == RP_VehicleOf( hit ) )
+		{
 			continue;
 		}
 

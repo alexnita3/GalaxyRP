@@ -6026,6 +6026,9 @@ void zyk_TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
 	if ( player->client->sess.sessionTeam != TEAM_SPECTATOR ) {
 		trap->LinkEntity ((sharedEntity_t *)player);
 	}
+
+	// DAJ_RP fix: [Vehicles] a vehicle takes its riders along, as with TeleportPlayer() (RP_CarryRiders(), g_misc.c)
+	RP_CarryRiders( player, angles );
 }
 
 // zyk: tests if ent has other as ally

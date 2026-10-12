@@ -2109,12 +2109,10 @@ void hyperspace_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 				VectorMA( newOrg, uDiff, up, newOrg );
 				//trap->Print("hyperspace from %s to %s\n", vtos(other->client->ps.origin), vtos(newOrg) );
 				//now put them in the offset position, facing the angles that position wants them to be facing
+				// DAJ_RP fix: [Vehicles] the pilot and passengers go with it, the pilot given the new angles
+				// (RP_CarryRiders(), g_misc.c). This teleported the pilot on his own after it -- and the passengers
+				// not at all ("FIXME: and the passengers?").
 				TeleportPlayer( other, newOrg, ent->s.angles );
-				if ( other->m_pVehicle && other->m_pVehicle->m_pPilot )
-				{//teleport the pilot, too
-					TeleportPlayer( (gentity_t*)other->m_pVehicle->m_pPilot, newOrg, ent->s.angles );
-					//FIXME: and the passengers?
-				}
 				//make them face the new angle
 				//other->client->ps.hyperSpaceIndex = ent->s.number;
 				VectorCopy( ent->s.angles, other->client->ps.hyperSpaceAngles );
