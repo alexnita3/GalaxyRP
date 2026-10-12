@@ -6,11 +6,13 @@ For an admin with the Entity System admin power who has the setting ON (player_s
 ON like every /settings toggle), this draws, for that admin only:
 
   - the box of the entity being aimed at -- solid entities and trigger volumes alike -- colour-coded by
-    kind: triggers yellow, brush entities (doors, movers, statics) green, NPCs and items purple, anything
-    else (models and the like) blue. A brush entity's box is its own model bounds turned by its angles,
-    which is exactly what the game collides against; every other entity collides as an axis-aligned box,
-    and that is what is drawn for it. A short centre-print names it: "#id classname targetname", with the
-    G mark /entlist uses for an entity the game made;
+    kind: triggers yellow, brush entities (doors, movers, statics) green, items purple, anything else
+    (models and the like) blue. A brush entity's box is its own model bounds turned by its angles, which
+    is exactly what the game collides against; every other entity collides as an axis-aligned box, and
+    that is what is drawn for it. A short centre-print names it: "#id classname targetname", with the G
+    mark /entlist uses for an entity the game made. DAJ_RP: an NPC or a vehicle aimed at is named but
+    gets no box, as a player gets none: they move, and in a fight the aim keeps finding them again,
+    each time a box -- see below for what a box costs;
   - a small white cross on each of the 8 nearest point and logical entities within 384 units -- spawn
     points, targets, NPC spawners, info_ entities -- which have no size or are not in the world at all,
     so they can never be aimed at;
@@ -30,6 +32,11 @@ The lines are EV_TESTLINE events, which the stock client already draws (CG_TestL
 nothing on the client side is needed. Each line is a temporary entity, and a temporary entity occupies a
 real entity slot for EVENT_VALID_MSEC (300 ms) -- and G_Spawn() ends the server when it runs out -- so
 every batch asks G_EntitySlotsAvailable() first, and is skipped rather than drawn into the reserve.
+DAJ_RP: a freed slot is not given out again for a second (G_Spawn()), so a line holds its slot about
+1.3 s, and the aimed box, 12 lines, used to be drawn anew at every change of aim: in a fight, with the
+aim on one NPC, then the wall, then the next, that was a box a server frame, some 300 slots held at
+once. So the aimed box is drawn at most once every RP_ENTBOUNDS_SWITCH_MSEC whatever the aim does (the
+last box's lines last a second, so something is on screen meanwhile), and NPCs and vehicles get none.
 ===========================================================================
 */
 
@@ -39,6 +46,7 @@ every batch asks G_EntitySlotsAvailable() first, and is skipped rather than draw
 #define RP_ENTBOUNDS_RANGE			8192.0f	// how far the aim reaches
 #define RP_ENTBOUNDS_BOX_MSEC		900		// the aimed box is redrawn this often...
 #define RP_ENTBOUNDS_BOX_LIFE		1000	// ...with lines that last a little longer, so it never blinks
+#define RP_ENTBOUNDS_SWITCH_MSEC	300		// DAJ_RP: and a new one, the aim moved, no sooner than this after the last
 #define RP_ENTBOUNDS_MARKER_MSEC	2000	// the nearby markers are redrawn this often...
 #define RP_ENTBOUNDS_MARKER_LIFE	2100	// ...likewise
 #define RP_ENTBOUNDS_MARKER_RANGE	384.0f
@@ -189,6 +197,13 @@ void RP_EntBoundsDrawBoxAt( int clientNum, const vec3_t origin, const vec3_t box
 	{
 		RP_EntBoundsLine( corners[edges[i][0]], corners[edges[i][1]], color, msec, clientNum );
 	}
+}
+
+// DAJ_RP: [Entity Bounds] an NPC or a vehicle (an NPC corpse too): named when aimed at, but no box. Not a
+// misc_weapon_shooter's borrowed client (RP_EntityIsCharacter): a shooter is shown, by its cross.
+static qboolean RP_EntBoundsNoBox( const gentity_t *e )
+{
+	return ( e->s.eType == ET_NPC || RP_EntityIsCharacter( e ) ) ? qtrue : qfalse;
 }
 
 static void RP_EntBoundsDrawBox( const gentity_t *viewer, const gentity_t *target, int color, int msec )
@@ -614,6 +629,7 @@ void RP_EntBoundsFrame( gentity_t *ent )
 		client->entBoundsAimed = 0;
 		client->entBoundsAimedStatic = 0;
 		client->entBoundsNextBox = 0;
+		client->entBoundsLastBox = 0;
 		client->entBoundsNextMarkers = 0;
 		client->entBoundsNextPrint = 0;
 		client->entBoundsPrintPending = qfalse;
@@ -623,6 +639,7 @@ void RP_EntBoundsFrame( gentity_t *ent )
 
 	// zyk: a stamp far in the future can only have come from an older, longer-running level.time
 	if ( client->entBoundsNextBox > level.time + 10000 ) client->entBoundsNextBox = 0;
+	if ( client->entBoundsLastBox > level.time ) client->entBoundsLastBox = 0;
 	if ( client->entBoundsNextMarkers > level.time + 10000 ) client->entBoundsNextMarkers = 0;
 	if ( client->entBoundsNextPrint > level.time + 10000 ) client->entBoundsNextPrint = 0;
 
@@ -634,17 +651,19 @@ void RP_EntBoundsFrame( gentity_t *ent )
 	{
 		client->entBoundsAimed = aimedNum;
 		client->entBoundsAimedStatic = aimedStatic + 1;
-		client->entBoundsNextBox = 0;	// draw the new one now
+		// draw the new one now -- DAJ_RP: or RP_ENTBOUNDS_SWITCH_MSEC after the last one, if that is later
+		client->entBoundsNextBox = client->entBoundsLastBox ? client->entBoundsLastBox + RP_ENTBOUNDS_SWITCH_MSEC : 0;
 		client->entBoundsPrintPending = qtrue;
 	}
 
-	if ( ( aimed || aimedStatic >= 0 ) && level.time >= client->entBoundsNextBox && G_EntitySlotsAvailable( 12 ) )
+	if ( ( ( aimed && !RP_EntBoundsNoBox( aimed ) ) || aimedStatic >= 0 ) && level.time >= client->entBoundsNextBox && G_EntitySlotsAvailable( 12 ) )
 	{
 		if ( aimed )
 			RP_EntBoundsDrawBox( ent, aimed, RP_EntBoundsColor( aimed ), RP_ENTBOUNDS_BOX_LIFE );
 		else
 			RP_EntBoundsDrawStatic( ent, aimedStatic, RP_ENTBOUNDS_BOX_LIFE );
 		client->entBoundsNextBox = level.time + RP_ENTBOUNDS_BOX_MSEC;
+		client->entBoundsLastBox = level.time;
 	}
 
 	// zyk: the name, when the aim settles on something new, and again now and then while it stays

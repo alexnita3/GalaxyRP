@@ -1695,6 +1695,7 @@ struct gclient_s {
 	int			entBoundsAimed;			// entity number whose box is drawn now, 0 for none
 	int			entBoundsAimedStatic;	// DAJ_RP: [Static Models] static model whose box is drawn now, plus 1; 0 for none
 	int			entBoundsNextBox;		// level.time the aimed box is redrawn
+	int			entBoundsLastBox;		// DAJ_RP: level.time a box was last drawn, 0 for none: the next comes no sooner than 300 ms after
 	int			entBoundsNextMarkers;	// level.time the nearby point-entity markers are redrawn
 	int			entBoundsNextPrint;		// level.time the aimed entity's centre-print may be (re)sent
 	qboolean	entBoundsPrintPending;	// the aimed entity changed and its centre-print is still owed
