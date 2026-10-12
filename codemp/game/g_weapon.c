@@ -1881,6 +1881,11 @@ void rocketThink( gentity_t *ent )
 
 			// let's also slow down a lot
 			// vel *= 0.5f; zyk: no longer slow it down. Cvar controls its velocity
+			// DAJ_RP fix: [Vehicles] a vehicle's homing missile does, as stock -- see below
+			if ( (ent->spawnflags&1) )
+			{//vehicle rocket
+				vel *= 0.5f;
+			}
 		}
 		else if ( dot < 0.70f )
 		{
@@ -1916,6 +1921,16 @@ void rocketThink( gentity_t *ent )
 		}
 
 		VectorNormalize( newdir );
+
+		// DAJ_RP fix: [Vehicles] a vehicle's homing missile flies at half its speed while it homes, and at a quarter
+		// while it turns back for a target behind it, as stock. zyk dropped both halvings for the hand-held rocket,
+		// whose speed rp_rocket_alt_velocity sets now, and they went for vehicle missiles too: twice as fast, the
+		// same turn every think, so twice the turning circle -- a missile overshot a turning fighter, came to have
+		// it behind it and gave it up for good (homingFOV, above). The hand-held rocket keeps its cvar speed.
+		if ( (ent->spawnflags&1) )
+		{//vehicle rocket
+			vel *= 0.5f;
+		}
 
 		VectorScale( newdir, vel /* * 0.5f */, ent->s.pos.trDelta ); // zyk: no more scale the rocket velocity here
 		VectorCopy( newdir, ent->movedir );
