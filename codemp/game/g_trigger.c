@@ -2662,11 +2662,6 @@ static void trigger_visible_think( gentity_t *self )
 	}
 }
 
-static void trigger_visible_use( gentity_t *self, gentity_t *other, gentity_t *activator )
-{
-	self->flags ^= FL_INACTIVE;
-}
-
 void SP_trigger_visible( gentity_t *self )
 {
 	G_SpawnInt( "FOV", "0", &self->genericValue1 );
@@ -2677,7 +2672,11 @@ void SP_trigger_visible( gentity_t *self )
 	}
 
 	G_SetOrigin( self, self->s.origin );
-	self->use = trigger_visible_use;
+	// DAJ_RP fix: [Entity System] no use function, as in single player: target_activate and target_deactivate (and
+	// scripts) switch it, by FL_INACTIVE, and being used does nothing. The port had given it a use that toggled
+	// FL_INACTIVE, so a relay or trigger firing its name switched it off -- and, inactive entities refusing other
+	// entities' uses, only /entuse could switch it back on.
+	self->use = NULL;
 	self->think = trigger_visible_think;
 	self->nextthink = level.time + 500;
 }

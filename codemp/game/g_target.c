@@ -525,6 +525,26 @@ void target_laser_think (gentity_t *self) {
 	trace_t	tr;
 	vec3_t	point;
 
+	// DAJ_RP fix: [Entity System] its target is looked for again while it is missing (placed after the laser, or
+	// removed): at most once a second, the beam pointing along its angle meanwhile. And one that is gone, or whose slot
+	// now holds something else, is let go of -- the beam used to follow whatever took the freed slot.
+	if ( self->target && self->target[0] )
+	{
+		if ( self->enemy && ( !self->enemy->inuse || !self->enemy->targetname || Q_stricmp( self->enemy->targetname, self->target ) ) )
+		{
+			self->enemy = NULL;
+		}
+		if ( !self->enemy && level.time >= self->genericValue1 )
+		{
+			self->enemy = G_Find( NULL, FOFS(targetname), self->target );
+			self->genericValue1 = level.time + 1000;
+		}
+		if ( !self->enemy )
+		{
+			VectorCopy( self->pos2, self->movedir );	// its angle (target_laser_start)
+		}
+	}
+
 	// if pointed at another entity, set movedir to point at it
 	if ( self->enemy ) {
 		VectorMA (self->enemy->s.origin, 0.5, self->enemy->r.mins, point);
@@ -581,14 +601,19 @@ void target_laser_start (gentity_t *self)
 
 	self->s.eType = ET_BEAM;
 
+	// DAJ_RP fix: [Entity System] its angle always gives a direction, kept in pos2: with a target that matches nothing
+	// (yet) the beam points that way instead of having no length (Quake 3's code read the angle only without a target)
+	G_SetMovedir (self->s.angles, self->movedir);
+	VectorCopy( self->movedir, self->pos2 );
+	self->genericValue1 = 0;
+
 	if (self->target) {
 		ent = G_Find (NULL, FOFS(targetname), self->target);
 		if (!ent) {
 			trap->Print ("%s at %s: %s is a bad target\n", self->classname, vtos(self->s.origin), self->target);
+			self->genericValue1 = level.time + 1000;
 		}
 		self->enemy = ent;
-	} else {
-		G_SetMovedir (self->s.angles, self->movedir);
 	}
 
 	self->use = target_laser_use;
@@ -964,8 +989,22 @@ void scriptrunner_run (gentity_t *self)
 				return;
 			}
 
+			// DAJ_RP fix: [Entity System] never a logical entity (ICARUS keeps its state by entity number, and the engine
+			// does not know those numbers -- see G_SpawnGEntityFromSpawnVars()) nor the world
+			if ( self->activator->isLogical || self->activator->s.number >= ENTITYNUM_WORLD )
+			{
+				if (developer.integer)
+				{
+					Com_Printf("target_scriptrunner tried to run on invalid ICARUS activator!\n");
+				}
+				return;
+			}
+
 			//if ( !self->activator->sequencer || !self->activator->taskManager )
-			if (!trap->ICARUS_IsInitialized(self->s.number))
+			// DAJ_RP fix: [Entity System] the ACTIVATOR is the one to set up, as single player tests it
+			// (activator->m_iIcarusID). Stock multiplayer tested the scriptrunner itself -- always set up, since it has a
+			// usescript -- so an activator that was not a player or an NPC never was, and the script did nothing on it.
+			if (!trap->ICARUS_IsInitialized(self->activator->s.number))
 			{//Need to be initialized through ICARUS
 				if ( !self->activator->script_targetname || !self->activator->script_targetname[0] )
 				{

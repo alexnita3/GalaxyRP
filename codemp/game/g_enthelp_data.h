@@ -1975,8 +1975,8 @@ static const rpEntHelp_t rp_ent_help[] = {
 	{ "target_laser", 0, NULL,
 		"A damaging beam reaching up to 2048 units, toward its target or along its angle, that hurts the first thing it hits 10 times a second. Using it switches it on or off, and the one who switched it on is credited with the damage.",
 		"1|START_ON|On from the start, without being used.",
-		"target||Name of an entity to aim at: the beam points at its middle and follows it as it moves. Without one, the angle sets the direction. A name that matches nothing (logged as a bad target) currently gives no beam at all: the angle is not used then.\n"
-		"angle||Direction of the beam when there is no target (-1 up, -2 down).\n"
+		"target||Name of an entity to aim at: the beam points at its middle and follows it as it moves. Without one, the angle sets the direction. A name that matches nothing yet (logged as a bad target), or an entity removed, is looked for again every second, the beam pointing along the angle meanwhile.\n"
+		"angle||Direction of the beam when there is no target, or while its target is missing (-1 up, -2 down).\n"
 		"dmg|1|Damage per hit, 10 hits a second.\n"
 		"targetname||Using it toggles the beam.",
 		"target_laser targetname laser1 angle 90 dmg 5",
@@ -2072,7 +2072,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"common target" },
 	{ "target_scriptrunner", 0, NULL,
 		"Runs its usescript (an ICARUS script) when used, on itself or, with RUNONACTIVATOR, on whoever used it. It runs count times at most, can wait delay seconds before running, and ignores uses during its wait.",
-		"1|RUNONACTIVATOR|Runs the script on the activator instead of on the scriptrunner. Works on players, NPCs and any entity with a script_targetname or a script key. Currently it does nothing on any other activator (it is not prepared for scripts).\n"
+		"1|RUNONACTIVATOR|Runs the script on the activator instead of on the scriptrunner. Works on any activator: players, NPCs and any networked entity, which is prepared for scripts if it is not yet (given a script name). Not on a logical entity, nor the world.\n"
 		"128|INACTIVE|Starts inactive: other entities cannot use it until a target_activate names it.",
 		"usescript||The script to run, given without the scripts/ folder (it is added).\n"
 		"count|1|How many times it can run. -1 means no limit.\n"
@@ -2329,14 +2329,14 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"trigger_teleport model *1 target tele_dest",
 		"common trigger target_position misc_teleporter_dest" },
 	{ "trigger_visible", 0, NULL,
-		"Fires its targets once, with the player as activator, when a living player looks at its origin, then removes itself. Checked every 0.5 seconds. Needs a clear line of sight to the origin unless NOTRACE, so keep the origin out of walls. It has no volume. Its usescript runs when it is seen. Currently each use toggles it: using it switches it off, and /entuse switches an off one back on (other entities cannot use one that is off).",
+		"Fires its targets once, with the player as activator, when a living player looks at its origin, then removes itself. Checked every 0.5 seconds. Needs a clear line of sight to the origin unless NOTRACE, so keep the origin out of walls. It has no volume. Its usescript runs when it is seen. Being used does nothing (as in single player): target_deactivate switches it off and target_activate on.",
 		"1|NOTRACE|Seen through walls and anything else.\n"
 		"2|FORCESIGHT|Only players with Force Sight active see it.\n"
-		"128|INACTIVE|Starts off: target_activate switches it on (so does /entuse, which toggles it).",
+		"128|INACTIVE|Starts off: target_activate switches it on.",
 		"target||Fired when it is seen.\n"
 		"radius|0|Most distance from the player's eyes, 0 for any.\n"
 		"FOV|0|Most degrees off the centre of view, up or sideways. 0: anywhere in front.\n"
-		"targetname||Using it toggles it: an entity using it can only switch it off.",
+		"targetname||The name target_activate and target_deactivate switch it by. Being used does nothing.",
 		"trigger_visible target mylight radius 512",
 		"common trigger" },
 	{ "waypoint", RP_EH_MAPONLY | RP_EH_REMOVED, "Waypoints cannot be added after map load: the navigation paths were computed at map start, and an NPC pathing to a later node would crash the server.",
