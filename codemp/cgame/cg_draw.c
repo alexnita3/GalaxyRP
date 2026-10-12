@@ -5072,6 +5072,20 @@ void CG_LerpCrosshairPos( float *x, float *y )
 }
 
 vec3_t cg_crosshairPos={0,0,0};
+/*
+=================
+CG_CrosshairAlly
+
+DAJ_RP fix: [Ally] whether the crosshair and the name under it show this player as a friend for being one of
+my allies (/allyadd; cg.ally1/ally2, CG_IsAlly): outside the team gametypes, as the radar does. In those the
+team decides, as before -- an ally on the other team stays an enemy.
+=================
+*/
+qboolean CG_CrosshairAlly( int clientNum )
+{
+	return ( cgs.gametype < GT_TEAM && CG_IsAlly( clientNum ) ) ? qtrue : qfalse;
+}
+
 static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 	float		w, h;
 	qhandle_t	hShader = 0;
@@ -5139,6 +5153,12 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 					cgs.clientinfo[crossEnt->currentState.number].team == cgs.clientinfo[cg.snap->ps.clientNum].team )
 				{
 					//Allies are green
+					ecolor[0] = 0.0;//R
+					ecolor[1] = 1.0;//G
+					ecolor[2] = 0.0;//B
+				}
+				else if ( CG_CrosshairAlly( crossEnt->currentState.number ) )
+				{ // DAJ_RP fix: [Ally] one of my allies is green, as on the radar (CG_CrosshairAlly)
 					ecolor[0] = 0.0;//R
 					ecolor[1] = 1.0;//G
 					ecolor[2] = 0.0;//B
@@ -5215,7 +5235,9 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 							{ //base color on who is pilotting this thing
 								clientInfo_t *ci = &cgs.clientinfo[crossEnt->currentState.owner];
 
-								if (cgs.gametype >= GT_TEAM && ci->team == cg.predictedPlayerState.persistant[PERS_TEAM])
+								// DAJ_RP fix: [Ally] or flown by one of my allies (CG_CrosshairAlly)
+								if ((cgs.gametype >= GT_TEAM && ci->team == cg.predictedPlayerState.persistant[PERS_TEAM]) ||
+									CG_CrosshairAlly(crossEnt->currentState.owner))
 								{ //friendly
 									ecolor[0] = 0.0f;//R
 									ecolor[1] = 1.0f;//G
@@ -6654,6 +6676,10 @@ static void CG_DrawCrosshairNames( void ) {
 			cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR &&
 			cgs.clientinfo[cg.crosshairClientNum].duelTeam == cgs.clientinfo[cg.predictedPlayerState.clientNum].duelTeam)
 		{ //on the same duel team in powerduel, so he's a friend
+			baseColor = CT_GREEN;
+		}
+		else if (CG_CrosshairAlly(cg.crosshairClientNum))
+		{ // DAJ_RP fix: [Ally] one of my allies, or the pilot of what I aim at, as the crosshair (CG_CrosshairAlly)
 			baseColor = CT_GREEN;
 		}
 		else

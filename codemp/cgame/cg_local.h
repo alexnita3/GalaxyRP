@@ -2146,6 +2146,7 @@ void CG_SetConfigValues( void );
 void CG_ShaderStateChanged(void);
 
 qboolean CG_IsAlly( int clientNum );	// GalaxyRP: [Radar] cg_servercmds.c
+qboolean CG_CrosshairAlly( int clientNum );	// DAJ_RP: [Ally] my ally, outside the team gametypes -- cg_draw.c
 //
 // cg_playerstate.c
 //
