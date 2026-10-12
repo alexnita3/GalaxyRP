@@ -9133,8 +9133,66 @@ void CG_InitJetpackGhoul2(void)
 	trap->G2API_SetBoltInfo(cg_g2JetpackInstance, 0, 2);
 
 	//Add the bolts jet effects will be played from
-	trap->G2API_AddBolt(cg_g2JetpackInstance, 0, "torso_ljet");
-	trap->G2API_AddBolt(cg_g2JetpackInstance, 0, "torso_rjet");
+	// DAJ_RP fix: [Jetpack] the pack's own bone, bolt 0: its origin and its axes (+X the wearer's left, +Y back, +Z up),
+	// which the flames are placed from (CG_JetpackFlame). Stock bolted to the surfaces "torso_ljet" and "torso_rjet",
+	// which are not tags in either model: the engine makes a frame of a mesh surface's first three vertices, and the
+	// flames' offsets were tuned by hand to the vanilla pack's. Our pack's vertices give other frames, and its flames
+	// came out tilted and off the pack.
+	trap->G2API_AddBolt(cg_g2JetpackInstance, 0, "model_root");
+}
+
+/*
+===============
+CG_JetpackFlame
+
+DAJ_RP fix: [Jetpack] where nozzle n (0 left, 1 right) of the pack bolted to this player fires from, and the
+direction to give the effect. Measured from our pack (models/weapons2/jetpack/model.glm) in its own units --
+the units it is drawn in, the frame of its bone: each nozzle's exit, and a flame going mostly down and a little
+back (CG_JETPACK_FLAME_BACK degrees), from a little inside the nozzle (jet.efx starts its flame 4 units out).
+The effect is handed the way up the flame, as the stock code did (the flame runs the other way). Scaled with
+the player's model scale, which the stock offsets were not.
+===============
+*/
+#define CG_JETPACK_FLAME_BACK	20.0f	// degrees back from straight down
+#define CG_JETPACK_FLAME_INSET	3.0f	// the flame starts this far back up its line from the nozzle's exit
+static const vec3_t cg_jetpackNozzle[2] = {
+	{ 6.43f, 8.17f, -0.30f },	// left: its +X
+	{ -6.59f, 8.14f, -0.31f }	// right
+};
+
+static void CG_JetpackFlame( centity_t *cent, int n, vec3_t flamePos, vec3_t flameDir )
+{
+	mdxaBone_t	mat;
+	vec3_t		axis[3], local;
+	float		scale = 1.0f, back = DEG2RAD( CG_JETPACK_FLAME_BACK );
+	int			k;
+
+	trap->G2API_GetBoltMatrix( cent->ghoul2, 3, 0, &mat, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+	BG_GiveMeVectorFromMatrix( &mat, ORIGIN, flamePos );
+	BG_GiveMeVectorFromMatrix( &mat, POSITIVE_X, axis[0] );
+	BG_GiveMeVectorFromMatrix( &mat, POSITIVE_Y, axis[1] );
+	BG_GiveMeVectorFromMatrix( &mat, POSITIVE_Z, axis[2] );
+	if ( cent->modelScale[0] > 0.0f )
+	{
+		scale = cent->modelScale[0];
+	}
+
+	// up the flame's line, in the pack's frame: the flame itself runs down and back (+Y)
+	local[0] = 0.0f;
+	local[1] = -sinf( back );
+	local[2] = cosf( back );
+	VectorClear( flameDir );
+	for ( k = 0; k < 3; k++ )
+	{
+		VectorMA( flameDir, local[k], axis[k], flameDir );
+	}
+	VectorNormalize( flameDir );
+
+	for ( k = 0; k < 3; k++ )
+	{
+		VectorMA( flamePos, scale * cg_jetpackNozzle[n][k], axis[k], flamePos );
+	}
+	VectorMA( flamePos, scale * CG_JETPACK_FLAME_INSET, flameDir, flamePos );
 }
 
 void CG_CleanJetpackGhoul2(void)
@@ -10100,30 +10158,14 @@ void CG_Player( centity_t *cent ) {
 
 		if (cent->currentState.eFlags & EF_JETPACK_ACTIVE)
 		{
-			mdxaBone_t mat;
 			vec3_t flamePos, flameDir;
 			int n = 0;
 
 			while (n < 2)
 			{
 				//Get the position/dir of the flame bolt on the jetpack model bolted to the player
-				trap->G2API_GetBoltMatrix(cent->ghoul2, 3, n, &mat, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale);
-				BG_GiveMeVectorFromMatrix(&mat, ORIGIN, flamePos);
-
-				if (n == 0)
-				{
-					BG_GiveMeVectorFromMatrix(&mat, NEGATIVE_Y, flameDir);
-					VectorMA(flamePos, -9.5f, flameDir, flamePos);
-					BG_GiveMeVectorFromMatrix(&mat, POSITIVE_X, flameDir);
-					VectorMA(flamePos, -13.5f, flameDir, flamePos);
-				}
-				else
-				{
-					BG_GiveMeVectorFromMatrix(&mat, POSITIVE_X, flameDir);
-					VectorMA(flamePos, -9.5f, flameDir, flamePos);
-					BG_GiveMeVectorFromMatrix(&mat, NEGATIVE_Y, flameDir);
-					VectorMA(flamePos, -13.5f, flameDir, flamePos);
-				}
+				// DAJ_RP fix: [Jetpack] from the pack's frame and its nozzles' exits (CG_JetpackFlame)
+				CG_JetpackFlame( cent, n, flamePos, flameDir );
 
 				if (cent->currentState.eFlags & EF_JETPACK_FLAMING)
 				{ //create effects
