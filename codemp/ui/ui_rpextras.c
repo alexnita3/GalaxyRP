@@ -705,7 +705,8 @@ qboolean UI_RpxScript( const char *name, char **args ) {
 		}
 	} else if ( !Q_stricmp( name, "rpxDo" ) ) {
 		if ( String_Parse( args, &arg ) ) {
-			static const char *closing[] = { "spawnprop", "spawnfx", "musicme", "musicall", "soundall" };
+			// DAJ_RP: [Extras] grabprop and grabfx: the Grab buttons under Spawn, as Spawn
+			static const char *closing[] = { "spawnprop", "spawnfx", "grabprop", "grabfx", "musicme", "musicall", "soundall" };
 			int i;
 
 			if ( !Q_stricmp( arg, "musicstop" ) || !Q_stricmp( arg, "musicmap" ) || !Q_stricmp( arg, "undo" ) ) {
@@ -714,14 +715,15 @@ qboolean UI_RpxScript( const char *name, char **args ) {
 			}
 			// GalaxyRP: [Extras] the Lights menu's Spawn: nothing to select, only its name to check first,
 			// so a name it cannot use is said in the menu, which stays open
-			if ( !Q_stricmp( arg, "spawnlight" ) ) {
+			// DAJ_RP: [Extras] and its Grab (grablight), the same
+			if ( !Q_stricmp( arg, "spawnlight" ) || !Q_stricmp( arg, "grablight" ) ) {
 				const char *problem = RPX_LabelProblem( RPX_CvarStr( "ui_rpx_l_name" ) );
 
 				if ( problem ) {
 					RPX_Msg( va( "^3%s", problem ) );
 					return qtrue;
 				}
-				trap->Cmd_ExecuteText( EXEC_APPEND, "rpx do spawnlight\n" );
+				trap->Cmd_ExecuteText( EXEC_APPEND, !Q_stricmp( arg, "grablight" ) ? "rpx do grablight\n" : "rpx do spawnlight\n" );
 				RPX_CloseMenus();
 				return qtrue;
 			}
@@ -744,7 +746,8 @@ qboolean UI_RpxScript( const char *name, char **args ) {
 			}
 			// GalaxyRP: [Extras] the Spawners menu's Spawn: a selection, and the names it needs and may have
 			// (RPX_SpawnerNamesProblem()) -- a problem is said in the menu, which stays open
-			if ( !Q_stricmp( arg, "spawnspawner" ) ) {
+			// DAJ_RP: [Extras] and its Grab (grabspawner), the same
+			if ( !Q_stricmp( arg, "spawnspawner" ) || !Q_stricmp( arg, "grabspawner" ) ) {
 				const char *problem;
 
 				if ( !RPX_HaveSelection() ) {
@@ -756,7 +759,7 @@ qboolean UI_RpxScript( const char *name, char **args ) {
 					RPX_Msg( va( "^3%s", problem ) );
 					return qtrue;
 				}
-				trap->Cmd_ExecuteText( EXEC_APPEND, "rpx do spawnspawner\n" );
+				trap->Cmd_ExecuteText( EXEC_APPEND, !Q_stricmp( arg, "grabspawner" ) ? "rpx do grabspawner\n" : "rpx do spawnspawner\n" );
 				RPX_CloseMenus();
 				return qtrue;
 			}

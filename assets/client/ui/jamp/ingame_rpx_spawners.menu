@@ -1120,7 +1120,7 @@
 			name                rpx_spawn
 			type                ITEM_TYPE_BUTTON
 			style               WINDOW_STYLE_FILLED
-			rect                432 330 180 32
+			rect                432 330 180 24
 			text                "Spawn"
 			textalign           ITEM_ALIGN_CENTER
 			textalignx          90
@@ -1145,6 +1145,38 @@
 			{
 				play "sound/interface/button1.wav" ;
 				uiScript rpxDo spawnspawner
+			}
+		}
+		itemDef
+		{
+			name                rpx_grab
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 358 180 24
+			text                "Grab"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          90
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Pick it up (/entaddgrab), place it with /entaddgrab again, and close the menu"
+			mouseEnter
+			{
+				setitemcolor rpx_grab bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_grab bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo grabspawner
 			}
 		}
 	}

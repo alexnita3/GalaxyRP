@@ -558,13 +558,19 @@ static void RPX_AddOffset( char *cmd, int size, const char *cvar ) {
 	}
 }
 
+// DAJ_RP: [Extras] the command a Spawn button sends, or its Grab button: /entaddgrab takes the same arguments
+// as /entaddaim, aimoffset too, but picks the new entity up, to be placed with /entaddgrab again (g_entgrab.c)
+static const char *RPX_AddVerb( qboolean grab ) {
+	return grab ? "entaddgrab" : "entaddaim";
+}
+
 static int RPX_FacingYaw( float extra ) {
 	float yaw = AngleNormalize360( cg.predictedPlayerState.viewangles[YAW] + 180.0f + extra );
 
 	return (int)( yaw + 0.5f ) % 360;
 }
 
-static void RPX_SpawnProp( void ) {
+static void RPX_SpawnProp( qboolean grab ) {
 	char folder[RPX_NAME_LEN], name[RPX_NAME_LEN], path[MAX_QPATH * 2], cmd[MAX_STRING_CHARS];
 	int pitch, yaw, roll, flags;
 	float scale;
@@ -584,7 +590,7 @@ static void RPX_SpawnProp( void ) {
 	if ( RPX_CvarInt( "ui_rpx_p_faceme" ) ) {
 		yaw = RPX_FacingYaw( yaw );
 	}
-	Com_sprintf( cmd, sizeof( cmd ), "entaddaim misc_model_breakable model \"%s\" angles \"%d %d %d\"", path, pitch, yaw, roll );
+	Com_sprintf( cmd, sizeof( cmd ), "%s misc_model_breakable model \"%s\" angles \"%d %d %d\"", RPX_AddVerb( grab ), path, pitch, yaw, roll );
 
 	scale = RPX_CvarFloat( "ui_rpx_p_scale" ) / 100.0f;	// a percent
 	if ( scale < 0.01f ) scale = 0.01f;
@@ -623,7 +629,7 @@ static void RPX_SpawnProp( void ) {
 	RPX_Queue( cmd );
 }
 
-static void RPX_SpawnEffect( void ) {
+static void RPX_SpawnEffect( qboolean grab ) {
 	char folder[RPX_NAME_LEN], name[RPX_NAME_LEN], file[MAX_QPATH * 2], cmd[MAX_STRING_CHARS];
 	int dir, delay, rnd, flags;
 
@@ -638,13 +644,13 @@ static void RPX_SpawnEffect( void ) {
 
 	dir = RPX_CvarInt( "ui_rpx_e_dir" );
 	if ( dir == 1 ) {
-		Com_sprintf( cmd, sizeof( cmd ), "entaddaim fx_runner fxFile \"%s\" angles \"0 %d 0\"", file, RPX_FacingYaw( 0 ) );
+		Com_sprintf( cmd, sizeof( cmd ), "%s fx_runner fxFile \"%s\" angles \"0 %d 0\"", RPX_AddVerb( grab ), file, RPX_FacingYaw( 0 ) );
 	} else if ( dir == 2 ) {
 		int pitch = (int)Com_Clamp( -90.0f, 90.0f, RPX_CvarFloat( "ui_rpx_e_pitch" ) );
 
-		Com_sprintf( cmd, sizeof( cmd ), "entaddaim fx_runner fxFile \"%s\" angles \"%d %d 0\"", file, pitch, RPX_FacingYaw( 0 ) );
+		Com_sprintf( cmd, sizeof( cmd ), "%s fx_runner fxFile \"%s\" angles \"%d %d 0\"", RPX_AddVerb( grab ), file, pitch, RPX_FacingYaw( 0 ) );
 	} else {
-		Com_sprintf( cmd, sizeof( cmd ), "entaddaim fx_runner fxFile \"%s\" angles \"-90 0 0\"", file );
+		Com_sprintf( cmd, sizeof( cmd ), "%s fx_runner fxFile \"%s\" angles \"-90 0 0\"", RPX_AddVerb( grab ), file );
 	}
 
 	delay = RPX_CvarInt( "ui_rpx_e_delay" );
@@ -715,10 +721,10 @@ GalaxyRP: [Extras] the Lights menu's Spawn: an rp_light (g_misc.c) on the surfac
 ui_rpx_l_lift units out from it (/entaddaim's aimoffset). Its radius and colour on; its radius and colour
 off, sent only when it gives light off (offlight 0 is dark, rp_light's own default); START_OFF; and a
 name to switch it with. No list, so nothing to check against a listing -- only the name, as the NPCs
-menu does.
+menu does. DAJ_RP: its Grab button sends the same with /entaddgrab (RPX_AddVerb()).
 ==================
 */
-static void RPX_SpawnLight( void ) {
+static void RPX_SpawnLight( qboolean grab ) {
 	char cmd[MAX_STRING_CHARS], label[64];
 	const char *problem;
 	int radius, offRadius, lift;
@@ -737,7 +743,7 @@ static void RPX_SpawnLight( void ) {
 	r = Com_Clamp( 0.0f, 1.0f, RPX_CvarFloat( "ui_rpx_l_r" ) / 255.0f );
 	g = Com_Clamp( 0.0f, 1.0f, RPX_CvarFloat( "ui_rpx_l_g" ) / 255.0f );
 	b = Com_Clamp( 0.0f, 1.0f, RPX_CvarFloat( "ui_rpx_l_b" ) / 255.0f );
-	Com_sprintf( cmd, sizeof( cmd ), "entaddaim rp_light light \"%d\" color \"%.2f %.2f %.2f\"", radius, r, g, b );
+	Com_sprintf( cmd, sizeof( cmd ), "%s rp_light light \"%d\" color \"%.2f %.2f %.2f\"", RPX_AddVerb( grab ), radius, r, g, b );
 
 	offRadius = RPX_CvarInt( "ui_rpx_l_offrad" );
 	if ( offRadius < 0 ) offRadius = 0;
@@ -776,6 +782,7 @@ GalaxyRP: [Extras] the Spawners menu's Spawn: an npc_spawner (NPCs tab) or NPC_V
 selected type, on the surface aimed at (/entaddaim), with the targetname the server requires and the
 menu's settings -- each sent only when it changes something. The type is checked against the listing the
 server sent and the names as the ui checked them (RPX_SpawnerNamesProblem()), in case they changed since.
+DAJ_RP: its Grab button sends the same with /entaddgrab (RPX_AddVerb()).
 Shy is an NPC spawner's only: a vehicle spawner spawns when fired, never waiting to be unseen. The
 health bar (showhealth) is both kinds'. The effect (npceffect) is an NPC spawner's only: vehicles cannot
 have one. The team (npcteam) is both kinds', as /npc team is. The kill rewards (npccredits, npcxp) are an NPC
@@ -784,7 +791,7 @@ refuses vehicles, and the server refuses the key on a vehicle spawner. With No A
 stays frozen until unfrozen, then stands as a no-AI one.
 ==================
 */
-static void RPX_SpawnSpawner( void ) {
+static void RPX_SpawnSpawner( qboolean grab ) {
 	int kind = RPX_CvarInt( "ui_rpx_npcmode" ) ? RPX_VEHICLES : RPX_NPCS;
 	char folder[RPX_NAME_LEN], type[RPX_NAME_LEN], cmd[MAX_STRING_CHARS];
 	char spname[64], npcname[64], ondeath[64];
@@ -814,8 +821,8 @@ static void RPX_SpawnSpawner( void ) {
 	} else {
 		yaw = RPX_FacingYaw( 0 );
 	}
-	Com_sprintf( cmd, sizeof( cmd ), "entaddaim %s npc_type \"%s\" angles \"0 %d 0\" targetname \"%s\"",
-		kind == RPX_VEHICLES ? "NPC_Vehicle" : "npc_spawner", type, yaw, spname );
+	Com_sprintf( cmd, sizeof( cmd ), "%s %s npc_type \"%s\" angles \"0 %d 0\" targetname \"%s\"",
+		RPX_AddVerb( grab ), kind == RPX_VEHICLES ? "NPC_Vehicle" : "npc_spawner", type, yaw, spname );
 
 	if ( RPX_CvarInt( "ui_rpx_sp_now" ) ) {
 		Q_strcat( cmd, sizeof( cmd ), " spawnnow \"1\"" );
@@ -1034,16 +1041,17 @@ void CG_Rpx_f( void ) {
 	}
 
 	if ( !Q_stricmp( sub, "do" ) ) {
-		if ( !Q_stricmp( arg, "spawnprop" ) ) {
-			RPX_SpawnProp();
-		} else if ( !Q_stricmp( arg, "spawnfx" ) ) {
-			RPX_SpawnEffect();
+		// DAJ_RP: [Extras] grab*: the Grab buttons under Spawn, the same command with /entaddgrab
+		if ( !Q_stricmp( arg, "spawnprop" ) || !Q_stricmp( arg, "grabprop" ) ) {
+			RPX_SpawnProp( !Q_stricmp( arg, "grabprop" ) );
+		} else if ( !Q_stricmp( arg, "spawnfx" ) || !Q_stricmp( arg, "grabfx" ) ) {
+			RPX_SpawnEffect( !Q_stricmp( arg, "grabfx" ) );
 		} else if ( !Q_stricmp( arg, "spawnnpc" ) ) {
 			RPX_SpawnNpc();
-		} else if ( !Q_stricmp( arg, "spawnlight" ) ) {
-			RPX_SpawnLight();
-		} else if ( !Q_stricmp( arg, "spawnspawner" ) ) {
-			RPX_SpawnSpawner();
+		} else if ( !Q_stricmp( arg, "spawnlight" ) || !Q_stricmp( arg, "grablight" ) ) {
+			RPX_SpawnLight( !Q_stricmp( arg, "grablight" ) );
+		} else if ( !Q_stricmp( arg, "spawnspawner" ) || !Q_stricmp( arg, "grabspawner" ) ) {
+			RPX_SpawnSpawner( !Q_stricmp( arg, "grabspawner" ) );
 		} else if ( !Q_stricmp( arg, "musicme" ) ) {
 			RPX_Music( qfalse );
 		} else if ( !Q_stricmp( arg, "musicall" ) ) {
