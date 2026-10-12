@@ -618,6 +618,13 @@ void G_EjectDroidUnit( Vehicle_t *pVeh, qboolean kill )
 #ifdef _GAME
 	{
 		gentity_t *droidEnt = (gentity_t *)pVeh->m_pDroidUnit;
+		// DAJ_RP: [Cloak Item] off the vehicle, off its cloak: seen and targetable again (RP_VehicleDroidCloakSync,
+		// NPC_AI_Jedi.c, kept it with the vehicle's). Silently -- it is being thrown off or destroyed.
+		if ( droidEnt->client && droidEnt->client->ps.powerups[PW_CLOAKED] )
+		{
+			droidEnt->client->ps.powerups[PW_CLOAKED] = 0;
+			droidEnt->flags &= ~FL_NOTARGET;
+		}
 		droidEnt->flags &= ~FL_UNDYING;
 		droidEnt->r.ownerNum = ENTITYNUM_NONE;
 		if ( droidEnt->client )
@@ -1911,6 +1918,9 @@ static void AttachRiders( Vehicle_t *pVeh )
 	int i = 0;
 
 	AttachRidersGeneric(pVeh);
+
+	// DAJ_RP: [Cloak Item] the droid unit keeps the vehicle's cloak, every frame (RP_VehicleDroidCloakSync, NPC_AI_Jedi.c)
+	RP_VehicleDroidCloakSync( (gentity_t *)pVeh->m_pParentEntity );
 
 	if (pVeh->m_pPilot)
 	{

@@ -933,6 +933,81 @@ void Boba_FireDecide( void )
 	}
 }
 
+/*
+=================
+RP_VehicleDroid / RP_DroidVehicle / RP_VehicleDroidCloakSync
+
+DAJ_RP: [Cloak Item] a vehicle's droid unit (the astromech in its socket, m_pDroidUnit) is cloaked and uncloaked
+with the vehicle. It is an NPC of its own, and nothing that cloaks a vehicle ever touched it: it stayed in sight
+on an invisible ship, and targetable -- NPCs and turrets fired at it and gave the ship away.
+
+The droid takes the vehicle's state, as a cloaked vehicle has it: PW_CLOAKED, and FL_NOTARGET with it (Jedi_Cloak).
+Silently -- the vehicle plays the cloak sound. At once, from Jedi_Cloak() and Jedi_Decloak() on the vehicle, which
+every cloak and uncloak goes through (/vehicle_cloak, firing, hits, death, the pilot getting off); and again every
+frame from the vehicle's AttachRiders() (g_vehicles.c), which seats the droid, so nothing that clears a vehicle's
+cloak some other way can leave the droid behind. Only while the vehicle still names it and its own vehicle number
+is the vehicle's; an ejected droid is uncloaked (G_EjectDroidUnit()).
+=================
+*/
+gentity_t *RP_VehicleDroid( gentity_t *veh )
+{
+	gentity_t *droid;
+
+	if ( !veh || !veh->inuse || !veh->client || veh->client->NPC_class != CLASS_VEHICLE || !veh->m_pVehicle ||
+		!veh->m_pVehicle->m_pDroidUnit )
+	{
+		return NULL;
+	}
+	droid = (gentity_t *)veh->m_pVehicle->m_pDroidUnit;
+	if ( droid == veh || !droid->inuse || !droid->client || droid->client->ps.m_iVehicleNum != veh->s.number )
+	{
+		return NULL;
+	}
+	return droid;
+}
+
+// DAJ_RP: [Cloak Item] the vehicle a droid unit is aboard (RP_VehicleDroid() the other way), or NULL
+gentity_t *RP_DroidVehicle( gentity_t *droid )
+{
+	gentity_t	*veh;
+	int			vehNum;
+
+	if ( !droid || !droid->client || droid->client->NPC_class == CLASS_VEHICLE )
+	{
+		return NULL;
+	}
+	vehNum = droid->client->ps.m_iVehicleNum;
+	if ( vehNum <= 0 || vehNum >= ENTITYNUM_WORLD )
+	{
+		return NULL;
+	}
+	veh = &g_entities[vehNum];
+	return ( RP_VehicleDroid( veh ) == droid ) ? veh : NULL;
+}
+
+void RP_VehicleDroidCloakSync( gentity_t *veh )
+{
+	gentity_t *droid = RP_VehicleDroid( veh );
+
+	if ( !droid )
+	{
+		return;
+	}
+	if ( veh->client->ps.powerups[PW_CLOAKED] )
+	{
+		droid->flags |= FL_NOTARGET;
+		if ( !droid->client->ps.powerups[PW_CLOAKED] )
+		{
+			droid->client->ps.powerups[PW_CLOAKED] = 2147483647; // as Jedi_Cloak()
+		}
+	}
+	else if ( droid->client->ps.powerups[PW_CLOAKED] )
+	{
+		droid->client->ps.powerups[PW_CLOAKED] = 0;
+		droid->flags &= ~FL_NOTARGET;
+	}
+}
+
 void Jedi_Cloak( gentity_t *self )
 {
 	if ( self )
@@ -955,6 +1030,8 @@ void Jedi_Cloak( gentity_t *self )
 				G_Sound( self, CHAN_ITEM, G_SoundIndex("sound/chars/shadowtrooper/cloak.wav") );
 			}
 		}
+		// DAJ_RP: [Cloak Item] a vehicle's droid unit with it (RP_VehicleDroidCloakSync above)
+		RP_VehicleDroidCloakSync( self );
 	}
 }
 
@@ -974,6 +1051,8 @@ void Jedi_Decloak( gentity_t *self )
 				G_Sound( self, CHAN_ITEM, G_SoundIndex("sound/chars/shadowtrooper/decloak.wav") );
 			}
 		}
+		// DAJ_RP: [Cloak Item] a vehicle's droid unit with it (RP_VehicleDroidCloakSync above)
+		RP_VehicleDroidCloakSync( self );
 	}
 }
 
@@ -1036,11 +1115,18 @@ gentity_t *Jedi_CloakPartner( gentity_t *self )
 // entity) as the thing that decides what actually comes down.
 qboolean Jedi_PairIsCloaked( gentity_t *self )
 {
-	gentity_t *partner;
+	gentity_t *partner, *droidVeh;
 
 	if ( !self || !self->client )
 	{
 		return qfalse;
+	}
+
+	// DAJ_RP: [Cloak Item] a vehicle's droid unit is asked about as its vehicle (RP_VehicleDroidCloakSync above)
+	droidVeh = RP_DroidVehicle( self );
+	if ( droidVeh )
+	{
+		return ( self->client->ps.powerups[PW_CLOAKED] || Jedi_PairIsCloaked( droidVeh ) ) ? qtrue : qfalse;
 	}
 
 	if ( self->client->ps.powerups[PW_CLOAKED] )
@@ -1070,10 +1156,23 @@ qboolean Jedi_PairIsCloaked( gentity_t *self )
 // mounted, or isn't a vehicle at all -- see Jedi_Decloak's own internal guard.
 void Jedi_DecloakPair( gentity_t *self )
 {
-	gentity_t *partner;
+	gentity_t *partner, *droidVeh;
 
 	if ( !self || !self->client )
 	{
+		return;
+	}
+
+	// DAJ_RP: [Cloak Item] a hit on a vehicle's droid unit takes the vehicle and its pilot down, as a hit on either
+	// of them does -- the droid is not the vehicle's cloak partner (the pilot is), so on its own it would have taken
+	// only itself and the vehicle down, and left the pilot cloaked on a ship in plain sight. The droid itself follows
+	// the vehicle (Jedi_Decloak() -> RP_VehicleDroidCloakSync()), and the sync below clears it even if the vehicle was
+	// not cloaked.
+	droidVeh = RP_DroidVehicle( self );
+	if ( droidVeh )
+	{
+		Jedi_DecloakPair( droidVeh );
+		RP_VehicleDroidCloakSync( droidVeh );
 		return;
 	}
 

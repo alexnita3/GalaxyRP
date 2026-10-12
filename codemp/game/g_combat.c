@@ -4905,14 +4905,18 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	// setting it only on whichever half happened to be hit left the other free to re-cloak at once.
 	if (damage > 0 && targ && targ->client && Jedi_PairIsCloaked(targ))
 	{
-		gentity_t *cloakPartner = Jedi_CloakPartner(targ);
+		// DAJ_RP: [Cloak Item] a hit on a vehicle's droid unit counts as a hit on the vehicle: the vehicle and its pilot
+		// come down (Jedi_DecloakPair() does that for a droid too) and both get the re-cloak lockout, as for a hit on
+		// either of them. The droid's own lockout is never read -- only a pilot can cloak a vehicle.
+		gentity_t *cloakTarg = RP_DroidVehicle(targ) ? RP_DroidVehicle(targ) : targ;
+		gentity_t *cloakPartner = Jedi_CloakPartner(cloakTarg);
 
 		Jedi_DecloakPair(targ);
-		targ->client->cloakToggleTime = level.time + Q_irand(3000, 10000);
+		cloakTarg->client->cloakToggleTime = level.time + Q_irand(3000, 10000);
 
 		if (cloakPartner)
 		{
-			cloakPartner->client->cloakToggleTime = targ->client->cloakToggleTime;
+			cloakPartner->client->cloakToggleTime = cloakTarg->client->cloakToggleTime;
 		}
 	}
 

@@ -3192,6 +3192,10 @@ void RP_StartOverlapRelease( gentity_t *ent );
 int RP_VehicleOf( const gentity_t *ent );
 qboolean RP_IsVehicleRider( const gentity_t *ent );
 void RP_CarryRiders( gentity_t *veh, vec3_t angles );
+// DAJ_RP: [Cloak Item] a vehicle's droid unit, while aboard, and its cloak kept with the vehicle's -- NPC_AI_Jedi.c
+gentity_t *RP_VehicleDroid( gentity_t *veh );
+gentity_t *RP_DroidVehicle( gentity_t *droid );
+void RP_VehicleDroidCloakSync( gentity_t *veh );
 void RP_PhaseNpcEndFrame( void );
 
 //
