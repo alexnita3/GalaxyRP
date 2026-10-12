@@ -3587,6 +3587,9 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 
 	if ( tr_ent && tr_ent->takedamage )
 	{
+		// DAJ_RP: [Shop] the target's damage tally for this frame, before the hit -- see the upgrade's slow below
+		const int hurtBefore = tr_ent->client ? tr_ent->client->damage_blood + tr_ent->client->damage_armor : 0;
+
 		G_PlayEffect( EFFECT_STUNHIT, tr.endpos, tr.plane.normal );
 
 		G_Sound( tr_ent, CHAN_WEAPON, G_SoundIndex( va("sound/weapons/melee/punch%d", Q_irand(1, 4)) ) );
@@ -3644,6 +3647,25 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 
 					if (zyk_can_hit_target(ent, tr_ent) == qfalse)
 					{ // zyk: testing if the target player can get hit by the stun baton
+						return;
+					}
+
+					// DAJ_RP: [Shop] only a hit that landed slows. G_Damage() above refuses a target for every
+					// reason that should spare it -- friendly fire off against a teammate or a rebel-team NPC,
+					// god mode, spawn or chat protection, /ally, a duel, the Duel Tournament, noclip -- and
+					// the slow used to be set regardless. Once G_Damage() accepts a hit it always adds at least
+					// 1 to the target's damage tally (damage is floored at 1, so rp_stun_baton_damage 0 still
+					// counts), so an unchanged tally means it was refused.
+					if (tr_ent->client->damage_blood + tr_ent->client->damage_armor <= hurtBefore)
+					{
+						return;
+					}
+
+					// DAJ_RP: [Shop] nor are the NPCs following you or one of your allies slowed, as /ally players
+					// are not above -- with friendly fire on (galaxyrp_server.cfg) they do take the hit itself
+					if (tr_ent->NPC && tr_ent->client->leader &&
+						(tr_ent->client->leader == ent || zyk_is_ally(ent, tr_ent->client->leader) == qtrue))
+					{
 						return;
 					}
 
