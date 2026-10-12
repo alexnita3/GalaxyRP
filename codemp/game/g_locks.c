@@ -1280,7 +1280,8 @@ void Cmd_EntLockSet_f( gentity_t *ent )
 	// DAJ_RP: [Locks] nor one an admin is holding with /entcopy or /entcut (g_entgrab.c), as /entedit refuses it
 	if ( target->rpHeldBy )
 	{
-		trap->SendServerCommand( ent - g_entities, va( "print \"Entity %d is being held with /entcopy or /entcut: drop it or /entcancel first.\n\"", id ) );
+		// DAJ_RP: [Entity System] by another admin: who, and with what (g_entgrab.c)
+		trap->SendServerCommand( ent - g_entities, va( "print \"Entity %d is %s: wait until they drop it or let go.\n\"", id, RP_EntHeldByText( target ) ) );
 		return;
 	}
 
@@ -1452,7 +1453,8 @@ void Cmd_EntTrigger_f( gentity_t *ent )
 	}
 	if ( target->rpHeldBy )
 	{
-		trap->SendServerCommand( ent - g_entities, va( "print \"Entity %d is held with /entcopy or /entcut: it is left alone.\n\"", id ) );
+		// DAJ_RP: [Entity System] by another admin: who, and with what (g_entgrab.c)
+		trap->SendServerCommand( ent - g_entities, va( "print \"Entity %d is %s: it is left alone.\n\"", id, RP_EntHeldByText( target ) ) );
 		return;
 	}
 	if ( target->s.eType != ET_MOVER && !target->use )

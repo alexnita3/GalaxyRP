@@ -2590,6 +2590,7 @@ const char	*RP_StaticLabel( int n );
 int			RP_EntBoundsAimStatic( const gentity_t *viewer );	// g_entbounds.c: the static model the display shows
 qboolean	RP_EntHeldAsStaticCopy( const gentity_t *e );	// g_entgrab.c: /entcopystatic's copy, not dropped yet
 qboolean	RP_EntHeldUnplaced( const gentity_t *e );		// DAJ_RP: that, or /entaddgrab's new entity: /entsave leaves both out
+const char	*RP_EntHeldByText( const gentity_t *e );		// DAJ_RP: "held by <name> with /entcut", for the commands that refuse it
 void		RP_EntAddGrabStart( gentity_t *ent, gentity_t *pending, float offset, qboolean originIgnored );	// DAJ_RP: /entaddgrab, g_entgrab.c
 void		RP_EntAddGrabHeld( gentity_t *ent );
 int			RP_PackConstantLight( float light, const vec3_t color );

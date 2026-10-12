@@ -1006,6 +1006,62 @@ qboolean RP_EntHeldUnplaced( const gentity_t *e )
 
 /*
 ==================
+RP_EntHeldByText
+
+DAJ_RP: [Entity System] who holds this entity and with which command, for the commands that refuse an entity
+another admin is holding (/entundo, /entedit, /entremove, /entlockset, /enttrigger): "held by Admin^7 with
+/entcut", or "held by another admin" when the holder cannot be told (the holder's own frame lets go of such a
+hold: RP_EntGrabFrame). The admin's own holds are refused before these commands get that far
+(RP_EntRefuseWhileHolding), so whoever reads this is not the holder. The name is made safe for a print: no
+quote to end it, nothing unprintable, no string reference. Its own buffers, so two can go in one va() line.
+==================
+*/
+const char *RP_EntHeldByText( const gentity_t *e )
+{
+	static char texts[2][MAX_NETNAME + 64];
+	static int next = 0;
+	char name[MAX_NETNAME];
+	const char *command;
+	const gclient_t *client;
+	char *text;
+	int holder, i, o;
+
+	text = texts[next++ & 1];
+	Q_strncpyz( text, "held by another admin", sizeof( texts[0] ) );
+
+	if ( !e || !e->rpHeldBy )
+		return text;
+
+	holder = e->rpHeldBy - 1;
+	if ( holder < 0 || holder >= MAX_CLIENTS || !g_entities[holder].inuse || !( client = g_entities[holder].client ) ||
+		client->pers.connected != CON_CONNECTED || client->pers.entHoldNum != e->s.number )
+		return text;
+
+	switch ( client->pers.entHoldMode )
+	{
+	case RP_HOLD_CUT:		command = "/entcut";		break;
+	case RP_HOLD_COPY:		command = "/entcopy";		break;
+	case RP_HOLD_STATIC:	command = "/entcopystatic";	break;
+	case RP_HOLD_ADD:		command = "/entaddgrab";	break;
+	default:				return text;
+	}
+
+	for ( i = o = 0; client->pers.netname[i] && o < (int)sizeof( name ) - 1; i++ )
+	{
+		const char c = client->pers.netname[i];
+
+		if ( c == '"' || (unsigned char)c < ' ' )
+			continue;
+		name[o++] = c;
+	}
+	name[o] = '\0';
+
+	Com_sprintf( text, sizeof( texts[0] ), "held by %s^7 with %s", o ? RP_ShownText( name ) : "an admin", command );
+	return text;
+}
+
+/*
+==================
 RP_GrabMakeGhost
 
 The preview model: an entity that looks like the held one -- a copy of its entityState -- sent to the

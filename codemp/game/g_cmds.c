@@ -15447,9 +15447,11 @@ void Cmd_EntUndo_f(gentity_t *ent) {
 	// write this slot -- /entadd, /spawnplatform and /spawndummy -- so this undoes whichever of them
 	// ran most recently. It is one step, not a stack: a second /entundo has nothing left to do.
 	// GalaxyRP: [Entity System] not while an admin holds it with /entcopy or /entcut (g_entgrab.c)
+	// DAJ_RP: [Entity System] that admin is another one (this one's own holds are refused above): who, and with what
 	if (level.last_spawned_entity && level.last_spawned_entity->rpHeldBy)
 	{
-		trap->SendServerCommand(ent->s.number, va("print \"Entity %d is being held with /entcopy or /entcut: drop it or /entcancel first.\n\"", level.last_spawned_entity->s.number));
+		trap->SendServerCommand(ent->s.number, va("print \"Entity %d is %s: wait until they drop it or let go.\n\"", level.last_spawned_entity->s.number,
+			RP_EntHeldByText(level.last_spawned_entity)));
 	}
 	else if (level.last_spawned_entity)
 	{ // zyk: removes the last entity spawned by /entadd, /spawnplatform or /spawndummy
@@ -16601,7 +16603,8 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 		// GalaxyRP: [Entity System] an admin is holding it with /entcopy or /entcut (g_entgrab.c)
 		if (this_ent->rpHeldBy)
 		{
-			trap->SendServerCommand( ent-g_entities, va("print \"Entity %d is being held with /entcopy or /entcut: drop it or /entcancel first.\n\"", entity_id) );
+			// DAJ_RP: [Entity System] by another admin: who, and with what (g_entgrab.c)
+			trap->SendServerCommand( ent-g_entities, va("print \"Entity %d is %s: wait until they drop it or let go.\n\"", entity_id, RP_EntHeldByText(this_ent)) );
 			return;
 		}
 
@@ -18229,7 +18232,8 @@ void Cmd_EntRemove_f( gentity_t *ent ) {
 				// GalaxyRP: [Entity System] an admin is holding it with /entcopy or /entcut (g_entgrab.c)
 				if (target_ent->rpHeldBy)
 				{
-					trap->SendServerCommand( ent-g_entities, va("print \"Entity %d is being held with /entcopy or /entcut: drop it or /entcancel first.\n\"", i) );
+					// DAJ_RP: [Entity System] by another admin: who, and with what (g_entgrab.c)
+					trap->SendServerCommand( ent-g_entities, va("print \"Entity %d is %s: wait until they drop it or let go.\n\"", i, RP_EntHeldByText(target_ent)) );
 					return;
 				}
 
