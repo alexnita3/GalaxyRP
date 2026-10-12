@@ -268,6 +268,28 @@ extern vec3_t gCGFallVector;
 
 /*
 ===============
+CG_CameraViewPitch
+
+DAJ_RP fix: [Vehicles] which way the view is pitched, for a vehicle camera that rises and falls with it
+(cameraPitchDependantVertOffset). Stock read the sign off the snapshot's own angles: a pilot's are his view, but a
+passenger's are his free mouse-look on the server, while his view is the vehicle's (CG_RpPassengerState(),
+cg_predict.c) -- so his camera could go up while the view went down. A passenger's view pitch, folded, is used;
+anyone else's is as before.
+===============
+*/
+static float CG_CameraViewPitch( void )
+{
+	const int vehNum = cg.predictedPlayerState.m_iVehicleNum;
+
+	if ( vehNum && vehNum < ENTITYNUM_WORLD && cg_entities[vehNum].currentState.owner != cg.predictedPlayerState.clientNum )
+	{
+		return AngleNormalize180( cg.predictedPlayerState.viewangles[PITCH] );
+	}
+	return cg.snap->ps.viewangles[PITCH];
+}
+
+/*
+===============
 CG_CalcTargetThirdPersonViewLocation
 
 ===============
@@ -304,7 +326,10 @@ static void CG_CalcIdealThirdPersonViewTarget(void)
 			{ //override the range with what the vehicle wants it to be
 				if ( veh->m_pVehicle->m_pVehicleInfo->cameraPitchDependantVertOffset )
 				{
-					if ( cg.snap->ps.viewangles[PITCH] > 0 )
+					// DAJ_RP fix: [Vehicles] which way the view is pitched: a passenger's corrected view (CG_CameraViewPitch)
+					const float viewPitch = CG_CameraViewPitch();
+
+					if ( viewPitch > 0 )
 					{
 						vertOffset = 130+cg.predictedPlayerState.viewangles[PITCH]*-10;
 						if ( vertOffset < -170 )
@@ -312,7 +337,7 @@ static void CG_CalcIdealThirdPersonViewTarget(void)
 							vertOffset = -170;
 						}
 					}
-					else if ( cg.snap->ps.viewangles[PITCH] < 0 )
+					else if ( viewPitch < 0 )
 					{
 						vertOffset = 130+cg.predictedPlayerState.viewangles[PITCH]*-5;
 						if ( vertOffset > 130 )
@@ -683,11 +708,14 @@ static void CG_OffsetThirdPersonView( void )
 				{ //override the range with what the vehicle wants it to be
 					if ( veh->m_pVehicle->m_pVehicleInfo->cameraPitchDependantVertOffset )
 					{
-						if ( cg.snap->ps.viewangles[PITCH] > 0 )
+						// DAJ_RP fix: [Vehicles] as CG_CalcIdealThirdPersonViewTarget(): CG_CameraViewPitch()
+						const float viewPitch = CG_CameraViewPitch();
+
+						if ( viewPitch > 0 )
 						{
 							pitchOffset = cg.predictedPlayerState.viewangles[PITCH]*-0.75;
 						}
-						else if ( cg.snap->ps.viewangles[PITCH] < 0 )
+						else if ( viewPitch < 0 )
 						{
 							pitchOffset = cg.predictedPlayerState.viewangles[PITCH]*-0.75;
 						}
@@ -724,6 +752,14 @@ static void CG_OffsetThirdPersonView( void )
 	}
 
 	// The next thing to do is to see if we need to calculate a new camera target location.
+
+	// DAJ_RP fix: [Vehicles] the pitch on -180..180 before it is capped, at +-80 below or +-89 in
+	// CG_ResetThirdPersonViewDamp(): a vehicle's angles can come as 0..360 -- a fighter nosed up a degree as 359 -- and
+	// 359 was capped to 80, the camera looking straight down from above. Only a pitch outside that range is touched.
+	if ( cameraFocusAngles[PITCH] > 180.0f || cameraFocusAngles[PITCH] < -180.0f )
+	{
+		cameraFocusAngles[PITCH] = AngleNormalize180( cameraFocusAngles[PITCH] );
+	}
 
 	// If we went back in time for some reason, or if we just started, reset the sample.
 	if (cameraLastFrame == 0 || cameraLastFrame > cg.time)

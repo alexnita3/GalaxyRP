@@ -1619,14 +1619,21 @@ static void CG_RpPassengerState( void )
 	VectorAdd( veh->lerpOrigin, seat, ps->origin );
 
 	// 3. the view angles
+	// DAJ_RP fix: [Vehicles] the vehicle's pitch and roll folded into -180..180. They come as the server keeps them -- a
+	// fighter's pitch 0..360 (AngleNormalize360(), FighterNPC.c) -- and LerpAngle() does not fold them back: a fighter
+	// nosed up a degree came as 359, which the third-person camera's +-80 cap read as looking straight down, so a
+	// hovering one's passenger saw the camera flip between behind the ship and above it at every wobble across level.
+	// A pilot's own angles come from his commands, already folded.
 	if ( veh->m_pVehicle && veh->m_pVehicle->m_pVehicleInfo && veh->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER )
 	{
 		VectorCopy( veh->lerpAngles, ps->viewangles );
+		ps->viewangles[PITCH] = AngleNormalize180( ps->viewangles[PITCH] );
+		ps->viewangles[ROLL] = AngleNormalize180( ps->viewangles[ROLL] );
 	}
 	else
 	{
 		const float lookPitch = ( veh->m_pVehicle && veh->m_pVehicle->m_pVehicleInfo ) ? veh->m_pVehicle->m_pVehicleInfo->lookPitch : 0.0f;
-		float pitch = veh->lerpAngles[PITCH];
+		float pitch = AngleNormalize180( veh->lerpAngles[PITCH] );
 
 		if ( lookPitch > 0.0f )
 		{
@@ -1639,7 +1646,7 @@ static void CG_RpPassengerState( void )
 
 		ps->viewangles[PITCH] = pitch;
 		ps->viewangles[YAW] = veh->lerpAngles[YAW];
-		ps->viewangles[ROLL] = veh->lerpAngles[ROLL];
+		ps->viewangles[ROLL] = AngleNormalize180( veh->lerpAngles[ROLL] );
 	}
 
 	cg.predictedErrorTime = 0;
