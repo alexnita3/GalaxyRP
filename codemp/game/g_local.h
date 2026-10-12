@@ -471,7 +471,7 @@ struct gentity_s {
 	// entity (g_locks.c). Only the Entity System's entities have one; the map's own are locked by brush
 	// model in the file instead. NULL when it has none.
 	char		*rpLock;
-	// DAJ_RP: [Locks] who set this entity off through /entuse, /enttrigger or the upgraded Stun Baton (or
+	// DAJ_RP: [Locks] who set this entity off through /entuse, /enttrigger or a level 5 Stun Baton (or
 	// through something they set off): 1 + that activator's number, and the client's pers.enterTime, so a
 	// later player in the same slot is not taken for them. What this entity uses later -- after a delay,
 	// when a door arrives -- with that same activator passes every lock, as the use itself did. 0: none.
@@ -2700,7 +2700,7 @@ void	G_CleanAllFakeClients(void);
 void	G_SetAnim(gentity_t *ent, usercmd_t *ucmd, int setAnimParts, int anim, int setAnimFlags, int blendTime);
 gentity_t *G_PickTarget (char *targetname);
 void	GlobalUse(gentity_t *self, gentity_t *other, gentity_t *activator);
-// GalaxyRP: [Shop] the Stun Baton Upgrade's effect on a mover it hits -- see g_mover.c.
+// GalaxyRP: [Shop] a level 5 Stun Baton's effect on a mover it hits (once the shop's Stun Baton Upgrade's) -- see g_mover.c.
 void	RP_StunBatonUseMover( gentity_t *mover, gentity_t *user );
 // DAJ_RP: [Locks] account-locked entities -- see g_locks.c.
 void		RP_LocksLoad( void );

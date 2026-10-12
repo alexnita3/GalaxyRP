@@ -3563,7 +3563,10 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 	// same hit, even inactive ones single player's scripts or droids would have activated -- see
 	// RP_StunBatonUseMover() in g_mover.c; every other mover gets the GlobalUse() it always did.
 	// A door that starts open and closes for good (wait -1) is reopened by it too.
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[38] & (1 << 2) && tr_ent->s.eType == ET_MOVER &&
+	// DAJ_RP: [Skills] this comes with Stun Baton skill level 5 now, not the shop's Stun Baton Upgrade, which
+	// keeps only the slow below. Forward-only: a character that bought the upgrade for this gets it back by
+	// raising the skill to 5.
+	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[18] >= 5 && tr_ent->s.eType == ET_MOVER &&
 		rp_stun_baton_door_unlock.integer == 1)
 	{
 		RP_StunBatonUseMover(tr_ent, ent);
@@ -3595,9 +3598,12 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 		G_Sound( tr_ent, CHAN_WEAPON, G_SoundIndex( va("sound/weapons/melee/punch%d", Q_irand(1, 4)) ) );
 
 		// zyk: stun baton in RPG mode does more damage
+		// DAJ_RP: [Skills] up to level 4's; level 5 adds the mover use above, not damage
 		if (ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[18] > 1)
 		{
-			G_Damage( tr_ent, ent, ent, forward, tr.endpos, rp_stun_baton_damage.integer * ent->client->pers.skill_levels[18], (DAMAGE_NO_KNOCKBACK|DAMAGE_HALF_ABSORB), MOD_STUN_BATON );
+			const int batonLevel = ent->client->pers.skill_levels[18] > 4 ? 4 : ent->client->pers.skill_levels[18];
+
+			G_Damage( tr_ent, ent, ent, forward, tr.endpos, rp_stun_baton_damage.integer * batonLevel, (DAMAGE_NO_KNOCKBACK|DAMAGE_HALF_ABSORB), MOD_STUN_BATON );
 		}
 		else
 		{

@@ -495,6 +495,7 @@ XCVAR_DEF( rp_scale_siege_damage,		"0.7",			NULL,				CVAR_ARCHIVE|CVAR_NORESTART
 // Baton Upgrade's door-unlock effect (its speed-debuff effect was never gated by it), so the old
 // name overstated its scope; matches the rp_ prefix convention used by other RPG-specific cvars
 // (e.g. rp_downed_timer).
+// DAJ_RP: [Skills] the door-unlock effect it gates comes with Stun Baton skill level 5 now, no longer the upgrade.
 XCVAR_DEF( rp_stun_baton_door_unlock,		"1",	NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 // GalaxyRP fix: [cleanup] renamed from zyk_allow_emotes to rp_allow_emotes -- matches this
 // codebase's rp_ naming convention for GalaxyRP-authored cvars (see rp_allow_playsound_command above).

@@ -1001,7 +1001,8 @@ void Use_BinaryMover( gentity_t *ent, gentity_t *other, gentity_t *activator )
 ================
 RP_StunBatonUseMover
 
-GalaxyRP: [Shop] what the Stun Baton Upgrade does to a mover it hits. It used to be GlobalUse(),
+GalaxyRP: [Shop] what a level 5 Stun Baton does to a mover it hits (the shop's Stun Baton Upgrade did, until
+DAJ_RP moved it to the skill -- see WP_FireStunBaton()). It used to be GlobalUse(),
 which gives up on an inactive mover (spawnflag INACTIVE, a target_deactivate, an ICARUS
 SET_INACTIVE) and only unlocks a locked door -- a second hit opened it, and UnLockDoors() also
 strips a non-toggle door's name, so that door's own button or script could never open it again.

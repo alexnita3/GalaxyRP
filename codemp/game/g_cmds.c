@@ -188,7 +188,9 @@ const skill_t skills[] = {
 	// w_force.c); the description text was simply never updated to match.
 	// GalaxyRP fix: [Skills audit] same "players near you" correction as Team Heal above.
 	{5, "Team Energize",		"restores Force power to your allies and friendly npcs near you. The range and Force restored grow with each level",																																																																	"force",	"dark",		FP_TEAM_FORCE},
-	{4, "Stun Baton",			"attacks someone with a small electric charge. Each level deals more damage. With Stun Baton Upgrade, opens doors including locked ones, moves elevators, and slows enemies for some seconds",																	"weapons",	"merc",		WP_STUN_BATON},
+	// DAJ_RP: [Skills] level 5 added: it opens doors and moves movers, which was the shop's Stun Baton Upgrade's
+	// (that keeps only the slow), and deals level 4's damage -- see WP_FireStunBaton() in g_weapon.c
+	{5, "Stun Baton",			"attacks someone with a small electric charge. Levels 2 to 4 deal more damage. Level 5 deals as much as level 4, and the baton opens any door it hits, including locked ones, and moves elevators and other movers. With the Stun Baton Upgrade from the shop, each hit also slows enemies down for 1.5 seconds",																	"weapons",	"merc",		WP_STUN_BATON},
 	{2, "Blaster Pistol",		"the popular Star Wars pistol used by Han Solo in the movies. Alt fire is a charged shot: the longer the charge, the more damage. Level 2 unlocks the alternate fire mode.",																	"weapons",	"merc",		WP_BRYAR_PISTOL},
 	{2, "E11 Blaster Rifle",	"the rifle used by the Storm Troopers. Normal fire is a single shot, alt fire is rapid fire. Level 2 unlocks the alternate fire mode.",																																										"weapons",	"merc",		WP_BLASTER},
 	{2, "Disruptor",			"the sniper, used by the rodians ingame. Normal fire is a single shot. Alt fire allows zoom and a charged shot. Level 2 unlocks the alternate fire mode.",																																					"weapons",	"merc",		WP_DISRUPTOR},
@@ -13078,7 +13080,8 @@ void Cmd_Stuff_f( gentity_t *ent ) {
 				// mechanic is opening/unlocking doors and elevators) and "decloak enemies" (no longer
 				// upgrade-specific since the cloak-sync overhaul made ANY damage decloak a cloaked
 				// target, with or without this upgrade -- see G_Damage's centralized decloak hook).
-				trap->SendServerCommand( ent-g_entities, "print \"\n^3Stun Baton Upgrade: ^7allows stun baton to open any door, including locked ones, and move elevators. Also decreases enemies' running speed for some seconds\n\n\"");
+				// DAJ_RP: [Skills] the doors and elevators moved to Stun Baton skill level 5; the upgrade keeps the slow
+				trap->SendServerCommand( ent-g_entities, "print \"\n^3Stun Baton Upgrade: ^7each stun baton hit halves the enemy's movement speed for 1.5 seconds. Opening doors and moving elevators comes with Stun Baton skill level 5\n\n\"");
 			}
 			else
 			{
@@ -20468,11 +20471,11 @@ void Cmd_EntitiesAndRemaps_f( gentity_t *ent ) {
 	lines[n++] = "^3/entlockremove <lock> <account> [more accounts] ^7or ^3/entlockremove <lock> all: ^7Takes accounts off the lock, or all of them. What carries a lock with nobody on it lets nobody through.\n";
 	lines[n++] = "^3/entlockset <entity id (optional)> <lock | none>: ^7Puts a lock on the door, lift, button, trigger or any entity you aim at, or that id, or takes it off. The map's own get it by their brush model, kept in the map's lock file. A locked door team is locked whole.\n";
 	lines[n++] = "^3/entlocklist <lock (optional)>: ^7Lists this map's locks, or one lock's accounts and the entities carrying it.\n";
-	lines[n++] = "^7A locked entity lets through only logged-in players whose account is on its lock (a vehicle: its pilot's). NPCs never do. Timers and map logic with no player behind them pass, and so do /entuse, /enttrigger and the upgraded Stun Baton, with what they set off, later too. Harmful triggers and target_kill cannot be locked.\n";
+	lines[n++] = "^7A locked entity lets through only logged-in players whose account is on its lock (a vehicle: its pilot's). NPCs never do. Timers and map logic with no player behind them pass, and so do /entuse, /enttrigger and a level 5 Stun Baton, with what they set off, later too. Harmful triggers and target_kill cannot be locked.\n";
 
 	lines[n++] = "^5Other\n";
 	lines[n++] = "^3/entuse <name>: ^7Uses every entity with that targetname, as a trigger or a button would: spawners, lights, effects, doors. NPCs and vehicles are left alone.\n";
-	lines[n++] = "^3/enttrigger <entity id (optional)>: ^7Activates the entity you aim at, or that id, as the upgraded Stun Baton does: a door, lift or button opens even when locked or inactive, anything else is used. Account locks do not stop it.\n";
+	lines[n++] = "^3/enttrigger <entity id (optional)>: ^7Activates the entity you aim at, or that id, as a level 5 Stun Baton does: a door, lift or button opens even when locked or inactive, anything else is used. Account locks do not stop it.\n";
 	lines[n++] = "^3/entslots: ^7Shows how full the map's model, effect and sound slots are, and how many can be reused.\n";
 	lines[n++] = "^3/list models ^7and ^3/list effects^7: Show the model and effect files the server has, for props.\n";
 	lines[n++] = "^3/settings 6: ^7Entity Bounds -- draws the box of the entity you aim at, and marks nearby spawn points, targets and other point entities. The map's static models are drawn and marked in ^1red^7.\n";

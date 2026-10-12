@@ -90,7 +90,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"refused, since it would disconnect them.\n"
 		"lock||An account lock: only logged-in players whose account is on that lock's list (/entlockadd) may use, touch or "
 		"trigger it, a vehicle by its pilot. NPCs never may. Timers and map logic with no player behind them, /entuse, /enttrigger "
-		"and the upgraded Stun Baton always pass, and so does what they set off, later too. A lock name is 1 to 31 letters, digits, "
+		"and a level 5 Stun Baton always pass, and so does what they set off, later too. A lock name is 1 to 31 letters, digits, "
 		"_ or -, and none means no lock. In a mover team one locked member locks them all. A trigger fired with the Use or fire "
 		"button refuses when the button is pressed, not when walked into. trigger_hurt, trigger_space, trigger_shipboundary, "
 		"trigger_hyperspace and target_kill ignore it: a lock would only spare the players not on its list. /entlockset, on the "

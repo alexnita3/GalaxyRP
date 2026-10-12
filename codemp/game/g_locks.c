@@ -18,7 +18,7 @@ Who gets through (RP_LockAllows):
   - a vehicle a player drives: the pilot's account decides;
   - no activator, or one that is not a character (timers, the world, map logic): passes;
   - an NPC, an empty vehicle, or one an NPC drives: never;
-  - what /entuse, /enttrigger or the upgraded Stun Baton uses: always, and so does everything it sets off,
+  - what /entuse, /enttrigger or a level 5 Stun Baton uses: always, and so does everything it sets off,
     at once (RP_LockBypass) or later, after a delay or when a door arrives (RP_LockMarkPass).
 A lock whose name has no list lets nobody through but those. The classes that hurt or kill whoever
 touches or uses them never carry a lock (RP_LockHarmful): it would only spare the players not on it.
@@ -609,7 +609,7 @@ static void RP_LockTell( gentity_t *player, const char *name )
 ==================
 RP_LockMarkPass / RP_LockPassMatches
 
-DAJ_RP: [Locks] /entuse, /enttrigger and the upgraded Stun Baton pass every lock, and so does what they
+DAJ_RP: [Locks] /entuse, /enttrigger and a level 5 Stun Baton pass every lock, and so does what they
 set off. RP_LockBypass covers what happens during the use itself; what happens later -- a door or button
 with a delay, a door's opentarget, closetarget and target2 when it arrives, a trigger_multiple with a
 delay, a target_delay -- runs from a think, after the bypass is over. Every one of those keeps the
@@ -691,7 +691,7 @@ RP_LockAllows
 
 DAJ_RP: [Locks] whether activator may use ent, which other (the entity doing the using: a trigger, a
 button, a door's own trigger, the toucher itself) set off. Who passes:
-  - anything, during /entuse, /enttrigger or the upgraded Stun Baton (RP_LockBypass), or set off later by
+  - anything, during /entuse, /enttrigger or a level 5 Stun Baton (RP_LockBypass), or set off later by
     an entity they set off, with the same activator (RP_LockMarkPass) -- ent is marked in turn;
   - with no lock on ent or its door team: anything;
   - nothing at all as the activator, or one that is not a character -- a timer, the world, map logic;
@@ -1387,8 +1387,8 @@ void Cmd_EntLockSet_f( gentity_t *ent )
 Cmd_EntTrigger_f
 
 DAJ_RP: [Locks] /enttrigger [entity id]: activates that entity -- or, with no id, the one aimed at, as
-/entedit and /entremove pick theirs (RP_EntAimTarget: a door's own trigger means the door) -- as the
-upgraded Stun Baton does (RP_StunBatonUseMover): a door, a lift or a button is made active again, the map's
+/entedit and /entremove pick theirs (RP_EntAimTarget: a door's own trigger means the door) -- as a
+level 5 Stun Baton does (RP_StunBatonUseMover): a door, a lift or a button is made active again, the map's
 own locked ones are unlocked until the map reloads, a door that started open and closed for good is opened
 again, and then the mover is used; anything else is used, as /entuse uses it. Account locks do not stop it,
 nor what it sets off. Not a player, an NPC or a vehicle (using a vehicle boards it from anywhere), nor an
@@ -1410,7 +1410,7 @@ void Cmd_EntTrigger_f( gentity_t *ent )
 
 	if ( trap->Argc() > 2 )
 	{
-		trap->SendServerCommand( ent - g_entities, "print \"Usage: ^3/enttrigger^7 activates the entity you aim at, ^3/enttrigger <entity id>^7 that entity, as the upgraded Stun Baton would: doors, lifts and buttons open even when locked or inactive; anything else is used. Account locks do not stop it.\n\"" );
+		trap->SendServerCommand( ent - g_entities, "print \"Usage: ^3/enttrigger^7 activates the entity you aim at, ^3/enttrigger <entity id>^7 that entity, as a level 5 Stun Baton would: doors, lifts and buttons open even when locked or inactive; anything else is used. Account locks do not stop it.\n\"" );
 		return;
 	}
 
