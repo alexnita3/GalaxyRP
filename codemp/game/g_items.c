@@ -3226,11 +3226,8 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 		// so pickup restriction never applies for any class -- falls through to normal
 		// pickup logic below unconditionally.
 	}
-	else if (other->client->pers.player_statuses & (1 << PLAYER_STATUS_ADM_GIVE_FORCE) && (ent->item->giType == IT_WEAPON || ent->item->giType == IT_AMMO ||
-			ent->item->giType == IT_HOLDABLE))
-	{ // zyk: players with all force powers given by admin cannot pickup some things
-		return;
-	}
+	// DAJ_RP: [Admin] a player given force powers with /give <player> force used to be refused every weapon,
+	// ammo and holdable item here. Removed: he picks up whatever anyone else can, like a /give guns player.
 	else if (level.duel_tournament_mode == 4 && other->s.number < MAX_CLIENTS && duel_tournament_is_duelist(other) == qtrue)
 	{ // zyk: duelists in Duel Tournament cannot grab anything
 		return;

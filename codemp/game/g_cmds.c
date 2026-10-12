@@ -14909,9 +14909,10 @@ void Cmd_Jetpack_f( gentity_t *ent ) {
 	// GalaxyRP fix: [Jetpack] the "(amrpgmode < 2 || skill_levels[34] > 0)" clause that used to sit
 	// in this condition has moved into jetpack_command_allowed(), which now answers the whole
 	// question -- see the long comment there for why the rule may not be spread across two fields.
+	// DAJ_RP: [Admin] a player given force powers with /give <player> force used to be refused here too.
+	// Removed: the cvar answers for him as for any other player, and so it does for a /give guns player.
 	if (!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_JETPACK)) && jetpack_command_allowed(ent) &&
-		level.gametype != GT_SIEGE && level.gametype != GT_JEDIMASTER &&
-		!(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_ADM_GIVE_FORCE)))
+		level.gametype != GT_SIEGE && level.gametype != GT_JEDIMASTER)
 	{ // zyk: gets jetpack if player does not have it. RPG players need jetpack skill to get it
 		// zyk: Jedi Master gametype will not allow jetpack
 		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);

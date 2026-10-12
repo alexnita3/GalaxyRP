@@ -865,8 +865,8 @@ typedef enum {
 	// says which -- this bit alone is a combat knockdown, this bit plus that one is an admin
 	// paralysis. Read it through G_PlayerIsDowned().
 	PLAYER_STATUS_DOWNED,
-	PLAYER_STATUS_ADM_GIVE_FORCE,            // /admgive force handed this player force powers
-	PLAYER_STATUS_ADM_GIVE_GUNS,             // /admgive guns handed this player weapons
+	PLAYER_STATUS_ADM_GIVE_FORCE,            // /give <player> force handed this player force powers
+	PLAYER_STATUS_ADM_GIVE_GUNS,             // /give <player> guns handed this player weapons
 	PLAYER_STATUS_NPC_ORDER_GUARD,           // NPC has the guard order
 	PLAYER_STATUS_NPC_ORDER_COVER,           // NPC has the cover order
 	PLAYER_STATUS_POISON_DART_HIT,           // taking poison dart damage over time
