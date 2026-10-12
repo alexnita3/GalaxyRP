@@ -118,7 +118,8 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"1024|NO_DROP|Stays at its origin height instead of dropping onto the floor below.",
 		"angle||The direction it points: the base facing the gunner turns from.\n"
 		"constraint|60|Degrees the gunner can turn it to each side of its base facing, 1 to 180.\n"
-		"count|600|With CANRESPAWN: milliseconds added to the 4 second respawn delay.",
+		"count|600|With CANRESPAWN: milliseconds added to the 4 second respawn delay.\n"
+		"teamowner|0|Team its crosshair shows as friendly in team games: 1 red, 2 blue.",
 		"emplaced_eweb angle 90",
 		"common emplaced_gun" },
 	{ "emplaced_gun", 0, NULL,
@@ -127,14 +128,19 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"1024|NO_DROP|Stays at its origin height instead of dropping onto the floor below.",
 		"angle||The direction it points: the base facing the gunner turns from.\n"
 		"constraint|60|Degrees the gunner can turn it to each side of its base facing, 1 to 180.\n"
-		"count|600|With CANRESPAWN: milliseconds added to the 4 second respawn delay.",
+		"count|600|With CANRESPAWN: milliseconds added to the 4 second respawn delay.\n"
+		"teamowner|0|Team its crosshair shows as friendly in team games: 1 red, 2 blue.",
 		"emplaced_gun angle 90",
 		"common emplaced_eweb" },
 	{ "func_bobbing", 0, NULL,
 		"A brush or .md3 model that bobs up and down (or along X or Y) from spawn, in a smooth sine motion. A player or NPC in its way is killed outright unless CRUSH_THROUGH is set. Using it (targetname, PLAYER_USE, the Stun Baton) stops it where it is, and the next use carries on from the same place in its cycle.",
 		"1|X_AXIS|Bobs along the X axis instead of Z.\n"
 		"2|Y_AXIS|Bobs along the Y axis instead of Z.\n"
-		"4|START_OFF|Starts still, at the place in the cycle phase gives: the first use starts it.",
+		"4|START_OFF|Starts still, at the place in the cycle phase gives: the first use starts it.\n"
+		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of being killed outright.\n"
+		"64|PLAYER_USE|Players can use it with the use key (an .md3 one needs SOLID to be aimed at).\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"height|32|How far it bobs each way, in units.\n"
 		"speed|4|Seconds for one full cycle.\n"
 		"phase|0|Where in the cycle it starts, 0 to 1.\n"
@@ -142,18 +148,19 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"func_bobbing model *1 height 16 speed 3",
 		"common mover" },
 	{ "func_breakable", 0, NULL,
-		"A brush or .md3 model that breaks into chunks when its health runs out or when it is used, fires its target and is removed. Bryar pistol, DEMP2 and plain melee do not hurt it (heavy melee does). One with 10 health or less, or THIN, also breaks when a player runs into it hard. Its spawnflags are not the other movers': 128 is PLAYER_USE and there is no INACTIVE.",
+		"A brush or .md3 model that breaks into chunks when its health runs out or when it is used, fires its target and is removed. Bryar pistol, DEMP2 and plain melee do not hurt it (heavy melee does). One with 10 health or less, or THIN, or of material 1, 6 or 12, also breaks when a player runs into it hard. Its spawnflags are not the other movers': 128 is PLAYER_USE and there is no INACTIVE.",
 		"1|INVINCIBLE|No default health: with no health key it takes no damage and only breaks when used.\n"
 		"8|THIN|Breaks easily when a player runs into it, like glass.\n"
 		"16|SABERONLY|Only sabers damage it.\n"
 		"32|HEAVY_WEAP|Only heavy weapons damage it: rockets, explosives, repeater alt fire, concussion, sabers, crushing and the like.\n"
 		"64|USE_NOT_BREAK|Using it fires its target instead of breaking it. Damage still breaks it.\n"
 		"128|PLAYER_USE|Players can use it with the use key.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.\n"
 		"2048|NO_EXPLOSION|No explosion effect when it breaks (the chunks still fly).",
 		"health|10|Hit points. With INVINCIBLE and no health it cannot be damaged.\n"
 		"material|0|Chunks: 0 metal, 1 glass, 2 sparks only, 3 metal and sparks, 4 brown stone, 5 tan stone, 6 glass and metal, 7 metal2, 8 none, 9 grey stone, 10 metal3, 11 yellow crate, 12 grate, 13 rope, 14 red crate, 15 white metal, 16 snowy rock. Stone ones also chip when hit.\n"
 		"radius|1|Multiplies the number of chunks. Use this, not numchunks, which it overwrites.\n"
-		"chunksize|1|Multiplies the size of the chunks.\n"
+		"chunksize|1|Multiplies the size of the chunks. mass is the same key.\n"
 		"playfx||An effect played where it breaks. One starting with * is a weather command and is refused (a map's own plays no effect instead, logged).\n"
 		"splashDamage|0|Damage of an explosion when it breaks (needs splashRadius too).\n"
 		"splashRadius|0|Radius of that explosion, in units.\n"
@@ -161,51 +168,68 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"target||Fired when it breaks.\n"
 		"paintarget||Fired when a player damages it without breaking it.\n"
 		"wait|0|Milliseconds before paintarget can fire again. -1: paintarget fires once only.\n"
-		"showhealth|0|Non-0: a health bar shows under the crosshair of a player aiming at it.",
+		"showhealth|0|Non-0: a health bar shows under the crosshair of a player aiming at it.\n"
+		"team||Siege only: 1 or 2, that team cannot damage it (as teamnodmg).\n"
+		"teamnodmg|0|Siege only (and only with g_ff_objectives 0): 1 or 2, that team cannot damage it.",
 		"func_breakable model *1 health 50 material 4",
 		"common mover func_glass" },
 	{ "func_button", 0, NULL,
 		"A brush or .md3 model that, touched by a player or NPC, slides in the direction of its angle by its own size minus lip, fires its target as it starts, waits, and goes back. With health it is pressed by shooting it instead of touching. Being used by a trigger or another entity presses it the same way.",
-		"2|FORCE_PUSH|Force Push also presses it.",
+		"2|FORCE_PUSH|Force Push also presses it.\n"
+		"8|TOGGLE|Stays pressed: touching it, the use key and Force Push only press it from rest, so only a use from a trigger or another entity releases it.\n"
+		"16|LOCKED|Starts locked: its first use only unlocks it (and, unless TOGGLE, drops its targetname), later uses work.\n"
+		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of being blocked. Needs dmg: a button has none by default.\n"
+		"64|PLAYER_USE|Players can press it with the use key, from rest only (an .md3 one needs SOLID to be aimed at).\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"angle||Direction it moves when pressed (-1 up, -2 down).\n"
 		"speed|40|Units per second.\n"
 		"wait|1|Seconds before it goes back. -1: stays pressed for good.\n"
 		"lip|4|Units of it left showing at the end of its move.\n"
 		"health|0|Non-0: shooting it presses it (it takes no real damage), and touching does not.\n"
 		"delay|0|Milliseconds between being used and moving (not seconds as on a door).\n"
-		"target||Fired as it starts moving.",
+		"target||Fired as it starts moving.\n"
+		"dmg|0|With CRUSH_THROUGH: damage to a player or NPC in its way. Blocked without it, a button just waits.",
 		"func_button model *1 angle 90 target door1",
 		"common mover func_door" },
 	{ "func_door", 0, NULL,
 		"A brush or .md3 model that slides in the direction of its angle by its own size minus lip, waits, and closes again. With no targetname, health, PLAYER_USE or FORCE_ACTIVATE it opens by itself when someone walks up (its trigger reaches 120 units out on each side of its thinnest axis). With a targetname it opens only when used. Blocked, it hurts the blocker by dmg and goes back.",
 		"1|START_OPEN|Spawns open and closes when used (its two positions are swapped).\n"
-		"2|FORCE_ACTIVATE|Opened and closed only by Force Push or Pull aimed at it while it is at rest.\n"
+		"2|FORCE_ACTIVATE|Force Push or Pull aimed at it while it is at rest moves it: Push away from you, Pull toward you. It gets no walk-up trigger, but a targetname, PLAYER_USE or the Stun Baton still use it.\n"
 		"4|CRUSHER|Does not go back when blocked: it keeps hurting what blocks it.\n"
 		"8|TOGGLE|Stays open until used again (wait is not used).\n"
-		"16|LOCKED|Starts locked, its shader on the first frame: walking up does nothing until it is used once, which unlocks it. A non-TOGGLE door then also drops its targetname and opens by walking up.",
+		"16|LOCKED|Starts locked, its shader on the first frame: walking up does nothing until it is used once, which unlocks it. A non-TOGGLE door then also drops its targetname and opens by walking up.\n"
+		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of going back. On by default: dmg is 2 unless set.\n"
+		"64|PLAYER_USE|Players open it with the use key (an .md3 one needs SOLID to be aimed at). It then gets no walk-up trigger.\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"angle||Direction it opens in (-1 up, -2 down).\n"
+		"angles||pitch yaw roll: the opening direction too, any direction including diagonals (angle is the yaw alone).\n"
 		"speed|400|Units per second.\n"
 		"wait|2|Seconds before it closes. -1: stays open for good.\n"
 		"lip|8|Units of it left showing when open.\n"
 		"dmg|2|Damage to what blocks it. Negative: none.\n"
 		"delay|0|Whole seconds between being used and moving.\n"
-		"health|0|Non-0: shooting it opens it (it takes no real damage), and it gets no walk-up trigger.\n"
+		"health|0|Non-0: shooting it while it is closed opens it (it takes no real damage), and it gets no walk-up trigger.\n"
 		"targetname||Using it opens it, and it gets no walk-up trigger.\n"
 		"teamallow|0|Team (1 red, 2 blue) whose players still open it by walking up while it is LOCKED.\n"
 		"vehopen|0|Non-0: vehicles and their riders can open it by walking up.",
 		"func_door model *1 angle -1 wait 4",
 		"common mover func_button" },
 	{ "func_glass", 0, NULL,
-		"A brush or .md3 model of breakable glass. Damage that takes its health breaks it into shards, a player running or jumping into it breaks it too, and so does using it. It fires its target when it breaks and is removed. PLAYER_USE has no effect on it.",
-		"1|NO_DAMAGE|Cannot be damaged: only using it breaks it.",
+		"A brush or .md3 model of breakable glass. Damage that takes its health breaks it into shards, a player running or jumping into it breaks it too, and so does using it. It fires its target when it breaks and is removed. PLAYER_USE (64) has no effect on it.",
+		"1|NO_DAMAGE|Cannot be damaged: only using it breaks it.\n"
+		"128|INACTIVE|Ignores uses until a target_activate activates it. Damage and running into it still break it.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"health|1|Damage it takes to break.\n"
 		"maxshards|0|Most shards it breaks into. 0 leaves it to the client.\n"
 		"target||Fired when it breaks.",
 		"func_glass model *1 health 10",
 		"common mover func_breakable" },
 	{ "func_goodie_panel", 0, NULL,
-		"A brush or .md3 panel a player uses with the use key (PLAYER_USE is not needed). If they carry a goodie key, one is used up, it plays the pass sound, fires its target and is spent for good. Without one it plays the fail sound and fires target2. It does not move. A player gets goodie keys (up to 5) from a dead NPC whose message is goodie, and loses them on death or disconnect.",
-		"128|INACTIVE|Cannot be used until a target_activate activates it.",
+		"A brush or .md3 panel a player uses with the use key (PLAYER_USE is not needed). Only a player can open it: a use from a trigger passes its player on and works, one from map logic with no player (a timer, a relay chain) does nothing. If they carry a goodie key, one is used up, it plays the pass sound, fires its target and is spent for good. Without one it plays the fail sound and fires target2. It does not move. A player gets goodie keys (up to 5) from a dead NPC whose message is goodie, and loses them on death or disconnect.",
+		"128|INACTIVE|Cannot be used until a target_activate activates it.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"target||Fired when a player with a goodie key uses it.\n"
 		"target2||Fired when a player without one uses it.",
 		"func_goodie_panel model *1 target door1",
@@ -218,7 +242,11 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"common" },
 	{ "func_pendulum", 0, NULL,
 		"A brush or .md3 model that swings back and forth from spawn, pivoting on its origin (a map's pendulum needs an origin brush at the pivot). Its swing time follows its length below the pivot (its mins height, at least 8) and gravity. A player or NPC in its way is killed outright unless CRUSH_THROUGH is set. Using it (targetname, PLAYER_USE, the Stun Baton) stops it where it is in its swing, and the next use carries on from there.",
-		"4|START_OFF|Starts still, at the point of its swing phase gives: the first use starts it.",
+		"4|START_OFF|Starts still, at the point of its swing phase gives: the first use starts it.\n"
+		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of being killed outright.\n"
+		"64|PLAYER_USE|Players can use it with the use key (an .md3 one needs SOLID to be aimed at).\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"speed|30|Degrees it swings to each side.\n"
 		"phase|0|Where in the swing it starts, 0 to 1.\n"
 		"angles||Its orientation, also for an .md3 model (angles2 is not used). It swings around its own roll axis, so the yaw picks the plane it swings in.\n"
@@ -226,7 +254,14 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"func_pendulum model *1 speed 45",
 		"common mover" },
 	{ "func_plat", 0, NULL,
-		"A brush or .md3 lift. It spawns lowered, height units below where it is placed, and rises to its placed position when a player steps onto it at the bottom (with a targetname, only when used). At the top it waits 1 second, longer while a live player stands on it, then goes back down. Blocked, it hurts the blocker by dmg and reverses. /spawnplatform makes one under your feet with a catwalk model: it stays put, or with a height given it rises that far, lowered to fit under a ceiling.",
+		"A brush or .md3 lift. It spawns lowered, height units below where it is placed, and rises to its placed position when a player or NPC steps onto it at the bottom (with a targetname, only when used). At the top it waits 1 second, longer while a live player or NPC stands on it, then goes back down. Blocked, it hurts the blocker by dmg and reverses. /spawnplatform makes one under your feet with a catwalk model: it stays put, or with a height given it rises that far, lowered to fit under a ceiling.",
+		"4|CRUSHER|Does not reverse when blocked: it keeps hurting what blocks it.\n"
+		"8|TOGGLE|Stays up until used again. A live rider at the top still sends it down 1 second after stepping off, unless NO_RIDER_WAIT.\n"
+		"16|LOCKED|Starts locked: its first use only unlocks it (and, unless TOGGLE, drops its targetname), later uses work.\n"
+		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of reversing. On by default: dmg is 2 unless set.\n"
+		"64|PLAYER_USE|Players can use it with the use key (an .md3 one needs SOLID to be aimed at).\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.\n"
 		"4096|NO_RIDER_WAIT|Goes down after its 1 second even with a live player standing on it.",
 		"height||How far it travels, in units. Default: its model height minus lip.\n"
 		"lip|8|Taken off the model height for the default height.\n"
@@ -238,12 +273,16 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"func_plat model *1 height 128",
 		"common mover" },
 	{ "func_rotating", 0, NULL,
-		"A brush or .md3 model that spins around its origin (a map's one needs an origin brush), around Z unless X_AXIS or Y_AXIS is set. Blocked, it stops until the way is clear, unless IMPACT. Using it (targetname, PLAYER_USE, the Stun Baton) stops it where it is, and the next use starts it again, with its soundSet's start, loop and stop sounds. One with a targetname starts still unless START_ON, one without spins from spawn. With health it can be broken instead (the func_breakable keys apply): it always spins, and using it breaks it.",
+		"A brush or .md3 model that spins around its origin (a map's one needs an origin brush), around Z unless X_AXIS or Y_AXIS is set. Blocked, it stops until the way is clear, unless IMPACT. Using it (targetname, PLAYER_USE, the Stun Baton) stops it where it is, and the next use starts it again, with its soundSet's start, loop and stop sounds. One with a targetname starts still unless START_ON, one without spins from spawn. With health it can be broken instead (the func_breakable keys apply): it always spins, using it breaks it (with 64, fires its target instead), the use key cannot use it, and 128, 1024, a soundSet and a team do nothing.",
 		"1|START_ON|With a targetname: spins from spawn (without it, the first use starts it). One without a targetname always does.\n"
 		"2|RADAR|Shown on the radar, as Siege asteroids are.\n"
 		"4|X_AXIS|Spins around the X axis (roll) instead of Z.\n"
 		"8|Y_AXIS|Spins around the Y axis (pitch) instead of Z.\n"
-		"16|IMPACT|Hurts anything it touches while spinning by dmg (10000 when not given) instead of being blocked.",
+		"16|IMPACT|Hurts anything it touches while spinning by dmg (10000 when not given) instead of being blocked.\n"
+		"32|CRUSH_THROUGH|Without health: a player or NPC in its way takes dmg and it keeps turning.\n"
+		"64|PLAYER_USE|Without health: players can use it with the use key (an .md3 one needs SOLID to be aimed at). With health: USE_NOT_BREAK, a use fires its target instead of breaking it.\n"
+		"128|INACTIVE|Without health: ignores every use until a target_activate activates it.\n"
+		"1024|SOLID|Without health: with an .md3 model it is solid, by its mins and maxs.",
 		"speed|100|Degrees per second.\n"
 		"spinangles||Degrees per second on pitch, yaw and roll at once, in place of speed and the axis flags.\n"
 		"trdelta||As spinangles, but then the axis chosen by the flags is set to speed.\n"
@@ -253,8 +292,9 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"func_rotating model *1 speed 45",
 		"common mover func_breakable" },
 	{ "func_security_panel", 0, NULL,
-		"A brush or .md3 panel a player uses with the use key (PLAYER_USE is not needed). If they carry the security key its message names (or it has no message), the key is taken, it plays the pass sound, fires its target and is spent for good. Otherwise it plays the fail sound and fires target2. It does not move. A player carries one security key at a time, from an item_security_key or a dead NPC, and loses it on death or disconnect.",
-		"128|INACTIVE|Cannot be used until a target_activate activates it.",
+		"A brush or .md3 panel a player uses with the use key (PLAYER_USE is not needed). Only a player can open it: a use from a trigger passes its player on and works, one from map logic with no player does nothing. If they carry the security key its message names (or it has no message), the key is taken, it plays the pass sound, fires its target and is spent for good. Otherwise it plays the fail sound and fires target2. It does not move. A player carries one security key at a time, from an item_security_key or a dead NPC, and loses it on death or disconnect.",
+		"128|INACTIVE|Cannot be used until a target_activate activates it.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"message||Name of the security key it needs. Empty: anyone opens it (and loses any key they carry).\n"
 		"target||Fired when it is opened.\n"
 		"target2||Fired when it is used without the key.",
@@ -265,14 +305,18 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"1|F_PUSH|Force Push aimed at it uses it.\n"
 		"2|F_PULL|Force Pull aimed at it uses it.\n"
 		"4|SWITCH_SHADER|Each use flips its shader animation between frames 0 and 1.\n"
+		"64|PLAYER_USE|Players can use it with the use key (an .md3 one needs SOLID to be aimed at).\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.\n"
 		"2048|BROADCAST|Sent to every client wherever they are (for something huge).",
 		"angles||Its orientation (pitch yaw roll), also for an .md3 model (angles2 is not used).\n"
 		"model2scale|0|Size of model2 in percent (0 or 100 normal, up to 1023).\n"
-		"target||Fired each time it is used.",
+		"target||Fired each time it is used.\n"
+		"hyperspace|0|Non-0: it is a hyperspace tunnel. Sent to every client, but drawn only in front of a player whose vehicle is making a hyperspace jump (trigger_hyperspace), never otherwise.",
 		"func_static model *1",
 		"common mover" },
 	{ "func_timer", 0, NULL,
-		"An invisible timer that, while on, fires its target over and over, every wait seconds give or take random. Using it switches it on and off (it fires at once when switched on), and its targets see whoever switched it on as the activator.",
+		"An invisible timer that, while on, fires its target over and over, every wait seconds give or take random. Using it switches it on and off (it fires at once when switched on), and its targets see whoever switched it on as the activator. It takes none of the mover flags: PLAYER_USE (64) and INACTIVE (128) do nothing, and a target_deactivate blocks uses but does not stop it running.",
 		"1|START_ON|Runs from spawn.",
 		"wait|1|Seconds between firings, at least 0.1.\n"
 		"random|1|Up to this many seconds added or taken off each time, at most wait minus 0.1 (so by default it fires every 0.1 to 1.9 seconds).\n"
@@ -282,28 +326,39 @@ static const rpEntHelp_t rp_ent_help[] = {
 	{ "func_train", 0, NULL,
 		"A brush or .md3 model that travels along a chain of path_corners: target names the first, each corner targets the next, and a corner targeting an earlier one makes a loop. It starts at the first corner and runs at once, unless it has a targetname and no START_ON: then it waits at its own spot until used. A brush train needs an origin brush, the point that follows the path. Blocked, it waits until the way is clear.",
 		"1|START_ON|Runs from spawn even with a targetname.\n"
-		"2|TOGGLE|Does nothing: using a running train does not stop it.\n"
-		"4|BLOCK_STOPS|Sets dmg to 0 (a blocked train always waits).",
+		"2|TOGGLE|Not used. Any use of a moving train (targetname, PLAYER_USE, the Stun Baton) sends it back toward the corner it left: getting there, it jumps to the corner it was heading for and carries on.\n"
+		"4|BLOCK_STOPS|Sets dmg to 0 (a blocked train always waits).\n"
+		"16|LOCKED|Starts locked: its first use only unlocks it (and, unless TOGGLE, drops its targetname), later uses work.\n"
+		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving, instead of waiting. On by default unless BLOCK_STOPS: dmg is 2 unless set.\n"
+		"64|PLAYER_USE|Players can use it with the use key (an .md3 one needs SOLID to be aimed at).\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"target||The first path_corner. Required: it is not spawned without one.\n"
 		"speed|100|Units per second, unless a path_corner sets its own.\n"
-		"dmg|2|With CRUSH_THROUGH: damage to a player in its way.",
+		"dmg|2|With CRUSH_THROUGH: damage to a player or NPC in its way.",
 		"func_train model *1 target p1",
 		"common mover path_corner" },
 	{ "func_usable", 0, NULL,
 		"A brush or .md3 model that each use switches between there (solid and visible) and gone. Going, it fires its target, coming back, its target2. With endframe it instead steps its shader animation one frame per use and fires its target. With ALWAYS_ON it never switches: a use only fires its target. With health, hits use it.",
 		"1|START_OFF|Starts gone.\n"
 		"8|ALWAYS_ON|Never switches: a use fires its target, and it cannot be used again until wait has passed (never, without wait).\n"
-		"16|BLOCKCHECK|Coming back, it waits until nobody stands inside it.",
+		"16|BLOCKCHECK|Coming back, it waits until nobody stands inside it.\n"
+		"64|PLAYER_USE|Players can use it with the use key while it is there (an .md3 one needs SOLID to be aimed at). With ALWAYS_ON and wait, the use key works again after the wait even without 64.\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it. Currently it comes back each time it returns: after going and coming back it ignores uses again.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		"target||Fired when it goes (and on every use with endframe or ALWAYS_ON).\n"
-		"target2||Fired when it comes back.\n"
+		"target2||Fired when it comes back, with no activator: targets that need a player get none.\n"
 		"wait|0|With ALWAYS_ON: seconds before it can be used again. 0: once only.\n"
-		"health|0|Non-0: every hit uses it, and the hit that takes the last of its health uses it a last time and ends that.\n"
+		"health|0|Currently does nothing: every hit just uses it, the health never goes down and it never ends.\n"
 		"endframe|0|Frames of its shader animation minus 1: each use steps one frame, back to 0 after the last.",
 		"func_usable model *1 targetname wall1",
 		"common mover func_wall" },
 	{ "func_wall", 0, NULL,
-		"A brush or .md3 model that each use switches between there (solid and visible) and gone, also opening or closing the map's area portal it sits in, unless it started gone.",
-		"1|START_OFF|Starts gone (and then never touches area portals).",
+		"A brush or .md3 model that each use switches between there (solid and visible) and gone, also opening or closing the map's area portal it sits in, unless it started gone. It fires no targets. An .md3 wall without SOLID (1024) counts as gone: its first use only makes it solid.",
+		"1|START_OFF|Starts gone (and then never touches area portals).\n"
+		"64|PLAYER_USE|Players can use it with the use key while it is there (an .md3 one needs SOLID to be aimed at). Gone, it cannot be aimed at.\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
+		"1024|SOLID|With an .md3 model: solid, by its mins and maxs. A *N model needs no flag: it collides as built.",
 		NULL,
 		"func_wall model *1 targetname wall1",
 		"common mover func_usable" },
@@ -328,10 +383,10 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"random|0|Up to this many milliseconds added to each delay.\n"
 		"angles|-90 0 0|Direction it plays in (the default is straight up).\n"
 		"target||An entity to aim at (an info_notnull, say), instead of angles.\n"
-		"target2||Fired each time the effect plays.\n"
+		"target2||Fired each time the effect plays. Currently fired twice per use with ONESHOT.\n"
 		"targetname||Needed to use it at all.\n"
-		"splashDamage|5|With DAMAGE: damage each time.\n"
-		"splashRadius|16|With DAMAGE: radius, in units.\n"
+		"splashDamage|5|With DAMAGE: damage each time (0 gives the default).\n"
+		"splashRadius|16|With DAMAGE: radius, in units (0 gives the default).\n"
 		"soundset||An ambient sound set: start sound when switched on, a loop while on, stop sound when switched off.",
 		"fx_runner fxFile env/small_fire",
 		"common info_notnull" },
@@ -362,9 +417,9 @@ static const rpEntHelp_t rp_ent_help[] = {
 	{ "gametype_item", RP_EH_GAMETYPE, "CTF and Capture the Ysalamiri only: in any other gametype the flag it becomes removes itself.",
 		"A CTF flag placeholder. With a targetname containing red_flag or blue_flag it becomes that team's CTF flag item. Any other name, or none, leaves an inert point. Flags can only be picked up in CTF and Capture the Ysalamiri.",
 		NULL,
-		"targetname||red_flag or blue_flag anywhere in it picks the flag.",
+		"targetname||red_flag or blue_flag anywhere in it picks the flag. The flag it becomes keeps no targetname (it cannot be used) and takes the items keys.",
 		"gametype_item targetname red_flag",
-		"common" },
+		"common items" },
 	{ "info_camp", 0, NULL,
 		"An invisible named point and nothing more: it does nothing by itself. Entities that use a target as a position read its origin, the same as info_notnull or target_position: a trigger_push aim, a trigger_teleport or target_teleporter destination, an fx_runner aim, a misc_portal_surface camera, the intermission view. Give it a targetname.",
 		NULL,
@@ -665,19 +720,21 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"An item falls to the floor below its origin (one starting inside something solid is removed) and comes back after being "
 		"taken. Gametype and server settings remove some: powerups in siege and Jedi Master, ammo and some holdables on "
 		"saber-only servers, health, shields and bacta in duels, weapons in g_weaponDisable, any item whose disable_<classname> "
-		"cvar is 1. A class the map had not precached shows as a placeholder to players with an older client until the map "
+		"cvar is 1 (such an item currently stays as an inert entity that still takes an entity slot). A class the map had not precached shows as a placeholder to players with an older client until the map "
 		"restarts. The map's own pickups that nothing links to are tagged E in /entlist and can be edited like placed ones.",
 		"1|SUSPENDED|Stays where it is placed instead of falling to the floor.\n"
-		"4|ALLOWNPC|NPCs can pick it up too.\n"
-		"131072|NO_DISABLE|A weapon is not removed by g_weaponDisable.",
+		"4|ALLOWNPC|NPCs can pick it up too (never droids, AT-STs, rancors, wampas or ugnaughts).\n"
+		"131072|NO_DISABLE|A weapon is not removed by g_weaponDisable, nor by g_duelWeaponDisable in duels (its disable_<classname> cvar still is).",
 		"wait|0|Seconds before it comes back once taken. 0: the server's time for its kind (weapons g_weaponRespawn, ammo and "
 		"the thermal, trip mine and det pack weapons rp_ammo_respawn_time, shields rp_shield_respawn_time, health "
 		"rp_health_respawn_time, holdables rp_holdable_item_respawn_time, powerups rp_powerup_respawn_time). -1: it never comes "
-		"back on its own.\n"
+		"back on its own, and nor does any other wait below 1 (0.5, -2) unless random is set. Also how long an item Force "
+		"Pushed or Pulled away stays gone.\n"
 		"random|0|Seconds added or taken at random from the respawn time (never under 1).\n"
-		"count|0|Overrides what it gives: ammo for a weapon (-1 none) or an ammo pack, health for a medpack, seconds for a "
-		"powerup. Ammo is scaled by rp_add_ammo_scale and capped by the rp_max_ cvars. Shields and holdables ignore it.\n"
-		"targetname||Hidden at first: using it makes it appear (and brings it back after a pickup when wait is -1).\n"
+		"count|0|Overrides what it gives: ammo for a weapon (any negative value: none) or an ammo pack, health for "
+		"item_medpak_instant (the bacta holdables ignore it), seconds for a powerup. Ammo is scaled by rp_add_ammo_scale and capped by the rp_max_ cvars. Shields and holdables ignore it.\n"
+		"targetname||Hidden at first: using it makes it appear, and brings it back at any time after a pickup (sooner than "
+		"its wait, or when wait is -1). In a team it brings back a random member.\n"
 		"target||Fired when someone picks it up, with that player as activator.\n"
 		"team||Items with the same team show one at a time: each pickup brings back a random one of them.\n"
 		"noglobalsound|0|Powerups: 1 plays the respawn sound only near the item, not to everyone.",
@@ -706,7 +763,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 	{ "misc_bsp", 0, NULL,
 		"Places another BSP (a sub-BSP) as solid geometry, turned by its angle (yaw only), with that BSP's own entities, drawn for every client. "
 		"After map load only a sub-BSP this map already loaded is accepted (others are refused and logged), so in practice it copies or moves the map's own misc_bsp. "
-		"Its sub-BSP entities are rebuilt with it, go with it on /entremove and /entedit, and are not saved by /entsave.",
+		"Its sub-BSP entities are rebuilt with it, go with it on /entremove and /entedit, and are not saved by /entsave. Their targetnames and targets get the instance number in front (door becomes 1-door), so link to them by that name.",
 		NULL,
 		"bspmodel||The sub-BSP, maps/NAME.bsp given as NAME: after map load the bspmodel of one of the map's own misc_bsp.\n"
 		"angle|0|Yaw. Other rotations are not supported.",
@@ -722,12 +779,15 @@ static const rpEntHelp_t rp_ent_help[] = {
 	{ "misc_exploding_crate", 0, NULL,
 		"An exploding crate, nar_shaddar/crate_xplode.md3 (fixed), solid, 48 units across and 64 high. Any damage hurts it: destroyed, it throws crate chunks, "
 		"explodes (splashdamage within splashradius), fires its target and is removed. Using it (targetname) blows it up at once.",
+		"64|USE_NOT_BREAK|Using it does nothing instead of blowing it up.\n"
 		"2048|NO_EXPLOSION|Breaks without the explosion and its damage.",
 		"health|40|Damage it takes. 0 does not make it unbreakable: it goes at the first hit.\n"
 		"splashdamage|50|Explosion damage (0 or absent: the default).\n"
 		"splashradius|128|Explosion radius (0 or absent: the default).\n"
+		"radius|1|Scales how many chunks it throws.\n"
 		"target||Fired when it is destroyed.\n"
-		"targetname||Using it blows it up.",
+		"targetname||Using it blows it up.\n"
+		"target4||Any use throws it toward the entity with this targetname instead of blowing it up (drawn by clients only, as on misc_model_breakable).",
 		"misc_exploding_crate health 60 splashdamage 80",
 		"common misc_gas_tank misc_model_breakable" },
 	{ "misc_faller", 0, NULL,
@@ -749,12 +809,15 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"An oxygen tank, imp_mine/tank.md3 (fixed), solid, 8 units across and 40 high. Every 12 to 28 seconds it puffs a small gas jet. "
 		"The first hit sets off a flame jet on its top that burns anything right above it (32 damage), and when destroyed it throws metal chunks, "
 		"explodes (splashdamage within splashradius), fires its target and is removed. Using it (targetname) blows it up.",
+		"64|USE_NOT_BREAK|Using it does nothing instead of blowing it up.\n"
 		"2048|NO_EXPLOSION|Breaks without the explosion and its damage.",
 		"health|20|Damage it takes. 0 does not make it unbreakable: it goes at the first hit.\n"
 		"splashdamage|32|Explosion damage (0 or absent: the default).\n"
 		"splashradius|48|Explosion radius (0 or absent: the default).\n"
+		"radius|1|Scales how many chunks it throws.\n"
 		"target||Fired when it is destroyed.\n"
-		"targetname||Using it blows it up.",
+		"targetname||Using it blows it up.\n"
+		"target4||Any use throws it toward the entity with this targetname instead of blowing it up (drawn by clients only, as on misc_model_breakable).",
 		"misc_gas_tank health 30",
 		"common misc_exploding_crate misc_model_breakable" },
 	{ "misc_holocron", RP_EH_GAMETYPE, "Holocron gametype only: in any other it removes itself.",
@@ -838,7 +901,9 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"light||Radius of a light on the model (100 when only color is given). It goes out when the model breaks.\n"
 		"color||Light colour, red green blue from 0 to 1 (default white).\n"
 		"gravity|0|Non-zero: set down on the floor below it when it spawns.\n"
-		"throwtarget||With gravity: using it throws it toward the entity with this targetname instead of breaking it.",
+		"target4||Any use throws it toward the entity with this targetname instead of breaking it. Currently the throw is drawn by clients only: the server keeps it where it was.\n"
+		"throwtarget||With gravity: the same as target4 (read only when gravity is set).\n"
+		"teamnodmg|0|Siege only (and only with g_ff_objectives 0): 1 or 2, that team cannot damage it.",
 		"misc_model_breakable model models/map_objects/kejim/cargo_small.md3 spawnflags 1 health 50 material 11",
 		"common misc_model_ghoul misc_model_cargo_small" },
 	{ "misc_model_cargo_small", 0, NULL,
@@ -1046,7 +1111,9 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"On ordinary maps, the large two-piece Hoth turbolaser turret (144 units high): it looks for clients (players and NPCs) within radius, turns and fires bolts at them, "
 		"and explodes when its health is gone, firing its target. Using it (targetname) switches it off for good, and a START_OFF one never comes on. "
 		"On a single-player map it is single player's small ceiling turret instead: a misc_turretG2 with single player's team rule.",
-		"1|START_OFF|Starts off (on ordinary maps it never comes on).",
+		"1|START_OFF|Starts off (on ordinary maps it never comes on).\n"
+		"2|UPSIDE_DOWN|Single-player maps only: stands on a floor, as misc_turretG2's.\n"
+		"4|TURBO|Jedi Academy single-player maps only: misc_turretG2's TURBO turbolaser.",
 		"radius|1024|How far away it picks up a target.\n"
 		"wait|300|Ms between shots (300 to 355 when 0 or under 100).\n"
 		"dmg|100|Damage per shot.\n"
@@ -1059,9 +1126,10 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"target2||Fired when it picks up a target.\n"
 		"showhealth|0|1: shows its health bar under the crosshair.\n"
 		"alliedteam|0|Team it does not shoot: 1 red, 2 blue (team games).\n"
-		"teamnodmg|0|Team it takes no damage from: 1 red, 2 blue.\n"
-		"teamowner|0|Team its crosshair shows as friendly: 1 red, 2 blue.\n"
-		"team||On a single-player map: the team it leaves alone and takes no damage from (player, enemy by default, neutral, free). Elsewhere: as teamnodmg.",
+		"teamnodmg|0|Siege only (and only with g_ff_objectives 0): team it takes no damage from, 1 red, 2 blue.\n"
+		"teamowner|alliedteam|Team its crosshair shows as friendly in team games: 1 red, 2 blue.\n"
+		"team||On a single-player map: the team it leaves alone and takes no damage from (player, enemy by default, neutral, free). Elsewhere, Siege only: as teamnodmg.\n"
+		"customscale|0|Single-player maps only, with the other misc_turretG2 keys: size in percent.",
 		"misc_turret radius 800 dmg 20 health 500",
 		"common misc_turretG2" },
 	{ "misc_turretG2", 0, NULL,
@@ -1070,8 +1138,8 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"TURBO makes it the big Death Star turbolaser with heavier defaults. Using it (targetname) switches it off and on.",
 		"1|START_OFF|Starts off: using it switches it on.\n"
 		"2|UPSIDE_DOWN|Stands on a floor instead of hanging (placed 22 units lower).\n"
-		"4|CANRESPAWN|Comes back count ms after it is destroyed.\n"
-		"8|TURBO|The big turbolaser: defaults radius 32768, wait 1000, dmg 500, health 2000, splash 200 in 500, shotspeed 20000.\n"
+		"4|CANRESPAWN|Comes back count ms after it is destroyed. Currently not with TURBO.\n"
+		"8|TURBO|The big turbolaser: defaults radius 32768, wait 1000, dmg 500, health 2000, splash 200 in 500, shotspeed 20000. Currently it has no damaged model: destroyed, it fires its target and is removed for good.\n"
 		"16|LEAD|Aims ahead of moving targets.\n"
 		"32|SHOWRADAR|Shows on the radar.\n"
 		"32768|NO_DROP|With UPSIDE_DOWN: not placed 22 units lower.",
@@ -1082,8 +1150,8 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"count|20000|With CANRESPAWN: ms before it comes back.\n"
 		"random|2|Aim error, in degrees.\n"
 		"shotspeed|1100|Speed of its bolts (under 100: the default).\n"
-		"splashdamage|10|Splash damage of each bolt and of its explosion when destroyed.\n"
-		"splashradius|25|Radius of its explosion when destroyed.\n"
+		"splashdamage|10|Splash damage of each bolt and of its explosion when destroyed. Currently also each bolt's splash radius.\n"
+		"splashradius|25|Radius of its explosion when destroyed (not of its bolts).\n"
 		"target||Fired when it is destroyed.\n"
 		"target2||Fired when it picks up a target.\n"
 		"paintarget||Fired when it is hurt.\n"
@@ -1091,8 +1159,9 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"showhealth|0|1: shows its health bar under the crosshair.\n"
 		"customscale|0|Size in percent (100 normal, at most 1023), box too.\n"
 		"alliedteam|0|Team it does not shoot: 1 red, 2 blue (team games).\n"
-		"teamnodmg|0|Team it takes no damage from: 1 red, 2 blue. team does the same.\n"
-		"teamowner|0|Team its crosshair shows as friendly: 1 red, 2 blue.",
+		"teamnodmg|0|Siege only (and only with g_ff_objectives 0): team it takes no damage from, 1 red, 2 blue. team does the same.\n"
+		"teamowner|0|Team its crosshair shows as friendly in team games: 1 red, 2 blue.\n"
+		"icon||With SHOWRADAR: the radar icon, a shader name.",
 		"misc_turretG2 spawnflags 2 radius 600 dmg 8",
 		"common misc_turret misc_sentry_turret" },
 	{ "misc_weapon_shooter", 0, NULL,
@@ -1136,12 +1205,13 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"common misc_model_breakable misc_model_ghoul" },
 	{ "mover", RP_EH_TOPIC, NULL,
 		"What the func_ mover classes share. Each takes a model: *N, one of the current map's inline brush models from *1 (*0, the map itself, and a number this map does not have are refused), or an .md3 file, refused if the server lacks it. A *N model is drawn shifted by the origin from where the map built it unless it was built around an origin brush, so origin 0 0 0 puts a plain one back in place. An .md3 one has no size or collision of its own: give mins and maxs, and spawnflag 1024.",
-		"32|CRUSH_THROUGH|With dmg set, a player in its way takes dmg and it keeps moving (on func_breakable 32 is HEAVY_WEAP).\n"
-		"64|PLAYER_USE|Players can use it with the use key (an .md3 one must be SOLID to be aimed at).\n"
-		"128|INACTIVE|Ignores every use until a target_activate activates it.\n"
+		"32|CRUSH_THROUGH|A player or NPC in its way takes dmg and it keeps moving. dmg is 2 unless set on doors, plats, trains, bobbing, pendulums and rotating ones, 0 on buttons. On func_breakable 32 is HEAVY_WEAP.\n"
+		"64|PLAYER_USE|Players can use it with the use key (an .md3 one must be SOLID to be aimed at). Not on func_glass, func_timer or a func_rotating with health. func_breakable uses 128 for this.\n"
+		"128|INACTIVE|Ignores every use until a target_activate activates it. Not on func_breakable, func_timer or a func_rotating with health. On func_usable it comes back each time it returns. A level 5 Stun Baton clears it for good on doors, plats and buttons. In a team only the leader counts.\n"
 		"1024|SOLID|With an .md3 model: it is solid, by its mins and maxs. A *N model collides as its brushes were built, without it.",
 		"model||*N: an inline brush model of the map, #name: a sub-BSP the map loaded, anything else: an .md3 path (tried as typed, then under models/ with .md3 added).\n"
-		"model2||An extra .md3 model drawn with it (.glm is ignored). It collides by model, not model2.\n"
+		"model2||An extra .md3 model drawn with it (.glm is ignored, except on func_breakable and a func_rotating with health). It collides by model, not model2.\n"
+		"zykmodelscale||Size of model2 in percent (100 normal, up to 1023). The main model is not scaled. On func_static and func_rotating use model2scale (it takes over).\n"
 		"mins||With an .md3 model: the lower corner of its box (x y z), which sets what it blocks and how far a door, button or plat moves.\n"
 		"maxs||With an .md3 model: the upper corner of its box.\n"
 		"angles2||The facing of an .md3 model (pitch yaw roll). Not on func_static and func_pendulum: they face by angles.\n"
@@ -1158,25 +1228,30 @@ static const rpEntHelp_t rp_ent_help[] = {
 		NULL,
 		"common" },
 	{ "npc", RP_EH_TOPIC, NULL,
-		"Shared behaviour of every npc_* spawner (npc_spawner, npc_vehicle and the named classes such as npc_stormtrooper). /entadd needs a targetname: firing that name spawns one NPC, after delay. Each spawn uses one of count, and when the last is used the spawner fires its target and removes itself. spawnnow and respawn work only on a named spawner. A spawn is skipped (count kept) when 256 NPCs are alive or entity slots run short. Its NPCs get npc_targetname, npc_target, health, scripts and spawnflags from it.",
+		"Shared behaviour of every npc_* spawner (npc_spawner, npc_vehicle and the named classes such as npc_stormtrooper). /entadd needs a targetname: firing that name spawns one NPC, after delay. Each spawn uses one of count, and when the last is used the spawner fires its target and removes itself. spawnnow and respawn work only on a named spawner. A spawn is skipped (count kept) when 256 NPCs are alive or entity slots run short. Its NPCs get npc_targetname, npc_target, health, scripts and spawnflags from it, so the spawnflags 1 to 8 act by NPC type as on the named classes (a wampa's WANDER and SEARCH, an R2 or R5 unit's ALWAYSDIE, a sniper's NO_HIDE).",
 		"16|DROPTOFLOOR|Traces the spawner down to the floor, but the NPC is still made at the spawner's own origin, so it has no visible effect (single player is the same). For Jedi, Luke or Kyle allies and Tavion, Reborn, Desann or Shadowtrooper enemies it is CEILING: the NPC clings where placed and drops on seeing an enemy or being hurt.\n"
 		"32|CINEMATIC|The NPC starts with no AI (cinematic behaviour state) and stands until a script moves it.\n"
 		"64|NOTSOLID|The NPC is not solid at all and is not checked for a blocked spawn spot. Wins over npceffect.\n"
 		"128|STARTINSOLID|Does not try to free an NPC that spawns inside something solid.\n"
 		"2048|SHY|When fired, waits until no player is within 128 units or looking at the spot (checked every second). The editor's SHY box (256) does nothing (single player is the same).\n"
-		"65536|MILLISECONDS|wait and delay are given in milliseconds instead of seconds. The spawner also sets it on itself.",
+		"65536|MILLISECONDS|wait and delay are given in milliseconds instead of seconds. The spawner also sets it on itself. Not on npc_vehicle: its wait and delay are always seconds.",
 		"npc_type||The NPC type (see /list npcs). Required on npc_spawner, a vehicle name on npc_vehicle. The named classes pick their own.\n"
 		"targetname||Required by /entadd and /entedit: using this name (trigger, button, /entuse) spawns an NPC. Without one (maps, /entsave files) it spawns one at map start and is gone.\n"
 		"count|1|NPCs it spawns before it removes itself, -1 for no limit (at most 1000).\n"
 		"delay|0|Seconds between being fired and the spawn (at most 3600).\n"
 		"wait|0.5|Seconds before the NPC tries again when its spawn spot is blocked. Below 0 the NPC fires target3 and is removed instead.\n"
+		"target3||With a wait below 0: fired when a blocked NPC is removed instead of trying again.\n"
 		"target||Fired when the spawner spawns its last NPC (count used up).\n"
 		"spawnnow|0|1: also spawns one at once when placed or loaded, not counted and without delay or shyness. Spawned again in place (/entedit) it does so only if none it made is alive.\n"
 		"respawn|0|1: when an NPC it made dies the spawner is fired again: its delay but at least 2 seconds, and one of its count. Use count -1 to keep it going.\n"
 		"health|0|Health of each NPC, 0 for the NPC type's own.\n"
 		"npc_targetname||targetname and script_targetname given to each NPC: using it uses the NPC.\n"
 		"npc_target||Fired by each NPC when it dies.\n"
+		"paintarget||Fired by each NPC every time it is hurt.\n"
 		"npcteam||player, enemy, neutral or free: the side of each NPC, as /npc team sets it.\n"
+		"team|0|1 red or 2 blue: the game team each NPC counts as in team games (not its side: that is npcteam).\n"
+		"teamowner|0|1 red or 2 blue: the game team each NPC counts as when team is not given, and its crosshair shows friendly to that team.\n"
+		"teamuser|0|1 red or 2 blue: in team games its NPCs do not hurt that team's players (unless g_friendlyFire), and only that team can board its vehicles.\n"
 		"npceffect||holo, ghost or walkthrough: each NPC starts in that /npc effect mode (walkthrough: walked through but still hit). Not on npc_vehicle.\n"
 		"npcfreeze|0|1: each NPC starts frozen, as /npc freeze leaves it, and its spawnscript waits until it is unfrozen. Not on npc_vehicle.\n"
 		"npccredits|0|Credits paid to the logged-in player who kills one of its NPCs, 0 to 100000. Not on npc_vehicle.\n"
@@ -1683,13 +1758,13 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"npc_snowtrooper targetname snow1 spawnnow 1",
 		"npc common" },
 	{ "npc_spawner", 0, NULL,
-		"The general NPC spawner: spawns the NPC type named in npc_type (see /list npcs) each time it is fired by its targetname. /entadd and /entedit refuse it without a targetname or an npc_type, with a type the server does not have, or with a vehicle type (use npc_vehicle). Refused too when the server has g_allowNPC 0. All the shared keys and spawnflags are under npc.",
+		"The general NPC spawner: spawns the NPC type named in npc_type (see /list npcs) each time it is fired by its targetname. /entadd and /entedit refuse it without a targetname or an npc_type, with a type the server does not have, or with a vehicle type (use npc_vehicle). Refused too when the server has g_allowNPC 0. On single-player maps, with rp_sp_npc_fix 1, it is removed at once for the types the named classes say so for (player, kyle, luke, chewie, r2d2, protocol, gonk, merchant and others). All the shared keys and spawnflags are under npc.",
 		NULL,
 		"npc_type||Required. The NPC type to spawn, e.g. stormtrooper, reborn, jawa.",
 		"npc_spawner targetname guard1 npc_type stormtrooper spawnnow 1",
 		"npc common" },
 	{ "npc_stormtrooper", 0, NULL,
-		"Each time it is fired by its targetname (trigger, button, /entuse) it spawns a stormtrooper: stormtrooper or stormtrooper2 (chosen at random), or the type the spawnflags pick. Of several spawnflags the highest wins. An npc_type key is ignored.",
+		"Each time it is fired by its targetname (trigger, button, /entuse) it spawns a stormtrooper: stormtrooper or stormtrooper2 (chosen at random once, when the spawner spawns, so all its NPCs are the same), or the type the spawnflags pick. Of several spawnflags the highest wins. An npc_type key is ignored.",
 		"1|OFFICER|stofficer.\n"
 		"2|COMMANDER|stcommander.\n"
 		"4|ALTOFFICER|stofficeralt.\n"
@@ -1748,7 +1823,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"npc_ugnaught targetname ugnaught1 spawnnow 1",
 		"npc common" },
 	{ "npc_vehicle", 0, NULL,
-		"Vehicle spawner: spawns the vehicle named in npc_type (see /list vehicles, default swoop) each time it is fired by its targetname. Fighters, speeders and walkers start empty and idle until ridden. Takes count, delay, wait, health, spawnnow, respawn, npcteam, showhealth and the npc_target keys like any spawner, but not npceffect, npcfreeze, npccredits, npcxp, the no*Sounds keys or SHY.",
+		"Vehicle spawner: spawns the vehicle named in npc_type (see /list vehicles, default swoop) each time it is fired by its targetname. Fighters, speeders and walkers start empty and idle until ridden. Takes count, delay, wait, health, spawnnow, respawn, npcteam, showhealth and the npc_target keys like any spawner, but not npceffect, npcfreeze, npccredits, npcxp, the no*Sounds keys, SHY or MILLISECONDS (its wait and delay are seconds). Unlike npc_spawner it is not refused by g_allowNPC 0.",
 		"1|NO_PILOT_DIE|Once ridden, it explodes when its pilot has been out of it and farther than speed for dmg milliseconds.\n"
 		"2|SUSPENDED|Fighters: hang in the air until someone gets in. With dropTime they first drop for that long.",
 		"npc_type|swoop|The vehicle to spawn. /entadd refuses one the server does not know.\n"
@@ -1768,7 +1843,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"A point on a func_train's path. A train reaching it fires its other targets (with the train as activator), waits there wait seconds if set, then heads for the next path_corner it targets, at this corner's speed or its own.",
 		NULL,
 		"targetname||Required (it is not spawned without one): the train or the previous corner names it.\n"
-		"target||The next path_corner, and anything else to fire when a train arrives. None: the train stops here.\n"
+		"target||The next path_corner, and anything else to fire when a train arrives. With no path_corner among them the train stops here, and currently it then fires none of them.\n"
 		"speed|0|Speed of the leg to the next corner. 0: the train's own speed.\n"
 		"wait|0|Seconds the train waits here.",
 		"path_corner targetname p1 target p2",
@@ -1900,7 +1975,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 	{ "target_laser", 0, NULL,
 		"A damaging beam reaching up to 2048 units, toward its target or along its angle, that hurts the first thing it hits 10 times a second. Using it switches it on or off, and the one who switched it on is credited with the damage.",
 		"1|START_ON|On from the start, without being used.",
-		"target||Name of an entity to aim at: the beam points at its middle and follows it as it moves. Without one, the angle sets the direction.\n"
+		"target||Name of an entity to aim at: the beam points at its middle and follows it as it moves. Without one, the angle sets the direction. A name that matches nothing (logged as a bad target) currently gives no beam at all: the angle is not used then.\n"
 		"angle||Direction of the beam when there is no target (-1 up, -2 down).\n"
 		"dmg|1|Damage per hit, 10 hits a second.\n"
 		"targetname||Using it toggles the beam.",
@@ -1997,7 +2072,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"common target" },
 	{ "target_scriptrunner", 0, NULL,
 		"Runs its usescript (an ICARUS script) when used, on itself or, with RUNONACTIVATOR, on whoever used it. It runs count times at most, can wait delay seconds before running, and ignores uses during its wait.",
-		"1|RUNONACTIVATOR|Runs the script on the activator (player, NPC or entity) instead of on the scriptrunner. The activator is given a script name if it has none.\n"
+		"1|RUNONACTIVATOR|Runs the script on the activator instead of on the scriptrunner. Works on players and NPCs. Currently another entity as the activator is not prepared for scripts, so the script may do nothing.\n"
 		"128|INACTIVE|Starts inactive: other entities cannot use it until a target_activate names it.",
 		"usescript||The script to run, given without the scripts/ folder (it is added).\n"
 		"count|1|How many times it can run. -1 means no limit.\n"
@@ -2042,9 +2117,10 @@ static const rpEntHelp_t rp_ent_help[] = {
 	{ "team_CTF_blueflag", RP_EH_GAMETYPE, "CTF and Capture the Ysalamiri only: in any other gametype it removes itself.",
 		"The blue team's flag, for CTF and CTY. In any other gametype it removes itself a moment after spawning (the add still "
 		"reports it). Red players take it and score by bringing it to their own flag at base, and a blue player touching it where "
-		"it was dropped sends it home. In CTY whoever carries a flag is under a ysalamiri's effect.",
+		"it was dropped sends it home. In CTY whoever carries a flag is under a ysalamiri's effect. Do not give it wait or "
+		"random: they make the flag come back to its base while it is being carried.",
 		NULL,
-		NULL,
+		"speed|0|Non-0: the flag taken sound is played to the taker only, not to everyone.",
 		"team_CTF_blueflag",
 		"items common team_CTF_redflag" },
 	{ "team_CTF_blueplayer", 0, NULL,
@@ -2071,9 +2147,10 @@ static const rpEntHelp_t rp_ent_help[] = {
 	{ "team_CTF_redflag", RP_EH_GAMETYPE, "CTF and Capture the Ysalamiri only: in any other gametype it removes itself.",
 		"The red team's flag, for CTF and CTY. In any other gametype it removes itself a moment after spawning (the add still "
 		"reports it). Blue players take it and score by bringing it to their own flag at base, and a red player touching it where "
-		"it was dropped sends it home. In CTY whoever carries a flag is under a ysalamiri's effect.",
+		"it was dropped sends it home. In CTY whoever carries a flag is under a ysalamiri's effect. Do not give it wait or "
+		"random: they make the flag come back to its base while it is being carried.",
 		NULL,
-		NULL,
+		"speed|0|Non-0: the flag taken sound is played to the taker only, not to everyone.",
 		"team_CTF_redflag",
 		"items common team_CTF_blueflag" },
 	{ "team_CTF_redplayer", 0, NULL,
@@ -2099,9 +2176,9 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"common" },
 	{ "trigger", RP_EH_TOPIC, NULL,
 		"Triggers are invisible volumes that react to what is inside them. The volume is a brush model (model *N) or, with no model, the box mins/maxs around the origin. Living players and NPCs touch triggers (not while in noclip), spectators only teleporters. The activator handed to the targets is whoever touched it, or whoever used it. target_deactivate switches most triggers off and target_activate on, and an off trigger also ignores being used. /entedit switches a deactivated trigger back on unless it has INACTIVE.",
-		"128|INACTIVE|Starts off until target_activate (or a script) switches it on. Honoured by trigger_once, trigger_multiple, trigger_hurt, trigger_push, trigger_teleport and trigger_visible.\n"
-		"2048|MULTIPLE|trigger_once, trigger_multiple and a LINEAR trigger_push: several entities can set it off in the same frame.",
-		"model||*N, one of this map's inline models from *1 (*0, the map itself, and a number this map does not have are refused). Its shape is the model's own moved by the origin, so with /entadd it is offset by where you stand. /entaddaim sets it on the surface aimed at.\n"
+		"128|INACTIVE|Starts off until target_activate (or a script) switches it on. Honoured by trigger_once, trigger_multiple, trigger_hurt, trigger_push, trigger_teleport and trigger_visible. On trigger_lightningstrike it does not stop the strikes, it only blocks the use that switches them.\n"
+		"2048|MULTIPLE|trigger_once, trigger_multiple and a LINEAR or RELATIVE trigger_push: several entities can set it off in the same frame.",
+		"model||*N, one of this map's inline models from *1 (*0, the map itself, and a number this map does not have are refused), or #name, an inline model of a sub-BSP the map loaded. An .md3 is refused. Its shape is the model's own moved by the origin, so with /entadd it is offset by where you stand. /entaddaim sets it on the surface aimed at.\n"
 		"mins|0 0 0|With no model: lower corner of the box relative to the origin, e.g. -64 -64 0. The console logs a missing brush model but the box works.\n"
 		"maxs|0 0 0|With no model: upper corner of the box relative to the origin, e.g. 64 64 128.\n"
 		"wait|0|trigger_multiple: seconds before it can fire again. -1 fires once only, 0 fires again every frame while touched.\n"
@@ -2136,7 +2213,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"8|NO_PROTECTION|The damage ignores armor, shields, god mode and spawn protection.\n"
 		"16|SLOW|Hurts once a second instead of every 0.1 seconds.\n"
 		"128|INACTIVE|Starts off: target_activate switches it on.",
-		"dmg|5|Damage per tick. -1 is a fall to death: a player ragdolls, screams and dies 3 seconds later (credited to whoever pushed them in), an NPC dies at once.\n"
+		"dmg|5|Damage per tick. -1 is a fall to death: a player ragdolls, screams and dies 3 seconds later (credited to whoever pushed them in), an NPC dies at once, and a dead player who touches it respawns at once.\n"
 		"targetname||With CAN_TARGET: using it switches it on or off.\n"
 		"team||Siege only: 1 or 2, only that team is hurt.",
 		"trigger_hurt model *1 dmg 10 spawnflags 16",
@@ -2150,7 +2227,8 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"common trigger target_position trigger_shipboundary" },
 	{ "trigger_lightningstrike", 0, NULL,
 		"Lightning strikes a random point of its volume every wait plus up to random milliseconds. The effect plays from just under the top of the volume and the strike runs down to its bottom: the first thing it hits takes dmg, or, with radius, everything near the impact point. Using it switches it on and off. Without lightningfx it is not spawned (logged).",
-		"1|START_OFF|Starts off: using it switches it on.",
+		"1|START_OFF|Starts off: using it switches it on.\n"
+		"128|INACTIVE|Currently does not stop the strikes: it only stops other entities from using it, so they cannot switch it on or off until a target_activate. target_deactivate does the same.",
 		"lightningfx||Required: the effect, e.g. env/huge_lightning. One starting with * is a weather command and is refused (a map's own trigger is not spawned, logged).\n"
 		"wait|1000|Milliseconds between strikes, at least 100.\n"
 		"random|2000|Up to this many milliseconds added at random each time.\n"
@@ -2184,10 +2262,13 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"angle||With FACING: the direction to look. 0 does not work, use 360 for east.\n"
 		"noise||Sound file played on the activator each time it fires.\n"
 		"soundSet||Ambient sound set from sound/sound.txt that becomes the map ambience for everyone when it fires.\n"
-		"team||1 or 2: only clients on that team can touch it (nobody in a game without teams). teamuser does the same.\n"
+		"team||1 or 2: only clients on that team can touch it (nobody in a game without teams). teamuser and alliedteam do the same.\n"
 		"NPC_targetname||Only the NPC with this script_targetname can touch it, players cannot. Ignored with CLIENTONLY.\n"
 		"usetime|0|With USE_BUTTON: milliseconds a player must hold Use, staying inside and facing the same way (at most 60000).\n"
-		"siegetrig|0|Siege only. Any other value outside Siege means it never fires. The same for teambalance.",
+		"siegetrig|0|Siege only. Any other value outside Siege means it never fires. The same for teambalance.\n"
+		"idealclass||Siege only: only players of the Siege classes named here (several separated by bars) can set it off.\n"
+		"target3||Siege only, with teambalance: fired when the trigger comes to belong to team 1.\n"
+		"target4||Siege only, with teambalance: fired when the trigger comes to belong to team 2.",
 		"trigger_multiple model *1 target mylight wait 2 spawnflags 4",
 		"common trigger trigger_once target_activate" },
 	{ "trigger_once", 0, NULL,
@@ -2205,10 +2286,11 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"angle||With FACING: the direction to look. 0 does not work, use 360 for east.\n"
 		"noise||Sound file played on the activator when it fires.\n"
 		"soundSet||Ambient sound set from sound/sound.txt that becomes the map ambience for everyone when it fires.\n"
-		"team||1 or 2: only clients on that team can touch it (nobody in a game without teams). teamuser does the same.\n"
+		"team||1 or 2: only clients on that team can touch it (nobody in a game without teams). teamuser and alliedteam do the same.\n"
 		"NPC_targetname||Only the NPC with this script_targetname can touch it, players cannot. Ignored with CLIENTONLY.\n"
 		"usetime|0|With USE_BUTTON: milliseconds a player must hold Use, staying inside and facing the same way (at most 60000).\n"
-		"siegetrig|0|Siege only. Any other value outside Siege means it never fires.",
+		"siegetrig|0|Siege only. Any other value outside Siege means it never fires.\n"
+		"idealclass||Siege only: only players of the Siege classes named here (several separated by bars) can set it off.",
 		"trigger_once model *1 target mydoor",
 		"common trigger trigger_multiple" },
 	{ "trigger_push", 0, NULL,
@@ -2247,14 +2329,14 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"trigger_teleport model *1 target tele_dest",
 		"common trigger target_position misc_teleporter_dest" },
 	{ "trigger_visible", 0, NULL,
-		"Fires its targets once, with the player as activator, when a living player looks at its origin, then removes itself. Checked every 0.5 seconds. Needs a clear line of sight to the origin unless NOTRACE, so keep the origin out of walls. It has no volume. Using it switches it off.",
+		"Fires its targets once, with the player as activator, when a living player looks at its origin, then removes itself. Checked every 0.5 seconds. Needs a clear line of sight to the origin unless NOTRACE, so keep the origin out of walls. It has no volume. Its usescript runs when it is seen. Currently each use toggles it: using it switches it off, and /entuse switches an off one back on (other entities cannot use one that is off).",
 		"1|NOTRACE|Seen through walls and anything else.\n"
 		"2|FORCESIGHT|Only players with Force Sight active see it.\n"
-		"128|INACTIVE|Starts off: target_activate switches it on (being used does not).",
+		"128|INACTIVE|Starts off: target_activate switches it on (so does /entuse, which toggles it).",
 		"target||Fired when it is seen.\n"
 		"radius|0|Most distance from the player's eyes, 0 for any.\n"
 		"FOV|0|Most degrees off the centre of view, up or sideways. 0: anywhere in front.\n"
-		"targetname||Using it switches it off.",
+		"targetname||Using it toggles it: an entity using it can only switch it off.",
 		"trigger_visible target mylight radius 512",
 		"common trigger" },
 	{ "waypoint", RP_EH_MAPONLY | RP_EH_REMOVED, "Waypoints cannot be added after map load: the navigation paths were computed at map start, and an NPC pathing to a later node would crash the server.",
