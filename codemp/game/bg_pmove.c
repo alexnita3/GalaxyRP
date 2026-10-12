@@ -4040,6 +4040,12 @@ static void PM_CrashLand( void ) {
 	float		t;
 	float		a, b, c, den;
 	qboolean	didRoll = qfalse;
+	// GalaxyRP: [Grapple Hook] coming down the rope: the hook is out and holding (PMF_GRAPPLE) and the
+	// player crouches, which pauses the pull and lets him down under plain gravity -- see the pull's call
+	// in PmoveSingle(). Such a landing never hurts, from any height: it lands as a soft one does, below.
+	// Letting go of the button lowers PMF_GRAPPLE, so a player who lets go falls as anyone does, and a
+	// fall to the death is not a landing at all (trigger_hurt's fallingToDeath timer in ClientThink_real).
+	const qboolean	ropeDescent = ( ( pm->ps->pm_flags & PMF_GRAPPLE ) && ( pm->ps->pm_flags & PMF_DUCKED ) ) ? qtrue : qfalse;
 
 	// calculate the exact velocity on landing
 	dist = pm->ps->origin[2] - pml.previous_origin[2];
@@ -4233,7 +4239,7 @@ static void PM_CrashLand( void ) {
 	// SURF_NODAMAGE is used for bounce pads where you don't ever
 	// want to take damage or play a crunch sound
 	if ( !(pml.groundTrace.surfaceFlags & SURF_NODAMAGE) )  {
-		if (delta > 7)
+		if (delta > 7 && !ropeDescent)	// GalaxyRP: [Grapple Hook] a rope descent lands soft -- see ropeDescent
 		{
 			int delta_send = (int)delta;
 
