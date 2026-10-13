@@ -2110,8 +2110,9 @@ Ghoul2 Insert Start
 	// DAJ_RP: [Still Weapons] a placed weapon pickup the server marks (EF_RP_STILL_ITEM, RP_ItemSetStill() in g_items.c)
 	// is drawn as single player draws it: no hologram pad or cone, not raised, bobbing or spinning, at normal size, at
 	// the angles in s.apos (the map's, tilted up for VERTICAL), lifted RP_STILL_ITEM_LIFT off its origin as single
-	// player's item bounds lift it (a saber more). It keeps what every pickup has here: the minimum light, the fade-in
-	// when it comes back, and the cg_simpleItems icon. While it is taken the server does not send it at all, as with
+	// player's item bounds lift it (a saber more), lit as ammo or a medpak is -- by the map, plus the minimum the
+	// renderer gives every entity -- without the hologram's blue tint (RF_MINLIGHT, below). It keeps the fade-in when it
+	// comes back and the cg_simpleItems icon. While it is taken the server does not send it at all, as with
 	// ammo (Touch_Item()), so it leaves no ghost. A gun rack's weapon carries EF_DROPPEDWEAPON too, and hangs where the
 	// rack puts it, without the lift. DAJ_RP: [Still Powerups] a marked powerup is drawn the same way, without a lift
 	// (the Ysalamiri model lies on its origin, the others float above theirs by themselves): the Ysalamiri still, the
@@ -2441,7 +2442,11 @@ Ghoul2 Insert End
 	// and a dropped one is lowered for 1x (RP_DROPPED_WEAPON_DROP()).
 	//trap->S_AddLoopingSound( cent->currentState.number, cent->lerpOrigin, vec3_origin, cgs.media.weaponHoverSound );
 
-	if ((!(cent->currentState.eFlags & EF_DROPPEDWEAPON) || still) &&	// DAJ_RP: [Still Weapons] a gun rack's too
+	// DAJ_RP: [Still Weapons] RF_MINLIGHT is not a minimum light in this engine: R_SetupEntityLighting() gives every
+	// entity a neutral one (+32 ambient) regardless, and this flag adds a blue-cyan one on top (16 96 150; yellow for an
+	// entity coloured 255 255 0) -- "for items rotating on their holo thing". So only the items over the hologram pad
+	// get it: a still weapon or powerup, without the pad, is lit like ammo or a medpak.
+	if (!(cent->currentState.eFlags & EF_DROPPEDWEAPON) && !still &&
 		(item->giType == IT_WEAPON || item->giType == IT_POWERUP))
 	{
 		ent.renderfx |= RF_MINLIGHT;
