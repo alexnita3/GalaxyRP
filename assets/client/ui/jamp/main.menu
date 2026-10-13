@@ -54,7 +54,7 @@
 
 		onOpen 
 		{
-			exec				"music music/t2_dpred/ImpBaseB_Action" ;
+			exec				"music music/yavin2_old/yavtemp_explore" ;
 		}
 									
 		onESC 
