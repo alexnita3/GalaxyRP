@@ -4139,8 +4139,38 @@ tryJetPack:
 // nothing -- never the reverse, so none of them can hide a genuinely usable trigger. Single player's
 // own equivalent has the same character. Adding them would mean duplicating four more pieces of
 // trigger state here purely to suppress the occasional spurious icon.
+//
+// DAJ_RP: [Use hint] and a zyk_mini_game_joiner that waits for the Use key (spawnflag 64): its own think
+// (zyk_mini_game_joiner_think, g_misc.c) lists what overlaps its box every 100 ms and joins a living player
+// holding Use to the Melee Battle (4) or the Duel Tournament (8) -- not through TryUse, nor as a trigger, so
+// neither half above saw it and the hand stayed dark inside one. RP_UseJoinerHere() asks what the think asks.
 extern void Touch_Multi( gentity_t *self, gentity_t *other, trace_t *trace );
+extern void zyk_mini_game_joiner_think( gentity_t *ent );
 qboolean G_PointInBounds( vec3_t point, vec3_t mins, vec3_t maxs );
+
+// DAJ_RP: [Use hint] whether hit is a mini-game joiner that pressing Use in would join ent to a mini-game, by the
+// joiner's own test: Use needed (64) and a mini-game to join (4 or 8); ent a living player, not an NPC (the think
+// takes client numbers under MAX_CLIENTS); its box -- origin plus mins and maxs -- overlapping the box ent is linked
+// with, the one the engine's EntitiesInBox() matches the think's query against. Whether that mini-game takes ent is
+// left to its command, which says why not, as every other false positive here is.
+static qboolean RP_UseJoinerHere( gentity_t *ent, gentity_t *hit )
+{
+	int k;
+
+	if ( !hit->inuse || hit->think != zyk_mini_game_joiner_think )
+		return qfalse;
+	if ( !( hit->spawnflags & 64 ) || !( hit->spawnflags & ( 4 | 8 ) ) )
+		return qfalse;
+	if ( !ent->client || ent->s.number >= MAX_CLIENTS || ent->health <= 0 )
+		return qfalse;
+
+	for ( k = 0; k < 3; k++ )
+	{
+		if ( ent->r.absmin[k] > hit->s.origin[k] + hit->r.maxs[k] || ent->r.absmax[k] < hit->s.origin[k] + hit->r.mins[k] )
+			return qfalse;
+	}
+	return qtrue;
+}
 
 static qboolean G_UsableTriggerInRange( gentity_t *ent )
 {
@@ -4170,6 +4200,11 @@ static qboolean G_UsableTriggerInRange( gentity_t *ent )
 	for ( i = 0; i < num; i++ )
 	{
 		hit = &g_entities[touch[i]];
+
+		if ( RP_UseJoinerHere( ent, hit ) )
+		{ // DAJ_RP: [Use hint] a mini-game joiner waiting for the Use key, and ent inside it
+			return qtrue;
+		}
 
 		if ( !hit->inuse || hit->touch != Touch_Multi )
 		{ // zyk: only trigger_multiple / trigger_once carry the USE_BUTTON behaviour
@@ -4257,6 +4292,9 @@ G_UsableTriggerInRange() above. The second route matters more than it looks: a f
 targetname gets no touch-trigger of its own and is opened by whatever targets it, so most map doors
 and lifts are reached that way and carry no SVF_PLAYER_USABLE at all. The first version of this
 feature had only route one and stayed dark on exactly the doors players use most.
+
+DAJ_RP: [Use hint] the trigger half also answers for a zyk_mini_game_joiner waiting for the Use key
+(RP_UseJoinerHere()), which its own think reads the key for, outside TryUse.
 
 Still NOT covered, deliberately: the Use key's other jobs -- vehicles, jetpacks, body dragging,
 corpse dragging, the jawa seller, NPC follow orders, dispensers and helping up a downed player. None
