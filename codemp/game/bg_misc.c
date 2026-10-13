@@ -685,9 +685,10 @@ An item fires all of its targets when it is picked up.  If the toucher can't car
 "count" override quantity or duration on most items.
 
 DAJ_RP: [Still Weapons] weapon pickups lie still where they are, at their angles, as in single player (the GalaxyRP
-client; others see the stock hologram pad). Two weapon spawnflags (RP_ItemSetStill() in g_items.c):
-16 VERTICAL		stands tilted up, 75 degrees (a saber 20), as on a weapon locker
-4096 HOLOGRAM	the stock multiplayer look instead: spinning above a hologram pad
+client; others see the stock hologram pad). DAJ_RP: [Still Powerups] powerups have no pad either: the Ysalamiri lies
+still, the Force Boon and Enlightenments turn slowly. Spawnflags (RP_ItemSetStill() in g_items.c):
+16 VERTICAL		a weapon stands tilted up, 75 degrees (a saber 20), as on a weapon locker
+4096 HOLOGRAM	a weapon or powerup has the stock multiplayer look instead: spinning above a hologram pad
 */
 
 gitem_t	bg_itemlist[] =

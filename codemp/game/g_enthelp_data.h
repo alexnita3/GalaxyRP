@@ -723,11 +723,12 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"cvar is 1 (/entadd says so). A class the map had not precached shows as a placeholder to players with an older client until the map "
 		"restarts. The map's own pickups that nothing links to are tagged E in /entlist and can be edited like placed ones. "
 		"Weapons lie still where they are, at their angles, as in single player (players without the GalaxyRP client see them "
-		"spin above a hologram pad). Weapons players drop lie on their side.",
+		"spin above a hologram pad). Weapons players drop lie on their side. Powerups have no pad either: the Ysalamiri lies "
+		"still, the Force Boon and both Enlightenments turn slowly where they are.",
 		"1|SUSPENDED|Stays where it is placed instead of falling to the floor.\n"
 		"4|ALLOWNPC|NPCs can pick it up too (never droids, AT-STs, rancors, wampas or ugnaughts).\n"
 		"16|VERTICAL|A weapon stands tilted up, 75 degrees (a saber 20), as on a weapon locker. Not with HOLOGRAM.\n"
-		"4096|HOLOGRAM|A weapon spins above a hologram pad, the stock multiplayer look, instead of lying still.\n"
+		"4096|HOLOGRAM|A weapon or powerup spins above a hologram pad, the stock multiplayer look, and leaves a see-through ghost while taken.\n"
 		"131072|NO_DISABLE|A weapon is not removed by g_weaponDisable, nor by g_duelWeaponDisable in duels (its disable_<classname> cvar still is).",
 		"wait|0|Seconds before it comes back once taken. 0: the server's time for its kind (weapons g_weaponRespawn, ammo and "
 		"the thermal, trip mine and det pack weapons rp_ammo_respawn_time, shields rp_shield_respawn_time, health "

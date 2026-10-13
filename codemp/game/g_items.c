@@ -3472,11 +3472,11 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	// picked up items still stay around, they just don't
 	// draw anything.  This allows respawnable items
 	// to be placed on movers.
-	// DAJ_RP: [Still Weapons] a still weapon (EF_RP_STILL_ITEM, RP_ItemSetStill()) leaves no ghost: it is hidden and
-	// not sent while it waits, as ammo, health and shields are, and RespawnItem() brings it back. A HOLOGRAM weapon
-	// (4096) and the powerups keep the see-through placeholder on their pad.
+	// DAJ_RP: [Still Weapons] [Still Powerups] a still weapon or powerup (EF_RP_STILL_ITEM, RP_ItemSetStill()) leaves no
+	// ghost: it is hidden and not sent while it waits, as ammo, health and shields are, and RespawnItem() brings it back.
+	// A HOLOGRAM (4096) one keeps the see-through placeholder on its pad.
 	if (!(ent->flags & FL_DROPPED_ITEM) &&
-		((ent->item->giType == IT_WEAPON && !(ent->s.eFlags & EF_RP_STILL_ITEM)) || ent->item->giType == IT_POWERUP))
+		(ent->item->giType == IT_WEAPON || ent->item->giType == IT_POWERUP) && !(ent->s.eFlags & EF_RP_STILL_ITEM))
 	{
 		ent->s.eFlags |= EF_ITEMPLACEHOLDER;
 		ent->s.eFlags &= ~EF_NODRAW;
@@ -3641,11 +3641,13 @@ RP_ItemSetStill
 DAJ_RP: [Still Weapons] whether this placed item is a weapon the GalaxyRP client draws lying still, as single player
 does (EF_RP_STILL_ITEM, bg_public.h), and at which angles. Every placed weapon pickup is -- the map's, /entadd's,
 /entedit's, a preset's, a misc_model_gun_rack's -- unless it has HOLOGRAM (4096); weapons dropped by players or NPCs
-(LaunchItem()) never come through here, and no other item type is. The angles go in s.apos.trBase, which the stock
-client ignores on an item (it reads s.angles): the map's angles, and with VERTICAL (16) tilted up as single player's
-weapon lockers are -- 75 degrees, a saber 20 (single player takes a saber's pitch from its "random" key, which is the
-respawn time here). Kept out of s.angles so the entity commands, which read s.angles back when a weapon has no angles
-key, never tilt it twice. The bit is cleared first, so each call decides afresh (an item spawned again in place,
+(LaunchItem()) never come through here. DAJ_RP: [Still Powerups] so is every placed powerup (Force Boon, both Force
+Enlightenments, Ysalamiri) without HOLOGRAM: the client draws the Ysalamiri lying still and turns the other three
+slowly, without the pad, raise or bob. No other item type is marked. The angles go in s.apos.trBase, which the stock
+client ignores on an item (it reads s.angles): the map's angles, and for a weapon with VERTICAL (16) tilted up as
+single player's weapon lockers are -- 75 degrees, a saber 20 (single player takes a saber's pitch from its "random"
+key, which is the respawn time here). A powerup is never tilted. Kept out of s.angles so the entity commands, which
+read s.angles back when a weapon has no angles key, never tilt it twice. The bit is cleared first, so each call decides afresh (an item spawned again in place,
 /entedit or /entrotate, has its eFlags cleared already by RP_EntResetForRespawn()). Called by FinishSpawningItem(),
 and again by GunRackAddItem() (g_misc.c), which turns the item afterwards.
 ================
@@ -3654,7 +3656,7 @@ void RP_ItemSetStill( gentity_t *ent )
 {
 	ent->s.eFlags &= ~EF_RP_STILL_ITEM;
 
-	if ( !ent->item || ent->item->giType != IT_WEAPON || ( ent->spawnflags & ITMSF_HOLOGRAM ) )
+	if ( !ent->item || ( ent->item->giType != IT_WEAPON && ent->item->giType != IT_POWERUP ) || ( ent->spawnflags & ITMSF_HOLOGRAM ) )
 		return;
 
 	ent->s.eFlags |= EF_RP_STILL_ITEM;
@@ -3663,7 +3665,7 @@ void RP_ItemSetStill( gentity_t *ent )
 	VectorCopy( ent->s.angles, ent->s.apos.trBase );
 	VectorClear( ent->s.apos.trDelta );
 
-	if ( ent->spawnflags & ITMSF_VERTICAL )
+	if ( ent->item->giType == IT_WEAPON && ( ent->spawnflags & ITMSF_VERTICAL ) )
 		ent->s.apos.trBase[PITCH] -= ( ent->item->giTag == WP_SABER ) ? 20 : 75;
 }
 

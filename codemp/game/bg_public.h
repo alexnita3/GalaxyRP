@@ -773,7 +773,10 @@ typedef enum {
 // DAJ_RP: [Still Weapons] set by the server (FinishSpawningItem, g_items.c) on every placed weapon pickup without the
 // HOLOGRAM spawnflag (4096): the GalaxyRP client draws it as single player does -- lying still where it is, at the
 // angles in its s.apos.trBase (the map's angles, tilted up for VERTICAL), with no hologram pad, cone, bob or spin, at
-// normal size (CG_Item, cg_ents.c). Weapons only: dropped weapons, powerups and every other item never carry it. Bit 31,
+// normal size (CG_Item, cg_ents.c). DAJ_RP: [Still Powerups] and on every placed powerup without HOLOGRAM: the Ysalamiri
+// is drawn lying still too, the Force Boon and both Enlightenments turning slowly, without the pad, raise or bob. Taken,
+// either is hidden and not sent until it comes back, as ammo is (Touch_Item). Dropped items and every other item type
+// never carry it. Bit 31,
 // not 15 or 16: TaystJK's headers name those EF_ALT_DIM and EF_GRAPPLE_SWING, and nothing names 31 there, in JA++ or
 // in the stock game. eFlags goes out at its full 32 bits (see EF_RPG_JETPACK_UPGRADE above); a client without the
 // plugin has no name for the bit and draws the pickup the stock way.

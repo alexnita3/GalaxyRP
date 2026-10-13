@@ -2058,6 +2058,12 @@ qboolean CG_GreyItem(int type, int tag, int plSide)
 #define RP_STILL_ITEM_LIFT	2
 #define RP_STILL_SABER_LIFT	8
 
+// DAJ_RP: [Still Powerups] how fast a still Force Boon or Enlightenment turns, in degrees a second -- as a func_rotating
+// with speed 10 -- and the milliseconds of one turn, which the turn is taken modulo so it stays exact however long
+// the map runs
+#define RP_POWERUP_SPIN_SPEED	10
+#define RP_POWERUP_SPIN_PERIOD	( 360000 / RP_POWERUP_SPIN_SPEED )
+
 // DAJ_RP: [Weapon Scale] how far a dropped weapon drawn at 1x is lowered, from the stock amount that lowered it at 1.5
 // times its size. A dropped item rests with its origin ITEM_RADIUS + 1 over the floor (LaunchItem()'s box, and
 // G_BounceItem()'s lift when it stops); the stock amount put the model's origin h = rest - stock over the floor. At 1x
@@ -2106,9 +2112,12 @@ Ghoul2 Insert Start
 	// the angles in s.apos (the map's, tilted up for VERTICAL), lifted RP_STILL_ITEM_LIFT off its origin as single
 	// player's item bounds lift it (a saber more). It keeps what every pickup has here: the minimum light, the fade-in
 	// when it comes back, and the cg_simpleItems icon. While it is taken the server does not send it at all, as with
-	// ammo (Touch_Item()), so it leaves no ghost. Weapons only; a gun rack's carries EF_DROPPEDWEAPON too, and hangs
-	// where the rack puts it, without the lift.
-	still = ( item->giType == IT_WEAPON && ( es->eFlags & EF_RP_STILL_ITEM ) ) ? qtrue : qfalse;
+	// ammo (Touch_Item()), so it leaves no ghost. A gun rack's weapon carries EF_DROPPEDWEAPON too, and hangs where the
+	// rack puts it, without the lift. DAJ_RP: [Still Powerups] a marked powerup is drawn the same way, without a lift
+	// (the Ysalamiri model lies on its origin, the others float above theirs by themselves): the Ysalamiri still, the
+	// Force Boon and both Enlightenments turning slowly (RP_POWERUP_SPIN_SPEED), an Enlightenment a player cannot take
+	// greyed as before, without its grey pad. Weapons and powerups only.
+	still = ( ( item->giType == IT_WEAPON || item->giType == IT_POWERUP ) && ( es->eFlags & EF_RP_STILL_ITEM ) ) ? qtrue : qfalse;
 
 	if ((item->giType == IT_WEAPON || item->giType == IT_POWERUP) &&
 		!(cent->currentState.eFlags & EF_DROPPEDWEAPON) &&
@@ -2221,8 +2230,8 @@ Ghoul2 Insert End
 
 	if ( still )
 	{ // DAJ_RP: [Still Weapons] resting on the floor, as single player's item bounds (2 units under the origin, a
-	  // saber's 8) leave it; not on a gun rack
-		if ( !( es->eFlags & EF_DROPPEDWEAPON ) )
+	  // saber's 8) leave it; not on a gun rack, and not a powerup
+		if ( item->giType == IT_WEAPON && !( es->eFlags & EF_DROPPEDWEAPON ) )
 		{
 			cent->lerpOrigin[2] += ( item->giTag == WP_SABER ) ? RP_STILL_SABER_LIFT : RP_STILL_ITEM_LIFT;
 		}
@@ -2269,6 +2278,11 @@ Ghoul2 Insert End
 	if ( still )
 	{ // DAJ_RP: [Still Weapons] the angles the server gave it, VERTICAL's tilt included
 		VectorCopy( es->apos.trBase, cent->lerpAngles );
+		if ( item->giType == IT_POWERUP && item->giTag != PW_YSALAMIRI )
+		{ // DAJ_RP: [Still Powerups] turning slowly from its own yaw, by the server's time (the same for every player)
+			cent->lerpAngles[YAW] = AngleNormalize360( cent->lerpAngles[YAW] +
+				( cg.time % RP_POWERUP_SPIN_PERIOD ) * RP_POWERUP_SPIN_SPEED / 1000.0f );
+		}
 		AnglesToAxis( cent->lerpAngles, ent.axis );
 	}
 	else if ( (!(cent->currentState.eFlags & EF_DROPPEDWEAPON) || item->giType == IT_POWERUP) &&
