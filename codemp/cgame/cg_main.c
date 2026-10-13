@@ -45,6 +45,7 @@ Ghoul2 Insert End
 
 void CG_InitJetpackGhoul2(void);
 void CG_CleanJetpackGhoul2(void);
+void CG_RpFreeHiltGhoul2(void);
 
 void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum );
 void CG_Shutdown( void );
@@ -2766,6 +2767,9 @@ void CG_DestroyAllGhoul2(void)
 
 	//Clean the global jetpack instance
 	CG_CleanJetpackGhoul2();
+
+	// DAJ_RP: [Holstered Sabers] and the hilts worn on the thigh (cg_players.c)
+	CG_RpFreeHiltGhoul2();
 }
 
 /*

@@ -9816,6 +9816,221 @@ qboolean CG_AddPhasedPlayerModel( centity_t *cent, const refEntity_t *legs, qboo
 	return qtrue;
 }
 
+/*
+===============
+Holstered sabers
+
+DAJ_RP: [Holstered Sabers] a player or NPC that carries a saber (EF2_RP_SABER_CARRIED, set by the server --
+see bg_public.h) and has another weapon out wears its hilt on the right thigh, a second saber of a pair on
+the left one, a staff on the right. Placement as in JoF_EJK (CG_DrawHolsteredSaber): each hilt at the
+model's rfemurX / lfemurX bone, 3.5 units out along the bone's X axis (scaled with the model), the hilt
+turned to hang down the thigh. Unlike JoF's:
+  - the bone matrix is taken where the body is drawn -- legs.origin and rootAngles, as the blades in the
+    hand use them -- so a scaled player, a rider in its seat and a victim held by a monster keep it;
+  - every pass that draws the body draws the hilts with the same look: the body's render flags, custom
+    shader, colour and alpha, lighting origin and shadow plane (the cloak fade and refraction, a Force
+    ghost or hologram through CG_AddPhasedPlayerModel, third-person alpha, the first-person and own-shadow
+    flags, the body's shadow). JoF copied the render flags into an otherwise zeroed entity: under a pass
+    with RF_RGB_TINT (which takes every stage's colour from the entity) the hilt would turn black, and a
+    shadow would be cast to height 0 (shadowPlane) -- most likely why it turned the hilt's shadow off;
+  - the hilt models are one shared Ghoul2 instance per model and skin, as item models are, freed with the
+    rest in CG_DestroyAllGhoul2(). JoF gave each client two of its own and never freed them: every
+    userinfo change leaked both.
+cg_holsteredSabers 0 hides them.
+===============
+*/
+#define RP_HILT_MODELS_MAX	32
+typedef struct rpHiltModel_s {
+	char		model[MAX_QPATH];
+	qhandle_t	skin;
+	void		*ghoul2;
+} rpHiltModel_t;
+static rpHiltModel_t rpHiltModels[RP_HILT_MODELS_MAX];
+static int rpHiltModelCount;
+static qboolean rpHiltModelsFullWarned;
+
+static const vec3_t rpHiltOffset = { 0.0f, 3.5f, 0.0f };		// JoF's cg_holsteredSaberPos: right, forward, up
+static const vec3_t rpHiltAngles = { 0.0f, 0.0f, 270.0f };	// JoF's cg_holsteredSaberAng1 and Ang2
+
+// the shared instance for this hilt, made the first time it is wanted; NULL when the list is full
+static void *CG_RpHiltGhoul2( const char *model, qhandle_t skin )
+{
+	rpHiltModel_t *m;
+	int i;
+
+	for ( i = 0; i < rpHiltModelCount; i++ )
+	{
+		if ( rpHiltModels[i].skin == skin && !Q_stricmp( rpHiltModels[i].model, model ) )
+		{
+			return rpHiltModels[i].ghoul2;
+		}
+	}
+
+	if ( rpHiltModelCount >= RP_HILT_MODELS_MAX )
+	{
+		if ( !rpHiltModelsFullWarned )
+		{
+			rpHiltModelsFullWarned = qtrue;
+			trap->Print( S_COLOR_YELLOW "WARNING: more than %d different saber hilts to holster on this map; the others are not drawn on the thigh.\n", RP_HILT_MODELS_MAX );
+		}
+		return NULL;
+	}
+
+	// a model that does not load is kept too (as an empty instance), so it is not tried again every frame
+	m = &rpHiltModels[rpHiltModelCount++];
+	Q_strncpyz( m->model, model, sizeof( m->model ) );
+	m->skin = skin;
+	m->ghoul2 = NULL;
+	trap->G2API_InitGhoul2Model( &m->ghoul2, model, 0, skin, 0, 0, 0 );
+
+	return m->ghoul2;
+}
+
+void CG_RpFreeHiltGhoul2( void )
+{
+	int i;
+
+	for ( i = 0; i < rpHiltModelCount; i++ )
+	{
+		if ( rpHiltModels[i].ghoul2 && trap->G2_HaveWeGhoul2Models( rpHiltModels[i].ghoul2 ) )
+		{
+			trap->G2API_CleanGhoul2Models( &rpHiltModels[i].ghoul2 );
+		}
+		rpHiltModels[i].ghoul2 = NULL;
+	}
+	rpHiltModelCount = 0;
+	rpHiltModelsFullWarned = qfalse;
+}
+
+typedef struct rpHolsteredHilts_s {
+	qboolean	placed;		// worked out this frame (once, before the first body pass)
+	int			count;
+	refEntity_t	hilt[MAX_SABERS];
+} rpHolsteredHilts_t;
+
+static void CG_RpPlaceHolsteredSabers( centity_t *cent, clientInfo_t *ci, const refEntity_t *body, vec3_t rootAngles, rpHolsteredHilts_t *hilts )
+{
+	static const char *bones[MAX_SABERS] = { "rfemurX", "lfemurX" };
+	int i;
+
+	hilts->placed = qtrue;
+	hilts->count = 0;
+
+	if ( !cg_holsteredSabers.integer
+		|| !( cent->currentState.eFlags2 & EF2_RP_SABER_CARRIED )
+		|| cent->currentState.weapon == WP_SABER
+		|| ( cent->currentState.eFlags & EF_DEAD )
+		|| !ci
+		|| !cent->ghoul2 || !trap->G2_HaveWeGhoul2Models( cent->ghoul2 ) )
+	{
+		return;
+	}
+
+	for ( i = 0; i < MAX_SABERS; i++ )
+	{
+		const saberInfo_t *saber = &ci->saber[i];
+		refEntity_t *re;
+		mdxaBone_t matrix;
+		vec3_t org, ax0, ax1, ax2, offset;
+		matrix3_t turn, axis;
+		void *g2;
+		int bolt;
+
+		// no hilt, or a "saber" worn on the wrist (claws, fists, shields): nothing to holster
+		if ( !saber->model[0] || ( saber->saberFlags & SFL_BOLT_TO_WRIST ) )
+		{
+			continue;
+		}
+
+		// a model on a skeleton of its own may not have the bone
+		bolt = trap->G2API_AddBolt( cent->ghoul2, 0, bones[i] );
+		if ( bolt == -1 )
+		{
+			continue;
+		}
+
+		g2 = CG_RpHiltGhoul2( saber->model, saber->skin );
+		if ( !g2 || !trap->G2_HaveWeGhoul2Models( g2 ) )
+		{
+			continue;
+		}
+
+		trap->G2API_GetBoltMatrix( cent->ghoul2, 0, bolt, &matrix, rootAngles, body->origin, cg.time, cgs.gameModels, cent->modelScale );
+		BG_GiveMeVectorFromMatrix( &matrix, ORIGIN, org );
+		BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_X, ax0 );
+		BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_Y, ax1 );
+		BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_Z, ax2 );
+
+		// cent->modelScale is all 0 for an unscaled model (CG_Player clears it), which means 1
+		VectorScale( rpHiltOffset, cent->modelScale[0] ? cent->modelScale[0] : 1.0f, offset );
+
+		if ( i == 0 )
+		{ // right thigh
+			VectorMA( org, offset[0], ax1, org );
+			VectorMA( org, offset[1], ax0, org );
+			VectorMA( org, offset[2], ax2, org );
+			VectorScale( ax2, -1.0f, axis[2] ); // the blade end points down the thigh
+			VectorCopy( ax1, axis[1] );
+			CrossProduct( axis[1], axis[2], axis[0] );
+		}
+		else
+		{ // left thigh, mirrored
+			VectorMA( org, -offset[0], ax1, org );
+			VectorMA( org, -offset[1], ax0, org );
+			VectorMA( org, offset[2], ax2, org );
+			VectorScale( ax2, -1.0f, axis[0] );
+			VectorCopy( ax1, axis[1] );
+			VectorCopy( ax0, axis[2] );
+		}
+
+		re = &hilts->hilt[hilts->count++];
+		memset( re, 0, sizeof( *re ) );
+		AnglesToAxis( rpHiltAngles, turn );
+		MatrixMultiply( turn, axis, re->axis );
+		re->ghoul2 = g2;
+		re->hModel = 0;
+		VectorCopy( org, re->origin );
+		VectorCopy( org, re->oldorigin );
+		VectorCopy( cent->modelScale, re->modelScale );
+		ScaleModelAxis( re );
+		re->radius = body->radius;
+	}
+}
+
+// how a body pass was drawn, so the hilts go the same way
+#define RP_HILTS_PLAIN				0	// trap->R_AddRefEntityToScene only (the cloak passes)
+#define RP_HILTS_PHASED				1	// CG_AddPhasedPlayerModel( ..., qfalse ), else added as it is
+#define RP_HILTS_PHASED_OVERLAY		2	// CG_AddPhasedPlayerModel( ..., qtrue ), else added as it is
+
+static void CG_RpAddHolsteredSabers( centity_t *cent, clientInfo_t *ci, const refEntity_t *body, vec3_t rootAngles, rpHolsteredHilts_t *hilts, int how )
+{
+	int i;
+
+	if ( !hilts->placed )
+	{
+		CG_RpPlaceHolsteredSabers( cent, ci, body, rootAngles, hilts );
+	}
+
+	for ( i = 0; i < hilts->count; i++ )
+	{
+		refEntity_t re = hilts->hilt[i];
+
+		re.renderfx = body->renderfx;
+		re.customShader = body->customShader;
+		re.shaderRGBA[0] = body->shaderRGBA[0];
+		re.shaderRGBA[1] = body->shaderRGBA[1];
+		re.shaderRGBA[2] = body->shaderRGBA[2];
+		re.shaderRGBA[3] = body->shaderRGBA[3];
+		re.shadowPlane = body->shadowPlane;
+		VectorCopy( body->lightingOrigin, re.lightingOrigin );
+
+		if ( how == RP_HILTS_PLAIN || !CG_AddPhasedPlayerModel( cent, &re, ( how == RP_HILTS_PHASED_OVERLAY ) ? qtrue : qfalse ) )
+		{
+			trap->R_AddRefEntityToScene( &re );
+		}
+	}
+}
+
 // DAJ_RP: [NPCs] Boba Fett's jet exhaust while he flies. Single-player plays boba/jetSP on his model's *jet1 and
 // *jet2 bolts from take-off to landing (Boba_FlyStart() / Boba_FlyStop()); the MP port of his AI kept the flight,
 // the take-off sound and the hover loop but dropped the effect, and no cgame drew one -- stock, TaystJK and JA++
@@ -9852,6 +10067,7 @@ static void CG_BobaJetFlames( centity_t *cent )
 void CG_Player( centity_t *cent ) {
 	clientInfo_t	*ci;
 	refEntity_t		legs;
+	rpHolsteredHilts_t	rpHilts = { qfalse };	// DAJ_RP: [Holstered Sabers] placed at the first body pass
 	refEntity_t		torso;
 	int				clientNum;
 	int				renderfx;
@@ -12183,6 +12399,7 @@ stillDoSaber:
 			{
 				trap->R_AddRefEntityToScene( &legs );
 			}
+			CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PHASED_OVERLAY ); // DAJ_RP: [Holstered Sabers]
 		}
 		else
 		{
@@ -12200,6 +12417,7 @@ stillDoSaber:
 				legs.shaderRGBA[3] = 0;
 				legs.customShader = cgs.media.cloakedShader;
 				trap->R_AddRefEntityToScene( &legs );
+				CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PLAIN ); // DAJ_RP: [Holstered Sabers]
 
 				legs.shaderRGBA[0] = legs.shaderRGBA[1] = legs.shaderRGBA[2] = 255;
 				legs.shaderRGBA[3] = 255 * (1.0f - perc); // let model alpha in
@@ -12212,6 +12430,7 @@ stillDoSaber:
 				{
 					trap->R_AddRefEntityToScene( &legs );
 				}
+				CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PHASED ); // DAJ_RP: [Holstered Sabers]
 			}
 		}
 	}
@@ -12225,6 +12444,7 @@ stillDoSaber:
 			{
 				trap->R_AddRefEntityToScene( &legs );
 			}
+			CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PHASED_OVERLAY ); // DAJ_RP: [Holstered Sabers]
 		}
 		else
 		{
@@ -12270,6 +12490,7 @@ stillDoSaber:
 					// alpha reached every stage, a black model where a stage ignored it (vehicles, rd-vulkan).
 					legs.customShader = 2; //crazy "refractive" shader
 					trap->R_AddRefEntityToScene( &legs );
+					CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PLAIN ); // DAJ_RP: [Holstered Sabers]
 					legs.customShader = 0;
 				}
 				else
@@ -12278,6 +12499,7 @@ stillDoSaber:
 					legs.shaderRGBA[0] = legs.shaderRGBA[1] = legs.shaderRGBA[2] = legs.shaderRGBA[3] = 255;
 					legs.customShader = cgs.media.cloakedShader;
 					trap->R_AddRefEntityToScene( &legs );
+					CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PLAIN ); // DAJ_RP: [Holstered Sabers]
 					legs.customShader = 0;
 				}
 			}
@@ -12292,6 +12514,7 @@ stillDoSaber:
 		{
 			trap->R_AddRefEntityToScene(&legs);
 		}
+		CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PHASED_OVERLAY ); // DAJ_RP: [Holstered Sabers]
 	}
 
 	//cent->frame_minus2 = cent->frame_minus1;

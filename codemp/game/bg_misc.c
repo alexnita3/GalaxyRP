@@ -2909,6 +2909,11 @@ void BG_PlayerStateToEntityState( playerState_t *ps, entityState_t *s, qboolean 
 										// so corpses can also reference the proper config
 	s->eFlags = ps->eFlags;
 	s->eFlags2 = ps->eFlags2;
+	// DAJ_RP: [Holstered Sabers] see EF2_RP_SABER_CARRIED in bg_public.h
+	if ( ( ps->stats[STAT_WEAPONS] & ( 1 << WP_SABER ) ) && !ps->saberInFlight )
+		s->eFlags2 |= EF2_RP_SABER_CARRIED;
+	else
+		s->eFlags2 &= ~EF2_RP_SABER_CARRIED;
 
 	s->saberInFlight = ps->saberInFlight;
 	s->saberEntityNum = ps->saberEntityNum;
@@ -3063,6 +3068,11 @@ void BG_PlayerStateToEntityStateExtraPolate( playerState_t *ps, entityState_t *s
 										// so corpses can also reference the proper config
 	s->eFlags = ps->eFlags;
 	s->eFlags2 = ps->eFlags2;
+	// DAJ_RP: [Holstered Sabers] see EF2_RP_SABER_CARRIED in bg_public.h
+	if ( ( ps->stats[STAT_WEAPONS] & ( 1 << WP_SABER ) ) && !ps->saberInFlight )
+		s->eFlags2 |= EF2_RP_SABER_CARRIED;
+	else
+		s->eFlags2 &= ~EF2_RP_SABER_CARRIED;
 
 	s->saberInFlight = ps->saberInFlight;
 	s->saberEntityNum = ps->saberEntityNum;
