@@ -2058,6 +2058,14 @@ qboolean CG_GreyItem(int type, int tag, int plSide)
 #define RP_STILL_ITEM_LIFT	2
 #define RP_STILL_SABER_LIFT	8
 
+// DAJ_RP: [Weapon Scale] how far a dropped weapon drawn at 1x is lowered, from the stock amount that lowered it at 1.5
+// times its size. A dropped item rests with its origin ITEM_RADIUS + 1 over the floor (LaunchItem()'s box, and
+// G_BounceItem()'s lift when it stops); the stock amount put the model's origin h = rest - stock over the floor. At 1x
+// it goes at h / 1.5: every point of the weapon is then two thirds as high as it was at 1.5 times, so what touched the
+// floor touches it still and nothing that was above it sinks.
+#define RP_DROPPED_WEAPON_REST		( ITEM_RADIUS + 1 )
+#define RP_DROPPED_WEAPON_DROP( stock )	( RP_DROPPED_WEAPON_REST - ( RP_DROPPED_WEAPON_REST - ( stock ) ) / 1.5f )
+
 /*
 ==================
 CG_Item
@@ -2306,44 +2314,55 @@ Ghoul2 Insert End
 	}
 	else
 	{
+		float drop;
+
 		wi = &cg_weapons[item->giTag];
 
+		// DAJ_RP: [Weapon Scale] the stock lowering puts a 1.5 times weapon on the floor; a dropped weapon is drawn at
+		// 1x now (below), so it is lowered by RP_DROPPED_WEAPON_DROP() of it instead. A dropped powerup takes this path
+		// too, and was never scaled: its lowering is left as it was.
 		switch(item->giTag)
 		{
 		case WP_BLASTER:
-			cent->lerpOrigin[2] -= 12;
+			drop = 12;
 			break;
 		case WP_DISRUPTOR:
-			cent->lerpOrigin[2] -= 13;
+			drop = 13;
 			break;
 		case WP_BOWCASTER:
-			cent->lerpOrigin[2] -= 16;
+			drop = 16;
 			break;
 		case WP_REPEATER:
-			cent->lerpOrigin[2] -= 12;
+			drop = 12;
 			break;
 		case WP_DEMP2:
-			cent->lerpOrigin[2] -= 10;
+			drop = 10;
 			break;
 		case WP_FLECHETTE:
-			cent->lerpOrigin[2] -= 6;
+			drop = 6;
 			break;
 		case WP_ROCKET_LAUNCHER:
-			cent->lerpOrigin[2] -= 11;
+			drop = 11;
 			break;
 		case WP_THERMAL:
-			cent->lerpOrigin[2] -= 12;
+			drop = 12;
 			break;
 		case WP_TRIP_MINE:
-			cent->lerpOrigin[2] -= 16;
+			drop = 16;
 			break;
 		case WP_DET_PACK:
-			cent->lerpOrigin[2] -= 16;
+			drop = 16;
 			break;
 		default:
-			cent->lerpOrigin[2] -= 8;
+			drop = 8;
 			break;
 		}
+
+		if ( item->giType == IT_WEAPON )
+		{
+			drop = RP_DROPPED_WEAPON_DROP( drop );
+		}
+		cent->lerpOrigin[2] -= drop;
 	}
 
 	ent.hModel = cg_items[es->modelindex].models[0];
@@ -2402,14 +2421,11 @@ Ghoul2 Insert End
 		ent.customShader = cgs.media.itemRespawningPlaceholder;
 	}
 
-	// increase the size of the weapons when they are presented as items
-	if ( item->giType == IT_WEAPON && !still ) {	// DAJ_RP: [Still Weapons] not a still one: normal size, as in single player
-		VectorScale( ent.axis[0], 1.5, ent.axis[0] );
-		VectorScale( ent.axis[1], 1.5, ent.axis[1] );
-		VectorScale( ent.axis[2], 1.5, ent.axis[2] );
-		ent.nonNormalizedAxes = qtrue;
-		//trap->S_AddLoopingSound( cent->currentState.number, cent->lerpOrigin, vec3_origin, cgs.media.weaponHoverSound );
-	}
+	// DAJ_RP: [Weapon Scale] weapons presented as items used to be drawn 1.5 times their size here (still ones excepted);
+	// every weapon pickup -- still, HOLOGRAM, dropped, on a gun rack -- is now drawn at its own size, as single
+	// player draws them. A HOLOGRAM weapon now spins exactly round its middle (weaponMidpoint is measured unscaled),
+	// and a dropped one is lowered for 1x (RP_DROPPED_WEAPON_DROP()).
+	//trap->S_AddLoopingSound( cent->currentState.number, cent->lerpOrigin, vec3_origin, cgs.media.weaponHoverSound );
 
 	if ((!(cent->currentState.eFlags & EF_DROPPEDWEAPON) || still) &&	// DAJ_RP: [Still Weapons] a gun rack's too
 		(item->giType == IT_WEAPON || item->giType == IT_POWERUP))
