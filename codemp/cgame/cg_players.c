@@ -9920,8 +9920,14 @@ An item with a blade of its own -- an electrostaff, whose six short "blades" onl
 is told by its swing trail instead (trailStyle, the first blade style's: "0 is normal, 1 is a motion blur
 and 2 is no trail at all (good for real-sword type mods)"): a lightsaber keeps the glowing trail, 1 and 2
 are the swords' (CG_AddSaberBlade draws the glowing trail for anything not 1 and not above 1). trailStyle2
-does not count: a lightsaber may give the short blades of its second style no trail (Darth Nihl's saber).
+does not count: a lightsaber may give the short blades of its second style no trail (a crossguard's).
 Nor do noManualDeactivate (lightsabers too) or numBlades (crossguard lightsabers have 3 or 6).
+bounceOnWalls ("the saber will bounce back when it hits solid architecture (good for real-sword type mods)",
+SFL_BOUNCE_ON_WALLS) hides one too: Darth Nihl's great staff, whose MP entry has no other sign of it.
+And a server admin can hide any other saber that looks wrong on the hip with the GalaxyRP key "noHolster 1"
+(SFL2_RP_NO_HOLSTER, bg_saberLoad.c). It can only hide: "noHolster 0", or no such key, leaves the rules above.
+noManualDeactivate is not a guard on purpose (it is a play setting -- lightsabers locked to a staff or a pair
+use it too): such a saber that looks wrong is for "noHolster 1".
 ===============
 */
 qboolean CG_RpSaberHolsterable( const saberInfo_t *saber )
@@ -9940,6 +9946,14 @@ qboolean CG_RpSaberHolsterable( const saberInfo_t *saber )
 	}
 	if ( saber->trailStyle > 0 )
 	{//a sword's trail (motion blur, or none)
+		return qfalse;
+	}
+	if ( saber->saberFlags & SFL_BOUNCE_ON_WALLS )
+	{//bounces off walls, as a sword does
+		return qfalse;
+	}
+	if ( saber->saberFlags2 & SFL2_RP_NO_HOLSTER )
+	{//the server admin's own choice
 		return qfalse;
 	}
 	return qtrue;

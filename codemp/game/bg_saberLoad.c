@@ -1568,6 +1568,16 @@ static void Saber_ParseNoBlade( saberInfo_t *saber, const char **p ) {
 	if ( n )
 		saber->saberFlags2 |= SFL2_NO_BLADE;
 }
+// DAJ_RP: [Holstered Sabers] "noHolster 1": not worn on the thigh, hidden -- see SFL2_RP_NO_HOLSTER (bg_public.h)
+static void Saber_ParseNoHolster( saberInfo_t *saber, const char **p ) {
+	int n;
+	if ( COM_ParseInt( p, &n ) ) {
+		SkipRestOfLine( p );
+		return;
+	}
+	if ( n )
+		saber->saberFlags2 |= SFL2_RP_NO_HOLSTER;
+}
 static void Saber_ParseTrailStyle( saberInfo_t *saber, const char **p ) {
 	int n;
 	if ( COM_ParseInt( p, &n ) ) {
@@ -2256,6 +2266,7 @@ static keywordHash_t saberParseKeywords[] = {
 	{ "bladeEffect2",			Saber_ParseBladeEffect2,		NULL	},
 	{ "noClashFlare",			Saber_ParseNoClashFlare,		NULL	},
 	{ "noClashFlare2",			Saber_ParseNoClashFlare2,		NULL	},
+	{ "noHolster",				Saber_ParseNoHolster,			NULL	},	// DAJ_RP: [Holstered Sabers]
 	{ NULL,						NULL,							NULL	}
 };
 static keywordHash_t *saberParseKeywordHash[KEYWORDHASH_SIZE];

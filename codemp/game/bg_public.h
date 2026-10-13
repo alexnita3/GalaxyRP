@@ -1741,6 +1741,10 @@ typedef enum saber_styles_e {
 #define SFL2_ALWAYS_BLOCK2			(1<<15)//if set, the blades will always be blocking (good for things like shields that should always block)
 #define SFL2_NO_MANUAL_DEACTIVATE2	(1<<16)//if set, the blades cannot manually be toggled on and off
 #define SFL2_TRANSITION_DAMAGE2		(1<<17)//if set, the blade does damage in start, transition and return anims (like strong style does)
+//DAJ_RP: [Holstered Sabers] "noHolster 1" in a .sab: the cgame does not wear this saber's hilt on the thigh while
+//its owner has another weapon out, it hides it (CG_RpSaberHolsterable) -- for server admins, for any saber that
+//looks wrong holstered. The whole saber, both blade styles. Not sent over the network.
+#define SFL2_RP_NO_HOLSTER			(1<<18)
 
 #define SABER_NAME_LENGTH (64)
 typedef struct saberInfo_s {
