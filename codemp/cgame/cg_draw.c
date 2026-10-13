@@ -8807,7 +8807,11 @@ void CG_DrawMiscStaticModels( void ) {
 			}
 		}
 
-		if( !trap->R_InPVS( cg.refdef.vieworg, cullorg, cg.refdef.areamask ) ) {
+		// DAJ_RP: [Static Models] and, when that point is not in the PVS, the centre of its bounds: the engine
+		// cannot answer for a point in solid, and culled a model whose origin is in its wall everywhere
+		// (CG_StaticModelSetCentre, cg_spawn.c)
+		if( !trap->R_InPVS( cg.refdef.vieworg, cullorg, cg.refdef.areamask ) &&
+			!trap->R_InPVS( cg.refdef.vieworg, cgs.miscStaticModels[i].centre, cg.refdef.areamask ) ) {
 			continue;
 		}
 

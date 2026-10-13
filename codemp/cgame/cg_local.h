@@ -1657,7 +1657,10 @@ typedef struct cg_staticmodel_s {
 	matrix3_t		axes;
 	float			radius;
 	float			zoffset;
+	vec3_t			centre;		// DAJ_RP: [Static Models] its bounds' centre, the PVS's second point (CG_StaticModelSetCentre)
 } cg_staticmodel_t;
+
+void CG_StaticModelSetCentre( cg_staticmodel_t *sm, const vec3_t mins, const vec3_t maxs );
 
 // The client game static (cgs) structure hold everything
 // loaded or calculated from the gamestate.  It will NOT

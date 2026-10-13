@@ -326,12 +326,15 @@ void CG_MiscEnt( void ) {
 
 		trap->R_ModelBounds( staticmodel->model, mins, maxs );
 
+		CG_StaticModelSetCentre( staticmodel, mins, maxs );	// DAJ_RP: [Static Models] the unscaled bounds
+
 		VectorScaleVector(mins, data->mScale, mins);
 		VectorScaleVector(maxs, data->mScale, maxs);
 
 		staticmodel->radius = RadiusFromBounds( mins, maxs );
 	} else {
 		staticmodel->radius = 0;
+		CG_StaticModelSetCentre( staticmodel, vec3_origin, vec3_origin );	// DAJ_RP: [Static Models]
 	}
 }
 
