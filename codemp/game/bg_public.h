@@ -768,7 +768,16 @@ typedef enum {
 #define EF_JETPACK				(1<<29)		//rww - wearing a jetpack
 #define EF_JETPACK_FLAMING		(1<<30)		//rww - jetpack fire effect
 
-#define	EF_NOT_USED_5			(1<<31)		// not used
+#define	EF_NOT_USED_5			(1<<31)		// claimed by GalaxyRP -- see EF_RP_STILL_ITEM below
+
+// DAJ_RP: [Still Weapons] set by the server (FinishSpawningItem, g_items.c) on every placed weapon pickup without the
+// HOLOGRAM spawnflag (4096): the GalaxyRP client draws it as single player does -- lying still where it is, at the
+// angles in its s.apos.trBase (the map's angles, tilted up for VERTICAL), with no hologram pad, cone, bob or spin, at
+// normal size (CG_Item, cg_ents.c). Weapons only: dropped weapons, powerups and every other item never carry it. Bit 31,
+// not 15 or 16: TaystJK's headers name those EF_ALT_DIM and EF_GRAPPLE_SWING, and nothing names 31 there, in JA++ or
+// in the stock game. eFlags goes out at its full 32 bits (see EF_RPG_JETPACK_UPGRADE above); a client without the
+// plugin has no name for the bit and draws the pickup the stock way.
+#define EF_RP_STILL_ITEM		EF_NOT_USED_5
 
 //These new EF2_??? flags were added for NPCs, they really should not be used often.
 //NOTE: we only allow 10 of these!

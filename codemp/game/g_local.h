@@ -2422,6 +2422,7 @@ gentity_t *Drop_Item( gentity_t *ent, gitem_t *item, float angle );
 gentity_t *LaunchItem( gitem_t *item, vec3_t origin, vec3_t velocity );
 void G_SpawnItem (gentity_t *ent, gitem_t *item);
 void FinishSpawningItem( gentity_t *ent );
+void RP_ItemSetStill( gentity_t *ent );	// DAJ_RP: [Still Weapons] g_items.c
 void	Add_Ammo (gentity_t *ent, int weapon, int count);
 int		RP_MaxAmmo( int ammoType );
 void	RP_ClampAmmoToCaps( gentity_t *ent );

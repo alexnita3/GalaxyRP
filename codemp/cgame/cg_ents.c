@@ -2051,6 +2051,13 @@ qboolean CG_GreyItem(int type, int tag, int plSide)
 	return qfalse;
 }
 
+// DAJ_RP: [Still Weapons] how far above its origin a still weapon is drawn: single player's items.dat gives weapon
+// pickups a box from 2 units under the origin (a saber's from 8), so they rest that far above the floor; ours rest
+// with the origin on it (FinishSpawningItem's box starts at 0). The weapon models reach 1 to 4 units under their
+// origin, and a saber's 9.
+#define RP_STILL_ITEM_LIFT	2
+#define RP_STILL_SABER_LIFT	8
+
 /*
 ==================
 CG_Item
@@ -2063,6 +2070,7 @@ static void CG_Item( centity_t *cent ) {
 	int				msec;
 	float			scale;
 	weaponInfo_t	*wi;
+	qboolean		still;
 
 	es = &cent->currentState;
 	if ( es->modelindex >= bg_numItems ) {
@@ -2085,8 +2093,17 @@ Ghoul2 Insert Start
 
 	item = &bg_itemlist[ es->modelindex ];
 
+	// DAJ_RP: [Still Weapons] a placed weapon pickup the server marks (EF_RP_STILL_ITEM, RP_ItemSetStill() in g_items.c)
+	// is drawn as single player draws it: no hologram pad or cone, not raised, bobbing or spinning, at normal size, at
+	// the angles in s.apos (the map's, tilted up for VERTICAL), lifted RP_STILL_ITEM_LIFT off its origin as single
+	// player's item bounds lift it (a saber more). It keeps what every pickup has here: the minimum light, the ghost
+	// while it is taken, the fade-in when it comes back, and the cg_simpleItems icon. Weapons only; a gun rack's carries
+	// EF_DROPPEDWEAPON too, and hangs where the rack puts it, without the lift.
+	still = ( item->giType == IT_WEAPON && ( es->eFlags & EF_RP_STILL_ITEM ) ) ? qtrue : qfalse;
+
 	if ((item->giType == IT_WEAPON || item->giType == IT_POWERUP) &&
 		!(cent->currentState.eFlags & EF_DROPPEDWEAPON) &&
+		!still &&
 		!cg_simpleItems.integer)
 	{
 		vec3_t uNorm;
@@ -2187,12 +2204,21 @@ Ghoul2 Insert End
 	}
 
 	if ((item->giType == IT_WEAPON || item->giType == IT_POWERUP) &&
-		!(cent->currentState.eFlags & EF_DROPPEDWEAPON))
+		!(cent->currentState.eFlags & EF_DROPPEDWEAPON) &&
+		!still)
 	{
 		cent->lerpOrigin[2] += 16;
 	}
 
-	if ((!(cent->currentState.eFlags & EF_DROPPEDWEAPON) || item->giType == IT_POWERUP) &&
+	if ( still )
+	{ // DAJ_RP: [Still Weapons] resting on the floor, as single player's item bounds (2 units under the origin, a
+	  // saber's 8) leave it; not on a gun rack
+		if ( !( es->eFlags & EF_DROPPEDWEAPON ) )
+		{
+			cent->lerpOrigin[2] += ( item->giTag == WP_SABER ) ? RP_STILL_SABER_LIFT : RP_STILL_ITEM_LIFT;
+		}
+	}
+	else if ((!(cent->currentState.eFlags & EF_DROPPEDWEAPON) || item->giType == IT_POWERUP) &&
 		(item->giType == IT_WEAPON || item->giType == IT_POWERUP))
 	{
 		// items bob up and down continuously
@@ -2231,7 +2257,12 @@ Ghoul2 Insert End
 
 	memset (&ent, 0, sizeof(ent));
 
-	if ( (!(cent->currentState.eFlags & EF_DROPPEDWEAPON) || item->giType == IT_POWERUP) &&
+	if ( still )
+	{ // DAJ_RP: [Still Weapons] the angles the server gave it, VERTICAL's tilt included
+		VectorCopy( es->apos.trBase, cent->lerpAngles );
+		AnglesToAxis( cent->lerpAngles, ent.axis );
+	}
+	else if ( (!(cent->currentState.eFlags & EF_DROPPEDWEAPON) || item->giType == IT_POWERUP) &&
 		(item->giType == IT_WEAPON || item->giType == IT_POWERUP) )
 	{ //only weapons and powerups rotate now
 		// autorotate at one of two speeds
@@ -2248,7 +2279,11 @@ Ghoul2 Insert End
 	// the weapons have their origin where they attatch to player
 	// models, so we need to offset them or they will rotate
 	// eccentricly
-	if (!(cent->currentState.eFlags & EF_DROPPEDWEAPON))
+	if ( still )
+	{ // DAJ_RP: [Still Weapons] it does not rotate, and lies where its origin is: neither the centring nor a dropped
+	  // weapon's lowering
+	}
+	else if (!(cent->currentState.eFlags & EF_DROPPEDWEAPON))
 	{
 		if ( item->giType == IT_WEAPON ) {
 			wi = &cg_weapons[item->giTag];
@@ -2367,7 +2402,7 @@ Ghoul2 Insert End
 	}
 
 	// increase the size of the weapons when they are presented as items
-	if ( item->giType == IT_WEAPON ) {
+	if ( item->giType == IT_WEAPON && !still ) {	// DAJ_RP: [Still Weapons] not a still one: normal size, as in single player
 		VectorScale( ent.axis[0], 1.5, ent.axis[0] );
 		VectorScale( ent.axis[1], 1.5, ent.axis[1] );
 		VectorScale( ent.axis[2], 1.5, ent.axis[2] );
@@ -2375,13 +2410,14 @@ Ghoul2 Insert End
 		//trap->S_AddLoopingSound( cent->currentState.number, cent->lerpOrigin, vec3_origin, cgs.media.weaponHoverSound );
 	}
 
-	if (!(cent->currentState.eFlags & EF_DROPPEDWEAPON) &&
+	if ((!(cent->currentState.eFlags & EF_DROPPEDWEAPON) || still) &&	// DAJ_RP: [Still Weapons] a gun rack's too
 		(item->giType == IT_WEAPON || item->giType == IT_POWERUP))
 	{
 		ent.renderfx |= RF_MINLIGHT;
 	}
 
-	if (item->giType != IT_TEAM && msec >= 0 && msec < ITEM_SCALEUP_TIME && !(es->eFlags & EF_ITEMPLACEHOLDER) && !(es->eFlags & EF_DROPPEDWEAPON))
+	if (item->giType != IT_TEAM && msec >= 0 && msec < ITEM_SCALEUP_TIME && !(es->eFlags & EF_ITEMPLACEHOLDER) &&
+		(!(es->eFlags & EF_DROPPEDWEAPON) || still))	// DAJ_RP: [Still Weapons] a gun rack's fades in too
 	{	// if just respawned, fade in, but don't do this for flags.
 		float alpha;
 		int a;

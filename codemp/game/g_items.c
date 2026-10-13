@@ -48,6 +48,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define ITMSF_NOTSOLID		8
 #define ITMSF_VERTICAL		16
 #define ITMSF_INVISIBLE		32
+// DAJ_RP: [Still Weapons] a weapon pickup drawn the stock multiplayer way -- spinning above a hologram pad -- instead of
+// lying still (RP_ItemSetStill() below). Free in both games' item flags (single player's go to 2048) and in their
+// skill filters (256, 512, 1024), and below zyk's 65536 and 131072.
+#define ITMSF_HOLOGRAM		4096
 
 extern gentity_t *droppedRedFlag;
 extern gentity_t *droppedBlueFlag;
@@ -3628,6 +3632,39 @@ void Use_Item( gentity_t *ent, gentity_t *other, gentity_t *activator ) {
 
 /*
 ================
+RP_ItemSetStill
+
+DAJ_RP: [Still Weapons] whether this placed item is a weapon the GalaxyRP client draws lying still, as single player
+does (EF_RP_STILL_ITEM, bg_public.h), and at which angles. Every placed weapon pickup is -- the map's, /entadd's,
+/entedit's, a preset's, a misc_model_gun_rack's -- unless it has HOLOGRAM (4096); weapons dropped by players or NPCs
+(LaunchItem()) never come through here, and no other item type is. The angles go in s.apos.trBase, which the stock
+client ignores on an item (it reads s.angles): the map's angles, and with VERTICAL (16) tilted up as single player's
+weapon lockers are -- 75 degrees, a saber 20 (single player takes a saber's pitch from its "random" key, which is the
+respawn time here). Kept out of s.angles so the entity commands, which read s.angles back when a weapon has no angles
+key, never tilt it twice. The bit is cleared first, so each call decides afresh (an item spawned again in place,
+/entedit or /entrotate, has its eFlags cleared already by RP_EntResetForRespawn()). Called by FinishSpawningItem(),
+and again by GunRackAddItem() (g_misc.c), which turns the item afterwards.
+================
+*/
+void RP_ItemSetStill( gentity_t *ent )
+{
+	ent->s.eFlags &= ~EF_RP_STILL_ITEM;
+
+	if ( !ent->item || ent->item->giType != IT_WEAPON || ( ent->spawnflags & ITMSF_HOLOGRAM ) )
+		return;
+
+	ent->s.eFlags |= EF_RP_STILL_ITEM;
+
+	ent->s.apos.trType = TR_STATIONARY;
+	VectorCopy( ent->s.angles, ent->s.apos.trBase );
+	VectorClear( ent->s.apos.trDelta );
+
+	if ( ent->spawnflags & ITMSF_VERTICAL )
+		ent->s.apos.trBase[PITCH] -= ( ent->item->giTag == WP_SABER ) ? 20 : 75;
+}
+
+/*
+================
 FinishSpawningItem
 
 Traces down to find where an item should rest, instead of letting them
@@ -3756,6 +3793,8 @@ void FinishSpawningItem( gentity_t *ent ) {
 	ent->s.eType = ET_ITEM;
 	ent->s.modelindex = ent->item - bg_itemlist;		// store item number in modelindex
 	ent->s.modelindex2 = 0; // zero indicates this isn't a dropped item
+
+	RP_ItemSetStill( ent );	// DAJ_RP: [Still Weapons]
 
 	ent->r.contents = CONTENTS_TRIGGER;
 	ent->touch = Touch_Item;

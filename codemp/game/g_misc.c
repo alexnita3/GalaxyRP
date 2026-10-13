@@ -5604,6 +5604,12 @@ void GunRackAddItem( gentity_t *rack, gitem_t *gun, vec3_t org, vec3_t angs, flo
 		G_SetAngles( it_ent, it_ent->s.angles );
 		G_SetOrigin( it_ent, it_ent->s.origin );
 
+		// DAJ_RP: [Still Weapons] once more, now that it is turned (G_SetAngles() above wrote the untilted angles into
+		// s.apos): a weapon is drawn still and leaning up the rack (the VERTICAL set above), as single player draws its
+		// racks. EF_DROPPEDWEAPON below stays for clients without the plugin, and keeps the GalaxyRP client from lifting
+		// it off the floor (CG_Item): it hangs where the rack puts it.
+		RP_ItemSetStill( it_ent );
+
 		// zyk: add dropped weapon flag if it is a weapon
 		if (gun->giType == IT_WEAPON)
 			it_ent->s.eFlags |= EF_DROPPEDWEAPON;
