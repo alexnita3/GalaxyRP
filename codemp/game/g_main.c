@@ -7591,11 +7591,30 @@ void melee_battle_prepare()
 			// zyk_wind_down_seeker_drone() in g_cmds.c.
 			zyk_wind_down_seeker_drone(ent);
 
+			// DAJ_RP: [Melee Battle] and the cloak, as duel_tournament_prepare() does. The holdables were
+			// just set to the binoculars directly, which never switches an active cloak off, and nothing
+			// else ends PW_CLOAKED -- while the cloak key itself wants the cloak item, which he no longer
+			// owns. So a player cloaked at the bell stayed invisible for the whole battle and could not
+			// even turn it off.
+			Jedi_DecloakPair(ent);
+
 			// DAJ_RP: [Force Enlightenment] end any Enlightenment before the Force is saved, as
 			// duel_tournament_prepare() does and for the same reason: a backup taken while boosted is
 			// handed back by melee_battle_restore() with nothing left to undo it. WP_ForcePowersUpdate()
 			// then keeps a new Enlightenment from applying until the battle is over.
 			WP_EndForceEnlightenment(ent);
+
+			// DAJ_RP: [Melee Battle] end every power still running, as duel_tournament_prepare() does for
+			// the ones it takes away. The strip below only takes the powers out of the menu; what was
+			// switched on before the bell -- Protect, Rage, Absorb, Speed, a grip on somebody -- kept
+			// running in the fight. This also covers the jump in progress the old line below stopped.
+			zyk_stop_active_force_powers(ent);
+
+			// DAJ_RP: [Melee Battle] and the Force powerups, as duel_tournament_prepare() does: a Boon kept
+			// its faster regeneration through the battle. (The Enlightenments are already ended above.)
+			ent->client->ps.powerups[PW_FORCE_BOON] = 0;
+			ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = 0;
+			ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = 0;
 
 			// GalaxyRP fix: [Melee Battle] same as the loadout backup above, placed against the
 			// force strip that follows it exactly as duel_tournament_prepare() places its own.
@@ -7618,7 +7637,8 @@ void melee_battle_prepare()
 			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_FORCE);
 
 			// zyk: stop jumping to avoid falling from the platform
-			ent->client->ps.fd.forcePowersActive &= ~(1 << FP_LEVITATION);
+			// DAJ_RP: [Melee Battle] done above now, with every other running power
+			// (zyk_stop_active_force_powers()).
 
 			VectorSet(origin, level.melee_mode_origin[0] - 120 + ((i % 6) * 45), level.melee_mode_origin[1] - 120 + ((i/6) * 45), level.melee_mode_origin[2] + 50);
 

@@ -1377,6 +1377,35 @@ static void rp_give_reset_active( gentity_t *ent )
 	zyk_stop_active_holdables(ent);
 }
 
+// DAJ_RP: [Admin] the "off" half of /give, on its own: whatever an admin gave this player with
+// /give <player> force or /give <player> guns is taken away again -- running powers and holdables
+// ended first (rp_give_reset_active()), the force powers or the guns removed, the status bit
+// cleared, everybody told in the console and the player on screen. Only one of the two bits is ever
+// set; a player with neither is left alone and nothing is printed. Used by Cmd_Give_f() for both its
+// "off" toggles, and by /duelmode and /meleemode when such a player signs up for a mini-game: he takes
+// part as a plain logged-out player, and stays one afterwards until an admin gives again.
+static void rp_give_lift( gentity_t *ent )
+{
+	if (ent->client->pers.player_statuses & (1 << PLAYER_STATUS_ADM_GIVE_FORCE))
+	{ // zyk: remove force powers
+		rp_give_reset_active(ent);
+		zyk_remove_force_powers(ent);
+
+		ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_ADM_GIVE_FORCE);
+		trap->SendServerCommand( -1, va("print \"Removed force powers from %s^7\n\"", ent->client->pers.netname) );
+		trap->SendServerCommand( ent->s.number, "cp \"^7Your Force powers have been taken away\n\"" );
+	}
+	else if (ent->client->pers.player_statuses & (1 << PLAYER_STATUS_ADM_GIVE_GUNS))
+	{ // zyk: remove guns
+		rp_give_reset_active(ent);
+		zyk_remove_guns(ent);
+
+		ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_ADM_GIVE_GUNS);
+		trap->SendServerCommand( -1, va("print \"Removed guns from %s^7\n\"", ent->client->pers.netname) );
+		trap->SendServerCommand( ent->s.number, "cp \"^7Your weapons have been taken away\n\"" );
+	}
+}
+
 void Cmd_Give_f( gentity_t *ent )
 {
 	char arg1[MAX_TOKEN_CHARS] = {0};
@@ -1461,22 +1490,17 @@ void Cmd_Give_f( gentity_t *ent )
 	}
 
 	// DAJ_RP: [Admin] every toggle below, on or off, first ends whatever the target has running (see
-	// rp_give_reset_active() above). The target alone is also told on screen what happened; the
-	// console line to everybody stays as it was.
+	// rp_give_reset_active() above; the "off" toggles get it through rp_give_lift()). The target alone
+	// is also told on screen what happened; the console line to everybody stays as it was.
 	if (Q_stricmp(arg2, "force") == 0)
 	{
-		rp_give_reset_active(&g_entities[client_id]);
-
 		if (g_entities[client_id].client->pers.player_statuses & (1 << PLAYER_STATUS_ADM_GIVE_FORCE))
 		{ // zyk: remove force powers
-			zyk_remove_force_powers(&g_entities[client_id]);
-
-			g_entities[client_id].client->pers.player_statuses &= ~(1 << PLAYER_STATUS_ADM_GIVE_FORCE);
-			trap->SendServerCommand( -1, va("print \"Removed force powers from %s^7\n\"", g_entities[client_id].client->pers.netname) );
-			trap->SendServerCommand( client_id, "cp \"^7Your Force powers have been taken away\n\"" );
+			rp_give_lift(&g_entities[client_id]);
 		}
 		else
 		{ // zyk: add force powers
+			rp_give_reset_active(&g_entities[client_id]);
 			zyk_remove_guns(&g_entities[client_id]);
 			zyk_add_force_powers(&g_entities[client_id]);
 
@@ -1488,18 +1512,13 @@ void Cmd_Give_f( gentity_t *ent )
 	}
 	else if (Q_stricmp(arg2, "guns") == 0)
 	{
-		rp_give_reset_active(&g_entities[client_id]);
-
 		if (g_entities[client_id].client->pers.player_statuses & (1 << PLAYER_STATUS_ADM_GIVE_GUNS))
 		{ // zyk: remove guns
-			zyk_remove_guns(&g_entities[client_id]);
-
-			g_entities[client_id].client->pers.player_statuses &= ~(1 << PLAYER_STATUS_ADM_GIVE_GUNS);
-			trap->SendServerCommand( -1, va("print \"Removed guns from %s^7\n\"", g_entities[client_id].client->pers.netname) );
-			trap->SendServerCommand( client_id, "cp \"^7Your weapons have been taken away\n\"" );
+			rp_give_lift(&g_entities[client_id]);
 		}
 		else
 		{ // zyk: add guns
+			rp_give_reset_active(&g_entities[client_id]);
 			zyk_remove_force_powers(&g_entities[client_id]);
 			zyk_add_guns(&g_entities[client_id]);
 
@@ -23242,6 +23261,11 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 				level.duel_tournament_timer = level.time + rp_duel_tournament_time_to_start.integer;
 			}
 
+			// DAJ_RP: [Admin] whatever an admin gave him with /give goes now, on signing up: he duels as a
+			// plain logged-out player, his own force profile and nothing more (rp_give_lift()). After every
+			// refusal above, so a refused sign-up keeps it.
+			rp_give_lift(ent);
+
 			level.duel_tournament_mode = 1;
 			level.duel_players[ent->s.number] = 0;
 			level.duel_players_hp[ent->s.number] = 0;
@@ -23902,6 +23926,10 @@ void Cmd_MeleeMode_f(gentity_t *ent) {
 		{
 			level.melee_mode_timer = level.time + 12000;
 		}
+
+		// DAJ_RP: [Admin] whatever an admin gave him with /give goes now, on signing up: he fights as a
+		// plain logged-out player (rp_give_lift()). After every refusal above, so a refused sign-up keeps it.
+		rp_give_lift(ent);
 
 		level.melee_players[ent->s.number] = 0;
 		level.melee_mode = 1;
