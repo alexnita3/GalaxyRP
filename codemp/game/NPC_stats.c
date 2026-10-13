@@ -248,7 +248,9 @@ extern qboolean BG_ParseLiteral( const char **data, const char *string );
 //
 // NPC parameters file : scripts/NPCs.cfg
 //
-#define MAX_NPC_DATA_SIZE 0x80000 // zyk: changed from 0x40000 to 0x80000
+// DAJ_RP: 0x80000 -> 0x160000 (as JoF_EJK). The combined, whitespace-stripped text of every ext_data/NPCs/*.npc
+// has to fit, or the map ends with "NPC extensions (*.npc) are too large"; 512 KB is tight for many NPC packs.
+#define MAX_NPC_DATA_SIZE 0x160000 // zyk: changed from 0x40000 to 0x80000
 char	NPCParms[MAX_NPC_DATA_SIZE];
 
 /*

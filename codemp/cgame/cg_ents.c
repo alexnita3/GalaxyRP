@@ -1173,6 +1173,7 @@ static void CG_General( centity_t *cent ) {
 			char *limbTagName;
 			char *stubTagName;
 			int newBolt;
+			int pivotBolt;
 			int limbBit = (1 << (cent->currentState.modelGhoul2-10));
 
 			if (clEnt && (clEnt->torsoBolt & limbBit))
@@ -1338,7 +1339,15 @@ static void CG_General( centity_t *cent ) {
 
 			trap->G2API_SetRootSurface(cent->ghoul2, 0, limbName);
 
-			trap->G2API_SetNewOrigin(cent->ghoul2, trap->G2API_AddBolt(cent->ghoul2, 0, rotateBone));
+			// DAJ_RP fix: a model with its own skeleton (not _humanoid.gla) may lack the limb's pivot bone. The
+			// engine ERR_DROPs on SetNewOrigin(-1) ("Bad boltindex"), dropping every client that draws the limb.
+			// Without the bone the limb keeps the model's own origin: the server placed it at the body's origin
+			// in that case too (G_GetDismemberBolt, g_combat.c), so it is drawn where it was cut from.
+			pivotBolt = trap->G2API_AddBolt(cent->ghoul2, 0, rotateBone);
+			if (pivotBolt != -1)
+			{
+				trap->G2API_SetNewOrigin(cent->ghoul2, pivotBolt);
+			}
 
 			trap->G2API_SetSurfaceOnOff(cent->ghoul2, limbCapName, 0);
 
