@@ -7505,6 +7505,139 @@ void melee_battle_end()
 }
 
 // zyk: prepares players to fight in Melee Battle
+/*
+DAJ_RP: [Melee Battle] the ring: where its top is, who is off it, and who is lifted out of it.
+
+The ring is the catwalk Cmd_MeleeMode_f() spawns at level.melee_mode_origin -- the origin of the admin who
+typed /meleearena, 24 units over the floor he stood on. Its solid box runs from that origin up to
+RP_MELEE_RING_TOP (g_local.h), the drawn floor grating, 46 units over that floor.
+
+RP_MeleeRingTop() reads the top off the live ring, so nothing else repeats the height; with the ring gone
+(an admin removed it -- G_FreeEntity() in g_utils.c resets melee_model_id), from the stored origin.
+*/
+float RP_MeleeRingTop( void )
+{
+	if (level.melee_model_id > 0 && level.melee_model_id < ENTITYNUM_WORLD)
+	{
+		gentity_t *ring = &g_entities[level.melee_model_id];
+
+		if (ring->inuse)
+		{
+			return ring->r.currentOrigin[2] + ring->r.maxs[2];
+		}
+	}
+
+	return level.melee_mode_origin[2] + RP_MELEE_RING_TOP;
+}
+
+/*
+DAJ_RP: [Melee Battle] whether a combatant is out: downed, fallen off, or too far away.
+
+Fallen off is "origin below the ring's top", i.e. feet more than 24 units under its surface -- which standing
+or jumping on it never comes near, and standing on the floor below (origin about 46 under the top) always is.
+It was "origin below melee_mode_origin", the origin of someone standing on that same floor: a fallen combatant
+was level with the line, not below it, and whether he was out came down to rounding -- an arena loaded from its
+file keeps the height cut to a whole number, so on a floor over zero height he stood just above the line and
+fought on from the ground until he wandered 1000 units off.
+
+The other two as before. A downed combatant is treated as one who fell: with death forced
+(zyk_minigame_forces_death) nobody can be knocked down here, and melee_battle_prepare() drops anyone who
+arrived downed, so only an admin /paralyze reaches it -- which would otherwise leave a body on the catwalk
+that no punch can remove and no timer releases.
+*/
+qboolean RP_MeleeOffRing( gentity_t *ent )
+{
+	if (G_PlayerIsDowned(ent))
+	{
+		return qtrue;
+	}
+
+	if (ent->client->ps.origin[2] < RP_MeleeRingTop())
+	{ // zyk: validating if player fell of the catwalk
+		return qtrue;
+	}
+
+	if (Distance(ent->client->ps.origin, level.melee_mode_origin) > 1000.0)
+	{ // zyk: validating if player is too far from the platform
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
+/*
+DAJ_RP: [Melee Battle] anyone standing where the ring appears is lifted onto it.
+
+The ring is spawned at the first sign-up, around whoever stands there -- the admin who set it up, as often as
+not. A solid box spawned around a player traps him: every move he makes starts inside it, so he never finds
+the ground, cannot jump and cannot fall. Each live player or NPC (vehicles too) whose box overlaps the ring's
+goes straight up, where he is, until his feet are 1 unit over its top; his own mins, so a taller or shorter
+NPC lands right. No kill box and no teleport effect: he simply stands on the ring and can jump down.
+
+Left alone: spectators and anyone following somebody, the dead, and a vehicle's riders (the vehicle carries
+them).
+*/
+void RP_MeleeLiftOffRing( gentity_t *ring )
+{
+	int touch[MAX_GENTITIES];
+	vec3_t lo, hi;
+	float top;
+	int num, i, k;
+
+	if (!ring || !ring->inuse)
+	{
+		return;
+	}
+
+	VectorAdd(ring->r.currentOrigin, ring->r.mins, lo);
+	VectorAdd(ring->r.currentOrigin, ring->r.maxs, hi);
+	top = hi[2];
+
+	num = trap->EntitiesInBox(lo, hi, touch, MAX_GENTITIES);
+
+	for (i = 0; i < num; i++)
+	{
+		gentity_t *other = &g_entities[touch[i]];
+		float *org;
+		qboolean inside = qtrue;
+
+		if (other == ring || !other->inuse || !other->client || other->health <= 0)
+			continue;
+
+		if (other->s.eType != ET_PLAYER && other->s.eType != ET_NPC)
+			continue;
+
+		if (other->client->sess.sessionTeam == TEAM_SPECTATOR || (other->client->ps.pm_flags & PMF_FOLLOW))
+			continue;
+
+		if (RP_IsVehicleRider(other))
+			continue;
+
+		// the engine's list is padded by a unit; only a box that really overlaps the ring's is inside it
+		org = other->client->ps.origin;
+		for (k = 0; k < 3; k++)
+		{
+			if (org[k] + other->r.mins[k] >= hi[k] || org[k] + other->r.maxs[k] <= lo[k])
+			{
+				inside = qfalse;
+				break;
+			}
+		}
+
+		if (!inside)
+			continue;
+
+		org[2] = top - other->r.mins[2] + 1;
+		if (other->client->ps.velocity[2] < 0)
+		{
+			other->client->ps.velocity[2] = 0;
+		}
+		VectorCopy(org, other->r.currentOrigin);
+		VectorCopy(org, other->s.pos.trBase);
+		trap->LinkEntity((sharedEntity_t *)other);
+	}
+}
+
 void melee_battle_prepare()
 {
 	int i = 0;
@@ -7640,7 +7773,10 @@ void melee_battle_prepare()
 			// DAJ_RP: [Melee Battle] done above now, with every other running power
 			// (zyk_stop_active_force_powers()).
 
-			VectorSet(origin, level.melee_mode_origin[0] - 120 + ((i % 6) * 45), level.melee_mode_origin[1] - 120 + ((i/6) * 45), level.melee_mode_origin[2] + 50);
+			// DAJ_RP: [Melee Battle] onto the ring's top: the feet 24 under the origin, and zyk_TeleportPlayer()
+			// adds 1, so they start 1 unit over the surface. It was the stored origin + 50, which put the feet
+			// 5 units inside the old box's top -- every combatant arrived stuck in the platform.
+			VectorSet(origin, level.melee_mode_origin[0] - 120 + ((i % 6) * 45), level.melee_mode_origin[1] - 120 + ((i/6) * 45), RP_MeleeRingTop() - DEFAULT_MINS_2);
 
 			zyk_TeleportPlayer(ent, origin, ent->client->ps.viewangles);
 		}
@@ -8895,24 +9031,12 @@ void G_RunFrame( int levelTime ) {
 			if (level.melee_mode == 2 && level.melee_players[ent->s.number] != -1)
 			{ // zyk: Melee Battle
 				// GalaxyRP fix: [Death System] a downed combatant inside the arena is treated as
-				// one who fell off it. With death forced (zyk_minigame_forces_death, above) nobody
-				// can be knocked down here any more, and melee_battle_prepare() drops anyone who
-				// arrived downed, so the only way to reach this is an admin /paralyze on a live
-				// combatant -- which would otherwise leave a body on the catwalk that no punch can
-				// remove and no timer releases, holding melee_mode_quantity above 1 until the
-				// ten-minute timeout. player_die() clears the downed state on its way through.
-				if (G_PlayerIsDowned(ent))
+				// one who fell off it, holding melee_mode_quantity above 1 until the ten-minute
+				// timeout otherwise. player_die() clears the downed state on its way through.
+				// DAJ_RP: [Melee Battle] downed, fallen off or too far away: RP_MeleeOffRing() above,
+				// which now measures "fallen off" against the ring's top.
+				if (RP_MeleeOffRing(ent))
 				{
-					ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
-					player_die(ent, ent, ent, 100000, MOD_SUICIDE);
-				}
-				else if (ent->client->ps.origin[2] < level.melee_mode_origin[2])
-				{ // zyk: validating if player fell of the catwalk
-					ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
-					player_die(ent, ent, ent, 100000, MOD_SUICIDE);
-				}
-				else if (Distance(ent->client->ps.origin, level.melee_mode_origin) > 1000.0)
-				{ // zyk: validating if player is too far from the platform
 					ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
 					player_die(ent, ent, ent, 100000, MOD_SUICIDE);
 				}

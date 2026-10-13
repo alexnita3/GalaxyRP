@@ -3191,6 +3191,14 @@ void RP_StartOverlapRelease( gentity_t *ent );
 // -- g_utils.c; and a teleported vehicle's riders seated with it at once -- g_misc.c
 int RP_VehicleOf( const gentity_t *ent );
 qboolean RP_IsVehicleRider( const gentity_t *ent );
+
+// DAJ_RP: [Melee Battle] the ring (the catwalk Cmd_MeleeMode_f() spawns at level.melee_mode_origin). Its solid box is
+// z 0 to RP_MELEE_RING_TOP over that origin, matching the drawn model: catw2_b.md3 at 400% has its bottom at the origin
+// and its floor grating at 5.4 * 4 = 21.6 (the outer rim, at 32, is drawn only). See g_main.c.
+#define RP_MELEE_RING_TOP		22
+float RP_MeleeRingTop( void );
+qboolean RP_MeleeOffRing( gentity_t *ent );
+void RP_MeleeLiftOffRing( gentity_t *ring );
 void RP_CarryRiders( gentity_t *veh, vec3_t angles );
 // DAJ_RP: [Cloak Item] a vehicle's droid unit, while aboard, and its cloak kept with the vehicle's -- NPC_AI_Jedi.c
 gentity_t *RP_VehicleDroid( gentity_t *veh );

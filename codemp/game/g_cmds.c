@@ -23909,12 +23909,23 @@ void Cmd_MeleeMode_f(gentity_t *ent) {
 			zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
 			zyk_set_entity_field(new_ent, "targetname", "zyk_melee_catwalk");
 			zyk_set_entity_field(new_ent, "zykmodelscale", "400");
-			zyk_set_entity_field(new_ent, "mins", "-256 -256 -32");
-			zyk_set_entity_field(new_ent, "maxs", "256 256 32");
+			// DAJ_RP: [Melee Battle] the solid box is the drawn ring: from its bottom at the origin up to its
+			// floor grating (RP_MELEE_RING_TOP, g_local.h). It was -32 to 32 -- a top 10 units over the
+			// grating, so everyone stood in the air, and an invisible slab under the ring that reached
+			// below the floor where /meleearena was set, trapping whoever stood there.
+			zyk_set_entity_field(new_ent, "mins", "-256 -256 0");
+			zyk_set_entity_field(new_ent, "maxs", va("256 256 %d", RP_MELEE_RING_TOP));
 
 			zyk_spawn_entity(new_ent);
 
 			level.melee_model_id = new_ent->s.number;
+
+			// DAJ_RP: [Melee Battle] anyone the ring has just appeared around is lifted onto it, rather than
+			// left stuck inside it (RP_MeleeLiftOffRing(), g_main.c)
+			if (new_ent->inuse)
+			{
+				RP_MeleeLiftOffRing(new_ent);
+			}
 		}
 
 		// GalaxyRP fix: [Melee Battle] only start the countdown, never restart it. This was
