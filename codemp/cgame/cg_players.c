@@ -9822,8 +9822,8 @@ Holstered sabers
 
 DAJ_RP: [Holstered Sabers] a player or NPC that carries a saber (EF2_RP_SABER_CARRIED, set by the server --
 see bg_public.h) and has another weapon out wears its hilt on the right thigh, a second saber of a pair on
-the left one, a staff on the right -- a lightsaber only: swords, vibroblades and props are not drawn
-(CG_RpSaberHolsterable). Placement as in JoF_EJK (CG_DrawHolsteredSaber): each hilt at the
+the left one, a staff on the right -- a lightsaber only: swords, vibroblades, electrostaffs and props are
+not drawn (CG_RpSaberHolsterable). Placement as in JoF_EJK (CG_DrawHolsteredSaber): each hilt at the
 model's rfemurX / lfemurX bone, 3.5 units out along the bone's X axis (scaled with the model), the hilt
 turned to hang down the thigh. Unlike JoF's:
   - the bone matrix is taken where the body is drawn -- legs.origin and rootAngles, as the blades in the
@@ -9916,6 +9916,12 @@ or sits in the wrong place. noDlight (exotic blades too) and notInMP (whether MP
 nothing about the item, so they do not count; nor can saberType: the MP saberTable (bg_saberLoad.c, as
 stock) has no SABER_SITH_SWORD, so such a saber is parsed as SABER_SINGLE. Each saber of a pair is judged
 on its own.
+An item with a blade of its own -- an electrostaff, whose six short "blades" only glow along the staff --
+is told by its swing trail instead (trailStyle, the first blade style's: "0 is normal, 1 is a motion blur
+and 2 is no trail at all (good for real-sword type mods)"): a lightsaber keeps the glowing trail, 1 and 2
+are the swords' (CG_AddSaberBlade draws the glowing trail for anything not 1 and not above 1). trailStyle2
+does not count: a lightsaber may give the short blades of its second style no trail (Darth Nihl's saber).
+Nor do noManualDeactivate (lightsabers too) or numBlades (crossguard lightsabers have 3 or 6).
 ===============
 */
 qboolean CG_RpSaberHolsterable( const saberInfo_t *saber )
@@ -9930,6 +9936,10 @@ qboolean CG_RpSaberHolsterable( const saberInfo_t *saber )
 	}
 	if ( saber->saberFlags2 & SFL2_NO_BLADE )
 	{
+		return qfalse;
+	}
+	if ( saber->trailStyle > 0 )
+	{//a sword's trail (motion blur, or none)
 		return qfalse;
 	}
 	return qtrue;
