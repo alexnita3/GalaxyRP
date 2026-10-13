@@ -9886,7 +9886,12 @@ void CG_Player( centity_t *cent ) {
 	if (cent->currentState.iModelScale)
 	{ //if the server says we have a custom scale then set it now.
 		cent->modelScale[0] = cent->modelScale[1] = cent->modelScale[2] = cent->currentState.iModelScale/100.0f;
-		if ( cent->currentState.NPC_class != CLASS_VEHICLE )
+		// DAJ_RP: [Scale] the lift keeps a scaled player's feet on the floor (they are 24 under the origin, and the
+		// model scales round it) -- but not a rider's: his origin is the vehicle's "*driver" bolt, where the sitting
+		// pose has his crotch, so scaling round it keeps him on the seat by itself. The lift put a rider of size 50
+		// 12 units under his seat, one of size 200 24 over it. A rider is anyone riding a vehicle who is not one --
+		// players and NPCs alike, as the "riding a vehicle" test further down.
+		if ( cent->currentState.NPC_class != CLASS_VEHICLE && !cent->currentState.m_iVehicleNum )
 		{
 			if (cent->modelScale[2] && cent->modelScale[2] != 1.0f)
 			{

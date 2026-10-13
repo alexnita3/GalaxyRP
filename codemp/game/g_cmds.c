@@ -1582,79 +1582,140 @@ void display_scale_help(gentity_t *ent) {
 }
 
 extern void update_current_character_scale(gentity_t* ent, sqlite3* db);
+
+// DAJ_RP: [Scale] the sizes /scale takes, and its usage line
+#define RP_SCALE_MIN	20
+#define RP_SCALE_MAX	500
+#define RP_SCALE_USAGE	"Usage: ^3/scale <size>^7 to scale yourself, ^3/scale <player name or ID> <size>^7 to scale another player, or ^3/scale help^7. Size 20 to 500, 100 is normal.\n"
+
+// DAJ_RP: [Scale] the size a player is now: their saved scale while scaled (PLAYER_STATUS_SCALED), else the normal 100
+// -- the same test ClientSpawn() makes to put the scale back on after a respawn
+static int RP_PlayerScale( const gentity_t *ent )
+{
+	if ( ent->client->pers.player_statuses & (1 << PLAYER_STATUS_SCALED) )
+		return ent->client->pers.player_scale;
+	return 100;
+}
+
+// DAJ_RP: [Scale] a size argument: a whole number from RP_SCALE_MIN to RP_SCALE_MAX, digits only (atoi() used to take
+// "80abc" as 80 and "abc" as 0), or 0 when it is not one
+static int RP_ScaleArg( const char *arg )
+{
+	int i, value = 0;
+
+	if ( !arg[0] || strlen( arg ) > 3 )
+		return 0;
+	for ( i = 0; arg[i]; i++ )
+	{
+		if ( arg[i] < '0' || arg[i] > '9' )
+			return 0;
+		value = value * 10 + ( arg[i] - '0' );
+	}
+	if ( value < RP_SCALE_MIN || value > RP_SCALE_MAX )
+		return 0;
+	return value;
+}
+
+/*
+==================
+Cmd_Scale_f
+
+DAJ_RP: [Scale] by the number of arguments, as /teleport goes:
+  /scale                          your size now, and the usage
+  /scale help                     the size table
+  /scale <size>                   scales yourself
+  /scale <player> <size>          scales that player: yourself without an admin flag, anyone else with ADM_SCALE (and
+                                  Admin Protect respected)
+One argument is always a size (or help), never a player: /scale 25 is size 25. Logged-in players only (CMD_LOGGEDIN in
+the command table). Scaling yourself is told to you alone; scaling another player is announced to everyone, as it was.
+It used to take only /scale help or /scale <player> <size> -- a player scaling himself had to name himself -- and its
+usage line said the size was optional, which it never was.
+==================
+*/
 void Cmd_Scale_f( gentity_t *ent ) {
 	char arg1[MAX_TOKEN_CHARS] = {0};
 	char arg2[MAX_TOKEN_CHARS] = {0};
-	int client_id = -1;
+	gentity_t *target = ent;
+	int argc = trap->Argc();
 	int new_size = 0;
 
 	// GalaxyRP fix: [Admin] a zyk_allow_adm_in_other_gametypes gate used to sit here, refusing this
 	// command outside FFA when the cvar was 0. The cvar defaulted to 1 and was never set in any
 	// shipped config, so the gate never fired; it has been removed along with the cvar itself.
 
-	if (trap->Argc() == 2) {
-		trap->Argv(1, arg1, sizeof(arg1));
-
-		if (strcmp(arg1, "help") == 0) {
-			display_scale_help(ent);
-			return;
-		}
-		else {
-			trap->SendServerCommand(ent - g_entities, "print \"Usage: /scale <playername/help> <size between 20 and 500 (optional, default is 100)>.\n\"");
-			return;
-		}
-
+	if ( argc == 1 )
+	{
+		trap->SendServerCommand( ent - g_entities, va( "print \"Your size is ^3%d^7. \"", RP_PlayerScale( ent ) ) );
+		trap->SendServerCommand( ent - g_entities, "print \"" RP_SCALE_USAGE "\"" );
+		return;
 	}
 
-	if (trap->Argc() != 3)
+	if ( argc > 3 )
 	{
-		trap->SendServerCommand(ent - g_entities, "print \"Usage: /scale <playername/help> <size between 20 and 500 (optional, default is 100)>.\n\"");
+		trap->SendServerCommand( ent - g_entities, "print \"" RP_SCALE_USAGE "\"" );
 		return;
 	}
 
 	trap->Argv( 1, arg1, sizeof( arg1 ) );
-	trap->Argv( 2, arg2, sizeof( arg2 ) );
 
-	client_id = ClientNumberFromString( ent, arg1, qfalse );
-
-	if (client_id == -1)
+	if ( argc == 2 )
 	{
-		return;
-	}
-
-	//only ask for admin permissions when scaling someone else
-	if (g_entities[client_id].client->pers.netname != ent->client->pers.netname) {
-
-		if (!check_admin_command(ent, ADM_SCALE, qtrue))
+		if ( Q_stricmp( arg1, "help" ) == 0 )
 		{
+			display_scale_help( ent );
+			return;
+		}
+
+		new_size = RP_ScaleArg( arg1 );
+		if ( !new_size )
+		{
+			trap->SendServerCommand( ent - g_entities, "print \"Size must be a number between 20 and 500. To scale another player: ^3/scale <player name or ID> <size>^7.\n\"" );
+			return;
+		}
+	}
+	else
+	{
+		int client_id;
+
+		trap->Argv( 2, arg2, sizeof( arg2 ) );
+
+		client_id = ClientNumberFromString( ent, arg1, qfalse );
+		if ( client_id == -1 )
+		{
+			return;
+		}
+		target = &g_entities[client_id];
+
+		// only ask for admin permissions when scaling someone else
+		if ( target != ent && !check_admin_command( ent, ADM_SCALE, qtrue ) )
+		{
+			return;
+		}
+
+		new_size = RP_ScaleArg( arg2 );
+		if ( !new_size )
+		{
+			trap->SendServerCommand( ent - g_entities, "print \"Size must be a number between 20 and 500.\n\"" );
+			return;
+		}
+
+		// GalaxyRP fix: [Quests] a "Cannot scale players in quests." refusal sat here, gated on
+		// can_play_quest == 1. The only value ever assigned to can_play_quest anywhere in the tree was 0
+		// (a reset in initialize_rpg_skills, itself removed in this pass), so the refusal never fired; the
+		// field is gone from clientPersistant_t now.
+
+		// GalaxyRP fix: [Guardian] a guardian_mode>0 guard blocking scaling players in boss battles used to
+		// be here. guardian_mode is permanently 0 now, so it was unreachable.
+
+		if ( target != ent && target->client->sess.amrpgmode > 0 &&
+			target->client->pers.bitvalue & (1 << ADM_ADMPROTECT) && !(target->client->pers.player_settings & (1 << 13)) )
+		{
+			trap->SendServerCommand( ent-g_entities, va("print \"Target player is adminprotected\n\"") );
 			return;
 		}
 	}
 
-	new_size = atoi(arg2);
-
-	if (new_size < 20 || new_size > 500)
-	{
-		trap->SendServerCommand( ent-g_entities, "print \"Size must be between 20 and 500.\n\"" );
-		return;
-	}
-
-	// GalaxyRP fix: [Quests] a "Cannot scale players in quests." refusal sat here, gated on
-	// can_play_quest == 1. The only value ever assigned to can_play_quest anywhere in the tree was 0
-	// (a reset in initialize_rpg_skills, itself removed in this pass), so the refusal never fired; the
-	// field is gone from clientPersistant_t now.
-
-	// GalaxyRP fix: [Guardian] a guardian_mode>0 guard blocking scaling players in boss battles used to
-	// be here. guardian_mode is permanently 0 now, so it was unreachable.
-
-	if (ent != &g_entities[client_id] && g_entities[client_id].client->sess.amrpgmode > 0 &&
-		g_entities[client_id].client->pers.bitvalue & (1 << ADM_ADMPROTECT) && !(g_entities[client_id].client->pers.player_settings & (1 << 13)))
-	{
-		trap->SendServerCommand( ent-g_entities, va("print \"Target player is adminprotected\n\"") );
-		return;
-	}
-
-	do_scale(&g_entities[client_id], new_size);
+	do_scale( target, new_size );
 
 	// GalaxyRP fix: [Database] this used to save with `ent` (the admin issuing the command) instead of
 	// the actual target -- so scaling someone else applied the new size live but persisted the admin's
@@ -1663,7 +1724,9 @@ void Cmd_Scale_f( gentity_t *ent ) {
 	// saved (100 by default), even though they still looked correctly resized until then. Save to the
 	// real target instead, and only when they're logged in -- a connected-but-not-logged-in target has
 	// no character row to save to (CharID 0, same reasoning as the /giveitem login check).
-	if (g_entities[client_id].client->sess.loggedin == qtrue)
+	// DAJ_RP: [Scale] a database that cannot be opened is logged and the scale still announced: it is applied already
+	// (do_scale() above), and returning here used to leave the player without a word.
+	if ( target->client->sess.loggedin == qtrue )
 	{
 		sqlite3* db;
 		int rc;
@@ -1672,16 +1735,22 @@ void Cmd_Scale_f( gentity_t *ent ) {
 		if (rc != SQLITE_OK)
 		{
 			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-			sqlite3_close(db);
-			return;
 		}
-
-		update_current_character_scale(&g_entities[client_id], db);
-
+		else
+		{
+			update_current_character_scale( target, db );
+		}
 		sqlite3_close(db);
 	}
 
-	trap->SendServerCommand( -1, va("print \"Scaled player %s ^7to ^3%d^7\n\"", g_entities[client_id].client->pers.netname, new_size) );
+	if ( target == ent )
+	{
+		trap->SendServerCommand( ent - g_entities, va( "print \"You are now size ^3%d^7.\n\"", new_size ) );
+	}
+	else
+	{
+		trap->SendServerCommand( -1, va( "print \"Scaled player %s ^7to ^3%d^7\n\"", target->client->pers.netname, new_size ) );
+	}
 }
 
 /*
@@ -12895,7 +12964,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 ^3/sabercolor <1|2> <r g b>/<color name>: ^7Sets the RGB or a preset color of saber 1 or 2. Run with no arguments to see current colors.\n\
 ^3/saberblade <1|2> <type>: ^7Sets the RGB blade style (classic/flame1/electric1/flame2/electric2) of saber 1 or 2.\n\
 ^3/updatesaber: ^7Applies your saber menu pick instantly, no respawn needed.\n\
-^3/scale <player name (optional)/help> <size>: ^7Scales character model (default is 100). ^3Help ^7lists in-game values compared to real life measurements. ^1(Only admins can scale other players)\n\"");
+^3/scale <size> ^7or ^3/scale <player name or ID> <size>: ^7Scales your character model, 20 to 500 (default 100). ^3/scale help ^7lists sizes next to real-life heights. ^1Scaling other players needs the Scale admin flag.\n\"");
 				// GalaxyRP fix: [Death System] split here for the same reason the Misc section above is
 				// split twice: saying what /getup and /helpup actually do -- neither ends an admin
 				// paralysis, only a combat knockdown -- took this block past SV_SendServerCommand's hard
@@ -19114,7 +19183,7 @@ void Cmd_AdminList_f( gentity_t *ent ) {
 		}
 		else if (command_number == ADM_SCALE)
 		{
-			trap->SendServerCommand( ent-g_entities, "print \"\nUse ^3/scale <player name or ID> <size between 20 and 500> ^7to change the player model size\n\n\"" );
+			trap->SendServerCommand( ent-g_entities, "print \"\nThis flag enables scaling other players. Use ^3/scale <player name or ID> <size between 20 and 500> ^7to change another player's model size.\n\n\"" );
 		}
 		else if (command_number == ADM_PLAYERS)
 		{
