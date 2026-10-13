@@ -2096,9 +2096,10 @@ Ghoul2 Insert Start
 	// DAJ_RP: [Still Weapons] a placed weapon pickup the server marks (EF_RP_STILL_ITEM, RP_ItemSetStill() in g_items.c)
 	// is drawn as single player draws it: no hologram pad or cone, not raised, bobbing or spinning, at normal size, at
 	// the angles in s.apos (the map's, tilted up for VERTICAL), lifted RP_STILL_ITEM_LIFT off its origin as single
-	// player's item bounds lift it (a saber more). It keeps what every pickup has here: the minimum light, the ghost
-	// while it is taken, the fade-in when it comes back, and the cg_simpleItems icon. Weapons only; a gun rack's carries
-	// EF_DROPPEDWEAPON too, and hangs where the rack puts it, without the lift.
+	// player's item bounds lift it (a saber more). It keeps what every pickup has here: the minimum light, the fade-in
+	// when it comes back, and the cg_simpleItems icon. While it is taken the server does not send it at all, as with
+	// ammo (Touch_Item()), so it leaves no ghost. Weapons only; a gun rack's carries EF_DROPPEDWEAPON too, and hangs
+	// where the rack puts it, without the lift.
 	still = ( item->giType == IT_WEAPON && ( es->eFlags & EF_RP_STILL_ITEM ) ) ? qtrue : qfalse;
 
 	if ((item->giType == IT_WEAPON || item->giType == IT_POWERUP) &&

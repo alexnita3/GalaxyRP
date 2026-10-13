@@ -3472,7 +3472,11 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	// picked up items still stay around, they just don't
 	// draw anything.  This allows respawnable items
 	// to be placed on movers.
-	if (!(ent->flags & FL_DROPPED_ITEM) && (ent->item->giType==IT_WEAPON || ent->item->giType==IT_POWERUP))
+	// DAJ_RP: [Still Weapons] a still weapon (EF_RP_STILL_ITEM, RP_ItemSetStill()) leaves no ghost: it is hidden and
+	// not sent while it waits, as ammo, health and shields are, and RespawnItem() brings it back. A HOLOGRAM weapon
+	// (4096) and the powerups keep the see-through placeholder on their pad.
+	if (!(ent->flags & FL_DROPPED_ITEM) &&
+		((ent->item->giType == IT_WEAPON && !(ent->s.eFlags & EF_RP_STILL_ITEM)) || ent->item->giType == IT_POWERUP))
 	{
 		ent->s.eFlags |= EF_ITEMPLACEHOLDER;
 		ent->s.eFlags &= ~EF_NODRAW;
