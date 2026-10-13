@@ -142,7 +142,7 @@ typedef struct playerInfo_s {
 #define MAX_MODS				64
 #define MAX_DEMOS				2048 // 256
 #define MAX_MOVIES				2048 // 256
-#define MAX_Q3PLAYERMODELS		2048 //256
+#define MAX_Q3PLAYERMODELS		4096 // DAJ_RP: was 2048 (stock 256) -- the GalaxyRP menu's model list (FEEDER_Q3HEADS)
 
 #define DEMO_DIRECTORY "demos"
 #define DEMO_EXTENSION "dm_"

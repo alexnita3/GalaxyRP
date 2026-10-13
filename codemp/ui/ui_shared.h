@@ -210,7 +210,7 @@ typedef struct editFieldDef_s {
 	int paintOffset;		//
 } editFieldDef_t;
 
-#define MAX_MULTI_CVARS 64//32
+#define MAX_MULTI_CVARS 256 // DAJ_RP: was 64 (stock 32), as JoF_EJK -- entries in one cvarStrList/cvarFloatList
 
 typedef struct multiDef_s {
 	const char *cvarList[MAX_MULTI_CVARS];

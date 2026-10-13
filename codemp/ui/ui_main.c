@@ -9812,6 +9812,54 @@ static qboolean bIsImageFile(const char* dirptr, const char* skinname)
 
 /*
 =================
+UI_FileListUsed
+
+DAJ_RP: the bytes the first <count> names of an FS_GetFileList buffer occupy, NUL separators
+included -- what BG_FileListMayBeTruncated() compares with the buffer size.
+=================
+*/
+static int UI_FileListUsed( const char *list, int count )
+{
+	int used = 0;
+
+	while ( count-- > 0 )
+	{
+		used += strlen( list + used ) + 1;
+	}
+	return used;
+}
+
+/*
+=================
+UI_AllocModelDirList
+
+DAJ_RP: the models/players folder list for UI_BuildQ3Model_List() and UI_BuildPlayerModel_List().
+FS_GetFileList() stops listing silently when its buffer is full; the stock 2048 (Q3 heads) and
+16384 (species) bytes held only some 130 and 1000-1500 folder names, so players with many model
+packs lost models from the lists. UI_MODEL_DIRLIST_SIZE holds the engine's own cap of 4095 names
+at up to 32 characters each. Heap memory, freed by the caller; the stack buffer if malloc fails.
+=================
+*/
+#define UI_MODEL_DIRLIST_SIZE	(128 * 1024)
+#define UI_MODEL_SKINLIST_SIZE	8192	// DAJ_RP: was 2048 -- the .skin files of one model folder
+
+static char *UI_AllocModelDirList( char *stackBuf, int stackSize, int *size )
+{
+	char *list = (char *)malloc( UI_MODEL_DIRLIST_SIZE );
+
+	if ( !list )
+	{
+		Com_Printf( S_COLOR_YELLOW "WARNING: Failed to allocate %d bytes of memory for the player model "
+			"directory list. Using a stack buffer of %d bytes instead.\n", UI_MODEL_DIRLIST_SIZE, stackSize );
+		*size = stackSize;
+		return stackBuf;
+	}
+	*size = UI_MODEL_DIRLIST_SIZE;
+	return list;
+}
+
+/*
+=================
 PlayerModel_BuildList
 =================
 */
@@ -9819,9 +9867,12 @@ static void UI_BuildQ3Model_List( void )
 {
 	int		numdirs;
 	int		numfiles;
-	char	dirlist[2048];
-	char	filelist[2048];
+	char	stackDirList[8192];
+	char	*dirlist;
+	int		dirListSize;
+	char	filelist[UI_MODEL_SKINLIST_SIZE];
 	char	skinname[64];
+	char	headName[MAX_QPATH * 2];
 	char*	dirptr;
 	char*	fileptr;
 	char*	check;
@@ -9832,8 +9883,11 @@ static void UI_BuildQ3Model_List( void )
 
 	uiInfo.q3HeadCount = 0;
 
+	dirlist = UI_AllocModelDirList( stackDirList, sizeof( stackDirList ), &dirListSize );
+
 	// iterate directory of all player models
-	numdirs = trap->FS_GetFileList("models/players", "/", dirlist, 2048 );
+	numdirs = trap->FS_GetFileList("models/players", "/", dirlist, dirListSize );
+	BG_FileListMayBeTruncated( "models/players", "folder", numdirs, UI_FileListUsed( dirlist, numdirs ), dirListSize );
 	dirptr  = dirlist;
 	for (i=0; i<numdirs && uiInfo.q3HeadCount < MAX_Q3PLAYERMODELS; i++,dirptr+=dirlen+1)
 	{
@@ -9845,7 +9899,8 @@ static void UI_BuildQ3Model_List( void )
 			continue;
 
 
-		numfiles = trap->FS_GetFileList( va("models/players/%s",dirptr), "skin", filelist, 2048 );
+		numfiles = trap->FS_GetFileList( va("models/players/%s",dirptr), "skin", filelist, sizeof( filelist ) );
+		BG_FileListMayBeTruncated( va("models/players/%s",dirptr), ".skin", numfiles, UI_FileListUsed( filelist, numfiles ), sizeof( filelist ) );
 		fileptr  = filelist;
 		for (j=0; j<numfiles && uiInfo.q3HeadCount < MAX_Q3PLAYERMODELS;j++,fileptr+=filelen+1)
 		{
@@ -9895,9 +9950,13 @@ static void UI_BuildQ3Model_List( void )
 
 				s = 0;
 
+				// DAJ_RP: the name built once, not by va() on every comparison -- with the lists no
+				// longer cut short this loop runs millions of times on every UI start
+				Com_sprintf( headName, sizeof( headName ), "%s%s", dirptr, skinname );
+
 				while (s < uiInfo.q3HeadCount)
 				{ //check for dupes
-					if (!Q_stricmp(va("%s%s", dirptr, skinname), uiInfo.q3HeadNames[s]))
+					if (!Q_stricmp(headName, uiInfo.q3HeadNames[s]))
 					{
 						iconExists = qtrue;
 						break;
@@ -9910,18 +9969,22 @@ static void UI_BuildQ3Model_List( void )
 					continue;
 				}
 
-				Com_sprintf( uiInfo.q3HeadNames[uiInfo.q3HeadCount], sizeof(uiInfo.q3HeadNames[uiInfo.q3HeadCount]), va("%s%s", dirptr, skinname));
+				Com_sprintf( uiInfo.q3HeadNames[uiInfo.q3HeadCount], sizeof(uiInfo.q3HeadNames[uiInfo.q3HeadCount]), "%s", headName );
 				uiInfo.q3HeadIcons[uiInfo.q3HeadCount++] = 0;//trap->R_RegisterShaderNoMip(fpath);
 				//rww - we are now registering them as they are drawn like the TA feeder, so as to decrease UI load time.
 			}
 
 			if (uiInfo.q3HeadCount >= MAX_Q3PLAYERMODELS)
 			{
-				return;
+				break; // DAJ_RP: was return -- the outer loop stops on the same test, and dirlist is freed below
 			}
 		}
 	}
 
+	if ( dirlist != stackDirList )
+	{
+		free( dirlist );
+	}
 }
 
 void UI_SiegeInit(void)
@@ -10026,10 +10089,8 @@ UI_BuildPlayerModel_List
 */
 static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 {
-	static const size_t DIR_LIST_SIZE = 16384;
-
 	int		numdirs;
-	size_t	dirListSize = DIR_LIST_SIZE;
+	int		dirListSize;
 	char	stackDirList[8192];
 	char	*dirlist;
 	char*	dirptr;
@@ -10037,16 +10098,8 @@ static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 	int		i;
 	int		j;
 
-	dirlist = malloc(DIR_LIST_SIZE);
-	if ( !dirlist )
-	{
-		Com_Printf(S_COLOR_YELLOW "WARNING: Failed to allocate %u bytes of memory for player model "
-			"directory list. Using stack allocated buffer of %u bytes instead.",
-			DIR_LIST_SIZE, sizeof(stackDirList));
-
-		dirlist = stackDirList;
-		dirListSize = sizeof(stackDirList);
-	}
+	// DAJ_RP: 16384 -> UI_MODEL_DIRLIST_SIZE (see UI_AllocModelDirList)
+	dirlist = UI_AllocModelDirList( stackDirList, sizeof( stackDirList ), &dirListSize );
 
 	uiInfo.playerSpeciesCount = 0;
 	uiInfo.playerSpeciesIndex = 0;
@@ -10055,6 +10108,7 @@ static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 
 	// iterate directory of all player models
 	numdirs = trap->FS_GetFileList("models/players", "/", dirlist, dirListSize );
+	BG_FileListMayBeTruncated( "models/players", "folder", numdirs, UI_FileListUsed( dirlist, numdirs ), dirListSize );
 	dirptr  = dirlist;
 	for (i=0; i<numdirs; i++,dirptr+=dirlen+1)
 	{
@@ -10083,7 +10137,7 @@ static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 
 		if (f)
 		{
-			char	filelist[2048];
+			char	filelist[UI_MODEL_SKINLIST_SIZE];
 			playerSpeciesInfo_t *species;
 			char                 skinname[64];
 			int                  numfiles;
@@ -10128,6 +10182,7 @@ static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 			free(buffer);
 
 			numfiles = trap->FS_GetFileList( va("models/players/%s",dirptr), ".skin", filelist, sizeof(filelist) );
+			BG_FileListMayBeTruncated( va("models/players/%s",dirptr), ".skin", numfiles, UI_FileListUsed( filelist, numfiles ), sizeof( filelist ) );
 			fileptr  = filelist;
 			for (j=0; j<numfiles; j++,fileptr+=filelen+1)
 			{
