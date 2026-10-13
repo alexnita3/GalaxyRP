@@ -9822,7 +9822,8 @@ Holstered sabers
 
 DAJ_RP: [Holstered Sabers] a player or NPC that carries a saber (EF2_RP_SABER_CARRIED, set by the server --
 see bg_public.h) and has another weapon out wears its hilt on the right thigh, a second saber of a pair on
-the left one, a staff on the right. Placement as in JoF_EJK (CG_DrawHolsteredSaber): each hilt at the
+the left one, a staff on the right -- a lightsaber only: swords, vibroblades and props are not drawn
+(CG_RpSaberHolsterable). Placement as in JoF_EJK (CG_DrawHolsteredSaber): each hilt at the
 model's rfemurX / lfemurX bone, 3.5 units out along the bone's X axis (scaled with the model), the hilt
 turned to hang down the thigh. Unlike JoF's:
   - the bone matrix is taken where the body is drawn -- legs.origin and rootAngles, as the blades in the
@@ -9902,6 +9903,38 @@ void CG_RpFreeHiltGhoul2( void )
 	rpHiltModelsFullWarned = qfalse;
 }
 
+/*
+===============
+CG_RpSaberHolsterable
+
+DAJ_RP: [Holstered Sabers] whether this "saber" is a lightsaber, whose hilt is worn on the thigh. Everything
+else a .sab can be -- the claws, fists and shields worn on the wrist (SFL_BOLT_TO_WRIST), the swords,
+vibroblades, force pikes and props such as a datapad, comlink or holocomm (noBlade: "stops the saber from
+drawing a blade (good for real-sword type mods)", SFL2_NO_BLADE; every one of them sets it, no lightsaber
+does) -- is not drawn at all while its owner has another weapon out: such an item looks wrong on the hip,
+or sits in the wrong place. noDlight (exotic blades too) and notInMP (whether MP players may pick it) say
+nothing about the item, so they do not count; nor can saberType: the MP saberTable (bg_saberLoad.c, as
+stock) has no SABER_SITH_SWORD, so such a saber is parsed as SABER_SINGLE. Each saber of a pair is judged
+on its own.
+===============
+*/
+qboolean CG_RpSaberHolsterable( const saberInfo_t *saber )
+{
+	if ( !saber || !saber->model[0] )
+	{
+		return qfalse;
+	}
+	if ( saber->saberFlags & SFL_BOLT_TO_WRIST )
+	{
+		return qfalse;
+	}
+	if ( saber->saberFlags2 & SFL2_NO_BLADE )
+	{
+		return qfalse;
+	}
+	return qtrue;
+}
+
 typedef struct rpHolsteredHilts_s {
 	qboolean	placed;		// worked out this frame (once, before the first body pass)
 	int			count;
@@ -9936,8 +9969,8 @@ static void CG_RpPlaceHolsteredSabers( centity_t *cent, clientInfo_t *ci, const 
 		void *g2;
 		int bolt;
 
-		// no hilt, or a "saber" worn on the wrist (claws, fists, shields): nothing to holster
-		if ( !saber->model[0] || ( saber->saberFlags & SFL_BOLT_TO_WRIST ) )
+		// only a lightsaber hilt: anything else is not drawn while another weapon is out
+		if ( !CG_RpSaberHolsterable( saber ) )
 		{
 			continue;
 		}
