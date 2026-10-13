@@ -9,11 +9,11 @@ Ultimate Edition fork modernises the **Galaxy RP** mod developed by Alex, making
 This project is a fork of **Zyk Mod**, which is itself a fork of [OpenJK](https://github.com/JACoders/OpenJK). The aim is to improve on the work Zyk has done and move the project into a different direction: Player Roleplaying as opposed to an "RPG" game.
 This mod will be geared towards the RP community mainly. It will have features to prevent common occurences such as "spec-hiding", "Mary-sues" and more! It will also contain features that help player immersion.
 
-[![version](https://img.shields.io/github/v/release/praviilon/DAJ_RP?label=Current%20Version&color=brightgreen)](https://github.com/praviilon/DAJ_RP/releases)
+[![version](https://img.shields.io/github/v/release/praviilon/galaxy_ultimate?label=Current%20Version&color=brightgreen)](https://github.com/praviilon/galaxy_ultimate/releases)
 [![discord](https://img.shields.io/badge/Discord-Join-blueviolet.svg?logo=discord&style=flat&logoColor=white)](https://discord.gg/aKnXckEFr5)
-[![issues](https://img.shields.io/github/issues/praviilon/DAJ_RP.svg?label=Issues%20%26%20Requests&color=red)](https://github.com/praviilon/DAJ_RP/issues)
+[![issues](https://img.shields.io/github/issues/praviilon/galaxy_ultimate.svg?label=Issues%20%26%20Requests&color=red)](https://github.com/praviilon/galaxy_ultimate/issues)
 [![guides](https://img.shields.io/badge/GalaxyRP-Website-blue.svg)](https://www.galaxyrp.uk/)
-[![license](https://img.shields.io/github/license/praviilon/DAJ_RP.svg?label=License&color=yellow)](#license)
+[![license](https://img.shields.io/github/license/praviilon/galaxy_ultimate.svg?label=License&color=yellow)](#license)
 
 </div>
 

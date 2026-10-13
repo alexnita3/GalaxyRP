@@ -31,7 +31,9 @@ Project based on OpenJK and Zyk Mod. Work copyrighted (C) 2020 - 2022
 // Set mod version definitions
 #define	JK_VERSION                  VER("GalaxyRP Mod v" VERSION_STRING_DOTTED)
 #define JK_VERSION_OLD              VER("JAmp: v" VERSION_STRING_DOTTED)
-#define JK_URL                      "https://github.com/praviilon/DAJ_RP/releases"
+// DAJ_RP: the repo's page, shown in two centre-prints ("Incomplete mod detected", the plugin mismatch) whose
+// lines break every 50 characters and only at spaces -- so short, and without "https://", to stay on one line
+#define JK_URL                      "github.com/praviilon/galaxy_ultimate"
 
 // Public version
 #define GAMEVERSION			        JK_VERSION
