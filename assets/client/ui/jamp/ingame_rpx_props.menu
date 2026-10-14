@@ -1204,7 +1204,7 @@
 			border              1
 			bordercolor         1 .682 0 .6
 			visible             1
-			descText            "Pick it up (/entaddgrab), place it with /entaddgrab again, and close the menu"
+			descText            "Pick it up and close the menu; aim and use /entaddgrab to place it"
 			mouseEnter
 			{
 				setitemcolor rpx_grab bordercolor 1 1 1 1
