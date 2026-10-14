@@ -4137,6 +4137,49 @@ void G_BounceItem( gentity_t *ent, trace_t *trace ) {
 
 
 /*
+===============
+RP_ItemIsMapPickup / RP_ItemNoDropReturn
+
+DAJ_RP: [Items] a moving item that lands in a "no drop" volume (textures/system/nodrop, stu/nodrop_trigger -- placed by
+mappers, mostly at the bottom of bottomless pits: ctf4, ctf5, siege_hoth, siege_korriban, kor2, t1_fatal, t2_rogue,
+t2_wedge, t3_rift, taspir2 and vjun1 among the stock maps; never lava) was always removed. Right for what was dropped,
+but a map's own pickup only moves when Force Push/Pull has moved it, and removing it took it off the map until the map
+was loaded again -- shown, or taken and still falling where the push sent it, its respawn lost with it. A map pickup
+(the map's, /entadd's, target_give's: not a dropped item, FL_DROPPED_ITEM, nor one tossed to be removed when picked up,
+genericValue9) is sent back to its spot instead, by G_ItemMoveHome as the push's return and RespawnItem do: shown, with
+the respawn effect, as G_ReturnPushedItem shows it; taken, quietly, still hidden and still waiting on RespawnItem. One
+already on its spot that lands in such a volume (a mapper put it in one) stops where it landed, rather than being sent
+home again and again. Flags, the sentry and everything else that runs here are removed as before.
+===============
+*/
+static qboolean RP_ItemIsMapPickup( const gentity_t *ent )
+{
+	return ( ent->inuse && ent->s.eType == ET_ITEM && ent->item && !( ent->flags & FL_DROPPED_ITEM ) && !ent->genericValue9 ) ? qtrue : qfalse;
+}
+
+static void RP_ItemNoDropReturn( gentity_t *ent, trace_t *tr )
+{
+	const qboolean shown = ( ent->s.eFlags & ( EF_NODRAW | EF_ITEMPLACEHOLDER ) ) ? qfalse : qtrue;
+
+	if ( G_ItemMoveHome( ent ) )
+	{
+		trap->LinkEntity( (sharedEntity_t *)ent );
+		if ( shown )
+		{
+			G_AddEvent( ent, EV_ITEM_RESPAWN, 0 );
+		}
+		return;
+	}
+
+	// already on its spot: come to rest where it landed, as G_BounceItem stops an item
+	tr->endpos[2] += 1.0f;
+	SnapVector( tr->endpos );
+	G_SetOrigin( ent, tr->endpos );
+	ent->s.groundEntityNum = tr->entityNum;
+	trap->LinkEntity( (sharedEntity_t *)ent );
+}
+
+/*
 ================
 G_RunItem
 
@@ -4196,6 +4239,8 @@ void G_RunItem( gentity_t *ent ) {
 			Team_FreeEntity(ent);
 		} else if(ent->genericValue15 == HI_SENTRY_GUN) {
 			turret_free(ent);
+		} else if ( RP_ItemIsMapPickup( ent ) ) {
+			RP_ItemNoDropReturn( ent, &tr );	// DAJ_RP: [Items] not removed: back to its spot
 		} else {
 			G_FreeEntity( ent );
 		}
