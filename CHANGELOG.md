@@ -50,6 +50,7 @@ All changes below are relative to the last stable GalaxyRP release (3.7.2) this 
 - `/enthelp`: in-game help for every entity class -- what it does, its keys and spawnflags, and an `/entadd` example -- for the entity you aim at, an entity id, a class name or part of one. `/enthelp list` lists every class.
 - New server cvars have been added for more control over item respawn and despawn rates.
 - Reward system (XP and credits) for defeating NPCs, set per NPC spawner with `npccredits` and `npcxp`. XP beyond a level now carries over to the next one, also for `/givexp`.
+- Lightsaber holstering: a player or NPC carrying a lightsaber wears its hilt on the thigh while another weapon is out (a second saber on the other thigh); swords, vibroblades, electrostaffs, props and wrist weapons are hidden instead. Players can turn it off with `cg_holsteredSabers 0`. Server admins can keep a specific saber from being holstered by adding `noHolster 1` to its .sab entry.
 
 ### Changed
 - **Private duels are saber duels again**: the vanilla force restriction was commented out in this fork, making a private duel the only one in the JKA family with no restriction at all. It is back for `/duel` -- only Saber Offense, Saber Defense, Jump and Push-while-locked -- and a duel is once more sealed off from the rest of the map, so a duellist can no longer Grip, Mind Trick or Push a bystander and a bystander can no longer do the same back. Use `/engage_fullforceduel` for the old behaviour.

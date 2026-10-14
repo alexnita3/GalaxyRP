@@ -53,6 +53,7 @@ The mod contains these following main features:
 - Many cvars at server.cfg to customize mod features
 - Countless bugfixes and optimizations
 - Extended Single Player map support in MP (for both JA and JO maps)
+- Lightsaber holstering
 - And more...
 
 # Building
