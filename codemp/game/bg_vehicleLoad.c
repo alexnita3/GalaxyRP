@@ -459,6 +459,7 @@ vehField_t vehicleFields[] =
 	{"armor", VFOFS(armor), VF_INT},			//total points of damage it can take
 	{"shields", VFOFS(shields), VF_INT},			//energy shield damage points
 	{"shieldRechargeMS", VFOFS(shieldRechargeMS), VF_INT},//energy shield milliseconds per point recharged
+	{"CantKnockoutShields", VFOFS(CantKnockoutShields), VF_BOOL},// DAJ_RP: [Vehicles] OJP's key: shields recharge from 0 too
 	{"toughness", VFOFS(toughness), VF_FLOAT},		//modifies incoming damage, 1.0 is normal, 0.5 is half, etc.  Simulates being made of tougher materials/construction
 	{"malfunctionArmorLevel", VFOFS(malfunctionArmorLevel), VF_INT},//when armor drops to or below this point, start malfunctioning
 	{"surfDestruction", VFOFS(surfDestruction), VF_INT},

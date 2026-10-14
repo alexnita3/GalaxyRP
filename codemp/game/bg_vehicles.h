@@ -183,6 +183,10 @@ typedef struct vehicleInfo_s {
 	int			armor;			//total points of damage it can take
 	int			shields;		//energy shield damage points
 	int			shieldRechargeMS;//energy shield milliseconds per point recharged
+	// DAJ_RP: [Vehicles] OJP's .veh key of the same name, so vehicles made for OJP work here too: when set, the
+	// shields keep recharging (at shieldRechargeMS) after they are knocked down to 0 instead of staying down.
+	// Off by default (BG_VehicleSetDefaults memsets the struct). Used by Update() in g_vehicles.c.
+	qboolean	CantKnockoutShields;
 	float		toughness;		//modifies incoming damage, 1.0 is normal, 0.5 is half, etc.  Simulates being made of tougher materials/construction
 	int			malfunctionArmorLevel;//when armor drops to or below this point, start malfunctioning
 	int			surfDestruction; //can parts of this thing be torn off on impact? -rww

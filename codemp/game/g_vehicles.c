@@ -1333,12 +1333,26 @@ static qboolean Update( Vehicle_t *pVeh, const usercmd_t *pUmcd )
 		}
 	}
 
+	// DAJ_RP: [Vehicles] a recharge stamp from the future -- a pilot's command time can run ahead of the server's,
+	// and the next pilot's, or the empty vehicle's own, is then behind it -- counts from now, so it can never
+	// hold the recharge back for longer than one shieldRechargeMS.
+	if ( pVeh->lastShieldInc > pUmcd->serverTime )
+	{
+		pVeh->lastShieldInc = pUmcd->serverTime;
+	}
+
 	//increment shields for rechargable shields
+	// DAJ_RP: [Vehicles] CantKnockoutShields (OJP's .veh key) lets them recharge from 0 too; without it they stay
+	// down once knocked out, as in the base game.
 	if ( pVeh->m_pVehicleInfo->shieldRechargeMS
-		&& parentPS->stats[STAT_ARMOR] > 0 //still have some shields left
+		&& ( parentPS->stats[STAT_ARMOR] > 0 || pVeh->m_pVehicleInfo->CantKnockoutShields ) //still have some shields left
 		&& parentPS->stats[STAT_ARMOR] < pVeh->m_pVehicleInfo->shields//its below max
 		&& pUmcd->serverTime-pVeh->lastShieldInc >= pVeh->m_pVehicleInfo->shieldRechargeMS )//enough time has passed
 	{
+		// DAJ_RP: [Vehicles] stamp the point, as the weapon and turret ammo above do. The base game never did,
+		// so the time test always passed and the shields went up a point every vehicle update -- every server
+		// frame, or every pilot command -- whatever shieldRechargeMS said. OJP fixes it the same way.
+		pVeh->lastShieldInc = pUmcd->serverTime;
 		parentPS->stats[STAT_ARMOR]++;
 		if ( parentPS->stats[STAT_ARMOR] > pVeh->m_pVehicleInfo->shields )
 		{
