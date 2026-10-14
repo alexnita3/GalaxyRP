@@ -3795,6 +3795,14 @@ void PM_SetSaberMove(short newMove)
 	{
 		setflags |= SETANIM_FLAG_RESTART;
 	}
+	// DAJ_RP: [Saber Stances] ...and when the upper body already shows it from the ready stance: Tavion's stance is
+	// the top parry pose (PM_GetSaberStance), and a .sab readyAnim* may name a move's anim too. Without the restart
+	// BG_SetAnimFinal keeps the anim it already runs and sets no torsoTimer, so a top parry or reflection from
+	// that stance ended on the very next frame.
+	else if ( newMove > LS_PUTAWAY && BG_SaberInIdle( pm->ps->saberMove ) && pm->ps->torsoAnim == anim )
+	{
+		setflags |= SETANIM_FLAG_RESTART;
+	}
 
 	//saber torso anims should always be highest priority (4/12/02 - for special anims only)
 	if (!pm->ps->m_iVehicleNum)

@@ -419,15 +419,25 @@ int PM_GetSaberStance(void)
 		anim = BOTH_SABERSTAFF_STANCE;
 		break;
 	case SS_FAST:
-	case SS_TAVION:
 		anim = BOTH_SABERFAST_STANCE;
+		break;
+	// DAJ_RP: [Saber Stances] Tavion and Desann get stances of their own, as JoF_EJK gives them (they used to
+	// borrow Fast's and Medium's): Tavion the top parry pose held, Desann Kyle's relaxed JK2 stand. Both are
+	// stock animations, so every client has them. A saber's readyAnimGreen/readyAnimPurple (above) still wins.
+	// Both are in the stance lists below (slopes, BG_SaberStanceAnim, BG_InSaberStandAnim, PM_Footsteps) except
+	// that BOTH_P1_S1_T_ stays out of BG_InSaberStandAnim and BG_SaberStanceAnim: it is also the real top parry,
+	// which PM_SetSaberMove would otherwise swap for the stance (see the restart test there too).
+	case SS_TAVION:
+		anim = BOTH_P1_S1_T_;
+		break;
+	case SS_DESANN:
+		anim = BOTH_STAND9;
 		break;
 	case SS_STRONG:
 		anim = BOTH_SABERSLOW_STANCE;
 		break;
 	case SS_NONE:
 	case SS_MEDIUM:
-	case SS_DESANN:
 	default:
 		anim = BOTH_STAND2;
 		break;
@@ -5224,6 +5234,8 @@ qboolean PM_AdjustStandAnimForSlope( void )
 	case BOTH_STAND2:
 	case BOTH_SABERFAST_STANCE:
 	case BOTH_SABERSLOW_STANCE:
+	case BOTH_STAND9:		// DAJ_RP: [Saber Stances] Desann's stance (PM_GetSaberStance)
+	case BOTH_P1_S1_T_:		// DAJ_RP: [Saber Stances] Tavion's stance
 	case BOTH_ATARU:
 	case BOTH_DJEMSO:
 	case BOTH_JARKAI:
@@ -5380,6 +5392,8 @@ qboolean PM_AdjustStandAnimForSlope( void )
 		case BOTH_STAND2:
 		case BOTH_SABERFAST_STANCE:
 		case BOTH_SABERSLOW_STANCE:
+		case BOTH_STAND9:		// DAJ_RP: [Saber Stances] Desann's stance (PM_GetSaberStance)
+		case BOTH_P1_S1_T_:		// DAJ_RP: [Saber Stances] Tavion's stance
 		case BOTH_CROUCH1IDLE:
 		case BOTH_ATARU:
 		case BOTH_DJEMSO:
@@ -5668,6 +5682,7 @@ static void PM_Footsteps( void ) {
 		case BOTH_STAND2:
 		case BOTH_SABERFAST_STANCE:
 		case BOTH_SABERSLOW_STANCE:
+		case BOTH_STAND9:		// DAJ_RP: [Saber Stances] Desann's stance (Tavion's, BOTH_P1_S1_T_, is a saber anim: overridden above)
 		case BOTH_ATARU:
 		case BOTH_DJEMSO:
 		case BOTH_JARKAI:

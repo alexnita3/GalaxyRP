@@ -57,6 +57,7 @@ qboolean BG_SaberStanceAnim( int anim )
 	case BOTH_STAND2://single-saber, medium style
 	case BOTH_SABERFAST_STANCE://single-saber, fast style
 	case BOTH_SABERSLOW_STANCE://single-saber, strong style
+	case BOTH_STAND9://single-saber, Desann style (DAJ_RP: [Saber Stances]; Tavion's BOTH_P1_S1_T_ is left out: it is also the top parry)
 	case BOTH_SABERSTAFF_STANCE://saber staff style
 	case BOTH_SABERDUAL_STANCE://dual saber style
 	case BOTH_ATARU:
@@ -178,6 +179,8 @@ qboolean BG_InSaberStandAnim( int anim )
 	case BOTH_SABERFAST_STANCE:
 	case BOTH_STAND2:
 	case BOTH_SABERSLOW_STANCE:
+	case BOTH_STAND9:	// DAJ_RP: [Saber Stances] Desann's stance. Not Tavion's BOTH_P1_S1_T_: it is also the top parry,
+						// which PM_SetSaberMove would then swap for the legs' anim
 	case BOTH_SABERDUAL_STANCE:
 	case BOTH_SABERSTAFF_STANCE:
 	case BOTH_ATARU:
