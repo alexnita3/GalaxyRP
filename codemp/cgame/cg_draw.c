@@ -5086,6 +5086,43 @@ qboolean CG_CrosshairAlly( int clientNum )
 	return ( cgs.gametype < GT_TEAM && CG_IsAlly( clientNum ) ) ? qtrue : qfalse;
 }
 
+/*
+=================
+CG_RpForceHintTarget
+
+DAJ_RP: [Force Powers] whether the crosshair, aimed at hitPoint on this entity, gets the blue Force hint and its
+swirl: single player's hint (CG_ScanForCrosshairEntity, code/cgame/cg_draw.cpp) on what Push or Pull uses. The
+server marks such a mover in s.bolt1 (g_mover.c): 1 Push uses it, 2 Pull does, 3 both -- a func_static by its
+F_PUSH/F_PULL spawnflags, a force-usable func_door (MOVER_FORCE_ACTIVATE) both. It used to show only with the
+saber out, for any power or none, at any distance. Now, with any weapon: when I know a power that uses it
+(forcePowersKnown; our levels are not sent to the client) and it is within RP_FORCE_HINT_RANGE of me -- the reach
+of levels 2-5 (ForceThrow, w_force.c, measures from the origin to the nearest edge of the target, never further
+than the point aimed at). Level 1's aimed push reaches 512 from the eyes, so the hint can show a little further
+than a level 1 push lands.
+=================
+*/
+#define RP_FORCE_HINT_RANGE	1024.0f
+static qboolean CG_RpForceHintTarget( const centity_t *cent, const float *hitPoint )
+{
+	const int known = cg.predictedPlayerState.fd.forcePowersKnown;
+	int marks;
+
+	if ( !cent || !hitPoint || cent->currentState.eType != ET_MOVER )
+	{
+		return qfalse;
+	}
+	marks = cent->currentState.bolt1;
+	if ( !marks )
+	{
+		return qfalse;
+	}
+	if ( !( ( ( marks & 1 ) && ( known & ( 1 << FP_PUSH ) ) ) || ( ( marks & 2 ) && ( known & ( 1 << FP_PULL ) ) ) ) )
+	{
+		return qfalse;
+	}
+	return ( DistanceSquared( cg.predictedPlayerState.origin, hitPoint ) <= RP_FORCE_HINT_RANGE * RP_FORCE_HINT_RANGE ) ? qtrue : qfalse;
+}
+
 static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 	float		w, h;
 	qhandle_t	hShader = 0;
@@ -5136,7 +5173,7 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 			cg_entities[cg.crosshairClientNum].currentState.eType == ET_NPC ||
 			cg_entities[cg.crosshairClientNum].currentState.shouldtarget ||
 			cg_entities[cg.crosshairClientNum].currentState.health || //always show ents with health data under crosshair
-			(cg_entities[cg.crosshairClientNum].currentState.eType == ET_MOVER && cg_entities[cg.crosshairClientNum].currentState.bolt1 && cg.predictedPlayerState.weapon == WP_SABER) ||
+			CG_RpForceHintTarget( &cg_entities[cg.crosshairClientNum], worldPoint ) ||	// DAJ_RP: [Force Powers] was ET_MOVER, bolt1, the saber out
 			(cg_entities[cg.crosshairClientNum].currentState.eType == ET_MOVER && cg_entities[cg.crosshairClientNum].currentState.teamowner)))
 		{
 			crossEnt = &cg_entities[cg.crosshairClientNum];
@@ -5314,8 +5351,8 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 					ecolor[2] = 0.0f;//B
 				}
 			}
-			else if (crossEnt->currentState.eType == ET_MOVER && crossEnt->currentState.bolt1 && cg.predictedPlayerState.weapon == WP_SABER)
-			{ //can push/pull this mover. Only show it if we're using the saber.
+			else if ( CG_RpForceHintTarget( crossEnt, worldPoint ) )
+			{ //can push/pull this mover. DAJ_RP: [Force Powers] with any weapon, a power that uses it, in reach (was: only with the saber out)
 				ecolor[0] = 0.2f;
 				ecolor[1] = 0.5f;
 				ecolor[2] = 1.0f;
@@ -6524,6 +6561,24 @@ static void CG_ScanForCrosshairEntity( void ) {
 	// GalaxyRP: [Phase] let the name of a phased player show -- see CG_PhaseCrosshairTrace(). A hidden one
 	// (/admhidden) is found too, and the stock Mind Trick test just below then keeps his name off.
 	CG_PhaseCrosshairTrace( &trace, start, end, ignore );
+
+	// DAJ_RP: [Force Powers] nothing found but the world: an invisible, non-solid brush Push or Pull uses in the way?
+	// (textures/system/caulk_nonsolid, CONTENTS_OPAQUE only -- kor2's pillar and push_brush; RP_ForceUsableStatic,
+	// w_force.c). The trace above stops only at solid brushes and bodies and goes straight through it. The same line
+	// again, stopping at opaque brushes too, taken only when the first thing it meets is such a mover that gets the
+	// Force hint (CG_RpForceHintTarget): the server's own rule for an aimed push. It can only add one of those --
+	// a world wall in front stops it first, and anything the first trace found wins.
+	if ( trace.entityNum >= ENTITYNUM_WORLD )
+	{
+		trace_t opaqueTr;
+
+		CG_Trace( &opaqueTr, start, vec3_origin, vec3_origin, end, ignore, CONTENTS_SOLID|CONTENTS_BODY|CONTENTS_OPAQUE );
+		if ( opaqueTr.fraction < 1.0f && opaqueTr.entityNum >= MAX_CLIENTS && opaqueTr.entityNum < ENTITYNUM_WORLD
+			&& CG_RpForceHintTarget( &cg_entities[opaqueTr.entityNum], opaqueTr.endpos ) )
+		{
+			trace = opaqueTr;
+		}
+	}
 
 	if (trace.entityNum < MAX_CLIENTS)
 	{

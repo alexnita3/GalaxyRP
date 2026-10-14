@@ -1686,6 +1686,10 @@ void SP_func_door (gentity_t *ent)
 
 	ent->nextthink = level.time + FRAMETIME;
 
+	// DAJ_RP: [Force Powers] cleared first: one spawned again in place (/entedit) keeps its struct, and a mark left from
+	// before an edit took MOVER_FORCE_ACTIVATE away would still show the crosshair's Force hint on it
+	ent->s.bolt1 = 0;
+
 	if ( !(ent->flags&FL_TEAMSLAVE) )
 	{
 		int health;
@@ -1704,7 +1708,8 @@ void SP_func_door (gentity_t *ent)
 
 			if (ent->spawnflags & MOVER_FORCE_ACTIVATE)
 			{ //so we know it's push/pullable on the client
-				ent->s.bolt1 = 1;
+				// DAJ_RP: [Force Powers] 3: Push and Pull both use it (1 Push, 2 Pull -- CG_RpForceHintTarget, cg_draw.c)
+				ent->s.bolt1 = 3;
 			}
 		}
 		else
@@ -2252,10 +2257,11 @@ void SP_func_static( gentity_t *ent )
 		ent->s.frame = 0;//first stage of anim
 	}
 
-	if ((ent->spawnflags & 1) || (ent->spawnflags & 2))
-	{ //so we know it's push/pullable on the client
-		ent->s.bolt1 = 1;
-	}
+	//so we know it's push/pullable on the client
+	// DAJ_RP: [Force Powers] which power uses it, for the crosshair's Force hint (CG_RpForceHintTarget, cg_draw.c):
+	// 1 Push (F_PUSH), 2 Pull (F_PULL), 3 both, 0 neither. It was 1 for either; a client that only tests it for non-zero
+	// is unaffected. Set either way: one spawned again in place (/entedit) keeps its struct, and its old mark with it.
+	ent->s.bolt1 = ent->spawnflags & 3;
 
 	G_SpawnInt("model2scale", "0", &ent->s.iModelScale);
 	if (ent->s.iModelScale < 0)
