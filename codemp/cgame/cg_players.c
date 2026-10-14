@@ -9969,12 +9969,11 @@ typedef struct rpHolsteredHilts_s {
 /*
 DAJ_RP: [Holstered Sabers] a wrist saber's hilt is drawn as its own entity at the bolt the saber is attached
 to while it is the weapon: "*r_hand_cap_r_arm" for saber 0, "*l_hand_cap_l_arm" for saber 1 -- the player
-model's bolts 3 and 4, the "3+saberNum" CG_InitG2SaberData gives a SFL_BOLT_TO_WRIST saber. The renderer
-(tr_ghoul2.cpp, R_AddGhoulSurfaces) builds an attached model's bones on the bolt's own matrix, but a model drawn
-on its own on its fixed root (identityMatrix there: a quarter turn about Z, model X onto world Y). With B the
-bolt's world matrix (GetBoltMatrix), the attached model is placed by B and a lone one by axis * root, so the
-lone hilt matches the attached one when axis = B * root^-1: axis[0] = -B's Y, axis[1] = B's X, axis[2] = B's Z,
-at B's origin -- no offset, no turn.
+model's bolts 3 and 4, the "3+saberNum" CG_InitG2SaberData gives a SFL_BOLT_TO_WRIST saber. It is oriented by
+the bolt's own axes (B's X, Y, Z from GetBoltMatrix) at B's origin -- no offset, no turn: checked in-game against
+the saber in the hand. (A first version undid a quarter turn about Z that the renderer's fixed root
+(identityMatrix in tr_ghoul2.cpp) seemed to give a lone model and not an attached one; in-game it came out a
+quarter turn off, and the bolt's axes as they are matched.)
 */
 static const char *rpWristBolts[MAX_SABERS] = { "*r_hand_cap_r_arm", "*l_hand_cap_l_arm" };
 
@@ -10045,8 +10044,8 @@ static void CG_RpPlaceHolsteredSabers( centity_t *cent, clientInfo_t *ci, const 
 
 		if ( wrist )
 		{ // on its wrist, as when it is the weapon (see rpWristBolts above)
-			VectorScale( ax1, -1.0f, axis[0] );
-			VectorCopy( ax0, axis[1] );
+			VectorCopy( ax0, axis[0] );
+			VectorCopy( ax1, axis[1] );
 			VectorCopy( ax2, axis[2] );
 		}
 		else if ( i == 0 )
