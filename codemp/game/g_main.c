@@ -6334,6 +6334,30 @@ qboolean duel_tournament_is_duelist(gentity_t *ent)
 	return qfalse;
 }
 
+/*
+DAJ_RP: [Minigames] whether this player is fighting in a mini-game right now: one of the two duelists of a live Duel
+Tournament fight (duel_tournament_mode 4), or on the roster of a running Melee Battle (melee_mode 2 -- not while it
+takes sign-ups, 1, nor in the winner's few seconds to leave the platform, 3; a player knocked out leaves the roster).
+Such a player picks nothing up (Touch_Item, g_items.c), and ClientEndFrame publishes it in ps.userInt1 so the shared
+BG_CanItemBeGrabbed -- and so cgame's pickup prediction -- refuses the same (RP_PS_MINIGAME_FIGHTER, bg_public.h).
+*/
+qboolean RP_MinigameFighter( gentity_t *ent )
+{
+	if (!ent || !ent->client || ent->s.number < 0 || ent->s.number >= MAX_CLIENTS)
+	{
+		return qfalse;
+	}
+	if (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(ent))
+	{
+		return qtrue;
+	}
+	if (level.melee_mode == 2 && level.melee_players[ent->s.number] != -1)
+	{
+		return qtrue;
+	}
+	return qfalse;
+}
+
 // GalaxyRP fix: [Death System] the mini-games and the Death System were written apart and never
 // introduced. G_Damage() only calls targ->die() for a player who is ALREADY downed; the first time
 // their health reaches 0 it calls paralyze_player() instead, which downs them at RP_DOWNED_HEALTH health and

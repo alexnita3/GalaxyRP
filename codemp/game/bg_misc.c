@@ -2181,6 +2181,10 @@ qboolean BG_CanItemBeGrabbed( int gametype, const entityState_t *ent, const play
 		{ //no picking stuff up while in a duel, no matter what the type is
 			return qfalse;
 		}
+		if ( RP_PS_MINIGAME_FIGHTER( ps ) )
+		{ // DAJ_RP: [Minigames] nor while fighting in the Duel Tournament or the Melee Battle (see bg_public.h)
+			return qfalse;
+		}
 	}
 	else
 	{//safety return since below code assumes a non-null ps

@@ -2446,6 +2446,7 @@ void SaveRegisteredItems( void );
 // GalaxyRP fix: [Death System] rp_downed_timer 0 switches the downed system off entirely -- see
 // RP_DownedSystemEnabled() in g_utils.c. The cvar is CVAR_LATCH, so this cannot change mid-map.
 qboolean RP_DownedSystemEnabled( void );
+qboolean RP_MinigameFighter( gentity_t *ent );	// DAJ_RP: [Minigames] g_main.c
 // GalaxyRP fix: [Death System] set around a player_die() call that is bookkeeping rather than a
 // death -- a team or class change, a forced move to Spectator, the respawn an account command
 // charges, or a mini-game tearing down a private duel it needs out of the way. player_die() is the

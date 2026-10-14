@@ -5317,6 +5317,11 @@ void ClientEndFrame( gentity_t *ent ) {
 		// bookkeeping -- the playerState delta only spends bits on the frames where it changes.
 		ent->client->ps.stats[STAT_FORCE_JUMP_LEVEL] = ent->client->ps.fd.forcePowerLevel[FP_LEVITATION];
 
+		// DAJ_RP: [Minigames] publish "fighting in a mini-game" for the shared pickup rule and cgame's pickup
+		// prediction (RP_PS_MINIGAME_FIGHTER, bg_public.h). Every frame, so it follows the battle and the fight as
+		// they begin and end; a one-bit field, so only 0 or 1 may be written.
+		ent->client->ps.userInt1 = RP_MinigameFighter( ent ) ? 1 : 0;
+
 		// DAJ_RP: [Entity Bounds] /settings 6 -- the aimed entity's box and the nearby point-entity
 		// markers, drawn for this client only. Here, with the use hint, so the view is final for the
 		// frame and a free-flying spectator (the early return below) still gets it. The function does

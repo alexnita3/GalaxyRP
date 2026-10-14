@@ -1335,6 +1335,13 @@ gitem_t	*BG_FindItemForPowerup( powerup_t pw );
 gitem_t	*BG_FindItemForHoldable( holdable_t pw );
 #define	ITEM_INDEX(x) ((x)-bg_itemlist)
 
+// DAJ_RP: [Minigames] playerState.userInt1, one of the three stock spare fields the engine networks as a single bit
+// (msg.cpp, the player and the pilot tables): 1 while this player fights in a mini-game -- one of the two duelists of
+// a live Duel Tournament fight, or on the roster of a running Melee Battle (RP_MinigameFighter, g_main.c). Set every
+// frame by ClientEndFrame (g_active.c), so it reaches the client with the snapshot: BG_CanItemBeGrabbed refuses every
+// item while it is set, as for a private duel (duelInProgress), and cgame's pickup prediction, which asks the same
+// function, refuses what the server refuses. Nothing else in the game, cgame or the engine uses userInt1.
+#define RP_PS_MINIGAME_FIGHTER( ps )	( (ps)->userInt1 )
 qboolean	BG_CanItemBeGrabbed( int gametype, const entityState_t *ent, const playerState_t *ps );
 
 

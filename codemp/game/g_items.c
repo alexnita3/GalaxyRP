@@ -3232,8 +3232,13 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	}
 	// DAJ_RP: [Admin] a player given force powers with /give <player> force used to be refused every weapon,
 	// ammo and holdable item here. Removed: he picks up whatever anyone else can, like a /give guns player.
-	else if (level.duel_tournament_mode == 4 && other->s.number < MAX_CLIENTS && duel_tournament_is_duelist(other) == qtrue)
-	{ // zyk: duelists in Duel Tournament cannot grab anything
+
+	// DAJ_RP: [Minigames] a mini-game fighter -- a Duel Tournament duelist in his fight, as before, and now a Melee
+	// Battle fighter too -- cannot grab anything (RP_MinigameFighter, g_main.c). The Melee Battle had no such rule: a
+	// fighter whose weapons and Force it had taken could pick a gun, a shield or a medpack up mid-battle. No longer
+	// tied to the empty logged-in branch above: both mini-games take logged-out players only, so that changes nothing.
+	if (RP_MinigameFighter(other))
+	{
 		return;
 	}
 
