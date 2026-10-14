@@ -9825,7 +9825,8 @@ see bg_public.h) and has another weapon out wears its hilt on the right thigh, a
 the left one, a staff on the right -- a lightsaber only: swords, vibroblades, electrostaffs and props are
 not drawn (CG_RpSaberHolsterable). Placement as in JoF_EJK (CG_DrawHolsteredSaber): each hilt at the
 model's rfemurX / lfemurX bone, 3.5 units out along the bone's X axis (scaled with the model), the hilt
-turned to hang down the thigh. Unlike JoF's:
+turned to hang down the thigh. A saber worn on the wrist (boltToWrist, SFL_BOLT_TO_WRIST) stays on its
+wrist instead, exactly where it is drawn while it is the weapon -- see CG_RpPlaceHolsteredSabers. Unlike JoF's:
   - the bone matrix is taken where the body is drawn -- legs.origin and rootAngles, as the blades in the
     hand use them -- so a scaled player, a rider in its seat and a victim held by a monster keep it;
   - every pass that draws the body draws the hilts with the same look: the body's render flags, custom
@@ -9907,12 +9908,15 @@ void CG_RpFreeHiltGhoul2( void )
 ===============
 CG_RpSaberHolsterable
 
-DAJ_RP: [Holstered Sabers] whether this "saber" is a lightsaber, whose hilt is worn on the thigh. Everything
-else a .sab can be -- the claws, fists and shields worn on the wrist (SFL_BOLT_TO_WRIST), the swords,
-vibroblades, force pikes and props such as a datapad, comlink or holocomm (noBlade: "stops the saber from
-drawing a blade (good for real-sword type mods)", SFL2_NO_BLADE; every one of them sets it, no lightsaber
-does) -- is not drawn at all while its owner has another weapon out: such an item looks wrong on the hip,
-or sits in the wrong place. noDlight (exotic blades too) and notInMP (whether MP players may pick it) say
+DAJ_RP: [Holstered Sabers] whether this "saber" is a lightsaber, whose hilt is worn while another weapon is
+out -- on the thigh, or on its wrist for one worn there (boltToWrist; where is CG_RpPlaceHolsteredSabers'
+business, not this test's: a wrist lightsaber passes like any other). Everything else a .sab can be -- the
+swords, vibroblades, force pikes and props such as a datapad, comlink or holocomm (noBlade: "stops the saber
+from drawing a blade (good for real-sword type mods)", SFL2_NO_BLADE; every one of them sets it, no
+lightsaber does) -- is not drawn at all while its owner has another weapon out: such an item looks wrong on
+the hip. The tests below apply to a wrist item as well, so an exotic non-lightsaber weapon worn on the wrist
+(a claw or blade with noBlade, a sword trail or bounceOnWalls) is still not drawn. noDlight (exotic blades
+too) and notInMP (whether MP players may pick it) say
 nothing about the item, so they do not count; nor can saberType: the MP saberTable (bg_saberLoad.c, as
 stock) has no SABER_SITH_SWORD, so such a saber is parsed as SABER_SINGLE. Each saber of a pair is judged
 on its own.
@@ -9933,10 +9937,6 @@ use it too): such a saber that looks wrong is for "noHolster 1".
 qboolean CG_RpSaberHolsterable( const saberInfo_t *saber )
 {
 	if ( !saber || !saber->model[0] )
-	{
-		return qfalse;
-	}
-	if ( saber->saberFlags & SFL_BOLT_TO_WRIST )
 	{
 		return qfalse;
 	}
@@ -9965,6 +9965,18 @@ typedef struct rpHolsteredHilts_s {
 	refEntity_t	hilt[MAX_SABERS];
 } rpHolsteredHilts_t;
 
+/*
+DAJ_RP: [Holstered Sabers] a wrist saber's hilt is drawn as its own entity at the bolt the saber is attached
+to while it is the weapon: "*r_hand_cap_r_arm" for saber 0, "*l_hand_cap_l_arm" for saber 1 -- the player
+model's bolts 3 and 4, the "3+saberNum" CG_InitG2SaberData gives a SFL_BOLT_TO_WRIST saber. The renderer
+(tr_ghoul2.cpp, R_AddGhoulSurfaces) builds an attached model's bones on the bolt's own matrix, but a model drawn
+on its own on its fixed root (identityMatrix there: a quarter turn about Z, model X onto world Y). With B the
+bolt's world matrix (GetBoltMatrix), the attached model is placed by B and a lone one by axis * root, so the
+lone hilt matches the attached one when axis = B * root^-1: axis[0] = -B's Y, axis[1] = B's X, axis[2] = B's Z,
+at B's origin -- no offset, no turn.
+*/
+static const char *rpWristBolts[MAX_SABERS] = { "*r_hand_cap_r_arm", "*l_hand_cap_l_arm" };
+
 static void CG_RpPlaceHolsteredSabers( centity_t *cent, clientInfo_t *ci, const refEntity_t *body, vec3_t rootAngles, rpHolsteredHilts_t *hilts )
 {
 	static const char *bones[MAX_SABERS] = { "rfemurX", "lfemurX" };
@@ -9992,6 +10004,7 @@ static void CG_RpPlaceHolsteredSabers( centity_t *cent, clientInfo_t *ci, const 
 		matrix3_t turn, axis;
 		void *g2;
 		int bolt;
+		qboolean wrist;
 
 		// only a lightsaber hilt: anything else is not drawn while another weapon is out
 		if ( !CG_RpSaberHolsterable( saber ) )
@@ -9999,8 +10012,9 @@ static void CG_RpPlaceHolsteredSabers( centity_t *cent, clientInfo_t *ci, const 
 			continue;
 		}
 
-		// a model on a skeleton of its own may not have the bone
-		bolt = trap->G2API_AddBolt( cent->ghoul2, 0, bones[i] );
+		// a model on a skeleton of its own may not have the bone (or the wrist bolt)
+		wrist = ( saber->saberFlags & SFL_BOLT_TO_WRIST ) ? qtrue : qfalse;
+		bolt = trap->G2API_AddBolt( cent->ghoul2, 0, wrist ? rpWristBolts[i] : bones[i] );
 		if ( bolt == -1 )
 		{
 			continue;
@@ -10021,7 +10035,13 @@ static void CG_RpPlaceHolsteredSabers( centity_t *cent, clientInfo_t *ci, const 
 		// cent->modelScale is all 0 for an unscaled model (CG_Player clears it), which means 1
 		VectorScale( rpHiltOffset, cent->modelScale[0] ? cent->modelScale[0] : 1.0f, offset );
 
-		if ( i == 0 )
+		if ( wrist )
+		{ // on its wrist, as when it is the weapon (see rpWristBolts above)
+			VectorScale( ax1, -1.0f, axis[0] );
+			VectorCopy( ax0, axis[1] );
+			VectorCopy( ax2, axis[2] );
+		}
+		else if ( i == 0 )
 		{ // right thigh
 			VectorMA( org, offset[0], ax1, org );
 			VectorMA( org, offset[1], ax0, org );
@@ -10042,8 +10062,15 @@ static void CG_RpPlaceHolsteredSabers( centity_t *cent, clientInfo_t *ci, const 
 
 		re = &hilts->hilt[hilts->count++];
 		memset( re, 0, sizeof( *re ) );
-		AnglesToAxis( rpHiltAngles, turn );
-		MatrixMultiply( turn, axis, re->axis );
+		if ( wrist )
+		{
+			AxisCopy( axis, re->axis );
+		}
+		else
+		{
+			AnglesToAxis( rpHiltAngles, turn );
+			MatrixMultiply( turn, axis, re->axis );
+		}
 		re->ghoul2 = g2;
 		re->hModel = 0;
 		VectorCopy( org, re->origin );
@@ -10648,7 +10675,12 @@ void CG_Player( centity_t *cent ) {
 	// Save the old weapon, to verify that it is or is not the same as the new weapon.
 	// rww - Make sure weapons don't get set BEFORE cent->ghoul2 is initialized or else we'll have no
 	// weapon bolted on
-	if (cent->currentState.saberInFlight)
+	// DAJ_RP: [Saber Drop] only while the saber is the weapon. Its being in flight (thrown, or knocked or
+	// /dropped out of the hand) means "the saber is not in the hand, put nothing there" -- but zyk lets a
+	// player whose saber is knocked away switch weapon (bg_saber.c, weapChecks), which the base game never
+	// did: with a rifle out, this made the rifle look missing every frame, so it was bolted on again every
+	// frame, and the knocked-away saber's removal further down took it off again -- never drawn.
+	if (cent->currentState.saberInFlight && cent->currentState.weapon == WP_SABER)
 	{
 		cent->ghoul2weapon = CG_G2WeaponInstance(cent, WP_SABER);
 	}
@@ -12280,7 +12312,10 @@ stillDoSaber:
 		BG_SI_SetDesiredLength(&ci->saber[0], 0, -1);
 		BG_SI_SetDesiredLength(&ci->saber[1], 0, -1);
 
-		if (g2HasWeapon)
+		// DAJ_RP: [Saber Drop] only while the saber is the weapon: what is in the hand then is the saber's
+		// model. With another weapon out (zyk allows the switch while the saber is knocked away), the hand
+		// holds that weapon, which this used to take off every frame.
+		if (g2HasWeapon && cent->currentState.weapon == WP_SABER)
 		{ //and remember to kill the bolton model in case we didn't get a thrown saber update first
 			trap->G2API_RemoveGhoul2Model(&(cent->ghoul2), 1);
 			g2HasWeapon = qfalse;

@@ -2558,7 +2558,8 @@ void CG_CheckPlayerG2Weapons(playerState_t *ps, centity_t *cent)
 	}
 
 	// should we change the gun model on this player?
-	if (cent->currentState.saberInFlight)
+	// DAJ_RP: [Saber Drop] only while the saber is the weapon -- see the same test in CG_Player (cg_players.c)
+	if (cent->currentState.saberInFlight && ps->weapon == WP_SABER)
 	{
 		cent->ghoul2weapon = CG_G2WeaponInstance(cent, WP_SABER);
 	}
