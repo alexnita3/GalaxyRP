@@ -3885,6 +3885,43 @@ float forcePushPullRadius[NUM_FORCE_POWER_LEVELS] =
 //rwwFIXMEFIXME: incorporate this into the below function? Currently it's only being used by jedi AI
 
 extern void Touch_Button(gentity_t *ent, gentity_t *other, trace_t *trace );
+
+/*
+===============
+RP_ForceUsableStatic / RP_ForceStaticSeen
+
+DAJ_RP: [Force Powers] a func_static that Force Push (F_PUSH, 1) or Pull (F_PULL, 2) uses can be an invisible brush that
+is not solid at all: textures/system/caulk_nonsolid, whose only content is CONTENTS_OPAQUE -- kor1 (three), kor2 (the
+pillar, push_brush), t1_surprise, vjun2 (secret_crate) and yavin2 (open_door_switch) among the stock single player maps.
+Single player's push and pull traces take CONTENTS_OPAQUE (its MASK_OPAQUE and MASK_FORCE_PUSH, wp_saber.cpp); ours,
+MASK_PLAYERSOLID and MASK_SHOT, do not: the aimed (level 1) trace went through such a brush, and the area one found it but
+judged it out of sight whenever something solid stood between the player and its centre. So, for these only:
+  - level 1: when our trace finds no entity (nothing, or the world), the same trace that also stops at opaque brushes,
+    taken only if the first thing it meets is such a func_static for this power; a target our trace finds always wins;
+  - levels 2-5: such a func_static our line-of-sight test calls hidden is in sight when a line from the eyes that also
+    stops at opaque brushes reaches it first, single player's own test.
+Either trace stops at everything ours does and at opaque brushes besides, so it can only ever add such a func_static:
+no other target, and no solid func_static, is pushed, pulled or skipped differently.
+===============
+*/
+static qboolean RP_ForceUsableStatic( const gentity_t *ent, qboolean pull )
+{
+	return ( ent && ent->inuse && !ent->client && ent->classname && !Q_stricmp( ent->classname, "func_static" )
+		&& ( ent->spawnflags & ( pull ? 2/*F_PULL*/ : 1/*F_PUSH*/ ) ) ) ? qtrue : qfalse;
+}
+
+static qboolean RP_ForceStaticSeen( gentity_t *self, gentity_t *ent, const vec3_t eyePoint, const vec3_t ent_org, qboolean pull )
+{
+	trace_t	tr;
+
+	if ( !RP_ForceUsableStatic( ent, pull ) )
+	{
+		return qfalse;
+	}
+	trap->Trace( &tr, eyePoint, vec3_origin, vec3_origin, ent_org, self->s.number, MASK_SHOT|CONTENTS_OPAQUE, qfalse, 0, 0 );
+	return ( tr.fraction == 1.0f || tr.entityNum == ent->s.number ) ? qtrue : qfalse;
+}
+
 void ForceThrow( gentity_t *self, qboolean pull )
 {
 	//shove things in front of you away
@@ -4061,6 +4098,18 @@ void ForceThrow( gentity_t *self, qboolean pull )
 
 		// zyk: added CONTENTS_TRIGGER so items are traced
 		trap->Trace(&tr, tfrom, NULL, NULL, tto, self->s.number, MASK_PLAYERSOLID|CONTENTS_TRIGGER, qfalse, 0, 0);
+
+		// DAJ_RP: [Force Powers] nothing found: a non-solid push/pull func_static in the way? (RP_ForceUsableStatic)
+		if (tr.fraction == 1.0 || tr.entityNum == ENTITYNUM_NONE || tr.entityNum == ENTITYNUM_WORLD)
+		{
+			trace_t opaqueTr;
+			trap->Trace(&opaqueTr, tfrom, NULL, NULL, tto, self->s.number, MASK_PLAYERSOLID|CONTENTS_TRIGGER|CONTENTS_OPAQUE, qfalse, 0, 0);
+			if (opaqueTr.fraction != 1.0 && opaqueTr.entityNum >= 0 && opaqueTr.entityNum < ENTITYNUM_WORLD &&
+				RP_ForceUsableStatic(&g_entities[opaqueTr.entityNum], pull))
+			{
+				tr = opaqueTr;
+			}
+		}
 
 		if (tr.fraction != 1.0 &&
 			tr.entityNum != ENTITYNUM_NONE)
@@ -4308,7 +4357,8 @@ void ForceThrow( gentity_t *self, qboolean pull )
 			eyePoint[2] += self->client->ps.viewheight;
 			trap->Trace( &tr, eyePoint, vec3_origin, vec3_origin, ent_org, self->s.number, MASK_SHOT, qfalse, 0, 0 );
 
-			if ( tr.fraction < 1.0f && tr.entityNum != ent->s.number )
+			if ( tr.fraction < 1.0f && tr.entityNum != ent->s.number
+				&& !RP_ForceStaticSeen( self, ent, eyePoint, ent_org, pull ) )	// DAJ_RP: [Force Powers] a non-solid push/pull func_static
 			{
 				continue;
 			}
