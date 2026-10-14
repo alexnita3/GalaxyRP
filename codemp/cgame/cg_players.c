@@ -9822,7 +9822,8 @@ Holstered sabers
 
 DAJ_RP: [Holstered Sabers] a player or NPC that carries a saber (EF2_RP_SABER_CARRIED, set by the server --
 see bg_public.h) and has another weapon out wears its hilt on the right thigh, a second saber of a pair on
-the left one, a staff on the right -- a lightsaber only: swords, vibroblades, electrostaffs and props are
+the left one (also while the first is thrown or knocked away: only the first is then not worn), a staff on
+the right -- a lightsaber only: swords, vibroblades, electrostaffs and props are
 not drawn (CG_RpSaberHolsterable). Placement as in JoF_EJK (CG_DrawHolsteredSaber): each hilt at the
 model's rfemurX / lfemurX bone, 3.5 units out along the bone's X axis (scaled with the model), the hilt
 turned to hang down the thigh. A saber worn on the wrist (boltToWrist, SFL_BOLT_TO_WRIST) stays on its
@@ -10008,6 +10009,13 @@ static void CG_RpPlaceHolsteredSabers( centity_t *cent, clientInfo_t *ci, const 
 
 		// only a lightsaber hilt: anything else is not drawn while another weapon is out
 		if ( !CG_RpSaberHolsterable( saber ) )
+		{
+			continue;
+		}
+
+		// DAJ_RP: [Saber Drop] the first saber thrown, dropped or knocked away is not with its owner; a second one
+		// of a pair is (the base game never knocks it away), so it is still worn
+		if ( i == 0 && cent->currentState.saberInFlight )
 		{
 			continue;
 		}
@@ -10759,6 +10767,21 @@ void CG_Player( centity_t *cent ) {
 	else if ((cent->currentState.eFlags & EF_DEAD) || cent->torsoBolt)
 	{
 		cent->ghoul2weapon = NULL; //be sure to update after respawning/getting limb regrown
+	}
+
+	// DAJ_RP: [Saber Drop] a pair whose first saber is away (thrown, dropped or knocked away) keeps its second in
+	// the left hand -- the base game knocks away the first only, and keeps the second lit (bg_saber.c). Switching
+	// to another weapon takes the second off the model (CG_CopyG2WeaponInstance), and switching back while the
+	// first is still away bolts nothing on (the test above takes the saber to be in place while it flies): the
+	// second saber came back hiltless, its blades drawn from the model's root. Put it back in the hand.
+	if (cent->ghoul2 && ci && ci->team != TEAM_SPECTATOR &&
+		cent->currentState.weapon == WP_SABER &&
+		cent->currentState.saberInFlight &&
+		!(cent->currentState.eFlags & EF_DEAD) && !cent->torsoBolt &&
+		ci->saber[1].model[0] && ci->ghoul2Weapons[1] &&
+		!trap->G2API_HasGhoul2ModelOnIndex(&(cent->ghoul2), 2))
+	{
+		trap->G2API_CopySpecificGhoul2Model(ci->ghoul2Weapons[1], 0, cent->ghoul2, 2);
 	}
 
 

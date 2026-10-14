@@ -2914,7 +2914,7 @@ void BG_PlayerStateToEntityState( playerState_t *ps, entityState_t *s, qboolean 
 	s->eFlags = ps->eFlags;
 	s->eFlags2 = ps->eFlags2;
 	// DAJ_RP: [Holstered Sabers] see EF2_RP_SABER_CARRIED in bg_public.h
-	if ( ( ps->stats[STAT_WEAPONS] & ( 1 << WP_SABER ) ) && !ps->saberInFlight )
+	if ( ps->stats[STAT_WEAPONS] & ( 1 << WP_SABER ) )
 		s->eFlags2 |= EF2_RP_SABER_CARRIED;
 	else
 		s->eFlags2 &= ~EF2_RP_SABER_CARRIED;
@@ -3073,7 +3073,7 @@ void BG_PlayerStateToEntityStateExtraPolate( playerState_t *ps, entityState_t *s
 	s->eFlags = ps->eFlags;
 	s->eFlags2 = ps->eFlags2;
 	// DAJ_RP: [Holstered Sabers] see EF2_RP_SABER_CARRIED in bg_public.h
-	if ( ( ps->stats[STAT_WEAPONS] & ( 1 << WP_SABER ) ) && !ps->saberInFlight )
+	if ( ps->stats[STAT_WEAPONS] & ( 1 << WP_SABER ) )
 		s->eFlags2 |= EF2_RP_SABER_CARRIED;
 	else
 		s->eFlags2 &= ~EF2_RP_SABER_CARRIED;

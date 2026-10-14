@@ -798,11 +798,12 @@ typedef enum {
 // scaled per axis (CG_General). Other clients do not know the bit and draw it as before, unscaled. Unused by
 // the stock game, TaystJK, EternalJK and JA++ (which takes the next bit for its grapple).
 #define	EF2_RP_VECTOR_SCALE		(1<<8)
-// DAJ_RP: [Holstered Sabers] the player or NPC carries a saber that is not in its hand: WP_SABER in its weapons
-// and the saber not thrown, dropped or knocked away (saberInFlight). Set by BG_PlayerStateToEntityState() from
-// the playerState, never stored in ps->eFlags2. The GalaxyRP client draws the hilt on the thigh while the holder
-// has another weapon out (CG_RpAddHolsteredSabers, cg_players.c). Clients see no one's weapons but their own,
-// and every NPC carries a default saber name ("@Kyle", NPC_stats.c) whether it has a saber or not, so the
+// DAJ_RP: [Holstered Sabers] the player or NPC carries a saber: WP_SABER in its weapons. Set by
+// BG_PlayerStateToEntityState() from the playerState, never stored in ps->eFlags2. The GalaxyRP client draws the
+// hilt on the thigh while the holder has another weapon out (CG_RpAddHolsteredSabers, cg_players.c) -- the first
+// saber's only while it is not thrown, dropped or knocked away (saberInFlight, sent on its own): a dual-saber
+// holder whose first saber is on the ground still wears the second (the flag used to be cleared while it was).
+// Clients see no one's weapons but their own, and every NPC carries a default saber name ("@Kyle", NPC_stats.c) whether it has a saber or not, so the
 // server says who has one. The last of the ten bits the engine sends; JA++ uses it for its grapple.
 #define	EF2_RP_SABER_CARRIED	(1<<9)
 
