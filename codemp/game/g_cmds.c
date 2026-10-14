@@ -1284,13 +1284,13 @@ void zyk_add_force_powers( gentity_t *ent )
 {
 	int i = 0;
 
+	// DAJ_RP: [Admin] every power at level 3, Saber Attack too: /give is for logged-out players, and levels 4
+	// and 5 -- for Saber Attack the Desann and Tavion styles -- are for logged-in characters only. Saber Attack
+	// used to be given at 5.
 	for (i = FP_HEAL; i < NUM_FORCE_POWERS; i++)
 	{
 		ent->client->ps.fd.forcePowersKnown |= (1 << i);
-		if (i == FP_SABER_OFFENSE) // zyk: gives Desann and Tavion styles
-			ent->client->ps.fd.forcePowerLevel[i] = FORCE_LEVEL_5;
-		else
-			ent->client->ps.fd.forcePowerLevel[i] = FORCE_LEVEL_3;
+		ent->client->ps.fd.forcePowerLevel[i] = FORCE_LEVEL_3;
 	}
 
 	// GalaxyRP fix: [cleanup] this used to re-set the WP_SABER bit on every loop iteration above
