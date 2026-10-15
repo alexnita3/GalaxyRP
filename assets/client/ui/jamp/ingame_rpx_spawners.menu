@@ -494,6 +494,96 @@
 		}
 		itemDef
 		{
+			name                rpx_spsep
+			style               WINDOW_STYLE_FILLED
+			rect                232 252 190 1
+			backcolor           1 .682 0 .5
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_head_spnpc
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 259 190 14
+			text                "Spawned NPC"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_head_spveh
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 259 190 14
+			text                "Spawned vehicle"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"1"
+			}
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_spscale
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                "Scale override (%): "
+			cvar                "ui_rpx_sp_scale"
+			maxchars            4
+			maxPaintChars       4
+			rect                232 278 190 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Its size in percent, 1 to 1023 (100 is normal); 0 or empty: its type's own"
+		}
+		itemDef
+		{
+			name                rpx_spscale_tip
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 300 190 14
+			text                "1 to 1023 percent, 100 is normal."
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          95
+			textaligny          0
+			font                2
+			textscale           0.6
+			forecolor           .8 .8 .8 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
 			name                rpx_undo
 			type                ITEM_TYPE_BUTTON
 			style               WINDOW_STYLE_FILLED
