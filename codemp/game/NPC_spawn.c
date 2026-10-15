@@ -1874,6 +1874,19 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 	// vehicle, since the spawner may be gone by the time NPC_Begin() applies it after its type's defaults.
 	newent->rpSpawnerTeam = ent->rpSpawnerTeam;
 
+	// DAJ_RP: [NPC Scale] the spawner's "npcscale" (RP_SpawnerScaleKey()), after NPC_ParseParms() so it takes over from
+	// the .npc file's own scale -- 100 included, which makes a scaled type its normal size. Both halves, as that scale
+	// does: the size sent to the clients (they draw it) and the server's Ghoul2 scale (hit detection, saber and rider
+	// bolts). The box is not scaled, as it is not for a .npc scale or /scale either.
+	newent->rpNpcScale = ent->rpNpcScale;
+	if ( newent->rpNpcScale > 0 )
+	{
+		const float scale = newent->rpNpcScale / 100.0f;
+
+		newent->client->ps.iModelScale = newent->rpNpcScale;
+		VectorSet( newent->modelScale, scale, scale, scale );
+	}
+
 	// DAJ_RP: [NPC Rewards] the spawner's "npccredits" and "npcxp": what this NPC's killer is paid. (The old
 	// spawnflags 32768 + genericvalue7 credits are not honoured any more -- nothing ever paid them.)
 	if ( newent->client->NPC_class != CLASS_VEHICLE )
@@ -2542,6 +2555,44 @@ static void RP_SpawnerRewardKeys( gentity_t *self )
 	self->rpRewardXP = RP_SpawnerRewardKey( self, "npcxp", RP_REWARD_MAX_XP );
 }
 
+/*
+==================
+RP_SpawnerScaleKey
+
+DAJ_RP: [NPC Scale] an NPC or vehicle spawner's "npcscale": the size of each NPC or vehicle it makes, in percent (100 is
+normal), taking over from its .npc file's own scale (NPC_Spawn_Do()). 0 or no key is none. /entadd and /entedit refuse
+anything outside RP_NPC_SCALE_MIN..RP_NPC_SCALE_MAX; a value that reaches here another way -- an entity file, a map --
+is brought into range and logged. Read every time, like npcteam, so a spawner spawned again in place without the key
+makes its NPCs their type's size again.
+==================
+*/
+static void RP_SpawnerScaleKey( gentity_t *self )
+{
+	char *text = NULL;
+	int value;
+
+	self->rpNpcScale = 0;
+
+	if ( !G_SpawnString( "npcscale", "", &text ) || !text || !text[0] )
+		return;
+
+	value = atoi( text );
+
+	if ( value == 0 )
+		return;
+
+	if ( value < RP_NPC_SCALE_MIN || value > RP_NPC_SCALE_MAX )
+	{
+		const int fixed = ( value < RP_NPC_SCALE_MIN ) ? RP_NPC_SCALE_MIN : RP_NPC_SCALE_MAX;
+
+		G_LogPrintf( "%s %d: \"npcscale\" %s is outside %d..%d, using %d\n", self->classname ? self->classname : "spawner",
+			self->s.number, RP_ShownText( text ), RP_NPC_SCALE_MIN, RP_NPC_SCALE_MAX, fixed );
+		value = fixed;
+	}
+
+	self->rpNpcScale = value;
+}
+
 /*QUAKED NPC_spawner (1 0 0) (-16 -16 -24) (16 16 40) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY
 
 DROPTOFLOOR - NPC can be in air, but will spawn on the closest floor surface below it
@@ -2758,6 +2809,9 @@ void SP_NPC_spawner( gentity_t *self)
 
 	// DAJ_RP: [NPC Rewards] "npccredits" and "npcxp" -- see RP_SpawnerRewardKeys()
 	RP_SpawnerRewardKeys( self );
+
+	// DAJ_RP: [NPC Scale] "npcscale" -- see RP_SpawnerScaleKey()
+	RP_SpawnerScaleKey( self );
 
 	// DAJ_RP: [NPC System] "npcfreeze" -- see RP_NpcFreezeFromValue(). Read every time, like npceffect.
 	{
@@ -2991,6 +3045,9 @@ void SP_NPC_Vehicle( gentity_t *self)
 
 	// GalaxyRP: [Entity System] "npcteam" -- /npc team takes vehicles too; see RP_NpcTeamFromName()
 	RP_SpawnerTeamKey( self );
+
+	// DAJ_RP: [NPC Scale] "npcscale" -- a vehicle is drawn, and carries its riders, at that size; see RP_SpawnerScaleKey()
+	RP_SpawnerScaleKey( self );
 
 	// DAJ_RP: [NPC Rewards] a vehicle pays nothing: /entadd and /entedit refuse npccredits and npcxp on an
 	// NPC_Vehicle, and one given them another way is not read

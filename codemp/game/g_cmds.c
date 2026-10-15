@@ -15897,6 +15897,37 @@ static const char *zyk_spawner_reward_problem( qboolean vehicle, const char *key
 	return NULL;
 }
 
+// DAJ_RP: [NPC Scale] what is wrong with an "npcscale" value on an NPC or vehicle spawner, or NULL: a whole number from
+// RP_NPC_SCALE_MIN to RP_NPC_SCALE_MAX, the size of each NPC or vehicle it makes in percent (RP_SpawnerScaleKey(),
+// NPC_spawn.c). An empty value is none and always fine. Used by /entadd and /entedit.
+static const char *zyk_spawner_scale_problem( const char *value )
+{
+	static char problem[256];
+	const char *p;
+
+	if ( !value || !value[0] )
+	{
+		return NULL;
+	}
+
+	for ( p = value; *p; p++ )
+	{
+		if ( *p < '0' || *p > '9' || ( p - value ) >= 4 )
+		{
+			break;
+		}
+	}
+
+	if ( *p || atoi( value ) < RP_NPC_SCALE_MIN || atoi( value ) > RP_NPC_SCALE_MAX )
+	{
+		Com_sprintf( problem, sizeof( problem ), "^3npcscale %s^7: the size is a whole number from ^3%d^7 to ^3%d^7 percent (^3100^7 is normal).",
+			zyk_shown_name( value ), RP_NPC_SCALE_MIN, RP_NPC_SCALE_MAX );
+		return problem;
+	}
+
+	return NULL;
+}
+
 /*
 ==================
 zyk_entadd_spawner_problem
@@ -15914,12 +15945,12 @@ static const char *zyk_entadd_spawner_problem( const char *classname, int number
 	static char problem[256];
 	char key[MAX_STRING_CHARS], value[MAX_STRING_CHARS];
 	char targetname[MAX_STRING_CHARS], npc_type[MAX_STRING_CHARS], effect[MAX_STRING_CHARS], team[MAX_STRING_CHARS];
-	char reward_credits[MAX_STRING_CHARS], reward_xp[MAX_STRING_CHARS], freeze[MAX_STRING_CHARS];
+	char reward_credits[MAX_STRING_CHARS], reward_xp[MAX_STRING_CHARS], freeze[MAX_STRING_CHARS], scale[MAX_STRING_CHARS];
 	qboolean has_type = qfalse;
 	qboolean vehicle = !Q_stricmp( classname, "npc_vehicle" ) ? qtrue : qfalse;
 	int i;
 
-	targetname[0] = npc_type[0] = effect[0] = team[0] = reward_credits[0] = reward_xp[0] = freeze[0] = '\0';
+	targetname[0] = npc_type[0] = effect[0] = team[0] = reward_credits[0] = reward_xp[0] = freeze[0] = scale[0] = '\0';
 	for ( i = 2; i + 1 < number_of_args; i += 2 )
 	{
 		trap->Argv( i, key, sizeof( key ) );
@@ -15952,6 +15983,10 @@ static const char *zyk_entadd_spawner_problem( const char *classname, int number
 		else if ( !Q_stricmp( key, "npcfreeze" ) )
 		{
 			Q_strncpyz( freeze, value, sizeof( freeze ) );
+		}
+		else if ( !Q_stricmp( key, "npcscale" ) )
+		{
+			Q_strncpyz( scale, value, sizeof( scale ) );
 		}
 	}
 
@@ -16001,6 +16036,17 @@ static const char *zyk_entadd_spawner_problem( const char *classname, int number
 		if ( problem_freeze )
 		{
 			return problem_freeze;
+		}
+	}
+
+	// DAJ_RP: [NPC Scale] "npcscale" -- see RP_SpawnerScaleKey() (NPC_spawn.c)
+	if ( scale[0] )
+	{
+		const char *problem_scale = zyk_spawner_scale_problem( scale );
+
+		if ( problem_scale )
+		{
+			return problem_scale;
 		}
 	}
 
@@ -16841,6 +16887,17 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 						return;
 					}
 				}
+				// DAJ_RP: [NPC Scale] "npcscale" -- removing it is always fine
+				if (Q_stricmp(key, "npcscale") == 0 && Q_stricmp(arg2, "zykremovekey") != 0)
+				{
+					const char *problem_scale = zyk_spawner_scale_problem(arg2);
+
+					if (problem_scale)
+					{
+						trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", problem_scale) );
+						return;
+					}
+				}
 			}
 		}
 
@@ -17170,6 +17227,10 @@ static qboolean zyk_entsave_add_common(const gentity_t *ent, int spawnflags, qbo
 		return qfalse;
 	if (ent->s.shouldtarget && !zyk_entsave_add("showhealth", "1"))
 		return qfalse;
+	// DAJ_RP: [NPC Scale] the size its spawner's "npcscale" gave it (gentity_t::rpNpcScale), so it comes back that size. One
+	// scaled only by its .npc file writes nothing: the file stays in charge.
+	if (ent->rpNpcScale > 0 && !zyk_entsave_add("npcscale", va("%d", ent->rpNpcScale)))
+		return qfalse;
 
 	return qtrue;
 }
@@ -17196,7 +17257,7 @@ static const char *zyk_entsave_effect_word(int mode)
 //  - npceffect: its /npc effect mode now; a release in progress is no mode.
 //  - npcfreeze: 1 while it is under /npc freeze (RP_NpcFreeze(), NPC_spawn.c), so it comes back frozen. A map
 //    script's own freeze is not ours to save.
-//  - npcteam, NPC_targetname, NPC_target, showhealth: see zyk_entsave_add_common().
+//  - npcteam, NPC_targetname, NPC_target, showhealth, npcscale: see zyk_entsave_add_common().
 //  - noBasicSounds, noCombatSounds, noExtraSounds: the sounds it was told not to load. Any value means yes to
 //    SP_NPC_spawner(), so 1.
 // Not its health: it comes back with its type's.
@@ -17245,7 +17306,7 @@ static const char *zyk_entsave_npc_line(gentity_t *ent, const char *escaped_type
 //    ceil( seconds * 1000 ), so it goes out half a millisecond short: a float a hair over the whole millisecond
 //    would otherwise come back one longer on every save.
 //  - model2: the droid it makes for its droid slot. The droid itself is not saved (the vehicle makes it again).
-//  - npcteam, NPC_targetname, NPC_target, showhealth: see zyk_entsave_add_common().
+//  - npcteam, NPC_targetname, NPC_target, showhealth, npcscale: see zyk_entsave_add_common().
 static const char *zyk_entsave_vehicle_line(gentity_t *ent, const char *escaped_type, qboolean with_text)
 {
 	const int spawnflags = ent->spawnflags & (1 | 2 | ZYK_ENTSAVE_CINEMATIC | ZYK_ENTSAVE_NOTSOLID | ZYK_ENTSAVE_STARTINSOLID);
@@ -20623,7 +20684,7 @@ void Cmd_EntitiesAndRemaps_f( gentity_t *ent ) {
 	lines[n++] = "^3/entaddaim <classname> <key> <value>...: ^7Like /entadd, but puts the entity on the surface you aim at (through players and NPCs); ^3aimoffset <units>^7 puts it that far out from the surface.\n";
 	lines[n++] = "^3/entorigin: ^7Sets your position as origin for new entities. Use again to unset.\n";
 	lines[n++] = "^3/entundo: ^7Removes last added entity; a spawner takes the NPCs it made with it. Only works once.\n";
-	lines[n++] = "^7NPC spawners: ^3npc_spawner^7 and ^3NPC_Vehicle^7 (npc_type) need a ^3targetname^7, the name they are fired by; ^3spawnnow 1^7 also spawns one at once, ^3respawn 1^7 fires it again when one it made dies, ^3count -1^7 is no limit; ^3npceffect holo^7, ^3ghost^7 or ^3walkthrough^7 spawns NPCs with that ^3/npc effect^7; ^3npcteam player^7, ^3enemy^7, ^3neutral^7 or ^3free^7 sets their side, as ^3/npc team^7 does; ^3npcfreeze 1^7 spawns them frozen, as ^3/npc freeze^7 leaves them.\n";
+	lines[n++] = "^7NPC spawners: ^3npc_spawner^7 and ^3NPC_Vehicle^7 (npc_type) need a ^3targetname^7, the name they are fired by; ^3spawnnow 1^7 also spawns one at once, ^3respawn 1^7 fires it again when one it made dies, ^3count -1^7 is no limit; ^3npceffect holo^7, ^3ghost^7 or ^3walkthrough^7 spawns NPCs with that ^3/npc effect^7; ^3npcteam player^7, ^3enemy^7, ^3neutral^7 or ^3free^7 sets their side, as ^3/npc team^7 does; ^3npcfreeze 1^7 spawns them frozen, as ^3/npc freeze^7 leaves them; ^3npcscale <1-1023>^7 sets their size in percent (^3100^7 is normal).\n";
 	lines[n++] = "^7NPC kill rewards: on an ^3npc_spawner^7, ^3npccredits <0-100000>^7 and ^3npcxp <0-100>^7 are paid to the logged-in player who kills one of its NPCs. Vehicles pay nothing.\n";
 
 	lines[n++] = "^5Finding and changing\n";

@@ -728,11 +728,21 @@ struct gentity_s {
 	// set back to 0 once paid. 0 is none. Never set on a vehicle.
 	int			rpRewardCredits;
 	int			rpRewardXP;
+
+	// DAJ_RP: [NPC Scale] on an NPC or vehicle spawner: its "npcscale" key, the size of each NPC or vehicle it makes in
+	// percent, RP_NPC_SCALE_MIN..RP_NPC_SCALE_MAX, 0 for none (RP_SpawnerScaleKey(), NPC_spawn.c). Copied onto each one
+	// by NPC_Spawn_Do(), which scales it with it; on the NPC, the size its spawner gave it, so /entsave can write it.
+	int			rpNpcScale;
 };
 
 // DAJ_RP: [NPC Rewards] the most an npc_spawner's "npccredits" and "npcxp" may pay for one kill
 #define RP_REWARD_MAX_CREDITS	100000
 #define RP_REWARD_MAX_XP		100
+
+// DAJ_RP: [NPC Scale] the sizes an NPC or vehicle spawner's "npcscale" takes, in percent (100 is normal): the drawn size is
+// sent in 10 bits, as a .npc file's own scale is
+#define RP_NPC_SCALE_MIN		1
+#define RP_NPC_SCALE_MAX		1023
 
 #define DAMAGEREDIRECT_HEAD		1
 #define DAMAGEREDIRECT_RLEG		2

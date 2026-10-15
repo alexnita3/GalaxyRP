@@ -1233,7 +1233,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		NULL,
 		"common" },
 	{ "npc", RP_EH_TOPIC, NULL,
-		"Shared behaviour of every npc_* spawner (npc_spawner, npc_vehicle and the named classes such as npc_stormtrooper). /entadd needs a targetname: firing that name spawns one NPC, after delay. Each spawn uses one of count, and when the last is used the spawner fires its target and removes itself. spawnnow and respawn work only on a named spawner. A spawn is skipped (count kept) when 256 NPCs are alive or entity slots run short. Its NPCs get npc_targetname, npc_target, health, scripts and spawnflags from it, so the spawnflags 1 to 8 act by NPC type as on the named classes (a wampa's WANDER and SEARCH, an R2 or R5 unit's ALWAYSDIE, a sniper's NO_HIDE).",
+		"Shared behaviour of every npc_* spawner (npc_spawner, npc_vehicle and the named classes such as npc_stormtrooper). /entadd needs a targetname: firing that name spawns one NPC, after delay. Each spawn uses one of count, and when the last is used the spawner fires its target and removes itself. spawnnow and respawn work only on a named spawner. A spawn is skipped (count kept) when 256 NPCs are alive or entity slots run short. Its NPCs get npc_targetname, npc_target, health (not a vehicle), npcscale, scripts and spawnflags from it, so the spawnflags 1 to 8 act by NPC type as on the named classes (a wampa's WANDER and SEARCH, an R2 or R5 unit's ALWAYSDIE, a sniper's NO_HIDE).",
 		"16|DROPTOFLOOR|Traces the spawner down to the floor, but the NPC is still made at the spawner's own origin, so it has no visible effect (single player is the same). For Jedi, Luke or Kyle allies and Tavion, Reborn, Desann or Shadowtrooper enemies it is CEILING: the NPC clings where placed and drops on seeing an enemy or being hurt.\n"
 		"32|CINEMATIC|The NPC starts with no AI (cinematic behaviour state) and stands until a script moves it.\n"
 		"64|NOTSOLID|The NPC is not solid at all and is not checked for a blocked spawn spot. Wins over npceffect.\n"
@@ -1249,7 +1249,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"target||Fired when the spawner spawns its last NPC (count used up).\n"
 		"spawnnow|0|1: also spawns one at once when placed or loaded, not counted and without delay or shyness. Spawned again in place (/entedit) it does so only if none it made is alive.\n"
 		"respawn|0|1: when an NPC it made dies the spawner is fired again: its delay but at least 2 seconds, and one of its count. Use count -1 to keep it going.\n"
-		"health|0|Health of each NPC, 0 for the NPC type's own.\n"
+		"health|0|Health of each NPC, 0 for the NPC type's own. Not on npc_vehicle: a vehicle's health is its armor from its vehicle file.\n"
 		"npc_targetname||targetname and script_targetname given to each NPC: using it uses the NPC.\n"
 		"npc_target||Fired by each NPC when it dies.\n"
 		"paintarget||Fired by each NPC when it is hurt (not by rancors, wampas, howlers or mine monsters, not always by Galak mechs, nor on most hits from its own side).\n"
@@ -1261,6 +1261,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"npcfreeze|0|1: each NPC starts frozen, as /npc freeze leaves it, and its spawnscript waits until it is unfrozen. Not on npc_vehicle.\n"
 		"npccredits|0|Credits paid to the logged-in player who kills one of its NPCs, 0 to 100000. Not on npc_vehicle.\n"
 		"npcxp|0|XP paid to that player, 0 to 100. Not on npc_vehicle.\n"
+		"npcscale|0|Size of each NPC or vehicle in percent, 1 to 1023 (100 is normal), taking over from its type's own scale. The drawn model and its hit detection are scaled, its box is not. 0: its type's size.\n"
 		"showhealth|0|1: a health bar shows when a crosshair is on the NPC.\n"
 		"message||Each NPC carries a security key of that name (goodie for a goodie key): a player standing over its body takes it.\n"
 		"noBasicSounds||Any value, even 0: the NPCs load and play no basic sounds (pain, death). Not on npc_vehicle.\n"
@@ -1828,7 +1829,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"npc_ugnaught targetname ugnaught1 spawnnow 1",
 		"npc common" },
 	{ "npc_vehicle", 0, NULL,
-		"Vehicle spawner: spawns the vehicle named in npc_type (see /list vehicles, default swoop) each time it is fired by its targetname. Fighters, speeders and walkers start empty and idle until ridden. Takes count, delay, wait, health, spawnnow, respawn, npcteam, showhealth and the npc_target keys like any spawner, but not npceffect, npcfreeze, npccredits, npcxp, the no*Sounds keys, SHY or MILLISECONDS (its wait and delay are seconds). Unlike npc_spawner it is not refused by g_allowNPC 0.",
+		"Vehicle spawner: spawns the vehicle named in npc_type (see /list vehicles, default swoop) each time it is fired by its targetname. Fighters, speeders and walkers start empty and idle until ridden. Takes count, delay, wait, spawnnow, respawn, npcteam, npcscale, showhealth and the npc_target keys like any spawner, but not npceffect, npcfreeze, npccredits, npcxp, the no*Sounds keys, SHY or MILLISECONDS (its wait and delay are seconds). Unlike npc_spawner it is not refused by g_allowNPC 0. A health key does nothing: its health is its armor from its vehicle file.",
 		"1|NO_PILOT_DIE|Once ridden, it explodes when its pilot has been out of it and farther than speed for dmg milliseconds.\n"
 		"2|SUSPENDED|Fighters: hang in the air until someone gets in. With dropTime they first drop for that long.",
 		"npc_type|swoop|The vehicle to spawn. /entadd refuses one the server does not know.\n"
