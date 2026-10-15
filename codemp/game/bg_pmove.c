@@ -6301,7 +6301,21 @@ void PM_FinishWeaponChange( void ) {
 	}
 
 	if ( !( pm->ps->stats[STAT_WEAPONS] & ( 1 << weapon ) ) ) {
-		weapon = WP_NONE;
+		// DAJ_RP: [Weapons] the weapon asked for was taken away while the old one was being put away -- PM_BeginWeaponChange()
+		// only starts a switch to an owned one. Stock gave no weapon at all then (a T-pose, until the player picked one
+		// himself): a Duel Tournament or Melee Battle starting, /give taken back, a /login without a respawn -- whatever
+		// took the guns or the saber and put another weapon in hand during those 200 ms lost that one too. Keep the
+		// weapon in hand, if it is owned; it is taken out again below. No weapon still for a switch to none, and when
+		// the one in hand is not owned either.
+		if ( weapon > WP_NONE && pm->ps->weapon > WP_NONE && pm->ps->weapon < WP_NUM_WEAPONS &&
+			( pm->ps->stats[STAT_WEAPONS] & ( 1 << pm->ps->weapon ) ) )
+		{
+			weapon = pm->ps->weapon;
+		}
+		else
+		{
+			weapon = WP_NONE;
+		}
 	}
 
 	if (weapon == WP_SABER)
