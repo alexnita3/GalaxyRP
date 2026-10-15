@@ -1597,6 +1597,7 @@ struct gclient_s {
 
 	int			idleHealth;		//stop idling if health decreases
 	vec3_t		idleViewAngles;	//stop idling if viewangles change
+	int			rpIdleAnim;		// DAJ_RP: [Saber Keys] the idle G_CheckClientIdle last started, while it plays: broken out of like the stock ones
 
 	int			forcePowerSoundDebounce; //if > level.time, don't do certain sound events again (drain sound, absorb sound, etc)
 	int			absorbBonusTime; // GalaxyRP fix: [Force] next level.time the Absorb 4+ bonus may be granted against a channelled power (see WP_AbsorbConversion)

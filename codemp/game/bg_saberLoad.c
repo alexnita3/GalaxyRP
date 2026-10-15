@@ -508,6 +508,7 @@ void WP_SaberSetDefaults( saberInfo_t *saber ) {
 	saber->readyAnimGreen		= -1;			// -1 - anim to use when standing idle
 	saber->readyAnimStaff		= -1;			// -1 - anim to use when standing idle
 	saber->readyAnimDual		= -1;			// -1 - anim to use when standing idle
+	saber->idleAnim				= -1;			// DAJ_RP: [Saber Keys] -1 - every style's idle fallback (get_idle_animation_for_style, g_active.c)
 	saber->idleAnimBlue			= -1;			// -1 - anim to use when standing in place for an extended period of time
 	saber->idleAnimYellow		= -1;			// -1 - anim to use when standing in place for an extended period of time
 	saber->idleAnimRed			= -1;			// -1 - anim to use when standing in place for an extended period of time
@@ -1296,6 +1297,17 @@ static void Saber_ParseReadyAnimDual(saberInfo_t* saber, const char** p) {
 	anim = GetIDForString(animTable, value);
 	if (anim >= 0 && anim < MAX_ANIMATIONS)
 		saber->readyAnimDual = anim;
+}
+// DAJ_RP: [Saber Keys] "idleAnim": the idle (saber off, 5 seconds still) for every style without its own idleAnim* key,
+// as readyAnim and kataMove are for theirs. Not a base-game key -- neither JKA nor TaystJK has one.
+static void Saber_ParseIdleAnim(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->idleAnim = anim;
 }
 static void Saber_ParseIdleAnimBlue(saberInfo_t* saber, const char** p) {
 	const char* value;
@@ -2227,6 +2239,7 @@ static keywordHash_t saberParseKeywords[] = {
 	{ "readyAnimGreen",			Saber_ParseReadyAnimGreen,		NULL	},
 	{ "readyAnimStaff",			Saber_ParseReadyAnimStaff,		NULL	},
 	{ "readyAnimDual",			Saber_ParseReadyAnimDual,		NULL	},
+	{ "idleAnim",				Saber_ParseIdleAnim,			NULL	},	// DAJ_RP: [Saber Keys]
 	{ "idleAnimBlue",			Saber_ParseIdleAnimBlue,		NULL	},
 	{ "idleAnimYellow",			Saber_ParseIdleAnimYellow,		NULL	},
 	{ "idleAnimRed",			Saber_ParseIdleAnimRed,			NULL	},

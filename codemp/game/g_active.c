@@ -2132,36 +2132,64 @@ int return_idle_animation(int animation) {
 	return BOTH_STAND1IDLE1;
 }
 
+// DAJ_RP: [Saber Keys] the style's own idleAnim* key, else the saber's plain idleAnim (every style's fallback, as
+// readyAnim and kataMove are for theirs), else the stock BOTH_STAND1IDLE1. A style outside the list gets the plain key
+// or the stock idle too (it used to get no idle at all).
 int get_idle_animation_for_style(gentity_t *ent) {
-	int idle_anim = 0;
+	const saberInfo_t *saber = &ent->client->saber[0];
+	int anim;
 
 	switch (ent->client->ps.fd.saberAnimLevel)
 	{
 	case SS_FAST:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimBlue);
+		anim = saber->idleAnimBlue;
 		break;
 	case SS_MEDIUM:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimYellow);
+		anim = saber->idleAnimYellow;
 		break;
 	case SS_STRONG:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimRed);
+		anim = saber->idleAnimRed;
 		break;
 	case SS_DESANN:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimPurple);
+		anim = saber->idleAnimPurple;
 		break;
 	case SS_TAVION:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimGreen);
+		anim = saber->idleAnimGreen;
 		break;
 	case SS_DUAL:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimDual);
+		anim = saber->idleAnimDual;
 		break;
 	case SS_STAFF:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimStaff);
+		anim = saber->idleAnimStaff;
+		break;
+	default:
+		anim = -1;
 		break;
 	}
 
-	return idle_anim;
+	if (anim <= 0)
+	{
+		anim = saber->idleAnim;
+	}
 
+	return return_idle_animation(anim);
+}
+
+// DAJ_RP: [Saber Keys] an idle the player breaks out of when he moves, acts or is hurt: the stock ones, and whichever
+// G_CheckClientIdle itself last started (a .sab's idleAnim key can name any anim). That one was held to its end before,
+// the player gliding around in it, because only the stock ones were listed here.
+static qboolean G_RpBreakableIdle( const gclient_t *client, int anim )
+{
+	switch ( anim )
+	{
+	case BOTH_STAND1IDLE1:
+	case BOTH_STAND2IDLE1:
+	case BOTH_STAND2IDLE2:
+	case BOTH_STAND3IDLE1:
+	case BOTH_STAND5IDLE1:
+		return qtrue;
+	}
+	return ( client->rpIdleAnim > 0 && anim == client->rpIdleAnim ) ? qtrue : qfalse;
 }
 
 void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
@@ -2211,6 +2239,13 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 	{//FIXME: also check for turning?
 		qboolean brokeOut = qfalse;
 
+		// DAJ_RP: [Saber Keys] forget the idle we started once neither half plays it any more, so a later anim that
+		// happens to be the same one (an emote) is left alone
+		if ( ent->client->rpIdleAnim && ent->client->ps.legsAnim != ent->client->rpIdleAnim && ent->client->ps.torsoAnim != ent->client->rpIdleAnim )
+		{
+			ent->client->rpIdleAnim = 0;
+		}
+
 		// zyk: if the player is using an emote, removes it
 		if (!ent->NPC && ent->client->pers.player_statuses & (1 << PLAYER_STATUS_EMOTE) && actionPressed == qtrue)
 		{
@@ -2233,29 +2268,22 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 			|| (ent->client->ps.weapon != ent->client->pers.cmd.weapon && ent->s.eType != ET_NPC))
 		{
 			//if in an idle, break out
-			switch ( ent->client->ps.legsAnim )
+			// DAJ_RP: [Saber Keys] the stock idles and the one we started (G_RpBreakableIdle)
+			if ( G_RpBreakableIdle( ent->client, ent->client->ps.legsAnim ) )
 			{
-			case BOTH_STAND1IDLE1:
-			case BOTH_STAND2IDLE1:
-			case BOTH_STAND2IDLE2:
-			case BOTH_STAND3IDLE1:
-			case BOTH_STAND5IDLE1:
 				ent->client->ps.legsTimer = 0;
 				brokeOut = qtrue;
-				break;
 			}
-			switch ( ent->client->ps.torsoAnim )
+			if ( G_RpBreakableIdle( ent->client, ent->client->ps.torsoAnim ) )
 			{
-			case BOTH_STAND1IDLE1:
-			case BOTH_STAND2IDLE1:
-			case BOTH_STAND2IDLE2:
-			case BOTH_STAND3IDLE1:
-			case BOTH_STAND5IDLE1:
 				ent->client->ps.torsoTimer = 0;
 				ent->client->ps.weaponTime = 0;
 				ent->client->ps.saberMove = LS_READY;
 				brokeOut = qtrue;
-				break;
+			}
+			if ( brokeOut )
+			{
+				ent->client->rpIdleAnim = 0;
 			}
 		}
 		//
@@ -2310,6 +2338,7 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 		if ( /*PM_HasAnimation( ent, idleAnim )*/idleAnim > 0 && idleAnim < MAX_ANIMATIONS )
 		{
 			G_SetAnim(ent, ucmd, SETANIM_BOTH, idleAnim, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD, 0);
+			ent->client->rpIdleAnim = idleAnim;	// DAJ_RP: [Saber Keys] so we can break out of it (G_RpBreakableIdle)
 
 			//don't idle again after this anim for a while
 			//ent->client->idleTime = level.time + PM_AnimLength( ent->client->clientInfo.animFileIndex, (animNumber_t)idleAnim ) + Q_irand( 0, 2000 );

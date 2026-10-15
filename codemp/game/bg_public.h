@@ -1813,6 +1813,7 @@ typedef struct saberInfo_s {
 	int				readyAnimGreen;							// -1 - anim to use when standing idle
 	int				readyAnimStaff;							// -1 - anim to use when standing idle
 	int				readyAnimDual;							// -1 - anim to use when standing idle
+	int				idleAnim;								// -1 - DAJ_RP: [Saber Keys] the idle for every style without its own idleAnim* key below
 	int				idleAnimBlue;							// -1 - anim to use when standing in place for an extended period of time
 	int				idleAnimYellow;							// -1 - anim to use when standing in place for an extended period of time
 	int				idleAnimRed;							// -1 - anim to use when standing in place for an extended period of time
