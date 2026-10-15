@@ -8728,6 +8728,22 @@ extern void BG_VehicleAdjustBBoxForOrientation( Vehicle_t *veh, vec3_t origin, v
 										int clientNum, int tracemask,
 										void (*localTrace)(trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask)); // bg_pmove.c
 */
+/*
+==================
+CG_RpVehicleLiftApplied
+
+DAJ_RP: [NPC Scale] does this vehicle's lerpOrigin hold the lift CG_Player() gave it to stand a scaled vehicle on the
+ground (rpVehicleLift)? It does once it has been drawn, until CG_CalcEntityLerpPositions() works the origin out afresh --
+next frame, or when the passenger prediction does it early (CG_RpPassengerState(), cg_predict.c). Its riders are lifted by
+it, and the client's collision with it takes it back off (CG_ClipMoveToEntities(), cg_predict.c), the server's box being
+where the vehicle physically is.
+==================
+*/
+qboolean CG_RpVehicleLiftApplied( const centity_t *veh )
+{
+	return ( veh && veh->rpVehicleLift && VectorCompare( veh->lerpOrigin, veh->rpVehicleLiftedOrigin ) ) ? qtrue : qfalse;
+}
+
 qboolean CG_VehicleAttachDroidUnit( centity_t *droidCent, refEntity_t *legs )
 {
 	if ( droidCent
@@ -10373,6 +10389,7 @@ void CG_Player( centity_t *cent ) {
 				if ( CG_VehicleAttachDroidUnit( cent, &legs ) )
 				{
 					checkDroidShields = qtrue;
+					reBolted = qtrue;	// DAJ_RP: [NPC Scale] onto the vehicle's socket, from its lerpOrigin (below)
 				}
 			}
 			// fix for screen blinking when spectating person on vehicle and then
@@ -10406,10 +10423,11 @@ void CG_Player( centity_t *cent ) {
 
 		// DAJ_RP: [NPC Scale] a rider of a scaled vehicle drawn lifted (rpVehicleLift, above) goes up or down with it: his
 		// seat came from the vehicle's un-lifted origin -- the server's, or his own prediction's for the local player and
-		// his passengers. One just re-bolted above was placed from the vehicle's lerpOrigin instead, which holds the lift
-		// if the vehicle was drawn since it was last worked out (this frame, or the last one when he is drawn first) --
-		// but not after the passenger prediction worked it out afresh (CG_RpPassengerState(), cg_predict.c).
-		if ( veh->rpVehicleLift && ( !reBolted || !VectorCompare( veh->lerpOrigin, veh->rpVehicleLiftedOrigin ) ) )
+		// his passengers. One just re-bolted above -- a pilot, or the vehicle's droid onto its socket -- was placed from the
+		// vehicle's lerpOrigin instead, which holds the lift if the vehicle was drawn since it was last worked out (this
+		// frame, or the last one when he is drawn first) -- but not after the passenger prediction worked it out afresh
+		// (CG_RpPassengerState(), cg_predict.c). See CG_RpVehicleLiftApplied().
+		if ( veh->rpVehicleLift && ( !reBolted || !CG_RpVehicleLiftApplied( veh ) ) )
 		{
 			cent->lerpOrigin[2] += veh->rpVehicleLift;
 		}

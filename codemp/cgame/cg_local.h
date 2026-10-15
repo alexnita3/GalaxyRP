@@ -472,6 +472,8 @@ typedef struct centity_s {
 	vec3_t			rpVehicleLiftedOrigin;
 } centity_t;
 
+qboolean CG_RpVehicleLiftApplied( const centity_t *veh );	// DAJ_RP: [NPC Scale] cg_players.c
+
 
 //======================================================================
 

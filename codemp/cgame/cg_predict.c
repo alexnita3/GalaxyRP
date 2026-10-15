@@ -314,6 +314,14 @@ static void CG_ClipMoveToEntities ( const vec3_t start, const vec3_t mins, const
 			VectorCopy( vec3_origin, angles );
 
 			VectorCopy( cent->lerpOrigin, origin );
+			// DAJ_RP: [NPC Scale] a scaled vehicle is drawn lifted to stand on the ground (CG_Player(), cg_players.c), and
+			// its lerpOrigin keeps that lift until it is worked out afresh; its box is where it physically is, as the
+			// server has it. Without this the client landed the player on its box that much higher (or lower), and the
+			// server then moved him down (or up) -- a second landing.
+			if ( ent->eType == ET_NPC && ent->NPC_class == CLASS_VEHICLE && CG_RpVehicleLiftApplied( cent ) )
+			{
+				origin[2] -= cent->rpVehicleLift;
+			}
 		}
 
 

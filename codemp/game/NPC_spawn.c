@@ -1306,6 +1306,25 @@ void NPC_Begin (gentity_t *ent)
 				droidEnt = NPC_SpawnType( ent, droidNPCType, NULL, qfalse );
 				if ( droidEnt != NULL )
 				{
+					// DAJ_RP: [NPC Scale] a scaled vehicle's droid is scaled with it -- its own type's scale times the
+					// vehicle's, so it fills the socket that grew or shrank with the vehicle (it sits on that socket, and
+					// grows round it as the socket does). Within the 1..1023 a scale is sent in: a droid type made bigger
+					// in its own .npc file, on a vehicle made big enough, stops at 1023, smaller next to the vehicle than
+					// its type would have it. Not kept in rpNpcScale: the droid is not saved, the vehicle makes it again.
+					if ( droidEnt->client && ent->client && ent->client->ps.iModelScale > 0 && ent->client->ps.iModelScale != 100 )
+					{
+						const int own = droidEnt->client->ps.iModelScale > 0 ? droidEnt->client->ps.iModelScale : 100;
+						int scale = ( own * ent->client->ps.iModelScale + 50 ) / 100;
+						float f;
+
+						if ( scale < RP_NPC_SCALE_MIN )
+							scale = RP_NPC_SCALE_MIN;
+						else if ( scale > RP_NPC_SCALE_MAX )
+							scale = RP_NPC_SCALE_MAX;
+						f = scale / 100.0f;
+						droidEnt->client->ps.iModelScale = scale;
+						VectorSet( droidEnt->modelScale, f, f, f );
+					}
 					if ( droidEnt->client )
 					{
 						droidEnt->client->ps.m_iVehicleNum =
