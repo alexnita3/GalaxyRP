@@ -4692,26 +4692,20 @@ void ForceThrow( gentity_t *self, qboolean pull )
 					continue;
 				}
 
-				if ( VectorCompare( vec3_origin, push_list[x]->s.origin ) )
-				{//does not have an origin brush, so pos1 & pos2 are relative to world origin, need to calc center
-					VectorSubtract( push_list[x]->r.absmax, push_list[x]->r.absmin, size );
-					VectorMA( push_list[x]->r.absmin, 0.5, size, center );
-					if ( (push_list[x]->spawnflags&1) && push_list[x]->moverState == MOVER_POS1 )
-					{//if at pos1 and started open, make sure we get the center where it *started* because we're going to add back in the relative values pos1 and pos2
-						VectorSubtract( center, push_list[x]->pos1, center );
-					}
-					else if ( !(push_list[x]->spawnflags&1) && push_list[x]->moverState == MOVER_POS2 )
-					{//if at pos2, make sure we get the center where it *started* because we're going to add back in the relative values pos1 and pos2
-						VectorSubtract( center, push_list[x]->pos2, center );
-					}
-					VectorAdd( center, push_list[x]->pos1, pos1 );
-					VectorAdd( center, push_list[x]->pos2, pos2 );
-				}
-				else
-				{//actually has an origin, pos1 and pos2 are absolute
-					VectorCopy( push_list[x]->r.currentOrigin, center );
-					VectorCopy( push_list[x]->pos1, pos1 );
-					VectorCopy( push_list[x]->pos2, pos2 );
+				// DAJ_RP: [Entity System] where the door's middle is at each end: its origin there (pos1, pos2) plus the
+				// middle of its own brushes (r.mins/r.maxs, the brush model's bounds), since a brush entity is drawn as its
+				// brushes moved by its origin. Stock took pos1 and pos2 themselves for a door with an origin, as if that
+				// origin were where the door is -- true of an origin brush, but a copy placed with /entcopy, /entaddaim or
+				// /entaddgrab (or /entadd with an origin) gets as its origin how far it was moved, so the side test below
+				// was made far from the door and push and pull swapped on one side of it. For a door without an origin
+				// this is the same point stock worked out from its absmin/absmax.
+				{
+					vec3_t	mid;
+
+					VectorAdd( push_list[x]->r.mins, push_list[x]->r.maxs, mid );
+					VectorScale( mid, 0.5f, mid );
+					VectorAdd( push_list[x]->pos1, mid, pos1 );
+					VectorAdd( push_list[x]->pos2, mid, pos2 );
 				}
 
 				if ( Distance( pos1, trFrom ) < Distance( pos2, trFrom ) )
