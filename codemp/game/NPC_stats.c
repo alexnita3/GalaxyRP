@@ -1795,12 +1795,16 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 				}
 				if (n != 100)
 				{
-					NPC->client->ps.iModelScale = n; //so the client knows
-					if (n >= 1024)
+					// DAJ_RP: [NPC Scale] brought down to the most a size can be sent as (RP_SENT_SCALE_MAX) before the
+					// clients are told it, not after: 1500 was sent as it was, in 10 bits, and drawn at 476 while the
+					// server took 1023 -- 1024 as 0, the normal size. 0 is left as it was: the normal size, as no scale
+					// line, both halves being 0.
+					if (n > RP_SENT_SCALE_MAX)
 					{
-						Com_Printf("WARNING: MP does not support scaling up to or over 1024%\n");
-						n = 1023;
+						Com_Printf(S_COLOR_YELLOW "WARNING: NPC '%s' has scale %d, more than MP can send: using %d\n", NPCName, n, RP_SENT_SCALE_MAX);
+						n = RP_SENT_SCALE_MAX;
 					}
+					NPC->client->ps.iModelScale = n; //so the client knows
 
 					NPC->modelScale[0] = NPC->modelScale[1] = NPC->modelScale[2] = n/100.0f;
 				}

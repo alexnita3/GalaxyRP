@@ -1308,19 +1308,21 @@ void NPC_Begin (gentity_t *ent)
 				{
 					// DAJ_RP: [NPC Scale] a scaled vehicle's droid is scaled with it -- its own type's scale times the
 					// vehicle's, so it fills the socket that grew or shrank with the vehicle (it sits on that socket, and
-					// grows round it as the socket does). Within the 1..1023 a scale is sent in: a droid type made bigger
-					// in its own .npc file, on a vehicle made big enough, stops at 1023, smaller next to the vehicle than
-					// its type would have it. Not kept in rpNpcScale: the droid is not saved, the vehicle makes it again.
+					// grows round it as the socket does). Within the 1..1023 a scale can be sent in (RP_SENT_SCALE_*), not
+					// npcscale's 20..500: it is not an npcscale but follows the vehicle's, a 150 droid on a 500 vehicle being
+					// 750. A droid type made bigger in its own .npc file, on a vehicle made big enough, stops at 1023, smaller
+					// next to the vehicle than its type would have it. Not kept in rpNpcScale: the droid is not saved, the
+					// vehicle makes it again.
 					if ( droidEnt->client && ent->client && ent->client->ps.iModelScale > 0 && ent->client->ps.iModelScale != 100 )
 					{
 						const int own = droidEnt->client->ps.iModelScale > 0 ? droidEnt->client->ps.iModelScale : 100;
 						int scale = ( own * ent->client->ps.iModelScale + 50 ) / 100;
 						float f;
 
-						if ( scale < RP_NPC_SCALE_MIN )
-							scale = RP_NPC_SCALE_MIN;
-						else if ( scale > RP_NPC_SCALE_MAX )
-							scale = RP_NPC_SCALE_MAX;
+						if ( scale < RP_SENT_SCALE_MIN )
+							scale = RP_SENT_SCALE_MIN;
+						else if ( scale > RP_SENT_SCALE_MAX )
+							scale = RP_SENT_SCALE_MAX;
 						f = scale / 100.0f;
 						droidEnt->client->ps.iModelScale = scale;
 						VectorSet( droidEnt->modelScale, f, f, f );
@@ -2576,40 +2578,87 @@ static void RP_SpawnerRewardKeys( gentity_t *self )
 
 /*
 ==================
+RP_NpcScaleValue
+
+DAJ_RP: [NPC Scale] what an "npcscale" value makes the size, in percent: 0 for none (its type's own size), else
+RP_NPC_SCALE_MIN..RP_NPC_SCALE_MAX, a whole number outside them brought to the nearer end, however long it is. Strict
+(/entadd, /entedit) takes digits only and says -1 for anything else, so "50.5", "-5", " 50" or "abc" are refused, not
+read as something; otherwise (an entity file, a map, a preset's one-time NPC line) it reads as atoi() always has here --
+leading spaces and a sign, the number up to the first non-digit, no number at all being none -- and a negative one is
+below the least, so the least.
+==================
+*/
+int RP_NpcScaleValue( const char *text, qboolean strict )
+{
+	const char *p = text;
+	qboolean negative = qfalse;
+	int value = 0, digits = 0;
+
+	if ( !p )
+	{
+		return 0;
+	}
+
+	if ( !strict )
+	{
+		while ( *p == ' ' || *p == '\t' )
+		{
+			p++;
+		}
+		if ( *p == '-' || *p == '+' )
+		{
+			negative = ( *p == '-' ) ? qtrue : qfalse;
+			p++;
+		}
+	}
+
+	for ( ; *p >= '0' && *p <= '9'; p++, digits++ )
+	{
+		if ( value <= RP_NPC_SCALE_MAX )
+		{
+			value = value * 10 + ( *p - '0' );	// past the most it stops growing: it only has to stay over it
+		}
+	}
+
+	if ( strict && ( !digits || *p ) )
+	{
+		return -1;
+	}
+
+	if ( !value )
+	{
+		return 0;
+	}
+
+	if ( negative || value < RP_NPC_SCALE_MIN )
+	{
+		return RP_NPC_SCALE_MIN;
+	}
+
+	return ( value > RP_NPC_SCALE_MAX ) ? RP_NPC_SCALE_MAX : value;
+}
+
+/*
+==================
 RP_SpawnerScaleKey
 
 DAJ_RP: [NPC Scale] an NPC or vehicle spawner's "npcscale": the size of each NPC or vehicle it makes, in percent (100 is
-normal), taking over from its .npc file's own scale (NPC_Spawn_Do()). 0 or no key is none. /entadd and /entedit refuse
-anything outside RP_NPC_SCALE_MIN..RP_NPC_SCALE_MAX; a value that reaches here another way -- an entity file, a map --
-is brought into range and logged. Read every time, like npcteam, so a spawner spawned again in place without the key
-makes its NPCs their type's size again.
+normal), taking over from its .npc file's own scale (NPC_Spawn_Do()). 0 or no key is none. Brought into
+RP_NPC_SCALE_MIN..RP_NPC_SCALE_MAX without a word, however it came -- /entadd and /entedit store it already brought in,
+an entity file or a map may not (RP_NpcScaleValue()). Read every time, like npcteam, so a spawner spawned again in place
+without the key makes its NPCs their type's size again.
 ==================
 */
 static void RP_SpawnerScaleKey( gentity_t *self )
 {
 	char *text = NULL;
-	int value;
 
 	self->rpNpcScale = 0;
 
 	if ( !G_SpawnString( "npcscale", "", &text ) || !text || !text[0] )
 		return;
 
-	value = atoi( text );
-
-	if ( value == 0 )
-		return;
-
-	if ( value < RP_NPC_SCALE_MIN || value > RP_NPC_SCALE_MAX )
-	{
-		const int fixed = ( value < RP_NPC_SCALE_MIN ) ? RP_NPC_SCALE_MIN : RP_NPC_SCALE_MAX;
-
-		G_LogPrintf( "%s %d: \"npcscale\" %s is outside %d..%d, using %d\n", self->classname ? self->classname : "spawner",
-			self->s.number, RP_ShownText( text ), RP_NPC_SCALE_MIN, RP_NPC_SCALE_MAX, fixed );
-		value = fixed;
-	}
-
-	self->rpNpcScale = value;
+	self->rpNpcScale = RP_NpcScaleValue( text, qfalse );
 }
 
 /*QUAKED NPC_spawner (1 0 0) (-16 -16 -24) (16 16 40) x x x x DROPTOFLOOR CINEMATIC NOTSOLID STARTINSOLID SHY

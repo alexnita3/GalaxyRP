@@ -739,10 +739,20 @@ struct gentity_s {
 #define RP_REWARD_MAX_CREDITS	100000
 #define RP_REWARD_MAX_XP		100
 
-// DAJ_RP: [NPC Scale] the sizes an NPC or vehicle spawner's "npcscale" takes, in percent (100 is normal): the drawn size is
-// sent in 10 bits, as a .npc file's own scale is
-#define RP_NPC_SCALE_MIN		1
-#define RP_NPC_SCALE_MAX		1023
+// DAJ_RP: [Scale] the sizes a player's /scale takes, in percent (100 is normal) -- g_cmds.c
+#define RP_SCALE_MIN			20
+#define RP_SCALE_MAX			500
+
+// DAJ_RP: [NPC Scale] the sizes an NPC or vehicle spawner's "npcscale" takes, in percent (100 is normal): a player's, a
+// value outside them brought to the nearer end (RP_NpcScaleValue(), NPC_spawn.c)
+#define RP_NPC_SCALE_MIN		RP_SCALE_MIN
+#define RP_NPC_SCALE_MAX		RP_SCALE_MAX
+
+// DAJ_RP: [NPC Scale] the sizes that can be sent to the clients at all, in percent: iModelScale goes in 10 bits, so 1024
+// arrives as 0 (normal size) and anything bigger wrapped round. A .npc file's own scale, a scripted one and a vehicle's
+// droid are kept within these.
+#define RP_SENT_SCALE_MIN		1
+#define RP_SENT_SCALE_MAX		1023
 
 #define DAMAGEREDIRECT_HEAD		1
 #define DAMAGEREDIRECT_RLEG		2
@@ -2674,6 +2684,7 @@ qboolean	RP_SpawnerMadeIt( const gentity_t *spawner, const gentity_t *npc );
 gentity_t	*RP_SpawnerLiveChild( const gentity_t *spawner );
 void		RP_SpawnerRespawn( gentity_t *npc );
 int			RP_SpawnerRemoveChildren( gentity_t *spawner, int *ridden );
+int			RP_NpcScaleValue( const char *text, qboolean strict );	// DAJ_RP: [NPC Scale] an "npcscale" value
 // GalaxyRP: [Slot Reuse] model and effect slots of removed Entity System props given to new names --
 // g_utils.c
 int			RP_EntityModelIndex( gentity_t *ent, const char *name );

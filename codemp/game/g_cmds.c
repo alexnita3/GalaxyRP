@@ -1583,9 +1583,8 @@ void display_scale_help(gentity_t *ent) {
 
 extern void update_current_character_scale(gentity_t* ent, sqlite3* db);
 
-// DAJ_RP: [Scale] the sizes /scale takes, and its usage line
-#define RP_SCALE_MIN	20
-#define RP_SCALE_MAX	500
+// DAJ_RP: [Scale] /scale's usage line; the sizes it takes, RP_SCALE_MIN and RP_SCALE_MAX, are in g_local.h, which an
+// NPC spawner's "npcscale" shares
 #define RP_SCALE_USAGE	"Usage: ^3/scale <size>^7 to scale yourself, ^3/scale <player name or ID> <size>^7 to scale another player, or ^3/scale help^7. Size 20 to 500, 100 is normal.\n"
 
 // DAJ_RP: [Scale] the size a player is now: their saved scale while scaled (PLAYER_STATUS_SCALED), else the normal 100
@@ -15906,35 +15905,39 @@ static const char *zyk_spawner_reward_problem( qboolean vehicle, const char *key
 	return NULL;
 }
 
-// DAJ_RP: [NPC Scale] what is wrong with an "npcscale" value on an NPC or vehicle spawner, or NULL: a whole number from
-// RP_NPC_SCALE_MIN to RP_NPC_SCALE_MAX, the size of each NPC or vehicle it makes in percent (RP_SpawnerScaleKey(),
-// NPC_spawn.c). An empty value is none and always fine. Used by /entadd and /entedit.
+// DAJ_RP: [NPC Scale] what is wrong with an "npcscale" value on an NPC or vehicle spawner, or NULL: a whole number, digits
+// only, the size of each NPC or vehicle it makes in percent -- 0 none, one outside RP_NPC_SCALE_MIN..RP_NPC_SCALE_MAX
+// brought to the nearer end without a word (RP_NpcScaleValue(), NPC_spawn.c; RP_EntScaleValueStored() stores it so). An
+// empty value is none and always fine. Used by /entadd and /entedit.
 static const char *zyk_spawner_scale_problem( const char *value )
 {
 	static char problem[256];
-	const char *p;
 
 	if ( !value || !value[0] )
 	{
 		return NULL;
 	}
 
-	for ( p = value; *p; p++ )
+	if ( RP_NpcScaleValue( value, qtrue ) < 0 )
 	{
-		if ( *p < '0' || *p > '9' || ( p - value ) >= 4 )
-		{
-			break;
-		}
-	}
-
-	if ( *p || atoi( value ) < RP_NPC_SCALE_MIN || atoi( value ) > RP_NPC_SCALE_MAX )
-	{
-		Com_sprintf( problem, sizeof( problem ), "^3npcscale %s^7: the size is a whole number from ^3%d^7 to ^3%d^7 percent (^3100^7 is normal).",
+		Com_sprintf( problem, sizeof( problem ), "^3npcscale %s^7: the size is a whole number in percent, ^3%d^7 to ^3%d^7 (^3100^7 is normal, ^30^7 its type's own).",
 			zyk_shown_name( value ), RP_NPC_SCALE_MIN, RP_NPC_SCALE_MAX );
 		return problem;
 	}
 
 	return NULL;
+}
+
+// DAJ_RP: [NPC Scale] the value /entadd or /entedit stores for a key of an entity of this class: an NPC or vehicle
+// spawner's "npcscale" as the size it makes (zyk_spawner_scale_problem() above has let only whole numbers through), so
+// /entsave and /entinfo show what is used; every other value as typed. value is a buffer of size bytes, changed in place.
+static void RP_EntScaleValueStored( const char *classname, const char *key, char *value, int size )
+{
+	if ( classname && RP_IsNpcSpawnerClass( classname ) && !Q_stricmp( key, "npcscale" ) && value[0] &&
+		Q_stricmp( value, "zykremovekey" ) && RP_NpcScaleValue( value, qtrue ) >= 0 )
+	{
+		Q_strncpyz( value, va( "%d", RP_NpcScaleValue( value, qtrue ) ), size );
+	}
 }
 
 /*
@@ -16396,6 +16399,7 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 				// GalaxyRP: [Entity System] an instruction to /entaddaim, not a key of the entity (see above)
 				if (Q_stricmp(key, "aimoffset") == 0)
 					continue;
+				RP_EntScaleValueStored(arg1, key, arg2, sizeof(arg2));	// DAJ_RP: [NPC Scale] npcscale 5 is stored as 20
 				zyk_main_set_entity_field(new_ent, key, arg2);
 			}
 		}
@@ -17013,6 +17017,7 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 
 				// GalaxyRP fix: [Entity System] as in Cmd_EntAdd_f -- the helper copies both
 				// arguments itself, so these two allocations were discarded the moment it returned.
+				RP_EntScaleValueStored(this_ent->classname, key, arg2, sizeof(arg2));	// DAJ_RP: [NPC Scale] as /entadd
 				zyk_main_set_entity_field(this_ent, key, arg2);
 			}
 		}
@@ -20693,7 +20698,7 @@ void Cmd_EntitiesAndRemaps_f( gentity_t *ent ) {
 	lines[n++] = "^3/entaddaim <classname> <key> <value>...: ^7Like /entadd, but puts the entity on the surface you aim at (through players and NPCs); ^3aimoffset <units>^7 puts it that far out from the surface.\n";
 	lines[n++] = "^3/entorigin: ^7Sets your position as origin for new entities. Use again to unset.\n";
 	lines[n++] = "^3/entundo: ^7Removes last added entity; a spawner takes the NPCs it made with it. Only works once.\n";
-	lines[n++] = "^7NPC spawners: ^3npc_spawner^7 and ^3NPC_Vehicle^7 (npc_type) need a ^3targetname^7, the name they are fired by; ^3spawnnow 1^7 also spawns one at once, ^3respawn 1^7 fires it again when one it made dies, ^3count -1^7 is no limit; ^3npceffect holo^7, ^3ghost^7 or ^3walkthrough^7 spawns NPCs with that ^3/npc effect^7; ^3npcteam player^7, ^3enemy^7, ^3neutral^7 or ^3free^7 sets their side, as ^3/npc team^7 does; ^3npcfreeze 1^7 spawns them frozen, as ^3/npc freeze^7 leaves them; ^3npcscale <1-1023>^7 sets their size in percent (^3100^7 is normal).\n";
+	lines[n++] = "^7NPC spawners: ^3npc_spawner^7 and ^3NPC_Vehicle^7 (npc_type) need a ^3targetname^7, the name they are fired by; ^3spawnnow 1^7 also spawns one at once, ^3respawn 1^7 fires it again when one it made dies, ^3count -1^7 is no limit; ^3npceffect holo^7, ^3ghost^7 or ^3walkthrough^7 spawns NPCs with that ^3/npc effect^7; ^3npcteam player^7, ^3enemy^7, ^3neutral^7 or ^3free^7 sets their side, as ^3/npc team^7 does; ^3npcfreeze 1^7 spawns them frozen, as ^3/npc freeze^7 leaves them; ^3npcscale <20-500>^7 sets their size in percent (^3100^7 is normal).\n";
 	lines[n++] = "^7NPC kill rewards: on an ^3npc_spawner^7, ^3npccredits <0-100000>^7 and ^3npcxp <0-100>^7 are paid to the logged-in player who kills one of its NPCs. Vehicles pay nothing.\n";
 
 	lines[n++] = "^5Finding and changing\n";

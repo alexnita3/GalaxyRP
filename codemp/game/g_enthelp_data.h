@@ -1261,7 +1261,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"npcfreeze|0|1: each NPC starts frozen, as /npc freeze leaves it, and its spawnscript waits until it is unfrozen. Not on npc_vehicle.\n"
 		"npccredits|0|Credits paid to the logged-in player who kills one of its NPCs, 0 to 100000. Not on npc_vehicle.\n"
 		"npcxp|0|XP paid to that player, 0 to 100. Not on npc_vehicle.\n"
-		"npcscale|0|Size of each NPC or vehicle in percent, 1 to 1023 (100 is normal), taking over from its type's own scale. The drawn model and its hit detection are scaled, its box is not. 0: its type's size.\n"
+		"npcscale|0|Size of each NPC or vehicle in percent, 20 to 500 (100 is normal, less is taken as 20 and more as 500), taking over from its type's own scale. The drawn model and its hit detection are scaled, its box is not. 0: its type's size.\n"
 		"showhealth|0|1: a health bar shows when a crosshair is on the NPC.\n"
 		"message||Each NPC carries a security key of that name (goodie for a goodie key): a player standing over its body takes it.\n"
 		"noBasicSounds||Any value, even 0: the NPCs load and play no basic sounds (pain, death). Not on npc_vehicle.\n"

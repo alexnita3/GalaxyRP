@@ -789,8 +789,8 @@ have one. The team (npcteam) is both kinds', as /npc team is. The kill rewards (
 spawner's only: a vehicle pays nothing, and the server refuses them on one. So is Frozen (npcfreeze): /npc freeze
 refuses vehicles, and the server refuses the key on a vehicle spawner. With No AI as well both are sent: the NPC
 stays frozen until unfrozen, then stands as a no-AI one.
-DAJ_RP: the scale override (npcscale) is both kinds', sent from 1 to 1023 percent: more is sent as 1023, 0 or
-less is not sent (its type's own size).
+DAJ_RP: the scale override (npcscale) is both kinds', sent from 20 to 500 percent, as a player's /scale: less is
+sent as 20, more as 500, 0 or less is not sent (its type's own size).
 ==================
 */
 static void RPX_SpawnSpawner( qboolean grab ) {
@@ -864,12 +864,13 @@ static void RPX_SpawnSpawner( qboolean grab ) {
 		break;
 	}
 	// DAJ_RP: [NPC Scale] the size of each one it makes in percent (npcscale), both kinds; 0 is its type's own, so
-	// nothing is sent. More than the server takes (RP_NPC_SCALE_MAX) is brought down to it, as the rewards are.
+	// nothing is sent. Outside the server's 20..500 (RP_NPC_SCALE_MIN, RP_NPC_SCALE_MAX) it is brought to the nearer
+	// end, as the server would.
 	{
-		const int scale = RPX_ClampInt( RPX_CvarInt( "ui_rpx_sp_scale" ), 0, 1023 );
+		const int scale = RPX_CvarInt( "ui_rpx_sp_scale" );
 
 		if ( scale > 0 ) {
-			Q_strcat( cmd, sizeof( cmd ), va( " npcscale \"%d\"", scale ) );
+			Q_strcat( cmd, sizeof( cmd ), va( " npcscale \"%d\"", RPX_ClampInt( scale, 20, 500 ) ) );
 		}
 	}
 

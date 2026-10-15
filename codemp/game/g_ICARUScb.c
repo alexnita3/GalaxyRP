@@ -4306,6 +4306,7 @@ Q3_SetScale
 static void Q3_SetScale(int entID, float float_data)
 {
 	gentity_t	*self  = &g_entities[entID];
+	int			scale;
 
 	if ( !self )
 	{
@@ -4313,13 +4314,44 @@ static void Q3_SetScale(int entID, float float_data)
 		return;
 	}
 
-	if (self->client)
+	// DAJ_RP: [NPC Scale] as a percentage, to the nearest one, within what can be sent (RP_SENT_SCALE_MIN..MAX): 15 was
+	// sent as 1500, in 10 bits, and drawn at 476, a negative one as garbage. 0, less, or no number at all (atof() gives 0,
+	// and a NaN is caught by the same test) is the normal size, as 0 always was; a size above 0 too small to round to
+	// 1 is 1, not that.
+	if ( !( float_data > 0.0f ) )
 	{
-		self->client->ps.iModelScale = float_data*100.0f;
+		scale = 0;
+	}
+	else if ( float_data * 100.0f >= RP_SENT_SCALE_MAX )
+	{
+		scale = RP_SENT_SCALE_MAX;
 	}
 	else
 	{
-		self->s.iModelScale = float_data*100.0f;
+		scale = (int)( float_data * 100.0f + 0.5f );
+		if ( scale < RP_SENT_SCALE_MIN )
+		{
+			scale = RP_SENT_SCALE_MIN;
+		}
+	}
+
+	if (self->client)
+	{
+		self->client->ps.iModelScale = scale;
+
+		// DAJ_RP: [NPC Scale] an NPC's or vehicle's server size too, as its .npc file's scale and npcscale set both --
+		// its hit detection, rider and droid sockets, severed limbs and a vehicle's muzzles follow what is drawn. A
+		// player's is left alone, as /scale leaves it.
+		if ( self->NPC )
+		{
+			const float f = scale / 100.0f;
+
+			VectorSet( self->modelScale, f, f, f );
+		}
+	}
+	else
+	{
+		self->s.iModelScale = scale;
 	}
 }
 
