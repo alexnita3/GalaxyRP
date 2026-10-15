@@ -3941,6 +3941,12 @@ void WP_CalcVehMuzzle(gentity_t *ent, int muzzleNum)
 		ent->client->ps.origin, level.time, NULL, ent->modelScale);
 	BG_GiveMeVectorFromMatrix(&boltMatrix, ORIGIN, pVeh->m_vMuzzlePos[muzzleNum]);
 	BG_GiveMeVectorFromMatrix(&boltMatrix, NEGATIVE_Y, pVeh->m_vMuzzleDir[muzzleNum]);
+
+	// DAJ_RP: [NPC Scale] a scaled vehicle is drawn lifted off its origin to stand on the ground (BG_RpVehicleScaleLift(),
+	// bg_vehicleLoad.c; CG_Player(), cg_players.c), and its muzzle flash plays on that drawn model -- so its shots start
+	// from there too, not from the muzzle of a model sunk into the ground (bigger) or floating (smaller). Every vehicle
+	// shot and turret aim starts here. A client that does not lift the model sees the shot start that far off its barrel.
+	pVeh->m_vMuzzlePos[muzzleNum][2] += BG_RpVehicleScaleLift( pVeh->m_pVehicleInfo, ent->modelScale[2] );
 }
 
 void WP_VehWeapSetSolidToOwner( gentity_t *self )

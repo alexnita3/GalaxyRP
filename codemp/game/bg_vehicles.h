@@ -645,6 +645,8 @@ typedef struct Vehicle_s
 #endif
 
 extern int BG_VehicleGetIndex( const char *vehicleName );
+// DAJ_RP: [NPC Scale] how far a vehicle of this kind, at this scale, is drawn above its origin -- see bg_vehicleLoad.c
+extern float BG_RpVehicleScaleLift( const vehicleInfo_t *vehInfo, float scale );
 #if defined(_GAME)
 // GalaxyRP fix: [Entity System] a SILENT "is this a vehicle name?" -- see bg_vehicleLoad.c
 extern qboolean BG_VehicleNameExists( const char *vehicleName );

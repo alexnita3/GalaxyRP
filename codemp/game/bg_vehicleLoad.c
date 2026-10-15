@@ -646,6 +646,46 @@ stringID_table_t VehicleTable[VH_NUM_VEHICLES+1] =
 
 // Setup the shared functions (one's that all vehicles would generally use).
 extern void G_SetSharedVehicleFunctions( vehicleInfo_t *pVehInfo );
+/*
+==================
+BG_RpVehicleScaleLift
+
+DAJ_RP: [NPC Scale] how far a vehicle of this kind, scaled by scale (npcscale, a .npc file's scale), is drawn above its
+origin to keep it on the ground: the model grows round its origin while its box does not, so its bottom, depth under the
+origin, would sink by depth * (scale - 1) when bigger and float when smaller. The depth is its box's: 24 for a walker or
+an animal (DEFAULT_MINS_2, which PM_CheckDuck() keeps for every vehicle); half its height for a fighter or a flier, whose
+box is built round the origin from its vehicle file (BG_VehicleAdjustBBoxForOrientation(), bg_pmove.c); nothing for a
+speeder, whose model hovers on its origin and looks right as it is. 0 with no vehicle file, no scale, or scale 1.
+The client draws the vehicle and its riders this much higher (CG_Player(), cg_players.c), and the server starts its
+shots from muzzles this much higher (WP_CalcVehMuzzle(), g_weapon.c), so they leave the barrel the client draws.
+==================
+*/
+float BG_RpVehicleScaleLift( const vehicleInfo_t *vehInfo, float scale )
+{
+	float depth = 0.0f;
+
+	if ( !vehInfo || !scale || scale == 1.0f )
+	{
+		return 0.0f;
+	}
+
+	switch ( vehInfo->type )
+	{
+	case VH_WALKER:
+	case VH_ANIMAL:
+		depth = -DEFAULT_MINS_2;
+		break;
+	case VH_FIGHTER:
+	case VH_FLIER:
+		depth = vehInfo->height / 2.0f;
+		break;
+	default:	// VH_SPEEDER
+		break;
+	}
+
+	return depth * ( scale - 1.0f );
+}
+
 void BG_SetSharedVehicleFunctions( vehicleInfo_t *pVehInfo )
 {
 #ifdef _GAME

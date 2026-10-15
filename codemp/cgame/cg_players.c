@@ -10267,10 +10267,22 @@ void CG_Player( centity_t *cent ) {
 				cent->lerpOrigin[2] += 24 * (cent->modelScale[2] - 1);
 			}
 		}
+		// DAJ_RP: [NPC Scale] and a scaled vehicle, which stock never lifted (nothing scaled one before npcscale): it scales
+		// round its origin as a player does, so it sank into the ground when bigger and floated when smaller. Lifted by
+		// BG_RpVehicleScaleLift() (bg_vehicleLoad.c) -- by how far its bottom is under its origin -- which the server's
+		// muzzles use too (WP_CalcVehMuzzle(), g_weapon.c), so its shots leave the barrel drawn here. Remembered for its
+		// riders (rpVehicleLift, below). Drawing only: its box and physics stay where the server has them.
+		cent->rpVehicleLift = 0.0f;
+		if ( cent->currentState.NPC_class == CLASS_VEHICLE && cent->m_pVehicle )
+		{
+			cent->rpVehicleLift = BG_RpVehicleScaleLift( cent->m_pVehicle->m_pVehicleInfo, cent->modelScale[2] );
+			cent->lerpOrigin[2] += cent->rpVehicleLift;
+		}
 	}
 	else
 	{
 		VectorClear(cent->modelScale);
+		cent->rpVehicleLift = 0.0f;	// DAJ_RP: [NPC Scale] see above
 	}
 
 	// GalaxyRP fix: [Vehicles] a rider used to be dragged along behind the vehicle he was sitting on.
@@ -10335,10 +10347,17 @@ void CG_Player( centity_t *cent ) {
 		VectorCopy(cent->lerpOrigin, cent->beamEnd);
 	}
 
+	// DAJ_RP: [NPC Scale] a lifted vehicle's drawn origin, as it ends up after the smoothing above (rpVehicleLiftedOrigin)
+	if ( cent->rpVehicleLift )
+	{
+		VectorCopy( cent->lerpOrigin, cent->rpVehicleLiftedOrigin );
+	}
+
 	if (cent->currentState.m_iVehicleNum &&
 		cent->currentState.NPC_class != CLASS_VEHICLE)
 	{ //this player is riding a vehicle
 		centity_t *veh = &cg_entities[cent->currentState.m_iVehicleNum];
+		qboolean reBolted = qfalse;	// DAJ_RP: [NPC Scale] placed from the vehicle's drawn (lifted) origin below
 
 		cent->lerpAngles[YAW] = veh->lerpAngles[YAW];
 
@@ -10381,7 +10400,18 @@ void CG_Player( centity_t *cent ) {
 				VectorCopy(cent->playerState->origin, cent->lerpOrigin);
 
 				VectorCopy(oldPSOrg, veh->playerState->origin);
+				reBolted = qtrue;
 			}
+		}
+
+		// DAJ_RP: [NPC Scale] a rider of a scaled vehicle drawn lifted (rpVehicleLift, above) goes up or down with it: his
+		// seat came from the vehicle's un-lifted origin -- the server's, or his own prediction's for the local player and
+		// his passengers. One just re-bolted above was placed from the vehicle's lerpOrigin instead, which holds the lift
+		// if the vehicle was drawn since it was last worked out (this frame, or the last one when he is drawn first) --
+		// but not after the passenger prediction worked it out afresh (CG_RpPassengerState(), cg_predict.c).
+		if ( veh->rpVehicleLift && ( !reBolted || !VectorCompare( veh->lerpOrigin, veh->rpVehicleLiftedOrigin ) ) )
+		{
+			cent->lerpOrigin[2] += veh->rpVehicleLift;
 		}
 	}
 

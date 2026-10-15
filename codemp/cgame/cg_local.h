@@ -464,6 +464,12 @@ typedef struct centity_s {
 	qboolean		cloaked;
 
 	int				vChatTime;
+
+	// DAJ_RP: [NPC Scale] a scaled vehicle: how far CG_Player() lifted its drawn origin (lerpOrigin) to keep it on the
+	// ground, 0 for none, and the origin it was lifted to -- lerpOrigin is worked out afresh each frame, so it holds the
+	// lift only while it still equals that. Its riders are lifted by as much (cg_players.c).
+	float			rpVehicleLift;
+	vec3_t			rpVehicleLiftedOrigin;
 } centity_t;
 
 
