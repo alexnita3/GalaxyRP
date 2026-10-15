@@ -8744,6 +8744,54 @@ qboolean CG_RpVehicleLiftApplied( const centity_t *veh )
 	return ( veh && veh->rpVehicleLift && VectorCompare( veh->lerpOrigin, veh->rpVehicleLiftedOrigin ) ) ? qtrue : qfalse;
 }
 
+/*
+==================
+CG_RpDroidAngles
+
+DAJ_RP fix: [Vehicles] the angles a vehicle's droid is drawn at (full ones: CG_G2PlayerAngles() takes pitch, yaw and roll
+for an NPC bolted to a vehicle), from its "*droidunit" socket's forward and right directions, so that it is drawn facing
+fwd with its right along rt. Stock took the pitch and yaw from fwd (as here) but the roll from how steeply rt slopes
+(vectoangles()), which cannot tell a roll of 45 from one of 135 or 0 from 180: past a quarter turn the droid turned back
+upright while its vehicle went on rolling, upside down it sat the right way up, and halfway round a loop it faced
+backwards. The roll is now found from both rt and the up direction, over the whole turn -- the same angle as stock's
+while the vehicle is less than a quarter turn over. Should the socket's up come out the opposite way to the vehicle's
+(the socket's sideways axis being its left, not its right), rt is taken the other way round, so the droid is never drawn
+upside down on an upright vehicle. Pointing straight up or down, where fwd gives no heading, the heading is taken from rt
+and the roll is 0. The socket's directions are scaled with a scaled vehicle, so they are made unit first.
+==================
+*/
+static void CG_RpDroidAngles( const vec3_t socketFwd, const vec3_t socketRt, const vec3_t vehAngles, vec3_t angles )
+{
+	vec3_t	fwd, rt, up, vehUp;
+	float	flat;
+
+	VectorCopy( socketFwd, fwd );
+	VectorNormalize( fwd );
+	VectorCopy( socketRt, rt );
+	VectorNormalize( rt );
+
+	CrossProduct( rt, fwd, up );	// right x forward is up, as AngleVectors() has them
+	AngleVectors( vehAngles, NULL, NULL, vehUp );
+	if ( DotProduct( up, vehUp ) < 0.0f )
+	{
+		VectorScale( rt, -1.0f, rt );
+		VectorScale( up, -1.0f, up );
+	}
+
+	flat = sqrtf( fwd[0] * fwd[0] + fwd[1] * fwd[1] );
+	if ( flat < 0.001f )
+	{//straight up or down: the heading from the right direction, which AngleVectors() has as (sin yaw, -cos yaw, 0) there
+		angles[PITCH] = ( fwd[2] > 0.0f ) ? -90.0f : 90.0f;
+		angles[YAW] = RAD2DEG( atan2f( rt[0], -rt[1] ) );
+		angles[ROLL] = 0.0f;
+		return;
+	}
+
+	vectoangles( fwd, angles );
+	// AngleVectors(): right[2] = -sin(roll) * cos(pitch), up[2] = cos(roll) * cos(pitch), cos(pitch) > 0 here
+	angles[ROLL] = RAD2DEG( atan2f( -rt[2], up[2] ) );
+}
+
 qboolean CG_VehicleAttachDroidUnit( centity_t *droidCent, refEntity_t *legs )
 {
 	if ( droidCent
@@ -8757,16 +8805,15 @@ qboolean CG_VehicleAttachDroidUnit( centity_t *droidCent, refEntity_t *legs )
 			&& vehCent->m_pVehicle->m_iDroidUnitTag != -1 )
 		{
 			mdxaBone_t boltMatrix;
-			vec3_t	fwd, rt, tempAng;
+			vec3_t	fwd, rt;
 
 			trap->G2API_GetBoltMatrix(vehCent->ghoul2, 0, vehCent->m_pVehicle->m_iDroidUnitTag, &boltMatrix, vehCent->lerpAngles, vehCent->lerpOrigin, cg.time,
 				cgs.gameModels, vehCent->modelScale);
 			BG_GiveMeVectorFromMatrix(&boltMatrix, ORIGIN, droidCent->lerpOrigin);
 			BG_GiveMeVectorFromMatrix(&boltMatrix, POSITIVE_X, fwd);//WTF???
 			BG_GiveMeVectorFromMatrix(&boltMatrix, NEGATIVE_Y, rt);//WTF???
-			vectoangles( fwd, droidCent->lerpAngles );
-			vectoangles( rt, tempAng );
-			droidCent->lerpAngles[ROLL] = tempAng[PITCH];
+			// DAJ_RP fix: [Vehicles] the roll over the whole turn, not only up to a quarter of it -- see CG_RpDroidAngles()
+			CG_RpDroidAngles( fwd, rt, vehCent->lerpAngles, droidCent->lerpAngles );
 
 			return qtrue;
 		}
