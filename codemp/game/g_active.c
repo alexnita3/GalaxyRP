@@ -2186,8 +2186,10 @@ int get_idle_animation_for_style(gentity_t *ent) {
 
 // DAJ_RP: [Saber Keys] an idle the player breaks out of when he moves, acts or is hurt: the stock ones, and whichever
 // G_CheckClientIdle itself last started (a .sab's idleAnim key can name any anim). That one was held to its end before,
-// the player gliding around in it, because only the stock ones were listed here.
-static qboolean G_RpBreakableIdle( const gclient_t *client, int anim )
+// the player gliding around in it, because only the stock ones were listed here. "timer" is that half's (legsTimer or
+// torsoTimer): the started one counts only while that half still holds it -- the same anim met any other way (a saber
+// stance such as Desann's BOTH_STAND9, an emote) is not an idle, and breaking out of it cut a saber's recovery short.
+static qboolean G_RpBreakableIdle( const gclient_t *client, int anim, int timer )
 {
 	switch ( anim )
 	{
@@ -2198,7 +2200,7 @@ static qboolean G_RpBreakableIdle( const gclient_t *client, int anim )
 	case BOTH_STAND5IDLE1:
 		return qtrue;
 	}
-	return ( client->rpIdleAnim > 0 && anim == client->rpIdleAnim ) ? qtrue : qfalse;
+	return ( client->rpIdleAnim > 0 && anim == client->rpIdleAnim && timer > 0 ) ? qtrue : qfalse;
 }
 
 void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
@@ -2211,6 +2213,16 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 		ent->client->sess.sessionTeam == TEAM_SPECTATOR || (ent->client->ps.pm_flags & PMF_FOLLOW))
 	{
 		return;
+	}
+
+	// DAJ_RP: [Saber Keys] forget the idle we started as soon as neither half still holds it (G_RpBreakableIdle): every
+	// frame, so one that ended while the player stood still is gone before he can light his saber into a stance using
+	// the same anim
+	if ( ent->client->rpIdleAnim
+		&& !( ent->client->ps.legsAnim == ent->client->rpIdleAnim && ent->client->ps.legsTimer > 0 )
+		&& !( ent->client->ps.torsoAnim == ent->client->rpIdleAnim && ent->client->ps.torsoTimer > 0 ) )
+	{
+		ent->client->rpIdleAnim = 0;
 	}
 
 	buttons = ucmd->buttons;
@@ -2248,13 +2260,6 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 	{//FIXME: also check for turning?
 		qboolean brokeOut = qfalse;
 
-		// DAJ_RP: [Saber Keys] forget the idle we started once neither half plays it any more, so a later anim that
-		// happens to be the same one (an emote) is left alone
-		if ( ent->client->rpIdleAnim && ent->client->ps.legsAnim != ent->client->rpIdleAnim && ent->client->ps.torsoAnim != ent->client->rpIdleAnim )
-		{
-			ent->client->rpIdleAnim = 0;
-		}
-
 		// zyk: if the player is using an emote, removes it
 		if (!ent->NPC && ent->client->pers.player_statuses & (1 << PLAYER_STATUS_EMOTE) && actionPressed == qtrue)
 		{
@@ -2278,12 +2283,12 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 		{
 			//if in an idle, break out
 			// DAJ_RP: [Saber Keys] the stock idles and the one we started (G_RpBreakableIdle)
-			if ( G_RpBreakableIdle( ent->client, ent->client->ps.legsAnim ) )
+			if ( G_RpBreakableIdle( ent->client, ent->client->ps.legsAnim, ent->client->ps.legsTimer ) )
 			{
 				ent->client->ps.legsTimer = 0;
 				brokeOut = qtrue;
 			}
-			if ( G_RpBreakableIdle( ent->client, ent->client->ps.torsoAnim ) )
+			if ( G_RpBreakableIdle( ent->client, ent->client->ps.torsoAnim, ent->client->ps.torsoTimer ) )
 			{
 				ent->client->ps.torsoTimer = 0;
 				ent->client->ps.weaponTime = 0;

@@ -6255,16 +6255,6 @@ static saber_colors_t CG_ClampSaberColor( int color )
 }
 
 /*
-GalaxyRP: [Saber RGB] does this blade actually have a custom colour to draw?
-
-SABER_RGB (and the four blade-style ordinals) can arrive without one: a .npc or siege class file can
-name "rgb" as a saber colour for an NPC, which has no player colour behind it at all, and a real
-player's packed RGB payload can legitimately be sent as 0. This NULL-context guard is what
-CG_DoSaberLight (no client context at all) relies on to fall back cleanly; a real networked player's
-rgb1/rgb2 no longer needs this to distinguish "unset" from "black" (see CG_NewClientInfo's
-zero-defaults-to-red handling), but NPC/.sab callers still pass ci == NULL and need a defined result.
-*/
-/*
 DAJ_RP: [Saber Keys] the saber's own .sab colour (customRGB, bg_saberLoad.c), 0-1, or NULL. It comes before the
 player's custom colour wherever a blade of the RGB family is drawn -- CG_AddSaberBlade turns such a saber's blades to
 the RGB family, unless the team colours win (see there).
@@ -6276,6 +6266,16 @@ static const float *CG_SabCustomRGB( const clientInfo_t *ci, int bnum )
 	return NULL;
 }
 
+/*
+GalaxyRP: [Saber RGB] does this blade actually have a custom colour to draw?
+
+SABER_RGB (and the four blade-style ordinals) can arrive without one: a .npc or siege class file can
+name "rgb" as a saber colour for an NPC, which has no player colour behind it at all, and a real
+player's packed RGB payload can legitimately be sent as 0. This NULL-context guard is what
+CG_DoSaberLight (no client context at all) relies on to fall back cleanly; a real networked player's
+rgb1/rgb2 no longer needs this to distinguish "unset" from "black" (see CG_NewClientInfo's
+zero-defaults-to-red handling), but NPC/.sab callers still pass ci == NULL and need a defined result.
+*/
 static qboolean CG_HasCustomSaberColor( const clientInfo_t *ci, int bnum )
 {
 	const float *rgb;
