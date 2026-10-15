@@ -2132,14 +2132,13 @@ int return_idle_animation(int animation) {
 	return BOTH_STAND1IDLE1;
 }
 
-// DAJ_RP: [Saber Keys] the style's own idleAnim* key, else the saber's plain idleAnim (every style's fallback, as
-// readyAnim and kataMove are for theirs), else the stock BOTH_STAND1IDLE1. A style outside the list gets the plain key
-// or the stock idle too (it used to get no idle at all).
-int get_idle_animation_for_style(gentity_t *ent) {
-	const saberInfo_t *saber = &ent->client->saber[0];
+// DAJ_RP: [Saber Keys] one saber's idle for the current style: its own idleAnim* key for the style, else its plain
+// idleAnim (every style's fallback, as readyAnim and kataMove are for theirs); <= 0 when it has neither.
+static int G_RpSaberIdleAnim( const saberInfo_t *saber, int style )
+{
 	int anim;
 
-	switch (ent->client->ps.fd.saberAnimLevel)
+	switch (style)
 	{
 	case SS_FAST:
 		anim = saber->idleAnimBlue;
@@ -2167,9 +2166,19 @@ int get_idle_animation_for_style(gentity_t *ent) {
 		break;
 	}
 
-	if (anim <= 0)
+	return (anim > 0) ? anim : saber->idleAnim;
+}
+
+// DAJ_RP: [Saber Keys] the first saber's idle (G_RpSaberIdleAnim), else the second saber's when there is one -- the
+// same first-then-second order the stance and kata keys use -- else the stock BOTH_STAND1IDLE1. A style outside the
+// list gets a plain key or the stock idle too (it used to get no idle at all).
+int get_idle_animation_for_style(gentity_t *ent) {
+	const int style = ent->client->ps.fd.saberAnimLevel;
+	int anim = G_RpSaberIdleAnim( &ent->client->saber[0], style );
+
+	if (anim <= 0 && ent->client->saber[1].model[0])
 	{
-		anim = saber->idleAnim;
+		anim = G_RpSaberIdleAnim( &ent->client->saber[1], style );
 	}
 
 	return return_idle_animation(anim);
