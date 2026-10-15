@@ -6048,7 +6048,14 @@ static QINLINE qboolean CheckThrownSaberDamaged(gentity_t *saberent, gentity_t *
 						dflags |= DAMAGE_SABER_KNOCKBACK1;
 					}
 
-					if (saberOwner->client->ps.isJediMaster)
+					// DAJ_RP: [Training Saber] a training saber thrown hits as it does swung, for 0 -- which G_Damage()
+					// makes the 1 it never goes under: the throw's damage is its own (saberent->damage), not the
+					// saber's damage scales "/training on" zeroes, so it used to hit at full throw damage
+					if (RP_TrainingActive(saberOwner))
+					{
+						G_Damage(ent, saberOwner, saberOwner, dir, tr.endpos, 0, dflags, MOD_SABER);
+					}
+					else if (saberOwner->client->ps.isJediMaster)
 					{ //2x damage for the Jedi Master
 						G_Damage(ent, saberOwner, saberOwner, dir, tr.endpos, saberent->damage*2, dflags, MOD_SABER);
 					}
@@ -6131,7 +6138,11 @@ static QINLINE qboolean CheckThrownSaberDamaged(gentity_t *saberent, gentity_t *
 					dflags |= DAMAGE_SABER_KNOCKBACK1;
 				}
 
-				if (ent->s.eType == ET_NPC)
+				if (RP_TrainingActive(saberOwner))
+				{ // DAJ_RP: [Training Saber] as above
+					G_Damage(ent, saberOwner, saberOwner, dir, tr.endpos, 0, dflags, MOD_SABER);
+				}
+				else if (ent->s.eType == ET_NPC)
 				{ //an animent
 					G_Damage(ent, saberOwner, saberOwner, dir, tr.endpos, 40, dflags, MOD_SABER);
 				}
