@@ -1338,6 +1338,8 @@ also called by CG_CheckPlayerstateEvents
 */
 #define	DEBUGNAME(x) if(cg_debugEvents.integer){trap->Print(x"\n");}
 extern void CG_ChatBox_AddString(char *chatStr); //cg_draw.c
+extern const playerState_t *cg_rpEventPS;	// DAJ_RP: [Weapons] cg_playerstate.c
+
 void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 	entityState_t	*es;
 	int				event;
@@ -2056,17 +2058,23 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 //		trap->S_StartSound (NULL, es->number, CHAN_AUTO, cgs.media.noAmmoSound );
 		if ( es->number == cg.snap->ps.clientNum )
 		{
-			if ( !cg.snap->ps.m_iVehicleNum && es->eventParm > WP_NONE && es->eventParm < WP_NUM_WEAPONS )
+			// DAJ_RP: [Weapons] what the server left the player holding is in the player state this event came with
+			// (cg_rpEventPS, CG_CheckPlayerstateEvents()), not in cg.snap: predicting from the next snapshot, as in
+			// ordinary play, cg.snap is still the one before, with the weapon just taken still in hand -- so that one
+			// was "followed", the client went on asking for it, and took it up again on the next pickup.
+			const playerState_t *serverPS = cg_rpEventPS ? cg_rpEventPS : &cg.snap->ps;
+
+			if ( !serverPS->m_iVehicleNum && es->eventParm > WP_NONE && es->eventParm < WP_NUM_WEAPONS )
 			{
 				// DAJ_RP: [Weapons] the server took the weapon in hand away (a Force Pull disarm, a skill
-				// lowered: TossClientWeapon() in g_combat.c, zyk_deselect_weapon_if_active() in g_cmds.c) and
-				// has already put the player on one they still own, or on none. Select that one too -- not an
-				// autoswitch but following the server -- or the client went on asking for the weapon that is
-				// gone, and took it up again the moment one was picked up. Tested first: with no weapon left in
-				// hand the vehicle branch below would swallow it. Not on a vehicle, whose own weapons' events
-				// (g_weapon.c) number them from 0 and come only to its riders.
+				// lowered, /drop: TossClientWeapon() in g_combat.c, zyk_deselect_weapon_if_active() and
+				// Cmd_Drop_f() in g_cmds.c) and has already put the player on one they still own, or on none.
+				// Select that one too -- not an autoswitch but following the server -- or the client went on
+				// asking for the weapon that is gone, and took it up again the moment one was picked up. Tested
+				// first: with no weapon left in hand the vehicle branch below would swallow it. Not on a vehicle,
+				// whose own weapons' events (g_weapon.c) number them from 0 and come only to its riders.
 				cg.snap->ps.stats[STAT_WEAPONS] &= ~(1 << es->eventParm);
-				cg.weaponSelect = cg.snap->ps.weapon;
+				cg.weaponSelect = serverPS->weapon;
 				cg.weaponSelectTime = cg.time;
 				trap->S_MuteSound(cg.snap->ps.clientNum, CHAN_WEAPON);	// as the switch away always did
 			}

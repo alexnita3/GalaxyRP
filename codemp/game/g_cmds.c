@@ -15009,6 +15009,12 @@ void Cmd_Drop_f( gentity_t *ent ) {
 
 			ent->s.weapon = WP_MELEE;
 			ent->client->ps.weapon = WP_MELEE;
+
+			// DAJ_RP: [Weapons] and the client is told, as TossClientWeapon() (g_combat.c) tells it after a Force Pull
+			// disarm: the GalaxyRP client selects what the server put in hand (EV_NOAMMO, cg_event.c). Without it the
+			// client went on asking for the weapon just dropped, its bar still showed it, and picking it up again
+			// switched straight back to it. A stock client picks its own best weapon, as after a disarm.
+			G_AddEvent(ent, EV_NOAMMO, weapon);
 		}
 	}
 }

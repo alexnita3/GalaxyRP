@@ -259,6 +259,11 @@ static qboolean CG_RpPickupChanged( const playerState_t *ps, const playerState_t
 	return ( CG_RpPickupItemKey( now ) != CG_RpPickupItemKey( before ) ) ? qtrue : qfalse;
 }
 
+// DAJ_RP: [Weapons] the player state the server event being handled came with, for CG_EntityEvent() (cg_event.c), NULL
+// otherwise. It is not cg.snap's: in ordinary play CG_PredictPlayerState() predicts from cg.nextSnap, so a server event
+// is handled while cg.snap is still the snapshot before it.
+const playerState_t *cg_rpEventPS = NULL;
+
 /*
 ==============
 CG_CheckPlayerstateEvents
@@ -273,7 +278,9 @@ void CG_CheckPlayerstateEvents( playerState_t *ps, playerState_t *ops ) {
 		cent = &cg_entities[ ps->clientNum ];
 		cent->currentState.event = ps->externalEvent;
 		cent->currentState.eventParm = ps->externalEventParm;
+		cg_rpEventPS = ps;
 		CG_EntityEvent( cent, cent->lerpOrigin );
+		cg_rpEventPS = NULL;
 	}
 
 	cent = &cg_entities[ ps->clientNum ];
