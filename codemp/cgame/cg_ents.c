@@ -1322,6 +1322,18 @@ static void CG_General( centity_t *cent ) {
 				return;
 			}
 
+			// DAJ_RP: [NPC Scale] the puff at the limb's cut end below is placed by its scale, which is otherwise only
+			// set further down this function: on this first frame it would be none, or what the last entity in this
+			// slot had. The server gives a limb the size of what it was cut from (G_Dismember(), g_combat.c).
+			if (cent->currentState.iModelScale)
+			{
+				cent->modelScale[0] = cent->modelScale[1] = cent->modelScale[2] = cent->currentState.iModelScale/100.0f;
+			}
+			else
+			{
+				VectorClear(cent->modelScale);
+			}
+
 			newBolt = trap->G2API_AddBolt( cent->ghoul2, 0, limbTagName );
 			if ( newBolt != -1 )
 			{

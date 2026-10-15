@@ -3764,6 +3764,29 @@ void G_Dismember( gentity_t *ent, gentity_t *enemy, vec3_t point, int limbType, 
 		limb->s.otherEntityNum2 = ent->s.number;
 	}
 
+	// DAJ_RP: [NPC Scale] the limb is the size of what it was cut from: CG_General() (cg_ents.c) draws it at its own
+	// iModelScale, which was never set, so a scaled NPC's (npcscale, a .npc file's scale), a /scale'd player's or such a
+	// player's corpse's limbs came out normal size. A live one's size is its playerState's (sent on in its entityState a
+	// frame later); a corpse keeps its player's in its entityState (CopyToBodyQue(), g_client.c).
+	limb->s.iModelScale = ent->client ? ent->client->ps.iModelScale : ent->s.iModelScale;
+	// ...and so is its box, which only LimbThink()'s physics uses (a limb is walked through). G_RunExPhys() frees a limb
+	// whose box starts in solid, so a bigger box that would -- a giant's leg cut by a wall -- keeps the stock one.
+	if ( limb->s.iModelScale > 0 && limb->s.iModelScale != 100 )
+	{
+		const float scale = limb->s.iModelScale / 100.0f;
+		vec3_t mins, maxs;
+		trace_t tr;
+
+		VectorScale( limb->r.mins, scale, mins );
+		VectorScale( limb->r.maxs, scale, maxs );
+		trap->Trace( &tr, limb->r.currentOrigin, mins, maxs, limb->r.currentOrigin, limb->s.number, limb->clipmask, qfalse, 0, 0 );
+		if ( !tr.startsolid && !tr.allsolid )
+		{
+			VectorCopy( mins, limb->r.mins );
+			VectorCopy( maxs, limb->r.maxs );
+		}
+	}
+
 	VectorClear(limb->s.apos.trDelta);
 
 	if (ent->client)
