@@ -5486,7 +5486,7 @@ void NPC_Kill_f( gentity_t *ent )
 	// separately so every one of the four teams is selectable.
 	qboolean	killByTeam = qfalse;
 	qboolean	killNonSF = qfalse;
-	int			killed = 0, spawnersRemoved = 0, ridden = 0;
+	int			killed = 0, ridden = 0;
 	const int	clientNum = ent - g_entities;
 
 	trap->Argv(2, name, 1024);
@@ -5554,30 +5554,30 @@ void NPC_Kill_f( gentity_t *ent )
 		// says. Everything below this point -- the team selection, the targetname matching and the
 		// pilot guard -- is GalaxyRP's own and is unchanged.
 
+		// DAJ_RP fix: [NPC System] "nonally": every NPC not on the player team -- NPCs only (player->NPC), as the other
+		// kinds below. Stock tested any client, so it killed real players whose NPC team was not "player": in Siege
+		// every Imperial (g_client.c gives them NPCTEAM_ENEMY, so enemy NPCs side with them) but slot 0, the loop
+		// starting at 1. A vehicle someone rides is left alone and counted, as "/npc kill all" leaves it. And it no
+		// longer frees NPC spawners (stock removed any entity with an NPC_type): the Entity System's are the
+		// admins' placed content, which /entsave would then have lost; "/npc kill all" keeps them too.
 		if ( killNonSF )
 		{
-			if ( player )
+			if ( player->NPC && player->client && player->client->playerTeam != NPCTEAM_PLAYER )
 			{
-				if ( player->client )
+				if ( player->m_pVehicle && player->m_pVehicle->m_pPilot )
 				{
-					if ( player->client->playerTeam != NPCTEAM_PLAYER )
-					{
-						Com_Printf( S_COLOR_GREEN"Killing NPC %s named %s\n", player->NPC_type, player->targetname );
-						player->health = 0;
-						killed++;
-
-						if (player->die && player->client)
-						{
-							player->die(player, player, player, player->client->pers.maxHealth, MOD_UNKNOWN);
-						}
-					}
+					ridden++;
 				}
-				else if ( player->NPC_type && player->classname && player->classname[0] && Q_stricmp( "NPC_starfleet", player->classname ) != 0 )
-				{//A spawner, remove it
-					Com_Printf( S_COLOR_GREEN"Removing NPC spawner %s with NPC named %s\n", player->NPC_type, player->NPC_targetname );
-					G_FreeEntity( player );
-					spawnersRemoved++;
-					//FIXME: G_UseTargets2(player, player, player->NPC_target & player->target);?
+				else
+				{
+					Com_Printf( S_COLOR_GREEN"Killing NPC %s named %s\n", player->NPC_type, player->targetname );
+					player->health = 0;
+					killed++;
+
+					if ( player->die )
+					{
+						player->die( player, player, player, player->client->pers.maxHealth, MOD_UNKNOWN );
+					}
 				}
 			}
 		}
@@ -5639,7 +5639,7 @@ void NPC_Kill_f( gentity_t *ent )
 	{
 		trap->SendServerCommand( clientNum, va( "print \"^7Killed %d npc%s that %s not your allies%s.\n\"",
 			killed, killed == 1 ? "" : "s", killed == 1 ? "is" : "are",
-			spawnersRemoved ? va( ", and removed %d npc spawner%s", spawnersRemoved, spawnersRemoved == 1 ? "" : "s" ) : "" ) );
+			ridden ? va( "; %d vehicle%s with someone riding %s left alone", ridden, ridden == 1 ? "" : "s", ridden == 1 ? "it was" : "them were" ) : "" ) );
 	}
 	else if ( killByTeam )
 	{
