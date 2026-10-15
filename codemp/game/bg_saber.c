@@ -2554,26 +2554,40 @@ qboolean PM_SaberMoveOkayForKata( void )
 
 //GalaxyRP (Alex): [New Combat Animations] This method returns the correct parameter from the .sab file depending on the style the player is currently using.
 // DAJ_RP: Purple = Desann and Green = Tavion, matching the ready anims (getOverridenAnimationByStyle in bg_pmove.c) and the idle anims (get_idle_animation_for_style in g_active.c).
+// DAJ_RP: [Saber Keys] the plain kataMove is the fallback for every style whose own key is not set (LS_INVALID), as
+// it is in the base game, where kataMove applies to all styles. It used to count for Fast alone, so a .sab with only
+// kataMove (a prop's "kataMove LS_NONE", a dual saber's own kata) lost it in every other style. A style's own key,
+// LS_NONE included, still wins.
 int getCorrectKata(saberInfo_t* saber ) {
+	int move;
+
 	switch (pm->ps->fd.saberAnimLevel)
 	{
-	case SS_FAST:
-		return saber->kataMove;
 	case SS_MEDIUM:
-		return saber->kataMoveYellow;
+		move = saber->kataMoveYellow;
+		break;
 	case SS_STRONG:
-		return saber->kataMoveRed;
+		move = saber->kataMoveRed;
+		break;
 	case SS_DESANN:
-		return saber->kataMovePurple;
+		move = saber->kataMovePurple;
+		break;
 	case SS_TAVION:
-		return saber->kataMoveGreen;
+		move = saber->kataMoveGreen;
+		break;
 	case SS_DUAL:
-		return saber->kataMoveDual;
+		move = saber->kataMoveDual;
+		break;
 	case SS_STAFF:
-		return saber->kataMoveStaff;
+		move = saber->kataMoveStaff;
+		break;
+	case SS_FAST:	// Fast has no key of its own: the plain one is Fast's
 	default:
-		return LS_INVALID;
+		move = LS_INVALID;
+		break;
 	}
+
+	return ( move != LS_INVALID ) ? move : saber->kataMove;
 }
 
 qboolean PM_CanDoKata( void )

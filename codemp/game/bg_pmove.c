@@ -353,26 +353,40 @@ static QINLINE qboolean PM_IsRocketTrooper(void)
 }
 
 //GalaxyRP (Alex): [New Combat Animations] This method returns the overriden saber stance depending on the current style.
+// DAJ_RP: [Saber Keys] the plain readyAnim is the fallback for every style whose own key is not set (-1), as it is in
+// the base game, where readyAnim applies to all styles. It used to count for Fast alone, so a .sab with only readyAnim
+// (a prop held in BOTH_OBJECT, a saber's BOTH_STAND9) lost it in every other style -- and disagreed with vanilla
+// clients, which predict their own stance with readyAnim in all of them. A style's own key still wins.
 int getOverridenAnimationByStyle(saberInfo_t* saber) {
+	int anim;
+
 	switch (pm->ps->fd.saberAnimLevel)
 	{
-	case SS_FAST:
-		return saber->readyAnim;
 	case SS_MEDIUM:
-		return saber->readyAnimYellow;
+		anim = saber->readyAnimYellow;
+		break;
 	case SS_STRONG:
-		return saber->readyAnimRed;
+		anim = saber->readyAnimRed;
+		break;
 	case SS_TAVION:
-		return saber->readyAnimGreen;
+		anim = saber->readyAnimGreen;
+		break;
 	case SS_DESANN:
-		return saber->readyAnimPurple;
+		anim = saber->readyAnimPurple;
+		break;
 	case SS_STAFF:
-		return saber->readyAnimStaff;
+		anim = saber->readyAnimStaff;
+		break;
 	case SS_DUAL:
-		return saber->readyAnimDual;
+		anim = saber->readyAnimDual;
+		break;
+	case SS_FAST:	// Fast has no key of its own: the plain one is Fast's
 	default:
-		return -1;
+		anim = -1;
+		break;
 	}
+
+	return ( anim != -1 ) ? anim : saber->readyAnim;
 }
 
 int PM_GetSaberStance(void)
@@ -423,7 +437,7 @@ int PM_GetSaberStance(void)
 		break;
 	// DAJ_RP: [Saber Stances] Tavion and Desann get stances of their own, as JoF_EJK gives them (they used to
 	// borrow Fast's and Medium's): Tavion the top parry pose held, Desann Kyle's relaxed JK2 stand. Both are
-	// stock animations, so every client has them. A saber's readyAnimGreen/readyAnimPurple (above) still wins.
+	// stock animations, so every client has them. A saber's readyAnimGreen/readyAnimPurple or plain readyAnim (above) still wins.
 	// Both are in the stance lists below (slopes, BG_SaberStanceAnim, BG_InSaberStandAnim, PM_Footsteps) except
 	// that BOTH_P1_S1_T_ stays out of BG_InSaberStandAnim and BG_SaberStanceAnim: it is also the real top parry,
 	// which PM_SetSaberMove would otherwise swap for the stance (see the restart test there too).
