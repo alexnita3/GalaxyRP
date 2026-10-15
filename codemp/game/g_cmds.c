@@ -10663,7 +10663,7 @@ void Cmd_ForceDuel_f(gentity_t *ent)
 {
 	if (rp_allow_force_duel.integer != 1)
 	{
-		trap->SendServerCommand(ent->s.number, "print \"Full force duels are not allowed in this server\n\"");
+		trap->SendServerCommand(ent->s.number, "print \"Force duels are not allowed on this server\n\"");
 		return;
 	}
 
@@ -10829,7 +10829,7 @@ void Cmd_EngageDuel_f(gentity_t *ent, int duel_type)
 		{
 			if (duel_type == 1)
 			{
-				trap->SendServerCommand( -1, va("print \"%s ^7and %s ^7have begun a ^3full force duel^7!\n\"", challenged->client->pers.netname, ent->client->pers.netname) );
+				trap->SendServerCommand( -1, va("print \"%s ^7and %s ^7have begun a ^3Force duel^7!\n\"", challenged->client->pers.netname, ent->client->pers.netname) );
 			}
 			else
 			{
@@ -10954,8 +10954,8 @@ void Cmd_EngageDuel_f(gentity_t *ent, int duel_type)
 			// think is a saber duel has no way to find out otherwise in time.
 			if (duel_type == 1)
 			{
-				trap->SendServerCommand( challenged-g_entities, va("cp \"%s ^7has challenged you to a ^3full force duel\n\"", ent->client->pers.netname) );
-				trap->SendServerCommand( ent-g_entities, va("cp \"^3Full force duel ^7challenge sent to %s\n\"", challenged->client->pers.netname) );
+				trap->SendServerCommand( challenged-g_entities, va("cp \"%s ^7has challenged you to a ^3Force duel\n\"", ent->client->pers.netname) );
+				trap->SendServerCommand( ent-g_entities, va("cp \"^3Force duel ^7challenge sent to %s\n\"", challenged->client->pers.netname) );
 			}
 			else
 			{
@@ -12935,15 +12935,18 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				// truncate, it silently drops the whole section. Splitting here puts both halves back
 				// near 500 and restores the headroom.
 				// GalaxyRP: [Force Duel] the two private-duel commands, listed together. Neither was
-				// documented anywhere before -- /duel has no commands[] row at all (it arrives as
+				// documented anywhere before -- the saber duel has no commands[] row at all (it arrives as
 				// GENCMD_ENGAGE_DUEL from a bound key), so a player had no way to learn either one
 				// existed. Put in this half of Misc rather than the block above it: that one ran at
-				// 402 of SV_SendServerCommand's hard 1022 characters and this one at 607 (941 now, with
+				// 402 of SV_SendServerCommand's hard 1022 characters and this one at 607 (963 now, with
 				// the longer /playsound line -- a longer addition goes in a message of its own), and the
 				// whole message is dropped rather than truncated once a block passes it.
+				// DAJ_RP: the first by its real name, /engage_duel -- the engine's own command
+				// (cl_input.cpp); there is no /duel, and it was listed as one. And the second is a
+				// "Force duel": it gives the opponent's Force only, not the full Force other mods' do.
 				trap->SendServerCommand(ent - g_entities, "print \"\
-^3/duel: ^7Challenges the player you are looking at to a private saber duel. Force powers are disabled for both of you; bind a key to ^3engage_duel^7.\n\
-^3/engage_fullforceduel: ^7The same duel with force powers allowed, on your opponent only. Both players must ask for this kind before it starts.\n\
+^3/engage_duel: ^7Challenges the player you are looking at to a private saber duel. Force powers are disabled for both of you. Bind it in Controls: Saber Challenge.\n\
+^3/engage_fullforceduel: ^7The same, as a Force duel: Force powers allowed, on your opponent only. Both players must ask for this kind before it starts.\n\
 ^3/anim ^7or ^3/emote <id/name/list>: ^7Plays an animation by id or name. ^3List ^7and ^3list 2 ^7are for listing all the available animations.\n\
 ^3/playsound <channel> <file path>: ^7Plays a sound on the chosen channel, once every 15 seconds. ^3/list sounds ^7shows them.\n\
 ^3/datetime: ^7Shows current server date and time.\n\
