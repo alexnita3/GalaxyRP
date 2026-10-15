@@ -10843,6 +10843,10 @@ void Cmd_EngageDuel_f(gentity_t *ent, int duel_type)
 			ent->client->ps.duelInProgress = qtrue;
 			challenged->client->ps.duelInProgress = qtrue;
 
+			// DAJ_RP: [Training Saber] both fight at their saber's real damage -- see RP_TrainingOff()
+			RP_TrainingOff(ent, "for the duel");
+			RP_TrainingOff(challenged, "for the duel");
+
 			// GalaxyRP: [Grapple Hook] a duel is sealed off from the map; neither duellist keeps a rope
 			// into it. Their hooks are refused for the duel's length by RP_HookMayStayOut().
 			if ( ent->client->hook )
@@ -23412,6 +23416,7 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 			// plain logged-out player, his own force profile and nothing more (rp_give_lift()). After every
 			// refusal above, so a refused sign-up keeps it.
 			rp_give_lift(ent);
+			RP_TrainingOff(ent, "for the Duel Tournament");	// DAJ_RP: [Training Saber] and his training saber, the same way
 
 			level.duel_tournament_mode = 1;
 			level.duel_players[ent->s.number] = 0;
@@ -24088,6 +24093,7 @@ void Cmd_MeleeMode_f(gentity_t *ent) {
 		// DAJ_RP: [Admin] whatever an admin gave him with /give goes now, on signing up: he fights as a
 		// plain logged-out player (rp_give_lift()). After every refusal above, so a refused sign-up keeps it.
 		rp_give_lift(ent);
+		RP_TrainingOff(ent, "for the Melee Battle");	// DAJ_RP: [Training Saber] and his training saber, the same way
 
 		level.melee_players[ent->s.number] = 0;
 		level.melee_mode = 1;
@@ -24862,6 +24868,45 @@ static qboolean Training_IsLiveActive(gentity_t* ent)
 	return qtrue;
 }
 
+// DAJ_RP: [Training Saber] training mode's undo, shared by "/training off" and RP_TrainingOff(): both saber slots'
+// damage scales back to what "/training on" stored, and the flag down.
+static void Training_Restore(gentity_t* ent)
+{
+	int i;
+
+	for (i = 0; i < MAX_SABERS; i++)
+	{
+		ent->client->saber[i].damageScale = ent->client->pers.training_stored_damageScale[i];
+		ent->client->saber[i].damageScale2 = ent->client->pers.training_stored_damageScale2[i];
+	}
+
+	ent->client->pers.training_mode = qfalse;
+}
+
+// DAJ_RP: [Training Saber] is this player's training saber on right now (Training_IsLiveActive(), which also clears a
+// flag gone stale)? A thrown saber reads it (CheckThrownSaberDamaged(), w_saber.c): its damage is the throw's own, not
+// the saber's damage scales that "/training on" zeroes, so it used to hit at full damage.
+qboolean RP_TrainingActive(gentity_t* ent)
+{
+	if (!ent || !ent->client)
+		return qfalse;
+
+	return Training_IsLiveActive(ent);
+}
+
+// DAJ_RP: [Training Saber] turns a player's training saber off, as "/training off" does, and tells him why ("for the
+// duel"), when a private duel he is in is accepted (Cmd_EngageDuel_f()) and when he signs up for the Duel Tournament or
+// the Melee Battle (Cmd_DuelMode_f(), Cmd_MeleeMode_f()): he fights at his saber's real damage. Nothing, and no word,
+// when it is not on. "/training on" is not refused afterwards: it is a handicap he may take on, not a gain.
+void RP_TrainingOff(gentity_t* ent, const char* why)
+{
+	if (!RP_TrainingActive(ent))
+		return;
+
+	Training_Restore(ent);
+	trap->SendServerCommand(ent->s.number, va("print \"Training saber is ^1INACTIVE^7: turned off %s.\n\"", why));
+}
+
 //GalaxyRP (Alex): [Training Saber] This method activates and deactivates the training saber, making it so that when active, you do very little damage.
 
 // GalaxyRP: [Training Saber fix] rewritten from a single no-argument toggle to explicit
@@ -24929,13 +24974,7 @@ void Cmd_TrainingMode_f(gentity_t* ent) {
 			return;
 		}
 
-		for (i = 0; i < MAX_SABERS; i++)
-		{
-			ent->client->saber[i].damageScale = ent->client->pers.training_stored_damageScale[i];
-			ent->client->saber[i].damageScale2 = ent->client->pers.training_stored_damageScale2[i];
-		}
-
-		ent->client->pers.training_mode = qfalse;
+		Training_Restore(ent);
 
 		trap->SendServerCommand(ent->s.number, "print \"Training saber is ^1INACTIVE\n\"");
 	}

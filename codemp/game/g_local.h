@@ -2685,6 +2685,9 @@ gentity_t	*RP_SpawnerLiveChild( const gentity_t *spawner );
 void		RP_SpawnerRespawn( gentity_t *npc );
 int			RP_SpawnerRemoveChildren( gentity_t *spawner, int *ridden );
 int			RP_NpcScaleValue( const char *text, qboolean strict );	// DAJ_RP: [NPC Scale] an "npcscale" value
+// DAJ_RP: [Training Saber] g_cmds.c: is /training on for this player; turn it off, telling him why
+qboolean	RP_TrainingActive( gentity_t *ent );
+void		RP_TrainingOff( gentity_t *ent, const char *why );
 // GalaxyRP: [Slot Reuse] model and effect slots of removed Entity System props given to new names --
 // g_utils.c
 int			RP_EntityModelIndex( gentity_t *ent, const char *name );
