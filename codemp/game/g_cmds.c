@@ -12808,22 +12808,24 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				trap->SendServerCommand(ent - g_entities, "print \"^3--------Admin Commands--------\n\
 ^3/adminlist <command ID (optional)>: ^7Lists admin commands and their availability for current player. If you pass a command ID as argument, shows info about it.\n\
 ^3/adminlist show <player id or name>: ^7Shows admin commands of another player. ^1(only for Admins with Give Admin)\n\
-^3/adminup <player name> <command number>: ^7Gives the player an admin command.\n\
-^3/admindown <player name> <command number>: ^7Removes an admin command from the player.\n\
+^3/adminup <player name> <command number or all>: ^7Gives the player an admin command, or all of them. ^1(only for Admins with Give Admin)\n\
+^3/admindown <player name> <command number or all>: ^7Removes an admin command, or all of them, from the player. ^1(only for Admins with Give Admin)\n\
 ^3/entitiesandremaps: ^7Shows the commands to add, edit, move and save entities, and to remap shaders. ^1(only for Admins with Entities and Remaps)\n\
-^3/playmusic <file path>: ^7Replaces the current map music for all players with the song given.\n\
-^3/levelup <player name> <number of levels (optional)>: ^7Levels the player up by one.\n\
-^3/leveldown <player name> <number of levels (optional)>: ^7Brings the player's level down by one.\n\"");
-				trap->SendServerCommand(ent - g_entities, "print \"^3/givexp <player name>: ^7Gives the player one xp.\n\
+^3/playmusic <file path>: ^7Replaces the current map music for all players with the song given.\n\"");
+				// DAJ_RP: [Admin] /levelup and /leveldown moved down here, and /telemark and /teleport into the next
+				// block, to keep each under the 1022 characters SV_SendServerCommand sends (the order shown is the same)
+				trap->SendServerCommand(ent - g_entities, "print \"^3/levelup <player name> <number of levels (optional)>: ^7Raises the player's level by one, or by that many.\n\
+^3/leveldown <player name> <number of levels (optional)>: ^7Lowers the player's level by one, or by that many.\n\
+^3/givexp <player name>: ^7Gives the player one xp.\n\
 ^3/removexp <player name>: ^7Removes one xp from the player.\n\
 ^3/skillup <player name> <skill number> <number of levels (optional)>: ^7upgrades a skill.\n\
 ^3/skilldown <player name> <skill number> <number of levels (optional)>: ^7downgrades a skill.\n\
 ^3/god: ^7Makes you invincible.\n\
 ^3/notarget <player name (optional)>: ^7Makes NPCs, turrets and seekers ignore you, or another player.\n\
-^3/players <player name(optional)> <force/weapons/protect/ammo/items (optional)>: ^7Checks the player's abilities and stats. Use without argument to see info about all players.\n\
-^3/telemark: ^7Sets a marker you can teleport to later.\n\
-^3/teleport ^7or /^3tele <player name (optional)> <player name (optional)>: ^7Teleports first player to the second player. Using one argument teleports current player to another player. Use with no arguments to teleport to your telemark.\n\"");
-				trap->SendServerCommand(ent - g_entities, "print \"^3/teleportaim ^7or ^3/teleaim <player name or ID (optional)>: ^7Teleports you, or the player, to where you aim: onto the floor, or just off a wall or ceiling.\n\
+^3/players <player name (optional)> <force/weapons/protect/ammo/items (optional)>: ^7With no name, lists every player's ID, name, IP and login status. With a name, shows their account, character, level, XP and skill points; add a category to see their skill levels in it.\n\"");
+				trap->SendServerCommand(ent - g_entities, "print \"^3/telemark: ^7Sets a marker you can teleport to later.\n\
+^3/teleport ^7or ^3/tele <player name (optional)> <player name (optional)>: ^7Teleports first player to the second player. Using one argument teleports current player to another player. Use with no arguments to teleport to your telemark.\n\
+^3/teleportaim ^7or ^3/teleaim <player name or ID (optional)>: ^7Teleports you, or the player, to where you aim: onto the floor, or just off a wall or ceiling.\n\
 ^3/silence <player name>: ^7Silences the player.\n\
 ^3/paralyze <player name> <seconds (optional, 30-900, default 30)>: ^7Paralyzes the player.\n\
 ^3/unparalyze <player name>: ^7Releases a player paralyzed by an admin.\n\
@@ -12857,6 +12859,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 ^3/giveitem <itemid> <playername>: ^7Transfers an item to the desired player.\n\n\
 ^3--------News System--------\n\
 ^3/news <channel> <number of entries (optional)>: ^7Displays the news of the chosen channel.\n\
+^3/newschannels: ^7Lists the news channels.\n\
 ^3/newsadd <channel> <text>: ^7Adds the news to a channel. The text has to be enclosed in double quotes for it to register properly. ^1(Admin only)\n\
 ^3/newsremove <news ID>: ^7Removes the news from a channel. ^1(Admin only)\n\n\" ");
 				trap->SendServerCommand(ent - g_entities, "print \"^3--------Credits and Trading--------\n\
@@ -12937,17 +12940,17 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				// documented anywhere before -- the saber duel has no commands[] row at all (it arrives as
 				// GENCMD_ENGAGE_DUEL from a bound key), so a player had no way to learn either one
 				// existed. Put in this half of Misc rather than the block above it: that one ran at
-				// 402 of SV_SendServerCommand's hard 1022 characters and this one at 607 (963 now, with
+				// 402 of SV_SendServerCommand's hard 1022 characters and this one at 607 (937 now, with
 				// the longer /playsound line -- a longer addition goes in a message of its own), and the
 				// whole message is dropped rather than truncated once a block passes it.
 				// DAJ_RP: the first by its real name, /engage_duel -- the engine's own command
 				// (cl_input.cpp); there is no /duel, and it was listed as one. And the second is a
 				// "Force duel": it gives the opponent's Force only, not the full Force other mods' do.
 				trap->SendServerCommand(ent - g_entities, "print \"\
-^3/engage_duel: ^7Challenges the player you are looking at to a private saber duel. Force powers are disabled for both of you. Bind it in Controls: Saber Challenge.\n\
-^3/engage_fullforceduel: ^7The same, as a Force duel: Force powers allowed, on your opponent only. Both players must ask for this kind before it starts.\n\
+^3/engage_duel: ^7Challenges the player you are looking at to a private saber duel. Most Force powers are disabled for both of you.\n\
+^3/engage_fullforceduel: ^7Challenges the player you are looking at to a private saber duel with Force powers allowed.\n\
 ^3/anim ^7or ^3/emote <id/name/list>: ^7Plays an animation by id or name. ^3List ^7and ^3list 2 ^7are for listing all the available animations.\n\
-^3/playsound <channel> <file path>: ^7Plays a sound on the chosen channel, once every 15 seconds. ^3/list sounds ^7shows them.\n\
+^3/playsound <channel (optional)> <file path>: ^7Plays a sound, once every 15 seconds. With no arguments, lists the channels; ^3/list sounds ^7lists the files.\n\
 ^3/datetime: ^7Shows current server date and time.\n\
 ^3/drop: ^7Drops the current weapon of the player. If current weapon is melee, drops the selected Holdable Item from inventory.\n\
 ^3/ignore <player name or id>: ^7Enable/disable ignoring a player. Covers every chat type.\n\
