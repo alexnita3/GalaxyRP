@@ -1846,6 +1846,13 @@ typedef struct saberInfo_s {
 	int				hitPersonEffect, hitPersonEffect2;		// none - if set, plays this effect when the saber/sword hits a person (instead of "saber/blood_sparks_mp.efx")
 	int				hitOtherEffect, hitOtherEffect2;		// none - if set, plays this effect when the saber/sword hits something else damagable (instead of "saber/saber_cut.efx")
 	int				bladeEffect, bladeEffect2;				// none - if set, plays this effect at the blade tag
+	// DAJ_RP: [Saber Keys] TaystJK's four (its NEW_SABER_PARMS), same key names, for every blade of the saber.
+	// Drawing only, so the shaders are registered in the cgame alone (bg_saberLoad.c) -- 0 everywhere else.
+	qhandle_t		customBladeShader;						// none - if set, the blade's core is drawn with this shader
+	qhandle_t		customGlowShader;						// none - if set, the blade's glow is drawn with this shader
+	qhandle_t		customTrailShader;						// none - if set, the swing trail is drawn with this shader (a normal trail: not trailStyle 1 or 2)
+	qboolean		useCustomRGBColor;						// qfalse - set by a customRGB other than 0 0 0
+	float			customRGB[3];							// 0 0 0 - "customRGB R G B", 0-255 each, stored 0-1: the blades are this RGB colour, whatever the player picked
 
 	//done in game (server-side code)
 	float			knockbackScale, knockbackScale2;		// 0 - if non-zero, uses damage done to calculate an appropriate amount of knockback

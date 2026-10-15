@@ -547,6 +547,11 @@ void WP_SaberSetDefaults( saberInfo_t *saber ) {
 	saber->hitPersonEffect		= 0;			// none - if set, plays this effect when the saber/sword hits a person (instead of "saber/blood_sparks_mp.efx")
 	saber->hitOtherEffect		= 0;			// none - if set, plays this effect when the saber/sword hits something else damagable (instead of "saber/saber_cut.efx")
 	saber->bladeEffect			= 0;			// none - if set, plays this effect at the blade tag
+	saber->customBladeShader	= 0;			// DAJ_RP: [Saber Keys] none - the blade's core shader
+	saber->customGlowShader		= 0;			// none - the blade's glow shader
+	saber->customTrailShader	= 0;			// none - the swing trail's shader
+	saber->useCustomRGBColor	= qfalse;		// no customRGB
+	VectorClear( saber->customRGB );
 
 	//done in game (server-side code)
 	saber->knockbackScale		= 0;			// 0 - if non-zero, uses damage done to calculate an appropriate amount of knockback
@@ -1578,6 +1583,51 @@ static void Saber_ParseNoHolster( saberInfo_t *saber, const char **p ) {
 	if ( n )
 		saber->saberFlags2 |= SFL2_RP_NO_HOLSTER;
 }
+// DAJ_RP: [Saber Keys] TaystJK's customBladeShader / customGlowShader / customTrailShader / customRGB, same names and
+// values, so a .sab looks the same on a stock TaystJK client. Drawing only: the shaders are registered in the cgame
+// alone, the game and ui modules just read past the value (as g2MarksShader does). "none" leaves the stock one.
+static qhandle_t Saber_RpParseShader( const char **p ) {
+	const char *value;
+	// No SkipRestOfLine on a missing value: the parse stops at the line's end having already stepped onto the next
+	// line, so skipping "the rest" would throw the next key away.
+	if ( COM_ParseString( p, &value ) || !value ) {
+		return 0;
+	}
+#ifdef _CGAME
+	if ( value[0] && Q_stricmp( value, "none" ) )
+		return trap->R_RegisterShader( value );
+#endif
+	return 0;
+}
+static void Saber_ParseCustomBladeShader( saberInfo_t *saber, const char **p ) {
+	saber->customBladeShader = Saber_RpParseShader( p );
+}
+static void Saber_ParseCustomGlowShader( saberInfo_t *saber, const char **p ) {
+	saber->customGlowShader = Saber_RpParseShader( p );
+}
+static void Saber_ParseCustomTrailShader( saberInfo_t *saber, const char **p ) {
+	saber->customTrailShader = Saber_RpParseShader( p );
+}
+// "customRGB R G B", 0-255 each (clamped), kept 0-1 like the other colours the cgame's saber code works in. 0 0 0 is
+// off, as in TaystJK. Incomplete: ignored, with a warning, and any earlier customRGB on this saber is cleared -- and
+// the next line is kept (no SkipRestOfLine: a missing number means the parse already stopped at the line's end).
+static void Saber_ParseCustomRGB( saberInfo_t *saber, const char **p ) {
+	float f[3];
+	int i;
+	saber->useCustomRGBColor = qfalse;
+	VectorClear( saber->customRGB );
+	for ( i = 0; i < 3; i++ ) {
+		if ( COM_ParseFloat( p, &f[i] ) ) {
+			Com_Printf( S_COLOR_YELLOW "WARNING: incomplete customRGB in saber '%s' -- wants three numbers 0-255\n", saber->name );
+			return;
+		}
+	}
+	for ( i = 0; i < 3; i++ ) {
+		saber->customRGB[i] = Com_Clamp( 0.0f, 255.0f, f[i] ) / 255.0f;
+	}
+	if ( saber->customRGB[0] > 0.0f || saber->customRGB[1] > 0.0f || saber->customRGB[2] > 0.0f )
+		saber->useCustomRGBColor = qtrue;
+}
 static void Saber_ParseTrailStyle( saberInfo_t *saber, const char **p ) {
 	int n;
 	if ( COM_ParseInt( p, &n ) ) {
@@ -2267,6 +2317,10 @@ static keywordHash_t saberParseKeywords[] = {
 	{ "noClashFlare",			Saber_ParseNoClashFlare,		NULL	},
 	{ "noClashFlare2",			Saber_ParseNoClashFlare2,		NULL	},
 	{ "noHolster",				Saber_ParseNoHolster,			NULL	},	// DAJ_RP: [Holstered Sabers]
+	{ "customBladeShader",		Saber_ParseCustomBladeShader,	NULL	},	// DAJ_RP: [Saber Keys] TaystJK's four
+	{ "customGlowShader",		Saber_ParseCustomGlowShader,	NULL	},
+	{ "customTrailShader",		Saber_ParseCustomTrailShader,	NULL	},
+	{ "customRGB",				Saber_ParseCustomRGB,			NULL	},
 	{ NULL,						NULL,							NULL	}
 };
 static keywordHash_t *saberParseKeywordHash[KEYWORDHASH_SIZE];

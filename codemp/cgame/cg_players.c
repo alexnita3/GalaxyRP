@@ -6264,12 +6264,27 @@ CG_DoSaberLight (no client context at all) relies on to fall back cleanly; a rea
 rgb1/rgb2 no longer needs this to distinguish "unset" from "black" (see CG_NewClientInfo's
 zero-defaults-to-red handling), but NPC/.sab callers still pass ci == NULL and need a defined result.
 */
+/*
+DAJ_RP: [Saber Keys] the saber's own .sab colour (customRGB, bg_saberLoad.c), 0-1, or NULL. It comes before the
+player's custom colour wherever a blade of the RGB family is drawn -- CG_AddSaberBlade turns such a saber's blades to
+the RGB family, unless the team colours win (see there).
+*/
+static const float *CG_SabCustomRGB( const clientInfo_t *ci, int bnum )
+{
+	if ( ci && bnum >= 0 && bnum < MAX_SABERS && ci->saber[bnum].useCustomRGBColor )
+		return ci->saber[bnum].customRGB;
+	return NULL;
+}
+
 static qboolean CG_HasCustomSaberColor( const clientInfo_t *ci, int bnum )
 {
 	const float *rgb;
 
 	if ( !ci )
 		return qfalse;
+
+	if ( CG_SabCustomRGB( ci, bnum ) )
+		return qtrue;	// DAJ_RP: [Saber Keys]
 
 	rgb = bnum ? ci->rgb2 : ci->rgb1;
 
@@ -6289,6 +6304,11 @@ static void CG_RGBForSaberColor( saber_colors_t color, vec3_t rgb, const clientI
 		case SABER_ELEC1:
 		case SABER_FLAME2:
 		case SABER_ELEC2:
+			if ( CG_SabCustomRGB( ci, bnum ) )
+			{	// DAJ_RP: [Saber Keys] the .sab's customRGB, already 0-1
+				VectorCopy( CG_SabCustomRGB( ci, bnum ), rgb );
+				break;
+			}
 			if ( CG_HasCustomSaberColor( ci, bnum ) )
 			{
 				// Stored 0-255 by CG_NewClientInfo; the dlight and tint paths both want 0-1 here.
@@ -6350,7 +6370,11 @@ static void CG_DoSaberLight( saberInfo_t *saber )
 			// driven by the blade colour baked into the .sab definition, not by the colour the
 			// player picked (that is CG_DoSaber's own light, further down) -- so a custom colour
 			// never reaches this field, and there is nothing here for it to select.
-			CG_RGBForSaberColor( CG_ClampSaberColor( saber->blade[i].color ), rgbs[i], NULL, 0 );
+			// DAJ_RP: [Saber Keys] ...except the .sab's own customRGB, which is baked into it too.
+			if ( saber->useCustomRGBColor )
+				VectorCopy( saber->customRGB, rgbs[i] );
+			else
+				CG_RGBForSaberColor( CG_ClampSaberColor( saber->blade[i].color ), rgbs[i], NULL, 0 );
 			lengths[i] = saber->blade[i].length;
 			if ( saber->blade[i].length*2.0f > diameter )
 			{
@@ -6531,6 +6555,16 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 			glow = cgs.media.redSaberGlowShader;
 			blade = cgs.media.redSaberCoreShader;
 			break;
+	}
+
+	// DAJ_RP: [Saber Keys] the .sab's customBladeShader / customGlowShader, for any colour (TaystJK's keys). The glow
+	// keeps the tint above, so an RGB blade tints a custom glow that takes vertex colour; the core stays white.
+	if ( ci && bnum >= 0 && bnum < MAX_SABERS )
+	{
+		if ( ci->saber[bnum].customBladeShader )
+			blade = ci->saber[bnum].customBladeShader;
+		if ( ci->saber[bnum].customGlowShader )
+			glow = ci->saber[bnum].customGlowShader;
 	}
 
 	if (doLight)
@@ -7178,6 +7212,7 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 	effectTrailArgStruct_t fx;
 	int scolor = 0;
 	int	useModelIndex = 0;
+	qboolean teamColor = qfalse;	// DAJ_RP: [Saber Keys] the team gametypes forced red or blue on this blade
 
 	if (cent->currentState.eType == ET_NPC)
 	{
@@ -7272,6 +7307,14 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 		}
 	}
 
+	// DAJ_RP: [Saber Keys] a .sab customRGB makes the blade an RGB one in that colour (CG_SabCustomRGB): the RGB blade
+	// style the player picked with /saberblade kept, classic RGB otherwise (black included). Before the team colours
+	// below, so those still win in the team gametypes.
+	if ( client->saber[saberNum].useCustomRGBColor && !( scolor >= SABER_RGB && scolor <= SABER_ELEC2 ) )
+	{
+		scolor = SABER_RGB;
+	}
+
 	if (cgs.gametype >= GT_TEAM &&
 		cgs.gametype != GT_SIEGE &&
 		!cgs.jediVmerc &&
@@ -7280,10 +7323,12 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 		if (client->team == TEAM_RED)
 		{
 			scolor = SABER_RED;
+			teamColor = qtrue;
 		}
 		else if (client->team == TEAM_BLUE)
 		{
 			scolor = SABER_BLUE;
+			teamColor = qtrue;
 		}
 	}
 
@@ -7538,7 +7583,14 @@ CheckTrail:
 						case SABER_ELEC1:
 						case SABER_FLAME2:
 						case SABER_ELEC2:
-							VectorCopy( saberNum ? client->rgb2 : client->rgb1, rgb1 );
+							if ( client->saber[saberNum].useCustomRGBColor )
+							{	// DAJ_RP: [Saber Keys] the .sab's customRGB (0-1) on this 0-255 scale
+								VectorScale( client->saber[saberNum].customRGB, 255.0f, rgb1 );
+							}
+							else
+							{
+								VectorCopy( saberNum ? client->rgb2 : client->rgb1, rgb1 );
+							}
 							switch ( scolor )
 							{
 								default:
@@ -7568,6 +7620,14 @@ CheckTrail:
 						default:
 							VectorSet( rgb1, 0.0f, 64.0f, 255.0f );
 							break;
+					}
+
+					// DAJ_RP: [Saber Keys] the .sab's customTrailShader, for any colour (TaystJK's key). A normal trail only:
+					// a sword's motion trail (trailStyle 1) and cg_saberTrail 2's refraction keep theirs. Not over a team
+					// colour: the team's own blade, trail and all, so the teams stay readable.
+					if ( client->saber[saberNum].customTrailShader && !teamColor )
+					{
+						trailShader = client->saber[saberNum].customTrailShader;
 					}
 
 					//Here we will use the happy process of filling a struct in with arguments and passing it to a trap function
@@ -7709,9 +7769,11 @@ JustDoIt:
 	//	scolor, renderfx, (qboolean)(saberNum==0&&bladeNum==0) );
 	// GalaxyRP: [Saber RGB] "client" and "saberNum" let CG_DoSaber resolve a SABER_RGB scolor to
 	// this player's own custom colour (clientInfo_t::rgb1/rgb2, filled in by CG_NewClientInfo).
+	// DAJ_RP: [Saber Keys] no client behind a team colour: the team's red or blue needs none, and without one the .sab's
+	// customBladeShader/customGlowShader stay off it too, so the teams stay readable.
 	CG_DoSaber( org_, axis_[0], saberLen, client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius,
 		scolor, renderfx, (qboolean)(client->saber[saberNum].numBlades < 3 && !(client->saber[saberNum].saberFlags2&SFL2_NO_DLIGHT)),
-		client, saberNum );
+		teamColor ? NULL : client, saberNum );
 }
 
 int CG_IsMindTricked(int trickIndex1, int trickIndex2, int trickIndex3, int trickIndex4, int client)
