@@ -5300,6 +5300,39 @@ static void UI_PackSaberRGBCvar( qboolean secondSaber )
 
 static void UI_SanitizeAccountArg( char *str );
 
+// GLX_U: [Cosmetics] sets color1/color2 to a saber colour number, keeping the hat (color1) or cape
+// (color2) name that follows the number -- see "Cosmetics" in cg_players.c -- so applying a saber
+// colour does not take it off. The name is kept only if it is one the server would take: letters,
+// digits, '_' and '-', 1-13 of them, starting with a letter or '_'.
+static void UI_SetSaberColorCvarKeepCosmetic( const char *cvarName, int saberColor )
+{
+	char value[MAX_CVAR_VALUE_STRING];
+	const char *name = value;
+	int len, i;
+
+	trap->Cvar_VariableStringBuffer( cvarName, value, sizeof( value ) );
+	while ( *name >= '0' && *name <= '9' )
+		name++;
+
+	len = (int)strlen( name );
+	if ( len < 1 || len > 13 || Q_stricmp( name, "none" ) == 0
+		|| !( ( name[0] >= 'a' && name[0] <= 'z' ) || ( name[0] >= 'A' && name[0] <= 'Z' ) || name[0] == '_' ) )
+	{
+		name = "";
+	}
+	for ( i = 0; name[i]; i++ )
+	{
+		const char c = name[i];
+		if ( !( ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) || ( c >= '0' && c <= '9' ) || c == '_' || c == '-' ) )
+		{
+			name = "";
+			break;
+		}
+	}
+
+	trap->Cvar_Set( cvarName, va( "%d%s", saberColor, name ) );
+}
+
 static void UI_UpdateSaberCvars ( void )
 {
 	saber_colors_t colorI;
@@ -5342,11 +5375,11 @@ static void UI_UpdateSaberCvars ( void )
 	UI_PackSaberRGBCvar( qtrue );
 
 	colorI = TranslateSaberColor( UI_Cvar_VariableString ( "ui_saber_color" ) );
-	trap->Cvar_Set ( "color1", va("%d",colorI));
+	UI_SetSaberColorCvarKeepCosmetic( "color1", colorI );	// GLX_U: [Cosmetics] keeps the hat
 	trap->Cvar_Set ( "g_saber_color", UI_Cvar_VariableString ( "ui_saber_color" ));
 
 	colorI = TranslateSaberColor( UI_Cvar_VariableString ( "ui_saber2_color" ) );
-	trap->Cvar_Set ( "color2", va("%d",colorI) );
+	UI_SetSaberColorCvarKeepCosmetic( "color2", colorI );	// GLX_U: [Cosmetics] keeps the cape
 	trap->Cvar_Set ( "g_saber2_color", UI_Cvar_VariableString ( "ui_saber2_color" ));
 
 	// GalaxyRP: [Saber] instant-apply the hilt/type selection immediately, matching TaystJK's own

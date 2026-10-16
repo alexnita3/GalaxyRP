@@ -485,6 +485,91 @@ int G_ValidateSaberColorMode( int decodedMode ) {
 
 /*
 =====================================================================
+GLX_U: [Cosmetics] the hats and capes that can be saved with a character, by id (index + 1). They
+are TaystJK's own (assets/japro/models/cosmetics), shipped in our client pk3 at the same paths.
+The order is FROZEN: an id is what the database holds, so a new item goes at the end of its list
+and an item is never removed or moved, or saved characters would come back wearing another one.
+At most RP_STORED_COSMETIC_MASK (255) per list.
+=====================================================================
+*/
+static const char *rpCosmeticHats[] = {
+	"afro", "beard", "bucket", "cap", "cringe", "crown", "fedora", "fedora2", "fedora3", "fedora4",
+	"glasses", "gradcap", "headcrab", "horns", "mario", "mask", "metalhelm", "plaguemask",
+	"predatorhelm", "pumpkin", "santahat", "sombrero", "supersaiyan", "tophat"
+};
+static const char *rpCosmeticCapes[] = {
+	"ak47", "crowbar", "goose", "grogucape", "royalcape", "rpg", "vadercape", "yodacape"
+};
+
+static const char **G_RpCosmeticList( int slot, int *count ) {
+	if ( slot == RP_COSMETIC_HAT ) {
+		*count = (int)ARRAY_LEN( rpCosmeticHats );
+		return rpCosmeticHats;
+	}
+	if ( slot == RP_COSMETIC_CAPE ) {
+		*count = (int)ARRAY_LEN( rpCosmeticCapes );
+		return rpCosmeticCapes;
+	}
+	*count = 0;
+	return NULL;
+}
+
+int G_RpCosmeticId( int slot, const char *name ) {
+	int count, i;
+	const char **list = G_RpCosmeticList( slot, &count );
+
+	if ( !name || !name[0] )
+		return 0;
+
+	for ( i = 0; i < count; i++ ) {
+		if ( !Q_stricmp( list[i], name ) )
+			return i + 1;
+	}
+	return 0;
+}
+
+const char *G_RpCosmeticName( int slot, int id ) {
+	int count;
+	const char **list = G_RpCosmeticList( slot, &count );
+
+	if ( id < 1 || id > count )
+		return "";
+	return list[id - 1];
+}
+
+void G_RpCosmeticFromColor( const char *colorValue, char *out, int outSize ) {
+	const char *s = colorValue;
+	int len, i;
+
+	if ( !out || outSize < 1 )
+		return;
+	out[0] = '\0';
+
+	if ( !s )
+		return;
+
+	// the saber number first, as TaystJK strips it: its digits only
+	while ( *s >= '0' && *s <= '9' )
+		s++;
+
+	len = (int)strlen( s );
+	if ( len < 1 || len >= RP_COSMETIC_NAME_SIZE || len >= outSize )
+		return;
+	if ( !( ( s[0] >= 'a' && s[0] <= 'z' ) || ( s[0] >= 'A' && s[0] <= 'Z' ) || s[0] == '_' ) )
+		return;
+	for ( i = 0; i < len; i++ ) {
+		const char c = s[i];
+		if ( !( ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) || ( c >= '0' && c <= '9' ) || c == '_' || c == '-' ) )
+			return;
+	}
+	if ( !Q_stricmp( s, "none" ) )
+		return;
+
+	Q_strncpyz( out, s, outSize );
+}
+
+/*
+=====================================================================
 Cleans the given string from newlines and such
 =====================================================================
 */

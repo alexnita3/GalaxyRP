@@ -294,6 +294,98 @@ static void CG_LoadHud_f( void ) {
 	CG_LoadMenus( hudSet );
 }
 
+/*
+=================
+CG_Cosmetics_f
+
+GLX_U: [Cosmetics] /cosmetics -- TaystJK's command, in TaystJK's form, for the hats and capes this
+client has (see "Cosmetics" in cg_players.c):
+  /cosmetics hats|capes             the list, numbered from 0 as TaystJK numbers it
+  /cosmetics hats|capes <n|name>    wear that one, or take it off if it is the one worn
+  /cosmetics clear                  take off both
+It only changes the name after the saber number in color1 (hats) or color2 (capes); the server sends
+it on to everyone, and saves it with a logged-in character.
+=================
+*/
+static void CG_Cosmetics_f( void ) {
+	char arg[MAX_QPATH];
+	int kind, i;
+	const char *cvarName;
+	char worn[RP_COSMETIC_NAME_SIZE];
+
+	if ( trap->Cmd_Argc() < 2 ) {
+		Com_Printf( "Usage: cosmetics <hats|capes|clear> [number or name]\n" );
+		return;
+	}
+
+	trap->Cmd_Argv( 1, arg, sizeof( arg ) );
+	if ( !Q_stricmp( arg, "clear" ) ) {
+		for ( kind = 0; kind < 2; kind++ ) {
+			cvarName = kind ? "color2" : "color1";
+			CG_RpSetCvarCosmetic( cvarName, "" );
+		}
+		Com_Printf( "Hat and cape taken off.\n" );
+		return;
+	}
+	if ( !Q_stricmp( arg, "hats" ) || !Q_stricmp( arg, "hat" ) ) {
+		kind = RP_COSMETIC_HAT;
+	}
+	else if ( !Q_stricmp( arg, "capes" ) || !Q_stricmp( arg, "cape" ) ) {
+		kind = RP_COSMETIC_CAPE;
+	}
+	else {
+		Com_Printf( "Usage: cosmetics <hats|capes|clear> [number or name]\n" );
+		return;
+	}
+
+	cvarName = kind ? "color2" : "color1";
+	CG_RpColorCvarCosmetic( cvarName, worn, sizeof( worn ) );
+
+	if ( !cgs.rpNumCosmetics[kind] ) {
+		Com_Printf( "No %s found.\n", kind ? "capes" : "hats" );
+		return;
+	}
+
+	if ( trap->Cmd_Argc() < 3 ) {
+		Com_Printf( "%s:\n", kind ? "Capes" : "Hats" );
+		for ( i = 0; i < cgs.rpNumCosmetics[kind]; i++ ) {
+			Com_Printf( "%3i  %s%s\n", i, cgs.rpCosmetics[kind][i].name,
+				!Q_stricmp( worn, cgs.rpCosmetics[kind][i].name ) ? S_COLOR_GREEN"  (worn)"S_COLOR_WHITE : "" );
+		}
+		Com_Printf( "Use /cosmetics %s <number> to wear one, again to take it off.\n", kind ? "capes" : "hats" );
+		return;
+	}
+
+	trap->Cmd_Argv( 2, arg, sizeof( arg ) );
+	if ( arg[0] >= '0' && arg[0] <= '9' ) {
+		for ( i = 0; arg[i] >= '0' && arg[i] <= '9'; i++ )
+			;
+		if ( arg[i] || i > 3 || ( i = atoi( arg ) ) >= cgs.rpNumCosmetics[kind] ) {
+			Com_Printf( "Give a number from 0 to %i.\n", cgs.rpNumCosmetics[kind] - 1 );
+			return;
+		}
+	}
+	else {
+		for ( i = 0; i < cgs.rpNumCosmetics[kind]; i++ ) {
+			if ( !Q_stricmp( arg, cgs.rpCosmetics[kind][i].name ) )
+				break;
+		}
+		if ( i == cgs.rpNumCosmetics[kind] ) {
+			Com_Printf( "No %s called %s. /cosmetics %s lists them.\n", kind ? "cape" : "hat", arg, kind ? "capes" : "hats" );
+			return;
+		}
+	}
+
+	if ( !Q_stricmp( worn, cgs.rpCosmetics[kind][i].name ) ) {
+		CG_RpSetCvarCosmetic( cvarName, "" );
+		Com_Printf( S_COLOR_YELLOW"%s"S_COLOR_WHITE" taken off.\n", cgs.rpCosmetics[kind][i].name );
+	}
+	else {
+		CG_RpSetCvarCosmetic( cvarName, cgs.rpCosmetics[kind][i].name );
+		Com_Printf( S_COLOR_YELLOW"%s"S_COLOR_WHITE" on.\n", cgs.rpCosmetics[kind][i].name );
+	}
+}
+
 typedef struct consoleCommand_s {
 	const char	*cmd;
 	void		(*func)(void);
@@ -311,6 +403,7 @@ static consoleCommand_t	commands[] = {
 	{"char",						NULL},
 	{ "briefing",					CG_SiegeBriefing_f },
 	{ "clientlist",					CG_ClientList_f },
+	{ "cosmetics",					CG_Cosmetics_f },	// GLX_U: [Cosmetics]
 	{ "forcenext",					CG_NextForcePower_f },
 	{ "forceprev",					CG_PrevForcePower_f },
 	{ "invnext",					CG_NextInventory_f },
