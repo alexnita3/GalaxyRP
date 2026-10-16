@@ -12989,12 +12989,16 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				trap->SendServerCommand(ent - g_entities, "print \"^3/use_cloak: ^7Activates or deactivates your Cloak Item, on foot or while riding a vehicle. Never cloaks the vehicle itself.\n\
 ^3/vehicle_cloak: ^7While piloting a vehicle with the Cloak Item at level 2, cloaks or decloaks the vehicle together with you.\n\
 ^3/updateforce: ^7Applies your force power menu pick instantly, no respawn needed (logged-out players only).\n\"");
+				// GLX_U: [Cosmetics] /cosmetics (a client command, the cgame's) goes with the other looks
+				// commands here; with it this block is 926 of SV_SendServerCommand's 1022 characters, so a
+				// further line belongs in a message of its own.
 				trap->SendServerCommand(ent - g_entities, "print \"^3/maplist <page (optional)>: ^7Lists the maps you can vote for in the current gametype, for /callvote map.\n\
 ^3/saber <saber1> <saber2>: ^7Changes lightsabers of the player.\n\
 ^3/sabercolor <1|2> <r g b>/<color name>: ^7Sets the RGB or a preset color of saber 1 or 2. Run with no arguments to see current colors.\n\
 ^3/saberblade <1|2> <type>: ^7Sets the RGB blade style (classic/flame1/electric1/flame2/electric2) of saber 1 or 2.\n\
 ^3/updatesaber: ^7Applies your saber menu pick instantly, no respawn needed.\n\
-^3/scale <size> ^7or ^3/scale <player name or ID> <size>: ^7Scales your character model, 20 to 500 (default 100). ^3/scale help ^7lists sizes next to real-life heights. ^1Scaling other players needs the Scale admin flag.\n\"");
+^3/scale <size> ^7or ^3/scale <player name or ID> <size>: ^7Scales your character model, 20 to 500 (default 100). ^3/scale help ^7lists sizes next to real-life heights. ^1Scaling other players needs the Scale admin flag.\n\
+^3/cosmetics <hats|capes|clear> <number or name>: ^7Puts on a hat or cape, or takes it off if you already wear it. ^3/cosmetics hats ^7or ^3capes ^7lists them. Saved with a logged-in character.\n\"");
 				// GalaxyRP fix: [Death System] split here for the same reason the Misc section above is
 				// split twice: saying what /getup and /helpup actually do -- neither ends an admin
 				// paralysis, only a combat knockdown -- took this block past SV_SendServerCommand's hard
