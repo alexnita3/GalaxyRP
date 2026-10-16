@@ -4840,8 +4840,13 @@ void update_current_character_name_and_model(gentity_t* ent, sqlite3* db, char* 
 	sqlite3_bind_text(stmt, 3, modelName, -1, SQLITE_TRANSIENT);
 	sqlite3_bind_text(stmt, 4, ent->client->pers.saber1, -1, SQLITE_TRANSIENT);
 	sqlite3_bind_text(stmt, 5, ent->client->pers.saber2, -1, SQLITE_TRANSIENT);
-	sqlite3_bind_int(stmt, 6, SABER_STORED_PACK(ent->client->pers.saberColorMode[0], ent->client->pers.saberRGB[0]));
-	sqlite3_bind_int(stmt, 7, SABER_STORED_PACK(ent->client->pers.saberColorMode[1], ent->client->pers.saberRGB[1]));
+	// GLX_U: [Cosmetics] the hat goes with the first saber's colour, the cape with the second's, as
+	// an id above the colour's 32 bits -- see RP_STORED_PACK (g_local.h). A name not on the saved list
+	// is stored as 0, none.
+	sqlite3_bind_int64(stmt, 6, RP_STORED_PACK(SABER_STORED_PACK(ent->client->pers.saberColorMode[0], ent->client->pers.saberRGB[0]),
+		G_RpCosmeticId(RP_COSMETIC_HAT, ent->client->pers.cosmetic[RP_COSMETIC_HAT])));
+	sqlite3_bind_int64(stmt, 7, RP_STORED_PACK(SABER_STORED_PACK(ent->client->pers.saberColorMode[1], ent->client->pers.saberRGB[1]),
+		G_RpCosmeticId(RP_COSMETIC_CAPE, ent->client->pers.cosmetic[RP_COSMETIC_CAPE])));
 	sqlite3_bind_int(stmt, 8, ent->client->pers.CharID);
 	rc = sqlite3_step(stmt);
 	if (rc != SQLITE_DONE)
@@ -5012,6 +5017,7 @@ qboolean select_player_character(gentity_t* ent, char *character_name, sqlite3* 
 		char saber2Model[30];
 		int saber1Color;
 		int saber2Color;
+		sqlite3_int64 stored1, stored2;	// GLX_U: [Cosmetics]
 		// GalaxyRP fix: [security] strcpy() into these fixed 30-byte stack buffers had no length
 		// check against the value read from the Characters table -- a saber-model name of 30+
 		// characters in the database (whether from a corrupted row or a maliciously edited one)
@@ -5019,9 +5025,12 @@ qboolean select_player_character(gentity_t* ent, char *character_name, sqlite3* 
 		// GalaxyRP fix: [Database] now zyk_db_column_string(), which is NULL-safe as well as bounded,
 		// and an empty result is put back to the default -- see zyk_default_empty_saber_models().
 		zyk_db_column_string(saber1Model, sizeof(saber1Model), stmt, 11);
-		saber1Color = sqlite3_column_int(stmt, 12);
+		// GLX_U: [Cosmetics] 64-bit reads: the hat and cape ids sit above the colour's 32 bits.
+		stored1 = sqlite3_column_int64(stmt, 12);
+		saber1Color = RP_STORED_COLOR(stored1);
 		zyk_db_column_string(saber2Model, sizeof(saber2Model), stmt, 13);
-		saber2Color = sqlite3_column_int(stmt, 14);
+		stored2 = sqlite3_column_int64(stmt, 14);
+		saber2Color = RP_STORED_COLOR(stored2);
 		zyk_default_empty_saber_models(saber1Model, sizeof(saber1Model), saber2Model, sizeof(saber2Model));
 
 		// GalaxyRP: [Saber RGB] restore the character's custom blade colours and blade styles. These
@@ -5035,6 +5044,10 @@ qboolean select_player_character(gentity_t* ent, char *character_name, sqlite3* 
 		ent->client->pers.saberRGB[1] = (saber2Color & SABERRGB_SET) ? (saber2Color & SABERRGB_MASK) : 0;
 		ent->client->pers.saberColorMode[0] = G_ValidateSaberColorMode( SABER_STORED_MODE(saber1Color) );
 		ent->client->pers.saberColorMode[1] = G_ValidateSaberColorMode( SABER_STORED_MODE(saber2Color) );
+		// GLX_U: [Cosmetics] and this character's hat and cape, for the same reason: the save that
+		// update_saber() can trigger writes them back to this row. An id not on the list gives none.
+		Q_strncpyz( ent->client->pers.cosmetic[RP_COSMETIC_HAT], G_RpCosmeticName( RP_COSMETIC_HAT, RP_STORED_COSMETIC(stored1) ), sizeof( ent->client->pers.cosmetic[0] ) );
+		Q_strncpyz( ent->client->pers.cosmetic[RP_COSMETIC_CAPE], G_RpCosmeticName( RP_COSMETIC_CAPE, RP_STORED_COSMETIC(stored2) ), sizeof( ent->client->pers.cosmetic[0] ) );
 
 		// GalaxyRP fix: [Saber RGB] patch the server's cached userinfo (cp_sbRGB1/cp_sbRGB2/color1/
 		// color2) to match this character's just-loaded colours *before* update_saber() below runs.
@@ -5527,13 +5540,17 @@ void select_account_and_default_character_data(gentity_t* ent, char username[32]
 		char saber2Model[30];
 		int saber1Color;
 		int saber2Color;
+		sqlite3_int64 stored1, stored2;	// GLX_U: [Cosmetics]
 		// GalaxyRP fix: [security] same fixed-size stack-buffer overflow as select_player_character()
 		// above -- bound the copy to the destination's size instead of trusting the DB value's length.
 		// GalaxyRP fix: [Database] NULL-safe too now, with the same empty-model default -- see there.
 		zyk_db_column_string(saber1Model, sizeof(saber1Model), stmt, 17);
-		saber1Color = sqlite3_column_int(stmt, 18);
+		// GLX_U: [Cosmetics] 64-bit reads: the hat and cape ids sit above the colour's 32 bits.
+		stored1 = sqlite3_column_int64(stmt, 18);
+		saber1Color = RP_STORED_COLOR(stored1);
 		zyk_db_column_string(saber2Model, sizeof(saber2Model), stmt, 19);
-		saber2Color = sqlite3_column_int(stmt, 20);
+		stored2 = sqlite3_column_int64(stmt, 20);
+		saber2Color = RP_STORED_COLOR(stored2);
 		zyk_default_empty_saber_models(saber1Model, sizeof(saber1Model), saber2Model, sizeof(saber2Model));
 
 		// GalaxyRP fix: [Account] apply the loaded account/character fields to ent->client, and mark
@@ -5614,6 +5631,10 @@ void select_account_and_default_character_data(gentity_t* ent, char username[32]
 		ent->client->pers.saberRGB[1] = (saber2Color & SABERRGB_SET) ? (saber2Color & SABERRGB_MASK) : 0;
 		ent->client->pers.saberColorMode[0] = G_ValidateSaberColorMode( SABER_STORED_MODE(saber1Color) );
 		ent->client->pers.saberColorMode[1] = G_ValidateSaberColorMode( SABER_STORED_MODE(saber2Color) );
+		// GLX_U: [Cosmetics] and this character's hat and cape, for the same reason: the save that
+		// update_saber() can trigger writes them back to this row. An id not on the list gives none.
+		Q_strncpyz( ent->client->pers.cosmetic[RP_COSMETIC_HAT], G_RpCosmeticName( RP_COSMETIC_HAT, RP_STORED_COSMETIC(stored1) ), sizeof( ent->client->pers.cosmetic[0] ) );
+		Q_strncpyz( ent->client->pers.cosmetic[RP_COSMETIC_CAPE], G_RpCosmeticName( RP_COSMETIC_CAPE, RP_STORED_COSMETIC(stored2) ), sizeof( ent->client->pers.cosmetic[0] ) );
 
 		// GalaxyRP fix: [Saber RGB] same reason as select_player_character()'s matching call above --
 		// sync the cached userinfo to this character's just-loaded colours before update_saber() below
@@ -22986,8 +23007,10 @@ static void G_SyncSaberColorUserinfo( gentity_t *ent ) {
 	trap->GetUserinfo( ent->s.number, userinfo, sizeof( userinfo ) );
 	Info_SetValueForKey( userinfo, "cp_sbRGB1", va( "%i", ent->client->pers.saberRGB[0] ) );
 	Info_SetValueForKey( userinfo, "cp_sbRGB2", va( "%i", ent->client->pers.saberRGB[1] ) );
-	Info_SetValueForKey( userinfo, "color1", va( "%i", ent->client->pers.saberColorMode[0] ) );
-	Info_SetValueForKey( userinfo, "color2", va( "%i", ent->client->pers.saberColorMode[1] ) );
+	// GLX_U: [Cosmetics] with the hat and cape after the number, or ClientUserinfoChanged() would read
+	// them back out of this cache as none
+	Info_SetValueForKey( userinfo, "color1", va( "%i%s", ent->client->pers.saberColorMode[0], ent->client->pers.cosmetic[RP_COSMETIC_HAT] ) );
+	Info_SetValueForKey( userinfo, "color2", va( "%i%s", ent->client->pers.saberColorMode[1], ent->client->pers.cosmetic[RP_COSMETIC_CAPE] ) );
 	trap->SetUserinfo( ent->s.number, userinfo );
 }
 
@@ -23042,9 +23065,14 @@ void update_saber_colors( gentity_t *ent ) {
 	// the client's menu holding the right value rather than whatever it last sent. Four ints now
 	// (mode1 rgb1 mode2 rgb2) instead of two, so the receiving end can restore color1/color2 and
 	// the palette-name cvars too, not just the RGB payload -- see CG_SaberColorUpdate_f.
-	trap->SendServerCommand( ent - g_entities, va( "supdatesabercolor %i %i %i %i\n",
+	// GLX_U: [Cosmetics] then the hat and cape, "-" for none, so the client's own color1/color2 carry
+	// what this character wears (restored on login) rather than sending back what it had before. An
+	// older client reads the first four and ignores these.
+	trap->SendServerCommand( ent - g_entities, va( "supdatesabercolor %i %i %i %i %s %s\n",
 		ent->client->pers.saberColorMode[0], ent->client->pers.saberRGB[0],
-		ent->client->pers.saberColorMode[1], ent->client->pers.saberRGB[1] ) );
+		ent->client->pers.saberColorMode[1], ent->client->pers.saberRGB[1],
+		ent->client->pers.cosmetic[RP_COSMETIC_HAT][0] ? ent->client->pers.cosmetic[RP_COSMETIC_HAT] : "-",
+		ent->client->pers.cosmetic[RP_COSMETIC_CAPE][0] ? ent->client->pers.cosmetic[RP_COSMETIC_CAPE] : "-" ) );
 }
 
 // Reads one 0-255 colour channel from a /sabercolor argument.

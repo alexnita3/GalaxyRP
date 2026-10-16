@@ -2522,6 +2522,11 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 
 	newInfo.icolor2 = atoi(v);
 
+	// GLX_U: [Cosmetics] the hat after c1's saber number and the cape after c2's ("5santahat"), as
+	// TaystJK publishes them; only a model this client has is worn
+	newInfo.rpCosmetic[RP_COSMETIC_HAT] = CG_RpCosmeticForColor( RP_COSMETIC_HAT, Info_ValueForKey( configstring, "c1" ) );
+	newInfo.rpCosmetic[RP_COSMETIC_CAPE] = CG_RpCosmeticForColor( RP_COSMETIC_CAPE, Info_ValueForKey( configstring, "c2" ) );
+
 	// GalaxyRP: [Saber RGB] the custom blade colours that go with an icolor in the RGB family
 	// (SABER_RGB..SABER_ELEC2), sent as packed 24-bit integers by ClientUserinfoChanged(). Nothing
 	// reads these when icolor isn't RGB-family, so the fallback below is harmless in that case.
@@ -9943,6 +9948,115 @@ qboolean CG_AddPhasedPlayerModel( centity_t *cent, const refEntity_t *legs, qboo
 
 /*
 ===============
+Cosmetics
+
+GLX_U: [Cosmetics] TaystJK's hats and capes, which it got from JAPro. A player picks them with
+/cosmetics; the name follows the saber number in his color1 (hat) and color2 (cape) userinfo, the
+server sends it on in "c1"/"c2", and every client that has models/cosmetics/hats|capes/<name>.md3
+draws it -- ours, and TaystJK's own cgame, which reads the same keys. The models ship in our client
+pk3 at TaystJK's paths. As in TaystJK the hat sits on the *head_top bolt and the cape on *back, the
+hat 2 units down the bolt's Z axis. Unlike TaystJK's:
+  - placed from the bolt where the body is drawn (body origin and rootAngles, as the holstered hilts
+    are), so it stays on a rider in his seat and on a victim held by a monster;
+  - scaled with the player (/scale, npcscale), model and offset alike;
+  - added in every pass the body is, with the body's look (CG_RpAddHolsteredSabers): cloak, Force
+    ghost and hologram, admhidden, mind-trick fade, third-person alpha, first person, shadow.
+===============
+*/
+// the name rule the server applies too (G_RpCosmeticFromColor): letters, digits, '_' and '-', 1-13
+// of them, starting with a letter or '_'
+qboolean CG_RpCosmeticNameValid( const char *name ) {
+	int len = (int)strlen( name ), i;
+
+	if ( len < 1 || len >= RP_COSMETIC_NAME_SIZE )
+		return qfalse;
+	if ( !( ( name[0] >= 'a' && name[0] <= 'z' ) || ( name[0] >= 'A' && name[0] <= 'Z' ) || name[0] == '_' ) )
+		return qfalse;
+	for ( i = 0; i < len; i++ ) {
+		const char c = name[i];
+		if ( !( ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) || ( c >= '0' && c <= '9' ) || c == '_' || c == '-' ) )
+			return qfalse;
+	}
+	return Q_stricmp( name, "none" ) ? qtrue : qfalse;
+}
+
+void CG_RpLoadCosmetics( void ) {
+	static const char *folders[2] = { "models/cosmetics/hats/", "models/cosmetics/capes/" };
+	static char list[RP_COSMETICS_MAX * MAX_QPATH];
+	int kind;
+
+	for ( kind = 0; kind < 2; kind++ ) {
+		const int count = trap->FS_GetFileList( folders[kind], ".md3", list, sizeof( list ) );
+		const char *file = list;
+		int i;
+
+		cgs.rpNumCosmetics[kind] = 0;
+		for ( i = 0; i < count && *file; i++, file += strlen( file ) + 1 ) {
+			char name[MAX_QPATH];
+			rpCosmetic_t *item;
+
+			if ( cgs.rpNumCosmetics[kind] >= RP_COSMETICS_MAX )
+				break;
+			COM_StripExtension( file, name, sizeof( name ) );
+			if ( !CG_RpCosmeticNameValid( name ) )
+				continue;
+
+			item = &cgs.rpCosmetics[kind][cgs.rpNumCosmetics[kind]];
+			Q_strncpyz( item->name, name, sizeof( item->name ) );
+			item->model = trap->R_RegisterModel( va( "%s%s.md3", folders[kind], name ) );
+			if ( item->model )
+				cgs.rpNumCosmetics[kind]++;
+		}
+	}
+}
+
+// the hat or cape name in one of this client's own color1/color2 cvars, "" for none
+void CG_RpColorCvarCosmetic( const char *cvarName, char *out, int outSize ) {
+	char value[MAX_CVAR_VALUE_STRING];
+	const char *name = value;
+
+	out[0] = '\0';
+	trap->Cvar_VariableStringBuffer( cvarName, value, sizeof( value ) );
+	while ( *name >= '0' && *name <= '9' )
+		name++;
+	if ( CG_RpCosmeticNameValid( name ) )
+		Q_strncpyz( out, name, outSize );
+}
+
+// sets this client's own color1/color2 to a saber number and the hat or cape after it ("" or an
+// invalid name for none), the form TaystJK uses and our server reads
+void CG_RpSetColorCvar( const char *cvarName, int saberColor, const char *cosmetic ) {
+	trap->Cvar_Set( cvarName, va( "%i%s", saberColor, ( cosmetic && CG_RpCosmeticNameValid( cosmetic ) ) ? cosmetic : "" ) );
+}
+
+// changes only the hat or cape in one of this client's own color1/color2 cvars, keeping its number
+void CG_RpSetCvarCosmetic( const char *cvarName, const char *cosmetic ) {
+	char value[MAX_CVAR_VALUE_STRING];
+
+	trap->Cvar_VariableStringBuffer( cvarName, value, sizeof( value ) );
+	CG_RpSetColorCvar( cvarName, atoi( value ), cosmetic );
+}
+
+int CG_RpCosmeticForColor( int kind, const char *colorValue ) {
+	const char *name = colorValue;
+	int i;
+
+	if ( kind < 0 || kind > 1 || !name )
+		return 0;
+	while ( *name >= '0' && *name <= '9' )
+		name++;
+	if ( !*name )
+		return 0;
+
+	for ( i = 0; i < cgs.rpNumCosmetics[kind]; i++ ) {
+		if ( !Q_stricmp( cgs.rpCosmetics[kind][i].name, name ) )
+			return i + 1;
+	}
+	return 0;
+}
+
+/*
+===============
 Holstered sabers
 
 DAJ_RP: [Holstered Sabers] a player or NPC that carries a saber (EF2_RP_SABER_CARRIED, set by the server --
@@ -10089,7 +10203,67 @@ typedef struct rpHolsteredHilts_s {
 	qboolean	placed;		// worked out this frame (once, before the first body pass)
 	int			count;
 	refEntity_t	hilt[MAX_SABERS];
+	int			wornCount;	// GLX_U: [Cosmetics] the hat and cape, placed and added with the hilts
+	refEntity_t	worn[2];
 } rpHolsteredHilts_t;
+
+// GLX_U: [Cosmetics] see "Cosmetics" above
+static void CG_RpPlaceCosmetics( centity_t *cent, clientInfo_t *ci, const refEntity_t *body, vec3_t rootAngles, rpHolsteredHilts_t *hilts )
+{
+	static const char *bolts[2] = { "*head_top", "*back" };
+	int kind;
+
+	hilts->wornCount = 0;
+
+	if ( !ci
+		|| ( cent->currentState.eFlags & EF_DEAD )
+		|| !cent->ghoul2 || !trap->G2_HaveWeGhoul2Models( cent->ghoul2 ) )
+	{
+		return;
+	}
+
+	for ( kind = 0; kind < 2; kind++ )
+	{
+		const int index = ci->rpCosmetic[kind];
+		refEntity_t *re;
+		mdxaBone_t matrix;
+		vec3_t org, ax0, ax1, ax2;
+		int bolt;
+
+		if ( index < 1 || index > cgs.rpNumCosmetics[kind] )
+		{
+			continue;
+		}
+
+		// a model on a skeleton of its own (a droid, a creature) may not have the bolt
+		bolt = trap->G2API_AddBolt( cent->ghoul2, 0, bolts[kind] );
+		if ( bolt == -1 )
+		{
+			continue;
+		}
+
+		trap->G2API_GetBoltMatrix( cent->ghoul2, 0, bolt, &matrix, rootAngles, body->origin, cg.time, cgs.gameModels, cent->modelScale );
+		BG_GiveMeVectorFromMatrix( &matrix, ORIGIN, org );
+		BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_X, ax0 );
+		BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_Y, ax1 );
+		BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_Z, ax2 );
+
+		// TaystJK's 2 units down the bolt's Z, scaled as the bolt's position already is
+		// (cent->modelScale is all 0 for an unscaled model, which means 1)
+		VectorMA( org, -2.0f * ( cent->modelScale[2] ? cent->modelScale[2] : 1.0f ), ax2, org );
+
+		re = &hilts->worn[hilts->wornCount++];
+		memset( re, 0, sizeof( *re ) );
+		re->hModel = cgs.rpCosmetics[kind][index - 1].model;
+		VectorCopy( ax0, re->axis[0] );
+		VectorCopy( ax1, re->axis[1] );
+		VectorCopy( ax2, re->axis[2] );
+		VectorCopy( org, re->origin );
+		VectorCopy( org, re->oldorigin );
+		VectorCopy( cent->modelScale, re->modelScale );
+		ScaleModelAxis( re );
+	}
+}
 
 /*
 DAJ_RP: [Holstered Sabers] a wrist saber's hilt is drawn as its own entity at the bolt the saber is attached
@@ -10109,6 +10283,8 @@ static void CG_RpPlaceHolsteredSabers( centity_t *cent, clientInfo_t *ci, const 
 
 	hilts->placed = qtrue;
 	hilts->count = 0;
+
+	CG_RpPlaceCosmetics( cent, ci, body, rootAngles, hilts );	// GLX_U: [Cosmetics] whatever the hilts do
 
 	if ( !cg_holsteredSabers.integer
 		|| !( cent->currentState.eFlags2 & EF2_RP_SABER_CARRIED )
@@ -10230,6 +10406,26 @@ static void CG_RpAddHolsteredSabers( centity_t *cent, clientInfo_t *ci, const re
 	for ( i = 0; i < hilts->count; i++ )
 	{
 		refEntity_t re = hilts->hilt[i];
+
+		re.renderfx = body->renderfx;
+		re.customShader = body->customShader;
+		re.shaderRGBA[0] = body->shaderRGBA[0];
+		re.shaderRGBA[1] = body->shaderRGBA[1];
+		re.shaderRGBA[2] = body->shaderRGBA[2];
+		re.shaderRGBA[3] = body->shaderRGBA[3];
+		re.shadowPlane = body->shadowPlane;
+		VectorCopy( body->lightingOrigin, re.lightingOrigin );
+
+		if ( how == RP_HILTS_PLAIN || !CG_AddPhasedPlayerModel( cent, &re, ( how == RP_HILTS_PHASED_OVERLAY ) ? qtrue : qfalse ) )
+		{
+			trap->R_AddRefEntityToScene( &re );
+		}
+	}
+
+	// GLX_U: [Cosmetics] the hat and cape, with the same look as the hilts
+	for ( i = 0; i < hilts->wornCount; i++ )
+	{
+		refEntity_t re = hilts->worn[i];
 
 		re.renderfx = body->renderfx;
 		re.customShader = body->customShader;

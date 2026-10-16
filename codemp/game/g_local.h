@@ -899,6 +899,12 @@ typedef enum {
 	PLAYER_STATUS_DUEL_TOURNAMENT_LOSS       // has just lost his duel in the Duel Tournament
 } playerStatus_t;
 
+// GLX_U: [Cosmetics] a hat or cape name: up to 13 characters and the NUL, TaystJK's own
+// MAX_COSMETIC_LENGTH, so a name either side accepts is accepted by the other.
+#define RP_COSMETIC_NAME_SIZE	14
+#define RP_COSMETIC_HAT			0	// rides on color1, drawn at *head_top
+#define RP_COSMETIC_CAPE		1	// rides on color2, drawn at *back
+
 // client data that stays across multiple respawns, but is cleared
 // on each level change or team change at ClientBegin()
 typedef struct clientPersistant_s {
@@ -933,6 +939,12 @@ typedef struct clientPersistant_s {
 	// vs. /saberblade). This is the field published through the "c1"/"c2" clientinfo configstring
 	// keys; unlike saberRGB[], 0 is a legitimate, meaningful value here (SABER_RED), not "unset".
 	int			saberColorMode[2];
+
+	// GLX_U: [Cosmetics] the hat (slot 0) and cape (slot 1) the player wears, "" for none. They ride
+	// on color1/color2 after the saber number, as TaystJK sends them ("5santahat"), and are published
+	// the same way in "c1"/"c2", so TaystJK's own cgame shows them too. Read from the userinfo in
+	// ClientUserinfoChanged(), and restored from the character's saber colour columns on login.
+	char		cosmetic[2][RP_COSMETIC_NAME_SIZE];
 
 	int			vote, teamvote; // 0 = none, 1 = yes, 2 = no
 
@@ -2547,6 +2559,24 @@ int		G_ParseSaberRGB( const char *str );
 // comes from a stored value; falls back to SABER_RED, matching how this column's pre-RGB legacy
 // default (schema default of 1) already decodes.
 int		G_ValidateSaberColorMode( int decodedMode );
+
+// GLX_U: [Cosmetics] a hat or cape is saved in the same saberOneColor/saberTwoColor column as its
+// saber's colour (the hat with the first saber, the cape with the second), as an id in bits 32-39.
+// SQLite keeps every INTEGER as 64 bits, so this needs no schema change, and a build that reads the
+// columns with sqlite3_column_int() still gets the colour, from the low 32 bits. Only the items in
+// the fixed list in g_utils.c have an id; any other name is worn but saved as 0, "none".
+#define RP_STORED_COSMETIC_SHIFT	32
+#define RP_STORED_COSMETIC_MASK		0xFF
+#define RP_STORED_COLOR(stored)		( (int)( (stored) & 0x7FFFFFFF ) )
+#define RP_STORED_COSMETIC(stored)	( (int)( ( (stored) >> RP_STORED_COSMETIC_SHIFT ) & RP_STORED_COSMETIC_MASK ) )
+#define RP_STORED_PACK(color, cosmeticId)	\
+	( ( (long long)( (cosmeticId) & RP_STORED_COSMETIC_MASK ) << RP_STORED_COSMETIC_SHIFT ) | (long long)( (color) & 0x7FFFFFFF ) )
+// the hat or cape name carried after the saber number in a color1/color2 value, checked: letters,
+// digits, '_' and '-', 1-13 of them, starting with a letter or '_'. "none", an empty, overlong or
+// otherwise bad name give "".
+void		G_RpCosmeticFromColor( const char *colorValue, char *out, int outSize );
+int			G_RpCosmeticId( int slot, const char *name );		// 0 for none or not on the list
+const char	*G_RpCosmeticName( int slot, int id );				// "" for 0 or an id not on the list
 void	RPMod_StringEscape(char *in, char *out, int outSize);
 int		G_ModelIndex( const char *name );
 int		G_SoundIndex( const char *name );

@@ -1866,7 +1866,25 @@ static void CG_SaberColorUpdate_f(void)
 
 		trap->Cvar_Set(i ? "cp_sbRGB2" : "cp_sbRGB1", va("%i", packed));
 
-		trap->Cvar_Set(i ? "color2" : "color1", va("%i", mode));
+		// GLX_U: [Cosmetics] with the hat (color1) or cape (color2) after the number: the one the
+		// server sent, "-" for none, or -- from an older server, which sends four -- the one already there
+		{
+			const char *colorCvar = i ? "color2" : "color1";
+			char cosmetic[RP_COSMETIC_NAME_SIZE];
+
+			if (trap->Cmd_Argc() >= 7)
+			{
+				const char *sent = CG_Argv(5 + i);
+
+				// an overlong one is none, not cut down to another name
+				Q_strncpyz(cosmetic, strlen(sent) < sizeof(cosmetic) ? sent : "", sizeof(cosmetic));
+			}
+			else
+			{
+				CG_RpColorCvarCosmetic(colorCvar, cosmetic, sizeof(cosmetic));
+			}
+			CG_RpSetColorCvar(colorCvar, mode, cosmetic);
+		}
 		trap->Cvar_Set(i ? "ui_saber2_color" : "ui_saber_color", SaberColorToString((saber_colors_t)mode));
 		trap->Cvar_Set(i ? "g_saber2_color" : "g_saber_color", SaberColorToString((saber_colors_t)mode));
 

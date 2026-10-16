@@ -197,6 +197,18 @@ typedef struct playerEntity_s {
 #define	MAX_CUSTOM_SOUNDS	40 //rww - Note that for now these must all be the same, because of the way I am
 							   //cycling through them and comparing for custom sounds.
 
+// GLX_U: [Cosmetics] TaystJK's hats and capes. A name is the model's file name, at most 13
+// characters (TaystJK's MAX_COSMETIC_LENGTH is 14 with the NUL) and not starting with a digit,
+// since it follows the saber number in color1/color2.
+#define RP_COSMETIC_NAME_SIZE	14
+#define RP_COSMETICS_MAX		256		// per kind, as TaystJK lists them
+#define RP_COSMETIC_HAT			0
+#define RP_COSMETIC_CAPE		1
+typedef struct rpCosmetic_s {
+	char		name[RP_COSMETIC_NAME_SIZE];
+	qhandle_t	model;
+} rpCosmetic_t;
+
 typedef struct clientInfo_s {
 	qboolean		infoValid;
 
@@ -304,6 +316,10 @@ typedef struct clientInfo_s {
 
 	int				siegeIndex;
 	int				siegeDesiredTeam;
+
+	// GLX_U: [Cosmetics] the hat (0) and cape (1) this player wears: an index + 1 into cgs.rpCosmetics,
+	// 0 for none -- read off the name after the saber number in "c1"/"c2", as TaystJK sends it
+	int				rpCosmetic[2];
 
 	sfxHandle_t		sounds[MAX_CUSTOM_SOUNDS];
 	sfxHandle_t		combatSounds[MAX_CUSTOM_COMBAT_SOUNDS];
@@ -1791,6 +1807,10 @@ typedef struct cgs_s {
 	// the snapshots -- CG_AS_ParsePending() in cg_view.c
 	qboolean	ambientSetsPending;
 
+	// GLX_U: [Cosmetics] the hats (0) and capes (1) this client has: every .md3 in
+	// models/cosmetics/hats/ and models/cosmetics/capes/, TaystJK's folders, listed at load
+	rpCosmetic_t	rpCosmetics[2][RP_COSMETICS_MAX];
+	int				rpNumCosmetics[2];
 } cgs_t;
 
 typedef struct siegeExtended_s
@@ -1966,6 +1986,12 @@ void CG_CreateNPCClient(clientInfo_t **ci);
 void CG_DestroyNPCClient(clientInfo_t **ci);
 
 void CG_Player( centity_t *cent );
+void CG_RpLoadCosmetics( void );	// GLX_U: [Cosmetics] cg_players.c
+int CG_RpCosmeticForColor( int kind, const char *colorValue );	// GLX_U: [Cosmetics] index + 1, 0 for none
+qboolean CG_RpCosmeticNameValid( const char *name );	// GLX_U: [Cosmetics]
+void CG_RpColorCvarCosmetic( const char *cvarName, char *out, int outSize );	// GLX_U: [Cosmetics]
+void CG_RpSetColorCvar( const char *cvarName, int saberColor, const char *cosmetic );	// GLX_U: [Cosmetics]
+void CG_RpSetCvarCosmetic( const char *cvarName, const char *cosmetic );	// GLX_U: [Cosmetics]
 // GalaxyRP: [Phase] also used by CG_General() for the limbs and corpses of ghosts and holograms
 qboolean CG_AddPhasedPlayerModel( centity_t *cent, const refEntity_t *legs, qboolean withOverlay );
 void CG_ResetPlayerEntity( centity_t *cent );
