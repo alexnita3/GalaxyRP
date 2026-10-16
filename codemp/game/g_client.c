@@ -3350,10 +3350,12 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 			// visible after the on-screen popup fades.
 			// GalaxyRP fix: [fs_forcegame] also cover the case where the player already has the
 			// plugin/mod installed but launched TaystJK directly (or switched mods via its mod menu)
-			// instead of using the DAJ_RP launch script -- fs_forcegame then stays on its "taystjk"
-			// default, which wins filesystem search priority over GalaxyRP and silently loads
-			// TaystJK's own bundled cgame/ui instead of ours. That can only be corrected by relaunching
-			// via the script (fs_forcegame is CVAR_INIT, so no in-game command can change it).
+			// instead of using the DAJ_RP launch script.
+			// GLX_U: [fs_forcegame] correction: fs_forcegame does not stop our cgame/ui loading --
+			// TaystJK's dll loader tries the fs_game folder first, before taystjk/ and base/. With no
+			// rpmod_client the player is running TaystJK's own fallback client, usually because our
+			// client files are not in the GalaxyRP folder. fs_forcegame only decides where the client
+			// writes (config, screenshots, demos), which is why the launch script still sets it.
 			trap->SendServerCommand(clientNum, va("print \"^3You do not have the required client plugin installed. The server requires ^5%s^7.\n^3If you already have it installed, your game started with the wrong engine folder override - close the game and relaunch using the script file shipped with the client.\n\"", JK_VERSION));
 			G_LogPrintf("ClientPlugin: Player does not have any plugin\n");
 		}
