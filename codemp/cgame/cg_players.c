@@ -9960,7 +9960,9 @@ hat 2 units down the bolt's Z axis. Unlike TaystJK's:
     are), so it stays on a rider in his seat and on a victim held by a monster;
   - scaled with the player (/scale, npcscale), model and offset alike;
   - added in every pass the body is, with the body's look (CG_RpAddHolsteredSabers): cloak, Force
-    ghost and hologram, admhidden, mind-trick fade, third-person alpha, first person, shadow.
+    ghost and hologram, admhidden, mind-trick fade, third-person alpha, first person, shadow;
+  - never in the first-person view of the player we look through, even with his saber out, when
+    his whole body is drawn: mirrors only, as his body is with any other weapon.
 ===============
 */
 // the name rule the server applies too (G_RpCosmeticFromColor): letters, digits, '_' and '-', 1-13
@@ -10205,6 +10207,7 @@ typedef struct rpHolsteredHilts_s {
 	refEntity_t	hilt[MAX_SABERS];
 	int			wornCount;	// GLX_U: [Cosmetics] the hat and cape, placed and added with the hilts
 	refEntity_t	worn[2];
+	qboolean	wornInView;	// GLX_U: [Cosmetics] the player we look through, in first person -- see below
 } rpHolsteredHilts_t;
 
 // GLX_U: [Cosmetics] see "Cosmetics" above
@@ -10214,6 +10217,12 @@ static void CG_RpPlaceCosmetics( centity_t *cent, clientInfo_t *ci, const refEnt
 	int kind;
 
 	hilts->wornCount = 0;
+
+	// GLX_U: [Cosmetics] the player we look through (ourselves, or the one a spectator follows) in first
+	// person. With any weapon but the saber his body is drawn RF_THIRD_PERSON -- in mirrors only -- and
+	// the hat and cape copy that; with the saber out his whole body is drawn (CG_Player), and so would
+	// they be: around the camera. They get RF_THIRD_PERSON of their own then -- see the add below.
+	hilts->wornInView = ( cg.snap && cent->currentState.number == cg.snap->ps.clientNum && !cg.renderingThirdPerson ) ? qtrue : qfalse;
 
 	if ( !ci
 		|| ( cent->currentState.eFlags & EF_DEAD )
@@ -10428,6 +10437,10 @@ static void CG_RpAddHolsteredSabers( centity_t *cent, clientInfo_t *ci, const re
 		refEntity_t re = hilts->worn[i];
 
 		re.renderfx = body->renderfx;
+		if ( hilts->wornInView )
+		{ // never in our own first-person view, still in mirrors and portals
+			re.renderfx |= RF_THIRD_PERSON;
+		}
 		re.customShader = body->customShader;
 		re.shaderRGBA[0] = body->shaderRGBA[0];
 		re.shaderRGBA[1] = body->shaderRGBA[1];
