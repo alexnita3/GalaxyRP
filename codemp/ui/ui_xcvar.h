@@ -44,9 +44,6 @@ XCVAR_DEF( g_spSkill,						"2",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( g_warmup,						"20",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( se_language,						"english",				NULL,				CVAR_ARCHIVE|CVAR_NORESTART )
 XCVAR_DEF( ui_galaxyrp_game,				"0",					NULL,				CVAR_ROM ) // Tr!Force: [AssetsCache] Set game cvar
-// GalaxyRP: [TaystJK] the same cvar cgame registers in cg_xcvar.h, with the same flags (flags OR
-// together across modules); see RP_AdoptTaystJKWriteFolder() in bg_misc.c.
-XCVAR_DEF( rp_taystjk_writefolder,				"1",					NULL,				CVAR_ARCHIVE )
 // DAJ_RP: [Menus] the TaystJK engine's widescreen switch (its own default and flags; jaPRO's and TaystJK's ui register
 // it too): on, the connect screen uses its 16:9 art and the cursor is not stretched -- see UI_WidthRatioCoef()
 XCVAR_DEF( cl_ratioFix,						"1",					NULL,				CVAR_ARCHIVE )

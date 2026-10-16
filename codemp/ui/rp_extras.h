@@ -13,11 +13,11 @@ How the two work together:
   server (/rpxlist, g_rplist.c), writes what it gets to one of rpxListFiles (named in ui_rpx_file)
   and raises ui_rpx_serial, and the ui reads the file then. ui_rpx_status says what is going on
   meanwhile. Several names, because the engine writes to one folder and reads from the first folder
-  on its search path that has the file: on TaystJK the write folder can be taystjk/ for a player's
-  first map and the mod folder after (RP_AdoptTaystJKWriteFolder() in bg_misc.c), and an old copy
-  in a folder searched first would hide the new one. cgame reads each file back after writing it
-  and moves on to the next name when what it reads is not what it wrote (the serial in its first
-  line).
+  on its search path that has the file: a TaystJK client started without the launch script writes
+  to taystjk/ but searches the mod folder first (GLX_U: the in-module write-folder switch is gone,
+  see cg_main.c), so an old copy left there by a launcher session would hide the new one. cgame
+  reads each file back after writing it and moves on to the next name when what it reads is not
+  what it wrote (the serial in its first line).
 - The action buttons run "rpx do <action>": cgame builds the server command from the cvars and
   sends it itself (never through the console, so no name can add a command of its own), after
   checking the selected name is one the server listed.

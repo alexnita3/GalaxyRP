@@ -10336,8 +10336,6 @@ void UI_Init( qboolean inGameLoad ) {
 
 	UI_RegisterCvars();
 
-	// GalaxyRP: [TaystJK] see bg_misc.c; covers a "+set fs_game GalaxyRP" launch without the flag.
-	RP_AdoptTaystJKWriteFolder();
 	UI_InitMemory();
 
 	// cache redundant calulations

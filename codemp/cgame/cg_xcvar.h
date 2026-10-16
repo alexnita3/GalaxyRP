@@ -148,11 +148,6 @@ XCVAR_DEF( cg_weaponBob,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_zyk_duel_keep_colors,				"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_zyk_duel_keep_duelists_colors,	"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_zyk_duel_only_render_duelists,	"0",					NULL,					CVAR_ARCHIVE )
-// GalaxyRP: [TaystJK] whether a client module may replace TaystJK's default fs_forcegame ("taystjk")
-// with the mod folder so the engine writes there from the next map. Registered identically by ui
-// (ui_xcvar.h); see RP_AdoptTaystJKWriteFolder() in bg_misc.c. Archived: it is the opt-out for a
-// player who plays several mods on one TaystJK install.
-XCVAR_DEF( rp_taystjk_writefolder,				"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cl_paused,							"0",					NULL,					CVAR_ROM )
 XCVAR_DEF( com_buildScript,						"0",					NULL,					CVAR_NONE )
 XCVAR_DEF( com_cameraMode,						"0",					NULL,					CVAR_CHEAT )

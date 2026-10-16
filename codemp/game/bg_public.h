@@ -1959,13 +1959,6 @@ void BG_TempFree( int size );
 char *BG_StringAlloc ( const char *source );
 qboolean BG_OutOfMemory ( void );
 
-// GalaxyRP: [TaystJK] cgame and ui only -- see the comment on the definition in bg_misc.c. The
-// engine default this replaces is TaystJK's TAYSTJKGAME ("taystjk", q_shared.h in its tree).
-#if defined(_CGAME) || defined(UI_BUILD)
-#define RP_TAYSTJK_DEFAULT_FORCEGAME "taystjk"
-qboolean RP_AdoptTaystJKWriteFolder( void );
-#endif
-
 void BG_BLADE_ActivateTrail ( bladeInfo_t *blade, float duration );
 void BG_BLADE_DeactivateTrail ( bladeInfo_t *blade, float duration );
 void BG_SI_Activate( saberInfo_t *saber );
