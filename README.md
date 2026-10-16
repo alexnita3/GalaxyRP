@@ -49,6 +49,7 @@ The mod contains these following main features:
 - An entity system, which allows players to add, edit, list and remove entities that are in the map
 - Commands to remap shaders in a map
 - RGB Lightsaber colors
+- Hats and capes for players
 - A client-side plugin with menus
 - Many cvars at server.cfg to customize mod features
 - Countless bugfixes and optimizations
@@ -83,6 +84,14 @@ The mod actually requires the only game-code files from the build project: `jamp
 - Tayst
 - Sunny
 - Dan (eternal coders)
+
+**JOF EJK authors:**
+- Milamber
+- Daniel
+- Jediman
+- lumayaa
+- Sol-Vulpes
+- Clix (looZ149)
 
 **OpenJK authors:**
 - Ensiform
