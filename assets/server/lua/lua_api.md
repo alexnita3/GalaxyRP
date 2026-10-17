@@ -112,7 +112,7 @@ nothing extra.
 | `/scripts disable <plugin>` | `lua_disable <plugin>` | Stop a plugin until the server restarts |
 | `/scripts errors` | `lua_errors` | The last 50 errors |
 | `/scripts stats` | `lua_stats` | Calls, time, timers, entities and storage per plugin |
-| — | `lua_exec <code>` | Run a line of Lua (only with `rp_lua_allowexec 1`) |
+| — | `lua_exec <code>` | Run a line of Lua (rcon and the server console only; written to the server log) |
 
 The console removes double quotes and splits commands at `;`. So in `lua_exec`, write strings with
 single quotes or `[[...]]`, and don't use `;`.
@@ -131,12 +131,12 @@ single quotes or `[[...]]`, and don't use `;`.
 | "setmetatable: __gc is not available to scripts" | Finalizers are not allowed. Clean up in a `shutdown` handler |
 | A map script does not run | Map scripts need `rp_lua_mapscripts 1`, and the folder named as the map is: `lua/maps/mp/ffa5/` |
 | `World.spawn` or `World.npc` returns nil | The second value says why: a plugin limit (`rp_lua_maxents`, `rp_lua_maxnpcs`, `rp_lua_spawnkb`), a model or NPC type the server does not have, or a full map |
-| `give` is refused | The item is not in `rp_lua_items` |
+| `give` is refused | The second value says why: not a weapon, ammo or holdable item, not a player weapon (`weapon_emplaced`, `weapon_turretwp`), or the player cannot take it now |
 | Credits or XP come out smaller, or are refused | `rp_lua_maxcredits` and `rp_lua_maxxp` cap each call, and 0 switches it off. The warning is in `/scripts errors` |
 | An order is refused: "it has not finished spawning" | An NPC takes orders from the frame after `World.npc`: give them in `Timer.after(100, ...)` |
 | An NPC does not walk to its spot | Most multiplayer maps have no NPC waypoints, so it walks in a straight line and stops at the first wall (`"stuck"`). Pick a spot it can see |
 | The dialogue shows in the chat area, not in a menu | The menu needs the Galaxy RP Ultimate client; everyone else answers in chat or with `/choose` |
-| `lua_exec` does nothing | It needs `rp_lua_allowexec 1`, and rcon only |
+| `lua_exec` does nothing in game | It is an rcon command: there is no in-game version |
 
 ## The API
 
@@ -419,7 +419,7 @@ Each returns `false` and the reason when it is refused, so a script can tell the
 | `player:teleport(pos [, yaw])` | Moves them there, with the teleport effect | Not alive, riding a vehicle, in a mini-game or a duel, admin-protected, or the spot is blocked: a wall, the floor, or someone standing there. Nobody is ever telefragged |
 | `player:heal(n)` | Adds up to `n` health, never above the maximum. Returns how much it added | Not alive (a script does not revive a knocked-down player) |
 | `player:set_armor(n)` | Sets their shield, kept between 0 and the maximum. Returns the new value | Not alive |
-| `player:give(item)` | One item, by its class name: a weapon with its ammo, ammo, or a holdable item, as picking it up would give it | The item is not listed in `rp_lua_items` (none are by default); not alive; in a mini-game; they cannot take it now (full on that ammo, already have that item, in a duel) |
+| `player:give(item)` | One item, by its class name: a weapon with its ammo, ammo, or a holdable item, as picking it up would give it | Not a weapon, ammo or holdable item (health, armor and powerups are not given); `weapon_emplaced` and `weapon_turretwp`, which are not player weapons; not alive; in a mini-game; they cannot take it now (full on that ammo, already have that item, in a duel) |
 | `player:set_effect(name)` | `"walkthrough"`, `"ghost"`, `"holo"` or `"hidden"`, as `/admwalkthrough`, `/admghost`, `/admholo` and `/admhidden` give them; nil takes it off. The player is not told | Spectating; admin-protected |
 | `player:skill_up(n [, count])` | Raises skill `n` by `count` (1 if left out), spending the player's own skillpoints, as `/skillup` does: they see the same message and it is saved. Returns how many levels it added (fewer than `count` when the maximum is nearer) | Not on a character; no such skill (or number 39, no longer in use); already at its maximum; not enough skillpoints |
 | `player:skill_down(n [, count])` | Lowers it and gives the skillpoints back, as `/skilldown` does | Not on a character; already at 0 |
@@ -432,8 +432,6 @@ Each returns `false` and the reason when it is refused, so a script can tell the
   taken off. A map change, logging in or out and changing character take every effect off, as always.
 - **The log:** every teleport, item, effect and skill change is written to the server log
   (`Lua: <plugin> teleported <player> to (x y z)`).
-- **Allowed items:** `rp_lua_items` in `galaxyrp_server.cfg`, e.g.
-  `set rp_lua_items "weapon_blaster ammo_blaster item_medpac"`.
 
 Names, teams and admin powers stay read-only; credits and XP change only through API version 4's
 methods (below). Killing or reviving a player is not possible from a script.
@@ -725,7 +723,6 @@ All are in `galaxyrp_server.cfg`.
 | `rp_lua` | 1 | 0 switches every script off |
 | `rp_lua_plugins` | (empty) | The plugins started with the server, separated by spaces |
 | `rp_lua_mapscripts` | 0 | 1 runs the map scripts in `lua/maps/<map name>/` |
-| `rp_lua_allowexec` | 0 | 1 allows rcon `lua_exec` |
 | `rp_lua_memmb` | 64 | Memory for all scripts together, in MB |
 | `rp_lua_budget` | 1000000 | Instructions one call into a script may run |
 | `rp_lua_budgetms` | 50 | Milliseconds one call may run |
@@ -737,6 +734,5 @@ All are in `galaxyrp_server.cfg`.
 | `rp_lua_spawnkb` | 512 | KB of game memory all scripts' `World.spawn` may use per map (freed when the map changes) |
 | `rp_lua_newfx` | 8 | New effect files scripts may add per map (a map has only 64 effect slots) |
 | `rp_lua_maxnpcs` | 8 | NPCs one plugin may have at once, corpses included |
-| `rp_lua_items` | (empty) | The item class names scripts may give players, separated by spaces |
 | `rp_lua_maxcredits` | 5000 | Credits one call may give or take (0: none at all) |
 | `rp_lua_maxxp` | 10 | XP one call may give (0: none at all) |

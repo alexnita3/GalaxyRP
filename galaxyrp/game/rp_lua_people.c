@@ -270,27 +270,11 @@ static int RP_LuaPeople_SetArmor( lua_State *L ) {
 	return 1;
 }
 
-// the item is in rp_lua_items, the server owner's list of what scripts may give
-static qboolean RP_LuaPeople_ItemAllowed( const char *name ) {
-	char list[MAX_CVAR_VALUE_STRING];
-	const char *s;
-
-	trap->Cvar_VariableStringBuffer( "rp_lua_items", list, sizeof( list ) );
-	s = list;
-	while ( 1 ) {
-		char *tok = COM_ParseExt( &s, qfalse );
-		if ( !tok[0] ) {
-			return qfalse;
-		}
-		if ( !Q_stricmp( tok, name ) ) {
-			return qtrue;
-		}
-	}
-}
-
 // what touching the item would give (Pickup_Weapon, Pickup_Ammo, Pickup_Holdable in g_items.c, for an item placed
 // in the map), with the pickup's own rules first: BG_CanItemBeGrabbed refuses a full ammo type, a holdable they have,
-// and anyone fighting a duel or in a mini-game
+// and anyone fighting a duel or in a mini-game. GLX_U: any weapon, ammo or holdable item, with no list in the server
+// config (rp_lua_items is gone); never the emplaced gun's or the turret's weapon, which only work from inside that
+// gun: past LAST_USEABLE_WEAPON, the two the admin /give guns leaves out too (g_cmds.c)
 static int RP_LuaPeople_Give( lua_State *L ) {
 	int client = RP_LuaApi_CheckPlayer( L, 1 );
 	gentity_t *ent = &g_entities[client];
@@ -299,15 +283,15 @@ static int RP_LuaPeople_Give( lua_State *L ) {
 	entityState_t es;
 	gitem_t *item;
 
-	if ( !RP_LuaPeople_ItemAllowed( name ) ) {
-		return RP_LuaPeople_Fail( L, va( "%s is not in rp_lua_items, the items scripts may give", name ) );
-	}
 	item = BG_FindItem( name );
 	if ( !item ) {
 		return RP_LuaPeople_Fail( L, va( "there is no item called %s", name ) );
 	}
 	if ( item->giType != IT_WEAPON && item->giType != IT_AMMO && item->giType != IT_HOLDABLE ) {
 		return RP_LuaPeople_Fail( L, "only weapons, ammo and holdable items can be given (heal and set_armor do health and armor)" );
+	}
+	if ( item->giType == IT_WEAPON && item->giTag > LAST_USEABLE_WEAPON ) {
+		return RP_LuaPeople_Fail( L, va( "%s is not a player weapon", item->classname ) );
 	}
 	if ( !RP_LuaPeople_Alive( ent ) ) {
 		return RP_LuaPeople_Fail( L, "they are not alive (spectating, dead or knocked down)" );

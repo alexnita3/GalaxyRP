@@ -4,8 +4,7 @@
 -- take_credits and skill_up.
 --
 -- To use it: copy this folder to lua/plugins/merchant and set POSITION and DOCKS below to spots on
--- your map (stand there and type /viewpos in the console). For the blaster to be sold, add
--- weapon_blaster to rp_lua_items in galaxyrp_server.cfg. Then run /scripts enable merchant in game
+-- your map (stand there and type /viewpos in the console). Then run /scripts enable merchant in game
 -- (or lua_enable merchant from rcon); to keep it on after a restart, add "merchant" to
 -- rp_lua_plugins.
 --

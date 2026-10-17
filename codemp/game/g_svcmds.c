@@ -569,7 +569,7 @@ svcmd_t svcmds[] = {
 	{ "game_memory",				Svcmd_GameMem_f,					qfalse },
 	{ "giveadmin",					Svcmd_GiveAdmin_f,					qfalse },
 	{ "listip",						Svcmd_ListIP_f,						qfalse },
-	// GLX_U: [Lua] server-side scripting (rp_lua_admin.c); lua_exec also needs rp_lua_allowexec 1
+	// GLX_U: [Lua] server-side scripting (rp_lua_admin.c)
 	{ "lua_disable",				Svcmd_LuaDisable_f,					qfalse },
 	{ "lua_enable",					Svcmd_LuaEnable_f,					qfalse },
 	{ "lua_errors",					Svcmd_LuaErrors_f,					qfalse },

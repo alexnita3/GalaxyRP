@@ -12897,9 +12897,12 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				// GalaxyRP: [Weather] split here rather than appending -- SV_SendServerCommand drops
 				// any formatted message over 1022 characters WHOLE and without a word, and adding the
 				// /admweather line to the block above took it to 1093.
+				// GLX_U: [Lua] /scripts added after /noclip: 621 bytes with it, of the 1022 SV_SendServerCommand sends (the
+				// header message, where /entitiesandremaps is, had no room for it)
 				trap->SendServerCommand(ent - g_entities, "print \"^3/admweather <effect (optional)>: ^7Sets the weather for everyone on the server. Run with no arguments to see the current weather, or ^3/admweather list ^7for the effects.\n\
 ^3/admweather add <effect>: ^7Layers another effect on top of the current weather. ^3/admweather remove <number> ^7drops one, ^3/admweather default ^7restores the map's own and ^3/admweather clear ^7switches it all off.\n\
-^3/noclip: ^7Makes you able to go through walls.\n\" ");
+^3/noclip: ^7Makes you able to go through walls.\n\
+^3/scripts <reload/enable/disable/errors/stats (optional)>: ^7Lists the server's Lua plugins and the commands they add, or manages them. ^1(only for Admins with Scripts)\n\" ");
 				// DAJ_RP: [Phase] the Player effects commands get a message of their own: with /admhidden added
 				// to the one above it would pass SV_SendServerCommand's 1022 characters and be dropped whole.
 				trap->SendServerCommand(ent - g_entities, "print \"^3/admghost <player name (optional)>: ^7Turns a player (or you) into a Force ghost: see-through, glowing, passes through people, off the radar. Again to turn it off.\n\

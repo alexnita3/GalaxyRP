@@ -7,7 +7,9 @@ it goes to the server console.
 
 enable and disable change rp_lua_plugins for the running server only: a restart goes back to the
 server config, which is where a permanent change belongs. lua_exec runs a line of Lua in its own
-"@console" environment and is refused unless rp_lua_allowexec is 1; it does not exist in game.
+"@console" environment, from rcon and the server console only; it does not exist in game. GLX_U: it needs no
+switch any more -- rp_lua_allowexec was an ordinary cvar that rcon could turn on, so it protected nothing, and
+the sandbox gives a line of Lua no more than rcon has. Every line is written to the server log.
 ===========================================================================
 */
 
@@ -409,10 +411,6 @@ void Svcmd_LuaExec_f( void ) {
 	rpLuaPlugin_t *p = &rl.plugins[RP_LUA_CONSOLE];
 	const char *code;
 
-	if ( !rp_lua_allowexec.integer ) {
-		trap->Print( "lua_exec is off. Set rp_lua_allowexec 1 to allow it.\n" );
-		return;
-	}
 	if ( !RP_LuaAdmin_Running( NULL ) ) {
 		return;
 	}

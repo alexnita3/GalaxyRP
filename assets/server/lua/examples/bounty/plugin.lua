@@ -5,7 +5,7 @@
 -- To use it: copy this folder to lua/plugins/bounty and set SPAWN_POINTS below to spots on your map
 -- (stand there and type /viewpos in the console). Then run /scripts enable bounty in game (or
 -- lua_enable bounty from rcon). To keep it on after a restart, add "bounty" to rp_lua_plugins in
--- galaxyrp_server.cfg. For the reward item, list it in rp_lua_items too.
+-- galaxyrp_server.cfg.
 
 Plugin.register{ name = "Bounty hunt", version = "1.0", api = 3 }
 
@@ -15,7 +15,7 @@ local SPAWN_POINTS = {
 	{ x = -256, y = 0, z = 0 },
 	{ x = 0, y = 256, z = 0 },
 }
-local REWARD_ITEM = "weapon_blaster"	-- given when rp_lua_items lists it; nil for none
+local REWARD_ITEM = "weapon_blaster"	-- given as a reward; nil for none
 
 local hunts = {}	-- player -> { left = targets still up, targets = { npc = true } }
 
