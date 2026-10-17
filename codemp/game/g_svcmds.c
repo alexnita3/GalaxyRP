@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // this file holds commands that can be executed by the server console, but not remote clients
 
 #include "g_local.h"
+#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] the lua_* rcon commands
 
 /*
 ==============================================================================
@@ -568,6 +569,14 @@ svcmd_t svcmds[] = {
 	{ "game_memory",				Svcmd_GameMem_f,					qfalse },
 	{ "giveadmin",					Svcmd_GiveAdmin_f,					qfalse },
 	{ "listip",						Svcmd_ListIP_f,						qfalse },
+	// GLX_U: [Lua] server-side scripting (rp_lua_admin.c); lua_exec also needs rp_lua_allowexec 1
+	{ "lua_disable",				Svcmd_LuaDisable_f,					qfalse },
+	{ "lua_enable",					Svcmd_LuaEnable_f,					qfalse },
+	{ "lua_errors",					Svcmd_LuaErrors_f,					qfalse },
+	{ "lua_exec",					Svcmd_LuaExec_f,					qfalse },
+	{ "lua_list",					Svcmd_LuaList_f,					qfalse },
+	{ "lua_reload",					Svcmd_LuaReload_f,					qfalse },
+	{ "lua_stats",					Svcmd_LuaStats_f,					qfalse },
 	{ "removeip",					Svcmd_RemoveIP_f,					qfalse },
 	{ "say",						Svcmd_Say_f,						qtrue },
 	{ "toggleallowvote",			Svcmd_ToggleAllowVote_f,			qfalse },

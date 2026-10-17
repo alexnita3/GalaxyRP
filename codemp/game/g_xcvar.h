@@ -571,5 +571,23 @@ XCVAR_DEF( rp_ammo_regen_timer,					"5",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART
 XCVAR_DEF( rp_explosives_recharge_timer,		"30",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART,					qtrue)
 XCVAR_DEF( rp_allow_ammo_regen,					"1",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART,					qtrue)
 XCVAR_DEF( rp_allow_explosives_regen,			"1",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART,					qtrue)
+// GLX_U: [Lua] server-side scripting (galaxyrp/game/rp_lua*.c). rp_lua 0 means no Lua state at all, from the
+// next map or "/scripts reload all". rp_lua_plugins lists the plugins to load (folders in lua/plugins); /scripts
+// enable and disable change it for the running server only. rp_lua_mapscripts loads lua/maps/<mapname>/*.lua.
+// The limits: memory for the whole state (MB), instructions and milliseconds per call, milliseconds per server
+// frame for timers, tasks and the frame event, errors per minute before a plugin is switched off, bytes per
+// stored value and per plugin in lua.db. rp_lua_allowexec 1 allows the rcon command lua_exec. Not archived and
+// not announced: the server config sets them (galaxyrp_server.cfg).
+XCVAR_DEF( rp_lua,								"1",		NULL,			CVAR_NONE,									qfalse )
+XCVAR_DEF( rp_lua_plugins,						"",			NULL,			CVAR_NONE,									qfalse )
+XCVAR_DEF( rp_lua_mapscripts,					"0",		NULL,			CVAR_NONE,									qfalse )
+XCVAR_DEF( rp_lua_memmb,						"64",		NULL,			CVAR_NONE,									qfalse )
+XCVAR_DEF( rp_lua_budget,						"1000000",	NULL,			CVAR_NONE,									qfalse )
+XCVAR_DEF( rp_lua_budgetms,						"50",		NULL,			CVAR_NONE,									qfalse )
+XCVAR_DEF( rp_lua_framems,						"15",		NULL,			CVAR_NONE,									qfalse )
+XCVAR_DEF( rp_lua_maxerrors,					"20",		NULL,			CVAR_NONE,									qfalse )
+XCVAR_DEF( rp_lua_maxvalue,						"65536",	NULL,			CVAR_NONE,									qfalse )
+XCVAR_DEF( rp_lua_maxstore,						"2097152",	NULL,			CVAR_NONE,									qfalse )
+XCVAR_DEF( rp_lua_allowexec,					"0",		NULL,			CVAR_NONE,									qfalse )
 
 #undef XCVAR_DEF

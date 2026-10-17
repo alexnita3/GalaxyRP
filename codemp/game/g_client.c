@@ -26,6 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ghoul2/G2.h"
 #include "bg_saga.h"
 #include "sqlite/sqlite3.h"
+#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] client events
 
 // g_client.c -- client functions that don't happen every frame
 
@@ -2973,6 +2974,9 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 //	if ( !client->areabits )
 //		client->areabits = G_Alloc( (trap->AAS_PointReachabilityAreaIndex( NULL ) + 7) / 8 );
 
+	// GLX_U: [Lua] the connection is accepted; scripts are told, and nothing they do changes that
+	RP_Lua_ClientConnect( clientNum, firstTime );
+
 	return NULL;
 }
 
@@ -3411,6 +3415,9 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 		ent->client->pers.training_stored_damageScale[i] = 0;
 		ent->client->pers.training_stored_damageScale2[i] = 0;
 	}
+
+	// GLX_U: [Lua] the client_begin event
+	RP_Lua_ClientBegin( clientNum );
 }
 
 static qboolean AllForceDisabled(int force)
@@ -4721,6 +4728,8 @@ void ClientSpawn(gentity_t *ent) {
 		sqlite3_close(db);
 	}
 
+	// GLX_U: [Lua] the client_spawn event, once the player is in the world with their loadout
+	RP_Lua_ClientSpawn( ent->s.number );
 }
 
 
@@ -4799,6 +4808,10 @@ void ClientDisconnect( int clientNum ) {
 	if ( !ent->client || ent->client->pers.connected == CON_DISCONNECTED ) {
 		return;
 	}
+
+	// GLX_U: [Lua] the client_disconnect event, while the player is still all there; their handles
+	// are stale from here on
+	RP_Lua_ClientDisconnect( clientNum );
 
 	// GalaxyRP: [SP Maps] security / goodie keys leave with the player
 	RP_ClearKeys( ent );

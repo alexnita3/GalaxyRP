@@ -30,6 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "b_local.h"
 #include "qcommon/q_version.h"
 #include "sqlite/sqlite3.h"
+#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] the per-map Lua state
 
 NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
 void (*Com_Printf)( const char *msg, ... );
@@ -3364,6 +3365,10 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	//alex: create tables required for storing stuff, and also create admin account. ONLY if those do not already exist.
 	InitializeGalaxyRpTables(qtrue);
 
+	// GLX_U: [Lua] the map's entities, cvars and database tables are all in place: start this map's
+	// Lua state and load the plugins and map scripts (rp_lua_core.c)
+	RP_Lua_Init();
+
 	// GalaxyRP fix: [Configstrings] every configstring the map and the mod register has now been
 	// written, so count the gamestate once and start the running estimate from the truth. Without
 	// this the estimate would begin at zero and the budget check in G_FindConfigstringIndex would
@@ -3415,6 +3420,9 @@ void G_ShutdownGame( int restart ) {
 		}
 	}
 	i = 0;
+
+	// GLX_U: [Lua] the shutdown event, the last storage flush, and the end of this map's Lua state
+	RP_Lua_Shutdown();
 
 	G_CleanAllFakeClients(); //get rid of dynamically allocated fake client structs.
 
@@ -9330,6 +9338,9 @@ void G_RunFrame( int levelTime ) {
 #ifdef _G_FRAME_PERFANAL
 	trap->PrecisionTimer_Start(&timer_Queues);
 #endif
+	// GLX_U: [Lua] timers, tasks and the frame event (inside rp_lua_framems), and the 30 s storage flush
+	RP_Lua_Frame( levelTime );
+
 	// GalaxyRP: [Entity System] which clients each sound-set speaker is sent to this frame
 	RP_SpeakerAudienceFrame();
 

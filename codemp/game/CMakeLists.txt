@@ -142,6 +142,13 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_public.h"
 	"${MPDir}/game/g_team.h"
 	"${RPDir}/game/rp_version.h" # GalaxyRP headers
+	# GLX_U: [Lua] server-side scripting (rp_lua*.c), see lib/lua/README.md
+	"${RPDir}/game/rp_lua.h"
+	"${RPDir}/game/rp_lua_local.h"
+	"${RPDir}/game/rp_lua_core.c"
+	"${RPDir}/game/rp_lua_api.c"
+	"${RPDir}/game/rp_lua_store.c"
+	"${RPDir}/game/rp_lua_admin.c"
 	"${MPDir}/game/g_xcvar.h"
 	"${MPDir}/game/inv.h"
 	"${MPDir}/game/match.h"
@@ -216,6 +223,46 @@ set(MPGameUiFiles
 	)
 source_group("ui" FILES ${MPGameUiFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameUiFiles})
+
+# GLX_U: [Lua] Lua 5.4.9 for server-side scripting, built into this module only (never into cgame
+# or ui). lib/lua holds only the files listed here plus their headers: the stand-alone programs and
+# the io, os, package and debug libraries were left out of the copy on purpose -- see
+# lib/lua/README.md. lauxlib.c keeps luaL_loadfilex (fopen), which nothing calls; the define only
+# quiets MSVC's deprecation warning for it.
+set(MPGameLuaFiles
+	"${CMAKE_SOURCE_DIR}/lib/lua/lapi.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lauxlib.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lbaselib.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lcode.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lcorolib.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lctype.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/ldebug.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/ldo.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/ldump.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lfunc.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lgc.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/llex.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lmathlib.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lmem.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lobject.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lopcodes.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lparser.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lstate.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lstring.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lstrlib.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/ltable.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/ltablib.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/ltm.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lundump.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lutf8lib.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lvm.c"
+	"${CMAKE_SOURCE_DIR}/lib/lua/lzio.c"
+	)
+if(MSVC)
+	set_source_files_properties(${MPGameLuaFiles} PROPERTIES COMPILE_DEFINITIONS "_CRT_SECURE_NO_WARNINGS")
+endif()
+source_group("lua" FILES ${MPGameLuaFiles})
+set(MPGameFiles ${MPGameFiles} ${MPGameLuaFiles})
 
 add_library(${MPGame} SHARED ${MPGameFiles})
 

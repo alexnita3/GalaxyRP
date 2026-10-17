@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/menudef.h"			// for the voice chats
 
 #include "sqlite/sqlite3.h"
+#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] /scripts, script commands, chat event, character cleanup
 
 // GalaxyRP fix: [portability] for zyk_create_dir() below, which creates directories itself
 // rather than shelling out to mkdir(1).
@@ -932,7 +933,9 @@ const admin_command_description_t admin_commands[ADM_NUM_CMDS] = {
 	{ "Play Music",				ADM_MUSIC				},
 	{ "Instant Revive",			ADM_GETUP				},
 	{ "Weather",				ADM_WEATHER				},
-	{ "Player effects",			ADM_PHASE				}
+	{ "Player effects",			ADM_PHASE				},
+	// GLX_U: [Lua] /scripts -- see rp_lua_admin.c
+	{ "Scripts",				ADM_SCRIPTS				}
 };
 
 qboolean check_admin_command(gentity_t* ent, int admin_command, qboolean with_message) {
@@ -6056,6 +6059,10 @@ void remove_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3*
 		return;
 	}
 
+	// GLX_U: [Lua] the character's script data goes too: SQLite hands this CharID to the next new
+	// character when it was the highest one, and that character must not inherit quest progress
+	RP_Lua_CharacterRemoved(charID);
+
 	if (removed_items > 0)
 	{
 		trap->SendServerCommand(ent - g_entities, va("print \"^2Character %s ^2has been removed, along with its %d item%s.\n\"", char_name, removed_items, (removed_items == 1) ? "" : "s"));
@@ -8862,6 +8869,15 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	Q_strncpyz( text, chatText, sizeof(text) );
 
 	Q_strstrip( text, "\n\r", "  " );
+
+	// GLX_U: [Lua] the chat event, raised only for chat that is going out: a silenced player is
+	// turned away by the switch below (every mode except /tell, which silence never covered), so
+	// they raise nothing. A handler that returns false stops the message.
+	if ( mode == SAY_TELL || !(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_SILENCED)) )
+	{
+		if ( !RP_Lua_Chat( ent, target, mode, ooc_flag ? qtrue : qfalse, text ) )
+			return;
+	}
 
 	switch ( mode ) {
 	default:
@@ -19364,6 +19380,12 @@ Run ^3/admweather ^7on its own to see the current weather, or ^3/admweather list
 All four let the player pass through other players and NPCs. The ghost and hologram also change how they look and hide them from the radar; a hidden player is not drawn at all and is off the radar too, though Force Sight still sees them. The same command again turns it off, and each one replaces the others.\n\
 Damage and targeting are not affected. The ghost and hologram look is only seen by players with the client plugin; hidden works for everyone.\n\n\"");
 		}
+		else if (command_number == ADM_SCRIPTS)
+		{
+			// GLX_U: [Lua] the server's Lua plugins -- rp_lua_admin.c
+			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/scripts ^7to see the server's Lua plugins and the commands they add. ^3/scripts reload [plugin|all]^7, ^3/scripts enable <plugin>^7, ^3/scripts disable <plugin>^7, ^3/scripts errors ^7and ^3/scripts stats ^7manage them.\n\
+Enable and disable last until the server restarts; to keep a change, edit rp_lua_plugins in the server config.\n\n\"");
+		}
 		else
 		{
 			// GalaxyRP fix: [Admin] the numeric-help chain above had no fallback for an
@@ -25283,6 +25305,7 @@ command_t commands[] = {
 	{ "say",				Cmd_Say_f,					0 },
 	{ "say_team",			Cmd_SayTeam_f,				0 },
 	{ "score",				Cmd_Score_f,				0 },
+	{ "scripts",			Cmd_Scripts_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },	// GLX_U: [Lua] needs the Scripts admin power
 	{ "settings",			Cmd_Settings_f,				CMD_LOGGEDIN|CMD_NOINTERMISSION },
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "shakescreen",		Cmd_ShakeScreen_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
@@ -25465,6 +25488,11 @@ command_t commands[] = {
 };
 static const size_t numCommands = ARRAY_LEN( commands );
 
+// GLX_U: [Lua] a script command may not take a built-in command's name (rp_lua_api.c)
+qboolean G_IsBuiltinClientCommand( const char *name ) {
+	return Q_LinearSearch( name, commands, numCommands, sizeof( commands[0] ), cmdcmp ) ? qtrue : qfalse;
+}
+
 void ClientCommand( int clientNum ) {
 	gentity_t	*ent = NULL;
 	char		cmd[MAX_TOKEN_CHARS] = {0};
@@ -25486,6 +25514,9 @@ void ClientCommand( int clientNum ) {
 	command = (command_t *)Q_LinearSearch( cmd, commands, numCommands, sizeof( commands[0] ), cmdcmp );
 	if ( !command )
 	{
+		// GLX_U: [Lua] only a name no built-in command took can reach a script command
+		if ( RP_Lua_ClientCommand( ent, cmd ) )
+			return;
 		trap->SendServerCommand( clientNum, va( "print \"Unknown command %s\n\"", cmd ) );
 		return;
 	}
