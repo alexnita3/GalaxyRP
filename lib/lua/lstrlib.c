@@ -25,6 +25,8 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#include "glx_lua.h"	/* GLX_U: see glx_lua.h */
+
 
 /*
 ** maximum number of captures that a pattern can do during
@@ -152,7 +154,7 @@ static int str_rep (lua_State *L) {
   const char *s = luaL_checklstring(L, 1, &l);
   lua_Integer n = luaL_checkinteger(L, 2);
   const char *sep = luaL_optlstring(L, 3, "", &lsep);
-  if (n <= 0)
+  if (n <= 0 || l + lsep == 0)  /* GLX_U: nothing to repeat: no loop of n */
     lua_pushliteral(L, "");
   else if (l_unlikely(l + lsep < l || l + lsep > MAXSIZE / n))
     return luaL_error(L, "resulting string too large");
@@ -160,7 +162,9 @@ static int str_rep (lua_State *L) {
     size_t totallen = (size_t)n * l + (size_t)(n - 1) * lsep;
     luaL_Buffer b;
     char *p = luaL_buffinitsize(L, &b, totallen);
+    unsigned int glxn = 0;  /* GLX_U */
     while (n-- > 1) {  /* first n-1 copies (followed by separator) */
+      GLX_CWORK(L, glxn);  /* GLX_U */
       memcpy(p, s, l * sizeof(char)); p += l;
       if (lsep > 0) {  /* empty 'memcpy' is not that cheap */
         memcpy(p, sep, lsep * sizeof(char));
@@ -375,7 +379,7 @@ static const char *match (MatchState *ms, const char *s, const char *p);
 
 
 /*
-** GLX_U: Galaxy RP Ultimate patch (the only change to this vendored copy).
+** GLX_U: Galaxy RP Ultimate patch (see glx_lua.h and README.md).
 ** Pattern matching runs in C, where Lua's count hook never fires, so a
 ** script could keep the server busy for a long time with a backtracking
 ** pattern. Every GLX_LSTRLIB_STEPS matching steps this calls the host's

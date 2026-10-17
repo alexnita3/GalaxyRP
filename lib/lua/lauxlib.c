@@ -26,6 +26,8 @@
 
 #include "lauxlib.h"
 
+#include "glx_lua.h"	/* GLX_U: GLX_MAXSTRING */
+
 
 #if !defined(MAX_SIZET)
 /* maximum value for size_t */
@@ -551,6 +553,12 @@ static size_t newbuffsize (luaL_Buffer *B, size_t sz) {
     return luaL_error(B->L, "buffer too large");
   if (newsize < B->n + sz)  /* not big enough? */
     newsize = B->n + sz;
+  /* GLX_U: a buffer never grows past the longest string it could make (see
+  ** glx_lua.h), so table.concat and friends fail before copying it all */
+  if (l_unlikely(B->n + sz > GLX_MAXSTRING))
+    return luaL_error(B->L, "string too long (at most %d bytes)", (int)GLX_MAXSTRING);
+  if (newsize > GLX_MAXSTRING)
+    newsize = GLX_MAXSTRING;
   return newsize;
 }
 

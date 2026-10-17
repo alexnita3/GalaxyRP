@@ -19,6 +19,11 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#include "glx_lua.h"	/* GLX_U: GLX_CWORK, see glx_lua.h */
+
+/* GLX_U: iterations of the loops below, for GLX_CWORK */
+static unsigned int glx_n;
+
 
 /*
 ** Operations that an object must define to mimic a table
@@ -74,6 +79,7 @@ static int tinsert (lua_State *L) {
       luaL_argcheck(L, (lua_Unsigned)pos - 1u < (lua_Unsigned)e, 2,
                        "position out of bounds");
       for (i = e; i > pos; i--) {  /* move up elements */
+        GLX_CWORK(L, glx_n);  /* GLX_U */
         lua_geti(L, 1, i - 1);
         lua_seti(L, 1, i);  /* t[i] = t[i - 1] */
       }
@@ -97,6 +103,7 @@ static int tremove (lua_State *L) {
                      "position out of bounds");
   lua_geti(L, 1, pos);  /* result = t[pos] */
   for ( ; pos < size; pos++) {
+    GLX_CWORK(L, glx_n);  /* GLX_U */
     lua_geti(L, 1, pos + 1);
     lua_seti(L, 1, pos);  /* t[pos] = t[pos + 1] */
   }
@@ -128,12 +135,14 @@ static int tmove (lua_State *L) {
                   "destination wrap around");
     if (t > e || t <= f || (tt != 1 && !lua_compare(L, 1, tt, LUA_OPEQ))) {
       for (i = 0; i < n; i++) {
+        GLX_CWORK(L, glx_n);  /* GLX_U */
         lua_geti(L, 1, f + i);
         lua_seti(L, tt, t + i);
       }
     }
     else {
       for (i = n - 1; i >= 0; i--) {
+        GLX_CWORK(L, glx_n);  /* GLX_U */
         lua_geti(L, 1, f + i);
         lua_seti(L, tt, t + i);
       }
@@ -162,6 +171,7 @@ static int tconcat (lua_State *L) {
   last = luaL_optinteger(L, 4, last);
   luaL_buffinit(L, &b);
   for (; i < last; i++) {
+    GLX_CWORK(L, glx_n);  /* GLX_U */
     addfield(L, &b, i);
     luaL_addlstring(&b, sep, lsep);
   }
@@ -201,6 +211,7 @@ static int tunpack (lua_State *L) {
                  !lua_checkstack(L, (int)(++n))))
     return luaL_error(L, "too many results to unpack");
   for (; i < e; i++) {  /* push arg[i..e - 1] (to avoid overflows) */
+    GLX_CWORK(L, glx_n);  /* GLX_U */
     lua_geti(L, 1, i);
   }
   lua_geti(L, 1, e);  /* push last element */
@@ -300,8 +311,10 @@ static IdxT partition (lua_State *L, IdxT lo, IdxT up) {
   IdxT j = up - 1;  /* will be decremented before first use */
   /* loop invariant: a[lo .. i] <= P <= a[j .. up] */
   for (;;) {
+    GLX_CWORK(L, glx_n);  /* GLX_U */
     /* next loop: repeat ++i while a[i] < P */
     while ((void)lua_geti(L, 1, ++i), sort_comp(L, -1, -2)) {
+      GLX_CWORK(L, glx_n);  /* GLX_U */
       if (l_unlikely(i == up - 1))  /* a[i] < P  but a[up - 1] == P  ?? */
         luaL_error(L, "invalid order function for sorting");
       lua_pop(L, 1);  /* remove a[i] */
@@ -309,6 +322,7 @@ static IdxT partition (lua_State *L, IdxT lo, IdxT up) {
     /* after the loop, a[i] >= P and a[lo .. i - 1] < P */
     /* next loop: repeat --j while P < a[j] */
     while ((void)lua_geti(L, 1, --j), sort_comp(L, -3, -1)) {
+      GLX_CWORK(L, glx_n);  /* GLX_U */
       if (l_unlikely(j < i))  /* j < i  but  a[j] > P ?? */
         luaL_error(L, "invalid order function for sorting");
       lua_pop(L, 1);  /* remove a[j] */
@@ -347,6 +361,7 @@ static void auxsort (lua_State *L, IdxT lo, IdxT up,
   while (lo < up) {  /* loop for tail recursion */
     IdxT p;  /* Pivot index */
     IdxT n;  /* to be used later */
+    GLX_CWORK(L, glx_n);  /* GLX_U */
     /* sort elements 'lo', 'p', and 'up' */
     lua_geti(L, 1, lo);
     lua_geti(L, 1, up);

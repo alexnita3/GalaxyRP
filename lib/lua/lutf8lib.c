@@ -20,6 +20,11 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#include "glx_lua.h"	/* GLX_U: GLX_CWORK, see glx_lua.h */
+
+/* GLX_U: iterations of the loops below, for GLX_CWORK */
+static unsigned int glx_n;
+
 
 #define MAXUNICODE	0x10FFFFu
 
@@ -107,7 +112,9 @@ static int utflen (lua_State *L) {
   luaL_argcheck(L, --posj < (lua_Integer)len, 3,
                    "final position out of bounds");
   while (posi <= posj) {
-    const char *s1 = utf8_decode(s + posi, NULL, !lax);
+    const char *s1;
+    GLX_CWORK(L, glx_n);  /* GLX_U */
+    s1 = utf8_decode(s + posi, NULL, !lax);
     if (s1 == NULL) {  /* conversion error? */
       luaL_pushfail(L);  /* return fail ... */
       lua_pushinteger(L, posi + 1);  /* ... and current position */
@@ -203,6 +210,7 @@ static int byteoffset (lua_State *L) {
       return luaL_error(L, "initial position is a continuation byte");
     if (n < 0) {
        while (n < 0 && posi > 0) {  /* move back */
+         GLX_CWORK(L, glx_n);  /* GLX_U */
          do {  /* find beginning of previous character */
            posi--;
          } while (posi > 0 && iscontp(s + posi));
@@ -212,6 +220,7 @@ static int byteoffset (lua_State *L) {
      else {
        n--;  /* do not move for 1st character */
        while (n > 0 && posi < (lua_Integer)len) {
+         GLX_CWORK(L, glx_n);  /* GLX_U */
          do {  /* find beginning of next character */
            posi++;
          } while (iscontp(s + posi));  /* (cannot pass final '\0') */

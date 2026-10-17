@@ -291,10 +291,13 @@ static int RP_LuaApi_Print( lua_State *L ) {
 
 	luaL_buffinit( L, &b );
 	for ( i = 1; i <= n; i++ ) {
-		luaL_tolstring( L, i, NULL );
+		// GLX_U: the tab goes in before the next value is pushed. The buffer may only be added to
+		// while its own box is on top of the stack: adding the tab with the value already pushed
+		// corrupted memory or crashed the server once the text passed about 1 KB.
 		if ( i > 1 ) {
 			luaL_addchar( &b, '\t' );
 		}
+		luaL_tolstring( L, i, NULL );
 		luaL_addvalue( &b );
 	}
 	luaL_pushresult( &b );

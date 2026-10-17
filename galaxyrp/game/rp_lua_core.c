@@ -9,15 +9,19 @@ collectgarbage, rawequal, rawget, rawset and rawlen are removed, and so is _G (e
 own); string.dump goes too. Every chunk is loaded as text only, so precompiled bytecode is refused.
 Each plugin runs in its own environment table whose __index is a read-only proxy of the shared
 globals, and every library table is itself a read-only proxy, so no plugin can change what another
-one sees. The string metatable is locked with __metatable.
+one sees. The string metatable is locked with __metatable. setmetatable refuses a metatable with
+__gc: Lua runs finalizers with its hooks off, outside any budget (RP_Lua_SetMetatable).
 
 Limits. A count hook fires every RP_LUA_HOOK_STEP instructions and checks the budget of the
 outermost call in progress: rp_lua_budget instructions and rp_lua_budgetms milliseconds. Once over,
 the call is "over budget" until it returns to C: the hook raises the error again every time it
 fires, and pcall, xpcall, coroutine.resume and coroutine.close raise it again as they return
-(RP_Lua_Guarded), so no script can catch it and carry on. Pattern matching runs in C where the
-hook never fires; lib/lua/lstrlib.c calls RP_Lua_PatternCheck every 4096 matching steps for the
-same reason. Memory is capped by the allocator (rp_lua_memmb). Timers, tasks and the frame event
+(RP_Lua_Guarded), so no script can catch it and carry on; xpcall's handler is skipped once over
+(RP_Lua_MsgHandler), since the error was raised inside the hook and the handler would run with hooks
+off. Pattern matching and the library's other loops run in C where the hook never fires: lib/lua
+calls RP_Lua_PatternCheck every so many steps there, and no string is longer than 4 MB, which bounds
+what one instruction can do between two hook calls (lib/lua/glx_lua.h). Memory is capped by the
+allocator (rp_lua_memmb). Timers, tasks and the frame event
 also share rp_lua_framems per server frame (RP_Lua_FrameBudgetLeft); events the game raises itself
 are never deferred.
 
@@ -138,12 +142,58 @@ static int RP_Lua_Guarded( lua_State *L ) {
 	return RP_Lua_GuardCont( L, LUA_OK, 0 );
 }
 
+// GLX_U: xpcall's message handler, wrapped. Once the call is over budget it returns the error as it is: that
+// error was raised inside the count hook, where Lua has hooks off, and the script's handler would run with them
+// still off -- a handler that loops would never be stopped. Otherwise the script's handler runs as usual.
+static int RP_Lua_MsgHandler( lua_State *L ) {
+	if ( rl.overBudget ) {
+		return 1;
+	}
+	lua_pushvalue( L, lua_upvalueindex( 1 ) );
+	lua_insert( L, 1 );
+	lua_call( L, lua_gettop( L ) - 1, 1 );
+	return 1;
+}
+
+// xpcall(f, msgh, ...): RP_Lua_Guarded, with msgh wrapped in RP_Lua_MsgHandler
+static int RP_Lua_GuardedXpcall( lua_State *L ) {
+	luaL_checktype( L, 2, LUA_TFUNCTION );
+	lua_pushvalue( L, 2 );
+	lua_pushcclosure( L, RP_Lua_MsgHandler, 1 );
+	lua_replace( L, 2 );
+	return RP_Lua_Guarded( L );
+}
+
 // replaces t[name] (t at index idx) with the guarded version of itself
-static void RP_Lua_Guard( lua_State *L, int idx, const char *name ) {
+static void RP_Lua_Guard( lua_State *L, int idx, const char *name, lua_CFunction guarded ) {
 	idx = lua_absindex( L, idx );
 	lua_getfield( L, idx, name );
-	lua_pushcclosure( L, RP_Lua_Guarded, 1 );
+	lua_pushcclosure( L, guarded, 1 );
 	lua_setfield( L, idx, name );
+}
+
+// GLX_U: setmetatable as the base library's, but a metatable with a __gc field is refused. Lua runs finalizers
+// with its hooks off (lgc.c), so no budget reaches them: one that loops hangs the server at the next garbage
+// collection or at the map change, and one can run in the middle of any API call that allocates. Lua 5.4 only
+// marks an object for finalization when its metatable is set, so a __gc added afterwards does nothing.
+static int RP_Lua_SetMetatable( lua_State *L ) {
+	int t = lua_type( L, 2 );
+
+	luaL_checktype( L, 1, LUA_TTABLE );
+	luaL_argexpected( L, t == LUA_TNIL || t == LUA_TTABLE, 2, "nil or table" );
+	if ( luaL_getmetafield( L, 1, "__metatable" ) != LUA_TNIL ) {
+		return luaL_error( L, "cannot change a protected metatable" );
+	}
+	if ( t == LUA_TTABLE ) {
+		lua_pushliteral( L, "__gc" );
+		if ( lua_rawget( L, 2 ) != LUA_TNIL ) {
+			return luaL_error( L, "setmetatable: __gc is not available to scripts" );
+		}
+		lua_pop( L, 1 );
+	}
+	lua_settop( L, 2 );
+	lua_setmetatable( L, 1 );
+	return 1;
 }
 
 static void RP_Lua_StartBudget( void ) {
@@ -219,6 +269,7 @@ void RP_Lua_CleanText( char *out, int outSize, const char *in, qboolean keepNewl
 		out[o++] = c;
 	}
 	out[o] = '\0';
+	RP_BreakStringEdRefs( out );	// GLX_U: never three '@' in a row -- see RP_BreakStringEdRefs() (g_utils.c)
 }
 
 void RP_Lua_AdminNotice( const char *text ) {
@@ -803,12 +854,14 @@ static int RP_Lua_SandboxWorker( lua_State *L, void *data ) {
 	lua_pop( L, 1 );
 
 	// the functions that catch errors re-raise "ran too long" (see RP_Lua_Guarded)
-	RP_Lua_Guard( L, g, "pcall" );
-	RP_Lua_Guard( L, g, "xpcall" );
+	RP_Lua_Guard( L, g, "pcall", RP_Lua_Guarded );
+	RP_Lua_Guard( L, g, "xpcall", RP_Lua_GuardedXpcall );
 	lua_getfield( L, g, "coroutine" );
-	RP_Lua_Guard( L, -1, "resume" );
-	RP_Lua_Guard( L, -1, "close" );
+	RP_Lua_Guard( L, -1, "resume", RP_Lua_Guarded );
+	RP_Lua_Guard( L, -1, "close", RP_Lua_Guarded );
 	lua_pop( L, 1 );
+	lua_pushcfunction( L, RP_Lua_SetMetatable );	// GLX_U: no __gc
+	lua_setfield( L, g, "setmetatable" );
 
 	// lock the string metatable: getmetatable("") returns false and nothing can change it
 	lua_pushliteral( L, "" );
@@ -871,8 +924,8 @@ void RP_Lua_CloseState( void ) {
 	RP_LuaDialog_Reset();	// API 5: nor a dialogue
 	RP_LuaOrders_Reset();	// API 6: nor an NPC order
 	if ( rl.L && !rl.panicked ) {
-		// finalizers (__gc) run here: give them one budget, which stays exhausted once used up,
-		// so a finalizer that loops cannot stall the map change
+		// finalizers (__gc) would run here; setmetatable refuses them (RP_Lua_SetMetatable), but the
+		// close still gets one budget, which stays exhausted once used up
 		rl.depth = 1;
 		RP_Lua_StartBudget();
 		lua_close( rl.L );

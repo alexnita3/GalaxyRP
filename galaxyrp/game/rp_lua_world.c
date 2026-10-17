@@ -974,6 +974,10 @@ static int RP_LuaWorld_Spawn( lua_State *L ) {
 					return luaL_error( L, "World.spawn: the value of \"%s\" is too long (at most %d characters)", key, RP_LUA_VALUE_MAX - 1 );
 				}
 				Q_strncpyz( rpSpawnValues[pairs], v, RP_LUA_VALUE_MAX );
+				// GLX_U: never three '@' in a row (RP_BreakStringEdRefs, g_utils.c): a target_print's
+				// message, for one, is sent to clients as a centre print, and a script may pass on
+				// what a player typed
+				RP_BreakStringEdRefs( rpSpawnValues[pairs] );
 				break;
 			}
 			case LUA_TNUMBER:

@@ -79,6 +79,11 @@ run, so no script can end up in a pk3 that players download.
 - **Removed from Lua:** `io`, `os`, `package`, `debug`, `require`, `load`, `loadfile`, `dofile`,
   `collectgarbage`, `rawget`, `rawset`, `rawequal`, `rawlen` and `string.dump`. Precompiled Lua
   files are refused.
+- **No `__gc`:** `setmetatable` refuses a metatable with a `__gc` field. Lua runs those finalizers
+  outside every limit. Clean up in a `shutdown` handler instead.
+- **Strings** are at most 4 MB each.
+- **Text sent to players** never keeps three `@` in a row: the game client would read it as one of its
+  own phrases. One or two `@` stay.
 - **Splitting a plugin into files:** `include("other.lua")` runs another file from the plugin's own
   folder, once.
 - **`print(...)`** writes to the server console and the server log.
@@ -122,6 +127,8 @@ single quotes or `[[...]]`, and don't use `;`.
 | "switched off after N errors in a minute" | It kept failing (`rp_lua_maxerrors`). Fix the error from `/scripts errors`, then `/scripts enable <name>` |
 | "script ran too long" | One call ran past `rp_lua_budget` instructions or `rp_lua_budgetms` ms: usually a loop that never ends. Spread long work over time with `Task.wait` or a timer |
 | "not enough memory" | All scripts together reached `rp_lua_memmb`. Look for tables that keep growing |
+| "string too long (at most 4194304 bytes)" | No string can be longer than 4 MB. Build big text in pieces, or keep the parts in a table |
+| "setmetatable: __gc is not available to scripts" | Finalizers are not allowed. Clean up in a `shutdown` handler |
 | A map script does not run | Map scripts need `rp_lua_mapscripts 1`, and the folder named as the map is: `lua/maps/mp/ffa5/` |
 | `World.spawn` or `World.npc` returns nil | The second value says why: a plugin limit (`rp_lua_maxents`, `rp_lua_maxnpcs`, `rp_lua_spawnkb`), a model or NPC type the server does not have, or a full map |
 | `give` is refused | The item is not in `rp_lua_items` |
@@ -628,8 +635,9 @@ The plugin's **own** NPCs (`World.npc`) take these orders:
   | `"replaced"` | A new order from the script, or a player took the NPC over with the Use key or `/order` |
   | `"stopped"` | `npc:stop()` |
 
-  It runs between frames, so everything is allowed in it. When the plugin is switched off or the NPC
-  is removed, nothing is called.
+  It runs between frames, so everything is allowed in it. `"replaced"` and `"stopped"` are heard in
+  the next frame; the order itself changes at once. When the plugin is switched off or the NPC is
+  removed, nothing is called.
 - **Paths:** NPCs use the map's NPC waypoints when it has them. Most multiplayer maps have none: the NPC
   then walks in a straight line, and a wall in the way ends `go_to` with `"stuck"`.
 - **Players:** a player's Use key makes a friendly NPC follow them, and `/order` changes what their

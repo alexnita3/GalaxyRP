@@ -19,8 +19,10 @@ attack makes the target the NPC's enemy (G_SetEnemy) and keeps it so while the N
 One order per NPC. The script's function hears once how it ended -- from the frame (RP_LuaOrders_Frame), so
 everything is allowed in it. A new order from the script, or stop(), undoes what the last one set before it
 takes over; a player's Use key or /order taking the NPC over (RP_Lua_NpcOrderTaken, called from game code)
-leaves what they set alone, and that function is heard next frame. When the plugin is switched off or the NPC
-is freed, nothing is called.
+leaves what they set alone. "replaced" and "stopped" are heard next frame (GLX_U: also when the script itself
+replaced or stopped the order -- called inside follow(), go_to(), attack() or stop(), the function could free
+the NPC or give it another order while that method was still setting it up). When the plugin is switched off
+or the NPC is freed, nothing is called.
 ===========================================================================
 */
 
@@ -42,7 +44,7 @@ extern void zyk_release_npc_from_leader( gentity_t *npc_ent );
 #define RP_ORD_TIMEOUT_MAX		600
 #define RP_ORD_ARRIVE_SLACK		16		// on top of the radius: the NPC's own box
 #define RP_ORD_ARRIVE_HEIGHT	64		// how far above or below the spot still counts
-#define RP_ORD_MAX_NOTES		64
+#define RP_ORD_MAX_NOTES		1024	// order ends heard next frame, per frame; past that they are dropped (a warning)
 
 typedef enum { ORD_NONE, ORD_FOLLOW, ORD_COVER, ORD_GUARD, ORD_GOTO, ORD_ATTACK } rpLuaOrderKind_t;
 
@@ -76,6 +78,8 @@ typedef struct {
 static rpLuaOrder_t		rpOrders[MAX_GENTITIES];
 static rpLuaOrderNote_t	rpOrderNotes[RP_ORD_MAX_NOTES];
 static int				rpNumOrderNotes;
+static rpLuaOrderNote_t	rpOrderNotesRun[RP_ORD_MAX_NOTES];	// the ones being called (RP_LuaOrders_Frame)
+static int				rpOrderNotesDropped;
 
 /*
 ================
@@ -152,8 +156,28 @@ static void RP_LuaOrders_Undo( gentity_t *npc, const rpLuaOrder_t *o, qboolean a
 	}
 }
 
+// an order's function to call at the start of the next frame (RP_LuaOrders_Frame)
+static void RP_LuaOrders_Later( int plugin, int ref, int num, int gen, const char *why ) {
+	rpLuaOrderNote_t *n;
+
+	if ( ref <= 0 ) {
+		return;
+	}
+	if ( rpNumOrderNotes >= RP_ORD_MAX_NOTES ) {
+		RP_LuaOrders_Unref( ref );	// more than RP_ORD_MAX_NOTES in one frame: not heard (a warning next frame)
+		rpOrderNotesDropped++;
+		return;
+	}
+	n = &rpOrderNotes[rpNumOrderNotes++];
+	n->plugin = plugin;
+	n->ref = ref;
+	n->num = num;
+	n->gen = gen;
+	n->why = why;
+}
+
 // takes num's order off: undone (all: everything it set), then its function hears why -- now, or in the next
-// frame when this runs inside game code (later)
+// frame (later): when this runs inside game code, or inside a script's own order method
 static void RP_LuaOrders_End( int num, const char *why, qboolean all, qboolean later ) {
 	rpLuaOrder_t o = rpOrders[num];
 	gentity_t *npc = &g_entities[num];
@@ -167,17 +191,8 @@ static void RP_LuaOrders_End( int num, const char *why, qboolean all, qboolean l
 	}
 	if ( !later ) {
 		RP_LuaOrders_Notify( o.plugin, o.ref, num, o.gen, why );
-	} else if ( o.ref > 0 ) {
-		if ( rpNumOrderNotes < RP_ORD_MAX_NOTES ) {
-			rpLuaOrderNote_t *n = &rpOrderNotes[rpNumOrderNotes++];
-			n->plugin = o.plugin;
-			n->ref = o.ref;
-			n->num = num;
-			n->gen = o.gen;
-			n->why = why;
-		} else {
-			RP_LuaOrders_Unref( o.ref );	// more than RP_ORD_MAX_NOTES in one frame: not heard
-		}
+	} else {
+		RP_LuaOrders_Later( o.plugin, o.ref, num, o.gen, why );
 	}
 }
 
@@ -259,10 +274,17 @@ static const char *RP_LuaOrders_GoToCheck( gentity_t *npc, rpLuaOrder_t *o ) {
 void RP_LuaOrders_Frame( void ) {
 	int num, i, n = rpNumOrderNotes;
 
-	// first what game code ended last frame
+	// GLX_U: first what ended last frame. Copied out before anything is called: a function that gives an order
+	// queues new notes (heard next frame), which must not overwrite the ones still to be called.
+	if ( rpOrderNotesDropped ) {
+		G_LogPrintf( "Lua: more than %d NPC order ends in one frame; %d were not called\n", RP_ORD_MAX_NOTES, rpOrderNotesDropped );
+		RP_Lua_AdminNotice( va( "^3Lua:^7 more than %d NPC order ends in one frame; %d were not called", RP_ORD_MAX_NOTES, rpOrderNotesDropped ) );
+		rpOrderNotesDropped = 0;
+	}
+	memcpy( rpOrderNotesRun, rpOrderNotes, n * sizeof( rpOrderNotes[0] ) );
 	rpNumOrderNotes = 0;
 	for ( i = 0; i < n; i++ ) {
-		RP_LuaOrders_Notify( rpOrderNotes[i].plugin, rpOrderNotes[i].ref, rpOrderNotes[i].num, rpOrderNotes[i].gen, rpOrderNotes[i].why );
+		RP_LuaOrders_Notify( rpOrderNotesRun[i].plugin, rpOrderNotesRun[i].ref, rpOrderNotesRun[i].num, rpOrderNotesRun[i].gen, rpOrderNotesRun[i].why );
 	}
 
 	for ( num = MAX_CLIENTS; num < MAX_GENTITIES; num++ ) {
@@ -332,6 +354,7 @@ void RP_LuaOrders_RemovePlugin( int plugin ) {
 void RP_LuaOrders_Reset( void ) {
 	memset( rpOrders, 0, sizeof( rpOrders ) );
 	rpNumOrderNotes = 0;
+	rpOrderNotesDropped = 0;
 }
 
 /*
@@ -386,17 +409,21 @@ static void RP_LuaOrders_Log( lua_State *L, gentity_t *npc, const char *what, ge
 		? target->client->pers.netname : va( "NPC %d (%s)", target->s.number, target->NPC_type ? target->NPC_type : "?" ) );
 }
 
-// installs the new order; the last one is undone first and its function hears "replaced" once the new one is in
+// installs the new order; the last one is undone first and its function hears "replaced" next frame. GLX_U:
+// not now -- called here, inside the method giving the new order, it could free the NPC or the target, stop
+// the NPC or give it yet another order while the method is still setting it up (a freed NPC crashed the server).
+// Undone only when it is this NPC's own order: a slot freed and reused before the frame cleared its record
+// keeps the old NPC's order, which is not the new NPC's to undo.
 static void RP_LuaOrders_Install( gentity_t *npc, const rpLuaOrder_t *o ) {
 	int num = npc->s.number;
 	rpLuaOrder_t old = rpOrders[num];
 
-	if ( old.kind != ORD_NONE ) {
+	if ( old.kind != ORD_NONE && old.gen == g_entityGen[num] ) {
 		RP_LuaOrders_Undo( npc, &old, qtrue );
 	}
 	rpOrders[num] = *o;
 	if ( old.kind != ORD_NONE ) {
-		RP_LuaOrders_Notify( old.plugin, old.ref, num, old.gen, "replaced" );
+		RP_LuaOrders_Later( old.plugin, old.ref, num, old.gen, "replaced" );
 	}
 }
 
@@ -600,7 +627,7 @@ static int RP_LuaOrders_Stop( lua_State *L ) {
 	int num = npc->s.number;
 
 	if ( rpOrders[num].kind != ORD_NONE ) {
-		RP_LuaOrders_End( num, "stopped", qtrue, qfalse );
+		RP_LuaOrders_End( num, "stopped", qtrue, qtrue );	// GLX_U: heard next frame, as "replaced"
 	}
 	if ( npc->inuse && npc->client && npc->client->leader && npc->NPC ) {
 		zyk_release_npc_from_leader( npc );		// a follower the Use key or the game gave it

@@ -24,7 +24,16 @@ mistake:
 
 ## Changed
 
-One change, marked `GLX_U` in `lstrlib.c`: pattern matching calls
-`glx_lstrlib_check` every 4096 matching steps, so the game's time and
-instruction limits also cover patterns, which run in C where Lua's count hook
-never fires. Everything else is byte-for-byte the release.
+Every change is marked `GLX_U`. Lua's count hook only fires between VM
+instructions, so the game's time and instruction limits need help where work
+happens in C. `glx_lua.h` (new) holds what the changes share.
+
+| File | Change |
+|---|---|
+| `lstrlib.c` | Pattern matching calls `glx_lstrlib_check` every 4096 matching steps; the `string.rep` loop every 1024 copies; `string.rep` with nothing to repeat returns `""` at once |
+| `ltablib.c` | `table.insert`, `remove`, `move`, `concat`, `unpack` and `sort` call it every 1024 steps (`GLX_CWORK`) |
+| `lutf8lib.c` | `utf8.len` and `utf8.offset` call it every 1024 steps |
+| `lstring.c`, `lauxlib.c` | No string, and no string buffer, grows past `GLX_MAXSTRING` (4 MB): that bounds what one instruction can do between two hook calls |
+| `lstate.c` | `luaE_resetthread` turns hooks back on before running a dead coroutine's pending `__close` metamethods (a coroutine stopped by an error from the hook still had them off) |
+
+Everything else is byte-for-byte the release.

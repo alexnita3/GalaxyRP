@@ -336,6 +336,10 @@ int luaE_resetthread (lua_State *L, int status) {
     status = LUA_OK;
   L->status = LUA_OK;  /* so it can run __close metamethods */
   L->errfunc = 0;   /* stack unwind can "throw away" the error function */
+  /* GLX_U: and hooks back on, as in a new thread. A coroutine killed by an
+  ** error raised from the count hook (the game's "script ran too long") still
+  ** had them off, so its pending __close metamethods ran unchecked. */
+  L->allowhook = 1;
   status = luaD_closeprotected(L, 1, status);
   if (status != LUA_OK)  /* errors? */
     luaD_seterrorobj(L, status, L->stack.p + 1);

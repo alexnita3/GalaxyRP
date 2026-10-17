@@ -21,6 +21,8 @@
 #include "lstate.h"
 #include "lstring.h"
 
+#include "glx_lua.h"	/* GLX_U: GLX_MAXSTRING */
+
 
 /*
 ** Maximum size for string table.
@@ -155,7 +157,12 @@ static TString *createstrobj (lua_State *L, size_t l, int tag, unsigned int h) {
 
 
 TString *luaS_createlngstrobj (lua_State *L, size_t l) {
-  TString *ts = createstrobj(L, l, LUA_VLNGSTR, G(L)->seed);
+  TString *ts;
+  /* GLX_U: no string is longer than GLX_MAXSTRING (see glx_lua.h); every
+  ** long string, concatenation included, is made here */
+  if (l_unlikely(l > GLX_MAXSTRING))
+    luaG_runerror(L, "string too long (at most %d bytes)", (int)GLX_MAXSTRING);
+  ts = createstrobj(L, l, LUA_VLNGSTR, G(L)->seed);
   ts->u.lnglen = l;
   ts->shrlen = 0xFF;  /* signals that it is a long string */
   return ts;
