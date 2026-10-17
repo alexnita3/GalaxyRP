@@ -2002,6 +2002,13 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"targetname||If set, it names no location: it stays as a plain position others can target, like target_position.",
 		"target_location message Cantina count 3",
 		"common target target_position" },
+	{ "target_lua", 0, NULL,
+		"Hands a named event to the server's Lua scripts when used: a button, trigger, relay, ICARUS script or /entuse sets it off, and every script listening for that name (Events.on map_event) runs, with whoever set it off. With Lua off, or no script listening, it does nothing. It is never sent to clients. See lua/lua_api.md in the server folder.",
+		NULL,
+		"event||Required: the name the scripts see, 1 to 32 lower-case letters, digits or _. Missing or invalid, it does nothing (logged).\n"
+		"targetname||Using it raises the event.",
+		"target_lua targetname alarm event vault_alarm",
+		"common target" },
 	{ "target_play_music", 0, NULL,
 		"Changes the background music for everyone on the server when used. With one file that file loops, with two the first plays as an intro and the second then loops. A change that would overflow the gamestate is refused and logged.",
 		NULL,

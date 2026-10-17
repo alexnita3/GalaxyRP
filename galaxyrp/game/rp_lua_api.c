@@ -1,12 +1,12 @@
 /*
 ===========================================================================
-GLX_U: [Lua] what scripts can call (API version 1), and the C side of events, commands, timers and
-tasks. Everything here runs inside RP_Lua_Call(); a script error raised here is reported against
+GLX_U: [Lua] what scripts can call (API version 1, and the events of version 2), and the C side of
+events, commands, timers and tasks. Everything here runs inside RP_Lua_Call(); a script error raised here is reported against
 the plugin that is running. Nothing in this file lets a script run a console command, touch a
 file, or reach the engine directly.
 
 Globals: print, include, Plugin, Events, Timer, Task, Commands, Msg, Server (Storage is in
-rp_lua_store.c). Player handles are userdata of type GLX.Player; one handle per connection, so the
+rp_lua_store.c, World in rp_lua_world.c). Player handles are userdata of type GLX.Player; one handle per connection, so the
 same player is always the same value (usable as a table key) until they disconnect, after which
 using it is a script error rather than a crash.
 ===========================================================================
@@ -27,6 +27,7 @@ typedef struct {
 	int			plugin;
 	int			ref;
 	int			id;
+	char		filter[RP_LUA_FILTER_SIZE];	// "use": the targetname; "map_event": the name, "" for all
 } rpLuaHandler_t;
 
 typedef struct {
@@ -70,7 +71,7 @@ static int				rpNextId = 1;
 
 static const char *rpLuaEventNames[RPLE_NUM] = {
 	"init", "shutdown", "unload", "frame", "client_connect", "client_begin", "client_spawn",
-	"client_disconnect", "chat", "command"
+	"client_disconnect", "chat", "command", "use", "map_event"
 };
 
 // names a script command may not take: commands the engine, our cgame or our ui handle on the
@@ -369,9 +370,49 @@ static int RP_LuaApi_PluginName( lua_State *L ) {
 Events
 ================
 */
+// Events.on("use", fn, { targetname = }) and Events.on("map_event", fn [, { name = }]): the filter
+static void RP_LuaApi_EventFilter( lua_State *L, int ev, char *filter ) {
+	const char *field = ( ev == RPLE_USE ) ? "targetname" : "name";
+	const char *value = NULL;
+
+	filter[0] = '\0';
+	if ( ev != RPLE_USE && ev != RPLE_MAP_EVENT ) {
+		if ( !lua_isnoneornil( L, 3 ) ) {
+			luaL_error( L, "only the use and map_event events take a filter" );
+		}
+		return;
+	}
+	if ( !lua_isnoneornil( L, 3 ) ) {
+		luaL_checktype( L, 3, LUA_TTABLE );
+		if ( lua_getfield( L, 3, field ) != LUA_TNIL ) {
+			if ( lua_type( L, -1 ) != LUA_TSTRING ) {
+				luaL_error( L, "the %s filter must be a string", field );
+				return;
+			}
+			value = lua_tostring( L, -1 );
+		}
+	}
+	if ( ev == RPLE_USE ) {
+		if ( !value || !value[0] || strlen( value ) >= RP_LUA_FILTER_SIZE ) {
+			luaL_error( L, "Events.on(\"use\", fn, { targetname = \"...\" }): the targetname (1 to %d characters) is required", RP_LUA_FILTER_SIZE - 1 );
+			return;
+		}
+	} else if ( value && !RP_Lua_ValidEventName( value ) ) {
+		luaL_error( L, "\"%s\" is not an event name (lower-case letters, digits and _, up to %d)", value, RP_LUA_EVENT_NAME_MAX );
+		return;
+	}
+	if ( value ) {
+		Q_strncpyz( filter, value, RP_LUA_FILTER_SIZE );
+	}
+	if ( !lua_isnoneornil( L, 3 ) ) {
+		lua_pop( L, 1 );
+	}
+}
+
 static int RP_LuaApi_EventsOn( lua_State *L ) {
 	int plugin = RP_Lua_CurrentPlugin( L );
 	const char *name = luaL_checkstring( L, 1 );
+	char filter[RP_LUA_FILTER_SIZE];
 	int ev, i;
 
 	luaL_checktype( L, 2, LUA_TFUNCTION );
@@ -381,8 +422,9 @@ static int RP_LuaApi_EventsOn( lua_State *L ) {
 		}
 	}
 	if ( ev == RPLE_NUM ) {
-		return luaL_error( L, "no event called \"%s\" (init, shutdown, unload, frame, client_connect, client_begin, client_spawn, client_disconnect, chat, command)", name );
+		return luaL_error( L, "no event called \"%s\" (init, shutdown, unload, frame, client_connect, client_begin, client_spawn, client_disconnect, chat, command, use, map_event)", name );
 	}
+	RP_LuaApi_EventFilter( L, ev, filter );
 	for ( i = 0; i < RP_LUA_MAX_HANDLERS; i++ ) {
 		if ( !rpHandlers[ev][i].active ) {
 			break;
@@ -395,6 +437,7 @@ static int RP_LuaApi_EventsOn( lua_State *L ) {
 	rpHandlers[ev][i].ref = luaL_ref( L, LUA_REGISTRYINDEX );
 	rpHandlers[ev][i].plugin = plugin;
 	rpHandlers[ev][i].id = rpNextId++;
+	Q_strncpyz( rpHandlers[ev][i].filter, filter, sizeof( rpHandlers[ev][i].filter ) );
 	rpHandlers[ev][i].active = qtrue;
 	lua_pushinteger( L, rpHandlers[ev][i].id );
 	return 1;
@@ -538,6 +581,95 @@ void RP_LuaApi_FireEvent( rpLuaEvent_t ev, int onlyPlugin, int client, int extra
 
 void RP_LuaApi_FireFrame( int levelTime ) {
 	RP_LuaApi_FireEvent( RPLE_FRAME, -1, -1, levelTime, NULL, -1, NULL );
+}
+
+/*
+================
+The use and map_event events (API 2): fired from game code through rp_lua_world.c
+================
+*/
+typedef struct {
+	int				ev;
+	int				slot;
+	gentity_t		*ent;
+	gentity_t		*activator;
+	gentity_t		*other;
+	const char		*name;
+	int				result;
+} rpLuaEntEventCall_t;
+
+static int RP_LuaApi_EntEventWorker( lua_State *L, void *data ) {
+	rpLuaEntEventCall_t *c = (rpLuaEntEventCall_t *)data;
+
+	lua_rawgeti( L, LUA_REGISTRYINDEX, rpHandlers[c->ev][c->slot].ref );
+	if ( c->ev == RPLE_USE ) {
+		RP_LuaWorld_PushEntity( L, c->ent );
+		RP_LuaWorld_PushActor( L, c->activator );
+		RP_LuaWorld_PushActor( L, c->other );
+	} else {
+		lua_pushstring( L, c->name );
+		RP_LuaWorld_PushActor( L, c->activator );
+		RP_LuaWorld_PushEntity( L, c->ent );
+	}
+	lua_call( L, 3, 1 );
+	if ( lua_isboolean( L, -1 ) && !lua_toboolean( L, -1 ) ) {
+		c->result = 0;
+	}
+	return 0;
+}
+
+// qfalse when a handler returned false (and it was not forced): the use does not happen
+qboolean RP_LuaApi_FireUse( gentity_t *self, gentity_t *other, gentity_t *activator, qboolean forced ) {
+	rpLuaEntEventCall_t c;
+	int i;
+
+	if ( !rl.L || !self->targetname || !self->targetname[0] ) {
+		return qtrue;
+	}
+	c.ev = RPLE_USE;
+	c.ent = self;
+	c.activator = activator;
+	c.other = other;
+	c.name = NULL;
+	for ( i = 0; i < RP_LUA_MAX_HANDLERS; i++ ) {
+		rpLuaHandler_t *h = &rpHandlers[RPLE_USE][i];
+		if ( !h->active || !RP_Lua_PluginRunning( h->plugin ) || Q_stricmp( h->filter, self->targetname ) ) {
+			continue;
+		}
+		c.slot = i;
+		c.result = 1;
+		RP_Lua_Call( h->plugin, RP_LuaApi_EntEventWorker, &c );
+		if ( !c.result && !forced ) {
+			return qfalse;		// the first handler that returns false stops the use
+		}
+		if ( !self->inuse ) {
+			return qfalse;		// a handler removed it (through something it used)
+		}
+	}
+	return qtrue;
+}
+
+void RP_LuaApi_FireMapEvent( const char *name, gentity_t *activator, gentity_t *ent ) {
+	rpLuaEntEventCall_t c;
+	int i;
+
+	if ( !rl.L ) {
+		return;
+	}
+	c.ev = RPLE_MAP_EVENT;
+	c.ent = ent;
+	c.activator = activator;
+	c.other = NULL;
+	c.name = name;
+	for ( i = 0; i < RP_LUA_MAX_HANDLERS; i++ ) {
+		rpLuaHandler_t *h = &rpHandlers[RPLE_MAP_EVENT][i];
+		if ( !h->active || !RP_Lua_PluginRunning( h->plugin ) || ( h->filter[0] && strcmp( h->filter, name ) ) ) {
+			continue;
+		}
+		c.slot = i;
+		c.result = 1;
+		RP_Lua_Call( h->plugin, RP_LuaApi_EntEventWorker, &c );
+	}
 }
 
 /*
@@ -1167,6 +1299,8 @@ void RP_LuaApi_Register( lua_State *L ) {
 void RP_LuaApi_RemovePlugin( int plugin ) {
 	lua_State *L = rl.L;
 	int ev, i;
+
+	RP_LuaWorld_RemovePlugin( plugin );		// API 2: its entities and zones
 
 	for ( ev = 0; ev < RPLE_NUM; ev++ ) {
 		for ( i = 0; i < RP_LUA_MAX_HANDLERS; i++ ) {

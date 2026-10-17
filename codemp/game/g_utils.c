@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "bg_saga.h"
 #include "qcommon/q_shared.h"
 #include "g_nav.h"
+#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] entity frees and uses reach scripts
 
 int remapCount = 0;
 
@@ -2170,7 +2171,14 @@ void GlobalUse(gentity_t *self, gentity_t *other, gentity_t *activator)
 
 	level.rp_use_depth++;
 	level.rp_use_chain++;
-	self->use(self, other, activator);
+	// GLX_U: [Lua] the script's on_use, when it is a script's entity, and the "use" event for its
+	// targetname: either can stop the use by returning false (rp_lua_world.c). After the lock and the
+	// loop limits, so a script never sees a use the game would refuse anyway, and inside the counted
+	// depth, so uses a script sets off count towards those limits too.
+	if (RP_Lua_EntityUsed(self, other, activator, qfalse) && self->inuse && self->use)
+	{
+		self->use(self, other, activator);
+	}
 	level.rp_use_depth--;
 }
 
@@ -2302,8 +2310,12 @@ void G_SetMovedir( vec3_t angles, vec3_t movedir ) {
 	VectorClear( angles );
 }
 
+// GLX_U: [Lua] see g_local.h
+int g_entityGen[MAX_ENTITIESTOTAL];
+
 void G_InitGentity( gentity_t *e ) {
 	e->inuse = qtrue;
+	g_entityGen[e - g_entities]++;	// GLX_U: [Lua] a new occupant: older handles to this slot stop working
 	e->classname = "noclass";
 	e->s.number = e - g_entities;
 	// GalaxyRP: [Logical Entities] the region is a property of the slot, decided here and nowhere
@@ -2879,6 +2891,12 @@ void G_FreeEntity( gentity_t *ed ) {
 	if ( ed->neverFree ) {
 		return;
 	}
+
+	// GLX_U: [Lua] the slot's handles stop working, and a script's entity is counted out of its
+	// plugin -- bookkeeping only, no script runs here (RP_Lua_EntityFreed, rp_lua_world.c). Below the
+	// neverFree bail: an entity that is not really freed keeps its handles.
+	g_entityGen[ed - g_entities]++;
+	RP_Lua_EntityFreed( ed );
 
 	// GalaxyRP fix: [Entity System] this reset used to sit above the neverFree bail, so an entity that
 	// is never actually freed -- the body queue is the only one in practice -- lost its Entity System

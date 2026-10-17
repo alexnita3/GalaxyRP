@@ -11184,7 +11184,14 @@ void Cmd_TargetUse_f( gentity_t *ent )
 		while ( targ )
 		{
 			if ( targ->use )
-				targ->use( targ, ent, ent );
+			{
+				// GLX_U: [Lua] a script's on_use and "use" event run too, but cannot stop it
+				RP_Lua_ForceUses( qtrue );
+				RP_Lua_EntityUsed( targ, ent, ent, qtrue );
+				if ( targ->inuse && targ->use )
+					targ->use( targ, ent, ent );
+				RP_Lua_ForceUses( qfalse );
+			}
 			targ = G_Find( targ, FOFS( targetname ), sArg );
 		}
 	}
@@ -15786,7 +15793,13 @@ void Cmd_EntUse_f( gentity_t *ent ) {
 		// and what it sets off later, with the admin as activator, passes too (RP_LockMarkPass)
 		RP_LockBypass(qtrue);
 		RP_LockMarkPass(e, ent);
-		e->use(e, ent, ent);
+		// GLX_U: [Lua] a script's on_use and "use" event run too, but cannot stop an admin's use, nor
+		// what it sets off (as locks cannot)
+		RP_Lua_ForceUses(qtrue);
+		RP_Lua_EntityUsed(e, ent, ent, qtrue);
+		if (e->inuse && e->use)
+			e->use(e, ent, ent);
+		RP_Lua_ForceUses(qfalse);
 		RP_LockBypass(qfalse);
 		used++;
 	}
@@ -16698,6 +16711,9 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 				Q_strcat(content, sizeof(content), va("^3entity: ^7%d\n", entity_id));
 				Q_strcat(content, sizeof(content), va("^3region: ^7%s\n",
 					this_ent->isLogical ? "logical (not networked)" : "networked"));
+				// GLX_U: [Lua] a script's own entity says whose
+				if (RP_Lua_EntityOwner(this_ent))
+					Q_strcat(content, sizeof(content), va("^3script: ^7%s\n", RP_Lua_EntityOwner(this_ent)));
 			}
 
 			// GalaxyRP fix: [Entity System] an entity the game created has no key/value record, so the
@@ -16827,6 +16843,14 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Entity %d is part of the map (marked M in /entlist) and cannot be edited%s. Use ^3/entcopy^7 to place a copy of it and edit that instead.\n\"",
 				entity_id, RP_MapEntityRefusalNote(this_ent)) );
+			return;
+		}
+
+		// GLX_U: [Lua] nor a script's own entity: its script places and changes it (/entremove still can)
+		if (RP_Lua_EntityOwner(this_ent))
+		{
+			trap->SendServerCommand( ent-g_entities, va("print \"Entity %d belongs to the script %s: use /scripts.\n\"",
+				entity_id, RP_Lua_EntityOwner(this_ent)) );
 			return;
 		}
 
@@ -17491,6 +17515,7 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 	int dead_skipped = 0;
 	int vehicles_saved = 0;
 	int sub_bsp_skipped = 0;
+	int script_skipped = 0;		// GLX_U: [Lua] a script's own entities
 	char skipped_note[256] = {0};
 
 	if (!check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
@@ -17565,6 +17590,14 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 		// DAJ_RP: [Entity System] and /entaddgrab's new entity, held: not placed yet, its record has no origin
 		if (RP_EntHeldUnplaced(this_ent))
 		{
+			continue;
+		}
+
+		// GLX_U: [Lua] nor a script's own entity: the script makes it again when it runs, so a written
+		// copy would come back twice -- and stay when the script is switched off
+		if (this_ent->inuse && RP_Lua_EntityOwner(this_ent))
+		{
+			script_skipped++;
 			continue;
 		}
 
@@ -17714,6 +17747,11 @@ void Cmd_EntSave_f( gentity_t *ent ) {
 	if (vehicles_saved > 0)
 	{
 		Q_strcat(skipped_note, sizeof(skipped_note), va("^7Vehicles saved at their current positions: %d.\n", vehicles_saved));
+	}
+
+	if (script_skipped > 0)
+	{
+		Q_strcat(skipped_note, sizeof(skipped_note), va("^7Not written: %d entities scripts made.\n", script_skipped));
 	}
 
 	if (sub_bsp_skipped > 0)
@@ -18026,6 +18064,9 @@ static void zyk_entnear_append(char *message, int message_size, gentity_t *this_
 		RP_MapEntityProtected(this_ent) ? "M" : RP_MapEntityExempt(this_ent) ? "E" : "",
 		this_ent->rpHeldBy ? "H" : "",
 		this_ent->classname ? RP_ShownText(this_ent->classname) : "<none>");
+	// GLX_U: [Lua] the script it belongs to, if any
+	if (RP_Lua_EntityOwner(this_ent))
+		Q_strcat(row, sizeof(row), va(" ^5(script: %s)^7", RP_Lua_EntityOwner(this_ent)));
 
 	Q_strcat(message, message_size, row);
 }
@@ -18150,13 +18191,17 @@ void Cmd_EntNear_f( gentity_t *ent ) {
 static void zyk_entlist_append(gentity_t *ent, char *message, int message_size, int *len, int id, gentity_t *target_ent)
 {
 	char row[RP_LIST_FLUSH_AT];
-	char lock[64];
+	char lock[128];
 	const char *lockName = RP_LockNameOf(target_ent);
+	const char *script = (target_ent && target_ent->inuse) ? RP_Lua_EntityOwner(target_ent) : NULL;
 
 	// DAJ_RP: [Locks] the lock it carries, if any (g_locks.c)
 	lock[0] = '\0';
 	if (lockName)
 		Com_sprintf(lock, sizeof(lock), " - ^3lock:%s^7", lockName);
+	// GLX_U: [Lua] and the script it belongs to, if any
+	if (script)
+		Q_strcat(lock, sizeof(lock), va(" - ^5script:%s^7", script));
 
 	// GalaxyRP: [Logical Entities] a logical entity's id carries an L so the admin can tell the
 	// two regions apart; the number itself (>= MAX_GENTITIES) is what every other command takes.

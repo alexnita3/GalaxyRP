@@ -1206,7 +1206,9 @@ static void RP_LiftCallUse( gentity_t *self, gentity_t *other, gentity_t *activa
 
 	if ( lift->moverState == MOVER_POS1 )
 	{
-		lift->use( lift, self, activator );
+		// GLX_U: [Lua] a call button is a use like any other: a script's on_use or "use" event can stop it
+		if ( RP_Lua_EntityUsed( lift, self, activator, qfalse ) && lift->inuse && lift->use )
+			lift->use( lift, self, activator );
 	}
 	else if ( lift->moverState == MOVER_POS2 && lift->think == ReturnToPos1 && lift->nextthink > level.time )
 	{

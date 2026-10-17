@@ -22,6 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "g_local.h"
+#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] target_lua
 
 //==========================================================
 
@@ -725,6 +726,40 @@ void SP_target_relay (gentity_t *self) {
 	{
 		self->flags |= FL_INACTIVE;
 	}
+}
+
+//==========================================================
+
+/*QUAKED target_lua (0 .5 .8) (-8 -8 -8) (8 8 8)
+GLX_U: [Lua] when used -- by a button, a trigger, a relay, ICARUS or /entuse -- raises the "map_event"
+event for the server's Lua scripts, with this entity's "event" name (lower-case letters, digits and _,
+up to 32) and whoever set it off. Scripts listen with Events.on("map_event", fn, { name = "..." }).
+With Lua off, or nothing listening, it does nothing. Logical: it is never sent to clients.
+
+"event"		the name the scripts see (required)
+"targetname"	what uses it
+*/
+void target_lua_use( gentity_t *self, gentity_t *other, gentity_t *activator ) {
+	(void)other;
+	if ( self->message && self->message[0] )
+	{
+		RP_Lua_MapEvent( self->message, activator, self );
+	}
+}
+
+void SP_target_lua( gentity_t *self ) {
+	char *event = NULL;
+
+	self->use = target_lua_use;
+	self->message = NULL;	// the event lives here; a "message" key is not one of its keys
+	G_SpawnString( "event", "", &event );
+	if ( !RP_Lua_ValidEventName( event ) )
+	{
+		G_LogPrintf( "target_lua %d: its \"event\" key (\"%s\") must be 1 to 32 lower-case letters, digits or _; it does nothing\n",
+			self->s.number, event ? event : "" );
+		return;
+	}
+	self->message = G_NewString( event );
 }
 
 

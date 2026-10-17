@@ -331,6 +331,7 @@ void SP_target_character (gentity_t *ent);
 void SP_target_score( gentity_t *ent );
 void SP_target_teleporter( gentity_t *ent );
 void SP_target_relay (gentity_t *ent);
+void SP_target_lua( gentity_t *ent );	// GLX_U: [Lua] g_target.c
 void SP_target_kill (gentity_t *ent);
 void SP_target_position (gentity_t *ent);
 void SP_target_location (gentity_t *ent);
@@ -794,6 +795,7 @@ spawn_t	spawns[] = {
 	{ "target_laser",						SP_target_laser },
 	{ "target_level_change",				SP_target_level_change, qtrue },
 	{ "target_location",					SP_target_location, qtrue },
+	{ "target_lua",							SP_target_lua, qtrue },	// GLX_U: [Lua] raises a script event (g_target.c)
 	{ "target_play_music",					SP_target_play_music, qtrue },
 	{ "target_position",					SP_target_position, qtrue },
 	{ "target_print",						SP_target_print, qtrue },

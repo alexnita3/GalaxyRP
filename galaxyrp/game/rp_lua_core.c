@@ -760,7 +760,7 @@ static const char *rpLuaRemovedGlobals[] = {
 // and RP_LuaStore_Register
 static const char *rpLuaProxiedGlobals[] = {
 	"string", "table", "math", "utf8", "coroutine",
-	"Plugin", "Events", "Timer", "Task", "Commands", "Msg", "Server", "Storage", NULL
+	"Plugin", "Events", "Timer", "Task", "Commands", "Msg", "Server", "Storage", "World", NULL
 };
 
 static int RP_Lua_SandboxWorker( lua_State *L, void *data ) {
@@ -805,6 +805,7 @@ static int RP_Lua_SandboxWorker( lua_State *L, void *data ) {
 
 	RP_LuaApi_Register( L );
 	RP_LuaStore_Register( L );
+	RP_LuaWorld_Register( L );
 
 	for ( i = 0; rpLuaProxiedGlobals[i]; i++ ) {
 		lua_getfield( L, g, rpLuaProxiedGlobals[i] );
@@ -848,6 +849,7 @@ void RP_Lua_InitState( void ) {
 
 void RP_Lua_CloseState( void ) {
 	RP_LuaApi_Reset();
+	RP_LuaWorld_Reset();
 	if ( rl.L && !rl.panicked ) {
 		// finalizers (__gc) run here: give them one budget, which stays exhausted once used up,
 		// so a finalizer that loops cannot stall the map change
@@ -989,6 +991,7 @@ void RP_Lua_Frame( int levelTime ) {
 	}
 	rl.frameStart = trap->Milliseconds();
 	rl.frameExhausted = qfalse;
+	RP_LuaWorld_Frame();	// frees queued inside game callbacks, zones' leave checks
 	RP_LuaApi_RunTimersAndTasks( levelTime );
 	RP_LuaApi_FireFrame( levelTime );
 	RP_LuaStore_Frame();
@@ -1036,6 +1039,7 @@ void RP_Lua_ClientDisconnect( int clientNum ) {
 		return;
 	}
 	if ( rl.L ) {
+		RP_LuaWorld_ClientGone( clientNum );	// zones see them leave first, while the handle still works
 		RP_LuaApi_FireEvent( RPLE_CLIENT_DISCONNECT, -1, clientNum, 0, NULL, -1, NULL );
 		RP_LuaApi_PlayerGone( clientNum );
 	}

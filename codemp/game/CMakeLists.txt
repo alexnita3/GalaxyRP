@@ -148,6 +148,7 @@ set(MPGameGameFiles
 	"${RPDir}/game/rp_lua_core.c"
 	"${RPDir}/game/rp_lua_api.c"
 	"${RPDir}/game/rp_lua_store.c"
+	"${RPDir}/game/rp_lua_world.c"
 	"${RPDir}/game/rp_lua_admin.c"
 	"${MPDir}/game/g_xcvar.h"
 	"${MPDir}/game/inv.h"

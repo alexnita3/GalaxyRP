@@ -2153,6 +2153,11 @@ typedef struct level_locals_s {
 	// GalaxyRP: [Entity System] a note about the last spawn that went through, for the command to print
 	// (an item the map had not precached -- see G_SpawnItem). Cleared with rp_spawn_refusal.
 	char rp_spawn_note[256];
+	// GLX_U: [Lua] what scripts used this map: bytes of the memory pool their World.spawn took
+	// (rp_lua_spawnkb), and new effect names their World.effect registered (rp_lua_newfx) -- see
+	// galaxyrp/game/rp_lua_world.c. Per map because the pool and the effect table are.
+	int rp_lua_spawn_bytes;
+	int rp_lua_new_fx;
 	// GalaxyRP: [Entity System] who set the sky portal (CS_SKYBOXORG): 0 nobody, -1 the map's own
 	// misc_skyportal, N+1 the Entity System's entity N -- see SP_misc_skyportal() and RP_SkyPortalRelease()
 	int rp_skyportal_owner;
@@ -3425,6 +3430,9 @@ extern	level_locals_t	level;
 // g_logicalents aliases the start of the upper region so a loop over it reads as one.
 extern	gentity_t		g_entities[MAX_ENTITIESTOTAL];
 extern	gentity_t		*g_logicalents;
+// GLX_U: [Lua] each slot's generation: changes whenever the slot is taken (G_InitGentity) or freed
+// (G_FreeEntity), so a script's entity handle can tell its entity from whatever took the slot since
+extern	int				g_entityGen[MAX_ENTITIESTOTAL];
 
 // GalaxyRP: [Logical Entities] walk every allocated slot in both regions, in use or not, exactly as
 // "for (i = 0; i < level.num_entities; i++)" walks the networked one -- the loop body keeps its

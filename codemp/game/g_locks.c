@@ -39,6 +39,7 @@ could not use kept as it was written. "none" is never a lock name: it means no l
 */
 
 #include "g_local.h"
+#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] /enttrigger reaches scripts
 #include "sqlite/sqlite3.h"
 
 extern int RP_DB_Open( sqlite3 **db );
@@ -1285,6 +1286,13 @@ void Cmd_EntLockSet_f( gentity_t *ent )
 		return;
 	}
 
+	// GLX_U: [Lua] nor a script's own entity, as /entedit refuses it: a lock is a key of its record
+	if ( RP_Lua_EntityOwner( target ) )
+	{
+		trap->SendServerCommand( ent - g_entities, va( "print \"Entity %d belongs to the script %s: use /scripts.\n\"", id, RP_Lua_EntityOwner( target ) ) );
+		return;
+	}
+
 	if ( RP_LockHarmful( target ) && !none )
 	{
 		trap->SendServerCommand( ent - g_entities, va( "print \"Entity %d (%s) hurts whoever touches or uses it: a lock would only spare the players not on its list, so it cannot carry one.\n\"", id, target->classname ) );
@@ -1464,13 +1472,20 @@ void Cmd_EntTrigger_f( gentity_t *ent )
 	}
 
 	RP_LockBypass( qtrue );
+	// GLX_U: [Lua] scripts cannot stop an admin's use, nor what it sets off (as locks cannot). A mover
+	// goes through GlobalUse() or straight to the door code (RP_StunBatonUseMover); anything else is
+	// used directly, so its script hook runs here.
+	RP_Lua_ForceUses( qtrue );
 	if ( target->s.eType == ET_MOVER )
 		RP_StunBatonUseMover( target, ent );
 	else
 	{
 		RP_LockMarkPass( target, ent );	// what it sets off later passes too
-		target->use( target, ent, ent );
+		RP_Lua_EntityUsed( target, ent, ent, qtrue );
+		if ( target->inuse && target->use )
+			target->use( target, ent, ent );
 	}
+	RP_Lua_ForceUses( qfalse );
 	RP_LockBypass( qfalse );
 
 	G_LogPrintf( "/enttrigger %d by %s\n", id, ent->client->pers.netname );

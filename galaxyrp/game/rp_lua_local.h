@@ -13,7 +13,7 @@ game module uses rp_lua.h.
 #include "../../lib/lua/lualib.h"
 #include "rp_lua.h"
 
-#define RP_LUA_API_VERSION			1		// Plugin.register{ api = n } may not ask for more
+#define RP_LUA_API_VERSION			2		// Plugin.register{ api = n } may not ask for more
 
 #define RP_LUA_MAX_PLUGINS			64		// plugins and map scripts together
 #define RP_LUA_CONSOLE				RP_LUA_MAX_PLUGINS	// plugins[] slot of rcon lua_exec's "@console"
@@ -42,6 +42,8 @@ game module uses rp_lua.h.
 #define RP_LUA_DEFER_WARN_MS		60000
 
 #define RP_LUA_TEXT_MAX				900		// what Msg.* and print() pass on
+#define RP_LUA_FILTER_SIZE			64		// a "use" handler's targetname, a "map_event" handler's name
+#define RP_LUA_EVENT_NAME_MAX		32		// a target_lua's event: [a-z0-9_]{1,32}
 
 typedef enum {
 	RPLE_INIT,
@@ -54,6 +56,8 @@ typedef enum {
 	RPLE_CLIENT_DISCONNECT,
 	RPLE_CHAT,
 	RPLE_COMMAND,
+	RPLE_USE,				// API 2: an entity with the handler's targetname is used
+	RPLE_MAP_EVENT,			// API 2: a target_lua was used
 	RPLE_NUM
 } rpLuaEvent_t;
 
@@ -85,6 +89,7 @@ typedef struct {
 	int			numTimers;
 	int			numTasks;
 	int			storeBytes;					// lua.db bytes counted against rp_lua_maxstore, -1 not read yet
+	int			numEnts;					// entities and zones it spawned that still exist (rp_lua_maxents)
 } rpLuaPlugin_t;
 
 typedef struct {
@@ -167,6 +172,18 @@ void		RP_LuaApi_PlayerGone( int client );
 int			RP_LuaApi_CommandCount( void );
 qboolean	RP_LuaApi_CommandInfo( int index, char *name, int nameSize, char *help, int helpSize, int *plugin );
 qboolean	RP_LuaApi_ReservedCommand( const char *name );
+qboolean	RP_LuaApi_FireUse( gentity_t *self, gentity_t *other, gentity_t *activator, qboolean forced );
+void		RP_LuaApi_FireMapEvent( const char *name, gentity_t *activator, gentity_t *ent );
+
+// rp_lua_world.c
+void		RP_LuaWorld_Register( lua_State *L );			// the World table, on the globals on top of the stack
+void		RP_LuaWorld_PushEntity( lua_State *L, gentity_t *ent );	// nil when not in use
+void		RP_LuaWorld_PushActor( lua_State *L, gentity_t *ent );	// player handle, entity handle or nil
+void		RP_LuaWorld_RemovePlugin( int plugin );			// its entities go (next frame inside a game callback)
+void		RP_LuaWorld_FreeAll( void );					// /scripts reload all: every script entity goes
+void		RP_LuaWorld_Reset( void );						// the state is closing
+void		RP_LuaWorld_Frame( void );						// queued frees, zones' leave checks
+void		RP_LuaWorld_ClientGone( int client );			// zones see a disconnecting player leave
 
 // rp_lua_store.c
 qboolean	RP_LuaStore_Open( void );

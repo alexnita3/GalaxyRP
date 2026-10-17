@@ -55,6 +55,7 @@ the entity goes (an /entload); checked every frame by RP_EntGrabFrame().
 */
 
 #include "g_local.h"
+#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] script entities are left to their scripts
 
 extern qboolean check_admin_command( gentity_t *ent, int admin_command, qboolean with_message );
 extern void zyk_main_set_entity_field( gentity_t *ent, char *key, char *value );
@@ -1426,6 +1427,10 @@ static const char *RP_GrabRefusal( const gentity_t *ent, const gentity_t *target
 
 	if ( why )
 		return why;
+
+	// GLX_U: [Lua] a script's own entity: its script places, moves and removes it (/entremove still can)
+	if ( RP_Lua_EntityOwner( target ) )
+		return va( "belongs to the script %s: use /scripts", RP_Lua_EntityOwner( target ) );
 
 	if ( target->rpHeldBy )
 	{

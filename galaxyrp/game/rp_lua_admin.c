@@ -131,6 +131,14 @@ reload, enable, disable
 static void RP_LuaAdmin_ReloadAll( gentity_t *ent ) {
 	int i, on = 0, off = 0;
 
+	if ( rl.L ) {
+		// the scripts' shutdown handlers run first, then every script entity goes (a map change frees
+		// them with the map; here the map stays). RP_Lua_Shutdown() itself is the map-end path.
+		RP_LuaApi_FireEvent( RPLE_SHUTDOWN, -1, -1, 0, NULL, -1, NULL );
+		RP_LuaWorld_FreeAll();
+		RP_LuaStore_Close();
+		RP_Lua_CloseState();
+	}
 	RP_Lua_Shutdown();
 	RP_Lua_Init();
 	if ( !rl.L ) {
@@ -292,8 +300,9 @@ static void RP_LuaAdmin_Stats( gentity_t *ent ) {
 		if ( !p->inUse ) {
 			continue;
 		}
-		RP_LuaAdmin_Out( ent, va( "  ^3%s^7 (%s): %u call(s), %dk instructions, %d ms, %d timer(s), %d task(s), %d deferred, %d error(s)%s",
-			p->name, p->enabled ? "on" : "off", p->calls, (int)( p->instructions / 1000.0 ), p->ms, p->numTimers, p->numTasks, p->deferred, p->errTotal,
+		RP_LuaAdmin_Out( ent, va( "  ^3%s^7 (%s): %u call(s), %dk instructions, %d ms, %d timer(s), %d task(s), %d entit%s, %d deferred, %d error(s)%s",
+			p->name, p->enabled ? "on" : "off", p->calls, (int)( p->instructions / 1000.0 ), p->ms, p->numTimers, p->numTasks,
+			p->numEnts, p->numEnts == 1 ? "y" : "ies", p->deferred, p->errTotal,
 			p->storeBytes >= 0 ? va( ", %d bytes stored", p->storeBytes ) : "" ) );
 	}
 }
