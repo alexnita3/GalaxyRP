@@ -2,7 +2,9 @@
 ===========================================================================
 GLX_U: [Lua] Storage: what scripts keep across maps and restarts, in GalaxyRP/database/lua.db.
 
-One table, LuaData(plugin, scope, key, value, updated): scope is "global" or "char:<CharID>". The
+One table, LuaData(plugin, scope, key, value, updated): plugin is the plugin's name, or for a map script
+"map:<mapname>/<file>" in lower case, so each map's script has its own data (GLX_U: it was "map:<file>",
+which the same file name on two maps shared); scope is "global" or "char:<CharID>". The
 accounts database is never written here -- only read, for the orphan sweep below. lua.db is opened
 when a map starts with any plugin or map script set to run, or by /scripts enable and reload --
 outside any script's time budget -- so a server with no scripts never gets the file. It runs in
@@ -659,7 +661,7 @@ static int RP_LuaStore_PluginBytes( int plugin ) {
 	if ( p->storeBytes >= 0 ) {
 		return p->storeBytes;
 	}
-	sqlite3_bind_text( stSum, 1, p->name, -1, SQLITE_STATIC );
+	sqlite3_bind_text( stSum, 1, p->storeName, -1, SQLITE_STATIC );
 	if ( sqlite3_step( stSum ) == SQLITE_ROW ) {
 		total = sqlite3_column_int( stSum, 1 ) + sqlite3_column_int( stSum, 0 ) * RP_LUA_STORE_OVERHEAD;
 	}
@@ -669,7 +671,7 @@ static int RP_LuaStore_PluginBytes( int plugin ) {
 	for ( i = 0; i < RP_LUA_PEND_BUCKETS; i++ ) {
 		rpLuaPend_t *e;
 		for ( e = rpPend[i]; e; e = e->next ) {
-			if ( strcmp( e->plugin, p->name ) ) {
+			if ( strcmp( e->plugin, p->storeName ) ) {
 				continue;
 			}
 			total -= RP_LuaStore_DbSize( e->plugin, e->scope, e->key );
@@ -693,7 +695,7 @@ static const char *RP_LuaStore_CheckKey( lua_State *L, int idx ) {
 
 static int RP_LuaStore_DoGet( lua_State *L, int plugin, const char *scope, const char *key ) {
 	rpLuaPend_t *e;
-	const char *name = rl.plugins[plugin].name;
+	const char *name = rl.plugins[plugin].storeName;	// GLX_U: storeName, not name
 
 	if ( !RP_LuaStore_Ensure() ) {
 		return luaL_error( L, "script storage is not available (see the server log)" );
@@ -752,18 +754,18 @@ static int RP_LuaStore_DoSet( lua_State *L, int plugin, const char *scope, const
 	}
 
 	total = RP_LuaStore_PluginBytes( plugin );
-	e = RP_LuaStore_FindPend( p->name, scope, key );
+	e = RP_LuaStore_FindPend( p->storeName, scope, key );
 	if ( e ) {
 		oldSize = e->blob ? (int)strlen( key ) + e->len + RP_LUA_STORE_OVERHEAD : 0;
 	} else {
-		oldSize = RP_LuaStore_DbSize( p->name, scope, key );
+		oldSize = RP_LuaStore_DbSize( p->storeName, scope, key );
 	}
 	// GLX_U: a delete of a key the database does not have writes nothing: before, every one became a pending
 	// entry (even for keys that never existed, and with no limit), all flushed as DELETEs in one frame. A write
 	// still waiting is simply forgotten.
-	if ( del && ( e ? RP_LuaStore_DbSize( p->name, scope, key ) : oldSize ) == 0 ) {
+	if ( del && ( e ? RP_LuaStore_DbSize( p->storeName, scope, key ) : oldSize ) == 0 ) {
 		if ( e ) {
-			RP_LuaStore_DropPend( p->name, scope, key );
+			RP_LuaStore_DropPend( p->storeName, scope, key );
 		}
 		p->storeBytes = total - oldSize;
 		return 0;
@@ -772,7 +774,7 @@ static int RP_LuaStore_DoSet( lua_State *L, int plugin, const char *scope, const
 	if ( newSize > oldSize && total - oldSize + newSize > RP_LuaStore_MaxStore() ) {
 		return luaL_error( L, "storage is full for %s (the limit is %d bytes per plugin)", p->name, RP_LuaStore_MaxStore() );
 	}
-	if ( !RP_LuaStore_SetPend( p->name, scope, key, del ? NULL : w.b, w.len ) ) {
+	if ( !RP_LuaStore_SetPend( p->storeName, scope, key, del ? NULL : w.b, w.len ) ) {
 		return luaL_error( L, "out of memory saving \"%s\"", key );
 	}
 	p->storeBytes = total - oldSize + newSize;

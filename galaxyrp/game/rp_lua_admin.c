@@ -449,6 +449,7 @@ void Svcmd_LuaExec_f( void ) {
 		p->envRef = LUA_NOREF;
 		p->storeBytes = -1;
 		Q_strncpyz( p->name, "@console", sizeof( p->name ) );
+		Q_strncpyz( p->storeName, p->name, sizeof( p->storeName ) );	// GLX_U: Storage files its data under this
 	}
 	G_LogPrintf( "Lua: lua_exec %s\n", code );
 	RP_Lua_Call( RP_LUA_CONSOLE, RP_LuaAdmin_ExecWorker, (void *)code );

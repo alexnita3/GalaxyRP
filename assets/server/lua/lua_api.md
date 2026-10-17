@@ -65,6 +65,8 @@ end, { help = "Says hello" })
 **Map scripts** are files in `lua/maps/<map name>/` (for example `lua/maps/mp/ffa5/doors.lua`).
 - They run on that map only, every time it starts.
 - Each file runs like its own plugin, called `map:<file>`.
+- Its saved data (`Storage`) belongs to that map: `doors.lua` on `mp/ffa5` and `doors.lua` on
+  `mp/duel1` each have their own. For data shared between maps, write a plugin.
 
 Scripts are read **only from loose files** in the GalaxyRP folder. A script inside a pk3 is never
 run, so no script can end up in a pk3 that players download.
@@ -279,7 +281,7 @@ end
 ```
 
 - **Where it lives:** `GalaxyRP/database/lua.db`, written every 30 seconds and at map end. Each
-  plugin sees only its own data.
+  plugin, and each map's script, sees only its own data.
 - **Keys:** 1 to 64 characters.
 - **Values:** nil, true/false, numbers, strings, and tables of them up to 16 deep, without loops.
 - **Characters:** a character's data is deleted when the character is deleted. `Storage.char` needs

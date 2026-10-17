@@ -707,6 +707,15 @@ int RP_Lua_AddPlugin( const char *name, qboolean isMap, const char *dir, const c
 		Q_strncpyz( p->name, name, sizeof( p->name ) );
 		Q_strncpyz( p->dir, dir, sizeof( p->dir ) );
 		Q_strncpyz( p->mainFile, file, sizeof( p->mainFile ) );
+		// GLX_U: a map script's data belongs to its map: before, it was filed under "map:<file>", so the same file
+		// name on two maps shared it. In lower case, as names are matched (RP_Lua_FindPlugin): the engine keeps the
+		// map name as typed (map MP/FFA5), and an admin may type a file name in any case.
+		if ( isMap && !Q_stricmpn( dir, "lua/maps/", 9 ) ) {
+			Com_sprintf( p->storeName, sizeof( p->storeName ), "map:%s/%s", dir + 9, file );
+			Q_strlwr( p->storeName );
+		} else {
+			Q_strncpyz( p->storeName, name, sizeof( p->storeName ) );
+		}
 		return i;
 	}
 	return -1;

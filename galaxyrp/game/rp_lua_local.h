@@ -20,6 +20,7 @@ game module uses rp_lua.h.
 #define RP_LUA_CONSOLE				RP_LUA_MAX_PLUGINS	// plugins[] slot of rcon lua_exec's "@console"
 #define RP_LUA_NAME_SIZE			48		// "welcome", or "map:castle_doors.lua"
 #define RP_LUA_PLUGIN_NAME_MAX		32		// a plugin folder name: [a-z0-9_], 1..32
+#define RP_LUA_STORE_NAME_SIZE		128		// GLX_U: rpLuaPlugin_t.storeName: "map:" + a map name (dir is MAX_QPATH) + "/" + a file name
 #define RP_LUA_MAX_FILE				( 256 * 1024 )
 #define RP_LUA_MAX_INCLUDES			32		// files one plugin may include()
 
@@ -77,6 +78,7 @@ typedef struct {
 	qboolean	isMap;
 	qboolean	disabling;					// RP_Lua_DisablePlugin is running its unload event
 	char		name[RP_LUA_NAME_SIZE];		// plugin folder name, "map:<file>" or "@console"
+	char		storeName[RP_LUA_STORE_NAME_SIZE];	// GLX_U: what Storage files its data under: the name, or "map:<mapname>/<file>" in lower case
 	char		dir[MAX_QPATH];				// "lua/plugins/<name>" or "lua/maps/<mapname>"
 	char		mainFile[MAX_QPATH];		// "plugin.lua" or the map script's file name
 	char		title[64];					// Plugin.register{ name = }
