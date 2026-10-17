@@ -2662,6 +2662,9 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	// frame -- before the sky portal below, which leaves its effects to that pass when it does
 	CG_RpxFrame();
 
+	// GLX_U: [Lua] the script dialogue menu: opening it once the console or chat line is closed, the time left
+	CG_RpDialogFrame();
+
 	// let the client system know what our weapon and zoom settings are
 	if (cg.snap && cg.snap->ps.saberLockTime > cg.time)
 	{

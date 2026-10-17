@@ -2637,6 +2637,9 @@ Ghoul2 Insert End
 	// GalaxyRP: [Extras] the Extras menus start this map afresh -- cg_rpextras.c
 	CG_RpxInit();
 
+	// GLX_U: [Lua] no script dialogue is shown when a map starts -- cg_rpdialog.c
+	CG_RpDialogInit();
+
 	cg.renderingThirdPerson = cg_thirdPerson.integer;
 
 	cg.weaponSelect = WP_BRYAR_PISTOL;

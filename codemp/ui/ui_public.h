@@ -48,7 +48,9 @@ typedef enum uiMenuCommand_e {
 	UIMENU_VOICECHAT,
 	UIMENU_CLOSEALL,
 	UIMENU_CLASSSEL,
-	UIMENU_ZYKMOD // zyk: new menu. It opens the Zyk OpenJK Mod menu
+	UIMENU_ZYKMOD, // zyk: new menu. It opens the Zyk OpenJK Mod menu
+	UIMENU_RPDIALOG,		// GLX_U: [Lua] opens the script dialogue menu (ui/rp_dialog.h)
+	UIMENU_RPDIALOG_CLOSE	// GLX_U: [Lua] closes it: the dialogue ended on the server
 } uiMenuCommand_t;
 
 #define SORT_HOST			0

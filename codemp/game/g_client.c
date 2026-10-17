@@ -2407,6 +2407,10 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 		client->pers.clientPlugin = qfalse;
 	}
 
+	// GLX_U: [Lua] "rpdlg" is the script dialogue menu's protocol version our cgame supports (cg_rpdialog.c); not
+	// tied to rpmod_client, which an older client of the same version string also sends without having the menu
+	client->pers.rpDialogMenu = ( atoi( Info_ValueForKey( userinfo, "rpdlg" ) ) >= 1 ) ? qtrue : qfalse;
+
 	// check the item prediction
 	s = Info_ValueForKey( userinfo, "cg_predictItems" );
 	if ( !atoi( s ) )	client->pers.predictItemPickup = qfalse;

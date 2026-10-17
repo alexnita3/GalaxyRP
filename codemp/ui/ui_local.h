@@ -411,6 +411,11 @@ qboolean	UI_RpxFeederSelection( int index );
 qboolean	UI_RpxScript( const char *name, char **args );
 qboolean	UI_RpxOwnerDraw( int ownerDraw, rectDef_t *rect, float scale, vec4_t color, int iMenuFont );
 void		UI_RpxRegisterCvars( void );
+// GLX_U: [Lua] the script dialogue menu -- ui_rpdialog.c, rp_dialog.h
+void		UI_RpDialogOpen( void );
+void		UI_RpDialogClose( void );
+qboolean	UI_RpDialogScript( const char *name, char **args );
+qboolean	UI_RpDialogKey( menuDef_t *menu, int key );
 char		*UI_Cvar_VariableString( const char *var_name );
 
 

@@ -22,6 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "cg_local.h"
+#include "ui/rp_dialog.h"	// GLX_U: [Lua] RPDLG_PROTOCOL
 
 //
 // Cvar callbacks
@@ -90,6 +91,11 @@ void CG_RegisterCvars( void ) {
 	// Tr!Force: [Plugin] Set the client plugin version
 	trap->Cvar_Register(NULL, "rpmod_client", "", CVAR_USERINFO | CVAR_ROM);
 	trap->Cvar_Set("rpmod_client", JK_VERSION);
+
+	// GLX_U: [Lua] this client shows script dialogues in its menu (cg_rpdialog.c): the server sends it rpdlg
+	// instead of the chat-area text
+	trap->Cvar_Register(NULL, "rpdlg", "", CVAR_USERINFO | CVAR_ROM);
+	trap->Cvar_Set("rpdlg", RPDLG_PROTOCOL);
 }
 
 void CG_UpdateCvars( void ) {

@@ -75,6 +75,7 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/cg_saga.c"
 	"${MPDir}/cgame/cg_scoreboard.c"
 	"${MPDir}/cgame/cg_rpextras.c"
+	"${MPDir}/cgame/cg_rpdialog.c"
 	"${MPDir}/cgame/cg_servercmds.c"
 	"${MPDir}/cgame/cg_snapshot.c"
 	"${MPDir}/cgame/cg_spawn.c"

@@ -542,10 +542,11 @@ end)
 - **One at a time:** a player has at most one dialogue open. Opening another from the same plugin
   replaces it; another plugin's is refused.
 - **A conversation** is one dialogue after another: open the next one in `fn`.
-- **What the player sees:** the dialogue in their chat area, with the options numbered. They answer
-  with `/choose <number>`, or by saying just the number in chat (that line goes to nobody); `/choose`
-  alone shows it again, and `/choose 0` ends it. (A menu for players with the Galaxy RP Ultimate
-  client is planned.)
+- **What the player sees:** with the Galaxy RP Ultimate client, a dialogue menu in the middle of the
+  screen: they click an answer or press its number (1 to 6), and Esc ends the conversation. Without
+  it, the dialogue in their chat area with the options numbered: they answer with `/choose <number>`,
+  or by saying just the number in chat (that line goes to nobody). For everyone, `/choose` alone shows
+  it again and `/choose 0` ends it.
 - **Limits:** the text up to 255 characters, the title up to 48, 1 to 6 options of up to 64
   characters each. Colour codes work. Quotes become `'` and line breaks spaces; a word over 40
   characters gets a space put into it, and that space counts towards the 255. Anything longer is a

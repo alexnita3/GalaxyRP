@@ -44,5 +44,6 @@
 	loadMenu { "ui/jamp/ingame_rpx_sounds.menu" 		}
 	loadMenu { "ui/jamp/ingame_rpx_lights.menu" 		}
 	loadMenu { "ui/jamp/ingame_rpx_spawners.menu" 		}
+	loadMenu { "ui/jamp/ingame_rpdialog.menu" 		}	// GLX_U: [Lua] a script's dialogue, cg_rpdialog.c
 }
 

@@ -1039,6 +1039,12 @@ void UI_SetActiveMenu( uiMenuCommand_t menu ) {
 			Menus_ActivateByName("ingame_galaxyrp");
 			UI_UpdateSaberCvars();
 			return;
+		case UIMENU_RPDIALOG:		// GLX_U: [Lua] the script dialogue menu, on top of any menu open -- ui_rpdialog.c
+			UI_RpDialogOpen();
+			return;
+		case UIMENU_RPDIALOG_CLOSE:	// GLX_U: [Lua] ...and the server ended that dialogue
+			UI_RpDialogClose();
+			return;
 		}
 	}
 }
@@ -6114,6 +6120,12 @@ static void UI_RunMenuScript(char **args)
 			return;
 		}
 
+		// GLX_U: [Lua] the script dialogue menu's scripts -- ui_rpdialog.c
+		if ( UI_RpDialogScript( name, args ) )
+		{
+			return;
+		}
+
 		if (Q_stricmp(name, "StartServer") == 0)
 		{
 			int i, added = 0;
@@ -10715,7 +10727,7 @@ void UI_KeyEvent( int key, qboolean down ) {
 					escapeHoldSuppressed = qtrue;
 					Menus_CloseAll();
 				}
-			} else {
+			} else if (!down || !UI_RpDialogKey(menu, key)) {	// GLX_U: [Lua] 1 to 6 answer a script dialogue -- ui_rpdialog.c
 				Menu_HandleKey(menu, key, down );
 			}
 		} else {

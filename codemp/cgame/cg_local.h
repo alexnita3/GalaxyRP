@@ -1862,6 +1862,12 @@ qboolean CG_RpxFxPassActive( void );
 void CG_RpxReply( void );
 void CG_Rpx_f( void );
 
+// GLX_U: [Lua] the script dialogue menu (cg_rpdialog.c, ui/rp_dialog.h)
+void CG_RpDialogInit( void );
+void CG_RpDialogFrame( void );
+void CG_RpDialog_f( void );
+void CG_RpDialogClose_f( void );
+
 void CG_UpdateCvars( void );
 
 int CG_CrosshairPlayer( void );

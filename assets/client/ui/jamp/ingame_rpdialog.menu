@@ -1,0 +1,397 @@
+//----------------------------------------------------------------------------------------------
+// ingame_rpdialog: a script's dialogue (Lua, Dialog.open), in the middle of the screen.
+// GLX_U: [Lua] cgame (cg_rpdialog.c) fills the ui_rpdlg_* cvars and opens it; ui_rpdialog.c sends the
+// answer. ui/rp_dialog.h says how they work together. The text lines and the options are font 2 at
+// textscale 0.58 in a column 572 wide, the title font 2 at 0.7: cgame breaks the text into lines for
+// exactly that (RPDLG_TEXT_SCALE, RPDLG_TEXT_WIDTH, RPDLG_TITLE_SCALE), so change them together.
+// An option is clicked, or its number pressed (1 to 6) while the menu is open; Esc, or anything else
+// that closes the menu without an answer, ends the conversation (onClose).
+//----------------------------------------------------------------------------------------------
+{
+	menuDef
+	{
+		name                    "ingame_rpdialog"
+		visible                 0
+		fullscreen              0
+		rect                    20 100 600 280
+		focusColor              1 1 1 1
+		style                   1
+		border                  1
+
+		onClose
+		{
+			uiScript		rpDialogClosed
+		}
+		onESC
+		{
+			uiScript		rpDialogClosed ;
+			close			ingame_rpdialog
+		}
+
+		itemDef
+		{
+			name                rpdlg_box
+			style               WINDOW_STYLE_SHADER
+			rect                0 0 600 280
+			background          "gfx/menus/menu_box_ingame"
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpdlg_title
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                14 8 572 18
+			cvar                "ui_rpdlg_title"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.7
+			forecolor           .549 .854 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpdlg_textbox
+			style               WINDOW_STYLE_FILLED
+			rect                10 30 580 122
+			backcolor           0 0 0 .35
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpdlg_line1
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                14 34 572 16
+			cvar                "ui_rpdlg_line1"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpdlg_line2
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                14 50 572 16
+			cvar                "ui_rpdlg_line2"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpdlg_line3
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                14 66 572 16
+			cvar                "ui_rpdlg_line3"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpdlg_line4
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                14 82 572 16
+			cvar                "ui_rpdlg_line4"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpdlg_line5
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                14 98 572 16
+			cvar                "ui_rpdlg_line5"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpdlg_line6
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                14 114 572 16
+			cvar                "ui_rpdlg_line6"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpdlg_line7
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                14 130 572 16
+			cvar                "ui_rpdlg_line7"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpdlg_opt1
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                14 158 572 17
+			cvar                "ui_rpdlg_opt1"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          4
+			textaligny          2
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			backcolor           0 0 0 0
+			visible             1
+			cvarTest            "ui_rpdlg_count"
+			showCvar            { "1" "2" "3" "4" "5" "6" }
+			mouseEnter
+			{
+				setitemcolor rpdlg_opt1 backcolor 1 .682 0 .25
+			}
+			mouseExit
+			{
+				setitemcolor rpdlg_opt1 backcolor 0 0 0 0
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpDialogChoose 1
+			}
+		}
+		itemDef
+		{
+			name                rpdlg_opt2
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                14 175 572 17
+			cvar                "ui_rpdlg_opt2"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          4
+			textaligny          2
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			backcolor           0 0 0 0
+			visible             1
+			cvarTest            "ui_rpdlg_count"
+			showCvar            { "2" "3" "4" "5" "6" }
+			mouseEnter
+			{
+				setitemcolor rpdlg_opt2 backcolor 1 .682 0 .25
+			}
+			mouseExit
+			{
+				setitemcolor rpdlg_opt2 backcolor 0 0 0 0
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpDialogChoose 2
+			}
+		}
+		itemDef
+		{
+			name                rpdlg_opt3
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                14 192 572 17
+			cvar                "ui_rpdlg_opt3"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          4
+			textaligny          2
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			backcolor           0 0 0 0
+			visible             1
+			cvarTest            "ui_rpdlg_count"
+			showCvar            { "3" "4" "5" "6" }
+			mouseEnter
+			{
+				setitemcolor rpdlg_opt3 backcolor 1 .682 0 .25
+			}
+			mouseExit
+			{
+				setitemcolor rpdlg_opt3 backcolor 0 0 0 0
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpDialogChoose 3
+			}
+		}
+		itemDef
+		{
+			name                rpdlg_opt4
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                14 209 572 17
+			cvar                "ui_rpdlg_opt4"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          4
+			textaligny          2
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			backcolor           0 0 0 0
+			visible             1
+			cvarTest            "ui_rpdlg_count"
+			showCvar            { "4" "5" "6" }
+			mouseEnter
+			{
+				setitemcolor rpdlg_opt4 backcolor 1 .682 0 .25
+			}
+			mouseExit
+			{
+				setitemcolor rpdlg_opt4 backcolor 0 0 0 0
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpDialogChoose 4
+			}
+		}
+		itemDef
+		{
+			name                rpdlg_opt5
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                14 226 572 17
+			cvar                "ui_rpdlg_opt5"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          4
+			textaligny          2
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			backcolor           0 0 0 0
+			visible             1
+			cvarTest            "ui_rpdlg_count"
+			showCvar            { "5" "6" }
+			mouseEnter
+			{
+				setitemcolor rpdlg_opt5 backcolor 1 .682 0 .25
+			}
+			mouseExit
+			{
+				setitemcolor rpdlg_opt5 backcolor 0 0 0 0
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpDialogChoose 5
+			}
+		}
+		itemDef
+		{
+			name                rpdlg_opt6
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                14 243 572 17
+			cvar                "ui_rpdlg_opt6"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          4
+			textaligny          2
+			font                2
+			textscale           0.58
+			forecolor           1 1 1 1
+			backcolor           0 0 0 0
+			visible             1
+			cvarTest            "ui_rpdlg_count"
+			showCvar            { "6" }
+			mouseEnter
+			{
+				setitemcolor rpdlg_opt6 backcolor 1 .682 0 .25
+			}
+			mouseExit
+			{
+				setitemcolor rpdlg_opt6 backcolor 0 0 0 0
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpDialogChoose 6
+			}
+		}
+		itemDef
+		{
+			name                rpdlg_hint
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                14 262 470 14
+			text                "Click an answer or press its number. Esc ends the conversation."
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.5
+			forecolor           .7 .7 .7 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpdlg_left
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                486 262 100 14
+			cvar                "ui_rpdlg_left"
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          100
+			textaligny          0
+			font                2
+			textscale           0.5
+			forecolor           1 .682 0 .9
+			visible             1
+			decoration
+		}
+	}
+}

@@ -1346,6 +1346,9 @@ typedef struct clientPersistant_s {
 
 	// Tr!Force: [Plugin] Client plugin check
 	qboolean		clientPlugin;
+	// GLX_U: [Lua] the client shows script dialogues in its menu (userinfo "rpdlg" 1 or more, set by our cgame):
+	// it gets the rpdlg / rpdlgclose commands instead of the chat-area text (rp_lua_dialog.c)
+	qboolean		rpDialogMenu;
 
 	// GalaxyRP fix: [Model] non-zero while a forced kill triggered by /login, /char use, or /new is
 	// waiting to fire -- set by select_player_character()/select_account_and_default_character_data()

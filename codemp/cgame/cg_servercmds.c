@@ -2117,6 +2117,8 @@ static serverCommand_t	commands[] = {
 	{ "print",				CG_Print_f },
 	{ "rcg",				CG_RestoreClientGhoul_f },
 	{ "remapShader",		CG_RemapShader_f },
+	{ "rpdlg",				CG_RpDialog_f },		// GLX_U: [Lua] a script dialogue for the menu, cg_rpdialog.c
+	{ "rpdlgclose",			CG_RpDialogClose_f },	// GLX_U: [Lua] ...and its end
 	{ "rpxl",				CG_RpxReply },	// GalaxyRP: [Extras] a listing for the Extras menus, cg_rpextras.c
 	{ "sb",					CG_SiegeBriefingDisplay_f },
 	{ "scl",				CG_SiegeClassSelect_f },

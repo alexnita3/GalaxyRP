@@ -10,8 +10,9 @@ switched off, its dialogues close and nothing is called.
 
 The player sees it in the chat area, and answers with /choose <number> or by saying just the number
 (RP_Lua_DialogChat, called from G_Say before any chat goes out). Every answer is checked against the
-open dialogue: a late or repeated one does nothing. The menu our client will show (claude/
-Lua_dialogues_scope_2026-10-17.md, D2) reaches the same /choose with the dialogue's id.
+open dialogue: a late or repeated one does nothing. A player whose client has the dialogue menu (D2,
+userinfo "rpdlg") gets the rpdlg command instead of the chat lines, and rpdlgclose whenever the dialogue
+ends other than by being replaced; the menu answers with /choose <number> <the dialogue's id>.
 
 The text is cleaned on the way in so it can later go into one menu cvar as it is: quotes become ', line
 breaks spaces, a run of more than 40 characters with no space is broken, and a leading @ (a string-table
@@ -91,10 +92,34 @@ static qboolean RP_LuaDialog_Clean( char *out, int max, const char *in, qboolean
 	return qtrue;
 }
 
+// D2: players whose client shows dialogues in its menu (userinfo "rpdlg", g_client.c) get one rpdlg command
+// instead of the chat lines; their cgame breaks the text into lines and opens the menu (cg_rpdialog.c). The text
+// and options were cleaned on the way in (no quotes), so each goes as one quoted argument.
+static qboolean RP_LuaDialog_HasMenu( int client ) {
+	return ( g_entities[client].inuse && level.clients[client].pers.rpDialogMenu ) ? qtrue : qfalse;
+}
+
 static void RP_LuaDialog_Show( int client ) {
 	rpLuaDialog_t *d = &rpDialogs[client];
 	int i;
 
+	if ( RP_LuaDialog_HasMenu( client ) ) {
+		char cmd[MAX_STRING_CHARS];
+		int left = ( d->ends - level.time + 999 ) / 1000;
+
+		if ( left < 1 ) {
+			left = 1;
+		} else if ( left > RP_DLG_TIMEOUT_MAX ) {
+			left = RP_DLG_TIMEOUT_MAX;
+		}
+		// at most 5 + 11 + 4 + 51 + 258 + 6 * 67 = 731 characters (an id of 10 digits): under the 1022 the engine sends
+		Com_sprintf( cmd, sizeof( cmd ), "rpdlg %d %d \"%s\" \"%s\"", d->id, left, d->title, d->text );
+		for ( i = 0; i < d->count; i++ ) {
+			Q_strcat( cmd, sizeof( cmd ), va( " \"%s\"", d->options[i] ) );
+		}
+		trap->SendServerCommand( client, cmd );
+		return;
+	}
 	if ( d->title[0] ) {
 		trap->SendServerCommand( client, va( "chat \"^3%s^7: %s\"", d->title, d->text ) );
 	} else {
@@ -150,6 +175,9 @@ static void RP_LuaDialog_Finish( int client, int choice, const char *why ) {
 	c.why = why;
 	d->open = qfalse;
 	d->ref = 0;
+	if ( RP_LuaDialog_HasMenu( client ) ) {	// before the function runs: a dialogue it opens comes after this
+		trap->SendServerCommand( client, va( "rpdlgclose %d", d->id ) );
+	}
 	if ( rl.L && c.ref > 0 ) {
 		if ( RP_Lua_PluginRunning( plugin ) ) {
 			RP_Lua_Call( plugin, RP_LuaDialog_Worker, &c );
@@ -224,6 +252,9 @@ void RP_LuaDialog_RemovePlugin( int plugin ) {
 	for ( i = 0; i < MAX_CLIENTS; i++ ) {
 		rpLuaDialog_t *d = &rpDialogs[i];
 		if ( d->open && d->plugin == plugin ) {
+			if ( RP_LuaDialog_HasMenu( i ) ) {
+				trap->SendServerCommand( i, va( "rpdlgclose %d", d->id ) );
+			}
 			if ( rl.L && d->ref > 0 ) {
 				luaL_unref( rl.L, LUA_REGISTRYINDEX, d->ref );
 			}
