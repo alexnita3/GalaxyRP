@@ -28,7 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/menudef.h"			// for the voice chats
 
 #include "sqlite/sqlite3.h"
-#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] /scripts, script commands, chat event, character cleanup
+#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] /scripts, script commands, chat event, character cleanup, level events
 
 // GalaxyRP fix: [portability] for zyk_create_dir() below, which creates directories itself
 // rather than shelling out to mkdir(1).
@@ -20189,6 +20189,12 @@ void increase_level(gentity_t* ent, qboolean admin_rp_mode, int number_of_levels
 	{
 		trap->SendServerCommand(ent - g_entities, va("chat \"^3You have reached maximum level!\n\""));
 	}
+
+	// GLX_U: [Lua] the "level_up" event, whoever gave the levels (/levelup, XP from /givexp, an NPC reward or a script)
+	if (levels_gained > 0)
+	{
+		RP_Lua_LevelChanged(ent, levels_gained);
+	}
 }
 
 /*
@@ -20369,6 +20375,12 @@ void decrease_level(gentity_t* ent, qboolean admin_rp_mode, int number_of_levels
 	if (ent->client->pers.level <= 1) {
 		trap->SendServerCommand(ent - g_entities, va("chat \"^3You have reached minimum level!\n\""));
 	}
+
+	// GLX_U: [Lua] the "level_down" event (/leveldown)
+	if (levels_lost > 0)
+	{
+		RP_Lua_LevelChanged(ent, -levels_lost);
+	}
 }
 
 /*
@@ -20474,7 +20486,8 @@ Returns the levels gained; adding the XP, saving the row and any message of thei
 after a level, throwing any remainder away, and the reward granted level by level, a line each.
 ==================
 */
-static int RP_LevelUpFromXP( gentity_t *ent )
+// GLX_U: [Lua] not static any more: a script's add_xp uses it too (rp_lua_people.c), declared in g_local.h
+int RP_LevelUpFromXP( gentity_t *ent )
 {
 	int level = ent->client->pers.level;
 	int levels = 0;

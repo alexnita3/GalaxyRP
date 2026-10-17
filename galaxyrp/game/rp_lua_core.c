@@ -243,6 +243,22 @@ void RP_Lua_AdminNotice( const char *text ) {
 Errors
 ================
 */
+// GLX_U: [Lua] API 4: something a script should know about but that is not its error (an amount cut to a cap):
+// the console, the server log and /scripts errors, but no admin notice and nothing counted towards rp_lua_maxerrors
+void RP_Lua_ReportWarning( int plugin, const char *message ) {
+	const char *name = ( plugin >= 0 && plugin <= RP_LUA_CONSOLE ) ? rl.plugins[plugin].name : "core";
+
+	trap->Print( S_COLOR_YELLOW "Lua warning [%s]" S_COLOR_WHITE " %s\n", name, message );
+	G_LogPrintf( "Lua warning [%s] %s\n", name, message );
+	rl.errors[rl.errorNext].time = (int)time( NULL );
+	Q_strncpyz( rl.errors[rl.errorNext].plugin, name, sizeof( rl.errors[0].plugin ) );
+	Q_strncpyz( rl.errors[rl.errorNext].line, va( "warning: %s", message ), sizeof( rl.errors[0].line ) );
+	rl.errorNext = ( rl.errorNext + 1 ) % RP_LUA_ERROR_RING;
+	if ( rl.errorCount < RP_LUA_ERROR_RING ) {
+		rl.errorCount++;
+	}
+}
+
 void RP_Lua_ReportError( int plugin, const char *message ) {
 	rpLuaPlugin_t *p = ( plugin >= 0 && plugin <= RP_LUA_CONSOLE ) ? &rl.plugins[plugin] : NULL;
 	const char *name = p ? p->name : "core";

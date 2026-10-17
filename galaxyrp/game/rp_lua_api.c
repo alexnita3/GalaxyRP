@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-GLX_U: [Lua] what scripts can call (API version 1, and the events of versions 2 and 3), and the C side of
+GLX_U: [Lua] what scripts can call (API version 1, and the events of versions 2 to 4), and the C side of
 events, commands, timers and tasks. Everything here runs inside RP_Lua_Call(); a script error raised here is reported against
 the plugin that is running. Nothing in this file lets a script run a console command, touch a
 file, or reach the engine directly.
@@ -73,7 +73,8 @@ static int				rpNextId = 1;
 
 static const char *rpLuaEventNames[RPLE_NUM] = {
 	"init", "shutdown", "unload", "frame", "client_connect", "client_begin", "client_spawn",
-	"client_disconnect", "chat", "command", "use", "map_event", "player_death", "player_downed", "npc_death", "damage"
+	"client_disconnect", "chat", "command", "use", "map_event", "player_death", "player_downed", "npc_death", "damage",
+	"level_up", "level_down"
 };
 
 // names a script command may not take: commands the engine, our cgame or our ui handle on the
@@ -477,7 +478,7 @@ static int RP_LuaApi_EventsOn( lua_State *L ) {
 		}
 	}
 	if ( ev == RPLE_NUM ) {
-		return luaL_error( L, "no event called \"%s\" (init, shutdown, unload, frame, client_connect, client_begin, client_spawn, client_disconnect, chat, command, use, map_event, player_death, player_downed, npc_death, damage)", name );
+		return luaL_error( L, "no event called \"%s\" (init, shutdown, unload, frame, client_connect, client_begin, client_spawn, client_disconnect, chat, command, use, map_event, player_death, player_downed, npc_death, damage, level_up, level_down)", name );
 	}
 	RP_LuaApi_EventFilter( L, ev, filter, filter2 );
 	for ( i = 0; i < RP_LUA_MAX_HANDLERS; i++ ) {
@@ -821,6 +822,52 @@ void RP_LuaApi_FireActorEvent( rpLuaEvent_t ev, gentity_t *ent, gentity_t *other
 		}
 		c.slot = i;
 		RP_Lua_Call( h->plugin, RP_LuaApi_ActorEventWorker, &c );
+	}
+}
+
+/*
+================
+The level_up and level_down events (API 4): fired from increase_level() / decrease_level() through
+rp_lua_people.c
+================
+*/
+typedef struct {
+	rpLuaEvent_t	ev;
+	int				slot;
+	int				client;
+	int				level;
+	int				count;
+} rpLuaLevelEventCall_t;
+
+static int RP_LuaApi_LevelEventWorker( lua_State *L, void *data ) {
+	rpLuaLevelEventCall_t *c = (rpLuaLevelEventCall_t *)data;
+
+	lua_rawgeti( L, LUA_REGISTRYINDEX, rpHandlers[c->ev][c->slot].ref );
+	RP_LuaApi_PushPlayer( L, c->client );
+	lua_pushinteger( L, c->level );
+	lua_pushinteger( L, c->count );
+	lua_call( L, 3, 0 );	// what the handler returns changes nothing
+	return 0;
+}
+
+void RP_LuaApi_FireLevelEvent( rpLuaEvent_t ev, int client, int level, int count ) {
+	rpLuaLevelEventCall_t c;
+	int i;
+
+	if ( !rl.L ) {
+		return;
+	}
+	c.ev = ev;
+	c.client = client;
+	c.level = level;
+	c.count = count;
+	for ( i = 0; i < RP_LUA_MAX_HANDLERS; i++ ) {
+		rpLuaHandler_t *h = &rpHandlers[ev][i];
+		if ( !h->active || !RP_Lua_PluginRunning( h->plugin ) ) {
+			continue;
+		}
+		c.slot = i;
+		RP_Lua_Call( h->plugin, RP_LuaApi_LevelEventWorker, &c );
 	}
 }
 

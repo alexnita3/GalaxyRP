@@ -18,8 +18,8 @@ entities (RP_LuaWorld_RemovePlugin).
 Game callbacks. on_use, on_pain, on_die, on_enter, on_leave and the use and map_event events run in
 the middle of game code (GlobalUse, G_Damage, G_TouchTriggers, ClientDisconnect). Inside any of them
 free() is queued and done at the start of the next server frame, so the game code that called the
-script never sees its entity vanish under it (rpCallbackDepth). An admin's /entuse, /enttrigger and
-/targetuse run the callbacks but cannot be stopped by them, nor can what those uses set off
+script never sees its entity vanish under it (rpCallbackDepth). An admin's /entuse and /enttrigger, and
+the cheat command /t_use (sv_cheats 1), run the callbacks but cannot be stopped by them, nor can what those uses set off
 (RP_Lua_ForceUses), just as locks cannot stop them.
 
 NPCs (API version 3). World.npc spawns one through /npc spawn's own path (RP_NpcSpawnAt, NPC_spawn.c), at a point

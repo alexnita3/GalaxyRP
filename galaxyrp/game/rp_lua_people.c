@@ -7,6 +7,13 @@ player effects, raise or lower a skill with their own skillpoints, and play a so
 Also the events the game raises about players and NPCs: player_death, player_downed, npc_death and
 damage. NPC handles and World.npc are in rp_lua_world.c, with the other entity handles.
 
+API version 4: the economy. A script can pay a character credits, charge them (all or nothing), and give
+them XP, through the game's own add_credits(), remove_credits() and RP_LevelUpFromXP(), saved at once as
+the admin commands save. Every call names its reason; an amount above rp_lua_maxcredits / rp_lua_maxxp is
+cut to that cap with a warning, a cap of 0 switches the action off, and every payment is logged. Each
+plugin's totals for the map show in /scripts stats. The level_up and level_down events come from
+increase_level() and decrease_level(), whoever changed the level.
+
 Everything a script does to a player goes through the code the matching admin command uses, with the
 same refusals: zyk_TeleportPlayer (/teleport), the pickup functions' rules (BG_CanItemBeGrabbed, Add_Ammo
 and its caps), RP_SetPhaseMode (/admghost and the others), do_upgrade_skill / do_downgrade_skill
@@ -31,8 +38,15 @@ extern void zyk_TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles 
 extern qboolean do_upgrade_skill( gentity_t *upgrader, gentity_t *upgradee, int skill_id, qboolean dont_show_message, int number_of_upgrades );
 extern qboolean do_downgrade_skill( gentity_t *downgrader, gentity_t *downgradee, int skill_id, int number_of_downgrades );
 extern void update_skills_table_row_with_current_values( gentity_t *ent );
+extern void add_credits( gentity_t *ent, int credits );
+extern void remove_credits( gentity_t *ent, int credits );
+extern void update_credits_value( gentity_t *ent );
+extern void update_chars_table_row_with_current_values( gentity_t *ent );
+extern int check_xp( int currentLevel );
 
 #define RP_LUA_UNUSED_SKILL		38		// skill_id 38 (/skillup's number 39) is the shop upgrades' storage
+#define RP_LUA_REASON_MAX		64		// the reason a payment gives, for the log
+#define RP_LUA_AMOUNT_CAP_MAX	1000000000
 
 static int RP_LuaPeople_Fail( lua_State *L, const char *reason ) {
 	lua_pushboolean( L, 0 );
@@ -506,6 +520,144 @@ static int RP_LuaPeople_PlaySound( lua_State *L ) {
 
 /*
 ================
+Credits and XP (API 4)
+================
+*/
+// the amount (argument 2) and the reason (argument 3) of a payment, checked (a Lua error when they are wrong),
+// and the cap: *limit is 0 when the action is switched off
+static int RP_LuaPeople_Payment( lua_State *L, const char *method, vmCvar_t *cap, int *limit, char *reason, int reasonSize ) {
+	lua_Integer n;
+	size_t len;
+	int isnum;
+	const char *r;
+
+	n = lua_tointegerx( L, 2, &isnum );
+	if ( !isnum || n < 1 || n > RP_LUA_AMOUNT_CAP_MAX ) {
+		luaL_error( L, "%s: the amount must be a whole number from 1 to %d", method, RP_LUA_AMOUNT_CAP_MAX );
+		return 0;
+	}
+	if ( lua_type( L, 3 ) != LUA_TSTRING ) {
+		luaL_error( L, "%s: give a reason (1 to %d characters) for the log", method, RP_LUA_REASON_MAX );
+		return 0;
+	}
+	r = lua_tolstring( L, 3, &len );
+	if ( !len || len > RP_LUA_REASON_MAX || strlen( r ) != len ) {
+		luaL_error( L, "%s: the reason must be 1 to %d characters", method, RP_LUA_REASON_MAX );
+		return 0;
+	}
+	RP_Lua_CleanText( reason, reasonSize, r, qfalse );
+
+	*limit = cap->integer;
+	if ( *limit < 0 ) {
+		*limit = 0;
+	} else if ( *limit > RP_LUA_AMOUNT_CAP_MAX ) {
+		*limit = RP_LUA_AMOUNT_CAP_MAX;
+	}
+	return (int)n;
+}
+
+// once the payment is going ahead: an amount above the cap is cut to it, with a warning for the plugin's author
+static int RP_LuaPeople_Capped( lua_State *L, const char *method, const char *what, const char *capName, int n, int limit ) {
+	if ( n > limit ) {
+		RP_Lua_ReportWarning( RP_Lua_CurrentPlugin( L ), va( "%s: %d %s cut to %s (%d)", method, n, what, capName, limit ) );
+		return limit;
+	}
+	return n;
+}
+
+static int RP_LuaPeople_AddCredits( lua_State *L ) {
+	int plugin = RP_Lua_CurrentPlugin( L );
+	int client = RP_LuaApi_CheckPlayer( L, 1 );
+	gentity_t *ent = &g_entities[client];
+	char reason[RP_LUA_REASON_MAX + 1];
+	int limit, n = RP_LuaPeople_Payment( L, "add_credits", &rp_lua_maxcredits, &limit, reason, sizeof( reason ) );
+	int before, given;
+
+	if ( !limit ) {
+		return RP_LuaPeople_Fail( L, "giving credits is switched off on this server (rp_lua_maxcredits 0)" );
+	}
+	if ( !RP_LuaPeople_OnCharacter( ent ) ) {
+		return RP_LuaPeople_Fail( L, "they are not playing a character" );
+	}
+	n = RP_LuaPeople_Capped( L, "add_credits", "credits", "rp_lua_maxcredits", n, limit );
+	before = ent->client->pers.credits;
+	add_credits( ent, n );		// rp_max_rpg_credits caps the balance
+	given = ent->client->pers.credits - before;
+	if ( given > 0 ) {
+		update_credits_value( ent );
+		rl.plugins[plugin].creditsGiven += given;
+		G_LogPrintf( "Lua: %s gave %d credits to %s^7 (char %d): %s\n", rl.plugins[plugin].name, given,
+			ent->client->pers.netname, ent->client->pers.CharID, reason );
+	}
+	lua_pushinteger( L, given );
+	return 1;
+}
+
+static int RP_LuaPeople_TakeCredits( lua_State *L ) {
+	int plugin = RP_Lua_CurrentPlugin( L );
+	int client = RP_LuaApi_CheckPlayer( L, 1 );
+	gentity_t *ent = &g_entities[client];
+	char reason[RP_LUA_REASON_MAX + 1];
+	int limit, n = RP_LuaPeople_Payment( L, "take_credits", &rp_lua_maxcredits, &limit, reason, sizeof( reason ) );
+
+	if ( !limit ) {
+		return RP_LuaPeople_Fail( L, "taking credits is switched off on this server (rp_lua_maxcredits 0)" );
+	}
+	if ( !RP_LuaPeople_OnCharacter( ent ) ) {
+		return RP_LuaPeople_Fail( L, "they are not playing a character" );
+	}
+	n = RP_LuaPeople_Capped( L, "take_credits", "credits", "rp_lua_maxcredits", n, limit );
+	if ( ent->client->pers.credits < n ) {
+		return RP_LuaPeople_Fail( L, va( "not enough credits (%d needed, %d held)", n, ent->client->pers.credits ) );
+	}
+	remove_credits( ent, n );
+	update_credits_value( ent );
+	rl.plugins[plugin].creditsTaken += n;
+	G_LogPrintf( "Lua: %s took %d credits from %s^7 (char %d): %s\n", rl.plugins[plugin].name, n,
+		ent->client->pers.netname, ent->client->pers.CharID, reason );
+	lua_pushinteger( L, n );
+	return 1;
+}
+
+static int RP_LuaPeople_AddXp( lua_State *L ) {
+	int plugin = RP_Lua_CurrentPlugin( L );
+	int client = RP_LuaApi_CheckPlayer( L, 1 );
+	gentity_t *ent = &g_entities[client];
+	char reason[RP_LUA_REASON_MAX + 1];
+	int limit, n = RP_LuaPeople_Payment( L, "add_xp", &rp_lua_maxxp, &limit, reason, sizeof( reason ) );
+	int levels, charID;
+	long long xp;
+	char name[MAX_NETNAME];
+
+	if ( !limit ) {
+		return RP_LuaPeople_Fail( L, "giving XP is switched off on this server (rp_lua_maxxp 0)" );
+	}
+	if ( !RP_LuaPeople_OnCharacter( ent ) ) {
+		return RP_LuaPeople_Fail( L, "they are not playing a character" );
+	}
+	if ( ent->client->pers.level >= rp_rpg_max_level.integer ) {
+		return RP_LuaPeople_Fail( L, "they are at the maximum level" );
+	}
+	n = RP_LuaPeople_Capped( L, "add_xp", "XP", "rp_lua_maxxp", n, limit );
+	// noted before the levels come: the level_up handlers run inside RP_LevelUpFromXP(), so the save below checks
+	// the player is still on the same character before writing
+	Q_strncpyz( name, ent->client->pers.netname, sizeof( name ) );
+	charID = ent->client->pers.CharID;
+	rl.plugins[plugin].xpGiven += n;
+	xp = (long long)ent->client->pers.xp + n;
+	ent->client->pers.xp = ( xp > 0x7fffffff ) ? 0x7fffffff : (int)xp;
+	levels = RP_LevelUpFromXP( ent );		// as /givexp: the levels it covers at once, the rest kept (level_up runs here)
+	if ( RP_LuaPeople_OnCharacter( ent ) && ent->client->pers.CharID == charID ) {
+		update_chars_table_row_with_current_values( ent );
+	}
+	G_LogPrintf( "Lua: %s gave %d XP to %s^7 (char %d, %d level%s): %s\n", rl.plugins[plugin].name, n, name, charID,
+		levels, levels == 1 ? "" : "s", reason );
+	lua_pushinteger( L, levels );
+	return 1;
+}
+
+/*
+================
 Player handle fields (rp_lua_api.c's __index falls through to here)
 ================
 */
@@ -514,6 +666,7 @@ int RP_LuaPeople_PlayerField( lua_State *L, int client, const char *key ) {
 		{ "teleport", RP_LuaPeople_Teleport }, { "heal", RP_LuaPeople_Heal }, { "set_armor", RP_LuaPeople_SetArmor },
 		{ "give", RP_LuaPeople_Give }, { "set_effect", RP_LuaPeople_SetEffect }, { "skill", RP_LuaPeople_Skill },
 		{ "skill_up", RP_LuaPeople_SkillUp }, { "skill_down", RP_LuaPeople_SkillDown }, { "play_sound", RP_LuaPeople_PlaySound },
+		{ "add_credits", RP_LuaPeople_AddCredits }, { "take_credits", RP_LuaPeople_TakeCredits }, { "add_xp", RP_LuaPeople_AddXp },
 		{ NULL, NULL } };
 	gentity_t *ent = &g_entities[client];
 	gclient_t *cl = &level.clients[client];
@@ -562,6 +715,8 @@ int RP_LuaPeople_PlayerField( lua_State *L, int client, const char *key ) {
 		RP_LuaPeople_PushOptInt( L, onChar, cl->pers.credits );
 	} else if ( !strcmp( key, "skillpoints" ) ) {
 		RP_LuaPeople_PushOptInt( L, onChar, cl->pers.skillpoints );
+	} else if ( !strcmp( key, "xp_next" ) ) {		// API 4
+		RP_LuaPeople_PushOptInt( L, onChar && cl->pers.level < rp_rpg_max_level.integer, check_xp( cl->pers.level ) );
 	} else if ( !strcmp( key, "riding" ) ) {
 		lua_pushboolean( L, RP_IsVehicleRider( ent ) );
 	} else if ( !strcmp( key, "minigame" ) ) {
@@ -636,5 +791,19 @@ void RP_Lua_Downed( gentity_t *ent, gentity_t *attacker ) {
 	}
 	RP_LuaWorld_EnterCallback();
 	RP_LuaApi_FireActorEvent( RPLE_PLAYER_DOWNED, ent, RP_LuaPeople_Killer( ent, attacker ), 0, 0 );
+	RP_LuaWorld_LeaveCallback();
+}
+
+// increase_level() gave levels (> 0) or decrease_level() took some (< 0): level_up / level_down. It may run inside
+// player_die (an NPC's reward), so free() and kill() wait as in the other events.
+void RP_Lua_LevelChanged( gentity_t *ent, int levels ) {
+	rpLuaEvent_t ev = ( levels > 0 ) ? RPLE_LEVEL_UP : RPLE_LEVEL_DOWN;
+
+	if ( !rl.L || !ent || !ent->inuse || !ent->client || !levels || ent->s.number < 0 || ent->s.number >= MAX_CLIENTS
+		|| !RP_LuaApi_HasHandlers( ev ) ) {
+		return;
+	}
+	RP_LuaWorld_EnterCallback();
+	RP_LuaApi_FireLevelEvent( ev, ent->s.number, ent->client->pers.level, ( levels > 0 ) ? levels : -levels );
 	RP_LuaWorld_LeaveCallback();
 }

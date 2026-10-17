@@ -2506,6 +2506,7 @@ int			RP_BreakStringEdRefs( char *text );
 qboolean	RP_HasStringEdRef( const char *text );
 const char	*RP_ShownText( const char *text );
 void		RP_PayNpcKillReward( gentity_t *npc, gentity_t *killer );
+int			RP_LevelUpFromXP( gentity_t *ent );	// GLX_U: [Lua] g_cmds.c: the levels a character's XP covers, granted; returns how many
 qboolean	RP_SoundSetKnown( const char *name );
 // GalaxyRP fix: [Shader Remap] /remapreset's worker -- returns how many remaps it cleared. See the
 // definition in g_utils.c for why it sends the configstring twice and in that order.

@@ -10,7 +10,8 @@ RP_Lua_Init() at the end of G_InitGame, RP_Lua_Shutdown() in G_ShutdownGame. Eve
 returns at once when Lua is off (rp_lua 0) or the state is not open.
 
 The pieces: rp_lua_core.c (state, sandbox, limits, loader, protected calls, errors),
-rp_lua_api.c (what scripts can call), rp_lua_world.c (entities and the World table, API version 2), rp_lua_people.c (players, and the death and damage events, API version 3; NPC handles are in rp_lua_world.c),
+rp_lua_api.c (what scripts can call), rp_lua_world.c (entities and the World table, API version 2), rp_lua_people.c (players, and the death and damage events, API version 3; credits, XP and the level events, API version 4;
+NPC handles are in rp_lua_world.c),
 rp_lua_store.c (lua.db), rp_lua_admin.c (/scripts and the rcon lua_* commands). lib/lua/README.md says what was left out of Lua itself and why.
 ===========================================================================
 */
@@ -39,7 +40,7 @@ void		RP_Lua_CharacterRemoved( int charID );
 // GLX_U: [Lua] entities (rp_lua_world.c). G_FreeEntity() reports every free: bookkeeping only, no
 // script runs. An entity about to be used: the script's on_use and the "use" event for its
 // targetname run, and qfalse means one of them stopped the use -- never when forced (the admin
-// commands /entuse, /enttrigger and /targetuse, which locks do not stop either). A target_lua was
+// commands /entuse and /enttrigger, and the cheat command /t_use, which locks do not stop either). A target_lua was
 // used: its event goes to the scripts. RP_Lua_EntityOwner() names the plugin that spawned the
 // entity, NULL when no script did (the Entity System commands leave those alone).
 void		RP_Lua_EntityFreed( gentity_t *ent );
@@ -56,6 +57,10 @@ qboolean	RP_Lua_ValidEventName( const char *name );
 void		RP_Lua_Death( gentity_t *self, gentity_t *attacker, int mod );
 void		RP_Lua_Damage( gentity_t *targ, gentity_t *attacker, int amount, int mod );
 void		RP_Lua_Downed( gentity_t *ent, gentity_t *attacker );
+
+// GLX_U: [Lua] API version 4 (rp_lua_people.c), from g_cmds.c: increase_level() gave a player levels (> 0) or
+// decrease_level() took some (< 0) -- the level_up and level_down events. Read-only for the scripts, like the above.
+void		RP_Lua_LevelChanged( gentity_t *ent, int levels );
 
 // /scripts (needs the Scripts admin power) and the rcon commands
 void		Cmd_Scripts_f( gentity_t *ent );

@@ -3,16 +3,16 @@
 Server admins can add quests, jobs, world events, scripted interactions and minigames with Lua
 scripts, without rebuilding the mod. Scripts run on the server only; players need nothing new.
 
-This guide covers **API version 3**:
+This guide covers **API version 4**:
 - version 1: events, commands, timers, tasks, messages, server information, player information
   and storage;
 - version 2: the world -- entities, zones, effects, sounds, music, screen shakes, and the map's
   `target_lua` entity;
 - version 3: players and NPCs -- what a player handle tells, teleporting, healing, items, player
-  effects and skills, spawning and controlling NPCs, and the death, knockdown and damage events.
+  effects and skills, spawning and controlling NPCs, and the death, knockdown and damage events;
+- version 4: the economy -- paying and charging credits, giving XP, and the level events.
 
-Credits, XP and login events come in a later version. A plugin written for version 1 or 2 runs
-unchanged.
+A plugin written for an earlier version runs unchanged.
 
 ## Getting started
 
@@ -30,7 +30,8 @@ unchanged.
 - `terminal` (API 2): a console players use with the Use key;
 - `meteors` (API 2): `/meteors <seconds>`, a meteor shower world event;
 - `bounty` (API 3): `/bounty`, a "kill three NPCs" quest;
-- `race` (API 3): `/race`, a checkpoint race with a countdown and records.
+- `race` (API 3): `/race`, a checkpoint race with a countdown and records;
+- `delivery` (API 4): `/job`, a delivery job with a deposit, a fee and XP.
 
 **Map scripts** are files in `lua/maps/<map name>/` (for example `lua/maps/mp/ffa5/doors.lua`).
 - They run only on that map, and only when `rp_lua_mapscripts` is 1.
@@ -71,6 +72,8 @@ All limits are cvars in `galaxyrp_server.cfg`.
 | `rp_lua_newfx` | 8 | New effect files scripts may add per map (a map has only 64 effect slots) |
 | `rp_lua_maxnpcs` | 8 | NPCs one plugin may have at once, corpses included |
 | `rp_lua_items` | (empty) | Not a limit but a list: the item class names scripts may give players |
+| `rp_lua_maxcredits` | 5000 | Credits one call may give or take (0: none at all) |
+| `rp_lua_maxxp` | 10 | XP one call may give (0: none at all) |
 
 - **A script over the limit** stops with an error: "script ran too long". It cannot catch that error
   and carry on.
@@ -344,8 +347,9 @@ end, { name = "vault_alarm" })
 
 ### Admin uses
 
-`/entuse`, `/enttrigger` and `/targetuse` run the scripts' `on_use` and `use` handlers too, but a
-script cannot stop them (nor what they set off), just as locks cannot. A door opened by
+`/entuse` and `/enttrigger` (and the cheat command `/t_use`, which needs `sv_cheats 1`) run the
+scripts' `on_use` and `use` handlers too, but a script cannot stop them (nor what they set off), just
+as locks cannot. A door opened by
 `/enttrigger` or the level 5 stun baton is not reported to scripts.
 
 ## Players and NPCs (API version 3)
@@ -392,8 +396,8 @@ Each returns `false` and the reason when it is refused, so a script can tell the
 - **Allowed items:** `rp_lua_items` in `galaxyrp_server.cfg`, e.g.
   `set rp_lua_items "weapon_blaster ammo_blaster item_medpac"`.
 
-Names, teams, admin powers, credits and XP stay read-only. Killing or reviving a player is not
-possible from a script.
+Names, teams and admin powers stay read-only; credits and XP change only through API version 4's
+methods (below). Killing or reviving a player is not possible from a script.
 
 ### NPCs
 
@@ -454,3 +458,46 @@ The plugin's **own** NPCs can also be:
 - These events, and `on_death`, only tell: what a handler returns changes nothing. Inside them,
   `free()` and `kill()` wait for the next server frame.
 - `damage` runs on every hit, so keep its handlers short; the usual limits apply.
+
+## The economy (API version 4)
+
+### Credits and XP
+
+```lua
+local paid = player:add_credits(250, "delivery to the cantina")
+local ok, why = player:take_credits(100, "delivery deposit")
+if not ok then Msg.print(player, "You cannot pay: " .. why) end
+local levels = player:add_xp(2, "found the lost holocron")
+```
+
+| Method | What it does | Refused (returns `false, reason`) when |
+|---|---|---|
+| `player:add_credits(n, reason)` | Adds `n` credits to the character. The balance never goes above `rp_max_rpg_credits`; returns how many were really added | Not on a character |
+| `player:take_credits(n, reason)` | Takes `n` credits, all or nothing. Returns `n` | Not on a character; fewer than `n` credits |
+| `player:add_xp(n, reason)` | Adds `n` XP. The levels it covers come at once, the rest is kept toward the next one, and the player sees the game's "New Level" line. Returns how many levels it gave (0 for none) | Not on a character; at the maximum level (`rp_rpg_max_level`) |
+
+- **`n`** is a whole number of 1 or more. **`reason`** (1 to 64 characters) says why, for the server log.
+  Anything else is a script error.
+- **The caps:** an `n` above `rp_lua_maxcredits` (credits) or `rp_lua_maxxp` (XP) is cut to the cap,
+  and a warning naming the plugin goes to the server log and `/scripts errors` (warnings never switch
+  a plugin off). With a cap of 0 the method is refused every time.
+- **Saved at once**, as the admins' credit and XP commands save.
+- **The log:** every payment is one line in the server log, e.g.
+  `Lua: delivery gave 350 credits to Kyle (char 12): delivery to the cantina`.
+- **Totals:** `/scripts stats` shows what each plugin gave and took on this map.
+- The game says nothing to the player about script credits or XP (apart from a new level): the
+  script tells them what it wants.
+- **New field:** `player.xp_next`, the XP the next level needs, or nil off a character or at the
+  maximum level. (`level`, `xp`, `credits` and `skillpoints` are in API 3.)
+
+### Events
+
+| Event | Arguments | Notes |
+|---|---|---|
+| `level_up` | `player`, `level`, `gained` | The character gained `gained` levels, now at `level`: XP from a script, `/givexp` or an NPC's reward, or an admin's `/levelup` |
+| `level_down` | `player`, `level`, `lost` | An admin's `/leveldown` |
+
+- They can come in the middle of game code (an NPC's reward is paid as it dies), so inside them
+  `free()` and `kill()` wait for the next server frame. What a handler returns changes nothing.
+- Logging in, logging out and changing character raise no events. A script that ties something to a
+  character keeps its `character_id` and checks it (the `delivery` example does).

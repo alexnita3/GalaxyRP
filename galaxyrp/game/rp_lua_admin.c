@@ -268,10 +268,10 @@ static void RP_LuaAdmin_Errors( gentity_t *ent ) {
 	int i, n;
 
 	if ( !rl.errorCount ) {
-		RP_LuaAdmin_Out( ent, "No Lua errors on this map." );
+		RP_LuaAdmin_Out( ent, "No Lua errors or warnings on this map." );
 		return;
 	}
-	RP_LuaAdmin_Out( ent, va( "^3Last %d Lua error(s)^7, oldest first (full messages are in the server log):", rl.errorCount ) );
+	RP_LuaAdmin_Out( ent, va( "^3Last %d Lua error(s) and warning(s)^7, oldest first (full messages are in the server log):", rl.errorCount ) );
 	for ( n = 0; n < rl.errorCount; n++ ) {
 		time_t t;
 		struct tm *tm;
@@ -304,6 +304,9 @@ static void RP_LuaAdmin_Stats( gentity_t *ent ) {
 			p->name, p->enabled ? "on" : "off", p->calls, (int)( p->instructions / 1000.0 ), p->ms, p->numTimers, p->numTasks,
 			p->numEnts, p->numEnts == 1 ? "y" : "ies", p->deferred, p->errTotal,
 			p->storeBytes >= 0 ? va( ", %d bytes stored", p->storeBytes ) : "" ) );
+		if ( p->creditsGiven || p->creditsTaken || p->xpGiven ) {	// API 4
+			RP_LuaAdmin_Out( ent, va( "    this map: %d credit(s) given, %d taken, %d XP given", p->creditsGiven, p->creditsTaken, p->xpGiven ) );
+		}
 	}
 }
 

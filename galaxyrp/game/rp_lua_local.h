@@ -13,7 +13,7 @@ game module uses rp_lua.h.
 #include "../../lib/lua/lualib.h"
 #include "rp_lua.h"
 
-#define RP_LUA_API_VERSION			3		// Plugin.register{ api = n } may not ask for more
+#define RP_LUA_API_VERSION			4		// Plugin.register{ api = n } may not ask for more
 
 #define RP_LUA_MAX_PLUGINS			64		// plugins and map scripts together
 #define RP_LUA_CONSOLE				RP_LUA_MAX_PLUGINS	// plugins[] slot of rcon lua_exec's "@console"
@@ -63,6 +63,8 @@ typedef enum {
 	RPLE_PLAYER_DOWNED,		// API 3: a player was knocked down (the Death System)
 	RPLE_NPC_DEATH,			// API 3: an NPC died
 	RPLE_DAMAGE,			// API 3: a hit on a player or NPC was applied
+	RPLE_LEVEL_UP,			// API 4: a character gained levels
+	RPLE_LEVEL_DOWN,		// API 4: a character lost levels
 	RPLE_NUM
 } rpLuaEvent_t;
 
@@ -96,6 +98,9 @@ typedef struct {
 	int			storeBytes;					// lua.db bytes counted against rp_lua_maxstore, -1 not read yet
 	int			numEnts;					// entities and zones it spawned that still exist (rp_lua_maxents)
 	int			numNpcs;					// NPCs it spawned that still exist, corpses included (rp_lua_maxnpcs)
+	int			creditsGiven;				// API 4: totals this map, for /scripts stats
+	int			creditsTaken;
+	int			xpGiven;
 } rpLuaPlugin_t;
 
 typedef struct {
@@ -145,6 +150,7 @@ char		*ConcatArgs( int start );
 // rp_lua_core.c
 qboolean	RP_Lua_Call( int plugin, rpLuaWorker_t worker, void *data );
 void		RP_Lua_ReportError( int plugin, const char *message );
+void		RP_Lua_ReportWarning( int plugin, const char *message );	// logged and listed, never counted against the plugin
 int			RP_Lua_CurrentPlugin( lua_State *L );		// raises a Lua error when none
 qboolean	RP_Lua_PluginRunning( int plugin );
 void		RP_Lua_DisablePlugin( int plugin, const char *reason );
@@ -182,6 +188,7 @@ qboolean	RP_LuaApi_FireUse( gentity_t *self, gentity_t *other, gentity_t *activa
 void		RP_LuaApi_FireMapEvent( const char *name, gentity_t *activator, gentity_t *ent );
 qboolean	RP_LuaApi_HasHandlers( rpLuaEvent_t ev );		// any running plugin listens
 void		RP_LuaApi_FireActorEvent( rpLuaEvent_t ev, gentity_t *ent, gentity_t *other, int amount, int mod );	// API 3 events
+void		RP_LuaApi_FireLevelEvent( rpLuaEvent_t ev, int client, int level, int count );	// API 4: level_up, level_down
 
 // rp_lua_world.c
 void		RP_LuaWorld_Register( lua_State *L );			// the World table, on the globals on top of the stack
