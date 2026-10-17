@@ -1120,6 +1120,12 @@ static int RP_LuaApi_TaskStart( lua_State *L ) {
 		return luaL_error( L, "too many tasks (at most %d for all plugins)", RP_LUA_MAX_TASKS );
 	}
 	co = lua_newthread( L );
+	// GLX_U: room for the function and every argument first: a new thread has about 20 free slots, and lua_xmove
+	// does not check (API checks are not compiled in) -- Task.start(f, table.unpack(t)) with 60 values wrote past
+	// the thread's stack and corrupted the heap. lua_checkstack raises nothing on co, which has no handler of its own.
+	if ( !lua_checkstack( co, n ) ) {
+		return luaL_error( L, "Task.start: too many arguments (%d)", n - 1 );
+	}
 	lua_insert( L, 1 );					// thread, fn, args...
 	lua_xmove( L, co, n );				// fn and args onto the new thread
 	memset( &rpTasks[i], 0, sizeof( rpTasks[i] ) );
@@ -1331,20 +1337,92 @@ void RP_LuaApi_RunTimersAndTasks( int levelTime ) {
 Msg
 ================
 */
+/*
+GLX_U: message budgets. The engine drops a client once 129 reliable server commands wait for it to
+acknowledge them ("Server command overflow"), and the drop runs ClientDisconnect at once -- inside the
+script call, in the middle of whatever game code raised the event. A script's loop of 130 Msg.print
+did that. So what scripts send one player is counted in one-second windows, RP_LUA_MSGS_PER_SEC at
+most: Msg.print/center/chat, what Dialog.open shows, and add_xp/skill_up/skill_down, which the game
+answers with a line. Broadcasts have a budget of their own for the whole server (RP_LUA_BROADCASTS_PER_SEC),
+so one busy player never holds them up; a player gets at most both, 20 a second. Kept here, outside the
+Lua state; a slot's count is cleared when it connects.
+*/
+static int	rpMsgStart[MAX_CLIENTS], rpMsgCount[MAX_CLIENTS];
+static int	rpBcastStart, rpBcastCount;
+
+static void RP_LuaApi_MsgWindow( int *start, int *count ) {
+	if ( level.time - *start >= 1000 || level.time < *start ) {
+		*start = level.time;
+		*count = 0;
+	}
+}
+
+qboolean RP_Lua_MessageRoom( int client, int n ) {
+	if ( client < 0 || client >= MAX_CLIENTS ) {
+		return qtrue;
+	}
+	RP_LuaApi_MsgWindow( &rpMsgStart[client], &rpMsgCount[client] );
+	return ( rpMsgCount[client] + n <= RP_LUA_MSGS_PER_SEC ) ? qtrue : qfalse;
+}
+
+void RP_Lua_MessageSent( int client, int n ) {
+	if ( client < 0 || client >= MAX_CLIENTS ) {
+		return;
+	}
+	RP_LuaApi_MsgWindow( &rpMsgStart[client], &rpMsgCount[client] );
+	rpMsgCount[client] += n;
+}
+
+void RP_Lua_MessageReset( int client ) {
+	if ( client >= 0 && client < MAX_CLIENTS ) {
+		rpMsgStart[client] = level.time;
+		rpMsgCount[client] = 0;
+	}
+}
+
+// a refusal: false and why for the script, and a console line at most once every 30 s per plugin
+int RP_Lua_MessageRefused( lua_State *L, int plugin, const char *why ) {
+	if ( plugin >= 0 && plugin <= RP_LUA_CONSOLE ) {
+		rpLuaPlugin_t *p = &rl.plugins[plugin];
+		int now = trap->Milliseconds();
+		if ( !p->lastMsgRefusal || now - p->lastMsgRefusal >= RP_LUA_NOTICE_GAP_MS ) {
+			p->lastMsgRefusal = now ? now : 1;
+			trap->Print( S_COLOR_YELLOW "Lua: %s sent more messages than a second allows; some were not sent (%s)\n", p->name, why );
+		}
+	}
+	lua_pushboolean( L, 0 );
+	lua_pushstring( L, why );
+	return 2;
+}
+
 static int RP_LuaApi_MsgSend( lua_State *L, const char *fmt, qboolean toPlayer, qboolean keepNewlines ) {
 	char clean[RP_LUA_TEXT_MAX + 1];
+	int plugin = RP_Lua_CurrentPlugin( L );	// GLX_U: a plugin switched off mid-call sends nothing more
 	int client = -1;
 	const char *text;
 
 	if ( toPlayer ) {
 		client = RP_LuaApi_CheckPlayer( L, 1 );
 		text = luaL_checkstring( L, 2 );
+		if ( !RP_Lua_MessageRoom( client, 1 ) ) {
+			return RP_Lua_MessageRefused( L, plugin, RP_LUA_MSG_REFUSED );
+		}
 	} else {
 		text = luaL_checkstring( L, 1 );
+		RP_LuaApi_MsgWindow( &rpBcastStart, &rpBcastCount );
+		if ( rpBcastCount >= RP_LUA_BROADCASTS_PER_SEC ) {
+			return RP_Lua_MessageRefused( L, plugin, "too many broadcasts this second" );
+		}
 	}
 	RP_Lua_CleanText( clean, sizeof( clean ), text, keepNewlines );
 	trap->SendServerCommand( client, va( fmt, clean ) );
-	return 0;
+	if ( toPlayer ) {
+		RP_Lua_MessageSent( client, 1 );
+	} else {
+		rpBcastCount++;
+	}
+	lua_pushboolean( L, 1 );
+	return 1;
 }
 
 static int RP_LuaApi_MsgPrint( lua_State *L ) {

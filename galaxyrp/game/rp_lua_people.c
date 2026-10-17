@@ -212,6 +212,11 @@ static int RP_LuaPeople_Teleport( lua_State *L ) {
 	if ( why ) {
 		return RP_LuaPeople_Fail( L, why );
 	}
+	// GLX_U: its two effects are temp entities, counted like World.effect's (a loop of teleports ran the server
+	// out of entities)
+	if ( !RP_LuaWorld_EventRoom( 2 ) ) {
+		return RP_LuaPeople_Fail( L, "too many effects, sounds and shakes this frame" );
+	}
 	RP_LuaPeople_DoTeleport( ent, dest, yaw );
 	G_LogPrintf( "Lua: %s teleported %s ^7to (%d %d %d)\n", RP_LuaPeople_PluginName( L ), ent->client->pers.netname,
 		(int)dest[0], (int)dest[1], (int)dest[2] );
@@ -448,8 +453,14 @@ static int RP_LuaPeople_SkillChange( lua_State *L, qboolean up ) {
 	if ( up && ent->client->pers.skillpoints < n ) {
 		return RP_LuaPeople_Fail( L, va( "not enough skillpoints (%d needed, %d left)", n, ent->client->pers.skillpoints ) );
 	}
+	// GLX_U: the player is sent a line for every change (show_skill_change_message): it counts in their message
+	// budget, so a loop of skill_up and skill_down could no longer flood them off the server
+	if ( !RP_Lua_MessageRoom( client, 1 ) ) {
+		return RP_Lua_MessageRefused( L, RP_Lua_CurrentPlugin( L ), RP_LUA_MSG_REFUSED );
+	}
 	// the commands' own code: the player sees its message, then the change is saved as /skillup saves it
 	done = up ? do_upgrade_skill( ent, ent, id, qfalse, n ) : do_downgrade_skill( ent, ent, id, n );
+	RP_Lua_MessageSent( client, 1 );
 	if ( !done ) {
 		return RP_LuaPeople_Fail( L, "the change was refused" );
 	}
@@ -628,6 +639,11 @@ static int RP_LuaPeople_AddXp( lua_State *L ) {
 		return RP_LuaPeople_Fail( L, "they are at the maximum level" );
 	}
 	n = RP_LuaPeople_Capped( L, "add_xp", "XP", "rp_lua_maxxp", n, limit );
+	// GLX_U: a level-up is answered with the game's "New Level" line (increase_level): it counts in the player's
+	// message budget, so XP that would level them up waits while it is spent
+	if ( (long long)ent->client->pers.xp + n >= check_xp( ent->client->pers.level ) && !RP_Lua_MessageRoom( client, 1 ) ) {
+		return RP_Lua_MessageRefused( L, plugin, RP_LUA_MSG_REFUSED );
+	}
 	// noted before the levels come: the level_up handlers run inside RP_LevelUpFromXP(), so the save below checks
 	// the player is still on the same character before writing
 	Q_strncpyz( name, ent->client->pers.netname, sizeof( name ) );
@@ -636,6 +652,9 @@ static int RP_LuaPeople_AddXp( lua_State *L ) {
 	xp = (long long)ent->client->pers.xp + n;
 	ent->client->pers.xp = ( xp > 0x7fffffff ) ? 0x7fffffff : (int)xp;
 	levels = RP_LevelUpFromXP( ent );		// as /givexp: the levels it covers at once, the rest kept (level_up runs here)
+	if ( levels > 0 ) {		// GLX_U: what increase_level sent: "New Level", and the maximum-level line when it got there
+		RP_Lua_MessageSent( client, ( ent->client->pers.level >= rp_rpg_max_level.integer ) ? 2 : 1 );
+	}
 	if ( RP_LuaPeople_OnCharacter( ent ) && ent->client->pers.CharID == charID ) {
 		update_chars_table_row_with_current_values( ent );
 	}

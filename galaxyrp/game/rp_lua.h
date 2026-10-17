@@ -47,8 +47,10 @@ void		RP_Lua_EntityFreed( gentity_t *ent );
 qboolean	RP_Lua_EntityUsed( gentity_t *self, gentity_t *other, gentity_t *activator, qboolean forced );
 void		RP_Lua_ForceUses( qboolean on );	// around an admin's use: every use until off is forced
 // GLX_U: a func_button a script stopped (on_use or "use" returned false) ignores touches and the Use key for
-// RP_LUA_BUTTON_QUIET_MS (Touch_Button, g_mover.c), or a player leaning on it ran the script every frame
+// RP_LUA_BUTTON_QUIET_MS (Touch_Button, g_mover.c), or a player leaning on it ran the script every frame. Touch_Button
+// names the entity it presses (a team's master for a slave brush) around its use; returns the one named before.
 qboolean	RP_Lua_ButtonQuiet( gentity_t *button );
+gentity_t	*RP_Lua_ButtonPressing( gentity_t *button );
 void		RP_Lua_MapEvent( const char *name, gentity_t *activator, gentity_t *ent );
 const char	*RP_Lua_EntityOwner( const gentity_t *ent );
 qboolean	RP_Lua_ValidEventName( const char *name );

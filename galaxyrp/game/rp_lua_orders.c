@@ -284,7 +284,36 @@ void RP_LuaOrders_Frame( void ) {
 	memcpy( rpOrderNotesRun, rpOrderNotes, n * sizeof( rpOrderNotes[0] ) );
 	rpNumOrderNotes = 0;
 	for ( i = 0; i < n; i++ ) {
+		// GLX_U: within the frame's script time, as timers and tasks: before, all of them (up to 1024, each with
+		// a full call budget) ran back to back, and one that gave a new order queued another -- seconds a frame
+		if ( !RP_Lua_FrameBudgetLeft() ) {
+			break;
+		}
 		RP_LuaOrders_Notify( rpOrderNotesRun[i].plugin, rpOrderNotesRun[i].ref, rpOrderNotesRun[i].num, rpOrderNotesRun[i].gen, rpOrderNotesRun[i].why );
+	}
+	if ( i < n ) {
+		// GLX_U: the rest are heard next frame, first, ahead of those queued meanwhile; past RP_ORD_MAX_NOTES the
+		// newest go unheard, as RP_LuaOrders_Later drops them (counted in the warning above). A note whose plugin
+		// was switched off meanwhile goes now: RemovePlugin only cleared the queue, and a plugin enabled again in
+		// that slot must not hear the old one's functions.
+		int left = 0, queued = rpNumOrderNotes, keep, j;
+
+		for ( j = i; j < n; j++ ) {
+			if ( rpOrderNotesRun[j].ref > 0 && RP_Lua_PluginRunning( rpOrderNotesRun[j].plugin ) ) {
+				rpOrderNotesRun[i + left++] = rpOrderNotesRun[j];
+				RP_Lua_NoteDeferred( rpOrderNotesRun[j].plugin, 1 );
+			} else {
+				RP_LuaOrders_Unref( rpOrderNotesRun[j].ref );
+			}
+		}
+		keep = ( left + queued > RP_ORD_MAX_NOTES ) ? RP_ORD_MAX_NOTES - left : queued;
+		for ( j = keep; j < queued; j++ ) {
+			RP_LuaOrders_Unref( rpOrderNotes[j].ref );
+			rpOrderNotesDropped++;
+		}
+		memmove( rpOrderNotes + left, rpOrderNotes, keep * sizeof( rpOrderNotes[0] ) );
+		memcpy( rpOrderNotes, rpOrderNotesRun + i, left * sizeof( rpOrderNotes[0] ) );
+		rpNumOrderNotes = left + keep;
 	}
 
 	for ( num = MAX_CLIENTS; num < MAX_GENTITIES; num++ ) {

@@ -104,6 +104,18 @@ with their defaults.
   once per plugin every 30 seconds.
 - **A plugin that keeps failing** is switched off until it is reloaded or enabled again. Code of it
   that is still running then stops at its next call to the API ("this plugin has been switched off").
+- **A loop that keeps setting off handlers** stops like any other loop: your call's own instructions
+  and its time are checked around every handler it sets off. A handler that runs out of the time your
+  call left it is stopped, but that error does not count towards switching its plugin off.
+- **Messages:** at most 10 a second to one player, counting `Msg.print`, `Msg.center`, `Msg.chat`,
+  what `Dialog.open` shows (1 for our menu; the text, one line per option and a hint in the chat
+  area), and the line the game sends for `add_xp` levelling up and for `skill_up`/`skill_down`.
+  Broadcasts have their own 10 a second for the whole server. Past that the call is refused (`false`
+  or `nil`, and "too many messages to this player this second"); the engine disconnects a player who
+  falls 128 messages behind. A long text goes as one `Msg.print` or `Msg.center` with line breaks (up
+  to 16 lines), not one call a line.
+- **Uses and teleports:** `ent:use()` at most 128 times a frame for all scripts, and only while the
+  server has entity slots to spare. Teleports count towards the 64 effects a frame, two each.
 
 ### Admin commands
 
@@ -234,6 +246,8 @@ Msg.broadcast_center(text)     -- everyone's screen
 
 - Colour codes (`^1`...`^7`) work.
 - Text is cut to 900 characters, and `"` becomes `'`.
+- Each returns `true`, or `false` and why when this second's messages are used up (see
+  [Limits](#limits)): at most 10 a second to one player, and 10 broadcasts a second.
 
 ### Server
 
@@ -309,7 +323,7 @@ gone, using its handle is an error; check `entity.valid` first when unsure.
 | `owner` | The plugin that spawned it, or nil |
 | `health` | Its health, or nil if it cannot be damaged |
 | `ent:key(name)` | One of its keys, as the map or the Entity System gave it, or nil |
-| `ent:use(player)` | Uses it, as a button would. With a player, locks judge that player; with none, it acts as the map's own logic |
+| `ent:use(player)` | Uses it, as a button would. With a player, locks judge that player; with none, it acts as the map's own logic. Returns `true`, or `false` and why: too many uses this frame (128 for all scripts), or the server is out of entity slots |
 
 Only the plugin's **own** entities (the ones it spawned) can also be:
 
@@ -426,13 +440,13 @@ Each returns `false` and the reason when it is refused, so a script can tell the
 
 | Method | What it does | Refused when |
 |---|---|---|
-| `player:teleport(pos [, yaw])` | Moves them there, with the teleport effect | Not alive, riding a vehicle, in a mini-game or a duel, admin-protected, or the spot is blocked: a wall, the floor, or someone standing there (also someone dying or knocked down). Nobody is ever telefragged |
+| `player:teleport(pos [, yaw])` | Moves them there, with the teleport effect | Not alive, riding a vehicle, in a mini-game or a duel, admin-protected, or the spot is blocked: a wall, the floor, or someone standing there (also someone dying or knocked down). Nobody is ever telefragged. Too many effects this frame (each teleport is two) |
 | `player:heal(n)` | Adds up to `n` health, never above the maximum. Returns how much it added | Not alive (a script does not revive a knocked-down player) |
 | `player:set_armor(n)` | Sets their shield, kept between 0 and the maximum. Returns the new value | Not alive |
 | `player:give(item)` | One item, by its class name: a weapon with its ammo, ammo, or a holdable item, as picking it up would give it | Not a weapon, ammo or holdable item (health, armor and powerups are not given); `weapon_emplaced` and `weapon_turretwp`, which are not player weapons; not alive; in a mini-game; they cannot take it now (full on that ammo, already have that item, in a duel) |
 | `player:set_effect(name)` | `"walkthrough"`, `"ghost"`, `"holo"` or `"hidden"`, as `/admwalkthrough`, `/admghost`, `/admholo` and `/admhidden` give them; nil takes it off. The player is not told | Spectating; admin-protected |
-| `player:skill_up(n [, count])` | Raises skill `n` by `count` (1 if left out), spending the player's own skillpoints, as `/skillup` does: they see the same message and it is saved. Returns how many levels it added (fewer than `count` when the maximum is nearer) | Not on a character; no such skill (or number 39, no longer in use); already at its maximum; not enough skillpoints |
-| `player:skill_down(n [, count])` | Lowers it and gives the skillpoints back, as `/skilldown` does | Not on a character; already at 0 |
+| `player:skill_up(n [, count])` | Raises skill `n` by `count` (1 if left out), spending the player's own skillpoints, as `/skillup` does: they see the same message and it is saved. Returns how many levels it added (fewer than `count` when the maximum is nearer) | Not on a character; no such skill (or number 39, no longer in use); already at its maximum; not enough skillpoints; this second's messages to the player used up (the message counts: 10 a second) |
+| `player:skill_down(n [, count])` | Lowers it and gives the skillpoints back, as `/skilldown` does | Not on a character; already at 0; this second's messages used up |
 | `player:play_sound(file)` | A sound only this player hears, wherever they are | The file is not on the server; too many effects and sounds this frame |
 
 - **Admin Protect:** an admin with the Admin Protect power and the setting on cannot be teleported or
@@ -482,7 +496,7 @@ The plugin's **own** NPCs can also be:
 |---|---|---|
 | `npc:kill()` | Kills it as `/npc kill` does: it dies and leaves a corpse | Already dead; a vehicle someone is riding |
 | `npc:free()` | Removes it at once | — |
-| `npc:teleport(pos [, yaw])` | Moves it, with the same checks as a player's teleport | Dead; riding a vehicle; the spot is blocked; it has not finished spawning (the frame it was made) |
+| `npc:teleport(pos [, yaw])` | Moves it, with the same checks as a player's teleport | Dead; riding a vehicle; the spot is blocked; it has not finished spawning (the frame it was made); too many effects this frame |
 | `npc:freeze()`, `npc:unfreeze()` | Stops it, or lets it go, as `/npc freeze` does. From API 6 on any NPC, the map's too (see below) | A vehicle, or riding one |
 | `npc:set_effect(name)` | `"walkthrough"`, `"ghost"`, `"holo"` or nil, as `/npc effect` does | A vehicle, or riding one |
 | `npc:on_death(fn)` | `fn(npc, killer)` when it dies | — |
@@ -521,7 +535,7 @@ local levels = player:add_xp(2, "found the lost holocron")
 |---|---|---|
 | `player:add_credits(n, reason)` | Adds `n` credits to the character. The balance never goes above `rp_max_rpg_credits`; returns how many were really added | Not on a character |
 | `player:take_credits(n, reason)` | Takes `n` credits, all or nothing. Returns `n` | Not on a character; fewer than `n` credits |
-| `player:add_xp(n, reason)` | Adds `n` XP. The levels it covers come at once, the rest is kept toward the next one, and the player sees the game's "New Level" line. Returns how many levels it gave (0 for none) | Not on a character; at the maximum level (`rp_rpg_max_level`) |
+| `player:add_xp(n, reason)` | Adds `n` XP. The levels it covers come at once, the rest is kept toward the next one, and the player sees the game's "New Level" line. Returns how many levels it gave (0 for none) | Not on a character; at the maximum level (`rp_rpg_max_level`); it would level them up while this second's messages to the player are used up (the "New Level" line counts) |
 
 - **`n`** is a whole number of 1 or more. **`reason`** (1 to 64 characters) says why, for the server log.
   Anything else is a script error.
@@ -566,7 +580,7 @@ end)
 
 | Function | What it does |
 |---|---|
-| `Dialog.open(player, spec, fn)` | Shows the player the dialogue and returns its id, or `nil` and why (spectating, dead or knocked down, too far from the speaker, or in another plugin's dialogue) |
+| `Dialog.open(player, spec, fn)` | Shows the player the dialogue and returns its id, or `nil` and why (spectating, dead or knocked down, too far from the speaker, in another plugin's dialogue, or this second's messages to the player used up: a dialogue in the chat area costs one message per line) |
 | `Dialog.close(player)` | Closes this plugin's open dialogue for that player; true if there was one |
 | `Dialog.is_open(player)` | Whether this plugin has a dialogue open for that player |
 

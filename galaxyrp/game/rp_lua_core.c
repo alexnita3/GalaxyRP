@@ -15,7 +15,10 @@ __gc: Lua runs finalizers with its hooks off, outside any budget (RP_Lua_SetMeta
 Limits. A count hook fires every RP_LUA_HOOK_STEP instructions and checks the budget of the call
 in progress: rp_lua_budget instructions and rp_lua_budgetms milliseconds. A call made while another
 runs (an event a script raised) has instructions of its own and what is left of the outer call's time,
-at least RP_LUA_NESTED_GRACE_MS (GLX_U: before, it shared the outer call's budget). Once over,
+at least RP_LUA_NESTED_GRACE_MS (GLX_U: before, it shared the outer call's budget). Each call is
+charged exactly the instructions it ran, around the nested ones too (glx_hookcount_take), and the outer
+call's limits are checked before and after each nested call, so a loop that keeps setting off handlers
+is stopped like any other (GLX_U: F4). Once over,
 the call is "over budget" until it returns to C: the hook raises the error again every time it
 fires, and pcall, xpcall, coroutine.resume and coroutine.close raise it again as they return
 (RP_Lua_Guarded), so no script can catch it and carry on; xpcall's handler is skipped once over
@@ -45,6 +48,7 @@ int rpLuaClientGen[MAX_CLIENTS];
 
 // lib/lua/lstrlib.c (the GLX_U patch)
 extern void ( *glx_lstrlib_check )( lua_State *L, unsigned int steps );
+extern int glx_hookcount_take( lua_State *L );	// GLX_U: lib/lua/ldebug.c, see RP_Lua_Call
 
 static char rpLuaWarnBuf[512];
 
@@ -205,6 +209,9 @@ static int RP_Lua_SetMetatable( lua_State *L ) {
 }
 
 static void RP_Lua_StartBudget( void ) {
+	if ( rl.L ) {
+		glx_hookcount_take( rl.L );	// GLX_U: the count starts with the call (RP_Lua_Call)
+	}
 	rl.instr = 0;
 	rl.instrLimit = RP_Lua_Clamp( rp_lua_budget.integer, 10000, 100000000 );
 	rl.msLimit = RP_Lua_BudgetMs();
@@ -357,7 +364,15 @@ void RP_Lua_ReportWarning( int plugin, const char *message ) {
 	}
 }
 
+// GLX_U: counted is qfalse for a nested call stopped by a time limit the outer call cut short (RP_Lua_Call): logged,
+// listed and shown like any error, but not counted towards rp_lua_maxerrors -- the call that set it off used the time
+static void RP_Lua_ReportErrorEx( int plugin, const char *message, qboolean counted );
+
 void RP_Lua_ReportError( int plugin, const char *message ) {
+	RP_Lua_ReportErrorEx( plugin, message, qtrue );
+}
+
+static void RP_Lua_ReportErrorEx( int plugin, const char *message, qboolean counted ) {
 	rpLuaPlugin_t *p = ( plugin >= 0 && plugin <= RP_LUA_CONSOLE ) ? &rl.plugins[plugin] : NULL;
 	const char *name = p ? p->name : "core";
 	char line[RP_LUA_ERROR_LINE];
@@ -410,6 +425,9 @@ void RP_Lua_ReportError( int plugin, const char *message ) {
 		p->heldNotices++;
 	}
 
+	if ( !counted ) {
+		return;
+	}
 	if ( !p->errWindowStart || now - p->errWindowStart > RP_LUA_ERROR_WINDOW_MS ) {
 		p->errWindowStart = now ? now : 1;
 		p->errWindowCount = 0;
@@ -455,7 +473,7 @@ qboolean RP_Lua_Call( int plugin, rpLuaWorker_t worker, void *data ) {
 	rpLuaCallArgs_t args;
 	int top, status, prevPlugin, start, instrBefore;
 	int outerInstr = 0, outerInstrLimit = 0, outerStart = 0, outerMsLimit = 0;
-	qboolean outer;
+	qboolean outer, cut = qfalse, counted = qtrue;
 	static char errBuf[2048];
 
 	if ( !L || rl.panicked ) {
@@ -472,14 +490,22 @@ qboolean RP_Lua_Call( int plugin, rpLuaWorker_t worker, void *data ) {
 		RP_Lua_StartBudget();
 	} else {
 		// GLX_U: a call made while another is running (an event a script raised): its own instruction budget,
-		// and what is left of the outer call's time, but never less than RP_LUA_NESTED_GRACE_MS. Before, the
-		// budget was shared, so the plugin whose handler happened to run when the outer call had used it up
-		// got the error -- and enough of them switched it off for another plugin's loop. The outer call's
-		// budget comes back when this one returns; its time went on running meanwhile.
+		// and what is left of the outer call's time, but never less than RP_LUA_NESTED_GRACE_MS -- so the plugin
+		// whose handler runs is never blamed for what the outer call used, nor the outer call for what it does.
+		// The count hook fires every RP_LUA_HOOK_STEP instructions on the thread wherever the script happens to
+		// be, and nested calls run on the same thread: when it kept firing inside them, an outer loop setting
+		// them off was never measured and ran for ever (F2 cleared overBudget on the way back). So each side is
+		// charged exactly what it ran (glx_hookcount_take), and the outer call's limits are checked here and
+		// when this call returns.
 		int now = trap->Milliseconds(), left;
 
 		if ( rl.overBudget ) {
 			return qfalse;	// the outer call is already being stopped: nothing more runs, nobody is blamed
+		}
+		RP_Lua_AddInstr( glx_hookcount_take( L ) );	// what the outer call ran since the hook last fired
+		if ( rl.instr >= rl.instrLimit || now - rl.callStart >= rl.msLimit ) {
+			rl.overBudget = qtrue;	// out of budget: stopped at its next hook or guard, this call skipped
+			return qfalse;
 		}
 		outerInstr = rl.instr;
 		outerInstrLimit = rl.instrLimit;
@@ -490,6 +516,7 @@ qboolean RP_Lua_Call( int plugin, rpLuaWorker_t worker, void *data ) {
 		rl.instrLimit = RP_Lua_Clamp( rp_lua_budget.integer, 10000, 100000000 );
 		rl.callStart = now;
 		rl.msLimit = ( left > RP_LUA_NESTED_GRACE_MS ) ? left : RP_LUA_NESTED_GRACE_MS;
+		cut = ( rl.msLimit < RP_Lua_BudgetMs() ) ? qtrue : qfalse;	// GLX_U: less time than a call of its own
 	}
 	start = trap->Milliseconds();
 	instrBefore = rl.instr;
@@ -523,15 +550,22 @@ qboolean RP_Lua_Call( int plugin, rpLuaWorker_t worker, void *data ) {
 	if ( outer ) {
 		rl.overBudget = qfalse;
 	} else {
-		// the outer call's budget again: it was not over when this one began
+		// GLX_U: stopped by a time limit the outer call cut short (not by its own instructions): the outer call
+		// used the time, so the error is not counted towards this plugin's rp_lua_maxerrors
+		if ( status != LUA_OK && cut && rl.overBudget && rl.instr < rl.instrLimit ) {
+			counted = qfalse;
+		}
+		// the outer call's budget again (what this call ran since the hook last fired is its own, and the count
+		// starts again for the outer call), and stopped at once if its time ran out meanwhile
+		glx_hookcount_take( L );
 		rl.instr = outerInstr;
 		rl.instrLimit = outerInstrLimit;
 		rl.callStart = outerStart;
 		rl.msLimit = outerMsLimit;
-		rl.overBudget = qfalse;
+		rl.overBudget = ( rl.instr >= rl.instrLimit || trap->Milliseconds() - rl.callStart >= rl.msLimit ) ? qtrue : qfalse;
 	}
 	if ( status != LUA_OK ) {
-		RP_Lua_ReportError( plugin, errBuf );
+		RP_Lua_ReportErrorEx( plugin, errBuf, counted );
 		return qfalse;
 	}
 	return qtrue;
@@ -1212,6 +1246,7 @@ Game hooks
 ================
 */
 void RP_Lua_ClientConnect( int clientNum, qboolean firstTime ) {
+	RP_Lua_MessageReset( clientNum );	// GLX_U: a new connection starts with a full message budget
 	if ( !rl.L || clientNum < 0 || clientNum >= MAX_CLIENTS ) {
 		return;
 	}

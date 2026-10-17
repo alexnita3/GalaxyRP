@@ -35,5 +35,6 @@ happens in C. `glx_lua.h` (new) holds what the changes share.
 | `lutf8lib.c` | `utf8.len` and `utf8.offset` call it every 1024 steps |
 | `lstring.c`, `lauxlib.c` | No string, and no string buffer, grows past `GLX_MAXSTRING` (4 MB): that bounds what one instruction can do between two hook calls |
 | `lstate.c` | `luaE_resetthread` turns hooks back on before running a dead coroutine's pending `__close` metamethods (a coroutine stopped by an error from the hook still had them off) |
+| `ldebug.c` | New `glx_hookcount_take`: the instructions a thread ran since its count hook last fired, with the count restarted. The game charges each script call exactly its own instructions around the nested calls it sets off, which run on the same thread |
 
 Everything else is byte-for-byte the release.

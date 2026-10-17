@@ -99,7 +99,23 @@ static qboolean RP_LuaDialog_HasMenu( int client ) {
 	return ( g_entities[client].inuse && level.clients[client].pers.rpDialogMenu ) ? qtrue : qfalse;
 }
 
-static void RP_LuaDialog_Show( int client ) {
+// GLX_U: a command for the player in a dialogue, counted in their message budget when the script caused it (the
+// engine drops a client 129 commands behind: RP_Lua_MessageRoom in rp_lua_api.c). What the player asks for again
+// (/choose with no number, "choose resend") is not counted.
+static void RP_LuaDialog_Send( int client, const char *cmd, qboolean counted ) {
+	trap->SendServerCommand( client, cmd );
+	if ( counted ) {
+		RP_Lua_MessageSent( client, 1 );
+	}
+}
+
+// what showing a dialogue of count options costs the player's message budget: one command for our menu, or the
+// text, one line per option and the hint in the chat area
+static int RP_LuaDialog_ShowCost( int client, int count ) {
+	return RP_LuaDialog_HasMenu( client ) ? 1 : count + 2;
+}
+
+static void RP_LuaDialog_Show( int client, qboolean counted ) {
 	rpLuaDialog_t *d = &rpDialogs[client];
 	int i;
 
@@ -117,18 +133,18 @@ static void RP_LuaDialog_Show( int client ) {
 		for ( i = 0; i < d->count; i++ ) {
 			Q_strcat( cmd, sizeof( cmd ), va( " \"%s\"", d->options[i] ) );
 		}
-		trap->SendServerCommand( client, cmd );
+		RP_LuaDialog_Send( client, cmd, counted );
 		return;
 	}
 	if ( d->title[0] ) {
-		trap->SendServerCommand( client, va( "chat \"^3%s^7: %s\"", d->title, d->text ) );
+		RP_LuaDialog_Send( client, va( "chat \"^3%s^7: %s\"", d->title, d->text ), counted );
 	} else {
-		trap->SendServerCommand( client, va( "chat \"%s\"", d->text ) );
+		RP_LuaDialog_Send( client, va( "chat \"%s\"", d->text ), counted );
 	}
 	for ( i = 0; i < d->count; i++ ) {
-		trap->SendServerCommand( client, va( "chat \"  ^3%d.^7 %s\"", i + 1, d->options[i] ) );
+		RP_LuaDialog_Send( client, va( "chat \"  ^3%d.^7 %s\"", i + 1, d->options[i] ), counted );
 	}
-	trap->SendServerCommand( client, "chat \"^7(type ^3/choose <number>^7 or say the number)\"" );
+	RP_LuaDialog_Send( client, "chat \"^7(type ^3/choose <number>^7 or say the number)\"", counted );
 }
 
 /*
@@ -176,7 +192,7 @@ static void RP_LuaDialog_Finish( int client, int choice, const char *why ) {
 	d->open = qfalse;
 	d->ref = 0;
 	if ( RP_LuaDialog_HasMenu( client ) ) {	// before the function runs: a dialogue it opens comes after this
-		trap->SendServerCommand( client, va( "rpdlgclose %d", d->id ) );
+		RP_LuaDialog_Send( client, va( "rpdlgclose %d", d->id ), qtrue );	// counted, never refused: one per open
 	}
 	if ( rl.L && c.ref > 0 ) {
 		if ( RP_Lua_PluginRunning( plugin ) ) {
@@ -234,7 +250,7 @@ void RP_LuaDialog_Frame( void ) {
 			return;		// still open: the next frame closes it
 		}
 		if ( strcmp( why, "died" ) ) {
-			trap->SendServerCommand( i, "chat \"^7(the conversation is over)\"" );
+			RP_LuaDialog_Send( i, "chat \"^7(the conversation is over)\"", qtrue );
 		}
 		RP_LuaDialog_Finish( i, 0, why );
 	}
@@ -253,7 +269,7 @@ void RP_LuaDialog_RemovePlugin( int plugin ) {
 		rpLuaDialog_t *d = &rpDialogs[i];
 		if ( d->open && d->plugin == plugin ) {
 			if ( RP_LuaDialog_HasMenu( i ) ) {
-				trap->SendServerCommand( i, va( "rpdlgclose %d", d->id ) );
+				RP_LuaDialog_Send( i, va( "rpdlgclose %d", d->id ), qtrue );
 			}
 			if ( rl.L && d->ref > 0 ) {
 				luaL_unref( rl.L, LUA_REGISTRYINDEX, d->ref );
@@ -278,9 +294,9 @@ void RP_LuaDialog_Reset( void ) {
 			continue;
 		}
 		if ( RP_LuaDialog_HasMenu( i ) ) {
-			trap->SendServerCommand( i, va( "rpdlgclose %d", d->id ) );
+			RP_LuaDialog_Send( i, va( "rpdlgclose %d", d->id ), qtrue );
 		} else if ( g_entities[i].inuse && level.clients[i].pers.connected == CON_CONNECTED ) {
-			trap->SendServerCommand( i, "chat \"^7(the conversation is over)\"" );
+			RP_LuaDialog_Send( i, "chat \"^7(the conversation is over)\"", qtrue );
 		}
 	}
 	memset( rpDialogs, 0, sizeof( rpDialogs ) );
@@ -303,7 +319,7 @@ static qboolean RP_LuaDialog_Answer( int client, int choice, int id ) {
 	why = RP_LuaDialog_Over( client );
 	if ( why ) {	// it ended before this frame's check: closed for that reason, as RP_LuaDialog_Frame would
 		if ( strcmp( why, "died" ) ) {
-			trap->SendServerCommand( client, "chat \"^7(the conversation is over)\"" );
+			RP_LuaDialog_Send( client, "chat \"^7(the conversation is over)\"", qtrue );
 		}
 		RP_LuaDialog_Finish( client, 0, why );
 		return qfalse;
@@ -343,7 +359,7 @@ void Cmd_Choose_f( gentity_t *ent ) {
 		trap->Argv( 1, arg, sizeof( arg ) );
 		if ( !Q_stricmp( arg, "resend" ) ) {
 			if ( d && d->open && RP_LuaDialog_HasMenu( client ) ) {
-				RP_LuaDialog_Show( client );
+				RP_LuaDialog_Show( client, qfalse );	// the player asked: not counted
 			}
 			return;
 		}
@@ -353,7 +369,7 @@ void Cmd_Choose_f( gentity_t *ent ) {
 		return;
 	}
 	if ( trap->Argc() < 2 ) {
-		RP_LuaDialog_Show( client );
+		RP_LuaDialog_Show( client, qfalse );	// the player asked: not counted
 		return;
 	}
 	trap->Argv( 1, arg, sizeof( arg ) );
@@ -506,6 +522,14 @@ static int RP_LuaDialog_Open( lua_State *L ) {
 	if ( why ) {
 		return RP_LuaDialog_Fail( L, !strcmp( why, "away" ) ? "they are too far from the speaker" : "they are not alive (spectating, dead or knocked down)" );
 	}
+	// GLX_U: what showing it sends counts in the player's message budget (RP_LUA_MSGS_PER_SEC)
+	if ( !RP_Lua_MessageRoom( client, RP_LuaDialog_ShowCost( client, nd.count ) ) ) {
+		rpDialogNextId = nd.id;		// the id was not used
+		RP_Lua_MessageRefused( L, plugin, RP_LUA_MSG_REFUSED );	// pushes false and why
+		lua_pushnil( L );
+		lua_replace( L, -3 );		// Dialog.open gives nil and why
+		return 2;
+	}
 
 	// the new one goes in first, then the one it replaces hears it: that function may open yet another, which then
 	// replaces this one in turn
@@ -516,7 +540,7 @@ static int RP_LuaDialog_Open( lua_State *L ) {
 	lua_pushvalue( L, 3 );
 	nd.ref = luaL_ref( L, LUA_REGISTRYINDEX );
 	*d = nd;
-	RP_LuaDialog_Show( client );
+	RP_LuaDialog_Show( client, qtrue );
 	if ( oldRef > 0 ) {
 		rpLuaDialogCall_t c;
 		c.ref = oldRef;

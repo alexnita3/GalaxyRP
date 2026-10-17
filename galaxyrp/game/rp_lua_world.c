@@ -65,7 +65,6 @@ extern void InitMoverTrData( gentity_t *ent );
 extern void MatchTeam( gentity_t *teamLeader, int moverState, int time );
 extern void Blocked_Mover( gentity_t *ent, gentity_t *other );
 extern void GlobalUse( gentity_t *self, gentity_t *other, gentity_t *activator );
-extern void Touch_Button( gentity_t *ent, gentity_t *other, trace_t *trace );
 extern void NPC_Begin( gentity_t *ent );
 
 typedef void ( *rpPainFn_t )( gentity_t *self, gentity_t *attacker, int damage );
@@ -401,9 +400,20 @@ void RP_LuaWorld_NpcDied( gentity_t *npc, gentity_t *killer ) {
 	RP_LuaWorld_CallOwn( npc, rpEnts[num].deathRef, RPCB_DEATH, killer, NULL, 0 );
 }
 
+// GLX_U: ent:use() calls this frame (RP_LuaWorld_EntUse)
+static int rpUseTime = -1, rpUseCount;
+
 // GLX_U: a func_button a script just stopped, until when, for the slot's generation then (RP_Lua_ButtonQuiet)
 static int rpButtonQuietUntil[MAX_ENTITIESTOTAL];
 static int rpButtonQuietGen[MAX_ENTITIESTOTAL];
+
+static gentity_t *rpButtonPressing;	// GLX_U: what Touch_Button is pressing right now (RP_Lua_ButtonPressing)
+
+gentity_t *RP_Lua_ButtonPressing( gentity_t *button ) {
+	gentity_t *prev = rpButtonPressing;
+	rpButtonPressing = button;
+	return prev;
+}
 
 qboolean RP_Lua_ButtonQuiet( gentity_t *button ) {
 	int num;
@@ -449,7 +459,7 @@ qboolean RP_Lua_EntityUsed( gentity_t *self, gentity_t *other, gentity_t *activa
 		}
 		rpCallbackDepth--;
 	}
-	if ( !forced && !allowed && self->inuse && self->touch == Touch_Button ) {
+	if ( !forced && !allowed && self->inuse && self == rpButtonPressing ) {	// GLX_U: a press a script stopped
 		rpButtonQuietUntil[num] = level.time + RP_LUA_BUTTON_QUIET_MS;
 		rpButtonQuietGen[num] = g_entityGen[num];
 	}
@@ -719,6 +729,9 @@ void RP_LuaWorld_Reset( void ) {
 	}
 	memset( rpZones, 0, sizeof( rpZones ) );
 	memset( rpButtonQuietUntil, 0, sizeof( rpButtonQuietUntil ) );	// GLX_U
+	rpUseTime = -1;
+	rpUseCount = 0;
+	rpButtonPressing = NULL;
 	rpCallbackDepth = 0;
 	rpPendingFrees = 0;
 	rpPendingKills = 0;
@@ -1502,17 +1515,33 @@ static int RP_LuaWorld_EntKey( lua_State *L ) {
 	return 1;
 }
 
+// GLX_U: script uses this frame (RP_LUA_USES_PER_FRAME for all scripts, rpUseTime/rpUseCount). Many use functions
+// spawn something every time (target_screenshake, fx_runner, misc_faller, misc_weapon_shooter): a loop of uses
+// filled the entity table and G_Spawn ended the server. Each use also needs RP_LUA_USE_SLOTS free slots on top of
+// ZYK_ENTITY_RESERVE.
 static int RP_LuaWorld_EntUse( lua_State *L ) {
 	gentity_t *ent = RP_LuaWorld_CheckEntity( L, 1 );
 	gentity_t *activator = RP_LuaWorld_OptActor( L, 2 );
 
 	RP_Lua_CurrentPlugin( L );
+	if ( rpUseTime != level.time ) {
+		rpUseTime = level.time;
+		rpUseCount = 0;
+	}
+	if ( rpUseCount >= RP_LUA_USES_PER_FRAME ) {
+		return RP_LuaWorld_Fail( L, "too many uses this frame" );
+	}
+	if ( !G_EntitySlotsAvailable( RP_LUA_USE_SLOTS ) ) {
+		return RP_LuaWorld_Fail( L, "the server is out of entity slots" );
+	}
+	rpUseCount++;
 	if ( activator ) {
 		GlobalUse( ent, activator, activator );		// a player's use: locks judge it
 	} else {
 		GlobalUse( ent, ent, ent );					// map logic, as ICARUS and the map's relays use
 	}
-	return 0;
+	lua_pushboolean( L, 1 );
+	return 1;
 }
 
 static int RP_LuaWorld_EntFree( lua_State *L ) {
@@ -2004,6 +2033,11 @@ static int RP_LuaWorld_EntTeleport( lua_State *L ) {
 	why = RP_LuaPeople_TeleportRefusal( npc, dest );
 	if ( why ) {
 		return RP_LuaWorld_Fail( L, why );
+	}
+	// GLX_U: the teleport's two effects are temp entities, counted like World.effect's: a loop of teleports filled
+	// the entity table and G_Spawn ended the server
+	if ( !RP_LuaWorld_EventRoom( 2 ) ) {
+		return RP_LuaWorld_Fail( L, "too many effects, sounds and shakes this frame" );
 	}
 	RP_LuaPeople_DoTeleport( npc, dest, yaw );
 	G_LogPrintf( "Lua: %s teleported NPC %d (%s) to (%d %d %d)\n", rl.plugins[RP_Lua_CurrentPlugin( L )].name, npc->s.number,

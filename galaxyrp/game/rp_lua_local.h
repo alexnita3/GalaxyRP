@@ -30,6 +30,11 @@ game module uses rp_lua.h.
 #define RP_LUA_NPC_SPAWN_BYTES		256		// GLX_U: what World.npc charges to rp_lua_spawnkb (about 192 measured)
 #define RP_LUA_BUTTON_QUIET_MS		500		// GLX_U: a button a script stopped ignores touches this long (RP_Lua_ButtonQuiet)
 #define RP_LUA_REMOVED_MAX			1024	// GLX_U: character deletions kept for Storage.char handles (rp_lua_store.c)
+#define RP_LUA_USES_PER_FRAME		128		// GLX_U: ent:use() calls per server frame, all scripts together
+#define RP_LUA_USE_SLOTS			8		// GLX_U: free entity slots ent:use() needs, on top of ZYK_ENTITY_RESERVE
+#define RP_LUA_MSGS_PER_SEC			10		// GLX_U: what scripts send one player in a second (RP_Lua_MessageRoom)
+#define RP_LUA_BROADCASTS_PER_SEC	10		// GLX_U: Msg.broadcast and Msg.broadcast_center, all scripts, in a second
+#define RP_LUA_MSG_REFUSED			"too many messages to this player this second"
 
 #define RP_LUA_MAX_HANDLERS			64		// per event, all plugins together
 #define RP_LUA_MAX_COMMANDS			128
@@ -95,6 +100,7 @@ typedef struct {
 	int			errTotal;
 	int			lastNotice;					// trap->Milliseconds() of the last admin notice, 0 none yet
 	int			heldNotices;				// errors since then that were not announced
+	int			lastMsgRefusal;				// GLX_U: trap->Milliseconds() of the last "too many messages" line
 
 	unsigned	calls;
 	double		instructions;
@@ -179,6 +185,12 @@ void		RP_Lua_LogText( const char *consoleTag, const char *logTag, const char *te
 void		RP_Lua_AdminNotice( const char *text );
 
 // rp_lua_api.c
+// GLX_U: message budgets (RP_LUA_MSGS_PER_SEC per player): room for n more this second, n sent, a slot cleared,
+// and a refusal (false, why) for the script
+qboolean	RP_Lua_MessageRoom( int client, int n );
+void		RP_Lua_MessageSent( int client, int n );
+void		RP_Lua_MessageReset( int client );
+int			RP_Lua_MessageRefused( lua_State *L, int plugin, const char *why );
 void		RP_LuaApi_Register( lua_State *L );				// fills the globals table on top of the stack
 void		RP_LuaApi_Reset( void );
 void		RP_LuaApi_RemovePlugin( int plugin );			// handlers, commands, timers, tasks

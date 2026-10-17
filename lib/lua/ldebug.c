@@ -160,6 +160,20 @@ LUA_API int lua_gethookcount (lua_State *L) {
 }
 
 
+/*
+** GLX_U: the VM instructions 'L' ran since its count hook last fired (or since the
+** last call), and its count started again. The count is kept per thread, and the
+** game runs a script's nested calls (events it raises) on the same thread: without
+** this, a hook that kept firing inside them never charged the outer call
+** (galaxyrp/game/rp_lua_core.c, RP_Lua_Call). See glx_lua.h.
+*/
+LUA_API int glx_hookcount_take (lua_State *L) {
+  int done = L->basehookcount - L->hookcount;
+  resethookcount(L);
+  return (done > 0) ? done : 0;
+}
+
+
 LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   int status;
   CallInfo *ci;

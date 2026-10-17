@@ -30,6 +30,10 @@ extern void (*glx_lstrlib_check) (lua_State *L, unsigned int steps);
   { if (l_unlikely(((++(n)) & (GLX_CWORK_STEPS - 1)) == 0) && glx_lstrlib_check) \
       glx_lstrlib_check(L, GLX_CWORK_COST); }
 
+/* The instructions 'L' ran since its count hook last fired, with the count started
+** again (ldebug.c): RP_Lua_Call charges each call exactly its own around a nested one. */
+LUA_API int glx_hookcount_take (lua_State *L);
+
 /* The longest string the game's Lua makes (lstring.c, lauxlib.c): it bounds
 ** what one instruction or library call can do between two checks. */
 #define GLX_MAXSTRING	((size_t)4 * 1024 * 1024)

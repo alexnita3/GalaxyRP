@@ -931,6 +931,34 @@ void LockDoors(gentity_t *const ent)
 Use_BinaryMover
 ================
 */
+/*
+================
+G_MoverValidTeamMaster
+
+GalaxyRP fix: [Entity System] the master a mover team's slave stands for, or NULL. Use_BinaryMover() handed a
+slave's use to ent->teammaster unchecked. A NULL one crashed on the "->use", and a master that is itself marked
+as a slave recursed there -- forever if the two point at each other, since that call does not pass through
+GlobalUse()'s limits. Team links are raw pointers kept from G_FindTeams() while entities are removed and slots
+reused under them, so the master counts only when it is a live entity that is not this one and not a slave
+itself. And only when it is still a team master, a mover, and of this slave's own team (the "team" key
+G_FindTeams() linked them by, which movers keep): after /entremove of the master door, /entadd can hand its
+slot to anything -- another team's door included -- which a slave would otherwise run door logic on, setting an
+unrelated entity moving. GLX_U: a function of its own so Touch_Button() can press a button team's master too.
+================
+*/
+static gentity_t *G_MoverValidTeamMaster( gentity_t *ent )
+{
+	gentity_t *master = ent->teammaster;
+
+	if ( !master || master == ent || !master->inuse || ( master->flags & FL_TEAMSLAVE ) ||
+		master->teammaster != master || master->s.eType != ET_MOVER ||
+		!master->team || !ent->team || strcmp( master->team, ent->team ) )
+	{
+		return NULL;
+	}
+	return master;
+}
+
 void Use_BinaryMover( gentity_t *ent, gentity_t *other, gentity_t *activator )
 {
 	if ( !ent->use )
@@ -938,24 +966,12 @@ void Use_BinaryMover( gentity_t *ent, gentity_t *other, gentity_t *activator )
 		return;
 	}
 
-	// only the master should be used
+	// only the master should be used (G_MoverValidTeamMaster: otherwise the slave does nothing)
 	if ( ent->flags & FL_TEAMSLAVE )
 	{
-		gentity_t *master = ent->teammaster;
+		gentity_t *master = G_MoverValidTeamMaster( ent );
 
-		// GalaxyRP fix: [Entity System] this handed the use to ent->teammaster unchecked. A NULL one
-		// crashed on the "->use" above, and a master that is itself marked as a slave recursed
-		// here -- forever if the two point at each other, since this call does not pass through
-		// GlobalUse()'s limits. Team links are raw pointers kept from G_FindTeams() while entities
-		// are removed and slots reused under them, so follow the master only when it is a live
-		// entity that is not this one and not a slave itself; otherwise the slave does nothing.
-		// And only when it is still a team master, a mover, and of this slave's own team (the "team"
-		// key G_FindTeams() linked them by, which movers keep): after /entremove of the master door,
-		// /entadd can hand its slot to anything -- another team's door included -- which a slave
-		// would otherwise run door logic on, setting an unrelated entity moving.
-		if ( !master || master == ent || !master->inuse || ( master->flags & FL_TEAMSLAVE ) ||
-			master->teammaster != master || master->s.eType != ET_MOVER ||
-			!master->team || !ent->team || strcmp( master->team, ent->team ) )
+		if ( !master )
 		{
 			return;
 		}
@@ -1884,20 +1900,36 @@ Touch_Button
 ===============
 */
 void Touch_Button(gentity_t *ent, gentity_t *other, trace_t *trace ) {
+	gentity_t *button = ent, *prev;
+
 	if ( !other->client ) {
 		return;
 	}
+	if ( !ent->use ) {
+		return;		// as Use_BinaryMover(), which this was
+	}
+	// GLX_U: a button team's slave brush presses the team's master, as Use_BinaryMover() hands it on -- and GlobalUse()
+	// below must see the master: its FL_INACTIVE (target_activate reaches only the master, so a slave of an INACTIVE
+	// team kept the flag for good and stopped working), its lock and its targetname (the "use" event)
+	if ( ent->flags & FL_TEAMSLAVE ) {
+		button = G_MoverValidTeamMaster( ent );
+		if ( !button ) {
+			return;
+		}
+	}
 
-	if ( ent->moverState == MOVER_POS1 ) {
+	if ( button->moverState == MOVER_POS1 ) {
 		// GLX_U: [Lua] through GlobalUse(), the way every other use goes: the lock, the loop limits, then a
 		// script's on_use and "use" event, which can stop it. This is the Use key (TryUse), walking into the
 		// button and a Force push; before, they went straight to Use_BinaryMover() and no script heard of
 		// them. A button a script just stopped is left alone for a moment (RP_Lua_ButtonQuiet), or a player
-		// leaning on it would run the script every frame.
-		if ( RP_Lua_ButtonQuiet( ent ) ) {
+		// leaning on it would run the script every frame: the scripts are told which entity is being pressed.
+		if ( RP_Lua_ButtonQuiet( button ) ) {
 			return;
 		}
-		GlobalUse( ent, other, other );
+		prev = RP_Lua_ButtonPressing( button );
+		GlobalUse( button, other, other );
+		RP_Lua_ButtonPressing( prev );
 	}
 }
 
