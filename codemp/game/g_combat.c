@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "b_local.h"
 #include "bg_saga.h"
+#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] the death, downed and damage events
 
 extern int G_ShipSurfaceForSurfName( const char *surfaceName );
 extern qboolean G_FlyVehicleDestroySurface( gentity_t *veh, int surface );
@@ -2234,6 +2235,10 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 	if ( !attacker )
 		return;
+
+	// GLX_U: [Lua] a real death, player or NPC: the player_death or npc_death event, and a script's own NPC's
+	// on_death. Read-only for the scripts; a free() they ask for waits for the next frame (rp_lua_people.c).
+	RP_Lua_Death( self, attacker, meansOfDeath );
 
 	// GalaxyRP: [SP Maps] security / goodie keys do not survive death (they are not dropped either)
 	if ( self->s.number < MAX_CLIENTS )
@@ -6213,6 +6218,14 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 		targ->health = targ->health - take;
 
+		// GLX_U: [Lua] the "damage" event for a player or NPC hit, read-only (rp_lua_people.c). Before this hit's
+		// pain, knockdown or death below, which the scripts cannot change: nothing they may do here frees or kills
+		// the target before the next frame.
+		if ( targ->client )
+		{
+			RP_Lua_Damage( targ, attacker, take, mod );
+		}
+
 		// zyk: training pole. Adds the count and sets the wait to execute the think function
 		//
 		// GalaxyRP fix: [Entity System] this identified the pole with a case-insensitive string
@@ -6539,6 +6552,9 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 					// dead nor downed. downedTime is now set inside paralyze_player() too, so the
 					// countdown can no longer be forgotten by a caller.
 					paralyze_player(targ);
+
+					// GLX_U: [Lua] the "player_downed" event: a combat knockdown (an admin's /paralyze never comes here)
+					RP_Lua_Downed(targ, attacker);
 				}
 			}
 			else {

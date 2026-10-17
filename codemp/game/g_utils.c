@@ -3493,6 +3493,48 @@ void G_KillBox (gentity_t *ent) {
 	}
 }
 
+/*
+=================
+G_KillBoxWouldHit
+
+GLX_U: [Lua] whether G_KillBox() would find a live body to telefrag (or walk out of) with ent standing at
+origin, by the same rules: itself, its vehicle and everyone aboard it, two duelists about to fight, and
+bodies passing through bodies are left alone. A script's teleport is refused rather than kill anyone
+(rp_lua_people.c). A corpse does not count: G_KillBox() only gibs it.
+=================
+*/
+qboolean G_KillBoxWouldHit( gentity_t *ent, const vec3_t origin ) {
+	int			i, num;
+	int			touch[MAX_GENTITIES];
+	gentity_t	*hit;
+	vec3_t		mins, maxs;
+
+	VectorAdd( origin, ent->r.mins, mins );
+	VectorAdd( origin, ent->r.maxs, maxs );
+	num = trap->EntitiesInBox( mins, maxs, touch, MAX_GENTITIES );
+
+	for ( i = 0; i < num; i++ ) {
+		hit = &g_entities[touch[i]];
+		if ( !hit->inuse || !hit->client || hit->s.number == ent->s.number || ent->r.ownerNum == hit->s.number ) {
+			continue;
+		}
+		if ( RP_VehicleOf( ent ) && RP_VehicleOf( ent ) == RP_VehicleOf( hit ) ) {
+			continue;
+		}
+		if ( level.duel_tournament_mode > 1 && duel_tournament_is_duelist( ent ) == qtrue && duel_tournament_is_duelist( hit ) == qtrue ) {
+			continue;
+		}
+		if ( RP_PhasePassesThrough( ent ) || RP_PhasePassesThrough( hit ) ) {
+			continue;
+		}
+		if ( hit->health <= 0 ) {
+			continue;
+		}
+		return qtrue;
+	}
+	return qfalse;
+}
+
 //==============================================================================
 
 /*

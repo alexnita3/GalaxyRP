@@ -13,7 +13,7 @@ game module uses rp_lua.h.
 #include "../../lib/lua/lualib.h"
 #include "rp_lua.h"
 
-#define RP_LUA_API_VERSION			2		// Plugin.register{ api = n } may not ask for more
+#define RP_LUA_API_VERSION			3		// Plugin.register{ api = n } may not ask for more
 
 #define RP_LUA_MAX_PLUGINS			64		// plugins and map scripts together
 #define RP_LUA_CONSOLE				RP_LUA_MAX_PLUGINS	// plugins[] slot of rcon lua_exec's "@console"
@@ -42,7 +42,8 @@ game module uses rp_lua.h.
 #define RP_LUA_DEFER_WARN_MS		60000
 
 #define RP_LUA_TEXT_MAX				900		// what Msg.* and print() pass on
-#define RP_LUA_FILTER_SIZE			64		// a "use" handler's targetname, a "map_event" handler's name
+#define RP_LUA_FILTER_SIZE			64		// a "use" handler's targetname, a "map_event" handler's name, an "npc_death"
+											// handler's npc_type and spawner, a "damage" handler's target
 #define RP_LUA_EVENT_NAME_MAX		32		// a target_lua's event: [a-z0-9_]{1,32}
 
 typedef enum {
@@ -58,6 +59,10 @@ typedef enum {
 	RPLE_COMMAND,
 	RPLE_USE,				// API 2: an entity with the handler's targetname is used
 	RPLE_MAP_EVENT,			// API 2: a target_lua was used
+	RPLE_PLAYER_DEATH,		// API 3: a player died (not a knockdown)
+	RPLE_PLAYER_DOWNED,		// API 3: a player was knocked down (the Death System)
+	RPLE_NPC_DEATH,			// API 3: an NPC died
+	RPLE_DAMAGE,			// API 3: a hit on a player or NPC was applied
 	RPLE_NUM
 } rpLuaEvent_t;
 
@@ -90,6 +95,7 @@ typedef struct {
 	int			numTasks;
 	int			storeBytes;					// lua.db bytes counted against rp_lua_maxstore, -1 not read yet
 	int			numEnts;					// entities and zones it spawned that still exist (rp_lua_maxents)
+	int			numNpcs;					// NPCs it spawned that still exist, corpses included (rp_lua_maxnpcs)
 } rpLuaPlugin_t;
 
 typedef struct {
@@ -174,6 +180,8 @@ qboolean	RP_LuaApi_CommandInfo( int index, char *name, int nameSize, char *help,
 qboolean	RP_LuaApi_ReservedCommand( const char *name );
 qboolean	RP_LuaApi_FireUse( gentity_t *self, gentity_t *other, gentity_t *activator, qboolean forced );
 void		RP_LuaApi_FireMapEvent( const char *name, gentity_t *activator, gentity_t *ent );
+qboolean	RP_LuaApi_HasHandlers( rpLuaEvent_t ev );		// any running plugin listens
+void		RP_LuaApi_FireActorEvent( rpLuaEvent_t ev, gentity_t *ent, gentity_t *other, int amount, int mod );	// API 3 events
 
 // rp_lua_world.c
 void		RP_LuaWorld_Register( lua_State *L );			// the World table, on the globals on top of the stack
@@ -184,6 +192,24 @@ void		RP_LuaWorld_FreeAll( void );					// /scripts reload all: every script enti
 void		RP_LuaWorld_Reset( void );						// the state is closing
 void		RP_LuaWorld_Frame( void );						// queued frees, zones' leave checks
 void		RP_LuaWorld_ClientGone( int client );			// zones see a disconnecting player leave
+// shared with rp_lua_people.c
+void		RP_LuaWorld_CheckVec( lua_State *L, int idx, vec3_t out, const char *what );	// a vector argument, or a Lua error
+void		RP_LuaWorld_PushVec( lua_State *L, const vec3_t v );
+qboolean	RP_LuaWorld_EventRoom( int n );					// room for n more temp entities this frame
+qboolean	RP_LuaWorld_PathName( const char *s );			// a file name scripts may give
+void		RP_LuaWorld_EnterCallback( void );				// game code calls scripts: free() and kill() wait for the
+void		RP_LuaWorld_LeaveCallback( void );				// next frame until the matching leave
+void		RP_LuaWorld_NpcDied( gentity_t *npc, gentity_t *killer );	// its on_death, when a script owns it
+
+// rp_lua_people.c
+int			RP_LuaPeople_PlayerField( lua_State *L, int client, const char *key );	// pushed one value (1) or nothing (0)
+void		RP_LuaPeople_RemovePlugin( int plugin );		// the player effects it set that are still its own go
+void		RP_LuaPeople_Reset( void );						// the state is closing: every script's effects go
+const char	*RP_LuaPeople_TeleportRefusal( gentity_t *ent, const vec3_t dest );	// NULL when dest is clear for ent
+void		RP_LuaPeople_DoTeleport( gentity_t *ent, const vec3_t dest, float yaw );
+const char	*RP_LuaPeople_ModName( int mod );				// "MOD_SABER"
+const char	*RP_LuaPeople_EffectName( int mode );			// "walkthrough", "ghost", "holo", "hidden", NULL for none
+int			RP_LuaPeople_EffectFromName( const char *name );	// RP_PHASE_*, -1 for a name that is none of those
 
 // rp_lua_store.c
 qboolean	RP_LuaStore_Open( void );

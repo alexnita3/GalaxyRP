@@ -22,6 +22,13 @@ script never sees its entity vanish under it (rpCallbackDepth). An admin's /entu
 /targetuse run the callbacks but cannot be stopped by them, nor can what those uses set off
 (RP_Lua_ForceUses), just as locks cannot stop them.
 
+NPCs (API version 3). World.npc spawns one through /npc spawn's own path (RP_NpcSpawnAt, NPC_spawn.c), at a point
+the script gives; it is the script's own entity like any other, counted against rp_lua_maxnpcs as well, until it is
+freed -- its corpse included. Any NPC's handle tells what it is; a script's own NPCs can also be killed, teleported,
+frozen and given an /npc effect, and given an on_death. A kill() inside a game callback waits for the next frame as
+free() does, and so does one asked for before the NPC has finished spawning (NPC_Begin). Zones made with npcs = true
+see NPCs come and go as well as players.
+
 Spawning goes through exactly the steps /entadd takes (zyk_entadd in g_cmds.c), so every Entity
 System safeguard applies, plus a per-map budget for the game's memory pool, which is never given back
 within a map (rp_lua_spawnkb), and a fixed list of classes scripts may not make (RP_LuaWorld_Denied).
@@ -37,6 +44,7 @@ into the reserve of free slots ordinary play depends on.
 #define RP_LUA_MAX_ZONES			256
 #define RP_LUA_ZONE_MAX_SIZE		8192.0f
 #define RP_LUA_ZONE_LEAVE_MS		500		// a player not touching a zone this long has left it
+#define RP_LUA_ZONE_NPCS			32		// NPCs one zone made with npcs = true follows at once
 #define RP_LUA_EVENTS_PER_FRAME		64		// effects, sounds and shakes, all scripts together
 #define RP_LUA_MOVE_MAX_MS			600000
 #define RP_LUA_COORD_MAX			262144.0f
@@ -57,6 +65,7 @@ extern void InitMoverTrData( gentity_t *ent );
 extern void MatchTeam( gentity_t *teamLeader, int moverState, int time );
 extern void Blocked_Mover( gentity_t *ent, gentity_t *other );
 extern void GlobalUse( gentity_t *self, gentity_t *other, gentity_t *activator );
+extern void NPC_Begin( gentity_t *ent );
 
 typedef void ( *rpPainFn_t )( gentity_t *self, gentity_t *attacker, int damage );
 typedef void ( *rpDieFn_t )( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int mod );
@@ -65,7 +74,7 @@ typedef void ( *rpThinkFn_t )( gentity_t *self );
 typedef struct {
 	int			owner;			// plugin + 1 that spawned it, 0: not a script's
 	int			gen;			// g_entityGen[] when it was spawned
-	int			useRef, painRef, dieRef, enterRef, leaveRef;	// 0: none
+	int			useRef, painRef, dieRef, enterRef, leaveRef, deathRef;	// 0: none
 	qboolean	addedUsable;	// on_use made it usable (SVF_PLAYER_USABLE)
 	qboolean	addedUseStub;	// on_use gave it a use function it did not have
 	rpPainFn_t	origPain;		// the class's own, while ent->pain is RP_LuaWorld_Pain
@@ -75,6 +84,8 @@ typedef struct {
 	qboolean	thinkSaved;
 	int			zone;			// rpZones index + 1, 0: not a zone
 	qboolean	pendingFree;	// free() inside a game callback: done next frame
+	qboolean	isNpc;			// World.npc made it: counted in numNpcs too
+	qboolean	pendingKill;	// kill() inside a game callback, or before NPC_Begin: done in a later frame
 	int			handleRef;		// cached handle (any entity), 0: none
 	int			handleGen;
 } rpLuaEnt_t;
@@ -84,6 +95,10 @@ typedef struct {
 	int			num;
 	qboolean	inside[MAX_CLIENTS];
 	int			lastTouch[MAX_CLIENTS];
+	qboolean	npcs;							// World.zone{ npcs = true }: NPCs too
+	int			npcNum[RP_LUA_ZONE_NPCS];		// 0: a free place (NPCs are never below MAX_CLIENTS)
+	int			npcGen[RP_LUA_ZONE_NPCS];
+	int			npcTouch[RP_LUA_ZONE_NPCS];
 } rpLuaZone_t;
 
 typedef struct {
@@ -95,6 +110,7 @@ static rpLuaEnt_t	rpEnts[MAX_ENTITIESTOTAL];
 static rpLuaZone_t	rpZones[RP_LUA_MAX_ZONES];
 static int			rpCallbackDepth;
 static int			rpPendingFrees;
+static int			rpPendingKills;
 static int			rpEvTime = -1, rpEvCount;
 static int			rpForceUses;		// RP_Lua_ForceUses: an admin's use and what it sets off
 
@@ -220,7 +236,7 @@ static qboolean RP_LuaWorld_Number( lua_State *L, int idx, float *out ) {
 	return qtrue;
 }
 
-static void RP_LuaWorld_CheckVec( lua_State *L, int idx, vec3_t out, const char *what ) {
+void RP_LuaWorld_CheckVec( lua_State *L, int idx, vec3_t out, const char *what ) {
 	static const char *names[3] = { "x", "y", "z" };
 	int i;
 
@@ -244,7 +260,7 @@ static void RP_LuaWorld_CheckVec( lua_State *L, int idx, vec3_t out, const char 
 	}
 }
 
-static void RP_LuaWorld_PushVec( lua_State *L, const vec3_t v ) {
+void RP_LuaWorld_PushVec( lua_State *L, const vec3_t v ) {
 	lua_createtable( L, 0, 3 );
 	lua_pushnumber( L, v[0] );
 	lua_setfield( L, -2, "x" );
@@ -269,7 +285,7 @@ static void RP_LuaWorld_Center( const gentity_t *ent, vec3_t out ) {
 Game callbacks
 ================
 */
-typedef enum { RPCB_USE, RPCB_PAIN, RPCB_DIE, RPCB_ENTER, RPCB_LEAVE } rpLuaCbKind_t;
+typedef enum { RPCB_USE, RPCB_PAIN, RPCB_DIE, RPCB_ENTER, RPCB_LEAVE, RPCB_DEATH } rpLuaCbKind_t;
 
 typedef struct {
 	rpLuaCbKind_t	kind;
@@ -277,7 +293,7 @@ typedef struct {
 	gentity_t		*self;
 	gentity_t		*a;			// activator / attacker
 	gentity_t		*b;			// other
-	int				n;			// damage, or the client entering or leaving
+	int				n;			// damage, or the client entering or leaving (-1: the NPC in a, NULL once freed)
 	int				result;		// 0 when the function returned false
 } rpLuaCb_t;
 
@@ -299,11 +315,16 @@ static int RP_LuaWorld_CbWorker( lua_State *L, void *data ) {
 		nargs = 3;
 		break;
 	case RPCB_DIE:
+	case RPCB_DEATH:
 		RP_LuaWorld_PushActor( L, c->a );
 		nargs = 2;
 		break;
 	default:
-		RP_LuaApi_PushPlayer( L, c->n );
+		if ( c->n >= 0 ) {
+			RP_LuaApi_PushPlayer( L, c->n );
+		} else {
+			RP_LuaWorld_PushActor( L, c->a );	// an NPC entering or leaving; nil once it is gone
+		}
 		nargs = 2;
 		break;
 	}
@@ -337,6 +358,30 @@ static int RP_LuaWorld_CallOwn( gentity_t *ent, int ref, rpLuaCbKind_t kind, gen
 	RP_Lua_Call( plugin, RP_LuaWorld_CbWorker, &c );
 	rpCallbackDepth--;
 	return c.result;
+}
+
+void RP_LuaWorld_EnterCallback( void ) {
+	rpCallbackDepth++;
+}
+
+void RP_LuaWorld_LeaveCallback( void ) {
+	if ( rpCallbackDepth > 0 ) {
+		rpCallbackDepth--;
+	}
+}
+
+// an NPC is dying (player_die, through RP_Lua_Death): the script that owns it hears it in its on_death
+void RP_LuaWorld_NpcDied( gentity_t *npc, gentity_t *killer ) {
+	int num;
+
+	if ( !rl.L || !npc ) {
+		return;
+	}
+	num = npc->s.number;
+	if ( num < 0 || num >= MAX_ENTITIESTOTAL || RP_LuaWorld_Owner( num ) < 0 || rpEnts[num].deathRef <= 0 ) {
+		return;
+	}
+	RP_LuaWorld_CallOwn( npc, rpEnts[num].deathRef, RPCB_DEATH, killer, NULL, 0 );
 }
 
 void RP_Lua_ForceUses( qboolean on ) {
@@ -463,6 +508,9 @@ void RP_Lua_EntityFreed( gentity_t *ent ) {
 		if ( p->numEnts > 0 ) {
 			p->numEnts--;
 		}
+		if ( e->isNpc && p->numNpcs > 0 ) {
+			p->numNpcs--;
+		}
 	}
 	if ( e->zone ) {
 		rpZones[e->zone - 1].active = qfalse;
@@ -470,11 +518,15 @@ void RP_Lua_EntityFreed( gentity_t *ent ) {
 	if ( e->pendingFree && rpPendingFrees > 0 ) {
 		rpPendingFrees--;
 	}
+	if ( e->pendingKill && rpPendingKills > 0 ) {
+		rpPendingKills--;
+	}
 	RP_LuaWorld_Unref( &e->useRef );
 	RP_LuaWorld_Unref( &e->painRef );
 	RP_LuaWorld_Unref( &e->dieRef );
 	RP_LuaWorld_Unref( &e->enterRef );
 	RP_LuaWorld_Unref( &e->leaveRef );
+	RP_LuaWorld_Unref( &e->deathRef );
 	RP_LuaWorld_Unref( &e->handleRef );
 	memset( e, 0, sizeof( *e ) );
 }
@@ -512,6 +564,14 @@ void RP_LuaWorld_RemovePlugin( int plugin ) {
 		RP_LuaWorld_Unref( &e->dieRef );
 		RP_LuaWorld_Unref( &e->enterRef );
 		RP_LuaWorld_Unref( &e->leaveRef );
+		RP_LuaWorld_Unref( &e->deathRef );
+		if ( e->pendingKill ) {
+			e->pendingKill = qfalse;	// it goes instead
+			if ( rpPendingKills > 0 ) {
+				rpPendingKills--;
+			}
+		}
+		e->isNpc = qfalse;
 		if ( rpCallbackDepth > 0 ) {
 			e->owner = 0;
 			if ( !e->pendingFree ) {
@@ -523,6 +583,7 @@ void RP_LuaWorld_RemovePlugin( int plugin ) {
 		}
 	}
 	rl.plugins[plugin].numEnts = 0;
+	rl.plugins[plugin].numNpcs = 0;
 }
 
 static void RP_LuaWorld_RunPendingFrees( void ) {
@@ -542,6 +603,56 @@ static void RP_LuaWorld_RunPendingFrees( void ) {
 		}
 	}
 	rpPendingFrees = 0;
+}
+
+// an NPC killed the way /npc kill kills one: its death and corpse, as if hit for its full health
+static void RP_LuaWorld_DoKill( gentity_t *npc ) {
+	npc->health = 0;
+	npc->client->ps.stats[STAT_HEALTH] = 0;
+	if ( npc->die ) {
+		npc->die( npc, npc, npc, npc->client->pers.maxHealth, MOD_UNKNOWN );
+	}
+}
+
+// alive as /entsave counts an NPC: not dead, not a vehicle counting down to its explosion; one that has not run
+// NPC_Begin yet has no health but is alive
+static qboolean RP_LuaWorld_NpcAlive( const gentity_t *npc ) {
+	if ( !npc->inuse || !npc->client || !npc->NPC || ( npc->s.eFlags & EF_DEAD ) || npc->client->ps.pm_type == PM_DEAD
+		|| ( npc->m_pVehicle && npc->m_pVehicle->m_iDieTime != 0 ) ) {
+		return qfalse;
+	}
+	return ( npc->health > 0 || npc->think == NPC_Begin ) ? qtrue : qfalse;
+}
+
+// a kill's die() runs scripts (npc_death, on_death), which may ask for more kills: the count is taken again after
+static void RP_LuaWorld_RunPendingKills( void ) {
+	int num;
+
+	if ( rpPendingKills <= 0 || rpCallbackDepth > 0 ) {
+		return;
+	}
+	for ( num = MAX_CLIENTS; num < MAX_ENTITIESTOTAL; num++ ) {
+		rpLuaEnt_t *e = &rpEnts[num];
+		gentity_t *npc = &g_entities[num];
+		if ( !e->pendingKill ) {
+			continue;
+		}
+		if ( !npc->inuse || e->gen != g_entityGen[num] || e->pendingFree || !RP_LuaWorld_NpcAlive( npc ) ) {
+			e->pendingKill = qfalse;	// gone, going, or dead already
+			continue;
+		}
+		if ( npc->think == NPC_Begin ) {
+			continue;					// not spawned yet: a later frame
+		}
+		e->pendingKill = qfalse;
+		RP_LuaWorld_DoKill( npc );
+	}
+	rpPendingKills = 0;
+	for ( num = MAX_CLIENTS; num < MAX_ENTITIESTOTAL; num++ ) {
+		if ( rpEnts[num].pendingKill ) {
+			rpPendingKills++;
+		}
+	}
 }
 
 // /scripts reload all: every script entity goes before the state does
@@ -573,6 +684,7 @@ void RP_LuaWorld_Reset( void ) {
 	memset( rpZones, 0, sizeof( rpZones ) );
 	rpCallbackDepth = 0;
 	rpPendingFrees = 0;
+	rpPendingKills = 0;
 	rpForceUses = 0;
 }
 
@@ -590,6 +702,46 @@ static void RP_LuaWorld_ZoneLeave( int z, int client ) {
 	}
 }
 
+// an NPC leaves zone z (place i): the handle, or nil when it has been freed
+static void RP_LuaWorld_ZoneLeaveNpc( int z, int i ) {
+	rpLuaZone_t *zone = &rpZones[z];
+	int num = zone->npcNum[i];
+	gentity_t *npc = ( g_entities[num].inuse && g_entityGen[num] == zone->npcGen[i] ) ? &g_entities[num] : NULL;
+
+	zone->npcNum[i] = 0;
+	if ( RP_LuaWorld_Owner( zone->num ) >= 0 && rpEnts[zone->num].leaveRef > 0 ) {
+		RP_LuaWorld_CallOwn( &g_entities[zone->num], rpEnts[zone->num].leaveRef, RPCB_LEAVE, npc, NULL, -1 );
+	}
+}
+
+// an NPC touching a zone made with npcs = true. Up to RP_LUA_ZONE_NPCS at once; more are not seen until one leaves.
+static void RP_LuaWorld_ZoneTouchNpc( gentity_t *self, int z, gentity_t *npc ) {
+	rpLuaZone_t *zone = &rpZones[z];
+	int i, num = npc->s.number, gen = g_entityGen[num], freeAt = -1;
+
+	if ( !RP_LuaWorld_NpcAlive( npc ) ) {
+		return;
+	}
+	for ( i = 0; i < RP_LUA_ZONE_NPCS; i++ ) {
+		if ( zone->npcNum[i] == num && zone->npcGen[i] == gen ) {
+			zone->npcTouch[i] = level.time;
+			return;
+		}
+		if ( !zone->npcNum[i] && freeAt < 0 ) {
+			freeAt = i;
+		}
+	}
+	if ( freeAt < 0 ) {
+		return;
+	}
+	zone->npcNum[freeAt] = num;
+	zone->npcGen[freeAt] = gen;
+	zone->npcTouch[freeAt] = level.time;
+	if ( RP_LuaWorld_Owner( self->s.number ) >= 0 && rpEnts[self->s.number].enterRef > 0 ) {
+		RP_LuaWorld_CallOwn( self, rpEnts[self->s.number].enterRef, RPCB_ENTER, npc, NULL, -1 );
+	}
+}
+
 static void RP_LuaWorld_ZoneTouch( gentity_t *self, gentity_t *other, trace_t *trace ) {
 	rpLuaZone_t *zone;
 	int z, c;
@@ -600,6 +752,10 @@ static void RP_LuaWorld_ZoneTouch( gentity_t *self, gentity_t *other, trace_t *t
 	}
 	z = rpEnts[self->s.number].zone - 1;
 	c = other->s.number;
+	if ( z >= 0 && rpZones[z].active && rpZones[z].npcs && c >= MAX_CLIENTS && other->NPC && other->client ) {
+		RP_LuaWorld_ZoneTouchNpc( self, z, other );
+		return;
+	}
 	if ( z < 0 || !rpZones[z].active || c < 0 || c >= MAX_CLIENTS || !other->client
 		|| other->client->pers.connected != CON_CONNECTED || other->client->sess.sessionTeam == TEAM_SPECTATOR || other->health <= 0 ) {
 		return;
@@ -641,6 +797,20 @@ static void RP_LuaWorld_ZonesFrame( void ) {
 				}
 			}
 		}
+		for ( c = 0; zone->active && zone->npcs && c < RP_LUA_ZONE_NPCS; c++ ) {
+			int num = zone->npcNum[c];
+			if ( !num ) {
+				continue;
+			}
+			if ( !g_entities[num].inuse || g_entityGen[num] != zone->npcGen[c] || !RP_LuaWorld_NpcAlive( &g_entities[num] )
+				|| level.time - zone->npcTouch[c] > RP_LUA_ZONE_LEAVE_MS ) {
+				if ( !RP_Lua_FrameBudgetLeft() ) {
+					RP_Lua_NoteDeferred( RP_LuaWorld_Owner( zone->num ), 1 );
+					return;
+				}
+				RP_LuaWorld_ZoneLeaveNpc( z, c );
+			}
+		}
 	}
 }
 
@@ -659,6 +829,7 @@ void RP_LuaWorld_ClientGone( int client ) {
 }
 
 void RP_LuaWorld_Frame( void ) {
+	RP_LuaWorld_RunPendingKills();		// before the frees: a killed NPC that is also freed just goes
 	RP_LuaWorld_RunPendingFrees();
 	RP_LuaWorld_ZonesFrame();
 }
@@ -668,7 +839,7 @@ void RP_LuaWorld_Frame( void ) {
 World.spawn
 ================
 */
-// classes scripts may not make: the map itself, NPCs and spawners (P3), player spawn points, sub-BSPs,
+// classes scripts may not make: the map itself, NPCs and spawners (World.npc spawns NPCs), player spawn points, sub-BSPs,
 // weather, and target_lua (a script raises its own events directly)
 static const char *RP_LuaWorld_Denied( const char *classname ) {
 	static const char *exact[] = {
@@ -678,7 +849,7 @@ static const char *RP_LuaWorld_Denied( const char *classname ) {
 	int i;
 
 	if ( RP_IsNpcSpawnerClass( classname ) ) {
-		return "NPCs and NPC or vehicle spawners";
+		return "NPCs and NPC or vehicle spawners (World.npc spawns an NPC or a vehicle)";
 	}
 	if ( !Q_stricmpn( classname, "info_player_", 12 ) || !Q_stricmpn( classname, "team_CTF_", 9 ) ) {
 		return "player spawn points";
@@ -877,6 +1048,7 @@ static int RP_LuaWorld_Zone( lua_State *L ) {
 	rpLuaPlugin_t *p = &rl.plugins[plugin];
 	vec3_t mins, maxs, center;
 	gentity_t *ent;
+	qboolean npcs;
 	int i, z;
 
 	luaL_checktype( L, 1, LUA_TTABLE );
@@ -885,6 +1057,11 @@ static int RP_LuaWorld_Zone( lua_State *L ) {
 	lua_getfield( L, 1, "maxs" );
 	RP_LuaWorld_CheckVec( L, -1, maxs, "maxs" );
 	lua_pop( L, 2 );
+	if ( lua_getfield( L, 1, "npcs" ) != LUA_TNIL && !lua_isboolean( L, -1 ) ) {
+		return luaL_error( L, "World.zone: npcs must be true or false" );
+	}
+	npcs = lua_toboolean( L, -1 ) ? qtrue : qfalse;
+	lua_pop( L, 1 );
 	for ( i = 0; i < 3; i++ ) {
 		if ( maxs[i] <= mins[i] || maxs[i] - mins[i] > RP_LUA_ZONE_MAX_SIZE ) {
 			return luaL_error( L, "World.zone: each side must be more than 0 and at most %d units, with maxs above mins", (int)RP_LUA_ZONE_MAX_SIZE );
@@ -921,6 +1098,7 @@ static int RP_LuaWorld_Zone( lua_State *L ) {
 	memset( &rpZones[z], 0, sizeof( rpZones[z] ) );
 	rpZones[z].active = qtrue;
 	rpZones[z].num = ent->s.number;
+	rpZones[z].npcs = npcs;
 	rpEnts[ent->s.number].owner = plugin + 1;
 	rpEnts[ent->s.number].gen = g_entityGen[ent->s.number];
 	rpEnts[ent->s.number].zone = z + 1;
@@ -1053,7 +1231,7 @@ Effects, sounds, music, shake
 ================
 */
 // room for n more temp entities this frame, outside the reserve of free slots
-static qboolean RP_LuaWorld_EventRoom( int n ) {
+qboolean RP_LuaWorld_EventRoom( int n ) {
 	if ( rpEvTime != level.time ) {
 		rpEvTime = level.time;
 		rpEvCount = 0;
@@ -1087,7 +1265,7 @@ static int RP_LuaWorld_FindEffect( const char *name ) {
 	return 0;
 }
 
-static qboolean RP_LuaWorld_PathName( const char *s ) {
+qboolean RP_LuaWorld_PathName( const char *s ) {
 	int i;
 	if ( !s[0] || s[0] == '/' || s[0] == '*' || strstr( s, ".." ) || strlen( s ) >= MAX_QPATH ) {
 		return qfalse;
@@ -1487,6 +1665,11 @@ static int RP_LuaWorld_EntOnUse( lua_State *L ) {
 
 static gentity_t *RP_LuaWorld_CheckDamageable( lua_State *L ) {
 	gentity_t *ent = RP_LuaWorld_CheckOwn( L, 1, "give callbacks to" );
+	if ( ent->NPC ) {
+		// its pain and die are the AI's own and NPC_Begin sets them again when it finishes spawning
+		luaL_error( L, "an NPC has on_death, and the damage event, instead of on_pain and on_die" );
+		return NULL;
+	}
 	if ( !ent->takedamage ) {
 		luaL_error( L, "entity %d (%s) cannot be damaged, so it has no on_pain or on_die", ent->s.number, ent->classname ? ent->classname : "noclass" );
 		return NULL;
@@ -1553,12 +1736,315 @@ static void RP_LuaWorld_PushOptString( lua_State *L, const char *s ) {
 	}
 }
 
+/*
+================
+NPCs (API version 3): World.npc, and what any NPC's handle tells and a script's own NPCs do
+================
+*/
+static const char *RP_LuaWorld_NpcTeamName( int team ) {
+	switch ( team ) {
+	case NPCTEAM_ENEMY:		return "enemy";
+	case NPCTEAM_PLAYER:	return "player";
+	case NPCTEAM_NEUTRAL:	return "neutral";
+	default:				return "free";
+	}
+}
+
+static int RP_LuaWorld_NpcTeamFromName( const char *name ) {
+	if ( !strcmp( name, "enemy" ) ) {
+		return NPCTEAM_ENEMY;
+	}
+	if ( !strcmp( name, "player" ) ) {
+		return NPCTEAM_PLAYER;
+	}
+	if ( !strcmp( name, "neutral" ) ) {
+		return NPCTEAM_NEUTRAL;
+	}
+	if ( !strcmp( name, "free" ) ) {
+		return NPCTEAM_FREE;
+	}
+	return -1;
+}
+
+static qboolean RP_LuaWorld_IsVehicle( const gentity_t *ent ) {
+	return ( ent->client && ( ent->client->NPC_class == CLASS_VEHICLE || ent->s.NPC_class == CLASS_VEHICLE ) ) ? qtrue : qfalse;
+}
+
+// World.npc(type, pos [, { yaw =, team =, effect =, vehicle = }]): /npc spawn at a point
+static int RP_LuaWorld_Npc( lua_State *L ) {
+	int plugin = RP_Lua_CurrentPlugin( L );
+	rpLuaPlugin_t *p = &rl.plugins[plugin];
+	const char *type = luaL_checkstring( L, 1 );
+	char typeBuf[RP_LUA_KEY_MAX];
+	vec3_t org;
+	float yaw = 0;
+	int team = -1, effect = RP_PHASE_NONE, i, num;
+	qboolean vehicle = qfalse;
+	gentity_t *npc;
+
+	for ( i = 0; type[i]; i++ ) {
+		char c = type[i];
+		if ( i >= RP_LUA_KEY_MAX - 1 || !( ( c >= 'a' && c <= 'z' ) || ( c >= 'A' && c <= 'Z' ) || ( c >= '0' && c <= '9' ) || c == '_' || c == '-' ) ) {
+			return luaL_error( L, "World.npc: \"%s\" is not an NPC type name", type );
+		}
+	}
+	if ( !i ) {
+		return luaL_error( L, "World.npc: the NPC type is empty" );
+	}
+	Q_strncpyz( typeBuf, type, sizeof( typeBuf ) );
+	RP_LuaWorld_CheckVec( L, 2, org, "the NPC's position" );
+	if ( !lua_isnoneornil( L, 3 ) ) {
+		luaL_checktype( L, 3, LUA_TTABLE );
+		lua_pushnil( L );
+		while ( lua_next( L, 3 ) ) {
+			const char *key;
+			if ( lua_type( L, -2 ) != LUA_TSTRING ) {
+				return luaL_error( L, "World.npc: option names must be strings" );
+			}
+			key = lua_tostring( L, -2 );
+			if ( !strcmp( key, "yaw" ) ) {
+				if ( !RP_LuaWorld_Number( L, -1, &yaw ) ) {
+					return luaL_error( L, "World.npc: yaw must be a number of degrees" );
+				}
+			} else if ( !strcmp( key, "team" ) ) {
+				if ( lua_type( L, -1 ) != LUA_TSTRING || ( team = RP_LuaWorld_NpcTeamFromName( lua_tostring( L, -1 ) ) ) < 0 ) {
+					return luaL_error( L, "World.npc: team must be \"enemy\", \"player\", \"neutral\" or \"free\"" );
+				}
+			} else if ( !strcmp( key, "effect" ) ) {
+				if ( lua_type( L, -1 ) != LUA_TSTRING || ( effect = RP_LuaPeople_EffectFromName( lua_tostring( L, -1 ) ) ) < 0
+					|| effect == RP_PHASE_HIDDEN ) {
+					return luaL_error( L, "World.npc: effect must be \"walkthrough\", \"ghost\" or \"holo\"" );
+				}
+			} else if ( !strcmp( key, "vehicle" ) ) {
+				if ( !lua_isboolean( L, -1 ) ) {
+					return luaL_error( L, "World.npc: vehicle must be true or false" );
+				}
+				vehicle = lua_toboolean( L, -1 ) ? qtrue : qfalse;
+			} else {
+				return luaL_error( L, "World.npc: there is no option \"%s\" (yaw, team, effect, vehicle)", key );
+			}
+			lua_pop( L, 1 );
+		}
+	}
+	if ( vehicle && effect != RP_PHASE_NONE ) {
+		return luaL_error( L, "World.npc: vehicles cannot be given an effect" );
+	}
+
+	// the checks /entadd makes for a spawner (zyk_spawner_problem, g_cmds.c), then the caps
+	if ( vehicle ) {
+		if ( !RP_VehicleTypeKnown( typeBuf ) ) {
+			return RP_LuaWorld_Refused( L, va( "%s is not a vehicle type on this server (see /list vehicles)", typeBuf ) );
+		}
+		if ( !RP_NpcTypeKnown( typeBuf ) ) {
+			return RP_LuaWorld_Refused( L, va( "the vehicle %s has no NPC entry of its name on this server, so it cannot be spawned", typeBuf ) );
+		}
+	} else {
+		if ( !g_allowNPC.integer ) {
+			return RP_LuaWorld_Refused( L, "NPCs are switched off on this server (g_allowNPC 0)" );
+		}
+		if ( RP_NpcTypeIsVehicle( typeBuf ) ) {
+			return RP_LuaWorld_Refused( L, va( "%s is a vehicle's NPC entry: spawn it with vehicle = true", typeBuf ) );
+		}
+		if ( !RP_NpcTypeKnown( typeBuf ) ) {
+			return RP_LuaWorld_Refused( L, va( "%s is not an NPC type on this server (see /list npcs)", typeBuf ) );
+		}
+	}
+	if ( p->numNpcs >= RP_LuaWorld_Clamp( rp_lua_maxnpcs.integer, 0, 256 ) ) {
+		return RP_LuaWorld_Refused( L, va( "this plugin already has %d NPCs (rp_lua_maxnpcs)", p->numNpcs ) );
+	}
+	if ( p->numEnts >= RP_LuaWorld_Clamp( rp_lua_maxents.integer, 0, 1024 ) ) {
+		return RP_LuaWorld_Refused( L, va( "this plugin already has %d entities (rp_lua_maxents)", p->numEnts ) );
+	}
+	if ( !G_EntitySlotsAvailable( 3 ) ) {
+		return RP_LuaWorld_Refused( L, "the server is near its entity limit" );
+	}
+
+	npc = RP_NpcSpawnAt( typeBuf, org, yaw, team, effect, vehicle );
+	if ( !npc || !npc->inuse || !npc->client ) {
+		return RP_LuaWorld_Refused( L, "the NPC could not be spawned (the server console says why)" );
+	}
+	num = npc->s.number;
+	rpEnts[num].owner = plugin + 1;
+	rpEnts[num].gen = g_entityGen[num];
+	rpEnts[num].isNpc = qtrue;
+	p->numEnts++;
+	p->numNpcs++;
+	RP_LuaWorld_PushEntity( L, npc );
+	return 1;
+}
+
+// the running plugin's own NPC, or a Lua error
+static gentity_t *RP_LuaWorld_CheckOwnNpc( lua_State *L, const char *what, const char *method ) {
+	gentity_t *ent = RP_LuaWorld_CheckOwn( L, 1, what );
+
+	if ( !ent->NPC || !ent->client ) {
+		luaL_error( L, "%s: entity %d (%s) is not an NPC", method, ent->s.number, ent->classname ? ent->classname : "noclass" );
+		return NULL;
+	}
+	return ent;
+}
+
+static int RP_LuaWorld_EntKill( lua_State *L ) {
+	gentity_t *npc = RP_LuaWorld_CheckOwnNpc( L, "kill", "kill" );
+	rpLuaEnt_t *e = &rpEnts[npc->s.number];
+
+	if ( e->pendingKill ) {
+		lua_pushboolean( L, 1 );	// already on its way
+		return 1;
+	}
+	if ( e->pendingFree ) {
+		return RP_LuaWorld_Fail( L, "it is being removed" );
+	}
+	if ( !RP_LuaWorld_NpcAlive( npc ) ) {
+		return RP_LuaWorld_Fail( L, "it is already dead" );
+	}
+	if ( npc->m_pVehicle && npc->m_pVehicle->m_pPilot ) {
+		return RP_LuaWorld_Fail( L, "someone is riding it" );	// as /npc kill leaves a ridden vehicle
+	}
+	if ( rpCallbackDepth > 0 || npc->think == NPC_Begin ) {
+		e->pendingKill = qtrue;
+		rpPendingKills++;
+	} else {
+		RP_LuaWorld_DoKill( npc );
+	}
+	lua_pushboolean( L, 1 );
+	return 1;
+}
+
+static int RP_LuaWorld_EntTeleport( lua_State *L ) {
+	gentity_t *npc = RP_LuaWorld_CheckOwnNpc( L, "teleport", "teleport" );
+	const char *why;
+	vec3_t dest;
+	float yaw = npc->client->ps.viewangles[YAW];
+
+	RP_LuaWorld_CheckVec( L, 2, dest, "the position to teleport to" );
+	if ( !lua_isnoneornil( L, 3 ) && !RP_LuaWorld_Number( L, 3, &yaw ) ) {
+		return luaL_error( L, "teleport: the yaw must be a number of degrees" );
+	}
+	if ( npc->think == NPC_Begin ) {
+		return RP_LuaWorld_Fail( L, "it has not finished spawning (try again next frame)" );
+	}
+	if ( !RP_LuaWorld_NpcAlive( npc ) ) {
+		return RP_LuaWorld_Fail( L, "it is dead" );
+	}
+	why = RP_LuaPeople_TeleportRefusal( npc, dest );
+	if ( why ) {
+		return RP_LuaWorld_Fail( L, why );
+	}
+	RP_LuaPeople_DoTeleport( npc, dest, yaw );
+	G_LogPrintf( "Lua: %s teleported NPC %d (%s) to (%d %d %d)\n", rl.plugins[RP_Lua_CurrentPlugin( L )].name, npc->s.number,
+		npc->NPC_type ? npc->NPC_type : "?", (int)dest[0], (int)dest[1], (int)dest[2] );
+	lua_pushboolean( L, 1 );
+	return 1;
+}
+
+// freeze and unfreeze: /npc freeze, which refuses vehicles and riders
+static int RP_LuaWorld_EntFreezeSet( lua_State *L, qboolean on ) {
+	gentity_t *npc = RP_LuaWorld_CheckOwnNpc( L, on ? "freeze" : "unfreeze", on ? "freeze" : "unfreeze" );
+
+	if ( RP_LuaWorld_IsVehicle( npc ) ) {
+		return RP_LuaWorld_Fail( L, "vehicles cannot be frozen" );
+	}
+	if ( npc->client->ps.m_iVehicleNum ) {
+		return RP_LuaWorld_Fail( L, "it is riding a vehicle" );
+	}
+	if ( on ) {
+		if ( !RP_LuaWorld_NpcAlive( npc ) ) {
+			return RP_LuaWorld_Fail( L, "it is dead" );
+		}
+		RP_NpcFreeze( npc );
+	} else {
+		RP_NpcUnfreeze( npc );
+	}
+	lua_pushboolean( L, 1 );
+	return 1;
+}
+
+static int RP_LuaWorld_EntFreeze( lua_State *L ) {
+	return RP_LuaWorld_EntFreezeSet( L, qtrue );
+}
+
+static int RP_LuaWorld_EntUnfreeze( lua_State *L ) {
+	return RP_LuaWorld_EntFreezeSet( L, qfalse );
+}
+
+// set_effect(name or nil): /npc effect's own change, with its refusals
+static int RP_LuaWorld_EntSetEffect( lua_State *L ) {
+	gentity_t *npc = RP_LuaWorld_CheckOwnNpc( L, "give effects to", "set_effect" );
+	int mode = RP_PHASE_NONE;
+
+	if ( !lua_isnoneornil( L, 2 ) ) {
+		const char *name = luaL_checkstring( L, 2 );
+		mode = RP_LuaPeople_EffectFromName( name );
+		if ( mode < 0 || mode == RP_PHASE_HIDDEN ) {
+			return luaL_error( L, "set_effect: \"%s\" is not an NPC effect (walkthrough, ghost, holo, or nil for none)", name );
+		}
+	}
+	if ( RP_LuaWorld_IsVehicle( npc ) ) {
+		return RP_LuaWorld_Fail( L, "vehicles cannot be given an effect" );
+	}
+	if ( npc->client->ps.m_iVehicleNum ) {
+		return RP_LuaWorld_Fail( L, "it is riding a vehicle" );
+	}
+	RP_NpcApplyEffect( npc, mode );
+	lua_pushboolean( L, 1 );
+	return 1;
+}
+
+static int RP_LuaWorld_EntOnDeath( lua_State *L ) {
+	gentity_t *npc = RP_LuaWorld_CheckOwnNpc( L, "give callbacks to", "on_death" );
+
+	RP_LuaWorld_SetCallback( L, &rpEnts[npc->s.number].deathRef );
+	return 0;
+}
+
+// the NPC fields of an entity handle: 1 when key was one of them (its value pushed)
+static int RP_LuaWorld_NpcField( lua_State *L, gentity_t *ent, const char *key ) {
+	qboolean isNpc = ( ent->NPC && ent->client ) ? qtrue : qfalse;
+
+	if ( !strcmp( key, "is_npc" ) ) {
+		lua_pushboolean( L, isNpc );
+		return 1;
+	}
+	if ( !strcmp( key, "is_vehicle" ) ) {
+		lua_pushboolean( L, isNpc && RP_LuaWorld_IsVehicle( ent ) );
+		return 1;
+	}
+	if ( strcmp( key, "npc_type" ) && strcmp( key, "team" ) && strcmp( key, "max_health" ) && strcmp( key, "alive" )
+		&& strcmp( key, "spawner" ) && strcmp( key, "effect" ) && strcmp( key, "frozen" ) ) {
+		return 0;
+	}
+	if ( !isNpc ) {
+		lua_pushnil( L );
+		return 1;
+	}
+	if ( !strcmp( key, "npc_type" ) ) {
+		RP_LuaWorld_PushOptString( L, ent->NPC_type );
+	} else if ( !strcmp( key, "team" ) ) {
+		lua_pushstring( L, RP_LuaWorld_NpcTeamName( ent->client->playerTeam ) );
+	} else if ( !strcmp( key, "max_health" ) ) {
+		lua_pushinteger( L, ent->client->ps.stats[STAT_MAX_HEALTH] );
+	} else if ( !strcmp( key, "alive" ) ) {
+		lua_pushboolean( L, RP_LuaWorld_NpcAlive( ent ) );
+	} else if ( !strcmp( key, "spawner" ) ) {
+		const gentity_t *sp = ent->zyk_npc_spawner;
+		RP_LuaWorld_PushOptString( L, RP_SpawnerMadeIt( sp, ent ) ? sp->targetname : NULL );
+	} else if ( !strcmp( key, "effect" ) ) {
+		RP_LuaWorld_PushOptString( L, RP_LuaPeople_EffectName( ent->client->pers.phase_mode ) );
+	} else {
+		lua_pushboolean( L, RP_NpcIsFrozen( ent ) );
+	}
+	return 1;
+}
+
 static int RP_LuaWorld_EntIndex( lua_State *L ) {
 	static const luaL_Reg methods[] = {
 		{ "key", RP_LuaWorld_EntKey }, { "use", RP_LuaWorld_EntUse }, { "free", RP_LuaWorld_EntFree },
 		{ "move", RP_LuaWorld_EntMove }, { "rotate", RP_LuaWorld_EntRotate }, { "on_use", RP_LuaWorld_EntOnUse },
 		{ "on_pain", RP_LuaWorld_EntOnPain }, { "on_die", RP_LuaWorld_EntOnDie }, { "on_enter", RP_LuaWorld_EntOnEnter },
-		{ "on_leave", RP_LuaWorld_EntOnLeave }, { NULL, NULL } };
+		{ "on_leave", RP_LuaWorld_EntOnLeave }, { "kill", RP_LuaWorld_EntKill }, { "teleport", RP_LuaWorld_EntTeleport },
+		{ "freeze", RP_LuaWorld_EntFreeze }, { "unfreeze", RP_LuaWorld_EntUnfreeze }, { "set_effect", RP_LuaWorld_EntSetEffect },
+		{ "on_death", RP_LuaWorld_EntOnDeath }, { NULL, NULL } };
 	rpLuaEntHandle_t *h = (rpLuaEntHandle_t *)luaL_checkudata( L, 1, RP_LUA_ENTITY_MT );
 	const char *key = luaL_checkstring( L, 2 );
 	gentity_t *ent;
@@ -1596,12 +2082,12 @@ static int RP_LuaWorld_EntIndex( lua_State *L ) {
 	} else if ( !strcmp( key, "owner" ) ) {
 		RP_LuaWorld_PushOptString( L, RP_Lua_EntityOwner( ent ) );
 	} else if ( !strcmp( key, "health" ) ) {
-		if ( ent->takedamage ) {
+		if ( ent->takedamage || ( ent->NPC && ent->client ) ) {
 			lua_pushinteger( L, ent->health );
 		} else {
 			lua_pushnil( L );
 		}
-	} else {
+	} else if ( !RP_LuaWorld_NpcField( L, ent, key ) ) {	// API 3
 		lua_pushnil( L );
 	}
 	return 1;
@@ -1631,7 +2117,8 @@ void RP_LuaWorld_Register( lua_State *L ) {
 	static const luaL_Reg worldFuncs[] = {
 		{ "spawn", RP_LuaWorld_Spawn }, { "zone", RP_LuaWorld_Zone }, { "find", RP_LuaWorld_Find },
 		{ "by_number", RP_LuaWorld_ByNumber }, { "effect", RP_LuaWorld_Effect }, { "sound", RP_LuaWorld_Sound },
-		{ "music", RP_LuaWorld_Music }, { "shake", RP_LuaWorld_Shake }, { "distance", RP_LuaWorld_Distance }, { NULL, NULL } };
+		{ "music", RP_LuaWorld_Music }, { "shake", RP_LuaWorld_Shake }, { "distance", RP_LuaWorld_Distance },
+		{ "npc", RP_LuaWorld_Npc }, { NULL, NULL } };
 	static const luaL_Reg entityMeta[] = {
 		{ "__index", RP_LuaWorld_EntIndex }, { "__newindex", RP_LuaWorld_EntNewIndex }, { "__tostring", RP_LuaWorld_EntToString }, { NULL, NULL } };
 	int g = lua_absindex( L, -1 );

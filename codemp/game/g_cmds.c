@@ -1345,7 +1345,8 @@ void zyk_add_guns( gentity_t *ent )
 // GalaxyRP fix: [Admin] forward declaration. zyk_minigame_name() is defined further down this
 // file, beside the account-change guards that were its first callers; declared here rather than
 // moved so those callers keep it in view.
-static const char *zyk_minigame_name( gentity_t *ent );
+// GLX_U: [Lua] not static any more: scripts ask it too (rp_lua_people.c), declared in g_local.h
+const char *zyk_minigame_name( gentity_t *ent );
 // DAJ_RP: [Admin] defined further down, beside zyk_stop_active_force_powers(); see Cmd_Give_f().
 void zyk_stop_active_holdables( gentity_t *ent );
 
@@ -6277,7 +6278,7 @@ void update_current_character_and_account(gentity_t* ent) {
 // Both halves ask for the mode AND this player's roster slot. Neither alone is enough: the mode
 // says a game exists, the roster slot says this player is in it, and they are cleared together
 // by melee_battle_end() and duel_tournament_end().
-static const char *zyk_minigame_name( gentity_t *ent )
+const char *zyk_minigame_name( gentity_t *ent )
 {
 	if (!ent || !ent->client)
 		return NULL;
@@ -22093,6 +22094,28 @@ void RP_ClearPhaseMode( gentity_t *ent )
 		ent->client->pers.phase_mode = RP_PHASE_NONE;
 		ent->client->pers.phase_releasing = qtrue;
 	}
+	ent->client->pers.phase_by_script = 0;	// GLX_U: [Lua] nobody's effect any more
+}
+
+// GLX_U: [Lua] a player's mode, set or cleared (RP_PHASE_NONE) exactly as the four commands below do it,
+// remembering who: scriptOwner is the plugin + 1 for a script, 0 for an admin. The last one wins both ways;
+// a plugin switched off clears only the modes still marked as its own (rp_lua_people.c).
+void RP_SetPhaseMode( gentity_t *ent, int mode, int scriptOwner )
+{
+	if ( !ent || !ent->client )
+	{
+		return;
+	}
+
+	if ( mode == RP_PHASE_NONE )
+	{
+		RP_ClearPhaseMode( ent );
+		return;
+	}
+
+	ent->client->pers.phase_mode = mode;
+	ent->client->pers.phase_releasing = qfalse;
+	ent->client->pers.phase_by_script = scriptOwner;
 }
 
 static void RP_PhaseCommand( gentity_t *ent, int mode, const char *cmdName )
@@ -22154,9 +22177,8 @@ static void RP_PhaseCommand( gentity_t *ent, int mode, const char *cmdName )
 		RP_ClearPhaseMode( target );
 	}
 	else
-	{ // off, or another mode: switch straight to this one
-		target->client->pers.phase_mode = mode;
-		target->client->pers.phase_releasing = qfalse;
+	{ // off, or another mode: switch straight to this one -- an admin's now, even over a script's (GLX_U: [Lua])
+		RP_SetPhaseMode( target, mode, 0 );
 	}
 
 	newMode = target->client->pers.phase_mode;

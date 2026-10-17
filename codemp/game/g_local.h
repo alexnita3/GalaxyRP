@@ -963,6 +963,9 @@ typedef struct clientPersistant_s {
 	// see RP_PhaseUpdate() in g_active.c.
 	int phase_mode;
 	qboolean phase_releasing;
+	// GLX_U: [Lua] who set phase_mode: a plugin + 1 when a script did (p:set_effect), 0 when an admin did or
+	// nothing is set. A plugin switched off clears only the modes still marked as its own (RP_SetPhaseMode()).
+	int phase_by_script;
 
 	// zyk: used to backup player force powers before some event that does not allow them. They will be restored after event ends
 	int zyk_saved_force_powers;
@@ -2774,6 +2777,7 @@ qboolean	G_PlayerHasCustomSkeleton(gentity_t *ent);
 void	G_TeamCommand( team_t team, char *cmd );
 void	G_ScaleNetHealth(gentity_t *self);
 void	G_KillBox (gentity_t *ent);
+qboolean G_KillBoxWouldHit( gentity_t *ent, const vec3_t origin );	// GLX_U: [Lua] g_utils.c
 gentity_t *G_Find (gentity_t *from, int fieldofs, const char *match);
 int		G_RadiusList ( vec3_t origin, float radius,	gentity_t *ignore, qboolean takeDamage, gentity_t *ent_list[MAX_GENTITIES]);
 
@@ -3231,6 +3235,8 @@ qboolean RP_PhasePassesThrough( const gentity_t *ent );
 qboolean RP_PlayerIsHidden( const gentity_t *ent );
 void RP_HiddenApplyState( const gentity_t *player, entityState_t *s );
 void RP_ClearPhaseMode( gentity_t *ent );
+void RP_SetPhaseMode( gentity_t *ent, int mode, int scriptOwner );	// GLX_U: [Lua] g_cmds.c
+const char *zyk_minigame_name( gentity_t *ent );					// GLX_U: [Lua] g_cmds.c: "Duel Tournament", "Melee Battle" or NULL
 const char *RP_PhaseModeName( int mode );
 void RP_PhaseTrackNpc( gentity_t *npc );
 // GalaxyRP: [Entity System] an npc_spawner's "npceffect" value: RP_PHASE_* for holo/ghost/walkthrough,
@@ -3239,6 +3245,9 @@ int RP_NpcEffectFromName( const char *name );
 // GalaxyRP: [Entity System] an npc_spawner's or NPC_Vehicle's "npcteam" value, the words /npc team takes:
 // the npcteam_t, -1 for an empty one, -2 for anything else -- see NPC_spawn.c
 int RP_NpcTeamFromName( const char *name );
+// GLX_U: [Lua] NPC_spawn.c: /npc spawn's spawn at a given point (NULL: no NPC), and /npc effect's change
+gentity_t *RP_NpcSpawnAt( char *npc_type, const vec3_t origin, float yaw, int team, int effect, qboolean isVehicle );
+qboolean RP_NpcApplyEffect( gentity_t *npc, int mode );
 // DAJ_RP: [NPC System] /npc freeze and the spawner key "npcfreeze" -- see NPC_spawn.c.
 // RP_NpcIsFrozen: ent is an NPC under the freeze. RP_NpcFreeze / RP_NpcUnfreeze: put it on / take it off.
 qboolean RP_NpcIsFrozen( const gentity_t *ent );

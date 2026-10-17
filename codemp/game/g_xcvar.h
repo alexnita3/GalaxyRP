@@ -577,7 +577,9 @@ XCVAR_DEF( rp_allow_explosives_regen,			"1",	NULL,					CVAR_ARCHIVE | CVAR_NORES
 // The limits: memory for the whole state (MB), instructions and milliseconds per call, milliseconds per server
 // frame for timers, tasks and the frame event, errors per minute before a plugin is switched off, bytes per
 // stored value and per plugin in lua.db, entities and zones per plugin, KB of the game's memory pool all script
-// spawns may use per map, and new effect names scripts may register per map (rp_lua_world.c).
+// spawns may use per map, and new effect names scripts may register per map (rp_lua_world.c). API 3 (rp_lua_people.c):
+// NPCs per plugin (they count as entities too), and the item class names scripts may give players, separated by
+// spaces (empty: none).
 // rp_lua_allowexec 1 allows the rcon command lua_exec. Not archived and not announced: the server config sets
 // them (galaxyrp_server.cfg).
 XCVAR_DEF( rp_lua,								"1",		NULL,			CVAR_NONE,									qfalse )
@@ -594,5 +596,7 @@ XCVAR_DEF( rp_lua_allowexec,					"0",		NULL,			CVAR_NONE,									qfalse )
 XCVAR_DEF( rp_lua_maxents,						"32",		NULL,			CVAR_NONE,									qfalse )
 XCVAR_DEF( rp_lua_spawnkb,						"512",		NULL,			CVAR_NONE,									qfalse )
 XCVAR_DEF( rp_lua_newfx,						"8",		NULL,			CVAR_NONE,									qfalse )
+XCVAR_DEF( rp_lua_maxnpcs,						"8",		NULL,			CVAR_NONE,									qfalse )
+XCVAR_DEF( rp_lua_items,						"",			NULL,			CVAR_NONE,									qfalse )
 
 #undef XCVAR_DEF

@@ -10,7 +10,7 @@ RP_Lua_Init() at the end of G_InitGame, RP_Lua_Shutdown() in G_ShutdownGame. Eve
 returns at once when Lua is off (rp_lua 0) or the state is not open.
 
 The pieces: rp_lua_core.c (state, sandbox, limits, loader, protected calls, errors),
-rp_lua_api.c (what scripts can call), rp_lua_world.c (entities and the World table, API version 2),
+rp_lua_api.c (what scripts can call), rp_lua_world.c (entities and the World table, API version 2), rp_lua_people.c (players, and the death and damage events, API version 3; NPC handles are in rp_lua_world.c),
 rp_lua_store.c (lua.db), rp_lua_admin.c (/scripts and the rcon lua_* commands). lib/lua/README.md says what was left out of Lua itself and why.
 ===========================================================================
 */
@@ -48,6 +48,14 @@ void		RP_Lua_ForceUses( qboolean on );	// around an admin's use: every use until
 void		RP_Lua_MapEvent( const char *name, gentity_t *activator, gentity_t *ent );
 const char	*RP_Lua_EntityOwner( const gentity_t *ent );
 qboolean	RP_Lua_ValidEventName( const char *name );
+
+// GLX_U: [Lua] players and NPCs (rp_lua_people.c, API version 3), from g_combat.c. A real death in player_die()
+// (player or NPC; not a knockdown), a hit G_Damage() has just applied to a player or NPC, and a player the Death
+// System has just knocked down. The scripts cannot change what happens next: they are told, and a free() or
+// kill() they ask for waits for the next frame.
+void		RP_Lua_Death( gentity_t *self, gentity_t *attacker, int mod );
+void		RP_Lua_Damage( gentity_t *targ, gentity_t *attacker, int amount, int mod );
+void		RP_Lua_Downed( gentity_t *ent, gentity_t *attacker );
 
 // /scripts (needs the Scripts admin power) and the rcon commands
 void		Cmd_Scripts_f( gentity_t *ent );

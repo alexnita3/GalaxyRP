@@ -1,12 +1,12 @@
 /*
 ===========================================================================
-GLX_U: [Lua] what scripts can call (API version 1, and the events of version 2), and the C side of
+GLX_U: [Lua] what scripts can call (API version 1, and the events of versions 2 and 3), and the C side of
 events, commands, timers and tasks. Everything here runs inside RP_Lua_Call(); a script error raised here is reported against
 the plugin that is running. Nothing in this file lets a script run a console command, touch a
 file, or reach the engine directly.
 
 Globals: print, include, Plugin, Events, Timer, Task, Commands, Msg, Server (Storage is in
-rp_lua_store.c, World in rp_lua_world.c). Player handles are userdata of type GLX.Player; one handle per connection, so the
+rp_lua_store.c, World in rp_lua_world.c; what a player handle adds in API version 3 is in rp_lua_people.c). Player handles are userdata of type GLX.Player; one handle per connection, so the
 same player is always the same value (usable as a table key) until they disconnect, after which
 using it is a script error rather than a crash.
 ===========================================================================
@@ -27,7 +27,9 @@ typedef struct {
 	int			plugin;
 	int			ref;
 	int			id;
-	char		filter[RP_LUA_FILTER_SIZE];	// "use": the targetname; "map_event": the name, "" for all
+	char		filter[RP_LUA_FILTER_SIZE];	// "use": the targetname; "map_event": the name; "npc_death": the npc_type;
+											// "damage": "players" or "npcs"; "" for all
+	char		filter2[RP_LUA_FILTER_SIZE];	// "npc_death": the spawner's targetname, "" for any
 } rpLuaHandler_t;
 
 typedef struct {
@@ -71,7 +73,7 @@ static int				rpNextId = 1;
 
 static const char *rpLuaEventNames[RPLE_NUM] = {
 	"init", "shutdown", "unload", "frame", "client_connect", "client_begin", "client_spawn",
-	"client_disconnect", "chat", "command", "use", "map_event"
+	"client_disconnect", "chat", "command", "use", "map_event", "player_death", "player_downed", "npc_death", "damage"
 };
 
 // names a script command may not take: commands the engine, our cgame or our ui handle on the
@@ -251,7 +253,7 @@ static int RP_LuaApi_PlayerIndex( lua_State *L ) {
 		}
 	} else if ( !strcmp( key, "has_admin" ) ) {
 		lua_pushcfunction( L, RP_LuaApi_PlayerHasAdmin );
-	} else {
+	} else if ( !RP_LuaPeople_PlayerField( L, h->client, key ) ) {	// API 3
 		lua_pushnil( L );
 	}
 	return 1;
@@ -370,15 +372,68 @@ static int RP_LuaApi_PluginName( lua_State *L ) {
 Events
 ================
 */
+// one string field of a filter table at index 3: NULL when absent; too long or empty is an error
+static const char *RP_LuaApi_FilterField( lua_State *L, const char *field ) {
+	const char *value = NULL;
+
+	if ( lua_getfield( L, 3, field ) != LUA_TNIL ) {
+		if ( lua_type( L, -1 ) != LUA_TSTRING ) {
+			luaL_error( L, "the %s filter must be a string", field );
+			return NULL;
+		}
+		value = lua_tostring( L, -1 );	// stays valid: the table holds it
+		if ( !value[0] || strlen( value ) >= RP_LUA_FILTER_SIZE ) {
+			luaL_error( L, "the %s filter must be 1 to %d characters", field, RP_LUA_FILTER_SIZE - 1 );
+			return NULL;
+		}
+	}
+	lua_pop( L, 1 );
+	return value;
+}
+
+// API 3: Events.on("npc_death", fn [, { npc_type =, spawner = }]) and Events.on("damage", fn [, { target = }])
+static void RP_LuaApi_ActorFilter( lua_State *L, int ev, char *filter, char *filter2 ) {
+	const char *value;
+
+	if ( lua_isnoneornil( L, 3 ) ) {
+		return;
+	}
+	luaL_checktype( L, 3, LUA_TTABLE );
+	if ( ev == RPLE_NPC_DEATH ) {
+		value = RP_LuaApi_FilterField( L, "npc_type" );
+		if ( value ) {
+			Q_strncpyz( filter, value, RP_LUA_FILTER_SIZE );
+		}
+		value = RP_LuaApi_FilterField( L, "spawner" );
+		if ( value ) {
+			Q_strncpyz( filter2, value, RP_LUA_FILTER_SIZE );
+		}
+		return;
+	}
+	value = RP_LuaApi_FilterField( L, "target" );
+	if ( value ) {
+		if ( strcmp( value, "players" ) && strcmp( value, "npcs" ) ) {
+			luaL_error( L, "the damage event's target filter is \"players\" or \"npcs\"" );
+			return;
+		}
+		Q_strncpyz( filter, value, RP_LUA_FILTER_SIZE );
+	}
+}
+
 // Events.on("use", fn, { targetname = }) and Events.on("map_event", fn [, { name = }]): the filter
-static void RP_LuaApi_EventFilter( lua_State *L, int ev, char *filter ) {
+static void RP_LuaApi_EventFilter( lua_State *L, int ev, char *filter, char *filter2 ) {
 	const char *field = ( ev == RPLE_USE ) ? "targetname" : "name";
 	const char *value = NULL;
 
 	filter[0] = '\0';
+	filter2[0] = '\0';
+	if ( ev == RPLE_NPC_DEATH || ev == RPLE_DAMAGE ) {
+		RP_LuaApi_ActorFilter( L, ev, filter, filter2 );
+		return;
+	}
 	if ( ev != RPLE_USE && ev != RPLE_MAP_EVENT ) {
 		if ( !lua_isnoneornil( L, 3 ) ) {
-			luaL_error( L, "only the use and map_event events take a filter" );
+			luaL_error( L, "only the use, map_event, npc_death and damage events take a filter" );
 		}
 		return;
 	}
@@ -412,7 +467,7 @@ static void RP_LuaApi_EventFilter( lua_State *L, int ev, char *filter ) {
 static int RP_LuaApi_EventsOn( lua_State *L ) {
 	int plugin = RP_Lua_CurrentPlugin( L );
 	const char *name = luaL_checkstring( L, 1 );
-	char filter[RP_LUA_FILTER_SIZE];
+	char filter[RP_LUA_FILTER_SIZE], filter2[RP_LUA_FILTER_SIZE];
 	int ev, i;
 
 	luaL_checktype( L, 2, LUA_TFUNCTION );
@@ -422,9 +477,9 @@ static int RP_LuaApi_EventsOn( lua_State *L ) {
 		}
 	}
 	if ( ev == RPLE_NUM ) {
-		return luaL_error( L, "no event called \"%s\" (init, shutdown, unload, frame, client_connect, client_begin, client_spawn, client_disconnect, chat, command, use, map_event)", name );
+		return luaL_error( L, "no event called \"%s\" (init, shutdown, unload, frame, client_connect, client_begin, client_spawn, client_disconnect, chat, command, use, map_event, player_death, player_downed, npc_death, damage)", name );
 	}
-	RP_LuaApi_EventFilter( L, ev, filter );
+	RP_LuaApi_EventFilter( L, ev, filter, filter2 );
 	for ( i = 0; i < RP_LUA_MAX_HANDLERS; i++ ) {
 		if ( !rpHandlers[ev][i].active ) {
 			break;
@@ -438,6 +493,7 @@ static int RP_LuaApi_EventsOn( lua_State *L ) {
 	rpHandlers[ev][i].plugin = plugin;
 	rpHandlers[ev][i].id = rpNextId++;
 	Q_strncpyz( rpHandlers[ev][i].filter, filter, sizeof( rpHandlers[ev][i].filter ) );
+	Q_strncpyz( rpHandlers[ev][i].filter2, filter2, sizeof( rpHandlers[ev][i].filter2 ) );
 	rpHandlers[ev][i].active = qtrue;
 	lua_pushinteger( L, rpHandlers[ev][i].id );
 	return 1;
@@ -669,6 +725,102 @@ void RP_LuaApi_FireMapEvent( const char *name, gentity_t *activator, gentity_t *
 		c.slot = i;
 		c.result = 1;
 		RP_Lua_Call( h->plugin, RP_LuaApi_EntEventWorker, &c );
+	}
+}
+
+/*
+================
+The player_death, player_downed, npc_death and damage events (API 3): fired from game code through
+rp_lua_people.c, which keeps free() and kill() waiting until the game code is done
+================
+*/
+qboolean RP_LuaApi_HasHandlers( rpLuaEvent_t ev ) {
+	int i;
+
+	if ( !rl.L ) {
+		return qfalse;
+	}
+	for ( i = 0; i < RP_LUA_MAX_HANDLERS; i++ ) {
+		if ( rpHandlers[ev][i].active && RP_Lua_PluginRunning( rpHandlers[ev][i].plugin ) ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
+typedef struct {
+	rpLuaEvent_t	ev;
+	int				slot;
+	gentity_t		*ent;		// the player or NPC
+	gentity_t		*other;		// the killer or attacker, NULL for none
+	int				amount;
+	int				mod;
+} rpLuaActorEventCall_t;
+
+static int RP_LuaApi_ActorEventWorker( lua_State *L, void *data ) {
+	rpLuaActorEventCall_t *c = (rpLuaActorEventCall_t *)data;
+	int nargs;
+
+	lua_rawgeti( L, LUA_REGISTRYINDEX, rpHandlers[c->ev][c->slot].ref );
+	RP_LuaWorld_PushActor( L, c->ent );
+	RP_LuaWorld_PushActor( L, c->other );
+	switch ( c->ev ) {
+	case RPLE_PLAYER_DOWNED:
+		nargs = 2;
+		break;
+	case RPLE_DAMAGE:
+		lua_pushinteger( L, c->amount );
+		lua_pushstring( L, RP_LuaPeople_ModName( c->mod ) );
+		nargs = 4;
+		break;
+	default:	// player_death, npc_death
+		lua_pushstring( L, RP_LuaPeople_ModName( c->mod ) );
+		nargs = 3;
+		break;
+	}
+	lua_call( L, nargs, 0 );	// what the handler returns changes nothing
+	return 0;
+}
+
+// an npc_death handler's filter: the NPC's type, and the spawner that made it (while that spawner exists)
+static qboolean RP_LuaApi_NpcDeathMatches( const rpLuaHandler_t *h, const gentity_t *npc ) {
+	if ( h->filter[0] && ( !npc->NPC_type || Q_stricmp( h->filter, npc->NPC_type ) ) ) {
+		return qfalse;
+	}
+	if ( h->filter2[0] ) {
+		const gentity_t *sp = npc->zyk_npc_spawner;
+		if ( !RP_SpawnerMadeIt( sp, npc ) || !sp->targetname || Q_stricmp( h->filter2, sp->targetname ) ) {
+			return qfalse;
+		}
+	}
+	return qtrue;
+}
+
+void RP_LuaApi_FireActorEvent( rpLuaEvent_t ev, gentity_t *ent, gentity_t *other, int amount, int mod ) {
+	rpLuaActorEventCall_t c;
+	int i;
+
+	if ( !rl.L || !ent ) {
+		return;
+	}
+	c.ev = ev;
+	c.ent = ent;
+	c.other = other;
+	c.amount = amount;
+	c.mod = mod;
+	for ( i = 0; i < RP_LUA_MAX_HANDLERS; i++ ) {
+		rpLuaHandler_t *h = &rpHandlers[ev][i];
+		if ( !h->active || !RP_Lua_PluginRunning( h->plugin ) || !ent->inuse ) {
+			continue;
+		}
+		if ( ev == RPLE_NPC_DEATH && !RP_LuaApi_NpcDeathMatches( h, ent ) ) {
+			continue;
+		}
+		if ( ev == RPLE_DAMAGE && h->filter[0] && strcmp( h->filter, ( ent->s.number < MAX_CLIENTS ) ? "players" : "npcs" ) ) {
+			continue;
+		}
+		c.slot = i;
+		RP_Lua_Call( h->plugin, RP_LuaApi_ActorEventWorker, &c );
 	}
 }
 
@@ -1300,7 +1452,8 @@ void RP_LuaApi_RemovePlugin( int plugin ) {
 	lua_State *L = rl.L;
 	int ev, i;
 
-	RP_LuaWorld_RemovePlugin( plugin );		// API 2: its entities and zones
+	RP_LuaWorld_RemovePlugin( plugin );		// API 2: its entities and zones (API 3: and NPCs)
+	RP_LuaPeople_RemovePlugin( plugin );	// API 3: the player effects it set that are still its own
 
 	for ( ev = 0; ev < RPLE_NUM; ev++ ) {
 		for ( i = 0; i < RP_LUA_MAX_HANDLERS; i++ ) {

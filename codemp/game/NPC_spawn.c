@@ -5198,86 +5198,19 @@ void SP_NPC_Droid_Protocol( gentity_t *self)
 
 //NPC console commands
 /*
-NPC_Spawn_f
+==================
+RP_NpcSpawnerGo / RP_NpcSpawnAt
+
+GLX_U: [Lua] the second half of NPC_SpawnType() -- the type, the count, the precaches and NPC_Spawn_Do() -- moved
+out unchanged, so /npc spawn and a script's World.npc share it. RP_NpcSpawnAt() is NPC_SpawnType() with the
+position and facing given rather than taken from the view of the player who typed /npc spawn, and with the team
+and effect an npc_spawner's "npcteam" and "npceffect" would give (team: an npcteam_t, -1 none; effect: an
+RP_PHASE_* mode). It keeps the same three free slots, and NULL means no NPC: no room, or NPC_Spawn_Do()
+refused. The caller checks the type and g_allowNPC first, as /entadd does for a spawner.
+==================
 */
-
-gentity_t *NPC_SpawnType( gentity_t *ent, char *npc_type, char *targetname, qboolean isVehicle )
+static gentity_t *RP_NpcSpawnerGo( gentity_t *NPCspawner, char *npc_type, char *targetname, qboolean isVehicle )
 {
-	gentity_t		*NPCspawner;
-	vec3_t			forward, end;
-	trace_t			trace;
-
-	// GalaxyRP fix: [Entity System] refuse before allocating, not after. One NPC costs three slots
-	// -- this spawner, the NPC itself and its NPC->tempGoal -- and G_Spawn() does not report
-	// failure, it calls trap->Error(ERR_DROP), which on a dedicated server ends the process (see
-	// ZYK_ENTITY_RESERVE in g_local.h). That is the crash an admin gets from overspawning NPCs,
-	// and it is why the "if (!NPCspawner)" check that used to be here could never fire: G_Spawn()
-	// never returns NULL.
-	if ( G_EntitySlotsAvailable( 3 ) == qfalse )
-	{
-		Com_Printf( S_COLOR_RED"NPC_Spawn Error: too few entity slots left (%d free, %d held in reserve)\n",
-			G_FreeEntityCount(), ZYK_ENTITY_RESERVE );
-
-		if ( ent && ent->client )
-		{
-			trap->SendServerCommand( ent-g_entities,
-				va("print \"Cannot spawn an NPC: the server is near its entity limit. %d slots free. Try ^3/npc kill all^7.\n\"",
-					G_FreeEntityCount()) );
-		}
-
-		G_LogPrintf( "NPC spawn of '%s' refused: %d entity slots free\n",
-			npc_type ? npc_type : "?", G_FreeEntityCount() );
-		return NULL;
-	}
-
-	// GalaxyRP: [Logical Entities] this spawner lives one frame and only exists so NPC_Spawn_Do
-	// has an origin, angles and an NPC_type to read; it is an npc_spawner in all but name, so it
-	// takes a logical slot when those are on (as TaystJK does) and never a networked one.
-	NPCspawner = RP_SpawnForClassname( "npc_spawner", qfalse, qfalse );
-
-	NPCspawner->think = G_FreeEntity;
-	NPCspawner->nextthink = level.time + FRAMETIME;
-
-	if ( !npc_type )
-	{
-		return NULL;
-	}
-
-	if (!npc_type[0])
-	{
-		Com_Printf( S_COLOR_RED"Error, expected one of:\n"S_COLOR_WHITE" NPC spawn [NPC type (from ext_data/NPCs)]\n NPC spawn vehicle [VEH type (from ext_data/vehicles)]\n" );
-		return NULL;
-	}
-
-	if ( !ent || !ent->client )
-	{//screw you, go away
-		return NULL;
-	}
-
-	//rwwFIXMEFIXME: Care about who is issuing this command/other clients besides 0?
-	//Spawn it at spot of first player
-	//FIXME: will gib them!
-	AngleVectors(ent->client->ps.viewangles, forward, NULL, NULL);
-	VectorNormalize(forward);
-	VectorMA(ent->r.currentOrigin, 64, forward, end);
-	trap->Trace(&trace, ent->r.currentOrigin, NULL, NULL, end, 0, MASK_SOLID, qfalse, 0, 0);
-	VectorCopy(trace.endpos, end);
-	end[2] -= 24;
-	trap->Trace(&trace, trace.endpos, NULL, NULL, end, 0, MASK_SOLID, qfalse, 0, 0);
-	VectorCopy(trace.endpos, end);
-	end[2] += 24;
-	G_SetOrigin(NPCspawner, end);
-	VectorCopy(NPCspawner->r.currentOrigin, NPCspawner->s.origin);
-	//set the yaw so that they face away from player
-	NPCspawner->s.angles[1] = ent->client->ps.viewangles[1];
-
-	// GalaxyRP: [Logical Entities] see above -- a logical spawner is never linked. Nothing reads
-	// the link: NPC_Spawn_Do takes the origin from the struct.
-	if (!NPCspawner->isLogical)
-	{
-		trap->LinkEntity((sharedEntity_t *)NPCspawner);
-	}
-
 	NPCspawner->NPC_type = G_NewString( npc_type );
 
 	if ( targetname )
@@ -5374,6 +5307,117 @@ gentity_t *NPC_SpawnType( gentity_t *ent, char *npc_type, char *targetname, qboo
 	}
 
 	return (NPC_Spawn_Do( NPCspawner ));
+}
+
+gentity_t *RP_NpcSpawnAt( char *npc_type, const vec3_t origin, float yaw, int team, int effect, qboolean isVehicle )
+{
+	gentity_t *NPCspawner;
+
+	if ( !npc_type || !npc_type[0] || G_EntitySlotsAvailable( 3 ) == qfalse )
+	{
+		return NULL;
+	}
+
+	NPCspawner = RP_SpawnForClassname( "npc_spawner", qfalse, qfalse );
+	NPCspawner->think = G_FreeEntity;
+	NPCspawner->nextthink = level.time + FRAMETIME;
+
+	G_SetOrigin( NPCspawner, (float *)origin );
+	VectorCopy( NPCspawner->r.currentOrigin, NPCspawner->s.origin );
+	NPCspawner->s.angles[1] = yaw;
+	if ( !NPCspawner->isLogical )
+	{
+		trap->LinkEntity( (sharedEntity_t *)NPCspawner );
+	}
+
+	NPCspawner->rpSpawnerTeam = ( team >= 0 ) ? team + 1 : 0;
+	NPCspawner->rpSpawnerEffect = ( !isVehicle && effect > RP_PHASE_NONE ) ? effect : RP_PHASE_NONE;
+
+	return RP_NpcSpawnerGo( NPCspawner, npc_type, NULL, isVehicle );
+}
+
+/*
+NPC_Spawn_f
+*/
+
+gentity_t *NPC_SpawnType( gentity_t *ent, char *npc_type, char *targetname, qboolean isVehicle )
+{
+	gentity_t		*NPCspawner;
+	vec3_t			forward, end;
+	trace_t			trace;
+
+	// GalaxyRP fix: [Entity System] refuse before allocating, not after. One NPC costs three slots
+	// -- this spawner, the NPC itself and its NPC->tempGoal -- and G_Spawn() does not report
+	// failure, it calls trap->Error(ERR_DROP), which on a dedicated server ends the process (see
+	// ZYK_ENTITY_RESERVE in g_local.h). That is the crash an admin gets from overspawning NPCs,
+	// and it is why the "if (!NPCspawner)" check that used to be here could never fire: G_Spawn()
+	// never returns NULL.
+	if ( G_EntitySlotsAvailable( 3 ) == qfalse )
+	{
+		Com_Printf( S_COLOR_RED"NPC_Spawn Error: too few entity slots left (%d free, %d held in reserve)\n",
+			G_FreeEntityCount(), ZYK_ENTITY_RESERVE );
+
+		if ( ent && ent->client )
+		{
+			trap->SendServerCommand( ent-g_entities,
+				va("print \"Cannot spawn an NPC: the server is near its entity limit. %d slots free. Try ^3/npc kill all^7.\n\"",
+					G_FreeEntityCount()) );
+		}
+
+		G_LogPrintf( "NPC spawn of '%s' refused: %d entity slots free\n",
+			npc_type ? npc_type : "?", G_FreeEntityCount() );
+		return NULL;
+	}
+
+	// GalaxyRP: [Logical Entities] this spawner lives one frame and only exists so NPC_Spawn_Do
+	// has an origin, angles and an NPC_type to read; it is an npc_spawner in all but name, so it
+	// takes a logical slot when those are on (as TaystJK does) and never a networked one.
+	NPCspawner = RP_SpawnForClassname( "npc_spawner", qfalse, qfalse );
+
+	NPCspawner->think = G_FreeEntity;
+	NPCspawner->nextthink = level.time + FRAMETIME;
+
+	if ( !npc_type )
+	{
+		return NULL;
+	}
+
+	if (!npc_type[0])
+	{
+		Com_Printf( S_COLOR_RED"Error, expected one of:\n"S_COLOR_WHITE" NPC spawn [NPC type (from ext_data/NPCs)]\n NPC spawn vehicle [VEH type (from ext_data/vehicles)]\n" );
+		return NULL;
+	}
+
+	if ( !ent || !ent->client )
+	{//screw you, go away
+		return NULL;
+	}
+
+	//rwwFIXMEFIXME: Care about who is issuing this command/other clients besides 0?
+	//Spawn it at spot of first player
+	//FIXME: will gib them!
+	AngleVectors(ent->client->ps.viewangles, forward, NULL, NULL);
+	VectorNormalize(forward);
+	VectorMA(ent->r.currentOrigin, 64, forward, end);
+	trap->Trace(&trace, ent->r.currentOrigin, NULL, NULL, end, 0, MASK_SOLID, qfalse, 0, 0);
+	VectorCopy(trace.endpos, end);
+	end[2] -= 24;
+	trap->Trace(&trace, trace.endpos, NULL, NULL, end, 0, MASK_SOLID, qfalse, 0, 0);
+	VectorCopy(trace.endpos, end);
+	end[2] += 24;
+	G_SetOrigin(NPCspawner, end);
+	VectorCopy(NPCspawner->r.currentOrigin, NPCspawner->s.origin);
+	//set the yaw so that they face away from player
+	NPCspawner->s.angles[1] = ent->client->ps.viewangles[1];
+
+	// GalaxyRP: [Logical Entities] see above -- a logical spawner is never linked. Nothing reads
+	// the link: NPC_Spawn_Do takes the origin from the struct.
+	if (!NPCspawner->isLogical)
+	{
+		trap->LinkEntity((sharedEntity_t *)NPCspawner);
+	}
+
+	return RP_NpcSpawnerGo( NPCspawner, npc_type, targetname, isVehicle );
 }
 
 void NPC_Spawn_f( gentity_t *ent )
@@ -5901,6 +5945,42 @@ static const char *RP_NpcEffectName( int mode )
 	return RP_PhaseModeName( mode );
 }
 
+/*
+==================
+RP_NpcApplyEffect
+
+GLX_U: [Lua] what /npc effect does to the NPC once it has passed the command's checks, moved out unchanged so a
+script's npc:set_effect does exactly the same: the mode set (RP_PHASE_NONE clears it, the NPC releasing out of
+whatever it overlaps), an NPC that spawned non-solid made a normal body, and the phase tracking. The caller
+refuses vehicles and riders. Returns whether the NPC had spawned non-solid.
+==================
+*/
+qboolean RP_NpcApplyEffect( gentity_t *npc, int mode )
+{
+	qboolean mapNonSolid = ( npc->r.contents != CONTENTS_BODY ) ? qtrue : qfalse;
+
+	if ( mode == RP_PHASE_NONE )
+	{
+		npc->client->pers.phase_mode = RP_PHASE_NONE;
+		npc->client->pers.phase_releasing = qtrue;
+	}
+	else
+	{
+		npc->client->pers.phase_mode = mode;
+		npc->client->pers.phase_releasing = qfalse;
+	}
+
+	if ( mapNonSolid )
+	{ // back to a normal body; the mode (or the release) keeps it walk-through for now
+		npc->r.contents = CONTENTS_BODY;
+		npc->clipmask |= CONTENTS_BODY;
+	}
+
+	RP_PhaseTrackNpc( npc );
+	trap->LinkEntity( (sharedEntity_t *)npc );
+	return mapNonSolid;
+}
+
 static void RP_NpcEffect_f( gentity_t *ent )
 {
 	char arg[MAX_STRING_CHARS];
@@ -5962,9 +6042,6 @@ static void RP_NpcEffect_f( gentity_t *ent )
 			trap->SendServerCommand( ent-g_entities, va( "print \"%s ^7has no effect to clear.\n\"", label ) );
 			return;
 		}
-
-		npc->client->pers.phase_mode = RP_PHASE_NONE;
-		npc->client->pers.phase_releasing = qtrue;
 	}
 	else
 	{
@@ -5973,19 +6050,9 @@ static void RP_NpcEffect_f( gentity_t *ent )
 			trap->SendServerCommand( ent-g_entities, va( "print \"%s ^7is already %s.\n\"", label, RP_NpcEffectName( mode ) ) );
 			return;
 		}
-
-		npc->client->pers.phase_mode = mode;
-		npc->client->pers.phase_releasing = qfalse;
 	}
 
-	if ( mapNonSolid )
-	{ // back to a normal body; the mode (or the release) keeps it walk-through for now
-		npc->r.contents = CONTENTS_BODY;
-		npc->clipmask |= CONTENTS_BODY;
-	}
-
-	RP_PhaseTrackNpc( npc );
-	trap->LinkEntity( (sharedEntity_t *)npc );
+	RP_NpcApplyEffect( npc, mode );
 
 	if ( mode == RP_PHASE_NONE )
 	{

@@ -850,6 +850,7 @@ void RP_Lua_InitState( void ) {
 void RP_Lua_CloseState( void ) {
 	RP_LuaApi_Reset();
 	RP_LuaWorld_Reset();
+	RP_LuaPeople_Reset();	// API 3: no script is left to own a player effect
 	if ( rl.L && !rl.panicked ) {
 		// finalizers (__gc) run here: give them one budget, which stays exhausted once used up,
 		// so a finalizer that loops cannot stall the map change

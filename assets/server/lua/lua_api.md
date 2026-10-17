@@ -3,14 +3,16 @@
 Server admins can add quests, jobs, world events, scripted interactions and minigames with Lua
 scripts, without rebuilding the mod. Scripts run on the server only; players need nothing new.
 
-This guide covers **API version 2**:
+This guide covers **API version 3**:
 - version 1: events, commands, timers, tasks, messages, server information, player information
   and storage;
 - version 2: the world -- entities, zones, effects, sounds, music, screen shakes, and the map's
-  `target_lua` entity.
+  `target_lua` entity;
+- version 3: players and NPCs -- what a player handle tells, teleporting, healing, items, player
+  effects and skills, spawning and controlling NPCs, and the death, knockdown and damage events.
 
-Changing players, NPCs and giving rewards come in later versions. A plugin written for version 1
-runs unchanged.
+Credits, XP and login events come in a later version. A plugin written for version 1 or 2 runs
+unchanged.
 
 ## Getting started
 
@@ -26,7 +28,9 @@ runs unchanged.
 - `announcements`: timed chat messages;
 - `playtime`: a `/playtime` command with per-character storage;
 - `terminal` (API 2): a console players use with the Use key;
-- `meteors` (API 2): `/meteors <seconds>`, a meteor shower world event.
+- `meteors` (API 2): `/meteors <seconds>`, a meteor shower world event;
+- `bounty` (API 3): `/bounty`, a "kill three NPCs" quest;
+- `race` (API 3): `/race`, a checkpoint race with a countdown and records.
 
 **Map scripts** are files in `lua/maps/<map name>/` (for example `lua/maps/mp/ffa5/doors.lua`).
 - They run only on that map, and only when `rp_lua_mapscripts` is 1.
@@ -65,6 +69,8 @@ All limits are cvars in `galaxyrp_server.cfg`.
 | `rp_lua_maxents` | 32 | Entities and zones one plugin may have at once |
 | `rp_lua_spawnkb` | 512 | KB of game memory all scripts' `World.spawn` may use per map (freed when the map changes) |
 | `rp_lua_newfx` | 8 | New effect files scripts may add per map (a map has only 64 effect slots) |
+| `rp_lua_maxnpcs` | 8 | NPCs one plugin may have at once, corpses included |
+| `rp_lua_items` | (empty) | Not a limit but a list: the item class names scripts may give players |
 
 - **A script over the limit** stops with an error: "script ran too long". It cannot catch that error
   and carry on.
@@ -209,7 +215,8 @@ player disconnects, using it is an error. Check `player.valid` first when unsure
 | `valid` | Still connected |
 | `player:has_admin(n)` | Has admin power `n` |
 
-Scripts cannot change players yet. That comes in a later version.
+API version 3 adds more fields, and a few things scripts can do to players: see
+[Players and NPCs](#players-and-npcs-api-version-3).
 
 ### Storage
 
@@ -316,7 +323,12 @@ zone:on_leave(function(zone, player) Msg.center(player, "You leave the cantina."
 - **Enter** fires once, when a player first touches it.
 - **Leave** fires half a second after they stop touching it, at once when they die or become a
   spectator, and when they disconnect (their handle still works then).
-- Spectators are never in a zone. Players only: NPCs come in a later version.
+- Spectators are never in a zone.
+- **NPCs** (API 3): a zone made with `npcs = true` sees NPCs too:
+  `World.zone{ mins = ..., maxs = ..., npcs = true }`. `on_enter` and `on_leave` then get an
+  entity handle for an NPC (nil on leave if the NPC was removed). A zone follows up to 32 NPCs at
+  once. An NPC leaves the same way a player does: half a second after it stops touching the zone,
+  or at once when it dies or is removed.
 
 ### Map events: `target_lua`
 
@@ -335,3 +347,110 @@ end, { name = "vault_alarm" })
 `/entuse`, `/enttrigger` and `/targetuse` run the scripts' `on_use` and `use` handlers too, but a
 script cannot stop them (nor what they set off), just as locks cannot. A door opened by
 `/enttrigger` or the level 5 stun baton is not reported to scripts.
+
+## Players and NPCs (API version 3)
+
+### Player fields
+
+| Field | Meaning |
+|---|---|
+| `alive` | Connected, playing (not spectating), not dead and not knocked down |
+| `downed` | Knocked down by the Death System, or paralyzed by an admin |
+| `health`, `max_health` | Health now, and its maximum |
+| `armor`, `max_armor` | Shield now, and its maximum (the Max Shield skill's on a character) |
+| `origin`, `yaw` | Where they stand (a vector) and which way they face (degrees) |
+| `account_id` | The account's id, or nil when logged out |
+| `character_name` | The character's name, or nil |
+| `level`, `xp`, `credits`, `skillpoints` | The character's, or nil when not playing one. Read-only |
+| `riding` | On a vehicle |
+| `minigame` | `"Duel Tournament"`, `"Melee Battle"` or nil |
+| `effect` | `"walkthrough"`, `"ghost"`, `"holo"`, `"hidden"` or nil |
+| `player:skill(n)` | Skill `n`'s level, its maximum and its name, numbered as `/skillup` numbers them; nil when not on a character |
+
+### Player actions
+
+Each returns `false` and the reason when it is refused, so a script can tell the player why.
+
+| Method | What it does | Refused when |
+|---|---|---|
+| `player:teleport(pos [, yaw])` | Moves them there, with the teleport effect | Not alive, riding a vehicle, in a mini-game or a duel, admin-protected, or the spot is blocked: a wall, the floor, or someone standing there. Nobody is ever telefragged |
+| `player:heal(n)` | Adds up to `n` health, never above the maximum. Returns how much it added | Not alive (a script does not revive a knocked-down player) |
+| `player:set_armor(n)` | Sets their shield, kept between 0 and the maximum. Returns the new value | Not alive |
+| `player:give(item)` | One item, by its class name: a weapon with its ammo, ammo, or a holdable item, as picking it up would give it | The item is not listed in `rp_lua_items` (none are by default); not alive; in a mini-game; they cannot take it now (full on that ammo, already have that item, in a duel) |
+| `player:set_effect(name)` | `"walkthrough"`, `"ghost"`, `"holo"` or `"hidden"`, as `/admwalkthrough`, `/admghost`, `/admholo` and `/admhidden` give them; nil takes it off. The player is not told | Spectating; admin-protected |
+| `player:skill_up(n [, count])` | Raises skill `n` by `count` (1 if left out), spending the player's own skillpoints, as `/skillup` does: they see the same message and it is saved. Returns how many levels it added (fewer than `count` when the maximum is nearer) | Not on a character; no such skill (or number 39, no longer in use); already at its maximum; not enough skillpoints |
+| `player:skill_down(n [, count])` | Lowers it and gives the skillpoints back, as `/skilldown` does | Not on a character; already at 0 |
+| `player:play_sound(file)` | A sound only this player hears, wherever they are | The file is not on the server; too many effects and sounds this frame |
+
+- **Admin Protect:** an admin with the Admin Protect power and the setting on cannot be teleported or
+  given an effect by scripts, as by other admins.
+- **Effects:** the last one wins. An admin's `/admghost` replaces a script's effect and the other way
+  round. When a plugin is disabled or reloaded, the effects it set that nobody has changed since are
+  taken off. A map change, logging in or out and changing character take every effect off, as always.
+- **The log:** every teleport, item, effect and skill change is written to the server log
+  (`Lua: <plugin> teleported <player> to (x y z)`).
+- **Allowed items:** `rp_lua_items` in `galaxyrp_server.cfg`, e.g.
+  `set rp_lua_items "weapon_blaster ammo_blaster item_medpac"`.
+
+Names, teams, admin powers, credits and XP stay read-only. Killing or reviving a player is not
+possible from a script.
+
+### NPCs
+
+```lua
+local npc, why = World.npc("stormtrooper", pos, { yaw = 90, team = "enemy" })
+if not npc then print("no NPC: " .. why) end
+npc:on_death(function(npc, killer) Msg.broadcast("The trooper fell.") end)
+```
+
+**`World.npc(type, pos [, options])`** spawns one NPC, the way `/npc spawn` does, at `pos`.
+- Options: `yaw`; `team` (`"enemy"`, `"player"`, `"neutral"` or `"free"`); `effect` (`"holo"`,
+  `"ghost"` or `"walkthrough"`); `vehicle = true` for a vehicle type (see `/list vehicles`).
+- It returns the NPC's entity handle, or `nil` and the reason: an unknown type (see `/list npcs`),
+  NPCs switched off (`g_allowNPC 0`), the server near its entity limit, or the plugin's limit.
+- **The limit:** `rp_lua_maxnpcs` (8) NPCs per plugin. An NPC counts until it is removed, its corpse
+  included (corpses go after `rp_npc_corpse_time`). NPCs count towards `rp_lua_maxents` too.
+- The NPC is the plugin's own entity: it goes when the plugin is disabled or reloaded, and never
+  reaches entity files. Admins' `/npc` commands work on it as on any NPC.
+
+**Any NPC's handle** (a map's too) also has:
+
+| Field | Meaning |
+|---|---|
+| `is_npc`, `is_vehicle` | What it is (false for anything that is not an NPC) |
+| `npc_type` | e.g. `"stormtrooper"` |
+| `team` | `"enemy"`, `"player"`, `"neutral"` or `"free"` |
+| `health`, `max_health`, `alive` | `alive` is false once it is dead, even while its corpse lies there |
+| `spawner` | The targetname of the map's or Entity System's spawner that made it (while that spawner exists), or nil |
+| `effect` | `"walkthrough"`, `"ghost"`, `"holo"` or nil |
+| `frozen` | Frozen by `/npc freeze`, a spawner's `npcfreeze` or a script |
+
+The plugin's **own** NPCs can also be:
+
+| Method | What it does | Refused when |
+|---|---|---|
+| `npc:kill()` | Kills it as `/npc kill` does: it dies and leaves a corpse | Already dead; a vehicle someone is riding |
+| `npc:free()` | Removes it at once | — |
+| `npc:teleport(pos [, yaw])` | Moves it, with the same checks as a player's teleport | Dead; riding a vehicle; the spot is blocked; it has not finished spawning (the frame it was made) |
+| `npc:freeze()`, `npc:unfreeze()` | Stops it, or lets it go, as `/npc freeze` does | A vehicle, or riding one |
+| `npc:set_effect(name)` | `"walkthrough"`, `"ghost"`, `"holo"` or nil, as `/npc effect` does | A vehicle, or riding one |
+| `npc:on_death(fn)` | `fn(npc, killer)` when it dies | — |
+
+- An NPC has `on_death` and the `damage` event instead of `on_pain` and `on_die`.
+- Giving NPCs orders (follow, guard, go somewhere) comes later.
+
+### Events
+
+| Event | Arguments | Filter (optional) | Notes |
+|---|---|---|---|
+| `player_death` | `player`, `killer`, `mod` | — | A real death, not a knockdown |
+| `player_downed` | `player`, `attacker` | — | The Death System knocked them down. Not raised for an admin's `/paralyze` |
+| `npc_death` | `npc`, `killer`, `mod` | `{ npc_type = "...", spawner = "..." }` | Any NPC, the map's included |
+| `damage` | `target`, `attacker`, `amount`, `mod` | `{ target = "players" }` or `{ target = "npcs" }` | After a hit took health from a player or NPC. `target.health` is already the new health |
+
+- `killer` and `attacker` are a player handle, an entity handle, or nil (the world, a fall, a
+  suicide, or an NPC's own `kill()`).
+- `mod` is the means of death, e.g. `"MOD_SABER"`, `"MOD_BLASTER"`, `"MOD_FALLING"`.
+- These events, and `on_death`, only tell: what a handler returns changes nothing. Inside them,
+  `free()` and `kill()` wait for the next server frame.
+- `damage` runs on every hit, so keep its handlers short; the usual limits apply.
