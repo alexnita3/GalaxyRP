@@ -11,7 +11,7 @@ returns at once when Lua is off (rp_lua 0) or the state is not open.
 
 The pieces: rp_lua_core.c (state, sandbox, limits, loader, protected calls, errors),
 rp_lua_api.c (what scripts can call), rp_lua_world.c (entities and the World table, API version 2), rp_lua_people.c (players, and the death and damage events, API version 3; credits, XP and the level events, API version 4;
-NPC handles are in rp_lua_world.c),
+NPC handles are in rp_lua_world.c), rp_lua_dialog.c (dialogues, API version 5),
 rp_lua_store.c (lua.db), rp_lua_admin.c (/scripts and the rcon lua_* commands). lib/lua/README.md says what was left out of Lua itself and why.
 ===========================================================================
 */
@@ -61,6 +61,12 @@ void		RP_Lua_Downed( gentity_t *ent, gentity_t *attacker );
 // GLX_U: [Lua] API version 4 (rp_lua_people.c), from g_cmds.c: increase_level() gave a player levels (> 0) or
 // decrease_level() took some (< 0) -- the level_up and level_down events. Read-only for the scripts, like the above.
 void		RP_Lua_LevelChanged( gentity_t *ent, int levels );
+
+// GLX_U: [Lua] dialogues (rp_lua_dialog.c, API version 5): /choose answers the player's open dialogue (it works,
+// and says there is none, with Lua off), and a chat line that is just one of its numbers answers it too: qtrue when
+// it did, and the line goes no further.
+void		Cmd_Choose_f( gentity_t *ent );
+qboolean	RP_Lua_DialogChat( gentity_t *ent, const char *text );
 
 // /scripts (needs the Scripts admin power) and the rcon commands
 void		Cmd_Scripts_f( gentity_t *ent );

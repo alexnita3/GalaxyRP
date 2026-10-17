@@ -28,7 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ui/menudef.h"			// for the voice chats
 
 #include "sqlite/sqlite3.h"
-#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] /scripts, script commands, chat event, character cleanup, level events
+#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] /scripts, script commands, chat event, character cleanup, level events, /choose
 
 // GalaxyRP fix: [portability] for zyk_create_dir() below, which creates directories itself
 // rather than shelling out to mkdir(1).
@@ -8870,6 +8870,11 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	Q_strncpyz( text, chatText, sizeof(text) );
 
 	Q_strstrip( text, "\n\r", "  " );
+
+	// GLX_U: [Lua] a line that is just a number answers the player's open script dialogue (rp_lua_dialog.c) and goes
+	// no further -- a silenced player can answer too, it is not chat. Not /tell, which is meant for someone.
+	if ( mode != SAY_TELL && RP_Lua_DialogChat( ent, text ) )
+		return;
 
 	// GLX_U: [Lua] the chat event, raised only for chat that is going out: a silenced player is
 	// turned away by the switch below (every mode except /tell, which silence never covered), so
@@ -25419,6 +25424,7 @@ command_t commands[] = {
 	{ "buy",				Cmd_Buy_f,					CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "changepassword",		Cmd_ChangePassword_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "char",				Cmd_Char_f,					CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "choose",				Cmd_Choose_f,				CMD_NOINTERMISSION },	// GLX_U: [Lua] answers a script dialogue (rp_lua_dialog.c)
 	{ "clientprint",		Cmd_ClientPrint_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "createcredits",		Cmd_CreditCreate_f,			CMD_RPG | CMD_NOINTERMISSION },
 	{ "createitem",			Cmd_CreateItem_f,			CMD_LOGGEDIN},

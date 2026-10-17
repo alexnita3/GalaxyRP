@@ -208,6 +208,15 @@ static gentity_t *RP_LuaWorld_CheckOwn( lua_State *L, int idx, const char *what 
 	return ent;
 }
 
+// API 5 (rp_lua_dialog.c): an entity handle argument -- a Lua error when it is not one or the entity is gone
+gentity_t *RP_LuaWorld_CheckEntityArg( lua_State *L, int idx ) {
+	return RP_LuaWorld_CheckEntity( L, idx );
+}
+
+qboolean RP_LuaWorld_IsEntityArg( lua_State *L, int idx ) {
+	return luaL_testudata( L, idx, RP_LUA_ENTITY_MT ) ? qtrue : qfalse;
+}
+
 // a player or entity handle as the entity it stands for; nil gives NULL
 static gentity_t *RP_LuaWorld_OptActor( lua_State *L, int idx ) {
 	if ( lua_isnoneornil( L, idx ) ) {
@@ -271,7 +280,7 @@ void RP_LuaWorld_PushVec( lua_State *L, const vec3_t v ) {
 }
 
 // where an entity is: a brush entity with no origin brush sits at 0 0 0, so its box's middle
-static void RP_LuaWorld_Center( const gentity_t *ent, vec3_t out ) {
+void RP_LuaWorld_Center( const gentity_t *ent, vec3_t out ) {
 	if ( ent->r.bmodel && ent->r.linked ) {
 		VectorAdd( ent->r.absmin, ent->r.absmax, out );
 		VectorScale( out, 0.5f, out );

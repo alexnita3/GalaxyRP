@@ -3,14 +3,15 @@
 Server admins can add quests, jobs, world events, scripted interactions and minigames with Lua
 scripts, without rebuilding the mod. Scripts run on the server only; players need nothing new.
 
-This guide covers **API version 4**:
+This guide covers **API version 5**:
 - version 1: events, commands, timers, tasks, messages, server information, player information
   and storage;
 - version 2: the world -- entities, zones, effects, sounds, music, screen shakes, and the map's
   `target_lua` entity;
 - version 3: players and NPCs -- what a player handle tells, teleporting, healing, items, player
   effects and skills, spawning and controlling NPCs, and the death, knockdown and damage events;
-- version 4: the economy -- paying and charging credits, giving XP, and the level events.
+- version 4: the economy -- paying and charging credits, giving XP, and the level events;
+- version 5: dialogues -- a text with numbered options a player answers.
 
 A plugin written for an earlier version runs unchanged.
 
@@ -31,7 +32,8 @@ A plugin written for an earlier version runs unchanged.
 - `meteors` (API 2): `/meteors <seconds>`, a meteor shower world event;
 - `bounty` (API 3): `/bounty`, a "kill three NPCs" quest;
 - `race` (API 3): `/race`, a checkpoint race with a countdown and records;
-- `delivery` (API 4): `/job`, a delivery job with a deposit, a fee and XP.
+- `delivery` (API 4): `/job`, a delivery job with a deposit, a fee and XP;
+- `merchant` (API 5): an NPC players talk to with the Use key, through dialogues.
 
 **Map scripts** are files in `lua/maps/<map name>/` (for example `lua/maps/mp/ffa5/doors.lua`).
 - They run only on that map, and only when `rp_lua_mapscripts` is 1.
@@ -501,3 +503,54 @@ local levels = player:add_xp(2, "found the lost holocron")
   `free()` and `kill()` wait for the next server frame. What a handler returns changes nothing.
 - Logging in, logging out and changing character raise no events. A script that ties something to a
   character keeps its `character_id` and checks it (the `delivery` example does).
+
+## Dialogues (API version 5)
+
+```lua
+Dialog.open(player, {
+    title = "Merchant",
+    text = "Hello wanderer, what do you want to do?",
+    options = { "Take me to the docks", "Buy a blaster (500 credits)", "Nothing, goodbye" },
+    speaker = npc,          -- optional: the NPC or object the player talks to (not a player)
+    range = 256,            -- optional: how far they may walk from it (0: any distance)
+    timeout = 60,           -- optional: seconds before it closes by itself (5 to 600)
+}, function(player, choice, why)
+    if choice == 1 then player:teleport(docks) end
+end)
+```
+
+| Function | What it does |
+|---|---|
+| `Dialog.open(player, spec, fn)` | Shows the player the dialogue and returns its id, or `nil` and why (spectating, dead or knocked down, too far from the speaker, or in another plugin's dialogue) |
+| `Dialog.close(player)` | Closes this plugin's open dialogue for that player; true if there was one |
+| `Dialog.is_open(player)` | Whether this plugin has a dialogue open for that player |
+
+- **The answer:** `fn(player, choice, why)`. `choice` is the option's number. When the dialogue
+  closes without an answer, `choice` is nil and `why` says why:
+
+  | `why` | When |
+  |---|---|
+  | `"cancelled"` | The player chose 0 |
+  | `"timeout"` | Nobody answered in time |
+  | `"away"` | They walked out of `range` of the speaker, or the speaker was removed |
+  | `"died"` | They died, were knocked down or became a spectator |
+  | `"replaced"` | The plugin opened another dialogue for them |
+  | `"closed"` | `Dialog.close` |
+  | `"left"` | They disconnected (the handle still works during the call) |
+
+  `fn` runs once. When the plugin is disabled or reloaded, its dialogues close and nothing is called.
+- **One at a time:** a player has at most one dialogue open. Opening another from the same plugin
+  replaces it; another plugin's is refused.
+- **A conversation** is one dialogue after another: open the next one in `fn`.
+- **What the player sees:** the dialogue in their chat area, with the options numbered. They answer
+  with `/choose <number>`, or by saying just the number in chat (that line goes to nobody); `/choose`
+  alone shows it again, and `/choose 0` ends it. (A menu for players with the Galaxy RP Ultimate
+  client is planned.)
+- **Limits:** the text up to 255 characters, the title up to 48, 1 to 6 options of up to 64
+  characters each. Colour codes work. Quotes become `'` and line breaks spaces; a word over 40
+  characters gets a space put into it, and that space counts towards the 255. Anything longer is a
+  script error.
+- **Starting one with the Use key:** give the script's NPC or object an `on_use` (return `false` so
+  its own use does not happen), or point a map's `trigger_multiple` with spawnflags 4 (Use button) at
+  a `target_lua` and open the dialogue in the `map_event` handler. See the `merchant` example.
+

@@ -13,7 +13,7 @@ game module uses rp_lua.h.
 #include "../../lib/lua/lualib.h"
 #include "rp_lua.h"
 
-#define RP_LUA_API_VERSION			4		// Plugin.register{ api = n } may not ask for more
+#define RP_LUA_API_VERSION			5		// Plugin.register{ api = n } may not ask for more
 
 #define RP_LUA_MAX_PLUGINS			64		// plugins and map scripts together
 #define RP_LUA_CONSOLE				RP_LUA_MAX_PLUGINS	// plugins[] slot of rcon lua_exec's "@console"
@@ -207,6 +207,16 @@ qboolean	RP_LuaWorld_PathName( const char *s );			// a file name scripts may giv
 void		RP_LuaWorld_EnterCallback( void );				// game code calls scripts: free() and kill() wait for the
 void		RP_LuaWorld_LeaveCallback( void );				// next frame until the matching leave
 void		RP_LuaWorld_NpcDied( gentity_t *npc, gentity_t *killer );	// its on_death, when a script owns it
+gentity_t	*RP_LuaWorld_CheckEntityArg( lua_State *L, int idx );	// an entity handle, or a Lua error
+qboolean	RP_LuaWorld_IsEntityArg( lua_State *L, int idx );
+void		RP_LuaWorld_Center( const gentity_t *ent, vec3_t out );	// where it is (a brush entity: its box's middle)
+
+// rp_lua_dialog.c (API 5)
+void		RP_LuaDialog_Register( lua_State *L );			// the Dialog table, on the globals on top of the stack
+void		RP_LuaDialog_RemovePlugin( int plugin );		// its dialogues close, nothing called
+void		RP_LuaDialog_Reset( void );						// the state is closing
+void		RP_LuaDialog_Frame( void );						// timeouts, walking away, death
+void		RP_LuaDialog_ClientGone( int client );			// a disconnecting player's dialogue closes ("left")
 
 // rp_lua_people.c
 int			RP_LuaPeople_PlayerField( lua_State *L, int client, const char *key );	// pushed one value (1) or nothing (0)
