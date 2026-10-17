@@ -1165,6 +1165,8 @@ static void CG_MapRestart( void ) {
 
 	cg.mapRestart = qtrue;
 
+	CG_RpDialogReset();	// GLX_U: [Lua] the server's script dialogues are gone (cg_rpdialog.c)
+
 	CG_StartMusic(qtrue);
 
 	trap->S_ClearLoopingSounds();

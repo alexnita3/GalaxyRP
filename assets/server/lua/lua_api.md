@@ -95,9 +95,13 @@ with their defaults.
 
 - **A script over the limit** stops with an error: "script ran too long". It cannot catch that error
   and carry on.
+- **Handlers your script sets off** (an event it raises, such as a use or a death) run with their own
+  instruction limit, so another plugin's handler is never cut short because your call used up its
+  own. Their time still counts towards your call.
 - **Errors** are written to the server log. Online admins with the Scripts power see them, at most
   once per plugin every 30 seconds.
-- **A plugin that keeps failing** is switched off until it is reloaded or enabled again.
+- **A plugin that keeps failing** is switched off until it is reloaded or enabled again. Code of it
+  that is still running then stops at its next call to the API ("this plugin has been switched off").
 
 ### Admin commands
 
@@ -167,7 +171,7 @@ Events.off(id)
 | `client_begin` | `player` | The player is in the game (also after every map change) |
 | `client_spawn` | `player` | The player (re)spawned |
 | `client_disconnect` | `player` | The player is leaving; the handle stops working after this |
-| `chat` | `player`, `mode`, `text`, `target` | `mode` is `"say"`, `"ooc"`, `"team"`, `"tell"` or `"ally"`. `target` is the player for `"tell"`, otherwise nil. Return `false` to stop the message; handlers after that one are not called |
+| `chat` | `player`, `mode`, `text`, `target` | `mode` is `"say"`, `"ooc"`, `"team"`, `"tell"` or `"ally"`. `target` is the player for `"tell"`, otherwise nil. Return `false` to stop the message; handlers after that one are not called. A `/tell` raises it once; stopping it also stops the copy the sender sees |
 | `command` | `player`, `name`, `args` | After any script command ran |
 | `use` | `entity`, `activator`, `other` | API 2. An entity with the targetname given is used (see below). Return `false` to stop the use |
 | `map_event` | `name`, `activator`, `entity` | API 2. A `target_lua` was used (see below) |
@@ -416,7 +420,7 @@ Each returns `false` and the reason when it is refused, so a script can tell the
 
 | Method | What it does | Refused when |
 |---|---|---|
-| `player:teleport(pos [, yaw])` | Moves them there, with the teleport effect | Not alive, riding a vehicle, in a mini-game or a duel, admin-protected, or the spot is blocked: a wall, the floor, or someone standing there. Nobody is ever telefragged |
+| `player:teleport(pos [, yaw])` | Moves them there, with the teleport effect | Not alive, riding a vehicle, in a mini-game or a duel, admin-protected, or the spot is blocked: a wall, the floor, or someone standing there (also someone dying or knocked down). Nobody is ever telefragged |
 | `player:heal(n)` | Adds up to `n` health, never above the maximum. Returns how much it added | Not alive (a script does not revive a knocked-down player) |
 | `player:set_armor(n)` | Sets their shield, kept between 0 and the maximum. Returns the new value | Not alive |
 | `player:give(item)` | One item, by its class name: a weapon with its ammo, ammo, or a holdable item, as picking it up would give it | Not a weapon, ammo or holdable item (health, armor and powerups are not given); `weapon_emplaced` and `weapon_turretwp`, which are not player weapons; not alive; in a mini-game; they cannot take it now (full on that ammo, already have that item, in a duel) |
@@ -731,7 +735,7 @@ All are in `galaxyrp_server.cfg`.
 | `rp_lua_maxvalue` | 65536 | Bytes in one stored value |
 | `rp_lua_maxstore` | 2097152 | Bytes one plugin may keep in storage |
 | `rp_lua_maxents` | 32 | Entities and zones one plugin may have at once |
-| `rp_lua_spawnkb` | 512 | KB of game memory all scripts' `World.spawn` may use per map (freed when the map changes) |
+| `rp_lua_spawnkb` | 512 | KB of game memory all scripts' `World.spawn` and `World.npc` may use per map (about 256 bytes per NPC; freed when the map changes) |
 | `rp_lua_newfx` | 8 | New effect files scripts may add per map (a map has only 64 effect slots) |
 | `rp_lua_maxnpcs` | 8 | NPCs one plugin may have at once, corpses included |
 | `rp_lua_maxcredits` | 5000 | Credits one call may give or take (0: none at all) |

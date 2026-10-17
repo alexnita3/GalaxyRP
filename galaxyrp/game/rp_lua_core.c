@@ -12,8 +12,10 @@ globals, and every library table is itself a read-only proxy, so no plugin can c
 one sees. The string metatable is locked with __metatable. setmetatable refuses a metatable with
 __gc: Lua runs finalizers with its hooks off, outside any budget (RP_Lua_SetMetatable).
 
-Limits. A count hook fires every RP_LUA_HOOK_STEP instructions and checks the budget of the
-outermost call in progress: rp_lua_budget instructions and rp_lua_budgetms milliseconds. Once over,
+Limits. A count hook fires every RP_LUA_HOOK_STEP instructions and checks the budget of the call
+in progress: rp_lua_budget instructions and rp_lua_budgetms milliseconds. A call made while another
+runs (an event a script raised) has instructions of its own and what is left of the outer call's time,
+at least RP_LUA_NESTED_GRACE_MS (GLX_U: before, it shared the outer call's budget). Once over,
 the call is "over budget" until it returns to C: the hook raises the error again every time it
 fires, and pcall, xpcall, coroutine.resume and coroutine.close raise it again as they return
 (RP_Lua_Guarded), so no script can catch it and carry on; xpcall's handler is skipped once over
@@ -86,6 +88,12 @@ static void *RP_Lua_Alloc( void *ud, void *ptr, size_t osize, size_t nsize ) {
 Budget
 ================
 */
+// rp_lua_budgetms as it applies: what the "ran too long" message quotes (a nested call's own time limit can be
+// shorter, see RP_Lua_Call)
+static int RP_Lua_BudgetMs( void ) {
+	return RP_Lua_Clamp( rp_lua_budgetms.integer, 5, 1000 );
+}
+
 static void RP_Lua_CheckBudget( lua_State *L ) {
 	if ( rl.depth <= 0 ) {
 		return;
@@ -96,7 +104,7 @@ static void RP_Lua_CheckBudget( lua_State *L ) {
 		}
 	}
 	if ( rl.overBudget ) {
-		luaL_error( L, "script ran too long (limit %d instructions or %d ms per call)", rl.instrLimit, rl.msLimit );
+		luaL_error( L, "script ran too long (limit %d instructions or %d ms per call)", rl.instrLimit, RP_Lua_BudgetMs() );
 	}
 }
 
@@ -130,7 +138,7 @@ static int RP_Lua_GuardCont( lua_State *L, int status, lua_KContext ctx ) {
 	(void)status;
 	(void)ctx;
 	if ( rl.overBudget ) {
-		return luaL_error( L, "script ran too long (limit %d instructions or %d ms per call)", rl.instrLimit, rl.msLimit );
+		return luaL_error( L, "script ran too long (limit %d instructions or %d ms per call)", rl.instrLimit, RP_Lua_BudgetMs() );
 	}
 	return lua_gettop( L );
 }
@@ -199,7 +207,7 @@ static int RP_Lua_SetMetatable( lua_State *L ) {
 static void RP_Lua_StartBudget( void ) {
 	rl.instr = 0;
 	rl.instrLimit = RP_Lua_Clamp( rp_lua_budget.integer, 10000, 100000000 );
-	rl.msLimit = RP_Lua_Clamp( rp_lua_budgetms.integer, 5, 1000 );
+	rl.msLimit = RP_Lua_BudgetMs();
 	rl.callStart = trap->Milliseconds();
 	rl.overBudget = qfalse;
 }
@@ -340,6 +348,11 @@ void RP_Lua_ReportError( int plugin, const char *message ) {
 		RP_Lua_AdminNotice( va( "^1Lua error^7: %s", line ) );
 		return;
 	}
+	// GLX_U: a plugin already switched off (its code still running when it was, see RP_Lua_CurrentPlugin): the
+	// error is in the log and /scripts errors, but not counted again or shown to the admins a second time
+	if ( plugin != RP_LUA_CONSOLE && !p->enabled ) {
+		return;
+	}
 
 	p->errTotal++;
 	if ( plugin == RP_LUA_CONSOLE ) {
@@ -402,6 +415,7 @@ qboolean RP_Lua_Call( int plugin, rpLuaWorker_t worker, void *data ) {
 	lua_State *L = rl.L;
 	rpLuaCallArgs_t args;
 	int top, status, prevPlugin, start, instrBefore;
+	int outerInstr = 0, outerInstrLimit = 0, outerStart = 0, outerMsLimit = 0;
 	qboolean outer;
 	static char errBuf[2048];
 
@@ -417,6 +431,26 @@ qboolean RP_Lua_Call( int plugin, rpLuaWorker_t worker, void *data ) {
 	outer = ( rl.depth == 0 ) ? qtrue : qfalse;
 	if ( outer ) {
 		RP_Lua_StartBudget();
+	} else {
+		// GLX_U: a call made while another is running (an event a script raised): its own instruction budget,
+		// and what is left of the outer call's time, but never less than RP_LUA_NESTED_GRACE_MS. Before, the
+		// budget was shared, so the plugin whose handler happened to run when the outer call had used it up
+		// got the error -- and enough of them switched it off for another plugin's loop. The outer call's
+		// budget comes back when this one returns; its time went on running meanwhile.
+		int now = trap->Milliseconds(), left;
+
+		if ( rl.overBudget ) {
+			return qfalse;	// the outer call is already being stopped: nothing more runs, nobody is blamed
+		}
+		outerInstr = rl.instr;
+		outerInstrLimit = rl.instrLimit;
+		outerStart = rl.callStart;
+		outerMsLimit = rl.msLimit;
+		left = rl.msLimit - ( now - rl.callStart );
+		rl.instr = 0;
+		rl.instrLimit = RP_Lua_Clamp( rp_lua_budget.integer, 10000, 100000000 );
+		rl.callStart = now;
+		rl.msLimit = ( left > RP_LUA_NESTED_GRACE_MS ) ? left : RP_LUA_NESTED_GRACE_MS;
 	}
 	start = trap->Milliseconds();
 	instrBefore = rl.instr;
@@ -449,6 +483,13 @@ qboolean RP_Lua_Call( int plugin, rpLuaWorker_t worker, void *data ) {
 	}
 	if ( outer ) {
 		rl.overBudget = qfalse;
+	} else {
+		// the outer call's budget again: it was not over when this one began
+		rl.instr = outerInstr;
+		rl.instrLimit = outerInstrLimit;
+		rl.callStart = outerStart;
+		rl.msLimit = outerMsLimit;
+		rl.overBudget = qfalse;
 	}
 	if ( status != LUA_OK ) {
 		RP_Lua_ReportError( plugin, errBuf );
@@ -460,6 +501,13 @@ qboolean RP_Lua_Call( int plugin, rpLuaWorker_t worker, void *data ) {
 int RP_Lua_CurrentPlugin( lua_State *L ) {
 	if ( rl.current < 0 || rl.current > RP_LUA_CONSOLE || !rl.plugins[rl.current].inUse ) {
 		return luaL_error( L, "no plugin is running" );
+	}
+	// GLX_U: a plugin switched off while its code runs (too many errors in a nested event, or while loading)
+	// stops at its next API call: before, it carried on registering timers, handlers, commands and entities
+	// after RP_LuaApi_RemovePlugin had cleaned it up, and they came back on the next reload. Its unload
+	// handlers still run: RP_Lua_DisablePlugin fires them before it clears enabled.
+	if ( !rl.plugins[rl.current].enabled ) {
+		return luaL_error( L, "this plugin has been switched off" );
 	}
 	return rl.current;
 }
@@ -671,6 +719,7 @@ static void RP_Lua_DropEnv( rpLuaPlugin_t *p ) {
 int RP_Lua_LoadPluginFile( int plugin ) {
 	rpLuaPlugin_t *p = &rl.plugins[plugin];
 
+	RP_LuaApi_RemovePlugin( plugin );	// GLX_U: nothing left from before survives into this load
 	p->enabled = qtrue;		// so what it registers while loading is accepted
 	p->numIncludes = 0;
 	p->title[0] = p->version[0] = p->failReason[0] = '\0';

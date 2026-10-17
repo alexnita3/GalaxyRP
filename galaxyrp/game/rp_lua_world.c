@@ -1798,7 +1798,7 @@ static int RP_LuaWorld_Npc( lua_State *L ) {
 	char typeBuf[RP_LUA_KEY_MAX];
 	vec3_t org;
 	float yaw = 0;
-	int team = -1, effect = RP_PHASE_NONE, i, num;
+	int team = -1, effect = RP_PHASE_NONE, i, num, limit;
 	qboolean vehicle = qfalse;
 	gentity_t *npc;
 
@@ -1878,11 +1878,23 @@ static int RP_LuaWorld_Npc( lua_State *L ) {
 	if ( !G_EntitySlotsAvailable( 3 ) ) {
 		return RP_LuaWorld_Refused( L, "the server is near its entity limit" );
 	}
+	// GLX_U: an NPC takes game memory too (G_Alloc: its type and names, most of it when it starts thinking a frame
+	// later), which nothing gave back before the map changes and nothing counted: a script spawning wave after wave
+	// on one long map would have run the pool out (ERR_DROP). A fixed RP_LUA_NPC_SPAWN_BYTES each, against
+	// rp_lua_spawnkb as World.spawn is
+	limit = RP_LuaWorld_Clamp( rp_lua_spawnkb.integer, 0, 2048 ) * 1024;
+	if ( level.rp_lua_spawn_bytes + RP_LUA_NPC_SPAWN_BYTES > limit ) {
+		return RP_LuaWorld_Refused( L, va( "scripts have used their %d KB of spawn memory for this map (rp_lua_spawnkb); it is freed when the map changes", limit / 1024 ) );
+	}
+	if ( !G_AllocRoomFor( RP_LUA_NPC_SPAWN_BYTES ) ) {
+		return RP_LuaWorld_Refused( L, "the game's memory pool is nearly full; it is freed when the map changes" );
+	}
 
 	npc = RP_NpcSpawnAt( typeBuf, org, yaw, team, effect, vehicle );
 	if ( !npc || !npc->inuse || !npc->client ) {
 		return RP_LuaWorld_Refused( L, "the NPC could not be spawned (the server console says why)" );
 	}
+	level.rp_lua_spawn_bytes += RP_LUA_NPC_SPAWN_BYTES;
 	num = npc->s.number;
 	rpEnts[num].owner = plugin + 1;
 	rpEnts[num].gen = g_entityGen[num];

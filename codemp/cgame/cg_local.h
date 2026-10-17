@@ -1867,6 +1867,7 @@ void CG_RpDialogInit( void );
 void CG_RpDialogFrame( void );
 void CG_RpDialog_f( void );
 void CG_RpDialogClose_f( void );
+void CG_RpDialogReset( void );
 
 void CG_UpdateCvars( void );
 

@@ -8827,6 +8827,11 @@ void delete_chat_command(char *original_text, int no_of_chars) {
 	strcpy(original_text, text);
 }
 
+// GLX_U: [Lua] a /tell is one message for the chat event, though G_Say() runs twice for it (to the target, then the
+// sender's own copy): the copy is sent with rpSayEcho set, which skips the event, and only when the event let the
+// message through (rpSayStopped, set below). Cmd_Tell_f and Cmd_GameCommand_f (the siege orders).
+static qboolean rpSayEcho, rpSayStopped;
+
 void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) {
 	int			j;
 	gentity_t	*other;
@@ -8879,10 +8884,13 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	// GLX_U: [Lua] the chat event, raised only for chat that is going out: a silenced player is
 	// turned away by the switch below (every mode except /tell, which silence never covered), so
 	// they raise nothing. A handler that returns false stops the message.
-	if ( mode == SAY_TELL || !(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_SILENCED)) )
+	if ( ( mode == SAY_TELL && !rpSayEcho ) || ( mode != SAY_TELL && !(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_SILENCED)) ) )
 	{
 		if ( !RP_Lua_Chat( ent, target, mode, ooc_flag ? qtrue : qfalse, text ) )
+		{
+			rpSayStopped = qtrue;
 			return;
+		}
 	}
 
 	switch ( mode ) {
@@ -9251,11 +9259,15 @@ static void Cmd_Tell_f( gentity_t *ent ) {
 	}
 
 	G_LogPrintf( "tell: %s to %s: %s\n", ent->client->pers.netname, target->client->pers.netname, p );
+	rpSayStopped = qfalse;
 	G_Say( ent, target, SAY_TELL, p );
 	// don't tell to the player self if it was already directed to this player
 	// also don't send the chat back to a bot
-	if ( ent != target && !(ent->r.svFlags & SVF_BOT)) {
+	// GLX_U: [Lua] nor when a script's chat handler stopped it; the copy raises no second chat event (G_Say)
+	if ( ent != target && !(ent->r.svFlags & SVF_BOT) && !rpSayStopped ) {
+		rpSayEcho = qtrue;
 		G_Say( ent, ent, SAY_TELL, p );
+		rpSayEcho = qfalse;
 	}
 }
 
@@ -9402,11 +9414,16 @@ void Cmd_GameCommand_f( gentity_t *ent ) {
 		return;
 
 	G_LogPrintf( "tell: %s to %s: %s\n", ent->client->pers.netname, target->client->pers.netname, gc_orders[order] );
+	rpSayStopped = qfalse;
 	G_Say( ent, target, SAY_TELL, gc_orders[order] );
 	// don't tell to the player self if it was already directed to this player
 	// also don't send the chat back to a bot
-	if ( ent != target && !(ent->r.svFlags & SVF_BOT) )
+	// GLX_U: [Lua] nor when a script's chat handler stopped it; the copy raises no second chat event (G_Say)
+	if ( ent != target && !(ent->r.svFlags & SVF_BOT) && !rpSayStopped ) {
+		rpSayEcho = qtrue;
 		G_Say( ent, ent, SAY_TELL, gc_orders[order] );
+		rpSayEcho = qfalse;
+	}
 }
 
 /*
@@ -25430,7 +25447,7 @@ command_t commands[] = {
 	{ "buy",				Cmd_Buy_f,					CMD_RPG | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "changepassword",		Cmd_ChangePassword_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "char",				Cmd_Char_f,					CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "choose",				Cmd_Choose_f,				CMD_NOINTERMISSION },	// GLX_U: [Lua] answers a script dialogue (rp_lua_dialog.c)
+	{ "choose",				Cmd_Choose_f,				0 },	// GLX_U: [Lua] answers a script dialogue (rp_lua_dialog.c); also at intermission, as a typed number does
 	{ "clientprint",		Cmd_ClientPrint_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "createcredits",		Cmd_CreditCreate_f,			CMD_RPG | CMD_NOINTERMISSION },
 	{ "createitem",			Cmd_CreateItem_f,			CMD_LOGGEDIN},

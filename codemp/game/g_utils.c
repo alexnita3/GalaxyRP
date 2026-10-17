@@ -3500,7 +3500,10 @@ G_KillBoxWouldHit
 GLX_U: [Lua] whether G_KillBox() would find a live body to telefrag (or walk out of) with ent standing at
 origin, by the same rules: itself, its vehicle and everyone aboard it, two duelists about to fight, and
 bodies passing through bodies are left alone. A script's teleport is refused rather than kill anyone
-(rp_lua_people.c). A corpse does not count: G_KillBox() only gibs it.
+(rp_lua_people.c). A corpse does not count: G_KillBox() only gibs it. GLX_U: but only a real one (PM_DEAD). A
+body at 0 health that player_die() has not finished with yet -- a script's death or damage handler runs in
+that window -- or a player the Death System knocked down would be damaged by G_KillBox(): the first died a
+second time (player_die() ran again in full), the second was killed outright.
 =================
 */
 qboolean G_KillBoxWouldHit( gentity_t *ent, const vec3_t origin ) {
@@ -3527,7 +3530,7 @@ qboolean G_KillBoxWouldHit( gentity_t *ent, const vec3_t origin ) {
 		if ( RP_PhasePassesThrough( ent ) || RP_PhasePassesThrough( hit ) ) {
 			continue;
 		}
-		if ( hit->health <= 0 ) {
+		if ( hit->health <= 0 && hit->client->ps.pm_type == PM_DEAD ) {
 			continue;
 		}
 		return qtrue;

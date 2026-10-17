@@ -11,6 +11,10 @@ the ui work together.
 - "rpdlgclose <id>": the menu closes, when that is the dialogue shown.
 - Every frame the time left is updated (ui_rpdlg_left), once a second.
 - Demo playback ignores both commands: a recorded dialogue cannot be answered.
+- GLX_U: the menu also closes, without answering, on a map_restart (the server's Lua state starts again; it
+  sends rpdlgclose as well) and RPDLG_LOST_MS after the dialogue's own end, in case its rpdlgclose never
+  came. On its first frame the cgame asks for the open dialogue again ("choose resend"): after a vid_restart
+  the menu is gone but the server's dialogue is not.
 ===========================================================================
 */
 
@@ -20,12 +24,14 @@ the ui work together.
 
 #define RPDLG_MAX_WRAPPED		64		// lines kept while breaking, before cutting to RPDLG_LINES
 #define RPDLG_ELLIPSIS			"..."
+#define RPDLG_LOST_MS			5000	// GLX_U: a dialogue still shown this long after its end is closed here
 
 static struct {
 	int			id;				// the dialogue shown or waiting to be shown; 0 for none
 	int			ends;			// cg.time
 	int			shownLeft;		// the seconds in ui_rpdlg_left
 	qboolean	pending;		// the menu is still to be opened
+	qboolean	askResend;		// GLX_U: "choose resend" is still to be sent (the first frame)
 	qhandle_t	font;
 } rpdlg;
 
@@ -197,6 +203,22 @@ void CG_RpDialogInit( void ) {
 	memset( &rpdlg, 0, sizeof( rpdlg ) );
 	rpdlg.font = trap->R_RegisterFont( RPDLG_FONT );
 	CG_RpDialog_ClearCvars();
+	rpdlg.askResend = qtrue;
+}
+
+// GLX_U: the menu closes here and answers nothing: the id goes to 0 first, so closing it sends no choice
+static void CG_RpDialog_CloseShown( void ) {
+	rpdlg.id = 0;
+	rpdlg.pending = qfalse;
+	trap->Cvar_Set( RPDLG_CVAR_ID, "0" );
+	trap->OpenUIMenu( UIMENU_RPDIALOG_CLOSE );
+}
+
+// GLX_U: map_restart (cg_servercmds.c): the server's dialogues went with its Lua state
+void CG_RpDialogReset( void ) {
+	if ( rpdlg.id ) {
+		CG_RpDialog_CloseShown();
+	}
 }
 
 // rpdlg <id> <seconds left> "<title>" "<text>" "<option 1>" ... "<option n>"
@@ -263,14 +285,21 @@ void CG_RpDialogClose_f( void ) {
 	if ( cg.demoPlayback || id <= 0 || id != rpdlg.id ) {
 		return;		// an older dialogue's, or one the menu has answered and the next has replaced
 	}
-	rpdlg.id = 0;
-	rpdlg.pending = qfalse;
-	trap->Cvar_Set( RPDLG_CVAR_ID, "0" );	// first: closing the menu then sends nothing
-	trap->OpenUIMenu( UIMENU_RPDIALOG_CLOSE );
+	CG_RpDialog_CloseShown();
 }
 
 void CG_RpDialogFrame( void ) {
+	if ( rpdlg.askResend ) {
+		rpdlg.askResend = qfalse;
+		if ( !cg.demoPlayback ) {
+			trap->SendClientCommand( "choose resend" );
+		}
+	}
 	if ( !rpdlg.id ) {
+		return;
+	}
+	if ( cg.time - rpdlg.ends > RPDLG_LOST_MS ) {
+		CG_RpDialog_CloseShown();	// GLX_U: its end never came
 		return;
 	}
 	CG_RpDialog_TryOpen();

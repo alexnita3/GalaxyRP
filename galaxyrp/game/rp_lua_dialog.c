@@ -265,6 +265,24 @@ void RP_LuaDialog_RemovePlugin( int plugin ) {
 }
 
 void RP_LuaDialog_Reset( void ) {
+	int i;
+
+	// GLX_U: the Lua state is going (map change, map_restart, /scripts reload all): the players still in a
+	// dialogue are told, or after a map_restart -- which keeps the client's cgame and ui -- the menu stayed open,
+	// holding the mouse and keys, for a dialogue the server no longer had. No script runs: the functions go
+	// with the state.
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		rpLuaDialog_t *d = &rpDialogs[i];
+
+		if ( !d->open ) {
+			continue;
+		}
+		if ( RP_LuaDialog_HasMenu( i ) ) {
+			trap->SendServerCommand( i, va( "rpdlgclose %d", d->id ) );
+		} else if ( g_entities[i].inuse && level.clients[i].pers.connected == CON_CONNECTED ) {
+			trap->SendServerCommand( i, "chat \"^7(the conversation is over)\"" );
+		}
+	}
 	memset( rpDialogs, 0, sizeof( rpDialogs ) );
 	rpDialogNextId = 1;
 }
@@ -319,6 +337,17 @@ void Cmd_Choose_f( gentity_t *ent ) {
 	int client = ent->s.number, choice, id = 0;
 	rpLuaDialog_t *d = ( client >= 0 && client < MAX_CLIENTS ) ? &rpDialogs[client] : NULL;
 
+	// GLX_U: "choose resend", from our cgame as it starts (cg_rpdialog.c): after a vid_restart the menu is gone
+	// but the dialogue is not, so it is sent again. Silent either way: on a first connect there is none.
+	if ( trap->Argc() == 2 ) {
+		trap->Argv( 1, arg, sizeof( arg ) );
+		if ( !Q_stricmp( arg, "resend" ) ) {
+			if ( d && d->open && RP_LuaDialog_HasMenu( client ) ) {
+				RP_LuaDialog_Show( client );
+			}
+			return;
+		}
+	}
 	if ( !d || !d->open ) {
 		trap->SendServerCommand( client, "print \"You have no dialogue open.\n\"" );
 		return;

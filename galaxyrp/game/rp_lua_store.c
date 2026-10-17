@@ -129,6 +129,22 @@ static void RP_LuaStore_FreePend( rpLuaPend_t *p ) {
 	free( p );
 }
 
+// GLX_U: forgets a pending write, as if it had never been made (Storage.set(key, nil) of a key that is not in the
+// database: there is nothing to delete)
+static void RP_LuaStore_DropPend( const char *plugin, const char *scope, const char *key ) {
+	rpLuaPend_t **link = &rpPend[RP_LuaStore_Hash( plugin, scope, key )];
+
+	for ( ; *link; link = &( *link )->next ) {
+		rpLuaPend_t *p = *link;
+		if ( !strcmp( p->plugin, plugin ) && !strcmp( p->scope, scope ) && !strcmp( p->key, key ) ) {
+			*link = p->next;
+			RP_LuaStore_FreePend( p );
+			rpPendCount--;
+			return;
+		}
+	}
+}
+
 static void RP_LuaStore_ClearPend( void ) {
 	int i;
 	for ( i = 0; i < RP_LUA_PEND_BUCKETS; i++ ) {
@@ -741,6 +757,16 @@ static int RP_LuaStore_DoSet( lua_State *L, int plugin, const char *scope, const
 		oldSize = e->blob ? (int)strlen( key ) + e->len + RP_LUA_STORE_OVERHEAD : 0;
 	} else {
 		oldSize = RP_LuaStore_DbSize( p->name, scope, key );
+	}
+	// GLX_U: a delete of a key the database does not have writes nothing: before, every one became a pending
+	// entry (even for keys that never existed, and with no limit), all flushed as DELETEs in one frame. A write
+	// still waiting is simply forgotten.
+	if ( del && ( e ? RP_LuaStore_DbSize( p->name, scope, key ) : oldSize ) == 0 ) {
+		if ( e ) {
+			RP_LuaStore_DropPend( p->name, scope, key );
+		}
+		p->storeBytes = total - oldSize;
+		return 0;
 	}
 	newSize = del ? 0 : (int)strlen( key ) + w.len + RP_LUA_STORE_OVERHEAD;
 	if ( newSize > oldSize && total - oldSize + newSize > RP_LuaStore_MaxStore() ) {

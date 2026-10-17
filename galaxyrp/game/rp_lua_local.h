@@ -24,6 +24,8 @@ game module uses rp_lua.h.
 
 #define RP_LUA_MAX_DEPTH			8		// Lua -> game -> Lua nesting
 #define RP_LUA_HOOK_STEP			1000	// the count hook fires every this many VM instructions
+#define RP_LUA_NESTED_GRACE_MS		5		// GLX_U: the least time a call made inside another gets (RP_Lua_Call)
+#define RP_LUA_NPC_SPAWN_BYTES		256		// GLX_U: what World.npc charges to rp_lua_spawnkb (about 192 measured)
 
 #define RP_LUA_MAX_HANDLERS			64		// per event, all plugins together
 #define RP_LUA_MAX_COMMANDS			128
