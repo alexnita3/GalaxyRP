@@ -302,8 +302,8 @@ static int RP_LuaApi_Print( lua_State *L ) {
 	}
 	luaL_pushresult( &b );
 	RP_Lua_CleanText( clean, sizeof( clean ), lua_tostring( L, -1 ), qtrue );
-	trap->Print( "Lua [%s]: %s\n", rl.plugins[plugin].name, clean );
-	G_LogPrintf( "Lua [%s]: %s\n", rl.plugins[plugin].name, clean );
+	// GLX_U: a line of its own for every line, each tagged: a newline began a log line of the script's own
+	RP_Lua_LogText( va( "Lua [%s]:", rl.plugins[plugin].name ), va( "Lua [%s]:", rl.plugins[plugin].name ), clean );
 	return 0;
 }
 

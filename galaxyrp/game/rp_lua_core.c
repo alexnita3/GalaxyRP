@@ -232,7 +232,9 @@ static int RP_Lua_Panic( lua_State *L ) {
 	const char *msg = lua_tostring( L, -1 );
 
 	// only reachable through a bug in our C code (every call is protected); the state is unusable,
-	// so it is abandoned rather than closed, and the map is dropped instead of the process aborted
+	// so it is abandoned rather than closed. GLX_U: what the error does next is the engine's: on a
+	// dedicated server every ERR_DROP becomes ERR_FATAL (Com_Error), so the process ends; on a listen
+	// server the map ends. Either way RP_Lua_Shutdown() then finds the call still open (rl.depth).
 	rl.panicked = qtrue;
 	trap->Error( ERR_DROP, "Lua: unprotected error: %s", msg ? msg : "(no message)" );
 	return 0;
@@ -246,8 +248,12 @@ static void RP_Lua_Warn( void *ud, const char *msg, int tocont ) {
 	Q_strcat( rpLuaWarnBuf, sizeof( rpLuaWarnBuf ), msg );
 	if ( !tocont ) {
 		const char *name = ( rl.current >= 0 ) ? rl.plugins[rl.current].name : "core";
-		trap->Print( S_COLOR_YELLOW "Lua warning [%s]" S_COLOR_WHITE " %s\n", name, rpLuaWarnBuf );
-		G_LogPrintf( "Lua warning [%s] %s\n", name, rpLuaWarnBuf );
+		char clean[sizeof( rpLuaWarnBuf )];
+
+		// GLX_U: one line, control characters dropped: warn() text went to the log as it was
+		RP_Lua_CleanText( clean, sizeof( clean ), rpLuaWarnBuf, qfalse );
+		trap->Print( S_COLOR_YELLOW "Lua warning [%s]" S_COLOR_WHITE " %s\n", name, clean );
+		G_LogPrintf( "Lua warning [%s] %s\n", name, clean );
 		rpLuaWarnBuf[0] = '\0';
 	}
 }
@@ -280,6 +286,40 @@ void RP_Lua_CleanText( char *out, int outSize, const char *in, qboolean keepNewl
 	RP_BreakStringEdRefs( out );	// GLX_U: never three '@' in a row -- see RP_BreakStringEdRefs() (g_utils.c)
 }
 
+// GLX_U: script text for the server console and games.log, one line at a time, every line starting with its tag
+// ("Lua [welcome]:", "Lua error [welcome]"). Before, a newline in print(), warn() or an error's text began a log
+// line of the script's own, which could pass for a game event (a kill, a chat line) to whatever reads the log.
+// Control characters other than tabs are dropped; the console tag may carry colours, the log's never does.
+void RP_Lua_LogText( const char *consoleTag, const char *logTag, const char *text ) {
+	char line[1024], cTag[128], lTag[128];	// the tags copied: callers pass va() strings
+	int o = 0;
+
+	Q_strncpyz( cTag, consoleTag, sizeof( cTag ) );
+	Q_strncpyz( lTag, logTag, sizeof( lTag ) );
+	if ( !text ) {
+		text = "";
+	}
+	for ( ;; text++ ) {
+		char c = *text;
+		if ( c == '\n' || c == '\0' ) {
+			line[o] = '\0';
+			trap->Print( "%s %s\n", cTag, line );
+			G_LogPrintf( "%s %s\n", lTag, line );
+			o = 0;
+			if ( c == '\0' || !text[1] ) {
+				break;	// a last newline ends the text: no empty line after it
+			}
+			continue;
+		}
+		if ( (unsigned char)c < ' ' && c != '\t' ) {
+			continue;
+		}
+		if ( o < (int)sizeof( line ) - 1 ) {
+			line[o++] = c;
+		}
+	}
+}
+
 void RP_Lua_AdminNotice( const char *text ) {
 	char clean[RP_LUA_TEXT_MAX + 1];
 	int i;
@@ -307,8 +347,7 @@ Errors
 void RP_Lua_ReportWarning( int plugin, const char *message ) {
 	const char *name = ( plugin >= 0 && plugin <= RP_LUA_CONSOLE ) ? rl.plugins[plugin].name : "core";
 
-	trap->Print( S_COLOR_YELLOW "Lua warning [%s]" S_COLOR_WHITE " %s\n", name, message );
-	G_LogPrintf( "Lua warning [%s] %s\n", name, message );
+	RP_Lua_LogText( va( S_COLOR_YELLOW "Lua warning [%s]" S_COLOR_WHITE, name ), va( "Lua warning [%s]", name ), message );	// GLX_U
 	rl.errors[rl.errorNext].time = (int)time( NULL );
 	Q_strncpyz( rl.errors[rl.errorNext].plugin, name, sizeof( rl.errors[0].plugin ) );
 	Q_strncpyz( rl.errors[rl.errorNext].line, va( "warning: %s", message ), sizeof( rl.errors[0].line ) );
@@ -325,10 +364,10 @@ void RP_Lua_ReportError( int plugin, const char *message ) {
 	int now = trap->Milliseconds();
 	int i;
 
-	trap->Print( S_COLOR_RED "Lua error [%s]" S_COLOR_WHITE " %s\n", name, message );
-	G_LogPrintf( "Lua error [%s] %s\n", name, message );
+	// GLX_U: every line of the message and its traceback tagged (RP_Lua_LogText)
+	RP_Lua_LogText( va( S_COLOR_RED "Lua error [%s]" S_COLOR_WHITE, name ), va( "Lua error [%s]", name ), message );
 
-	// first line only, for /scripts errors and the admin notice
+	// first line only, for /scripts errors and the admin notice (both clean it as they show it)
 	Q_strncpyz( line, message, sizeof( line ) );
 	for ( i = 0; line[i]; i++ ) {
 		if ( line[i] == '\n' || line[i] == '\r' ) {
@@ -1125,7 +1164,19 @@ void RP_Lua_Shutdown( void ) {
 		RP_LuaStore_Close();
 		return;
 	}
-	RP_LuaApi_FireEvent( RPLE_SHUTDOWN, -1, -1, 0, NULL, -1, NULL );
+	// GLX_U: the map is ending in the middle of a script call: game code a script called raised an error
+	// (G_Spawn with no free entity...). A dedicated server shuts down from inside that call; a listen
+	// server's error jumped out of it, leaving it open. The state is mid-call, so no script runs again --
+	// not the shutdown handlers, nor the __close handlers lua_close would run: it is abandoned as after a
+	// panic (its memory is not given back; a dedicated server exits next anyway). Storage is still saved.
+	if ( rl.depth > 0 && !rl.panicked ) {
+		trap->Print( S_COLOR_YELLOW "Lua: the map ended in the middle of a script call (a game error); the scripts' shutdown handlers were skipped\n" );
+		G_LogPrintf( "Lua: the map ended in the middle of a script call (a game error); the scripts' shutdown handlers were skipped\n" );
+		rl.panicked = qtrue;
+	}
+	if ( !rl.panicked ) {
+		RP_LuaApi_FireEvent( RPLE_SHUTDOWN, -1, -1, 0, NULL, -1, NULL );
+	}
 	RP_LuaStore_Close();
 	RP_Lua_CloseState();
 }

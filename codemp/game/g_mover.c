@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "g_local.h"
+#include "../../galaxyrp/game/rp_lua.h"	// GLX_U: [Lua] a button pressed, touched or pushed reaches scripts
 
 
 /*
@@ -1888,7 +1889,15 @@ void Touch_Button(gentity_t *ent, gentity_t *other, trace_t *trace ) {
 	}
 
 	if ( ent->moverState == MOVER_POS1 ) {
-		Use_BinaryMover( ent, other, other );
+		// GLX_U: [Lua] through GlobalUse(), the way every other use goes: the lock, the loop limits, then a
+		// script's on_use and "use" event, which can stop it. This is the Use key (TryUse), walking into the
+		// button and a Force push; before, they went straight to Use_BinaryMover() and no script heard of
+		// them. A button a script just stopped is left alone for a moment (RP_Lua_ButtonQuiet), or a player
+		// leaning on it would run the script every frame.
+		if ( RP_Lua_ButtonQuiet( ent ) ) {
+			return;
+		}
+		GlobalUse( ent, other, other );
 	}
 }
 

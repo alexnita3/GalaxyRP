@@ -28,6 +28,8 @@ game module uses rp_lua.h.
 #define RP_LUA_HOOK_STEP			1000	// the count hook fires every this many VM instructions
 #define RP_LUA_NESTED_GRACE_MS		5		// GLX_U: the least time a call made inside another gets (RP_Lua_Call)
 #define RP_LUA_NPC_SPAWN_BYTES		256		// GLX_U: what World.npc charges to rp_lua_spawnkb (about 192 measured)
+#define RP_LUA_BUTTON_QUIET_MS		500		// GLX_U: a button a script stopped ignores touches this long (RP_Lua_ButtonQuiet)
+#define RP_LUA_REMOVED_MAX			1024	// GLX_U: character deletions kept for Storage.char handles (rp_lua_store.c)
 
 #define RP_LUA_MAX_HANDLERS			64		// per event, all plugins together
 #define RP_LUA_MAX_COMMANDS			128
@@ -173,6 +175,7 @@ qboolean	RP_Lua_LooseFileExists( const char *relPath );								// GLX_U
 int			RP_Lua_PluginFolders( char names[][RP_LUA_PLUGIN_NAME_MAX + 1], int max );	// GLX_U: lua/plugins, sorted
 void		RP_Lua_NoteDeferred( int plugin, int count );
 void		RP_Lua_CleanText( char *out, int outSize, const char *in, qboolean keepNewlines );
+void		RP_Lua_LogText( const char *consoleTag, const char *logTag, const char *text );	// GLX_U: a tag on every line
 void		RP_Lua_AdminNotice( const char *text );
 
 // rp_lua_api.c

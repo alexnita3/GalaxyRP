@@ -282,10 +282,10 @@ static qboolean RP_LuaStore_Ensure( void ) {
 	sqlite3_exec( rpDb, "PRAGMA synchronous=NORMAL;", 0, 0, NULL );
 	if ( sqlite3_exec( rpDb, "CREATE TABLE IF NOT EXISTS LuaData(plugin TEXT NOT NULL, scope TEXT NOT NULL, key TEXT NOT NULL, value BLOB NOT NULL, updated INTEGER NOT NULL, PRIMARY KEY(plugin, scope, key))", 0, 0, NULL ) != SQLITE_OK
 		|| sqlite3_prepare_v2( rpDb, "SELECT value FROM LuaData WHERE plugin=? AND scope=? AND key=?", -1, &stGet, NULL ) != SQLITE_OK
-		|| sqlite3_prepare_v2( rpDb, "SELECT length(key) + length(value) FROM LuaData WHERE plugin=? AND scope=? AND key=?", -1, &stLen, NULL ) != SQLITE_OK
+		|| sqlite3_prepare_v2( rpDb, "SELECT length(CAST(key AS BLOB)) + length(value) FROM LuaData WHERE plugin=? AND scope=? AND key=?", -1, &stLen, NULL ) != SQLITE_OK
 		|| sqlite3_prepare_v2( rpDb, "INSERT OR REPLACE INTO LuaData(plugin, scope, key, value, updated) VALUES(?, ?, ?, ?, strftime('%s','now'))", -1, &stPut, NULL ) != SQLITE_OK
 		|| sqlite3_prepare_v2( rpDb, "DELETE FROM LuaData WHERE plugin=? AND scope=? AND key=?", -1, &stDel, NULL ) != SQLITE_OK
-		|| sqlite3_prepare_v2( rpDb, "SELECT COUNT(*), COALESCE(SUM(length(key) + length(value)), 0) FROM LuaData WHERE plugin=?", -1, &stSum, NULL ) != SQLITE_OK ) {
+		|| sqlite3_prepare_v2( rpDb, "SELECT COUNT(*), COALESCE(SUM(length(CAST(key AS BLOB)) + length(value)), 0) FROM LuaData WHERE plugin=?", -1, &stSum, NULL ) != SQLITE_OK ) {
 		trap->Print( S_COLOR_RED "Lua: could not set up %s: %s\n", path, sqlite3_errmsg( rpDb ) );
 		RP_LuaStore_Finalize();
 		sqlite3_close( rpDb );
@@ -357,6 +357,48 @@ void RP_LuaStore_Frame( void ) {
 	}
 }
 
+/*
+GLX_U: characters deleted while this Lua state runs, for the Storage.char handles scripts hold. A handle
+remembers rpRemovedSeq when it was made; it is stale once its character was deleted after that -- before,
+it went on writing rows for the deleted CharID, which SQLite can give to the next new character. The last
+RP_LUA_REMOVED_MAX deletions are kept; past that, handles older than the oldest kept one count as stale too
+(rpRemovedFloor), which is the safe side. Cleared when the state closes (RP_LuaStore_Close): no handle is left.
+*/
+static struct {
+	int			charID;
+	unsigned	seq;
+} rpRemoved[RP_LUA_REMOVED_MAX];
+static int		rpRemovedCount, rpRemovedNext;
+static unsigned	rpRemovedSeq, rpRemovedFloor;
+
+static void RP_LuaStore_NoteRemoved( int charID ) {
+	if ( rpRemovedCount == RP_LUA_REMOVED_MAX ) {
+		rpRemovedFloor = rpRemoved[rpRemovedNext].seq;	// the oldest goes: handles made before it are stale
+	} else {
+		rpRemovedCount++;
+	}
+	rpRemoved[rpRemovedNext].charID = charID;
+	rpRemoved[rpRemovedNext].seq = ++rpRemovedSeq;
+	rpRemovedNext = ( rpRemovedNext + 1 ) % RP_LUA_REMOVED_MAX;
+}
+
+static qboolean RP_LuaStore_CharDeletedSince( int charID, unsigned seq ) {
+	int i;
+
+	if ( seq == rpRemovedSeq ) {
+		return qfalse;	// nothing deleted since the handle was made
+	}
+	if ( seq < rpRemovedFloor ) {
+		return qtrue;
+	}
+	for ( i = 0; i < rpRemovedCount; i++ ) {
+		if ( rpRemoved[i].charID == charID && rpRemoved[i].seq > seq ) {
+			return qtrue;
+		}
+	}
+	return qfalse;
+}
+
 void RP_LuaStore_Close( void ) {
 	if ( rpDb ) {
 		if ( !RP_LuaStore_Flush() ) {
@@ -369,12 +411,16 @@ void RP_LuaStore_Close( void ) {
 	}
 	RP_LuaStore_ClearPend();
 	rpDbTried = qfalse;
+	rpRemovedCount = rpRemovedNext = 0;	// GLX_U: the handles go with the state
+	rpRemovedFloor = rpRemovedSeq;
 }
 
 void RP_LuaStore_CharacterRemoved( int charID ) {
 	char scope[32], path[MAX_OSPATH * 2];
 	sqlite3 *db = rpDb;
 	int i;
+
+	RP_LuaStore_NoteRemoved( charID );	// GLX_U
 
 	Com_sprintf( scope, sizeof( scope ), "char:%d", charID );
 	for ( i = 0; i < RP_LUA_PEND_BUCKETS; i++ ) {
@@ -796,8 +842,9 @@ static int RP_LuaStore_LSet( lua_State *L ) {
 #define RP_LUA_CHARSTORE_MT	"GLX.CharStore"
 
 typedef struct {
-	int		plugin;
-	int		charID;
+	int			plugin;
+	int			charID;
+	unsigned	seq;		// GLX_U: rpRemovedSeq when it was made (RP_LuaStore_CharDeletedSince)
 } rpLuaCharStore_t;
 
 static rpLuaCharStore_t *RP_LuaStore_CheckCharStore( lua_State *L ) {
@@ -812,6 +859,10 @@ static int RP_LuaStore_CharGet( lua_State *L ) {
 	rpLuaCharStore_t *cs = RP_LuaStore_CheckCharStore( L );
 	const char *key = RP_LuaStore_CheckKey( L, 2 );
 	char scope[32];
+	if ( RP_LuaStore_CharDeletedSince( cs->charID, cs->seq ) ) {
+		lua_pushnil( L );	// GLX_U: its character was deleted
+		return 1;
+	}
 	Com_sprintf( scope, sizeof( scope ), "char:%d", cs->charID );
 	return RP_LuaStore_DoGet( L, cs->plugin, scope, key );
 }
@@ -820,6 +871,11 @@ static int RP_LuaStore_CharSet( lua_State *L ) {
 	rpLuaCharStore_t *cs = RP_LuaStore_CheckCharStore( L );
 	const char *key = RP_LuaStore_CheckKey( L, 2 );
 	char scope[32];
+	if ( RP_LuaStore_CharDeletedSince( cs->charID, cs->seq ) ) {
+		lua_pushboolean( L, 0 );	// GLX_U: nothing is written for a deleted character; not an error
+		lua_pushliteral( L, "the character was deleted" );
+		return 2;
+	}
 	Com_sprintf( scope, sizeof( scope ), "char:%d", cs->charID );
 	lua_settop( L, 3 );
 	return RP_LuaStore_DoSet( L, cs->plugin, scope, key, 3 );
@@ -843,6 +899,7 @@ static int RP_LuaStore_LChar( lua_State *L ) {
 	cs = (rpLuaCharStore_t *)lua_newuserdatauv( L, sizeof( *cs ), 0 );
 	cs->plugin = plugin;
 	cs->charID = cl->pers.CharID;
+	cs->seq = rpRemovedSeq;
 	luaL_setmetatable( L, RP_LUA_CHARSTORE_MT );
 	return 1;
 }

@@ -184,6 +184,9 @@ Events.off(id)
 - `use` needs a filter: `Events.on("use", fn, { targetname = "vault_door" })`. `map_event` may
   have one: `Events.on("map_event", fn, { name = "vault_alarm" })`, or none for every event.
 - `activator` and `other` are player handles for players, entity handles for anything else, or nil.
+- A `func_button` raises `use` (and its `on_use` runs) however it is pressed: with the Use key, by
+  walking into it, with a Force push, or by the map. A button a script stopped ignores touches and the
+  Use key for half a second, so a player leaning on it does not run the handler every frame.
 
 ### Commands
 
@@ -285,7 +288,8 @@ end
 - **Keys:** 1 to 64 characters.
 - **Values:** nil, true/false, numbers, strings, and tables of them up to 16 deep, without loops.
 - **Characters:** a character's data is deleted when the character is deleted. `Storage.char` needs
-  a player who is playing a character.
+  a player who is playing a character. A store kept after its character was deleted stops working:
+  `get` gives nil, and `set` writes nothing and returns `false, "the character was deleted"`.
 
 ## The world (API version 2)
 
@@ -314,7 +318,7 @@ Only the plugin's **own** entities (the ones it spawned) can also be:
 | `ent:free()` | Removes it |
 | `ent:move(to, ms)` | Moves it to `to` over `ms` milliseconds (0: at once). Brush entities (`func_*`) and models (`misc_model*`) only |
 | `ent:rotate(angles, ms)` | Turns it the same way |
-| `ent:on_use(fn)` | `fn(ent, activator, other)` runs when it is used. It also becomes usable with the Use key. Return `false` to stop its own use (a `misc_model_breakable` breaks when used, unless spawnflag 64) |
+| `ent:on_use(fn)` | `fn(ent, activator, other)` runs when it is used. It also becomes usable with the Use key. Return `false` to stop its own use (a `misc_model_breakable` breaks when used, unless spawnflag 64). A `func_button` runs it however it is pressed (see the `use` event) |
 | `ent:on_pain(fn)` | `fn(ent, attacker, damage)` when it is hurt (entities that can be damaged) |
 | `ent:on_die(fn)` | `fn(ent, attacker)` when it is destroyed, before its own breaking |
 

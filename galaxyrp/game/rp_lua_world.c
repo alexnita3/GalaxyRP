@@ -65,6 +65,7 @@ extern void InitMoverTrData( gentity_t *ent );
 extern void MatchTeam( gentity_t *teamLeader, int moverState, int time );
 extern void Blocked_Mover( gentity_t *ent, gentity_t *other );
 extern void GlobalUse( gentity_t *self, gentity_t *other, gentity_t *activator );
+extern void Touch_Button( gentity_t *ent, gentity_t *other, trace_t *trace );
 extern void NPC_Begin( gentity_t *ent );
 
 typedef void ( *rpPainFn_t )( gentity_t *self, gentity_t *attacker, int damage );
@@ -400,6 +401,21 @@ void RP_LuaWorld_NpcDied( gentity_t *npc, gentity_t *killer ) {
 	RP_LuaWorld_CallOwn( npc, rpEnts[num].deathRef, RPCB_DEATH, killer, NULL, 0 );
 }
 
+// GLX_U: a func_button a script just stopped, until when, for the slot's generation then (RP_Lua_ButtonQuiet)
+static int rpButtonQuietUntil[MAX_ENTITIESTOTAL];
+static int rpButtonQuietGen[MAX_ENTITIESTOTAL];
+
+qboolean RP_Lua_ButtonQuiet( gentity_t *button ) {
+	int num;
+
+	if ( !rl.L || !button ) {
+		return qfalse;
+	}
+	num = (int)( button - g_entities );
+	return ( num >= 0 && num < MAX_ENTITIESTOTAL && rpButtonQuietGen[num] == g_entityGen[num]
+		&& level.time < rpButtonQuietUntil[num] ) ? qtrue : qfalse;
+}
+
 void RP_Lua_ForceUses( qboolean on ) {
 	rpForceUses += on ? 1 : -1;
 	if ( rpForceUses < 0 ) {
@@ -432,6 +448,10 @@ qboolean RP_Lua_EntityUsed( gentity_t *self, gentity_t *other, gentity_t *activa
 			allowed = qfalse;
 		}
 		rpCallbackDepth--;
+	}
+	if ( !forced && !allowed && self->inuse && self->touch == Touch_Button ) {
+		rpButtonQuietUntil[num] = level.time + RP_LUA_BUTTON_QUIET_MS;
+		rpButtonQuietGen[num] = g_entityGen[num];
 	}
 	return ( forced || allowed ) ? qtrue : qfalse;
 }
@@ -698,6 +718,7 @@ void RP_LuaWorld_Reset( void ) {
 		e->origDie = die;
 	}
 	memset( rpZones, 0, sizeof( rpZones ) );
+	memset( rpButtonQuietUntil, 0, sizeof( rpButtonQuietUntil ) );	// GLX_U
 	rpCallbackDepth = 0;
 	rpPendingFrees = 0;
 	rpPendingKills = 0;
