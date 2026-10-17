@@ -869,6 +869,7 @@ void RP_Lua_CloseState( void ) {
 	RP_LuaWorld_Reset();
 	RP_LuaPeople_Reset();	// API 3: no script is left to own a player effect
 	RP_LuaDialog_Reset();	// API 5: nor a dialogue
+	RP_LuaOrders_Reset();	// API 6: nor an NPC order
 	if ( rl.L && !rl.panicked ) {
 		// finalizers (__gc) run here: give them one budget, which stays exhausted once used up,
 		// so a finalizer that loops cannot stall the map change
@@ -1012,6 +1013,7 @@ void RP_Lua_Frame( int levelTime ) {
 	rl.frameExhausted = qfalse;
 	RP_LuaWorld_Frame();	// frees queued inside game callbacks, zones' leave checks
 	RP_LuaDialog_Frame();	// API 5: dialogues that time out or that the player walked away from
+	RP_LuaOrders_Frame();	// API 6: NPC orders that have ended
 	RP_LuaApi_RunTimersAndTasks( levelTime );
 	RP_LuaApi_FireFrame( levelTime );
 	RP_LuaStore_Frame();

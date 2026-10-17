@@ -6,7 +6,7 @@ the plugin that is running. Nothing in this file lets a script run a console com
 file, or reach the engine directly.
 
 Globals: print, include, Plugin, Events, Timer, Task, Commands, Msg, Server (Storage is in
-rp_lua_store.c, World in rp_lua_world.c, Dialog in rp_lua_dialog.c; what a player handle adds in API version 3 is in
+rp_lua_store.c, World in rp_lua_world.c (NPC orders in rp_lua_orders.c), Dialog in rp_lua_dialog.c; what a player handle adds in API version 3 is in
 rp_lua_people.c). Player handles are userdata of type GLX.Player; one handle per connection, so the
 same player is always the same value (usable as a table key) until they disconnect, after which
 using it is a script error rather than a crash.
@@ -1503,6 +1503,7 @@ void RP_LuaApi_RemovePlugin( int plugin ) {
 	RP_LuaWorld_RemovePlugin( plugin );		// API 2: its entities and zones (API 3: and NPCs)
 	RP_LuaPeople_RemovePlugin( plugin );	// API 3: the player effects it set that are still its own
 	RP_LuaDialog_RemovePlugin( plugin );	// API 5: its dialogues close
+	RP_LuaOrders_RemovePlugin( plugin );	// API 6: its NPC orders are forgotten
 
 	for ( ev = 0; ev < RPLE_NUM; ev++ ) {
 		for ( i = 0; i < RP_LUA_MAX_HANDLERS; i++ ) {

@@ -208,6 +208,13 @@ static gentity_t *RP_LuaWorld_CheckOwn( lua_State *L, int idx, const char *what 
 	return ent;
 }
 
+static gentity_t *RP_LuaWorld_OptActor( lua_State *L, int idx );
+
+// API 6 (rp_lua_orders.c): a player or entity handle argument as the entity it stands for (nil: NULL)
+gentity_t *RP_LuaWorld_OptActorArg( lua_State *L, int idx ) {
+	return RP_LuaWorld_OptActor( L, idx );
+}
+
 // API 5 (rp_lua_dialog.c): an entity handle argument -- a Lua error when it is not one or the entity is gone
 gentity_t *RP_LuaWorld_CheckEntityArg( lua_State *L, int idx ) {
 	return RP_LuaWorld_CheckEntity( L, idx );
@@ -1893,6 +1900,27 @@ static gentity_t *RP_LuaWorld_CheckOwnNpc( lua_State *L, const char *what, const
 	return ent;
 }
 
+// API 6 (rp_lua_orders.c): the running plugin's own NPC at argument 1, or a Lua error
+gentity_t *RP_LuaWorld_OwnNpcArg( lua_State *L, const char *method ) {
+	return RP_LuaWorld_CheckOwnNpc( L, "give orders to", method );
+}
+
+qboolean RP_LuaWorld_NpcIsAlive( const gentity_t *npc ) {
+	return RP_LuaWorld_NpcAlive( npc );
+}
+
+// API 6: a script NPC with an on_use is not taken as a follower by a player's Use key (TryUse, g_utils.c): its
+// on_use decides what the Use key does
+qboolean RP_Lua_NpcKeepsUse( const gentity_t *npc ) {
+	int num;
+
+	if ( !rl.L || !npc ) {
+		return qfalse;
+	}
+	num = npc->s.number;
+	return ( num >= 0 && num < MAX_ENTITIESTOTAL && RP_LuaWorld_Owner( num ) >= 0 && rpEnts[num].useRef > 0 ) ? qtrue : qfalse;
+}
+
 static int RP_LuaWorld_EntKill( lua_State *L ) {
 	gentity_t *npc = RP_LuaWorld_CheckOwnNpc( L, "kill", "kill" );
 	rpLuaEnt_t *e = &rpEnts[npc->s.number];
@@ -1947,9 +1975,17 @@ static int RP_LuaWorld_EntTeleport( lua_State *L ) {
 	return 1;
 }
 
-// freeze and unfreeze: /npc freeze, which refuses vehicles and riders
+// freeze and unfreeze: /npc freeze, which refuses vehicles and riders. API 6: any NPC, the map's too (a pause
+// the map's ICARUS scripts already wait out); a map NPC's freeze is its own state, as an admin's is, and stays
+// when the plugin goes
 static int RP_LuaWorld_EntFreezeSet( lua_State *L, qboolean on ) {
-	gentity_t *npc = RP_LuaWorld_CheckOwnNpc( L, on ? "freeze" : "unfreeze", on ? "freeze" : "unfreeze" );
+	gentity_t *npc = RP_LuaWorld_CheckEntity( L, 1 );
+	int plugin = RP_Lua_CurrentPlugin( L );
+	qboolean own = ( RP_LuaWorld_Owner( npc->s.number ) == plugin ) ? qtrue : qfalse;
+
+	if ( !npc->NPC || !npc->client ) {
+		return luaL_error( L, "%s: entity %d (%s) is not an NPC", on ? "freeze" : "unfreeze", npc->s.number, npc->classname ? npc->classname : "noclass" );
+	}
 
 	if ( RP_LuaWorld_IsVehicle( npc ) ) {
 		return RP_LuaWorld_Fail( L, "vehicles cannot be frozen" );
@@ -1964,6 +2000,9 @@ static int RP_LuaWorld_EntFreezeSet( lua_State *L, qboolean on ) {
 		RP_NpcFreeze( npc );
 	} else {
 		RP_NpcUnfreeze( npc );
+	}
+	if ( !own ) {
+		G_LogPrintf( "Lua: %s %s NPC %d (%s)\n", rl.plugins[plugin].name, on ? "froze" : "unfroze", npc->s.number, npc->NPC_type ? npc->NPC_type : "?" );
 	}
 	lua_pushboolean( L, 1 );
 	return 1;
@@ -2069,6 +2108,13 @@ static int RP_LuaWorld_EntIndex( lua_State *L ) {
 			return 1;
 		}
 	}
+	{	// API 6: NPC orders (rp_lua_orders.c)
+		lua_CFunction order = RP_LuaOrders_Method( key );
+		if ( order ) {
+			lua_pushcfunction( L, order );
+			return 1;
+		}
+	}
 	if ( !RP_LuaWorld_Alive( h->num, h->gen ) ) {
 		return luaL_error( L, "that entity no longer exists" );
 	}
@@ -2096,7 +2142,7 @@ static int RP_LuaWorld_EntIndex( lua_State *L ) {
 		} else {
 			lua_pushnil( L );
 		}
-	} else if ( !RP_LuaWorld_NpcField( L, ent, key ) ) {	// API 3
+	} else if ( !RP_LuaWorld_NpcField( L, ent, key ) && !RP_LuaOrders_Field( L, ent, key ) ) {	// API 3, API 6
 		lua_pushnil( L );
 	}
 	return 1;

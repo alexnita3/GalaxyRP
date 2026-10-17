@@ -1,9 +1,10 @@
 # Galaxy RP Ultimate: server Lua scripts
 
 Server admins can add quests, jobs, world events, scripted interactions and minigames with Lua
-scripts, without rebuilding the mod. Scripts run on the server only; players need nothing new.
+scripts, without rebuilding the mod. Scripts run on the server only; players need nothing new (with
+the Galaxy RP Ultimate client, dialogues also show in a menu).
 
-This guide covers **API version 5**:
+This guide covers **API version 6**:
 - version 1: events, commands, timers, tasks, messages, server information, player information
   and storage;
 - version 2: the world -- entities, zones, effects, sounds, music, screen shakes, and the map's
@@ -11,17 +12,42 @@ This guide covers **API version 5**:
 - version 3: players and NPCs -- what a player handle tells, teleporting, healing, items, player
   effects and skills, spawning and controlling NPCs, and the death, knockdown and damage events;
 - version 4: the economy -- paying and charging credits, giving XP, and the level events;
-- version 5: dialogues -- a text with numbered options a player answers.
+- version 5: dialogues -- a text with numbered options a player answers;
+- version 6: NPC orders -- follow, cover, guard, walk somewhere, attack, stop.
 
 A plugin written for an earlier version runs unchanged.
 
-## Getting started
+Contents: [Quick start](#quick-start) · [How scripts run](#how-scripts-run) ·
+[Troubleshooting](#troubleshooting) · [The API](#the-api) · [The world](#the-world-api-version-2) ·
+[Players and NPCs](#players-and-npcs-api-version-3) · [The economy](#the-economy-api-version-4) ·
+[Dialogues](#dialogues-api-version-5) · [NPC orders](#npc-orders-api-version-6) · [Reference](#reference)
 
-1. Make a folder `lua/plugins/<name>/` in the GalaxyRP folder, with a `plugin.lua` in it.
+## Quick start
+
+A complete plugin: it greets players when they join, and adds a `/hello` command.
+
+```lua
+-- lua/plugins/hello/plugin.lua
+Plugin.register{ name = "Hello", version = "1.0", api = 1 }
+
+Events.on("client_begin", function(player)
+    Msg.chat(player, "^3Welcome, " .. player.name .. "!")
+end)
+
+Commands.register("hello", function(player, args)
+    Msg.broadcast(player.name .. " says hello to " .. (args[1] or "everyone") .. ".")
+end, { help = "Says hello" })
+```
+
+1. Make the folder `lua/plugins/hello/` in the GalaxyRP folder and save the code above in it as
+   `plugin.lua`.
    - The folder name is the plugin's name: lower-case letters, digits and `_`, up to 32 characters.
-2. In game, an admin with the **Scripts** power runs `/scripts enable <name>`. From rcon, use
-   `lua_enable <name>`.
-3. To keep the plugin on after a restart, add its name to `rp_lua_plugins` in
+2. In game, an admin with the **Scripts** power runs `/scripts enable hello`. From rcon, use
+   `lua_enable hello`.
+3. Type `/hello Kyle` to try it.
+4. Change the file, then run `/scripts reload hello`: the new version runs at once.
+5. If something goes wrong, `/scripts errors` shows the error with its file and line.
+6. To keep the plugin on after a restart, add its name to `rp_lua_plugins` in
    `galaxyrp_server.cfg`, separated from the others by spaces.
 
 `lua/examples/` has plugins to copy and change:
@@ -33,7 +59,8 @@ A plugin written for an earlier version runs unchanged.
 - `bounty` (API 3): `/bounty`, a "kill three NPCs" quest;
 - `race` (API 3): `/race`, a checkpoint race with a countdown and records;
 - `delivery` (API 4): `/job`, a delivery job with a deposit, a fee and XP;
-- `merchant` (API 5): an NPC players talk to with the Use key, through dialogues.
+- `merchant` (API 5): an NPC players talk to with the Use key, through dialogues;
+- `escort` (API 6): `/escort`, a guard that covers a player through an ambush and holds a spot.
 
 **Map scripts** are files in `lua/maps/<map name>/` (for example `lua/maps/mp/ffa5/doors.lua`).
 - They run only on that map, and only when `rp_lua_mapscripts` is 1.
@@ -58,24 +85,8 @@ run, so no script can end up in a pk3 that players download.
 
 ### Limits
 
-All limits are cvars in `galaxyrp_server.cfg`.
-
-| Cvar | Default | What it limits |
-|---|---|---|
-| `rp_lua_budget` | 1000000 | Instructions one call into a script may run |
-| `rp_lua_budgetms` | 50 | Milliseconds one call may run |
-| `rp_lua_framems` | 15 | Milliseconds of timers, tasks and `frame` handlers per server frame; the rest run next frame |
-| `rp_lua_memmb` | 64 | Memory for all scripts together, in MB |
-| `rp_lua_maxerrors` | 20 | Errors in a minute before a plugin is switched off |
-| `rp_lua_maxvalue` | 65536 | Bytes in one stored value |
-| `rp_lua_maxstore` | 2097152 | Bytes one plugin may keep in storage |
-| `rp_lua_maxents` | 32 | Entities and zones one plugin may have at once |
-| `rp_lua_spawnkb` | 512 | KB of game memory all scripts' `World.spawn` may use per map (freed when the map changes) |
-| `rp_lua_newfx` | 8 | New effect files scripts may add per map (a map has only 64 effect slots) |
-| `rp_lua_maxnpcs` | 8 | NPCs one plugin may have at once, corpses included |
-| `rp_lua_items` | (empty) | Not a limit but a list: the item class names scripts may give players |
-| `rp_lua_maxcredits` | 5000 | Credits one call may give or take (0: none at all) |
-| `rp_lua_maxxp` | 10 | XP one call may give (0: none at all) |
+All limits are cvars in `galaxyrp_server.cfg`; [Cvars](#cvars) in the reference lists them all
+with their defaults.
 
 - **A script over the limit** stops with an error: "script ran too long". It cannot catch that error
   and carry on.
@@ -100,6 +111,25 @@ nothing extra.
 
 The console removes double quotes and splits commands at `;`. So in `lua_exec`, write strings with
 single quotes or `[[...]]`, and don't use `;`.
+
+## Troubleshooting
+
+| What happens | Why, and what to do |
+|---|---|
+| `/scripts` does not list the plugin | The file must be `lua/plugins/<name>/plugin.lua`, a loose file in the GalaxyRP folder (never inside a pk3), and the folder name lower-case letters, digits and `_`. With `rp_lua 0` no script runs at all |
+| It is listed, but not running | `/scripts errors` says why: usually an error when it loaded. Fix it and `/scripts reload <name>` |
+| "needs Lua API version N, but this server has version M" | The plugin was written for a newer server. Update the server, or lower `api` if the plugin really uses nothing newer |
+| "switched off after N errors in a minute" | It kept failing (`rp_lua_maxerrors`). Fix the error from `/scripts errors`, then `/scripts enable <name>` |
+| "script ran too long" | One call ran past `rp_lua_budget` instructions or `rp_lua_budgetms` ms: usually a loop that never ends. Spread long work over time with `Task.wait` or a timer |
+| "not enough memory" | All scripts together reached `rp_lua_memmb`. Look for tables that keep growing |
+| A map script does not run | Map scripts need `rp_lua_mapscripts 1`, and the folder named as the map is: `lua/maps/mp/ffa5/` |
+| `World.spawn` or `World.npc` returns nil | The second value says why: a plugin limit (`rp_lua_maxents`, `rp_lua_maxnpcs`, `rp_lua_spawnkb`), a model or NPC type the server does not have, or a full map |
+| `give` is refused | The item is not in `rp_lua_items` |
+| Credits or XP come out smaller, or are refused | `rp_lua_maxcredits` and `rp_lua_maxxp` cap each call, and 0 switches it off. The warning is in `/scripts errors` |
+| An order is refused: "it has not finished spawning" | An NPC takes orders from the frame after `World.npc`: give them in `Timer.after(100, ...)` |
+| An NPC does not walk to its spot | Most multiplayer maps have no NPC waypoints, so it walks in a straight line and stops at the first wall (`"stuck"`). Pick a spot it can see |
+| The dialogue shows in the chat area, not in a menu | The menu needs the Galaxy RP Ultimate client; everyone else answers in chat or with `/choose` |
+| `lua_exec` does nothing | It needs `rp_lua_allowexec 1`, and rcon only |
 
 ## The API
 
@@ -438,12 +468,12 @@ The plugin's **own** NPCs can also be:
 | `npc:kill()` | Kills it as `/npc kill` does: it dies and leaves a corpse | Already dead; a vehicle someone is riding |
 | `npc:free()` | Removes it at once | — |
 | `npc:teleport(pos [, yaw])` | Moves it, with the same checks as a player's teleport | Dead; riding a vehicle; the spot is blocked; it has not finished spawning (the frame it was made) |
-| `npc:freeze()`, `npc:unfreeze()` | Stops it, or lets it go, as `/npc freeze` does | A vehicle, or riding one |
+| `npc:freeze()`, `npc:unfreeze()` | Stops it, or lets it go, as `/npc freeze` does. From API 6 on any NPC, the map's too (see below) | A vehicle, or riding one |
 | `npc:set_effect(name)` | `"walkthrough"`, `"ghost"`, `"holo"` or nil, as `/npc effect` does | A vehicle, or riding one |
 | `npc:on_death(fn)` | `fn(npc, killer)` when it dies | — |
 
 - An NPC has `on_death` and the `damage` event instead of `on_pain` and `on_die`.
-- Giving NPCs orders (follow, guard, go somewhere) comes later.
+- Orders (follow, cover, guard, walk somewhere, attack, stop) are API version 6, below.
 
 ### Events
 
@@ -530,7 +560,7 @@ end)
 
   | `why` | When |
   |---|---|
-  | `"cancelled"` | The player chose 0 |
+  | `"cancelled"` | The player chose 0, or closed the dialogue menu (Esc) |
   | `"timeout"` | Nobody answered in time |
   | `"away"` | They walked out of `range` of the speaker, or the speaker was removed |
   | `"died"` | They died, were knocked down or became a spectator |
@@ -555,3 +585,150 @@ end)
   its own use does not happen), or point a map's `trigger_multiple` with spawnflags 4 (Use button) at
   a `target_lua` and open the dialogue in the `map_event` handler. See the `merchant` example.
 
+## NPC orders (API version 6)
+
+```lua
+local guard = World.npc("rebel", pos, { team = "player" })
+-- (orders work from the frame after World.npc: the NPC has to finish spawning)
+guard:cover(player, function(npc, done, why) print("the cover order ended: " .. why) end)
+guard:go_to({ x = 512, y = 0, z = 0 }, { run = true }, function(npc, done, why)
+    if done then npc:guard(player) end
+end)
+```
+
+The plugin's **own** NPCs (`World.npc`) take these orders:
+
+| Method | What it does | Refused (returns `false`, reason) when |
+|---|---|---|
+| `npc:follow(player [, fn])` | Follows the player, fighting its own enemies on the way, as a player's Use key makes a friendly NPC do | Below |
+| `npc:cover(player [, fn])` | Follows the player and shoots anyone not on their side, as `/order cover` does | Below |
+| `npc:guard(player [, fn])` | Stands where it is and shoots anyone not on the player's side, as `/order guard` does | Below |
+| `npc:go_to(pos [, options] [, fn])` | Walks to `pos`, or runs with `run = true`, straight there and without stopping to fight, then goes back to what it was doing. Options: `run`; `radius`, how close counts as there (16 to 512, default 48); `timeout` in seconds (5 to 600, default 60) | Below |
+| `npc:attack(target [, fn])` | Makes a player or an NPC its enemy, and goes back after it when it loses sight of it | Below; also the target is itself, not alive (knocked down counts), spectating, admin-protected, or on its side |
+| `npc:stop()` | Ends any order: no leader, no goal, no enemy the script gave it; it stands where it is | — |
+
+- **Refused** for every order: it has not finished spawning (the frame it was made), it is dead, frozen,
+  a vehicle, a wampa or a remote, riding a vehicle, or under a mind trick; for follow, cover and guard
+  also when the player is spectating or not alive.
+- **Fields**, on any NPC: `npc.order` (`"follow"`, `"cover"`, `"guard"`, `"go_to"`, `"attack"` or nil;
+  a player's Use key and `/order` count too) and `npc.leader` (a player handle, or nil).
+- **One order at a time:** a new one replaces the last, which is undone first.
+- **`fn(npc, done, why)`** runs once, when the order ends; `done` is true only for `"arrived"`:
+
+  | `why` | When |
+  |---|---|
+  | `"arrived"` | `go_to` reached its spot |
+  | `"stuck"` | `go_to` has not moved 16 units in 5 seconds: a wall, or no way through |
+  | `"timeout"` | `go_to` took longer than its timeout |
+  | `"killed"` | `attack`: the target died or was knocked down |
+  | `"target_left"` | `attack`: the target disconnected, went spectator or was removed |
+  | `"leader_left"` | follow, cover or guard: the player disconnected, went spectator or changed team |
+  | `"frozen"` | `go_to` or `attack`: the NPC was frozen (a follower stays one, standing still) |
+  | `"died"` | The NPC died |
+  | `"replaced"` | A new order from the script, or a player took the NPC over with the Use key or `/order` |
+  | `"stopped"` | `npc:stop()` |
+
+  It runs between frames, so everything is allowed in it. When the plugin is switched off or the NPC
+  is removed, nothing is called.
+- **Paths:** NPCs use the map's NPC waypoints when it has them. Most multiplayer maps have none: the NPC
+  then walks in a straight line, and a wall in the way ends `go_to` with `"stuck"`.
+- **Players:** a player's Use key makes a friendly NPC follow them, and `/order` changes what their
+  followers do. A script NPC with an `on_use` is never taken over by the Use key: its `on_use`
+  decides. `/order` from the player the script made its leader still works, and ends the script's
+  order with `"replaced"`.
+- **The log:** every order is written to the server log (`Lua: <plugin> ordered NPC 70 (rebel) to cover <player>`).
+
+**Freezing any NPC:** from API 6, `npc:freeze()` and `npc:unfreeze()` also work on the map's NPCs,
+as an admin's `/npc freeze` does (not on vehicles or riders). The map's own scripts wait while it is
+frozen. The freeze stays when the plugin is switched off, and is written to the server log. See the
+`escort` example.
+
+## Reference
+
+### Functions
+
+The version is the API version that brought it (`Plugin.register{ api = n }`).
+
+| Table | Functions | Version |
+|---|---|---|
+| (globals) | `print(...)`, `include(file)` | 1 |
+| `Plugin` | `register{ name, version, api }`, `name()` | 1 |
+| `Events` | `on(event, fn [, filter])`, `off(id)` | 1 |
+| `Commands` | `register(name, fn [, { help, logged_in, admin }])` | 1 |
+| `Timer` | `after(ms, fn)`, `every(ms, fn)`, `cancel(id)` | 1 |
+| `Task` | `start(fn, ...)`, `wait(ms)`, `cancel(id)` | 1 |
+| `Msg` | `print`, `center`, `chat` (player, text); `broadcast`, `broadcast_center` (text) | 1 |
+| `Server` | `time()`, `realtime()`, `date(what)`, `map()`, `cvar(name)`, `players()` | 1 |
+| `Storage` | `get(key)`, `set(key, value)`, `char(player)` with `:get` and `:set` | 1 |
+| `World` | `spawn`, `zone`, `find`, `by_number`, `effect`, `sound`, `music`, `shake`, `distance` | 2 |
+| `World` | `npc(type, pos [, options])` | 3 |
+| `Dialog` | `open(player, spec, fn)`, `close(player)`, `is_open(player)` | 5 |
+
+**Player handles**
+
+| Fields and methods | Version |
+|---|---|
+| `id`, `name`, `name_raw`, `team`, `is_bot`, `logged_in`, `rpg`, `character_id`, `valid`, `has_admin(n)` | 1 |
+| `alive`, `downed`, `health`, `max_health`, `armor`, `max_armor`, `origin`, `yaw`, `account_id`, `character_name`, `level`, `xp`, `credits`, `skillpoints`, `riding`, `minigame`, `effect`, `skill(n)` | 3 |
+| `teleport`, `heal`, `set_armor`, `give`, `set_effect`, `skill_up`, `skill_down`, `play_sound` | 3 |
+| `xp_next`, `add_credits`, `take_credits`, `add_xp` | 4 |
+
+**Entity handles**
+
+| Fields and methods | Of | Version |
+|---|---|---|
+| `valid`, `id`, `classname`, `targetname`, `target`, `origin`, `angles`, `is_logical`, `owner`, `health`, `key(name)`, `use(player)` | Any entity | 2 |
+| `free`, `move`, `rotate`, `on_use`, `on_pain`, `on_die` | The plugin's own | 2 |
+| `on_enter`, `on_leave` | The plugin's own zones | 2 |
+| `is_npc`, `is_vehicle`, `npc_type`, `team`, `max_health`, `alive`, `spawner`, `effect`, `frozen` | Any NPC | 3 |
+| `kill`, `teleport`, `set_effect`, `on_death` | The plugin's own NPCs | 3 |
+| `freeze`, `unfreeze` | The plugin's own NPCs (3); any NPC (6) | 3, 6 |
+| `order`, `leader` | Any NPC | 6 |
+| `follow`, `cover`, `guard`, `go_to`, `attack`, `stop` | The plugin's own NPCs | 6 |
+
+### Events
+
+| Event | Arguments | Filter | Version |
+|---|---|---|---|
+| `init`, `shutdown`, `unload` | — | — | 1 |
+| `frame` | `time` | — | 1 |
+| `client_connect` | `player`, `first_time` | — | 1 |
+| `client_begin`, `client_spawn`, `client_disconnect` | `player` | — | 1 |
+| `chat` | `player`, `mode`, `text`, `target` | — | 1 |
+| `command` | `player`, `name`, `args` | — | 1 |
+| `use` | `entity`, `activator`, `other` | `{ targetname = }` (required) | 2 |
+| `map_event` | `name`, `activator`, `entity` | `{ name = }` | 2 |
+| `player_death` | `player`, `killer`, `mod` | — | 3 |
+| `player_downed` | `player`, `attacker` | — | 3 |
+| `npc_death` | `npc`, `killer`, `mod` | `{ npc_type =, spawner = }` | 3 |
+| `damage` | `target`, `attacker`, `amount`, `mod` | `{ target = "players" \| "npcs" }` | 3 |
+| `level_up` | `player`, `level`, `gained` | — | 4 |
+| `level_down` | `player`, `level`, `lost` | — | 4 |
+
+Only `chat` and `use` handlers can change anything by what they return (`false` stops the message
+or the use).
+
+### Cvars
+
+All are in `galaxyrp_server.cfg`.
+
+| Cvar | Default | What it does |
+|---|---|---|
+| `rp_lua` | 1 | 0 switches every script off |
+| `rp_lua_plugins` | (empty) | The plugins started with the server, separated by spaces |
+| `rp_lua_mapscripts` | 0 | 1 runs the map scripts in `lua/maps/<map name>/` |
+| `rp_lua_allowexec` | 0 | 1 allows rcon `lua_exec` |
+| `rp_lua_memmb` | 64 | Memory for all scripts together, in MB |
+| `rp_lua_budget` | 1000000 | Instructions one call into a script may run |
+| `rp_lua_budgetms` | 50 | Milliseconds one call may run |
+| `rp_lua_framems` | 15 | Milliseconds of timers, tasks and `frame` handlers per server frame; the rest run next frame |
+| `rp_lua_maxerrors` | 20 | Errors in a minute before a plugin is switched off |
+| `rp_lua_maxvalue` | 65536 | Bytes in one stored value |
+| `rp_lua_maxstore` | 2097152 | Bytes one plugin may keep in storage |
+| `rp_lua_maxents` | 32 | Entities and zones one plugin may have at once |
+| `rp_lua_spawnkb` | 512 | KB of game memory all scripts' `World.spawn` may use per map (freed when the map changes) |
+| `rp_lua_newfx` | 8 | New effect files scripts may add per map (a map has only 64 effect slots) |
+| `rp_lua_maxnpcs` | 8 | NPCs one plugin may have at once, corpses included |
+| `rp_lua_items` | (empty) | The item class names scripts may give players, separated by spaces |
+| `rp_lua_maxcredits` | 5000 | Credits one call may give or take (0: none at all) |
+| `rp_lua_maxxp` | 10 | XP one call may give (0: none at all) |

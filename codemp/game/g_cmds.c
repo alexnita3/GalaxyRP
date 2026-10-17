@@ -22261,6 +22261,7 @@ void Cmd_Order_f( gentity_t *ent ) {
 
 				if (zyk_npc_can_take_orders(this_ent, ent))
 				{
+					RP_Lua_NpcOrderTaken(this_ent);	// GLX_U: [Lua] a script's order on it ends ("replaced", rp_lua_orders.c)
 					this_ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_NPC_ORDER_GUARD);
 					this_ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_NPC_ORDER_COVER);
 					this_ent->NPC->tempBehavior = BS_FOLLOW_LEADER;
@@ -22276,6 +22277,7 @@ void Cmd_Order_f( gentity_t *ent ) {
 
 				if (zyk_npc_can_take_orders(this_ent, ent))
 				{
+					RP_Lua_NpcOrderTaken(this_ent);	// GLX_U: [Lua] a script's order on it ends ("replaced", rp_lua_orders.c)
 					this_ent->NPC->tempBehavior = BS_STAND_GUARD;
 					this_ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_NPC_ORDER_COVER);
 					this_ent->client->pers.player_statuses |= (1 << PLAYER_STATUS_NPC_ORDER_GUARD);
@@ -22291,6 +22293,7 @@ void Cmd_Order_f( gentity_t *ent ) {
 
 				if (zyk_npc_can_take_orders(this_ent, ent))
 				{
+					RP_Lua_NpcOrderTaken(this_ent);	// GLX_U: [Lua] a script's order on it ends ("replaced", rp_lua_orders.c)
 					this_ent->NPC->tempBehavior = BS_FOLLOW_LEADER;
 					this_ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_NPC_ORDER_GUARD);
 					this_ent->client->pers.player_statuses |= (1 << PLAYER_STATUS_NPC_ORDER_COVER);

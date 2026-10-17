@@ -13,7 +13,7 @@ game module uses rp_lua.h.
 #include "../../lib/lua/lualib.h"
 #include "rp_lua.h"
 
-#define RP_LUA_API_VERSION			5		// Plugin.register{ api = n } may not ask for more
+#define RP_LUA_API_VERSION			6		// Plugin.register{ api = n } may not ask for more
 
 #define RP_LUA_MAX_PLUGINS			64		// plugins and map scripts together
 #define RP_LUA_CONSOLE				RP_LUA_MAX_PLUGINS	// plugins[] slot of rcon lua_exec's "@console"
@@ -211,6 +211,17 @@ gentity_t	*RP_LuaWorld_CheckEntityArg( lua_State *L, int idx );	// an entity han
 qboolean	RP_LuaWorld_IsEntityArg( lua_State *L, int idx );
 void		RP_LuaWorld_Center( const gentity_t *ent, vec3_t out );	// where it is (a brush entity: its box's middle)
 
+gentity_t	*RP_LuaWorld_OwnNpcArg( lua_State *L, const char *method );	// API 6: the plugin's own NPC at argument 1, or a Lua error
+gentity_t	*RP_LuaWorld_OptActorArg( lua_State *L, int idx );	// a player or entity handle as its entity (nil: NULL)
+qboolean	RP_LuaWorld_NpcIsAlive( const gentity_t *npc );		// not dead (a corpse is not); still spawning counts
+
+// rp_lua_orders.c (API 6)
+lua_CFunction	RP_LuaOrders_Method( const char *key );		// an order method of an entity handle, or NULL
+int			RP_LuaOrders_Field( lua_State *L, gentity_t *ent, const char *key );	// order / leader: 1 when pushed
+void		RP_LuaOrders_Frame( void );						// ends orders: arrived, stuck, timeout, the leader gone...
+void		RP_LuaOrders_RemovePlugin( int plugin );		// its orders are forgotten, nothing called
+void		RP_LuaOrders_Reset( void );						// the state is closing
+
 // rp_lua_dialog.c (API 5)
 void		RP_LuaDialog_Register( lua_State *L );			// the Dialog table, on the globals on top of the stack
 void		RP_LuaDialog_RemovePlugin( int plugin );		// its dialogues close, nothing called
@@ -223,6 +234,7 @@ int			RP_LuaPeople_PlayerField( lua_State *L, int client, const char *key );	// 
 void		RP_LuaPeople_RemovePlugin( int plugin );		// the player effects it set that are still its own go
 void		RP_LuaPeople_Reset( void );						// the state is closing: every script's effects go
 const char	*RP_LuaPeople_TeleportRefusal( gentity_t *ent, const vec3_t dest );	// NULL when dest is clear for ent
+qboolean	RP_LuaPeople_IsProtected( gentity_t *ent );		// Admin Protect on: scripts leave them alone
 void		RP_LuaPeople_DoTeleport( gentity_t *ent, const vec3_t dest, float yaw );
 const char	*RP_LuaPeople_ModName( int mod );				// "MOD_SABER"
 const char	*RP_LuaPeople_EffectName( int mode );			// "walkthrough", "ghost", "holo", "hidden", NULL for none

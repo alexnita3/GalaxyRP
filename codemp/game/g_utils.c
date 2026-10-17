@@ -4102,12 +4102,16 @@ void TryUse( gentity_t *ent )
 	// here, so pressing Use on a corpse set leader and BS_FOLLOW_LEADER on it. Taken from the
 	// upstream Zyk mod, which carries target->health > 0 in this same condition; this fork
 	// predates that change.
-	if (target->NPC && target->client && target->health > 0 && target->s.NPC_class != CLASS_VEHICLE && OnSameTeam(ent,target))
+	// GLX_U: [Lua] a script NPC with an on_use is not taken as a follower here: its on_use, below, decides what the
+	// Use key does (rp_lua_world.c)
+	if (target->NPC && target->client && target->health > 0 && target->s.NPC_class != CLASS_VEHICLE && OnSameTeam(ent,target)
+		&& !RP_Lua_NpcKeepsUse(target))
 	{
 		// DAJ_RP: [NPC System] a frozen NPC is not claimed (see RP_NpcFreeze(), NPC_spawn.c); its leader can
 		// still dismiss it below
 		if (!target->client->leader && !RP_NpcIsFrozen(target))
 		{ // zyk: setting the npc leader so he follows the player
+			RP_Lua_NpcOrderTaken(target);	// GLX_U: [Lua] a script's order on it ends ("replaced", rp_lua_orders.c)
 			target->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_NPC_ORDER_GUARD);
 			target->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_NPC_ORDER_COVER);
 			target->client->leader = ent;
@@ -4115,6 +4119,7 @@ void TryUse( gentity_t *ent )
 		}
 		else if (target->client->leader == ent)
 		{ // zyk: npc will stop follow the player, which is the leader
+			RP_Lua_NpcOrderTaken(target);	// GLX_U: [Lua] a script's order on it ends ("replaced", rp_lua_orders.c)
 			// GalaxyRP fix: [NPC] this used to open-code the release and left NPC->goalEntity still
 			// pointing at the player. NPC_BSFollowLeader() parks the leader there while the NPC is
 			// following (both its close-in and back-off branches do, and at Use range the NPC is

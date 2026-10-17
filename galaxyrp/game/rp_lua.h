@@ -11,7 +11,7 @@ returns at once when Lua is off (rp_lua 0) or the state is not open.
 
 The pieces: rp_lua_core.c (state, sandbox, limits, loader, protected calls, errors),
 rp_lua_api.c (what scripts can call), rp_lua_world.c (entities and the World table, API version 2), rp_lua_people.c (players, and the death and damage events, API version 3; credits, XP and the level events, API version 4;
-NPC handles are in rp_lua_world.c), rp_lua_dialog.c (dialogues, API version 5),
+NPC handles are in rp_lua_world.c), rp_lua_dialog.c (dialogues, API version 5), rp_lua_orders.c (NPC orders, API version 6),
 rp_lua_store.c (lua.db), rp_lua_admin.c (/scripts and the rcon lua_* commands). lib/lua/README.md says what was left out of Lua itself and why.
 ===========================================================================
 */
@@ -67,6 +67,12 @@ void		RP_Lua_LevelChanged( gentity_t *ent, int levels );
 // it did, and the line goes no further.
 void		Cmd_Choose_f( gentity_t *ent );
 qboolean	RP_Lua_DialogChat( gentity_t *ent, const char *text );
+
+// GLX_U: [Lua] NPC orders (rp_lua_orders.c, API version 6): a player's Use key or /order is taking the NPC over,
+// so a script's order on it ends ("replaced"); and a script NPC with an on_use is not taken as a follower by the
+// Use key at all -- its on_use decides what the Use key does.
+void		RP_Lua_NpcOrderTaken( gentity_t *npc );
+qboolean	RP_Lua_NpcKeepsUse( const gentity_t *npc );
 
 // /scripts (needs the Scripts admin power) and the rcon commands
 void		Cmd_Scripts_f( gentity_t *ent );

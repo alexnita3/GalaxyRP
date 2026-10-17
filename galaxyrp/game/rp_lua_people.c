@@ -87,6 +87,11 @@ static qboolean RP_LuaPeople_Protected( gentity_t *ent ) {
 	return ( cl->sess.amrpgmode > 0 && ( cl->pers.bitvalue & ( 1 << ADM_ADMPROTECT ) ) && !( cl->pers.player_settings & ( 1 << 13 ) ) ) ? qtrue : qfalse;
 }
 
+// API 6 (rp_lua_orders.c): an NPC is not ordered to attack an admin-protected player either
+qboolean RP_LuaPeople_IsProtected( gentity_t *ent ) {
+	return RP_LuaPeople_Protected( ent );
+}
+
 static int RP_LuaPeople_MaxArmor( gentity_t *ent ) {
 	return ( ent->client->sess.amrpgmode == 2 ) ? ent->client->pers.max_rpg_shield : ent->client->ps.stats[STAT_MAX_HEALTH];
 }
