@@ -42,13 +42,13 @@ end, { help = "Says hello" })
 1. Make the folder `lua/plugins/hello/` in the GalaxyRP folder and save the code above in it as
    `plugin.lua`.
    - The folder name is the plugin's name: lower-case letters, digits and `_`, up to 32 characters.
-2. In game, an admin with the **Scripts** power runs `/scripts enable hello`. From rcon, use
-   `lua_enable hello`.
+2. It starts with the next map. To start it now, an admin with the **Scripts** power runs
+   `/scripts enable hello`; from rcon, `lua_enable hello`.
 3. Type `/hello Kyle` to try it.
 4. Change the file, then run `/scripts reload hello`: the new version runs at once.
 5. If something goes wrong, `/scripts errors` shows the error with its file and line.
-6. To keep the plugin on after a restart, add its name to `rp_lua_plugins` in
-   `galaxyrp_server.cfg`, separated from the others by spaces.
+6. Every folder in `lua/plugins/` runs, at every map start. `/scripts disable hello` stops it
+   until the next map; to keep it off, move its folder out of `lua/plugins/`.
 
 `lua/examples/` has plugins to copy and change:
 - `welcome`: greets new players;
@@ -63,7 +63,7 @@ end, { help = "Says hello" })
 - `escort` (API 6): `/escort`, a guard that covers a player through an ambush and holds a spot.
 
 **Map scripts** are files in `lua/maps/<map name>/` (for example `lua/maps/mp/ffa5/doors.lua`).
-- They run only on that map, and only when `rp_lua_mapscripts` is 1.
+- They run on that map only, every time it starts.
 - Each file runs like its own plugin, called `map:<file>`.
 
 Scripts are read **only from loose files** in the GalaxyRP folder. A script inside a pk3 is never
@@ -112,8 +112,8 @@ nothing extra.
 |---|---|---|
 | `/scripts` | `lua_list` | Plugins, map scripts and script commands |
 | `/scripts reload [plugin\|all]` | `lua_reload [plugin\|all]` | Load a plugin again, or all of them |
-| `/scripts enable <plugin>` | `lua_enable <plugin>` | Start a plugin until the server restarts |
-| `/scripts disable <plugin>` | `lua_disable <plugin>` | Stop a plugin until the server restarts |
+| `/scripts enable <plugin>` | `lua_enable <plugin>` | Start a plugin now: one switched off, or a folder added since the map started (`map:<file>` for a map script) |
+| `/scripts disable <plugin>` | `lua_disable <plugin>` | Stop a plugin (or `map:<file>`) until the next map. To keep it off, move its folder out of `lua/plugins/` |
 | `/scripts errors` | `lua_errors` | The last 50 errors |
 | `/scripts stats` | `lua_stats` | Calls, time, timers, entities and storage per plugin |
 | — | `lua_exec <code>` | Run a line of Lua (rcon and the server console only; written to the server log) |
@@ -125,7 +125,7 @@ single quotes or `[[...]]`, and don't use `;`.
 
 | What happens | Why, and what to do |
 |---|---|
-| `/scripts` does not list the plugin | The file must be `lua/plugins/<name>/plugin.lua`, a loose file in the GalaxyRP folder (never inside a pk3), and the folder name lower-case letters, digits and `_`. With `rp_lua 0` no script runs at all |
+| `/scripts` does not list the plugin | The file must be `lua/plugins/<name>/plugin.lua`, a loose file in the GalaxyRP folder (never inside a pk3), and the folder name lower-case letters, digits and `_`; the server log names a folder it skipped and why. A new folder starts with the next map, or with `/scripts enable <name>`. With `rp_lua 0` no script runs at all |
 | It is listed, but not running | `/scripts errors` says why: usually an error when it loaded. Fix it and `/scripts reload <name>` |
 | "needs Lua API version N, but this server has version M" | The plugin was written for a newer server. Update the server, or lower `api` if the plugin really uses nothing newer |
 | "switched off after N errors in a minute" | It kept failing (`rp_lua_maxerrors`). Fix the error from `/scripts errors`, then `/scripts enable <name>` |
@@ -133,7 +133,7 @@ single quotes or `[[...]]`, and don't use `;`.
 | "not enough memory" | All scripts together reached `rp_lua_memmb`. Look for tables that keep growing |
 | "string too long (at most 4194304 bytes)" | No string can be longer than 4 MB. Build big text in pieces, or keep the parts in a table |
 | "setmetatable: __gc is not available to scripts" | Finalizers are not allowed. Clean up in a `shutdown` handler |
-| A map script does not run | Map scripts need `rp_lua_mapscripts 1`, and the folder named as the map is: `lua/maps/mp/ffa5/` |
+| A map script does not run | The folder must be named as the map is: `lua/maps/mp/ffa5/`. A new file starts with the next map start, or with `/scripts enable map:<file>` |
 | `World.spawn` or `World.npc` returns nil | The second value says why: a plugin limit (`rp_lua_maxents`, `rp_lua_maxnpcs`, `rp_lua_spawnkb`), a model or NPC type the server does not have, or a full map |
 | `give` is refused | The second value says why: not a weapon, ammo or holdable item, not a player weapon (`weapon_emplaced`, `weapon_turretwp`), or the player cannot take it now |
 | Credits or XP come out smaller, or are refused | `rp_lua_maxcredits` and `rp_lua_maxxp` cap each call, and 0 switches it off. The warning is in `/scripts errors` |
@@ -724,9 +724,7 @@ All are in `galaxyrp_server.cfg`.
 
 | Cvar | Default | What it does |
 |---|---|---|
-| `rp_lua` | 1 | 0 switches every script off |
-| `rp_lua_plugins` | (empty) | The plugins started with the server, separated by spaces |
-| `rp_lua_mapscripts` | 0 | 1 runs the map scripts in `lua/maps/<map name>/` |
+| `rp_lua` | 1 | 1 = on, 0 = off. Read when a map starts and by `/scripts reload all` |
 | `rp_lua_memmb` | 64 | Memory for all scripts together, in MB |
 | `rp_lua_budget` | 1000000 | Instructions one call into a script may run |
 | `rp_lua_budgetms` | 50 | Milliseconds one call may run |

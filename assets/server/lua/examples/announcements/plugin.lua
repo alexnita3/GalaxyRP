@@ -1,8 +1,8 @@
 -- Timed announcements: shows the next message from a list in everyone's chat every few minutes.
 --
 -- To use it: copy this folder to lua/plugins/announcements, edit MESSAGES and MINUTES below, then
--- run /scripts enable announcements in game (or lua_enable announcements from rcon). To keep it on
--- after a restart, add "announcements" to rp_lua_plugins in galaxyrp_server.cfg.
+-- run /scripts enable announcements in game (or lua_enable announcements from rcon). From then on
+-- it starts with every map.
 
 Plugin.register{ name = "Timed announcements", version = "1.0", api = 1 }
 

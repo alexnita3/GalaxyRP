@@ -6,8 +6,8 @@
 --
 -- To use it: copy this folder to lua/plugins/delivery and set DEPOT and DROP_OFFS below to boxes on
 -- your map (stand at two opposite corners of each and type /viewpos in the console). Then run
--- /scripts enable delivery in game (or lua_enable delivery from rcon). To keep it on after a restart,
--- add "delivery" to rp_lua_plugins in galaxyrp_server.cfg.
+-- /scripts enable delivery in game (or lua_enable delivery from rcon). From then on it starts with
+-- every map.
 --
 -- The amounts are cut to rp_lua_maxcredits and rp_lua_maxxp (5000 and 10 by default), and every
 -- payment is written to the server log.

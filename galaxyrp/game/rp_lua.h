@@ -2,8 +2,8 @@
 ===========================================================================
 GLX_U: [Lua] server-side Lua scripting -- the calls the rest of the game module makes.
 
-Admins write plugins (lua/plugins/<name>/plugin.lua, loaded when named in rp_lua_plugins) and map
-scripts (lua/maps/<mapname>/*.lua, loaded when rp_lua_mapscripts is 1). Scripts run in a sandbox
+Admins write plugins (lua/plugins/<name>/plugin.lua: every such folder is loaded) and map scripts
+(lua/maps/<mapname>/*.lua, loaded on that map). Scripts run in a sandbox
 with no file, OS, native-library or debug access, under instruction, time, memory and per-frame
 limits, and reach the game only through the API in rp_lua_api.c. One Lua state lives for one map:
 RP_Lua_Init() at the end of G_InitGame, RP_Lua_Shutdown() in G_ShutdownGame. Every call below

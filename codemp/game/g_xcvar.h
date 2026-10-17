@@ -571,9 +571,9 @@ XCVAR_DEF( rp_ammo_regen_timer,					"5",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART
 XCVAR_DEF( rp_explosives_recharge_timer,		"30",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART,					qtrue)
 XCVAR_DEF( rp_allow_ammo_regen,					"1",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART,					qtrue)
 XCVAR_DEF( rp_allow_explosives_regen,			"1",	NULL,					CVAR_ARCHIVE | CVAR_NORESTART,					qtrue)
-// GLX_U: [Lua] server-side scripting (galaxyrp/game/rp_lua*.c). rp_lua 0 means no Lua state at all, from the
-// next map or "/scripts reload all". rp_lua_plugins lists the plugins to load (folders in lua/plugins); /scripts
-// enable and disable change it for the running server only. rp_lua_mapscripts loads lua/maps/<mapname>/*.lua.
+// GLX_U: [Lua] server-side scripting (galaxyrp/game/rp_lua*.c). rp_lua 0 means no Lua state at all; it is read
+// when a map starts and by "/scripts reload all". Every folder in lua/plugins is a plugin and runs, and so do the
+// map's own lua/maps/<mapname>/*.lua; /scripts enable and disable last until the next map.
 // The limits: memory for the whole state (MB), instructions and milliseconds per call, milliseconds per server
 // frame for timers, tasks and the frame event, errors per minute before a plugin is switched off, bytes per
 // stored value and per plugin in lua.db, entities and zones per plugin, KB of the game's memory pool all script
@@ -581,8 +581,6 @@ XCVAR_DEF( rp_allow_explosives_regen,			"1",	NULL,					CVAR_ARCHIVE | CVAR_NORES
 // NPCs per plugin (they count as entities too). API 4: the most credits and XP one script call may give or take
 // (0: none at all). Not archived and not announced: the server config sets them (galaxyrp_server.cfg).
 XCVAR_DEF( rp_lua,								"1",		NULL,			CVAR_NONE,									qfalse )
-XCVAR_DEF( rp_lua_plugins,						"",			NULL,			CVAR_NONE,									qfalse )
-XCVAR_DEF( rp_lua_mapscripts,					"0",		NULL,			CVAR_NONE,									qfalse )
 XCVAR_DEF( rp_lua_memmb,						"64",		NULL,			CVAR_NONE,									qfalse )
 XCVAR_DEF( rp_lua_budget,						"1000000",	NULL,			CVAR_NONE,									qfalse )
 XCVAR_DEF( rp_lua_budgetms,						"50",		NULL,			CVAR_NONE,									qfalse )

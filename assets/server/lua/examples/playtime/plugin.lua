@@ -2,8 +2,7 @@
 -- so a player can see their character's total. Shows per-character storage (Storage.char).
 --
 -- To use it: copy this folder to lua/plugins/playtime, then run /scripts enable playtime in game
--- (or lua_enable playtime from rcon). To keep it on after a restart, add "playtime" to
--- rp_lua_plugins in galaxyrp_server.cfg.
+-- (or lua_enable playtime from rcon). From then on it starts with every map.
 --
 -- Time is counted for logged-in players playing a character. It is saved every minute, when the
 -- player leaves and at map end, so at most a minute is lost when a player switches character.

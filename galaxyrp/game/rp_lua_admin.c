@@ -5,8 +5,8 @@ lua_reload, lua_enable, lua_disable, lua_errors, lua_stats and lua_exec. Both sh
 in game the output goes to the admin's console in prints under the 1022-character limit, from rcon
 it goes to the server console.
 
-enable and disable change rp_lua_plugins for the running server only: a restart goes back to the
-server config, which is where a permanent change belongs. lua_exec runs a line of Lua in its own
+GLX_U: every folder in lua/plugins runs, and the map's own lua/maps/<mapname> scripts; enable and disable
+last until the next map (or reload all). A plugin is kept off for good by moving its folder out. lua_exec runs a line of Lua in its own
 "@console" environment, from rcon and the server console only; it does not exist in game. GLX_U: it needs no
 switch any more -- rp_lua_allowexec was an ordinary cvar that rcon could turn on, so it protected nothing, and
 the sandbox gives a line of Lua no more than rcon has. Every line is written to the server log.
@@ -60,17 +60,17 @@ list
 ================
 */
 static void RP_LuaAdmin_List( gentity_t *ent ) {
-	char list[MAX_CVAR_VALUE_STRING], name[RP_LUA_CMD_NAME_SIZE], help[RP_LUA_CMD_HELP_SIZE];
-	int i, shown, plugin;
+	static char folders[RP_LUA_MAX_FOLDERS][RP_LUA_PLUGIN_NAME_MAX + 1];
+	char name[RP_LUA_CMD_NAME_SIZE], help[RP_LUA_CMD_HELP_SIZE];
+	int i, shown, plugin, numFolders;
 
 	if ( !RP_LuaAdmin_Running( ent ) ) {
 		return;
 	}
 	RP_LuaAdmin_Out( ent, va( "^3Lua 5.4^7: memory %d KB of %d MB%s", (int)( rl.memUsed / 1024 ), (int)( rl.memCap / ( 1024 * 1024 ) ),
-		rp_lua.integer ? "" : " ^1(rp_lua is 0: scripts stop at the next map or /scripts reload all)" ) );
+		rp_lua.integer ? "" : " ^1(rp_lua is 0: scripts stop at the next map start or /scripts reload all)" ) );
 
-	trap->Cvar_VariableStringBuffer( "rp_lua_plugins", list, sizeof( list ) );
-	RP_LuaAdmin_Out( ent, va( "^3Plugins^7 (rp_lua_plugins: \"%s\"):", list ) );
+	RP_LuaAdmin_Out( ent, "^3Plugins^7 (lua/plugins):" );
 	shown = 0;
 	for ( i = 0; i < RP_LUA_MAX_PLUGINS; i++ ) {
 		rpLuaPlugin_t *p = &rl.plugins[i];
@@ -85,12 +85,23 @@ static void RP_LuaAdmin_List( gentity_t *ent ) {
 			RP_LuaAdmin_Out( ent, va( "  ^1off^7 %s: %s", p->name, p->failReason[0] ? p->failReason : "off" ) );
 		}
 	}
+	// GLX_U: the plugin folders not running now: switched off this map, or put there since it started
+	numFolders = RP_Lua_PluginFolders( folders, RP_LUA_MAX_FOLDERS );
+	for ( i = 0; i < numFolders; i++ ) {
+		if ( RP_Lua_FindPlugin( folders[i] ) < 0 ) {
+			shown++;
+			RP_LuaAdmin_Out( ent, va( "  ^1off^7 %s: not running until the next map (/scripts enable %s starts it now)", folders[i], folders[i] ) );
+		}
+	}
 	if ( !shown ) {
-		RP_LuaAdmin_Out( ent, "  none. Put a plugin in lua/plugins/<name>/plugin.lua, then /scripts enable <name>." );
+		RP_LuaAdmin_Out( ent, "  none. Put a plugin in lua/plugins/<name>/plugin.lua: it starts with the next map, or now with /scripts enable <name>." );
 	}
 
-	if ( rp_lua_mapscripts.integer ) {
-		RP_LuaAdmin_Out( ent, "^3Map scripts^7 (rp_lua_mapscripts 1):" );
+	{
+		char dir[MAX_QPATH];
+
+		trap->Cvar_VariableStringBuffer( "mapname", dir, sizeof( dir ) );
+		RP_LuaAdmin_Out( ent, va( "^3Map scripts^7 (lua/maps/%s):", dir ) );
 		shown = 0;
 		for ( i = 0; i < RP_LUA_MAX_PLUGINS; i++ ) {
 			rpLuaPlugin_t *p = &rl.plugins[i];
@@ -107,8 +118,6 @@ static void RP_LuaAdmin_List( gentity_t *ent ) {
 		if ( !shown ) {
 			RP_LuaAdmin_Out( ent, "  none for this map." );
 		}
-	} else {
-		RP_LuaAdmin_Out( ent, "^3Map scripts^7: off (rp_lua_mapscripts 0)." );
 	}
 
 	RP_LuaAdmin_Out( ent, "^3Script commands^7:" );
@@ -201,12 +210,24 @@ static void RP_LuaAdmin_Reload( gentity_t *ent, const char *arg ) {
 	}
 }
 
+// GLX_U: "map:<file>", a script of this map's lua/maps/<mapname> folder (RP_Lua_LoadMapScripts names them so)
+static qboolean RP_LuaAdmin_MapScriptName( const char *name ) {
+	const char *file = name + 4;
+	int len = (int)strlen( name );
+
+	return ( !Q_stricmpn( name, "map:", 4 ) && file[0] && !strchr( file, '/' ) && !strchr( file, '\\' ) && len < RP_LUA_NAME_SIZE
+		&& len > 8 && !Q_stricmp( name + len - 4, ".lua" ) ) ? qtrue : qfalse;
+}
+
+// enable: a plugin (its folder in lua/plugins) or a map script, started now; at the next map every folder and this
+// map's scripts start anyway, so this is for one switched off this map, or added since it started
 static void RP_LuaAdmin_Enable( gentity_t *ent, const char *name ) {
 	char dir[MAX_QPATH];
+	qboolean isMap = RP_LuaAdmin_MapScriptName( name );
 	int i;
 
-	if ( !RP_Lua_ValidPluginName( name ) ) {
-		RP_LuaAdmin_Out( ent, va( "Usage: enable <plugin>. A plugin name is the name of its folder in lua/plugins: lower-case letters, digits and _, up to %d.", RP_LUA_PLUGIN_NAME_MAX ) );
+	if ( !isMap && !RP_Lua_ValidPluginName( name ) ) {
+		RP_LuaAdmin_Out( ent, va( "Usage: enable <plugin> or enable map:<file>. A plugin name is the name of its folder in lua/plugins: lower-case letters, digits and _, up to %d.", RP_LUA_PLUGIN_NAME_MAX ) );
 		return;
 	}
 	if ( !RP_LuaAdmin_Running( ent ) ) {
@@ -218,8 +239,15 @@ static void RP_LuaAdmin_Enable( gentity_t *ent, const char *name ) {
 		return;
 	}
 	if ( i < 0 ) {
-		Com_sprintf( dir, sizeof( dir ), "lua/plugins/%s", name );
-		i = RP_Lua_AddPlugin( name, qfalse, dir, "plugin.lua" );
+		if ( isMap ) {
+			char mapname[MAX_QPATH];
+			trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
+			Com_sprintf( dir, sizeof( dir ), "lua/maps/%s", mapname );
+			i = RP_Lua_AddPlugin( name, qtrue, dir, name + 4 );
+		} else {
+			Com_sprintf( dir, sizeof( dir ), "lua/plugins/%s", name );
+			i = RP_Lua_AddPlugin( name, qfalse, dir, "plugin.lua" );
+		}
 		if ( i < 0 ) {
 			RP_LuaAdmin_Out( ent, va( "No room for another plugin (at most %d plugins and map scripts).", RP_LUA_MAX_PLUGINS ) );
 			return;
@@ -229,36 +257,31 @@ static void RP_LuaAdmin_Enable( gentity_t *ent, const char *name ) {
 		RP_LuaAdmin_Out( ent, va( "%s failed to load: %s. See /scripts errors.", name, rl.plugins[i].failReason ) );
 		return;
 	}
-	if ( !RP_Lua_PluginListed( name ) && !RP_Lua_SetPluginListed( name, qtrue ) ) {
-		RP_LuaAdmin_Out( ent, va( "%s is on, but rp_lua_plugins is too long to add it to: it stops at the next map.", name ) );
-		return;
-	}
-	RP_LuaAdmin_Out( ent, va( "%s is on until the server restarts. To keep it, add it to rp_lua_plugins in galaxyrp_server.cfg.", name ) );
+	RP_LuaAdmin_Out( ent, isMap ? va( "%s is on. It starts with this map every time while the file is in %s.", name, rl.plugins[i].dir )
+		: va( "%s is on. It starts with every map while its folder is in lua/plugins.", name ) );
 }
 
+// disable: off until the next map (or reload all); to keep it off, its folder (or file) has to go
 static void RP_LuaAdmin_Disable( gentity_t *ent, const char *name ) {
+	char where[MAX_QPATH];
+	qboolean isMap = RP_LuaAdmin_MapScriptName( name );
 	int i;
 
-	if ( !Q_stricmpn( name, "map:", 4 ) ) {
-		RP_LuaAdmin_Out( ent, "Map scripts are switched on and off together with rp_lua_mapscripts." );
-		return;
-	}
-	if ( !RP_Lua_ValidPluginName( name ) ) {
-		RP_LuaAdmin_Out( ent, "Usage: disable <plugin>" );
+	if ( !isMap && !RP_Lua_ValidPluginName( name ) ) {
+		RP_LuaAdmin_Out( ent, "Usage: disable <plugin> or disable map:<file>" );
 		return;
 	}
 	i = RP_Lua_FindPlugin( name );
-	if ( i < 0 && !RP_Lua_PluginListed( name ) ) {
-		RP_LuaAdmin_Out( ent, va( "No plugin called %s is loaded.", name ) );
+	if ( i < 0 ) {
+		RP_LuaAdmin_Out( ent, va( "No plugin or map script called %s is loaded.", name ) );
 		return;
 	}
-	if ( i >= 0 ) {
-		RP_Lua_DisablePlugin( i, "switched off with /scripts disable" );
-		RP_LuaStore_Flush();
-		rl.plugins[i].inUse = qfalse;
-	}
-	RP_Lua_SetPluginListed( name, qfalse );
-	RP_LuaAdmin_Out( ent, va( "%s is off until the server restarts. To keep it off, remove it from rp_lua_plugins in galaxyrp_server.cfg.", name ) );
+	Q_strncpyz( where, rl.plugins[i].dir, sizeof( where ) );
+	RP_Lua_DisablePlugin( i, "switched off with /scripts disable" );
+	RP_LuaStore_Flush();
+	rl.plugins[i].inUse = qfalse;
+	RP_LuaAdmin_Out( ent, isMap ? va( "%s is off until the next map. To keep it off, move the file out of %s.", name, where )
+		: va( "%s is off until the next map. To keep it off, move its folder out of lua/plugins.", name ) );
 }
 
 /*

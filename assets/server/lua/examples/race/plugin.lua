@@ -5,8 +5,8 @@
 --
 -- To use it: copy this folder to lua/plugins/race and set START and CHECKPOINTS below to your
 -- course (stand at each spot and type /viewpos in the console; a checkpoint is a box between two
--- opposite corners). Then run /scripts enable race in game (or lua_enable race from rcon). To keep
--- it on after a restart, add "race" to rp_lua_plugins in galaxyrp_server.cfg.
+-- opposite corners). Then run /scripts enable race in game (or lua_enable race from rcon). From
+-- then on it starts with every map.
 
 Plugin.register{ name = "Checkpoint race", version = "1.0", api = 3 }
 

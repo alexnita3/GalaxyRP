@@ -16,6 +16,7 @@ game module uses rp_lua.h.
 #define RP_LUA_API_VERSION			6		// Plugin.register{ api = n } may not ask for more
 
 #define RP_LUA_MAX_PLUGINS			64		// plugins and map scripts together
+#define RP_LUA_MAX_FOLDERS			256		// GLX_U: plugin folders looked at in lua/plugins (RP_Lua_PluginFolders)
 #define RP_LUA_CONSOLE				RP_LUA_MAX_PLUGINS	// plugins[] slot of rcon lua_exec's "@console"
 #define RP_LUA_NAME_SIZE			48		// "welcome", or "map:castle_doors.lua"
 #define RP_LUA_PLUGIN_NAME_MAX		32		// a plugin folder name: [a-z0-9_], 1..32
@@ -166,8 +167,8 @@ void		RP_Lua_NewEnv( lua_State *L, rpLuaPlugin_t *p );
 qboolean	RP_Lua_FrameBudgetLeft( void );
 void		RP_Lua_InitState( void );
 void		RP_Lua_CloseState( void );
-qboolean	RP_Lua_PluginListed( const char *name );
-qboolean	RP_Lua_SetPluginListed( const char *name, qboolean listed );
+qboolean	RP_Lua_LooseFileExists( const char *relPath );								// GLX_U
+int			RP_Lua_PluginFolders( char names[][RP_LUA_PLUGIN_NAME_MAX + 1], int max );	// GLX_U: lua/plugins, sorted
 void		RP_Lua_NoteDeferred( int plugin, int count );
 void		RP_Lua_CleanText( char *out, int outSize, const char *in, qboolean keepNewlines );
 void		RP_Lua_AdminNotice( const char *text );

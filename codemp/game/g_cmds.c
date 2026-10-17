@@ -19455,7 +19455,7 @@ Damage and targeting are not affected. The ghost and hologram look is only seen 
 		{
 			// GLX_U: [Lua] the server's Lua plugins -- rp_lua_admin.c
 			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/scripts ^7to see the server's Lua plugins and the commands they add. ^3/scripts reload [plugin|all]^7, ^3/scripts enable <plugin>^7, ^3/scripts disable <plugin>^7, ^3/scripts errors ^7and ^3/scripts stats ^7manage them.\n\
-Enable and disable last until the server restarts; to keep a change, edit rp_lua_plugins in the server config.\n\n\"");
+Enable and disable last until the next map; a plugin whose folder is in lua/plugins starts with every map.\n\n\"");
 		}
 		else
 		{

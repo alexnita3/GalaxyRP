@@ -1,8 +1,7 @@
 -- Welcome message: greets every player once, when they first join the server.
 --
 -- To use it: copy this folder to lua/plugins/welcome, then run /scripts enable welcome in game
--- (or lua_enable welcome from rcon). To keep it on after a restart, add "welcome" to
--- rp_lua_plugins in galaxyrp_server.cfg.
+-- (or lua_enable welcome from rcon). From then on it starts with every map.
 
 Plugin.register{ name = "Welcome message", version = "1.0", api = 1 }
 

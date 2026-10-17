@@ -535,24 +535,18 @@ static qboolean RP_Lua_SafeRelPath( const char *rel ) {
 	return qtrue;
 }
 
-qboolean RP_Lua_ReadOSFile( const char *relPath, char **buf, int *len, char *err, int errSize ) {
-	char roots[2][MAX_OSPATH], game[MAX_QPATH], path[MAX_OSPATH * 2];
+// a loose file of the mod folder, opened for reading: fs_homepath first, then fs_basepath (NULL when there is none;
+// a copy only inside a pk3 is never found). game gets the mod folder's name.
+static FILE *RP_Lua_OpenOSFile( const char *relPath, char *game, int gameSize ) {
+	char roots[2][MAX_OSPATH], path[MAX_OSPATH * 2];
 	FILE *f = NULL;
-	long size;
-	int i, got;
-
-	*buf = NULL;
-	*len = 0;
-	if ( !RP_Lua_SafeRelPath( relPath ) ) {
-		Com_sprintf( err, errSize, "bad file name: %s", relPath );
-		return qfalse;
-	}
+	int i;
 
 	trap->Cvar_VariableStringBuffer( "fs_homepath", roots[0], sizeof( roots[0] ) );
 	trap->Cvar_VariableStringBuffer( "fs_basepath", roots[1], sizeof( roots[1] ) );
-	trap->Cvar_VariableStringBuffer( "fs_game", game, sizeof( game ) );
+	trap->Cvar_VariableStringBuffer( "fs_game", game, gameSize );
 	if ( !game[0] ) {
-		Q_strncpyz( game, BASEGAME, sizeof( game ) );
+		Q_strncpyz( game, BASEGAME, gameSize );
 	}
 
 	for ( i = 0; i < 2 && !f; i++ ) {
@@ -566,6 +560,39 @@ qboolean RP_Lua_ReadOSFile( const char *relPath, char **buf, int *len, char *err
 		Com_sprintf( path, sizeof( path ), "%s/%s", game, relPath );
 		f = fopen( path, "rb" );
 	}
+	return f;
+}
+
+// GLX_U: whether relPath is a loose file a script could be read from (RP_Lua_ReadOSFile)
+qboolean RP_Lua_LooseFileExists( const char *relPath ) {
+	char game[MAX_QPATH];
+	FILE *f;
+
+	if ( !RP_Lua_SafeRelPath( relPath ) ) {
+		return qfalse;
+	}
+	f = RP_Lua_OpenOSFile( relPath, game, sizeof( game ) );
+	if ( !f ) {
+		return qfalse;
+	}
+	fclose( f );
+	return qtrue;
+}
+
+qboolean RP_Lua_ReadOSFile( const char *relPath, char **buf, int *len, char *err, int errSize ) {
+	char game[MAX_QPATH];
+	FILE *f = NULL;
+	long size;
+	int got;
+
+	*buf = NULL;
+	*len = 0;
+	if ( !RP_Lua_SafeRelPath( relPath ) ) {
+		Com_sprintf( err, errSize, "bad file name: %s", relPath );
+		return qfalse;
+	}
+
+	f = RP_Lua_OpenOSFile( relPath, game, sizeof( game ) );
 	if ( !f ) {
 		Com_sprintf( err, errSize, "%s not found (scripts are read only from loose files in the %s folder, never from pk3s)", relPath, game );
 		return qfalse;
@@ -761,68 +788,6 @@ void RP_Lua_DisablePlugin( int plugin, const char *reason ) {
 
 /*
 ================
-rp_lua_plugins
-================
-*/
-qboolean RP_Lua_PluginListed( const char *name ) {
-	char list[MAX_CVAR_VALUE_STRING];
-	const char *s;
-	char *tok;
-
-	trap->Cvar_VariableStringBuffer( "rp_lua_plugins", list, sizeof( list ) );
-	s = list;
-	while ( 1 ) {
-		tok = COM_ParseExt( &s, qfalse );
-		if ( !tok[0] ) {
-			break;
-		}
-		if ( !Q_stricmp( tok, name ) ) {
-			return qtrue;
-		}
-	}
-	return qfalse;
-}
-
-qboolean RP_Lua_SetPluginListed( const char *name, qboolean listed ) {
-	char list[MAX_CVAR_VALUE_STRING], out[MAX_CVAR_VALUE_STRING];
-	const char *s;
-	char *tok;
-	qboolean found = qfalse;
-
-	trap->Cvar_VariableStringBuffer( "rp_lua_plugins", list, sizeof( list ) );
-	out[0] = '\0';
-	s = list;
-	while ( 1 ) {
-		tok = COM_ParseExt( &s, qfalse );
-		if ( !tok[0] ) {
-			break;
-		}
-		if ( !Q_stricmp( tok, name ) ) {
-			found = qtrue;
-			if ( !listed ) {
-				continue;
-			}
-		}
-		if ( out[0] ) {
-			Q_strcat( out, sizeof( out ), " " );
-		}
-		Q_strcat( out, sizeof( out ), tok );
-	}
-	if ( listed && !found ) {
-		if ( strlen( out ) + strlen( name ) + 2 >= sizeof( out ) ) {
-			return qfalse;
-		}
-		if ( out[0] ) {
-			Q_strcat( out, sizeof( out ), " " );
-		}
-		Q_strcat( out, sizeof( out ), name );
-	}
-	trap->Cvar_Set( "rp_lua_plugins", out );
-	return qtrue;
-}
-
-/*
-================
 The state
 ================
 */
@@ -993,17 +958,79 @@ void RP_Lua_CloseState( void ) {
 Startup and shutdown
 ================
 */
+static int RP_Lua_NameCompare( const void *a, const void *b ) {
+	return strcmp( (const char *)a, (const char *)b );
+}
+
+// GLX_U: the plugins to load: every folder in lua/plugins with a loose plugin.lua, its name a plugin name, sorted
+// (the engine's list is in no set order). How many, at most max; the others are skipped with a line in the log.
+int RP_Lua_PluginFolders( char names[][RP_LUA_PLUGIN_NAME_MAX + 1], int max ) {
+	static char list[16384];
+	char *name;
+	int count, i, j, len, n = 0;
+
+	count = trap->FS_GetFileList( "lua/plugins", "/", list, sizeof( list ) );
+	for ( i = 0, name = list; i < count; i++, name += len + 1 ) {
+		char rel[MAX_QPATH];
+
+		len = strlen( name );
+		if ( len && name[len - 1] == '/' ) {
+			name[len - 1] = '\0';	// a folder inside a pk3 comes with its slash
+		}
+		if ( !name[0] || name[0] == '.' ) {
+			continue;
+		}
+		if ( !RP_Lua_ValidPluginName( name ) ) {
+			trap->Print( S_COLOR_YELLOW "Lua: lua/plugins/%s skipped: a plugin folder's name is lower-case letters, digits and _ only, up to %d\n", name, RP_LUA_PLUGIN_NAME_MAX );
+			continue;
+		}
+		for ( j = 0; j < n && strcmp( names[j], name ); j++ ) {
+		}
+		if ( j < n ) {
+			continue;	// the same folder loose and in a pk3
+		}
+		Com_sprintf( rel, sizeof( rel ), "lua/plugins/%s/plugin.lua", name );
+		if ( !RP_Lua_LooseFileExists( rel ) ) {
+			trap->Print( S_COLOR_YELLOW "Lua: lua/plugins/%s skipped: it has no plugin.lua (a loose file: one inside a pk3 is never read)\n", name );
+			continue;
+		}
+		if ( n >= max ) {
+			trap->Print( S_COLOR_YELLOW "Lua: more than %d plugin folders, %s skipped\n", max, name );
+			continue;
+		}
+		Q_strncpyz( names[n++], name, sizeof( names[0] ) );
+	}
+	qsort( names, n, sizeof( names[0] ), RP_Lua_NameCompare );
+	return n;
+}
+
+// GLX_U: this map's script folder (lua/maps/<mapname>) and the .lua files the engine lists in it; returns how many
+// (0 with no map or a map name no path can hold). list may be NULL to only count them.
+static int RP_Lua_MapScriptFiles( char *list, int listSize, char *dir ) {
+	static char buf[8192];
+	char mapname[MAX_QPATH], path[MAX_QPATH];
+
+	trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
+	Com_sprintf( path, sizeof( path ), "lua/maps/%s", mapname );
+	if ( dir ) {
+		Q_strncpyz( dir, path, MAX_QPATH );
+	}
+	if ( !mapname[0] || !RP_Lua_SafeRelPath( path ) ) {
+		return 0;
+	}
+	if ( !list ) {
+		list = buf;
+		listSize = sizeof( buf );
+	}
+	return trap->FS_GetFileList( path, ".lua", list, listSize );
+}
+
 static void RP_Lua_LoadMapScripts( int *loaded, int *failed ) {
-	char mapname[MAX_QPATH], dir[MAX_QPATH], list[8192];
+	char dir[MAX_QPATH], list[8192];
 	char *name;
 	int count, i, len;
 
-	trap->Cvar_VariableStringBuffer( "mapname", mapname, sizeof( mapname ) );
-	Com_sprintf( dir, sizeof( dir ), "lua/maps/%s", mapname );
-	if ( !mapname[0] || !RP_Lua_SafeRelPath( dir ) ) {
-		return;
-	}
-	count = trap->FS_GetFileList( dir, ".lua", list, sizeof( list ) );
+	count = RP_Lua_MapScriptFiles( list, sizeof( list ), dir );
 	name = list;
 	for ( i = 0; i < count; i++, name += len + 1 ) {
 		char pname[RP_LUA_NAME_SIZE];
@@ -1012,6 +1039,10 @@ static void RP_Lua_LoadMapScripts( int *loaded, int *failed ) {
 		len = strlen( name );
 		if ( strchr( name, '/' ) || strchr( name, '\\' ) || !RP_Lua_SafeRelPath( name ) || len >= RP_LUA_NAME_SIZE - 5 ) {
 			trap->Print( S_COLOR_YELLOW "Lua: map script %s/%s skipped: bad file name\n", dir, name );
+			continue;
+		}
+		if ( !RP_Lua_LooseFileExists( va( "%s/%s", dir, name ) ) ) {
+			trap->Print( S_COLOR_YELLOW "Lua: map script %s/%s skipped: only inside a pk3, which is never read\n", dir, name );
 			continue;
 		}
 		Com_sprintf( pname, sizeof( pname ), "map:%s", name );
@@ -1029,10 +1060,8 @@ static void RP_Lua_LoadMapScripts( int *loaded, int *failed ) {
 }
 
 void RP_Lua_Init( void ) {
-	char list[MAX_CVAR_VALUE_STRING];
-	const char *s;
-	char *tok;
-	int loaded = 0, failed = 0, mapLoaded = 0;
+	static char names[RP_LUA_MAX_FOLDERS][RP_LUA_PLUGIN_NAME_MAX + 1];
+	int count, i, loaded = 0, failed = 0, mapLoaded = 0;
 
 	if ( rl.L ) {
 		RP_Lua_Shutdown();
@@ -1049,35 +1078,22 @@ void RP_Lua_Init( void ) {
 		return;
 	}
 
-	trap->Cvar_VariableStringBuffer( "rp_lua_plugins", list, sizeof( list ) );
-
-	// open lua.db (and sweep it) now, outside any script's time budget, when anything will run:
-	// a server with no plugins and no map scripts never gets the file
-	s = list;
-	if ( COM_ParseExt( &s, qfalse )[0] || rp_lua_mapscripts.integer ) {
+	// GLX_U: every plugin folder in lua/plugins (rp_lua_plugins is gone), then this map's scripts (rp_lua_mapscripts
+	// is gone too). lua.db is opened (and swept) now, outside any script's time budget, when anything will run:
+	// a server with no plugins and no map scripts never gets the file.
+	count = RP_Lua_PluginFolders( names, RP_LUA_MAX_FOLDERS );
+	if ( count || RP_Lua_MapScriptFiles( NULL, 0, NULL ) ) {
 		RP_LuaStore_Open();
 	}
 
-	s = list;
-	while ( 1 ) {
+	for ( i = 0; i < count; i++ ) {
 		char dir[MAX_QPATH];
 		int plugin;
 
-		tok = COM_ParseExt( &s, qfalse );
-		if ( !tok[0] ) {
-			break;
-		}
-		if ( !RP_Lua_ValidPluginName( tok ) ) {
-			trap->Print( S_COLOR_YELLOW "Lua: \"%s\" in rp_lua_plugins is not a plugin name (lower-case letters, digits and _ only, up to %d)\n", tok, RP_LUA_PLUGIN_NAME_MAX );
-			continue;
-		}
-		if ( RP_Lua_FindPlugin( tok ) >= 0 ) {
-			continue;
-		}
-		Com_sprintf( dir, sizeof( dir ), "lua/plugins/%s", tok );
-		plugin = RP_Lua_AddPlugin( tok, qfalse, dir, "plugin.lua" );
+		Com_sprintf( dir, sizeof( dir ), "lua/plugins/%s", names[i] );
+		plugin = RP_Lua_AddPlugin( names[i], qfalse, dir, "plugin.lua" );
 		if ( plugin < 0 ) {
-			trap->Print( S_COLOR_YELLOW "Lua: more than %d plugins, %s skipped\n", RP_LUA_MAX_PLUGINS, tok );
+			trap->Print( S_COLOR_YELLOW "Lua: more than %d plugins, %s and the %d after it skipped\n", RP_LUA_MAX_PLUGINS, names[i], count - i - 1 );
 			break;
 		}
 		if ( RP_Lua_LoadPluginFile( plugin ) ) {
@@ -1087,9 +1103,7 @@ void RP_Lua_Init( void ) {
 		}
 	}
 
-	if ( rp_lua_mapscripts.integer ) {
-		RP_Lua_LoadMapScripts( &mapLoaded, &failed );
-	}
+	RP_Lua_LoadMapScripts( &mapLoaded, &failed );
 
 	RP_LuaApi_FireEvent( RPLE_INIT, -1, -1, 0, NULL, -1, NULL );
 	if ( loaded || mapLoaded || failed ) {

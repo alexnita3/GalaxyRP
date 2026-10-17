@@ -5,8 +5,8 @@
 --
 -- To use it: copy this folder to lua/plugins/meteors and set AREA_MINS and AREA_MAXS below to
 -- two opposite corners of the area (stand at each and type /viewpos in the console). Then run
--- /scripts enable meteors in game (or lua_enable meteors from rcon). To keep it on after a
--- restart, add "meteors" to rp_lua_plugins in galaxyrp_server.cfg.
+-- /scripts enable meteors in game (or lua_enable meteors from rcon). From then on it starts with
+-- every map.
 
 Plugin.register{ name = "Meteor shower", version = "1.0", api = 2 }
 

@@ -4,8 +4,8 @@
 --
 -- To use it: copy this folder to lua/plugins/terminal and set POSITION below to a spot on your
 -- map (stand there and type /viewpos in the console: it prints where you are). Then run
--- /scripts enable terminal in game (or lua_enable terminal from rcon). To keep it on after a
--- restart, add "terminal" to rp_lua_plugins in galaxyrp_server.cfg.
+-- /scripts enable terminal in game (or lua_enable terminal from rcon). From then on it starts with
+-- every map.
 
 Plugin.register{ name = "Info terminal", version = "1.0", api = 2 }
 

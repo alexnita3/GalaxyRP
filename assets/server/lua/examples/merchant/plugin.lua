@@ -5,8 +5,7 @@
 --
 -- To use it: copy this folder to lua/plugins/merchant and set POSITION and DOCKS below to spots on
 -- your map (stand there and type /viewpos in the console). Then run /scripts enable merchant in game
--- (or lua_enable merchant from rcon); to keep it on after a restart, add "merchant" to
--- rp_lua_plugins.
+-- (or lua_enable merchant from rcon); from then on it starts with every map.
 --
 -- To use a map's own Use trigger instead of an NPC: point the trigger (trigger_multiple with
 -- spawnflags 4) at a target_lua with event "merchant", and uncomment the map_event handler below.

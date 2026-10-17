@@ -4,8 +4,7 @@
 --
 -- To use it: copy this folder to lua/plugins/bounty and set SPAWN_POINTS below to spots on your map
 -- (stand there and type /viewpos in the console). Then run /scripts enable bounty in game (or
--- lua_enable bounty from rcon). To keep it on after a restart, add "bounty" to rp_lua_plugins in
--- galaxyrp_server.cfg.
+-- lua_enable bounty from rcon). From then on it starts with every map.
 
 Plugin.register{ name = "Bounty hunt", version = "1.0", api = 3 }
 

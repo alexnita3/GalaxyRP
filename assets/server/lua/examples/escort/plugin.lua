@@ -7,8 +7,8 @@
 -- To use it: copy this folder to lua/plugins/escort and set START, GOAL, POST and AMBUSH below to spots on
 -- your map (stand there and type /viewpos in the console). On a map without NPC waypoints, NPCs walk in
 -- straight lines: keep POST in plain sight of GOAL. Then run /scripts enable escort in game (or
--- lua_enable escort from rcon); to keep it on after a restart, add "escort" to rp_lua_plugins. The XP is
--- subject to rp_lua_maxxp.
+-- lua_enable escort from rcon); from then on it starts with every map. The XP is subject to
+-- rp_lua_maxxp.
 
 Plugin.register{ name = "Escort", version = "1.0", api = 6 }
 
