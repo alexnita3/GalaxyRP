@@ -198,11 +198,15 @@
 			forecolor			1 .682 0 1
 			descText			"Register a new account"
 			visible			1
-			action 
-			{ 
+			action
+			{
 				uiScript		zykmod "new"
 				play			"sound/interface/button1.wav" ;
-				close			ingame_register
+				// GalaxyRP fix: [UI] was "close ingame_register", which only closed this submenu and left
+				// the top-bar menu open underneath (had to press Escape to actually get back into
+				// gameplay) -- same class of bug fixed for the saber menu's Apply button (987bccf9).
+				// uiScript closeingame releases the UI key-catcher and tears down the whole menu stack.
+				uiScript		closeingame
 			}
 			mouseEnter 
 			{ 

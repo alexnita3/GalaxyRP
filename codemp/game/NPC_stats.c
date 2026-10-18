@@ -148,11 +148,24 @@ stringID_table_t BSETTable[] =
 extern stringID_table_t WPTable[];
 extern stringID_table_t FPTable[];
 
-char	*TeamNames[TEAM_NUM_TEAMS] =
+// GalaxyRP fix: [NPC] this held NPC team names but was sized by team_t, and its entries did not
+// line up with npcteam_t: positions 1 and 2 read "player" and "enemy" while the enum has
+// NPCTEAM_ENEMY = 1 and NPCTEAM_PLAYER = 2, so TeamNames[NPCTEAM_ENEMY] gave back "player".
+// Nothing indexes it that way today -- its only live readers are the two "valid team names are:"
+// listings in NPC_Kill_f(), which print every entry in order and so were merely out of order rather
+// than wrong -- but TranslateTeamName() below walks it and returns the index as a team, and would
+// have handed back the opposite team the moment anyone uncommented it. Reordered to match the enum,
+// which is the safe direction: npcteam_t is load-bearing across .npc parsing, TeamTable,
+// OnSameTeam() and every NPC's playerTeam, so it is the array that moves, not the enum.
+//
+// Index 0 was an empty string and the listings started at 1 to skip it, so "free" -- a real team,
+// and one zyk_team_from_string() accepts -- was never offered to the admin. It is spelled out now
+// and the loops start at 0.
+char	*TeamNames[NPCTEAM_NUM_TEAMS] =
 {
-	"",
-	"player",
+	"free",
 	"enemy",
+	"player",
 	"neutral"
 };
 
@@ -235,7 +248,9 @@ extern qboolean BG_ParseLiteral( const char **data, const char *string );
 //
 // NPC parameters file : scripts/NPCs.cfg
 //
-#define MAX_NPC_DATA_SIZE 0x80000 // zyk: changed from 0x40000 to 0x80000
+// DAJ_RP: 0x80000 -> 0x160000 (as JoF_EJK). The combined, whitespace-stripped text of every ext_data/NPCs/*.npc
+// has to fit, or the map ends with "NPC extensions (*.npc) are too large"; 512 KB is tight for many NPC packs.
+#define MAX_NPC_DATA_SIZE 0x160000 // zyk: changed from 0x40000 to 0x80000
 char	NPCParms[MAX_NPC_DATA_SIZE];
 
 /*
@@ -1780,12 +1795,16 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 				}
 				if (n != 100)
 				{
-					NPC->client->ps.iModelScale = n; //so the client knows
-					if (n >= 1024)
+					// DAJ_RP: [NPC Scale] brought down to the most a size can be sent as (RP_SENT_SCALE_MAX) before the
+					// clients are told it, not after: 1500 was sent as it was, in 10 bits, and drawn at 476 while the
+					// server took 1023 -- 1024 as 0, the normal size. 0 is left as it was: the normal size, as no scale
+					// line, both halves being 0.
+					if (n > RP_SENT_SCALE_MAX)
 					{
-						Com_Printf("WARNING: MP does not support scaling up to or over 1024%\n");
-						n = 1023;
+						Com_Printf(S_COLOR_YELLOW "WARNING: NPC '%s' has scale %d, more than MP can send: using %d\n", NPCName, n, RP_SENT_SCALE_MAX);
+						n = RP_SENT_SCALE_MAX;
 					}
+					NPC->client->ps.iModelScale = n; //so the client knows
 
 					NPC->modelScale[0] = NPC->modelScale[1] = NPC->modelScale[2] = n/100.0f;
 				}
@@ -2558,7 +2577,13 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 				}
 				//FIXME: need to precache the weapon, too?  (in above func)
 				weap = GetIDForString( WPTable, value );
-				if ( weap >= WP_NONE && weap <= WP_NUM_WEAPONS )///*WP_BLASTER_PISTOL*/WP_SABER ) //?!
+				// GalaxyRP fix: [bounds] "<=" admitted WP_NUM_WEAPONS itself, which would index
+				// weaponData[] one past the end and then write to ps.ammo[] at whatever ammoIndex
+				// that garbage held. Unreachable as things stand -- GetIDForString returns -1 for an
+				// unknown name and no WPTable row is valued WP_NUM_WEAPONS -- so the guard was only
+				// correct by accident of the table's contents. NPC_stats.c:842 already gets this
+				// right a few hundred lines up. Matches OpenJK 6a8a8809.
+				if ( weap >= WP_NONE && weap < WP_NUM_WEAPONS )///*WP_BLASTER_PISTOL*/WP_SABER ) //?!
 				{
 					NPC->client->ps.weapon = weap;
 					NPC->client->ps.stats[STAT_WEAPONS] |= ( 1 << NPC->client->ps.weapon );
@@ -3569,7 +3594,9 @@ void NPC_LoadParms( void )
 	char		/**buffer,*/ *holdChar, *marker;
 
 	// zyk: changed from 2048 to 8192
-	char		npcExtensionListBuf[8192];			//	The list of file names read in
+	// GalaxyRP fix: [Vehicles] 8192 -> 32768; see MAX_VEH_EXT_LIST_SIZE in bg_vehicleLoad.c. Every
+	// vehicle needs an .npc as well, and the engine drops names silently once this is full.
+	char		npcExtensionListBuf[32768];			//	The list of file names read in
 
 	fileHandle_t f;
 	len = 0;
@@ -3597,7 +3624,9 @@ void NPC_LoadParms( void )
 		}
 		else
 		{
-			if ( totallen + len >= MAX_NPC_DATA_SIZE ) {
+			// GalaxyRP fix: [Vehicles] "+ 1" for the "\n" appended below: with the file text alone
+			// filling the buffer to the last byte, that newline's terminator landed one past the end.
+			if ( totallen + len + 1 >= MAX_NPC_DATA_SIZE ) {
 				trap->FS_Close( f );
 				trap->Error( ERR_DROP, "NPC extensions (*.npc) are too large" );
 			}
@@ -3617,4 +3646,7 @@ void NPC_LoadParms( void )
 			//rww  12/19/02-actually the probelm was npcParseBuffer not being nul-term'd, which could cause issues in the strcat too
 		}
 	}
+
+	// GalaxyRP fix: [Vehicles] holdChar has walked exactly the bytes the names occupied.
+	BG_FileListMayBeTruncated( "ext_data/NPCs", ".npc", fileCnt, (int)(holdChar - npcExtensionListBuf), sizeof( npcExtensionListBuf ) );
 }

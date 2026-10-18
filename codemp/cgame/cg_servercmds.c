@@ -28,6 +28,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "cg_local.h"
 #include "ui/menudef.h"
+
+// GalaxyRP: [Saber RGB] defined in bg_saberLoad.c (shared across game/cgame/ui) -- CG_SaberColorUpdate_f
+// below needs the palette-name string for the mode the server just pushed down.
+const char *SaberColorToString( saber_colors_t color );
 #include "ghoul2/G2.h"
 #include "ui/ui_public.h"
 
@@ -65,9 +69,17 @@ static void CG_ParseScores( void ) {
 		cg.scores[i].scoreFlags			= atoi( CG_Argv( i*SCORE_OFFSET +  8 ) );
 		powerups						= atoi( CG_Argv( i*SCORE_OFFSET +  9 ) );
 		cg.scores[i].accuracy			= atoi( CG_Argv( i*SCORE_OFFSET + 10 ) );
-		cg.scores[i].impressiveCount	= atoi( CG_Argv( i*SCORE_OFFSET + 11 ) );
-		cg.scores[i].excellentCount		= atoi( CG_Argv( i*SCORE_OFFSET + 12 ) );
-		cg.scores[i].gauntletCount		= atoi( CG_Argv( i*SCORE_OFFSET + 13 ) );
+		// GalaxyRP fix: [Death System] knockdowns, not impressive awards -- see the matching
+		// comment in DeathmatchScoreboardMessage (g_cmds.c). SCORE_OFFSET deliberately stays at
+		// 14 so a client running a different cgame still parses every row at the right place.
+		// GalaxyRP fix: [Scoreboard] level, knockdowns and deaths ride in the impressive, excellent
+		// and gauntlet positions so the score, ping and time slots can carry what they are named --
+		// see DeathmatchScoreboardMessage (g_cmds.c). SCORE_OFFSET deliberately stays at 14: the
+		// field count is unchanged, so a client that knows nothing about this mod reads the same
+		// fourteen fields it always did, and gets sensible values in them now.
+		cg.scores[i].level				= atoi( CG_Argv( i*SCORE_OFFSET + 11 ) );
+		cg.scores[i].knockdowns			= atoi( CG_Argv( i*SCORE_OFFSET + 12 ) );
+		cg.scores[i].deaths				= atoi( CG_Argv( i*SCORE_OFFSET + 13 ) );
 		cg.scores[i].defendCount		= atoi( CG_Argv( i*SCORE_OFFSET + 14 ) );
 		cg.scores[i].assistCount		= atoi( CG_Argv( i*SCORE_OFFSET + 15 ) );
 		cg.scores[i].perfect			= atoi( CG_Argv( i*SCORE_OFFSET + 16 ) );
@@ -135,6 +147,17 @@ void CG_ParseServerinfo( void ) {
 
 	cgs.debugMelee = atoi( Info_ValueForKey( info, "g_debugMelee" ) ); //trap->Cvar_GetHiddenVarValue("g_iknowkungfu");
 	cgs.stepSlideFix = atoi( Info_ValueForKey( info, "g_stepSlideFix" ) );
+
+	// GalaxyRP: [Grapple Hook] the mode and the three pull numbers, published by the server for
+	// exactly this read (g_xcvar.h). A missing key is the cvar's own default, not zero -- a zero
+	// strength would leave the client predicting no pull at all while the server pulls.
+	{
+		const char *v;
+		v = Info_ValueForKey( info, "g_allowGrapple" );		cgs.grappleMode   = v[0] ? atoi( v ) : 2;
+		v = Info_ValueForKey( info, "g_hookStrength" );		cgs.hookStrength  = v[0] ? atoi( v ) : 800;
+		v = Info_ValueForKey( info, "g_hookStrength1" );	cgs.hookStrength1 = v[0] ? atoi( v ) : 20;
+		v = Info_ValueForKey( info, "g_hookStrength2" );	cgs.hookStrength2 = v[0] ? atoi( v ) : 40;
+	}
 
 	cgs.noSpecMove = atoi( Info_ValueForKey( info, "g_noSpecMove" ) );
 
@@ -335,25 +358,48 @@ void CG_ShaderStateChanged(void) {
 	const char *o;
 	char *n,*t;
 
+	// GalaxyRP fix: [security] every one of these three copies used the distance to the next
+	// separator as its length, with nothing comparing that to the size of the destination. A
+	// shader name longer than MAX_QPATH-1, or a time offset longer than fifteen characters,
+	// therefore overran a stack buffer in this function -- on the client, driven entirely by a
+	// configstring the server sent. The server side is fixed too (AddRemap and /remap now refuse a
+	// name that cannot fit, so this server can no longer emit one), but that only protects players
+	// while they are HERE; this is the half that travels with them onto any other server.
+	//
+	// Clamping rather than skipping the record, because a truncated name simply fails to match a
+	// real shader and the remap quietly does nothing, which is the right outcome for a value this
+	// client was never going to be able to represent.
 	o = CG_ConfigString( CS_SHADERSTATE );
 	while (o && *o) {
 		n = strstr(o, "=");
 		if (n && *n) {
-			strncpy(originalShader, o, n-o);
-			originalShader[n-o] = 0;
+			int len = n - o;
+
+			if ( len >= (int)sizeof(originalShader) )
+				len = (int)sizeof(originalShader) - 1;
+			strncpy(originalShader, o, len);
+			originalShader[len] = 0;
 			n++;
 			t = strstr(n, ":");
 			if (t && *t) {
-				strncpy(newShader, n, t-n);
-				newShader[t-n] = 0;
+				len = t - n;
+
+				if ( len >= (int)sizeof(newShader) )
+					len = (int)sizeof(newShader) - 1;
+				strncpy(newShader, n, len);
+				newShader[len] = 0;
 			} else {
 				break;
 			}
 			t++;
 			o = strstr(t, "@");
 			if (o) {
-				strncpy(timeOffset, t, o-t);
-				timeOffset[o-t] = 0;
+				len = o - t;
+
+				if ( len >= (int)sizeof(timeOffset) )
+					len = (int)sizeof(timeOffset) - 1;
+				strncpy(timeOffset, t, len);
+				timeOffset[len] = 0;
 				o++;
 				trap->R_RemapShader( originalShader, newShader, timeOffset );
 			}
@@ -835,6 +881,18 @@ static void CG_ConfigStringModified( void ) {
 		Q_strncpyz( cgs.teamVoteString[num-CS_TEAMVOTE_STRING], str, sizeof( cgs.teamVoteString ) );
 	} else if ( num == CS_INTERMISSION ) {
 		cg.intermissionStarted = atoi( str );
+	} else if ( num == CS_ITEMS ) {
+		// GalaxyRP fix: [Entity System] the server writes CS_ITEMS again when an item class the map had
+		// not precached is spawned after map load (G_SpawnItem). Item visuals were registered from it
+		// once, at load (CG_RegisterItems), so such an item drew as nothing but its hologram cone until
+		// the map restarted. Register what is new; CG_RegisterItemVisuals skips what it has already.
+		int i;
+
+		for ( i = 1; i < bg_numItems && str[i - 1]; i++ ) {
+			if ( str[i] == '1' && !cg_items[i].registered ) {
+				CG_RegisterItemVisuals( i );
+			}
+		}
 	} else if ( num >= CS_MODELS && num < CS_MODELS+MAX_MODELS ) {
 		char modelName[MAX_QPATH];
 		strcpy(modelName, str);
@@ -852,6 +910,9 @@ static void CG_ConfigStringModified( void ) {
 		{
             cgs.gameModels[ num-CS_MODELS ] = 0;
 		}
+
+		// DAJ_RP: [SP Maps] a misc_model_ghoul's skin entry: the skin, loaded now -- see CG_ModelEntrySkin()
+		CG_ModelEntrySkin( str );
 // GHOUL2 Insert start
 		/*
 	} else if ( num >= CS_CHARSKINS && num < CS_CHARSKINS+MAX_CHARSKINS ) {
@@ -876,6 +937,28 @@ static void CG_ConfigStringModified( void ) {
 		else
 		{
 			cgs.gameEffects[ num-CS_EFFECTS] = trap->FX_RegisterEffect( str );
+		}
+	}
+	// GalaxyRP fix: [Ambient Sets] a sound set first used after this client connected -- an ambient speaker
+	// or a mover the entity commands added -- was never loaded: CG_AS_Register() reads the slots once, at
+	// connect, and the engine plays nothing for a set it has not loaded, so it stayed silent until the
+	// player reconnected. Loaded now, the way CG_AS_Register() loads them: added to the engine's precache
+	// list and the set file parsed again. That re-parse adds the sets already loaded once more (the engine
+	// has no call to add a single one; it frees them all at map change) -- the price of leaving the
+	// precache list alone, since clearing it resets the area ambience the player is hearing. The server
+	// only lets a name through that sound/sound.txt defines (RP_SoundSetKnown(), g_spawn.c): the engine
+	// drops a client whose list holds a name the file has not.
+	// The parse itself waits for the end of the snapshots (CG_AS_ParsePending() in cg_view.c), so a preset
+	// that brings several new sets at once parses the file once, not once per set.
+	else if ( num > CS_AMBIENT_SET && num < CS_AMBIENT_SET + MAX_AMBIENT_SETS )
+	{
+		const int slot = num - CS_AMBIENT_SET;
+
+		if ( str[0] && !cgs.ambientSetLoaded[slot] )
+		{
+			cgs.ambientSetLoaded[slot] = qtrue;
+			trap->AS_AddPrecacheEntry( str );
+			cgs.ambientSetsPending = qtrue;
 		}
 	}
 	else if ( num >= CS_SIEGE_STATE && num < CS_SIEGE_STATE+1 )
@@ -1181,7 +1264,12 @@ void CG_CheckSVStringEdRef(char *buf, const char *str)
 			}
 		}
 
-		if (!gotStrip)
+		// GalaxyRP fix: [security] bounded. After an expansion b is wherever Q_strcat stopped, which can
+		// be the last byte of buf, and the rest of the line was then copied on with no check at all --
+		// a server line full of "@@@KEY " (a player's /examine description, a poll, a /clientprint)
+		// wrote past buf, a 1024-byte array on the caller's stack, and crashed the client. Whatever
+		// does not fit is dropped; the line is cut at the end of the buffer.
+		if (!gotStrip && b < MAX_STRINGED_SV_STRING - 1)
 		{
 			buf[b] = str[i];
 			b++;
@@ -1595,42 +1683,212 @@ static void CG_ClientLevelShot_f( void ) {
 	cg.levelShot = qtrue;
 }
 
-static qboolean light_quest_defeated_guardians(int light_quest_progress)
-{
-	int j = 0, defeated_guardians = 0;
+// GalaxyRP fix: [Quests] light_quest_defeated_guardians and dark_quest_collected_notes (client-side
+// mirrors of the same-named server functions) used to live here. Both were orphaned -- zero call
+// sites anywhere in cgame -- even before the server-side quest system was confirmed fully dead (see
+// the GalaxyRP fix comment on quest_get_new_player's old location in g_cmds.c). Deleted outright.
 
-	for (j = 4; j <= 12; j++)
+// GalaxyRP fix: [Model/Name] same root cause and same fix shape as CG_SaberUpdate_f below --
+// set_model()/set_netname() in g_cmds.c force a player's model/name from the database (on login,
+// character load, or character switch) by writing the SERVER's cached copy of that client's
+// userinfo via trap->SetUserinfo(), which never reaches the client's own local "model"/"name"
+// cvars. Those are the same cvars the in-game console echoes and that the customization menu
+// (UI_GetCharacterCvars/UI_UpdateCharacterCvars for model, ui_GetName/ui_SetName for name in
+// ui_main.c) seeds its "current selection" from and re-sends verbatim on Apply -- so a logged-in
+// player whose model/name was just restored from the database would still see (and could
+// silently re-send) their stale pre-login value the moment they opened that menu, undoing the
+// restore. A pre-existing "zykmod" server command already pushes several of these values to the
+// client, but only when the client's own plugin happens to request it (not guaranteed to happen
+// right away, or at all without the plugin), and even then it targets "ui_saber"/"ui_saber2"
+// rather than the raw "saber1"/"saber2"/"model"/"name" cvars for the saber case. These two
+// commands push the correction directly and unconditionally, the same way supdatesaber does.
+static void CG_ModelUpdate_f(void)
+{
+	if (trap->Cmd_Argc() < 2)
 	{
-		if (light_quest_progress & (1 << j))
-		{
-			defeated_guardians++;
-		}
+		return;
 	}
 
-	if (defeated_guardians == 9)
-		return qtrue;
-	else
-		return qfalse;
+	trap->Cvar_Set("model", CG_Argv(1));
 }
 
-static qboolean dark_quest_collected_notes(int dark_quest_progress)
+static void CG_NameUpdate_f(void)
 {
-	if (dark_quest_progress & (1 << 4) && dark_quest_progress & (1 << 5) && dark_quest_progress & (1 << 6) && dark_quest_progress & (1 << 7) && 
-		dark_quest_progress & (1 << 8) && dark_quest_progress & (1 << 9) && dark_quest_progress & (1 << 10) && dark_quest_progress & (1 << 11) && 
-		dark_quest_progress & (1 << 12))
+	if (trap->Cmd_Argc() < 2)
 	{
-		return qtrue;
+		return;
 	}
-	else
+
+	trap->Cvar_Set("name", CG_Argv(1));
+}
+
+// GalaxyRP: [Profile UI] the Profile menu (ingame_galaxyrp.menu) needs to know whether the local
+// player is currently logged into an account so it can hide the Character Information block and
+// the Skills/Characters/Shop/Games tabs (which only make sense for a logged-in account) and show
+// the Force selection icon (which only makes sense for a logged-out player, since a logged-in
+// account manages Force powers through the RPG skill tree instead). There was previously no
+// client-visible signal for this at all. Cmd_GalaxyRpUi_f sends this command every time the
+// Profile menu is opened or its "Customize"/"Skills"/"Characters" tabs are clicked (the existing
+// "exec zykmod" calls in the menu), unconditionally and regardless of login state, so ui_loggedin
+// is always refreshed before the menu's cvarTest/hideCvar gating reads it.
+static void CG_LoggedInUpdate_f(void)
+{
+	if (trap->Cmd_Argc() < 2)
+	{
+		return;
+	}
+
+	trap->Cvar_Set("ui_loggedin", CG_Argv(1));
+}
+
+// GalaxyRP: [Radar] the local player's ally set, as the two bitfields the server keeps in
+// sess.ally1/ally2 -- ally1 for client slots 0-15, ally2 for 16-31, matching zyk_ally_bit_set().
+// The radar uses it to colour an ally differently from an enemy below GT_TEAM.
+//
+// This replaces a pair of EV_USE_ITEM14 events that set and cleared one bit of a per-slot client
+// cache. A reliable, sequenced server command is the right carrier for it: the whole set arrives
+// in one message, it cannot be lost, and ClientBegin re-sends it, so it survives a map change --
+// the events did not, and since sess.ally1/ally2 ride the session string the server went on
+// believing in allies the client had forgotten, which showed up as every ally reading as an enemy
+// after every map change.
+static void CG_AllyUpdate_f(void)
+{
+	if (trap->Cmd_Argc() < 3)
+	{
+		return;
+	}
+
+	cg.ally1 = atoi(CG_Argv(1));
+	cg.ally2 = atoi(CG_Argv(2));
+}
+
+// GalaxyRP: [Skills] a Sense Health reading: level, health, max health, shield, max shield, force,
+// max force, type, "name" -- see zyk_sense_health_command() in w_force.c. The server sends it every
+// half second while the skill has a target; CG_DrawSenseHealth shows it under the crosshair and lets
+// it fade when they stop. Anything short or out of range is ignored rather than half-applied.
+static void CG_SenseHealth_f(void)
+{
+	int level;
+
+	if (trap->Cmd_Argc() < 10)
+	{
+		return;
+	}
+
+	level = atoi(CG_Argv(1));
+	if (level < 1 || level > 3)
+	{
+		return;
+	}
+
+	cg.senseHealth.level = level;
+	cg.senseHealth.health = atoi(CG_Argv(2));
+	cg.senseHealth.maxHealth = atoi(CG_Argv(3));
+	cg.senseHealth.shield = atoi(CG_Argv(4));
+	cg.senseHealth.maxShield = atoi(CG_Argv(5));
+	cg.senseHealth.force = atoi(CG_Argv(6));
+	cg.senseHealth.maxForce = atoi(CG_Argv(7));
+	cg.senseHealth.type = atoi(CG_Argv(8));
+	Q_strncpyz(cg.senseHealth.name, CG_Argv(9), sizeof(cg.senseHealth.name));
+	cg.senseHealth.time = cg.time ? cg.time : 1;
+}
+
+// GalaxyRP: [Radar] one place knows the ally1/ally2 split on this side, mirroring
+// zyk_ally_bit_set() in g_main.c. Out-of-range slots answer "not an ally" rather than indexing
+// anything.
+qboolean CG_IsAlly( int clientNum )
+{
+	if ( clientNum < 0 || clientNum >= MAX_CLIENTS )
 	{
 		return qfalse;
+	}
+
+	if ( clientNum > 15 )
+	{
+		return (cg.ally2 & (1 << (clientNum - 16))) ? qtrue : qfalse;
+	}
+
+	return (cg.ally1 & (1 << clientNum)) ? qtrue : qfalse;
+}
+
+// GalaxyRP fix: [Saber] the server can change a player's saber1/saber2 out from under them --
+// on login/character load (restoring the character's saved saber from the database) or by
+// silently rejecting/correcting an invalid combo typed at the /saber console command (e.g. two
+// two-handed sabers at once) -- via update_saber() in g_cmds.c on the server side. That function
+// already updates the SERVER's own cached copy of this client's userinfo, but "saber1"/"saber2"
+// are CVAR_USERINFO cvars whose real, authoritative value lives on the CLIENT: nothing tells the
+// client itself to update its own local cvars, so the in-game console still echoes the stale
+// value, and the saber-selection menu (which seeds its "current selection" from these same local
+// cvars, see UI_SaberInitPage/UI_SaberDoneMenu below) shows and re-sends the stale choice too,
+// making the UI appear stuck for a logged-in player. update_saber() now sends this command with
+// the final, authoritative saber1/saber2 strings any time it changes them, so cgame can push the
+// correction into the client's own local cvars directly.
+static void CG_SaberUpdate_f(void)
+{
+	if (trap->Cmd_Argc() < 3)
+	{
+		return;
+	}
+
+	trap->Cvar_Set("saber1", CG_Argv(1));
+	trap->Cvar_Set("saber2", CG_Argv(2));
+}
+
+// GalaxyRP: [Saber RGB] the colour counterpart of CG_SaberUpdate_f above, and needed for the same
+// reason: pers.saberColorMode[]/pers.saberRGB[] on the server are authoritative, but the cvars the
+// player's own console and saber menu read (cp_sbRGB1/cp_sbRGB2, and the color1/color2 that select
+// which palette entry -- ordinary, RGB-family, or black -- is in effect) live on the CLIENT, where
+// the server cannot write them. update_saber_colors() in g_cmds.c sends this after every change --
+// a /sabercolor, a /saberblade, or a database restore on login -- so the menu shows what is actually
+// in effect instead of re-sending its stale value on the next Apply.
+//
+// Payload is four ints now (mode1 rgb1 mode2 rgb2) instead of two, and every field below is written
+// UNCONDITIONALLY -- deliberately including color1/color2 and the palette-name cvars even when the
+// packed RGB value is 0. The previous version only touched those when packed was nonzero, which is
+// exactly why clearing a colour (going back to an ordinary palette entry) never actually restored
+// the client's own console/menu state: color1/color2 stayed stuck on SABER_RGB, and the menu would
+// then re-send that stale value on its very next Apply, undoing the clear server-side too. Now that
+// pers.saberColorMode[] is sent explicitly rather than inferred from "is the RGB payload nonzero,"
+// there is no case where skipping the write is correct.
+static void CG_SaberColorUpdate_f(void)
+{
+	int i;
+
+	if (trap->Cmd_Argc() < 5)
+	{
+		return;
+	}
+
+	for (i = 0; i < 2; i++)
+	{
+		int mode = atoi(CG_Argv(i * 2 + 1));
+		int packed = atoi(CG_Argv(i * 2 + 2));
+
+		trap->Cvar_Set(i ? "cp_sbRGB2" : "cp_sbRGB1", va("%i", packed));
+
+		trap->Cvar_Set(i ? "color2" : "color1", va("%i", mode));
+		trap->Cvar_Set(i ? "ui_saber2_color" : "ui_saber_color", SaberColorToString((saber_colors_t)mode));
+		trap->Cvar_Set(i ? "g_saber2_color" : "g_saber_color", SaberColorToString((saber_colors_t)mode));
+
+		// Keep the menu's own slider cvars in step too, so re-opening it shows the real colour
+		// rather than snapping back to whatever the sliders were last dragged to.
+		trap->Cvar_Set(i ? "ui_sab2_r" : "ui_sab1_r", va("%i", SABERRGB_R(packed)));
+		trap->Cvar_Set(i ? "ui_sab2_g" : "ui_sab1_g", va("%i", SABERRGB_G(packed)));
+		trap->Cvar_Set(i ? "ui_sab2_b" : "ui_sab1_b", va("%i", SABERRGB_B(packed)));
 	}
 }
 
 static void CG_ZykChars(void)
 {
 	char arg[1024] = { 0 };
-	int char_count = 0;
+	// GalaxyRP fix: [UI] this wrote ui_zyk_rpg_char_0 through _14 (0-indexed), but
+	// ingame_galaxyrp.menu's 15 character-slot itemDefs read ui_zyk_rpg_char_1 through _15
+	// (1-indexed) -- so the first character in the list (the account's first-ever created
+	// character, e.g. "admin" for the admin account, since the server query has no ORDER BY
+	// and SQLite returns rows in creation order) was always written to the never-displayed
+	// slot 0 and silently vanished from the UI list, even though it was still fully usable via
+	// /char use. Made this 1-indexed to match the menu file instead.
+	int char_count = 1;
 
 	trap->Cmd_Argv(1, arg, sizeof(arg));
 
@@ -1639,20 +1897,19 @@ static void CG_ZykChars(void)
 
 	while (value != NULL)
 	{
-		if (char_count >= 15) {
+		if (char_count > 15) {
 			break;
 		}
 		trap->Cvar_Set(va("ui_zyk_rpg_char_%d", char_count), va("%s", value));
 		char_count++;
-		
+
 		value = strtok(NULL, "&");
 	}
 
 	// zyk: cleaning cvars that will not render a charname
-	char_count--;
-	while (char_count < 15)
+	while (char_count <= 15)
 	{
-		trap->Cvar_Set(va("ui_zyk_rpg_char_%d", char_count + 1), "");
+		trap->Cvar_Set(va("ui_zyk_rpg_char_%d", char_count), "");
 		char_count++;
 	}
 }
@@ -1726,10 +1983,62 @@ char ui_cvars_in_order[100][100] = {
 	"ui_rp_skill_57_level",
 	"ui_rp_skill_58_level",
 	"ui_rp_skill_59_level",
+	// GalaxyRP fix: [Settings] ui_rp_skill_61_level and ui_rp_skill_62_level used to sit here, after
+	// ui_rp_skill_60_level -- but NUM_OF_SKILLS (rp_local.h) is 60, and the server's skills[] array
+	// (g_cmds.c) that Cmd_GalaxyRpUi_f's ARRAY_LEN(skills) loop walks to build the zykmod content
+	// string genuinely has only 60 entries; nothing in the menu references skill 61 or 62 either
+	// (ui_rp_skill_60_level is the highest skill cvar ingame_galaxyrp.menu actually reads). Those two
+	// extra slots meant this array had 62 skill-level entries for a 60-skill server payload, so
+	// CG_ZykMod's positional strtok parsing landed the first two of the six setting values below into
+	// ui_rp_skill_61_level/_62_level instead, then every remaining setting value one slot short of
+	// where it belonged -- shifting all six settings on the panel by two positions, with the last two
+	// (ui_zyk_setting_11_value/_13_value, Start With Saber and Admin Protect) never receiving a value
+	// at all and just showing their static "0" XCVAR_DEF default. Removed the two orphaned slots so
+	// this array's skill-cvar count (60) matches the server's actual skill count exactly, putting the
+	// six setting cvars back in alignment with the six setting values the server actually sends right
+	// after them.
+	// Follow-up: the two orphaned ui_rp_skill_61_level/_62_level cvars themselves have now also been
+	// removed from ui_xcvar.h, so nothing anywhere declares a skill cvar the server cannot fill.
 	"ui_rp_skill_60_level",
-	"ui_rp_skill_61_level",
-	"ui_rp_skill_62_level"
+	// GalaxyRP fix: [Settings] 6 entries used to sit here (ui_zyk_setting_6/8/9/10/11/13_value), fed by
+	// a settings_to_sync loop that used to be in Cmd_GalaxyRpUi_f (g_cmds.c) via the now-removed
+	// zyk_setting_status_text(). Those cvars only ever fed the Settings panel's *Value itemDefs in
+	// ingame_galaxyrp.menu, which was removed entirely in an earlier pass of this cleanup, and the
+	// settings themselves (Allow Force Powers from allies, Starting Single Saber Style, Allow Screen
+	// Message, Use healing force only at allied players, Start With Saber, Admin Protect) are either
+	// removed or no longer UI-synced in this pass (see settings_number_to_bit in Cmd_Settings_f) -- so
+	// these entries, the loop that fed them and their XCVAR_DEFs in ui_xcvar.h have all been removed
+	// together. Removing them here (rather than leaving "0"-valued placeholders) is safe precisely
+	// because the server-side loop that appended their values to the zykmod content string is removed
+	// in the same pass -- this array's positional strtok parsing in CG_ZykMod below still lines up with
+	// what the server actually sends.
+	// GalaxyRP fix: [Shop] 3 new entries appended here, in the exact same order the server appends
+	// them to the zykmod content string (see the upgrade_bits_to_sync loop added to Cmd_GalaxyRpUi_f
+	// in g_cmds.c, right after the settings loop above) -- "1" if the player already owns that shop
+	// upgrade (player_settings bit 0/1/2), "0" otherwise. Feeds the Shop -> Upgrades panel's
+	// cvarTest/disableCvar gate in ingame_galaxyrp.menu, which greys out and disables a button for an
+	// upgrade already owned. Numbered 1-3 to match the /buy upgrade 1-3 numbering; the unrelated
+	// ui_zyk_upgrade_0_value through _16_value cvars that used to be declared alongside them in
+	// ui_xcvar.h (leftovers of the old "Unique Upgrades" panel, whose writer was a block of
+	// trap->Cvar_Set calls right here in CG_ZykMod and whose reader was the old ingame_zykmod.menu --
+	// both long since deleted) have now been removed. They were never entries in this array, so their
+	// removal does not affect the positional parsing below.
+	"ui_zyk_upgrade_1_owned",
+	"ui_zyk_upgrade_2_owned",
+	"ui_zyk_upgrade_3_owned"
 };
+
+// GalaxyRP fix: [stability] CG_ZykMod below assigns each "~"-delimited field of the zykmod payload to
+// ui_cvars_in_order[] purely by position, with nothing to catch the server's field count and this array
+// drifting apart -- exactly this already happened once (see the "GalaxyRP fix: [Settings]" comment above,
+// which silently shifted six settings values two array positions out of alignment for a long time, with
+// no error or warning anywhere). This constant is the real, current field count Cmd_GalaxyRpUi_f
+// (g_cmds.c) sends: 9 base fields (name, model, saber1, saber2, level, xp/xpToLevel, skillpoints, credits,
+// current character) + NUM_OF_SKILLS (60, rp_local.h) skill levels + 3 shop-upgrade-owned flags = 72.
+// There's no automatic way to keep the two sides in sync across this VM boundary, so this has to be
+// updated by hand whenever either side's field count changes -- the warning in CG_ZykMod is the safety
+// net for whenever it isn't.
+#define ZYKMOD_EXPECTED_FIELD_COUNT 72
 
 static void CG_ZykMod( void )
 { // zyk: receives account info of logged players
@@ -1746,9 +2055,20 @@ static void CG_ZykMod( void )
 		trap->Cvar_Set(ui_cvars_in_order[i], va("%s", value));
 		i++;
 		if (i >= ARRAY_LEN(ui_cvars_in_order)) {
+			trap->Print("WARNING: CG_ZykMod received more fields than ui_cvars_in_order[] has entries -- server and client zykmod field counts are out of sync.\n");
 			return;
 		}
 		value = strtok(NULL, "~");
+	}
+
+	// GalaxyRP fix: [stability] see the comment on ZYKMOD_EXPECTED_FIELD_COUNT above. If fewer fields
+	// arrived than expected, every cvar from this point on in ui_cvars_in_order[] was left holding
+	// whatever it already had (a previous zykmod update, or its XCVAR_DEF default) rather than being
+	// corrupted with a misaligned value -- but that's still silently stale data with nothing anywhere to
+	// report it. Log it so a future protocol mismatch between this array and Cmd_GalaxyRpUi_f is caught
+	// immediately instead of quietly shipping wrong menu data.
+	if (i != ZYKMOD_EXPECTED_FIELD_COUNT) {
+		trap->Print("WARNING: CG_ZykMod received %d fields, expected %d -- zykmod payload may be out of sync with ui_cvars_in_order[].\n", i, ZYKMOD_EXPECTED_FIELD_COUNT);
 	}
 }
 
@@ -1779,10 +2099,18 @@ static serverCommand_t	commands[] = {
 	{ "print",				CG_Print_f },
 	{ "rcg",				CG_RestoreClientGhoul_f },
 	{ "remapShader",		CG_RemapShader_f },
+	{ "rpxl",				CG_RpxReply },	// GalaxyRP: [Extras] a listing for the Extras menus, cg_rpextras.c
 	{ "sb",					CG_SiegeBriefingDisplay_f },
 	{ "scl",				CG_SiegeClassSelect_f },
 	{ "scores",				CG_ParseScores },
+	{ "sensehp",			CG_SenseHealth_f },	// GalaxyRP: [Skills] Sense Health
 	{ "spc",				CG_SiegeProfileMenu_f },
+	{ "supdateally",		CG_AllyUpdate_f },	// GalaxyRP: [Radar]
+	{ "supdateloggedin",	CG_LoggedInUpdate_f },	// GalaxyRP: [Profile UI]
+	{ "supdatemodel",		CG_ModelUpdate_f },
+	{ "supdatename",		CG_NameUpdate_f },
+	{ "supdatesaber",		CG_SaberUpdate_f },
+	{ "supdatesabercolor",	CG_SaberColorUpdate_f },	// GalaxyRP: [Saber RGB]
 	{ "sxd",				CG_ParseSiegeExtendedData },
 	{ "tchat",				CG_Chat_f },
 	{ "tinfo",				CG_ParseTeamInfo },

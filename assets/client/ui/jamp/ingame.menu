@@ -119,15 +119,17 @@
 			visible			0
 		}
 
-		itemDef 
+		itemDef
 		{
 			name				join
 			text				@MENUS_JOIN
-			cvarTest			"ui_singleplayeractive"
-			disableCvar 
-			{ 
-				"1" 
-			}
+			// GalaxyRP fix: [UI] this itemDef used to also carry a first cvarTest "ui_singleplayeractive"
+			// / disableCvar {"1"} block meant to gray this button out in Solo Game mode. itemDef_t has
+			// only one cvarTest field and one shared value-list field used by enableCvar/disableCvar/
+			// showCvar/hideCvar alike, each parsed with a plain (non-merging) overwrite -- so the
+			// cvarTest/showcvar pair below silently erased that block's effect and the disable never
+			// actually worked. Removed rather than fixed: Join stays enabled in Solo Game mode, as it
+			// has always effectively behaved.
 			rect				65 0 70 32
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_FILLED
@@ -157,7 +159,7 @@
 			}
 		}
 
-		itemDef 
+		itemDef
 		{
 			name				class
 			text				@MENUS_JOIN
@@ -328,27 +330,38 @@
 			}
 		}
 		
-		itemDef 
+		// GalaxyRP fix: [UI] moved to its own row directly below the bar, under the "About" button on the
+		// far left (x=5), instead of x=195 y=0, which overlapped the "Galaxy RP" button (zykmod,
+		// x=220-290) by 45px and the Account/Objectives button (x=135-205) by 10px. Both this button and
+		// zykmod can be visible at once (host + not in Siege), unlike the other pairs sharing a slot in
+		// this bar (join/class, player/objectives), which are always mutually exclusive by gametype -- so
+		// the overlap here was a real hitbox conflict, not just a visual one. This button only matters
+		// while hosting, so trading its spot in the packed top-bar row for an isolated slot underneath is
+		// an acceptable rare-case tradeoff rather than reflowing every other button on the bar. Placed
+		// under "About" (the leftmost, least-trafficked button) rather than under "Galaxy RP" so it reads
+		// as its own thing rather than a submenu of Galaxy RP, and stays out of the way of the busier
+		// right side of the bar.
+		itemDef
 		{
 			name				addBotButton
 			group				none
 			style				WINDOW_STYLE_SHADER
-			rect				195 0 70 32
+			rect				5 32 70 32
 			background			"gfx/menus/menu_buttonback"			// Frame around button
 			forecolor			1 1 1 1
 			decoration
 			visible			0
 		}
 
-		// do not change the name of this, the uiScript setBotButton looks 
+		// do not change the name of this, the uiScript setBotButton looks
 		// for this item and turns it off if the gametype is siege
-		itemDef 
+		itemDef
 		{
 			name				addBot
 			text				@MENUS_ADD_BOT
 			type				ITEM_TYPE_BUTTON
 			style				WINDOW_STYLE_FILLED
-			rect				195 0 70 32
+			rect				5 32 70 32
 			font				2
 			textscale			.8
 			textstyle			3

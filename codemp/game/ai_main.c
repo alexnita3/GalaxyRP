@@ -5911,7 +5911,7 @@ int BotWeaponBlockable(int weapon)
 	}
 }
 
-void Cmd_EngageDuel_f(gentity_t *ent);
+void Cmd_EngageDuel_f(gentity_t *ent, int duel_type);
 void Cmd_ToggleSaber_f(gentity_t *ent);
 
 //movement overrides
@@ -6515,7 +6515,7 @@ void StandardBotAI(bot_state_t *bs, float thinktime)
 						bs->currentEnemy->client->ps.duelTime > level.time &&
 						!bs->cur_ps.duelInProgress)
 					{
-						Cmd_EngageDuel_f(&g_entities[bs->client]);
+						Cmd_EngageDuel_f(&g_entities[bs->client], 0);
 					}
 				}
 

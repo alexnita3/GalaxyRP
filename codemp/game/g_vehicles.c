@@ -75,7 +75,13 @@ void G_VehicleSpawn( gentity_t *self )
 
 	VectorCopy( self->r.currentOrigin, self->s.origin );
 
-	trap->LinkEntity( (sharedEntity_t *)self );
+	// GalaxyRP: [Logical Entities] "self" is the npc_vehicle SPAWNER, a logical class; the vehicle
+	// it produces below is spawned and linked by NPC_Spawn_Do as a networked NPC. The spawner
+	// itself must not be handed to the engine.
+	if ( !self->isLogical )
+	{
+		trap->LinkEntity( (sharedEntity_t *)self );
+	}
 
 	if ( !self->count )
 	{
@@ -347,6 +353,16 @@ qboolean Board( Vehicle_t *pVeh, bgEntity_t *pEnt )
 		if (ent->client)
 		{
 			ent->client->ps.m_iVehicleNum = ent->s.m_iVehicleNum;
+
+			// GalaxyRP fix: [Jetpack] in with the jetpack on -- landing on an empty speeder or animal, or on a
+			// docked fighter, boards with nothing switching it off, and a rider cannot switch it off himself.
+			// Off now, and its flags with it: this runs in the middle of his move, after ClientThink_real()
+			// has set them for the frame. ClientThink_real() makes sure of it for any other way in.
+			if ( ent->client->jetPackOn )
+			{
+				Jetpack_Off( ent );
+				ent->client->ps.eFlags &= ~( EF_JETPACK_ACTIVE | EF_JETPACK_FLAMING );
+			}
 		}
 		if ( pVeh->m_pPilot == (bgEntity_t *)ent )
 		{
@@ -435,6 +451,13 @@ qboolean Board( Vehicle_t *pVeh, bgEntity_t *pEnt )
 	ent->client->ps.m_iVehicleNum = parent->s.number;
 	ent->r.ownerNum = parent->s.number;
 	ent->s.owner = ent->r.ownerNum; //for prediction
+
+	// GalaxyRP: [Grapple Hook] boarding lets go of the rope; a rider cannot fire one either
+	// (RP_HookMayStayOut, g_active.c).
+	if ( ent->client->hook )
+	{
+		Weapon_HookFree( ent->client->hook );
+	}
 	if (pVeh->m_pPilot == (bgEntity_t *)ent)
 	{
 		parent->client->ps.m_iVehicleNum = ent->s.number+1; //always gonna be under MAX_CLIENTS so no worries about 1 byte overflow
@@ -555,7 +578,18 @@ qboolean VEH_TryEject( Vehicle_t *pVeh,
 	VectorSet(vEntMaxs, 15.0f, 15.0f, DEFAULT_MAXS_2);
 	oldOwner = ent->r.ownerNum;
 	ent->r.ownerNum = ENTITYNUM_NONE;
-	G_VehicleTrace( &m_ExitTrace, ent->r.currentOrigin, vEntMins, vEntMaxs, vExitPos, ent->s.number, ent->clipmask );
+	// DAJ_RP: [Vehicles] and the vehicle as the leaving rider's own, for this trace only. The trace starts
+	// at the rider's seat, inside the vehicle's box, and the engine leaves out of a trace only what the
+	// tracing entity owns (sv_world.cpp): the vehicle is its pilot's, so a passenger's trace started in
+	// solid every way and a passenger could not get off at all until promoted to pilot. Nothing of this
+	// reaches a client: only r.ownerNum changes, and it is put back straight after.
+	{
+		const int oldVehOwner = parent->r.ownerNum;
+
+		parent->r.ownerNum = ent->s.number;
+		G_VehicleTrace( &m_ExitTrace, ent->r.currentOrigin, vEntMins, vEntMaxs, vExitPos, ent->s.number, ent->clipmask );
+		parent->r.ownerNum = oldVehOwner;
+	}
 	ent->r.ownerNum = oldOwner;
 
 	if ( m_ExitTrace.allsolid//in solid
@@ -584,6 +618,13 @@ void G_EjectDroidUnit( Vehicle_t *pVeh, qboolean kill )
 #ifdef _GAME
 	{
 		gentity_t *droidEnt = (gentity_t *)pVeh->m_pDroidUnit;
+		// DAJ_RP: [Cloak Item] off the vehicle, off its cloak: seen and targetable again (RP_VehicleDroidCloakSync,
+		// NPC_AI_Jedi.c, kept it with the vehicle's). Silently -- it is being thrown off or destroyed.
+		if ( droidEnt->client && droidEnt->client->ps.powerups[PW_CLOAKED] )
+		{
+			droidEnt->client->ps.powerups[PW_CLOAKED] = 0;
+			droidEnt->flags &= ~FL_NOTARGET;
+		}
 		droidEnt->flags &= ~FL_UNDYING;
 		droidEnt->r.ownerNum = ENTITYNUM_NONE;
 		if ( droidEnt->client )
@@ -602,6 +643,7 @@ void G_EjectDroidUnit( Vehicle_t *pVeh, qboolean kill )
 }
 
 // Eject the pilot from the vehicle.
+extern void Jedi_Decloak( gentity_t *self );
 qboolean Eject( Vehicle_t *pVeh, bgEntity_t *pEnt, qboolean forceEject )
 {
 	gentity_t	*parent;
@@ -611,6 +653,7 @@ qboolean Eject( Vehicle_t *pVeh, bgEntity_t *pEnt, qboolean forceEject )
 
 	qboolean	taintedRider = qfalse;
 	qboolean	deadRider = qfalse;
+	qboolean	wasPilot;
 
 	if ( pEnt == pVeh->m_pDroidUnit )
 	{
@@ -695,6 +738,9 @@ qboolean Eject( Vehicle_t *pVeh, bgEntity_t *pEnt, qboolean forceEject )
 	}
 
 getItOutOfMe:
+	// DAJ_RP: [Cloak Item] who is getting off, before the pilot's seat is cleared or handed on -- see the
+	// cloak check further down.
+	wasPilot = ( (gentity_t *)pVeh->m_pPilot == ent ) ? qtrue : qfalse;
 
 	// If he's the pilot...
 	if ( (gentity_t *)pVeh->m_pPilot == ent )
@@ -774,6 +820,29 @@ getItOutOfMe:
 #endif
 				pVeh->m_ppPassengers[i] = NULL;
 				pVeh->m_iNumPassengers--;
+
+				// DAJ_RP: [Vehicles] the passengers behind him move down a seat, and are told their new one
+				// (ps.generic1, which also says which turret is theirs), as the promotion to pilot above
+				// already does. Everything that goes through the passengers stops at m_iNumPassengers --
+				// AttachRiders(), the UpdateRider() loop in bg_pmove.c, the promotion above, the vehicle's
+				// death (g_combat.c), the turrets (g_vehicleTurret.c) -- so a passenger left behind an
+				// empty seat was not carried along, could not jump or roll off, was never made pilot and
+				// stayed aboard a destroyed vehicle.
+				{
+					int k;
+
+					for ( k = i + 1; k < pVeh->m_pVehicleInfo->maxPassengers; k++ )
+					{
+						pVeh->m_ppPassengers[k-1] = pVeh->m_ppPassengers[k];
+						pVeh->m_ppPassengers[k] = NULL;
+#ifdef _GAME
+						if ( pVeh->m_ppPassengers[k-1] && ((gentity_t *)pVeh->m_ppPassengers[k-1])->client )
+						{
+							((gentity_t *)pVeh->m_ppPassengers[k-1])->client->ps.generic1 = k;
+						}
+#endif
+					}
+				}
 				break;
 			}
 		}
@@ -802,6 +871,28 @@ getItOutOfMe:
 		{
 			parent->client->ps.m_iVehicleNum = 0;
 		}
+
+		// GalaxyRP fix: [Cloak Item] a cloaked vehicle must never be left cloaked and unmanned. This is
+		// the actual single chokepoint every real dismount funnels through -- the normal exit key,
+		// roll-off, and jump-off (all in UpdateRider() below), a Walker's forced exit, falling off a
+		// flying vehicle, a death-eject (g_combat.c), and a Force-Push eject (w_force.c) all call this
+		// Eject() function directly, and Fighter's own Eject() override (FighterNPC.c) still calls back
+		// into this one -- so a single check here covers all of them. G_LeaveVehicle() (g_cmds.c) was
+		// where this fix originally lived, on the assumption it was the shared dismount chokepoint, but
+		// it's actually only ever reached from StopFollowing() and client disconnect, so the vehicle was
+		// staying cloaked and invisible with nobody aboard on every normal dismount.
+	}
+
+	// DAJ_RP: [Cloak Item] ...and the pilot getting off takes the vehicle's cloak with him, whether or not a
+	// passenger is promoted to pilot above. Only a pilot can cloak a vehicle (Cmd_VehicleCloak_f), so a
+	// cloaked vehicle is the leaving pilot's doing; the old "no pilot left" test kept it cloaked under a
+	// promoted passenger who never cloaked it and could not switch it off -- visible himself, on the radar
+	// and named on the crosshair over an invisible vehicle. That test stays as a backstop. Still a plain
+	// Jedi_Decloak, not Jedi_DecloakPair: the leaving pilot, the new pilot and every passenger keep their
+	// own cloak state; only the vehicle's is forced off. A passenger getting off changes nothing.
+	if ( ( wasPilot || pVeh->m_pPilot == NULL ) && parent->client && parent->client->ps.powerups[PW_CLOAKED] )
+	{
+		Jedi_Decloak( parent );
 	}
 
 	if (taintedRider)
@@ -898,6 +989,34 @@ qboolean EjectAll( Vehicle_t *pVeh )
 	pVeh->m_iBoarding = 0;
 	pVeh->m_bWasBoarding = qfalse;
 
+	// DAJ_RP: [Vehicles] the passengers first, from the last seat down. The pilot used to go first, and a pilot
+	// leaving makes the first passenger the pilot (Eject()), whom nothing here then took off; and a passenger
+	// leaving now moves those behind him down a seat (Eject()), which a loop going up the seats would step over.
+	if ( pVeh->m_iNumPassengers )
+	{
+		int i;
+
+		for ( i = pVeh->m_pVehicleInfo->maxPassengers - 1; i >= 0; i-- )
+		{
+			if ( pVeh->m_ppPassengers[i] )
+			{
+#ifdef _GAME
+				gentity_t *rider = (gentity_t*)pVeh->m_ppPassengers[i];
+#endif
+				pVeh->m_pVehicleInfo->Eject( pVeh, pVeh->m_ppPassengers[i], qtrue );
+#ifdef _GAME
+				if ( pVeh->m_pVehicleInfo->killRiderOnDeath && rider )
+				{//Kill them, too
+					//FIXME: proper origin, MOD and attacker (for credit/death message)?  Get from vehicle?
+					G_MuteSound(rider->s.number, CHAN_VOICE);
+					G_Damage( rider, NULL, NULL, NULL, rider->s.origin, 10000, 0, MOD_SUICIDE );//FIXME: proper MOD?  Get from vehicle?
+				}
+#endif
+			}
+		}
+		pVeh->m_iNumPassengers = 0;
+	}
+
 	// Throw them off.
 	if ( pVeh->m_pPilot )
 	{
@@ -928,30 +1047,6 @@ qboolean EjectAll( Vehicle_t *pVeh )
 			G_Damage( pilot, NULL, NULL, NULL, pilot->s.origin, 10000, 0, MOD_SUICIDE );
 		}
 #endif
-	}
-	if ( pVeh->m_iNumPassengers )
-	{
-		int i;
-
-		for ( i = 0; i < pVeh->m_pVehicleInfo->maxPassengers; i++ )
-		{
-			if ( pVeh->m_ppPassengers[i] )
-			{
-#ifdef _GAME
-				gentity_t *rider = (gentity_t*)pVeh->m_ppPassengers[i];
-#endif
-				pVeh->m_pVehicleInfo->Eject( pVeh, pVeh->m_ppPassengers[i], qtrue );
-#ifdef _GAME
-				if ( pVeh->m_pVehicleInfo->killRiderOnDeath && rider )
-				{//Kill them, too
-					//FIXME: proper origin, MOD and attacker (for credit/death message)?  Get from vehicle?
-					G_MuteSound(rider->s.number, CHAN_VOICE);
-					G_Damage( rider, NULL, NULL, NULL, rider->s.origin, 10000, 0, MOD_SUICIDE );//FIXME: proper MOD?  Get from vehicle?
-				}
-#endif
-			}
-		}
-		pVeh->m_iNumPassengers = 0;
 	}
 
 	if ( pVeh->m_pDroidUnit )
@@ -1238,12 +1333,26 @@ static qboolean Update( Vehicle_t *pVeh, const usercmd_t *pUmcd )
 		}
 	}
 
+	// DAJ_RP: [Vehicles] a recharge stamp from the future -- a pilot's command time can run ahead of the server's,
+	// and the next pilot's, or the empty vehicle's own, is then behind it -- counts from now, so it can never
+	// hold the recharge back for longer than one shieldRechargeMS.
+	if ( pVeh->lastShieldInc > pUmcd->serverTime )
+	{
+		pVeh->lastShieldInc = pUmcd->serverTime;
+	}
+
 	//increment shields for rechargable shields
+	// DAJ_RP: [Vehicles] CantKnockoutShields (OJP's .veh key) lets them recharge from 0 too; without it they stay
+	// down once knocked out, as in the base game.
 	if ( pVeh->m_pVehicleInfo->shieldRechargeMS
-		&& parentPS->stats[STAT_ARMOR] > 0 //still have some shields left
+		&& ( parentPS->stats[STAT_ARMOR] > 0 || pVeh->m_pVehicleInfo->CantKnockoutShields ) //still have some shields left
 		&& parentPS->stats[STAT_ARMOR] < pVeh->m_pVehicleInfo->shields//its below max
 		&& pUmcd->serverTime-pVeh->lastShieldInc >= pVeh->m_pVehicleInfo->shieldRechargeMS )//enough time has passed
 	{
+		// DAJ_RP: [Vehicles] stamp the point, as the weapon and turret ammo above do. The base game never did,
+		// so the time test always passed and the shields went up a point every vehicle update -- every server
+		// frame, or every pilot command -- whatever shieldRechargeMS said. OJP fixes it the same way.
+		pVeh->lastShieldInc = pUmcd->serverTime;
 		parentPS->stats[STAT_ARMOR]++;
 		if ( parentPS->stats[STAT_ARMOR] > pVeh->m_pVehicleInfo->shields )
 		{
@@ -1422,7 +1531,11 @@ static qboolean Update( Vehicle_t *pVeh, const usercmd_t *pUmcd )
 	{
 		gentity_t *psngr;
 		// See if any of these suckers are dead.
-		for ( i = 0; i < pVeh->m_pVehicleInfo->maxPassengers; i++ )
+		// DAJ_RP: [Vehicles] from the last seat down -- a passenger leaving moves those behind him down a seat
+		// (Eject()), which a loop going up would step over -- and without the "m_iNumPassengers--" that stood
+		// after the Eject(): Eject() counts him off itself, so every passenger removed here took one more off
+		// the count, and the passengers past it were left out of everything that goes by the count.
+		for ( i = pVeh->m_pVehicleInfo->maxPassengers - 1; i >= 0; i-- )
 		{
 			psngr = (gentity_t *)pVeh->m_ppPassengers[i];
 
@@ -1430,7 +1543,6 @@ static qboolean Update( Vehicle_t *pVeh, const usercmd_t *pUmcd )
 				(!psngr->inuse || !psngr->client || psngr->health <= 0 || psngr->client->pers.connected != CON_CONNECTED) )
 			{
 				pVeh->m_pVehicleInfo->Eject( pVeh, pVeh->m_ppPassengers[i], qtrue );
-				pVeh->m_iNumPassengers--;
 			}
 		}
 	}
@@ -1820,6 +1932,9 @@ static void AttachRiders( Vehicle_t *pVeh )
 	int i = 0;
 
 	AttachRidersGeneric(pVeh);
+
+	// DAJ_RP: [Cloak Item] the droid unit keeps the vehicle's cloak, every frame (RP_VehicleDroidCloakSync, NPC_AI_Jedi.c)
+	RP_VehicleDroidCloakSync( (gentity_t *)pVeh->m_pParentEntity );
 
 	if (pVeh->m_pPilot)
 	{

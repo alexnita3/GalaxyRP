@@ -111,9 +111,8 @@ static void NPC_CheckAttacker( gentity_t *other, int mod )
 		}
 	}
 
-	//OJKFIXME: clientnum 0
 	//Special case player interactions
-	if ( other == &g_entities[0] )
+	if ( other->s.number < MAX_CLIENTS )
 	{
 		//Account for the skill level to skew the results
 		float	luckThreshold;
@@ -229,17 +228,15 @@ void NPC_ChoosePainAnimation( gentity_t *self, gentity_t *other, vec3_t point, i
 		return;
 	}
 
-	// zyk: guardians resist attack, they just take the damage but will not have pain anim
-	if (self->client->pers.guardian_mode > 0)
-	{
-		return;
-	}
+	// GalaxyRP fix: [Guardian] a "guardians resist attack" pain-immunity guard, gated on
+	// pers.guardian_mode, used to live here. spawn_boss() (its only setter) was deleted as
+	// unreachable dead code, and pers.guardian_mode is being removed along with it, so this
+	// guard is removed too.
 
-	// zyk: Guardian of Map also resist attack and does not have pain anim
-	if (level.guardian_quest > 0 && self->s.number == level.guardian_quest)
-	{
-		return;
-	}
+	// GalaxyRP fix: [Quests] a "Guardian of Map also resists attack" pain-immunity guard, gated on
+	// level.guardian_quest, used to live here. Cmd_GuardianQuest_f (its only setter) was deleted as
+	// unreachable dead code (see the GalaxyRP fix comment in g_cmds.c), and level.guardian_quest has
+	// been removed along with it, so this guard is removed too.
 
 	if ( self->s.weapon == WP_THERMAL && self->client->ps.weaponTime > 0 )
 	{//don't interrupt thermal throwing anim
@@ -268,7 +265,7 @@ void NPC_ChoosePainAnimation( gentity_t *self, gentity_t *other, vec3_t point, i
 			pain_chance = (200.0f-self->health)/100.0f + damage/50.0f;
 		}
 	}
-	else if ( self->client && self->client->playerTeam == NPCTEAM_PLAYER && other && !other->s.number )
+	else if ( self->client && self->client->playerTeam == NPCTEAM_PLAYER && other && other->s.number < MAX_CLIENTS )
 	{//ally shot by player always complains
 		pain_chance = 1.1f;
 	}
@@ -463,7 +460,7 @@ void NPC_Pain(gentity_t *self, gentity_t *attacker, int damage)
 				}
 				return;
 			}
-			else if ( self->NPC && !other->s.number )//should be assumed, but...
+			else if ( self->NPC && other->s.number < MAX_CLIENTS )//should be assumed, but...
 			{//dammit, stop that!
 				if ( self->NPC->charmedTime )
 				{//mindtricked
@@ -496,7 +493,8 @@ void NPC_Pain(gentity_t *self, gentity_t *attacker, int damage)
 					voiceEvent = EV_FFTURN;
 					self->NPC->behaviorState = self->NPC->tempBehavior = self->NPC->defaultBehavior = BS_DEFAULT;
 					other->flags &= ~FL_NOTARGET;
-					//self->svFlags &= ~(SVF_IGNORE_ENEMIES|SVF_ICARUS_FREEZE|SVF_NO_COMBAT_SOUNDS);
+					self->NPC->scriptFlags &= ~SCF_IGNORE_ENEMIES;
+					//self->svFlags &= ~(SVF_ICARUS_FREEZE|SVF_NO_COMBAT_SOUNDS);
 					self->r.svFlags &= ~SVF_ICARUS_FREEZE;
 					G_SetEnemy( self, other );
 					//self->svFlags |= SVF_LOCKEDENEMY; //rwwFIXMEFIXME: proper support for these flags.
@@ -557,10 +555,82 @@ void NPC_Pain(gentity_t *self, gentity_t *attacker, int damage)
 
 /*
 -------------------------
+RP_CorpseGiveKey / RP_CorpseKeyCheck
+
+GalaxyRP: [SP Maps] single player's key pickup from a dead key officer, per client -- see
+RP_GiveSecurityKey(). A corpse is CONTENTS_CORPSE, which a player's movement passes through
+without a touch, so DeadThink() also runs RP_CorpseKeyCheck() to hand the key to any player
+standing over the body.
+-------------------------
+*/
+void RP_CorpseGiveKey( gentity_t *self, gentity_t *other )
+{
+	qboolean	keyTaken;
+	const char	*text;
+
+	if ( !self->message || self->health > 0
+		|| !other || !other->client || other->s.number >= MAX_CLIENTS || other->health <= 0
+		|| other->client->pers.connected != CON_CONNECTED || other->client->sess.sessionTeam == TEAM_SPECTATOR )
+	{
+		return;
+	}
+
+	//give him my key
+	if ( Q_stricmp( "goodie", self->message ) == 0 )
+	{//a goodie key
+		keyTaken = RP_GiveGoodieKey( other );
+		text = keyTaken ? "cp \"Took the goodie key\n\"" : "cp \"Can't carry any more goodie keys\n\"";
+	}
+	else
+	{//a named security key
+		keyTaken = RP_GiveSecurityKey( other, self->message );
+		text = keyTaken ? "cp \"Took the security key\n\"" : "cp \"Already carrying a security key\n\"";
+	}
+	if ( keyTaken )
+	{//remove my key
+		NPC_SetSurfaceOnOff( self, "l_arm_key", 0x00000100 /*TURN_OFF*/ );
+		self->message = NULL;
+		G_Sound( other, CHAN_AUTO, G_SoundIndex( "sound/weapons/key_pkup.wav" ) );
+		trap->SendServerCommand( other->s.number, text );
+	}
+	else if ( self->painDebounceTime < level.time )
+	{//standing on the body asks every frame; say it once in a while
+		self->painDebounceTime = level.time + 2000;
+		trap->SendServerCommand( other->s.number, text );
+	}
+}
+
+void RP_CorpseKeyCheck( gentity_t *self )
+{
+	int			touch[MAX_GENTITIES];
+	int			i, num;
+	vec3_t		mins, maxs;
+
+	if ( !self->message || self->health > 0 )
+	{
+		return;
+	}
+
+	VectorAdd( self->r.currentOrigin, self->r.mins, mins );
+	VectorAdd( self->r.currentOrigin, self->r.maxs, maxs );
+	mins[0] -= 16; mins[1] -= 16; mins[2] -= 8;
+	maxs[0] += 16; maxs[1] += 16; maxs[2] += 24;
+	num = trap->EntitiesInBox( mins, maxs, touch, MAX_GENTITIES );
+
+	for ( i = 0; i < num && self->message; i++ )
+	{
+		if ( touch[i] < MAX_CLIENTS )
+		{
+			RP_CorpseGiveKey( self, &g_entities[touch[i]] );
+		}
+	}
+}
+
+/*
+-------------------------
 NPC_Touch
 -------------------------
 */
-extern qboolean INV_SecurityKeyGive( gentity_t *target, const char *keyname );
 void NPC_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 {
 
@@ -572,52 +642,7 @@ void NPC_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 
 	if ( self->message && self->health <= 0 )
 	{//I am dead and carrying a key
-		//if ( other && player && player->health > 0 && other == player )
-		if (other && other->client && other->s.number < MAX_CLIENTS)
-		{//player touched me
-			/*
-			char *text;
-			qboolean	keyTaken;
-			//give him my key
-			if ( Q_stricmp( "goodie", self->message ) == 0 )
-			{//a goodie key
-				if ( (keyTaken = INV_GoodieKeyGive( other )) == qtrue )
-				{
-					text = "cp @SP_INGAME_TOOK_IMPERIAL_GOODIE_KEY";
-					G_AddEvent( other, EV_ITEM_PICKUP, (FindItemForInventory( INV_GOODIE_KEY )-bg_itemlist) );
-				}
-				else
-				{
-					text = "cp @SP_INGAME_CANT_CARRY_GOODIE_KEY";
-				}
-			}
-			else
-			{//a named security key
-				if ( (keyTaken = INV_SecurityKeyGive( player, self->message )) == qtrue )
-				{
-					text = "cp @SP_INGAME_TOOK_IMPERIAL_SECURITY_KEY";
-					G_AddEvent( other, EV_ITEM_PICKUP, (FindItemForInventory( INV_SECURITY_KEY )-bg_itemlist) );
-				}
-				else
-				{
-					text = "cp @SP_INGAME_CANT_CARRY_SECURITY_KEY";
-				}
-			}
-			*/
-			//rwwFIXMEFIXME: support for goodie/security keys?
-			/*
-			if ( keyTaken )
-			{//remove my key
-				NPC_SetSurfaceOnOff( self, "l_arm_key", 0x00000002 );
-				self->message = NULL;
-				//FIXME: temp pickup sound
-				G_Sound( player, G_SoundIndex( "sound/weapons/key_pkup.wav" ) );
-				//FIXME: need some event to pass to cgame for sound/graphic/message?
-			}
-			//FIXME: temp message
-			trap->SendServerCommand( NULL, text );
-			*/
-		}
+		RP_CorpseGiveKey( self, other );
 	}
 
 	if ( other->client )
@@ -633,7 +658,7 @@ void NPC_Touch(gentity_t *self, gentity_t *other, trace_t *trace)
 			NPCS.NPCInfo->aiFlags |= NPCAI_TOUCHED_GOAL;
 		}
 
-		if( /*!(self->svFlags&SVF_LOCKEDENEMY) && !(self->svFlags&SVF_IGNORE_ENEMIES) &&*/ !(other->flags & FL_NOTARGET) )
+		if( /*!(self->svFlags&SVF_LOCKEDENEMY) &&*/ !(self->NPC->scriptFlags&SCF_IGNORE_ENEMIES) && !(other->flags & FL_NOTARGET) )
 		{
 			if ( self->client->enemyTeam )
 			{//See if we bumped into an enemy
@@ -813,12 +838,9 @@ void NPC_Respond( gentity_t *self, int userNum )
 	case CLASS_JEDI:
 		if ( !self->enemy )
 		{
-			/*
-			if ( !(self->svFlags&SVF_IGNORE_ENEMIES)
+			if ( !(self->NPC->scriptFlags&SCF_IGNORE_ENEMIES)
 				&& (self->NPC->scriptFlags&SCF_LOOK_FOR_ENEMIES)
-				&& self->client->enemyTeam == TEAM_ENEMY )
-				*/
-			if (0) //rwwFIXMEFIXME: support flags!
+				&& self->client->enemyTeam == NPCTEAM_ENEMY )
 			{
 				event = Q_irand( EV_ANGER1, EV_ANGER3 );
 			}
@@ -1039,6 +1061,14 @@ void NPC_Use( gentity_t *self, gentity_t *other, gentity_t *activator )
 {
 	if (self->client->ps.pm_type == PM_DEAD)
 	{//or just remove ->pain in player_die?
+		return;
+	}
+
+	// DAJ_RP: [NPC System] a frozen NPC ignores being used, by a player's Use key or a map trigger alike: no
+	// ambush drop, no spoken response, and its usescript is not run (not kept for later either). Vehicles are
+	// never frozen. See RP_NpcFreeze() (NPC_spawn.c).
+	if ( RP_NpcIsFrozen( self ) )
+	{
 		return;
 	}
 

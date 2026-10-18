@@ -195,37 +195,22 @@ void Sentry_Fire (void)
 
 	G_PlayEffectID( G_EffectIndex("bryar/muzzle_flash"), muzzle, forward );
 
-	// zyk: added this condition for guardian of wind
-	if (Q_stricmp(NPCS.NPC->NPC_type, "guardian_boss_7") == 0)
-	{
-		missile = CreateMissile( muzzle, forward, 5000, 10000, NPCS.NPC, qfalse );
+	// GalaxyRP fix: [Quests] a guardian_boss_7 branch used to sit in front of this, firing the same
+	// shot at velocity 5000 for 80 damage instead of 3000 for 30. That NPC type went with the
+	// zyk_quest_*.npc asset files and can no longer be spawned, so only the normal path remains --
+	// the two bodies were otherwise identical.
+	missile = CreateMissile( muzzle, forward, 3000, 10000, NPCS.NPC, qfalse ); // zyk: changed velocity. Default 1600
 
-		missile->classname = "bryar_proj";
-		missile->s.weapon = WP_BRYAR_PISTOL;
+	missile->classname = "bryar_proj";
+	missile->s.weapon = WP_BRYAR_PISTOL;
 
-		missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-		missile->methodOfDeath = MOD_BRYAR_PISTOL;
-		missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
+	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
+	missile->methodOfDeath = MOD_BRYAR_PISTOL;
+	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
 
-		NPCS.NPCInfo->burstCount++;
-		NPCS.NPC->attackDebounceTime = level.time + 150;
-		missile->damage = 80;
-	}
-	else
-	{
-		missile = CreateMissile( muzzle, forward, 3000, 10000, NPCS.NPC, qfalse ); // zyk: changed velocity. Default 1600
-
-		missile->classname = "bryar_proj";
-		missile->s.weapon = WP_BRYAR_PISTOL;
-
-		missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-		missile->methodOfDeath = MOD_BRYAR_PISTOL;
-		missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
-
-		NPCS.NPCInfo->burstCount++;
-		NPCS.NPC->attackDebounceTime = level.time + 150; // zyk: default 50
-		missile->damage = 30; // zyk: default 5
-	}
+	NPCS.NPCInfo->burstCount++;
+	NPCS.NPC->attackDebounceTime = level.time + 150; // zyk: default 50
+	missile->damage = 30; // zyk: default 5
 }
 
 /*

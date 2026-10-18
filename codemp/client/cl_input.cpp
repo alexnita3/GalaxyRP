@@ -353,6 +353,13 @@ void IN_GenCMD31( void )
 	cl.gcmdValue = GENCMD_GLOAT;
 }
 
+// GalaxyRP fix: [Cloak Item] IN_GenCMD32/"use_cloak_vehicle" (GENCMD_USE_CLOAK_VEHICLE) removed --
+// this file isn't part of what actually ships (this project runs on a separately-distributed TaystJK
+// engine binary, not one built from this tree), so this key never reached any real client, and the
+// gamecode side (g_active.c's old GENCMD_USE_CLOAK_VEHICLE case) was consequently unreachable too.
+// Vehicle-cloak is now the "/vehicle_cloak" console command instead (Cmd_VehicleCloak_f in
+// g_cmds.c), which needs no engine-side command or keybind at all -- see that function's own doc
+// comment for the full explanation.
 
 //toggle automap view mode
 static bool g_clAutoMapMode = false;

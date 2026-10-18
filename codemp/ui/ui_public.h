@@ -224,7 +224,14 @@ typedef enum uiExportLegacy_e {
 	UI_CONSOLE_COMMAND,
 	UI_DRAW_CONNECT_SCREEN,
 	UI_HASUNIQUECDKEY,
-	UI_MENU_RESET
+	UI_MENU_RESET,
+	// GalaxyRP fix: [TaystJK] added so this header's uiExportLegacy_t numbering matches
+	// TaystJK's -- these opcode values are only used by the legacy vmMain/syscall path,
+	// explicitly pinned to 1000+ (same as TaystJK) so they can never collide with any
+	// value assigned above, whether or not this enum grows further upstream.
+	UI_POST_CONNECT = 1000,
+	UI_CVAR_HELP,
+	UI_CMD_HELP
 } uiExportLegacy_t;
 
 typedef struct uiImport_s {
@@ -390,6 +397,14 @@ typedef struct uiExport_s {
 	qboolean	(*ConsoleCommand)		( int realTime );
 	void		(*DrawConnectScreen)	( qboolean overlay );
 	void		(*MenuReset)			( void );
+	// GalaxyRP fix: [TaystJK] TaystJK's own uiExport_t has this trailing field. Without it,
+	// a TaystJK-built engine (compiled against ITS OWN, longer uiExport_t) reads past the end
+	// of this module's smaller static uiExport_t object when it accesses ->CvarHelp (reached
+	// from ordinary console cvar autocomplete/help text -- see Cvar_DescriptionString()/
+	// Cmd_DescriptionString() on the engine side) -- an out-of-bounds read that can crash or,
+	// worse, call whatever garbage bytes happen to follow as a function pointer. Must stay
+	// last in the struct and match TaystJK's field order exactly.
+	void		(*CvarHelp)				( const char *cvarName, qboolean enter, char *helpBuffer, size_t helpBufferSize );
 } uiExport_t;
 
 //linking of ui library

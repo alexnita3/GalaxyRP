@@ -108,6 +108,12 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 		#define idx64
 		#define ARCH_STRING "x86_64"
 		#define Q3_LITTLE_ENDIAN
+	#elif defined(__arm64__)
+		// GalaxyRP fix: [TaystJK multi-arch] Apple Silicon (arm64) branch was missing entirely --
+		// without it, ARCH_STRING stays undefined on macOS ARM64 and the #error a few dozen lines
+		// down ("Architecture not supported") hard-fails the build. Matches TaystJK.
+		#define ARCH_STRING "arm64"
+		#define Q3_LITTLE_ENDIAN
 	#endif
 
     #define DLL_EXT ".dylib"

@@ -1,140 +1,187 @@
-# Version 3.3
-Version 3.3 is here! _Everything is saved now?_
+# Changelog. Galaxy RP
 
-- Added 31 new animations to use with /emote
-- Everything will now save in a database, no more fiddling with text files
-- Added /resetpassword
-- Model and nicknames will now be saved and loaded per character from the database. (Once you change it make sure to /logout for it to save!)
-- Both /anim and /emote work the same now
-- Both /inv and /inventory work the same now
-- Added /scale help which displays the ig scale compared to real life measurements
-- Removed golden aura when dueling
-- When dueling, other players will not be visible anymore
-- /emote list is now more ordered, with categories in which the animations are sorted
-- Tavion and Desann (Purple and Green styles) are now properly balanced
-- Added autoWalk
 
-FOR PLAYERS: To bind an autowalk button do the following in your console:
 
-`seta autoWalkOn "+forward;bind key vstr autoWalkOff"`\
-`seta autoWalkOff "-forward;bind key vstr autoWalkOn"`\
-`bind key vstr autoWalkOn`\
-Replace "key" with your desired button.
+## [3.8.5]
 
-FOR ADMINS: Delete the existing GalaxyRP folder from the server, it contains unused folders. (don't forget to back up). It comes with a default account of user: `admin` pass: `admin`. So don't forget to /resetpassword.
+All changes below are relative to the last stable GalaxyRP release (3.7.2) this fork started from.
 
-Special thanks to JustJordyn, RepJunkie, TriForce and ZelZel for helping out with stuff I had no knowledge about!
+### Added
+- New `/settings 3` command, "Activate Saber on Spawn": defaults ON (spawn with the blade already lit, the existing behavior), OFF spawns with the saber selected but not ignited.
+- New `/settings 1` "Sense Health Toggle" (requires the Sense Health skill, OFF for new accounts): shows or hides the Sense Health readout. The readout now reports whoever is under your crosshair (else the nearest within 256 units) in small text under the crosshair instead of a centre-print.
+- New `/settings 5` "Ignore Chat Distance" (requires the matching admin power, OFF for new accounts): ON hears range-limited chat -- ordinary chat, the RP chat modifiers, `/roll` and `/flipcoin` -- from anywhere on the map; OFF hears it by distance like everyone else.
+- New `/settings 6` "Entity Bounds" (requires the Entities and Remaps admin power; OFF for new accounts, ON for existing admins with it): draws the box of the entity you aim at, colour-coded by kind with its id and classname, and marks nearby point entities such as spawn points and targets. Only you see it.
+- New Entity System commands: `/entcopy` and `/entcut` pick up a copy of the entity you aim at (or give an id) or the entity itself, and the same command again drops it on the surface you aim at, with a live preview while held; `/entrotate` turns what you hold or the entity you aim at; `/entcancel` lets go. `/entaddaim` is `/entadd` placing the entity on the surface you aim at, across the map and through players and NPCs, with an optional `aimoffset` to set it out from that surface. The map's own entities (marked `M` in `/entlist`) and brush entities can be copied but not cut or rotated. `/entslots` shows how full the map's model, effect and sound slots are.
+- New `/entuse <name>`: uses every entity with that targetname, as a trigger or button would (spawners, lights, effects, doors); NPCs and vehicles are left alone.
+- NPC and vehicle spawners: `npc_spawner` and `NPC_Vehicle` keys `spawnnow 1` (spawn one at once, not counted) and `respawn 1` (fire again when one it made dies). `/entundo` of a spawner also removes the NPCs and vehicles it made.
+- Native TaystJK engine support: builds and runs directly on TaystJK (EternalJK's modern successor) instead of OpenJK, with the old EternalJK/JAPro detection and "switch to OpenJK" warning removed.
+- Multi-platform CI and build support: Windows (x86/x86_64), Linux (x86/x86_64/arm64), and macOS (x86_64/Apple Silicon), including a missing arm64 branch in the platform-detection headers and updated bundled SDL2 (2.0.12 -> 2.32.4).
+- RGB lightsaber colors, persisted per character. Shaders and textures are courtesy of JAPro/TaystJK.
+- `rp_loginRequired` cvar: optionally forces any player who isn't logged into an account to stay in Spectator.
+- `/admmap <gametype> <map>` admin command to change map and gametype together, gated by a repurposed admin bit.
+- `/admweather` admin command, gated by a new "Weather" admin bit: sets the weather for everyone on the server, stacking up to 8 effects at once, with `/admweather default` to put back the weather the map was built with and `/admweather clear` to switch it all off. It reuses a fixed block of effect slots instead of spending a new one on every change, so the weather can be changed freely without running the map out of them, and players who were already connected see the same sky as players who join later.
+- `/training <on|off>` command: turns a near-zero-damage training saber mode on or off. This one is courtesy of Alex.
+- Client-side sync commands (`supdatemodel`, `supdatename`, `supdatesaber`): push server-corrected model/name/saber values back to the client's own cvars so the console and menus no longer show stale values after a database-driven login, character switch, or rejected saber choice.
+- `/list commands` output rewritten to reflect the current command list, including several commands that existed but were undocumented.
+- `/updatesaber` and `/updateforce` commands: apply lightsaber pick or force power (logged-out players only) pick instantly without needing to respawn first.
+- Armor skill now gives a chance to deflect an incoming blaster shot.
+- `/adminup`, `/admindown`, and the credit commands (`/spendcredits`, `/createcredits`, `/givecredits`) now write an audit-log entry recording who did what to whom.
+- `/roll <dice>d<faces>` dice notation (up to 10 dice, 2-100 faces), plus `/rollall` and `/flipcoinall` to send a roll or flip to the whole server.
+- `rp_dice_roll_cooldown` cvar (default 3000 ms): shared cooldown for `/roll`, `/rollall`, `/flipcoin` and `/flipcoinall`.
+- Use hint: the hand icon now appears whenever the Use key would actually do something — both for directly usable entities (consoles, power converters, emplaced guns, use-flagged movers) and for the USE_BUTTON triggers that operate most map doors and lifts. Toggle with `/settings 4`.
+- `/ooc` command: out-of-character chat that works in every gametype. Previously OOC was only reachable through `/say_team` in a non-team gametype and with no allies, so most players had no route to it at all.
+- `/unparalyze` admin command, split out of `/paralyze` (which used to toggle).
+- `/list chat`: the first documentation the 34 RP chat modifiers have ever had. `/list commands` also gains an NPC System section.
+- New listings of what the server has: `/list models`, `/list effects`, `/list sounds` and `/list music` (browse a folder with `/list models <folder>`), `/list maps`, `/list npcs` and `/list vehicles`, a page at a time. `/maplist` now lists only the maps you can vote for in the current gametype.
+- `rp_seamlesslogin` cvar (default 1): `/login`, `/new`, `/char new`, `/char use` and `/logout` take effect in place instead of killing and respawning the player; set it to 0 to force the respawn on every one of them, as the mod always did. A player in a private duel or a live Duel Tournament match is refused all five commands outright at either setting, so a mid-fight character swap is not possible.
+- `/npc kill <name>` now kills a single NPC by the name it was spawned with, while `/npc kill <type>` still clears every NPC of that type, and `/npc team` and `/npc kill team` accept either spelling of a team name. New `/npc killaim` kills the NPC or vehicle in your crosshair (not one with a player aboard). `/npc kill` now tells the admin what it killed.
+- `/engage_fullforceduel` command: a Force duel, a private duel with Force powers, alongside the ordinary saber one (`/engage_duel`). Both players must ask for this kind before it starts, force powers only work on your own opponent, and the challenge and acceptance messages say which kind of duel is on offer. Gated by `rp_allow_force_duel` (default 1), with `g_forceDuelForceRegenTime` and `g_saberDuelForceRegenTime` (both default 200) to tune force regeneration inside each kind of duel — the shipped server config sets both to 60 to match its own `g_forceRegenTime`. Adapted from TaystJK. `/list commands` documents both duel commands under Misc, where neither had appeared before.
+- Grappling hook, ported from TaystJK (JA+/JAPro's hook): bind a key to `+grapple` (or `+button12`), hold it to fire and be pulled to wherever the hook lands -- walls, ceilings, other players -- and let go to release; crouching pauses the pull. It is a one-level "Grapple Hook" skill in the Items category (skill 56, in the slot the old Improvements placeholder held). Two server cvars: `rp_allow_grapple_hook` (0 nobody, 1 logged-out players and skill holders, 2 skill holders only -- the default) and `g_allowGrapple` (1 swing, 2 JA+ winch -- the default; anything else is put back to 2). TaystJK's `g_hookSpeed`, `g_hookStrength`, `g_hookStrength1`, `g_hookStrength2`, `g_hookInheritance` and `g_hookFloodProtect` are honoured with its defaults. The client predicts the pull, so it is smooth on this mod's own cgame; the server also advertises the feature to TaystJK clients (`taystJKinfo`), whose current builds fire and are pulled but do not yet draw the rope or predict the pull on a server they do not recognise as JA+/JAPro. Requires the updated client files (cgame and the grapple assets).
+- Logical entities, ported from TaystJK (originally Jedi Knight Galaxies): entities that never need to reach a client -- spawn points, `target_*` relays, `info_*` markers, NPC spawners, path corners, waypoints, `zyk_weather`, `fx_rain`/`fx_snow`/`fx_wind` and the like -- now live in a second region of 3072 slots above the 1024 the engine and the network know about, so they no longer compete with players, NPCs, projectiles, pickups, models and movers for the networked table. `rcon entityinfo` reports both regions. The Entity System commands cover both: `/entlist` marks logical ids (from 1024 up) with an `L`, `/entedit`, `/entremove`, `/entsave`, `/entload` and `/entnear` accept and walk them, and an `/entedit` that would move an entity between regions is refused. A `nological 1` key on an entity keeps it networked; any entity with a `script_targetname` or an ICARUS script key is networked automatically. `rp_logical_entities` (default 1, latched, takes effect at the next map) switches the feature off. No client, engine, asset or protocol change; a base or TaystJK client sees exactly the same game.
+- TaystJK write folder: the TaystJK client defaults `fs_forcegame` to `taystjk`, which sends everything the client writes -- config, screenshots, demos, downloaded pk3s -- to `taystjk/` instead of the mod folder, and the launchers work around it with `+set fs_forcegame GalaxyRP`. The client modules now do the same for a player who joined without the launcher: when `fs_forcegame` is still the engine default, cgame/ui set it to the mod folder, and the engine uses that from the next map or reconnect. A value the player or a launcher chose is never touched. It lasts for the client session, so a player who then plays another mod on the same TaystJK install writes to this folder instead of `taystjk/`; `rp_taystjk_writefolder 0` (archived) turns it off.
+- `/admghost`, `/admholo`, `/admwalkthrough` and `/admhidden` admin commands, gated by a new "Player effects" admin bit: turn yourself or a named player into a Force ghost, a hologram, just walk-through, or hidden, so players and NPCs walk through them while they can still be hit and targeted as usual. A hidden player is not drawn for anyone else, on any client, much like a Mind Trick on everyone (Force Sight still sees them), and their corpse and severed limbs are not shown either. Ghosts, holograms and hidden players are kept off the radar (so is a player Mind Tricking you), and ghosts and holograms keep their look on severed limbs and corpses; each command toggles, and the four are mutually exclusive.
+- `/npc effect <holo|ghost|walkthrough|clear>`: gives the NPC in your crosshair the same hologram, Force ghost or walk-through effect, which stays until `/npc effect clear`. `clear` also makes an NPC that the map spawned non-solid solid again.
+- `/npc freeze`: freezes the NPC in your crosshair in place, or unfreezes it. A frozen NPC does not move, attack or defend itself and its scripts pause, but it can still be pushed, hurt and killed. NPC spawners take `npcfreeze 1` to spawn their NPCs frozen, also offered as Frozen in the Extras Spawners menu.
+- **Locks**: doors, lifts, buttons, triggers and other entities can be locked to a list of accounts with `/entlockset`, `/entlockadd`, `/entlockremove` and `/entlocklist`, kept per map. A locked entity lets through only logged-in players on its list; NPCs never pass, while `/entuse`, the new `/enttrigger <id>` and the upgraded Stun Baton always do.
+- **Extras** in the Galaxy RP menu (logged-in players): Props, Effects, NPCs & Vehicles, Music and Sounds menus list what the server has and spawn or play your pick, with a 3D preview for props and an in-menu preview for effects. Lights makes a light a trigger can switch on and off, and Spawners a named NPC or vehicle spawner (count, delay, respawn and more); Props, Effects, Lights and Spawners place it on the surface you aim at, with an Offset slider. The server still decides who may use each command. Requires the updated client files.
+- Single Player map support has been expanded with fixes from OJP and well newly added support to play Jedi Outcast SP Maps in Jedi Academy.
+- `misc_model_ghoul`: single player's Ghoul2 (.glm) prop, ported and extended: any .glm model, a `skin` key, animation frames (`startframe`/`endframe`, looped with spawnflag 2), a light, SOLID, and show/hide by its targetname. The SP maps' props of this class now appear when the server has their model files; custom skins need the updated client files.
+- `misc_model_cargo_small`: single player's small cargo crate, a breakable that only heavy weapons hurt and that drops a medpack, shield or bacta when destroyed. Restores the crates on kejim_base and kejim_post.
+- `/enthelp`: in-game help for every entity class -- what it does, its keys and spawnflags, and an `/entadd` example -- for the entity you aim at, an entity id, a class name or part of one. `/enthelp list` lists every class.
+- New server cvars have been added for more control over item respawn and despawn rates.
+- Reward system (XP and credits) for defeating NPCs, set per NPC spawner with `npccredits` and `npcxp`. XP beyond a level now carries over to the next one, also for `/givexp`.
+- Lightsaber holstering: a player or NPC carrying a lightsaber wears its hilt on the thigh while another weapon is out (a second saber on the other thigh); swords, vibroblades, electrostaffs, props and wrist weapons are hidden instead. Players can turn it off with `cg_holsteredSabers 0`. Server admins can keep a specific saber from being holstered by adding `noHolster 1` to its .sab entry.
+- NPC and vehicle size: NPC and vehicle spawners take `npcscale` (20-500 percent), also in the Extras Spawners menu. A scaled vehicle stands on the ground, and its riders, droid and weapon fire go with it.
+- Tavion and Desann saber styles have stances of their own instead of borrowing Fast's and Medium's.
+- More .sab keys, from TaystJK: `customRGB`, `customBladeShader`/`customGlowShader` and a plain `idleAnim`. A plain `readyAnim` or `kataMove` now applies to every style without its own key, as in the base game.
+- Vehicles honour OJP's `CantKnockoutShields` .veh key, so their shields recharge from empty.
 
-# Version 3.2
-Version 3.2 is here! _Let me check my inventory..._
+### Changed
+- **Private duels are saber duels again**: the vanilla force restriction was commented out in this fork, making a private duel the only one in the JKA family with no restriction at all. It is back for `/engage_duel` -- only Saber Offense, Saber Defense, Jump and Push-while-locked -- and a duel is once more sealed off from the rest of the map, so a duellist can no longer Grip, Mind Trick or Push a bystander and a bystander can no longer do the same back. Use `/engage_fullforceduel` for the old behaviour.
+- `/roll` and `/flipcoin` are now distance-scoped like `/me` instead of being broadcast to the whole server, and require being alive; spectators and dead players use `/rollall` and `/flipcoinall`.
+- Default admin account's `AdminLevel` is now `-1` (all bits) instead of a hardcoded bitmask, so it automatically gains any admin command added in the future.
+- The server is now always treated as being in RP Mode: the `zyk_rp_mode` cvar and the mode-switching `/mode`-style dead code tied to it were removed, along with several other unused quest/RPG cvars.
+- Command usage messages made consistent with their actual names (`/new`, `/spendcredits`, `/newsadd`, `/helpup`, etc., which had drifted from earlier renames).
+- Saber color slider dragging now snaps to whole numbers instead of floats.
+- Distributable packaging: the mod's game/cgame/ui modules now install only into their own `GalaxyRP` folder, matching how GalaxyRP is actually distributed.
+- CI build artifacts now zip with a top-level `GalaxyRP` folder wrapping their contents.
+- Refactored `/buy` and `/stuff` into clean `/buy item <n>` / `/buy upgrade <n>` subcommands (and `/stuff` equivalents).
+- Removed a lot of of the legacy per-class RPG content.
+- `/settings` command cut down to Admin Protect (now `/settings 2`); Language (its only use was the removed RPG tutorial) and the other 5 toggles (Allow Force Powers from allies, Starting Single Saber Style, Allow Screen Message, Use healing force only at allied players, Start With Saber) are gone, and the gameplay ones now always behave the way they used to by default. The freed slots hold new toggles, so the command now lists 1-6: Sense Health Toggle, Admin Protect, Activate Saber on Spawn, Use Hint, Ignore Chat Distance and Entity Bounds (the new ones are under Added above).
+- A new account now defaults to Admin Protect OFF instead of ON (the previous, unintentional default -- a fresh account has no admin permissions to protect, so there was nothing to gain from starting protected). Turning Admin Protect on for yourself via `/settings 2` now also requires the "Admin Protect" admin command.
+- Jetpack: unified the `/jetpack` command's and the RPG auto-grant's availability checks, added a logged-in-only tier to `rp_allow_jetpack_command`.
+- A logged-in player can now pick up either Force Enlightenment color regardless of their current alignment.
+- Redesigned parts of the UI/UX streamlining the user flow.
+- Cloak system is redesigned: /use_cloak and /vehicle_cloak commands are used to trigger self-cloak and vehicle-cloak respectively.
+- The in-game saber menu's Apply button now instantly applies a hilt/type change.
+- **Force pool**: the ceiling for a logged-in character is hardcoded to 250. Logged-out players are capped at 100 separately.
+- **Force power rebalance at levels 4 and 5**, which several powers never actually reached: Saber Defense 4/5 could not autoblock at all, Push and Pull lost their knockdown and disarm, Mind Trick did nothing to NPCs, and Absorb 5, Protect 5 and Rage 4/5 were downgrades from the level below. Team Heal and Team Energize paid out their level-1 amount with fewer than three allies. Force Drain gained a level-2 cooldown (the curve is now 3000/2000/1500/1000/0 ms), and Absorb now mitigates Drain 4 and 5. Force Jump 4 and 5 no longer mispredict on the client.
+- Logged-out players also no longer regenerate up to an RPG character's health and shield caps.
+- DEMP2's alternate fire now requires DEMP2 skill level 2, like every other ranged weapon's alt fire and like its own description always claimed.
+- Melee is now the same for everyone: logged-out players get the full kick and grapple set instead of a stripped-down version, and `g_debugMelee` is pinned on. The Melee skill's description now says what the skill actually does (more damage per level) rather than describing the moves.
+- `/ignore` now also covers the RP chat modifiers (`/me`, `/do`, `/my`, `/shout`, the languages, and the rest), `/roll` and `/flipcoin`.
+- Spectators now hear ordinary chat at any range, matching every other chat type.
+- **Downed system**: a downed player can no longer use force powers or holdable items, cannot be Force Gripped back to their feet, and stays downed across a respawn or a turn in spectator. `/paralyze` now has a real duration instead of a countdown stuck at zero. `rp_downed_timer` is now limited to 30-100 seconds and takes effect on the next map, a knockdown leaves 30 health instead of 50, and `rp_downed_invulnerability_timer` is capped at 30. Setting `rp_downed_timer` to 0 disables the downed system entirely -- a lethal hit kills outright, as it did before the system existed. Admin `/paralyze` keeps its own 30-900 second range either way.
+- `/god`, `/killother` and `/notarget` now require being logged in, and `/notarget` is behind the God Mode admin command instead of having no gate at all.
+- Removed three more unused cvars: `zyk_allow_adm_in_other_gametypes` (never fired at its own default), `zyk_enable_magic_sense` and `zyk_magic_sense_mp_cost`.
+- `/order` no longer accepts NPC classes whose AI ignores orders (Wampa, Remote, vehicles), where an order changed nothing but quietly turned the NPC on its own side.
+- The ranged weapon and Stun Baton Upgrade skill descriptions were rewritten for accuracy.
+- `/allychat` and `/ooc` work during intermission, like the other say modes.
+- The shipped server config (`assets/server/galaxyrp_server.cfg`) was reorganised by category with a one-line description on every cvar, one `set` form throughout and every value quoted. Several values were wrong and are corrected: `sv_timeout` was 3000 *seconds*, holding a crashed client's slot for 50 minutes, `sv_maxRate` and `g_userinfoValidate` had drifted off their defaults, and the weapon-mask examples were miscalculated.
+- `rp_sp_npc_fix` is documented as what it actually does -- stripping the SP story cast, droids, merchants and creatures out of SP maps -- rather than the two engine limits it was originally written against, neither of which still exists. Its map list gains `academy1`-`academy6`, the hub maps most likely to host RP, and the shipped config sets it to 0 to match its default.
+- `rp_starting_shield`'s upper bound drops from 200 to 100. It only ever reaches logged-out players, whose shield pickups refuse anything above 100, so a higher value was a one-shot bonus that no pickup could ever refill.
+- Radar HUD can now be turned on in FFA mode for logged-in players. Cloaked players and vehicles are hidden on the radar.
+- **Entity System**: `/entedit` and `/entremove` now only touch entities from the map or the entity system; ones the game created (saber entities, door triggers, NPCs, dropped items) are refused and marked `G` in `/entlist`. Without an id they act on the entity you aim at. The map's own entities (`M`) are left alone, except its pickups, dispensers and decor nothing links to (`E`). Spawn points cannot be removed, `/entedit` cannot change a classname, and removing or editing a door or platform takes its trigger with it. A `misc_bsp` brings its sub-BSP's entities along when added, edited, removed, saved or loaded, and `/entload` no longer deletes what players are holding.
+- `/entadd` now places the entity at the origin given, else at the `/entorigin` position, else where you stand (aiming is `/entaddaim`'s job), and warns when a solid entity is built around someone.
+- `/entadd` and `/entaddaim` refuse an NPC or vehicle spawner without a `targetname`, or with an NPC or vehicle type the server does not have; `/npc spawn` is the way to spawn a single NPC now.
+- The Entity System admin power is renamed **Entities and Remaps**, and `/entitysystem` is now `/entitiesandremaps`, its help split into Entity System and Shader Remaps sections.
+- The blue Force hint shows on anything Push or Pull can move, whatever weapon is out (it used to need the saber), and Push and Pull now reach the invisible push/pull brushes some maps use.
+- An item that lands in a no-drop area goes back to where it came from instead of disappearing.
+- Melee Battle fighters, like Duel Tournament duellists, cannot pick up items while fighting.
+- `/give force` gives every power at level 3, Saber Attack included (it was 5).
 
-- Added /mylow, /myall, /mylong, /my chat modifiers.
-- Added a brand new inventory system, with custom items that can be created (/createitem), deleted (/trashitem), and passed around between players (/giveitem).
-- Added a brand new description system for characters. Players can now set their own character descriptions (/attributes), which can be seen by other players (/examine).
-- Added six more admin permissions that allow the use of their respective commands. (fully backwards compatible)
-- Added /flipcoin command.
-- Fixed a chat bug where text in the middle of the string would be interpreted as a command. (e.g. "I know /all/ the cool places." would be interpreted as /all. Not anymore!)
-- Fixed dueling always starting people at 100 hp 100 shield.
+### Fixed
+- **Dice rolls**: `/roll` could produce a non-uniform result and, on a Windows build, silently capped any roll above 32767; `/roll 2147483647` was undefined behavior. Rolls are now drawn with a bias-free rejection sample and bounded to 100 faces.
+- **Account/character persistence**: database access now goes through a shared open helper that enables SQLite WAL mode and a busy-retry timeout, fixing intermittent "database is locked" errors on map change that could leave a returning player with no weapons or inventory until a manual respawn. The database path is also now resolved against the engine's home path instead of the process's working directory, so it no longer depends on how the server was launched.
+- **Saber persistence**: a saved dual/staff saber configuration was being silently discarded and replaced with a single saber on every login or character load, due to a counting bug in the database-load path; fixed so dual/staff sabers round-trip correctly.
+- **Saber switching**: a logged-in player's saber choice made through the UI was never detected as changed (the client's live selection was unconditionally overwritten by the database value on every spawn), leaving the saber selection menu stuck; the database read is now scoped to first spawn only.
+- Model, name, and saber changes made via the client console or menu could silently revert or fail to reflect on the client's own screen for logged-in players, since server-side corrections never reached the client's local cvars — fixed via the new sync commands above.
+- First spawn after a map change used blank skill/inventory data because the account/character reload happened after starting equipment was already granted; reload now happens first.
+- Force Sense played no activation sound at all (the sound calls were left commented out).
+- Upgrading Absorb/Protect/Lightning to skill level 4 or 5 could make Force Lightning render as Force Drain until the next respawn, due to a missing cap that the database-load path already applied; the immediate skill-up/down path now applies the same cap.
+- A UI listbox click on an empty row past the last real item could select an out-of-range index, and the staff-saber hilt list was validated against the wrong array; both fixed.
+- A vehicle's model scale could reset to default for its own rider (though not for observers) due to a field not carried over in client-side prediction.
+- A copy-paste bug in the saber-columns database migration compared against the wrong error string, printing a spurious SQL error and skipping the rest of table initialization (including admin account setup) on every server restart after the first.
+- A cosmetic string-mismatch bug where `/players` could show a fully-admin account as "(logged)" instead of "(admin)".
+- `Accounts.PlayerSettings` (the `/settings` bitmask) was hardcoded to `0` on every save instead of being bound, so every `/settings` toggle was silently reset to off on the very next save and came back off on the player's next login; it's now actually persisted.
+- Ammo counts on character load were reading the wrong database columns (an enum/schema-offset mismatch that grew worse as the Skills table gained columns over time), so ammo restored on relogin or character switch could be wrong.
+- A stack buffer overflow in `create_new_character()`: its query buffer was sized before the Armor/Flamethrower/ShieldRegen/HealthRegen skill columns existed, so the SQL text it holds was being silently truncated with no NUL terminator, in practice causing `/char new` to run garbage SQL and fail to create the new character's Skills/Weapons rows.
+- **Character/account persistence**: neither a map change nor a player disconnecting (quit, timeout, kick/ban) ever explicitly saved a logged-in player's progress, so the next login silently discarded any credits, skill points, XP, saber colors, or settings changes made since the last incidental save. Both paths, and `/char use`/`/char new`/`/char remove` switching character, now save first.
+- The 3 kept shop upgrades (Holdable Items, Impact Reducer, Stun Baton) now persist correctly: their state was moved off a field that was never written to the database onto one that is.
+- `/levelup`, `/leveldown`, and `/scale` (when targeting another player) were saving the admin's own database row instead of the target's, so the change applied live but silently reverted on the target's next login or logout.
+- Downgrading a weapon-granting skill to 0 now immediately switches a player away from that weapon if they're actively holding it, instead of leaving it usable until they switch weapons themselves.
+- The Heal and Force Field skills now take effect immediately on `/skillup`/`/skilldown` instead of only on the player's next respawn (a zero-value table collision had been masking the immediate-apply path).
+- Downgrading Max Shield or Max Force Power now clamps the player's current shield/force pool down to the new cap immediately, instead of leaving it above the cap until spent in combat.
+- `/skillup`, `/skilldown`, `/levelup`, and `/leveldown` now reject a zero or negative count instead of silently doing nothing while still reporting success.
+- `player_statuses` bitfield is now reset on login and character switch instead of carrying stale flags over.
+- `/login`, `/new`, and `/char use` now apply the new character's force powers and weapons immediately and synchronously, instead of relying entirely on the deferred kill/respawn cycle, which silently never applied them at all for a paralyzed or mid-duel player.
+- `/logout` now actually clears the player's weapon list, instead of leaving any RPG-unlocked weapon equipped after logging out.
+- `/killother` now shares admin permission with `/admkick` instead of requiring the much broader Give Admin permission with no entry of its own; `/teleport`'s Admin Protect check can now be bypassed against yourself like `/give`/`/scale` already could; `/telemark` now requires the same permission `/teleport` does.
+- `/adminlist show <player>` and its numeric command-help lookup now report clear errors instead of misparsing a missing player name or silently failing on an out-of-range command number.
+- `/char` now prints a proper usage message for a malformed invocation, no longer leaks its database handle, refreshes the client's character list after a removal, and reports clearly when a target character doesn't exist or is already active, instead of silently doing nothing on any of these.
+- `/giveitem` now rejects a connected-but-not-logged-in target instead of orphaning the item permanently; `/createitem` now only logs a creation when the insert actually succeeded.
+- `/news`/`/newsremove`/`/newsadd` no longer accept a negative count, news ID 0, or a blank channel/text; `/newschannels` now groups channel names case-insensitively, matching `/news` itself.
+- `/emote` fixes: worded emote names now match case-insensitively, animation ID 0 is now playable, the duration argument is no longer ignored in favor of a hardcoded value, and a missing `break` that made the Force-sensitive back-flip get-up animation unreachable is fixed.
+- `/helpup`'s revive-range check was unreachable, so it had no range requirement at all; the intended ~65-unit range is now actually enforced.
+- Several timer/cooldown cvars are now clamped instead of being read unchecked. `rp_screen_message_timer` and the flamethrower cooldown (`rp_flame_thrower_cooldown`) reject a negative value, which in the flamethrower's case pushed its cooldown deadline into the past and let the weapon re-fire on effectively every server frame. The maplist/dueltable page size (`rp_list_cmds_results_per_page`) takes a minimum of 1, since 0 there printed a blank page for every page number instead of an error. The two downed-system timers have real ranges of their own -- see the Downed system entry above.
+- The 3 credit commands now validate their arguments consistently, and `/createcredits` no longer reports success against a target who isn't actually logged in while silently discarding the credited amount.
+- A stale mouse-cursor focus in the menu system could silently swallow a click if the cursor hadn't moved since the last mouse-move event; clicks now always re-check what's actually under the cursor.
+- Force Drain's visual effect no longer fails to show at skill levels 1-2.
+- Fixed multiple code syntax errors that could potentially crash the server.
+- The new-player tutorial message system could crash the server on a literal `%` in a language text file, and could read out of bounds on an empty one; both fixed.
+- The client now warns in its console if the RP menu data it receives from the server has a different number of fields than expected, instead of silently misaligning the menu's data if the two ever drift out of sync again (as happened once before).
+- `/new` used to mark the session as fully logged in *before* actually creating the account/character/skills/weapons database rows behind it, with none of those inserts' success checked; a failure partway through (a DB error, or a duplicate-username race, see Security below) left the player told they were "successfully created and logged in" while some or all of their account data silently didn't exist. Every step is now checked, in order, and the session is only marked logged in once all of them have actually succeeded; a failure at any point now reports a clear error instead.
+- Fixed `sqlite3` prepared-statement leaks.
+- `sqlite3` account lookup via `select_account_id_from_username()` (currently unused, but fixed for correctness) could return an uninitialized value instead of a proper "not found" sentinel when the username didn't exist.
+- `sess.accountID` was never reset on `/logout`, unlike every other account-identity session field; combined with `zykchars` (the Characters-tab list refresh) never checking whether the session was actually logged in, a `zykchars` request sent right after logging out (but before a fresh login) could still return the *previous* account's character list. Both are fixed: `accountID` is reset on logout, and `zykchars` now explicitly refuses to answer with character data while logged out.
+- `create_admin_account()` used to close its database connection itself if the very first step (creating the default admin account's `Accounts` row) failed, but its caller already unconditionally closes that same connection right afterward regardless of what happened -- so that specific failure path closed the connection twice, which is undefined behavior. Fixed to match every other failure path in the same function, which correctly leave closing it to the caller.
+- Fixed the same missing-`sqlite3_finalize()`-on-not-found leak as above in `admin_account_exists()`.
+- Fixed menu flickering on holding ESCAPE key.
+- Extension file-name lists were capped at 2048 bytes, which the engine fills and then stops filling silently, so past roughly the 80th-130th file a server's `.veh`, `.vwp`, `.npc` and `.sab` extensions were never read and only ever surfaced later as "Could not find Vehicle" or a missing saber. The lists are now 16384/8192/32768/16384 bytes, `MAX_VEHICLES` goes from 128 to 256, and each loader now warns on the console when its list looks truncated.
+- NPC bookkeeping is allocated once per entity slot and never returned, so a long map of NPC spawning drifted across the free slot range and eventually hit "BG_Alloc: buffer exceeded tail" -- a client disconnect, or a dedicated server exit. The game and cgame pools now cover all 992 slots.
+- Environment damage that is certain death -- a fall into the void, or a Duel team change -- passes the player as their own attacker, so the downed system read it as "somebody did this to you" and knocked them down for a single frame before the same timer killed them, printing "X killed X" right after the knockdown. Those deaths are lethal outright again, while survivable falls keep their knockdown and a player pushed off a ledge still credits the pusher.
+- `rp_duel_tournament_arena_scale` and `rp_duel_no_collision` are now latched, so a value set mid-map takes effect at the next one instead of changing under a running event. Changing either mid-event put the visible tournament globe out of step with the real kill boundary, or left two overlapping duellists stuck inside each other.
+- `rp_chat_protection_timer` now counts elapsed time since the chat box opened instead of storing a deadline when it opened, so lowering the cvar reaches players who are already typing and an absurdly large value no longer overflows and protects instantly.
+- `/admweather` captured the map's own weather by count alone, so a map shipping more particle-cloud effects than the renderer can draw at once kept a command that could never appear -- listed by `/admweather default`, and counted on the status screen as "6 of 5 particle effects". The capture now applies the renderer's cloud and wind limits too, and both truncation notices report what was actually kept.
+- The saber ignition sound played on every spawn, `/char` and model rebuild even when the saber was holstered, because the client infers "switched to the saber" from which weapon model is bolted to the player, and all three reset that bookkeeping.
+- Single-saber players heard two overlapping copies of the saber ignition sound on every toggle: an unused second saber keeps a valid sound index after its model is cleared, and no saber-on path checked for that model the way every saber-off path already did.
+- The Create Game menu's force-power and weapon-disable toggles did nothing when starting a listen server -- their handlers had been left inside an `#if 0`. Re-enabled, with OpenJK's two repairs (c79e6576).
+- Shields no longer soak damage meant to bypass armor (falls, drowning, lava, crushing, punches and kicks, Rancor and Wampa attacks); it goes straight to health, as in the base game.
+- An NPC spawner's delay and retry wait no longer change units when it is edited, rotated or moved (10 seconds could become 10 milliseconds).
+- `/npc spawn` with a vehicle's NPC entry now tells the admin to use `/npc spawn vehicle`, and `/list npcs` no longer lists those entries.
+- **Entity System crashes**: a bad model or sub-BSP name, a malformed or oversized entity preset, running out of entity slots, targets that use each other in a loop, a looping `path_corner` chain, and a map left with no spawn points could each crash or shut down the server. They are now refused or cut short with a log entry instead.
+- **Entity System editing**: an entity that is edited, rotated or moved is now set up afresh, so a door no longer stays open for minutes after an edit and a removed key really goes. A trigger added after map load now plays its ambient sound set, and an edited Ghoul2 entity changes its model or skin for every player.
+- **Dispensers and racks**: the ammo power converter is no longer invisible without a model key, the converters no longer print "S_findname: empty name" to every player, and the health converter now drains and recharges instead of healing without end. Weapon and ammo racks show their single player models and take their goods along when edited, moved or removed. The Entity System refuses a prop or dispenser whose model file is missing or of the wrong type instead of leaving it invisible.
+- Switching weapons at the wrong moment (for example, firing as a duel starts) could leave a player in a T-pose with no weapon.
+- After a Force Pull disarm or `/drop`, picking the weapon up again no longer switches the player straight back to it.
+- Severed limbs of a scaled player or NPC now have its size.
+- A droid riding a vehicle now rolls with it; past a quarter roll it used to turn back upright.
+- An .npc file `scale` above 1023, and a script's `set scale`, are now capped (and the script's rounded); players were shown a wrong size.
+- `/npc kill team nonally` now kills NPCs only: in Siege it also killed Imperial-side players, and it deleted NPC spawners.
 
-# Version 3.1
-Version 3.1 is here! _Haven't you read the news yet?_
-
-- /all is now fixed, and broadcasts to the whole server.
-- Added a news system in-game, where news can be read and written ICly.
-- AdminProtect will now allow admins to see all chat on the server, to allow them to monitor players.
-- Minor bugfix with /all where the message wouldn't be displayed correctly on the screen (missing the colon)
-
-# Version 3.0
-Version 3.0 is here! _I can do what with the chat now??_
-
-- Chat system revamped, added chat modifiers for all actions that can be done. The normal chat is unchanged should players prefer to keep using that.
-- Entity saving is now fixed, no longer crashes the server. (whoops)
-- /roll will never display 0 anymore. It was due to a bug in the random number generator. (whoops x2)
-
-PRO TIP: The server side and local server now come with an admin account by default. Username is admin and password is admin.
-FOR ALL THAT IS SACRED CHANGE THE ACCOUNT DETAILS AFTER YOU START HOSING ONLINE!
-
-# Version 2.0
-Version 2.0 is finally here! _What do you mean i have to pay more for stuff now?_
-
-The following has been changed:
-
-- /god now works for everyone in the server, and will be broadcast to let everyone know. This is to allow players with less skill to take part in combat and be able to roleplay properly.
-- /rpmodeup and /rpmodedown are replaced by /skillup and /skilldown
-- /createcredits is now a separate command (but it can still only be used by admins)
-- /creditgive is now replaced by /givecredits
-- /spendcredits was added, which broadcasts a message and takes the money form the players account.
-- .sab variable is now increased, hopefully allowing for more saber models to be added.
-- Weapons will now have to be bought IG, and an admin has to authorize it.
-- Store prices have been balanced, and increased to better allow lower denominations.
-- Unused items have been removed form the shop.
-- Added a /news command, used by players to get IC news updates from the server. This can either be /news, /news republic, /news sith and /news jedi.
-- Credit creation is now only allowed by admins with GiveAdmin permission.
-- Some sounds have been disabled, namely see, distract, distractstop, absorbloop and seeloop. This is for better immersion.
-- Added 16 new animations, be sure to check out /emote list to find them.
-- /list rpg now replaced by /list help
-
-# Version 1.1.1 - bugfix
-For now, weapons will work like this:
-
-- No need to BUY the weapon itself, everyone will have all weapons from the start (but no ammo)
-- Ammo is saved and if you run out you'll have to buy more form the seller if you want to use the weapon.
-
-I have a proper fix in mind, but it might require massive rework in the way accounts are saved (which I planned to do anyway) so it will take time before I add it.
-Sorry about that!
-
-# Version 1.1
-Version 1.1 is finally here! _Rolls a natural 20_
-The following has been changed:
-
-- Ammo files aren't shown as characters anymore
-- Sniper battle minigame now works
-- Melee battle minigame now works
-- Added some validation to the name of characters (special characters apart from "_" are not allowed anymore)
-- Dueling now works just like in ja+
-- Duel tournament now works
-- Last Man Standing now works
-- "Magic Potion" doesn't show up anymore at the item seller (Duh!)
-- Added dice roll command (/roll <max_roll>)
-- Map loading screen is now less cluttered, leaving more room for the artwork.
-
-This version is also generally more robust, I haven't been able to break it. (yet!)
-
-(Update: Forgot to compile the right version so if you see this and you didn't when you got it, get it again please)
-
-# Version 1.0
-Version 1.0 is finally here!
-Full list of features that are included.
-
-- Account system
-- Ammo and skills are saved per character
-- Fully working shop
-- Credit system (Admins can now create credits)
-- OOC chat
-- NoClip now works as intended
-- Custom UI
-- Custom HUD
-- Fully working emote system words AND IDs (Do /emote list to see everything)
-- Desann and Tavion are unlocked
-- New Upgrades for Mercs as well as more force powers for Force sensitive chars
-- Added scripts for setting resolution
-- Admin permissions work as intended
-- Voice chat works as intended (Not mic but pre recorded commands)
-- Weapons upgrades work as intended
-- Podracing now works
-- Ally system now works
-- Entity system now works
-- Shader remapping through ig commands now works
-- Skills that can be added or removed by admins only
-- Broadcasting of a player's login/logout message to let people know what they logged in as.
-
-This is the first stable version, and as such, I'm releasing it to the public, the feature pool is big enough that I feel like it can finally be used to start an RP community.
-
-# Ready for testing
-The following functionality is included:
-
-- Advanced admin system
-- Advanced credit system
-- More abilities can be unlocked compared to in the base game
-- New Art
-- Improved UI
+### Security
+- Fixed a real SQL injection vulnerability in the `/login`, `/new`, and `/changepassword` account commands, and applied the same parameterized-query treatment across the rest of the database layer (item names, chat/news text, character saves, and related queries) as a broader hardening pass.
+- Values of Account and Character-related commands sent from the UI are now stripped of embedded quote characters before being passed to the console command parser, preventing a crafted password from breaking out of its quoted argument.
+- Fixed a SQL injection vector in `/createitem`'s item-name query, which spliced the raw name into SQL text instead of using a parameter binding like its sibling item/character queries.
+- Fixed a server crash: any connected player, even one not logged in, could crash the whole server with a couple hundred `/playsound` calls using unique nonsense paths, filling the 256-slot sound table that the lookup function otherwise crashes on the instant it's full. It now degrades to an error message instead, `/playsound` requires being logged in, and both `/playsound` and `/playmusic` reject an empty path.
+- `/entsave`, `/entload`, and `/entdeletefile`'s filename argument was spliced directly into a filesystem path with no validation; it is now restricted to letters and digits.
+- Fixed a stack buffer overflow risk from unbounded string copies in `/emote`'s animation-name argument and in `/maplist`/`/dueltable`'s result-page builders; all now use bounds-checked copies.
+- Account/character data loaded from the database is now copied into its fixed-size in-memory buffers with bounds-checked copies instead of unbounded ones; `/register` also now rejects a username or password too long to fit those buffers.
+- Character creation is now capped at 15 per account.
+- Fixed an unbounded string-accumulation buffer overflow risk in the server's character-list and RP-menu-data commands (`zykchars`/`zykmod`): both now use bounds-checked appends and cap/reject any data that wouldn't fit, instead of writing past their fixed-size buffers.
+- A `/login` whose account's default/selected character couldn't be resolved to an actual database row (a stale `DefaultChar`, or any other data-integrity gap) used to mark the session as fully "in RPG mode" anyway despite never actually completing the login, letting it pass every command that requires being logged in while its account/character data was never loaded; it also read from uninitialized memory in that case. It now correctly leaves the session untouched and reports a clear login failure instead.
+- Fixed several `sqlite3` prepared-statement leaks in the character lookup/creation/save paths that only triggered when a query legitimately found no matching row (e.g. `/char remove <a name that doesn't exist>`) -- each one silently left the database connection unable to actually close afterward, a leak that compounded with repeated use.
+- `set_model()`, `set_netname()`, the character/account save functions, and the `zykmod` handler all used to re-look-up "the current player" by searching every connected player's name for a substring match (or treating the name as a raw slot number) instead of using the player's own already-known identity; a player whose name was purely numeric, or was a substring of another connected player's name, could have a different player's model/saber data read and, in the save paths, written into their own character's database row. All of these now use the player's own identity directly.
+- The `zykmod` payload's name/model/saber fields, taken from client-editable data, could contain the same `~` character used as the payload's own field separator, corrupting the player's own menu display; these fields are now sanitized before being sent.
+- `/char remove`'s database delete is now parameterized instead of splicing the character ID into the query text, for consistency with the rest of the database layer (the ID involved was always server-derived, so this wasn't independently exploitable).
+- `Accounts.Username` was never actually constrained to be unique at the database level, only checked at the application level in `/new` immediately before inserting; two players registering the same username within a small enough window could both pass that check and end up with duplicate-username accounts, which every username-based login query then had to resolve ambiguously between. A real `UNIQUE` index is now created on `Accounts.Username`, and `/new` now correctly reports failure (instead of silently ignoring it) if that index rejects a race it couldn't otherwise catch. An existing database with pre-existing duplicate usernames from before this fix will log a clear warning on startup instead of applying the index, until the duplicate is manually resolved.

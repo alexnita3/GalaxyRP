@@ -280,15 +280,28 @@ const char *G_RefreshNextMap(int gametype, qboolean forced)
 		n++;
 	}
 
-	if (desiredMap == thisLevel)
-	{ //If this is the only level for this game mode or we just can't find a map for this game mode, then nextmap
-	  //will always restart.
-		trap->Cvar_Set( "nextmap", "map_restart 0");
-	}
-	else
-	{ //otherwise we have a valid nextmap to cycle to, so use it.
-		type = Info_ValueForKey( level.arenas.infos[desiredMap], "map" );
-		trap->Cvar_Set( "nextmap", va("map %s", type));
+	// GalaxyRP fix: [Vote] a forced call with g_autoMapCycle off only answers the question -- it returns
+	// the map below but leaves the nextmap cvar alone. The only forced caller is the gametype vote in
+	// CheckVote(), which needs a map to change to right now; it does not need the rotation replaced. With
+	// auto-cycling off, nextmap belongs to the server config (galaxyrp_server.cfg steps it with "set
+	// nextmap vstr galaxyrp_N"), and this overwrote it with "map <x>" / "map_restart 0" for good: every
+	// map load afterwards calls here unforced, which returns early above, so nothing ever put the
+	// rotation back and each later "vstr nextmap" reloaded the same map. The price, accepted: while the
+	// server sits in a voted-in gametype the configured rotation carries on unchanged, and may reach a
+	// map that gametype does not support. With g_autoMapCycle on nothing changes -- every map load
+	// recomputes nextmap anyway.
+	if (!forced || g_autoMapCycle.integer)
+	{
+		if (desiredMap == thisLevel)
+		{ //If this is the only level for this game mode or we just can't find a map for this game mode, then nextmap
+		  //will always restart.
+			trap->Cvar_Set( "nextmap", "map_restart 0");
+		}
+		else
+		{ //otherwise we have a valid nextmap to cycle to, so use it.
+			type = Info_ValueForKey( level.arenas.infos[desiredMap], "map" );
+			trap->Cvar_Set( "nextmap", va("map %s", type));
+		}
 	}
 
 	return Info_ValueForKey( level.arenas.infos[desiredMap], "map" );

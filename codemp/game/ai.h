@@ -134,7 +134,11 @@ typedef struct AIGroupInfo_s
 	vec3_t		enemyLastSeenPos;
 	int			numState[ NUM_SQUAD_STATES ];
 	AIGroupMember_t member[ MAX_GROUP_MEMBERS ];
+	int			rpDebugLineTime;	// DAJ_RP: [NPC Debug] d_npcai draws this squad's lines again at this level.time
 } AIGroupInfo_t;
+
+// DAJ_RP fix: [NPC] whether a squad's member slot still holds an NPC (NPC_AI_Utils.c)
+qboolean AI_GroupMemberValid( const gentity_t *member );
 
 int	AI_GetGroupSize( vec3_t origin, int radius, team_t playerTeam, gentity_t *avoid );
 int AI_GetGroupSize2( gentity_t *ent, int radius );

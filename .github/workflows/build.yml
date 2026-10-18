@@ -1,0 +1,550 @@
+name: build
+
+# GalaxyRP addition: [TaystJK multi-arch] DAJ_RP previously had no CI at all. This workflow is
+# modeled on TaystJK's own .github/workflows/build.yml matrix (Windows x86/x86_64 via MSVC,
+# Linux x86/x86_64 via GCC, macOS x86_64/arm64 native), so every push/PR is actually built for
+# all of the platform/architecture combinations this port is meant to support -- something that
+# can't be fully verified from a single Linux sandbox. It additionally builds Linux arm64
+# (cross-compiled via cmake/Toolchains/linux-aarch64.cmake), which TaystJK's own CI does not do
+# (TaystJK's only "ARM" coverage is a native macOS Apple Silicon runner).
+#
+# This builds ONLY the GalaxyRP mod (jampgame/cgame/ui, the GetModuleAPI-native modules meant to
+# load into TaystJK, plus the assets pk3 and the assembled GalaxyRP/ package -- see
+# assets/CMakeLists.txt) -- never the engine executable, dedicated server, or renderer DLL
+# (BuildMPEngine/BuildMPRdVanilla/BuildMPDed all explicitly OFF below). That also means none of
+# these jobs need OpenGL/X11/SDL2 development packages -- the mod modules don't link against them.
+#
+# Each job publishes TWO packages from that one build:
+#
+#   GalaxyRP-<os>-<arch>-Release-Full    the whole assembled GalaxyRP/ folder, as before
+#   GalaxyRP-<os>-<arch>-Release-Client  cgame + ui + pk3 + description.txt + galaxyrp_play
+#
+# so 14 per run rather than 7. The Client package is for players joining someone else's server: it
+# leaves out jampgame (the server-side module) and everything an operator needs, so it is not a
+# smaller DOWNLOAD -- the pk3 is ~75% of either package -- it is a package with no server files in
+# it. See the "Stage client package" step in any job for the full reasoning.
+#
+# Each package is a real archive built by the job itself (.zip on Windows, .tar.gz on Linux and
+# macOS) rather than a directory handed to upload-artifact, which would strip the execute bit off
+# galaxyrp_play. See the "Package" step for why that matters and what it would break.
+#
+# On a pushed v* tag, the release job at the bottom collects all 14 and attaches them to a DRAFT
+# GitHub release for review. Nothing publishes itself.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+      - main
+    # GalaxyRP addition: [releases] a pushed v* tag builds everything and then runs the release
+    # job at the bottom. Releases are cut from main; the tag is what triggers them, and nothing is
+    # published automatically -- the release job produces a DRAFT for you to review and publish.
+    #
+    # Caveat worth knowing: GitHub does not document whether paths-ignore is evaluated for tag
+    # pushes. If it is, tagging a commit whose only changes are markdown could skip this workflow
+    # entirely. A release tag essentially always sits on a commit with real changes, and
+    # workflow_dispatch above is the escape hatch if it ever bites.
+    tags:
+      - "v*"
+    paths-ignore:
+      - "**.md"
+      - ".gitignore"
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths-ignore:
+      - "**.md"
+      - ".gitignore"
+
+jobs:
+  msvc:
+    name: Windows ${{ matrix.arch }} ${{ matrix.build_type }}
+    # GalaxyRP fix: [runner currency] windows-2022 only ever exercises the VS2022 toolset, even
+    # though CreateVisualStudioProjects.bat already supports the VS2026 generator. windows-2025
+    # (Windows Server 2025 + VS2026, GA in Actions since mid-2026) is what windows-latest now
+    # points to -- pin it explicitly so CI actually builds with the current toolset.
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86_64]
+        build_type: [Release]
+        include:
+          - arch: x86
+            platform: Win32
+          - arch: x86_64
+            platform: x64
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{ github.workspace }}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{ github.workspace }}/build
+        run: |
+          cmake $GITHUB_WORKSPACE -A ${{ matrix.platform }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_INSTALL_PREFIX=bin \
+            -DBuildMPEngine=OFF -DBuildMPRdVanilla=OFF -DBuildMPDed=OFF \
+            -DBuildMPGame=ON -DBuildMPCGame=ON -DBuildMPUI=ON
+
+      - name: Build
+        working-directory: ${{ github.workspace }}/build
+        shell: bash
+        run: cmake --build . --config ${{ matrix.build_type }} -j $NUMBER_OF_PROCESSORS
+
+      - name: Install
+        working-directory: ${{ github.workspace }}/build
+        shell: bash
+        run: cmake --install . --config ${{ matrix.build_type }}
+
+      # GalaxyRP addition: [CI packaging] the client package is a SELECTION from the install tree
+      # the step above already produced -- not a second build. Same compile, same commit, two views
+      # of it. That is why it lives here rather than in a workflow of its own: a separate workflow
+      # would re-clone, re-configure and recompile identical source just to drop a few files, would
+      # double the CI minutes, and would have to be kept in step with this one for every runner
+      # image, CMake flag and matrix change.
+      #
+      # Contents: cgame + ui (the two modules a joining player actually loads -- jampgame is the
+      # server-side module and is deliberately left out), the pk3, description.txt for the in-game
+      # mod menu, and this platform's galaxyrp_play launcher. Everything server-side stays in the
+      # Full package only: database/, duelarena/, textfiles/, galaxyrp_server.cfg, the two host
+      # launchers and galaxyrp_calculator.html.
+      #
+      # Globbed rather than spelled out, because every one of these names varies by job: the modules
+      # are <name>${Architecture} plus a platform extension (cgamex86.dll, cgamei386.so on Linux x86
+      # -- note i386, not x86 -- cgamearm64.dylib on Apple Silicon), the pk3 carries the version
+      # from rp_version.h, and the launcher is .bat/.sh/.command. Paths are relative to the
+      # workspace on purpose: ${{ github.workspace }} is a backslash path on the Windows runner and
+      # feeding that to bash's mkdir/cp invites trouble, whereas working-directory is resolved by
+      # the runner itself.
+      - name: Stage client package
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          SRC="build/bin/JediAcademy/GalaxyRP"
+          DST="client-package/GalaxyRP"
+          rm -rf client-package
+          mkdir -p "$DST"
+          cp "$SRC"/cgame*.so "$SRC"/cgame*.dll "$SRC"/cgame*.dylib \
+             "$SRC"/ui*.so    "$SRC"/ui*.dll    "$SRC"/ui*.dylib    \
+             "$SRC"/*.pk3 "$SRC"/description.txt "$SRC"/galaxyrp_play.* "$DST"/
+          echo "Client package contents:"
+          find "$DST" -type f | sort
+          # Fail the job rather than publish a half-empty package. Every line above is a glob, so a
+          # renamed module, a changed launcher extension or a missing pk3 would not error -- it
+          # would simply match nothing and sail through as a slightly smaller zip that nobody
+          # notices until a player unpacks it.
+          found=$(find "$DST" -type f | wc -l | tr -d ' ')
+          if [ "$found" -ne 5 ]; then
+            echo "::error::expected 5 files in the client package, found $found"
+            exit 1
+          fi
+
+      # GalaxyRP addition: [releases] see the matching comment in the ubuntu job for why the archive
+      # is built here rather than left to upload-artifact. Windows is the one platform where the
+      # permission argument does not apply -- cmd.exe decides what is runnable from the extension,
+      # so galaxyrp_play.bat needs no execute bit -- but the packages are built here anyway so that
+      # every release asset is a real archive produced by the build, and .zip because that is what a
+      # Windows player can open without installing anything.
+      #
+      # Compress-Archive rather than tar/7z because it ships with Windows PowerShell itself, so it
+      # cannot go missing from a runner image. Pointing -Path at the directory (no trailing \*)
+      # keeps GalaxyRP/ as the archive's single top-level folder, matching the other two jobs.
+      - name: Package
+        shell: pwsh
+        working-directory: ${{ github.workspace }}
+        run: |
+          $base = "GalaxyRP-windows-${{ matrix.arch }}-${{ matrix.build_type }}"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path build/bin/JediAcademy/GalaxyRP -DestinationPath "dist/$base-Full.zip"
+          Compress-Archive -Path client-package/GalaxyRP        -DestinationPath "dist/$base-Client.zip"
+          Get-ChildItem dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: GalaxyRP-windows-${{ matrix.arch }}-${{ matrix.build_type }}-Full
+          # The asset itself, built by the Package step above -- not a directory for
+          # upload-artifact to zip, which is what used to strip the execute bit.
+          path: dist/GalaxyRP-windows-${{ matrix.arch }}-${{ matrix.build_type }}-Full.zip
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: GalaxyRP-windows-${{ matrix.arch }}-${{ matrix.build_type }}-Client
+          path: dist/GalaxyRP-windows-${{ matrix.arch }}-${{ matrix.build_type }}-Client.zip
+          if-no-files-found: error
+
+  ubuntu:
+    name: Ubuntu ${{ matrix.arch }} ${{ matrix.build_type }}
+    # GalaxyRP fix: [runner currency] ubuntu-22.04 begins its GitHub Actions deprecation on
+    # 2026-09-17 and is fully unsupported by 2027-04-17 (actions/runner-images#14254). GitHub only
+    # maintains the latest two stable Ubuntu LTS images, so move to ubuntu-24.04 now.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86_64, arm64]
+        build_type: [Release]
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Create Build Environment
+        run: |
+          if [ ${{ matrix.arch }} == "x86" ]; then
+            sudo dpkg --add-architecture i386
+            sudo apt-get -qq update
+            sudo apt-get -y install gcc-multilib g++-multilib
+          elif [ ${{ matrix.arch }} == "arm64" ]; then
+            sudo apt-get -qq update
+            sudo apt-get -y install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          fi
+          cmake -E make_directory ${{ github.workspace }}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{ github.workspace }}/build
+        run: |
+          OPTIONS="-DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install"
+          OPTIONS+=" -DBuildMPEngine=OFF -DBuildMPRdVanilla=OFF -DBuildMPDed=OFF"
+          OPTIONS+=" -DBuildMPGame=ON -DBuildMPCGame=ON -DBuildMPUI=ON"
+          # GalaxyRP fix: [CI configure failure] the root CMakeLists.txt's find_package(JPEG/ZLIB/PNG
+          # REQUIRED) calls run unconditionally, even for this gamecode-only configure -- so the x86
+          # and arm64 cross-compiles (which have no matching -dev packages installed above) fail with
+          # "Could NOT find JPEG". Build from our own bundled/vendored sources instead of relying on
+          # find_package finding a system copy; verified locally (native x86_64 and i686 cross-build)
+          # and matches the failure seen in live CI run 33105699123 (arm64 and x86 jobs both failed
+          # with this exact error; x86_64 passed only because the native ubuntu-22.04 image happens to
+          # ship these -dev packages preinstalled).
+          OPTIONS+=" -DUseInternalZlib=ON -DUseInternalPNG=ON -DUseInternalJPEG=ON"
+          if [ ${{ matrix.arch }} == "x86" ]; then
+            OPTIONS+=" -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/linux-i686.cmake"
+          elif [ ${{ matrix.arch }} == "arm64" ]; then
+            OPTIONS+=" -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchains/linux-aarch64.cmake"
+          fi
+          cmake $GITHUB_WORKSPACE $OPTIONS
+
+      - name: Build
+        working-directory: ${{ github.workspace }}/build
+        shell: bash
+        run: cmake --build . -j $(nproc)
+
+      - name: Install
+        working-directory: ${{ github.workspace }}/build
+        shell: bash
+        run: cmake --install .
+
+      # GalaxyRP addition: [CI packaging] the client package is a SELECTION from the install tree
+      # the step above already produced -- not a second build. Same compile, same commit, two views
+      # of it. That is why it lives here rather than in a workflow of its own: a separate workflow
+      # would re-clone, re-configure and recompile identical source just to drop a few files, would
+      # double the CI minutes, and would have to be kept in step with this one for every runner
+      # image, CMake flag and matrix change.
+      #
+      # Contents: cgame + ui (the two modules a joining player actually loads -- jampgame is the
+      # server-side module and is deliberately left out), the pk3, description.txt for the in-game
+      # mod menu, and this platform's galaxyrp_play launcher. Everything server-side stays in the
+      # Full package only: database/, duelarena/, textfiles/, galaxyrp_server.cfg, the two host
+      # launchers and galaxyrp_calculator.html.
+      #
+      # Globbed rather than spelled out, because every one of these names varies by job: the modules
+      # are <name>${Architecture} plus a platform extension (cgamex86.dll, cgamei386.so on Linux x86
+      # -- note i386, not x86 -- cgamearm64.dylib on Apple Silicon), the pk3 carries the version
+      # from rp_version.h, and the launcher is .bat/.sh/.command. Paths are relative to the
+      # workspace on purpose: ${{ github.workspace }} is a backslash path on the Windows runner and
+      # feeding that to bash's mkdir/cp invites trouble, whereas working-directory is resolved by
+      # the runner itself.
+      - name: Stage client package
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          SRC="install/JediAcademy/GalaxyRP"
+          DST="client-package/GalaxyRP"
+          rm -rf client-package
+          mkdir -p "$DST"
+          cp "$SRC"/cgame*.so "$SRC"/cgame*.dll "$SRC"/cgame*.dylib \
+             "$SRC"/ui*.so    "$SRC"/ui*.dll    "$SRC"/ui*.dylib    \
+             "$SRC"/*.pk3 "$SRC"/description.txt "$SRC"/galaxyrp_play.* "$DST"/
+          echo "Client package contents:"
+          find "$DST" -type f | sort
+          # Fail the job rather than publish a half-empty package. Every line above is a glob, so a
+          # renamed module, a changed launcher extension or a missing pk3 would not error -- it
+          # would simply match nothing and sail through as a slightly smaller zip that nobody
+          # notices until a player unpacks it.
+          found=$(find "$DST" -type f | wc -l | tr -d ' ')
+          if [ "$found" -ne 5 ]; then
+            echo "::error::expected 5 files in the client package, found $found"
+            exit 1
+          fi
+
+      # GalaxyRP addition: [releases] build the archive HERE rather than letting upload-artifact zip
+      # loose files. upload-artifact documents that "File permissions are not maintained during
+      # zipped artifact upload. All directories will have 755 and all files will have 644", which
+      # silently strips the 0755 that assets/CMakeLists.txt forces onto galaxyrp_play -- and a
+      # .command that is not executable cannot be double-clicked at all, which is its only purpose.
+      #
+      # Its re-zipping cannot reach inside an archive we made, though, so a tarball built here
+      # carries the mode all the way to the player: through the artifact, through the release job,
+      # into the release asset (GitHub never re-archives release assets) and out the far end.
+      # tar rather than zip because tar's handling of Unix modes is unambiguous on both Linux and
+      # macOS, and extracting a .tar.gz from Terminal also avoids macOS propagating the
+      # com.apple.quarantine flag onto the scripts the way Archive Utility does.
+      - name: Package
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          BASE="GalaxyRP-linux-${{ matrix.arch }}-${{ matrix.build_type }}"
+          mkdir -p dist
+          tar czf "dist/$BASE-Full.tar.gz"   -C install/JediAcademy GalaxyRP
+          tar czf "dist/$BASE-Client.tar.gz" -C client-package GalaxyRP
+          ls -l dist
+          # Assert the bit actually survived. This is the entire reason these are archives rather
+          # than loose files, so it should fail the build rather than be assumed.
+          #
+          # Note the shape of the check: the listing is captured first and grep is used WITHOUT -q.
+          # With `set -o pipefail`, `tar tvzf ... | grep -q` fails the whole pipeline even on a
+          # match -- grep -q exits at the first hit, tar dies of SIGPIPE with 141, and pipefail
+          # reports that. This exact guard reported a false failure until it was written this way.
+          for a in dist/*.tar.gz; do
+            listing="$(tar tvzf "$a")"
+            if ! printf '%s\n' "$listing" | grep -E '^-rwx.*galaxyrp_play' > /dev/null; then
+              echo "::error::$a has no executable galaxyrp_play -- the launcher would not run"
+              printf '%s\n' "$listing" | grep galaxyrp_play || true
+              exit 1
+            fi
+          done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: GalaxyRP-linux-${{ matrix.arch }}-${{ matrix.build_type }}-Full
+          # The asset itself, built by the Package step above -- not a directory for
+          # upload-artifact to zip, which is what used to strip the execute bit.
+          path: dist/GalaxyRP-linux-${{ matrix.arch }}-${{ matrix.build_type }}-Full.tar.gz
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: GalaxyRP-linux-${{ matrix.arch }}-${{ matrix.build_type }}-Client
+          path: dist/GalaxyRP-linux-${{ matrix.arch }}-${{ matrix.build_type }}-Client.tar.gz
+          if-no-files-found: error
+
+  macos:
+    name: macOS ${{ matrix.arch }} ${{ matrix.build_type }}
+    # GalaxyRP fix: [runner currency] macos-15/macos-15-intel are one version behind the now-GA
+    # macos-26 ("Tahoe") images. Bump to keep pace with the latest two supported OS versions.
+    runs-on: ${{ matrix.arch == 'arm64' && 'macos-26' || 'macos-26-intel' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, arm64]
+        build_type: [Release]
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{ github.workspace }}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{ github.workspace }}/build
+        run: |
+          OPTIONS="-DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }}"
+          OPTIONS+=" -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install"
+          OPTIONS+=" -DBuildMPEngine=OFF -DBuildMPRdVanilla=OFF -DBuildMPDed=OFF"
+          OPTIONS+=" -DBuildMPGame=ON -DBuildMPCGame=ON -DBuildMPUI=ON"
+          # GalaxyRP fix: [CI configure failure] macOS never installs libjpeg/libpng/zlib dev
+          # packages at all, so find_package(JPEG/ZLIB/PNG REQUIRED) in the root CMakeLists.txt
+          # always failed here too (confirmed in live CI run 33105699123, both macOS jobs failed).
+          # Build from our own bundled/vendored sources instead -- same fix as the ubuntu job.
+          OPTIONS+=" -DUseInternalZlib=ON -DUseInternalPNG=ON -DUseInternalJPEG=ON"
+          cmake $GITHUB_WORKSPACE $OPTIONS
+
+      - name: Build
+        working-directory: ${{ github.workspace }}/build
+        shell: bash
+        run: cmake --build . -j $(getconf _NPROCESSORS_ONLN)
+
+      - name: Install
+        working-directory: ${{ github.workspace }}/build
+        shell: bash
+        run: cmake --install .
+
+      # GalaxyRP addition: [CI packaging] the client package is a SELECTION from the install tree
+      # the step above already produced -- not a second build. Same compile, same commit, two views
+      # of it. That is why it lives here rather than in a workflow of its own: a separate workflow
+      # would re-clone, re-configure and recompile identical source just to drop a few files, would
+      # double the CI minutes, and would have to be kept in step with this one for every runner
+      # image, CMake flag and matrix change.
+      #
+      # Contents: cgame + ui (the two modules a joining player actually loads -- jampgame is the
+      # server-side module and is deliberately left out), the pk3, description.txt for the in-game
+      # mod menu, and this platform's galaxyrp_play launcher. Everything server-side stays in the
+      # Full package only: database/, duelarena/, textfiles/, galaxyrp_server.cfg, the two host
+      # launchers and galaxyrp_calculator.html.
+      #
+      # Globbed rather than spelled out, because every one of these names varies by job: the modules
+      # are <name>${Architecture} plus a platform extension (cgamex86.dll, cgamei386.so on Linux x86
+      # -- note i386, not x86 -- cgamearm64.dylib on Apple Silicon), the pk3 carries the version
+      # from rp_version.h, and the launcher is .bat/.sh/.command. Paths are relative to the
+      # workspace on purpose: ${{ github.workspace }} is a backslash path on the Windows runner and
+      # feeding that to bash's mkdir/cp invites trouble, whereas working-directory is resolved by
+      # the runner itself.
+      - name: Stage client package
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          SRC="install/JediAcademy/GalaxyRP"
+          DST="client-package/GalaxyRP"
+          rm -rf client-package
+          mkdir -p "$DST"
+          cp "$SRC"/cgame*.so "$SRC"/cgame*.dll "$SRC"/cgame*.dylib \
+             "$SRC"/ui*.so    "$SRC"/ui*.dll    "$SRC"/ui*.dylib    \
+             "$SRC"/*.pk3 "$SRC"/description.txt "$SRC"/galaxyrp_play.* "$DST"/
+          echo "Client package contents:"
+          find "$DST" -type f | sort
+          # Fail the job rather than publish a half-empty package. Every line above is a glob, so a
+          # renamed module, a changed launcher extension or a missing pk3 would not error -- it
+          # would simply match nothing and sail through as a slightly smaller zip that nobody
+          # notices until a player unpacks it.
+          found=$(find "$DST" -type f | wc -l | tr -d ' ')
+          if [ "$found" -ne 5 ]; then
+            echo "::error::expected 5 files in the client package, found $found"
+            exit 1
+          fi
+
+      # GalaxyRP addition: [releases] build the archive HERE rather than letting upload-artifact zip
+      # loose files. upload-artifact documents that "File permissions are not maintained during
+      # zipped artifact upload. All directories will have 755 and all files will have 644", which
+      # silently strips the 0755 that assets/CMakeLists.txt forces onto galaxyrp_play -- and a
+      # .command that is not executable cannot be double-clicked at all, which is its only purpose.
+      #
+      # Its re-zipping cannot reach inside an archive we made, though, so a tarball built here
+      # carries the mode all the way to the player: through the artifact, through the release job,
+      # into the release asset (GitHub never re-archives release assets) and out the far end.
+      # tar rather than zip because tar's handling of Unix modes is unambiguous on both Linux and
+      # macOS, and extracting a .tar.gz from Terminal also avoids macOS propagating the
+      # com.apple.quarantine flag onto the scripts the way Archive Utility does.
+      - name: Package
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          BASE="GalaxyRP-macos-${{ matrix.arch }}-${{ matrix.build_type }}"
+          mkdir -p dist
+          tar czf "dist/$BASE-Full.tar.gz"   -C install/JediAcademy GalaxyRP
+          tar czf "dist/$BASE-Client.tar.gz" -C client-package GalaxyRP
+          ls -l dist
+          # Assert the bit actually survived. This is the entire reason these are archives rather
+          # than loose files, so it should fail the build rather than be assumed.
+          for a in dist/*.tar.gz; do
+            if ! tar tvzf "$a" | grep -Eq '^-rwx.*galaxyrp_play'; then
+              echo "::error::$a has no executable galaxyrp_play -- the launcher would not run"
+              tar tvzf "$a" | grep galaxyrp_play || true
+              exit 1
+            fi
+          done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: GalaxyRP-macos-${{ matrix.arch }}-${{ matrix.build_type }}-Full
+          # The asset itself, built by the Package step above -- not a directory for
+          # upload-artifact to zip, which is what used to strip the execute bit.
+          path: dist/GalaxyRP-macos-${{ matrix.arch }}-${{ matrix.build_type }}-Full.tar.gz
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: GalaxyRP-macos-${{ matrix.arch }}-${{ matrix.build_type }}-Client
+          path: dist/GalaxyRP-macos-${{ matrix.arch }}-${{ matrix.build_type }}-Client.tar.gz
+          if-no-files-found: error
+
+  # GalaxyRP addition: [releases] tag-only, and never automatic. Ordinary pushes to develop or main
+  # build and upload artifacts exactly as before and skip this job entirely; only a pushed v* tag
+  # reaches it, and what it produces is a DRAFT -- the 14 assets are attached and left for you to
+  # review in the UI and publish by hand.
+  #
+  # The point of routing releases through here rather than uploading by hand: a release asset is
+  # byte-exact (GitHub never re-archives one), so what a player downloads is precisely the archive
+  # the build produced, execute bits and all. Nothing is downloaded to a PC and re-uploaded, which
+  # would both break that chain and be impossible to do properly on Windows anyway -- neither
+  # Explorer nor 7-Zip can write Unix modes into a zip.
+  release:
+    name: Draft release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [msvc, ubuntu, macos]
+    runs-on: ubuntu-24.04
+    # Needed to create the release; the default token is read-only for contents.
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The pk3's filename is derived from rp_version.h by assets/CMakeLists.txt, so a tag that
+      # disagrees with the header ships GalaxyRP_v3.8.0.pk3 inside an asset called v3.9.0 -- the
+      # kind of mismatch nobody spots until a player reports it. Cheaper to fail here.
+      - name: Check the tag matches rp_version.h
+        shell: bash
+        run: |
+          set -euo pipefail
+          field() {
+            sed -n "s/^#define[[:space:]]*VERSION_$1_RELEASE[[:space:]]*\([0-9][0-9]*\).*/\1/p" \
+              galaxyrp/game/rp_version.h
+          }
+          want="v$(field MAJOR).$(field MINOR).$(field BUGFIX)"
+          echo "tag=$GITHUB_REF_NAME  rp_version.h=$want"
+          if [ "$GITHUB_REF_NAME" != "$want" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match rp_version.h ($want). Bump the header or retag."
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          # Flatten: without this each artifact lands in its own subdirectory named after itself,
+          # and the assets are already uniquely named.
+          merge-multiple: true
+
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -l dist
+          # 7 build jobs x 2 packages. If you change the matrix, change this number -- it is here so
+          # a job that silently failed to upload cannot produce a release that is quietly missing a
+          # platform.
+          found=$(ls -1 dist | wc -l | tr -d ' ')
+          if [ "$found" -ne 14 ]; then
+            echo "::error::expected 14 assets, found $found -- a build job did not upload"
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" \
+            --draft \
+            --title "GalaxyRP $GITHUB_REF_NAME" \
+            --generate-notes \
+            dist/*

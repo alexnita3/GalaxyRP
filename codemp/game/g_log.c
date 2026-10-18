@@ -81,6 +81,13 @@ int weaponFromMOD[MOD_MAX] =
 	WP_TRIP_MINE,			//MOD_TRIP_MINE_SPLASH,
 	WP_TRIP_MINE,			//MOD_TIMED_MINE_SPLASH,
 	WP_DET_PACK,			//MOD_DET_PACK_SPLASH,
+	// GalaxyRP fix: [Stat Log] MOD_VEHICLE, MOD_CONC and MOD_CONC_ALT were never added here, so
+	// from this point on every row sat one means-of-death too early and the table ran out four
+	// short of MOD_MAX. Most of the shifted region is WP_NONE either way, but the concussion
+	// rifle was the real loss: its damage and kills were being credited to WP_NONE.
+	WP_NONE,				//MOD_VEHICLE,
+	WP_CONCUSSION,			//MOD_CONC,
+	WP_CONCUSSION,			//MOD_CONC_ALT,
 	WP_NONE,				//MOD_FORCE_DARK,
 	WP_NONE,				//MOD_SENTRY,
 	WP_NONE,				//MOD_WATER,
@@ -92,26 +99,37 @@ int weaponFromMOD[MOD_MAX] =
 	WP_NONE,				//MOD_SUICIDE,
 	WP_NONE,				//MOD_TARGET_LASER,
 	WP_NONE,				//MOD_TRIGGER_HURT,
+	WP_NONE,				//MOD_TEAM_CHANGE,
 };
 
+// GalaxyRP fix: [Stat Log] this list was written for an older weapon enum and never grew with
+// it. It had no entry for WP_MELEE, so every weapon from index 2 up was named as its
+// neighbour -- WP_MELEE printed "Saber", WP_SABER printed "Bryar Pistol", and so on to
+// WP_CONCUSSION printing "Turret" -- and the last three slots were NULL, which the writer
+// loops below walk straight into (they run to WP_NUM_WEAPONS). Every column in a stat log
+// produced with g_statLog on was therefore labelled with the wrong weapon. The //WP_ comments
+// are new: they are what makes this table checkable against the enum from now on.
 char *weaponNameFromIndex[WP_NUM_WEAPONS] =
 {
-	"No Weapon",
-	"Stun Baton",
-	"Saber",
-	"Bryar Pistol",
-	"Blaster",
-	"Disruptor",
-	"Bowcaster",
-	"Repeater",
-	"Demp2",
-	"Flechette",
-	"Rocket Launcher",
-	"Thermal",
-	"Tripmine",
-	"Detpack",
-	"Emplaced gun",
-	"Turret"
+	"No Weapon",				//WP_NONE,
+	"Stun Baton",				//WP_STUN_BATON,
+	"Melee",					//WP_MELEE,
+	"Saber",					//WP_SABER,
+	"Bryar Pistol",				//WP_BRYAR_PISTOL,
+	"Blaster",					//WP_BLASTER,
+	"Disruptor",				//WP_DISRUPTOR,
+	"Bowcaster",				//WP_BOWCASTER,
+	"Repeater",					//WP_REPEATER,
+	"Demp2",					//WP_DEMP2,
+	"Flechette",				//WP_FLECHETTE,
+	"Rocket Launcher",			//WP_ROCKET_LAUNCHER,
+	"Thermal",					//WP_THERMAL,
+	"Tripmine",					//WP_TRIP_MINE,
+	"Detpack",					//WP_DET_PACK,
+	"Concussion",				//WP_CONCUSSION,
+	"Bryar Pistol (Old)",		//WP_BRYAR_OLD,
+	"Emplaced gun",				//WP_EMPLACED_GUN,
+	"Turret"					//WP_TURRET,
 };
 
 extern char	*modNames[];

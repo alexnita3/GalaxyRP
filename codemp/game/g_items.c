@@ -39,7 +39,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #define	RESPAWN_TEAM_WEAPON	30
-#define	RESPAWN_POWERUP		90 // zyk: default 120
+// GalaxyRP fix: [Items] RESPAWN_POWERUP (90) is now the default of the rp_powerup_respawn_time cvar
 
 // Item Spawn flags
 #define ITMSF_SUSPEND		1
@@ -48,6 +48,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define ITMSF_NOTSOLID		8
 #define ITMSF_VERTICAL		16
 #define ITMSF_INVISIBLE		32
+// DAJ_RP: [Still Weapons] a weapon pickup drawn the stock multiplayer way -- spinning above a hologram pad -- instead of
+// lying still (RP_ItemSetStill() below). Free in both games' item flags (single player's go to 2048) and in their
+// skill filters (256, 512, 1024), and below zyk's 65536 and 131072.
+#define ITMSF_HOLOGRAM		4096
 
 extern gentity_t *droppedRedFlag;
 extern gentity_t *droppedBlueFlag;
@@ -69,7 +73,7 @@ int adjustRespawnTime(float preRespawnTime, int itemType, int itemTag)
 			itemTag == WP_TRIP_MINE ||
 			itemTag == WP_DET_PACK)
 		{ //special case for these, use ammo respawn rate
-			respawnTime = zyk_ammo_respawn_time.integer;
+			respawnTime = rp_ammo_respawn_time.integer;
 		}
 	}
 
@@ -86,7 +90,11 @@ int adjustRespawnTime(float preRespawnTime, int itemType, int itemTag)
 		}
 		else if (level.numPlayingClients > 12)
 		{	// From 12-32, scale from 0.5 to 0.25;
-			respawnTime *= 20.0 / (float)(level.numPlayingClients + 8);
+			// GalaxyRP fix: [Items] was 20.0 / (n + 8), inherited from vanilla: that is 0.95 at 13
+			// players against 0.5 at 12 -- respawns nearly DOUBLED when the 13th player joined -- and only
+			// got back down to 0.5 at 32, so the 1/4 floor this comment promises was never reached.
+			// 10.0 / (n + 8) meets the band below at 12 (0.5) and reaches 0.25 at 32, as documented.
+			respawnTime *= 10.0 / (float)(level.numPlayingClients + 8);
 		}
 		else
 		{	// From 4-12, scale from 1.0 to 0.5;
@@ -100,6 +108,77 @@ int adjustRespawnTime(float preRespawnTime, int itemType, int itemTag)
 	}
 
 	return ((int)respawnTime);
+}
+
+/*
+================
+G_ItemRespawnTime
+
+GalaxyRP fix: [Items] the one place that says how long an item takes to come back, in seconds, by
+category -- the Pickup_* functions return it, and Force Push/Pull uses it for how long a moved item
+stays away from its spot (see G_ItemPushReturnTime). Before this each pickup computed its own value
+and the push code had a second, different copy that skipped g_adaptRespawn, the team-FFA weapon
+time and the thermal/trip mine/det pack exception, and gave powerups 60s instead of 90.
+
+	weapon		g_weaponRespawn (RESPAWN_TEAM_WEAPON in team FFA)	adapted
+	ammo		rp_ammo_respawn_time								adapted
+	shield		rp_shield_respawn_time							adapted
+	health		rp_health_respawn_time							adapted
+	holdable	rp_holdable_item_respawn_time (jetpack too)		adapted
+	powerup		rp_powerup_respawn_time							NOT adapted, as vanilla never did
+	other		60													adapted
+
+"adapted" is adjustRespawnTime(), which also sends the thermal/trip mine/det pack weapons to the ammo
+time. A map item's own "wait"/"random" and dropped items are handled by Touch_Item, not here.
+================
+*/
+int G_ItemRespawnTime( const gentity_t *ent )
+{
+	const gitem_t *item = ent->item;
+
+	if ( !item )
+	{
+		return 0;
+	}
+
+	switch ( item->giType )
+	{
+	case IT_WEAPON:
+		if ( level.gametype == GT_TEAM )
+		{ // team deathmatch has slow weapon respawns
+			return adjustRespawnTime(RESPAWN_TEAM_WEAPON, item->giType, item->giTag);
+		}
+		return adjustRespawnTime(g_weaponRespawn.integer, item->giType, item->giTag);
+	case IT_AMMO:
+		return adjustRespawnTime(rp_ammo_respawn_time.integer, item->giType, item->giTag);
+	case IT_ARMOR:
+		return adjustRespawnTime(rp_shield_respawn_time.integer, item->giType, item->giTag);
+	case IT_HEALTH:
+		return adjustRespawnTime(rp_health_respawn_time.integer, item->giType, item->giTag);
+	case IT_HOLDABLE:
+		return adjustRespawnTime(rp_holdable_item_respawn_time.integer, item->giType, item->giTag);
+	case IT_POWERUP:
+		return rp_powerup_respawn_time.integer;
+	default:
+		return adjustRespawnTime(60, item->giType, item->giTag);
+	}
+}
+
+/*
+================
+G_ItemPushReturnTime
+
+GalaxyRP fix: [Items] how long a map item moved by Force Push/Pull stays away before it goes back to
+its spot: the map's own "wait" if it has one, else its category time above -- never under a second,
+so a pushed item always comes back (a 0 or negative cvar used to leave it at the push spot for good,
+or snap it back the next frame).
+================
+*/
+int G_ItemPushReturnTime( const gentity_t *ent )
+{
+	int seconds = ( ent->wait > 0 ) ? (int)ent->wait : G_ItemRespawnTime( ent );
+
+	return ( seconds < 1 ) ? 1 : seconds;
 }
 
 
@@ -150,7 +229,7 @@ void ShieldThink(gentity_t *self)
 	self->nextthink = level.time + 1000;
 
 	if (level.duel_tournament_mode > 0 && 
-		Distance(self->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+		Distance(self->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * rp_duel_tournament_arena_scale.value / 100.0))
 	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
 		self->health = 0;
 	}
@@ -359,7 +438,10 @@ void CreateShield(gentity_t *ent)
 	if ( level.gametype == GT_SIEGE || level.gametype == GT_CTF)
 	{ // zyk: added CTF condition
 		// zyk: Force Field 2/2 in RPG Mode has double health
-		if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.secrets_found & (1 << 0))
+		// GalaxyRP fix: [Shop] Holdable Items Upgrade moved from secrets_found bit 0 (never persisted),
+		// to player_settings bit 0 (account-wide), to skill_levels[38] bit 0 (per-character) -- see
+		// g_local.h's skill_levels field.
+		if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.skill_levels[38] & (1 << 0))
 		{
 			ent->health = SHIELD_SIEGE_HEALTH * 2;
 		}
@@ -370,7 +452,10 @@ void CreateShield(gentity_t *ent)
 	}
 	else
 	{ // zyk: Force Field 2/2 in RPG Mode has double health
-		if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.secrets_found & (1 << 0))
+		// GalaxyRP fix: [Shop] Holdable Items Upgrade moved from secrets_found bit 0 (never persisted),
+		// to player_settings bit 0 (account-wide), to skill_levels[38] bit 0 (per-character) -- see
+		// g_local.h's skill_levels field.
+		if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.skill_levels[38] & (1 << 0))
 		{
 			ent->health = SHIELD_HEALTH * 2;
 		}
@@ -452,7 +537,7 @@ qboolean PlaceShield(gentity_t *playerent)
 		trap->Trace( &tr, pos, mins, maxs, dest, playerent->s.number, MASK_SOLID, qfalse, 0, 0 );
 
 		if (level.duel_tournament_mode > 0 && 
-			Distance(tr.endpos, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+			Distance(tr.endpos, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * rp_duel_tournament_arena_scale.value / 100.0))
 		{ // zyk: cannot place it inside a Duel Tornament arena
 			return qfalse;
 		}
@@ -478,7 +563,10 @@ qboolean PlaceShield(gentity_t *playerent)
 			// Set team number.
 			shield->s.otherEntityNum2 = playerent->client->sess.sessionTeam;
 
-			if (level.gametype < GT_TEAM && playerent->client && playerent->client->sess.amrpgmode == 2 && playerent->client->pers.secrets_found & (1 << 0))
+			// GalaxyRP fix: [Shop] Holdable Items Upgrade moved from secrets_found bit 0 (never
+			// persisted), to player_settings bit 0 (account-wide), to skill_levels[38] bit 0
+			// (per-character) -- see g_local.h's skill_levels field.
+			if (level.gametype < GT_TEAM && playerent->client && playerent->client->sess.amrpgmode == 2 && playerent->client->pers.skill_levels[38] & (1 << 0))
 			{
 				// zyk: setting shield red color if it has the upgrade
 				shield->s.otherEntityNum2 = TEAM_RED;
@@ -544,14 +632,12 @@ void ItemUse_Binoculars(gentity_t *ent)
 	}
 	*/
 
-	// zyk: with Thermal Vision, sets the cooldown between activating and deactivating Binoculars to avoid problem in which it gets instantly on and off
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) && 
-		ent->client->pers.thermal_vision_cooldown_time > level.time)
-	{
-		return;
-	}
-
-	if (ent->client->ps.zoomMode == 0) // not zoomed or currently zoomed with the disruptor
+	// GalaxyRP fix: [RPG classes] removed a dead Thermal Vision cooldown check gated on
+	// pers.rpg_class == 2 (Bounty Hunter), which is permanently 0 now.
+	// GalaxyRP fix: [Death System] a downed player cannot raise the binoculars. Gates only the
+	// zoom-IN direction, like the cloak item and the jetpack above, so a player who was already
+	// zoomed when they went down can still lower them.
+	if (ent->client->ps.zoomMode == 0 && !G_PlayerIsDowned( ent )) // not zoomed or currently zoomed with the disruptor
 	{
 		ent->client->ps.zoomMode = 2;
 		ent->client->ps.zoomLocked = qfalse;
@@ -566,6 +652,13 @@ void ItemUse_Binoculars(gentity_t *ent)
 
 void ItemUse_Shield(gentity_t *ent)
 {
+	// GalaxyRP fix: [Death System] a downed player keeps RP_DOWNED_HEALTH health, so nothing above stops
+	// them using this while incapacitated. Same explicit guard as the cloak item below.
+	if ( G_PlayerIsDowned( ent ) )
+	{
+		return;
+	}
+
 	PlaceShield(ent);
 }
 
@@ -578,6 +671,17 @@ void ItemUse_Shield(gentity_t *ent)
 void SentryTouch(gentity_t *ent, gentity_t *other, trace_t *trace)
 {
 	return;
+}
+
+// GalaxyRP: [SP Maps] the client that placed this sentry (ItemUse_Sentry), or NULL for a
+// map-placed misc_sentry_turret, which has no owner and lives as long as the map does
+static gentity_t *pas_owner( gentity_t *self )
+{
+	if ( self->genericValue3 < 0 || self->genericValue3 >= ENTITYNUM_WORLD )
+	{
+		return NULL;
+	}
+	return &g_entities[self->genericValue3];
 }
 
 //----------------------------------------------------------------
@@ -606,11 +710,9 @@ void pas_fire( gentity_t *ent )
 	myOrg[2] += fwd[2]*16;
 
 	// zyk: changed sentry gun shotspeed from 2300 to 2800
-	// zyk: Bounty Hunter Upgrade makes sentry gun have more damage
-	if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.rpg_class == 2 && ent->parent->client->pers.secrets_found & (1 << 1))
-		WP_FireTurretMissile(&g_entities[ent->genericValue3], myOrg, fwd, qfalse, 12, 2800, MOD_SENTRY, ent );
-	else
-		WP_FireTurretMissile(&g_entities[ent->genericValue3], myOrg, fwd, qfalse, 10, 2800, MOD_SENTRY, ent );
+	// GalaxyRP fix: [RPG classes] removed a dead Bounty Hunter Upgrade damage bonus branch
+	// gated on pers.rpg_class == 2, which is permanently 0 now.
+	WP_FireTurretMissile( pas_owner( ent ) ? pas_owner( ent ) : ent, myOrg, fwd, qfalse, 10, 2800, MOD_SENTRY, ent );
 
 	G_RunObject(ent);
 }
@@ -641,16 +743,20 @@ static qboolean pas_find_enemies( gentity_t *self )
 		}
 	}
 
-	VectorCopy(self->s.pos.trBase, org2);
-
-	// zyk: Bounty Hunter Upgrade allows it to find enemies in a greater distance
-	if (self->parent && self->parent->client && self->parent->client->sess.amrpgmode == 2 && 
-		self->parent->client->pers.rpg_class == 2 && self->parent->client->pers.secrets_found & (1 << 1))
+	// GalaxyRP fix: [Dueling] a sentry whose owner is in a private duel acquires nothing at all. It
+	// could only ever pick a target outside the duel, and G_Damage() throws that damage away -- but
+	// Jedi_DecloakPair() runs above the duel gate there, so every blank shot still strips a cloaked
+	// bystander's cloak and locks them out of re-cloaking for 3-10 seconds. Same reasoning as the
+	// seeker drone wind-down in Cmd_EngageDuel_f(). self->parent is the owner (ItemUse_Sentry).
+	if (self->parent && self->parent->client && self->parent->client->ps.duelInProgress)
 	{
-		distance_to_find_enemies *= 2;
-		bestDist = distance_to_find_enemies*distance_to_find_enemies;
+		return qfalse;
 	}
 
+	VectorCopy(self->s.pos.trBase, org2);
+
+	// GalaxyRP fix: [RPG classes] removed a dead Bounty Hunter Upgrade detection-range
+	// doubling branch gated on pers.rpg_class == 2, which is permanently 0 now.
 	count = G_RadiusList( org2, distance_to_find_enemies, self, qtrue, entity_list );
 
 	for ( i = 0; i < count; i++ )
@@ -673,6 +779,18 @@ static qboolean pas_find_enemies( gentity_t *self )
 		{
 			continue;
 		}
+
+		// GalaxyRP fix: [Dueling] never acquire a player who is in a private duel. The seeker drone's
+		// own target search has had this test all along (FindGenericEnemyIndex, w_force.c); the sentry
+		// never got it, and zyk_can_hit_target() below covers the Duel Tournament and the Melee Battle
+		// but not the private duel. The result was a sentry that locked onto a duellist, wound up, and
+		// fired at them for the rest of its life for nothing -- G_Damage() gates the damage -- while
+		// ignoring every legitimate target, because ent->enemy is only ever dropped on death.
+		if (target->client->ps.duelInProgress)
+		{
+			continue;
+		}
+
 		if ( !trap->InPVS( org2, target->r.currentOrigin ))
 		{
 			continue;
@@ -698,16 +816,25 @@ static qboolean pas_find_enemies( gentity_t *self )
 
 		if ( target->client )
 		{
-			if (target->NPC && target->client->playerTeam == NPCTEAM_PLAYER && target->client->enemyTeam == NPCTEAM_ENEMY)
+			if ( target->client->sess.sessionTeam == TEAM_SPECTATOR || target->client->tempSpectate >= level.time )
+			{
+				continue;
+			}
+			if ( self->rpSpTurret )
+			{ // GalaxyRP: [SP Maps] a map-placed sentry: single player's team rule, leave its own team alone
+				if ( target->client->playerTeam == self->rpSpTurretTeam )
+				{
+					continue;
+				}
+			}
+			else if (target->NPC && target->client->playerTeam == NPCTEAM_PLAYER && target->client->enemyTeam == NPCTEAM_ENEMY)
 			{ // zyk: dont attack allied npcs
 				continue;
 			}
 
-			if (self->parent && self->parent->client && self->parent->client->pers.guardian_mode != target->client->pers.guardian_mode && 
-				!target->NPC)
-			{ // zyk: sentry of players in boss battle can only hit the boss and his npcs, and players outside boss battle cannot hit players in boss battle
-				continue;
-			}
+			// GalaxyRP fix: [Guardian] removed a dead boss-battle sentry-targeting restriction
+			// comparing pers.guardian_mode to itself (always equal; pers.guardian_mode is
+			// permanently 0 now).
 
 			VectorCopy( target->client->ps.origin, org );
 		}
@@ -872,8 +999,8 @@ void pas_think( gentity_t *ent )
 		ent->r.contents = CONTENTS_SOLID;
 	}
 
-	if (!g_entities[ent->genericValue3].inuse || !g_entities[ent->genericValue3].client ||
-		g_entities[ent->genericValue3].client->sess.sessionTeam != ent->genericValue2)
+	if ( pas_owner( ent ) && ( !pas_owner( ent )->inuse || !pas_owner( ent )->client ||
+		pas_owner( ent )->client->sess.sessionTeam != ent->genericValue2 ) )
 	{
 		ent->think = G_FreeEntity;
 		ent->nextthink = level.time;
@@ -889,8 +1016,8 @@ void pas_think( gentity_t *ent )
 		return;
 	}
 
-	if ((ent->genericValue8+TURRET_LIFETIME) < level.time)
-	{
+	if ( !ent->rpSpTurret && (ent->genericValue8+TURRET_LIFETIME) < level.time )
+	{ // GalaxyRP: [SP Maps] a map-placed sentry has no lifetime
 		G_Sound( ent, CHAN_BODY, G_SoundIndex( "sound/chars/turret/shutdown.wav" ));
 		ent->s.bolt2 = ENTITYNUM_NONE;
 		ent->s.fireflag = 2;
@@ -901,7 +1028,7 @@ void pas_think( gentity_t *ent )
 	}
 
 	if (level.duel_tournament_mode == 4 && 
-		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * rp_duel_tournament_arena_scale.value / 100.0))
 	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
 		G_Sound(ent, CHAN_BODY, G_SoundIndex("sound/chars/turret/shutdown.wav"));
 		ent->s.bolt2 = ENTITYNUM_NONE;
@@ -932,6 +1059,21 @@ void pas_think( gentity_t *ent )
 		}
 		else if (ent->enemy->health < 1)
 		{
+			ent->enemy = NULL;
+		}
+		// GalaxyRP fix: [Dueling] ...and let go of the target when a private duel starts, in either
+		// direction. The two filters added to pas_find_enemies() only stop the sentry ACQUIRING while
+		// a duel is on; a lock that already existed when the duel began would otherwise have survived
+		// for the sentry's whole remaining lifetime, which is the same blank-fire-and-decloak problem
+		// those filters exist to prevent. Deliberately here rather than in pas_adjust_enemy() just
+		// above, which defers its drop behind the bounceCount anti-ping-pong delay -- this one should
+		// take effect on the frame the duel starts, like the other three tests it sits with.
+		else if (ent->enemy->client->ps.duelInProgress)
+		{ // the target has entered a duel and is now off limits
+			ent->enemy = NULL;
+		}
+		else if (ent->parent && ent->parent->client && ent->parent->client->ps.duelInProgress)
+		{ // the OWNER has entered a duel, so this sentry stands down entirely
 			ent->enemy = NULL;
 		}
 	}
@@ -1038,7 +1180,13 @@ void pas_think( gentity_t *ent )
 	{
 		ent->count--;
 
-		if ( ent->count )
+		// GalaxyRP fix: [Entity System] a shot is a missile, an entity: skipped (the round still
+		// counts) while the table is at the reserve, rather than walked into G_Spawn()'s ERR_DROP
+		if ( ent->count && G_EntitySlotsAvailable( 1 ) == qfalse )
+		{
+			ent->attackDebounceTime = level.time + 150;
+		}
+		else if ( ent->count )
 		{
 			pas_fire( ent );
 			ent->s.fireflag = 1;
@@ -1074,7 +1222,7 @@ void turret_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 		G_UseTargets( self, attacker );
 	}
 
-	if (!g_entities[self->genericValue3].inuse || !g_entities[self->genericValue3].client)
+	if ( pas_owner( self ) && ( !pas_owner( self )->inuse || !pas_owner( self )->client ) )
 	{
 		G_FreeEntity(self);
 		return;
@@ -1089,15 +1237,15 @@ void turret_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 	VectorSet( self->s.angles, 0, 0, 1 );
 
 	G_PlayEffect(EFFECT_EXPLOSION_PAS, self->s.pos.trBase, self->s.angles);
-	G_RadiusDamage(self->s.pos.trBase, &g_entities[self->genericValue3], 30, 256, self, self, MOD_UNKNOWN);
+	G_RadiusDamage(self->s.pos.trBase, pas_owner( self ) ? pas_owner( self ) : self, 30, 256, self, self, MOD_UNKNOWN);
 
-	g_entities[self->genericValue3].client->ps.fd.sentryDeployed = qfalse;
-
-	// zyk: Bounty Hunter with Upgrade can place more sentries
-	if (g_entities[self->genericValue3].client->sess.amrpgmode == 2 && g_entities[self->genericValue3].client->pers.rpg_class == 2)
+	if ( pas_owner( self ) )
 	{
-		g_entities[self->genericValue3].client->pers.bounty_hunter_placed_sentries--;
+		pas_owner( self )->client->ps.fd.sentryDeployed = qfalse;
 	}
+
+	// GalaxyRP fix: [RPG classes] removed a dead Bounty Hunter placed-sentries decrement
+	// gated on pers.rpg_class == 2, which is permanently 0 now.
 
 	//ExplodeDeath( self );
 	G_FreeEntity( self );
@@ -1105,13 +1253,13 @@ void turret_die(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int 
 
 void turret_free(gentity_t *self)
 {
-	if (!g_entities[self->genericValue3].inuse || !g_entities[self->genericValue3].client)
+	if ( !pas_owner( self ) || !pas_owner( self )->inuse || !pas_owner( self )->client )
 	{
 		G_FreeEntity(self);
 		return;
 	}
 
-	g_entities[self->genericValue3].client->ps.fd.sentryDeployed = qfalse;
+	pas_owner( self )->client->ps.fd.sentryDeployed = qfalse;
 
 	G_FreeEntity( self );
 }
@@ -1154,6 +1302,83 @@ void SP_PAS( gentity_t *base )
 	G_Sound( base, CHAN_BODY, G_SoundIndex( "sound/chars/turret/startup.wav" ));
 }
 
+/*QUAKED misc_sentry_turret (1 0 0) (-8 -8 0) (8 8 24)
+model="models/items/psgun.glm"
+Single player's portable sentry turret placed in a map. The same gun as the sentry item, owned by
+nobody: it never expires, and shoots at everyone but the team named in "team".
+
+  "team" - the team it leaves alone: player, enemy (the default), neutral or free
+  "count" - shots before it runs out of ammo (default 500)
+  "health" - default 50
+  "target" - used when it is destroyed
+*/
+void SP_misc_sentry_turret( gentity_t *base )
+{
+	vec3_t mins, maxs;
+
+	base->classname = "misc_sentry_turret";
+	base->s.modelindex = G_ModelIndex( "models/items/psgun.glm" );
+	base->s.g2radius = 30.0f;
+	base->s.modelGhoul2 = 1;
+
+	G_SetOrigin( base, base->s.origin );
+	G_SetAngles( base, base->s.angles );
+	base->parent = NULL;
+	base->r.contents = CONTENTS_SOLID;
+	base->s.solid = 2;
+	base->clipmask = MASK_SOLID;
+	VectorSet( mins, -8, -8, 0 );
+	VectorSet( maxs, 8, 8, 24 );
+	VectorCopy( mins, base->r.mins );
+	VectorCopy( maxs, base->r.maxs );
+	base->genericValue3 = ENTITYNUM_NONE;	//no owner
+	base->genericValue2 = 0;
+	base->genericValue15 = HI_SENTRY_GUN;
+	base->s.eType = ET_GENERAL;
+	base->s.pos.trType = TR_GRAVITY;
+	base->s.pos.trTime = level.time;
+	base->touch = SentryTouch;
+	base->nextthink = level.time;
+	base->genericValue4 = ENTITYNUM_NONE;	//enemy index
+	base->genericValue5 = 1000;
+	base->genericValue8 = level.time;
+	base->s.owner = ENTITYNUM_NONE;
+	base->s.shouldtarget = qtrue;
+	base->s.teamowner = 16;
+
+	// the team it leaves alone, single player's "team" key (misc_turret reads it the same way)
+	base->rpSpTurret = qtrue;
+	base->rpSpTurretTeam = NPCTEAM_ENEMY;
+	if ( base->team && base->team[0] )
+	{
+		if ( !Q_stricmp( base->team, "player" ) )
+		{
+			base->rpSpTurretTeam = NPCTEAM_PLAYER;
+		}
+		else if ( !Q_stricmp( base->team, "enemy" ) )
+		{
+			base->rpSpTurretTeam = NPCTEAM_ENEMY;
+		}
+		else if ( !Q_stricmp( base->team, "neutral" ) )
+		{
+			base->rpSpTurretTeam = NPCTEAM_NEUTRAL;
+		}
+		else if ( !Q_stricmp( base->team, "free" ) )
+		{
+			base->rpSpTurretTeam = NPCTEAM_FREE;
+		}
+		else
+		{
+			base->rpSpTurretTeam = NPCTEAM_NUM_TEAMS;	//nobody is left alone
+		}
+		base->team = NULL;
+	}
+
+	trap->LinkEntity( (sharedEntity_t *)base );
+
+	SP_PAS( base );
+}
+
 //------------------------------------------------------------------------
 void ItemUse_Sentry( gentity_t *ent )
 //------------------------------------------------------------------------
@@ -1164,6 +1389,13 @@ void ItemUse_Sentry( gentity_t *ent )
 	gentity_t *sentry;
 
 	if (!ent || !ent->client)
+	{
+		return;
+	}
+
+	// GalaxyRP fix: [Death System] a downed player keeps RP_DOWNED_HEALTH health, so nothing above stops
+	// them using this while incapacitated. Same explicit guard as the cloak item below.
+	if ( G_PlayerIsDowned( ent ) )
 	{
 		return;
 	}
@@ -1236,25 +1468,21 @@ void ItemUse_Sentry( gentity_t *ent )
 
 	SP_PAS( sentry );
 
-	// zyk: Bounty Hunter sentry gun has more HP and with the Upgrade, player can place more sentry guns
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 2)
-	{
-		sentry->health = 50 * (ent->client->pers.skill_levels[55] + 1);
-
-		// zyk: validating quantity of sentry guns that the Bounty Hunter can place
-		ent->client->pers.bounty_hunter_placed_sentries++;
-		ent->client->pers.bounty_hunter_sentries--;
-
-		if (ent->client->pers.secrets_found & (1 << 1) && ent->client->pers.bounty_hunter_placed_sentries < MAX_BOUNTY_HUNTER_SENTRIES)
-		{
-			ent->client->ps.fd.sentryDeployed = qfalse;
-		}
-	}
+	// GalaxyRP fix: [RPG classes] removed a dead Bounty Hunter sentry-HP-bonus /
+	// placed-sentries-bookkeeping block gated on pers.rpg_class == 2, which is permanently
+	// 0 now. sentry->health keeps the default of 50 set inside SP_PAS() above.
 }
 
 extern gentity_t *NPC_SpawnType( gentity_t *ent, char *npc_type, char *targetname, qboolean isVehicle );
 void ItemUse_Seeker(gentity_t *ent)
 {
+	// GalaxyRP fix: [Death System] a downed player keeps RP_DOWNED_HEALTH health, so nothing above stops
+	// them using this while incapacitated. Same explicit guard as the cloak item below.
+	if ( G_PlayerIsDowned( ent ) )
+	{
+		return;
+	}
+
 	if ( level.gametype == GT_SIEGE && d_siegeSeekerNPC.integer )
 	{//actualy spawn a remote NPC
 		gentity_t *remote = NPC_SpawnType( ent, "remote", NULL, qfalse );
@@ -1279,11 +1507,9 @@ void ItemUse_Seeker(gentity_t *ent)
 	else
 	{
 		ent->client->ps.eFlags |= EF_SEEKERDRONE;
-		// zyk: Bounty Hunter Upgrade increases seeker drone lifetime
-		if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1))
-			ent->client->ps.droneExistTime = level.time + 80000;
-		else
-			ent->client->ps.droneExistTime = level.time + 60000; // zyk: the seeker drone lifetime, changed from 30000 to 60000
+		// GalaxyRP fix: [RPG classes] removed a dead Bounty Hunter Upgrade seeker-drone
+		// lifetime-extension branch gated on pers.rpg_class == 2, which is permanently 0 now.
+		ent->client->ps.droneExistTime = level.time + 60000; // zyk: the seeker drone lifetime, changed from 30000 to 60000
 		ent->client->ps.droneFireTime = level.time + 500;   // zyk: fire time of seeker drone changed from 1500 to 500
 	}
 }
@@ -1317,24 +1543,46 @@ static void MedPackGive(gentity_t *ent, int amount)
 
 void ItemUse_MedPack_Big(gentity_t *ent)
 {
+	// GalaxyRP fix: [Death System] a downed player keeps RP_DOWNED_HEALTH health, so nothing above stops
+	// them using this while incapacitated. Same explicit guard as the cloak item below.
+	if ( G_PlayerIsDowned( ent ) )
+	{
+		return;
+	}
+
 	// zyk: RPG Mode Big Bacta. Recover 150 HP
-	if (ent && ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.secrets_found & (1 << 0))
+	// GalaxyRP fix: [Shop] Holdable Items Upgrade moved from secrets_found bit 0 (never persisted), to
+	// player_settings bit 0 (account-wide), to skill_levels[38] bit 0 (per-character) -- see g_local.h's
+	// skill_levels field.
+	if (ent && ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[38] & (1 << 0))
 		MedPackGive(ent, MAX_MEDPACK_BIG_HEAL_AMOUNT * 3);
 	else
 		MedPackGive(ent, MAX_MEDPACK_BIG_HEAL_AMOUNT);
 }
 
-extern int zyk_max_magic_power(gentity_t *ent);
 void ItemUse_MedPack(gentity_t *ent)
 {
-	// zyk: RPG Mode Bacta Canister. Recover 75 HP
-	if (ent && ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.secrets_found & (1 << 0))
+	// GalaxyRP fix: [Death System] a downed player keeps RP_DOWNED_HEALTH health, so nothing above stops
+	// them using this while incapacitated. Same explicit guard as the cloak item below.
+	if ( G_PlayerIsDowned( ent ) )
 	{
-		ent->client->pers.magic_power = zyk_max_magic_power(ent);
-		send_rpg_events(2000);
+		return;
 	}
-	
-	MedPackGive(ent, MAX_MEDPACK_HEAL_AMOUNT);
+
+	// zyk: RPG Mode Bacta Canister. Recover 75 HP
+	// GalaxyRP fix: [Shop] Holdable Items Upgrade moved from secrets_found bit 0 (never persisted), to
+	// player_settings bit 0 (account-wide), to skill_levels[38] bit 0 (per-character) -- see g_local.h's
+	// skill_levels field.
+	// GalaxyRP fix: [Shop] the Holdable Items Upgrade's Bacta Canister bonus used to be a no-op for
+	// healing (it only refilled magic_power instead), which contradicted the shop's own description
+	// ("Bacta Canister recovers more health"). Now mirrors Big Bacta's upgrade bonus exactly: heals
+	// 3x the base amount (225 HP) instead of a magic_power refill. See the matching GalaxyRP fix
+	// comment on PM_ItemUsable's HI_MEDPAC case (bg_pmove.c) -- the old "usable at max health to top
+	// off magic_power" carve-out there no longer applies now that this has no non-HP effect.
+	if (ent && ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[38] & (1 << 0))
+		MedPackGive(ent, MAX_MEDPACK_HEAL_AMOUNT * 3);
+	else
+		MedPackGive(ent, MAX_MEDPACK_HEAL_AMOUNT);
 }
 
 #define JETPACK_TOGGLE_TIME			900 // zyk: default 1000
@@ -1392,12 +1640,24 @@ void ItemUse_Jetpack( gentity_t *ent )
 		return;
 	}
 
+	// GalaxyRP fix: [RPG classes] removed a dead Magic Master fuel-restore exception
+	// (pers.rpg_class != 8 was always true, so the OR'd clause was always true and never
+	// blocked this return).
 	if (!ent->client->jetPackOn &&
 		// ent->client->ps.jetpackFuel < 5
-		ent->client->pers.jetpack_fuel < JETPACK_SCALE && 
-		(ent->client->sess.amrpgmode != 2 || ent->client->pers.rpg_class != 8 || ent->client->pers.magic_power < 10 || ent->client->pers.skill_levels[55] == 0))
+		ent->client->pers.jetpack_fuel < JETPACK_SCALE)
 	{ //too low on fuel to start it up
-		// zyk: Magic Master can use magic to restore fuel so allow him to activate jetpack
+		return;
+	}
+
+	// GalaxyRP fix: [Death System] a downed player must not be able to switch the jetpack back ON.
+	// paralyze_player() calls Jetpack_Off() when they go down, but that is one-shot: nothing stopped
+	// them re-enabling it here or via /jetpack, and ClientThink_real() hands any client with
+	// jetPackOn a PM_JETPACK movetype regardless of the downed state -- putting them straight back
+	// into the flying-while-downed state that Jetpack_Off() call was added to end.
+	// Gates only the ON direction, like the cloak item: switching OFF stays reachable.
+	if ( !ent->client->jetPackOn && G_PlayerIsDowned( ent ) )
+	{
 		return;
 	}
 
@@ -1420,6 +1680,7 @@ void ItemUse_Jetpack( gentity_t *ent )
 #define CLOAK_TOGGLE_TIME			1000
 extern void Jedi_Cloak( gentity_t *self );
 extern void Jedi_Decloak( gentity_t *self );
+extern void Jedi_DecloakPair( gentity_t *self );
 void ItemUse_UseCloak( gentity_t *ent )
 {
 	assert(ent && ent->client);
@@ -1437,6 +1698,23 @@ void ItemUse_UseCloak( gentity_t *ent )
 		return;
 	}
 
+	// GalaxyRP fix: [Cloak Item] explicit possession check -- this is normally already guaranteed by
+	// the fact this function is only reached while Cloak Item is the player's selected holdable, but
+	// checking it directly here is cheap and matches the same possession gate "use_cloak" applies.
+	if ( !(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK)) )
+	{
+		return;
+	}
+
+	// GalaxyRP fix: [Cloak Item] same downed test as the /use_cloak console path (g_active.c) -- a
+	// downed player keeps RP_DOWNED_HEALTH health, so nothing above stops them re-cloaking after being downed and
+	// lying there invisible. Gates only the cloak direction; the decloak below stays reachable.
+	if ( !ent->client->ps.powerups[PW_CLOAKED] &&
+		(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DOWNED)) )
+	{
+		return;
+	}
+
 	/* zyk: now cloak item doesnt use fuel anymore
 	if (!ent->client->ps.powerups[PW_CLOAKED] &&
 		ent->client->ps.cloakFuel < 5)
@@ -1445,12 +1723,16 @@ void ItemUse_UseCloak( gentity_t *ent )
 	}
 	*/
 
+	// GalaxyRP fix: [Cloak Item] same toggle logic as "use_cloak" now (see g_active.c's
+	// GENCMD_USE_CLOAK) -- cloaking is always solo (never touches a vehicle, even though using this
+	// item while mounted is still allowed), but decloaking goes through Jedi_DecloakPair so a player
+	// who is currently part of a paired vehicle+rider cloak also takes the vehicle down with them.
 	if ( ent->client->ps.powerups[PW_CLOAKED] )
-	{//decloak
-		Jedi_Decloak( ent );
+	{//decloak (self, plus the vehicle too if paired)
+		Jedi_DecloakPair( ent );
 	}
 	else
-	{//cloak
+	{//cloak (self only)
 		Jedi_Cloak( ent );
 	}
 
@@ -1538,6 +1820,14 @@ void G_PrecacheDispensers(void)
 
 void ItemUse_UseDisp(gentity_t *ent, int type)
 {
+	// GalaxyRP fix: [Death System] a downed player keeps RP_DOWNED_HEALTH health. This one was already
+	// blocked in practice by the forceHandExtend test below, but only as a side effect of the
+	// downed state pinning HANDEXTEND_KNOCKDOWN -- the exact accident this fix stops relying on.
+	if ( G_PlayerIsDowned( ent ) )
+	{
+		return;
+	}
+
 	gitem_t *item = NULL;
 	gentity_t *eItem;
 
@@ -1634,6 +1924,16 @@ void EWebDie(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int dam
 {
 	vec3_t fxDir;
 
+	// GalaxyRP fix: [E-Web] die once. For anything that is not a client, G_Damage() calls ->die() on
+	// EVERY hit that lands while health is at or below zero, and nothing here used to clear
+	// takedamage -- while the entity itself is only freed on its next think (EWebDisattach() sets
+	// think = G_FreeEntity). So each further hit in the same frame, which flechette shards, repeater
+	// fire and overlapping splash all deliver, ran this whole function again: another
+	// EWEB_DEATH_DMG blast across EWEB_DEATH_RADIUS, landing on whoever was standing next to it --
+	// normally the owner, who is positioned right behind it -- another explosion effect, and another
+	// disattach. First line on purpose, ahead of the blast, so nothing below can re-enter either.
+	self->takedamage = qfalse;
+
 	G_RadiusDamage(self->r.currentOrigin, self, EWEB_DEATH_DMG, EWEB_DEATH_RADIUS, self, self, MOD_SUICIDE);
 
 	VectorSet(fxDir, 1.0f, 0.0f, 0.0f);
@@ -1662,6 +1962,17 @@ void EWebDie(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int dam
 			}
 		}
 	}
+
+	// GalaxyRP fix: [E-Web] and always go away afterwards. The only thing that used to schedule the
+	// free was EWebDisattach(), which runs only when there is a live owner to hand back to -- so an
+	// e-web that died without one was left in the world for the rest of the map, solid and shootable
+	// but no longer thinking: EWebThink() returns straight after calling this, without setting
+	// nextthink, and G_RunThink() has already zeroed it. Nothing reaches that branch today
+	// (r.ownerNum is only ever set by EWeb_Create(), and ClientDisconnect() frees a player's e-web
+	// before this could see them gone), but it was one guard away from a leak, and these two lines
+	// are exactly what EWebDisattach() writes on every other path, so repeating them is idempotent.
+	self->think = G_FreeEntity;
+	self->nextthink = level.time;
 }
 
 //e-web pain
@@ -1826,11 +2137,9 @@ void EWebFire(gentity_t *owner, gentity_t *eweb)
 	missile->classname = "generic_proj";
 	missile->s.weapon = WP_TURRET;
 
-	// zyk: Bounty Hunter EWeb has more damage
-	if (owner && owner->client && owner->client->sess.amrpgmode == 2 && owner->client->pers.rpg_class == 2 && owner->client->pers.secrets_found & (1 << 1))
-		missile->damage = EWEB_MISSILE_DAMAGE + 5;
-	else
-		missile->damage = EWEB_MISSILE_DAMAGE;
+	// GalaxyRP fix: [RPG classes] removed a dead Bounty Hunter EWeb damage-bonus branch
+	// gated on pers.rpg_class == 2, which is permanently 0 now.
+	missile->damage = EWEB_MISSILE_DAMAGE;
 
 	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
 	missile->methodOfDeath = MOD_TURBLAST;
@@ -1995,7 +2304,24 @@ void EWebThink(gentity_t *self)
 				owner->client->ps.viewangles[YAW] = yaw;
 			}
 			owner->client->ps.weapon = WP_EMPLACED_GUN;
-			owner->client->ps.stats[STAT_WEAPONS] = WP_EMPLACED_GUN;
+			// GalaxyRP fix: [E-Web] a bit, not the enum. This was "= WP_EMPLACED_GUN", and
+			// WP_EMPLACED_GUN is 17, so the mask it wrote was bits 0 and 4 -- WP_NONE and
+			// WP_BRYAR_PISTOL -- while the one weapon the player is actually holding was not in it.
+			// Nothing a player could see showed it: the weapon-select bar and weapon cycling both
+			// stand down while emplacedIndex is set, pmove forces cmd.weapon to WP_EMPLACED_GUN, and
+			// firing goes through this think rather than FireWeapon(). But every other writer of this
+			// bit treats it as a bit -- emplaced_gun_use() sets it with |=, the map-gun release clears
+			// it with &= ~ -- and this was the only one that did not.
+			//
+			// Still a wholesale replace, deliberately: while mounted the player holds this and nothing
+			// else, and EWebDisattach() puts the deploy-time mask back from genericValue11.
+			//
+			// The old value had one accidental virtue, which is why this has a companion in
+			// zyk_stop_active_holdables() (g_cmds.c). When an account command frees the e-web, the mask
+			// is left as whatever this line last wrote, and the skills load that follows only sets or
+			// clears the skill-backed weapons. That happened to correct bit 4, and bit 0 is inert; bit 17
+			// is neither, and nothing on that path would clear it -- so the helper takes it back itself.
+			owner->client->ps.stats[STAT_WEAPONS] = (1 << WP_EMPLACED_GUN);
 
 			if (self->genericValue8 < level.time)
 			{ //make sure the anim timer is done
@@ -2106,11 +2432,8 @@ gentity_t *EWeb_Create(gentity_t *spawner)
 
 	ent->takedamage = qtrue;
 
-	// zyk: Bounty Hunter EWeb has more health
-	if (spawner->client->sess.amrpgmode == 2 && spawner->client->pers.rpg_class == 2)
-	{
-		eweb_health = eweb_health * (spawner->client->pers.skill_levels[55] + 1);
-	}
+	// GalaxyRP fix: [RPG classes] removed a dead Bounty Hunter EWeb health-multiplier block
+	// gated on pers.rpg_class == 2, which is permanently 0 now.
 
 	if (spawner->client->ewebHealth <= 0)
 	{ //refresh the owner's e-web health if its last e-web did not exist or was killed
@@ -2177,6 +2500,14 @@ gentity_t *EWeb_Create(gentity_t *spawner)
 //use the e-web
 void ItemUse_UseEWeb(gentity_t *ent)
 {
+	// GalaxyRP fix: [Death System] a downed player keeps RP_DOWNED_HEALTH health. This one was already
+	// blocked in practice by the forceHandExtend test below, but only as a side effect of the
+	// downed state pinning HANDEXTEND_KNOCKDOWN -- the exact accident this fix stops relying on.
+	if ( G_PlayerIsDowned( ent ) )
+	{
+		return;
+	}
+
 	if (ent->client->ewebTime > level.time)
 	{ //can't use again yet
 		return;
@@ -2290,7 +2621,7 @@ int Pickup_Powerup( gentity_t *ent, gentity_t *other ) {
 		// anti-reward
 		client->ps.persistant[PERS_PLAYEREVENTS] ^= PLAYEREVENT_DENIEDREWARD;
 	}
-	return RESPAWN_POWERUP;
+	return G_ItemRespawnTime(ent); // GalaxyRP fix: [Items] rp_powerup_respawn_time, see G_ItemRespawnTime
 }
 
 //======================================================================
@@ -2303,33 +2634,138 @@ int Pickup_Holdable( gentity_t *ent, gentity_t *other ) {
 
 	G_LogWeaponItem(other->s.number, ent->item->giTag);
 
-	return adjustRespawnTime(zyk_holdable_item_respawn_time.integer, ent->item->giType, ent->item->giTag);
+	return G_ItemRespawnTime(ent); // GalaxyRP fix: [Items] see G_ItemRespawnTime
 }
 
 
 //======================================================================
 
+// DAJ_RP: [Ammo] rp_add_ammo_scale as it is used: clamped to RP_AMMO_SCALE_MIN..RP_AMMO_SCALE_MAX
+// here as well as by its cvar callback (RP_CVU_addAmmoScale, g_cvar.c), so no reader depends on the
+// callback having run. A NaN fails the first test and comes back as the minimum.
+float RP_AmmoScale( void )
+{
+	const float scale = rp_add_ammo_scale.value;
+
+	if ( !( scale >= RP_AMMO_SCALE_MIN ) )
+	{
+		return RP_AMMO_SCALE_MIN;
+	}
+	if ( scale > RP_AMMO_SCALE_MAX )
+	{
+		return RP_AMMO_SCALE_MAX;
+	}
+	return scale;
+}
+
+// DAJ_RP: [Ammo] an amount of ammo as a pickup hands it out: quantity * scale, rounded up. Used by
+// Pickup_Ammo() and Pickup_Weapon() below, and as the most a dropped weapon may carry -- the weapon's
+// default quantity scaled -- by /drop (Cmd_Drop_f), the death drop (TossClientItems) and the Force
+// Pull disarm (TossClientWeapon), so those three take from the dropper exactly what a pickup of the
+// same weapon would give.
+int RP_ScaledAmmo( int quantity )
+{
+	return (int)ceil( quantity * RP_AmmoScale() );
+}
+
+// DAJ_RP: [Ammo] what a dropped weapon stores in its count so that picking it up gives back exactly
+// "give" rounds. Pickup_Weapon() multiplies count by the scale again, so the count is give / scale --
+// but not left to float arithmetic alone:
+//   - nothing to give is -1, which Pickup_Weapon() reads as "no ammo" (0 would mean "the weapon's
+//     full default quantity" -- the reason a count must never be 0: above a scale of 1 a round or two
+//     used to divide down to it and came back as a full pack);
+//   - at some scales (0.3, 0.6, ...) the float quotient rounds so that a pickup would give one round
+//     more than was dropped, a +1 per /drop and pick-up; the count is lowered until it does not.
+// Lowering the count by one lowers what a pickup gives by at most one, because the scale is at most 1,
+// so the result never undershoots either: a pickup gives back exactly "give".
+int RP_DropAmmoCount( int give )
+{
+	int count;
+
+	if ( give <= 0 )
+	{
+		return -1;
+	}
+
+	count = (int)( give / RP_AmmoScale() );
+
+	if ( count < 1 )
+	{
+		count = 1;
+	}
+
+	while ( count > 1 && RP_ScaledAmmo( count ) > give )
+	{
+		count--;
+	}
+
+	return count;
+}
+
+// DAJ_RP: [Ammo] the server's cap for one ammo type -- the same rp_max_* cvar Add_Ammo() below fills
+// to, in one place so the ammo dispensers (g_misc.c) and the load-time clamp can ask for it instead of
+// carrying their own copy of this list. 0 for anything with no rp_max_* cvar (AMMO_NONE, AMMO_FORCE,
+// AMMO_EMPLACED), which Add_Ammo() never fills either.
+int RP_MaxAmmo( int ammoType )
+{
+	switch ( ammoType )
+	{
+	case AMMO_BLASTER:		return rp_max_blaster_pack_ammo.integer;
+	case AMMO_POWERCELL:	return rp_max_power_cell_ammo.integer;
+	case AMMO_METAL_BOLTS:	return rp_max_metal_bolt_ammo.integer;
+	case AMMO_ROCKETS:		return rp_max_rocket_ammo.integer;
+	case AMMO_THERMAL:		return rp_max_thermal_ammo.integer;
+	case AMMO_TRIPMINE:		return rp_max_tripmine_ammo.integer;
+	case AMMO_DETPACK:		return rp_max_detpack_ammo.integer;
+	default:				return 0;
+	}
+}
+
+// DAJ_RP: [Ammo] bring every capped ammo type down to its rp_max_* cap -- lowers only, never raises.
+// Called right after a character's saved ammo is read from the database (/login, /new, /char and
+// every respawn -- see g_cmds.c), so ammo saved above the caps is cut back on the next load and saved
+// correctly from then on. That covers the overfill the old misc_model_ammo_power_converter handed out
+// (it filled to the engine's ammoData[] maximums -- 1000 blaster packs against a cap of 300), and any
+// character left above a cap an admin has since lowered.
+void RP_ClampAmmoToCaps( gentity_t *ent )
+{
+	int i;
+
+	if ( !ent || !ent->client )
+	{
+		return;
+	}
+
+	for ( i = AMMO_BLASTER; i < AMMO_MAX; i++ )
+	{
+		int cap;
+
+		if ( i == AMMO_EMPLACED )
+		{ // no rp_max_* cvar and no Weapons column -- not ours to touch
+			continue;
+		}
+
+		cap = RP_MaxAmmo( i );
+
+		if ( cap >= 0 && ent->client->ps.ammo[i] > cap )
+		{
+			ent->client->ps.ammo[i] = cap;
+		}
+	}
+}
+
 void Add_Ammo (gentity_t *ent, int weapon, int count)
 {
-	int max_blasterpack_ammo = zyk_max_blaster_pack_ammo.integer;
-	int max_powercell_ammo = zyk_max_power_cell_ammo.integer;
-	int max_metalbolt_ammo = zyk_max_metal_bolt_ammo.integer;
-	int max_rocket_ammo = zyk_max_rocket_ammo.integer;
-	int max_thermal_ammo = zyk_max_thermal_ammo.integer;
-	int max_tripmine_ammo = zyk_max_tripmine_ammo.integer;
-	int max_detpack_ammo = zyk_max_detpack_ammo.integer;
+	int max_blasterpack_ammo = rp_max_blaster_pack_ammo.integer;
+	int max_powercell_ammo = rp_max_power_cell_ammo.integer;
+	int max_metalbolt_ammo = rp_max_metal_bolt_ammo.integer;
+	int max_rocket_ammo = rp_max_rocket_ammo.integer;
+	int max_thermal_ammo = rp_max_thermal_ammo.integer;
+	int max_tripmine_ammo = rp_max_tripmine_ammo.integer;
+	int max_detpack_ammo = rp_max_detpack_ammo.integer;
 
-	// zyk: Bounty Hunter class has more max ammo
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 2)
-	{
-		max_blasterpack_ammo += max_blasterpack_ammo/6 * ent->client->pers.skill_levels[55];
-		max_powercell_ammo += max_powercell_ammo/6 * ent->client->pers.skill_levels[55];
-		max_metalbolt_ammo += max_metalbolt_ammo/6 * ent->client->pers.skill_levels[55];
-		max_rocket_ammo += max_rocket_ammo/6 * ent->client->pers.skill_levels[55];
-		max_thermal_ammo += max_thermal_ammo/6 * ent->client->pers.skill_levels[55];
-		max_tripmine_ammo += max_tripmine_ammo/6 * ent->client->pers.skill_levels[55];
-		max_detpack_ammo += max_detpack_ammo/6 * ent->client->pers.skill_levels[55];
-	}
+	// GalaxyRP fix: [RPG classes] removed a dead Bounty Hunter max-ammo-bonus block gated
+	// on pers.rpg_class == 2, which is permanently 0 now.
 
 	if (weapon == AMMO_BLASTER){
 		if (max_blasterpack_ammo - ent->client->ps.ammo[weapon] > count)
@@ -2416,10 +2852,10 @@ int Pickup_Ammo (gentity_t *ent, gentity_t *other)
 	}
 	else
 	{
-		Add_Ammo (other, ent->item->giTag, (int)ceil(quantity * zyk_add_ammo_scale.value)); // zyk: cvar to scale the add ammo amount
+		Add_Ammo (other, ent->item->giTag, RP_ScaledAmmo(quantity)); // zyk: cvar to scale the add ammo amount (DAJ_RP: [Ammo] clamped, see RP_AmmoScale)
 	}
 
-	return adjustRespawnTime(zyk_ammo_respawn_time.integer, ent->item->giType, ent->item->giTag);
+	return G_ItemRespawnTime(ent); // GalaxyRP fix: [Items] see G_ItemRespawnTime
 }
 
 //======================================================================
@@ -2466,17 +2902,12 @@ int Pickup_Weapon (gentity_t *ent, gentity_t *other) {
 	other->client->ps.stats[STAT_WEAPONS] |= ( 1 << ent->item->giTag );
 
 	//Add_Ammo( other, ent->item->giTag, quantity );
-	Add_Ammo( other, weaponData[ent->item->giTag].ammoIndex, (int)ceil(quantity * zyk_add_ammo_scale.value) ); // zyk: cvar to scale the add ammo amount
+	Add_Ammo( other, weaponData[ent->item->giTag].ammoIndex, RP_ScaledAmmo(quantity) ); // zyk: cvar to scale the add ammo amount (DAJ_RP: [Ammo] clamped, see RP_AmmoScale)
 
 	G_LogWeaponPickup(other->s.number, ent->item->giTag);
 
-	// team deathmatch has slow weapon respawns
-	if ( level.gametype == GT_TEAM )
-	{
-		return adjustRespawnTime(RESPAWN_TEAM_WEAPON, ent->item->giType, ent->item->giTag);
-	}
-
-	return adjustRespawnTime(g_weaponRespawn.integer, ent->item->giType, ent->item->giTag);
+	// GalaxyRP fix: [Items] team deathmatch's slow weapon respawns moved into G_ItemRespawnTime
+	return G_ItemRespawnTime(ent);
 }
 
 
@@ -2507,10 +2938,10 @@ int Pickup_Health (gentity_t *ent, gentity_t *other) {
 	other->client->ps.stats[STAT_HEALTH] = other->health;
 
 	if ( ent->item->quantity == 100 ) {		// mega health respawns slow
-		return zyk_holdable_item_respawn_time.integer;
+		return rp_holdable_item_respawn_time.integer;
 	}
 
-	return adjustRespawnTime(zyk_health_respawn_time.integer, ent->item->giType, ent->item->giTag);
+	return G_ItemRespawnTime(ent); // GalaxyRP fix: [Items] see G_ItemRespawnTime
 }
 
 //======================================================================
@@ -2536,7 +2967,7 @@ int Pickup_Armor( gentity_t *ent, gentity_t *other )
 			other->client->ps.stats[STAT_ARMOR] = other->client->pers.max_rpg_shield;
 		}
 
-		return adjustRespawnTime(zyk_shield_respawn_time.integer, ent->item->giType, ent->item->giTag);
+		return G_ItemRespawnTime(ent); // GalaxyRP fix: [Items] see G_ItemRespawnTime
 	}
 	else if (other->client->sess.amrpgmode < 2 && other->client->ps.stats[STAT_ARMOR] < (other->client->ps.stats[STAT_MAX_HEALTH] * ent->item->giTag))
 	{ // zyk: player who is not in RPG Mode
@@ -2546,7 +2977,7 @@ int Pickup_Armor( gentity_t *ent, gentity_t *other )
 			other->client->ps.stats[STAT_ARMOR] = other->client->ps.stats[STAT_MAX_HEALTH] * ent->item->giTag;
 		}
 
-		return adjustRespawnTime(zyk_shield_respawn_time.integer, ent->item->giType, ent->item->giTag);
+		return G_ItemRespawnTime(ent); // GalaxyRP fix: [Items] see G_ItemRespawnTime
 	}
 	else
 	{
@@ -2558,41 +2989,148 @@ int Pickup_Armor( gentity_t *ent, gentity_t *other )
 
 /*
 ===============
+G_ItemMoveHome
+
+GalaxyRP fix: [Items] puts a map item that Force Push/Pull moved back on its spot. Split out of
+RespawnItem so G_ReturnPushedItem can share it, and taught about suspended items: those were given
+TR_GRAVITY like any other and dropped to the floor the first time they came back. A suspended item is
+put back stationary, standing on the world (G_RunItem turns an item with no ground entity back into a
+falling one), and compared on height too, since a straight pull down moves it on z only. Everything
+else keeps the old rule: compared on x and y, and let fall from its spawn point to the floor.
+===============
+*/
+static qboolean G_ItemMoveHome( gentity_t *ent )
+{
+	const qboolean suspended = ( ent->spawnflags & ITMSF_SUSPEND ) ? qtrue : qfalse;
+
+	if ( ent->r.currentOrigin[0] == ent->s.origin[0] && ent->r.currentOrigin[1] == ent->s.origin[1]
+		&& ( !suspended || ent->r.currentOrigin[2] == ent->s.origin[2] ) )
+	{
+		return qfalse; // zyk: already home
+	}
+
+	G_SetOrigin( ent, ent->s.origin );
+
+	if ( suspended )
+	{
+		ent->s.groundEntityNum = ENTITYNUM_WORLD;
+	}
+	else
+	{
+		ent->s.pos.trType = TR_GRAVITY;
+		ent->s.pos.trTime = level.time;
+	}
+
+	return qtrue;
+}
+
+/*
+===============
+G_ReturnPushedItem
+
+GalaxyRP fix: [Items] think for a map item Force Push/Pull moved and nobody picked up: back to its
+spot after G_ItemPushReturnTime. The push used to set RespawnItem for this, which for an item in a
+"team" group picks a RANDOM member to bring back -- so the pushed one could stay where it was pushed
+while another appeared. This moves only this item. If someone picks it up first, Touch_Item replaces
+this think with RespawnItem, which brings it home when it respawns.
+===============
+*/
+void G_ReturnPushedItem( gentity_t *ent )
+{
+	ent->nextthink = 0;
+
+	if ( !G_ItemMoveHome( ent ) )
+	{
+		return; // zyk: pushed, but it came to rest on its own spot
+	}
+
+	trap->LinkEntity( (sharedEntity_t *)ent );
+	G_AddEvent( ent, EV_ITEM_RESPAWN, 0 ); // zyk: the respawn effect, so players see it return
+}
+
+/*
+===============
 RespawnItem
 ===============
 */
+// GalaxyRP fix: [Entity System] whether one entity of an item "team" group can be the one that comes
+// back. G_FindTeams() builds the group as raw pointers, and nothing unhooks a member that is freed
+// later (/entremove, /entload, a preset respawn), so the chain can lead into a free slot or into one
+// that has since been reused by something else entirely.
+static qboolean RP_ItemTeamMemberValid( gentity_t *member, gentity_t *master )
+{
+	return ( member && member->inuse && member->s.eType == ET_ITEM && member->item &&
+		member->teammaster == master ) ? qtrue : qfalse;
+}
+
 void RespawnItem( gentity_t *ent ) {
 	// randomly select from teamed entities
 	if (ent->team) {
 		gentity_t	*master;
+		gentity_t	*member;
 		int	count;
 		int choice;
+		int steps;
 
-		if ( !ent->teammaster ) {
-			trap->Error( ERR_DROP, "RespawnItem: bad teammaster");
-		}
+		// GalaxyRP fix: [Entity System] this was trap->Error(ERR_DROP, "RespawnItem: bad teammaster"),
+		// a process exit on a dedicated server. Groups are only linked by G_FindTeams(), which runs at
+		// map load and after /entload, so any item given a "team" key by /entadd or /entedit has no
+		// master: the first time someone picked it up, its respawn ended the server. And when the
+		// master itself was removed, the others kept pointing at its freed slot. An item whose group
+		// is not intact now simply respawns on its own -- as does one the chain no longer reaches --
+		// and the random pick below only ever lands on a member that is still a live item of this
+		// group. steps bounds both walks, so a chain bent by slot reuse cannot loop.
 		master = ent->teammaster;
+		count = 0;
 
-		for (count = 0, ent = master; ent; ent = ent->teamchain, count++)
-			;
+		if ( RP_ItemTeamMemberValid( master, master ) && RP_ItemTeamMemberValid( ent, master ) )
+		{
+			qboolean reachable = qfalse;
 
-		choice = rand() % count;
+			for (member = master, steps = 0; member && steps < MAX_GENTITIES; member = member->teamchain, steps++)
+			{
+				if ( RP_ItemTeamMemberValid( member, master ) )
+					count++;
+				if ( member == ent )
+					reachable = qtrue;
+			}
 
-		for (count = 0, ent = master; count < choice; ent = ent->teamchain, count++)
-			;
+			// zyk: a freed member cuts the chain there (G_FreeEntity() zeroes its teamchain), so an
+			// item beyond it is no longer reachable from its master and could never be picked
+			// again. Bring that one back itself rather than lose it from the map.
+			if ( !reachable )
+				count = 0;
+		}
+
+		if ( count > 0 )
+		{
+			choice = rand() % count;
+
+			for (member = master, steps = 0; member && steps < MAX_GENTITIES; member = member->teamchain, steps++)
+			{
+				if ( !RP_ItemTeamMemberValid( member, master ) )
+					continue;
+				if ( choice == 0 )
+				{
+					ent = member;
+					break;
+				}
+				choice--;
+			}
+		}
 	}
 
-	if (ent->r.currentOrigin[0] != ent->s.origin[0] || ent->r.currentOrigin[1] != ent->s.origin[1])
-	{ // zyk: if a player pushed/pulled this item, make it return to its default origin
-		G_SetOrigin(ent, ent->s.origin);
-		ent->s.pos.trType = TR_GRAVITY;
-		ent->s.pos.trTime = level.time;
-	}
+	// zyk: if a player pushed/pulled this item, make it return to its default origin
+	(void)G_ItemMoveHome(ent);
 
 	ent->r.contents = CONTENTS_TRIGGER;
 	//ent->s.eFlags &= ~EF_NODRAW;
 	ent->s.eFlags &= ~(EF_NODRAW | EF_ITEMPLACEHOLDER);
 	ent->r.svFlags &= ~SVF_NOCLIENT;
+	// GalaxyRP fix: [SP Maps] shown by its name within the 300 ms a target_give keeps a given item in every
+	// snapshot (Use_Target_Give()), it went on being sent to every client: nextthink = 0 below cancels the
+	// unlink that would have ended it. No item is sent to everyone otherwise.
+	ent->r.svFlags &= ~SVF_BROADCAST;
 	trap->LinkEntity ((sharedEntity_t *)ent);
 
 	if ( ent->item->giType == IT_POWERUP ) {
@@ -2642,12 +3180,9 @@ qboolean CheckItemCanBePickedUpByNPC( gentity_t *item, gentity_t *pickerupper )
 Touch_Item
 ===============
 */
-extern void universe_quest_artifacts_checker(gentity_t *ent);
-extern void quest_get_new_player(gentity_t *ent);
 void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	int			respawn;
 	qboolean	predict;
-	qboolean	zyk_bounty_sentry_validation = qfalse; // zyk: used to test if the player is a Bounty Hunter with Upgrade, which can grab more sentry guns
 
 	if (ent->genericValue10 > level.time &&
 		other &&
@@ -2679,98 +3214,49 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	if (other->health < 1)
 		return;		// dead people can't pickup
 
-	if (Q_stricmp(ent->targetname, "zyk_quest_artifact") == 0 && ent->item->giType == IT_POWERUP && ent->item->giTag == PW_FORCE_BOON)
-	{ // zyk: an Universe Quest artifact
-		if (other->client->sess.amrpgmode == 2 && other->client->pers.can_play_quest == 1 && other->client->pers.guardian_mode == 0 &&
-			other->client->pers.universe_quest_artifact_holder_id != -1)
-		{ // zyk: player got the artifact in Universe Quest
-			zyk_text_message(other, "universe/mission_2/mission_2_got_artifact", qtrue, qfalse, other->client->pers.netname);
-			other->client->pers.universe_quest_counter |= (1 << other->client->pers.universe_quest_artifact_holder_id);
-			other->client->pers.universe_quest_artifact_holder_id = -1;
-
-			universe_quest_artifacts_checker(other);
-
-			ent->targetname = NULL; // zyk: nullify so in this case the quest system does not free this entity
-
-			quest_get_new_player(other);
-		}
-		else
-		{ // zyk: this is not the quest player. Only the quest player can get the artifact
-
-			// zyk: if he is in a guardian battle and tries to get artifact, do not allow it
-			if (other->client->pers.guardian_mode > 0)
-				ent->targetname = NULL;
-
-			return;
-		}
-	}
+	// GalaxyRP fix: [Quests] a `zyk_quest_artifact` pickup handler used to live here, along with the
+	// `ent->spawnflags & 131072` (Universe Quest prison key) branch just below in the RPG-class pickup
+	// restrictions block. Both were part of the general automated Universe Quest system, which is
+	// fully unreachable now that quest_get_new_player, its sole entry point, has been deleted as
+	// unreachable dead code (see the GalaxyRP fix comment on its old location in g_cmds.c). Removed
+	// outright, along with the universe_quest_artifacts_checker call the first block was the last
+	// live caller of.
 
 	// zyk: Some RPG classes cant pickup some items
 	if (other->client->sess.amrpgmode == 2)
 	{
-		if (ent->spawnflags & 131072)
-		{
-			if (other->client->pers.can_play_quest == 1 && other->client->pers.universe_quest_messages < 6)
-			{ // zyk: player got the key to the prison door in first Universe Quest mission
-				other->client->pers.universe_quest_messages = 6;
-
-				zyk_text_message(other, "universe/mission_0/mission_0_key", qtrue, qfalse, other->client->pers.netname);
-
-				ent->think = G_FreeEntity;
-				ent->nextthink = level.time;
-			}
-
-			return;
-		}
-
-		if (other->client->pers.rpg_class == 1 && ((ent->item->giType == IT_WEAPON && ent->item->giTag != WP_STUN_BATON) || ent->item->giType == IT_AMMO || 
-			ent->item->giType == IT_HOLDABLE))
-		{
-			return;
-		}
-		else if (other->client->pers.rpg_class == 3 && ent->item->giType == IT_HOLDABLE && ent->item->giTag == HI_CLOAK)
-		{
-			return;
-		}
-		else if (other->client->pers.rpg_class == 4 && ((ent->item->giType == IT_WEAPON && ent->item->giTag != WP_STUN_BATON) || 
-				 ent->item->giType == IT_AMMO || ent->item->giType == IT_HOLDABLE))
-		{
-			return;
-		}
-		else if (other->client->pers.rpg_class == 6 && ((ent->item->giType == IT_WEAPON && ent->item->giTag != WP_STUN_BATON) || 
-				 ent->item->giType == IT_AMMO || ent->item->giType == IT_HOLDABLE))
-		{
-			return;
-		}
-		else if (other->client->pers.rpg_class == 8 && ((ent->item->giType == IT_WEAPON && ent->item->giTag != WP_STUN_BATON) || ent->item->giType == IT_AMMO || 
-			     (ent->item->giType == IT_HOLDABLE && ent->item->giTag != HI_MEDPAC && ent->item->giTag != HI_CLOAK && ent->item->giTag != HI_JETPACK)))
-		{ // zyk: Magic Master can only pickup some items
-			return;
-		}
-		else if (other->client->pers.rpg_class == 9 && ((ent->item->giType == IT_WEAPON && ent->item->giTag != WP_STUN_BATON && ent->item->giTag != WP_BLASTER) ||
-			(ent->item->giType == IT_AMMO && ent->item->giTag != AMMO_BLASTER) || 
-			(ent->item->giType == IT_HOLDABLE && ent->item->giTag != HI_MEDPAC_BIG && ent->item->giTag != HI_CLOAK && ent->item->giTag != HI_JETPACK)))
-		{
-			return;
-		}
+		// GalaxyRP fix: [RPG classes] removed a dead six-way pers.rpg_class pickup
+		// restriction chain (classes 1/3/4/6/8/9); pers.rpg_class is permanently 0 now,
+		// so pickup restriction never applies for any class -- falls through to normal
+		// pickup logic below unconditionally.
 	}
-	else if (other->client->pers.player_statuses & (1 << 12) && (ent->item->giType == IT_WEAPON || ent->item->giType == IT_AMMO || 
-			ent->item->giType == IT_HOLDABLE))
-	{ // zyk: players with all force powers given by admin cannot pickup some things
-		return;
-	}
-	else if (level.sniper_mode == 2 && other->s.number < MAX_CLIENTS && level.sniper_players[other->s.number] != -1)
-	{ // zyk: players in Sniper Battle cannot grab anything
-		return;
-	}
-	else if (level.duel_tournament_mode == 4 && other->s.number < MAX_CLIENTS && duel_tournament_is_duelist(other) == qtrue)
-	{ // zyk: duelists in Duel Tournament cannot grab anything
+	// DAJ_RP: [Admin] a player given force powers with /give <player> force used to be refused every weapon,
+	// ammo and holdable item here. Removed: he picks up whatever anyone else can, like a /give guns player.
+
+	// DAJ_RP: [Minigames] a mini-game fighter -- a Duel Tournament duelist in his fight, as before, and now a Melee
+	// Battle fighter too -- cannot grab anything (RP_MinigameFighter, g_main.c). The Melee Battle had no such rule: a
+	// fighter whose weapons and Force it had taken could pick a gun, a shield or a medpack up mid-battle. No longer
+	// tied to the empty logged-in branch above: both mini-games take logged-out players only, so that changes nothing.
+	if (RP_MinigameFighter(other))
+	{
 		return;
 	}
 
 	if (ent->item->giType == IT_POWERUP &&
 		(ent->item->giTag == PW_FORCE_ENLIGHTENED_LIGHT || ent->item->giTag == PW_FORCE_ENLIGHTENED_DARK))
-	{
+	{ // GalaxyRP: [Force Enlightenment] DAJ_RP: logged-in players cannot pick up either color. The
+	  // effect never applied to them -- WP_ForcePowersUpdate() (w_force.c) only boosts players with
+	  // sess.amrpgmode < 2 -- so a pickup did nothing but bank a boost that kicked in after /logout
+	  // and then clobbered the next character's powers at /login. This used to be the opposite
+	  // carve-out (logged-in players could take either color); refusing both is the simpler rule.
+	  // cgame's CG_GreyItem() (cg_ents.c) carries the same rule for the grey-out and for pickup
+	  // prediction, so the item is drawn disabled and no pickup sound is predicted -- keep the two
+	  // in step. Logged-out players keep the vanilla rule: only their own side's color.
+		if (other->client->sess.loggedin == qtrue)
+		{
+			return;
+		}
+
 		if (ent->item->giTag == PW_FORCE_ENLIGHTENED_LIGHT)
 		{
 			if (other->client->ps.fd.forceSide != FORCE_LIGHTSIDE)
@@ -2787,17 +3273,12 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 		}
 	}
 
-	if (other->client->sess.amrpgmode == 2 && other->client->pers.rpg_class == 2 && 
-		ent->item->giType == IT_HOLDABLE && ent->item->giTag == HI_SENTRY_GUN && 
-		other->client->pers.secrets_found & (1 << 1) && other->client->pers.bounty_hunter_sentries < MAX_BOUNTY_HUNTER_SENTRIES)
-	{ // zyk: Bounty Hunter can grab more sentries when he has the Bounty Hunter Upgrade
-		other->client->ps.stats[STAT_HOLDABLE_ITEMS] &= ~(1 << HI_SENTRY_GUN);
-		other->client->pers.bounty_hunter_sentries++;
-		zyk_bounty_sentry_validation = qtrue;
-	}
+	// GalaxyRP fix: [RPG classes] removed a dead Bounty Hunter Upgrade extra-sentry-grab
+	// block gated on pers.rpg_class == 2, which is permanently 0 now -- and, later, the
+	// zyk_bounty_sentry_validation flag it used to set, which nothing else ever set.
 
 	// the same pickup rules are used for client side and server side
-	if ( !BG_CanItemBeGrabbed( level.gametype, &ent->s, &other->client->ps ) && zyk_bounty_sentry_validation == qfalse) {
+	if ( !BG_CanItemBeGrabbed( level.gametype, &ent->s, &other->client->ps ) ) {
 		return;
 	}
 
@@ -2996,7 +3477,11 @@ void Touch_Item (gentity_t *ent, gentity_t *other, trace_t *trace) {
 	// picked up items still stay around, they just don't
 	// draw anything.  This allows respawnable items
 	// to be placed on movers.
-	if (!(ent->flags & FL_DROPPED_ITEM) && (ent->item->giType==IT_WEAPON || ent->item->giType==IT_POWERUP))
+	// DAJ_RP: [Still Weapons] [Still Powerups] a still weapon or powerup (EF_RP_STILL_ITEM, RP_ItemSetStill()) leaves no
+	// ghost: it is hidden and not sent while it waits, as ammo, health and shields are, and RespawnItem() brings it back.
+	// A HOLOGRAM (4096) one keeps the see-through placeholder on its pad.
+	if (!(ent->flags & FL_DROPPED_ITEM) &&
+		(ent->item->giType == IT_WEAPON || ent->item->giType == IT_POWERUP) && !(ent->s.eFlags & EF_RP_STILL_ITEM))
 	{
 		ent->s.eFlags |= EF_ITEMPLACEHOLDER;
 		ent->s.eFlags &= ~EF_NODRAW;
@@ -3081,9 +3566,11 @@ gentity_t *LaunchItem( gitem_t *item, vec3_t origin, vec3_t velocity ) {
 		{
 			droppedBlueFlag = dropped;
 		}
-	} else { // auto-remove after 30 seconds
+	} else { // auto-remove after rp_item_lifetime seconds
+		// DAJ_RP: [Items] was a hard-coded 300000 (zyk's 5 minutes, up from stock's 30 s); now
+		// rp_item_lifetime, default 100 s, clamped to 0..200 s. At 0 the item is freed on the next frame.
 		dropped->think = G_FreeEntity;
-		dropped->nextthink = level.time + 300000;  // zyk: changed the timeout of the item to 5 minutes
+		dropped->nextthink = level.time + RP_CorpseSecondsToMs( rp_item_lifetime.integer );
 	}
 
 	dropped->flags = FL_DROPPED_ITEM;
@@ -3154,6 +3641,41 @@ void Use_Item( gentity_t *ent, gentity_t *other, gentity_t *activator ) {
 
 /*
 ================
+RP_ItemSetStill
+
+DAJ_RP: [Still Weapons] whether this placed item is a weapon the GalaxyRP client draws lying still, as single player
+does (EF_RP_STILL_ITEM, bg_public.h), and at which angles. Every placed weapon pickup is -- the map's, /entadd's,
+/entedit's, a preset's, a misc_model_gun_rack's -- unless it has HOLOGRAM (4096); weapons dropped by players or NPCs
+(LaunchItem()) never come through here. DAJ_RP: [Still Powerups] so is every placed powerup (Force Boon, both Force
+Enlightenments, Ysalamiri) without HOLOGRAM: the client draws the Ysalamiri lying still and turns the other three
+slowly, without the pad, raise or bob. No other item type is marked. The angles go in s.apos.trBase, which the stock
+client ignores on an item (it reads s.angles): the map's angles, and for a weapon with VERTICAL (16) tilted up as
+single player's weapon lockers are -- 75 degrees, a saber 20 (single player takes a saber's pitch from its "random"
+key, which is the respawn time here). A powerup is never tilted. Kept out of s.angles so the entity commands, which
+read s.angles back when a weapon has no angles key, never tilt it twice. The bit is cleared first, so each call decides afresh (an item spawned again in place,
+/entedit or /entrotate, has its eFlags cleared already by RP_EntResetForRespawn()). Called by FinishSpawningItem(),
+and again by GunRackAddItem() (g_misc.c), which turns the item afterwards.
+================
+*/
+void RP_ItemSetStill( gentity_t *ent )
+{
+	ent->s.eFlags &= ~EF_RP_STILL_ITEM;
+
+	if ( !ent->item || ( ent->item->giType != IT_WEAPON && ent->item->giType != IT_POWERUP ) || ( ent->spawnflags & ITMSF_HOLOGRAM ) )
+		return;
+
+	ent->s.eFlags |= EF_RP_STILL_ITEM;
+
+	ent->s.apos.trType = TR_STATIONARY;
+	VectorCopy( ent->s.angles, ent->s.apos.trBase );
+	VectorClear( ent->s.apos.trDelta );
+
+	if ( ent->item->giType == IT_WEAPON && ( ent->spawnflags & ITMSF_VERTICAL ) )
+		ent->s.apos.trBase[PITCH] -= ( ent->item->giTag == WP_SABER ) ? 20 : 75;
+}
+
+/*
+================
 FinishSpawningItem
 
 Traces down to find where an item should rest, instead of letting them
@@ -3221,7 +3743,9 @@ void FinishSpawningItem( gentity_t *ent ) {
 		}
 	}
 
-	if (g_forcePowerDisable.integer)
+	// GalaxyRP fix: [Force] duel-aware, see G_ForcePowerDisableValue() -- force powerups used to keep
+	// spawning in Duel/Power Duel when only g_duelForcePowerDisable was set.
+	if (G_ForcePowerDisableValue())
 	{ //if force powers disabled, don't add force powerups
 		if (ent->item->giType == IT_POWERUP)
 		{
@@ -3280,6 +3804,8 @@ void FinishSpawningItem( gentity_t *ent ) {
 	ent->s.eType = ET_ITEM;
 	ent->s.modelindex = ent->item - bg_itemlist;		// store item number in modelindex
 	ent->s.modelindex2 = 0; // zero indicates this isn't a dropped item
+
+	RP_ItemSetStill( ent );	// DAJ_RP: [Still Weapons]
 
 	ent->r.contents = CONTENTS_TRIGGER;
 	ent->touch = Touch_Item;
@@ -3460,8 +3986,25 @@ Items can't be immediately dropped to floor, because they might
 be on an entity that hasn't spawned yet.
 ============
 */
+extern qboolean itemRegistered[MAX_ITEMS];	// GalaxyRP: [Entity System] below, with RegisterItem()
+
 void G_SpawnItem (gentity_t *ent, gitem_t *item) {
 	int wDisable = 0;
+
+	// GalaxyRP fix: [Items] a placed weapon_melee spawns as a stun baton. The two items share one world
+	// model (baton_w.glm), so a melee pickup looks exactly like a stun baton on its pad -- but every
+	// player always owns melee, and melee has no ammo (AMMO_NONE, whose cap is 0), so
+	// BG_CanItemBeGrabbed() refused it to everyone, forever: a "stun baton" nobody could pick up. Swap
+	// the item here, before the weapon-disable test below, so g_weaponDisable, g_duelWeaponDisable and
+	// disable_weapon_stun_baton judge the weapon the pickup actually gives. Every placed item comes
+	// through this function (map load, /entadd, /entload, /entedit); /entsave writes the entity's
+	// original spawn strings, not this classname, so a saved preset keeps weapon_melee and is swapped
+	// again on every load.
+	if ( item->giType == IT_WEAPON && item->giTag == WP_MELEE )
+	{
+		item = BG_FindItemForWeapon( WP_STUN_BATON );
+		ent->classname = item->classname;
+	}
 
 	G_SpawnFloat( "random", "0", &ent->random );
 
@@ -3485,14 +4028,50 @@ void G_SpawnItem (gentity_t *ent, gitem_t *item) {
 	{
 		if (level.gametype != GT_JEDIMASTER)
 		{
+			// DAJ_RP: [Entity System] /entadd and the rest say why, as for the disable_ cvar below
+			Q_strncpyz( level.rp_spawn_refusal, va( "%s is switched off on this server (%s)", item->classname,
+				( level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL ) ? "g_duelWeaponDisable" : "g_weaponDisable" ),
+				sizeof( level.rp_spawn_refusal ) );
 			G_FreeEntity( ent );
 			return;
 		}
 	}
 
+	// GalaxyRP fix: [Entity System] an item class the map had not precached, spawned after map load
+	// (/entadd, /entedit, a preset): the client registers item visuals from CS_ITEMS, which was written
+	// once at G_InitGame (SaveRegisteredItems), so the item was invisible -- a hologram cone only --
+	// until the map restarted. Written again now, for every later joiner, and for connected clients
+	// whose cgame registers a late CS_ITEMS change (CG_ConfigStringModified); older cgames keep the
+	// cone, which the note tells the admin.
+	// GalaxyRP fix: [Entity System] tested against CS_ITEMS itself, not itemRegistered[]: every NPC
+	// spawned after map load registers the items of the weapons it carries (NPC_PrecacheWeapons),
+	// without writing CS_ITEMS, so the table said "precached" for a weapon no client had ever seen.
+	if ( level.rp_map_loaded )
+	{
+		char	items[MAX_STRING_CHARS];
+		int		index = (int)( item - bg_itemlist );
+
+		trap->GetConfigstring( CS_ITEMS, items, sizeof( items ) );
+		if ( index >= 0 && index < bg_numItems && ( index >= (int)strlen( items ) || items[index] != '1' ) )
+		{
+			RegisterItem( item );
+			SaveRegisteredItems();
+			Q_strncpyz( level.rp_spawn_note, va( "%s was not precached by this map: players with an older client see a placeholder for it until the map restarts.", item->classname ),
+				sizeof( level.rp_spawn_note ) );
+			G_LogPrintf( "item %s precached after map load (CS_ITEMS rewritten)\n", item->classname );
+		}
+	}
+
 	RegisterItem( item );
+	// DAJ_RP fix: [Entity System] freed, as a weapon g_weaponDisable switches off is above: it used to stay as an inert
+	// entity with no item -- an entity slot held for nothing, shown in /entlist, and reported by /entadd as spawned
+	// (stock multiplayer is the same). Every caller already handles a freed entity (G_CallSpawn, the gun rack).
 	if ( G_ItemDisabled(item) )
+	{
+		Q_strncpyz( level.rp_spawn_refusal, va( "disable_%s is 1 on this server", item->classname ), sizeof( level.rp_spawn_refusal ) );
+		G_FreeEntity( ent );
 		return;
+	}
 
 	ent->item = item;
 	// some movers spawn on the second frame, so delay item
@@ -3563,6 +4142,49 @@ void G_BounceItem( gentity_t *ent, trace_t *trace ) {
 
 
 /*
+===============
+RP_ItemIsMapPickup / RP_ItemNoDropReturn
+
+DAJ_RP: [Items] a moving item that lands in a "no drop" volume (textures/system/nodrop, stu/nodrop_trigger -- placed by
+mappers, mostly at the bottom of bottomless pits: ctf4, ctf5, siege_hoth, siege_korriban, kor2, t1_fatal, t2_rogue,
+t2_wedge, t3_rift, taspir2 and vjun1 among the stock maps; never lava) was always removed. Right for what was dropped,
+but a map's own pickup only moves when Force Push/Pull has moved it, and removing it took it off the map until the map
+was loaded again -- shown, or taken and still falling where the push sent it, its respawn lost with it. A map pickup
+(the map's, /entadd's, target_give's: not a dropped item, FL_DROPPED_ITEM, nor one tossed to be removed when picked up,
+genericValue9) is sent back to its spot instead, by G_ItemMoveHome as the push's return and RespawnItem do: shown, with
+the respawn effect, as G_ReturnPushedItem shows it; taken, quietly, still hidden and still waiting on RespawnItem. One
+already on its spot that lands in such a volume (a mapper put it in one) stops where it landed, rather than being sent
+home again and again. Flags, the sentry and everything else that runs here are removed as before.
+===============
+*/
+static qboolean RP_ItemIsMapPickup( const gentity_t *ent )
+{
+	return ( ent->inuse && ent->s.eType == ET_ITEM && ent->item && !( ent->flags & FL_DROPPED_ITEM ) && !ent->genericValue9 ) ? qtrue : qfalse;
+}
+
+static void RP_ItemNoDropReturn( gentity_t *ent, trace_t *tr )
+{
+	const qboolean shown = ( ent->s.eFlags & ( EF_NODRAW | EF_ITEMPLACEHOLDER ) ) ? qfalse : qtrue;
+
+	if ( G_ItemMoveHome( ent ) )
+	{
+		trap->LinkEntity( (sharedEntity_t *)ent );
+		if ( shown )
+		{
+			G_AddEvent( ent, EV_ITEM_RESPAWN, 0 );
+		}
+		return;
+	}
+
+	// already on its spot: come to rest where it landed, as G_BounceItem stops an item
+	tr->endpos[2] += 1.0f;
+	SnapVector( tr->endpos );
+	G_SetOrigin( ent, tr->endpos );
+	ent->s.groundEntityNum = tr->entityNum;
+	trap->LinkEntity( (sharedEntity_t *)ent );
+}
+
+/*
 ================
 G_RunItem
 
@@ -3622,6 +4244,8 @@ void G_RunItem( gentity_t *ent ) {
 			Team_FreeEntity(ent);
 		} else if(ent->genericValue15 == HI_SENTRY_GUN) {
 			turret_free(ent);
+		} else if ( RP_ItemIsMapPickup( ent ) ) {
+			RP_ItemNoDropReturn( ent, &tr );	// DAJ_RP: [Items] not removed: back to its spot
 		} else {
 			G_FreeEntity( ent );
 		}

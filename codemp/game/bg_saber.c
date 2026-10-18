@@ -2447,6 +2447,22 @@ saberMoveName_t PM_SaberAttackForMovement(saberMoveName_t curmove)
 	return newmove;
 }
 
+// GalaxyRP: [Saber Kick] "is the player asking for a directional kick?"
+//
+// This is the one question that decides, for a single alt-attack press, whether the player gets a
+// kick or a saber throw: a direction held means kick, standing still means throw. It reads exactly
+// the two command fields PM_KickMoveForConditions() below consumes, and lives next to it so the two
+// cannot drift -- if that function ever learns a new way to produce a kick, this has to learn it too
+// or the throw will start stealing presses the player meant as kicks.
+//
+// cmd.upmove is deliberately NOT part of it. PM_KickMoveForConditions() ignores upmove entirely (its
+// only reader is the disabled "fancy kicks" branch), so including it here would make jump+alt-attack
+// produce neither a kick nor a throw.
+qboolean PM_KickDirectionHeld( void )
+{
+	return (pm->cmd.forwardmove || pm->cmd.rightmove) ? qtrue : qfalse;
+}
+
 int PM_KickMoveForConditions(void)
 {
 	int kickMove = -1;
@@ -2537,26 +2553,41 @@ qboolean PM_SaberMoveOkayForKata( void )
 }
 
 //GalaxyRP (Alex): [New Combat Animations] This method returns the correct parameter from the .sab file depending on the style the player is currently using.
+// DAJ_RP: Purple = Desann and Green = Tavion, matching the ready anims (getOverridenAnimationByStyle in bg_pmove.c) and the idle anims (get_idle_animation_for_style in g_active.c).
+// DAJ_RP: [Saber Keys] the plain kataMove is the fallback for every style whose own key is not set (LS_INVALID), as
+// it is in the base game, where kataMove applies to all styles. It used to count for Fast alone, so a .sab with only
+// kataMove (a prop's "kataMove LS_NONE", a dual saber's own kata) lost it in every other style. A style's own key,
+// LS_NONE included, still wins.
 int getCorrectKata(saberInfo_t* saber ) {
+	int move;
+
 	switch (pm->ps->fd.saberAnimLevel)
 	{
-	case SS_FAST:
-		return saber->kataMove;
 	case SS_MEDIUM:
-		return saber->kataMoveYellow;
+		move = saber->kataMoveYellow;
+		break;
 	case SS_STRONG:
-		return saber->kataMoveRed;
-	case SS_TAVION:
-		return saber->kataMovePurple;
+		move = saber->kataMoveRed;
+		break;
 	case SS_DESANN:
-		return saber->kataMoveGreen;
+		move = saber->kataMovePurple;
+		break;
+	case SS_TAVION:
+		move = saber->kataMoveGreen;
+		break;
 	case SS_DUAL:
-		return saber->kataMoveDual;
+		move = saber->kataMoveDual;
+		break;
 	case SS_STAFF:
-		return saber->kataMoveStaff;
+		move = saber->kataMoveStaff;
+		break;
+	case SS_FAST:	// Fast has no key of its own: the plain one is Fast's
 	default:
-		return LS_INVALID;
+		move = LS_INVALID;
+		break;
 	}
+
+	return ( move != LS_INVALID ) ? move : saber->kataMove;
 }
 
 qboolean PM_CanDoKata( void )
@@ -2904,7 +2935,23 @@ void PM_WeaponLightsaber(void)
 				}
 			}
 		}
-		else if ( pm->ps->weaponTime < 1&&
+		// GalaxyRP fix: [Saber Throw] a direction held means the player wants a KICK, so the throw
+		// stands aside and the press falls through to the kick block further down (which 35bcdc75
+		// opened to every saber style). Standing still still throws. Without this, one button meant
+		// two things and which one you got depended on your force bar: the throw wins whenever it can
+		// afford itself, so a player with the Saber Throw skill threw while they had force and kicked
+		// when they ran dry, mid-fight, with no way to ask for either.
+		//
+		// This does NOT stop you guiding a thrown saber while running. The saber's lifetime is owned
+		// by the server, which recalls it when the raw BUTTON_ALT_ATTACK is released (w_saber.c) --
+		// the assignment further down here only keeps the predicted flag in step, so skipping this
+		// block on a frame where the player is moving changes nothing about a saber already in flight.
+		//
+		// First in the chain on purpose: PM_SaberPowerCheck() reaches BG_EnoughForcePowerForMove(),
+		// which fires EV_NOAMMO. Tested last, a moving player with an empty force bar would get that
+		// beep every single frame of every kick.
+		else if ( !PM_KickDirectionHeld() &&
+				pm->ps->weaponTime < 1&&
 				pm->ps->saberCanThrow &&
 				//pm->ps->fd.forcePower >= forcePowerNeeded[pm->ps->fd.forcePowerLevel[FP_SABERTHROW]][FP_SABERTHROW] &&
 				!BG_HasYsalamiri(pm->gametype, pm->ps) &&
@@ -3762,6 +3809,14 @@ void PM_SetSaberMove(short newMove)
 	{
 		setflags |= SETANIM_FLAG_RESTART;
 	}
+	// DAJ_RP: [Saber Stances] ...and when the upper body already shows it from the ready stance: Tavion's stance is
+	// the top parry pose (PM_GetSaberStance), and a .sab readyAnim* may name a move's anim too. Without the restart
+	// BG_SetAnimFinal keeps the anim it already runs and sets no torsoTimer, so a top parry or reflection from
+	// that stance ended on the very next frame.
+	else if ( newMove > LS_PUTAWAY && BG_SaberInIdle( pm->ps->saberMove ) && pm->ps->torsoAnim == anim )
+	{
+		setflags |= SETANIM_FLAG_RESTART;
+	}
 
 	//saber torso anims should always be highest priority (4/12/02 - for special anims only)
 	if (!pm->ps->m_iVehicleNum)
@@ -3806,6 +3861,26 @@ void PM_SetSaberMove(short newMove)
 		}
 
 		if (BG_InSlopeAnim( anim ))
+		{
+			anim = PM_GetSaberStance();
+		}
+
+		// GalaxyRP fix: [Saber Kick] the line above that reads anim = pm->ps->legsAnim exists so the
+		// upper body matches the lower body on the way back to ready, and the checks beside this one
+		// name the leg anims that must not be copied. A kick anim was missing from that list, and it
+		// is the one that could not recover: nothing else ever rewrites the torso once saberMove is
+		// already LS_READY, and the repair further up this file that copies the legs back over the
+		// torso only runs with the blade off (see the BG_SabersOff block). So the upper body stayed
+		// clamped on the kick's last frame for the rest of the life, the player walking normally
+		// underneath it, and BG_KickingAnim(torsoAnim) in the kick guard meant they could never kick
+		// again either.
+		//
+		// The legs reach here still holding the kick because PM_KickMoveForConditions() zeroes the
+		// movement command on the frame the kick fires, and PM_Footsteps() sets no leg anim at all
+		// when both move axes are zero but the player still carries speed -- it returns early. Whether
+		// that happens is a race against friction, which is why a player who had come to rest never
+		// saw this and a moving one always did. Refusing the copy settles it at either speed.
+		if (BG_KickingAnim( anim ))
 		{
 			anim = PM_GetSaberStance();
 		}

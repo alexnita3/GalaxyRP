@@ -65,6 +65,12 @@ enum
 
 #include "icarus/interpreter.h"
 
+// GalaxyRP: [ICARUS] MP's animation timer setters (bg_panimate.c), for Q3_SetAnimHoldTime()
+extern void BG_SetLegsAnimTimer(playerState_t *ps, int time );
+extern void BG_SetTorsoAnimTimer(playerState_t *ps, int time );
+// GalaxyRP: [ICARUS] g_utils.c's positioned sound event, for RP_IcarusVoiceSound()
+extern gentity_t *G_SoundTempEntity( vec3_t origin, int event, int channel );
+
 extern stringID_table_t animTable [MAX_ANIMATIONS+1];
 
 stringID_table_t setTable[] =
@@ -280,6 +286,15 @@ stringID_table_t setTable[] =
 	ENUM2STRING(SET_USE_SUBTITLES),
 	ENUM2STRING(SET_CLEAN_DAMAGING_ENTS),
 	ENUM2STRING(SET_HUD),
+	// GalaxyRP: [Scripts] appended SP setters (see Q3_Interface.h)
+	ENUM2STRING(SET_SAFE_REMOVE),
+	ENUM2STRING(SET_FORCE_PULL),
+	ENUM2STRING(SET_FORCE_PROTECT),
+	ENUM2STRING(SET_FORCE_RAGE_LEVEL),
+	ENUM2STRING(SET_FORCE_PROTECT_LEVEL),
+	ENUM2STRING(SET_FORCE_ABSORB_LEVEL),
+	ENUM2STRING(SET_FORCE_DRAIN_LEVEL),
+	ENUM2STRING(SET_FORCE_SIGHT_LEVEL),
 
 //FIXME: add BOTH_ attributes here too
 	{"",	SET_},
@@ -415,6 +430,433 @@ static char *Q3_GetAnimBoth( gentity_t *ent )
 	return lowerName;
 }
 
+
+/*
+==================================================================================================
+GalaxyRP: [ICARUS] voice-line task completion
+
+A script's task( sound(CHAN_VOICE, ...) ) dowait waits for TID_CHAN_VOICE, which Q3_PlaySound()
+sets below. In single player the engine completes it from its sound system when the line ends;
+the multiplayer engine has no such path, and nothing in the game module ever completed it either,
+so every cutscene script with dialogue stalled on its first line. The game module cannot ask the
+client how long a sound is, but it can read the file: RP_SoundDuration() opens the .mp3 or .wav
+behind the sound name and computes its length from the headers (MP3: an Xing/Info frame count when
+present, otherwise every frame walked; WAV: the data chunk over the byte rate). Q3_PlaySound()
+stores level.time plus that length in ent->IcarusSoundTime and RP_IcarusSoundCheck(), from the
+entity loop in G_RunFrame(), completes the task when it passes. One read per sound per map: the
+result is cached by sound index, and the cache is cleared with the map.
+
+Sizes: voice lines are a few hundred KB; the file is streamed through a 64 KB window and never
+held whole. A file that cannot be opened or parsed falls back to RP_SOUND_FALLBACK_MS -- the
+script then waits a fixed five seconds instead of forever, which is what OJP always did.
+==================================================================================================
+*/
+#define RP_SOUND_FALLBACK_MS	5000
+#define RP_SOUND_MIN_MS			100
+#define RP_SOUND_MAX_MS			120000
+#define RP_SOUND_WINDOW			65536
+#define RP_SOUND_MAX_BYTES		( 32 * 1024 * 1024 )	// give up on anything bigger, it is not a voice line
+#define RP_SOUND_CACHE_SIZE		128
+
+typedef struct rpSoundCacheEntry_s {
+	int		soundIndex;
+	int		ms;
+} rpSoundCacheEntry_t;
+
+static rpSoundCacheEntry_t	rp_soundCache[RP_SOUND_CACHE_SIZE];
+static int					rp_soundCacheNext = 0;
+static byte					rp_soundWindow[RP_SOUND_WINDOW];
+
+void RP_IcarusSoundCacheReset( void )
+{
+	memset( rp_soundCache, 0, sizeof( rp_soundCache ) );
+	rp_soundCacheNext = 0;
+}
+
+// A streamed read window over a file handle: bytes [0, len) are valid, pos is the parse cursor.
+typedef struct rpSoundStream_s {
+	fileHandle_t	f;
+	int				fileLen;		// bytes in the file
+	int				consumed;		// bytes of the file before window[0]
+	int				len;			// valid bytes in the window
+	int				pos;			// cursor inside the window
+	qboolean		eof;
+} rpSoundStream_t;
+
+// Makes sure at least `need` bytes are available at the cursor, reading more if the file has them.
+// Returns qfalse when the file has fewer than `need` bytes left from the cursor.
+static qboolean RP_SoundStreamEnsure( rpSoundStream_t *st, int need )
+{
+	int keep, got;
+
+	if ( need > RP_SOUND_WINDOW ) {
+		return qfalse;
+	}
+	if ( st->len - st->pos >= need ) {
+		return qtrue;
+	}
+	if ( st->eof ) {
+		return qfalse;
+	}
+	// slide what is left to the front, refill the rest
+	keep = st->len - st->pos;
+	if ( keep > 0 ) {
+		memmove( rp_soundWindow, rp_soundWindow + st->pos, keep );
+	}
+	st->consumed += st->pos;
+	st->pos = 0;
+	st->len = keep;
+	// fill the window; a short read is retried, only 0 (or an error) means the end
+	while ( st->len < RP_SOUND_WINDOW ) {
+		got = trap->FS_Read( rp_soundWindow + st->len, RP_SOUND_WINDOW - st->len, st->f );
+		if ( got <= 0 ) {
+			st->eof = qtrue;
+			break;
+		}
+		st->len += got;
+		if ( st->consumed + st->len >= st->fileLen ) {
+			st->eof = qtrue;
+			break;
+		}
+	}
+	return ( st->len - st->pos >= need ) ? qtrue : qfalse;
+}
+
+// Advances the cursor by `n` bytes, across window boundaries. Returns qfalse at end of file.
+static qboolean RP_SoundStreamSkip( rpSoundStream_t *st, int n )
+{
+	while ( n > 0 ) {
+		int chunk = n < RP_SOUND_WINDOW ? n : RP_SOUND_WINDOW;
+
+		if ( !RP_SoundStreamEnsure( st, chunk ) ) {
+			// the file ends inside the skip: consume what is there and report it
+			st->pos = st->len;
+			return qfalse;
+		}
+		st->pos += chunk;
+		n -= chunk;
+	}
+	return qtrue;
+}
+
+static const byte *RP_SoundStreamPeek( rpSoundStream_t *st, int need )
+{
+	if ( !RP_SoundStreamEnsure( st, need ) ) {
+		return NULL;
+	}
+	return rp_soundWindow + st->pos;
+}
+
+static int RP_ReadLE32( const byte *p ) { return p[0] | ( p[1] << 8 ) | ( p[2] << 16 ) | ( p[3] << 24 ); }
+static int RP_ReadBE32( const byte *p ) { return ( p[0] << 24 ) | ( p[1] << 16 ) | ( p[2] << 8 ) | p[3]; }
+
+// One MPEG audio frame header, decoded. Returns qfalse for anything that is not a valid header.
+typedef struct rpMp3Frame_s {
+	int		frameBytes;		// whole frame, header included
+	int		samples;		// PCM samples this frame decodes to (per channel)
+	int		sampleRate;
+	int		sideInfoBytes;	// Layer III side info after the header (for the Xing/Info lookup)
+} rpMp3Frame_t;
+
+static qboolean RP_Mp3DecodeHeader( const byte *h, rpMp3Frame_t *fr )
+{
+	static const int bitrateTable[2][3][16] = {
+		{	// MPEG-1: layer I, II, III
+			{ 0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 0 },
+			{ 0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 0 },
+			{ 0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0 },
+		},
+		{	// MPEG-2 and 2.5: layer I, II, III
+			{ 0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 0 },
+			{ 0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0 },
+			{ 0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0 },
+		},
+	};
+	static const int sampleRateTable[4][3] = {
+		{ 11025, 12000, 8000 },		// MPEG-2.5
+		{ 0, 0, 0 },				// reserved
+		{ 22050, 24000, 16000 },	// MPEG-2
+		{ 44100, 48000, 32000 },	// MPEG-1
+	};
+	int version, layer, bitrateIndex, sampleRateIndex, padding, channelMode;
+	int bitrate, mpeg1, layerIndex;
+
+	if ( h[0] != 0xFF || ( h[1] & 0xE0 ) != 0xE0 ) {
+		return qfalse;
+	}
+	version = ( h[1] >> 3 ) & 3;			// 0 = 2.5, 1 = reserved, 2 = 2, 3 = 1
+	layer = ( h[1] >> 1 ) & 3;				// 0 = reserved, 1 = III, 2 = II, 3 = I
+	bitrateIndex = ( h[2] >> 4 ) & 15;
+	sampleRateIndex = ( h[2] >> 2 ) & 3;
+	padding = ( h[2] >> 1 ) & 1;
+	channelMode = ( h[3] >> 6 ) & 3;
+
+	if ( version == 1 || layer == 0 || bitrateIndex == 0 || bitrateIndex == 15 || sampleRateIndex == 3 ) {
+		return qfalse;
+	}
+	mpeg1 = ( version == 3 );
+	layerIndex = 3 - layer;					// 0 = I, 1 = II, 2 = III
+	bitrate = bitrateTable[mpeg1 ? 0 : 1][layerIndex][bitrateIndex] * 1000;
+	fr->sampleRate = sampleRateTable[version][sampleRateIndex];
+	if ( bitrate <= 0 || fr->sampleRate <= 0 ) {
+		return qfalse;
+	}
+
+	if ( layerIndex == 0 ) {				// layer I
+		fr->samples = 384;
+		fr->frameBytes = ( 12 * bitrate / fr->sampleRate + padding ) * 4;
+	} else if ( layerIndex == 1 ) {			// layer II
+		fr->samples = 1152;
+		fr->frameBytes = 144 * bitrate / fr->sampleRate + padding;
+	} else {								// layer III
+		fr->samples = mpeg1 ? 1152 : 576;
+		fr->frameBytes = ( mpeg1 ? 144 : 72 ) * bitrate / fr->sampleRate + padding;
+	}
+	if ( mpeg1 ) {
+		fr->sideInfoBytes = ( channelMode == 3 ) ? 17 : 32;
+	} else {
+		fr->sideInfoBytes = ( channelMode == 3 ) ? 9 : 17;
+	}
+	return ( fr->frameBytes >= 4 ) ? qtrue : qfalse;
+}
+
+// Duration of an MPEG audio stream in milliseconds, 0 when it cannot be read.
+static int RP_Mp3Duration( rpSoundStream_t *st )
+{
+	const byte		*p;
+	rpMp3Frame_t	fr;
+	double			samples = 0.0;
+	int				sampleRate = 0;
+	int				frames = 0;
+	int				resync = 0;
+
+	// ID3v2 tag in front of the audio
+	p = RP_SoundStreamPeek( st, 10 );
+	if ( p && p[0] == 'I' && p[1] == 'D' && p[2] == '3' ) {
+		int size = ( ( p[6] & 0x7F ) << 21 ) | ( ( p[7] & 0x7F ) << 14 ) | ( ( p[8] & 0x7F ) << 7 ) | ( p[9] & 0x7F );
+		int footer = ( p[5] & 0x10 ) ? 10 : 0;
+
+		if ( !RP_SoundStreamSkip( st, 10 + size + footer ) ) {
+			return 0;
+		}
+	}
+
+	while ( ( p = RP_SoundStreamPeek( st, 4 ) ) != NULL ) {
+		if ( !RP_Mp3DecodeHeader( p, &fr ) ) {
+			// not a frame: step one byte and look for the next sync word. Bounded, so a file
+			// that is not MPEG audio at all does not cost a full scan.
+			st->pos++;
+			if ( ++resync > 65536 && frames == 0 ) {
+				return 0;
+			}
+			continue;
+		}
+		if ( frames == 0 ) {
+			// Xing (VBR) / Info (CBR) header in the first frame: the frame count is exact and
+			// saves walking the file. Flags bit 0 = frames field present. One peek covers the tag,
+			// the flags and the count: a second peek could slide the window and stale the first.
+			const byte *x = RP_SoundStreamPeek( st, 4 + fr.sideInfoBytes + 12 );
+
+			if ( x ) {
+				const byte *tag = x + 4 + fr.sideInfoBytes;
+
+				if ( !memcmp( tag, "Xing", 4 ) || !memcmp( tag, "Info", 4 ) ) {
+					int flags = RP_ReadBE32( tag + 4 );
+
+					if ( flags & 1 ) {
+						int count = RP_ReadBE32( tag + 8 );
+
+						if ( count > 0 && count < 10000000 ) {
+							return (int)( (double)count * fr.samples * 1000.0 / fr.sampleRate );
+						}
+					}
+				}
+			}
+			sampleRate = fr.sampleRate;
+		}
+		frames++;
+		samples += fr.samples;
+		if ( !RP_SoundStreamSkip( st, fr.frameBytes ) ) {
+			break;		// last frame truncated: count it and stop
+		}
+	}
+	if ( frames == 0 || sampleRate <= 0 ) {
+		return 0;
+	}
+	return (int)( samples * 1000.0 / sampleRate );
+}
+
+// Duration of a RIFF WAVE file in milliseconds, 0 when it cannot be read.
+static int RP_WavDuration( rpSoundStream_t *st )
+{
+	const byte	*p;
+	int			byteRate = 0;
+
+	p = RP_SoundStreamPeek( st, 12 );
+	if ( !p || memcmp( p, "RIFF", 4 ) || memcmp( p + 8, "WAVE", 4 ) ) {
+		return 0;
+	}
+	st->pos += 12;
+	while ( ( p = RP_SoundStreamPeek( st, 8 ) ) != NULL ) {
+		int chunkSize = RP_ReadLE32( p + 4 );
+
+		if ( chunkSize < 0 ) {
+			return 0;
+		}
+		if ( !memcmp( p, "fmt ", 4 ) ) {
+			const byte *fmt = RP_SoundStreamPeek( st, 8 + 16 );
+
+			if ( !fmt || chunkSize < 16 ) {
+				return 0;
+			}
+			byteRate = RP_ReadLE32( fmt + 8 + 8 );
+		} else if ( !memcmp( p, "data", 4 ) ) {
+			if ( byteRate <= 0 ) {
+				return 0;
+			}
+			// the header may claim more than the file holds (a stream written without a fixup)
+			if ( st->consumed + st->pos + 8 + chunkSize > st->fileLen ) {
+				chunkSize = st->fileLen - ( st->consumed + st->pos + 8 );
+				if ( chunkSize <= 0 ) {
+					return 0;
+				}
+			}
+			return (int)( (double)chunkSize * 1000.0 / byteRate );
+		}
+		st->pos += 8;
+		if ( !RP_SoundStreamSkip( st, chunkSize + ( chunkSize & 1 ) ) ) {
+			return 0;
+		}
+	}
+	return 0;
+}
+
+// Milliseconds a sound plays for. `soundName` is the name as G_SoundIndex() takes it, with or
+// without an extension; .mp3 is tried first, then .wav. Never returns less than RP_SOUND_MIN_MS.
+int RP_SoundDuration( const char *soundName )
+{
+	static const char *exts[] = { ".mp3", ".wav" };
+	char			base[MAX_QPATH];
+	int				soundIndex, i, ms = 0;
+
+	if ( !soundName || !soundName[0] || soundName[0] == '*' ) {
+		return RP_SOUND_FALLBACK_MS;
+	}
+	soundIndex = G_SoundIndex( (char *)soundName );
+	for ( i = 0; i < RP_SOUND_CACHE_SIZE; i++ ) {
+		if ( rp_soundCache[i].ms && rp_soundCache[i].soundIndex == soundIndex ) {
+			return rp_soundCache[i].ms;
+		}
+	}
+
+	COM_StripExtension( soundName, base, sizeof( base ) );
+	Q_strlwr( base );
+	for ( i = 0; i < (int)ARRAY_LEN( exts ) && ms <= 0; i++ ) {
+		rpSoundStream_t	st;
+		int				len;
+
+		memset( &st, 0, sizeof( st ) );
+		len = trap->FS_Open( va( "%s%s", base, exts[i] ), &st.f, FS_READ );
+		if ( len <= 0 || !st.f ) {
+			if ( st.f ) {
+				trap->FS_Close( st.f );
+			}
+			continue;
+		}
+		st.fileLen = len;
+		if ( len <= RP_SOUND_MAX_BYTES ) {
+			ms = ( i == 0 ) ? RP_Mp3Duration( &st ) : RP_WavDuration( &st );
+		}
+		trap->FS_Close( st.f );
+	}
+
+	if ( ms <= 0 ) {
+		ms = RP_SOUND_FALLBACK_MS;
+	} else if ( ms < RP_SOUND_MIN_MS ) {
+		ms = RP_SOUND_MIN_MS;
+	} else if ( ms > RP_SOUND_MAX_MS ) {
+		ms = RP_SOUND_MAX_MS;
+	}
+
+	rp_soundCache[rp_soundCacheNext].soundIndex = soundIndex;
+	rp_soundCache[rp_soundCacheNext].ms = ms;
+	rp_soundCacheNext = ( rp_soundCacheNext + 1 ) % RP_SOUND_CACHE_SIZE;
+	return ms;
+}
+
+// Called for every networked entity each frame, before it thinks (G_RunFrame).
+void RP_IcarusSoundCheck( gentity_t *ent )
+{
+	if ( !ent->IcarusSoundTime || level.time < ent->IcarusSoundTime ) {
+		return;
+	}
+	ent->IcarusSoundTime = 0;
+	if ( trap->ICARUS_TaskIDPending( (sharedEntity_t *)ent, TID_CHAN_VOICE ) ) {
+		trap->ICARUS_TaskIDComplete( (sharedEntity_t *)ent, TID_CHAN_VOICE );
+	}
+}
+
+/*
+GalaxyRP fix: [ICARUS] animation task completion
+
+SET_ANIM_UPPER / SET_ANIM_LOWER / SET_ANIM_BOTH and the SET_ANIM_HOLDTIME_* setters (Q3_Set,
+below) register TID_ANIM_UPPER / TID_ANIM_LOWER / TID_ANIM_BOTH so a script can
+wait("ANIM_UPPER") for the animation to finish. Single player completes those from
+PM_SetLegsAnimTimer / PM_SetTorsoAnimTimer, the setters its timer countdown runs through; the
+multiplayer countdown (PM_DropTimers, bg_pmove.c) is shared with the client and cannot reach
+ICARUS, so nothing ever completed them and the wait never ended. ClientThink_real() calls this
+right after its Pmove, for players and NPCs alike: a timer that has reached 0 completes its task,
+and TID_ANIM_BOTH when both have. A -1 timer is a deliberate hold and never completes, as in SP.
+The engine clears the other task ids that share a completed task's number (Q3_TaskIDComplete),
+so SET_ANIM_BOTH's three registrations settle with the first of them that fires.
+*/
+void RP_IcarusAnimTaskCheck( gentity_t *ent )
+{
+	playerState_t *ps;
+
+	if ( !ent || !ent->client ) {
+		return;
+	}
+	ps = &ent->client->ps;
+	if ( ps->legsTimer == 0 && trap->ICARUS_TaskIDPending( (sharedEntity_t *)ent, TID_ANIM_LOWER ) ) {
+		trap->ICARUS_TaskIDComplete( (sharedEntity_t *)ent, TID_ANIM_LOWER );
+	}
+	if ( ps->torsoTimer == 0 && trap->ICARUS_TaskIDPending( (sharedEntity_t *)ent, TID_ANIM_UPPER ) ) {
+		trap->ICARUS_TaskIDComplete( (sharedEntity_t *)ent, TID_ANIM_UPPER );
+	}
+	if ( ps->legsTimer == 0 && ps->torsoTimer == 0 && trap->ICARUS_TaskIDPending( (sharedEntity_t *)ent, TID_ANIM_BOTH ) ) {
+		trap->ICARUS_TaskIDComplete( (sharedEntity_t *)ent, TID_ANIM_BOTH );
+	}
+}
+
+// GalaxyRP: [ICARUS] a voice line played on its speaker. G_Sound() made a temp entity that
+// played the sound at the point the speaker stood on when the line started; for a player or an
+// NPC this is G_EntitySound()'s EV_ENTITY_SOUND instead -- the client attaches the sound to the
+// entity, so it follows a walking NPC. Either way it now goes through the engine's real voice
+// channels: CHAN_VOICE and CHAN_VOICE_ATTEN attenuate, CHAN_VOICE_GLOBAL plays everywhere at
+// full volume. A speaker that is not a client (a target_scriptrunner narrating, a func_) keeps
+// the positioned temp entity: the client has no position for an entity it never receives. The
+// temp entity is broadcast for a global line, since it is otherwise only sent to clients whose
+// PVS holds it -- G_Sound()'s never was, so a CHAN_VOICE_GLOBAL line used to fade with distance.
+static void RP_IcarusVoiceSound( gentity_t *ent, int channel, int soundIndex, qboolean broadcast )
+{
+	gentity_t *te;
+
+	if ( ent->client ) {
+		te = G_TempEntity( ent->r.currentOrigin, EV_ENTITY_SOUND );
+		te->s.eventParm = soundIndex;
+		te->s.clientNum = ent->s.number;
+		te->s.trickedentindex = channel;
+	} else {
+		te = G_SoundTempEntity( ent->r.currentOrigin, EV_GENERAL_SOUND, channel );
+		te->s.eventParm = soundIndex;
+		te->s.saberEntityNum = channel;
+	}
+	if ( broadcast ) {
+		te->r.svFlags |= SVF_BROADCAST;
+	}
+}
+
 int Q3_PlaySound( int taskID, int entID, const char *name, const char *channel )
 {
 	gentity_t		*ent = &g_entities[entID];
@@ -445,14 +887,16 @@ int Q3_PlaySound( int taskID, int entID, const char *name, const char *channel )
 		voice_chan = CHAN_VOICE;
 		type_voice = qtrue;
 	}
+	// GalaxyRP fix: [ICARUS] these two mapped to CHAN_AUTO; the client engine handles both real
+	// channels (see RP_IcarusVoiceSound() above), so the script's choice now reaches it.
 	else if ( Q_stricmp( channel, "CHAN_VOICE_ATTEN" ) == 0 )
 	{
-		voice_chan = CHAN_AUTO;//CHAN_VOICE_ATTEN;
+		voice_chan = CHAN_VOICE_ATTEN;
 		type_voice = qtrue;
 	}
 	else if ( Q_stricmp( channel, "CHAN_VOICE_GLOBAL" ) == 0 ) // this should broadcast to everyone, put only casue animation on G_SoundOnEnt...
 	{
-		voice_chan = CHAN_AUTO;//CHAN_VOICE_GLOBAL;
+		voice_chan = CHAN_VOICE_GLOBAL;
 		type_voice = qtrue;
 		bBroadcast = qtrue;
 	}
@@ -513,10 +957,13 @@ int Q3_PlaySound( int taskID, int entID, const char *name, const char *channel )
 		else
 		{
 			//This the voice channel
-			G_Sound( ent, voice_chan, G_SoundIndex((char *) finalName) );
+			// GalaxyRP fix: [ICARUS] on the speaker and its real channel -- see RP_IcarusVoiceSound()
+			RP_IcarusVoiceSound( ent, voice_chan, soundHandle, bBroadcast );
 		}
 		//Remember we're waiting for this
 		trap->ICARUS_TaskIDSet( (sharedEntity_t *)ent, TID_CHAN_VOICE, taskID );
+		// GalaxyRP fix: [ICARUS] ...and complete it when the line ends -- see RP_IcarusSoundCheck()
+		ent->IcarusSoundTime = level.time + RP_SoundDuration( finalName );
 
 		return qfalse;
 	}
@@ -569,6 +1016,10 @@ void Q3_Play( int taskID, int entID, const char *type, const char *name )
 			//VectorCopy( ent->r.currentAngles, ent->pos2 );
 			VectorCopy( ent->r.currentOrigin, ent->s.origin2 );
 			VectorCopy( ent->r.currentAngles, ent->s.angles2 );
+
+			// DAJ_RP: [Static Models] origin2 held a breakable's per-axis scale (EF2_RP_VECTOR_SCALE, g_misc.c);
+			// it is the ROFF's now, so the model is drawn unscaled, as every other client draws it
+			ent->s.eFlags2 &= ~EF2_RP_VECTOR_SCALE;
 
 			trap->LinkEntity( (sharedEntity_t *)ent );
 
@@ -1083,8 +1534,11 @@ void Q3_RemoveEnt( gentity_t *victim )
 	{
 		if ( victim->s.eType != ET_NPC )
 		{
+			// GalaxyRP fix: [ICARUS] "remove" on a player -- an SP script's remove("player") at
+			// the end of a level, or a targetname that resolved to someone -- used to assert() and
+			// take the server down in a debug build. A player cannot be removed; say so and leave.
 			G_DebugPrint( WL_WARNING, "Q3_RemoveEnt: You can't remove clients in MP!\n" );
-			assert(0); //can't remove clients in MP
+			return;
 		}
 		else
 		{//remove the NPC
@@ -1253,7 +1707,7 @@ int Q3_GetFloat( int entID, int type, const char *name, float *value )
 		break;
 
 	case SET_SKILL:
-		return 0;
+		*value = g_npcspskill.integer;
 		break;
 
 	case SET_XVELOCITY://## %f="0.0" # Velocity along X axis
@@ -1403,13 +1857,13 @@ int Q3_GetFloat( int entID, int type, const char *name, float *value )
 		return 0;
 		break;
 	case SET_STARTFRAME:	//## %d="0" # frame to start animation sequence on
-		return 0;
+		*value = ent->startFrame;
 		break;
 	case SET_ENDFRAME:	//## %d="0" # frame to end animation sequence on
-		return 0;
+		*value = ent->endFrame;
 		break;
 	case SET_ANIMFRAME:	//## %d="0" # of current frame
-		return 0;
+		*value = ent->s.frame;
 		break;
 
 	case SET_SHOT_SPACING://## %d="1000" # Time between shots for an NPC - reset to defaults when changes weapon
@@ -1420,10 +1874,20 @@ int Q3_GetFloat( int entID, int type, const char *name, float *value )
 		break;
 	//# #sep booleans
 	case SET_IGNOREPAIN://## %t="BOOL_TYPES" # Do not react to pain
-		return 0;
+		if ( ent->NPC == NULL )
+		{
+			G_DebugPrint( WL_WARNING, "Q3_GetFloat: SET_IGNOREPAIN, %s not an NPC\n", ent->targetname );
+			return 0;
+		}
+		*value = ent->NPC->ignorePain;
 		break;
 	case SET_IGNOREENEMIES://## %t="BOOL_TYPES" # Do not acquire enemies
-		return 0;
+		if ( ent->NPC == NULL )
+		{
+			G_DebugPrint( WL_WARNING, "Q3_GetFloat: SET_IGNOREENEMIES, %s not an NPC\n", ent->targetname );
+			return 0;
+		}
+		*value = (ent->NPC->scriptFlags & SCF_IGNORE_ENEMIES) ? 1 : 0;
 		break;
 	case SET_IGNOREALERTS://## Do not get enemy set by allies in area(ambush)
 		return 0;
@@ -1463,7 +1927,7 @@ int Q3_GetFloat( int entID, int type, const char *name, float *value )
 		return 0;
 		break;
 	case SET_UNDYING://## %t="BOOL_TYPES" # Can take damage down to 1 but not die
-		return 0;
+		*value = (ent->flags & FL_UNDYING) ? 1 : 0;
 		break;
 	case SET_NOAVOID://## %t="BOOL_TYPES" # Will not avoid other NPCs or architecture
 		return 0;
@@ -1476,7 +1940,7 @@ int Q3_GetFloat( int entID, int type, const char *name, float *value )
 		*value = (ent->r.svFlags&SVF_PLAYER_USABLE);
 		break;
 	case SET_LOOP_ANIM://## %t="BOOL_TYPES" # For non-NPCs: loop your animation sequence
-		return 0;
+		*value = ent->loopAnim ? 1 : 0;
 		break;
 	case SET_INTERFACE://## %t="BOOL_TYPES" # Player interface on/off
 		G_DebugPrint( WL_WARNING, "Q3_GetFloat: SET_INTERFACE not implemented\n" );
@@ -1511,8 +1975,8 @@ int Q3_GetFloat( int entID, int type, const char *name, float *value )
 	case SET_LOCK_PLAYER_WEAPONS://## %t="BOOL_TYPES" # Makes it so player cannot switch weapons
 		return 0;
 		break;
-	case SET_NO_IMPACT_DAMAGE://## %t="BOOL_TYPES" # Makes it so player cannot switch weapons
-		return 0;
+	case SET_NO_IMPACT_DAMAGE://## %t="BOOL_TYPES" # Makes it so the ent cannot take impact damage
+		*value = (ent->flags & FL_NO_IMPACT_DMG) ? 1 : 0;
 		break;
 	case SET_NO_KNOCKBACK://## %t="BOOL_TYPES" # Stops this ent from taking knockback from weapons
 		*value = (ent->flags&FL_NO_KNOCKBACK);
@@ -1713,7 +2177,22 @@ int Q3_GetString( int entID, int type, const char *name, char **value )
 		break;
 
 	case SET_LOCATION:
-		return 0;
+		{
+			// GalaxyRP: [Scripts] the trigger_location the entity stands in (single player's way),
+			// else the nearest target_location in PVS (the MP location system)
+			const char *name = RP_TriggerLocationName( ent );
+			locationData_t *loc = name ? NULL : Team_GetLocation( ent );
+
+			if ( !name && loc && loc->message[0] )
+			{
+				name = loc->message;
+			}
+			if ( !name )
+			{
+				return 0;
+			}
+			*value = (char *)name;
+		}
 		break;
 
 	//# #sep Scripts and other file paths
@@ -1765,7 +2244,11 @@ int Q3_GetString( int entID, int type, const char *name, char **value )
 		return 0;
 		break;
 	case SET_LEADER://## %s="NULL" # Set for BS_FOLLOW_LEADER
-		return 0;
+		if ( !ent->client || !ent->client->leader || !ent->client->leader->targetname )
+		{
+			return 0;
+		}
+		*value = ent->client->leader->targetname;
 		break;
 	case SET_CAPTURE://## %s="NULL" # Set captureGoal by targetname
 		return 0;
@@ -1784,7 +2267,24 @@ int Q3_GetString( int entID, int type, const char *name, char **value )
 		return 0;
 		break;
 	case SET_LOOK_TARGET://## %s="NULL" # object for NPC to look at
-		G_DebugPrint( WL_WARNING, "Q3_GetString: SET_LOOK_TARGET, NOT SUPPORTED IN MULTIPLAYER\n" );
+		if ( ent->client == NULL )
+		{
+			G_DebugPrint( WL_WARNING, "Q3_GetString: SET_LOOK_TARGET, %s not a client\n", ent->targetname );
+			return 0;
+		}
+		else
+		{
+			gentity_t *lookTarg = NULL;
+			if ( ent->client->renderInfo.lookTarget >= 0 && ent->client->renderInfo.lookTarget < ENTITYNUM_WORLD )
+			{
+				lookTarg = &g_entities[ent->client->renderInfo.lookTarget];
+			}
+			if ( !lookTarg || !lookTarg->inuse || !lookTarg->targetname )
+			{
+				return 0;
+			}
+			*value = lookTarg->targetname;
+		}
 		break;
 	case SET_TARGET2://## %s="NULL" # Set/change your target2: on NPC's: this fires when they're knocked out by the red hypo
 		return 0;
@@ -1805,8 +2305,11 @@ int Q3_GetString( int entID, int type, const char *name, char **value )
 		break;
 	//The below cannot be gotten
 	case SET_NAVGOAL://## %s="NULL" # *Move to this navgoal then continue script
-		G_DebugPrint( WL_WARNING, "Q3_GetString: SET_NAVGOAL not implemented\n" );
-		return 0;
+		if ( !ent->NPC || !ent->NPC->goalEntity || !ent->NPC->goalEntity->targetname || !ent->NPC->goalEntity->targetname[0] )
+		{
+			return 0;
+		}
+		*value = ent->NPC->goalEntity->targetname;
 		break;
 	case SET_VIEWTARGET://## %s="NULL" # Set angles toward ent by targetname
 		G_DebugPrint( WL_WARNING, "Q3_GetString: SET_VIEWTARGET not implemented\n" );
@@ -2209,6 +2712,13 @@ static void Q3_SetEnemy( int entID, const char *name )
 				G_SetEnemy( ent, enemy );
 				ent->cantHitEnemyCounter = 0;
 			}
+			else if ( !ent->client )
+			{
+				// GalaxyRP fix: [ICARUS] G_SetEnemy() reads self->client; a SET_ENEMY on a
+				// non-client entity (a func_, a scriptrunner) crashed the server.
+				G_DebugPrint( WL_ERROR, "Q3_SetEnemy: ent %d is NOT a player or NPC!\n", entID);
+				return;
+			}
 			else
 			{
 				G_SetEnemy(ent, enemy);
@@ -2241,8 +2751,28 @@ static void Q3_SetLeader( int entID, const char *name )
 		return;
 	}
 
+	// GalaxyRP fix: [NPC] drop the /order guard and /order cover bits whenever this changes the
+	// leader. This was the last route in the tree that moved client->leader without them, and the
+	// NONE/NULL branch below was the damaging half: NPC_ValidEnemy() reads those bits and then asks
+	// zyk_is_ally(leader, ent) who is friendly, which a NULL leader answers "nobody" to -- so an NPC
+	// a player had claimed and set to /order guard, then handed back by a map script, treated every
+	// player on its own side as a valid enemy. TryUse(), Cmd_Order_f(), NPC_CheckCharmed() and
+	// zyk_release_npc_from_leader() all keep the bits and the leader together; this did not.
+	//
+	// Cleared on the assignment branch too, so the orders never carry over to a leader who was not
+	// the one given them. Nothing is lost by that: bits 18 and 19 are set only by Cmd_Order_f(), and
+	// ICARUS has no way to set them, so a script reassigning a leader cannot have meant to keep them.
+	// Both calls sit on the two statements that actually write client->leader, not above the branch:
+	// the else branch has two early returns that leave the leader alone, and a SET_LEADER naming a
+	// missing or dead entity must not quietly strip a player's orders on its way out.
+	//
+	// Only the bits. Deliberately NOT zyk_release_npc_from_leader(), which also forces
+	// BS_STAND_GUARD: a script that sets a leader on a wandering or scripted NPC and later clears it
+	// expects its own bState to survive, and NPC_BSFollowLeader() already stands an NPC down by
+	// itself on the next think when it finds the leader gone.
 	if( !Q_stricmp("NONE", name) || !Q_stricmp("NULL", name))
 	{
+		zyk_clear_npc_order_bits( ent );
 		ent->client->leader = NULL;
 	}
 	else
@@ -2261,6 +2791,7 @@ static void Q3_SetLeader( int entID, const char *name )
 		}
 		else
 		{
+			zyk_clear_npc_order_bits( ent );
 			ent->client->leader = leader;
 		}
 	}
@@ -2469,7 +3000,32 @@ Q3_SetAnimHoldTime
 */
 static void Q3_SetAnimHoldTime( int entID, int int_data, qboolean lower )
 {
-	G_DebugPrint( WL_WARNING, "Q3_SetAnimHoldTime is not currently supported in MP\n");
+	// GalaxyRP fix: [ICARUS] was "not currently supported in MP": the SP body below, over MP's
+	// timer setters. The task registered by the caller completes through
+	// RP_IcarusAnimTaskCheck() when the timer runs out (-1 holds for good, as in SP).
+	gentity_t	*ent  = &g_entities[entID];
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetAnimHoldTime: invalid entID %d\n", entID);
+		return;
+	}
+
+	if ( !ent->client )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetAnimHoldTime: ent %d is NOT a player or NPC!\n", entID);
+		return;
+	}
+
+	if ( lower )
+	{
+		BG_SetLegsAnimTimer( &ent->client->ps, int_data );
+	}
+	else
+	{
+		BG_SetTorsoAnimTimer( &ent->client->ps, int_data );
+	}
+	return;
 	/*
 	gentity_t	*ent  = &g_entities[entID];
 
@@ -2618,11 +3174,20 @@ static qboolean Q3_SetBState( int entID, const char *bs_name )
 	{
 		if ( bSID == BS_SEARCH || bSID == BS_WANDER )
 		{
+			// GalaxyRP fix: [ICARUS] NPC_BSSearchStart() writes through the NPC globals
+			// (NPCS.NPC / NPCS.NPCInfo), which are whatever NPC last thought -- NULL between
+			// thinks, or another NPC when this script runs inside that NPC's think and affects
+			// this one -- so a SET_BEHAVIOR_STATE BS_SEARCH / BS_WANDER from a script set some
+			// other NPC's home waypoint and temp behaviour, or crashed. Point the globals at this
+			// NPC around the calls and put back whatever they held, as the AI code does.
 			//FIXME: Reimplement
 
 			if( ent->waypoint != WAYPOINT_NONE )
 			{
+				SaveNPCGlobals();
+				SetNPCGlobals( ent );
 				NPC_BSSearchStart( ent->waypoint, bSID );
+				RestoreNPCGlobals();
 			}
 			else
 			{
@@ -2630,7 +3195,10 @@ static qboolean Q3_SetBState( int entID, const char *bs_name )
 
 				if( ent->waypoint != WAYPOINT_NONE )
 				{
+					SaveNPCGlobals();
+					SetNPCGlobals( ent );
 					NPC_BSSearchStart( ent->waypoint, bSID );
+					RestoreNPCGlobals();
 				}
 				/*else if( ent->lastWaypoint >=0 && ent->lastWaypoint < num_waypoints )
 				{
@@ -3071,8 +3639,23 @@ Q3_SetWidth
 */
 static void Q3_SetWidth( int entID, int data )
 {
-	G_DebugPrint( WL_WARNING, "Q3_SetWidth: NOT SUPPORTED IN MP\n");
-	return;
+	gentity_t	*ent  = &g_entities[entID];
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetWidth: invalid entID %d\n", entID);
+		return;
+	}
+
+	if ( !ent->NPC )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetWidth: '%s' is not an NPC\n", ent->targetname );
+		return;
+	}
+
+	ent->r.maxs[0] = ent->r.maxs[1] = data;
+	ent->r.mins[0] = ent->r.mins[1] = -data;
+	trap->LinkEntity( (sharedEntity_t *)ent );
 }
 
 /*
@@ -3349,10 +3932,48 @@ Q3_SetWeapon
 ============
 */
 extern void ChangeWeapon( gentity_t *ent, int newWeapon );
+extern void WP_DeactivateSaber( gentity_t *self, qboolean clearLength );
+extern void WP_ActivateSaber( gentity_t *self );
 static void Q3_SetWeapon (int entID, const char *wp_name)
 {
 	gentity_t	*ent  = &g_entities[entID];
 	int		wp = GetIDForString( WPTable, wp_name );
+
+	// GalaxyRP fix: [ICARUS] a SET_WEAPON on a non-client (a scriptrunner affecting a func_ or
+	// a misplaced target name) dereferenced ent->client. Refuse it.
+	if ( !ent->client )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetWeapon: ent %d is NOT a player or NPC!\n", entID );
+		return;
+	}
+
+	// GalaxyRP fix: [ICARUS] SET_WEAPON WP_NONE is how single-player scripts disarm someone
+	// (cutscenes, prisoners). It was rejected below with the bad names; now it means what it
+	// says: an NPC keeps no weapon at all, a player is left with melee, since a weaponless player
+	// state is not one the client HUD or the weapon code expects.
+	if ( wp == WP_NONE )
+	{
+		if ( ent->NPC )
+		{
+			ent->client->ps.stats[STAT_WEAPONS] = 0;
+			ChangeWeapon( ent, WP_NONE );
+		}
+		else
+		{
+			ent->client->ps.stats[STAT_WEAPONS] = (1<<WP_MELEE);
+			ChangeWeapon( ent, WP_MELEE );
+		}
+		return;
+	}
+
+	// GalaxyRP fix: [bounds] wp is -1 for any name not in WPTable, and "1 << -1" is undefined
+	// behaviour before ChangeWeapon() even sees the bad index. Reject it and leave the weapon
+	// alone, the same way SP_misc_weapon_shooter now keeps its default.
+	if ( wp < WP_NONE || wp >= WP_NUM_WEAPONS )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetWeapon: unknown weapon \"%s\"\n", wp_name );
+		return;
+	}
 
 	ent->client->ps.stats[STAT_WEAPONS] = (1<<wp);
 	ChangeWeapon( ent, wp );
@@ -3685,6 +4306,7 @@ Q3_SetScale
 static void Q3_SetScale(int entID, float float_data)
 {
 	gentity_t	*self  = &g_entities[entID];
+	int			scale;
 
 	if ( !self )
 	{
@@ -3692,13 +4314,44 @@ static void Q3_SetScale(int entID, float float_data)
 		return;
 	}
 
-	if (self->client)
+	// DAJ_RP: [NPC Scale] as a percentage, to the nearest one, within what can be sent (RP_SENT_SCALE_MIN..MAX): 15 was
+	// sent as 1500, in 10 bits, and drawn at 476, a negative one as garbage. 0, less, or no number at all (atof() gives 0,
+	// and a NaN is caught by the same test) is the normal size, as 0 always was; a size above 0 too small to round to
+	// 1 is 1, not that.
+	if ( !( float_data > 0.0f ) )
 	{
-		self->client->ps.iModelScale = float_data*100.0f;
+		scale = 0;
+	}
+	else if ( float_data * 100.0f >= RP_SENT_SCALE_MAX )
+	{
+		scale = RP_SENT_SCALE_MAX;
 	}
 	else
 	{
-		self->s.iModelScale = float_data*100.0f;
+		scale = (int)( float_data * 100.0f + 0.5f );
+		if ( scale < RP_SENT_SCALE_MIN )
+		{
+			scale = RP_SENT_SCALE_MIN;
+		}
+	}
+
+	if (self->client)
+	{
+		self->client->ps.iModelScale = scale;
+
+		// DAJ_RP: [NPC Scale] an NPC's or vehicle's server size too, as its .npc file's scale and npcscale set both --
+		// its hit detection, rider and droid sockets, severed limbs and a vehicle's muzzles follow what is drawn. A
+		// player's is left alone, as /scale leaves it.
+		if ( self->NPC )
+		{
+			const float f = scale / 100.0f;
+
+			VectorSet( self->modelScale, f, f, f );
+		}
+	}
+	else
+	{
+		self->s.iModelScale = scale;
 	}
 }
 
@@ -3964,7 +4617,11 @@ static void Q3_SetForcePowerLevel ( int entID, int forcePower, int forceLevel )
 {
 	gentity_t	*self  = &g_entities[entID];
 
-	if ( forcePower < FP_FIRST || forceLevel >= NUM_FORCE_POWERS )
+	// GalaxyRP fix: [Scripts] this tested forceLevel against NUM_FORCE_POWERS -- the wrong variable
+	// against the wrong bound -- so forcePower itself was never checked for an upper limit and a
+	// script passing an out-of-range power index wrote past the end of forcePowerLevel[] in the
+	// playerState below.
+	if ( forcePower < FP_FIRST || forcePower >= NUM_FORCE_POWERS )
 	{
 		G_DebugPrint( WL_ERROR, "Q3_SetForcePowerLevel: Force Power index %d out of range (%d-%d)\n", forcePower, FP_FIRST, (NUM_FORCE_POWERS-1) );
 		return;
@@ -4141,9 +4798,28 @@ Q3_SetIgnoreEnemies
 */
 static void Q3_SetIgnoreEnemies( int entID, qboolean data)
 {
+	gentity_t	*ent  = &g_entities[entID];
 
-	G_DebugPrint( WL_WARNING, "Q3_SetIgnoreEnemies: NOT SUPPORTED IN MP");
-	return;
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetIgnoreEnemies: invalid entID %d\n", entID);
+		return;
+	}
+
+	if ( !ent->NPC )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetIgnoreEnemies: '%s' is not an NPC!\n", ent->targetname );
+		return;
+	}
+
+	if ( data )
+	{
+		ent->NPC->scriptFlags |= SCF_IGNORE_ENEMIES;
+	}
+	else
+	{
+		ent->NPC->scriptFlags &= ~SCF_IGNORE_ENEMIES;
+	}
 }
 
 /*
@@ -4322,6 +4998,7 @@ static void Q3_SetInactive(int entID, qboolean add)
 	{
 		ent->flags &= ~FL_INACTIVE;
 	}
+	RP_PushTriggerNetSync( ent );	// GalaxyRP: [SP Maps] a trigger_push's prediction follows it
 }
 
 /*
@@ -4392,8 +5069,28 @@ Q3_SetNoMindTrick
 */
 static void Q3_SetNoMindTrick( int entID, qboolean add)
 {
-	G_DebugPrint( WL_WARNING, "Q3_SetNoMindTrick: NOT SUPPORTED IN MP\n");
-	return;
+	gentity_t	*ent  = &g_entities[entID];
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetNoMindTrick: invalid entID %d\n", entID);
+		return;
+	}
+
+	if ( !ent->NPC )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetNoMindTrick: '%s' is not an NPC!\n", ent->targetname );
+		return;
+	}
+
+	if ( add )
+	{
+		ent->NPC->scriptFlags |= SCF_NO_MIND_TRICK;
+	}
+	else
+	{
+		ent->NPC->scriptFlags &= ~SCF_NO_MIND_TRICK;
+	}
 }
 
 /*
@@ -5241,7 +5938,33 @@ static void Q3_SetLockAngle( int entID, const char *lockAngle)
 		return;
 	}
 
-	G_DebugPrint( WL_WARNING, "Q3_SetLockAngle is not currently available. Ask if you really need it.\n");
+	// GalaxyRP: [Scripts] NPCs only. MP has no RF_LOCKEDANGLE render flag; NPC_UpdateAngles instead
+	// keeps lockedDesiredYaw/Pitch while level.time < NPC->aimTime (its own comment asks for exactly
+	// this use), so the lock is aimTime and "off" clears it. Players stay unsupported.
+	if ( !ent->NPC )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetLockAngle: '%s' is a player, only NPCs are supported\n", ent->targetname );
+		return;
+	}
+
+	if ( Q_stricmp( "off", lockAngle ) == 0 )
+	{//free it
+		ent->NPC->aimTime = 0;
+	}
+	else
+	{
+		if ( Q_stricmp( "auto", lockAngle ) == 0 )
+		{//use current yaw
+			ent->NPC->desiredYaw = ent->client->ps.viewangles[YAW];
+		}
+		else
+		{//specified yaw
+			ent->NPC->desiredYaw = atof( lockAngle );
+		}
+		ent->NPC->lockedDesiredYaw = ent->NPC->desiredYaw;
+		ent->NPC->lockedDesiredPitch = ent->NPC->desiredPitch;
+		ent->NPC->aimTime = INT_MAX;
+	}
 	/*
 	if(Q_stricmp("off", lockAngle) == 0)
 	{//free it
@@ -5459,7 +6182,250 @@ Q3_SetNoImpactDamage
 */
 static void Q3_SetNoImpactDamage( int entID, qboolean noImp )
 {
-	G_DebugPrint( WL_WARNING, "Q3_SetNoImpactDamage: NOT SUPPORTED IN MP\n");
+	gentity_t	*ent  = &g_entities[entID];
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetNoImpactDamage: invalid entID %d\n", entID);
+		return;
+	}
+
+	if ( noImp )
+	{
+		ent->flags |= FL_NO_IMPACT_DMG;
+	}
+	else
+	{
+		ent->flags &= ~FL_NO_IMPACT_DMG;
+	}
+}
+
+/*
+============
+Q3_SetPlayerTeam / Q3_SetEnemyTeam
+
+GalaxyRP: [Scripts] were "Not in MP ATM" stubs; scripts that turn an NPC friendly or hostile
+mid-scene (SET_PLAYER_TEAM/SET_ENEMY_TEAM) now work. Team names come from TeamTable (NPC_stats.c).
+============
+*/
+extern stringID_table_t TeamTable[];
+
+// scripts (and .npc files) name teams the SP way, "TEAM_PLAYER"; the MP enum names are "NPCTEAM_PLAYER"
+static int Q3_TeamForString( const char *data )
+{
+	int team = GetIDForString( TeamTable, data );
+
+	if ( team < 0 && !Q_stricmpn( data, "TEAM_", 5 ) )
+	{
+		team = GetIDForString( TeamTable, va( "NPC%s", data ) );
+	}
+	return team;
+}
+
+static void Q3_SetPlayerTeam( int entID, const char *data )
+{
+	gentity_t	*ent  = &g_entities[entID];
+	int			team;
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetPlayerTeam: invalid entID %d\n", entID);
+		return;
+	}
+
+	if ( !ent->client )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetPlayerTeam: '%s' is not an NPC/player!\n", ent->targetname );
+		return;
+	}
+
+	team = Q3_TeamForString( data );
+	if ( team < 0 )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetPlayerTeam: unknown team '%s'\n", data );
+		return;
+	}
+
+	ent->client->playerTeam = (npcteam_t)team;
+	if ( ent->NPC )
+	{
+		ent->s.teamowner = ent->client->playerTeam;
+	}
+}
+
+static void Q3_SetEnemyTeam( int entID, const char *data )
+{
+	gentity_t	*ent  = &g_entities[entID];
+	int			team;
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetEnemyTeam: invalid entID %d\n", entID);
+		return;
+	}
+
+	if ( !ent->client )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetEnemyTeam: '%s' is not an NPC/player!\n", ent->targetname );
+		return;
+	}
+
+	team = Q3_TeamForString( data );
+	if ( team < 0 )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetEnemyTeam: unknown team '%s'\n", data );
+		return;
+	}
+
+	ent->client->enemyTeam = (npcteam_t)team;
+}
+
+/*
+============
+Q3_SetEntFlag / Q3_SetScriptFlag / Q3_SetAdjustAreaPortals / Q3_SetForcePower
+
+GalaxyRP: [Scripts] small SP setters that were "NOT SUPPORTED IN MP" stubs.
+============
+*/
+static void Q3_SetEntFlag( int entID, int flag, qboolean on, const char *who )
+{
+	gentity_t	*ent  = &g_entities[entID];
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "%s: invalid entID %d\n", who, entID);
+		return;
+	}
+
+	if ( on )
+	{
+		ent->flags |= flag;
+	}
+	else
+	{
+		ent->flags &= ~flag;
+	}
+}
+
+static void Q3_SetScriptFlag( int entID, int flag, qboolean on, const char *who )
+{
+	gentity_t	*ent  = &g_entities[entID];
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "%s: invalid entID %d\n", who, entID);
+		return;
+	}
+
+	if ( !ent->NPC )
+	{
+		G_DebugPrint( WL_ERROR, "%s: '%s' is not an NPC!\n", who, ent->targetname );
+		return;
+	}
+
+	if ( on )
+	{
+		ent->NPC->scriptFlags |= flag;
+	}
+	else
+	{
+		ent->NPC->scriptFlags &= ~flag;
+	}
+}
+
+static void Q3_SetAdjustAreaPortals( int entID, qboolean adjust )
+{
+	gentity_t	*ent  = &g_entities[entID];
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetAdjustAreaPortals: invalid entID %d\n", entID);
+		return;
+	}
+
+	if ( !ent->r.bmodel )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetAdjustAreaPortals: '%s' is not a brush entity\n", ent->targetname );
+		return;
+	}
+
+	trap->AdjustAreaPortalState( (sharedEntity_t *)ent, adjust );
+}
+
+static void Q3_SetForcePower( int entID, forcePowers_t forcePower, qboolean powerOn )
+{
+	gentity_t	*ent  = &g_entities[entID];
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetForcePower: invalid entID %d\n", entID);
+		return;
+	}
+
+	if ( !ent->client )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetForcePower: ent # %d not a client!\n", entID );
+		return;
+	}
+
+	switch ( forcePower )
+	{
+	case FP_PULL:
+		if ( powerOn )
+		{
+			ForceThrow( ent, qtrue );
+		}
+		break;
+	case FP_PROTECT:
+		if ( powerOn )
+		{
+			if ( !(ent->client->ps.fd.forcePowersActive & (1 << FP_PROTECT)) )
+			{
+				ForceProtect( ent );
+			}
+		}
+		else if ( ent->client->ps.fd.forcePowersActive & (1 << FP_PROTECT) )
+		{
+			WP_ForcePowerStop( ent, FP_PROTECT );
+		}
+		break;
+	default:
+		G_DebugPrint( WL_WARNING, "Q3_SetForcePower: force power %d cannot be toggled from a script\n", (int)forcePower );
+		break;
+	}
+}
+
+/*
+============
+Q3_ForcePowerForSetID
+
+GalaxyRP fix: [Scripts] the SET_FORCE_*_LEVEL cases used (toSet - SET_FORCE_HEAL_LEVEL) as the
+forcePowers_t index, which only lines up for the first eight; SET_SABER_THROW/DEFENSE/OFFENSE
+landed on FP_RAGE/FP_PROTECT/FP_ABSORB. Map them explicitly.
+============
+*/
+static int Q3_ForcePowerForSetID( int toSet )
+{
+	switch ( toSet )
+	{
+	case SET_FORCE_HEAL_LEVEL:		return FP_HEAL;
+	case SET_FORCE_JUMP_LEVEL:		return FP_LEVITATION;
+	case SET_FORCE_SPEED_LEVEL:		return FP_SPEED;
+	case SET_FORCE_PUSH_LEVEL:		return FP_PUSH;
+	case SET_FORCE_PULL_LEVEL:		return FP_PULL;
+	case SET_FORCE_MINDTRICK_LEVEL:	return FP_TELEPATHY;
+	case SET_FORCE_GRIP_LEVEL:		return FP_GRIP;
+	case SET_FORCE_LIGHTNING_LEVEL:	return FP_LIGHTNING;
+	case SET_FORCE_RAGE_LEVEL:		return FP_RAGE;
+	case SET_FORCE_PROTECT_LEVEL:	return FP_PROTECT;
+	case SET_FORCE_ABSORB_LEVEL:	return FP_ABSORB;
+	case SET_FORCE_DRAIN_LEVEL:		return FP_DRAIN;
+	case SET_FORCE_SIGHT_LEVEL:		return FP_SEE;
+	case SET_SABER_THROW:			return FP_SABERTHROW;
+	case SET_SABER_DEFENSE:			return FP_SABER_DEFENSE;
+	case SET_SABER_OFFENSE:			return FP_SABER_OFFENSE;
+	default:						return -1;
+	}
 }
 
 /*
@@ -5647,7 +6613,24 @@ Q3_SetStartFrame
 */
 static void Q3_SetStartFrame( int entID, int startFrame )
 {
-	G_DebugPrint( WL_WARNING, "Q3_SetStartFrame: NOT SUPPORTED IN MP\n");
+	gentity_t	*ent  = &g_entities[entID];
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetStartFrame: invalid entID %d\n", entID);
+		return;
+	}
+	if ( ent->client )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetStartFrame: command not valid on players/NPCs!\n" );
+		return;
+	}
+	if ( startFrame >= 0 )
+	{
+		ent->s.frame = startFrame;
+		ent->startFrame = startFrame;
+		ent->rpAnimating = qtrue;	// RP_Animate() (g_main.c's entity loop) steps the frames
+	}
 }
 
 
@@ -5662,7 +6645,23 @@ Q3_SetEndFrame
 */
 static void Q3_SetEndFrame( int entID, int endFrame )
 {
-	G_DebugPrint( WL_WARNING, "Q3_SetEndFrame: NOT SUPPORTED IN MP\n");
+	gentity_t	*ent  = &g_entities[entID];
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetEndFrame: invalid entID %d\n", entID);
+		return;
+	}
+	if ( ent->client )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetEndFrame: command not valid on players/NPCs!\n" );
+		return;
+	}
+	if ( endFrame >= 0 )
+	{
+		ent->endFrame = endFrame;
+		ent->rpAnimating = qtrue;
+	}
 }
 
 /*
@@ -5676,7 +6675,31 @@ Q3_SetAnimFrame
 */
 static void Q3_SetAnimFrame( int entID, int animFrame )
 {
-	G_DebugPrint( WL_WARNING, "Q3_SetAnimFrame: NOT SUPPORTED IN MP\n");
+	gentity_t	*ent  = &g_entities[entID];
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetAnimFrame: invalid entID %d\n", entID);
+		return;
+	}
+	if ( ent->client )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetAnimFrame: command not valid on players/NPCs!\n" );
+		return;
+	}
+	if ( animFrame >= ent->endFrame )
+	{
+		ent->s.frame = ent->endFrame;
+	}
+	else if ( animFrame >= ent->startFrame )
+	{
+		ent->s.frame = animFrame;
+	}
+	else
+	{
+		ent->s.frame = ent->startFrame;
+	}
+	ent->rpAnimating = qtrue;
 }
 
 /*
@@ -5690,7 +6713,23 @@ Q3_SetLoopAnim
 */
 static void Q3_SetLoopAnim( int entID, qboolean loopAnim )
 {
-	G_DebugPrint( WL_WARNING, "Q3_SetLoopAnim: NOT SUPPORTED IN MP\n");
+	gentity_t	*ent  = &g_entities[entID];
+
+	if ( !ent )
+	{
+		G_DebugPrint( WL_WARNING, "Q3_SetLoopAnim: invalid entID %d\n", entID);
+		return;
+	}
+	if ( ent->client )
+	{
+		G_DebugPrint( WL_ERROR, "Q3_SetLoopAnim: command not valid on players/NPCs!\n" );
+		return;
+	}
+	ent->loopAnim = loopAnim;
+	if ( loopAnim )
+	{
+		ent->rpAnimating = qtrue;
+	}
 }
 
 
@@ -5729,17 +6768,39 @@ static void Q3_SetSaberActive( int entID, qboolean active )
 
 	if (!ent->client)
 	{
+		// GalaxyRP fix: [ICARUS] warned, then dereferenced the NULL client anyway
 		G_DebugPrint( WL_WARNING, "Q3_SetSaberActive: %d is not a client\n", entID);
+		return;
 	}
 
-	//fixme: Take into account player being in state where saber won't toggle? For now we simply won't care.
-	if (!ent->client->ps.saberHolstered && active)
+	// GalaxyRP fix: [ICARUS] the two tests were inverted: "saber lit AND active requested" and
+	// "saber off AND off requested" each toggled the saber, so SET_SABERACTIVE true on a lit
+	// saber switched it OFF and did nothing on a holstered one -- the opposite of every script's
+	// intent. And Cmd_ToggleSaber_f() refuses unless the saber is the held weapon and weaponTime
+	// is 0, which a scripted NPC mid-animation rarely satisfies. This is single player's
+	// Q3_SetSaberActive over MP's own WP_ActivateSaber()/WP_DeactivateSaber(), which set the
+	// holster state and play the sounds directly; an NPC that owns a saber but holds another
+	// weapon is switched to it first, as SP does. A player is only toggled when the saber is
+	// already their weapon: the server cannot change a player's weapon under the client.
+	if ( active )
 	{
-		Cmd_ToggleSaber_f(ent);
+		if ( ent->client->ps.weapon != WP_SABER )
+		{
+			if ( ent->NPC && ( ent->client->ps.stats[STAT_WEAPONS] & ( 1 << WP_SABER ) ) )
+			{
+				ChangeWeapon( ent, WP_SABER );
+			}
+			else
+			{
+				G_DebugPrint( WL_WARNING, "Q3_SetSaberActive: %d does not hold a saber\n", entID );
+				return;
+			}
+		}
+		WP_ActivateSaber( ent );
 	}
-	else if (BG_SabersOff( &ent->client->ps ) && !active)
+	else
 	{
-		Cmd_ToggleSaber_f(ent);
+		WP_DeactivateSaber( ent, qfalse );
 	}
 }
 
@@ -6035,11 +7096,11 @@ qboolean Q3_Set( int taskID, int entID, const char *type_name, const char *data 
 		break;
 
 	case SET_PLAYER_TEAM:
-		G_DebugPrint( WL_WARNING, "Q3_SetPlayerTeam: Not in MP ATM, let a programmer (ideally Rich) know if you need it\n");
+		Q3_SetPlayerTeam( entID, (char *) data );
 		break;
 
 	case SET_ENEMY_TEAM:
-		G_DebugPrint( WL_WARNING, "Q3_SetEnemyTeam: NOT SUPPORTED IN MP\n");
+		Q3_SetEnemyTeam( entID, (char *) data );
 		break;
 
 	case SET_HEALTH:
@@ -6138,7 +7199,6 @@ qboolean Q3_Set( int taskID, int entID, const char *type_name, const char *data 
 	case SET_WIDTH:
 		int_data = atoi((char *) data);
 		Q3_SetWidth( entID, int_data );
-		return qfalse;
 		break;
 
 	case SET_YAWSPEED:
@@ -6731,19 +7791,31 @@ qboolean Q3_Set( int taskID, int entID, const char *type_name, const char *data 
 		break;
 
 	case SET_ADJUST_AREA_PORTALS:
-		G_DebugPrint( WL_WARNING, "Q3_SetAdjustAreaPortals: NOT SUPPORTED IN MP\n");
+		Q3_SetAdjustAreaPortals( entID, (qboolean)(Q_stricmp( "true", (char *)data ) == 0) );
 		break;
 
 	case SET_DMG_BY_HEAVY_WEAP_ONLY:
-		G_DebugPrint( WL_WARNING, "Q3_SetDmgByHeavyWeapOnly: NOT SUPPORTED IN MP\n");
+		Q3_SetEntFlag( entID, FL_DMG_BY_HEAVY_WEAP_ONLY, (qboolean)(Q_stricmp( "true", (char *)data ) == 0), "Q3_SetDmgByHeavyWeapOnly" );
 		break;
 
 	case SET_SHIELDED:
-		G_DebugPrint( WL_WARNING, "Q3_SetShielded: NOT SUPPORTED IN MP\n");
+		Q3_SetEntFlag( entID, FL_SHIELDED, (qboolean)(Q_stricmp( "true", (char *)data ) == 0), "Q3_SetShielded" );
 		break;
 
 	case SET_NO_GROUPS:
-		G_DebugPrint( WL_WARNING, "Q3_SetNoGroups: NOT SUPPORTED IN MP\n");
+		Q3_SetScriptFlag( entID, SCF_NO_GROUPS, (qboolean)(Q_stricmp( "true", (char *)data ) == 0), "Q3_SetNoGroups" );
+		break;
+
+	case SET_SAFE_REMOVE:
+		Q3_SetScriptFlag( entID, SCF_SAFE_REMOVE, (qboolean)(Q_stricmp( "true", (char *)data ) == 0), "Q3_SetSafeRemove" );
+		break;
+
+	case SET_FORCE_PULL:
+		Q3_SetForcePower( entID, FP_PULL, (qboolean)(Q_stricmp( "true", (char *)data ) == 0) );
+		break;
+
+	case SET_FORCE_PROTECT:
+		Q3_SetForcePower( entID, FP_PROTECT, (qboolean)(Q_stricmp( "true", (char *)data ) == 0) );
 		break;
 
 	case SET_FIRE_WEAPON:
@@ -6924,8 +7996,13 @@ qboolean Q3_Set( int taskID, int entID, const char *type_name, const char *data 
 	case SET_SABER_THROW:
 	case SET_SABER_DEFENSE:
 	case SET_SABER_OFFENSE:
+	case SET_FORCE_RAGE_LEVEL:
+	case SET_FORCE_PROTECT_LEVEL:
+	case SET_FORCE_ABSORB_LEVEL:
+	case SET_FORCE_DRAIN_LEVEL:
+	case SET_FORCE_SIGHT_LEVEL:
 		int_data = atoi((char *) data);
-		Q3_SetForcePowerLevel( entID, (toSet-SET_FORCE_HEAL_LEVEL), int_data );
+		Q3_SetForcePowerLevel( entID, Q3_ForcePowerForSetID( toSet ), int_data );
 		break;
 
 	default:

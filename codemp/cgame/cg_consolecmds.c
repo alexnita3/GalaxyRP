@@ -117,6 +117,17 @@ CG_ScoresUp_f
 
 =================
 */
+// GalaxyRP: [Grapple Hook] the same convenience binds TaystJK and JAPro give the hook, so one
+// "bind x +grapple" works on every client. They only forward to the engine's +button12/-button12,
+// which is the usercmd bit the server fires and releases on; binding +button12 directly is the same.
+static void CG_GrappleDown_f( void ) {
+	trap->SendConsoleCommand( "+button12\n" );
+}
+
+static void CG_GrappleUp_f( void ) {
+	trap->SendConsoleCommand( "-button12\n" );
+}
+
 static void CG_ScoresUp_f( void ) {
 	if ( cg.showScores ) {
 		cg.showScores = qfalse;
@@ -293,7 +304,9 @@ int cmdcmp( const void *a, const void *b ) {
 }
 
 static consoleCommand_t	commands[] = {
+	{ "+grapple",					CG_GrappleDown_f },
 	{ "+scores",					CG_ScoresDown_f },
+	{ "-grapple",					CG_GrappleUp_f },
 	{ "-scores",					CG_ScoresUp_f },
 	{"char",						NULL},
 	{ "briefing",					CG_SiegeBriefing_f },
@@ -308,6 +321,7 @@ static consoleCommand_t	commands[] = {
 	{ "nextskin",					CG_TestModelNextSkin_f },
 	{ "prevframe",					CG_TestModelPrevFrame_f },
 	{ "prevskin",					CG_TestModelPrevSkin_f },
+	{ "rpx",						CG_Rpx_f },	// GalaxyRP: [Extras] the Extras menus' scripts, cg_rpextras.c
 	{ "siegeCompleteCvarUpdate",	CG_SiegeCompleteCvarUpdate_f },
 	{ "siegeCvarUpdate",			CG_SiegeCvarUpdate_f },
 	{ "sizedown",					CG_SizeDown_f },

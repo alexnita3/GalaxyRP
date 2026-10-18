@@ -37,7 +37,9 @@ typedef struct gtimer_s
 } gtimer_t;
 
 gtimer_t g_timerPool[ MAX_GTIMERS ];
-gtimer_t *g_timers[ MAX_GENTITIES ];
+// GalaxyRP: [Logical Entities] indexed by ent->s.number, so it covers both regions -- TIMER_Set
+// on a logical entity (an NPC spawner, say) must not write past the table.
+gtimer_t *g_timers[ MAX_ENTITIESTOTAL ];
 gtimer_t *g_timerFreeList;
 
 /*
@@ -49,7 +51,7 @@ TIMER_Clear
 void TIMER_Clear( void )
 {
 	int i;
-	for (i = 0; i < MAX_GENTITIES; i++)
+	for (i = 0; i < MAX_ENTITIESTOTAL; i++)
 	{
 		g_timers[i] = NULL;
 	}
@@ -71,7 +73,7 @@ TIMER_Clear
 void TIMER_Clear2( gentity_t *ent )
 {
 	// rudimentary safety checks, might be other things to check?
-	if ( ent && ent->s.number >= 0 && ent->s.number < MAX_GENTITIES )
+	if ( ent && ent->s.number >= 0 && ent->s.number < MAX_ENTITIESTOTAL )
 	{
 		gtimer_t *p = g_timers[ent->s.number];
 

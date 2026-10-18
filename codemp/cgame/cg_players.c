@@ -416,27 +416,31 @@ void ParseAnimationEvtBlock(const char* aeb_filename, animevent_t* animEvents, a
 			{
 				break;
 			}
-			if (stricmp(token, "CHAN_VOICE_ATTEN") == 0)
+			// GalaxyRP fix: [macOS/Clang build failure] stricmp is an MSVC CRT extension, not
+			// declared on Linux/macOS -- use the codebase's own portable Q_stricmp instead (same
+			// fix applied to all 12 occurrences of this sound-channel-name comparison in this file,
+			// across both parse blocks).
+			if (Q_stricmp(token, "CHAN_VOICE_ATTEN") == 0)
 			{
 				animEvents[curAnimEvent].eventData[AED_SOUNDCHANNEL] = CHAN_VOICE_ATTEN;
 			}
-			else if (stricmp(token, "CHAN_VOICE_GLOBAL") == 0)
+			else if (Q_stricmp(token, "CHAN_VOICE_GLOBAL") == 0)
 			{
 				animEvents[curAnimEvent].eventData[AED_SOUNDCHANNEL] = CHAN_VOICE_GLOBAL;
 			}
-			else if (stricmp(token, "CHAN_ANNOUNCER") == 0)
+			else if (Q_stricmp(token, "CHAN_ANNOUNCER") == 0)
 			{
 				animEvents[curAnimEvent].eventData[AED_SOUNDCHANNEL] = CHAN_ANNOUNCER;
 			}
-			else if (stricmp(token, "CHAN_BODY") == 0)
+			else if (Q_stricmp(token, "CHAN_BODY") == 0)
 			{
 				animEvents[curAnimEvent].eventData[AED_SOUNDCHANNEL] = CHAN_BODY;
 			}
-			else if (stricmp(token, "CHAN_WEAPON") == 0)
+			else if (Q_stricmp(token, "CHAN_WEAPON") == 0)
 			{
 				animEvents[curAnimEvent].eventData[AED_SOUNDCHANNEL] = CHAN_WEAPON;
 			}
-			else if (stricmp(token, "CHAN_VOICE") == 0)
+			else if (Q_stricmp(token, "CHAN_VOICE") == 0)
 			{
 				animEvents[curAnimEvent].eventData[AED_SOUNDCHANNEL] = CHAN_VOICE;
 			}
@@ -592,27 +596,31 @@ void ParseAnimationEvtBlock(const char* aeb_filename, animevent_t* animEvents, a
 			{
 				break;
 			}
-			if (stricmp(token, "CHAN_VOICE_ATTEN") == 0)
+			// GalaxyRP fix: [macOS/Clang build failure] stricmp is an MSVC CRT extension, not
+			// declared on Linux/macOS -- use the codebase's own portable Q_stricmp instead (same
+			// fix applied to all 12 occurrences of this sound-channel-name comparison in this file,
+			// across both parse blocks).
+			if (Q_stricmp(token, "CHAN_VOICE_ATTEN") == 0)
 			{
 				animEvents[curAnimEvent].eventData[AED_SOUNDCHANNEL] = CHAN_VOICE_ATTEN;
 			}
-			else if (stricmp(token, "CHAN_VOICE_GLOBAL") == 0)
+			else if (Q_stricmp(token, "CHAN_VOICE_GLOBAL") == 0)
 			{
 				animEvents[curAnimEvent].eventData[AED_SOUNDCHANNEL] = CHAN_VOICE_GLOBAL;
 			}
-			else if (stricmp(token, "CHAN_ANNOUNCER") == 0)
+			else if (Q_stricmp(token, "CHAN_ANNOUNCER") == 0)
 			{
 				animEvents[curAnimEvent].eventData[AED_SOUNDCHANNEL] = CHAN_ANNOUNCER;
 			}
-			else if (stricmp(token, "CHAN_BODY") == 0)
+			else if (Q_stricmp(token, "CHAN_BODY") == 0)
 			{
 				animEvents[curAnimEvent].eventData[AED_SOUNDCHANNEL] = CHAN_BODY;
 			}
-			else if (stricmp(token, "CHAN_WEAPON") == 0)
+			else if (Q_stricmp(token, "CHAN_WEAPON") == 0)
 			{
 				animEvents[curAnimEvent].eventData[AED_SOUNDCHANNEL] = CHAN_WEAPON;
 			}
-			else if (stricmp(token, "CHAN_VOICE") == 0)
+			else if (Q_stricmp(token, "CHAN_VOICE") == 0)
 			{
 				animEvents[curAnimEvent].eventData[AED_SOUNDCHANNEL] = CHAN_VOICE;
 			}
@@ -2054,11 +2062,17 @@ void CG_LoadClientInfo( clientInfo_t *ci ) {
 	}
 
 	//GalaxyRP (Alex): [Model Customization] Here is where the model config file is loaded.
-	FILE* testFile_;
-	char buffer[2048];
-	testFile_ = fopen(va("base/models/players/%s/player.cfg", ci->modelName), "r");
+	// GalaxyRP fix: [macOS/Clang build failure + real bug] fread() returns a size_t byte/item
+	// count, not a FILE*; assigning its result back into testFile_ overwrote the open file handle
+	// with a small integer (0 or 1), which Clang correctly rejects as a hard error on macOS
+	// (-Wint-conversion). Beyond the compile error, this also leaked the file descriptor on every
+	// player model load, since the (corrupted) handle was never fclose()'d. Keep fopen/fread as
+	// separate statements and close the handle once we're done with it.
+	FILE* testFile_ = fopen(va("base/models/players/%s/player.cfg", ci->modelName), "r");
 	if (testFile_ != NULL) {
-		testFile_ = fread(buffer, sizeof(buffer), 1, testFile_);
+		char buffer[2048];
+		fread(buffer, sizeof(buffer), 1, testFile_);
+		fclose(testFile_);
 	}
 
 	ci->newAnims = qfalse;
@@ -2507,6 +2521,29 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	CG_ColorFromString( v, newInfo.color2 );
 
 	newInfo.icolor2 = atoi(v);
+
+	// GalaxyRP: [Saber RGB] the custom blade colours that go with an icolor in the RGB family
+	// (SABER_RGB..SABER_ELEC2), sent as packed 24-bit integers by ClientUserinfoChanged(). Nothing
+	// reads these when icolor isn't RGB-family, so the fallback below is harmless in that case.
+	//
+	// A packed value of 0 -- absent (a server/client that predates this feature), or a real,
+	// legitimate "no custom colour chosen yet" -- defaults to packed 255, which unpacks to pure red
+	// (255,0,0). This matches TaystJK/JAPro's own legacy-compatibility fallback exactly (their
+	// CG_NewClientInfo does the identical "if (!full) full=255;"), and is what makes a bare "rgb"
+	// selection with no colour set render as a sensible default instead of invisible black.
+	{
+		int packed;
+
+		packed = atoi( Info_ValueForKey( configstring, "c3" ) );
+		if ( !packed )
+			packed = 255;
+		VectorSet( newInfo.rgb1, SABERRGB_R( packed ), SABERRGB_G( packed ), SABERRGB_B( packed ) );
+
+		packed = atoi( Info_ValueForKey( configstring, "c4" ) );
+		if ( !packed )
+			packed = 255;
+		VectorSet( newInfo.rgb2, SABERRGB_R( packed ), SABERRGB_G( packed ), SABERRGB_B( packed ) );
+	}
 
 	// bot skill
 	v = Info_ValueForKey( configstring, "skill" );
@@ -3089,7 +3126,12 @@ static void _PlayerFootStep( const vec3_t origin,
 			}
 			break;
 	}
-	if (soundType < FOOTSTEP_TOTAL)
+	// DAJ_RP: [dmflags] DF_NO_FOOTSTEPS (32) silences the step itself, for players and NPCs alike.
+	// The flag is Quake 3's, where pmove raised the footstep event and pm->noFootsteps stopped it;
+	// JKA moved footsteps into these client-side animation events and left pm->noFootsteps set but
+	// unread, so the flag did nothing. Only the sound: the dust puff and the footprint below stay,
+	// as do splashing and wading (EV_FOOTSPLASH/EV_FOOTWADE/EV_SWIM), which the flag never covered.
+	if (soundType < FOOTSTEP_TOTAL && !(cgs.dmflags & DF_NO_FOOTSTEPS))
 	{
 	 	trap->S_StartSound( NULL, cent->currentState.clientNum, CHAN_BODY, cgs.media.footsteps[soundType][rand()&3] );
 	}
@@ -3632,12 +3674,18 @@ void CG_PlayerAnimEvents( int animFileIndex, int eventFileIndex, qboolean torso,
 				break;
 				//[AMBIENTEV]
 			case AEV_AMBIENT:
-				CG_Printf("ERROR: CG_PlayerAnimEvents() tried to play a AEV_AMBIENT as a keyframed sound.\n");
+				// GalaxyRP fix: [macOS/Clang build failure] CG_Printf is the internal
+				// implementation behind the trap->Print function pointer (cg_syscalls.c) and isn't
+				// declared in any header this file includes; every other error log in this file
+				// (and the rest of cgame) goes through trap->Print instead. On Linux/GCC the
+				// missing declaration was only a warning; Clang rejects it as a hard error on
+				// macOS (-Wimplicit-function-declaration).
+				trap->Print("ERROR: CG_PlayerAnimEvents() tried to play a AEV_AMBIENT as a keyframed sound.\n");
 				break;
 				//[/AMBIENTEV]
 			default:
 				//[ANIMEVENTS]
-				CG_Printf("ERROR: No eventType for animevent in CG_PlayerAnimEvents().\n");
+				trap->Print("ERROR: No eventType for animevent in CG_PlayerAnimEvents().\n");
 				//[/ANIMEVENTS]
 				//doEvent = qfalse;//implicit
 				break;
@@ -5594,6 +5642,16 @@ static qboolean CG_PlayerShadow( centity_t *cent, float *shadowPlane ) {
 		return qfalse;
 	}
 
+	// GalaxyRP: [Phase] nor for a Force ghost or a hologram -- see CG_AddPhasedPlayerModel()
+	{
+		const int phase = RP_PHASE_FROM_EFLAGS( cent->currentState.eFlags );
+
+		if ( phase == RP_PHASE_GHOST || phase == RP_PHASE_HOLO )
+		{
+			return qfalse;
+		}
+	}
+
 	if (cent->currentState.eFlags & EF_DEAD)
 	{
 		return qfalse;
@@ -6173,10 +6231,92 @@ int CG_LightVerts( vec3_t normal, int numVerts, polyVert_t *verts )
 	return qtrue;
 }
 
-static void CG_RGBForSaberColor( saber_colors_t color, vec3_t rgb )
+/*
+GalaxyRP: [Saber RGB] a colour value arriving from another client is whatever that client put in
+its color1/color2 cvar -- an arbitrary integer, not necessarily one of ours. Fold anything we do
+not draw ourselves back onto a colour we do, so an out-of-range value can never index past the end
+of a switch's worth of shaders or leave a blade drawn with an uninitialised handle.
+
+Any in-range value (0..NUM_SABER_COLORS-1) passes through unchanged -- including SABER_RGB and the
+four blade-style/black ordinals, all of which we now actually draw (see CG_RGBForSaberColor and
+CG_DoSaber below). Anything >= NUM_SABER_COLORS cycles back into the palette via "% NUM_SABER_COLORS",
+matching TaystJK's own ClampSaberColor -- an earlier version of this function clamped such values to
+SABER_RED instead, but that left color1/2 stuck once pushed out of range while /sabercolor's own
+no-args status print kept walking the palette from the start, which read as inconsistent in practice.
+A negative value still clamps to SABER_RED (TaystJK's version has no such guard, but there's no reason
+to drop one that's already correct here).
+*/
+static saber_colors_t CG_ClampSaberColor( int color )
+{
+	if ( color < 0 )
+		return SABER_RED;
+
+	return (saber_colors_t)(color % NUM_SABER_COLORS);
+}
+
+/*
+DAJ_RP: [Saber Keys] the saber's own .sab colour (customRGB, bg_saberLoad.c), 0-1, or NULL. It comes before the
+player's custom colour wherever a blade of the RGB family is drawn -- CG_AddSaberBlade turns such a saber's blades to
+the RGB family, unless the team colours win (see there).
+*/
+static const float *CG_SabCustomRGB( const clientInfo_t *ci, int bnum )
+{
+	if ( ci && bnum >= 0 && bnum < MAX_SABERS && ci->saber[bnum].useCustomRGBColor )
+		return ci->saber[bnum].customRGB;
+	return NULL;
+}
+
+/*
+GalaxyRP: [Saber RGB] does this blade actually have a custom colour to draw?
+
+SABER_RGB (and the four blade-style ordinals) can arrive without one: a .npc or siege class file can
+name "rgb" as a saber colour for an NPC, which has no player colour behind it at all, and a real
+player's packed RGB payload can legitimately be sent as 0. This NULL-context guard is what
+CG_DoSaberLight (no client context at all) relies on to fall back cleanly; a real networked player's
+rgb1/rgb2 no longer needs this to distinguish "unset" from "black" (see CG_NewClientInfo's
+zero-defaults-to-red handling), but NPC/.sab callers still pass ci == NULL and need a defined result.
+*/
+static qboolean CG_HasCustomSaberColor( const clientInfo_t *ci, int bnum )
+{
+	const float *rgb;
+
+	if ( !ci )
+		return qfalse;
+
+	if ( CG_SabCustomRGB( ci, bnum ) )
+		return qtrue;	// DAJ_RP: [Saber Keys]
+
+	rgb = bnum ? ci->rgb2 : ci->rgb1;
+
+	return (qboolean)( rgb[0] > 0.0f || rgb[1] > 0.0f || rgb[2] > 0.0f );
+}
+
+// GalaxyRP: [Saber RGB] "ci" supplies the custom colour behind SABER_RGB (and the four blade-style
+// ordinals, which share the same custom-colour source -- only the shader differs) and "bnum" picks
+// which of the player's two saber slots it comes from. Both may be omitted (NULL) by callers with no
+// client context, in which case these degrade to plain red -- see CG_DoSaberLight.
+static void CG_RGBForSaberColor( saber_colors_t color, vec3_t rgb, const clientInfo_t *ci, int bnum )
 {
 	switch( color )
 	{
+		case SABER_RGB:
+		case SABER_FLAME1:
+		case SABER_ELEC1:
+		case SABER_FLAME2:
+		case SABER_ELEC2:
+			if ( CG_SabCustomRGB( ci, bnum ) )
+			{	// DAJ_RP: [Saber Keys] the .sab's customRGB, already 0-1
+				VectorCopy( CG_SabCustomRGB( ci, bnum ), rgb );
+				break;
+			}
+			if ( CG_HasCustomSaberColor( ci, bnum ) )
+			{
+				// Stored 0-255 by CG_NewClientInfo; the dlight and tint paths both want 0-1 here.
+				VectorScale( bnum ? ci->rgb2 : ci->rgb1, 1.0f / 255.0f, rgb );
+				break;
+			}
+			VectorSet( rgb, 1.0f, 0.2f, 0.2f );
+			break;
 		case SABER_RED:
 			VectorSet( rgb, 1.0f, 0.2f, 0.2f );
 			break;
@@ -6194,6 +6334,11 @@ static void CG_RGBForSaberColor( saber_colors_t color, vec3_t rgb )
 			break;
 		case SABER_PURPLE:
 			VectorSet( rgb, 0.9f, 0.2f, 1.0f );
+			break;
+		case SABER_BLACK:
+			// The black shaders (rgbGen identity) supply the actual colour themselves; this value
+			// only feeds the dynamic-light call (CG_DoSaberLight), where white is a harmless no-op.
+			VectorSet( rgb, 1.0f, 1.0f, 1.0f );
 			break;
 		default:
 			break;
@@ -6221,8 +6366,15 @@ static void CG_DoSaberLight( saberInfo_t *saber )
 	{
 		if ( saber->blade[i].length >= 0.5f )
 		{
-			//FIXME: make RGB sabers
-			CG_RGBForSaberColor( saber->blade[i].color, rgbs[i] );
+			// GalaxyRP: [Saber RGB] no client context is passed here on purpose. This dlight is
+			// driven by the blade colour baked into the .sab definition, not by the colour the
+			// player picked (that is CG_DoSaber's own light, further down) -- so a custom colour
+			// never reaches this field, and there is nothing here for it to select.
+			// DAJ_RP: [Saber Keys] ...except the .sab's own customRGB, which is baked into it too.
+			if ( saber->useCustomRGBColor )
+				VectorCopy( saber->customRGB, rgbs[i] );
+			else
+				CG_RGBForSaberColor( CG_ClampSaberColor( saber->blade[i].color ), rgbs[i], NULL, 0 );
 			lengths[i] = saber->blade[i].length;
 			if ( saber->blade[i].length*2.0f > diameter )
 			{
@@ -6286,7 +6438,10 @@ static void CG_DoSaberLight( saberInfo_t *saber )
 	}
 }
 
-void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int rfx, qboolean doLight )
+// GalaxyRP: [Saber RGB] "ci"/"bnum" identify whose blade this is, so a SABER_RGB colour can be
+// resolved to that player's own custom colour. Callers with no client context may pass NULL/0, in
+// which case SABER_RGB falls back to the default blue rather than tinting with stale data.
+void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float radius, saber_colors_t color, int rfx, qboolean doLight, const clientInfo_t *ci, int bnum )
 {
 	vec3_t		mid;
 	qhandle_t	blade = 0, glow = 0;
@@ -6294,6 +6449,22 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	float radiusmult;
 	float radiusRange;
 	float radiusStart;
+	// GalaxyRP: [Saber RGB] the glow halo's tint. Full white leaves the six pre-coloured palette
+	// glow shaders looking exactly as they always have (white is the identity for the multiply the
+	// renderer applies), so this stays a no-op for every colour but SABER_RGB. Only the glow pass
+	// uses this -- the core/blade pass below is always drawn white, matching JAPro/TaystJK: their
+	// RGBcore1.jpg is itself a plain white blade texture, tinted glow around a white-hot core.
+	byte		tint[3] = { 0xff, 0xff, 0xff };
+
+	color = CG_ClampSaberColor( color );
+
+	// GalaxyRP: [Saber RGB] a blade can claim SABER_RGB (or one of the four blade-style ordinals)
+	// with no colour behind it (an NPC whose .npc file names "rgb", a client sending c1 without c3).
+	// Drop back to a palette colour rather than selecting the tintable shaders and multiplying them
+	// by black, which draws nothing at all. SABER_BLACK is excluded -- it doesn't need a custom
+	// colour behind it, its shaders draw black on their own.
+	if ( color >= SABER_RGB && color <= SABER_ELEC2 && !CG_HasCustomSaberColor( ci, bnum ) )
+		color = SABER_RED;
 
 	if ( length < 0.5f )
 	{
@@ -6330,16 +6501,76 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 			glow = cgs.media.purpleSaberGlowShader;
 			blade = cgs.media.purpleSaberCoreShader;
 			break;
-		default:
-			glow = cgs.media.blueSaberGlowShader;
-			blade = cgs.media.blueSaberCoreShader;
+		// GalaxyRP: [Saber RGB] the five greyscale, tintable pairs -- classic RGB plus the four
+		// TaystJK/JAPro blade-style variants. Unlike the six fixed-palette shaders above, these carry
+		// no colour of their own -- the shaderRGBA set on the refEntity below supplies it, and all
+		// five share the exact same tint-computation code, only the glow/core shader pair differs.
+		case SABER_RGB:
+		case SABER_FLAME1:
+		case SABER_ELEC1:
+		case SABER_FLAME2:
+		case SABER_ELEC2:
+		{
+			int i;
+			vec3_t custom;
+
+			switch ( color )
+			{
+				default:
+				case SABER_RGB:
+					glow = cgs.media.rgbSaberGlowShader;
+					blade = cgs.media.rgbSaberCoreShader;
+					break;
+				case SABER_FLAME1:
+					glow = cgs.media.rgbSaberGlowShader2;
+					blade = cgs.media.rgbSaberCoreShader2;
+					break;
+				case SABER_ELEC1:
+					glow = cgs.media.rgbSaberGlowShader3;
+					blade = cgs.media.rgbSaberCoreShader3;
+					break;
+				case SABER_FLAME2:
+					glow = cgs.media.rgbSaberGlowShader4;
+					blade = cgs.media.rgbSaberCoreShader4;
+					break;
+				case SABER_ELEC2:
+					glow = cgs.media.rgbSaberGlowShader5;
+					blade = cgs.media.rgbSaberCoreShader5;
+					break;
+			}
+
+			CG_RGBForSaberColor( color, custom, ci, bnum );
+			for ( i = 0; i < 3; i++ )
+				tint[i] = (byte)Com_Clampi( 0, 255, (int)(custom[i] * 255.0f) );
 			break;
+		}
+		// GalaxyRP: [Saber RGB] the fixed black blade -- no custom colour behind it, tint stays
+		// default white (a no-op here, since these shaders use "rgbGen identity" rather than
+		// "vertex" -- see sbRGB.shader -- so they draw black on their own regardless of the tint).
+		case SABER_BLACK:
+			glow = cgs.media.blackSaberGlowShader;
+			blade = cgs.media.blackSaberCoreShader;
+			break;
+		default:
+			glow = cgs.media.redSaberGlowShader;
+			blade = cgs.media.redSaberCoreShader;
+			break;
+	}
+
+	// DAJ_RP: [Saber Keys] the .sab's customBladeShader / customGlowShader, for any colour (TaystJK's keys). The glow
+	// keeps the tint above, so an RGB blade tints a custom glow that takes vertex colour; the core stays white.
+	if ( ci && bnum >= 0 && bnum < MAX_SABERS )
+	{
+		if ( ci->saber[bnum].customBladeShader )
+			blade = ci->saber[bnum].customBladeShader;
+		if ( ci->saber[bnum].customGlowShader )
+			glow = ci->saber[bnum].customGlowShader;
 	}
 
 	if (doLight)
 	{	// always add a light because sabers cast a nice glow before they slice you in half!!  or something...
 		vec3_t rgb={1,1,1};
-		CG_RGBForSaberColor( color, rgb );
+		CG_RGBForSaberColor( color, rgb, ci, bnum );
 		trap->R_AddLightToScene( mid, (length*1.4f) + (Q_flrand(0.0f, 1.0f)*3.0f), rgb[0], rgb[1], rgb[2] );
 	}
 
@@ -6375,7 +6606,12 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 	VectorCopy( dir, saber.axis[0] );
 	saber.reType = RT_SABER_GLOW;
 	saber.customShader = glow;
-	saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
+	// GalaxyRP: [Saber RGB] "tint" is full white for every palette colour, so this is byte-for-byte
+	// the 0xff,0xff,0xff,0xff this line always wrote unless a custom colour is in play.
+	saber.shaderRGBA[0] = tint[0];
+	saber.shaderRGBA[1] = tint[1];
+	saber.shaderRGBA[2] = tint[2];
+	saber.shaderRGBA[3] = 0xff;
 	saber.renderfx = rfx;
 
 	trap->R_AddRefEntityToScene( &saber );
@@ -6393,6 +6629,7 @@ void CG_DoSaber( vec3_t origin, vec3_t dir, float length, float lengthMax, float
 //	saber.radius = (1.0 + Q_flrand(-1.0f, 1.0f) * 0.2f)*radiusmult;
 
 	saber.shaderTexCoord[0] = saber.shaderTexCoord[1] = 1.0f;
+	// GalaxyRP: [Saber RGB] always white, including for SABER_RGB -- see the tint comment above.
 	saber.shaderRGBA[0] = saber.shaderRGBA[1] = saber.shaderRGBA[2] = saber.shaderRGBA[3] = 0xff;
 
 	trap->R_AddRefEntityToScene( &saber );
@@ -6975,6 +7212,7 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 	effectTrailArgStruct_t fx;
 	int scolor = 0;
 	int	useModelIndex = 0;
+	qboolean teamColor = qfalse;	// DAJ_RP: [Saber Keys] the team gametypes forced red or blue on this blade
 
 	if (cent->currentState.eType == ET_NPC)
 	{
@@ -7069,6 +7307,14 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 		}
 	}
 
+	// DAJ_RP: [Saber Keys] a .sab customRGB makes the blade an RGB one in that colour (CG_SabCustomRGB): the RGB blade
+	// style the player picked with /saberblade kept, classic RGB otherwise (black included). Before the team colours
+	// below, so those still win in the team gametypes.
+	if ( client->saber[saberNum].useCustomRGBColor && !( scolor >= SABER_RGB && scolor <= SABER_ELEC2 ) )
+	{
+		scolor = SABER_RGB;
+	}
+
 	if (cgs.gametype >= GT_TEAM &&
 		cgs.gametype != GT_SIEGE &&
 		!cgs.jediVmerc &&
@@ -7077,10 +7323,12 @@ void CG_AddSaberBlade( centity_t *cent, centity_t *scent, refEntity_t *saber, in
 		if (client->team == TEAM_RED)
 		{
 			scolor = SABER_RED;
+			teamColor = qtrue;
 		}
 		else if (client->team == TEAM_BLUE)
 		{
 			scolor = SABER_BLUE;
+			teamColor = qtrue;
 		}
 	}
 
@@ -7296,7 +7544,12 @@ CheckTrail:
 				else
 	#endif
 				{
-					vec3_t	rgb1={255.0f,255.0f,255.0f};
+					vec3_t		rgb1={255.0f,255.0f,255.0f};
+					// GalaxyRP: [Saber RGB] which trail shader to use, same layout the idle blade's
+					// glow/core selection uses (CG_DoSaber) -- default is the plain motion-blur trail
+					// every fixed-palette colour already used, overridden below for the RGB-family
+					// and black cases.
+					qhandle_t	trailShader = cgs.media.saberBlurShader;
 
 					switch( scolor )
 					{
@@ -7318,9 +7571,63 @@ CheckTrail:
 						case SABER_PURPLE:
 							VectorSet( rgb1, 220.0f, 0.0f, 255.0f );
 							break;
+						// GalaxyRP: [Saber RGB] the confirmed "swing trail always renders blue" bug --
+						// this switch previously had no case for SABER_RGB or any of the four
+						// blade-style variants at all, so every one of them silently fell to default
+						// (plain blue) here, even though the idle blade a few hundred lines away
+						// (CG_DoSaber) already renders the real custom colour correctly, through a
+						// completely separate code path. client->rgb1/rgb2 are already 0-255 scale,
+						// matching rgb1 here exactly -- no rescale needed.
+						case SABER_RGB:
+						case SABER_FLAME1:
+						case SABER_ELEC1:
+						case SABER_FLAME2:
+						case SABER_ELEC2:
+							if ( client->saber[saberNum].useCustomRGBColor )
+							{	// DAJ_RP: [Saber Keys] the .sab's customRGB (0-1) on this 0-255 scale
+								VectorScale( client->saber[saberNum].customRGB, 255.0f, rgb1 );
+							}
+							else
+							{
+								VectorCopy( saberNum ? client->rgb2 : client->rgb1, rgb1 );
+							}
+							switch ( scolor )
+							{
+								default:
+								case SABER_RGB:
+									trailShader = cgs.media.saberBlurShader;
+									break;
+								case SABER_FLAME1:
+									trailShader = cgs.media.rgbSaberTrail2Shader;
+									break;
+								case SABER_ELEC1:
+									trailShader = cgs.media.rgbSaberTrail3Shader;
+									break;
+								case SABER_FLAME2:
+									trailShader = cgs.media.rgbSaberTrail4Shader;
+									break;
+								case SABER_ELEC2:
+									// No RGBtrail5 asset -- matches TaystJK's own registration, which
+									// falls back to the plain sword trail for this one style too.
+									trailShader = cgs.media.swordTrailShader;
+									break;
+							}
+							break;
+						case SABER_BLACK:
+							VectorSet( rgb1, 255.0f, 255.0f, 255.0f );
+							trailShader = cgs.media.blackBlurShader;
+							break;
 						default:
 							VectorSet( rgb1, 0.0f, 64.0f, 255.0f );
 							break;
+					}
+
+					// DAJ_RP: [Saber Keys] the .sab's customTrailShader, for any colour (TaystJK's key). A normal trail only:
+					// a sword's motion trail (trailStyle 1) and cg_saberTrail 2's refraction keep theirs. Not over a team
+					// colour: the team's own blade, trail and all, so the teams stay readable.
+					if ( client->saber[saberNum].customTrailShader && !teamColor )
+					{
+						trailShader = client->saber[saberNum].customTrailShader;
 					}
 
 					//Here we will use the happy process of filling a struct in with arguments and passing it to a trap function
@@ -7358,7 +7665,10 @@ CheckTrail:
 							}
 							else
 							{
-								fx.mShader = cgs.media.saberBlurShader;
+								// GalaxyRP: [Saber RGB] trailShader is saberBlurShader for every
+								// fixed-palette colour (unchanged behaviour) and the RGB-family/black
+								// shader for those cases -- see the switch above.
+								fx.mShader = trailShader;
 							}
 							fx.mKillTime = trailDur;
 							fx.mSetFlags = FX_USE_ALPHA;
@@ -7457,8 +7767,13 @@ JustDoIt:
 	//	will get rendered properly in a mirror...not sure if this is necessary??
 	//CG_DoSaber( org_, axis_[0], saberLen, client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius,
 	//	scolor, renderfx, (qboolean)(saberNum==0&&bladeNum==0) );
+	// GalaxyRP: [Saber RGB] "client" and "saberNum" let CG_DoSaber resolve a SABER_RGB scolor to
+	// this player's own custom colour (clientInfo_t::rgb1/rgb2, filled in by CG_NewClientInfo).
+	// DAJ_RP: [Saber Keys] no client behind a team colour: the team's red or blue needs none, and without one the .sab's
+	// customBladeShader/customGlowShader stay off it too, so the teams stay readable.
 	CG_DoSaber( org_, axis_[0], saberLen, client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius,
-		scolor, renderfx, (qboolean)(client->saber[saberNum].numBlades < 3 && !(client->saber[saberNum].saberFlags2&SFL2_NO_DLIGHT)) );
+		scolor, renderfx, (qboolean)(client->saber[saberNum].numBlades < 3 && !(client->saber[saberNum].saberFlags2&SFL2_NO_DLIGHT)),
+		teamColor ? NULL : client, saberNum );
 }
 
 int CG_IsMindTricked(int trickIndex1, int trickIndex2, int trickIndex3, int trickIndex4, int client)
@@ -8413,6 +8728,70 @@ extern void BG_VehicleAdjustBBoxForOrientation( Vehicle_t *veh, vec3_t origin, v
 										int clientNum, int tracemask,
 										void (*localTrace)(trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask)); // bg_pmove.c
 */
+/*
+==================
+CG_RpVehicleLiftApplied
+
+DAJ_RP: [NPC Scale] does this vehicle's lerpOrigin hold the lift CG_Player() gave it to stand a scaled vehicle on the
+ground (rpVehicleLift)? It does once it has been drawn, until CG_CalcEntityLerpPositions() works the origin out afresh --
+next frame, or when the passenger prediction does it early (CG_RpPassengerState(), cg_predict.c). Its riders are lifted by
+it, and the client's collision with it takes it back off (CG_ClipMoveToEntities(), cg_predict.c), the server's box being
+where the vehicle physically is.
+==================
+*/
+qboolean CG_RpVehicleLiftApplied( const centity_t *veh )
+{
+	return ( veh && veh->rpVehicleLift && VectorCompare( veh->lerpOrigin, veh->rpVehicleLiftedOrigin ) ) ? qtrue : qfalse;
+}
+
+/*
+==================
+CG_RpDroidAngles
+
+DAJ_RP fix: [Vehicles] the angles a vehicle's droid is drawn at (full ones: CG_G2PlayerAngles() takes pitch, yaw and roll
+for an NPC bolted to a vehicle), from its "*droidunit" socket's forward and right directions, so that it is drawn facing
+fwd with its right along rt. Stock took the pitch and yaw from fwd (as here) but the roll from how steeply rt slopes
+(vectoangles()), which cannot tell a roll of 45 from one of 135 or 0 from 180: past a quarter turn the droid turned back
+upright while its vehicle went on rolling, upside down it sat the right way up, and halfway round a loop it faced
+backwards. The roll is now found from both rt and the up direction, over the whole turn -- the same angle as stock's
+while the vehicle is less than a quarter turn over. Should the socket's up come out the opposite way to the vehicle's
+(the socket's sideways axis being its left, not its right), rt is taken the other way round, so the droid is never drawn
+upside down on an upright vehicle. Pointing straight up or down, where fwd gives no heading, the heading is taken from rt
+and the roll is 0. The socket's directions are scaled with a scaled vehicle, so they are made unit first.
+==================
+*/
+static void CG_RpDroidAngles( const vec3_t socketFwd, const vec3_t socketRt, const vec3_t vehAngles, vec3_t angles )
+{
+	vec3_t	fwd, rt, up, vehUp;
+	float	flat;
+
+	VectorCopy( socketFwd, fwd );
+	VectorNormalize( fwd );
+	VectorCopy( socketRt, rt );
+	VectorNormalize( rt );
+
+	CrossProduct( rt, fwd, up );	// right x forward is up, as AngleVectors() has them
+	AngleVectors( vehAngles, NULL, NULL, vehUp );
+	if ( DotProduct( up, vehUp ) < 0.0f )
+	{
+		VectorScale( rt, -1.0f, rt );
+		VectorScale( up, -1.0f, up );
+	}
+
+	flat = sqrtf( fwd[0] * fwd[0] + fwd[1] * fwd[1] );
+	if ( flat < 0.001f )
+	{//straight up or down: the heading from the right direction, which AngleVectors() has as (sin yaw, -cos yaw, 0) there
+		angles[PITCH] = ( fwd[2] > 0.0f ) ? -90.0f : 90.0f;
+		angles[YAW] = RAD2DEG( atan2f( rt[0], -rt[1] ) );
+		angles[ROLL] = 0.0f;
+		return;
+	}
+
+	vectoangles( fwd, angles );
+	// AngleVectors(): right[2] = -sin(roll) * cos(pitch), up[2] = cos(roll) * cos(pitch), cos(pitch) > 0 here
+	angles[ROLL] = RAD2DEG( atan2f( -rt[2], up[2] ) );
+}
+
 qboolean CG_VehicleAttachDroidUnit( centity_t *droidCent, refEntity_t *legs )
 {
 	if ( droidCent
@@ -8426,16 +8805,15 @@ qboolean CG_VehicleAttachDroidUnit( centity_t *droidCent, refEntity_t *legs )
 			&& vehCent->m_pVehicle->m_iDroidUnitTag != -1 )
 		{
 			mdxaBone_t boltMatrix;
-			vec3_t	fwd, rt, tempAng;
+			vec3_t	fwd, rt;
 
 			trap->G2API_GetBoltMatrix(vehCent->ghoul2, 0, vehCent->m_pVehicle->m_iDroidUnitTag, &boltMatrix, vehCent->lerpAngles, vehCent->lerpOrigin, cg.time,
 				cgs.gameModels, vehCent->modelScale);
 			BG_GiveMeVectorFromMatrix(&boltMatrix, ORIGIN, droidCent->lerpOrigin);
 			BG_GiveMeVectorFromMatrix(&boltMatrix, POSITIVE_X, fwd);//WTF???
 			BG_GiveMeVectorFromMatrix(&boltMatrix, NEGATIVE_Y, rt);//WTF???
-			vectoangles( fwd, droidCent->lerpAngles );
-			vectoangles( rt, tempAng );
-			droidCent->lerpAngles[ROLL] = tempAng[PITCH];
+			// DAJ_RP fix: [Vehicles] the roll over the whole turn, not only up to a quarter of it -- see CG_RpDroidAngles()
+			CG_RpDroidAngles( fwd, rt, vehCent->lerpAngles, droidCent->lerpAngles );
 
 			return qtrue;
 		}
@@ -8880,8 +9258,84 @@ void CG_InitJetpackGhoul2(void)
 	trap->G2API_SetBoltInfo(cg_g2JetpackInstance, 0, 2);
 
 	//Add the bolts jet effects will be played from
-	trap->G2API_AddBolt(cg_g2JetpackInstance, 0, "torso_ljet");
-	trap->G2API_AddBolt(cg_g2JetpackInstance, 0, "torso_rjet");
+	// DAJ_RP fix: [Jetpack] the pack's own tag, *chestg, bolt 0: its origin and its axes, which the flames are placed
+	// from (CG_JetpackFlame). Stock bolted to the surfaces "torso_ljet" and "torso_rjet", which are not tags in either
+	// model: the engine makes a frame of a mesh surface's first three vertices, and the flames' offsets were tuned by
+	// hand to the vanilla pack's. Our pack's vertices give other frames, and its flames came out tilted and off the pack.
+	// The tag sits at the pack's origin, in both packs. In game its frame -- as the pack's bone's (model_root), tried
+	// first -- is a quarter turn about the up axis from the pack's drawn axes; CG_JetpackFlame turns its offsets to suit.
+	trap->G2API_AddBolt(cg_g2JetpackInstance, 0, "*chestg");
+}
+
+/*
+===============
+CG_JetpackFlame
+
+DAJ_RP fix: [Jetpack] where nozzle n (0 left, 1 right) of the pack bolted to this player fires from, and the
+direction to give the effect. Measured from our pack (models/weapons2/jetpack/model.glm) in its own units and axes
+(+X the wearer's left, +Y back, +Z up): each nozzle's exit, and a flame going mostly down and a little back
+(CG_JETPACK_FLAME_BACK degrees), from a little inside the nozzle (jet.efx starts its flame 4 units out). The effect
+is handed the way up the flame, as the stock code did (the flame runs the other way). Scaled with the player's model
+scale, which the stock offsets were not.
+
+They are applied along the axes of the pack's *chestg bolt (CG_InitJetpackGhoul2), turned a quarter turn first
+(CG_JetpackTurn): in game that bolt's frame has its +X forward and +Y to the wearer's left, a quarter turn about its
+up axis from the pack's drawn axes -- tested with our pack and the vanilla one, and with the pack's bone (model_root)
+as the bolt too; its origin and its up axis are the pack's. The engine's Ghoul2 code is the same here as OpenJK's
+and TaystJK's, so this is not ours. The stock offsets along "torso_ljet" and "torso_rjet" were tuned by hand in game
+and never came from the model either.
+===============
+*/
+#define CG_JETPACK_FLAME_BACK	20.0f	// degrees back from straight down
+#define CG_JETPACK_FLAME_INSET	3.0f	// the flame starts this far back up its line from the nozzle's exit
+static const vec3_t cg_jetpackNozzle[2] = {
+	{ 6.43f, 8.17f, -0.30f },	// left: the pack's +X
+	{ -6.59f, 8.14f, -0.31f }	// right
+};
+
+// DAJ_RP: [Jetpack] from the pack's axes (left, back, up) to the bolt's (forward, left, up) -- see CG_JetpackFlame
+static void CG_JetpackTurn( const vec3_t packAxes, vec3_t boltAxes )
+{
+	boltAxes[0] = -packAxes[1];	// back -> -forward
+	boltAxes[1] = packAxes[0];	// left
+	boltAxes[2] = packAxes[2];	// up
+}
+
+static void CG_JetpackFlame( centity_t *cent, int n, vec3_t flamePos, vec3_t flameDir )
+{
+	mdxaBone_t	mat;
+	vec3_t		axis[3], packUp, local;
+	float		scale = 1.0f, back = DEG2RAD( CG_JETPACK_FLAME_BACK );
+	int			k;
+
+	trap->G2API_GetBoltMatrix( cent->ghoul2, 3, 0, &mat, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale );
+	BG_GiveMeVectorFromMatrix( &mat, ORIGIN, flamePos );
+	BG_GiveMeVectorFromMatrix( &mat, POSITIVE_X, axis[0] );
+	BG_GiveMeVectorFromMatrix( &mat, POSITIVE_Y, axis[1] );
+	BG_GiveMeVectorFromMatrix( &mat, POSITIVE_Z, axis[2] );
+	if ( cent->modelScale[0] > 0.0f )
+	{
+		scale = cent->modelScale[0];
+	}
+
+	// up the flame's line, in the pack's axes: the flame itself runs down and back (+Y)
+	packUp[0] = 0.0f;
+	packUp[1] = -sinf( back );
+	packUp[2] = cosf( back );
+	CG_JetpackTurn( packUp, local );
+	VectorClear( flameDir );
+	for ( k = 0; k < 3; k++ )
+	{
+		VectorMA( flameDir, local[k], axis[k], flameDir );
+	}
+	VectorNormalize( flameDir );
+
+	CG_JetpackTurn( cg_jetpackNozzle[n], local );
+	for ( k = 0; k < 3; k++ )
+	{
+		VectorMA( flamePos, scale * local[k], axis[k], flamePos );
+	}
+	VectorMA( flamePos, scale * CG_JETPACK_FLAME_INSET, flameDir, flamePos );
 }
 
 void CG_CleanJetpackGhoul2(void)
@@ -9386,9 +9840,450 @@ void CG_CheckThirdPersonAlpha( centity_t *cent, refEntity_t *legs )
 	}
 }
 
+/*
+===============
+CG_AddPhasedPlayerModel
+
+GalaxyRP: [Phase] draws a player whom /admholo or /admghost has turned into a hologram or a Force
+ghost, in place of the plain model. Returns qfalse, drawing nothing, for anyone else -- including a
+player who is only walk-through (/admwalkthrough), who looks normal -- so every caller can fall back to its
+own R_AddRefEntityToScene. The mode comes from the two phase bits of eFlags (bg_public.h).
+
+The effect has to work on any player model, and a customShader replaces every surface of a model
+with one fixed shader that cannot refer to the surface's own texture. So it is two passes of the same
+posed model, as the force shells are drawn:
+
+  1. The model with its own textures, restyled by the renderer's per-entity overrides (both TaystJK
+     renderers honour them): RF_RGB_TINT forces the entity colour onto every stage of the model's
+     shaders, RF_FORCE_ENT_ALPHA forces translucent blending at the entity alpha, RF_ALPHA_DEPTH
+     makes that translucent pass write depth.
+       hologram: tinted ( 0.35 0.55 1.0 ) and translucent at 200. The hologram skin's own colour,
+                 ( 0.1 0.2 1.0 ), is too dark here: the tint MULTIPLIES the texture and drops the
+                 lighting, and the skin could get away with it only because it was added, not
+                 blended -- the renderers have no per-entity additive override. At 0.1 / 0.2 the
+                 red and green that carry a skin's detail are crushed and the model reads as a
+                 dark blue shape behind the overlay; 0.35 / 0.55 keeps the detail and stays blue.
+       ghost:    translucent with a flicker like the ghost skin's, alphaGen wave sin 0.55 0.1 0.1
+                 0.1 (the skin uses 0.7; a little more see-through suits the model pass here),
+                 computed here, and depth-writing like the skin's depthWrite; lighting is untouched.
+  2. The same model again with a customShader holding only the texture-independent stages
+     (assets/client/shaders/rp_phase.shader): scanlines + broken-camera noise for the hologram,
+     the pulsing blue glow for the ghost. RF_FORCEPOST keeps it after pass 1 in the vanilla
+     renderer, which post-renders RF_FORCE_ENT_ALPHA entities; the Vulkan renderer draws both in
+     sort order, where the additive overlay already comes after the opaque-sorted model.
+
+An alpha the caller has already asked for -- the third-person alpha, a cloak fade -- is kept: the
+lower of that and the phase's own wins. withOverlay is qfalse during a cloak fade, where only the
+fading model is wanted. Both passes skip the shadow (CG_PlayerShadow skips the blob too).
+===============
+*/
+#define RP_HOLO_TINT_R		89		// 0.35
+#define RP_HOLO_TINT_G		140		// 0.55
+#define RP_HOLO_TINT_B		255		// 1.0
+#define RP_HOLO_ALPHA		200		// 0.78
+#define RP_GHOST_ALPHA_BASE	0.55f	// flicker between 0.45 and 0.65
+#define RP_GHOST_ALPHA_AMP	0.1f
+qboolean CG_AddPhasedPlayerModel( centity_t *cent, const refEntity_t *legs, qboolean withOverlay )
+{
+	const int phase = RP_PHASE_FROM_EFLAGS( cent->currentState.eFlags );
+	refEntity_t model;
+	int alpha;
+
+	if ( phase != RP_PHASE_GHOST && phase != RP_PHASE_HOLO )
+	{
+		return qfalse;
+	}
+
+	model = *legs;
+	model.renderfx |= RF_NOSHADOW;
+
+	alpha = ( model.renderfx & RF_FORCE_ENT_ALPHA ) ? model.shaderRGBA[3] : 255;
+
+	if ( phase == RP_PHASE_HOLO )
+	{
+		model.renderfx |= ( RF_RGB_TINT | RF_FORCE_ENT_ALPHA );
+		model.shaderRGBA[0] = RP_HOLO_TINT_R;
+		model.shaderRGBA[1] = RP_HOLO_TINT_G;
+		model.shaderRGBA[2] = RP_HOLO_TINT_B;
+
+		if ( alpha > RP_HOLO_ALPHA )
+		{
+			alpha = RP_HOLO_ALPHA;
+		}
+	}
+	else
+	{ // base RP_GHOST_ALPHA_BASE, amplitude RP_GHOST_ALPHA_AMP, phase 0.1, 0.1 cycles a second
+		const float wave = RP_GHOST_ALPHA_BASE + RP_GHOST_ALPHA_AMP * (float)sin( 2.0 * M_PI * ( 0.1 + 0.1 * ( cg.time * 0.001 ) ) );
+		const int ghostAlpha = (int)( wave * 255.0f );
+
+		model.renderfx |= ( RF_FORCE_ENT_ALPHA | RF_ALPHA_DEPTH );
+
+		if ( alpha > ghostAlpha )
+		{
+			alpha = ghostAlpha;
+		}
+	}
+
+	model.shaderRGBA[3] = (byte)alpha;
+	trap->R_AddRefEntityToScene( &model );
+
+	if ( withOverlay )
+	{
+		refEntity_t overlay = *legs;
+
+		overlay.renderfx &= ~( RF_RGB_TINT | RF_FORCE_ENT_ALPHA | RF_ALPHA_DEPTH );
+		overlay.renderfx |= ( RF_NOSHADOW | RF_FORCEPOST );
+		overlay.shaderRGBA[0] = overlay.shaderRGBA[1] = overlay.shaderRGBA[2] = overlay.shaderRGBA[3] = 255;
+		overlay.customShader = ( phase == RP_PHASE_HOLO ) ? cgs.media.rpHoloOverlayShader : cgs.media.rpGhostOverlayShader;
+		trap->R_AddRefEntityToScene( &overlay );
+	}
+
+	return qtrue;
+}
+
+/*
+===============
+Holstered sabers
+
+DAJ_RP: [Holstered Sabers] a player or NPC that carries a saber (EF2_RP_SABER_CARRIED, set by the server --
+see bg_public.h) and has another weapon out wears its hilt on the right thigh, a second saber of a pair on
+the left one (also while the first is thrown or knocked away: only the first is then not worn), a staff on
+the right -- a lightsaber only: swords, vibroblades, electrostaffs and props are
+not drawn (CG_RpSaberHolsterable). Placement as in JoF_EJK (CG_DrawHolsteredSaber): each hilt at the
+model's rfemurX / lfemurX bone, 3.5 units out along the bone's X axis (scaled with the model), the hilt
+turned to hang down the thigh. A saber worn on the wrist (boltToWrist, SFL_BOLT_TO_WRIST) stays on its
+wrist instead, exactly where it is drawn while it is the weapon -- see CG_RpPlaceHolsteredSabers. Unlike JoF's:
+  - the bone matrix is taken where the body is drawn -- legs.origin and rootAngles, as the blades in the
+    hand use them -- so a scaled player, a rider in its seat and a victim held by a monster keep it;
+  - every pass that draws the body draws the hilts with the same look: the body's render flags, custom
+    shader, colour and alpha, lighting origin and shadow plane (the cloak fade and refraction, a Force
+    ghost or hologram through CG_AddPhasedPlayerModel, third-person alpha, the first-person and own-shadow
+    flags, the body's shadow). JoF copied the render flags into an otherwise zeroed entity: under a pass
+    with RF_RGB_TINT (which takes every stage's colour from the entity) the hilt would turn black, and a
+    shadow would be cast to height 0 (shadowPlane) -- most likely why it turned the hilt's shadow off;
+  - the hilt models are one shared Ghoul2 instance per model and skin, as item models are, freed with the
+    rest in CG_DestroyAllGhoul2(). JoF gave each client two of its own and never freed them: every
+    userinfo change leaked both.
+cg_holsteredSabers 0 hides them.
+===============
+*/
+#define RP_HILT_MODELS_MAX	32
+typedef struct rpHiltModel_s {
+	char		model[MAX_QPATH];
+	qhandle_t	skin;
+	void		*ghoul2;
+} rpHiltModel_t;
+static rpHiltModel_t rpHiltModels[RP_HILT_MODELS_MAX];
+static int rpHiltModelCount;
+static qboolean rpHiltModelsFullWarned;
+
+static const vec3_t rpHiltOffset = { 0.0f, 3.5f, 0.0f };		// JoF's cg_holsteredSaberPos: right, forward, up
+static const vec3_t rpHiltAngles = { 0.0f, 0.0f, 270.0f };	// JoF's cg_holsteredSaberAng1 and Ang2
+
+// the shared instance for this hilt, made the first time it is wanted; NULL when the list is full
+static void *CG_RpHiltGhoul2( const char *model, qhandle_t skin )
+{
+	rpHiltModel_t *m;
+	int i;
+
+	for ( i = 0; i < rpHiltModelCount; i++ )
+	{
+		if ( rpHiltModels[i].skin == skin && !Q_stricmp( rpHiltModels[i].model, model ) )
+		{
+			return rpHiltModels[i].ghoul2;
+		}
+	}
+
+	if ( rpHiltModelCount >= RP_HILT_MODELS_MAX )
+	{
+		if ( !rpHiltModelsFullWarned )
+		{
+			rpHiltModelsFullWarned = qtrue;
+			trap->Print( S_COLOR_YELLOW "WARNING: more than %d different saber hilts to holster on this map; the others are not drawn on the thigh.\n", RP_HILT_MODELS_MAX );
+		}
+		return NULL;
+	}
+
+	// a model that does not load is kept too (as an empty instance), so it is not tried again every frame
+	m = &rpHiltModels[rpHiltModelCount++];
+	Q_strncpyz( m->model, model, sizeof( m->model ) );
+	m->skin = skin;
+	m->ghoul2 = NULL;
+	trap->G2API_InitGhoul2Model( &m->ghoul2, model, 0, skin, 0, 0, 0 );
+
+	return m->ghoul2;
+}
+
+void CG_RpFreeHiltGhoul2( void )
+{
+	int i;
+
+	for ( i = 0; i < rpHiltModelCount; i++ )
+	{
+		if ( rpHiltModels[i].ghoul2 && trap->G2_HaveWeGhoul2Models( rpHiltModels[i].ghoul2 ) )
+		{
+			trap->G2API_CleanGhoul2Models( &rpHiltModels[i].ghoul2 );
+		}
+		rpHiltModels[i].ghoul2 = NULL;
+	}
+	rpHiltModelCount = 0;
+	rpHiltModelsFullWarned = qfalse;
+}
+
+/*
+===============
+CG_RpSaberHolsterable
+
+DAJ_RP: [Holstered Sabers] whether this "saber" is a lightsaber, whose hilt is worn while another weapon is
+out -- on the thigh, or on its wrist for one worn there (boltToWrist; where is CG_RpPlaceHolsteredSabers'
+business, not this test's: a wrist lightsaber passes like any other). Everything else a .sab can be -- the
+swords, vibroblades, force pikes and props such as a datapad, comlink or holocomm (noBlade: "stops the saber
+from drawing a blade (good for real-sword type mods)", SFL2_NO_BLADE; every one of them sets it, no
+lightsaber does) -- is not drawn at all while its owner has another weapon out: such an item looks wrong on
+the hip. The tests below apply to a wrist item as well, so an exotic non-lightsaber weapon worn on the wrist
+(a claw or blade with noBlade, a sword trail or bounceOnWalls) is still not drawn. noDlight (exotic blades
+too) and notInMP (whether MP players may pick it) say
+nothing about the item, so they do not count; nor can saberType: the MP saberTable (bg_saberLoad.c, as
+stock) has no SABER_SITH_SWORD, so such a saber is parsed as SABER_SINGLE. Each saber of a pair is judged
+on its own.
+An item with a blade of its own -- an electrostaff, whose six short "blades" only glow along the staff --
+is told by its swing trail instead (trailStyle, the first blade style's: "0 is normal, 1 is a motion blur
+and 2 is no trail at all (good for real-sword type mods)"): a lightsaber keeps the glowing trail, 1 and 2
+are the swords' (CG_AddSaberBlade draws the glowing trail for anything not 1 and not above 1). trailStyle2
+does not count: a lightsaber may give the short blades of its second style no trail (a crossguard's).
+Nor do noManualDeactivate (lightsabers too) or numBlades (crossguard lightsabers have 3 or 6).
+bounceOnWalls ("the saber will bounce back when it hits solid architecture (good for real-sword type mods)",
+SFL_BOUNCE_ON_WALLS) hides one too: Darth Nihl's great staff, whose MP entry has no other sign of it.
+And a server admin can hide any other saber that looks wrong on the hip with the GalaxyRP key "noHolster 1"
+(SFL2_RP_NO_HOLSTER, bg_saberLoad.c). It can only hide: "noHolster 0", or no such key, leaves the rules above.
+noManualDeactivate is not a guard on purpose (it is a play setting -- lightsabers locked to a staff or a pair
+use it too): such a saber that looks wrong is for "noHolster 1".
+===============
+*/
+qboolean CG_RpSaberHolsterable( const saberInfo_t *saber )
+{
+	if ( !saber || !saber->model[0] )
+	{
+		return qfalse;
+	}
+	if ( saber->saberFlags2 & SFL2_NO_BLADE )
+	{
+		return qfalse;
+	}
+	if ( saber->trailStyle > 0 )
+	{//a sword's trail (motion blur, or none)
+		return qfalse;
+	}
+	if ( saber->saberFlags & SFL_BOUNCE_ON_WALLS )
+	{//bounces off walls, as a sword does
+		return qfalse;
+	}
+	if ( saber->saberFlags2 & SFL2_RP_NO_HOLSTER )
+	{//the server admin's own choice
+		return qfalse;
+	}
+	return qtrue;
+}
+
+typedef struct rpHolsteredHilts_s {
+	qboolean	placed;		// worked out this frame (once, before the first body pass)
+	int			count;
+	refEntity_t	hilt[MAX_SABERS];
+} rpHolsteredHilts_t;
+
+/*
+DAJ_RP: [Holstered Sabers] a wrist saber's hilt is drawn as its own entity at the bolt the saber is attached
+to while it is the weapon: "*r_hand_cap_r_arm" for saber 0, "*l_hand_cap_l_arm" for saber 1 -- the player
+model's bolts 3 and 4, the "3+saberNum" CG_InitG2SaberData gives a SFL_BOLT_TO_WRIST saber. It is oriented by
+the bolt's own axes (B's X, Y, Z from GetBoltMatrix) at B's origin -- no offset, no turn: checked in-game against
+the saber in the hand. (A first version undid a quarter turn about Z that the renderer's fixed root
+(identityMatrix in tr_ghoul2.cpp) seemed to give a lone model and not an attached one; in-game it came out a
+quarter turn off, and the bolt's axes as they are matched.)
+*/
+static const char *rpWristBolts[MAX_SABERS] = { "*r_hand_cap_r_arm", "*l_hand_cap_l_arm" };
+
+static void CG_RpPlaceHolsteredSabers( centity_t *cent, clientInfo_t *ci, const refEntity_t *body, vec3_t rootAngles, rpHolsteredHilts_t *hilts )
+{
+	static const char *bones[MAX_SABERS] = { "rfemurX", "lfemurX" };
+	int i;
+
+	hilts->placed = qtrue;
+	hilts->count = 0;
+
+	if ( !cg_holsteredSabers.integer
+		|| !( cent->currentState.eFlags2 & EF2_RP_SABER_CARRIED )
+		|| cent->currentState.weapon == WP_SABER
+		|| ( cent->currentState.eFlags & EF_DEAD )
+		|| !ci
+		|| !cent->ghoul2 || !trap->G2_HaveWeGhoul2Models( cent->ghoul2 ) )
+	{
+		return;
+	}
+
+	for ( i = 0; i < MAX_SABERS; i++ )
+	{
+		const saberInfo_t *saber = &ci->saber[i];
+		refEntity_t *re;
+		mdxaBone_t matrix;
+		vec3_t org, ax0, ax1, ax2, offset;
+		matrix3_t turn, axis;
+		void *g2;
+		int bolt;
+		qboolean wrist;
+
+		// only a lightsaber hilt: anything else is not drawn while another weapon is out
+		if ( !CG_RpSaberHolsterable( saber ) )
+		{
+			continue;
+		}
+
+		// DAJ_RP: [Saber Drop] the first saber thrown, dropped or knocked away is not with its owner; a second one
+		// of a pair is (the base game never knocks it away), so it is still worn
+		if ( i == 0 && cent->currentState.saberInFlight )
+		{
+			continue;
+		}
+
+		// a model on a skeleton of its own may not have the bone (or the wrist bolt)
+		wrist = ( saber->saberFlags & SFL_BOLT_TO_WRIST ) ? qtrue : qfalse;
+		bolt = trap->G2API_AddBolt( cent->ghoul2, 0, wrist ? rpWristBolts[i] : bones[i] );
+		if ( bolt == -1 )
+		{
+			continue;
+		}
+
+		g2 = CG_RpHiltGhoul2( saber->model, saber->skin );
+		if ( !g2 || !trap->G2_HaveWeGhoul2Models( g2 ) )
+		{
+			continue;
+		}
+
+		trap->G2API_GetBoltMatrix( cent->ghoul2, 0, bolt, &matrix, rootAngles, body->origin, cg.time, cgs.gameModels, cent->modelScale );
+		BG_GiveMeVectorFromMatrix( &matrix, ORIGIN, org );
+		BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_X, ax0 );
+		BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_Y, ax1 );
+		BG_GiveMeVectorFromMatrix( &matrix, POSITIVE_Z, ax2 );
+
+		// cent->modelScale is all 0 for an unscaled model (CG_Player clears it), which means 1
+		VectorScale( rpHiltOffset, cent->modelScale[0] ? cent->modelScale[0] : 1.0f, offset );
+
+		if ( wrist )
+		{ // on its wrist, as when it is the weapon (see rpWristBolts above)
+			VectorCopy( ax0, axis[0] );
+			VectorCopy( ax1, axis[1] );
+			VectorCopy( ax2, axis[2] );
+		}
+		else if ( i == 0 )
+		{ // right thigh
+			VectorMA( org, offset[0], ax1, org );
+			VectorMA( org, offset[1], ax0, org );
+			VectorMA( org, offset[2], ax2, org );
+			VectorScale( ax2, -1.0f, axis[2] ); // the blade end points down the thigh
+			VectorCopy( ax1, axis[1] );
+			CrossProduct( axis[1], axis[2], axis[0] );
+		}
+		else
+		{ // left thigh, mirrored
+			VectorMA( org, -offset[0], ax1, org );
+			VectorMA( org, -offset[1], ax0, org );
+			VectorMA( org, offset[2], ax2, org );
+			VectorScale( ax2, -1.0f, axis[0] );
+			VectorCopy( ax1, axis[1] );
+			VectorCopy( ax0, axis[2] );
+		}
+
+		re = &hilts->hilt[hilts->count++];
+		memset( re, 0, sizeof( *re ) );
+		if ( wrist )
+		{
+			AxisCopy( axis, re->axis );
+		}
+		else
+		{
+			AnglesToAxis( rpHiltAngles, turn );
+			MatrixMultiply( turn, axis, re->axis );
+		}
+		re->ghoul2 = g2;
+		re->hModel = 0;
+		VectorCopy( org, re->origin );
+		VectorCopy( org, re->oldorigin );
+		VectorCopy( cent->modelScale, re->modelScale );
+		ScaleModelAxis( re );
+		re->radius = body->radius;
+	}
+}
+
+// how a body pass was drawn, so the hilts go the same way
+#define RP_HILTS_PLAIN				0	// trap->R_AddRefEntityToScene only (the cloak passes)
+#define RP_HILTS_PHASED				1	// CG_AddPhasedPlayerModel( ..., qfalse ), else added as it is
+#define RP_HILTS_PHASED_OVERLAY		2	// CG_AddPhasedPlayerModel( ..., qtrue ), else added as it is
+
+static void CG_RpAddHolsteredSabers( centity_t *cent, clientInfo_t *ci, const refEntity_t *body, vec3_t rootAngles, rpHolsteredHilts_t *hilts, int how )
+{
+	int i;
+
+	if ( !hilts->placed )
+	{
+		CG_RpPlaceHolsteredSabers( cent, ci, body, rootAngles, hilts );
+	}
+
+	for ( i = 0; i < hilts->count; i++ )
+	{
+		refEntity_t re = hilts->hilt[i];
+
+		re.renderfx = body->renderfx;
+		re.customShader = body->customShader;
+		re.shaderRGBA[0] = body->shaderRGBA[0];
+		re.shaderRGBA[1] = body->shaderRGBA[1];
+		re.shaderRGBA[2] = body->shaderRGBA[2];
+		re.shaderRGBA[3] = body->shaderRGBA[3];
+		re.shadowPlane = body->shadowPlane;
+		VectorCopy( body->lightingOrigin, re.lightingOrigin );
+
+		if ( how == RP_HILTS_PLAIN || !CG_AddPhasedPlayerModel( cent, &re, ( how == RP_HILTS_PHASED_OVERLAY ) ? qtrue : qfalse ) )
+		{
+			trap->R_AddRefEntityToScene( &re );
+		}
+	}
+}
+
+// DAJ_RP: [NPCs] Boba Fett's jet exhaust while he flies. Single-player plays boba/jetSP on his model's *jet1 and
+// *jet2 bolts from take-off to landing (Boba_FlyStart() / Boba_FlyStop()); the MP port of his AI kept the flight,
+// the take-off sound and the hover loop but dropped the effect, and no cgame drew one -- stock, TaystJK and JA++
+// alike. This draws the MP jetpack's own flame (effects/boba/jet.efx, played every frame like the jetpack's, once
+// per nozzle as the jetpack does when idling) at each bolt, pointed along the bolt's -X axis. *jet1 is his left
+// nozzle, *jet2 his right. Checked in-game: a flame sent along *jet1's +X went straight up, and one sent along
+// +Y went out to his left from both bolts, so the two share a frame and -X is down on both; the flame follows
+// his torso as he leans. The bolts are looked up with the NPC's other bolts, once per model
+// (npcClient->bolt_jet[]); a model without one (a custom one) gets no flame from that nozzle.
+static void CG_BobaJetFlames( centity_t *cent )
+{
+	mdxaBone_t	mat;
+	vec3_t		flamePos, flameDir;
+	int			n;
+
+	if ( !cent->npcClient )
+	{
+		return;
+	}
+	for ( n = 0; n < 2; n++ )
+	{
+		if ( cent->npcClient->bolt_jet[n] == -1 )
+		{
+			continue;
+		}
+		trap->G2API_GetBoltMatrix( cent->ghoul2, 0, cent->npcClient->bolt_jet[n], &mat, cent->turAngles, cent->lerpOrigin,
+			cg.time, cgs.gameModels, cent->modelScale );
+		BG_GiveMeVectorFromMatrix( &mat, ORIGIN, flamePos );
+		BG_GiveMeVectorFromMatrix( &mat, NEGATIVE_X, flameDir );
+		trap->FX_PlayEffectID( cgs.effects.mBobaJet, flamePos, flameDir, -1, -1, qfalse );
+	}
+}
+
 void CG_Player( centity_t *cent ) {
 	clientInfo_t	*ci;
 	refEntity_t		legs;
+	rpHolsteredHilts_t	rpHilts = { qfalse };	// DAJ_RP: [Holstered Sabers] placed at the first body pass
 	refEntity_t		torso;
 	int				clientNum;
 	int				renderfx;
@@ -9423,21 +10318,54 @@ void CG_Player( centity_t *cent ) {
 	if (cent->currentState.iModelScale)
 	{ //if the server says we have a custom scale then set it now.
 		cent->modelScale[0] = cent->modelScale[1] = cent->modelScale[2] = cent->currentState.iModelScale/100.0f;
-		if ( cent->currentState.NPC_class != CLASS_VEHICLE )
+		// DAJ_RP: [Scale] the lift keeps a scaled player's feet on the floor (they are 24 under the origin, and the
+		// model scales round it) -- but not a rider's: his origin is the vehicle's "*driver" bolt, where the sitting
+		// pose has his crotch, so scaling round it keeps him on the seat by itself. The lift put a rider of size 50
+		// 12 units under his seat, one of size 200 24 over it. A rider is anyone riding a vehicle who is not one --
+		// players and NPCs alike, as the "riding a vehicle" test further down.
+		if ( cent->currentState.NPC_class != CLASS_VEHICLE && !cent->currentState.m_iVehicleNum )
 		{
 			if (cent->modelScale[2] && cent->modelScale[2] != 1.0f)
 			{
 				cent->lerpOrigin[2] += 24 * (cent->modelScale[2] - 1);
 			}
 		}
+		// DAJ_RP: [NPC Scale] and a scaled vehicle, which stock never lifted (nothing scaled one before npcscale): it scales
+		// round its origin as a player does, so it sank into the ground when bigger and floated when smaller. Lifted by
+		// BG_RpVehicleScaleLift() (bg_vehicleLoad.c) -- by how far its bottom is under its origin -- which the server's
+		// muzzles use too (WP_CalcVehMuzzle(), g_weapon.c), so its shots leave the barrel drawn here. Remembered for its
+		// riders (rpVehicleLift, below). Drawing only: its box and physics stay where the server has them.
+		cent->rpVehicleLift = 0.0f;
+		if ( cent->currentState.NPC_class == CLASS_VEHICLE && cent->m_pVehicle )
+		{
+			cent->rpVehicleLift = BG_RpVehicleScaleLift( cent->m_pVehicle->m_pVehicleInfo, cent->modelScale[2] );
+			cent->lerpOrigin[2] += cent->rpVehicleLift;
+		}
 	}
 	else
 	{
 		VectorClear(cent->modelScale);
+		cent->rpVehicleLift = 0.0f;	// DAJ_RP: [NPC Scale] see above
 	}
 
+	// GalaxyRP fix: [Vehicles] a rider used to be dragged along behind the vehicle he was sitting on.
+	// This block exponentially chases cent->lerpOrigin toward its target, which lags it by roughly one
+	// frame of travel -- growing with speed, closing again at a standstill. The vehicle itself is
+	// already exempt (the m_iVehicleNum test below), but its rider was not, so the swoop rendered at
+	// its exact predicted origin while the player chased the seat. The rider's origin is DERIVED from
+	// the vehicle's "*driver" bolt -- set by AttachRidersGeneric() inside the vehicle's own pmove for
+	// the player we predict, and re-bolted further down in this function for everyone else -- so it is
+	// already as smooth as the vehicle is. Smoothing it cannot remove jitter that isn't there; it only
+	// adds lag. Skip riders, using the same "riding a vehicle" test this function already uses below.
+	//
+	// This is stock behaviour, not something we introduced -- OpenJK and TaystJK carry the identical
+	// block. It just never fires under TaystJK because it defaults cg_smoothClients to 0 where OpenJK
+	// (and therefore we) default it to 1. Fixing the block rather than the cvar default keeps on-foot
+	// smoothing, which is what the cvar is actually for, and fixes every player regardless of the
+	// value already archived in their config.
 	if ((cg_smoothClients.integer || cent->currentState.heldByClient) && (cent->currentState.groundEntityNum >= ENTITYNUM_WORLD || cent->currentState.eType == ET_TERRAIN) &&
-		!(cent->currentState.eFlags2 & EF2_HYPERSPACE) && cg.predictedPlayerState.m_iVehicleNum != cent->currentState.number)
+		!(cent->currentState.eFlags2 & EF2_HYPERSPACE) && cg.predictedPlayerState.m_iVehicleNum != cent->currentState.number &&
+		!(cent->currentState.m_iVehicleNum && cent->currentState.NPC_class != CLASS_VEHICLE))
 	{ //always smooth when being thrown
 		vec3_t			posDif;
 		float			smoothFactor;
@@ -9482,10 +10410,17 @@ void CG_Player( centity_t *cent ) {
 		VectorCopy(cent->lerpOrigin, cent->beamEnd);
 	}
 
+	// DAJ_RP: [NPC Scale] a lifted vehicle's drawn origin, as it ends up after the smoothing above (rpVehicleLiftedOrigin)
+	if ( cent->rpVehicleLift )
+	{
+		VectorCopy( cent->lerpOrigin, cent->rpVehicleLiftedOrigin );
+	}
+
 	if (cent->currentState.m_iVehicleNum &&
 		cent->currentState.NPC_class != CLASS_VEHICLE)
 	{ //this player is riding a vehicle
 		centity_t *veh = &cg_entities[cent->currentState.m_iVehicleNum];
+		qboolean reBolted = qfalse;	// DAJ_RP: [NPC Scale] placed from the vehicle's drawn (lifted) origin below
 
 		cent->lerpAngles[YAW] = veh->lerpAngles[YAW];
 
@@ -9501,6 +10436,7 @@ void CG_Player( centity_t *cent ) {
 				if ( CG_VehicleAttachDroidUnit( cent, &legs ) )
 				{
 					checkDroidShields = qtrue;
+					reBolted = qtrue;	// DAJ_RP: [NPC Scale] onto the vehicle's socket, from its lerpOrigin (below)
 				}
 			}
 			// fix for screen blinking when spectating person on vehicle and then
@@ -9528,7 +10464,19 @@ void CG_Player( centity_t *cent ) {
 				VectorCopy(cent->playerState->origin, cent->lerpOrigin);
 
 				VectorCopy(oldPSOrg, veh->playerState->origin);
+				reBolted = qtrue;
 			}
+		}
+
+		// DAJ_RP: [NPC Scale] a rider of a scaled vehicle drawn lifted (rpVehicleLift, above) goes up or down with it: his
+		// seat came from the vehicle's un-lifted origin -- the server's, or his own prediction's for the local player and
+		// his passengers. One just re-bolted above -- a pilot, or the vehicle's droid onto its socket -- was placed from the
+		// vehicle's lerpOrigin instead, which holds the lift if the vehicle was drawn since it was last worked out (this
+		// frame, or the last one when he is drawn first) -- but not after the passenger prediction worked it out afresh
+		// (CG_RpPassengerState(), cg_predict.c). See CG_RpVehicleLiftApplied().
+		if ( veh->rpVehicleLift && ( !reBolted || !CG_RpVehicleLiftApplied( veh ) ) )
+		{
+			cent->lerpOrigin[2] += veh->rpVehicleLift;
 		}
 	}
 
@@ -9584,6 +10532,10 @@ void CG_Player( centity_t *cent ) {
 				}
 				cent->npcClient->bolt_motion = trap->G2API_AddBolt(cent->npcClient->ghoul2Model, 0, "Motion");
 				cent->npcClient->bolt_llumbar = trap->G2API_AddBolt(cent->npcClient->ghoul2Model, 0, "lower_lumbar");
+				// DAJ_RP: [NPCs] Boba Fett's jets (CG_BobaJetFlames()), looked up once per model like the bolts above; a
+				// model without them gets -1 and no bolt is added
+				cent->npcClient->bolt_jet[0] = trap->G2API_AddBolt(cent->npcClient->ghoul2Model, 0, "*jet1");
+				cent->npcClient->bolt_jet[1] = trap->G2API_AddBolt(cent->npcClient->ghoul2Model, 0, "*jet2");
 			}
 			else
 			{
@@ -9592,6 +10544,7 @@ void CG_Player( centity_t *cent ) {
 				cent->npcClient->bolt_head = -1;
 				cent->npcClient->bolt_motion = -1;
 				cent->npcClient->bolt_llumbar = -1;
+				cent->npcClient->bolt_jet[0] = cent->npcClient->bolt_jet[1] = -1;
 			}
 			cent->npcClient->team = TEAM_FREE;
 			cent->npcClient->infoValid = qtrue;
@@ -9692,37 +10645,30 @@ void CG_Player( centity_t *cent ) {
 
 		if (cent->currentState.eFlags & EF_JETPACK_ACTIVE)
 		{
-			mdxaBone_t mat;
 			vec3_t flamePos, flameDir;
 			int n = 0;
 
 			while (n < 2)
 			{
 				//Get the position/dir of the flame bolt on the jetpack model bolted to the player
-				trap->G2API_GetBoltMatrix(cent->ghoul2, 3, n, &mat, cent->turAngles, cent->lerpOrigin, cg.time, cgs.gameModels, cent->modelScale);
-				BG_GiveMeVectorFromMatrix(&mat, ORIGIN, flamePos);
-
-				if (n == 0)
-				{
-					BG_GiveMeVectorFromMatrix(&mat, NEGATIVE_Y, flameDir);
-					VectorMA(flamePos, -9.5f, flameDir, flamePos);
-					BG_GiveMeVectorFromMatrix(&mat, POSITIVE_X, flameDir);
-					VectorMA(flamePos, -13.5f, flameDir, flamePos);
-				}
-				else
-				{
-					BG_GiveMeVectorFromMatrix(&mat, POSITIVE_X, flameDir);
-					VectorMA(flamePos, -9.5f, flameDir, flamePos);
-					BG_GiveMeVectorFromMatrix(&mat, NEGATIVE_Y, flameDir);
-					VectorMA(flamePos, -13.5f, flameDir, flamePos);
-				}
+				// DAJ_RP fix: [Jetpack] from the pack's frame and its nozzles' exits (CG_JetpackFlame)
+				CG_JetpackFlame( cent, n, flamePos, flameDir );
 
 				if (cent->currentState.eFlags & EF_JETPACK_FLAMING)
 				{ //create effects
 					//FIXME: Just one big effect
 					//Play the effect
-					if ((cg.snap->ps.clientNum == cent->currentState.number && cg.rpg_stuff & (1 << 1)) || 
-						(cg.snap->ps.clientNum != cent->currentState.number && cg.zyk_rpg_stuff[cent->currentState.number] & (1 << 0)))
+					// GalaxyRP fix: [Skills] this used to read a client-side cache keyed on whether the
+					// entity was "me" -- cg.rpg_stuff bit 1 for self, cg.zyk_rpg_stuff[number] bit 0 for
+					// everyone else -- filled by a one-shot EV_ITEMUSEFAIL event. The upgrade flag now
+					// rides the entity state (EF_RPG_JETPACK_UPGRADE, set in g_active.c), so this reads
+					// it off the same `cent` as the EF_JETPACK gate above. That fixes four things at
+					// once: the self/other test used cg.snap->ps.clientNum, which is the FOLLOWED player
+					// while spectating (so a spectator saw their own colour on whoever they watched); the
+					// event was PVS-culled and never re-sent; the cache was only zeroed in CG_Init, so a
+					// reused client slot kept the last occupant's colour; and the array was indexed by
+					// entity number with no bound check.
+					if (cent->currentState.eFlags & EF_RPG_JETPACK_UPGRADE)
 					{ // zyk: if this player has the jetpack upgrade, use the blue jetpack effect
 						trap->FX_PlayEffectID(cgs.effects.mBlueJet, flamePos, flameDir, -1, -1, qfalse);
 						trap->FX_PlayEffectID(cgs.effects.mBlueJet, flamePos, flameDir, -1, -1, qfalse);
@@ -9741,8 +10687,9 @@ void CG_Player( centity_t *cent ) {
 				{ //just idling
 					//FIXME: Different smaller effect for idle
 					//Play the effect
-					if ((cg.snap->ps.clientNum == cent->currentState.number && cg.rpg_stuff & (1 << 1)) || 
-						(cg.snap->ps.clientNum != cent->currentState.number && cg.zyk_rpg_stuff[cent->currentState.number] & (1 << 0)))
+					// GalaxyRP fix: [Skills] same swap as the flaming branch above -- entity-state bit
+					// instead of the cg.rpg_stuff / cg.zyk_rpg_stuff[] cache.
+					if (cent->currentState.eFlags & EF_RPG_JETPACK_UPGRADE)
 					{ // zyk: if player has the jetpack upgrade, use the blue jetpack effect
 						trap->FX_PlayEffectID(cgs.effects.mBlueJet, flamePos, flameDir, -1, -1, qfalse);
 					}
@@ -9762,6 +10709,14 @@ void CG_Player( centity_t *cent ) {
 	else if (trap->G2API_HasGhoul2ModelOnIndex(&(cent->ghoul2), 3))
 	{ //fixme: would be good if this could be done not every frame
 		trap->G2API_RemoveGhoul2Model(&(cent->ghoul2), 3);
+	}
+
+	// DAJ_RP: [NPCs] a flying Boba Fett NPC's jet exhaust (see CG_BobaJetFlames()); his class and the flying flag
+	// both come with his entity state.
+	if ( cent->currentState.eType == ET_NPC && cent->currentState.NPC_class == CLASS_BOBAFETT &&
+		( cent->currentState.eFlags2 & EF2_FLYING ) && !( cent->currentState.eFlags & EF_DEAD ) )
+	{
+		CG_BobaJetFlames( cent );
 	}
 
 	g2HasWeapon = trap->G2API_HasGhoul2ModelOnIndex(&(cent->ghoul2), 1);
@@ -9884,7 +10839,12 @@ void CG_Player( centity_t *cent ) {
 	// Save the old weapon, to verify that it is or is not the same as the new weapon.
 	// rww - Make sure weapons don't get set BEFORE cent->ghoul2 is initialized or else we'll have no
 	// weapon bolted on
-	if (cent->currentState.saberInFlight)
+	// DAJ_RP: [Saber Drop] only while the saber is the weapon. Its being in flight (thrown, or knocked or
+	// /dropped out of the hand) means "the saber is not in the hand, put nothing there" -- but zyk lets a
+	// player whose saber is knocked away switch weapon (bg_saber.c, weapChecks), which the base game never
+	// did: with a rifle out, this made the rifle look missing every frame, so it was bolted on again every
+	// frame, and the knocked-away saber's removal further down took it off again -- never drawn.
+	if (cent->currentState.saberInFlight && cent->currentState.weapon == WP_SABER)
 	{
 		cent->ghoul2weapon = CG_G2WeaponInstance(cent, WP_SABER);
 	}
@@ -9925,9 +10885,17 @@ void CG_Player( centity_t *cent ) {
 					}
 
 				}
+				// GalaxyRP fix: [Saber Sounds] added "&& !cent->currentState.saberHolstered", the same
+				// missing guard as the local-player arm in CG_CheckPlayerG2Weapons (cg_weapons.c), which
+				// carries the full explanation. Short version: the sibling "switching away" arm above
+				// tests saberHolstered three times and this one tested it nowhere, so a holstered saber
+				// made the ignition sound every time cent->weapon was reset by a respawn, a model or
+				// saber change, a ghoul2 rebuild or a spectator transition. The BG_SI_SetDesiredLength()
+				// calls at the bottom of the arm stay outside the new condition on purpose.
 				else if (cent->currentState.weapon == WP_SABER
 					&& cent->weapon != cent->currentState.weapon
-					&& !cent->saberWasInFlight)
+					&& !cent->saberWasInFlight
+					&& !cent->currentState.saberHolstered)
 				{ //switching to the saber
 					//trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, trap->S_RegisterSound( "sound/weapons/saber/saberon.wav" ));
 					if (ci->saber[0].soundOn)
@@ -9935,7 +10903,10 @@ void CG_Player( centity_t *cent ) {
 						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, ci->saber[0].soundOn);
 					}
 
-					if (ci->saber[1].soundOn)
+					// GalaxyRP fix: [Saber Sounds] added the saber[1].model[0] test -- see
+					// Cmd_ToggleSaber_f in g_cmds.c for why an unused second saber has a playable soundOn.
+					if (ci->saber[1].soundOn &&
+						ci->saber[1].model[0])
 					{
 						trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, ci->saber[1].soundOn);
 					}
@@ -9952,6 +10923,21 @@ void CG_Player( centity_t *cent ) {
 	else if ((cent->currentState.eFlags & EF_DEAD) || cent->torsoBolt)
 	{
 		cent->ghoul2weapon = NULL; //be sure to update after respawning/getting limb regrown
+	}
+
+	// DAJ_RP: [Saber Drop] a pair whose first saber is away (thrown, dropped or knocked away) keeps its second in
+	// the left hand -- the base game knocks away the first only, and keeps the second lit (bg_saber.c). Switching
+	// to another weapon takes the second off the model (CG_CopyG2WeaponInstance), and switching back while the
+	// first is still away bolts nothing on (the test above takes the saber to be in place while it flies): the
+	// second saber came back hiltless, its blades drawn from the model's root. Put it back in the hand.
+	if (cent->ghoul2 && ci && ci->team != TEAM_SPECTATOR &&
+		cent->currentState.weapon == WP_SABER &&
+		cent->currentState.saberInFlight &&
+		!(cent->currentState.eFlags & EF_DEAD) && !cent->torsoBolt &&
+		ci->saber[1].model[0] && ci->ghoul2Weapons[1] &&
+		!trap->G2API_HasGhoul2ModelOnIndex(&(cent->ghoul2), 2))
+	{
+		trap->G2API_CopySpecificGhoul2Model(ci->ghoul2Weapons[1], 0, cent->ghoul2, 2);
 	}
 
 
@@ -10475,6 +11461,17 @@ void CG_Player( centity_t *cent ) {
 	{
 		CG_ForcePushBodyBlur(cent);
 	}
+	// DAJ_RP: [Phase] /admhidden -- the hidden player sees the same body blur on himself, as feedback that he is
+	// hidden (JA++'s /amempower look). The server tells only him, in his own playerState (STAT_RP_SELF_FX,
+	// bg_public.h), so nobody else can draw it. Only on his own body: a spectator following him is copied his
+	// playerState, bit and all, but cg.clientNum is the spectator's own number, which no drawn player has. Not
+	// in first person, where the blur would sit around the camera, and not twice while a real push blur is
+	// already running on him.
+	else if (cent->currentState.number == cg.clientNum && cg.snap &&
+		(cg.snap->ps.stats[STAT_RP_SELF_FX] & RP_SELF_FX_HIDDEN) && cg.renderingThirdPerson)
+	{
+		CG_ForcePushBodyBlur(cent);
+	}
 
 	if ( cent->currentState.powerups & (1 << PW_DISINT_4) )
 	{
@@ -10880,43 +11877,18 @@ void CG_Player( centity_t *cent ) {
 		}
 	}
 
-	if (cent->currentState.number < MAX_CLIENTS && 
-		cent->currentState.powerups & (1 << PW_NEUTRALFLAG))
-	{ 
-		if (cg.rpg_class[cent->currentState.number] == 1) // zyk: Force User, draws the Force Shield effect
-			CG_DrawPlayerSphere(cent, cent->lerpOrigin, 1.4f, cgs.media.ysaliblueShader );
-		else if (cg.rpg_class[cent->currentState.number] == 9) // zyk: Force Guardian, draws the resistance shield around him
-			CG_DrawPlayerSphere(cent, cent->lerpOrigin, 1.4f, cgs.media.ysaliredShader );
-
-		if (cg.snap->ps.clientNum == cent->currentState.number && cg.rpg_class[cent->currentState.number] >= 0 && cg.unique_cooldown_timer == 0)
-		{ // zyk: classes that are using Unique Skill must show the cooldown time
-			int unique_cooldown_duration = 0;
-
-			if (cg.rpg_class[cent->currentState.number] == 0)
-				unique_cooldown_duration = 50000;
-			else if (cg.rpg_class[cent->currentState.number] == 1)
-				unique_cooldown_duration = 50000;
-			else if (cg.rpg_class[cent->currentState.number] == 2)
-				unique_cooldown_duration = 35000;
-			else if (cg.rpg_class[cent->currentState.number] == 3)
-				unique_cooldown_duration = 30000;
-			else if (cg.rpg_class[cent->currentState.number] == 4)
-				unique_cooldown_duration = 30000;
-			else if (cg.rpg_class[cent->currentState.number] == 5)
-				unique_cooldown_duration = 45000;
-			else if (cg.rpg_class[cent->currentState.number] == 6)
-				unique_cooldown_duration = 45000;
-			else if (cg.rpg_class[cent->currentState.number] == 7)
-				unique_cooldown_duration = 40000;
-			else if (cg.rpg_class[cent->currentState.number] == 8)
-				unique_cooldown_duration = 50000;
-			else if (cg.rpg_class[cent->currentState.number] == 9)
-				unique_cooldown_duration = 50000;
-
-			cg.unique_cooldown_timer = cg.time + unique_cooldown_duration;
-			cg.unique_cooldown_duration = unique_cooldown_duration;
-		}
-	}
+	// GalaxyRP fix: [RPG Class] removed dead Force Shield / resistance shield draws (mirror var never reached class 1 or 9)
+	// GalaxyRP fix: [RPG Class] removed the unique-skill cooldown trigger that depended on them; its "confirmed RPG Mode 2"
+	// guard (cg.rpg_class[num] >= 0) has no live cgame-side replacement now that the mirror is gone -- sess.amrpgmode is
+	// server-only and was only ever bridged to cgame via that mirror (EV_USE_ITEM13, eventParm 104/114). Originally
+	// flagged here for follow-up rather than guessed; since resolved -- Cmd_Unique_f (g_cmds.c) was fixed to send a
+	// dedicated eventParm 105 only when an RPG Unique Ability actually fires, and cg_event.c's cooldown-bar trigger
+	// listened for that instead. (A separate, later fix had briefly reused eventParm 104 itself for this, which
+	// turned out to collide with g_active.c's unrelated periodic per-player status-sync signal of the same value --
+	// see the fix comment in cg_event.c.)
+	// GalaxyRP fix: [Skills] Cmd_Unique_f has since been removed entirely (the /unique command was dead, disabled
+	// code), along with the only other eventParm-105 sender (g_active.c's Unique Skill branch), and with the
+	// magic cleanup the server stopped sending EV_USE_ITEM13 altogether -- see the fix comment in cg_event.c.
 
 	if (cent->currentState.powerups & (1 << PW_FORCE_BOON))
 	{
@@ -11519,7 +12491,10 @@ stillDoSaber:
 		BG_SI_SetDesiredLength(&ci->saber[0], 0, -1);
 		BG_SI_SetDesiredLength(&ci->saber[1], 0, -1);
 
-		if (g2HasWeapon)
+		// DAJ_RP: [Saber Drop] only while the saber is the weapon: what is in the hand then is the saber's
+		// model. With another weapon out (zyk allows the switch while the saber is knocked away), the hand
+		// holds that weapon, which this used to take off every frame.
+		if (g2HasWeapon && cent->currentState.weapon == WP_SABER)
 		{ //and remember to kill the bolton model in case we didn't get a thrown saber update first
 			trap->G2API_RemoveGhoul2Model(&(cent->ghoul2), 1);
 			g2HasWeapon = qfalse;
@@ -11690,7 +12665,12 @@ stillDoSaber:
 		if ((cg.snap->ps.fd.forcePowersActive & (1 << FP_SEE))
 			&& cg.snap->ps.clientNum != cent->currentState.number)
 		{//just draw him
-			trap->R_AddRefEntityToScene( &legs );
+			// GalaxyRP: [Phase] ...as a ghost or hologram if that is what he is
+			if ( !CG_AddPhasedPlayerModel( cent, &legs, qtrue ) )
+			{
+				trap->R_AddRefEntityToScene( &legs );
+			}
+			CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PHASED_OVERLAY ); // DAJ_RP: [Holstered Sabers]
 		}
 		else
 		{
@@ -11708,13 +12688,20 @@ stillDoSaber:
 				legs.shaderRGBA[3] = 0;
 				legs.customShader = cgs.media.cloakedShader;
 				trap->R_AddRefEntityToScene( &legs );
+				CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PLAIN ); // DAJ_RP: [Holstered Sabers]
 
 				legs.shaderRGBA[0] = legs.shaderRGBA[1] = legs.shaderRGBA[2] = 255;
 				legs.shaderRGBA[3] = 255 * (1.0f - perc); // let model alpha in
 				legs.customShader = 0; // use regular skin
 				legs.renderfx &= ~RF_RGB_TINT;
 				legs.renderfx |= RF_FORCE_ENT_ALPHA;
-				trap->R_AddRefEntityToScene( &legs );
+				// GalaxyRP: [Phase] a ghost or hologram fades in and out as itself, not as a plain
+				// player; its overlay pass waits until the fade is over
+				if ( !CG_AddPhasedPlayerModel( cent, &legs, qfalse ) )
+				{
+					trap->R_AddRefEntityToScene( &legs );
+				}
+				CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PHASED ); // DAJ_RP: [Holstered Sabers]
 			}
 		}
 	}
@@ -11723,7 +12710,12 @@ stillDoSaber:
 		if ((cg.snap->ps.fd.forcePowersActive & (1 << FP_SEE))
 			&& cg.snap->ps.clientNum != cent->currentState.number)
 		{//just draw him
-			trap->R_AddRefEntityToScene( &legs );
+			// GalaxyRP: [Phase] ...as a ghost or hologram if that is what he is
+			if ( !CG_AddPhasedPlayerModel( cent, &legs, qtrue ) )
+			{
+				trap->R_AddRefEntityToScene( &legs );
+			}
+			CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PHASED_OVERLAY ); // DAJ_RP: [Holstered Sabers]
 		}
 		else
 		{
@@ -11760,14 +12752,16 @@ stillDoSaber:
 				if (cg_shadows.integer != 2 && cgs.glconfig.stencilBits >= 4 && cg_renderToTextureFX.integer)
 				{
 					trap->R_SetRefractionProperties(1.0f, 0.0f, qfalse, qfalse); //don't need to do this every frame.. but..
-					// GalaxyRP (Alex): [Items] Instead of applying a hardcoded, make them fully invisible to any other player.
-					//legs.customShader = 2; //crazy "refractive" shader
-					legs.shaderRGBA[0] /= 5.0f;
-					legs.shaderRGBA[1] /= 5.0f;
-					legs.shaderRGBA[2] /= 5.0f;
-					legs.shaderRGBA[3] /= 255.0f; //make them invisible
-					legs.renderfx |= RF_FORCE_ENT_ALPHA;
+					// DAJ_RP: [Cloak Item] the stock refraction again, as TaystJK's own cgame draws it. Handle 2 is every
+					// renderer's "internal_distortion" shader -- the third it makes, after <default> and <stencil
+					// shadow>: rd-vanilla's stencil refraction, rend2's GLSL refraction pass, rd-vulkan's refraction
+					// pass (or, where the device has none, its faint translucent shell). It replaces a GalaxyRP
+					// "fully invisible" pass -- the model's colour divided by 5, its alpha by 255, with
+					// RF_FORCE_ENT_ALPHA -- which each renderer took its own way: no trace at all where the forced
+					// alpha reached every stage, a black model where a stage ignored it (vehicles, rd-vulkan).
+					legs.customShader = 2; //crazy "refractive" shader
 					trap->R_AddRefEntityToScene( &legs );
+					CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PLAIN ); // DAJ_RP: [Holstered Sabers]
 					legs.customShader = 0;
 				}
 				else
@@ -11776,6 +12770,7 @@ stillDoSaber:
 					legs.shaderRGBA[0] = legs.shaderRGBA[1] = legs.shaderRGBA[2] = legs.shaderRGBA[3] = 255;
 					legs.customShader = cgs.media.cloakedShader;
 					trap->R_AddRefEntityToScene( &legs );
+					CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PLAIN ); // DAJ_RP: [Holstered Sabers]
 					legs.customShader = 0;
 				}
 			}
@@ -11785,7 +12780,12 @@ stillDoSaber:
 	if (!(cent->currentState.powerups & (1 << PW_CLOAKED)))
 	{ //don't add the normal model if cloaked
 		CG_CheckThirdPersonAlpha( cent, &legs );
-		trap->R_AddRefEntityToScene(&legs);
+		// GalaxyRP: [Phase] a Force ghost or hologram is drawn in its own style instead
+		if ( !CG_AddPhasedPlayerModel( cent, &legs, qtrue ) )
+		{
+			trap->R_AddRefEntityToScene(&legs);
+		}
+		CG_RpAddHolsteredSabers( cent, ci, &legs, rootAngles, &rpHilts, RP_HILTS_PHASED_OVERLAY ); // DAJ_RP: [Holstered Sabers]
 	}
 
 	//cent->frame_minus2 = cent->frame_minus1;

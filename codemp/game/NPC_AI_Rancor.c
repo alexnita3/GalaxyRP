@@ -448,7 +448,6 @@ void Rancor_Bite( void )
 	}
 }
 //------------------------------
-extern void TossClientItems( gentity_t *self );
 void Rancor_Attack( float distance, qboolean doCharge )
 {
 
@@ -473,9 +472,21 @@ void Rancor_Attack( float distance, qboolean doCharge )
 				{
 					G_AddEvent( NPCS.NPC->activator, Q_irand(EV_DEATH1, EV_DEATH3), 0 );
 					NPC_SetAnim( NPCS.NPC->activator, SETANIM_TORSO, BOTH_FALLDEATH1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD );
+					// GalaxyRP fix: [Drop] the TossClientItems() call that used to be here is gone.
+					// It passed NPCS.NPC -- the RANCOR -- where every other statement in this block
+					// acts on NPCS.NPC->activator, the victim it is holding. So a rancor grabbing an
+					// armed NPC made the rancor drop its own items rather than the victim's, which
+					// for an entity that carries no weapon meant its powerups or nothing at all.
+					//
+					// Corrected by removing it rather than by swapping the argument. Rancor_Attack()
+					// runs on every attack cycle while count == 1, and "full eat" versus "quick bite"
+					// is a coin flip each time, so this block can be re-entered several times while
+					// the victim is still alive -- pointing it at the victim would have dropped their
+					// weapon once per cycle, and then once more when player_die() ran. The victim
+					// dies to the eat damage a moment later and drops there, correctly and once,
+					// which is all this was ever trying to achieve.
 					if ( NPCS.NPC->activator->NPC )
 					{//no more thinking for you
-						TossClientItems( NPCS.NPC );
 						NPCS.NPC->activator->NPC->nextBStateThink = Q3_INFINITE;
 					}
 				}
@@ -737,7 +748,7 @@ void NPC_Rancor_Pain( gentity_t *self, gentity_t *attacker, int damage )
 	{
 		if ( !self->count )
 		{
-			if ( (!attacker->s.number&&!Q_irand(0,3))
+			if ( (attacker->s.number < MAX_CLIENTS&&!Q_irand(0,3))
 				|| !self->enemy
 				|| self->enemy->health == 0
 				|| (self->enemy->client&&self->enemy->client->NPC_class == CLASS_RANCOR)

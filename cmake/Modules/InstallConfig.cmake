@@ -81,9 +81,19 @@ if(WIN32)
 			"${CPACK_NSIS_DELETE_ICONS_EXTRA}
 			Delete '$SMPROGRAMS\\\\$MUI_TEMP\\\\Jedi Academy MP.lnk'")
 
-		install(FILES ${MPDir}/OpenAL32.dll ${MPDir}/EaxMan.dll
-				DESTINATION ${JKAInstallDir}
-				COMPONENT ${JKAMPClientComponent})
+		# GalaxyRP fix: [TaystJK multi-arch] this used to unconditionally install the 32-bit
+		# OpenAL32.dll/EaxMan.dll pair even on 64-bit builds. Split by pointer size, matching
+		# TaystJK -- 64-bit builds ship OpenAL32.x86_64.dll instead (EaxMan is 32-bit-only/not
+		# needed there).
+		if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+			install(FILES ${MPDir}/OpenAL32.dll ${MPDir}/EaxMan.dll
+					DESTINATION ${JKAInstallDir}
+					COMPONENT ${JKAMPClientComponent})
+		else()
+			install(FILES ${MPDir}/OpenAL32.x86_64.dll
+					DESTINATION ${JKAInstallDir}
+					COMPONENT ${JKAMPClientComponent})
+		endif()
 
 		install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
 				DESTINATION ${JKAInstallDir}

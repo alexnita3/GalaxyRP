@@ -360,14 +360,25 @@ if(BuildMPEngine)
 	endif()
 
 	# OpenAL (is optionally included for Windows)
-	if (MSVC AND NOT WIN64)
+	# GalaxyRP fix: [TaystJK multi-arch] this used to be "if (MSVC AND NOT WIN64)", which meant
+	# OpenAL was never linked at all on 64-bit MSVC builds. Now handles both 32- and 64-bit MSVC,
+	# selecting the matching prebuilt import lib, matching TaystJK.
+	if (MSVC)
 		if(UseInternalOpenAL)
-			# There's a libs/OpenAL32.lib
-			# (mrw) TODO Is this actually required on windows? It is loaded at runtime, should not be linked?
-			find_library(OpenALLibrary NAMES OpenAL32 PATHS ${OpenJKLibDir})
-			if(NOT OpenALLibrary)
-				message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.lib not found!")
-			endif(NOT OpenALLibrary)
+			if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+				# There's a libs/OpenAL32.lib
+				# (mrw) TODO Is this actually required on windows? It is loaded at runtime, should not be linked?
+				find_library(OpenALLibrary NAMES OpenAL32 PATHS ${OpenJKLibDir})
+				if(NOT OpenALLibrary)
+					message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.lib not found!")
+				endif(NOT OpenALLibrary)
+			else()
+				# There's a libs/OpenAL32.x86_64.lib
+				find_library(OpenALLibrary NAMES OpenAL32.x86_64 PATHS ${OpenJKLibDir})
+				if(NOT OpenALLibrary)
+					message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.x86_64.lib not found!")
+				endif(NOT OpenALLibrary)
+			endif()
 			set(MPEngineLibraries ${MPEngineLibraries} ${OpenALLibrary})
 		else(UseInternalOpenAL)
 			find_package(OpenAL REQUIRED)
@@ -377,6 +388,9 @@ if(BuildMPEngine)
 	endif()
 
 	if(UseInternalSDL2)
+		# GalaxyRP fix: [libs] bumped bundled SDL2 2.0.12 -> 2.32.4, matching TaystJK. Its x64
+		# import libs are named with an x86_64 suffix (same convention as OpenAL32.x86_64.lib
+		# above), unlike the x86 ones -- split by pointer size, same as the OpenAL block.
 		if(CMAKE_SIZEOF_VOID_P EQUAL 4)
 			set(MPEngineLibraries
 				${MPEngineLibraries}
@@ -386,8 +400,8 @@ if(BuildMPEngine)
 		else()
 			set(MPEngineLibraries
 				${MPEngineLibraries}
-				${OpenJKLibDir}/SDL2/lib/x64/SDL2main.lib
-				${OpenJKLibDir}/SDL2/lib/x64/SDL2.lib
+				${OpenJKLibDir}/SDL2/lib/x64/SDL2main.x86_64.lib
+				${OpenJKLibDir}/SDL2/lib/x64/SDL2.x86_64.lib
 				)
 		endif()
 
@@ -564,13 +578,14 @@ if(BuildMPEngine)
 	if(WIN32)
 		add_executable(${MPEngine} WIN32 ${MPEngineFiles})
 		if(UseInternalSDL2)
+			# GalaxyRP fix: [libs] x64 SDL2.dll is now SDL2.x86_64.dll, see the link-libs split above.
 			if(CMAKE_SIZEOF_VOID_P EQUAL 4)
 				set(MPEngineExtraInstallFiles
 					${OpenJKLibDir}/SDL2/bin/x86/SDL2.dll
 					)
 			else()
 				set(MPEngineExtraInstallFiles
-					${OpenJKLibDir}/SDL2/bin/x64/SDL2.dll
+					${OpenJKLibDir}/SDL2/bin/x64/SDL2.x86_64.dll
 					)
 			endif()
 		endif()

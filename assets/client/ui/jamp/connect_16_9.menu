@@ -1,0 +1,24 @@
+// DAJ_RP: [Menus] the connect screen's background on a 16:9 or wider screen. UI_DrawConnectScreen() (ui_main.c)
+// paints this one instead of "Connect" (connect.menu) when the screen is that wide and cl_ratioFix is on, as
+// TaystJK's own ui does; the art is drawn for 16:9, so it is not stretched there.
+{
+
+menuDef {
+    	name "Connect_16_9"
+      	rect 0 0 640 480
+    	fullScreen MENU_FALSE
+    	visible MENU_FALSE
+      	style WINDOW_STYLE_SHADER
+
+	itemDef 
+	{
+		name				miniFrame
+		rect				0 0 640 480
+		style				WINDOW_STYLE_SHADER
+		background			"menu/art/unknownmap_mp_16_9"
+		visible				1
+		decoration
+	}
+  }
+
+}

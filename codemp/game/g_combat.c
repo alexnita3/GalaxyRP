@@ -486,20 +486,38 @@ TossClientItems
 rww - Toss the weapon away from the player in the specified direction
 =================
 */
+extern void ChangeWeapon( gentity_t *ent, int newWeapon );
 void TossClientWeapon(gentity_t *self, vec3_t direction, float speed)
 {
 	vec3_t vel;
 	gitem_t *item;
 	gentity_t *launched;
 	int weapon = self->s.weapon;
-	int ammoSub;
+	int carried, give;
 
 	if (level.gametype == GT_SIEGE)
 	{ //no dropping weaps
 		return;
 	}
 
+	// GalaxyRP fix: [Drop] the stun baton is on this list now. It is the only weapon that reaches
+	// this function with ammoIndex == AMMO_NONE, and AMMO_NONE is 0 -- which is not a spare slot,
+	// it is where a vehicle's own weapon keeps its ammo (bg_pmove.c fires from ps.ammo[0], cg_draw.c
+	// draws it). Every ammo read below would therefore have been reading the speeder out from under
+	// a mounted victim, and "ammo[ammoIndex] -= quantity" would have taken 100 rounds of it.
+	//
+	// On foot this changes nothing: ps.ammo[0] is 0 there, so ammoSub came out at -100, ammoQuan at
+	// 100 - 100 = 0, and the function already returned without tossing. The baton has never been
+	// disarmable by a force push and still is not. What is closed is the mounted case, where slot 0
+	// holds a real number and the early return therefore did not fire.
+	//
+	// Deliberately an early return rather than Cmd_Drop_f's has_ammo_type gate. That gate would
+	// make the arithmetic safe and thereby START letting a push knock the baton out of someone's
+	// hands on foot, which is a gameplay change nobody asked for. With the baton out, every weapon
+	// below is guaranteed a real ammo index, which is also why the det-pack test further down needs
+	// no such gate.
 	if (weapon == WP_NONE ||
+		weapon == WP_STUN_BATON ||
 		weapon == WP_MELEE ||
 		weapon == WP_SABER ||
 		weapon == WP_EMPLACED_GUN ||
@@ -508,25 +526,30 @@ void TossClientWeapon(gentity_t *self, vec3_t direction, float speed)
 		return;
 	}
 
-	if (self && self->client && self->NPC && self->client->pers.guardian_invoked_by_id != -1)
-	{ // zyk: guardians cant lose their guns
-		return;
-	}
+	// GalaxyRP fix: [Dead Code] removed guardian-guns weapon-drop guard (guardian_invoked_by_id was always -1)
 
 	// find the item type for this weapon
 	item = BG_FindItemForWeapon( weapon );
 
-	ammoSub = (self->client->ps.ammo[weaponData[weapon].ammoIndex] - bg_itemlist[BG_GetItemIndexByTag(weapon, IT_WEAPON)].quantity);
+	carried = self->client->ps.ammo[weaponData[weapon].ammoIndex];
 
-	if (ammoSub < 0)
+	if (carried <= 0)
+	{ //no ammo
+		return;
+	}
+
+	// DAJ_RP: [Ammo] the Force Pull disarm takes and stores the ammo the way /drop does (Cmd_Drop_f).
+	// It used to take up to the weapon's full default quantity off the victim -- 100 rifle rounds --
+	// and store it raw in count, which Pickup_Weapon() then multiplied by rp_add_ammo_scale: at the
+	// usual 0.5 whoever picked the weapon up got half of what the victim lost, and the other half was
+	// simply gone (and saved gone, for a logged-in victim, at their next death). Now the victim loses
+	// at most the scaled quantity (RP_ScaledAmmo, 50 rifle rounds at 0.5), never more than they carry,
+	// and the count is stored through RP_DropAmmoCount so the pickup gives exactly that back.
+	give = RP_ScaledAmmo(bg_itemlist[BG_GetItemIndexByTag(weapon, IT_WEAPON)].quantity);
+
+	if (give > carried)
 	{
-		int ammoQuan = item->quantity;
-		ammoQuan -= (-ammoSub);
-
-		if (ammoQuan <= 0)
-		{ //no ammo
-			return;
-		}
+		give = carried;
 	}
 
 	vel[0] = direction[0]*speed;
@@ -538,17 +561,17 @@ void TossClientWeapon(gentity_t *self, vec3_t direction, float speed)
 	launched->s.generic1 = self->s.number;
 	launched->s.powerups = level.time + 1500;
 
-	launched->count = bg_itemlist[BG_GetItemIndexByTag(weapon, IT_WEAPON)].quantity;
+	self->client->ps.ammo[weaponData[weapon].ammoIndex] -= give;
+	launched->count = RP_DropAmmoCount(give);
 
-	self->client->ps.ammo[weaponData[weapon].ammoIndex] -= bg_itemlist[BG_GetItemIndexByTag(weapon, IT_WEAPON)].quantity;
-
-	if (self->client->ps.ammo[weaponData[weapon].ammoIndex] < 0)
-	{
-		launched->count -= (-self->client->ps.ammo[weaponData[weapon].ammoIndex]);
-		self->client->ps.ammo[weaponData[weapon].ammoIndex] = 0;
-	}
-
-	if ((self->client->ps.ammo[weaponData[weapon].ammoIndex] < 1 && weapon != WP_DET_PACK) ||
+	// GalaxyRP fix: [Drop] the first clause used to carry "&& weapon != WP_DET_PACK", and the second
+	// excludes the det pack as well, so for that one weapon the whole test could never be true and it
+	// was never taken off the victim. This is the same defect Cmd_Drop_f had, where it was an entity
+	// fountain; here it is only an inconsistency, because the no-ammo check above refuses the toss
+	// once the charges are gone, so a det pack at zero simply sat in STAT_WEAPONS doing nothing while
+	// a thermal or a trip mine in the same state left properly. It leaves with its last charge now,
+	// like the other two.
+	if ((self->client->ps.ammo[weaponData[weapon].ammoIndex] < 1) ||
 		(weapon != WP_THERMAL && weapon != WP_DET_PACK && weapon != WP_TRIP_MINE))
 	{
 		int i = 0;
@@ -575,6 +598,19 @@ void TossClientWeapon(gentity_t *self, vec3_t direction, float speed)
 		{
 			self->s.weapon = 0;
 			self->client->ps.weapon = 0;
+		}
+
+		// GalaxyRP fix: [NPC] an NPC needs the rest of what ChangeWeapon() does, not just ps.weapon.
+		// The two writes above are the whole of the switch for a player, whose client picks the new
+		// weapon itself, but for an NPC they leave NPCInfo->shotTime, burstCount and attackHold, and
+		// the aiFlags/burstSpacing that ChangeWeapon's per-weapon switch sets, all describing the
+		// weapon that was just taken away -- so a disarmed NPC fired its remaining weapon on the old
+		// one's cadence. Called after the writes rather than instead of them: ChangeWeapon() sets
+		// ps.weapon but not s.weapon, and it returns immediately on a non-NPC, so the explicit test
+		// is for the reader rather than for safety.
+		if (self->NPC)
+		{
+			ChangeWeapon(self, self->client->ps.weapon);
 		}
 
 		G_AddEvent(self, EV_NOAMMO, weapon);
@@ -627,7 +663,9 @@ void TossClientItems( gentity_t *self ) {
 		(self->client->ps.ammo[ weaponData[weapon].ammoIndex ] ||
 		weapon == WP_STUN_BATON
 		) ) {
-		gentity_t *te;
+		gentity_t	*te;
+		gentity_t	*dropped;
+		int			packGive, carried, give;
 
 		// find the item type for this weapon
 		item = BG_FindItemForWeapon( weapon );
@@ -637,8 +675,48 @@ void TossClientItems( gentity_t *self ) {
 		te->r.svFlags |= SVF_BROADCAST;
 		te->s.eventParm = self->s.number;
 
-		// spawn the item
-		Drop_Item( self, item, 0 );
+		// GalaxyRP fix: [Drop] the dropped weapon carries what the victim was actually holding.
+		//
+		// Drop_Item() returns the entity and this used to throw the return value away, so count
+		// stayed at the 0 that G_Spawn() left it at -- and Pickup_Weapon() (g_items.c) reads count
+		// as "0 means give the item's DEFAULT quantity". FL_DROPPED_ITEM then skips the halving
+		// rules below that, so every corpse handed out a full pack no matter what it had died
+		// holding: a repeater with two bolts left dropped fifty. Nothing was deducted from the
+		// victim either, so the ammo came out of nowhere. Every armed NPC does this too -- they
+		// spawn with 100 rounds (NPC_spawn.c, NPC_stats.c) -- which on a busy map is a steady
+		// fountain rather than an occasional windfall.
+		//
+		// The ceiling is Cmd_Drop_f's: at most ceil(quantity * rp_add_ammo_scale), and never more
+		// than the victim had. TossClientWeapon() above uses the same ceiling, so all three drops --
+		// "I threw it", "they pulled it off me" and "they killed me for it" -- are worth the same.
+		//
+		// count is stored in PRE-scale units, because Pickup_Weapon() multiplies by the scale
+		// again on the way out. That is the same round trip Cmd_Drop_f does (it divides for
+		// exactly this reason) and the opposite convention to the raw quantity TossClientWeapon
+		// stores -- which is consistent, since that one is capped pre-scale.
+		//
+		// Not deducted from the victim, unlike the other two. Both are drops by a player who keeps
+		// playing; this one is only reached from player_die(), ClientDisconnect() and the rancor,
+		// and in all three the ammo stops mattering inside the same frame -- ClientSpawn() memsets
+		// the client, disconnect frees it. The character's saved ammo is already written by then
+		// too: update_weapons_table_row_with_current_values() runs far above this in player_die().
+		//
+		// AMMO_NONE weapons carry nothing. Of the ones that reach here that is only the stun baton
+		// (the test above lets it through explicitly), and AMMO_NONE is slot 0 -- the VEHICLE's own
+		// weapon ammo, not a spare. Reading it for a mounted victim would have handed a dropped
+		// baton a share of the speeder's ammo. It makes no difference at the far end either way,
+		// since Add_Ammo() has no AMMO_NONE branch, but the arithmetic should not depend on that.
+		dropped = Drop_Item( self, item, 0 );
+
+		// DAJ_RP: [Ammo] the ceiling and the stored count now come from RP_ScaledAmmo() and
+		// RP_DropAmmoCount() (g_items.c), shared with /drop and the Force Pull disarm: the scale is
+		// clamped, and the count is never 0 and never gives back more than "give".
+		packGive = RP_ScaledAmmo(bg_itemlist[BG_GetItemIndexByTag(weapon, IT_WEAPON)].quantity);
+		carried = (weaponData[weapon].ammoIndex != AMMO_NONE)
+					? self->client->ps.ammo[weaponData[weapon].ammoIndex] : 0;
+		give = (carried < packGive) ? carried : packGive;
+
+		dropped->count = RP_DropAmmoCount(give);	// -1, carrying nothing, when give is 0 -- as Cmd_Drop_f
 	}
 
 	// drop all the powerups if not in teamplay
@@ -668,12 +746,10 @@ void TossClientItems( gentity_t *self ) {
 					drop->count = 1;
 				}
 
-				// zyk: artifact holder npc died. Set a targetname in this artifact
-				if (self->NPC && self->client->pers.universe_quest_artifact_holder_id != -1 && 
-					drop->item->giType == IT_POWERUP && drop->item->giTag == PW_FORCE_BOON)
-				{
-					drop->targetname = "zyk_quest_artifact";
-				}
+				// GalaxyRP fix: [Quests] a block here used to tag a dropped Force Boon with targetname
+				// "zyk_quest_artifact" when an "artifact holder" NPC died. Its guard was
+				// universe_quest_artifact_holder_id != -1, and that field was only ever assigned -1, so it
+				// could not fire. Nothing read the targetname either, so even a hit would have been invisible.
 
 				angle += 45;
 			}
@@ -2115,16 +2191,21 @@ extern void Rancor_DropVictim( gentity_t *self );
 extern qboolean g_dontFrickinCheck;
 extern qboolean g_endPDuel;
 extern qboolean g_noPDuelCheck;
-extern void saberReactivate(gentity_t *saberent, gentity_t *saberOwner);
-extern void saberBackToOwner(gentity_t *saberent);
-extern void quest_get_new_player(gentity_t *ent);
-extern void try_finishing_race();
+
+// GalaxyRP fix: [Death System] see g_local.h for what this is and which calls set it. Defined here
+// because player_die() below is its only reader.
+qboolean g_bookkeepingDeath = qfalse;
 extern void update_weapons_table_row_with_current_values(gentity_t *ent);
 extern void remove_credits(gentity_t *ent, int credits);
-extern void zyk_NPC_Kill_f( char *name );
-extern gentity_t *Zyk_NPC_SpawnType(char *npc_type, int x, int y, int z, int yaw);
+// GalaxyRP fix: [Guardian] an extern for Zyk_NPC_SpawnType() used to be here. That function was
+// removed with the quest guardians (see the note at its old site in g_main.c); the declaration was
+// left behind and had no call site in this file or anywhere else.
 extern qboolean duel_tournament_is_duelist(gentity_t *ent);
 extern void player_restore_force(gentity_t *ent);
+extern void melee_battle_restore(gentity_t *ent);
+extern void Jedi_DecloakPair( gentity_t *self );
+extern qboolean Jedi_PairIsCloaked( gentity_t *self );
+extern gentity_t *Jedi_CloakPartner( gentity_t *self );
 void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int meansOfDeath ) {
 	gentity_t	*ent;
 	int			anim;
@@ -2134,7 +2215,14 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	qboolean	wasJediMaster = qfalse;
 	int			sPMType = 0;
 	char		buf[512] = {0};
-	gentity_t	*quest_player = NULL;
+
+	// GalaxyRP: [Grapple Hook] the dead let go, and they let go before either early return below --
+	// TaystJK frees the hook further down, under its intermission return, so a hook there outlived a
+	// death during intermission and went on writing into its owner's playerState.
+	if ( self->client && self->client->hook )
+	{
+		Weapon_HookFree( self->client->hook );
+	}
 
 	if ( self->client->ps.pm_type == PM_DEAD ) {
 		return;
@@ -2147,80 +2235,75 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	if ( !attacker )
 		return;
 
+	// GalaxyRP: [SP Maps] security / goodie keys do not survive death (they are not dropped either)
+	if ( self->s.number < MAX_CLIENTS )
+	{
+		RP_ClearKeys( self );
+	}
+
+	// GalaxyRP fix: [Death System] this is where a death is counted, and the only place.
+	//
+	// It used to live further down, and unconditionally, straight out of stock JKA, until commit
+	// 54a1b823 moved it into paralyze_player() -- with the Death System running, a player's death
+	// was taken to be the KNOCKDOWN, since player_die() only fires afterwards when somebody
+	// finishes off a body already lying down. That made the scoreboard column count knockdowns
+	// rather than deaths, and it lost every death that never passed through one: a player killed in
+	// a vehicle or a mini-game (both excluded from the downed path in G_Damage), and, once
+	// rp_downed_timer 0 existed, every death on a server with the system switched off.
+	//
+	// The two are separate counters now. paralyze_player() counts knockdowns into
+	// PERS_KNOCKED_DOWN; this counts deaths. One increment per death, whatever route it took, with
+	// no reference to rp_downed_timer -- the column reads the same with the system on or off.
+	//
+	// Counting inside this function rather than at its call sites is what makes that true. The
+	// three early returns above are the whole of "this is not really a death", so a hit that kills
+	// nobody cannot count. That matters more than it looks: EF_DEAD is not set here, it is derived
+	// from health in BG_PlayerStateToEntityState() once per frame, so a rocket's direct hit and its
+	// splash both re-enter G_Damage()'s death branch on the same corpse within one frame -- the
+	// second one arrives here and leaves on the pm_type test above.
+	//
+	// Placed immediately after those returns rather than beside "self->enemy = attacker" further
+	// down, where stock JKA had it, so nothing between can skip it. There is one such return: a
+	// PowerDuel death that ends the match starts the intermission and leaves early, which would
+	// otherwise drop the last death of the round.
+	//
+	// The slot test keeps the counter to real players: NPCs and vehicles reach player_die() too and
+	// have a client of their own, and nothing ever read their count.
+	//
+	// g_bookkeepingDeath excludes the kills that are administration rather than dying -- see its
+	// declaration in g_local.h for the list. /kill is deliberately NOT one of them: it is a real
+	// death and counts, in a private duel and a mini-game as much as anywhere else.
+	if ( self->s.number < MAX_CLIENTS && !g_bookkeepingDeath )
+	{
+		self->client->ps.persistant[PERS_KILLED]++;
+	}
+
+	// GalaxyRP fix: [Cloak Item] decloak on the real, final kill -- covers both players (this only
+	// reaches player_die() once they're actually dying for good, since a live player's first lethal
+	// hit only downs them via paralyze_player(), which has its own matching hook) and vehicles/NPCs
+	// (which always die in a single call here, no "downed" step). Pair-aware, so a cloaked vehicle
+	// dying with a cloaked rider aboard (or vice versa) takes both down together. No re-cloak lockout
+	// set here -- a dead player is about to respawn and a destroyed vehicle ceases to exist, so the
+	// cooldown wouldn't mean anything.
+	// GalaxyRP fix: [Cloak Item] pair-gated -- see the matching change in G_Damage below. A cloaked
+	// rider whose vehicle is destroyed under them was left invisible by the old per-entity test.
+	if ( self->client && Jedi_PairIsCloaked( self ) )
+	{
+		Jedi_DecloakPair( self );
+	}
+
 	// GalaxyRP (Alex): [Database] Update just the ammo table with the current values on death.
 	update_weapons_table_row_with_current_values(self);
 
-	self->client->pers.player_statuses &= ~(1 << 6);
+	// GalaxyRP fix: [Death System] dying ends a downed state, and ends all of it: both status bits,
+	// the countdown (which lives in pers and would otherwise survive the respawn that follows) and
+	// FL_NOTARGET. This was three hand-written lines that had to be kept in step with the other exits
+	// by hand; it is one shared call now. See RP_ClearDownedState() in g_cmds.c.
+	RP_ClearDownedState( self );
 
-	// zyk: remove any quest_power status from this player
-	self->client->pers.quest_power_status = 0;
-	self->client->pers.player_statuses &= ~(1 << 20);
-	self->client->pers.unique_skill_duration = 0;
+	self->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_POISON_DART_HIT);
 
-	// zyk: stoping Unique Abilities when player dies
-	self->client->pers.player_statuses &= ~(1 << 21);
-	self->client->pers.player_statuses &= ~(1 << 22);
-	self->client->pers.player_statuses &= ~(1 << 23);
-
-	// zyk: resetting boss battle music to default one if needed
-	if (self->client->pers.guardian_invoked_by_id != -1 && self->client->pers.guardian_mode != 15 && self->client->pers.guardian_mode != 17 && self->client->pers.guardian_mode != 18)
-	{
-		level.boss_battle_music_reset_timer = level.time + 1000;
-	}
-	else if (self->client->sess.amrpgmode == 2 && self->client->pers.guardian_mode > 0 && self->client->pers.can_play_quest == 1)
-	{ // zyk: quest player died. Reset boss battle music and guardian_mode of his allies
-		int ally_it = 0;
-
-		level.boss_battle_music_reset_timer = level.time + 1000;
-
-		for (ally_it = 0; ally_it < level.maxclients; ally_it++)
-		{
-			gentity_t *this_ent = &g_entities[ally_it];
-
-			if (zyk_is_ally(self,this_ent) == qtrue)
-			{
-				this_ent->client->pers.guardian_mode = 0;
-			}
-		}
-	}
-
-	if (self->client->pers.race_position > 0) // zyk: if a player dies during a race, he loses the race
-	{
-		self->client->pers.race_position = 0;
-		trap->SendServerCommand( -1, va("chat \"^3Race System: ^7%s ^7died during the race!\n\"",self->client->pers.netname) );
-		try_finishing_race();
-	}
-
-	// zyk: player died in Sniper Battle
-	if (level.sniper_mode == 2 && self->s.number < MAX_CLIENTS && level.sniper_players[self->s.number] != -1)
-	{
-		trap->SendServerCommand(-1, va("chat \"^3Sniper Battle: ^7%s ^7died in Sniper Battle!\n\"", self->client->pers.netname));
-		level.sniper_players[self->s.number] = -1;
-		level.sniper_mode_quantity--;
-
-		// zyk: resetting his force powers
-		self->client->ps.fd.forceDeactivateAll = 0;
-
-		WP_InitForcePowers(self);
-
-		if (attacker && attacker->client && attacker->s.number < MAX_CLIENTS && level.sniper_players[attacker->s.number] != -1)
-		{ // zyk: adding score to the attacker
-			level.sniper_players[attacker->s.number]++;
-		}
-	}
-
-	// zyk: player died in RPG LMS
-	if (level.rpg_lms_mode == 2 && self->s.number < MAX_CLIENTS && level.rpg_lms_players[self->s.number] != -1)
-	{
-		trap->SendServerCommand(-1, va("chat \"^3RPG LMS: ^7%s ^7died in RPG LMS!\n\"", self->client->pers.netname));
-		level.rpg_lms_players[self->s.number] = -1;
-		level.rpg_lms_quantity--;
-
-		if (attacker && attacker->client && attacker->s.number < MAX_CLIENTS && level.rpg_lms_players[attacker->s.number] != -1)
-		{ // zyk: adding score to the attacker
-			level.rpg_lms_players[attacker->s.number]++;
-		}
-	}
+	// GalaxyRP fix: [Dead Code] removed boss-battle-music-reset guardian logic (guardian_invoked_by_id/guardian_mode always dead)
 
 	// zyk: player died in Duel Tournament
 	if (level.duel_tournament_mode == 4 && self->s.number < MAX_CLIENTS && level.duel_players[self->s.number] != -1 && 
@@ -2230,7 +2313,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		player_restore_force(self);
 
 		// zyk: lost the duel
-		self->client->pers.player_statuses |= (1 << 27);
+		self->client->pers.player_statuses |= (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS);
 	}
 
 	// zyk: player died in Melee Battle
@@ -2240,8 +2323,21 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		level.melee_players[self->s.number] = -1;
 		level.melee_mode_quantity--;
 
-		// zyk: resetting his force powers
-		WP_InitForcePowers(self);
+		// GalaxyRP fix: [Melee Battle] was WP_InitForcePowers(self), which put force powers back
+		// from the client's vanilla JKA Profile rather than from what this player actually had --
+		// and, more importantly, left the pre-battle backup melee_battle_prepare() took still
+		// pending. Clearing level.melee_players[] on the line above takes this player out of
+		// melee_battle_end()'s loop, so nothing downstream would ever have consumed it: their next
+		// battle's backup would have returned early on the stale flag and handed them a loadout
+		// from the previous fight, and a Duel Tournament entered afterwards would have done the
+		// same, since both mini-games share the one snapshot.
+		//
+		// melee_battle_restore() consumes both halves and restores the real force powers. The
+		// loadout half writes to a corpse that ClientSpawn is about to rebuild from scratch, which
+		// is the same outcome the Duel Tournament reaches by a different route -- there
+		// player_restore_loadout() sees PLAYER_STATUS_DUEL_TOURNAMENT_LOSS and consumes the
+		// snapshot without applying it. Dying in a mini-game costs you what dying always costs.
+		melee_battle_restore(self);
 
 		if (attacker && attacker->client && attacker->s.number < MAX_CLIENTS && level.melee_players[attacker->s.number] != -1)
 		{ // zyk: adding score to the attacker
@@ -2257,129 +2353,15 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 		self->client->pers.being_mind_controlled = -1;
 	}
 
-	if (!self->NPC && self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 1 && self->client->pers.mind_controlled1_id > -1)
-	{
-		gentity_t *controlled_ent = &g_entities[self->client->pers.mind_controlled1_id];
-		self->client->pers.mind_controlled1_id = -1;
-		controlled_ent->client->pers.being_mind_controlled = -1;
-	}
+	// GalaxyRP fix: [Dead Code] removed rpg_class==1 mind-control-release block (rpg_class always 0)
 
-	if (self->client->pers.guardian_invoked_by_id != -1)
-	{ // zyk: rpg mode boss. Getting the quest player
-		quest_player = &g_entities[self->client->pers.guardian_invoked_by_id];
+	// GalaxyRP fix: [Dead Code] removed guardian_invoked_by_id quest_player lookup (guardian_invoked_by_id always -1)
 
-		if (quest_player && quest_player->client && quest_player->client->pers.guardian_mode == 0)
-		{ // zyk: player died before. Do not give anything to quest_player
-			quest_player = NULL;
-		}
-	}
-
-	if (self->client->pers.universe_quest_messages == -10000 && self->NPC)
-	{ // zyk: Ymir or Thor defeated
-		int j = 0;
-		qboolean still_has_boss = qfalse;
-		quest_player = &g_entities[self->client->pers.universe_quest_objective_control];
-
-		if (Q_stricmp(self->NPC_type, "guardian_of_universe") == 0)
-		{ // zyk: failed mission
-			zyk_text_message(quest_player, "universe/mission_16_guardians/mission_16_guardians_fail", qtrue, qfalse, quest_player->client->pers.netname);
-
-			quest_get_new_player(quest_player);
-		}
-		else
-		{
-			for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
-			{
-				gentity_t *old_boss = &g_entities[j];
-
-				if (old_boss && old_boss->NPC && old_boss->health > 0 && old_boss->client && old_boss->client->pers.universe_quest_messages == -10000 && 
-					Q_stricmp(old_boss->NPC_type, "guardian_of_universe") != 0)
-				{
-					if (Q_stricmp(old_boss->NPC_type, "ymir_boss") == 0)
-					{
-						zyk_text_message(quest_player, "universe/mission_16_guardians/mission_16_guardians_ymir", qtrue, qfalse);
-					}
-					else
-					{
-						zyk_text_message(quest_player, "universe/mission_16_guardians/mission_16_guardians_thor", qtrue, qfalse);
-					}
-
-					still_has_boss = qtrue;
-				}
-			}
-
-			if (still_has_boss == qfalse)
-			{
-				for (j = (MAX_CLIENTS + BODY_QUEUE_SIZE); j < level.num_entities; j++)
-				{
-					gentity_t *old_npc = &g_entities[j];
-
-					if (old_npc && old_npc->NPC && old_npc->health > 0 && old_npc->client && Q_stricmp(old_npc->NPC_type, "quest_mage") == 0 && old_npc->die)
-					{ // zyk: killing the remaining mages
-						old_npc->health = 0;
-						old_npc->client->ps.stats[STAT_HEALTH] = 0;
-						old_npc->die(old_npc, old_npc, old_npc, 100, MOD_UNKNOWN);
-					}
-				}
-
-				quest_player->client->pers.universe_quest_messages = 6;
-				quest_player->client->pers.universe_quest_timer = level.time + 3000;
-			}
-		}
-	}
-	else if (self->client->pers.universe_quest_artifact_holder_id != -1 && self->NPC)
-	{ // zyk: artifact holder of Universe Quest, set the player universe_quest_artifact_holder_id to -2 so he can get the artifact when he touches the force boon item
-		if (Q_stricmp(self->NPC_type, "quest_ragnos") == 0) // zyk: quest_ragnos npc has a different way to get the artifact
-		{
-			gentity_t* player_ent = &g_entities[self->client->pers.universe_quest_artifact_holder_id];
-
-			zyk_text_message(player_ent, "universe/mission_2/mission_2_artifact_guardian_fail", qtrue, qfalse);
-			player_ent->client->pers.universe_quest_artifact_holder_id = -1;
-
-			// zyk: fixed bug in which a boss battle would kill this npc and pass quest turn
-			if (player_ent->client->pers.guardian_mode == 0)
-				quest_get_new_player(player_ent);
-		}
-	}
+	// GalaxyRP fix: [Quests] removed dead universe_quest_messages==-10000 sentinel block here (Ymir/Thor/guardian_of_universe death handling) and its sibling universe_quest_artifact_holder_id!=-1 branch (quest_ragnos artifact-guardian handling) -- neither sentinel is ever assigned a matching value anywhere in the codebase (ymir_boss/thor_boss ability chains that used to set universe_quest_messages==-10000 conditions were themselves removed as dead code; universe_quest_artifact_holder_id is only ever reset to -1), so both branches were permanently unreachable. quest_player local var (only used inside this block) removed too.
 	
-	if (self->client->sess.amrpgmode == 2)
-	{ 
-		if (self->client->pers.guardian_mode > 0)
-		{ // zyk: player lost to a guardian
-			self->client->pers.guardian_mode = 0;
-		}
-
-		// zyk: removing the crystals from the player
-		self->client->pers.player_statuses &= ~(1 << 10);
-		self->client->pers.player_statuses &= ~(1 << 11);
-
-		// zyk: player has the Resurrection Power, after completing quests in Challenge Mode. Uses mp. Not allowed in CTF gametype
-		if (self->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ && self->client->pers.universe_quest_counter & (1 << 29) && g_gametype.integer != GT_CTF && 
-			!(self->client->ps.eFlags2 & EF2_HELD_BY_MONSTER) && self->client->pers.magic_power >= 5 && zyk_enable_resurrection_power.integer == 1 && 
-			!(self->client->sess.magic_more_disabled_powers & (1 << 1)))
-		{
-			qboolean zyk_allow_vehicle_resurrect = qtrue; // zyk: if player is riding a ship, do not allow resurrection to avoid invisible player bug
-
-			if (self->client->NPC_class != CLASS_VEHICLE
-				&& self->client->ps.m_iVehicleNum)
-			{ //I'm riding a vehicle
-				//tell it I'm getting off
-				gentity_t *veh = &g_entities[self->client->ps.m_iVehicleNum];
-
-				if (veh->inuse && veh->client && veh->m_pVehicle && veh->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER)
-				{
-					zyk_allow_vehicle_resurrect = qfalse;
-				}
-			}
-
-			if (zyk_allow_vehicle_resurrect == qtrue)
-			{
-				self->client->pers.magic_power -= 5;
-				self->client->pers.quest_power_status |= (1 << 10);
-				self->client->pers.quest_power1_timer = level.time + 3000;
-			}
-		}
-	}
+	// GalaxyRP fix: [Dead Code] an amrpgmode == 2 block used to sit here. By the end it only cleared
+	// PLAYER_STATUS_HEALING_CRYSTAL and PLAYER_STATUS_ENERGY_CRYSTAL, two bits nothing set; the
+	// guardian reset and the Challenge Mode Resurrection Power grant it once held went earlier.
 
 	//check player stuff
 	g_dontFrickinCheck = qfalse;
@@ -2470,11 +2452,9 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 		if ( self->m_pVehicle->m_pVehicleInfo->hideRider )
 		{//pilot is *inside* me, so kill him, too
-			killEnt = (gentity_t *)self->m_pVehicle->m_pPilot;
-			if (killEnt && killEnt->inuse && killEnt->client)
-			{
-				G_Damage(killEnt, murderer, murderer, NULL, killEnt->client->ps.origin, 99999, DAMAGE_NO_PROTECTION, MOD_BLASTER);
-			}
+			// DAJ_RP: [Vehicles] after the passengers (below), not before: a pilot killed while there are
+			// passengers is taken off (player_die()), and that makes the first passenger the pilot (Eject()),
+			// whom the passengers' loop then no longer counts -- he alone came out of the wreck alive
 			if ( self->m_pVehicle->m_pVehicleInfo )
 			{//FIXME: this wile got stuck in an endless loop, that's BAD!!  This method SUCKS (not initting "i", not incrementing it or using it directly, all sorts of badness), so I'm rewriting it
 				//while (i < self->m_pVehicle->m_iNumPassengers)
@@ -2492,6 +2472,11 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 					}
 				}
 			}
+			killEnt = (gentity_t *)self->m_pVehicle->m_pPilot;
+			if (killEnt && killEnt->inuse && killEnt->client)
+			{
+				G_Damage(killEnt, murderer, murderer, NULL, killEnt->client->ps.origin, 99999, DAMAGE_NO_PROTECTION, MOD_BLASTER);
+			}
 		}
 		killEnt = (gentity_t *)self->m_pVehicle->m_pDroidUnit;
 		if (killEnt && killEnt->inuse && killEnt->client)
@@ -2506,17 +2491,45 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	G_BreakArm(self, 0); //unbreak anything we have broken
 	self->client->ps.saberEntityNum = self->client->saberStoredIndex; //in case we died while our saber was knocked away.
 
-	if (self->client->ps.weapon == WP_SABER && self->client->saberKnockedTime)
-	{
-		gentity_t *saberEnt = &g_entities[self->client->ps.saberEntityNum];
-		//trap->Print("DEBUG: Running saber cleanup for %s\n", self->client->pers.netname);
-		self->client->saberKnockedTime = 0;
-		saberReactivate(saberEnt, self);
-		saberEnt->r.contents = CONTENTS_LIGHTSABER;
-		saberEnt->think = saberBackToOwner;
-		saberEnt->nextthink = level.time;
-		G_RunObject(saberEnt);
-	}
+	// GalaxyRP fix: [Death System] a block used to sit here that reactivated a knocked-away saber
+	// and ran its physics by hand -- saberReactivate(), r.contents = CONTENTS_LIGHTSABER,
+	// think = saberBackToOwner, then G_RunObject(saberEnt). Removed; matches OpenJK c2095bb4, whose
+	// author calls it a 2006 regression that stood until 2022. The line above is the part that
+	// mattered and stays: it restores ps.saberEntityNum, which saberKnockDown() had zeroed.
+	//
+	// It re-entered death processing. The guard at the top of this function is
+	// "if ( ps.pm_type == PM_DEAD ) return;", but pm_type is not SET to PM_DEAD until roughly 260
+	// lines below here, so everything in between runs on a player the guard cannot recognise as
+	// already dying -- and this block was the only thing in that window that handed control to
+	// physics and touch code:
+	//
+	//   saberReactivate()  sets saberent->touch = thrownSaberTouch
+	//   G_RunObject()      ends with an unconditional ent->touch( ent, &g_entities[...], &tr )
+	//   thrownSaberTouch() ends with CheckThrownSaberDamaged(), which carries four G_Damage calls
+	//
+	// so a dying player's own death dealt saber damage mid-death, which could kill someone else and
+	// run their player_die() nested inside this one. That is the "same-frame mutual kills" case.
+	// Note the difference from the re-entry we already tolerate: a rocket's direct hit and its
+	// splash arrive SEQUENTIALLY, the first call having reached pm_type = PM_DEAD, so the second
+	// bounces off the guard (see the death-counter note further up). Nesting is the shape the guard
+	// cannot catch.
+	//
+	// Nothing is lost by removing it, because it was applying the wrong branch anyway.
+	// DownedSaberThink() in w_saber.c has an explicit dead-owner case --
+	// "if (notDisowned || saberOwn->health < 1 || ...) { //He's dead, just go back to our normal
+	// saber status" -- which calls MakeDeadSaber(), sets think = SaberUpdateSelf and SVF_NOCLIENT,
+	// and also sets touch, speed and genericValue5 that this block never did. This block instead
+	// did the pullBack (living-owner) behaviour: a live, solid lightsaber flown back to a corpse.
+	// The saber now stays where it fell and becomes a dead saber, which is what every other death
+	// path already produces.
+	//
+	// saberKnockedTime is no longer cleared anywhere -- this block was its only reset. Harmless:
+	// its only remaining readers are two time comparisons in DownedSaberThink, which read a stale
+	// past value as "long enough ago" and pull the saber back for a living owner, which is what is
+	// wanted. Worth knowing that it is also never reset on respawn, which is what let this block
+	// fire on a saber that had never been knocked away at all: get disarmed, switch to a blaster,
+	// die (this block skipped it, weapon was not WP_SABER, so the flag survived), respawn, then die
+	// holding a saber.
 
 	self->client->bodyGrabIndex = ENTITYNUM_NONE;
 	self->client->bodyGrabTime = 0;
@@ -2628,6 +2641,9 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 			Boba_FlyStop( self );
 		if ( self->s.NPC_class == CLASS_RANCOR )
 			Rancor_DropVictim( self );
+		// DAJ_RP: [NPC System] a frozen NPC that dies is let go, so its deathscript runs (the freeze keeps
+		// its ICARUS scripts paused) -- see RP_NpcFreeze() in NPC_spawn.c
+		RP_NpcUnfreeze( self );
 	}
 	if ( attacker && attacker->NPC && attacker->NPC->group && attacker->NPC->group->enemy == self )
 	{
@@ -2654,6 +2670,9 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 
 	//Use any target we had
 	G_UseTargets( self, self );
+
+	// GalaxyRP: [Entity System] an NPC or vehicle whose spawner has "respawn": the spawner fires again
+	RP_SpawnerRespawn( self );
 
 	if (g_slowmoDuelEnd.integer && (level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL) && attacker && attacker->inuse && attacker->client)
 	{
@@ -2711,88 +2730,16 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 		attacker = &g_entities[self->client->ps.otherKiller];
 	}
 
-	// zyk: setting the credits_modifier and the bonus score for the RPG player
-	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2)
-	{
-		if (!self->NPC && self->client->sess.amrpgmode == 2)
-		{ // zyk: RPG Mode player score and credits
-			attacker->client->pers.credits_modifier = self->client->pers.level;
-			attacker->client->pers.score_modifier = self->client->pers.level / 50;
+	// DAJ_RP: [NPC Rewards] an NPC whose spawner set "npccredits" or "npcxp" pays its killer, if that is a
+	// logged-in player -- see RP_PayNpcKillReward() (g_cmds.c). Here, after the attacker has been resolved
+	// above (a turret's owner, whoever pushed it into a pit or a crusher; a vehicle's guns are already the
+	// pilot's). This replaces a block that set the killer's credits_modifier and score_modifier from the
+	// victim -- an RPG player's level, an NPC's spawnflags 32768 + genericvalue7 -- which nothing ever read.
+	RP_PayNpcKillReward( self, attacker );
 
-			if (self->client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ)
-			{
-				attacker->client->pers.score_modifier += 1;
-				attacker->client->pers.credits_modifier += 20;
-			}
-		}
-		else if (self->NPC && self->client->NPC_class == CLASS_VEHICLE)
-		{ // zyk: vehicles will not give any score or credits
-			attacker->client->pers.credits_modifier = -10;
-			attacker->client->pers.score_modifier = -1;
-		}
-		else if (self->NPC && self->client->pers.guardian_invoked_by_id != -1)
-		{ // zyk: guardians give more score and credits
-			attacker->client->pers.credits_modifier = 490;
-			attacker->client->pers.score_modifier = 6;
-		}
-		else if (self->NPC && self->client->ps.fd.forcePowerMax > 0 && self->client->ps.stats[STAT_WEAPONS] & (1 << WP_SABER))
-		{ // zyk: force-user saber npcs give more score and credits
-			attacker->client->pers.credits_modifier = 10;
-			attacker->client->pers.score_modifier = 1;
-		}
-
-		if (self->NPC && self->client->ps.stats[STAT_MAX_HEALTH] >= 500 && self->client->pers.guardian_invoked_by_id == -1)
-		{ // zyk: npcs with more than 500 hp gives more score
-			attacker->client->pers.score_modifier += 1;
-			attacker->client->pers.credits_modifier += 20;
-		}
-
-		if (self->NPC && self->client->pers.credits_modifier > 0)
-		{ // zyk: npc with a custom amount of credits set
-			attacker->client->pers.credits_modifier = self->client->pers.credits_modifier;
-		}
-
-		if (level.guardian_quest > 0 && self->NPC && self->s.number == level.guardian_quest)
-		{ // zyk: if player defeated the map guardian npc
-			attacker->client->pers.score_modifier = 2;
-			attacker->client->pers.credits_modifier = 990;
-			trap->SendServerCommand(-1, va("chat \"^3Guardian Quest: ^7%s^7 receives ^31000 ^7credits for defeating the Guardian of Map\n\"", attacker->client->pers.netname));
-			level.guardian_quest = 0;
-			level.boss_battle_music_reset_timer = level.time + 1000;
-			level.guardian_quest_timer = level.time + zyk_guardian_quest_timer.integer;
-		}
-
-		if (attacker->client->pers.rpg_class == 2)
-		{ // zyk: Bounty Hunter class receives more credits
-			attacker->client->pers.credits_modifier += 5 * (attacker->client->pers.skill_levels[55] + 1);
-		}
-
-		// zyk: Bounty Quest manager
-		if (level.bounty_quest_choose_target == qfalse && attacker != self && self->client->sess.amrpgmode == 2)
-		{
-			if (level.bounty_quest_target_id == (attacker - g_entities))
-			{ // zyk: attacker was the target, so the attacker receives bonus credits
-				int bonus_credits = self->client->pers.level * 2;
-
-				attacker->client->pers.credits_modifier += bonus_credits;
-				trap->SendServerCommand(-1, va("chat \"^3Bounty Quest: ^7%s ^7was defeated by the target player, ^3%d ^7bonus credits\n\"", self->client->pers.netname, bonus_credits));
-			}
-			else if (level.bounty_quest_target_id == (self - g_entities))
-			{ // zyk: target player was defeated. Gives the reward to the attacker
-				attacker->client->pers.credits_modifier += (self->client->pers.level * 15);
-				level.bounty_quest_choose_target = qtrue;
-				level.bounty_quest_target_id++;
-				trap->SendServerCommand(-1, va("chat \"^3Bounty Quest: ^7%s^7 receives ^3%d ^7bonus credits\n\"", attacker->client->pers.netname, (self->client->pers.level * 15)));
-			}
-		}
-	}
-
-	if (level.guardian_quest > 0 && self->NPC && self->s.number == level.guardian_quest)
-	{ // zyk: map guardian npc defeated by a non-rpg player
-		trap->SendServerCommand(-1, va("chat \"^3Guardian Quest: ^7Map Guardian not defeated by rpg player\n\""));
-		level.guardian_quest = 0;
-		level.boss_battle_music_reset_timer = level.time + 1000;
-	}
+	// GalaxyRP fix: [Quests] a "map guardian npc defeated by a non-rpg player" notification block
+	// used to live here, gated on level.guardian_quest -- removed for the same reason as the block
+	// above.
 
 	// check for an almost capture
 	CheckAlmostCapture( self, attacker );
@@ -3155,12 +3102,13 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 				G_CheckForDismemberment(self, attacker, self->pos1, damage, anim, qfalse);
 			}
 		}
-		else if (self->NPC && self->client && self->client->NPC_class != CLASS_MARK1 &&
-			self->client->NPC_class != CLASS_VEHICLE)
-		{ //in this case if we're an NPC it's my guess that we want to get removed straight away.
-			self->think = G_FreeEntity;
-			self->nextthink = level.time;
-		}
+		// GalaxyRP fix: [ICARUS] an NPC with no death animation (droids, creatures without a
+		// humanoid skeleton) used to be freed on the next frame right here -- "my guess that we
+		// want to get removed straight away". Its deathscript had just been started a few lines
+		// up, so any wait, task or effect in it was cut off with the entity, and an SP map that
+		// counts on a droid's death script (opening a door, firing a target) never got it. The
+		// body now leaves the way every other NPC corpse does, through NPC_RemoveBody() after
+		// rp_npc_corpse_time, which also removes a corpse that has no enemy.
 
 		//self->client->ps.legsAnim = anim;
 		//self->client->ps.torsoAnim = anim;
@@ -3235,6 +3183,7 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 	if ( self->NPC )
 	{
 		self->NPC->timeOfDeath = level.time;//this will change - used for debouncing post-death events
+		self->NPC->rpDeathTime = level.time;	// DAJ_RP: [Corpses] and this will not -- see NPC_RemoveBody
 	}
 
 	// Start any necessary death fx for this entity
@@ -3775,7 +3724,14 @@ void G_Dismember( gentity_t *ent, gentity_t *enemy, vec3_t point, int limbType, 
 	VectorCopy( newPoint, limb->s.pos.trBase );
 	limb->think = LimbThink;
 	limb->touch = LimbTouch;
-	limb->speed = level.time + Q_irand(8000, 16000);
+	// DAJ_RP: [Corpses] was a hard-coded 8-16 seconds; now rp_limb_lifetime (seconds, default 8) to
+	// twice that, so the limbs from one fight still leave at different moments. LimbThink() frees the
+	// limb once level.time passes this.
+	{
+		const int lifetime = RP_CorpseSecondsToMs( rp_limb_lifetime.integer );
+
+		limb->speed = level.time + Q_irand( lifetime, lifetime * 2 );
+	}
 	limb->nextthink = level.time + FRAMETIME;
 
 	limb->r.svFlags = SVF_USE_CURRENT_ORIGIN;
@@ -3790,11 +3746,45 @@ void G_Dismember( gentity_t *ent, gentity_t *enemy, vec3_t point, int limbType, 
 	limb->s.eType = ET_GENERAL;
 	limb->s.weapon = G2_MODEL_PART;
 	limb->s.modelGhoul2 = limbType;
+	// GalaxyRP: [Phase] a severed limb of a Force ghost or a hologram looks like one too (drawn by
+	// CG_General(), cg_ents.c). The owner -- a player, an NPC or a player's corpse (ET_BODY, see
+	// CopyToBodyQue) -- already carries the mode in s.eFlags; purely visual on a limb.
+	limb->s.eFlags |= ( ent->s.eFlags & EF_RP_PHASE_MASK );
+	// DAJ_RP: [Phase] a limb cut from a player under /admhidden, or from his corpse (CopyToBodyQue(), g_client.c),
+	// is not sent to anyone: it would otherwise fly out of thin air. Done with SVF_NOCLIENT rather than the Mind
+	// Trick bits, because CG_General() draws limbs without reading those.
+	if ( RP_PlayerIsHidden( ent ) || ( ent->s.eType == ET_BODY && ent->rpHiddenCorpse ) )
+	{
+		limb->r.svFlags |= SVF_NOCLIENT;
+	}
 	limb->s.modelindex = ent->s.number;
 	if (!ent->client)
 	{
 		limb->s.modelindex = -1;
 		limb->s.otherEntityNum2 = ent->s.number;
+	}
+
+	// DAJ_RP: [NPC Scale] the limb is the size of what it was cut from: CG_General() (cg_ents.c) draws it at its own
+	// iModelScale, which was never set, so a scaled NPC's (npcscale, a .npc file's scale), a /scale'd player's or such a
+	// player's corpse's limbs came out normal size. A live one's size is its playerState's (sent on in its entityState a
+	// frame later); a corpse keeps its player's in its entityState (CopyToBodyQue(), g_client.c).
+	limb->s.iModelScale = ent->client ? ent->client->ps.iModelScale : ent->s.iModelScale;
+	// ...and so is its box, which only LimbThink()'s physics uses (a limb is walked through). G_RunExPhys() frees a limb
+	// whose box starts in solid, so a bigger box that would -- a giant's leg cut by a wall -- keeps the stock one.
+	if ( limb->s.iModelScale > 0 && limb->s.iModelScale != 100 )
+	{
+		const float scale = limb->s.iModelScale / 100.0f;
+		vec3_t mins, maxs;
+		trace_t tr;
+
+		VectorScale( limb->r.mins, scale, mins );
+		VectorScale( limb->r.maxs, scale, maxs );
+		trap->Trace( &tr, limb->r.currentOrigin, mins, maxs, limb->r.currentOrigin, limb->s.number, limb->clipmask, qfalse, 0, 0 );
+		if ( !tr.startsolid && !tr.allsolid )
+		{
+			VectorCopy( mins, limb->r.mins );
+			VectorCopy( maxs, limb->r.maxs );
+		}
 	}
 
 	VectorClear(limb->s.apos.trDelta);
@@ -4769,21 +4759,13 @@ qboolean zyk_can_damage_saber_only_entities(gentity_t *attacker, gentity_t *infl
 			return qtrue;
 		}
 
-		if (mod == MOD_MELEE && attacker->client->pers.rpg_class == 4)
-		{ // zyk: Monk melee
-			return qtrue;
-		}
+		// GalaxyRP fix: [Dead Code] removed rpg_class==4 Monk melee saber-only-damage grant (rpg_class always 0)
 
-		if (mod == MOD_MELEE && attacker->client->pers.rpg_class == 8 &&
-			inflictor && inflictor->s.weapon == WP_CONCUSSION)
-		{ // zyk: Magic Master bolts, the Ultra Bolt
-			return qtrue;
-		}
+		// GalaxyRP fix: [Dead Code] removed rpg_class==8 Magic Master Ultra Bolt saber-only-damage grant (rpg_class always 0)
 
-		if (mod == MOD_DET_PACK_SPLASH && attacker->client->pers.secrets_found & (1 << 14))
-		{ // zyk: detpacks
-			return qtrue;
-		}
+		// GalaxyRP fix: [Upgrades] removed detpack saber-only-damage grant here (gated on
+		// secrets_found&(1<<14), the Rocket Upgrade bit) — Rocket Upgrade was removed as
+		// inert/non-functional, so this bit can never be set again
 	}
 
 	return qfalse;
@@ -4821,9 +4803,59 @@ int gPainHitLoc = -1;
 vec3_t gPainPoint;
 
 extern void Jedi_Decloak( gentity_t *self );
+extern void Jedi_DecloakPair( gentity_t *self );
+extern qboolean Jedi_PairIsCloaked( gentity_t *self );
+extern gentity_t *Jedi_CloakPartner( gentity_t *self );
 extern void Boba_FlyStop( gentity_t *self );
-extern void paralyze_player(int client_id);
+extern void paralyze_player( gentity_t *ent );
+extern qboolean zyk_minigame_forces_death( gentity_t *ent );
 extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
+
+// GalaxyRP fix: [Force Duel] which means of death one duellist may inflict on the other.
+//
+// A private duel has always been saber-only here, enforced by a bare "mod != MOD_SABER" test in
+// G_Damage below. That is correct for an ordinary duel and wrong for a full force one: every
+// offensive force power in w_force.c deals MOD_FORCE_DARK -- Force Lightning, Force Drain's
+// drain-shield finisher and all five Force Grip crush tiers -- so the powers fired, the animations
+// played, the opponent was lifted and shoved, and none of it could take a point of health. The two
+// blocks restoring the vanilla restriction (BG_CanUseFPNow and WP_ForcePowerUsableOn) decide whether
+// a power may be USED and on WHOM; this third gate, in a different file and keyed on the means of
+// death rather than on the duel, decides whether the result lands. It was missed.
+//
+// A whitelist rather than TaystJK's blacklist, which allows every non-saber means of death in a full
+// force duel and then has to carve MOD_TRIP_MINE_SPLASH and MOD_DET_PACK_SPLASH back out -- a
+// tripmine planted before the duel would otherwise detonate inside it. Their own comment calls that
+// "sad hack". The carve-out exists because TaystJK also has GUN duels, which need arbitrary weapon
+// damage; we deliberately took only the force half, and bg_pmove.c pins a duellist's weapon to
+// WP_SABER for the duration, so no gun can be fired in one of ours at all. Listing what a force duel
+// is FOR is therefore both narrower and safer: nothing a player plants, throws or triggers beforehand
+// can leak in, and a means of death nobody thought of fails closed rather than open.
+//
+// World damage is unaffected in either kind: falling, lava and trigger_hurt arrive with no client
+// attacker, so neither this nor the caller's gates ever look at them.
+static qboolean zyk_duel_allows_mod( gentity_t *duellist, int mod )
+{
+	if (mod == MOD_SABER)
+	{ // every duel is a saber duel first
+		return qtrue;
+	}
+
+	// Bounds-checked like every other read of this array: G_Damage runs for NPCs, whose s.number is
+	// an entity number rather than a client slot. An NPC cannot be in a private duel, so this is
+	// belt and braces rather than a live path.
+	if (!duellist || duellist->s.number < 0 || duellist->s.number >= MAX_CLIENTS)
+	{
+		return qfalse;
+	}
+
+	if (level.duel_types[duellist->s.number] != 1)
+	{ // an ordinary duel: sabers and nothing else, exactly as before
+		return qfalse;
+	}
+
+	return (mod == MOD_FORCE_DARK) ? qtrue : qfalse;
+}
+
 void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t dir, vec3_t point, int damage, int dflags, int mod ) {
 	gclient_t	*client;
 	int			take, asave = 0, max, subamt = 0, knockback;
@@ -4854,32 +4886,61 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		return;
 	}
 
-	// zyk: if attacker has nofight, cannot damage sentries
-	if (attacker && attacker->client && !attacker->NPC && attacker->client->pers.player_statuses & (1 << 26) && targ && Q_stricmp(targ->classname, "sentryGun") == 0 && 
-		(!targ->parent || targ->parent != attacker))
-	{
-		return;
-	}
+	// GalaxyRP: [nofight] an "if attacker has nofight, cannot damage sentries" check used to sit
+	// here, reading the PLAYER_STATUS_ADMIN_PARALYSIS bit. It went with the /nofight command -- see the note where
+	// Cmd_NoFight_f used to live in g_cmds.c. Nothing else guarded sentry guns, so a player can now
+	// damage another player's sentry exactly as they could before ever using /nofight.
 
 	// zyk: target has chat protection
-	if (targ && targ->client && !targ->NPC && targ->client->pers.player_statuses & (1 << 5))
+	if (targ && targ->client && !targ->NPC && targ->client->pers.player_statuses & (1 << PLAYER_STATUS_CHAT_PROTECTION))
 		return;
 
 	// zyk: players with noclip cannot damage
 	if (attacker && attacker->client && attacker->s.number < MAX_CLIENTS && attacker->client->noclip == qtrue)
 		return;
 
-	// zyk: Race Mode. Players in the race waiting for it to start cannot be hit or hit anyone
-	if (level.race_mode > 0 && level.race_mode < 3 && attacker && attacker->client && targ && targ->client && 
-		((attacker->client->pers.race_position > 0) || 
-		 (attacker->client->pers.race_position == 0 && targ->client->pers.race_position > 0)))
-	{
-		return;
-	}
-
 	if (targ && targ->client && targ->NPC && targ->health <= 0 && targ->client->ps.eFlags & EF_DISINTEGRATION)
 	{ // zyk: bug fix. If this npc was desintegrated, do not damage it again
 		return;
+	}
+
+	// GalaxyRP fix: [Cloak Item] centralizes "taking damage breaks cloak" here, replacing every
+	// previous bespoke decloak-on-hit patch scattered across DEMP2 (direct hit and alt-fire shockwave),
+	// Lightning Dome, Force Lightning, and Stun Baton -- all of those were just special cases of "this
+	// entity took damage", and G_Damage() is the one function every damage source (weapon hits,
+	// AoE/splash, and environmental/self damage like fall damage, lava, or a player's own splash) funnels
+	// through. Placed here, after every early veto return above (allies, duel-tournament restrictions,
+	// chat protection, noclip attacker, race mode, already-disintegrated NPC) but before any of the
+	// RPG damage-bonus multipliers or shield/armor absorption below touch `damage`, so this fires on any
+	// real (non-vetoed) incoming hit even if it ends up being fully absorbed by shields and drops the
+	// final `take` to 0 -- "took damage" is about being hit, not about net HP lost. Applies identically
+	// to players and vehicles (both have a ->client). Uses Jedi_DecloakPair so a hit on either half of a
+	// cloaked vehicle+rider pair takes both down together, and applies the same temporary re-cloak
+	// lockout (3-10s) the old per-ability code used, so getting hit can't be immediately shrugged off by
+	// re-cloaking.
+	// GalaxyRP fix: [Cloak Item] gate on the PAIR, not on this one entity. /use_cloak cloaks the
+	// rider alone and never touches the vehicle, so a solo-cloaked rider sat on an UNCLOAKED
+	// vehicle: this guard tested the vehicle's own flag, found it clear, and returned without ever
+	// calling Jedi_DecloakPair -- which would have found and dropped the rider's cloak. The rider
+	// stayed invisible through their own vehicle's gunfire, damage and destruction.
+	// The re-cloak lockout goes on BOTH halves for the same reason: it is read by each side's own
+	// toggle (ItemUse_UseCloak reads the rider's, Cmd_VehicleCloak_f reads the vehicle's), so
+	// setting it only on whichever half happened to be hit left the other free to re-cloak at once.
+	if (damage > 0 && targ && targ->client && Jedi_PairIsCloaked(targ))
+	{
+		// DAJ_RP: [Cloak Item] a hit on a vehicle's droid unit counts as a hit on the vehicle: the vehicle and its pilot
+		// come down (Jedi_DecloakPair() does that for a droid too) and both get the re-cloak lockout, as for a hit on
+		// either of them. The droid's own lockout is never read -- only a pilot can cloak a vehicle.
+		gentity_t *cloakTarg = RP_DroidVehicle(targ) ? RP_DroidVehicle(targ) : targ;
+		gentity_t *cloakPartner = Jedi_CloakPartner(cloakTarg);
+
+		Jedi_DecloakPair(targ);
+		cloakTarg->client->cloakToggleTime = level.time + Q_irand(3000, 10000);
+
+		if (cloakPartner)
+		{
+			cloakPartner->client->cloakToggleTime = cloakTarg->client->cloakToggleTime;
+		}
 	}
 
 	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2)
@@ -4957,179 +5018,39 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			damage = (int)ceil(damage * 1.06);
 		else if (attacker->client->ps.fd.forcePowerLevel[FP_RAGE] == 3)
 			damage = (int)ceil(damage * 1.09);
-	}
-
-	if (attacker && attacker->client && (attacker->NPC || attacker->client->sess.amrpgmode == 2) && attacker->client->pers.quest_power_status & (1 << 3))
-	{ // zyk: Ultra Strength bonus damage
-		// zyk: Universe Power
-		if (attacker->client->pers.quest_power_status & (1 << 13))
+		// GalaxyRP fix: [Force] this chain stopped at level 3 with no else, which was harmless while
+		// forcePowerLevel[FP_RAGE] was capped there. With the cap removed it would have handed
+		// Rage 4 and 5 no damage bonus at all -- worse than Rage 3 -- so the existing +0.03/level
+		// progression is continued.
+		else if (attacker->client->ps.fd.forcePowerLevel[FP_RAGE] == 4)
 			damage = (int)ceil(damage * 1.12);
-		else
-			damage = (int)ceil(damage * 1.08);
+		else if (attacker->client->ps.fd.forcePowerLevel[FP_RAGE] == 5)
+			damage = (int)ceil(damage * 1.15);
 	}
 
-	if (attacker && attacker->client && attacker->client->sess.amrpgmode == 2)
-	{ // zyk: bonus damage of each RPG class
-		if (attacker->client->pers.rpg_class == 0)
-		{ // zyk: Free Warrior
-			damage = (int)ceil(damage * (1.0 + (0.03 * attacker->client->pers.skill_levels[55])));
-		}
-		else if (attacker->client->pers.rpg_class == 1 && (mod == MOD_SABER || mod == MOD_FORCE_DARK))
-		{ // zyk: Force User
-			damage = (int)ceil(damage * (1.0 + (0.05 * attacker->client->pers.skill_levels[55])));
-		}
-		else if (attacker->client->pers.rpg_class == 2 && mod != MOD_SABER && mod != MOD_MELEE && mod != MOD_FORCE_DARK)
-		{ // zyk: Bounty Hunter
-			damage = (int)ceil(damage * (1.0 + (0.05 * attacker->client->pers.skill_levels[55])));
-		}
-		else if (attacker->client->pers.rpg_class == 4 && mod == MOD_MELEE)
-		{ // zyk: Monk
-			damage = damage * (1.0 + (attacker->client->pers.skill_levels[55]*0.5));
-			can_damage_heavy_things = qtrue;
-		}
-		else if (attacker->client->pers.rpg_class == 5 && (mod == MOD_STUN_BATON || mod == MOD_DISRUPTOR || mod == MOD_DISRUPTOR_SNIPER || 
-			     mod == MOD_REPEATER || mod == MOD_REPEATER_ALT || mod == MOD_REPEATER_ALT_SPLASH || mod == MOD_DEMP2 || mod == MOD_DEMP2_ALT || 
-				 mod == MOD_LAVA || mod == MOD_TRIP_MINE_SPLASH || mod == MOD_TIMED_MINE_SPLASH || mod == MOD_DET_PACK_SPLASH || 
-				 mod == MOD_CONC || mod == MOD_CONC_ALT || mod == MOD_DISRUPTOR_SPLASH))
-		{ // zyk: Stealth Attacker has more gun damage
-			float stealth_attacker_bonus_damage = 0.0;
-
-			// zyk: Stealth Attacker Upgrade increases damage
-			if (attacker->client->pers.secrets_found & (1 << 7))
-				stealth_attacker_bonus_damage = 0.2;
-
-			damage = (int)ceil(damage * (1.05 + (0.15 * attacker->client->pers.skill_levels[55]) + stealth_attacker_bonus_damage));
-		}
-		else if (attacker->client->pers.rpg_class == 6 && (mod == MOD_SABER || mod == MOD_MELEE))
-		{ // zyk: Duelist has higher damage in saber and melee
-			damage = (int)ceil(damage * (1.2 + (0.2 * attacker->client->pers.skill_levels[55])));
-		}
-		else if (attacker->client->pers.rpg_class == 7)
-		{ // zyk: Force Gunner bonus damage
-			damage = (int)ceil(damage * (1.0 + (0.06 * attacker->client->pers.skill_levels[55])));
-		}
-		else if (attacker->client->pers.rpg_class == 8 && mod == MOD_MELEE)
-		{ // zyk: Magic Master bolts can damage heavy things
-			if (inflictor && (inflictor->s.weapon == WP_BOWCASTER || inflictor->s.weapon == WP_DEMP2 || inflictor->s.weapon == WP_CONCUSSION))
-				can_damage_heavy_things = qtrue;
-		}
-	}
-
-	if (attacker && attacker->client && (attacker->NPC || attacker->client->sess.amrpgmode == 2) && attacker->client->pers.quest_power_status & (1 << 15))
-	{ // zyk: Dark Power increases damage of every attack
-		damage = (int)ceil(damage*1.1);
-	}
-
-	if (attacker && attacker->client && attacker->client->pers.quest_power_status & (1 << 21))
-	{ // zyk: Enemy Weakening decreases damage
-		damage = (int)ceil(damage*0.92);
-	}
+	// GalaxyRP fix: [Skills] this block used to add a +3%-per-level damage bonus based on
+	// pers.skill_levels[55] (Improvements) here (originally the "Free Warrior" RPG-class bonus, from
+	// back when rpg_class still varied; the class check itself had already been dropped as dead code
+	// since rpg_class is permanently 0). Improvements is now a reserved/unused skill (see the matching
+	// fix comment in do_upgrade_skill() in g_cmds.c), so this bonus has been removed outright rather
+	// than left keyed off a skill players can no longer gain or lose levels in.
 
 	if (level.gametype == GT_SIEGE)
 	{
-		damage = (int)ceil(damage*zyk_scale_siege_damage.value);
+		damage = (int)ceil(damage*rp_scale_siege_damage.value);
 	}
 
-	if (attacker && attacker->client && attacker->NPC && attacker->client->pers.guardian_invoked_by_id != -1)
-	{ // zyk: attacker is a RPG boss. Increase damage based in the number of allies of the quest player
-		gentity_t *quest_player_ent = &g_entities[attacker->client->pers.guardian_invoked_by_id];
+	// GalaxyRP fix: [Dead Code] removed ally-count Challenge-Mode damage bonus (guardian_invoked_by_id always -1)
 
-		if (quest_player_ent && quest_player_ent->client && quest_player_ent->client->sess.amrpgmode == 2 && 
-			quest_player_ent->client->pers.universe_quest_counter & (1 << 29))
-		{ // zyk: Challenge Mode increases more damage
-			damage += ((int)ceil(damage * 0.08 * (1 + zyk_number_of_allies(quest_player_ent, qtrue))));
-		}
-		else
-		{
-			damage += ((int)ceil(damage * 0.04 * zyk_number_of_allies(quest_player_ent, qtrue)));
-		}
-	}
+	// GalaxyRP fix: [Dead Code] removed "targ is a RPG mode boss" block, including its decloak-on-hit logic
+	// (guardian_invoked_by_id always -1)
 
-	if (targ && targ->client && targ->NPC && targ->client->pers.guardian_invoked_by_id != -1)
-	{ // zyk: targ is a RPG mode boss
-		// zyk: chaos power, map entities and telefrag cannot hit the boss
-		if (!attacker || !attacker->client || mod == MOD_TELEFRAG)
-			return;
+	// GalaxyRP fix: [Quests] removed the "special npcs spawned in the Universe Quest that cannot be
+	// killed" guard here (universe_quest_messages == -2000) — that sentinel value is never assigned
+	// anywhere in the codebase (the only remaining assignment is a reset to 0), so this was permanently dead.
 
-		if (targ->client->pers.guardian_invoked_by_id != (attacker-g_entities))
-		{			
-			if (attacker->client->sess.amrpgmode != 2 || attacker->client->pers.guardian_mode == 0)
-				return;
-		}
-
-		// zyk: guardians remove cloak of the player when hit by him
-		if (attacker->client->ps.powerups[PW_CLOAKED])
-		{
-			Jedi_Decloak(attacker);
-			attacker->client->cloakToggleTime = level.time + Q_irand( 5000, 10000 );
-		}
-	}
-
-	if (targ && targ->client && targ->NPC)
-	{
-		if (targ->client->pers.universe_quest_messages == -2000)
-		{ // zyk: special npcs spawned in the Universe Quest that cannot be killed
-			return;
-		}
-	}
-
-	if (targ && targ->client && targ->client->sess.amrpgmode == 2 && targ->client->pers.can_play_quest == 1 && 
-		targ->client->pers.universe_quest_counter & (1 << 29) && targ->client->pers.guardian_mode == 0)
-	{ // zyk: Challenge Mode increases damage taken from anything
-		damage = (int)ceil(damage*1.15);
-	}
-
-	if (targ && targ->client && (targ->NPC || targ->client->sess.amrpgmode == 2) && targ->client->pers.quest_power_status & (1 << 16))
-	{ // zyk: Eternity Power reduces damage of every attack
-		damage = (int)ceil(damage*0.9);
-	}
-
-	if (targ && targ->client && targ->client->pers.quest_power_status & (1 << 21))
-	{ // zyk: Enemy Weakening increases damage taken
-		damage = (int)ceil(damage*1.08);
-	}
-
-	if (targ && targ->client && targ->client->pers.quest_power_status & (1 << 25))
-	{ // zyk: Ice Boulder decreases damage taken
-		damage = (int)ceil(damage*0.6);
-	}
-
-	if (targ && targ->client && targ->client->pers.quest_power_status & (1 << 26))
-	{ // zyk: Elemental Attack Ice decreases damage taken
-		damage = (int)ceil(damage*0.4);
-	}
-
-	if (targ && targ->client && (targ->NPC || targ->client->sess.amrpgmode == 2) && targ->client->pers.quest_power_status & (1 << 22))
-	{ // zyk: Ice Block decreases damage taken
-		damage = (int)ceil(damage*0.2);
-	}
-
-	// zyk: player or npc with Magic Shield takes little damage
-	if (targ && targ->client && (targ->client->sess.amrpgmode == 2 || targ->NPC) && targ->client->pers.quest_power_status & (1 << 11))
-	{
-		damage = (int)ceil(damage * 0.1);
-	}
-
-	// zyk: hit by Time Power. Receive less damage
-	if (targ && targ->client && targ->client->pers.quest_power_status & (1 << 2))
-	{
-		damage = (int)ceil(damage * 0.1);
-	}
-
-	if (targ && targ->client && (targ->client->sess.amrpgmode == 2 || targ->NPC) && targ->client->pers.quest_power_status & (1 << 7))
-	{ // zyk: Ultra Resistance bonus resistance
-		// zyk: Universe Power
-		if (targ->client->pers.quest_power_status & (1 << 13))
-			damage = (int)ceil(damage * 0.88);
-		else
-			damage = (int)ceil(damage * 0.92);
-	}
-
-	if (targ && targ->client && targ->client->pers.quest_power_status & (1 << 24))
-	{ // zyk: target hit by Sleeping Flowers. if he takes damage, he can get up
-		targ->client->ps.forceHandExtendTime = level.time;
-		targ->client->pers.quest_target9_timer = 0;
-	}
+	// GalaxyRP fix: [Challenge Mode] removed the +15% damage-taken Challenge Mode penalty (already dead via
+	// can_play_quest, and doubly dead now that Challenge Mode itself is removed)
 
 	if (targ && targ->client && targ->client->sess.amrpgmode == 2)
 	{ 
@@ -5169,7 +5090,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		targ->client->pers.poison_dart_hit_counter = 40;
 		targ->client->pers.poison_dart_user_id = attacker->s.number;
 		targ->client->pers.poison_dart_hit_timer = level.time + 200;
-		targ->client->pers.player_statuses |= (1 << 20);
+		targ->client->pers.player_statuses |= (1 << PLAYER_STATUS_POISON_DART_HIT);
 	}
 
 	if (level.gametype == GT_SIEGE &&
@@ -5264,7 +5185,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		{
 			return;
 		}
-		else if (attacker && attacker->client && mod != MOD_SABER)
+		else if (attacker && attacker->client && zyk_duel_allows_mod(attacker, mod) == qfalse)
 		{
 			return;
 		}
@@ -5275,7 +5196,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		{
 			return;
 		}
-		else if (targ && targ->client && mod != MOD_SABER)
+		else if (targ && targ->client && zyk_duel_allows_mod(attacker, mod) == qfalse)
 		{
 			return;
 		}
@@ -5383,24 +5304,18 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	{
 		int new_knockback = knockback;
 
-		if (targ->client->pers.secrets_found & (1 << 9))
+		// GalaxyRP fix: [Shop] Impact Reducer moved from secrets_found bit 9 (never persisted), to
+		// player_settings bit 1 (account-wide), to skill_levels[38] bit 1 (per-character) -- see
+		// g_local.h's skill_levels field.
+		if (targ->client->pers.skill_levels[38] & (1 << 1))
 			new_knockback -= knockback * 0.8;
 
-		if (targ->client->pers.rpg_class == 9 && targ->client->pers.secrets_found & (1 << 19))
-			new_knockback -= knockback * 0.15;
+		// GalaxyRP fix: [Dead Code] removed rpg_class==9 knockback reduction (rpg_class always 0)
 
 		knockback = new_knockback;
 	}
 
-	// zyk: these npcs will not have knockback
-	if (targ && targ->client && targ->NPC && (targ->client->pers.guardian_mode == 2 || (targ->client->pers.guardian_mode == 17 && Q_stricmp(targ->NPC_type, "guardian_boss_2") == 0) ||
-		targ->client->pers.guardian_mode == 3 || (targ->client->pers.guardian_mode == 17 && Q_stricmp(targ->NPC_type, "guardian_boss_3") == 0) ||
-		targ->client->pers.guardian_mode == 7 || (targ->client->pers.guardian_mode == 17 && Q_stricmp(targ->NPC_type, "guardian_boss_7") == 0) ||
-		targ->client->pers.guardian_mode == 11 || (targ->client->pers.guardian_mode == 17 && Q_stricmp(targ->NPC_type, "guardian_boss_8") == 0) ||
-		targ->client->pers.guardian_mode == 21))
-	{
-		knockback = 0;
-	}
+	// GalaxyRP fix: [Dead Code] removed guardian_mode-based no-knockback npc list (guardian_mode always 0)
 
 	// figure momentum add, even if the damage won't be taken
 	if ( knockback && targ->client ) {
@@ -5616,8 +5531,8 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			{
 				targ->client->ps.eFlags &= ~EF_INVULNERABLE;
 			}
-			else if (!((targ->client->sess.amrpgmode == 2 || targ->NPC) && targ->client->pers.quest_power_status & (1 << 11)))
-			{ // zyk: added condition to not consider clients using Magic Shield
+			else
+			{
 				return;
 			}
 		}
@@ -5661,6 +5576,15 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		}
 	}
 
+	// GalaxyRP: [SP Maps] a single-player map's misc_turret takes no damage from the team it leaves
+	// alone, as single player's noDamageTeam -- see RP_SpawnSPTurret() in g_turret.c. So a stray
+	// shot from one of the map's own stormtroopers neither hurts it nor, through TurretG2Pain(),
+	// makes it turn on him.
+	if ( targ->rpSpTurret && attacker && attacker->client && attacker->client->playerTeam == targ->rpSpTurretTeam )
+	{
+		return;
+	}
+
 	#ifdef BASE_COMPAT
 		// battlesuit protects from all radius damage (but takes knockback)
 		// and protects 50% against all damage
@@ -5691,17 +5615,31 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	}
 	take = damage;
 
-	if (attacker && 
-		attacker->client && 
+	if (attacker &&
+		attacker->client &&
 		attacker->client->NPC_class != CLASS_RANCOR && // zyk: grip cant be absorbed by shields
 		(attacker->client->ps.fd.forcePowersActive & (1 << FP_GRIP) &&
 		mod == MOD_FORCE_DARK)
 		) // zyk: grip cant be absorbed by shields
 		check_shield = 0;
-	
+
+
 	if (targ && targ->client && targ->client->NPC_class == CLASS_VEHICLE //ion-cannon has disabled this ship's shields, take damage on hull!
 		&& targ->m_pVehicle
 		&& targ->client->ps.electrifyTime > level.time)
+		check_shield = 0;
+
+	// GalaxyRP fix: [Shields] damage sent as DAMAGE_NO_ARMOR goes straight to health again, as in the
+	// base game, OpenJK and TaystJK. Zyk's 2014 "Added some RPG skills" replaced CheckArmor(), which is
+	// where the base game honours that flag, with the shield code below, for the Shield Strength
+	// skill; the flag was lost with it, so every such hit ate shields first: falls, being slammed into
+	// walls and bodies, drowning, lava, space, vehicle crashes, punches, the flip-kick off someone's
+	// face and the Rancor, Wampa and Galak Mech attacks. (The grip exception above was the one case
+	// noticed; this covers it too.) Kicks -- melee and saber kicks, the hilt bash and the get-up roll
+	// kicks -- never carried the flag at all, even in the base game; they do now (G_KickTrace,
+	// w_saber.c). DAMAGE_HALF_ABSORB, which CheckArmor() also read, is still not honoured here: shields take
+	// all of a bowcaster, flechette or rocket hit and a stun baton blow, as they have in this mod.
+	if (dflags & DAMAGE_NO_ARMOR)
 		check_shield = 0;
 
 	// save some from armor
@@ -5709,15 +5647,13 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	if (check_shield == 1 && targ && targ->client && take > 0)  
 	{ // zyk: check shields if the damage is greater than 0
 		int scaled_damage = take;
-		float bounty_hunter_shield_resistance = 0.0;
 
 		if (targ->client->sess.amrpgmode == 2) // zyk: Shield Strength skill
 		{
-			// zyk: if player is Bounty Hunter and has the Bounty Hunter Upgrade, absorbs more damage
-			if (targ->client->pers.rpg_class == 2 && targ->client->pers.secrets_found & (1 << 1))
-				bounty_hunter_shield_resistance = 0.07;
+			// GalaxyRP fix: [Dead Code] removed rpg_class==2 Bounty Hunter shield-resistance bonus (rpg_class always 0),
+			// and later the always-0.0 bounty_hunter_shield_resistance term it left in this formula.
 
-			scaled_damage = (int)ceil(take * (1.0 - bounty_hunter_shield_resistance - (0.07 * targ->client->pers.skill_levels[31])));
+			scaled_damage = (int)ceil(take * (1.0 - (0.07 * targ->client->pers.skill_levels[31])));
 		}
 
 		if (targ->client->ps.stats[STAT_ARMOR] >= scaled_damage)
@@ -5930,7 +5866,9 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	// zyk: Electric Bolts of Magic Master can disable jetpacks. Except Stealth Attacker ones
 	if (mod == MOD_MELEE && inflictor && inflictor->s.weapon == WP_DEMP2 && client)
 	{
-		if (client->jetPackOn && (client->sess.amrpgmode != 2 || client->pers.rpg_class != 5 || !(client->pers.secrets_found & (1 << 7))))
+		// GalaxyRP fix: [Dead Code] simplified condition to unconditional jetPackOn check (the parenthesized
+		// OR was always true since rpg_class is always 0, never 5)
+		if (client->jetPackOn)
 		{ //disable jetpack temporarily
 			Jetpack_Off(targ);
 			client->jetPackToggleTime = level.time + Q_irand(3000, 10000);
@@ -5979,9 +5917,8 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 							client->NPC_class == CLASS_ATST )
 				{
 					// DEMP2 does way more damage to these guys.
-					// zyk: Guardian of Wind takes less DEMP2 damage
-					if (!(client->pers.guardian_mode == 7 || (client->pers.guardian_mode == 17 && Q_stricmp(targ->NPC_type, "guardian_boss_7") == 0)))
-						take *= 4; // zyk: changed from 5 to 4
+					// GalaxyRP fix: [Dead Code] removed guardian_mode==7 exemption condition (guardian_mode always 0)
+					take *= 4; // zyk: changed from 5 to 4
 				}
 				else
 				{
@@ -6081,10 +6018,17 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 					}
 				}
 
+				// GalaxyRP fix: [Force] these arms were unreachable while forcePowerLevel[FP_PROTECT]
+				// was capped at 3, and carried hamt values that only made sense while they were.
+				// subamt is (maxtake * hamt) + (take - maxtake) and take is then reduced by subamt,
+				// so hamt 1.0f zeroes incoming damage outright and 1.20f overshoots into the
+				// negative clamp -- both are total invulnerability for as long as the player has any
+				// force left. Retuned to continue the existing 0.40 / 0.60 / 0.80 progression so
+				// Protect 5 beats Protect 4 beats Protect 3 without anyone becoming unkillable.
 				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_4)
 				{
 					famt = 0.125f;
-					hamt = 1.0f;
+					hamt = 0.87f;
 					if (maxtake > 600)
 					{
 						maxtake = 600;
@@ -6094,7 +6038,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 				else if (targ->client->ps.fd.forcePowerLevel[FP_PROTECT] == FORCE_LEVEL_5)
 				{
 					famt = 0.0625f;
-					hamt = 1.20f;
+					hamt = 0.92f;
 					if (maxtake > 800)
 					{
 						maxtake = 800;
@@ -6176,9 +6120,11 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		{
 			if (targ->client->ps.fd.forcePower)
 			{
-				float force_decrease_change = 1.0; // zyk: Protect 4/4 will make player lose less force
+				float force_decrease_change = 1.0; // zyk: Protect 4/4 and above will make player lose less force
 
-				if (targ->client->sess.amrpgmode == 2 && targ->client->pers.skill_levels[10] == 4)
+				// GalaxyRP fix: [Force] this was `== 4`, so Protect 5 lost the halved force drain
+				// that Protect 4 received -- the same off-by-one the Absorb bonus had.
+				if (targ->client->sess.amrpgmode == 2 && targ->client->pers.skill_levels[10] >= 4)
 					force_decrease_change = 0.5;
 
 				if (targ->client->forcePowerSoundDebounce < level.time)
@@ -6245,33 +6191,36 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 				take = (int)ceil(take*0.7);
 			else if (targ->client->ps.fd.forcePowerLevel[FP_RAGE] == 3)
 				take = (int)ceil(take*0.55);
+			// GalaxyRP fix: [Force] same as the outgoing-damage chain above -- this stopped at level
+			// 3, so with the cap removed Rage 4 and 5 would have taken full damage. Continuing the
+			// existing -0.15/level progression.
+			else if (targ->client->ps.fd.forcePowerLevel[FP_RAGE] == 4)
+				take = (int)ceil(take*0.40);
+			else if (targ->client->ps.fd.forcePowerLevel[FP_RAGE] == 5)
+				take = (int)ceil(take*0.25);
 		}
 
 		if (!targ->NPC && targ->client && targ->client->sess.amrpgmode == 2)
 		{ // zyk: Health Strength skill decreases damage taken
 			float bonus_resistance = 0.0;
 
-			// zyk: if player is a Bounty Hunter and has the Bounty Hunter Upgrade, absorbs some damage taken
-			if (targ->client->pers.rpg_class == 2 && targ->client->pers.secrets_found & (1 << 1))
-				bonus_resistance = 0.07;
+			// GalaxyRP fix: [Dead Code] removed rpg_class==2 Bounty Hunter damage-resistance bonus (rpg_class always 0)
 
 			take = (int)ceil(take * (1.0 - bonus_resistance - (0.07 * targ->client->pers.skill_levels[32])));
 
-			// zyk: Improvements skill makes Force Guardian regen some force with Rage when taking damage
-			if (targ->client->pers.rpg_class == 9 && targ->client->pers.skill_levels[55] > 0 && 
-				(targ->client->ps.fd.forcePowersActive & (1 << FP_RAGE)) && (inflictor->client || attacker->client))
-			{
-				targ->client->ps.fd.forcePower += (int)ceil((take * 0.1 * targ->client->pers.skill_levels[55]));
-
-				if (targ->client->ps.fd.forcePower > targ->client->ps.fd.forcePowerMax)
-					targ->client->ps.fd.forcePower = targ->client->ps.fd.forcePowerMax;
-			}
+			// GalaxyRP fix: [Dead Code] removed rpg_class==9 Force Guardian Rage force-regen (rpg_class always 0)
 		}
 
 		targ->health = targ->health - take;
 
 		// zyk: training pole. Adds the count and sets the wait to execute the think function
-		if (targ && (targ->spawnflags & 1) && Q_stricmp(targ->classname, "zyk_training_pole") == 0)
+		//
+		// GalaxyRP fix: [Entity System] this identified the pole with a case-insensitive string
+		// compare against its classname, on the path every single damage event in the game takes.
+		// spawnflag 1 filtered some of it out, but that flag is common. The pole is the only entity
+		// whose think is zyk_training_pole_damage, so compare the pointer instead -- same entities
+		// match, at the cost of one comparison rather than a string walk.
+		if (targ && (targ->spawnflags & 1) && targ->think == zyk_training_pole_damage)
 		{
 			targ->count += take;
 			
@@ -6282,6 +6231,15 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		{//take damage down to 1, but never die
 			if ( targ->health < 1 )
 			{
+				// GalaxyRP fix: [ICARUS] single player runs the entity's death script the moment an
+				// undying entity would have died -- it is how every scripted boss fight ends (Tavion,
+				// Desann, Alora, the Kothos twins, Rosh, Racto are all SET_UNDYING and their
+				// deathscript takes over when they are "beaten"). Multiplayer only clamped the
+				// health, so those fights could never be won. Exactly SP's rule, including that it
+				// fires on every hit that would have killed: SP scripts count on that and answer it
+				// by clearing FL_UNDYING, going invincible, retreating or removing the entity. An
+				// entity with no deathscript is unaffected (G_ActivateBehavior is a no-op for it).
+				G_ActivateBehavior( targ, BSET_DEATH );
 				targ->health = 1;
 			}
 		}
@@ -6403,22 +6361,184 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 			targ->enemy = attacker;
 
 			//GalaxyRP (Alex): [New Death System] Only down non-npcs, and only people who aren't already dead.
-			if (!targ->NPC && targ->client && !(targ->s.eFlags & EF_DEAD)) {
+			// GalaxyRP fix: [Death System] never down a player who is currently mounted in a vehicle --
+			// paralyze_player() only sets HP/status flags, it never touches a rider's mount state
+			// (ps.m_iVehicleNum) or, for a hideRider vehicle, their Ghost()-applied EF_NODRAW/SVF_NOCLIENT/
+			// zero-collision state. The only code that properly clears all of that (a plain Eject() call)
+			// lives in player_die()'s own rider-dismount block below, which never runs while the player is
+			// merely downed instead of actually dying. Concretely this was leaving a hideRider vehicle's
+			// pilot invisible, non-collidable, and stuck "mounted" to a vehicle that no longer exists once
+			// they got back up -- unable to see themselves or move properly. Excluding mounted players
+			// here forces them straight to targ->die() (the else branch just below), which does run that
+			// eject/unghost cleanup, so a rider who takes a lethal hit while still mounted now always dies
+			// for real instead of being downed -- consistent for every vehicle type, not just hideRider
+			// ones, and regardless of whether the fatal hit came from their vehicle being destroyed or a
+			// direct hit that bypassed the walker/fighter mounted-damage protection.
+			// GalaxyRP fix: [Death System] mini-game combatants die outright instead of going down, the
+			// same way a player riding a vehicle already does through the !m_iVehicleNum test beside it.
+			// Both mini-games hang all of their death handling off targ->die(), which the downed path
+			// never reaches on a first knockdown -- see zyk_minigame_forces_death() in g_main.c for what
+			// that cost them. Added to this condition rather than as a fourth arm below, so one place
+			// keeps deciding between "goes down" and "dies".
+			// GalaxyRP fix: [Death System] rp_downed_timer 0 switches the downed system off, and a
+			// lethal hit then kills outright the way it did before the system existed -- added to
+			// this condition rather than as another arm below, for the same reason
+			// zyk_minigame_forces_death() was: one place keeps deciding between "goes down" and
+			// "dies".
+			//
+			// The "|| G_PlayerIsDowned(targ)" half is not about players left over from a change of
+			// setting -- the cvar is CVAR_LATCH and cannot change mid-map. It is there for ADMIN
+			// PARALYSIS, which is independent of this cvar and can still put a player down while the
+			// gameplay system is off. Such a player taking a lethal hit must still reach the
+			// clear-then-die arm below; sending them to the plain targ->die() in the else would skip
+			// RP_ClearDownedState(), and player_die()'s early returns would leave status bits 6 and
+			// 26 set on a corpse.
+			// GalaxyRP fix: [Death System] "&& attacker->client" -- damage nobody dealt you kills
+			// outright instead of knocking you down, the same way a vehicle or a mini-game already
+			// does.
+			//
+			// A hazard never arrives once. trigger_hurt re-arms itself every FRAMETIME
+			// (g_trigger.c), and lava, slime and drowning repeat on pain_debounce_time
+			// (P_WorldEffects, g_active.c), so the first tick downed the player at
+			// RP_DOWNED_HEALTH and the next one -- a tenth of a second later -- killed them.
+			// Nothing could happen in between: the three seconds of EF_INVULNERABLE that
+			// RP_EnterDownedState grants are gated on "attacker->client" in the invulnerability
+			// test above, so world damage walks straight through the very protection the
+			// knockdown exists to give. It cost a knockdown and a death for a state that lasted
+			// 100ms and that no one could revive anyone out of.
+			//
+			// Written as the ATTACKER rather than as a list of means of death, which is the
+			// tempting version and the wrong one: MOD_LAVA is the Flame Burst quest power
+			// (g_main.c) and a Jedi NPC attack (NPC_AI_Jedi.c), MOD_CRUSH is a Galak Mech and a
+			// Rancor attack, and MOD_FALLING is passed with a client attacker when somebody
+			// pushed you (the otherKiller credit in g_active.c). Excluding those by name would
+			// have turned Flame Burst into an instant-kill weapon. Asking who dealt the damage
+			// sorts all of them correctly by itself.
+			//
+			// It is deliberately inside the left half of the OR rather than in the AND chain
+			// above. A player who is ALREADY down and then burns must still come in here to
+			// reach the clear-then-die arm -- sending them to the plain targ->die() in the else
+			// would lean on player_die()'s own cleanup, which sits below three early returns.
+			// So: the system is on and somebody did this to you, OR you are already down and
+			// this state has to be torn down however it ends.
+			//
+			// The cost, stated plainly: a fall that leaves you in one piece used to be the one
+			// hazard knockdown an ally could genuinely /helpup you out of, and it is an outright
+			// death now. Anything else without a client goes the same way -- map turrets and
+			// target_lasers included. Sentry guns are not affected (WP_FireTurretMissile passes
+			// the owner through, so the attacker is a player) and Seeker drones are NPCs, which
+			// have clients of their own.
+			//
+			// GalaxyRP fix: [Death System] "&& !certainDeath" -- two callers pass a player as their own
+			// attacker for damage that is, by construction, the end: the void / fall-to-death timer in
+			// ClientThink_real() (g_active.c: 9999, DAMAGE_NO_PROTECTION, MOD_FALLING, attacker =
+			// otherKiller or SELF when nobody pushed you) and the Duel-team change in Cmd_DuelTeam_f()
+			// (g_cmds.c: 99999, DAMAGE_NO_PROTECTION, MOD_SUICIDE, attacker = self). Self has a client,
+			// so the "somebody did this to you" test admitted them, the player went down at
+			// RP_DOWNED_HEALTH -- knockdown message, invulnerability grant and all -- and the same
+			// timer fired again next frame, found them already down and killed them: the
+			// "PraViilon killed PraViilon by MOD_FALLING" pair in the log. Named by the MOD +
+			// DAMAGE_NO_PROTECTION pairing rather than by attacker == targ, because a pushed player
+			// arrives here with the pusher as attacker and must take the same outright death (they
+			// did, one frame late) while player_die() still credits the push. Plain MOD_FALLING
+			// without the flag -- survivable fall damage -- keeps its knockdown, so the MOD-list
+			// warning above still stands. And it sits in the left half of the OR for the reason
+			// given two paragraphs up: a player ALREADY down who then falls into the void must still
+			// reach the clear-then-die arm.
+			//
+			// GalaxyRP fix: [Death System] MOD_TELEFRAG joins that pair. G_KillBox() (g_utils.c) passes
+			// the arriving player -- or NPC -- as attacker, so a telefrag downed its victim, and a downed
+			// player is still a solid body: the new arrival stood inside them and neither could move,
+			// /getup included, which only stood the victim up in the same spot. A corpse is
+			// CONTENTS_CORPSE and blocks nobody, so a telefrag kills outright now, as in stock JKA.
+			// Every MOD_TELEFRAG caller passes DAMAGE_NO_PROTECTION (G_KillBox, target_kill, the Seeker
+			// drone's self-destruct), so the pairing holds. NPCs arriving on a player no longer
+			// telefrag at all, and a victim whose protection turns the damage away is not left stuck
+			// either -- both are handled in G_KillBox.
+			//
+			// GalaxyRP fix: [Death System] "&& pm_type != PM_DEAD" -- a player who died earlier in THIS
+			// frame is not downed by a second hit on the corpse. The EF_DEAD test beside it cannot see
+			// such a death: s.eFlags gets EF_DEAD from health only once per frame, in
+			// BG_PlayerStateToEntityState() (see the death-counter note in player_die()). A rider killed
+			// in the saddle loses the other guard too, because player_die() ejects them and that clears
+			// ps.m_iVehicleNum. So when a vehicle's own bolt destroyed a hideRider vehicle, the vehicle's
+			// death killed its pilot outright (deaths +1, correct) and ejected him, and the SAME bolt's
+			// splash then found the fresh corpse -- attacker with a client, not "dead", not mounted -- and
+			// ran paralyze_player() on it: knockdowns +1, health back to RP_DOWNED_HEALTH and the downed
+			// state on a dead man, until the vehicle's explosion finished him off again. Any splash weapon
+			// that kills a rider does the same. pm_type is set to PM_DEAD by player_die() at once and is
+			// its own "already dead" guard, and it is never PM_DEAD for a downed player (ClientThink_real
+			// only assigns it at health <= 0 without the DOWNED bit), so the finish-off half of this
+			// condition is untouched. A corpse hit now goes to the plain targ->die() below, where
+			// player_die() returns on that same guard, as any second hit on a corpse already did.
+			if (!targ->NPC && targ->client && !(targ->s.eFlags & EF_DEAD) && targ->client->ps.pm_type != PM_DEAD && !targ->client->ps.m_iVehicleNum
+				&& !zyk_minigame_forces_death(targ)
+				&& ((RP_DownedSystemEnabled() && attacker && attacker->client
+					&& !((mod == MOD_FALLING || mod == MOD_SUICIDE || mod == MOD_TELEFRAG) && (dflags & DAMAGE_NO_PROTECTION)))
+					|| G_PlayerIsDowned(targ))) {
 				//GalaxyRP (Alex): [New Death System] If player is paralyzed and was attacked fuirther, kill them permanently.
-				if (targ->client->pers.player_statuses & (1 << 6)) {
-					targ->client->pers.player_statuses &= ~(1 << 6);
+				//
+				// GalaxyRP fix: [Death System] ...or if a rancor has them in its fist, which ends in
+				// death no matter what and has no business going through a knockdown first.
+				//
+				// The rancor eats in two stages 1350ms apart (NPC_AI_Rancor.c): "cut in half" on the
+				// attack_dmg timer, then "swallow victim" on attack_dmg2. Both deal enemy->health+5000
+				// and both attack as the rancor NPC -- which has a client, exactly like the Seeker
+				// drones named in the comment above -- so the AND chain admitted them and the first
+				// stage downed the player instead of killing them. The second stage then found
+				// health > 0 (a downed player sits on RP_DOWNED_HEALTH), dismembered them a SECOND
+				// time, and killed them. The net effect was 1.35 seconds face-down inside a rancor's
+				// mouth, charged a knockdown and a death for one event.
+				//
+				// The three seconds of EF_INVULNERABLE the knockdown grants never came into it: both
+				// stages pass DAMAGE_NO_PROTECTION, and the whole godmode/invulnerability block is
+				// inside "if (!(dflags & DAMAGE_NO_PROTECTION))" further up this function.
+				//
+				// Deliberately HERE and not in the AND chain above, which is the tempting spelling.
+				// A player can be downed and held at once -- Rancor_Swing's grab is a radius sweep
+				// around the hand bolt that checks distance, "has a client", "not already held" and a
+				// list of NPC classes, and looks at neither health, nor FL_NOTARGET, nor the downed
+				// bit -- so anyone knocked down beside the rancor's real target gets picked up off the
+				// floor. Excluding held players from the block would send that one to the plain
+				// targ->die() in the else and leave the downed bits set on a corpse, which is the
+				// residue the note on the enclosing condition exists to prevent. As an extra || here,
+				// a player who is both simply satisfies both halves and lands in the same arm.
+				//
+				// RP_ClearDownedState() is safe on a player who was never downed: its FL_NOTARGET
+				// release and admin-invulnerability clear are each gated on the state being set, and
+				// the rest are idempotent bit clears.
+				//
+				// Nothing downstream changes. The rancor's swallow stage guards only its damage and
+				// dismemberment on health > 0; EF_NODRAW, count = 2 and the 2600ms "clearGrabbed"
+				// timer that ends in Rancor_DropVictim() all sit outside that guard, so the animation
+				// finishes and the body is released on schedule. That is the path stock JKA always
+				// took, where the first stage killed outright.
+				if (G_PlayerIsDowned(targ)
+					|| (targ->client->ps.eFlags2 & EF2_HELD_BY_MONSTER)) {
+					// GalaxyRP fix: [Death System] clear the whole state, not just bit 6. This used
+					// to zero that one bit and leave pers.downedTime and the ADMIN_PARALYSIS bit to player_die() --
+					// which returns early, above its own cleanup, on an intermission or a NULL
+					// attacker. G_Damage() normalises a NULL attacker to the world entity long before
+					// this point so that half was unreachable, but the intermission half was not, and
+					// the residue is the ADMIN_PARALYSIS bit set with the DOWNED bit clear: a player walking around free whom
+					// /paralyze then refuses as "already paralyzed". Clearing here is also the right
+					// order -- it must happen before targ->die(), because several checks (the respawn
+					// gate in ClientThink_real(), the PM_DEAD assignment) read bit 6.
+					RP_ClearDownedState( targ );
 
 					targ->die(targ, inflictor, attacker, take, mod);
 					G_ActivateBehavior(targ, BSET_DEATH);
 				}
 				//GalaxyRP (Alex): [New Death System] Player was alive, so down them instead of killing them.
 				else {
-					int client_id = -1;
-					client_id = ClientNumberFromString(targ, targ->client->pers.netname, qfalse);
-
-					targ->client->downedTime = rp_downed_timer.integer;
-
-					paralyze_player(client_id);
+					// GalaxyRP fix: [Death System] pass the entity straight through. This used to
+					// recover a client id with ClientNumberFromString() on the victim's own netname,
+					// which resolves an all-digit name as a slot number and otherwise matches the
+					// first client whose name merely CONTAINS the string -- so with "Bob" and "Bobby"
+					// both connected, downing Bob paralyzed Bobby and left Bob at <=0 health, neither
+					// dead nor downed. downedTime is now set inside paralyze_player() too, so the
+					// countdown can no longer be forgotten by a caller.
+					paralyze_player(targ);
 				}
 			}
 			else {
@@ -6526,9 +6646,10 @@ qboolean CanDamage (gentity_t *targ, vec3_t origin) {
 G_RadiusDamage
 ============
 */
-extern qboolean npcs_on_same_team(gentity_t *attacker, gentity_t *target);
-extern qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *target);
-extern qboolean zyk_check_immunity_power(gentity_t *ent);
+// GalaxyRP fix: [Magic] the externs for npcs_on_same_team(), zyk_unique_ability_can_hit_target()
+// and zyk_check_immunity_power() used to be here. They existed only for the two
+// special_power_effects blocks inside this function, which went with the array. All three
+// functions have since been deleted from g_main.c with the rest of the magic engine.
 qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, float radius,
 					 gentity_t *ignore, gentity_t *missile, int mod) {
 	float		points, dist;
@@ -6567,22 +6688,13 @@ qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, floa
 		radius = 1;
 	}
 
+	// GalaxyRP fix: [Magic] the Rockfall and Dome of Damage effects used to get their own bounding
+	// boxes and distance rule here, keyed on the attacker's targetname. Only the magic engine's
+	// zyk_quest_effect_spawn() ever made an entity with those names; it is gone, so the vanilla box
+	// applies to everything again.
 	for ( i = 0 ; i < 3 ; i++ ) {
-		if (i == 2 && attacker && Q_stricmp(attacker->targetname, "zyk_quest_effect_rockfall") == 0)
-		{ // zyk: Rockfall quest power calculates the bounding box in a different way
-			mins[i] = origin[i] - radius;
-			maxs[i] = origin[i] + radius + 1000;
-		}
-		else if (i == 2 && attacker && Q_stricmp(attacker->targetname, "zyk_quest_effect_dome") == 0)
-		{ // zyk: Dome of Damage quest power calculates the bounding box in a different way
-			mins[i] = origin[i] - 20;
-			maxs[i] = origin[i] + radius - 150;
-		}
-		else
-		{
-			mins[i] = origin[i] - radius;
-			maxs[i] = origin[i] + radius;
-		}
+		mins[i] = origin[i] - radius;
+		maxs[i] = origin[i] + radius;
 	}
 
 	numListedEntities = trap->EntitiesInBox( mins, maxs, entityList, MAX_GENTITIES );
@@ -6597,19 +6709,12 @@ qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, floa
 
 		// find the distance from the edge of the bounding box
 		for ( i = 0 ; i < 3 ; i++ ) {
-			if (i == 2 && attacker && Q_stricmp(attacker->targetname, "zyk_quest_effect_rockfall") == 0)
-			{ // zyk: Rockfall quest power will consider only the distance in x and y axis
+			if ( origin[i] < ent->r.absmin[i] ) {
+				v[i] = ent->r.absmin[i] - origin[i];
+			} else if ( origin[i] > ent->r.absmax[i] ) {
+				v[i] = origin[i] - ent->r.absmax[i];
+			} else {
 				v[i] = 0;
-			}
-			else
-			{
-				if ( origin[i] < ent->r.absmin[i] ) {
-					v[i] = ent->r.absmin[i] - origin[i];
-				} else if ( origin[i] > ent->r.absmax[i] ) {
-					v[i] = origin[i] - ent->r.absmax[i];
-				} else {
-					v[i] = 0;
-				}
 			}
 		}
 
@@ -6639,179 +6744,21 @@ qboolean G_RadiusDamage ( vec3_t origin, gentity_t *attacker, float damage, floa
 			}
 			else
 			{
-				if (attacker && ent && level.special_power_effects[attacker->s.number] != -1 && 
-					Q_stricmp(attacker->targetname, "zyk_quest_effect_healing") == 0)
-				{ // zyk: Healing Area. Heals the user and his allies
-					gentity_t *quest_power_user = &g_entities[level.special_power_effects[attacker->s.number]];
-
-					// zyk: if the power user and the target are allies (player or npc), or the target is the quest power user himself, heal him
-					if (quest_power_user && quest_power_user->client && ent && ent->client && ent->health > 0 && 
-						(level.special_power_effects[attacker->s.number] == ent->s.number || OnSameTeam(quest_power_user, ent) == qtrue || 
-						npcs_on_same_team(quest_power_user, ent) == qtrue || zyk_is_ally(quest_power_user,ent) == qtrue) && 
-						quest_power_user->client->pers.guardian_mode == ent->client->pers.guardian_mode)
-					{
-						if (quest_power_user->client->sess.amrpgmode == 2 && quest_power_user->client->pers.rpg_class == 8 && 
-							quest_power_user->client->pers.unique_skill_duration > level.time &&
-							!(quest_power_user->client->pers.player_statuses & (1 << 21)) && 
-							!(quest_power_user->client->pers.player_statuses & (1 << 22)))
-						{ // zyk: Magic Master Unique Skill increases amount of health recovered
-							int heal_amount = 8;
-							int shield_amount = 8;
-
-							// zyk: Universe Power
-							if (quest_power_user->client->pers.quest_power_status & (1 << 13))
-							{
-								heal_amount += 2;
-								shield_amount += 2;
-							}
-
-							// zyk: Magic Master Healing Improvement unique ability. Increases healing
-							if (quest_power_user->client->pers.player_statuses & (1 << 23))
-							{
-								heal_amount *= 2;
-								shield_amount *= 2;
-
-								// zyk: restores force too
-								if (ent->client->ps.fd.forcePower < ent->client->ps.fd.forcePowerMax)
-									ent->client->ps.fd.forcePower += 1;
-							}
-
-							if ((ent->health + heal_amount) < ent->client->ps.stats[STAT_MAX_HEALTH])
-								ent->health += heal_amount;
-							else
-								ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
-
-							if (ent->health == ent->client->ps.stats[STAT_MAX_HEALTH])
-							{ // zyk: Unique Skill makes it possible to heal shield too, if hp is full
-								int max_shield = ent->client->ps.stats[STAT_MAX_HEALTH];
-
-								if (ent->client->sess.amrpgmode == 2)
-									max_shield = ent->client->pers.max_rpg_shield;
-
-								if (!ent->NPC)
-								{
-									if ((ent->client->ps.stats[STAT_ARMOR] + shield_amount) < max_shield)
-									{
-										ent->client->ps.stats[STAT_ARMOR] += shield_amount;
-									}
-									else
-									{
-										ent->client->ps.stats[STAT_ARMOR] = max_shield;
-									}
-								}
-							}
-						}
-						else
-						{
-							int heal_amount = 6;
-
-							// zyk: Universe Power
-							if (quest_power_user->client->pers.quest_power_status & (1 << 13))
-							{
-								heal_amount += 2;
-							}
-
-							if ((ent->health + heal_amount) < ent->client->ps.stats[STAT_MAX_HEALTH])
-								ent->health += heal_amount;
-							else
-								ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
-						}
-					}
-				}
-				
-				if (attacker && ent && level.special_power_effects[attacker->s.number] != -1 && level.special_power_effects[attacker->s.number] != ent->s.number)
-				{ // zyk: if it is an effect used by special power, then attacker must be the owner of the effect. Also, do not hit the owner
-					gentity_t *quest_power_user = &g_entities[level.special_power_effects[attacker->s.number]];
-
-					if (ent && ent->client &&
-						Q_stricmp(attacker->targetname, "zyk_effect_scream") != 0 &&
-						Q_stricmp(attacker->targetname, "zyk_timed_bomb_explosion") != 0 &&
-						Q_stricmp(attacker->targetname, "zyk_vertical_dfa") != 0 &&
-						Q_stricmp(attacker->targetname, "zyk_force_storm") != 0 &&
-						((Q_stricmp(attacker->targetname, "zyk_quest_effect_healing") != 0 && zyk_check_immunity_power(ent)) || 
-						 (Q_stricmp(attacker->targetname, "zyk_quest_effect_healing") == 0 && zyk_is_ally(quest_power_user, ent) == qfalse && zyk_check_immunity_power(ent))))
-					{ // zyk: do not hit enemies using Immunity Power if the effect is not from some unique abilities
-						continue;
-					}
-
-					// zyk: if the power user and the target are allies (player or npc), then do not hit
-					if (quest_power_user && quest_power_user->client && ent && ent->client &&
-						(OnSameTeam(quest_power_user, ent) == qtrue || npcs_on_same_team(quest_power_user, ent) == qtrue))
-					{
-						continue;
-					}
-
-					if (zyk_is_ally(quest_power_user, ent) == qtrue)
-					{
-						continue;
-					}
-
-					if (quest_power_user && quest_power_user->client && ent && ent->client && 
-						quest_power_user->client->pers.guardian_mode != ent->client->pers.guardian_mode &&
-						!(quest_power_user->NPC && quest_power_user->client->pers.guardian_mode == 0) && 
-						!(!quest_power_user->NPC && quest_power_user->client->pers.guardian_mode > 0 && ent->NPC))
-					{ // zyk: validating boss battles
-						continue;
-					}
-
-					if (Q_stricmp(attacker->targetname, "zyk_quest_effect_drain") == 0 || 
-						Q_stricmp(attacker->targetname, "zyk_quest_effect_watersplash") == 0)
-					{ // zyk: Ultra Drain heals the power user
-						if (quest_power_user && quest_power_user->client && quest_power_user->health > 0 && 
-							zyk_can_hit_target(quest_power_user, ent) == qtrue && zyk_is_ally(quest_power_user, ent) == qfalse && ent->health > 0)
-						{
-							int heal_amount = (int)points;
-
-							if ((quest_power_user->health + heal_amount) < quest_power_user->client->ps.stats[STAT_MAX_HEALTH])
-								quest_power_user->health += heal_amount;
-							else
-								quest_power_user->health = quest_power_user->client->ps.stats[STAT_MAX_HEALTH];
-						}
-					}
-
-					// zyk: target will not be knocked back by Rockfall, Dome of Damage, Ultra Flame, Ultra Drain, Water Splash, 
-					// Acid Water, Flaming Area, Healing Area, Vertical DFA and Force Storm
-					if (Q_stricmp(attacker->targetname, "zyk_quest_effect_rockfall") == 0 || 
-						Q_stricmp(attacker->targetname, "zyk_quest_effect_watersplash") == 0 ||
-						Q_stricmp(attacker->targetname, "zyk_quest_effect_dome") == 0 || 
-						Q_stricmp(attacker->targetname, "zyk_quest_effect_flame") == 0 || 
-						Q_stricmp(attacker->targetname, "zyk_quest_effect_flaming_area") == 0 ||
-						Q_stricmp(attacker->targetname, "zyk_quest_effect_acid") == 0 ||
-						Q_stricmp(attacker->targetname, "zyk_quest_effect_drain") == 0 ||
-						Q_stricmp(attacker->targetname, "zyk_quest_effect_healing") == 0 || 
-						Q_stricmp(attacker->targetname, "zyk_vertical_dfa") == 0 || 
-						Q_stricmp(attacker->targetname, "zyk_force_storm") == 0)
-					{
-						if (Q_stricmp(attacker->targetname, "zyk_quest_effect_flaming_area") == 0 && quest_power_user && quest_power_user != ent && ent->client)
-						{ // zyk: if player touches the flame, will keep catching fire for some seconds
-							ent->client->pers.quest_power_status |= (1 << 23);
-							ent->client->pers.quest_power_user5_id = quest_power_user->s.number;
-							ent->client->pers.quest_power_hit4_counter = 15;
-							ent->client->pers.quest_target8_timer = level.time + 200;
-						}
-
-						G_Damage (ent, quest_power_user, quest_power_user, NULL, origin, (int)points, DAMAGE_RADIUS, mod);
-					}
-					else if (Q_stricmp(attacker->targetname, "zyk_effect_scream") == 0)
-					{ // zyk: it will also not knockback by Force Scream ability
-						if (ent->client && Q_irand(0, 3) == 0 && zyk_unique_ability_can_hit_target(quest_power_user, ent) == qtrue)
-						{ // zyk: it has a chance of setting a stun anim on the target
-							ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-							ent->client->ps.forceDodgeAnim = BOTH_SONICPAIN_END;
-							ent->client->ps.forceHandExtendTime = level.time + 3000;
-						}
-
-						G_Damage(ent, quest_power_user, quest_power_user, NULL, origin, (int)points, DAMAGE_RADIUS, mod);
-					}
-					else
-					{
-						G_Damage (ent, quest_power_user, quest_power_user, dir, origin, (int)points, DAMAGE_RADIUS, mod);
-					}
-				}
-				else if (!attacker || level.special_power_effects[attacker->s.number] == -1)
-				{
-					G_Damage (ent, NULL, attacker, dir, origin, (int)points, DAMAGE_RADIUS, mod);
-				}
+				// GalaxyRP fix: [Magic] two blocks used to sit here, both keyed on
+				// level.special_power_effects[attacker->s.number]: a Healing Area block that healed the
+				// effect owner's allies, and a 83-line attribution block that re-pointed the damage at the
+				// owner, skipped his allies and the owner himself, applied the Ultra Drain / Water Splash
+				// lifesteal, the Force Scream stun and the no-knockback list, and set the flaming-area
+				// catch-fire bit. Both went with level.special_power_effects[] -- the array had exactly one
+				// producer, the quest_mage power chain, and that NPC no longer exists, so every entry was
+				// permanently -1 and neither block could be entered.
+				//
+				// What remains is the branch that used to be guarded by "else if (!attacker ||
+				// level.special_power_effects[attacker->s.number] == -1)". With the array gone that guard is
+				// always true, so it is now unconditional. The one input that fell through BOTH branches was
+				// an entry equal to ent->s.number (the "do not hit your own effect" case), which needed a
+				// non--1 entry and can no longer occur. This is also exactly what stock TaystJK does here.
+				G_Damage (ent, NULL, attacker, dir, origin, (int)points, DAMAGE_RADIUS, mod);
 			}
 
 			if (ent && ent->client && roastPeople && missile &&

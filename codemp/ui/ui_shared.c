@@ -2822,6 +2822,15 @@ void Item_ListBox_MouseEnter(itemDef_t *item, float x, float y)
 {
 	rectDef_t r;
 	listBoxDef_t *listPtr = item->typeData.listbox;
+	// GalaxyRP fix: [UI] listPtr->endPos is a scrollbar/draw-loop bookkeeping value, not a
+	// reliable "last valid index" -- when a feeder has fewer items than the listbox has visible
+	// rows for (e.g. only 5 saber hilts in a box tall enough for 6), the draw loop runs it off the
+	// end of count without ever hitting its "ran out of room" break, leaving endPos == count
+	// instead of count - 1. Clicking in that leftover empty row then clamped cursorPos to endPos
+	// (== count), one past the last real item, which downstream code (e.g. the saber-hilt "select"
+	// script handlers in ui_main.c) trusted as a valid index. Clamp against the feeder's own count
+	// instead, same as the keyboard up/down handling in Item_ListBox_HandleKey below already does.
+	int count = DC->feederCount(item->special);
 
 	item->window.flags &= ~(WINDOW_LB_LEFTARROW | WINDOW_LB_RIGHTARROW | WINDOW_LB_THUMB | WINDOW_LB_PGUP | WINDOW_LB_PGDN);
 	item->window.flags |= Item_ListBox_OverLB(item, x, y);
@@ -2840,9 +2849,9 @@ void Item_ListBox_MouseEnter(itemDef_t *item, float x, float y)
 				if (Rect_ContainsPoint(&r, x, y))
 				{
 					listPtr->cursorPos =  (int)((x - r.x) / listPtr->elementWidth)  + listPtr->startPos;
-					if (listPtr->cursorPos >= listPtr->endPos)
+					if (listPtr->cursorPos >= count)
 					{
-						listPtr->cursorPos = listPtr->endPos;
+						listPtr->cursorPos = (count > 0) ? count - 1 : 0;
 					}
 				}
 			}
@@ -2872,18 +2881,18 @@ void Item_ListBox_MouseEnter(itemDef_t *item, float x, float y)
 				column = (int)((x - r.x) / listPtr->elementWidth);
 
 				listPtr->cursorPos = (row * rowLength)+column  + listPtr->startPos;
-				if (listPtr->cursorPos >= listPtr->endPos)
+				if (listPtr->cursorPos >= count)
 				{
-					listPtr->cursorPos = listPtr->endPos;
+					listPtr->cursorPos = (count > 0) ? count - 1 : 0;
 				}
 			}
 			// single column
 			else
 			{
 				listPtr->cursorPos =  (int)((y - 2 - r.y) / listPtr->elementHeight)  + listPtr->startPos;
-				if (listPtr->cursorPos > listPtr->endPos)
+				if (listPtr->cursorPos >= count)
 				{
-                    listPtr->cursorPos = listPtr->endPos;
+					listPtr->cursorPos = (count > 0) ? count - 1 : 0;
 				}
 			}
 		}
@@ -3173,8 +3182,14 @@ qboolean Item_ListBox_HandleKey(itemDef_t *item, int key, qboolean down, qboolea
 				return qtrue;
 			}
 		}
-		// mouse hit
-		if (key == A_MOUSE1 || key == A_MOUSE2) {
+		// GalaxyRP fix: [UI] this used to be one "if (key == A_MOUSE1 || key == A_MOUSE2)" block
+		// that treated left- and right-clicking a listbox row identically (select/double-click).
+		// Split into separate left/right handling, ported from the TaystJK engine's own
+		// ui_shared.c, so a right-click can instead run its own "rightClick" script (see
+		// ItemParse_rightClick above) -- e.g. the server browser's right-click context menu in
+		// the engine's bundled joinserver.menu. Left-click keeps its previous behavior exactly.
+		// left click
+		if (key == A_MOUSE1) {
 			if (item->window.flags & WINDOW_LB_LEFTARROW) {
 				listPtr->startPos--;
 				if (listPtr->startPos < 0) {
@@ -3217,6 +3232,23 @@ qboolean Item_ListBox_HandleKey(itemDef_t *item, int key, qboolean down, qboolea
 						item->cursorPos = listPtr->cursorPos = prePos;
 					}
 				}
+			}
+			return qtrue;
+		}
+		// right click
+		if (key == A_MOUSE2) { // for context popupmenus
+			if (listPtr->rightClick) {
+				{ // highlight it first
+					int prePos = item->cursorPos;
+
+					item->cursorPos = listPtr->cursorPos;
+
+					if (!DC->feederSelection(item->special, item->cursorPos, item))
+					{
+						item->cursorPos = listPtr->cursorPos = prePos;
+					}
+				}
+				Item_RunScript(item, listPtr->rightClick);
 			}
 			return qtrue;
 		}
@@ -3279,6 +3311,67 @@ qboolean Item_ListBox_HandleKey(itemDef_t *item, int key, qboolean down, qboolea
 			return qtrue;
 		}
 	}
+	return qfalse;
+}
+
+// GalaxyRP fix: [UI] ITEM_TYPE_CHECKBOX, ported from TaystJK (its "bitMask" item keyword and the
+// two Item_YesNoBitmask_* functions). A checkbox shows and toggles ONE bit of an integer cvar, so
+// several checkboxes can share a flags cvar (TaystJK uses it for the 9 cg_stylePlayer toggles):
+//     type ITEM_TYPE_CHECKBOX   cvar "some_flags_cvar"   bitMask "3"
+// Before this port a checkbox drew nothing and ignored keys, and no menu shipped by us or by vanilla
+// JKA uses one, so nothing that exists today changes. Differences from TaystJK, all defensive:
+//  - bitMask must be a plain bit number 0-31; a missing, empty, non-numeric or out-of-range value
+//    (and a checkbox with no cvar) keeps the old behaviour: nothing drawn, keys not consumed.
+//    TaystJK used atoi() and shifted by whatever came out (a shift of 32+ or a negative one is
+//    undefined behaviour in C).
+//  - the cvar is read as a string and converted with atoi, the same way the engine fills
+//    cvar->integer, instead of through the float getCVarValue: a float has 24 bits of precision,
+//    so toggling bit 24 or above that way could silently change the lower bits too.
+//  - the bit is built from an unsigned 1u, so bit 31 is well defined.
+static int Item_Bitmask_Bit(const itemDef_t *item) {
+	const char *p;
+	int bit = 0;
+
+	if (!item->cvar || !item->cvar[0] || !item->bitMask || !item->bitMask[0]) {
+		return -1;
+	}
+	for (p = item->bitMask; *p; p++) {
+		if (*p < '0' || *p > '9') {
+			return -1;
+		}
+		bit = bit * 10 + (*p - '0');
+		if (bit > 31) {
+			return -1;
+		}
+	}
+	return bit;
+}
+
+static int Item_Bitmask_CvarValue(const itemDef_t *item) {
+	char buf[64];
+
+	buf[0] = '\0';
+	DC->getCVarString(item->cvar, buf, sizeof(buf));
+	return atoi(buf);
+}
+
+qboolean Item_YesNoBitmask_HandleKey(itemDef_t *item, int key) {
+	const int bit = Item_Bitmask_Bit(item);
+
+	if (bit < 0) {
+		return qfalse;
+	}
+	if (Rect_ContainsPoint(&item->window.rect, DC->cursorx, DC->cursory) && item->window.flags & WINDOW_HASFOCUS)
+	{
+		if (key == A_MOUSE1 || key == A_ENTER || key == A_MOUSE2 || key == A_MOUSE3)
+		{
+			const unsigned int newValue = (unsigned int)Item_Bitmask_CvarValue(item) ^ (1u << bit);
+
+			DC->setCVar(item->cvar, va("%i", (int)newValue));
+			return qtrue;
+		}
+	}
+
 	return qfalse;
 }
 
@@ -3827,7 +3920,13 @@ static void Scroll_Slider_ThumbFunc(void *p) {
 	value /= SLIDER_WIDTH;
 	value *= (editDef->maxVal - editDef->minVal);
 	value += editDef->minVal;
-	DC->setCVar(si->item->cvar, va("%f", value));
+	// GalaxyRP fix: [UI] round to a whole number when dragging an ITEM_TYPE_INTSLIDER (e.g. the
+	// RGB saber color sliders in ingame_saber.menu, which are bound to 0-255 integer cvars) --
+	// ported from the TaystJK engine's own ui_shared.c.
+	if (si->item->type == ITEM_TYPE_INTSLIDER)
+		DC->setCVar(si->item->cvar, va("%i", (int)value));
+	else
+		DC->setCVar(si->item->cvar, va("%f", value));
 }
 
 void Item_StartCapture(itemDef_t *item, int key)
@@ -3889,6 +3988,7 @@ void Item_StartCapture(itemDef_t *item, int key)
 			break;
 
 		case ITEM_TYPE_SLIDER:
+		case ITEM_TYPE_INTSLIDER: // GalaxyRP fix: [UI] see ItemParse_cvarInt comment above
 		{
 			flags = Item_Slider_OverSlider(item, DC->cursorx, DC->cursory);
 			if (flags & WINDOW_LB_THUMB) {
@@ -3974,7 +4074,7 @@ qboolean Item_HandleKey(itemDef_t *item, int key, qboolean down) {
 		return qfalse;
 		break;
 	case ITEM_TYPE_CHECKBOX:
-		return qfalse;
+		return Item_YesNoBitmask_HandleKey(item, key); // GalaxyRP fix: [UI] was return qfalse, see Item_Bitmask_Bit
 		break;
 	case ITEM_TYPE_EDITFIELD:
 	case ITEM_TYPE_NUMERICFIELD:
@@ -4013,6 +4113,7 @@ qboolean Item_HandleKey(itemDef_t *item, int key, qboolean down) {
 		return Item_Bind_HandleKey(item, key, down);
 		break;
 	case ITEM_TYPE_SLIDER:
+	case ITEM_TYPE_INTSLIDER: // GalaxyRP fix: [UI] see ItemParse_cvarInt comment above
 		return Item_Slider_HandleKey(item, key, down);
 		break;
 		//case ITEM_TYPE_IMAGE:
@@ -4244,6 +4345,19 @@ void Menu_HandleKey(menuDef_t *menu, int key, qboolean down) {
 		}
 	}
 
+	// GalaxyRP fix: [UI] a mouse click only ever fires the action of whichever item currently holds
+	// WINDOW_HASFOCUS (set below), and that flag is only (re)computed on an actual mouse-move event --
+	// see Display_MouseMove()/Menu_HandleMouseMove(). If the cursor is sitting still at click time (the
+	// player didn't perceptibly move the mouse since the last movement event -- e.g. clicking the same
+	// spot again after an earlier click that appeared to do nothing), focus can be stale and the click
+	// is silently swallowed. Leaving an actively-edited text field already forces a fresh, click-time
+	// Display_MouseMove() call for exactly this reason (see the g_editingField block above); do the
+	// same for every ordinary mouse-down so a click always reflects what's actually under the cursor.
+	// Cheap when focus is already correct -- Item_SetFocus() no-ops on an item that already has focus.
+	if (down && (key == A_MOUSE1 || key == A_MOUSE2 || key == A_MOUSE3)) {
+		Display_MouseMove(NULL, DC->cursorx, DC->cursory);
+	}
+
 	// get the item with focus
 	for (i = 0; i < menu->itemCount; i++) {
 		if (menu->items[i]->window.flags & WINDOW_HASFOCUS) {
@@ -4350,7 +4464,7 @@ void Menu_HandleKey(menuDef_t *menu, int key, qboolean down) {
 */
 
 //JLFACCEPT MPMOVED
-				else if ( item->type == ITEM_TYPE_MULTI || item->type == ITEM_TYPE_YESNO || item->type == ITEM_TYPE_SLIDER)
+				else if ( item->type == ITEM_TYPE_MULTI || item->type == ITEM_TYPE_YESNO || item->type == ITEM_TYPE_SLIDER || item->type == ITEM_TYPE_INTSLIDER) // GalaxyRP fix: [UI] see ItemParse_cvarInt comment above
 				{
 					if (Item_HandleAccept(item))
 					{
@@ -4743,6 +4857,41 @@ void Item_TextField_Paint(itemDef_t *item) {
 		DC->drawTextWithCursor(item->textRect.x + item->textRect.w + offset, item->textRect.y, item->textscale, newColor, buff + editPtr->paintOffset, item->cursorPos - editPtr->paintOffset , cursor, item->window.rect.w, item->textStyle, item->iMenuFont);
 	} else {
 		DC->drawText(item->textRect.x + item->textRect.w + offset, item->textRect.y, item->textscale, newColor, buff + editPtr->paintOffset, 0, item->window.rect.w, item->textStyle,item->iMenuFont);
+	}
+}
+
+// GalaxyRP fix: [UI] ITEM_TYPE_CHECKBOX painter, ported from TaystJK; see Item_Bitmask_Bit above.
+// Same layout as Item_YesNo_Paint, but Yes/No comes from one bit of the cvar.
+void Item_YesNoBitmask_Paint(itemDef_t *item) {
+	char	sYES[20];
+	char	sNO[20];
+	vec4_t color;
+	qboolean set;
+	const char *yesnovalue;
+	const int bit = Item_Bitmask_Bit(item);
+
+	if (bit < 0) {
+		return;
+	}
+	set = ((unsigned int)Item_Bitmask_CvarValue(item) & (1u << bit)) ? qtrue : qfalse;
+
+	trap->SE_GetStringTextString("MENUS_YES", sYES, sizeof(sYES));
+	trap->SE_GetStringTextString("MENUS_NO", sNO, sizeof(sNO));
+
+	if (item->invertYesNo)
+		yesnovalue = set ? sNO : sYES;
+	else
+		yesnovalue = set ? sYES : sNO;
+
+	Item_TextColor(item, &color);
+	if (item->text)
+	{
+		Item_Text_Paint(item);
+		DC->drawText(item->textRect.x + item->textRect.w + 8, item->textRect.y, item->textscale, color, yesnovalue, 0, 0, item->textStyle, item->iMenuFont);
+	}
+	else
+	{
+		DC->drawText(item->textRect.x, item->textRect.y, item->textscale, color, yesnovalue, 0, 0, item->textStyle, item->iMenuFont);
 	}
 }
 
@@ -6488,6 +6637,7 @@ void Item_Paint(itemDef_t *item)
 	case ITEM_TYPE_RADIOBUTTON:
 		break;
 	case ITEM_TYPE_CHECKBOX:
+		Item_YesNoBitmask_Paint(item); // GalaxyRP fix: [UI] was an empty case, see Item_Bitmask_Bit
 		break;
 	case ITEM_TYPE_EDITFIELD:
 	case ITEM_TYPE_NUMERICFIELD:
@@ -6517,6 +6667,7 @@ void Item_Paint(itemDef_t *item)
 		Item_Bind_Paint(item);
 		break;
 	case ITEM_TYPE_SLIDER:
+	case ITEM_TYPE_INTSLIDER: // GalaxyRP fix: [UI] see ItemParse_cvarInt comment above
 		Item_Slider_Paint(item);
 		break;
 	default:
@@ -6804,6 +6955,7 @@ void Item_ValidateTypeData(itemDef_t *item)
 		case ITEM_TYPE_YESNO:
 		case ITEM_TYPE_BIND:
 		case ITEM_TYPE_SLIDER:
+		case ITEM_TYPE_INTSLIDER: // GalaxyRP fix: [UI] see ItemParse_cvarInt comment above
 		{
 			item->typeData.edit = (editFieldDef_t *)UI_Alloc(sizeof(editFieldDef_t));
 			memset(item->typeData.edit, 0, sizeof(editFieldDef_t));
@@ -7891,6 +8043,23 @@ qboolean ItemParse_doubleClick( itemDef_t *item, int handle ) {
 	return qtrue;
 }
 
+// GalaxyRP fix: [UI] "rightClick { ... }" -- lets a listbox item run its own script when
+// right-clicked, instead of the right mouse button being treated identically to the left one (see
+// the ITEM_TYPE_LISTBOX mouse-handling change in Item_ListBox_HandleKey below). Ported from the
+// TaystJK engine's own ui_shared.c so its bundled joinserver.menu (right-click context menu on a
+// server in the browser) can parse.
+qboolean ItemParse_rightClick( itemDef_t *item, int handle ) {
+	listBoxDef_t *listPtr;
+
+	Item_ValidateTypeData(item);
+	listPtr = item->typeData.listbox;
+
+	if (!listPtr || !PC_Script_Parse(handle, &listPtr->rightClick)) {
+		return qfalse;
+	}
+	return qtrue;
+}
+
 qboolean ItemParse_onFocus( itemDef_t *item, int handle ) {
 	if (!PC_Script_Parse(handle, &item->onFocus)) {
 		return qfalse;
@@ -7933,6 +8102,18 @@ qboolean ItemParse_mouseExitText( itemDef_t *item, int handle ) {
 	return qtrue;
 }
 
+// GalaxyRP fix: [UI] item->accept is already read by Item_HandleAccept() below (run when Enter is
+// pressed, or a menu item is otherwise "accepted") but nothing ever set it, because the "accept"
+// item keyword itself was never implemented -- ported from the TaystJK engine's own ui_shared.c so
+// menus (this mod's own, and the engine's bundled ones such as password.menu/password_request.menu)
+// can actually use it.
+qboolean ItemParse_accept( itemDef_t *item, int handle ) {
+	if (!PC_Script_Parse(handle, &item->accept)) {
+		return qfalse;
+	}
+	return qtrue;
+}
+
 qboolean ItemParse_action( itemDef_t *item, int handle ) {
 	if (!PC_Script_Parse(handle, &item->action)) {
 		return qfalse;
@@ -7942,6 +8123,15 @@ qboolean ItemParse_action( itemDef_t *item, int handle ) {
 
 qboolean ItemParse_special( itemDef_t *item, int handle ) {
 	if (!PC_Float_Parse(handle, &item->special)) {
+		return qfalse;
+	}
+	return qtrue;
+}
+
+// GalaxyRP fix: [UI] bitMask <n> -- the bit an ITEM_TYPE_CHECKBOX shows and toggles (ported from
+// TaystJK). Stored as the raw string, as TaystJK does; Item_Bitmask_Bit validates it at use.
+qboolean ItemParse_bitMask( itemDef_t *item, int handle ) {
+	if (!PC_String_Parse(handle, &item->bitMask)) {
 		return qfalse;
 	}
 	return qtrue;
@@ -7969,6 +8159,7 @@ qboolean ItemParse_cvar( itemDef_t *item, int handle )
 		case ITEM_TYPE_YESNO:
 		case ITEM_TYPE_BIND:
 		case ITEM_TYPE_SLIDER:
+		case ITEM_TYPE_INTSLIDER: // GalaxyRP fix: [UI] see ItemParse_cvarInt comment above
 		case ITEM_TYPE_TEXT:
 		{
 			if ( item->typeData.edit )
@@ -8057,6 +8248,33 @@ qboolean ItemParse_cvarFloat( itemDef_t *item, int handle ) {
 		PC_Float_Parse(handle, &editPtr->defVal) &&
 		PC_Float_Parse(handle, &editPtr->minVal) &&
 		PC_Float_Parse(handle, &editPtr->maxVal)) {
+		return qtrue;
+	}
+	return qfalse;
+}
+
+// GalaxyRP fix: [UI] "cvarInt <cvar> <default> <min> <max>" -- the integer-valued counterpart to
+// cvarFloat above, used by ITEM_TYPE_INTSLIDER items (see the ITEM_TYPE_INTSLIDER additions
+// elsewhere in this file). Ported from the TaystJK engine's own ui_shared.c: this mod's bundled
+// ingame_saber.menu uses it for its RGB saber color sliders (ui_sab1_r/g/b, ui_sab2_r/g/b), which
+// were otherwise failing to parse under this mod's own ui module.
+qboolean ItemParse_cvarInt(itemDef_t *item, int handle) {
+	editFieldDef_t *editPtr;
+	int defVal, minVal, maxVal;
+
+	Item_ValidateTypeData(item);
+	editPtr = item->typeData.edit;
+
+	if (!editPtr)
+		return qfalse;
+
+	if (PC_String_Parse(handle, &item->cvar) &&
+		PC_Int_Parse(handle, &defVal) &&
+		PC_Int_Parse(handle, &minVal) &&
+		PC_Int_Parse(handle, &maxVal)) {
+		editPtr->defVal = defVal;
+		editPtr->minVal = minVal;
+		editPtr->maxVal = maxVal;
 		return qtrue;
 	}
 	return qfalse;
@@ -8346,6 +8564,7 @@ qboolean ItemParse_isSaber2( itemDef_t *item, int handle  )
 }
 
 keywordHash_t itemParseKeywords[] = {
+	{"accept",			ItemParse_accept,			NULL	},
 	{"action",			ItemParse_action,			NULL	},
 	{"addColorRange",	ItemParse_addColorRange,	NULL	},
 	{"align",			ItemParse_align,			NULL	},
@@ -8363,6 +8582,7 @@ keywordHash_t itemParseKeywords[] = {
 	{"cvar",			ItemParse_cvar,				NULL	},
 	{"cvarFloat",		ItemParse_cvarFloat,		NULL	},
 	{"cvarFloatList",	ItemParse_cvarFloatList,	NULL	},
+	{"cvarInt",			ItemParse_cvarInt,			NULL	},
 	{"cvarStrList",		ItemParse_cvarStrList,		NULL	},
 	{"cvarTest",		ItemParse_cvarTest,			NULL	},
 	{"desctext",		ItemParse_descText,			NULL	},
@@ -8411,6 +8631,7 @@ keywordHash_t itemParseKeywords[] = {
 	{"ownerdrawFlag",	ItemParse_ownerdrawFlag,	NULL	},
 	{"rect",			ItemParse_rect,				NULL	},
 	{"rectcvar",		ItemParse_rectcvar,			NULL	},
+	{"rightClick",		ItemParse_rightClick,		NULL	},
 	{"showCvar",		ItemParse_showCvar,			NULL	},
 	{"special",			ItemParse_special,			NULL	},
 	{"style",			ItemParse_style,			NULL	},
@@ -8431,6 +8652,7 @@ keywordHash_t itemParseKeywords[] = {
 	{"maxLineChars",	ItemParse_maxLineChars,		NULL	},
 	{"lineHeight",		ItemParse_lineHeight,		NULL	},
 	{"invertyesno",		ItemParse_invertyesno,		NULL	},
+	{"bitMask",			ItemParse_bitMask,			NULL	}, // GalaxyRP fix: [UI] ported from TaystJK
 	//JLF MPMOVED
 	{"scrollhidden",	ItemParse_scrollhidden,		NULL	},
 	{"xoffset		",	ItemParse_xoffset,			NULL	},

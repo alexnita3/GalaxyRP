@@ -1,0 +1,14 @@
+landing_gear,models/map_objects/ships/falcon_landing_gear.tga
+forward_plating,models/map_objects/ships/falcon_shield_front.tga
+edge,models/map_objects/ships/falcon_cockpit.tga
+parts_01,models/map_objects/ships/falcon_front_parts.tga
+center_circular_things,models/map_objects/ships/falcon_thrusters.tga
+rear_plating01,models/map_objects/ships/falcon_shield_rear.tga
+guns,models/map_objects/ships/falcon_thrusters.tga
+gear_front,models/map_objects/ships/falcon_landing_gear.tga
+fianl,models/map_objects/ships/falcon_landing_gear.tga
+fianl01,models/map_objects/ships/falcon_landing_gear.tga
+fianl02,models/map_objects/ships/falcon_landing_gear.tga
+object02,models/map_objects/ships/falcon_landing_gear.tga
+radar,models/map_objects/ships/falcon_disk.tga
+dish,models/map_objects/ships/falcon_shield_front.tga

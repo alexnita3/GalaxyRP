@@ -312,9 +312,11 @@ int WeaponAttackAnim[WP_NUM_WEAPONS] =
 	BOTH_THERMAL_THROW,//WP_THERMAL,
 	BOTH_ATTACK3,//BOTH_ATTACK11,//WP_TRIP_MINE,
 	BOTH_ATTACK3,//BOTH_ATTACK12,//WP_DET_PACK,
-	#ifndef BASE_COMPAT
-		BOTH_ATTACK3,//WP_CONCUSSION,
-	#endif // BASE_COMPAT
+	// this row used to sit inside #ifndef BASE_COMPAT, which left the table one row
+	// short of WP_NUM_WEAPONS on our build: WP_CONCUSSION through WP_EMPLACED_GUN each
+	// read their neighbour's animation and WP_TURRET read a zero-filled slot.
+	// WeaponReadyAnim and WeaponReadyLegsAnim have always carried it unconditionally
+	BOTH_ATTACK3,//WP_CONCUSSION,
 	BOTH_ATTACK2,//WP_BRYAR_OLD,
 
 	//NOT VALID (e.g. should never really be used):
@@ -681,6 +683,12 @@ An item fires all of its targets when it is picked up.  If the toucher can't car
 "wait"	override the default wait before respawning.  -1 = never respawn automatically, which can be used with targeted spawning.
 "random" random number of plus or minus seconds varied from the respawn time
 "count" override quantity or duration on most items.
+
+DAJ_RP: [Still Weapons] weapon pickups lie still where they are, at their angles, as in single player (the GalaxyRP
+client; others see the stock hologram pad). DAJ_RP: [Still Powerups] powerups have no pad either: the Ysalamiri lies
+still, the Force Boon and Enlightenments turn slowly. Spawnflags (RP_ItemSetStill() in g_items.c):
+16 VERTICAL		a weapon stands tilted up, 75 degrees (a saber 20), as on a weapon locker
+4096 HOLOGRAM	a weapon or powerup has the stock multiplayer look instead: spinning above a hologram pad
 */
 
 gitem_t	bg_itemlist[] =
@@ -1698,6 +1706,35 @@ qboolean BG_HasYsalamiri(int gametype, playerState_t *ps)
 	return qfalse;
 }
 
+// GalaxyRP: [Force Duel] answers "is this player in a FULL FORCE private duel", for the one caller
+// below. The duel type cannot live in playerState_t -- the engine knows that struct and delta-encodes
+// it, and we replace the game modules, not the engine -- so each build reads its own copy, exactly as
+// TaystJK does for the same reason:
+//
+//   _GAME   the authority, level.duel_types[], written by Cmd_EngageDuel_f()
+//   _CGAME  cg_duel_types[], fed by the EV_PRIVATE_DUEL event so client prediction agrees
+//   UI      no duel can be in progress, and no copy exists; fail safe and apply the restriction
+//
+// Bounds-checked because BG_CanUseFPNow() is also called for NPCs (see WP_ForcePowerUsableOn() in
+// w_force.c), and an NPC's ps->clientNum is its ENTITY number, which runs to MAX_GENTITIES. The
+// caller's ps->duelInProgress test makes that unreachable today, since NPCs never duel, but an
+// out-of-bounds read on a MAX_CLIENTS array is not a thing to leave resting on that.
+static qboolean zyk_duel_is_full_force( playerState_t *ps )
+{
+	if (!ps || ps->clientNum < 0 || ps->clientNum >= MAX_CLIENTS)
+	{
+		return qfalse;
+	}
+
+#if defined(_GAME)
+	return (level.duel_types[ps->clientNum] == 1) ? qtrue : qfalse;
+#elif defined(_CGAME)
+	return (cg_duel_types[ps->clientNum] == 1) ? qtrue : qfalse;
+#else
+	return qfalse;
+#endif
+}
+
 qboolean BG_CanUseFPNow(int gametype, playerState_t *ps, int time, forcePowers_t power)
 {
 	if (BG_HasYsalamiri(gametype, ps))
@@ -1724,9 +1761,21 @@ qboolean BG_CanUseFPNow(int gametype, playerState_t *ps, int time, forcePowers_t
 		return qfalse;
 	}
 	*/
-	// GalaxyRP (Alex): [Dueling] Characters should be able to use force powers while dueling
-	/*
-	if (ps->duelInProgress)
+	// GalaxyRP fix: [Dueling] the vanilla restriction, live again. It had been commented out with
+	// "Characters should be able to use force powers while dueling", which made a private duel the
+	// only one in the JKA family with no force restriction at all -- OpenJK, TaystJK and JA++ all
+	// keep this block for an ordinary duel, and the two that offer full-force duelling put it behind
+	// a SEPARATE command rather than changing what /duel means. A player challenging someone for a
+	// saber duel could not get one.
+	//
+	// What this permits is what vanilla permits: Saber Offense, Saber Defense, Jump, and Push while
+	// locked. Everything else -- Heal, Absorb, Protect, Rage, Speed, Seeing, Push, Pull, Grip,
+	// Lightning, Drain, Mind Trick and Saber Throw -- is refused for the duration.
+	//
+	// GalaxyRP: [Force Duel] ... unless both duellists agreed to a full force duel, which is a
+	// separate command (/engage_fullforceduel) and a separate handshake. See zyk_duel_is_full_force()
+	// above for where the answer comes from in each build.
+	if (ps->duelInProgress && zyk_duel_is_full_force(ps) == qfalse)
 	{
 		if (power != FP_SABER_OFFENSE && power != FP_SABER_DEFENSE && power != FP_LEVITATION)
 		{
@@ -1735,7 +1784,7 @@ qboolean BG_CanUseFPNow(int gametype, playerState_t *ps, int time, forcePowers_t
 				return qfalse;
 			}
 		}
-	}*/
+	}
 
 	if (ps->saberLockFrame || ps->saberLockTime > time)
 	{
@@ -1965,6 +2014,48 @@ int BG_GetItemIndexByTag(int tag, int type)
 }
 
 //yeah..
+// GalaxyRP fix: [Dueling] holdables are refused inside a private duel again.
+//
+// Vanilla JKA sealed a private duel off from the rest of the map on three fronts: force powers could
+// not be activated (BG_CanUseFPNow), could not be aimed at anyone (ForcePowerUsableOn), and holdables
+// could not be used at all (PM_ItemUsable). Commit 3f65a601 "Dueling changes Force powers and items
+// now allowed." commented out all three. The first two are already live again (see the GalaxyRP fix
+// comments on each, which restore them with a carve-out for a full force duel against your own
+// opponent); this is the third and last.
+//
+// The reason is the same one that brought the other two back: G_Damage() blocks the DAMAGE in both
+// directions, so it looks like a duel is sealed, but the items do their real work through effects
+// that never reach G_Damage. A seeker drone deployed mid-duel cannot target the opponent at all
+// (FindGenericEnemyIndex skips duellists) -- it picks bystanders instead and fires blanks at them,
+// and every blank still runs Jedi_DecloakPair() on the target, which sits ABOVE the duel gate in
+// G_Damage(). So the one thing a duellist's drone reliably does is strip the cloak off uninvolved
+// players, with a 3-10 second re-cloak lockout and no damage to explain it. The Cloak Item is worse
+// still: invisibility is not damage, so nothing gates it, and an opponent who cannot leave the duel,
+// cannot switch weapons and cannot shoot has no answer to it.
+//
+// Restored as a shared predicate rather than three copies of "if (ps->duelInProgress)" because there
+// are three independent ways into the holdable system and 3f65a601 only ever disabled one of them:
+// PM_ItemUsable covers the inventory key (and is compiled into cgame, so the prediction agrees with
+// the server), G_ItemUsable covers the use_seeker/use_sentry/use_bacta style binds -- which never had
+// a duel guard at all, not even upstream -- and use_cloak deliberately bypasses G_ItemUsable and has
+// to ask separately.
+//
+// Note for the use_cloak caller: this answers "may a holdable be USED", which for a toggle means the
+// switching-ON direction only. Switching a cloak off must stay reachable, or a player who entered the
+// duel already cloaked would be stuck invisible for the whole fight with nothing able to clear
+// PW_CLOAKED. ItemUse_Jetpack() has exactly this shape already -- Jetpack_Off unconditional,
+// Jetpack_On gated -- and Cmd_EngageDuel_f() now decloaks both players at the start anyway, so the
+// case should not arise in the first place.
+qboolean BG_HoldablesBlocked(playerState_t *ps)
+{
+	if (!ps)
+	{
+		return qfalse;
+	}
+
+	return ps->duelInProgress ? qtrue : qfalse;
+}
+
 qboolean BG_IsItemSelectable(playerState_t *ps, int item)
 {
 	if (item == HI_HEALTHDISP || item == HI_AMMODISP ||
@@ -2056,37 +2147,7 @@ qboolean BG_CanItemBeGrabbed( int gametype, const entityState_t *ent, const play
 	item = &bg_itemlist[ent->modelindex];
 
 #if defined(_CGAME)
-	// zyk: Some RPG classes cant pickup some items
-	if (cg.rpg_class[ps->clientNum] == 1 && ((item->giType == IT_WEAPON && item->giTag != WP_STUN_BATON) || item->giType == IT_AMMO || 
-		item->giType == IT_HOLDABLE))
-	{
-		return qfalse;
-	}
-	else if (cg.rpg_class[ps->clientNum] == 3 && item->giType == IT_HOLDABLE && item->giTag == HI_CLOAK)
-	{
-		return qfalse;
-	}
-	else if (cg.rpg_class[ps->clientNum] == 4 && ((item->giType == IT_WEAPON && item->giTag != WP_STUN_BATON) || 
-				item->giType == IT_AMMO || item->giType == IT_HOLDABLE))
-	{
-		return qfalse;
-	}
-	else if (cg.rpg_class[ps->clientNum] == 6 && ((item->giType == IT_WEAPON && item->giTag != WP_STUN_BATON) || 
-				item->giType == IT_AMMO || item->giType == IT_HOLDABLE))
-	{
-		return qfalse;
-	}
-	else if (cg.rpg_class[ps->clientNum] == 8 && ((item->giType == IT_WEAPON && item->giTag != WP_STUN_BATON) || item->giType == IT_AMMO || 
-			    (item->giType == IT_HOLDABLE && item->giTag != HI_MEDPAC && item->giTag != HI_CLOAK && item->giTag != HI_JETPACK)))
-	{ // zyk: Magic Master can only pickup some items
-		return qfalse;
-	}
-	else if (cg.rpg_class[ps->clientNum] == 9 && ((item->giType == IT_WEAPON && item->giTag != WP_STUN_BATON && item->giTag != WP_BLASTER) ||
-		(item->giType == IT_AMMO && item->giTag != AMMO_BLASTER) ||
-		(item->giType == IT_HOLDABLE && item->giTag != HI_MEDPAC_BIG && item->giTag != HI_CLOAK && item->giTag != HI_JETPACK)))
-	{
-		return qfalse;
-	}
+	// GalaxyRP fix: [RPG Class] removed dead per-class pickup restriction checks; cg.rpg_class can now only ever be 0 or -1, so the class==1/3/4/6/8/9 branches here could never trigger
 #endif
 
 	if ( ps )
@@ -2118,6 +2179,10 @@ qboolean BG_CanItemBeGrabbed( int gametype, const entityState_t *ent, const play
 		}
 		if ( ps->duelInProgress )
 		{ //no picking stuff up while in a duel, no matter what the type is
+			return qfalse;
+		}
+		if ( RP_PS_MINIGAME_FIGHTER( ps ) )
+		{ // DAJ_RP: [Minigames] nor while fighting in the Duel Tournament or the Melee Battle (see bg_public.h)
 			return qfalse;
 		}
 	}
@@ -2162,7 +2227,21 @@ qboolean BG_CanItemBeGrabbed( int gametype, const entityState_t *ent, const play
 		return qtrue;
 
 	case IT_ARMOR:
-		if ( ps->stats[STAT_ARMOR] >= ps->stats[STAT_MAX_HEALTH]/* * item->giTag*/ ) {
+		// GalaxyRP fix: [Shield] against the SHIELD ceiling, not the health one. This compared
+		// stats[STAT_MAX_HEALTH], which for an RPG player is pers.max_rpg_health -- but their shield
+		// cap is pers.max_rpg_shield, a different number, and zero for a character with no Max Shield
+		// skill. Both sides computed the same wrong answer, so nothing mispredicted: Touch_Item really
+		// took the item, Pickup_Armor's else-arm gave nothing, and adjustRespawnTime(1, ...) -- whose
+		// floor is one second -- put it straight back. STAT_MAX_ARMOR (bg_public.h) carries the right
+		// ceiling, published every frame in ClientEndFrame(), and for non-RPG players and NPCs it is
+		// STAT_MAX_HEALTH, so this line means exactly what it used to for them.
+		//
+		// The giTag multiply stays commented, as it was. Both shield items carry giTag 1 (see the
+		// bg_itemlist entries above -- the large shield was changed from 2 to 1), so it is a no-op
+		// today, and a per-player stat could not carry a per-item factor anyway. If a shield ever gets
+		// giTag 2 again, this and Pickup_Armor's non-RPG arm would part company, which is why the
+		// static suite pins both.
+		if ( ps->stats[STAT_ARMOR] >= ps->stats[STAT_MAX_ARMOR]/* * item->giTag*/ ) {
 			return qfalse;
 		}
 		return qtrue;
@@ -2834,6 +2913,11 @@ void BG_PlayerStateToEntityState( playerState_t *ps, entityState_t *s, qboolean 
 										// so corpses can also reference the proper config
 	s->eFlags = ps->eFlags;
 	s->eFlags2 = ps->eFlags2;
+	// DAJ_RP: [Holstered Sabers] see EF2_RP_SABER_CARRIED in bg_public.h
+	if ( ps->stats[STAT_WEAPONS] & ( 1 << WP_SABER ) )
+		s->eFlags2 |= EF2_RP_SABER_CARRIED;
+	else
+		s->eFlags2 &= ~EF2_RP_SABER_CARRIED;
 
 	s->saberInFlight = ps->saberInFlight;
 	s->saberEntityNum = ps->saberEntityNum;
@@ -2988,6 +3072,11 @@ void BG_PlayerStateToEntityStateExtraPolate( playerState_t *ps, entityState_t *s
 										// so corpses can also reference the proper config
 	s->eFlags = ps->eFlags;
 	s->eFlags2 = ps->eFlags2;
+	// DAJ_RP: [Holstered Sabers] see EF2_RP_SABER_CARRIED in bg_public.h
+	if ( ps->stats[STAT_WEAPONS] & ( 1 << WP_SABER ) )
+		s->eFlags2 |= EF2_RP_SABER_CARRIED;
+	else
+		s->eFlags2 &= ~EF2_RP_SABER_CARRIED;
 
 	s->saberInFlight = ps->saberInFlight;
 	s->saberEntityNum = ps->saberEntityNum;
@@ -3115,10 +3204,19 @@ int BG_ModelCache(const char *modelName, const char *skinName)
 	#endif // _GAME
 }
 
+// GalaxyRP fix: [NPC] both pools sized for every networked slot to hold an NPC at once. NPC
+// bookkeeping is allocated ONCE PER ENTITY SLOT and never given back -- G_CreateFakeClient() and
+// New_NPC_t() on the server (gclient_t + gNPC_t, ~10.6 KB), CG_CreateNPCClient() on the client
+// (clientInfo_t, ~6.2 KB) -- and G_Spawn() skips slots freed in the last second, so under steady
+// temp-entity traffic NPC spawns drift across the whole free range over a long map. The old sizes
+// (6,000,000 / 2,048,000) covered ~560 / ~300 distinct slots; past that BG_Alloc() Com_Errors with
+// "buffer exceeded tail", which is a client disconnect, or on a dedicated server an exit. 992
+// possible NPC slots need ~10.5 MB / ~6.1 MB plus the animation sets; static BSS, so no cost until
+// touched.
 #if defined(_GAME)
-	#define MAX_POOL_SIZE	6000000 //1024000 // zyk: increased from 3000000 to 6000000
-#elif defined(_CGAME) //don't need as much for cgame stuff. 2mb will be fine.
-	#define MAX_POOL_SIZE	2048000
+	#define MAX_POOL_SIZE	12000000 //1024000 // zyk: increased from 3000000 to 6000000
+#elif defined(_CGAME)
+	#define MAX_POOL_SIZE	8388608
 #elif defined(UI_BUILD) //And for the ui the only thing we'll be using this for anyway is allocating anim data for g2 menu models
 	#define MAX_POOL_SIZE	512000
 #endif
@@ -3261,3 +3359,76 @@ int BG_GetGametypeForString( const char *gametype )
 	else if ( !Q_stricmp( gametype, "cty" ) )			return GT_CTY;
 	else												return -1;
 }
+
+#if defined(_CGAME) || defined(UI_BUILD)
+/*
+============
+RP_AdoptTaystJKWriteFolder
+
+GalaxyRP: [TaystJK] the TaystJK client defaults fs_forcegame to "taystjk" (files.cpp, FS_Startup;
+the dedicated server defaults it to ""). fs_game content and dlls still load from the mod folder --
+it is added to the search path last and the dll loader tries it first -- but the override sets
+fs_gamedir, which is where the engine WRITES: jampconfig.cfg, screenshots, demos and every pk3
+the client downloads land in taystjk/ instead of the mod folder, downloaded pk3s are then on the
+search path for every mod, and FS_Restart skips "exec jampconfig.cfg" on an fs_game change while
+fs_forcegame is set. The launchers pass "+set fs_forcegame GalaxyRP" for this reason; a player who
+joins from the server browser with a plain TaystJK launch never sees them.
+
+This is the in-module version of that flag. The cvar is CVAR_INIT but not CVAR_PROTECTED, and
+Cvar_VM_Set (cvar.cpp) forces a module's set past the INIT check, so a client module may change
+it; the engine reads it again at its next FS_Startup, which happens on every gamestate with a new
+checksum feed -- the next map or reconnect -- and in FS_UpdateGamedir on every svc_setgame. So it
+takes effect from the next map, not this one.
+
+Only the engine DEFAULT is replaced, never a value the player or a launcher chose, and only with
+the fs_game the module is actually running under -- read at runtime, not a literal, so a renamed
+mod folder still works. Once set it lasts for the client process: a player who then joins another
+mod in the same session writes to this folder instead of taystjk/, which is TaystJK's own default
+mirrored; rp_taystjk_writefolder 0 opts out, and is archived for exactly that player.
+
+Returns qtrue when the cvar was changed. Prints once per process.
+============
+*/
+qboolean RP_AdoptTaystJKWriteFolder( void )
+{
+	static qboolean announced = qfalse;
+	char forcegame[MAX_CVAR_VALUE_STRING];
+	char fsgame[MAX_CVAR_VALUE_STRING];
+
+	if ( !rp_taystjk_writefolder.integer )
+	{
+		return qfalse;
+	}
+
+	// absent (base, JA+) or empty (OpenJK, TaystJK dedicated): nothing is overriding anything
+	trap->Cvar_VariableStringBuffer( "fs_forcegame", forcegame, sizeof( forcegame ) );
+	if ( !forcegame[0] )
+	{
+		return qfalse;
+	}
+
+	// anything but the engine default was chosen deliberately -- by the launcher's own
+	// "+set fs_forcegame GalaxyRP", or by the player -- and is theirs to keep
+	if ( Q_stricmp( forcegame, RP_TAYSTJK_DEFAULT_FORCEGAME ) )
+	{
+		return qfalse;
+	}
+
+	// never adopt "base": an empty fs_game means we are not running as a mod at all
+	trap->Cvar_VariableStringBuffer( "fs_game", fsgame, sizeof( fsgame ) );
+	if ( !fsgame[0] )
+	{
+		return qfalse;
+	}
+
+	trap->Cvar_Set( "fs_forcegame", fsgame );
+
+	if ( !announced )
+	{
+		announced = qtrue;
+		trap->Print( "TaystJK: %s will be this client's write folder (config, screenshots, downloads) from the next map. rp_taystjk_writefolder 0 disables this.\n", fsgame );
+	}
+
+	return qtrue;
+}
+#endif

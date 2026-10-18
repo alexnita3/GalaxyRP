@@ -1,0 +1,713 @@
+//----------------------------------------------------------------------------------------------
+// ingame_rpx_effects: the Effects menu of the Extras.
+// GalaxyRP: [Extras] generated with the others of ingame_rpx_*.menu; the Extras button of
+// ingame_galaxyrp.menu opens it. The list, the previews and the rpx scripts are ui_rpextras.c; the
+// commands the buttons send are built in cg_rpextras.c.
+//----------------------------------------------------------------------------------------------
+{
+	menuDef
+	{
+		name                    "ingame_rpx_effects"
+		visible                 0
+		fullscreen              0
+		outOfBoundsClick
+		rect                    10 20 620 440
+		focusColor              1 1 1 1
+		disableColor            .5 .5 .5 1
+		style                   1
+		border                  1
+		descX                   310
+		descY                   424
+		descScale               0.8
+		descColor               1 .682 0 .8
+		descAlignment           ITEM_ALIGN_CENTER
+
+		onOpen
+		{
+			uiScript		rpxOpen effects ingame_rpx_effects
+		}
+		onClose
+		{
+			uiScript		rpxClose
+		}
+		onESC
+		{
+			play			"sound/interface/button1.wav" ;
+			close			ingame_rpx_effects
+		}
+
+		itemDef
+		{
+			name                rpx_background
+			style               WINDOW_STYLE_SHADER
+			rect                0 0 620 440
+			background          "gfx/menus/menu_box_ingame"
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_title
+			style               WINDOW_STYLE_SHADER
+			background          "gfx/menus/menu_blendbox"
+			text                "^6Galaxy ^4RP^3 Extras: ^7Effects"
+			rect                20 5 580 28
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          290
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           .549 .854 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_back
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                12 405 90 24
+			text                "Back"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          45
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Back to the Galaxy RP menu"
+			mouseEnter
+			{
+				setitemcolor rpx_back bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_back bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setcvar ui_rpx_back 1 ;
+				close ingame_rpx_effects ;
+				open ingame_galaxyrp
+			}
+		}
+		itemDef
+		{
+			name                rpx_msg
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                110 415 500 14
+			cvar                "ui_rpx_msg"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.6
+			forecolor           1 1 .4 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_filter
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                "Filter: "
+			cvar                "ui_rpx_filter_effects"
+			maxchars            30
+			maxPaintChars       30
+			rect                12 40 210 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Show only the names with this in them"
+		}
+		itemDef
+		{
+			name                rpx_list
+			type                ITEM_TYPE_LISTBOX
+			style               WINDOW_STYLE_FILLED
+			rect                12 60 210 300
+			elementwidth        190
+			elementheight       15
+			elementtype         LISTBOX_TEXT
+			feeder              FEEDER_RPX_LIST
+			font                2
+			textscale           0.6
+			textstyle           0
+			textalign           0
+			textaligny          0
+			columns             1 4 184 184
+			border              1
+			bordercolor         1 .682 0 .6
+			forecolor           1 1 1 1
+			backcolor           0 0 0 .6
+			outlinecolor        1 .682 0 .35
+			visible             1
+			descText            "Double-click a folder to open it; .. goes back up"
+			doubleclick
+			{
+				uiScript rpxEnter
+			}
+			mouseEnter
+			{
+				setitemcolor rpx_list bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_list bordercolor 1 .682 0 .6
+			}
+		}
+		itemDef
+		{
+			name                rpx_info
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                12 364 210 14
+			cvar                "ui_rpx_info"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           .8 .8 .8 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_status
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                12 378 210 14
+			cvar                "ui_rpx_status"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 1 .4 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_fxbox
+			type                ITEM_TYPE_OWNERDRAW
+			ownerdraw           UI_RPX_FXBOX
+			rect                232 40 190 150
+			font                2
+			textscale           0.7
+			forecolor           .8 .8 .8 1
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_head_prev
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 192 190 14
+			text                "Preview only"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_preview_btn
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                232 206 92 20
+			text                "Preview"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          46
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Preview only: play the selected effect in the box (press again to replay)"
+			mouseEnter
+			{
+				setitemcolor rpx_preview_btn bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_preview_btn bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxPreview
+			}
+		}
+		itemDef
+		{
+			name                rpx_reset
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                330 206 92 20
+			text                "Reset view"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          46
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Preview only: put the camera back"
+			mouseEnter
+			{
+				setitemcolor rpx_reset bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_reset bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxReset cam
+			}
+		}
+		itemDef
+		{
+			name                rpx_cdist
+			type                ITEM_TYPE_INTSLIDER
+			text                "Distance"
+			cvarint             "ui_rpx_e_cdist" 160 32 1024
+			rect                272 230 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Preview only: how far the camera is"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_cdist_value
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_e_cdist"
+			maxchars            4
+			maxPaintChars       4
+			rect                372 230 42 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Preview only: how far the camera is"
+		}
+		itemDef
+		{
+			name                rpx_cang
+			type                ITEM_TYPE_INTSLIDER
+			text                "Angle"
+			cvarint             "ui_rpx_e_cang" 0 -180 180
+			rect                272 250 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Preview only: walk the camera around it (degrees)"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_cang_value
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_e_cang"
+			maxchars            4
+			maxPaintChars       4
+			rect                372 250 42 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Preview only: walk the camera around it (degrees)"
+		}
+		itemDef
+		{
+			name                rpx_undo
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                232 360 190 22
+			text                "Undo last"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          95
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Remove the last entity you added (/entundo)"
+			mouseEnter
+			{
+				setitemcolor rpx_undo bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_undo bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo undo
+			}
+		}
+		itemDef
+		{
+			name                rpx_selname
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                12 392 410 14
+			cvar                "ui_rpx_selname"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_head_spawn
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                432 40 180 14
+			text                "Spawned effect"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_dir
+			type                ITEM_TYPE_MULTI
+			text                "Direction:"
+			cvar                "ui_rpx_e_dir"
+			rect                432 58 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned effect: up, at you, or at you tilted; the preview shows it"
+			cvarFloatList
+			{
+				"Up" 0
+				"Facing me" 1
+				"Tilted" 2
+			}
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_tilt
+			type                ITEM_TYPE_INTSLIDER
+			text                "Tilt"
+			cvarint             "ui_rpx_e_pitch" 0 -90 90
+			rect                474 80 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned effect: for Tilted, -90 is up, 90 is down; the preview shows it"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_tilt_value
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_e_pitch"
+			maxchars            3
+			maxPaintChars       3
+			rect                574 80 40 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned effect: for Tilted, -90 is up, 90 is down; the preview shows it"
+		}
+		itemDef
+		{
+			name                rpx_delay
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                "Every (ms): "
+			cvar                "ui_rpx_e_delay"
+			maxchars            5
+			maxPaintChars       5
+			rect                432 106 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned effect: how often it plays again, in milliseconds (at least 50)"
+		}
+		itemDef
+		{
+			name                rpx_random
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                "Plus up to (ms): "
+			cvar                "ui_rpx_e_random"
+			maxchars            5
+			maxPaintChars       5
+			rect                432 126 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned effect: a random extra wait each time, in milliseconds"
+		}
+		itemDef
+		{
+			name                rpx_off
+			type                ITEM_TYPE_YESNO
+			text                "Starts off:"
+			cvar                "ui_rpx_e_off"
+			rect                432 150 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned effect: it waits to be switched on by a trigger or button"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_once
+			type                ITEM_TYPE_YESNO
+			text                "Plays once:"
+			cvar                "ui_rpx_e_once"
+			rect                432 170 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned effect: it only plays when used by a trigger or button"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_lift
+			type                ITEM_TYPE_INTSLIDER
+			text                "Offset"
+			cvarint             "ui_rpx_e_lift" 0 0 512
+			rect                474 308 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned effect: how far out from the surface you aim at it goes"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_lift_value
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_e_lift"
+			maxchars            3
+			maxPaintChars       3
+			rect                574 308 40 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned effect: how far out from the surface you aim at it goes"
+		}
+		itemDef
+		{
+			name                rpx_spawn
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 330 180 24
+			text                "Spawn"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          90
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Spawn it on the surface you are aiming at (/entaddaim), and close the menu"
+			mouseEnter
+			{
+				setitemcolor rpx_spawn bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_spawn bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo spawnfx
+			}
+		}
+		itemDef
+		{
+			name                rpx_grab
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 358 180 24
+			text                "Grab"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          90
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Pick it up and close the menu; aim and use /entaddgrab to place it"
+			mouseEnter
+			{
+				setitemcolor rpx_grab bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_grab bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo grabfx
+			}
+		}
+	}
+}

@@ -75,6 +75,29 @@ void G_InitMemory( void ) {
 	allocPoint = 0;
 }
 
+// GalaxyRP: [Entity System] bytes left in the pool. G_Alloc() Com_Error(ERR_DROP)s when it runs out,
+// and nothing ever returns memory to it within a map, so a caller about to allocate a lot -- a
+// misc_bsp rebuilding its sub-BSP's entities, see SP_misc_bsp() -- checks first.
+int G_AllocRemaining( void ) {
+	return POOLSIZE - allocPoint;
+}
+
+int G_AllocPoolSize( void ) {
+	return POOLSIZE;
+}
+
+// GalaxyRP fix: [Entity System] whether the pool can take this many more bytes and still keep
+// ZYK_ALLOC_RESERVE for what the game allocates for itself as the map goes on (NPC parms, remaps,
+// bot and arena info). The entity commands ask before every spawn and respawn: each one copies its
+// record into the pool (G_ParseField's string fields, zyk_main_set_entity_field), nothing is ever
+// given back, and G_Alloc() ends the server when it runs out.
+qboolean G_AllocRoomFor( int bytes ) {
+	if ( bytes < 0 ) {
+		bytes = 0;
+	}
+	return ( G_AllocRemaining() >= bytes + ZYK_ALLOC_RESERVE ) ? qtrue : qfalse;
+}
+
 void Svcmd_GameMem_f( void ) {
 	float f = allocPoint;
 	f /= POOLSIZE;

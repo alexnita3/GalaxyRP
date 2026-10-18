@@ -517,6 +517,21 @@ NPC_ApplyRoff
 void NPC_ApplyRoff(void)
 {
 	BG_PlayerStateToEntityState( &NPCS.NPC->client->ps, &NPCS.NPC->s, qfalse );
+
+	// GalaxyRP fix: [NPC] restore ET_NPC, which the call above overwrites. BG_PlayerStateToEntityState
+	// sets eType unconditionally and, for anything alive and not spectating, that means ET_PLAYER --
+	// so every other caller in the tree that may be handling an NPC puts it back (ClientThink_real and
+	// ClientEndFrame in g_active.c, TeleportPlayer in g_misc.c, zyk_TeleportPlayer in g_main.c). This
+	// one did not, and it is precisely the branch that runs INSTEAD of ClientThink while an NPC is on
+	// a ROFF path (NPC.c), so the restore that would normally cover it never ran.
+	//
+	// The consequence was not cosmetic. An NPC's ps.clientNum is its ENTITY number (NPC_spawn.c), so
+	// on those frames it reached cgame as ET_PLAYER carrying a number at or above MAX_CLIENTS -- and
+	// cgame's ET_PLAYER paths index MAX_CLIENTS-sized arrays with it: cgs.clientinfo[] in the radar
+	// (cg_draw.c, stock code) and, until this pass, cg.zyk_rpg_stuff[] in the jetpack effect. Both
+	// were reads past the end of the array.
+	NPCS.NPC->s.eType = ET_NPC;
+
 	//VectorCopy ( NPC->r.currentOrigin, NPC->lastOrigin );
 	//rwwFIXMEFIXME: Any significance to this?
 

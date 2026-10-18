@@ -228,16 +228,111 @@ fend:
 	return flagstr;
 }
 
-void G_TestLine(vec3_t start, vec3_t end, int color, int time)
+/*
+===========================================================================
+DAJ_RP fix: [NPC Debug] the debug lines -- d_npcai's squads, d_JediAI's blocks, g_saberDebugBox and the
+bot waypoint editor (bot_wp_edit) -- go through RP_DebugLines() now, which can refuse them.
+
+Each line is an EV_TESTLINE temporary entity sent to every player: it holds an entity slot for
+EVENT_VALID_MSEC (300 ms) and the freed slot is not given out again for a second (G_Spawn()). Nothing
+counted them, and nothing can refuse a G_TempEntity(): d_npcai alone drew a line per squad member every
+server frame, some 13 slots per NPC alive at once and 53 tied up, so a large squad filled the snapshots
+(256 entities) and then the entity table, which ends a dedicated server. In single player these lines are
+drawn by the client and cost no entities.
+
+So at most RP_DEBUGLINE_MAX_PER_WINDOW lines are drawn per RP_DEBUGLINE_WINDOW_MSEC, whatever sv_fps is,
+and none while fewer than RP_DEBUGLINE_SLOT_MARGIN slots are free above the entity reserve (checked once a
+frame). A batch is drawn whole or not at all; one that alone is larger than the cap is still drawn when it
+opens a window, so a full squad is never refused for ever. The first line refused on a map, for each
+reason, is logged.
+===========================================================================
+*/
+static void RP_DrawDebugLine( const vec3_t start, const vec3_t end, int color, int time )
 {
 	gentity_t *te;
+	vec3_t org;
 
-	te = G_TempEntity( start, EV_TESTLINE );
+	VectorCopy( start, org );
+	te = G_TempEntity( org, EV_TESTLINE );
 	VectorCopy(start, te->s.origin);
 	VectorCopy(end, te->s.origin2);
 	te->s.time2 = time;
 	te->s.weapon = color;
 	te->r.svFlags |= SVF_BROADCAST;
+}
+
+static qboolean RP_DebugLinesAllowed( int count )
+{
+	if ( count < 1 )
+	{
+		count = 1;
+	}
+
+	if ( level.time < level.rp_debugline_window || level.time - level.rp_debugline_window >= RP_DEBUGLINE_WINDOW_MSEC )
+	{//a new window
+		level.rp_debugline_window = level.time;
+		level.rp_debugline_count = 0;
+	}
+
+	if ( !level.rp_debugline_slot_checked || level.rp_debugline_slot_time != level.time )
+	{//once a frame: a batch drawn in this frame takes at most a few dozen of the margin
+		level.rp_debugline_slot_checked = qtrue;
+		level.rp_debugline_slot_time = level.time;
+		level.rp_debugline_slots_ok = G_EntitySlotsAvailable( RP_DEBUGLINE_SLOT_MARGIN );
+	}
+
+	if ( !level.rp_debugline_slots_ok )
+	{
+		if ( !level.rp_debugline_slots_warned )
+		{
+			level.rp_debugline_slots_warned = qtrue;
+			G_LogPrintf( "debug lines (d_npcai, d_JediAI, g_saberDebugBox, bot_wp_edit) not drawn: fewer than %d entity slots free "
+				"(%d). Logged once per map.\n", RP_DEBUGLINE_SLOT_MARGIN + ZYK_ENTITY_RESERVE, G_FreeEntityCount() );
+		}
+		return qfalse;
+	}
+
+	if ( level.rp_debugline_count > 0 && level.rp_debugline_count + count > RP_DEBUGLINE_MAX_PER_WINDOW )
+	{
+		if ( !level.rp_debugline_capped_warned )
+		{
+			level.rp_debugline_capped_warned = qtrue;
+			G_LogPrintf( "debug lines (d_npcai, d_JediAI, g_saberDebugBox, bot_wp_edit) capped at %d per %d ms: the rest are "
+				"not drawn. Logged once per map.\n", RP_DEBUGLINE_MAX_PER_WINDOW, RP_DEBUGLINE_WINDOW_MSEC );
+		}
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+qboolean RP_DebugLines( const vec3_t start, const vec3_t *ends, int count, int color, int time )
+{
+	int i;
+
+	if ( !ends || count < 1 )
+	{
+		return qfalse;
+	}
+	if ( !RP_DebugLinesAllowed( count ) )
+	{
+		return qfalse;
+	}
+
+	level.rp_debugline_count += count;
+	for ( i = 0; i < count; i++ )
+	{
+		RP_DrawDebugLine( start, ends[i], color, time );
+	}
+	return qtrue;
+}
+
+void G_TestLine(vec3_t start, vec3_t end, int color, int time)
+{
+	vec3_t ends[1];
+
+	VectorCopy( end, ends[0] );
+	RP_DebugLines( start, (const vec3_t *)ends, 1, color, time );
 }
 
 void BotWaypointRender(void)
@@ -1823,7 +1918,16 @@ float botGlobalNavWeaponWeights[WP_NUM_WEAPONS] =
 	3,//WP_THERMAL,
 	3,//WP_TRIP_MINE,
 	3,//WP_DET_PACK,
-	0//WP_EMPLACED_GUN,
+	// GalaxyRP fix: [Bots] the table stopped one weapon early and the last row was mislabelled:
+	// the slot commented WP_EMPLACED_GUN is really WP_CONCUSSION, and WP_BRYAR_OLD,
+	// WP_EMPLACED_GUN and WP_TURRET had no rows at all. weapon_concussion_rifle is a real map
+	// pickup, so bots were reading a zero weight for it and never pathing to one of the
+	// strongest weapons in the game. Weighted with the rocket launcher, which is its match.
+	// The other three are weapons a bot has no business chasing, so nought is right for them.
+	9,//WP_CONCUSSION,
+	0,//WP_BRYAR_OLD,
+	0,//WP_EMPLACED_GUN,
+	0//WP_TURRET,
 };
 
 int GetNearestVisibleWPToItem(vec3_t org, int ignore)
@@ -3228,10 +3332,9 @@ void BeginAutoPathRoutine(void)
 
 	CreateNewWP(vec3_origin, 0); //create a dummy waypoint to insert under
 
-	while (i < level.num_entities)
+	// GalaxyRP: [Logical Entities] both regions -- spawn points are logical entities now.
+	RP_FOR_EACH_ENTITY( ent )
 	{
-		ent = &g_entities[i];
-
 		if (ent && ent->inuse && ent->classname && ent->classname[0] && !Q_stricmp(ent->classname, "info_player_deathmatch"))
 		{
 			if (ent->s.origin[2] < 1280)
@@ -3246,8 +3349,6 @@ void BeginAutoPathRoutine(void)
 			gSpawnPoints[gSpawnPointNum] = ent;
 			gSpawnPointNum++;
 		}
-
-		i++;
 	}
 
 	if (gSpawnPointNum < 1)
@@ -3354,14 +3455,11 @@ gentity_t *GetClosestSpawn(gentity_t *ent)
 	gentity_t	*spawn;
 	gentity_t	*closestSpawn = NULL;
 	float		closestDist = -1;
-	int			i = MAX_CLIENTS;
 
-	spawn = NULL;
-
-	while (i < level.num_entities)
+	// GalaxyRP: [Logical Entities] both regions -- spawn points are logical entities now. The
+	// client slots the old loop skipped never carry these classnames, so nothing is added.
+	RP_FOR_EACH_ENTITY( spawn )
 	{
-		spawn = &g_entities[i];
-
 		if (spawn && spawn->inuse && (!Q_stricmp(spawn->classname, "info_player_start") || !Q_stricmp(spawn->classname, "info_player_deathmatch")) )
 		{
 			float checkDist;
@@ -3376,8 +3474,6 @@ gentity_t *GetClosestSpawn(gentity_t *ent)
 				closestDist = checkDist;
 			}
 		}
-
-		i++;
 	}
 
 	return closestSpawn;
@@ -3387,38 +3483,27 @@ gentity_t *GetNextSpawnInIndex(gentity_t *currentSpawn)
 {
 	gentity_t	*spawn;
 	gentity_t	*nextSpawn = NULL;
-	int			i = currentSpawn->s.number+1;
 
-	spawn = NULL;
-
-	while (i < level.num_entities)
+	// GalaxyRP: [Logical Entities] "the next one after currentSpawn, in table order, wrapping to
+	// the start" -- now in the order both regions are walked, since spawn points are logical.
+	for (spawn = RP_NextEntityInAnyRegion(currentSpawn); spawn; spawn = RP_NextEntityInAnyRegion(spawn))
 	{
-		spawn = &g_entities[i];
-
-		if (spawn && spawn->inuse && (!Q_stricmp(spawn->classname, "info_player_start") || !Q_stricmp(spawn->classname, "info_player_deathmatch")) )
+		if (spawn->inuse && (!Q_stricmp(spawn->classname, "info_player_start") || !Q_stricmp(spawn->classname, "info_player_deathmatch")) )
 		{
 			nextSpawn = spawn;
 			break;
 		}
-
-		i++;
 	}
 
 	if (!nextSpawn)
 	{ //loop back around to 0
-		i = MAX_CLIENTS;
-
-		while (i < level.num_entities)
+		RP_FOR_EACH_ENTITY( spawn )
 		{
-			spawn = &g_entities[i];
-
-			if (spawn && spawn->inuse && (!Q_stricmp(spawn->classname, "info_player_start") || !Q_stricmp(spawn->classname, "info_player_deathmatch")) )
+			if (spawn->inuse && (!Q_stricmp(spawn->classname, "info_player_start") || !Q_stricmp(spawn->classname, "info_player_deathmatch")) )
 			{
 				nextSpawn = spawn;
 				break;
 			}
-
-			i++;
 		}
 	}
 

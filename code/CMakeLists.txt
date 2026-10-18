@@ -71,6 +71,9 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 	endif()
 
 	if(UseInternalSDL2)
+		# GalaxyRP fix: [libs] bumped bundled SDL2 2.0.12 -> 2.32.4, matching TaystJK/codemp. Its
+		# x64 import libs are named with an x86_64 suffix, unlike the x86 ones -- split by pointer
+		# size, same as codemp/CMakeLists.txt.
 		if(CMAKE_SIZEOF_VOID_P EQUAL 4)
 			set(SPEngineLibraries
 				${SPEngineLibraries}
@@ -80,8 +83,8 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 		else()
 			set(SPEngineLibraries
 				${SPEngineLibraries}
-				${OpenJKLibDir}/SDL2/lib/x64/SDL2main.lib
-				${OpenJKLibDir}/SDL2/lib/x64/SDL2.lib
+				${OpenJKLibDir}/SDL2/lib/x64/SDL2main.x86_64.lib
+				${OpenJKLibDir}/SDL2/lib/x64/SDL2.x86_64.lib
 				)
 		endif()
 
@@ -387,13 +390,14 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 		if(WIN32)
 			add_executable(${ProjectName} WIN32 ${SPEngineFiles})
 			if(UseInternalSDL2)
+				# GalaxyRP fix: [libs] x64 SDL2.dll is now SDL2.x86_64.dll, see the link-libs split above.
 				if(CMAKE_SIZEOF_VOID_P EQUAL 4)
 					set(SPEngineExtraInstallFiles
 						${OpenJKLibDir}/SDL2/bin/x86/SDL2.dll
 						)
 				else()
 					set(SPEngineExtraInstallFiles
-						${OpenJKLibDir}/SDL2/bin/x64/SDL2.dll
+						${OpenJKLibDir}/SDL2/bin/x64/SDL2.x86_64.dll
 						)
 				endif()
 			endif()

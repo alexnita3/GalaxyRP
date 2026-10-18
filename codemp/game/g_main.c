@@ -42,7 +42,10 @@ extern int fatalErrors;
 
 int killPlayerTimer = 0;
 
-gentity_t		g_entities[MAX_GENTITIES];
+// GalaxyRP: [Logical Entities] the array holds both regions; see g_local.h. g_logicalents is the
+// first slot of the upper, engine-invisible region.
+gentity_t		g_entities[MAX_ENTITIESTOTAL];
+gentity_t		*g_logicalents = &g_entities[MAX_GENTITIES];
 gclient_t		g_clients[MAX_CLIENTS];
 
 qboolean gDuelExit = qfalse;
@@ -127,6 +130,76 @@ void G_FindTeams( void ) {
 //	trap->Print ("%i teams with %i entities\n", c, c2);
 }
 
+/*
+=================
+RP_TeamLinkEntity
+
+GalaxyRP: [Entity System] one entity into its team, the way G_FindTeams() would have linked it had it been
+there at map load: as a slave of the live master of the team its "team" key names (its targetname moves
+onto the master, as there), or as a master on its own when there is none. For entities spawned after map
+load (/entadd, /entedit, a copy, a preset) -- G_FindTeams() was never run again for them, so a door added
+to a team stood alone, and one spawned again in place after RP_TeamDetach() has to be put back. Triggers
+never link, as there. An entity linked already is left as it is.
+
+A trigger is told by its contents, as G_FindTeams() tells it -- but G_FindTeams() runs before any item
+has its contents (FinishSpawningItem sets CONTENTS_TRIGGER two frames later), while here a live item has
+them, so an item is not a trigger for this: "team" on items is the one-of-a-team respawn (RespawnItem),
+and an item added to such a team joins it.
+=================
+*/
+static qboolean RP_TeamIsTrigger( const gentity_t *e )
+{
+	return ( e->r.contents == CONTENTS_TRIGGER && e->s.eType != ET_ITEM ) ? qtrue : qfalse;
+}
+
+void RP_TeamLinkEntity( gentity_t *e )
+{
+	gentity_t *master = NULL;
+	int i;
+
+	if ( !e || !e->inuse || !e->team || !e->team[0] || e->isLogical )
+		return;
+	if ( RP_TeamIsTrigger( e ) )
+		return;
+	if ( e->teammaster && e->teammaster->inuse )
+		return;
+
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ )
+	{
+		gentity_t *m = &g_entities[i];
+
+		if ( m == e || !m->inuse || !m->team || ( m->flags & FL_TEAMSLAVE ) || m->teammaster != m )
+			continue;
+		if ( RP_TeamIsTrigger( m ) )
+			continue;
+		if ( !strcmp( m->team, e->team ) )
+		{
+			master = m;
+			break;
+		}
+	}
+
+	if ( !master )
+	{
+		e->teammaster = e;
+		e->teamchain = NULL;
+		e->flags &= ~FL_TEAMSLAVE;
+		return;
+	}
+
+	e->teamchain = master->teamchain;
+	master->teamchain = e;
+	e->teammaster = master;
+	e->flags |= FL_TEAMSLAVE;
+
+	// make sure that targets only point at the master
+	if ( e->targetname )
+	{
+		master->targetname = e->targetname;
+		e->targetname = NULL;
+	}
+}
+
 sharedBuffer_t gSharedBuffer;
 
 void WP_SaberLoadParms( void );
@@ -181,12 +254,53 @@ void RP_CVU_pluginRequired(void)
 	}
 }
 
+// GalaxyRP fix: [Database] every prepare in the game module is sqlite3_prepare_v2(), not the
+// legacy sqlite3_prepare(). They take identical arguments; what differs is how sqlite3_step()
+// behaves afterwards, and both differences cost us something real:
+//
+//   1. Error detail. With the legacy interface a failing step() returns a bare SQLITE_ERROR and
+//      sqlite3_errmsg() says "SQL logic error" -- the actual reason is only available from
+//      sqlite3_finalize()'s return value, which nothing in this codebase reads. So every one of
+//      the ~107 trap->Print("SQL error: %s", sqlite3_errmsg(db)) lines in the database layer
+//      reported "SQL logic error" for any constraint failure. Measured against our own bundled
+//      amalgamation, the same duplicate-username INSERT reports:
+//
+//          legacy : rc=1  "SQL logic error"
+//          _v2    : rc=19 "UNIQUE constraint failed: Accounts.Username"
+//
+//      That matters here specifically because Accounts.Username now HAS a UNIQUE index (see
+//      statement_username_unique_index in InitializeGalaxyRpTables below), so a duplicate
+//      registration is a reachable failure that insert_accounts_table_row() was fixed to report --
+//      and it was reporting it uselessly.
+//
+//   2. Schema changes. If the schema changes between prepare() and step(), the legacy interface
+//      fails the query outright; _v2 recompiles the statement and runs it. This is reachable for
+//      us: DB_PATH resolves against fs_homepath, so two server instances on one machine share the
+//      database file, and InitializeGalaxyRpTables() runs its ALTER TABLE batch on every map load.
+//      One instance migrating while the other has a statement prepared silently loses that other
+//      query -- a character load, typically. WAL (which RP_DB_Open sets) widens the window rather
+//      than narrowing it, because a writer is no longer blocked by a reader.
+//
+// The third documented _v2 difference -- recompiling when a bound value could change the query
+// plan -- needs LIKE/GLOB or SQLITE_ENABLE_STAT4, and we have neither. It does not apply.
+//
+// Nothing else changes. No call site in this codebase tests a specific failure code (every one
+// checks != SQLITE_OK, != SQLITE_DONE, or != SQLITE_ROW && != SQLITE_DONE), so a step that now
+// returns SQLITE_CONSTRAINT instead of SQLITE_ERROR takes the identical branch; only the logged
+// text differs. SQLITE_BUSY was already passed through unchanged by both interfaces, so none of
+// the "database is locked" handling in RP_DB_Open() is affected. The sqlite3_exec() sites needed
+// nothing -- exec has always used prepare_v2 internally, which is why exec failures in this file
+// already reported properly while prepare failures did not.
+//
+// Note this is not something the 3.53.4 bump forced: _v2 has existed since 2007, the old 3.8.8.3
+// amalgamation behaved identically, and sqlite3_prepare() carries no SQLITE_DEPRECATED attribute
+// and is not behind SQLITE_OMIT_DEPRECATED. It is not going away. This is a diagnostics fix.
 //alex: checks if an admin account exists
 qboolean admin_account_exists(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 
 	int count = 0;
 
-	rc = sqlite3_prepare(db, "SELECT count(AccountID) FROM Accounts WHERE Username='admin'", -1, &stmt, NULL);
+	rc = sqlite3_prepare_v2(db, "SELECT count(AccountID) FROM Accounts WHERE Username = 'admin' COLLATE NOCASE", -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
@@ -205,6 +319,15 @@ qboolean admin_account_exists(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* 
 		count = sqlite3_column_int(stmt, 0);
 		sqlite3_finalize(stmt);
 	}
+	else
+	{
+		// GalaxyRP fix: [stability] this fallthrough (rc == SQLITE_DONE, no row at all) used to return
+		// without ever finalizing stmt -- effectively dead in practice for a bare COUNT(*) query (which
+		// always yields exactly one row), but the same missing-finalize class of bug fixed in several
+		// other functions in g_cmds.c. Finalized here too so sqlite3_close() on this connection can't be
+		// silently left BUSY by it.
+		sqlite3_finalize(stmt);
+	}
 
 	if (count == 0) {
 		return qfalse;
@@ -214,30 +337,54 @@ qboolean admin_account_exists(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* 
 }
 
 //alex: creates an admin account with default values and highest admin authority possible
+// GalaxyRP fix: [gameplay] AdminLevel is a bitmask of the zyk_admin_t enum in rp_local.h
+// (ADM_NPC=0 .. ADM_GETUP=26, ADM_NUM_CMDS=27 total admin commands today). It used to be set to
+// (1 << 27) - 1 = 134217727 -- literally every bit for the commands that exist right now -- but
+// every admin check in the codebase (e.g. check_admin_command() and the ADM_* bit tests in
+// g_cmds.c) is a plain "bitvalue & (1 << admin_command)", so that value silently stopped covering
+// any admin command added above bit 26 in the future (it would need to be bumped by hand every
+// time). Using -1 (all 32 bits set, via two's complement) instead means every bit position is
+// already set, so the default admin account automatically has every admin command that exists now
+// AND every one added later, with nothing left to remember to update here again.
 void create_admin_account(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt)
 {
 	int accountID = 1;
+	int charID = 0;
 	char comparisonName[256] = { 0 };
-	char char_name[10] = "admin";
+	char char_name[] = "admin";
 
-	char statement_account_entry_creation[200] = "INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('admin','admin','66846719','0','admin')";
-	char statement_account_id_select[100] = "SELECT AccountID FROM Accounts WHERE Username='admin'";
-	char statement_character_entry_creation[207] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName, xp) VALUES('%i', '100', '1', '100', '%s', '1', 'Nothing to show.', 'DefaultName', 'kyle', 0)";
-	char statement_skill_entry_creation[1000] = "INSERT INTO Skills(Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements, Armor, Flamethrower, ShieldRegen, HealthRegen) VALUES('0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
-	char statement_weapon_entry_creation[200] = "INSERT INTO Weapons(AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('0', '0', '0', '0', '0', '0', '0')";
+	// GalaxyRP fix: [Database] PlayerSettings='0' here is intentionally left as a literal, unlike the
+	// same column in g_cmds.c's UPDATE sites -- this is a one-time bootstrap of a brand new admin
+	// account with no gentity_t/pers.player_settings to bind at all, so 0 (no custom settings) is
+	// simply the correct starting value, not an instance of the same bug.
+	char statement_account_entry_creation[] = "INSERT INTO Accounts(Username, Password, AdminLevel, PlayerSettings, DefaultChar) VALUES('admin','admin','-1','0','admin')";
+	char statement_account_id_select[] = "SELECT AccountID FROM Accounts WHERE Username = 'admin' COLLATE NOCASE";
+	char statement_character_entry_creation[] = "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName, xp) VALUES('%i', '100', '1', '100', '%s', '1', 'Nothing to show.', 'DefaultName', 'kyle', 0)";
+	char statement_skill_entry_creation[] = "INSERT INTO Skills(CharID, Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements, Armor, Flamethrower, ShieldRegen, HealthRegen) VALUES('%i', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
+	char statement_weapon_entry_creation[] = "INSERT INTO Weapons(CharID, AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('%i', '0', '0', '0', '0', '0', '0', '0')";
 
 	//alex: Create account record
+	// GalaxyRP fix: [stability] this used to call sqlite3_close(db) before returning on this specific
+	// failure path -- unlike every other early return in this function, none of which close db
+	// themselves. This function's only caller, InitializeGalaxyRpTables(), already calls
+	// sqlite3_close(db) unconditionally right after the admin-account block finishes, regardless of
+	// which path was taken in here. That meant this one path closed db twice: once here, and once again
+	// in the caller right after -- calling sqlite3_close() on an already-closed handle is undefined
+	// behavior (a use-after-free of the connection object). This INSERT can fail on any genuine DB
+	// error, and, now that Accounts.Username has a real UNIQUE index (see InitializeGalaxyRpTables()),
+	// also on a UNIQUE constraint violation if this ever races another process inserting the same
+	// 'admin' username against a shared database file. Removed the redundant close here so the caller's
+	// single close is the only one, matching every other early-return path in this function.
 	rc = sqlite3_exec(db, statement_account_entry_creation, 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
 		sqlite3_free(zErrMsg);
-		sqlite3_close(db);
 		return;
 	}
 
 	//alex: Get AccountID for later so we know which account the char is tied to
-	rc = sqlite3_prepare(db, statement_account_id_select, -1, &stmt, NULL);
+	rc = sqlite3_prepare_v2(db, statement_account_id_select, -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
@@ -267,8 +414,28 @@ void create_admin_account(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt
 		return;
 	}
 
+	// GalaxyRP fix: [Database] the Skills and Weapons rows below are bound to the Characters row by
+	// its actual CharID now. Both INSERTs used to leave CharID out of the column list entirely and
+	// rely on SQLite handing all three tables the same auto-assigned rowid -- which it does only for
+	// as long as the three stay in perfect lockstep. On a brand new database they do (every table is
+	// empty, so all three rows come out as 1), which is why this has always appeared to work, and
+	// the one reachable delete path (remove_character, g_cmds.c) removes all three rows together, so
+	// nothing routine pulls them apart either.
+	//
+	// What pulls them apart is a failure partway through this very function. If the INSERT above
+	// succeeds and the Skills INSERT below then fails, this returns with Characters at rowid N and
+	// Skills still at N-1 -- and from then on EVERY later CharID-less insert pair on this database
+	// binds mismatched ids, silently giving new characters somebody else's skills row or none at
+	// all. The failure is rare; the corruption it leaves behind is permanent and invisible.
+	//
+	// sqlite3_last_insert_rowid() is read here rather than re-selected, and read immediately, while
+	// the INSERT above is still the last statement executed on this connection. This is the same
+	// thing create_new_character() (g_cmds.c) already does -- that path was written later and got it
+	// right; this one and Cmd_Register_F's are the two that predate it.
+	charID = (int)sqlite3_last_insert_rowid(db);
+
 	//alex: Create skill record
-	rc = sqlite3_exec(db, statement_skill_entry_creation, 0, 0, &zErrMsg);
+	rc = sqlite3_exec(db, va(statement_skill_entry_creation, charID), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
@@ -277,7 +444,7 @@ void create_admin_account(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt
 	}
 
 	//alex: Create ammo record
-	rc = sqlite3_exec(db, statement_weapon_entry_creation, 0, 0, &zErrMsg);
+	rc = sqlite3_exec(db, va(statement_weapon_entry_creation, charID), 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", zErrMsg);
@@ -288,6 +455,74 @@ void create_admin_account(sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt
 	return;
 }
 
+// GalaxyRP fix: [Database] "database is locked" (SQLITE_BUSY) fix. Every database access in the
+// game module opens its own short-lived sqlite3 connection to the same on-disk file via plain
+// sqlite3_open(), with no shared connection and no busy handler. SQLite's rollback-journal default
+// is to fail a write *immediately* with SQLITE_BUSY/SQLITE_LOCKED if another connection already
+// holds the write lock, instead of waiting. InitializeGalaxyRpTables() below runs a batch of
+// ALTER TABLE statements on every single map load (it's called unconditionally from G_InitGame),
+// at exactly the moment reconnecting clients are opening their own connections to read/save their
+// character row -- so map change routinely produced "database is locked" errors on whichever side
+// lost the race, which is why players could come back from a map change with no weapons/inventory
+// (their load query failed) until a /kill forced a retry once the lock had cleared.
+//
+// RP_DB_Open() is a drop-in replacement for sqlite3_open(DB_PATH, &db) that (1) sets a busy
+// timeout so a connection that does collide with another writer blocks and retries for up to
+// RP_DB_BUSY_TIMEOUT_MS instead of failing outright, and (2) switches the database to WAL
+// journal mode, where readers no longer block a writer and a writer no longer blocks readers --
+// which removes the vast majority of the contention in the first place. WAL mode is a persistent
+// property of the database file (only needs to succeed once), but PRAGMA journal_mode is cheap
+// and idempotent, so it's simplest to just set it on every open.
+//
+// GalaxyRP fix: [Database] DB_PATH ("GalaxyRP/database/accounts.db") is a relative filesystem
+// path, and sqlite3_open() resolves it against the server process's actual OS working directory
+// -- NOT against fs_homepath/fs_basepath/fs_game, which the rest of the engine's virtual
+// filesystem uses. That only happened to work as long as the server was launched with its
+// working directory set to exactly the folder containing GalaxyRP (e.g. via galaxyrp_host.bat's
+// `cd..` before launching), and breaks silently with "unable to open database file" for any
+// other launch method (double-clicking the engine exe directly, a shortcut with a different
+// "Start in" folder, launching from an IDE, etc.) -- the working directory just isn't guaranteed
+// to be right. Resolve it against fs_homepath instead, which the engine already knows
+// authoritatively regardless of how it was launched, so the DB path no longer depends on the
+// process's working directory at all. Falls back to the old relative path if fs_homepath is
+// somehow empty, rather than failing outright.
+int RP_DB_Open(sqlite3 **db)
+{
+	char fsHomepath[MAX_OSPATH] = { 0 };
+	char dbPath[MAX_OSPATH * 2];
+
+	trap->Cvar_VariableStringBuffer("fs_homepath", fsHomepath, sizeof(fsHomepath));
+	if (fsHomepath[0])
+	{
+		Com_sprintf(dbPath, sizeof(dbPath), "%s/%s", fsHomepath, DB_PATH);
+	}
+	else
+	{
+		Q_strncpyz(dbPath, DB_PATH, sizeof(dbPath));
+	}
+
+	int rc = sqlite3_open(dbPath, db);
+	if (rc != SQLITE_OK)
+	{
+		return rc;
+	}
+
+	sqlite3_busy_timeout(*db, RP_DB_BUSY_TIMEOUT_MS);
+
+	char *walErrMsg = 0;
+	int walRc = sqlite3_exec(*db, "PRAGMA journal_mode=WAL;", 0, 0, &walErrMsg);
+	if (walRc != SQLITE_OK)
+	{
+		trap->Print("Warning: could not enable WAL journal mode on database: %s\n", walErrMsg ? walErrMsg : sqlite3_errmsg(*db));
+		if (walErrMsg)
+		{
+			sqlite3_free(walErrMsg);
+		}
+	}
+
+	return rc;
+}
+
 //alex: creates tables is they didn't exist, and admin account if it doesn't exist. This is the place to add things whenever the database structure changes (use UPDATE TABLE for further changes)
 void InitializeGalaxyRpTables(qboolean with_admin_account)
 {
@@ -296,7 +531,7 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 	int rc;
 	sqlite3_stmt* stmt = 0;
 
-	rc = sqlite3_open(DB_PATH, &db);
+	rc = RP_DB_Open(&db);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
@@ -304,23 +539,76 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 		return;
 	}
 
-	char statement_account_table_creation[186] = "CREATE TABLE IF NOT EXISTS 'Accounts' ('AccountID' INTEGER, 'PlayerSettings' INTEGER, 'AdminLevel' INTEGER, 'Password' TEXT, 'Username' TEXT, 'DefaultChar' TEXT, PRIMARY KEY(AccountID))";
-	char statement_character_table_creation[249] = "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, 'Description' TEXT, 'NetName' TEXT, 'ModelName' TEXT, PRIMARY KEY(CharID))";
-	char statement_weapon_table_creation[244] = "CREATE TABLE IF NOT EXISTS 'Weapons' ('CharID' INTEGER, 'AmmoBlaster' INTEGER, 'AmmoPowercell' INTEGER, 'AmmoMetalBolts' INTEGER, 'AmmoRockets' INTEGER, 'AmmoThermal' INTEGER, 'AmmoTripmine' INTEGER, 'AmmoDetpack' INTEGER, PRIMARY KEY(CharID))";
-	char statement_skill_table_creation[1289] = "CREATE TABLE IF NOT EXISTS 'Skills' ('CharID' INTEGER, 'Jump' INTEGER, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER, PRIMARY KEY(CharID))";
-	char statement_item_table_creation[110] = "CREATE TABLE IF NOT EXISTS 'Items' ('ItemID' INTEGER, 'CharID' INTEGER, 'ItemName' TEXT, PRIMARY KEY(ItemID))";
-	char statement_news_table_creation[155] = "CREATE TABLE IF NOT EXISTS 'News' ('newsID' INTEGER, 'channel' TEXT, 'date' TEXT DEFAULT (strftime('%d-%m-%Y','now')), 'text' TEXT, PRIMARY KEY('newsID'))";
+	char statement_account_table_creation[] = "CREATE TABLE IF NOT EXISTS 'Accounts' ('AccountID' INTEGER, 'PlayerSettings' INTEGER, 'AdminLevel' INTEGER, 'Password' TEXT, 'Username' TEXT, 'DefaultChar' TEXT, PRIMARY KEY(AccountID))";
+	char statement_character_table_creation[] = "CREATE TABLE IF NOT EXISTS 'Characters' ('AccountID' INTEGER, 'CharID' INTEGER, 'Credits' INTEGER, 'Level' INTEGER, 'ModelScale' INTEGER, 'Name' TEXT, 'SkillPoints' INTEGER, 'Description' TEXT, 'NetName' TEXT, 'ModelName' TEXT, PRIMARY KEY(CharID))";
+	char statement_weapon_table_creation[] = "CREATE TABLE IF NOT EXISTS 'Weapons' ('CharID' INTEGER, 'AmmoBlaster' INTEGER, 'AmmoPowercell' INTEGER, 'AmmoMetalBolts' INTEGER, 'AmmoRockets' INTEGER, 'AmmoThermal' INTEGER, 'AmmoTripmine' INTEGER, 'AmmoDetpack' INTEGER, PRIMARY KEY(CharID))";
+	char statement_skill_table_creation[] = "CREATE TABLE IF NOT EXISTS 'Skills' ('CharID' INTEGER, 'Jump' INTEGER, 'Push' INTEGER, 'Pull' INTEGER, 'Speed' INTEGER, 'Sense' INTEGER, 'SaberAttack' INTEGER, 'SaberDefense' INTEGER, 'SaberThrow' INTEGER, 'Absorb' INTEGER, 'Heal' INTEGER, 'Protect' INTEGER, 'MindTrick' INTEGER, 'TeamHeal' INTEGER, 'Lightning' INTEGER, 'Grip' INTEGER, 'Drain' INTEGER, 'Rage' INTEGER, 'TeamEnergize' INTEGER, 'StunBaton' INTEGER, 'BlasterPistol' INTEGER, 'BlasterRifle' INTEGER, 'Disruptor' INTEGER, 'Bowcaster' INTEGER, 'Repeater' INTEGER, 'DEMP2' INTEGER, 'Flechette' INTEGER, 'RocketLauncher' INTEGER, 'ConcussionRifle' INTEGER, 'BryarPistol' INTEGER, 'Melee' INTEGER, 'MaxShield' INTEGER, 'ShieldStrength' INTEGER, 'HealthStrength' INTEGER, 'DrainShield' INTEGER, 'Jetpack' INTEGER, 'SenseHealth' INTEGER, 'ShieldHeal' INTEGER, 'TeamShieldHeal' INTEGER, 'UniqueSkill' INTEGER, 'BlasterPack' INTEGER, 'PowerCell' INTEGER, 'MetalBolts' INTEGER, 'Rockets' INTEGER, 'Thermals' INTEGER, 'TripMines' INTEGER, 'Detpacks' INTEGER, 'Binoculars' INTEGER, 'BactaCanister' INTEGER, 'SentryGun' INTEGER, 'SeekerDrone' INTEGER, 'Eweb' INTEGER, 'BigBacta' INTEGER, 'ForceField' INTEGER, 'CloakItem' INTEGER, 'ForcePower' INTEGER, 'Improvements' INTEGER, PRIMARY KEY(CharID))";
+	char statement_item_table_creation[] = "CREATE TABLE IF NOT EXISTS 'Items' ('ItemID' INTEGER, 'CharID' INTEGER, 'ItemName' TEXT, PRIMARY KEY(ItemID))";
+	char statement_news_table_creation[] = "CREATE TABLE IF NOT EXISTS 'News' ('newsID' INTEGER, 'channel' TEXT, 'date' TEXT DEFAULT (strftime('%d-%m-%Y','now')), 'text' TEXT, PRIMARY KEY('newsID'))";
 
 	// GalaxyRP (Alex): [Database] New columns that are added as part of updates. If they were included in the previous columns, upgrading servers would have to redo their database from scratch.
-	char statement_xp_column_alter[110] = "ALTER TABLE Characters ADD COLUMN xp INTEGER DEFAULT 0";
-	char statement_armor_column_alter[110] = "ALTER TABLE Skills ADD COLUMN Armor INTEGER DEFAULT 0";
-	char statement_flamethrower_column_alter[110] = "ALTER TABLE Skills ADD COLUMN Flamethrower INTEGER DEFAULT 0";
-	char statement_shieldregen_columns_alter[110] = "ALTER TABLE Skills ADD COLUMN ShieldRegen INTEGER DEFAULT 0";
-	char statement_heathregen_columns_alter[110] = "ALTER TABLE Skills ADD COLUMN HealthRegen INTEGER DEFAULT 0";
-	char statement_saber_columns_alter[310] = "ALTER TABLE Characters ADD COLUMN saberOneModel TEXT DEFAULT 'saber_1';\
+	char statement_xp_column_alter[] = "ALTER TABLE Characters ADD COLUMN xp INTEGER DEFAULT 0";
+	char statement_armor_column_alter[] = "ALTER TABLE Skills ADD COLUMN Armor INTEGER DEFAULT 0";
+	char statement_flamethrower_column_alter[] = "ALTER TABLE Skills ADD COLUMN Flamethrower INTEGER DEFAULT 0";
+	char statement_shieldregen_columns_alter[] = "ALTER TABLE Skills ADD COLUMN ShieldRegen INTEGER DEFAULT 0";
+	char statement_heathregen_columns_alter[] = "ALTER TABLE Skills ADD COLUMN HealthRegen INTEGER DEFAULT 0";
+	// GalaxyRP fix: [Database] wrapped in an explicit BEGIN/COMMIT so the four ADD COLUMNs apply
+	// atomically -- previously they ran as four separate auto-committed statements within one
+	// sqlite3_exec() call, so a server crash at the exact instant between two of them could in
+	// principle leave the migration half-applied (only some of the four columns added), and the
+	// guard below -- which only re-checks whether the *first* column already exists -- would then
+	// treat that partial state as "already fully migrated" and never add the rest.
+	// GalaxyRP fix: [Database] buffer bumped 310 -> 400 -- the added "BEGIN;"/"COMMIT;" lines are two
+	// more backslash-newline-spliced continuation lines, and (like every other line here) the tab
+	// indentation on each continuation line is itself part of the literal string content, not just
+	// source formatting -- true content is 347 bytes plus the NUL terminator, so 310 would silently
+	// truncate this string with no space left for the terminator (see create_new_character_query's
+	// near-identical bug, fixed earlier this engagement, for what that failure mode looks like).
+	// GalaxyRP: [Saber RGB] no schema change for the RGB/blade-style redesign -- saberOneColor/
+	// saberTwoColor (INTEGER DEFAULT 1) are reused as-is, now packing both the selected
+	// saber_colors_t mode and the custom RGB payload via SABER_STORED_PACK (g_local.h) instead of
+	// just the RGB payload. The DEFAULT 1 a pre-existing row still holds decodes to mode 0
+	// (SABER_RED) with no RGB payload -- a reasonable default for a row this feature predates.
+	char statement_saber_columns_alter[] = "BEGIN;\
+												ALTER TABLE Characters ADD COLUMN saberOneModel TEXT DEFAULT 'saber_1';\
 												ALTER TABLE Characters ADD COLUMN saberOneColor INTEGER DEFAULT 1;\
 												ALTER TABLE Characters ADD COLUMN saberTwoModel TEXT DEFAULT 'saber_1';\
-												ALTER TABLE Characters ADD COLUMN saberTwoColor INTEGER DEFAULT 1";
+												ALTER TABLE Characters ADD COLUMN saberTwoColor INTEGER DEFAULT 1;\
+												COMMIT;";
+
+	// GalaxyRP fix: [security/Account] Accounts.Username was never actually constrained to be unique at
+	// the database level -- uniqueness was enforced only in application code, as a check-then-insert in
+	// Cmd_Register_F (g_cmds.c): select_number_of_accounts_with_username() followed by
+	// insert_accounts_table_row(). Two players submitting /new for the same username within the same
+	// narrow window could both pass that check before either INSERT committed, producing two Accounts
+	// rows with an identical Username -- and every username-keyed query in this codebase (/login,
+	// is_password_correct(), select_account_and_default_character_data(), etc.) assumes exactly one
+	// matching row, with no ORDER BY, so which of the two duplicates a given query resolves to is
+	// undefined once that happens. CREATE UNIQUE INDEX (rather than a UNIQUE column constraint, which
+	// SQLite has no ALTER TABLE support for adding to an existing table) closes this at the storage layer
+	// itself: insert_accounts_table_row() now checks its own INSERT's result and reports failure to
+	// Cmd_Register_F instead of silently ignoring a constraint violation this index can now raise.
+	//
+	// GalaxyRP fix: [Account] the index is case-insensitive now, to match every Username comparison in
+	// g_cmds.c (all of them carry COLLATE NOCASE -- see the note above
+	// select_number_of_characters_with_name() there for why). A binary index would keep letting "Bob"
+	// and "bob" coexist at the storage layer while the application refused them, which is the wrong
+	// way round for a backstop. Since CREATE INDEX IF NOT EXISTS never touches an index that already
+	// exists, the collated one is created under a NEW name, and the old binary one is dropped only
+	// once that has succeeded -- so a database that already holds a case-variant pair (the one thing
+	// that makes the NOCASE build fail) keeps the binary index it had, logs the same warning as before,
+	// and is never left with no uniqueness guarantee at all.
+	char statement_username_unique_index[] = "CREATE UNIQUE INDEX IF NOT EXISTS 'idx_accounts_username_nocase' ON 'Accounts' ('Username' COLLATE NOCASE)";
+	char statement_username_old_index_drop[] = "DROP INDEX IF EXISTS 'idx_accounts_username_unique'";
+
+	// GalaxyRP fix: [Account] and the same backstop for character names, which never had one. The
+	// duplicate check in create_new_character() is the same check-then-insert the account index exists
+	// to close, with the same window between the two. Keyed on (AccountID, Name) because uniqueness is
+	// per account: two players may each have a character called Jedi. Built on the collation the
+	// lookups use, so the database rather than the C code is what says two characters cannot share a
+	// name. Same warn-and-continue handling as the account index -- a database that already holds an
+	// "Admin"/"admin" pair logs it and keeps running.
+	char statement_character_unique_index[] = "CREATE UNIQUE INDEX IF NOT EXISTS 'idx_characters_account_name_nocase' ON 'Characters' ('AccountID', 'Name' COLLATE NOCASE)";
 
 	//Alex: Create Account Table
 	trap->Print("Initializing Account table.\n");
@@ -386,6 +674,30 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 		return;
 	}
 	trap->Print("Done with Items table.\n");
+
+	// GalaxyRP fix: [Items] sweep up items whose character no longer exists. remove_character()
+	// (g_cmds.c) never deleted a character's Items rows until it was fixed, and Characters.CharID is
+	// reused: it is a plain INTEGER PRIMARY KEY, so a new character gets max(CharID) + 1, and removing
+	// the character with the highest CharID handed its items to whoever created a character next, on
+	// any account. The fix stops new leftovers; this removes the ones already in the database, on the
+	// first map load of the fixed build and harmlessly (it finds nothing) on every one after.
+	//
+	// It also takes the items the old /giveitem sent to CharID 0 (a player who was not logged in yet)
+	// -- no character has that id, so nobody could ever see them. CharID in Characters is the primary
+	// key and never NULL, so the NOT IN cannot be tripped up by a NULL in the subquery; the IS NULL arm
+	// catches an Items row with no owner at all. A failure is reported and the start-up carries on:
+	// nothing after this depends on it.
+	rc = sqlite3_exec(db, "DELETE FROM Items WHERE CharID IS NULL OR CharID NOT IN (SELECT CharID FROM Characters)", 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		zErrMsg = 0;
+	}
+	else if (sqlite3_changes(db) > 0)
+	{
+		trap->Print("Removed %d orphaned item(s) belonging to characters that no longer exist.\n", sqlite3_changes(db));
+	}
 
 	//Alex: Create News Table
 
@@ -490,17 +802,82 @@ void InitializeGalaxyRpTables(qboolean with_admin_account)
 	rc = sqlite3_exec(db, statement_saber_columns_alter, 0, 0, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
-		if (strcmp(zErrMsg, "duplicate column name: HealthRegen") != 0) {
+		// GalaxyRP fix: this was comparing against "duplicate column name: HealthRegen" (copy-pasted
+		// from the block above) instead of the column this statement actually adds first
+		// ("saberOneModel"). Because the comparison never matched, every server (re)start after the
+		// saber columns had already been created printed a spurious "SQL error: duplicate column
+		// name: saberOneModel" and returned out of this function early, skipping the rest of
+		// InitializeGalaxyRpTables (including admin account setup) on every subsequent run.
+		if (strcmp(zErrMsg, "duplicate column name: saberOneModel") != 0) {
 			trap->Print("SQL error: %s\n", zErrMsg);
 			sqlite3_free(zErrMsg);
 			sqlite3_close(db);
 			return;
 		}
 		else {
+			// GalaxyRP fix: [Database] the BEGIN above already opened a transaction on db before the
+			// first ALTER failed, and sqlite3_exec() stops at the first failing statement without
+			// ever reaching the COMMIT -- so db is left mid-transaction here. Everything else in this
+			// function (admin_account_exists()/create_admin_account() below, and every other DB call
+			// on this same connection for the rest of the process) would silently run inside that
+			// same never-committed transaction and vanish when db is eventually closed. Roll it back
+			// explicitly so the connection is back in its normal autocommit state; there is nothing
+			// to lose here since this failed attempt never got past its first (rejected) statement.
+			sqlite3_exec(db, "ROLLBACK;", 0, 0, 0);
 			trap->Print("Saber columns already exists, nothing to do here.\n");
 		}
 	}
 	trap->Print("Done with Saber columns.\n");
+
+	// GalaxyRP fix: [security/Account] see the doc comment on statement_username_unique_index above --
+	// this is the DB-level enforcement half of that fix. "IF NOT EXISTS" makes this safe to (re-)run on
+	// every server start once it has succeeded once. If it fails, that is not "already applied" the way
+	// duplicate-column-name is for the ALTER TABLE migrations above (IF NOT EXISTS already handles that
+	// case for an index) -- the realistic failure here is that this database already has two or more
+	// Accounts rows sharing a Username from before this fix existed, which SQLite refuses to build a
+	// UNIQUE index over. Don't block server startup over it: log a clear, actionable warning so an admin
+	// can find and merge/rename the duplicate(s), and continue -- the application-level check in
+	// Cmd_Register_F still guards *new* registrations either way, this index just can't be created until
+	// the existing duplicate is resolved.
+	trap->Print("Initializing unique index on Accounts.Username.\n");
+
+	rc = sqlite3_exec(db, statement_username_unique_index, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("WARNING: could not create a UNIQUE index on Accounts.Username: %s\n", zErrMsg);
+		trap->Print("WARNING: this usually means two or more existing accounts already share a Username "
+			"(the comparison is case-insensitive, so \"Bob\" and \"bob\" count as the same name). "
+			"Find and rename/merge the duplicate account(s) in the database, then restart the server to "
+			"finish enabling this protection. Until then, duplicate usernames can still be created.\n");
+		sqlite3_free(zErrMsg);
+	}
+	else {
+		// GalaxyRP fix: [Account] only now, with the collated index in place, retire the binary one it
+		// replaces. On a database that never had it this is a no-op.
+		rc = sqlite3_exec(db, statement_username_old_index_drop, 0, 0, &zErrMsg);
+		if (rc != SQLITE_OK)
+		{
+			trap->Print("WARNING: could not drop the superseded index idx_accounts_username_unique: %s\n", zErrMsg);
+			sqlite3_free(zErrMsg);
+		}
+		trap->Print("Done with unique index on Accounts.Username.\n");
+	}
+
+	trap->Print("Initializing unique index on Characters.(AccountID, Name).\n");
+
+	rc = sqlite3_exec(db, statement_character_unique_index, 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("WARNING: could not create a UNIQUE index on Characters.(AccountID, Name): %s\n", zErrMsg);
+		trap->Print("WARNING: this usually means an account already has two characters whose names differ "
+			"only in case. Rename or remove one of them in the database, then restart the server to "
+			"finish enabling this protection. Until then, the application-level check in "
+			"create_new_character() is the only thing refusing a duplicate name.\n");
+		sqlite3_free(zErrMsg);
+	}
+	else {
+		trap->Print("Done with unique index on Characters.(AccountID, Name).\n");
+	}
 
 	if (with_admin_account == qtrue) {
 		trap->Print("Initializing admin account.\n");
@@ -525,22 +902,16 @@ void zyk_create_info_player_deathmatch(int x, int y, int z, int yaw)
 {
 	gentity_t *spawn_ent = NULL;
 
-	spawn_ent = G_Spawn();
+	// GalaxyRP: [Logical Entities] a spawn point is a logical class; allocate it where the map
+	// loader would, so an SP map's added spawn points do not take networked slots either.
+	spawn_ent = RP_SpawnForClassname("info_player_deathmatch", qfalse, qfalse);
 	if (spawn_ent)
 	{
-		int i = 0;
-		gentity_t *this_ent;
 		gentity_t *spawn_point_ent = NULL;
 
-		for (i = 0; i < level.num_entities; i++)
-		{
-			this_ent = &g_entities[i];
-			if (Q_stricmp( this_ent->classname, "info_player_deathmatch") == 0)
-			{ // zyk: found the original SP map spawn point
-				spawn_point_ent = this_ent;
-				break;
-			}
-		}
+		// GalaxyRP: [Logical Entities] G_Find covers both regions; the plain index loop this used
+		// to be only saw the networked one, and the map's own spawn points are logical now.
+		spawn_point_ent = G_Find(NULL, FOFS(classname), "info_player_deathmatch");
 
 		zyk_set_entity_field(spawn_ent,"classname","info_player_deathmatch");
 		zyk_set_entity_field(spawn_ent,"origin",va("%d %d %d",x,y,z));
@@ -559,7 +930,9 @@ void zyk_create_ctf_flag_spawn(int x, int y, int z, qboolean redteam)
 {
 	gentity_t *spawn_ent = NULL;
 
-	spawn_ent = G_Spawn();
+	// GalaxyRP: [Logical Entities] a flag is an item and so always networked, but every code
+	// spawn goes through the one allocator so the rule lives in one place.
+	spawn_ent = RP_SpawnForClassname(redteam ? "team_CTF_redflag" : "team_CTF_blueflag", qfalse, qfalse);
 	if (spawn_ent)
 	{
 		if (redteam == qtrue)
@@ -576,8 +949,15 @@ void zyk_create_ctf_flag_spawn(int x, int y, int z, qboolean redteam)
 void zyk_create_ctf_player_spawn(int x, int y, int z, int yaw, qboolean redteam, qboolean team_begin_spawn_point)
 {
 	gentity_t *spawn_ent = NULL;
+	const char *classname;
 
-	spawn_ent = G_Spawn();
+	if (redteam == qtrue)
+		classname = team_begin_spawn_point ? "team_CTF_redplayer" : "team_CTF_redspawn";
+	else
+		classname = team_begin_spawn_point ? "team_CTF_blueplayer" : "team_CTF_bluespawn";
+
+	// GalaxyRP: [Logical Entities] the four CTF spawn-point classes are logical; see above.
+	spawn_ent = RP_SpawnForClassname(classname, qfalse, qfalse);
 	if (spawn_ent)
 	{
 		if (redteam == qtrue)
@@ -602,6 +982,18 @@ void zyk_create_ctf_player_spawn(int x, int y, int z, int yaw, qboolean redteam,
 	}
 }
 
+// GalaxyRP: [SP Maps] the per-map fix-ups in G_InitGame name the entities they change by what they
+// are -- classname and brush model -- rather than by entity number. New Zyk mod picks some of them
+// by slot; those numbers only hold for one spawn order and one server config (g_weaponDisable frees
+// rack weapons at load and shifts every later number), so each was matched against the real map and
+// replaced by the classname and "*N" model of the entity it hit. An inline model belongs to exactly
+// one entity in a map, and a freed entity (classname "freed", model NULL) never matches.
+static qboolean RP_IsBrushEntity( const gentity_t *ent, const char *classname, const char *model )
+{
+	return ( ent->inuse && ent->classname && ent->model &&
+		!Q_stricmp( ent->classname, classname ) && !Q_stricmp( ent->model, model ) ) ? qtrue : qfalse;
+}
+
 // zyk: used to fix func_door entities in SP maps that wont work and must be removed without causing the door glitch
 void fix_sp_func_door(gentity_t *ent)
 {
@@ -611,70 +1003,870 @@ void fix_sp_func_door(gentity_t *ent)
 	G_FreeEntity( ent );
 }
 
+/*
+==================================================================================================
+GalaxyRP: [SP Maps] Jedi Outcast single-player maps
 
-extern gentity_t *NPC_Spawn_Do( gentity_t *ent );
+The Jedi Outcast SP maps load in Jedi Academy multiplayer but were never part of Zyk's SP map list
+(rp_ja_sp_maps, below): each has exactly one spawn point (its info_player_start), so everyone who
+spawns together telefrags. This adds 3-4 spawn points to every one of the 28, and on bespin_streets
+makes the doors, lifts and start lift that only single-player scripts moved usable by players.
 
-// zyk: spawn an npc at a given x, y and z coordinates
-gentity_t *Zyk_NPC_SpawnType( char *npc_type, int x, int y, int z, int yaw )
+Spawn points. For 22 maps they sit 40-80 units from the original start, facing the same way, and
+were picked by testing each candidate against the map's own geometry (read from the .bsp): a clear
+player box and a clear path from the start, level solid floor within 24 units of the start's, no
+water/slime/lava, no hurt/teleport/push trigger down to the floor, nothing within 16 units of a
+door or lift, and 40+ units from every other spawn point (the player box is 30 wide, so closer
+would telefrag). On five maps where the start is on a moving lift, inside a moving bin, in a
+shuttle over a hurt zone or on a slope, the points were placed in game and checked the same way,
+and so were cairn_assembly's (see below).
+
+The original start is kept, except where it stands on or in something that moves, or where it
+hurts:
+  - ns_starpad: at the bottom of a script-driven elevator ride of some 6,700 units;
+  - ns_hideout: inside a moving bin under a low ceiling;
+  - bespin_streets: on the start lift's deck, which RP_FixBespinStreets() below makes rest at the
+    top -- its column then fills the bottom of the shaft, so a spawn there would be inside it;
+  - cairn_assembly: in a closet behind ass_door, a door that starts open, wait -1. A one-shot
+    trigger across the hall beyond it closes it for good the first time anyone walks through, and
+    everyone who spawned after that was shut in. The four points are in that hall, past the door
+    and short of the trigger, out of sight of the two entry turrets;
+  - artus_detention: on the tram rail, where a player lands inside the rail's own trigger_hurt.
+    Three points are at the east end of the landing past the bridge the intro script collapses,
+    the fourth on the rock ledge below the landing's west end. See RP_FixArtusDetention() for the
+    falling beam the eastern three would otherwise never set off.
+Its target is read before it is removed, and every added point carries it, as Zyk's helper copies
+it: it is the map's single-player start script. level.rp_spawn_target_once makes it fire for the
+first spawn only (ClientSpawn(), g_client.c).
+==================================================================================================
+*/
+#define RP_JO_MAX_SPAWNS	4
+
+typedef struct rp_jo_spawns_s {
+	const char	*map;
+	qboolean	removeOriginal;
+	int			count;
+	int			points[RP_JO_MAX_SPAWNS][4];	// x, y, z, yaw
+} rp_jo_spawns_t;
+
+static const rp_jo_spawns_t rp_jo_spawns[] = {
+	{ "artus_detention", qtrue , 4, { { -241, 4222, 660, 167 }, { -215, 4360, 660, 178 }, { -182, 4509, 660, -158 }, { -815, 4545, 496, -4 } } },
+	{ "artus_mine", qfalse, 3, { { 3904, -2928, 1192, 180 }, { 3904, -2848, 1192, 180 }, { 3944, -2888, 1194, 180 } } },
+	{ "artus_topside", qfalse, 3, { { 2204, 1892, 160, 0 }, { 2204, 1812, 156, 0 }, { 2244, 1852, 156, 0 } } },
+	{ "bespin_platform", qfalse, 3, { { -1280, 40, 24, 0 }, { -1280, -40, 24, 0 }, { -1320, 0, 24, 0 } } },
+	{ "bespin_streets", qtrue , 4, { { -3782, -4094, -1703, 91 }, { -3590, -4069, -1703, 95 }, { -4044, -4092, -1703, 58 }, { -4013, -3903, -1703, -1 } } },
+	{ "bespin_undercity", qfalse, 3, { { -40, -496, -3432, 90 }, { 40, -496, -3432, 90 }, { 0, -456, -3432, 90 } } },
+	{ "cairn_assembly", qtrue , 4, { { -2326, 815, 472, 62 }, { -2324, 1118, 472, -54 }, { -2339, 970, 472, 2 }, { -2232, 974, 472, 2 } } },
+	{ "cairn_bay", qfalse, 3, { { -3128, 176, 600, 135 }, { -3088, 216, 600, 135 }, { -3168, 216, 600, 135 } } },
+	{ "cairn_dock1", qfalse, 3, { { 6584, -5928, 464, 90 }, { 6664, -5928, 464, 90 }, { 6624, -5968, 468, 90 } } },
+	{ "cairn_reactor", qfalse, 3, { { 1464, -8912, -584, 270 }, { 1384, -8912, -584, 270 }, { 1424, -8872, -584, 270 } } },
+	{ "demo", qfalse, 3, { { 464, 2848, -28, 315 }, { 424, 2808, -28, 315 }, { 504, 2808, -28, 315 } } },
+	{ "doom_comm", qfalse, 3, { { 40, -832, 24, 270 }, { -40, -832, 24, 270 }, { 0, -872, 24, 270 } } },
+	{ "doom_detention", qfalse, 3, { { -1024, -376, 216, 0 }, { -1024, -456, 216, 0 }, { -1064, -416, 216, 0 } } },
+	{ "doom_shields", qfalse, 3, { { 2144, -1576, 24, 135 }, { 2184, -1536, 24, 135 }, { 2104, -1536, 24, 135 } } },
+	{ "jodemo", qfalse, 3, { { 464, 2848, -28, 315 }, { 424, 2808, -28, 315 }, { 504, 2808, -28, 315 } } },
+	{ "kejim_base", qfalse, 3, { { 416, 752, 24, 180 }, { 416, 832, 24, 180 }, { 456, 792, 24, 180 } } },
+	{ "kejim_post", qfalse, 3, { { 1692, -1732, -40, 180 }, { 1692, -1652, -40, 180 }, { 1732, -1692, -40, 180 } } },
+	{ "ns_hideout", qtrue , 4, { { -177, 2486, 8, -1 }, { -128, 2332, 8, 32 }, { -289, 2420, 8, 175 }, { 54, 2462, -247, 84 } } },
+	{ "ns_starpad", qtrue , 3, { { -1647, -2984, -1063, 93 }, { -1643, -2826, -1063, -163 }, { -1835, -2955, -1063, 4 } } },
+	{ "ns_streets", qfalse, 3, { { 2292, 388, -224, 135 }, { 2332, 428, -224, 135 }, { 2252, 428, -224, 135 } } },
+	{ "pit", qfalse, 3, { { 312, -1040, 216, 0 }, { 312, -1120, 216, 0 }, { 272, -1080, 216, 0 } } },
+	{ "valley", qfalse, 3, { { -1312, -1080, -104, 135 }, { -1272, -1040, -104, 135 }, { -1352, -1040, -104, 135 } } },
+	{ "yavin_canyon", qfalse, 3, { { -4322, -4798, 2241, 45 }, { -4282, -4838, 2238, 45 }, { -4282, -4758, 2238, 45 } } },
+	{ "yavin_courtyard", qfalse, 3, { { 2464, -2424, -536, 45 }, { 2504, -2464, -533, 45 }, { 2504, -2384, -538, 45 } } },
+	{ "yavin_final", qfalse, 3, { { -8608, 3944, -784, 90 }, { -8528, 3944, -784, 90 }, { -8568, 3904, -784, 90 } } },
+	{ "yavin_swamp", qfalse, 3, { { -5954, -4174, 1751, 315 }, { -5914, -4214, 1757, 315 }, { -5954, -4214, 1758, 315 } } },
+	{ "yavin_temple", qfalse, 3, { { 896, -1336, -488, 90 }, { 976, -1336, -488, 90 }, { 936, -1296, -488, 90 } } },
+	{ "yavin_trial", qfalse, 3, { { 135, 383, 24, -92 }, { 356, -105, 56, 164 }, { 505, 199, 88, 8 } } },
+};
+
+/*
+------------------
+Single-player map lists
+
+Which campaign a map comes from, by its name -- the only reliable test there is. DAJ runs these
+maps in FFA, so the gametype says nothing, and the folder does not either: custom multiplayer maps
+sit in maps/ just as the SP maps do, and must keep the multiplayer meaning of every classname.
+The two campaigns have to be told apart as well, not just "SP or not" -- misc_turret's spawnflag
+4 is TURBO in Jedi Academy and means nothing in Jedi Outcast (SP_misc_turret(), g_turret.c).
+No name is on both lists.
+
+  - Jedi Academy: Zyk's SP map list, which sets level.sp_map (and so rp_sp_npc_fix) as it always
+    did -- the 28 campaign maps and the six academy hubs;
+  - Jedi Outcast: the 28 maps of the spawn-point table above.
+------------------
+*/
+static const char *rp_ja_sp_maps[] = {
+	"yavin1", "yavin1b", "yavin2",
+	"t1_danger", "t1_fatal", "t1_inter", "t1_rail", "t1_sour", "t1_surprise",
+	"hoth2", "hoth3",
+	"t2_dpred", "t2_rancor", "t2_rogue", "t2_trip", "t2_wedge",
+	"vjun1", "vjun2", "vjun3",
+	"t3_bounty", "t3_byss", "t3_hevil", "t3_rift", "t3_stamp",
+	"taspir1", "taspir2", "kor1", "kor2",
+	// GalaxyRP fix: [NPC] the six academy hub maps were missing, so rp_sp_npc_fix never applied
+	// to the SP maps most likely to host RP -- the ones with Kyle, Luke, Rosh, the students and
+	// the protocol droids in them.
+	"academy1", "academy2", "academy3", "academy4", "academy5", "academy6",
+};
+
+static qboolean RP_IsJediAcademySPMap( const char *mapname )
 {
-	gentity_t		*NPCspawner;
-	vec3_t			forward, end, viewangles;
-	trace_t			trace;
-	vec3_t origin;
+	int i;
 
-	origin[0] = x;
-	origin[1] = y;
-	origin[2] = z;
-
-	viewangles[0] = 0;
-	viewangles[1] = yaw;
-	viewangles[2] = 0;
-
-	NPCspawner = G_Spawn();
-
-	if(!NPCspawner)
+	for ( i = 0; i < (int)ARRAY_LEN( rp_ja_sp_maps ); i++ )
 	{
-		Com_Printf( S_COLOR_RED"NPC_Spawn Error: Out of entities!\n" );
-		return NULL;
+		if ( !Q_stricmp( mapname, rp_ja_sp_maps[i] ) )
+		{
+			return qtrue;
+		}
 	}
 
-	NPCspawner->think = G_FreeEntity;
-	NPCspawner->nextthink = level.time + FRAMETIME;
-
-	//rwwFIXMEFIXME: Care about who is issuing this command/other clients besides 0?
-	//Spawn it at spot of first player
-	//FIXME: will gib them!
-	AngleVectors(viewangles, forward, NULL, NULL);
-	VectorNormalize(forward);
-	VectorMA(origin, 0, forward, end);
-	trap->Trace(&trace, origin, NULL, NULL, end, 0, MASK_SOLID, qfalse, 0, 0);
-	VectorCopy(trace.endpos, end);
-	end[2] -= 24;
-	trap->Trace(&trace, trace.endpos, NULL, NULL, end, 0, MASK_SOLID, qfalse, 0, 0);
-	VectorCopy(trace.endpos, end);
-	end[2] += 24;
-	G_SetOrigin(NPCspawner, end);
-	VectorCopy(NPCspawner->r.currentOrigin, NPCspawner->s.origin);
-	//set the yaw so that they face away from player
-	NPCspawner->s.angles[1] = viewangles[1];
-
-	trap->LinkEntity((sharedEntity_t *)NPCspawner);
-
-	NPCspawner->NPC_type = G_NewString( npc_type );
-
-	NPCspawner->count = 1;
-
-	NPCspawner->delay = 0;
-
-	NPCspawner = NPC_Spawn_Do( NPCspawner );
-
-	if ( NPCspawner != NULL )
-		return NPCspawner;
-
-	G_FreeEntity( NPCspawner );
-
-	return NULL;
+	return qfalse;
 }
+
+static qboolean RP_IsJediOutcastMap( const char *mapname )
+{
+	int i;
+
+	for ( i = 0; i < (int)ARRAY_LEN( rp_jo_spawns ); i++ )
+	{
+		if ( !Q_stricmp( mapname, rp_jo_spawns[i].map ) )
+		{
+			return qtrue;
+		}
+	}
+
+	return qfalse;
+}
+
+// zyk_create_info_player_deathmatch() with the target passed in: it copies the target of the
+// first spawn point it finds, which is gone on the maps that remove their original.
+static void RP_CreateSpawnPoint( const int *point, const char *target )
+{
+	gentity_t *spawn_ent = RP_SpawnForClassname( "info_player_deathmatch", qfalse, qfalse );
+
+	if ( !spawn_ent )
+	{
+		return;
+	}
+
+	zyk_set_entity_field( spawn_ent, "classname", "info_player_deathmatch" );
+	zyk_set_entity_field( spawn_ent, "origin", va( "%d %d %d", point[0], point[1], point[2] ) );
+	zyk_set_entity_field( spawn_ent, "angles", va( "0 %d 0", point[3] ) );
+	if ( target && target[0] )
+	{
+		zyk_set_entity_field( spawn_ent, "target", (char *)target );
+	}
+
+	zyk_spawn_entity( spawn_ent );
+}
+
+/*
+------------------
+Lift calls
+
+A use-panel that sends a lift to its other end. A func_door that is not TOGGLE, used while it is
+waiting at its far end (pos2), only restarts its wait -- so pressing the panel at the lift's
+resting landing to call it back would keep it away longer instead, and on bespin_streets' start
+lift that means holding a 1,728-unit shaft open in the street. So every panel goes through one of
+these: resting at pos1 -> a normal use, and it travels to pos2; waiting at pos2 -> it heads back
+now instead of after its wait; moving -> ignored, so nobody reverses it under a rider. Every press
+therefore means "go to the other end" -- once the lift has stood at that landing for
+RP_LIFT_CALL_COOLDOWN: a press sooner than that after it arrives is ignored too, so the people
+it brought can step off before anyone sends it away again (and a rider still holding the use key
+on the deck does not bounce it straight back). SetMoverState() stamps s.pos.trTime with the
+moment the lift reached pos1 or pos2, so that is what the cooldown counts from. It is 0 on a lift
+that has not moved since the map loaded, and that never blocks -- level.time itself can be under
+the cooldown when the server has only just started.
+------------------
+*/
+#define RP_LIFT_CALL_COOLDOWN	3000	// ms after a lift reaches either end before a call moves it
+
+extern void ReturnToPos1( gentity_t *ent );
+extern void InitMoverTrData( gentity_t *ent );
+extern void Touch_Multi( gentity_t *self, gentity_t *other, trace_t *trace );
+extern void Use_Multi( gentity_t *ent, gentity_t *other, gentity_t *activator );
+
+static void RP_LiftCallUse( gentity_t *self, gentity_t *other, gentity_t *activator )
+{
+	gentity_t *lift = self->target_ent;
+
+	if ( !lift || !lift->inuse || lift->s.eType != ET_MOVER || !lift->use )
+	{
+		return;
+	}
+
+	if ( ( lift->moverState == MOVER_POS1 || lift->moverState == MOVER_POS2 ) &&
+		lift->s.pos.trTime && level.time < lift->s.pos.trTime + RP_LIFT_CALL_COOLDOWN )
+	{ // arrived less than the cooldown ago
+		return;
+	}
+
+	if ( lift->moverState == MOVER_POS1 )
+	{
+		lift->use( lift, self, activator );
+	}
+	else if ( lift->moverState == MOVER_POS2 && lift->think == ReturnToPos1 && lift->nextthink > level.time )
+	{
+		// DAJ_RP: [Locks] sending it back early is a use of the lift too: only for whom its lock lets through,
+		// and the one who sent it is who its closetarget answers to (the way up goes through Use_BinaryMover)
+		if ( !RP_LockAllows( lift, self, activator ) )
+		{
+			return;
+		}
+		if ( activator )
+		{
+			lift->activator = activator;
+		}
+		lift->nextthink = level.time;
+	}
+}
+
+// The logic entity panels target; target_ent is the lift. Never linked, networked or thinking, and
+// only ever reached by name through G_UseTargets() -> G_Find(), which walks both regions -- so it
+// goes in the logical region like a target_relay, and falls back to a networked slot only when
+// rp_logical_entities was 0 at map start.
+static void RP_SpawnLiftCall( gentity_t *lift, const char *name )
+{
+	gentity_t *call = level.logical_entities_enabled ? G_SpawnLogical() : G_Spawn();
+
+	call->classname = "rp_lift_call";
+	call->targetname = G_NewString( name );
+	call->target_ent = lift;
+	call->use = RP_LiftCallUse;
+}
+
+// A trigger volume (a trigger_multiple) built in place: one spawned without a brush model works,
+// but InitTrigger() complains about it on the console at every map load. spawnflags as
+// trigger_multiple's (1 CLIENTONLY, 4 USE_BUTTON); wait in seconds, and -1 fires once, as
+// trigger_once does.
+static void RP_SpawnTrigger( const vec3_t absmin, const vec3_t absmax, const char *target, int spawnflags, float wait )
+{
+	gentity_t *trig = G_Spawn();
+	vec3_t center;
+	int k;
+
+	for ( k = 0; k < 3; k++ )
+	{
+		center[k] = ( absmin[k] + absmax[k] ) * 0.5f;
+		trig->r.mins[k] = absmin[k] - center[k];
+		trig->r.maxs[k] = absmax[k] - center[k];
+	}
+
+	trig->classname = "trigger_multiple";
+	trig->spawnflags = spawnflags;
+	trig->target = G_NewString( target );
+	trig->wait = wait;
+	trig->touch = Touch_Multi;
+	trig->use = Use_Multi;
+	trig->r.contents = CONTENTS_TRIGGER;
+	trig->r.svFlags = SVF_NOCLIENT;
+	G_SetOrigin( trig, center );
+	trap->LinkEntity( (sharedEntity_t *)trig );
+}
+
+extern void Think_SpawnNewDoorTrigger( gentity_t *ent );
+
+/*
+------------------
+RP_OpenUpDoor
+
+A door that only a single-player script opens -- one that runs inside an affect("kyle") block,
+waits on a signal sent from one, or needs a cutscene or a companion's walk -- stays shut for good
+in multiplayer. This makes every func_door with that name an ordinary door, before the first frame:
+  - a locked one is unlocked (every member of its team, the lock shader stepped to its unlocked
+    frame, as UnLockDoors() does). SP_func_door gave it the think that builds its walk-up trigger
+    one frame after spawn, and that still runs;
+  - a toggle one stops toggling, and gets the same walk-up-trigger think in place of
+    Think_MatchTeam (Think_SpawnNewDoorTrigger() ends with the same MatchTeam() call), so it opens
+    as anyone walks up and closes after its wait;
+  - an ordinary named door (named doors get no walk-up trigger) gets that think too.
+The name stays: a script that still reaches the door opens it as any use would. G_FindTeams() has
+already moved a team's name onto its master, so the name finds the master and the team is walked
+from there.
+------------------
+*/
+static void RP_OpenUpDoor( const char *name )
+{
+	gentity_t *ent, *member;
+	int count = 0;
+
+	RP_FOR_EACH_ENTITY( ent )
+	{
+		if ( !ent->inuse || !ent->classname || Q_stricmp( ent->classname, "func_door" ) ||
+			!ent->targetname || Q_stricmp( ent->targetname, name ) )
+		{
+			continue;
+		}
+
+		for ( member = ent; member; member = member->teamchain )
+		{
+			if ( member->spawnflags & 16 )	// MOVER_LOCKED
+			{
+				member->spawnflags &= ~16;
+				member->s.frame = 1;	// second stage of the locked-door shader anim, as UnLockDoors()
+			}
+			member->spawnflags &= ~(8 | 128);	// MOVER_TOGGLE, MOVER_INACTIVE
+			member->flags &= ~FL_INACTIVE;
+		}
+
+		if ( ent->think != Think_SpawnNewDoorTrigger )
+		{
+			ent->think = Think_SpawnNewDoorTrigger;
+			ent->nextthink = level.time + FRAMETIME;
+		}
+		count++;
+	}
+
+	if ( !count )
+	{
+		G_Printf( "RP_OpenUpDoor: no func_door named %s on this map\n", name );
+	}
+}
+
+/*
+------------------
+RP_DisableLockedTrigger
+
+The use-button trigger by a locked door that plays the "locked" sound or a Kyle line when someone
+presses use at it. Single player switches it off (a target_deactivate or a script) when the door
+opens; a door opened by RP_OpenUpDoor() needs it off from the start. Only trigger_multiples with
+that name, and only the one with that brush model when model is given -- a name some maps share
+between several doors.
+------------------
+*/
+static void RP_DisableLockedTrigger( const char *name, const char *model )
+{
+	gentity_t *ent;
+	int count = 0;
+
+	RP_FOR_EACH_ENTITY( ent )
+	{
+		if ( !ent->inuse || !ent->classname || Q_stricmp( ent->classname, "trigger_multiple" ) ||
+			!ent->targetname || Q_stricmp( ent->targetname, name ) )
+		{
+			continue;
+		}
+		if ( model && ( !ent->model || Q_stricmp( ent->model, model ) ) )
+		{
+			continue;
+		}
+		ent->flags |= FL_INACTIVE;
+		count++;
+	}
+
+	if ( !count )
+	{
+		G_Printf( "RP_DisableLockedTrigger: no trigger_multiple named %s on this map\n", name );
+	}
+}
+
+/*
+------------------
+RP_FixBespinStreets
+
+In single player an R5 droid's scripts unlock three doors and the player's scripts run the lifts;
+without those scripts nothing here moves. Fixed as follows:
+  - locked_door1/2/3 (the droid's doors), copdoors (a locked double door) and bigdoor (the hangar
+    door, a 1,000-damage crusher): opened and removed with Zyk's fix_sp_func_door(), matched on
+    func_door as well as the name -- "copdoors" is also a target_deactivate's name. A door's team
+    partners go with it (copdoors is a two-door team, and G_FindTeams() has moved the partner's
+    name onto the master), and team links are cut first: moving a door team relinks every member,
+    and a partner already freed must not be. Their target and target2 are cleared first too:
+    opening a door fires its target, which would have spawned locked_door1's eight ledge_enemies
+    (Rodians, Grans, a Weequay; MP ignores the difficulty flags, so all eight) at map load. They
+    now spawn when a player first walks through that doorway, from a one-shot trigger put there;
+  - lift1-lift5: they already have a use-panel (trigger_multiple, USE_BUTTON) at each landing
+    that fired a single-player script; the panels now target a lift call for their lift, and the
+    lifts wait 5 seconds at the far end instead of 3;
+  - uplift, the start lift -- a deck on a 1,728-unit hydraulic column, START_OPEN|TOGGLE, resting
+    at the bottom until a script raised it: it now rests at the top (START_OPEN's position swap
+    undone, not TOGGLE, 5-second wait), since at street level the shaft is open with floor right
+    up to its edge and a lift resting at the bottom would leave that drop open; at the top the
+    deck closes the street and the column fills the shaft. It travels at the map's own speed (200,
+    8.6 seconds end to end). It gets a use-trigger over each landing, 48 units wider than the
+    shaft and 88 high, built from its own bounds, that fires at most every 3 seconds. Renamed, so a
+    leftover script cannot drive it;
+  - every lift, the start lift too, ignores calls for RP_LIFT_CALL_COOLDOWN after it arrives;
+  - the R5 droid stood on the lift deck, inside the column now: its spawner (which spawns it after
+    this has run) moves beside the new spawn points, clear of the lift trigger, facing the lift.
+------------------
+*/
+static void RP_FixBespinStreets( void )
+{
+	static const char *removeDoors[] = { "locked_door1", "locked_door2", "locked_door3", "copdoors", "bigdoor" };
+	static const char *liftNames[] = { "lift1", "lift2", "lift3", "lift4", "lift5" };
+	static const char *panelNames[] = { "t296", "t297", "t299", "t302", "t304" };	// same order as liftNames
+	gentity_t *doors[16];
+	int numDoors = 0;
+	gentity_t *ent;
+	gentity_t *uplift = NULL;
+	vec3_t ledgeMins, ledgeMaxs;
+	qboolean haveLedgeDoor = qfalse;
+	int i;
+
+	RP_FOR_EACH_ENTITY( ent )
+	{
+		if ( !ent->inuse || !ent->classname )
+		{
+			continue;
+		}
+
+		if ( !Q_stricmp( ent->classname, "func_door" ) && ent->targetname )
+		{
+			for ( i = 0; i < (int)ARRAY_LEN( removeDoors ); i++ )
+			{
+				if ( !Q_stricmp( ent->targetname, removeDoors[i] ) )
+				{ // and its team partners: G_FindTeams() has already moved their targetname onto this
+				  // one, the team master, so they cannot be found by name any more
+					gentity_t *member;
+
+					for ( member = ent; member && numDoors < (int)ARRAY_LEN( doors ); member = member->teamchain )
+					{
+						int k;
+
+						for ( k = 0; k < numDoors && doors[k] != member; k++ )
+							;
+						if ( k == numDoors )
+						{ // not collected yet
+							doors[numDoors++] = member;
+						}
+					}
+				}
+			}
+
+			for ( i = 0; i < (int)ARRAY_LEN( liftNames ); i++ )
+			{
+				if ( !Q_stricmp( ent->targetname, liftNames[i] ) )
+				{
+					ent->wait = 5000;
+					RP_SpawnLiftCall( ent, va( "rp_liftcall_%s", liftNames[i] ) );
+				}
+			}
+
+			if ( !Q_stricmp( ent->targetname, "uplift" ) )
+			{
+				uplift = ent;
+			}
+		}
+		else if ( !Q_stricmp( ent->classname, "trigger_multiple" ) && ent->targetname )
+		{
+			for ( i = 0; i < (int)ARRAY_LEN( panelNames ); i++ )
+			{
+				if ( !Q_stricmp( ent->targetname, panelNames[i] ) )
+				{
+					ent->target = G_NewString( va( "rp_liftcall_%s", liftNames[i] ) );
+				}
+			}
+		}
+		else if ( !Q_stricmp( ent->classname, "NPC_Droid_R5D2" ) )
+		{
+			vec3_t droidOrigin = { -3900, -4010, -1704 };
+
+			VectorCopy( droidOrigin, ent->s.origin );
+			G_SetOrigin( ent, droidOrigin );
+			ent->s.angles[YAW] = 90;
+		}
+	}
+
+	for ( i = 0; i < numDoors; i++ )
+	{
+		gentity_t *door = doors[i];
+
+		// the doorway locked_door1 closed: both halves fire ledge_enemies when they start to open.
+		// Kept, before the targets are cleared below, to put a trigger in their place.
+		if ( door->target && !Q_stricmp( door->target, "ledge_enemies" ) )
+		{
+			vec3_t dmins, dmaxs;
+			int k;
+
+			VectorAdd( door->r.currentOrigin, door->r.mins, dmins );
+			VectorAdd( door->r.currentOrigin, door->r.maxs, dmaxs );
+			for ( k = 0; k < 3; k++ )
+			{
+				if ( !haveLedgeDoor || dmins[k] < ledgeMins[k] ) ledgeMins[k] = dmins[k];
+				if ( !haveLedgeDoor || dmaxs[k] > ledgeMaxs[k] ) ledgeMaxs[k] = dmaxs[k];
+			}
+			haveLedgeDoor = qtrue;
+		}
+
+		// fix_sp_func_door() opens a door before it frees it, and a door that starts to open fires
+		// its target (Use_BinaryMover_Go) -- at map load, for nobody. target2 is cleared with it.
+		door->target = NULL;
+		door->target2 = NULL;
+
+		door->teamchain = NULL;
+		door->teammaster = door;
+	}
+	for ( i = 0; i < numDoors; i++ )
+	{
+		fix_sp_func_door( doors[i] );
+	}
+
+	// the ledge enemies now appear when a player first walks through that doorway, as they did in
+	// single player when the door opened: a one-shot, players-only trigger filling the opening,
+	// 32 units deep either side of the doors' plane (their thin horizontal axis)
+	if ( haveLedgeDoor )
+	{
+		int thin = ( ledgeMaxs[0] - ledgeMins[0] ) <= ( ledgeMaxs[1] - ledgeMins[1] ) ? 0 : 1;
+
+		ledgeMins[thin] -= 32;
+		ledgeMaxs[thin] += 32;
+		RP_SpawnTrigger( ledgeMins, ledgeMaxs, "ledge_enemies", 1, -1.0f );	// CLIENTONLY, fire once
+	}
+
+	if ( uplift && (uplift->spawnflags & 1) )
+	{
+		vec3_t tmp, mins, maxs;
+
+		// SP_func_door swapped the two positions for START_OPEN; swap them back, so pos1 -- where it
+		// rests -- is the compiled position at street level
+		VectorCopy( uplift->pos1, tmp );
+		VectorCopy( uplift->pos2, uplift->pos1 );
+		VectorCopy( tmp, uplift->pos2 );
+		uplift->spawnflags &= ~(1 | 8);		// START_OPEN, TOGGLE
+		uplift->wait = 5000;
+		uplift->targetname = G_NewString( "rp_uplift" );
+		G_SetOrigin( uplift, uplift->pos1 );
+		// G_SetOrigin() zeroes s.pos.trDuration, the travel time SP_func_door worked out from the
+		// speed -- and SetMoverState() turns a zero into 1 ms, which made the lift jump from end to
+		// end. Work it out again from pos1, pos2 and the map's speed.
+		InitMoverTrData( uplift );
+		trap->LinkEntity( (sharedEntity_t *)uplift );
+
+		RP_SpawnLiftCall( uplift, "rp_liftcall_uplift" );
+
+		// one trigger over each landing: the deck's top surface at pos1 (street) and at pos2 (bottom)
+		for ( i = 0; i < 2; i++ )
+		{
+			const float *deck = i ? uplift->pos2 : uplift->pos1;
+
+			mins[0] = deck[0] + uplift->r.mins[0] - 48;
+			mins[1] = deck[1] + uplift->r.mins[1] - 48;
+			mins[2] = deck[2] + uplift->r.maxs[2];
+			maxs[0] = deck[0] + uplift->r.maxs[0] + 48;
+			maxs[1] = deck[1] + uplift->r.maxs[1] + 48;
+			maxs[2] = mins[2] + 88;
+			RP_SpawnTrigger( mins, maxs, "rp_liftcall_uplift", 1 | 4, 3.0f );	// CLIENTONLY | USE_BUTTON
+		}
+	}
+}
+
+/*
+------------------
+RP_FixArtusDetention
+
+In single player Kyle arrives from the tram at the landing's west end and walks east across it.
+On the way he crosses a one-shot trigger (x -592..-552, the full width of the landing) that runs
+artus_detention/beam: a beam drops from the upper walkway and comes to rest as a 45-degree ramp
+from the landing up to it, killing the two guards up there. That ramp is the way to the upper
+booth, whose trigger unlocks the double door into the facility (t4) and arms the trigger that
+spawns the next squad.
+
+The three eastern spawn points are past where the beam lands, some 300 units short of that
+trigger, and a player can walk from them to the door -- through its east half, even -- without
+touching it. So a second one-shot, players-only trigger runs the same scriptrunner: a strip
+across the landing just west of those points, so the beam falls ahead of whoever first walks
+that way, as it did ahead of Kyle. The map's own trigger stays, for the ledge spawn point, whose
+way up to the landing crosses it. The scriptrunner allows one run (count 1), so the beam falls
+once whichever trigger fires first, and the other then does nothing.
+
+Two locked double doors open only in the warden's forced march, and only inside its
+affect("kyle") blocks, which MP skips: office_door (march_warden) and warden_door (warden_escape,
+run from the same block). Both are made ordinary doors (RP_OpenUpDoor), and the "locked" sound
+trigger in front of office_door (t424, which march_warden removes) is switched off.
+------------------
+*/
+static void RP_FixArtusDetention( void )
+{
+	const vec3_t mins = { -320, 4112, 636 };
+	const vec3_t maxs = { -288, 4568, 740 };
+
+	RP_SpawnTrigger( mins, maxs, "run_beam", 1, -1.0f );	// CLIENTONLY, fire once
+
+	RP_OpenUpDoor( "office_door" );
+	RP_OpenUpDoor( "warden_door" );
+	RP_DisableLockedTrigger( "t424", NULL );
+}
+
+/*
+------------------
+RP_FixJediOutcastDemo
+
+demo and jodemo (the same map under two names). The demo's own scripts were never shipped, so
+the two doors only they unlocked stay locked for good:
+  - shieldgendoor, into the shield generator room;
+  - baydoor, a small bay door on the upper level.
+Both are unlocked here, before the first frame. SP_func_door gave every locked door the think that
+builds its walk-up trigger one frame after spawn, and that still runs, so from then on each is an
+ordinary door: it opens as anyone walks up and closes after its wait. The lock shader is stepped
+to its unlocked frame, as UnLockDoors() does. shieldgendoor's opentarget (kyle_seecore) is
+dropped: it runs a script the game never had, so every opening would only print an error.
+------------------
+*/
+static void RP_FixJediOutcastDemo( void )
+{
+	gentity_t *ent;
+
+	RP_FOR_EACH_ENTITY( ent )
+	{
+		if ( RP_IsBrushEntity( ent, "func_door", "*99" ) && ent->targetname && !Q_stricmp( ent->targetname, "shieldgendoor" ) )
+		{
+			ent->spawnflags &= ~16;		// MOVER_LOCKED
+			ent->s.frame = 1;
+			ent->opentarget = NULL;
+		}
+		else if ( RP_IsBrushEntity( ent, "func_door", "*106" ) && ent->targetname && !Q_stricmp( ent->targetname, "baydoor" ) )
+		{
+			ent->spawnflags &= ~16;		// MOVER_LOCKED
+			ent->s.frame = 1;
+		}
+	}
+}
+
+/*
+------------------
+RP_FixNsStreets
+
+ts1 and ts2 are the two sliding tables in the bar: doors the use key slides open, which start
+inactive. Only the bartender conversation arms them (act_table), and that is a cutscene, so they
+never could be used. They are made active here: anyone can slide one open with the use key, and it
+slides back after its wait.
+
+Three NPCs hide inside those tables -- table1_thug and table3_thug under ts1, table2_thug under
+ts2 -- spawned cinematic (no AI), not solid and inside the table brushes, for the ambush the
+bartender script springs by teleporting them out. Nothing here would, so an open table would
+show three motionless figures anyone can walk through. Their spawners are removed before the
+first frame, which is before they would spawn.
+------------------
+*/
+static void RP_FixNsStreets( void )
+{
+	static const char *tableThugs[] = { "table1_thug", "table2_thug", "table3_thug" };
+	gentity_t *ent;
+	int i;
+
+	RP_FOR_EACH_ENTITY( ent )
+	{
+		if ( !ent->inuse || !ent->classname )
+		{
+			continue;
+		}
+
+		if ( ( RP_IsBrushEntity( ent, "func_door", "*141" ) || RP_IsBrushEntity( ent, "func_door", "*140" ) ) &&
+			ent->targetname && ( !Q_stricmp( ent->targetname, "ts1" ) || !Q_stricmp( ent->targetname, "ts2" ) ) )
+		{
+			ent->spawnflags &= ~128;	// MOVER_INACTIVE
+			ent->flags &= ~FL_INACTIVE;
+		}
+		else if ( !Q_stricmpn( ent->classname, "NPC_", 4 ) && ent->NPC_targetname )
+		{
+			for ( i = 0; i < (int)ARRAY_LEN( tableThugs ); i++ )
+			{
+				if ( !Q_stricmp( ent->NPC_targetname, tableThugs[i] ) )
+				{
+					G_FreeEntity( ent );
+					break;
+				}
+			}
+		}
+	}
+}
+
+/*
+------------------
+RP_FixNsStarpad
+
+backdooropen2, a double door by the hangar, has its own walk-up trigger (named backdoor), but
+that trigger starts inactive and only a target_activate called hangar_ramp arms it. Lando's
+hangar-attack script fires that, after a voice line nothing in MP ever finishes, so the door
+never opened. The trigger is armed here instead. hangar_ramp is not fired: the hangar ramp door
+answers to the same name.
+
+backdooropen, the locked double door further along, is unlocked by the same script, after Lando's
+line. That now plays out in MP, but only if Lando is still alive when the first player crosses the
+one-shot trigger that runs it; it is made an ordinary door here (RP_OpenUpDoor) so it does not
+depend on him, and its "locked" use trigger (no3, which the door's target_deactivate switches off
+in single player) is switched off.
+------------------
+*/
+static void RP_FixNsStarpad( void )
+{
+	gentity_t *ent;
+
+	RP_FOR_EACH_ENTITY( ent )
+	{
+		if ( RP_IsBrushEntity( ent, "trigger_multiple", "*111" ) &&
+			ent->targetname && !Q_stricmp( ent->targetname, "backdoor" ) &&
+			ent->target && !Q_stricmp( ent->target, "backdooropen2" ) )
+		{
+			ent->spawnflags &= ~128;	// INACTIVE
+			ent->flags &= ~FL_INACTIVE;
+		}
+	}
+
+	RP_OpenUpDoor( "backdooropen" );
+	RP_DisableLockedTrigger( "no3", NULL );
+}
+
+/*
+------------------
+RP_FixKejimPost
+
+Three passage doors that only single-player scripts open, none of which gets there in MP:
+  - tower_door, a toggle door: check_bigdoor and finish_checking_door use it inside
+    affect("kyle"), after Jan finds the big door jammed;
+  - upper_door, a toggle door: the perimeter-defence script uses it inside affect("kyle"), with
+    upper_door_deac, which switches off its Kyle-line use trigger upper_door_l;
+  - monitor_room_door, two separate locked doors of one name, some 600 units apart: Jan opens
+    them from a console, after a trigger only she can fire and three walks. The door's
+    target_deactivate switches off their use triggers, green_room_l.
+All three are made ordinary doors (RP_OpenUpDoor) and those use triggers are switched off. The
+encounters the scripts start with them (tower troops, perimeter guns, the monitor-room squad)
+stay unspawned, as they are without this.
+------------------
+*/
+static void RP_FixKejimPost( void )
+{
+	RP_OpenUpDoor( "tower_door" );
+	RP_OpenUpDoor( "upper_door" );
+	RP_OpenUpDoor( "monitor_room_door" );
+	RP_DisableLockedTrigger( "upper_door_l", NULL );
+	RP_DisableLockedTrigger( "green_room_l", NULL );
+}
+
+/*
+------------------
+RP_FixKejimBase
+
+lab_door, a locked door, is unlocked by place_mines: two stormtroopers placing mines, after one of
+their lines. That now plays out in MP, but only if both miners -- spawned when someone first comes
+through the doors before them -- are still alive when a player crosses the one-shot trigger that
+runs it. Opening lab_door is what spawns lab_enemies, the officer carrying key3 among them, so a
+lab_door that never unlocked also left keydoor3 shut. It is made an ordinary door (RP_OpenUpDoor):
+its first opening still spawns lab_enemies (the spawners' count is 1, so later openings do not).
+------------------
+*/
+static void RP_FixKejimBase( void )
+{
+	RP_OpenUpDoor( "lab_door" );
+}
+
+/*
+------------------
+RP_FixNsHideout
+
+  - eye_door, the toggle door behind the eyeball: the eyeball script runs whole inside
+    affect("kyle"), so the eye never asks and the door never opens. Made an ordinary door, and its
+    "locked" use trigger (ed, which the door's target_deactivate switches off) is switched off;
+  - end_door, the three-door team Lando runs out through once freed (only its master is locked):
+    only the Lando rescue cutscene opens it (lando_free, run from cinematic19, with cutscene Kyle and Lando
+    actors, walks and signal waits), which never finishes in MP. Made an ordinary door. Its
+    "locked" use trigger is one of the many named roj (run_open_jail switches them all off when
+    the cells open), so only that one, brush model *307, is switched off.
+------------------
+*/
+static void RP_FixNsHideout( void )
+{
+	RP_OpenUpDoor( "eye_door" );
+	RP_OpenUpDoor( "end_door" );
+	RP_DisableLockedTrigger( "ed", NULL );
+	RP_DisableLockedTrigger( "roj", "*307" );
+}
+
+/*
+------------------
+RP_FixBespinUndercity
+
+vane_door is opened by reborn_dead, which the Reborn's death runs: it waits for a signal that is
+only sent inside affect("kyle"), so in MP it waits for good. It is made an ordinary door
+(RP_OpenUpDoor); its wait is -1, as the map has it, so the first player to walk up opens it for
+good, which is how single player leaves it. Its "locked" use trigger (t292, which the door's
+target_deactivate switches off) is switched off.
+------------------
+*/
+static void RP_FixBespinUndercity( void )
+{
+	RP_OpenUpDoor( "vane_door" );
+	RP_DisableLockedTrigger( "t292", NULL );
+}
+
+static void RP_JediOutcastMapFixes( const char *mapname )
+{
+	int m;
+
+	for ( m = 0; m < (int)ARRAY_LEN( rp_jo_spawns ); m++ )
+	{
+		const rp_jo_spawns_t *map = &rp_jo_spawns[m];
+		gentity_t *original;
+		const char *target;
+		int i;
+
+		if ( Q_stricmp( mapname, map->map ) != 0 )
+		{
+			continue;
+		}
+
+		// the map's own start (SP_info_player_start renamed it); the string survives G_FreeEntity,
+		// it lives in the level string pool
+		original = G_Find( NULL, FOFS(classname), "info_player_deathmatch" );
+		target = original ? original->target : NULL;
+
+		if ( map->removeOriginal && original )
+		{
+			G_FreeEntity( original );
+		}
+
+		for ( i = 0; i < map->count; i++ )
+		{
+			RP_CreateSpawnPoint( map->points[i], target );
+		}
+
+		level.rp_spawn_target_once = qtrue;
+
+		if ( !Q_stricmp( mapname, "bespin_streets" ) )
+		{
+			RP_FixBespinStreets();
+		}
+		else if ( !Q_stricmp( mapname, "artus_detention" ) )
+		{
+			RP_FixArtusDetention();
+		}
+		else if ( !Q_stricmp( mapname, "demo" ) || !Q_stricmp( mapname, "jodemo" ) )
+		{
+			RP_FixJediOutcastDemo();
+		}
+		else if ( !Q_stricmp( mapname, "ns_streets" ) )
+		{
+			RP_FixNsStreets();
+		}
+		else if ( !Q_stricmp( mapname, "ns_starpad" ) )
+		{
+			RP_FixNsStarpad();
+		}
+		else if ( !Q_stricmp( mapname, "kejim_post" ) )
+		{
+			RP_FixKejimPost();
+		}
+		else if ( !Q_stricmp( mapname, "kejim_base" ) )
+		{
+			RP_FixKejimBase();
+		}
+		else if ( !Q_stricmp( mapname, "ns_hideout" ) )
+		{
+			RP_FixNsHideout();
+		}
+		else if ( !Q_stricmp( mapname, "bespin_undercity" ) )
+		{
+			RP_FixBespinUndercity();
+		}
+		return;
+	}
+}
+
+
+// GalaxyRP fix: [Guardian] Zyk_NPC_SpawnType() (and its local NPC_Spawn_Do extern) removed here — its only call sites were spawn_boss() and the dead quest guardians dispatch block, both permanently unreachable (spawn_boss has no callers)
 
 /*
 ============
@@ -689,15 +1881,48 @@ void SP_info_jedimaster_start( gentity_t *ent );
 extern void zyk_create_dir(char *file_path);
 void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	int					i;
+	int					rngDiscard;
 	vmCvar_t	mapname;
 	vmCvar_t	ckSum;
 	char serverinfo[MAX_INFO_STRING] = {0};
 	// zyk: variable used in the SP buged maps fix
 	char zyk_mapname[128] = {0};
 	FILE *zyk_entities_file = NULL;
-	FILE *zyk_remap_file = NULL;
 	FILE *zyk_duel_arena_file = NULL;
 	FILE *zyk_melee_arena_file = NULL;
+
+	// GalaxyRP fix: [RNG] seed the module's random generator. Q_irand/Q_flrand/erandom all run off
+	// a single "static uint32_t holdrand" in shared/qcommon/q_math.c, which only Rand_Init() ever
+	// sets -- and nothing in codemp/ was calling it. The engine seeds its OWN copy in common.cpp,
+	// but each module compiles q_math.c separately with hidden visibility, so jampgame, cgame and
+	// ui each carry a private holdrand that stayed at its 0x89abcdef initialiser forever.
+	//
+	// That is not once per server start. SV_ShutdownGameProgs ("Called every time a map changes")
+	// runs VM_Free -> Sys_UnloadDll, so the module is genuinely unloaded and reloaded on every map
+	// load and holdrand returns to its initialiser. The first twenty Q_irand(0,100) values were
+	// therefore 44 24 13 74 15 89 61 87 0 14 83 81 48 34 83 81 25 50 53 33 on every map, on every
+	// server. 1066 Q_irand and 233 Q_flrand call sites read from it, including our own percentage
+	// rolls -- the deflect check in g_cmds.c and the dismemberment roll in g_combat.c -- so those
+	// produced an identical outcome pattern after every map load.
+	//
+	// Seeded at the very top so nothing can consume a value before the seed is set. Nothing
+	// currently does (BG_VehicleLoadParms uses no RNG), but bg_panimate.c does, and this removes
+	// the ordering question rather than relying on it.
+	//
+	// srand() is the C library generator, used separately by roll_dice() for /roll; it was already
+	// being seeded further down and is moved up here to keep the two together.
+	Rand_Init( randomSeed );
+	srand( randomSeed );
+	// GalaxyRP fix: [RNG] discard the first few outputs. The generator is a plain LCG
+	//   holdrand = holdrand * 214013 + 2531011;  result = holdrand >> 17
+	// and seeding it with a small number leaves the very first output poorly mixed. The seed here
+	// is the engine's Com_Milliseconds(), which on a freshly started server is only a few thousand
+	// at the first map load: measured over that band (2-8 s of uptime), the first Q_irand(0,100)
+	// took only 31 of its 101 possible values. Discarding even one output takes it to all 101; four
+	// costs nothing and leaves margin. OpenJK's fix (and TaystJK's port of it) seeds without this.
+	for ( rngDiscard = 0; rngDiscard < 4; rngDiscard++ ) {
+		Q_irand( 0, 1 );
+	}
 
 	//Init RMG to 0, it will be autoset to 1 if there is terrain on the level.
 	trap->Cvar_Set("RMG", "0");
@@ -719,8 +1944,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	trap->Print ("gamename: %s\n", GAMEVERSION);
 	trap->Print ("gamedate: %s\n", SOURCE_DATE);
 
-	srand( randomSeed );
-
 	G_RegisterCvars();
 
 	G_ProcessIPBans();
@@ -732,6 +1955,10 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	level.time = levelTime;
 	level.startTime = levelTime;
 
+	// GalaxyRP: [Slot Reuse] the reuses already spent this map survive a map_restart, as the clients'
+	// registrations do (RP_SlotRestore() in g_utils.c)
+	RP_SlotRestore( restart );
+
 	level.follow1 = level.follow2 = -1;
 
 	level.snd_fry = G_SoundIndex("sound/player/fry.wav");	// FIXME standing in lava / slime
@@ -739,6 +1966,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	level.snd_hack = G_SoundIndex("sound/player/hacking.wav");
 	level.snd_medHealed = G_SoundIndex("sound/player/supp_healed.wav");
 	level.snd_medSupplied = G_SoundIndex("sound/player/supp_supplied.wav");
+
+	WP_RegisterForceLoopSounds();
 
 	//trap->SP_RegisterServer("mp_svgame");
 
@@ -780,8 +2009,14 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	G_InitWorldSession();
 
 	// initialize all entities for this game
-	memset( g_entities, 0, MAX_GENTITIES * sizeof(g_entities[0]) );
+	// GalaxyRP: [Logical Entities] both regions -- the engine only ever hears about the first
+	// MAX_GENTITIES of them, but the logical region is reused from map to map just the same.
+	memset( g_entities, 0, MAX_ENTITIESTOTAL * sizeof(g_entities[0]) );
 	level.gentities = g_entities;
+	level.num_logicalents = 0;
+	// GalaxyRP: [Logical Entities] the cvar is latched, but this copy is what the allocator reads,
+	// so nothing can move between regions while a map is running.
+	level.logical_entities_enabled = rp_logical_entities.integer ? qtrue : qfalse;
 
 	// initialize all clients for this game
 	level.maxclients = sv_maxclients.integer;
@@ -845,25 +2080,42 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	Q_strncpyz(zyk_mapname, Info_ValueForKey( serverinfo, "mapname" ), sizeof(zyk_mapname));
 	strcpy(level.zykmapname, zyk_mapname);
 
-	level.is_vjun3_map = qfalse;
-	if (Q_stricmp(zyk_mapname, "vjun3") == 0)
-	{ // zyk: fixing vjun3 map. It will not load protocol_imp npc to prevent exceeding the npc model limit (16) and crashing clients
-		level.is_vjun3_map = qtrue;
-	}
+	// GalaxyRP fix: [NPC] the is_vjun3_map flag that was set here is gone: its only reader dropped
+	// protocol_imp and r2d2_imp on vjun3 unconditionally to stay under the old 16-entry
+	// MAX_ANIM_FILES, which has been 128 since 3.47. Both types are on the rp_sp_npc_fix list.
 
-	if (Q_stricmp(zyk_mapname, "yavin1") == 0 || Q_stricmp(zyk_mapname, "yavin1b") == 0 || Q_stricmp(zyk_mapname, "yavin2") == 0 || 
-		Q_stricmp(zyk_mapname, "t1_danger") == 0 || Q_stricmp(zyk_mapname, "t1_fatal") == 0 || Q_stricmp(zyk_mapname, "t1_inter") == 0 ||
-		Q_stricmp(zyk_mapname, "t1_rail") == 0 || Q_stricmp(zyk_mapname, "t1_sour") == 0 || Q_stricmp(zyk_mapname, "t1_surprise") == 0 ||
-		Q_stricmp(zyk_mapname, "hoth2") == 0 || Q_stricmp(zyk_mapname, "hoth3") == 0 || Q_stricmp(zyk_mapname, "t2_dpred") == 0 ||
-		Q_stricmp(zyk_mapname, "t2_rancor") == 0 || Q_stricmp(zyk_mapname, "t2_rogue") == 0 || Q_stricmp(zyk_mapname, "t2_trip") == 0 ||
-		Q_stricmp(zyk_mapname, "t2_wedge") == 0 || Q_stricmp(zyk_mapname, "vjun1") == 0 || Q_stricmp(zyk_mapname, "vjun2") == 0 ||
-		Q_stricmp(zyk_mapname, "vjun3") == 0 || Q_stricmp(zyk_mapname, "t3_bounty") == 0 || Q_stricmp(zyk_mapname, "t3_byss") == 0 ||
-		Q_stricmp(zyk_mapname, "t3_hevil") == 0 || Q_stricmp(zyk_mapname, "t3_rift") == 0 || Q_stricmp(zyk_mapname, "t3_stamp") == 0 ||
-		Q_stricmp(zyk_mapname, "taspir1") == 0 || Q_stricmp(zyk_mapname, "taspir2") == 0 || Q_stricmp(zyk_mapname, "kor1") == 0 ||
-		Q_stricmp(zyk_mapname, "kor2") == 0)
+	// GalaxyRP: [SP Maps] the single-player map lists moved into RP_IsJediAcademySPMap() and
+	// RP_IsJediOutcastMap() above; sp_map is set from the first exactly as before.
+	if ( RP_IsJediAcademySPMap( zyk_mapname ) )
 	{
 		level.sp_map = qtrue;
+		level.rp_sp_game = RP_SP_GAME_JA;
+		// GalaxyRP fix: [SP Maps] the start's target -- the map's intro / setup script, copied onto
+		// every added spawn point by zyk_create_info_player_deathmatch() -- fires for the first
+		// spawn only, as it already does on the Jedi Outcast maps (RP_JediOutcastMapFixes). Every
+		// one of the 34 maps' start targets was checked: all are one-shot setup scriptrunners
+		// (intros, cranes, clips, objectives, Kyle's setup on vjun1) or, on vjun2, the NPC_Kyle
+		// spawner itself -- which spawned another Kyle on every respawn.
+		level.rp_spawn_target_once = qtrue;
 	}
+	else if ( RP_IsJediOutcastMap( zyk_mapname ) )
+	{
+		level.rp_sp_game = RP_SP_GAME_JO;
+	}
+
+	// GalaxyRP fix: [Entity System] this MUST be reset before the line below and nowhere else.
+	// The game module has no trap that reports how many inline models a map holds, so
+	// zyk_brush_model_allowed() learns the bound by watching the map's own brush entities as they
+	// spawn -- and that is the call below. It used to be zeroed 200 lines further down, still
+	// inside this function, which threw the bound away as soon as it had been learned: from then
+	// on the map believed it had no inline models past *0, and every /entload, /entadd and
+	// /entedit that named a brush model was refused. Doors came back with no brush (invisible,
+	// non-solid, so the doorway reads as permanently open), and every refused trigger collapsed
+	// to a zero-size volume at the world origin.
+	//
+	// memset( &level, ... ) above already zeroes it; this is here to say where the bound is
+	// filled in, and to make an assignment after the spawn look as wrong as it is.
+	level.zyk_max_inline_model = 0;
 
 	// parse the key/value pairs and spawn gentities
 	G_SpawnEntitiesFromString(qfalse);
@@ -904,6 +2156,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 	// general initialization
 	G_FindTeams();
+	RP_ToggleMoverTeamsMatch();	// GalaxyRP: [SP Maps] a team of rotators/bobbers/pendulums starts as its master
 
 	// make sure we have flags for CTF, etc
 	if( level.gametype >= GT_TEAM ) {
@@ -1023,39 +2276,15 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		}
 	}
 
-	// zyk: initializing race mode
-	level.race_mode = 0;
+	// GalaxyRP fix: [Guardian] level.quest_effect_id init removed here — the quest_effect_id field
+	// itself (g_local.h) was deleted as dead (its sole reader/writer, clean_effect(), is gone).
 
-	// zyk: initializing quest_map value
-	level.quest_map = 0;
-	level.custom_quest_map = -1;
-	level.zyk_custom_quest_effect_id = -1;
-
-	// zyk: initializing quest_note_id value
-	level.quest_note_id = -1;
-	level.universe_quest_note_id = -1;
-
-	// zyk: initializing quest_effect_id value
-	level.quest_effect_id = -1;
-
-	level.chaos_portal_id = -1;
-
-	// zyk: initializing bounty_quest_target_id value
-	level.bounty_quest_target_id = 0;
-	level.bounty_quest_choose_target = qtrue;
-
-	// zyk: initializing guardian quest values
-	level.guardian_quest = 0;
-	level.initial_map_guardian_weapons = 0;
-
-	level.boss_battle_music_reset_timer = 0;
+	// GalaxyRP fix: [Guardian] level.boss_battle_music_reset_timer init removed here — field removed as dead (see g_local.h)
 
 	level.voting_player = -1;
 
 	level.server_empty_change_map_timer = 0;
 	level.num_fully_connected_clients = 0;
-
-	level.guardian_quest_timer = 0;
 
 	// zyk: initializing Duel Tournament variables
 	level.duel_tournament_mode = 0;
@@ -1067,15 +2296,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	level.duel_tournament_timer = 0;
 	level.duelist_1_id = -1;
 	level.duelist_2_id = -1;
-	level.duelist_1_ally_id = -1;
-	level.duelist_2_ally_id = -1;
 	level.duel_tournament_model_id = -1;
 	level.duel_arena_loaded = qfalse;
-	level.duel_leaderboard_step = 0;
-
-	// zyk: initializing Sniper Battle variables
-	level.sniper_mode = 0;
-	level.sniper_mode_quantity = 0;
 
 	// zyk: initializing Melee Battle variables
 	level.melee_mode = 0;
@@ -1084,10 +2306,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	level.melee_mode_quantity = 0;
 	level.melee_arena_loaded = qfalse;
 
-	// zyk: initializing RPG LMS variables
-	level.rpg_lms_mode = 0;
-	level.rpg_lms_quantity = 0;
-
 	level.last_spawned_entity = NULL;
 
 	level.ent_origin_set = qfalse;
@@ -1095,23 +2313,13 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	level.load_entities_timer = 0;
 	strcpy(level.load_entities_file,"");
 
-	if (1)
 	{
-		FILE *quest_file = NULL;
-		char content[8192];
 		int zyk_iterator = 0;
-
-		strcpy(content, "");
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_CLIENTS; zyk_iterator++)
 		{ // zyk: initializing duelist scores
 			level.duel_players[zyk_iterator] = -1;
-			level.sniper_players[zyk_iterator] = -1;
 			level.melee_players[zyk_iterator] = -1;
-			level.rpg_lms_players[zyk_iterator] = -1;
-
-			// zyk: initializing ally table
-			level.duel_allies[zyk_iterator] = -1;
 		}
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_DUEL_MATCHES; zyk_iterator++)
@@ -1122,120 +2330,16 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			level.duel_matches[zyk_iterator][3] = 0;
 		}
 
-		for (zyk_iterator = 0; zyk_iterator < MAX_RACERS; zyk_iterator++)
-		{ // zyk: initializing race vehicle ids
-			level.race_mode_vehicle[zyk_iterator] = -1;
-		}
-
-		for (zyk_iterator = 0; zyk_iterator < ENTITYNUM_MAX_NORMAL; zyk_iterator++)
-		{ // zyk: initializing special power variables
-			level.special_power_effects[zyk_iterator] = -1;
-			level.special_power_effects_timer[zyk_iterator] = 0;
-		}
+		// GalaxyRP fix: [Magic] the level.special_power_effects[] / _timer[] init loop used to be
+		// here. Both arrays went with the magic effect engine. Worth recording: this loop ran to
+		// ENTITYNUM_MAX_NORMAL while the arrays were sized MAX_ENTITIESTOTAL, so the logical-entity
+		// half was never seeded with the -1 sentinel and sat at 0 -- "owned by entity 0". Nothing
+		// reachable ever read those slots, but the inconsistency goes with the arrays.
 
 		for (zyk_iterator = 0; zyk_iterator < MAX_CLIENTS; zyk_iterator++)
 		{
 			level.ignored_players[zyk_iterator][0] = 0;
 			level.ignored_players[zyk_iterator][1] = 0;
-		}
-
-		// zyk: initializing quest_crystal_id value
-		for (zyk_iterator = 0; zyk_iterator < 3; zyk_iterator++)
-		{
-			level.quest_crystal_id[zyk_iterator] = -1;
-		}
-
-		for (zyk_iterator = 0; zyk_iterator < MAX_CUSTOM_QUESTS; zyk_iterator++)
-		{ // zyk: initializing custom quest values
-			level.zyk_custom_quest_mission_count[zyk_iterator] = -1;
-
-			quest_file = fopen(va("GalaxyRP/customquests/%d.txt", zyk_iterator), "r");
-			if (quest_file)
-			{
-				// zyk: initializes amount of quest missions
-				level.zyk_custom_quest_mission_count[zyk_iterator] = 0;
-
-				// zyk: reading the first line, which contains the main quest fields
-				if (fgets(content, sizeof(content), quest_file) != NULL)
-				{
-					int j = 0;
-					int k = 0; // zyk: current spawn string position
-					char field[256];
-
-					if (content[strlen(content) - 1] == '\n')
-						content[strlen(content) - 1] = '\0';
-
-					while (content[k] != '\0')
-					{
-						int l = 0;
-
-						// zyk: getting the field
-						while (content[k] != ';')
-						{
-							field[l] = content[k];
-
-							l++;
-							k++;
-						}
-						field[l] = '\0';
-						k++;
-
-						level.zyk_custom_quest_main_fields[zyk_iterator][j] = G_NewString(field);
-
-						j++;
-					}
-				}
-
-				while (fgets(content, sizeof(content), quest_file) != NULL)
-				{
-					int j = 0; // zyk: the current key/value being used
-					int k = 0; // zyk: current spawn string position
-
-					if (content[strlen(content) - 1] == '\n')
-						content[strlen(content) - 1] = '\0';
-
-					while (content[k] != '\0')
-					{
-						int l = 0;
-						char zyk_key[256];
-						char zyk_value[256];
-
-						// zyk: getting the key
-						while (content[k] != ';')
-						{
-							zyk_key[l] = content[k];
-
-							l++;
-							k++;
-						}
-						zyk_key[l] = '\0';
-						k++;
-
-						// zyk: getting the value
-						l = 0;
-						while (content[k] != ';')
-						{
-							zyk_value[l] = content[k];
-
-							l++;
-							k++;
-						}
-						zyk_value[l] = '\0';
-						k++;
-
-						// zyk: copying the key and value to the fields array
-						level.zyk_custom_quest_missions[zyk_iterator][level.zyk_custom_quest_mission_count[zyk_iterator]][j] = G_NewString(zyk_key);
-						level.zyk_custom_quest_missions[zyk_iterator][level.zyk_custom_quest_mission_count[zyk_iterator]][j + 1] = G_NewString(zyk_value);
-
-						j += 2;
-					}
-
-					level.zyk_custom_quest_mission_values_count[zyk_iterator][level.zyk_custom_quest_mission_count[zyk_iterator]] = j;
-					level.zyk_custom_quest_mission_count[zyk_iterator]++;
-				}
-
-				fclose(quest_file);
-			}
 		}
 	}
 
@@ -1277,12 +2381,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "yavin1") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "end_level") == 0)
 			{ // zyk: remove the map change entity
 				G_FreeEntity( ent );
@@ -1293,16 +2396,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "yavin1b") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "yavin1b", 8) == 0)
-			level.quest_map = 1;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "door1") == 0)
 			{
 				fix_sp_func_door(ent);
@@ -1317,16 +2415,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "yavin2") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "yavin2", 7) == 0)
-			level.quest_map = 10;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "t530") == 0 || Q_stricmp( ent->targetname, "Putz_door") == 0 || Q_stricmp( ent->targetname, "afterdroid_door") == 0 || Q_stricmp( ent->targetname, "pit_door") == 0 || Q_stricmp( ent->targetname, "door1") == 0)
 			{
 				fix_sp_func_door(ent);
@@ -1341,16 +2434,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "hoth2") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "hoth2", 6) == 0)
-			level.quest_map = 5;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "end_level") == 0)
 			{ // zyk: remove the map change entity
 				G_FreeEntity( ent );
@@ -1362,21 +2450,21 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "hoth3") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "hoth3", 6) == 0)
-			level.quest_map = 20;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "end_level") == 0)
 			{ // zyk: remove the map change entity
 				G_FreeEntity( ent );
 			}
-			if (i == 232 || i == 233)
+			// GalaxyRP: [SP Maps] these were entities 232 and 233 (New Zyk mod picks them by slot); matched
+			// by what they are, which is the same two: the script runners for elevator1 near the end of
+			// the map, hoth3/elevator (t146, the call button) and common/elevator (t145, the car). Their
+			// name is removed, so neither trigger reaches its script any more.
+			if (Q_stricmp(ent->classname, "target_scriptrunner") == 0 &&
+				(Q_stricmp(ent->targetname, "t146") == 0 || Q_stricmp(ent->targetname, "t145") == 0))
 			{ // zyk: fixing the final door
 				ent->targetname = NULL;
 				zyk_main_set_entity_field(ent, "targetname", "zykremovekey");
@@ -1390,16 +2478,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t1_danger") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "t1_danger", 10) == 0)
-			level.quest_map = 18;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->classname, "NPC_Monster_Sand_Creature") == 0)
 			{ // zyk: remove the map change entity
 				G_FreeEntity( ent );
@@ -1411,32 +2494,39 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t1_fatal") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "t1_fatal", 9) == 0)
-			level.quest_map = 13;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 
 			if (Q_stricmp(ent->targetname, "door_trap") == 0)
 			{ // zyk: fixing this door so it will not lock
 				fix_sp_func_door(ent);
 			}
 				
-			if (Q_stricmp(ent->targetname, "lobbydoor1") == 0 || Q_stricmp(ent->targetname, "lobbydoor2") == 0 || 
-				Q_stricmp(ent->targetname, "t7708018") == 0 || Q_stricmp(ent->targetname, "t7708017") == 0)
+			if (Q_stricmp(ent->targetname, "lobbydoor1") == 0 || Q_stricmp(ent->targetname, "lobbydoor2") == 0)
 			{ // zyk: fixing these doors so they will not lock
 				GlobalUse(ent, ent, ent);
 			}
 
-			if (i == 443)
-			{ // zyk: trigger_hurt at the spawn area
-				G_FreeEntity( ent );
+			// GalaxyRP: [SP Maps] t7708017 and t7708018 are the key_2 and key_3 security doors. Zyk unlocked
+			// them here at load because MP had no keys; it has them now (a dead key officer's body hands
+			// the key over, the misc_security_panel takes it and unlocks the door for everyone), so they
+			// stay locked until a player brings the key, as in single player. The key officers spawn only
+			// once, so in CTF, whose bases this map was set up with, they are still unlocked at load.
+			if (level.gametype == GT_CTF &&
+				(Q_stricmp(ent->targetname, "t7708018") == 0 || Q_stricmp(ent->targetname, "t7708017") == 0))
+			{ // zyk: fixing these doors so they will not lock
+				GlobalUse(ent, ent, ent);
 			}
+
+			// GalaxyRP fix: [SP Maps] a removal of entity 443 ("trigger_hurt at the spawn area") used to
+			// be here. On this map 443 is not that trigger: it is func_door *137, an ordinary automatic
+			// door, and freeing it closed nothing but left the area portal under it shut -- the doorway
+			// showed the void. The trigger it meant (*139, two slots later) is the falling-death volume
+			// of the chasm around the spawn platform, and parts of that chasm have no floor at all, so
+			// removing it would leave a player falling for ever. Both are left as the map made them.
 
 		}
 		zyk_create_info_player_deathmatch(-1563,-4241,4569,-157);
@@ -1465,6 +2555,16 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	{
 		zyk_create_info_player_deathmatch(-65,-686,89,90);
 		zyk_create_info_player_deathmatch(56,-686,89,90);
+		// GalaxyRP: [SP Maps] six more from New Zyk mod: two extending the row above, and four in the
+		// gaps between the bunks along the side walls, facing into the room. Checked against the map:
+		// clear standing room, flat floor at the start's height, clear of the NPCs and of the
+		// intermission trigger on the original start.
+		zyk_create_info_player_deathmatch(-329, -686, 89, 90);
+		zyk_create_info_player_deathmatch(202, -686, 89, 90);
+		zyk_create_info_player_deathmatch(-411, -491, 89, 0);
+		zyk_create_info_player_deathmatch(280, -491, 89, 179);
+		zyk_create_info_player_deathmatch(-411, -252, 89, 0);
+		zyk_create_info_player_deathmatch(280, -252, 89, 179);
 	}
 	else if (Q_stricmp(zyk_mapname, "t1_rail") == 0)
 	{
@@ -1492,26 +2592,17 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t1_sour") == 0)
 	{
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "t1_sour", 8) == 0)
-			level.quest_map = 2;
-
 		zyk_create_info_player_deathmatch(9828,-5521,153,90);
 		zyk_create_info_player_deathmatch(9845,-5262,153,153);
 	}
 	else if (Q_stricmp(zyk_mapname, "t1_surprise") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 		qboolean found_bugged_switch = qfalse;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "t1_surprise", 12) == 0)
-			level.quest_map = 3;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 
 			if (Q_stricmp( ent->targetname, "fire_hurt") == 0)
 			{
@@ -1534,7 +2625,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			{ // zyk: elevator inside sand crawler near the wall fire
 				G_FreeEntity( ent );
 			}
-			if (Q_stricmp( ent->classname, "func_door") == 0 && i > 200 && Q_stricmp( ent->model, "*63") == 0)
+			// GalaxyRP: [SP Maps] the brush model alone identifies it (a slot test above 200 went with it,
+			// and matched the same door); it is tube_door's team partner, freed after the master
+			if (Q_stricmp( ent->classname, "func_door") == 0 && Q_stricmp( ent->model, "*63") == 0)
 			{ // zyk: tube door in which the droid goes in SP
 				G_FreeEntity( ent );
 			}
@@ -1563,12 +2656,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t2_rancor") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			
 			if (Q_stricmp( ent->targetname, "t857") == 0)
 			{
@@ -1584,16 +2676,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t2_rogue") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "t2_rogue", 9) == 0)
-			level.quest_map = 7;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "t475") == 0)
 			{ // zyk: remove the invisible wall at the end of the bridge at start
 				G_FreeEntity( ent );
@@ -1618,11 +2705,14 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			{ // zyk: remove office door
 				G_FreeEntity(ent);
 			}
-			if (i == 142)
+			// GalaxyRP: [SP Maps] these two were entities 142 and 166 (New Zyk mod picks them by slot);
+			// matched by brush model, which is the same two: the scripted elevator car
+			// (penthouse_elevator1, whose *38 the func_plat below reuses) and its use-button
+			if (Q_stricmp(ent->classname, "func_static") == 0 && Q_stricmp(ent->model, "*38") == 0)
 			{ // zyk: remove the elevator
 				G_FreeEntity(ent);
 			}
-			if (i == 166)
+			if (Q_stricmp(ent->classname, "trigger_multiple") == 0 && Q_stricmp(ent->model, "*47") == 0)
 			{ // zyk: remove the elevator button
 				G_FreeEntity(ent);
 			}
@@ -1674,16 +2764,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t2_trip") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "t2_trip", 8) == 0)
-			level.quest_map = 17;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "t546") == 0)
 			{
 				G_FreeEntity( ent );
@@ -1708,12 +2793,18 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			{
 				G_FreeEntity( ent );
 			}
-			else if (Q_stricmp( ent->classname, "func_door") == 0 && i > 200)
-			{ // zyk: door after the teleports of the race mode
+			else if (Q_stricmp( ent->classname, "func_door") == 0 && Q_stricmp( ent->model, "*79" ) == 0)
+			{ // zyk: door in the far end of the map, past the teleports the old Race Mode used
+			  // GalaxyRP: [SP Maps] matched by brush model; this was "any func_door above slot 200",
+			  // and *79 is the only one there once cin_door (*78) has been freed by name above
 				G_FreeEntity( ent );
 			}
 			else if (Q_stricmp( ent->targetname, "t547") == 0)
-			{ // zyk: removes swoop at end of map. Must be removed to prevent bug in racemode
+			{ // zyk: removes the swoop at the end of the map
+			  // GalaxyRP: [Race Mode] this removal and the func_door one above were written for Race Mode,
+			  // which is gone. Kept anyway: both are unconditional map fix-ups that run on every t2_trip
+			  // load, so dropping them would put a stray swoop and a door back into the map for everyone --
+			  // a content change rather than dead-code removal.
 				G_FreeEntity( ent );
 			}
 		}
@@ -1746,17 +2837,21 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t2_dpred") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "prisonshield1") == 0)
 			{
 				G_FreeEntity( ent );
 			}
-			if (Q_stricmp( ent->targetname, "t556") == 0)
+			// GalaxyRP: [SP Maps] t556 is the loading-room security door (key "loadingroom_key", carried by
+			// an officer of corridortroopers1), plus a target_deactivate of the same name that silences the
+			// door's "locked" sound trigger once the panel opens it. MP has the keys now, so both stay, as
+			// in single player; in CTF, whose bases this map was set up with, the door is still removed
+			// (the key officer spawns only once).
+			if (level.gametype == GT_CTF && Q_stricmp( ent->targetname, "t556") == 0)
 			{
 				fix_sp_func_door(ent);
 			}
@@ -1798,12 +2893,13 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "vjun1") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
-			if (i == 123 || i == 124)
+			// GalaxyRP: [SP Maps] entities 123 and 124 in New Zyk mod: the map's only two TIE bombers
+			if (Q_stricmp(ent->classname, "misc_model_breakable") == 0 &&
+				(Q_stricmp(ent->script_targetname, "tie1") == 0 || Q_stricmp(ent->script_targetname, "tie2") == 0))
 			{ // zyk: removing tie fighter misc_model_breakable entities to prevent client crashes
 				G_FreeEntity( ent );
 			}
@@ -1818,12 +2914,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "vjun3") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "end_level") == 0)
 			{
 				G_FreeEntity( ent );
@@ -1835,17 +2930,13 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t3_hevil") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "t3_hevil", 9) == 0)
-			level.quest_map = 8;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
-			if (i == 42)
+			// GalaxyRP: [SP Maps] entity 42 in New Zyk mod: a 5000-damage trigger_hurt
+			if (RP_IsBrushEntity(ent, "trigger_hurt", "*3"))
 			{
 				G_FreeEntity( ent );
 			}
@@ -1855,10 +2946,6 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t3_bounty") == 0)
 	{
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "t3_bounty", 10) == 0)
-			level.quest_map = 6;
-
 		zyk_create_info_player_deathmatch(-3721,-726,73,75);
 		zyk_create_info_player_deathmatch(-3198,-706,73,90);
 
@@ -1883,17 +2970,13 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t3_byss") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
-			
-			if (Q_stricmp( ent->targetname, "wall_door1") == 0)
-			{
-				fix_sp_func_door(ent);
-			}
+			// GalaxyRP: [SP Maps] zyk removed wall_door1 here; it is the key1 security door, and MP has the
+			// keys now (the officer in the t4 group carries it), so it stays, as in single player.
 			if (Q_stricmp( ent->target, "field_counter1") == 0)
 			{
 				G_FreeEntity( ent );
@@ -1928,16 +3011,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "t3_rift") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "t3_rift", 8) == 0)
-			level.quest_map = 4;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "fakewall1") == 0)
 			{
 				G_FreeEntity( ent );
@@ -1962,24 +3040,19 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "taspir1") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "taspir1", 8) == 0)
-			level.quest_map = 25;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp(ent->targetname, "t278") == 0)
 			{
 				G_FreeEntity(ent);
 			}
-			if (Q_stricmp(ent->targetname, "bldg2_ext_door") == 0)
-			{
-				fix_sp_func_door(ent);
-			}
+			// GalaxyRP: [SP Maps] zyk removed bldg2_ext_door here; it is a security door (key
+			// "bldg2_ext_door_lock", carried by the commander in building2_3), with a target_deactivate of
+			// the same name that silences its "locked" sound trigger once the panel opens it. MP has the
+			// keys now, so both stay, as in single player.
 			if (Q_stricmp(ent->targetname, "end_level") == 0)
 			{
 				G_FreeEntity(ent);
@@ -1990,12 +3063,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "taspir2") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp(ent->targetname, "force_field") == 0)
 			{
 				G_FreeEntity(ent);
@@ -2011,17 +3083,16 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "kor1") == 0)
 	{
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "kor1", 5) == 0)
-			level.quest_map = 9;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
-			if (i >= 418 && i <= 422)
+			// GalaxyRP: [SP Maps] entities 418-422 in New Zyk mod: the five floor slabs s9..s5 of the
+			// first puzzle, brush models *78..*82
+			if (RP_IsBrushEntity(ent, "func_static", "*78") || RP_IsBrushEntity(ent, "func_static", "*79") ||
+				RP_IsBrushEntity(ent, "func_static", "*80") || RP_IsBrushEntity(ent, "func_static", "*81") ||
+				RP_IsBrushEntity(ent, "func_static", "*82"))
 			{ // zyk: remove part of the door on the floor on the first puzzle
 				G_FreeEntity( ent );
 			}
@@ -2038,41 +3109,20 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		zyk_create_info_player_deathmatch(2977,3137,-2526,0);
 		zyk_create_info_player_deathmatch(3072,2992,-2526,0);
 	}
-	else if (Q_stricmp(zyk_mapname, "mp/duel5") == 0 && g_gametype.integer == GT_FFA)
-	{
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "mp/duel5", 9) == 0)
-			level.quest_map = 11;
-	}
-	else if (Q_stricmp(zyk_mapname, "mp/duel8") == 0 && g_gametype.integer == GT_FFA)
-	{
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "mp/duel8", 9) == 0)
-			level.quest_map = 14;
-	}
-	else if (Q_stricmp(zyk_mapname, "mp/duel9") == 0 && g_gametype.integer == GT_FFA)
-	{
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "mp/duel9", 9) == 0)
-			level.quest_map = 15;
-	}
 	else if (Q_stricmp(zyk_mapname, "mp/siege_korriban") == 0 && g_gametype.integer == GT_FFA)
 	{ // zyk: if its a FFA game, then remove some entities
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "mp/siege_korriban", 18) == 0)
-			level.quest_map = 12;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "cyrstalsinplace") == 0)
 			{
 				G_FreeEntity( ent );
 			}
-			if (i >= 236 && i <= 238)
+			// GalaxyRP: [SP Maps] entities 236-238 in New Zyk mod: the three lava trigger_hurts
+			if (RP_IsBrushEntity(ent, "trigger_hurt", "*21") || RP_IsBrushEntity(ent, "trigger_hurt", "*22") ||
+				RP_IsBrushEntity(ent, "trigger_hurt", "*23"))
 			{ // zyk: removing the trigger_hurt from the lava in Guardian of Universe arena
 				G_FreeEntity( ent );
 			}
@@ -2080,16 +3130,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "mp/siege_desert") == 0 && g_gametype.integer == GT_FFA)
 	{ // zyk: if its a FFA game, then remove the shield in the final part
-		int i = 0;
 		gentity_t *ent;
 
-		// zyk: making case sensitive comparing so only low case quest map names will be set to play quests. This allows building these maps without conflicting with quests
-		if (Q_strncmp(zyk_mapname, "mp/siege_desert", 16) == 0)
-			level.quest_map = 24;
-
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "rebel_obj_2_doors") == 0)
 			{
 				fix_sp_func_door(ent);
@@ -2102,7 +3147,26 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			{
 				G_FreeEntity( ent );
 			}
-			if (i >= 153 && i <= 160)
+			// GalaxyRP: [SP Maps] entities 153-160 in New Zyk mod: the droid-head doors and what drives
+			// them -- the t408 door pair (*22, *23), the t410 door (*26), the two breakables (*24, *27)
+			// and the trigger (*25) that start the chain, and its relays t409 and t407
+			if (RP_IsBrushEntity(ent, "func_door", "*22") || RP_IsBrushEntity(ent, "func_door", "*23") ||
+				RP_IsBrushEntity(ent, "func_breakable", "*24") || RP_IsBrushEntity(ent, "trigger_once", "*25") ||
+				RP_IsBrushEntity(ent, "func_door", "*26") || RP_IsBrushEntity(ent, "func_breakable", "*27") ||
+				(Q_stricmp(ent->classname, "target_relay") == 0 &&
+				 (Q_stricmp(ent->targetname, "t409") == 0 || Q_stricmp(ent->targetname, "t407") == 0)))
+			{
+				G_FreeEntity( ent );
+			}
+			// GalaxyRP: [SP Maps] from New Zyk mod: open the right-hand breach in the city wall. The
+			// siege attackers blow one of two holes in it, each three func_breakable pieces feeding a
+			// counter (rightholecounter / leftholecounter) whose only target drives the siege radar
+			// icons. Those pieces take heavy weapons only and 1000-3000 damage, so in FFA the players
+			// who spawn outside the wall could not get in -- everything beyond it (the gate, the
+			// objective doors, the shield) is already opened above. The left breach is left as it is.
+			// New Zyk mod picks these by slot (358, 359, 362); matched by what they are here, which is
+			// the same three entities without depending on the spawn order.
+			if (Q_stricmp( ent->classname, "func_breakable") == 0 && Q_stricmp( ent->target, "rightholecounter") == 0)
 			{
 				G_FreeEntity( ent );
 			}
@@ -2110,12 +3174,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 	else if (Q_stricmp(zyk_mapname, "mp/siege_destroyer") == 0 && g_gametype.integer == GT_FFA)
 	{ // zyk: if its a FFA game, then remove the shield at the destroyer
-		int i = 0;
 		gentity_t *ent;
 
-		for (i = 0; i < level.num_entities; i++)
+		// GalaxyRP: [Logical Entities] both regions -- the entity looked for may be logical now.
+		RP_FOR_EACH_ENTITY( ent )
 		{
-			ent = &g_entities[i];
 			if (Q_stricmp( ent->targetname, "ubershield") == 0)
 			{
 				G_FreeEntity( ent );
@@ -2143,23 +3206,52 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		zyk_create_info_player_deathmatch(2797,7403,1817,90);
 	}
 
+	// GalaxyRP: [SP Maps] the Jedi Outcast SP maps -- spawn points, and bespin_streets' doors and lifts
+	RP_JediOutcastMapFixes( zyk_mapname );
+
 	level.sp_map = qfalse;
+
+	// GalaxyRP: [ICARUS] sound indices are per map, and so is the voice-line length cache keyed by them
+	RP_IcarusSoundCacheReset();
 
 	if (Q_stricmp(level.default_map_music, "") == 0)
 	{ // zyk: if the default map music is empty (the map has no music) then set a default music
-		if (level.quest_map == 1)
+		// GalaxyRP fix: [Quests] this used to key off level.quest_map, the number the map blocks
+		// above gave each quest map (case-sensitively, so a "Yavin1b" build would not count).
+		// The quest engine is gone and quest_map with it; the four maps that had their own music
+		// keep it, matched the same way.
+		if (Q_strncmp(zyk_mapname, "yavin1b", 8) == 0)
 			strcpy(level.default_map_music,"music/yavin1/swamp_explore.mp3");
-		else if (level.quest_map == 7)
+		else if (Q_strncmp(zyk_mapname, "t2_rogue", 9) == 0)
 			strcpy(level.default_map_music,"music/t2_rogue/narshaada_explore.mp3");
-		else if (level.quest_map == 10)
+		else if (Q_strncmp(zyk_mapname, "yavin2", 7) == 0)
 			strcpy(level.default_map_music,"music/yavin2/yavtemp2_explore.mp3");
-		else if (level.quest_map == 13)
+		else if (Q_strncmp(zyk_mapname, "t1_fatal", 9) == 0)
 			strcpy(level.default_map_music,"music/t1_fatal/tunnels_explore.mp3");
 		else
 			strcpy(level.default_map_music,"music/hoth2/hoth2_explore.mp3");
 	}
 
 	zyk_create_dir(va("entities/%s", zyk_mapname));
+
+	// GalaxyRP fix: [Spawning] remember where the map's first spawn point is, for the selectors to
+	// fall back on if an entity preset later leaves the map with none -- see g_client.c. Here, after
+	// every per-map fix above has added its spawn points and removed the bad originals (the Jedi
+	// Outcast table does both), and before the default entity file below clears anything.
+	RP_RecordFallbackSpawnPoint();
+
+	// GalaxyRP: [Entity System] and, at the same point for the same reason, which entities are the map's
+	// own: /entcut and /entrotate leave those alone. See RP_MarkMapEntities() in g_entgrab.c.
+	RP_MarkMapEntities();
+
+	// DAJ_RP: [Static Models] and say if some of the map's misc_model_static did not fit the list (g_statics.c)
+	RP_StaticsReport();
+
+	// GalaxyRP fix: [Entity System] CS_ITEMS once more, now that the per-map fixes above have spawned
+	// their items: it was written before them (SaveRegisteredItems() with the map's own entities), so an
+	// item class only a fix placed was never precached by the client -- a hologram cone until a restart.
+	// The same string when nothing changed; the same bytes in the gamestate either way.
+	SaveRegisteredItems();
 
 	// zyk: loading entities set as default (Entity System)
 	zyk_entities_file = fopen(va("GalaxyRP/entities/%s/default.txt",zyk_mapname),"r");
@@ -2169,12 +3261,40 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		fclose(zyk_entities_file);
 
 		// zyk: cleaning entities. Only the ones from the file will be in the map. Do not remove CTF flags
-		for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
+		// GalaxyRP fix: [Entity System] the surviving twin of the test fixed in Cmd_EntLoad_f. "target_ent"
+		// is the address of a fixed array element and so can never be NULL, so every slot in the range was
+		// freed unconditionally -- including the ones the map's own spawn pass had already freed, because
+		// the current gametype did not want them (notsingle / notteam / notfree / gametype).
+		//
+		// A second G_FreeEntity() on an already-free entity is not merely wasted work. G_FreeEntity() ends
+		// with memset(ed, 0, sizeof(*ed)) and never puts s.number back -- only G_InitGentity() does, when
+		// the slot is handed out again -- so the second call runs with s.number == 0 and therefore unlinks
+		// client slot 0 from the world sectors and calls ICARUS_FreeEnt() on it. Here that happens to be
+		// harmless: G_InitGame() runs before any client enters the world (map_restart re-enters them only
+		// after the game module has initialised) and gSequencers[0] is NULL, so both are no-ops. It is the
+		// same call at runtime, through /entload, that had to be fixed -- there client 0 is a real player.
+		//
+		// Test what was actually meant, and first, so the two classname compares only ever see a live
+		// entity rather than the "freed" placeholder.
+		// GalaxyRP: [Logical Entities] both regions, as in Cmd_EntLoad_f.
 		{
-			gentity_t *target_ent = &g_entities[i];
+			gentity_t *target_ent;
 
-			if (target_ent && Q_stricmp(target_ent->classname, "team_CTF_redflag") != 0 && Q_stricmp(target_ent->classname, "team_CTF_blueflag") != 0)
-				G_FreeEntity( target_ent );
+			RP_FOR_EACH_ENTITY( target_ent )
+			{
+				i = target_ent - g_entities;
+				if (i < (MAX_CLIENTS + BODY_QUEUE_SIZE))
+					continue;
+
+				// GalaxyRP fix: [Entity System] and not the spawn points the per-map fixes above built in
+				// code: no preset can hold them, so clearing them here lost them for good -- see
+				// RP_EntityIsCodeMadeSpawnPoint() in g_spawn.c.
+				if (target_ent->inuse && RP_EntityIsCodeMadeSpawnPoint(target_ent))
+					continue;
+
+				if (target_ent->inuse && Q_stricmp(target_ent->classname, "team_CTF_redflag") != 0 && Q_stricmp(target_ent->classname, "team_CTF_blueflag") != 0)
+					G_FreeEntity( target_ent );
+			}
 		}
 
 		strcpy(level.load_entities_file, va("GalaxyRP/entities/%s/default.txt",zyk_mapname));
@@ -2183,30 +3303,19 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 
 	// zyk: loading default remaps
-	zyk_remap_file = fopen(va("GalaxyRP/remaps/%s/default.txt",zyk_mapname),"r");
+	// GalaxyRP fix: [security] this was a second, unhardened copy of /remapload's read loop, and
+	// the more dangerous of the two because it runs at map start with nobody typing anything. Its
+	// conversions were bare "%s" into char[128] with no field width -- a straight overflow from any
+	// token of 128 characters or more in remaps/<map>/default.txt -- and the two follow-up reads
+	// were unchecked, so a file ending mid-record registered a remap built from whatever the
+	// previous iteration had left in the buffers. The command's copy had been given both of those
+	// fixes at some point and this one was missed, which is the argument for there being one copy:
+	// zyk_load_remap_file() (g_utils.c). It also validates each record now and skips the unusable
+	// ones instead of trusting the file.
+	zyk_load_remap_file(va("GalaxyRP/remaps/%s/default.txt", zyk_mapname));
 
-	if (zyk_remap_file != NULL)
-	{
-		char old_shader[128];
-		char new_shader[128];
-		char time_offset[128];
-
-		strcpy(old_shader,"");
-		strcpy(new_shader,"");
-		strcpy(time_offset,"");
-
-		while(fscanf(zyk_remap_file,"%s",old_shader) != EOF)
-		{
-			fscanf(zyk_remap_file,"%s",new_shader);
-			fscanf(zyk_remap_file,"%s",time_offset);
-
-			AddRemap(G_NewString(old_shader), G_NewString(new_shader), atof(time_offset));
-		}
-		
-		fclose(zyk_remap_file);
-
-		trap->SetConfigstring(CS_SHADERSTATE, BuildShaderStateConfig());
-	}
+	// DAJ_RP: [Locks] this map's account locks -- see g_locks.c
+	RP_LocksLoad();
 
 	// zyk: loading duel arena, if this map has one
 	zyk_duel_arena_file = fopen(va("GalaxyRP/duelarena/%s/origin.txt", zyk_mapname), "r");
@@ -2254,6 +3363,18 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 	//alex: create tables required for storing stuff, and also create admin account. ONLY if those do not already exist.
 	InitializeGalaxyRpTables(qtrue);
+
+	// GalaxyRP fix: [Configstrings] every configstring the map and the mod register has now been
+	// written, so count the gamestate once and start the running estimate from the truth. Without
+	// this the estimate would begin at zero and the budget check in G_FindConfigstringIndex would
+	// not look at the real total until it believed it had added 14976 bytes by itself -- by which
+	// point the gamestate would be long past the 16000 every client enforces.
+	//
+	// GalaxyRP fix: [Configstrings] this count is no longer the one that gets reported, because it
+	// cannot see the whole gamestate yet -- SV_SpawnServer writes CS_SYSTEMINFO and CS_SERVERINFO
+	// only after InitGame returns. G_RunFrame takes the count again once they are there and logs it
+	// then. This one stays so level.zyk_gamestate_bytes is a real number in the meantime.
+	G_ResetGamestateEstimate();
 }
 
 /*
@@ -2261,11 +3382,39 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 G_ShutdownGame
 =================
 */
+// GalaxyRP: [Account] forward-declared so G_ShutdownGame (below) can flush every still-connected
+// player's currently active character before this level's game module is torn down -- same pattern
+// used for the ClientDisconnect fix in g_client.c, whose comment goes into the full history.
+extern void save_account(gentity_t *ent, qboolean save_char_file);
 void G_ShutdownGame( int restart ) {
 	int i = 0;
 	gentity_t *ent;
 
 //	trap->Print ("==== ShutdownGame ====\n");
+
+	// GalaxyRP: [Account] G_ShutdownGame runs on every level change -- a server-console /map, this
+	// mod's own /admmap, map rotation, a vote, or a full server shutdown -- and never called
+	// save_account() for anyone. The engine's own G_WriteSessionData() call further down persists a
+	// player's team/spectator state and *which* account/character they were using (via session
+	// cvars), but none of their actual RPG progress (credits, skill points, XP, saber colours,
+	// etc.) -- those live in ent->client->pers, which is wiped fresh for the new level. Worse,
+	// ClientBegin() on the new level unconditionally reloads every RPG-mode player's account and
+	// default character straight from the database to restore their loadout before they spawn -- so
+	// without a save here, a level change didn't just risk losing unsaved progress, it *guaranteed*
+	// overwriting it with whatever the database already had, for every RPG-mode player on the server
+	// at once, on every single level change. Flush everyone here, first, before any of the cleanup
+	// below runs (none of it touches pers/sess, but this keeps the same save-before-teardown
+	// ordering used in ClientDisconnect). save_account() itself is a no-op for anyone not actually in
+	// RPG mode (sess.amrpgmode != 2), so this is harmless for spectators, bots, and logged-out
+	// players.
+	for (i = 0; i < level.maxclients; i++) {
+		ent = &g_entities[i];
+
+		if (ent->client) {
+			save_account(ent, qtrue);
+		}
+	}
+	i = 0;
 
 	G_CleanAllFakeClients(); //get rid of dynamically allocated fake client structs.
 
@@ -2869,8 +4018,13 @@ void G_ResetDuelists(void)
 	{
 		ent = &g_entities[level.sortedClients[i]];
 
+		// GalaxyRP fix: [Death System] bookkeeping, not a death -- see g_bookkeepingDeath in
+		// g_local.h. Resetting the duelists is the match machinery clearing the arena, not
+		// something any of them did.
 		g_noPDuelCheck = qtrue;
+		g_bookkeepingDeath = qtrue;
 		player_die(ent, ent, ent, 999, MOD_SUICIDE);
+		g_bookkeepingDeath = qfalse;
 		g_noPDuelCheck = qfalse;
 		trap->UnlinkEntity ((sharedEntity_t *)ent);
 		ClientSpawn(ent);
@@ -3863,14 +5017,14 @@ void CheckExitRules( void ) {
 			}
 		}
 
-		if (zyk_server_empty_change_map_time.integer > 0)
+		if (rp_server_empty_change_map_time.integer > 0)
 		{
 			if (level.num_fully_connected_clients == 0)
 			{ // zyk: changes map if server has no one for some time
 				if (level.server_empty_change_map_timer == 0)
 					level.server_empty_change_map_timer = level.time;
 
-				if ((level.time - level.server_empty_change_map_timer) > zyk_server_empty_change_map_time.integer)
+				if ((level.time - level.server_empty_change_map_timer) > rp_server_empty_change_map_time.integer)
 					ExitLevel();
 			}
 			else
@@ -4449,12 +5603,12 @@ void CheckVote( void ) {
 					//trap->Cvar_Set("bot_minplayers", "0");
 				}
 
-				if (nextMap && nextMap[0] && zyk_change_map_gametype_vote.integer)
+				if (nextMap && nextMap[0] && rp_change_map_gametype_vote.integer)
 				{
 					trap->SendConsoleCommand( EXEC_APPEND, va("map %s\n", nextMap ) );
 				}
 				else
-				{ // zyk: if zyk_change_map_gametype_vote is 0, just restart the current map
+				{ // zyk: if rp_change_map_gametype_vote is 0, just restart the current map
 					trap->SendConsoleCommand( EXEC_APPEND, "map_restart 0\n"  );
 				}
 			}
@@ -4507,11 +5661,13 @@ void CheckVote( void ) {
 		else
 		{
 			trap->SendServerCommand( -1, va("print \"%s (%s)\n\"", G_GetStringEdString("MP_SVGAME", "VOTEFAILED"), level.voteStringClean) );
+			// GalaxyRP fix: [Vote] a failed gametype vote no longer leaves votingGametype set -- see below
+			level.votingGametype = qfalse;
 		}
 
 		// zyk: set the timer for the next vote of this player
-		if (zyk_vote_timer.integer > 0 && level.voting_player > -1)
-			g_entities[level.voting_player].client->sess.vote_timer = zyk_vote_timer.integer;
+		if (rp_vote_timer.integer > 0 && level.voting_player > -1)
+			g_entities[level.voting_player].client->sess.vote_timer = rp_vote_timer.integer;
 	}
 	else 
 	{
@@ -4520,21 +5676,37 @@ void CheckVote( void ) {
 			trap->SendServerCommand( -1, va("print \"%s (%s)\n\"", G_GetStringEdString("MP_SVGAME", "VOTEPASSED"), level.voteStringClean) );
 			level.voteExecuteTime = level.time + level.voteExecuteDelay;
 			// zyk: set the timer for the next vote of this player
-			if (zyk_vote_timer.integer > 0 && level.voting_player > -1)
-				g_entities[level.voting_player].client->sess.vote_timer = zyk_vote_timer.integer;
+			if (rp_vote_timer.integer > 0 && level.voting_player > -1)
+				g_entities[level.voting_player].client->sess.vote_timer = rp_vote_timer.integer;
 		}
 		// same behavior as a timeout
 		else if ( level.voteNo >= (level.numVotingClients+1)/2 )
 		{
 			trap->SendServerCommand( -1, va("print \"%s (%s)\n\"", G_GetStringEdString("MP_SVGAME", "VOTEFAILED"), level.voteStringClean) );
+			// GalaxyRP fix: [Vote] G_VoteGametype() raises votingGametype when the vote is CALLED, and only
+			// the execute block above lowered it again, so a gametype vote that failed left it standing
+			// until the next /callvote. Whatever next set voteExecuteTime without going through
+			// Cmd_CallVote_f() -- which is exactly what the team-vote timer bug in CheckTeamVote() did --
+			// then ran the gametype switch (map change, bot kick, fraglimit reset) for a vote nobody
+			// passed. Nothing can reach that any more, but a failed vote should not leave the flag armed.
+			level.votingGametype = qfalse;
 			// zyk: set the timer for the next vote of this player
-			if (zyk_vote_timer.integer > 0 && level.voting_player > -1)
-				g_entities[level.voting_player].client->sess.vote_timer = zyk_vote_timer.integer;
+			if (rp_vote_timer.integer > 0 && level.voting_player > -1)
+				g_entities[level.voting_player].client->sess.vote_timer = rp_vote_timer.integer;
 		}
 		else // still waiting for a majority
 			return;
 	}
 	level.voteTime = 0;
+
+	// GalaxyRP fix: [Vote] level.voting_player was set when the vote was called and then never cleared,
+	// so it went on naming a client slot after the vote had resolved. Client slots are reused: if the
+	// player who called the vote disconnects and somebody else connects into the same slot before the
+	// vote finishes, the rp_vote_timer cooldown above is applied to the newcomer, who is then refused
+	// with "You cannot vote now" without ever having voted. Clearing it with the vote it belongs to
+	// keeps the two in step. (Only matters on servers that set rp_vote_timer above 0.)
+	level.voting_player = -1;
+
 	trap->SetConfigstring( CS_VOTE_TIME, "" );
 }
 
@@ -4653,7 +5825,14 @@ void CheckTeamVote( int team ) {
 		if ( level.teamVoteYes[cs_offset] > level.numteamVotingClients[cs_offset]/2 ) {
 			// execute the command, then remove the vote
 			trap->SendServerCommand( -1, va("print \"%s (%s)\n\"", G_GetStringEdString("MP_SVGAME", "TEAMVOTEPASSED"), level.teamVoteStringClean[cs_offset]) );
-			level.voteExecuteTime = level.time + 3000;
+			// GalaxyRP fix: [Vote] this set level.voteExecuteTime -- the GLOBAL vote's timer -- instead of
+			// this team's own. teamVoteExecuteTime[] was read by the block at the top of this function but
+			// never set anywhere, so a passed leader vote never made anyone leader; instead, three seconds
+			// later CheckVote() re-ran level.voteString, which is never cleared: the last global vote of the
+			// map (a map change, a gametype change, a restart), or -- with a global vote still being voted
+			// on -- a command nobody had passed yet. Inherited from upstream (TaystJK has it too). Team
+			// votes exist only in the Red/Blue gametypes, so FFA never reached it.
+			level.teamVoteExecuteTime[cs_offset] = level.time + 3000;
 		}
 
 		// same behavior as a timeout
@@ -4726,7 +5905,10 @@ void G_RunThink (gentity_t *ent) {
 	ent->think (ent);
 
 runicarus:
-	if ( ent->inuse )
+	// GalaxyRP: [Logical Entities] a logical entity has no ICARUS task manager (it was never
+	// ICARUS_InitEnt'ed -- the engine does not know its number) and never an NPC, so there is
+	// nothing to maintain and the number must not be handed over.
+	if ( ent->inuse && !ent->isLogical )
 	{
 		SaveNPCGlobals();
 		if(NPCS.NPCInfo == NULL && ent->NPC != NULL)
@@ -4795,6 +5977,12 @@ void zyk_TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
 		isNPC = qtrue;
 	}
 
+	// GalaxyRP: [Grapple Hook] same as TeleportPlayer() in g_misc.c: the rope stays behind.
+	if ( player->client && player->client->hook )
+	{
+		Weapon_HookFree( player->client->hook );
+	}
+
 	// use temp events at source and destination to prevent the effect
 	// from getting dropped by a second player event
 	if ( player->client->sess.sessionTeam != TEAM_SPECTATOR ) {
@@ -4829,54 +6017,291 @@ void zyk_TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
 		player->s.eType = ET_NPC;
 	}
 
+	// DAJ_RP: [Phase] /admhidden -- the copy above rebuilt s from ps
+	RP_HiddenApplyState( player, &player->s );
+
 	// use the precise origin for linking
 	VectorCopy( player->client->ps.origin, player->r.currentOrigin );
 
 	if ( player->client->sess.sessionTeam != TEAM_SPECTATOR ) {
 		trap->LinkEntity ((sharedEntity_t *)player);
 	}
-}
 
-// zyk: function to kill npcs with the name as parameter
-void zyk_NPC_Kill_f( char *name )
-{
-	int	n = 0;
-	gentity_t *player = NULL;
-
-	for ( n = level.maxclients; n < level.num_entities; n++) 
-	{
-		player = &g_entities[n];
-		if ( player && player->NPC && player->client )
-		{
-			if( (Q_stricmp( name, player->NPC_type ) == 0 || Q_stricmp( name, "all" ) == 0) && player->client->pers.guardian_invoked_by_id == -1)
-			{ // zyk: do not kill guardians
-				player->health = 0;
-				player->client->ps.stats[STAT_HEALTH] = 0;
-				if (player->die)
-				{
-					player->die(player, player, player, 100, MOD_UNKNOWN);
-				}
-			}
-		}
-	}
+	// DAJ_RP fix: [Vehicles] a vehicle takes its riders along, as with TeleportPlayer() (RP_CarryRiders(), g_misc.c)
+	RP_CarryRiders( player, angles );
 }
 
 // zyk: tests if ent has other as ally
+/*
+GalaxyRP fix: [Ally] the raw bitfield test, with no other conditions attached.
+
+An ally list is two ints: ally1 holds client slots 0-15 and ally2 holds 16 and up at bit
+(slot - 16). That split was open-coded in four places -- here, zyk_add_ally(), zyk_remove_ally()
+and ClientDisconnect() -- which is three chances for them to disagree. Reading now goes through
+this one function, and writing already went through the add/remove pair.
+
+It also removes an undefined shift. zyk_is_ally() used to read:
+
+    if (slot > 15 && (ally2 & (1 << (slot - 16)))) return qtrue;
+    else if (ally1 & (1 << slot))                  return qtrue;
+
+The else branch runs whenever the first condition is false -- including when the slot IS above 15
+and its ally2 bit simply is not set. That evaluated 1 << slot for slots up to 31, and 1 << 31 on a
+signed int is undefined behaviour. It also asked ally1 about a slot ally1 never stores, so a stray
+bit in its high half would have reported a stranger as an ally. Branching on the slot number
+rather than on the bit test makes both impossible.
+*/
+qboolean zyk_ally_bit_set(gentity_t *owner, int client_id)
+{
+	if (!owner || !owner->client || client_id < 0 || client_id >= MAX_CLIENTS)
+		return qfalse;
+
+	if (client_id > 15)
+		return (owner->client->sess.ally2 & (1 << (client_id - 16))) ? qtrue : qfalse;
+
+	return (owner->client->sess.ally1 & (1 << client_id)) ? qtrue : qfalse;
+}
+
 qboolean zyk_is_ally(gentity_t *ent, gentity_t *other)
 {
 	if (ent && other && !ent->NPC && !other->NPC && ent != other && ent->client && other->client && other->client->pers.connected == CON_CONNECTED)
 	{
-		if (other->s.number > 15 && (ent->client->sess.ally2 & (1 << (other->s.number-16))))
-		{
-			return qtrue;
-		}
-		else if (ent->client->sess.ally1 & (1 << other->s.number))
-		{
-			return qtrue;
-		}
+		return zyk_ally_bit_set(ent, other->s.number);
 	}
 
 	return qfalse;
+}
+
+/*
+GalaxyRP fix: [NPC] drop the /order guard and /order cover bits.
+
+These two bits are the only thing NPC_ValidEnemy() consults before it starts asking
+zyk_is_ally(leader, ent) who is friendly, and a NULL leader answers "nobody" for everyone -- so an
+NPC carrying an order bit without a leader treats its own side as valid enemies. The bits must
+therefore never outlive the leader they were given under, which makes "clear the orders" an
+operation worth naming rather than two lines to remember to copy. Every site that drops a leader
+calls this: the release below, and Q3_SetLeader(), which sets and clears client->leader without
+going anywhere near a bState.
+*/
+void zyk_clear_npc_order_bits(gentity_t *npc_ent)
+{
+	if (!npc_ent || !npc_ent->client)
+		return;
+
+	npc_ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_NPC_ORDER_GUARD);
+	npc_ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_NPC_ORDER_COVER);
+}
+
+/*
+GalaxyRP fix: [NPC] the one place that breaks an NPC's follow link to its leader.
+
+The three-line dance -- drop the /order guard and /order cover bits, drop the leader, fall back
+to BS_STAND_GUARD -- was open-coded in TryUse() and again in ClientDisconnect(), and is now
+needed in two more places (see zyk_release_player_npcs() and zyk_npc_leader_lost() below). Four
+hand-written copies is four chances for them to drift apart, which is exactly how
+NPC_CheckCharmed() ended up clearing the leader without the order bits. One function now.
+
+goalEntity is cleared too when it is the leader: NPC_BSFollowLeader() parks the leader there as
+the move goal whenever it closes or backs off, and NPC_SlideMoveToGoal() reads
+goalEntity->r.currentOrigin without an inuse test. G_ClearEnemy() does the same for the enemy
+pointer, for the same reason.
+
+Vehicles keep their behaviour untouched, matching the guard TryUse() and Cmd_Order_f() already
+apply -- BS_STAND_GUARD is meaningless for a vehicle and its bState is driven by its rider.
+*/
+void zyk_release_npc_from_leader(gentity_t *npc_ent)
+{
+	if (!npc_ent || !npc_ent->client || !npc_ent->NPC)
+		return;
+
+	zyk_clear_npc_order_bits(npc_ent);
+
+	if (npc_ent->client->leader && npc_ent->NPC->goalEntity == npc_ent->client->leader)
+	{
+		npc_ent->NPC->goalEntity = NULL;
+	}
+
+	npc_ent->client->leader = NULL;
+
+	if (npc_ent->client->NPC_class != CLASS_VEHICLE)
+	{
+		npc_ent->NPC->tempBehavior = BS_STAND_GUARD;
+	}
+}
+
+/*
+GalaxyRP fix: [NPC] should this NPC still be following the player it is following?
+
+TryUse() tests OnSameTeam() once, at the moment the Use key claims the NPC, and nothing ever
+looked again. Everything that test depends on can change a second later, and none of it did
+anything: the leader could go to spectator and keep an escort walking to wherever
+SpectatorClientEndFrame() had copied their playerState origin to -- for a following spectator
+that is the position of whoever they are watching, so an NPC could be aimed at a live player it
+was never given to -- or simply switch team and keep NPCs claimed as the other side.
+
+Note that re-running OnSameTeam() by itself catches none of this. Its player-versus-NPC arm
+returns qtrue for any ET_PLAYER against an ET_NPC on NPCTEAM_PLAYER and returns before it ever
+looks at sessionTeam, so it reads the same both before and after any team change, spectator
+included. The conditions that actually change are spelled out here instead.
+
+Red/blue switches are handled where they happen, in SetTeam() and SetTeamQuick(); this is the
+per-frame net under them, for the routes that write sessionTeam directly and never call either
+(StopFollowing() is the obvious one).
+
+Two kinds of link are deliberately out of scope. Mind Trick 3 charm sets leader as well, but
+NPC_CheckCharmed() owns that link and restores the NPC's original teams when charmedTime runs
+out, so it is left alone. ICARUS SET_LEADER can name another NPC as the leader, and a map script
+pointing one NPC at another has nothing to do with the Use key.
+*/
+/*
+Stop an NPC under a /order guard from walking after the player it is guarding for.
+
+/order guard sets NPC->tempBehavior = BS_STAND_GUARD, and the behaviour that name promises --
+NPC_BSStandGuard(), which issues no movement at all -- is only ever reached from inside
+NPC_BSFollowLeader(), whose opening test reads the guard bit. But BS_STAND_GUARD routes the NPC
+AWAY from NPC_BSFollowLeader: NPC_RunBehavior() dispatches by class, and thirteen of the seventeen
+behaviour sets map BS_STAND_GUARD onto their own <class>_Default AI instead (NPC_BehaviorSet_Jedi
+-> NPC_BSJedi_Default, NPC_BehaviorSet_Stormtrooper -> NPC_BSST_Default, and so on). Those AIs end
+with the shape
+
+	if ( UpdateGoal() ) { ucmd.buttons |= BUTTON_WALKING; NPC_MoveToGoal( qtrue ); }
+
+and goalEntity is still the leader, left there by NPC_BSFollowLeader() while the NPC was following
+-- /order guard never clears it. So the NPC kept following, and because those paths force
+BUTTON_WALKING unconditionally while the real follow code only walks inside a short close-range
+band, it followed at walk speed instead of run speed. That speed difference is what the bug looked
+like from the outside; the following itself was the actual defect.
+
+Dropping the goal when it is the leader is deliberately the whole fix. It is the one thing that
+makes the NPC walk toward the player, and clearing it leaves every other part of the class AI
+untouched -- enemy acquisition, shooting, repositioning, cover, class-specific moves. NPCs whose
+behaviour set does fall through to NPC_BehaviorSet_Default keep working exactly as before, because
+NPC_BSDefault() reacts to a null goal by calling NPC_BSFollowLeader(), which reads the guard bit and
+lands on NPC_BSStandGuard() -- the intended behaviour, reached by the route that already worked.
+
+Scoped by the guard bit and by the goal actually being the leader, so a map- or script-spawned NPC
+is untouched: those never carry bit 18, which only Cmd_Order_f() sets.
+*/
+/*
+Can this NPC be given a /order?
+
+The three verbs used to repeat one condition three times, which is how the two gaps below went
+unnoticed. One test now, so the three branches cannot drift apart.
+
+CLASS_WAMPA and CLASS_REMOTE are excluded for the same reason CLASS_VEHICLE already was: their AI
+never reads the behaviour state, so no order can change what they do. NPC_RunBehavior() calls
+NPC_BSWampa_Default() directly for a wampa and discards bState entirely, and
+NPC_BehaviorSet_Remote() ignores its bState parameter and always calls NPC_BSRemote_Default(). But
+/order guard and /order cover also set bits 18 and 19, and NPC_ValidEnemy() reads those to decide
+that anyone not on the leader's ally list is a valid target -- reached from these classes through
+NPC_CheckEnemyExt() -> NPC_FindEnemy() -> NPC_ValidEnemy(). So on those two classes an order moved
+nothing and changed nothing visible, while quietly turning the NPC on its own side. Note this is
+NOT true of the rancor, which looks similar but is fine: NPC_BehaviorSet_Rancor() has no
+BS_FOLLOW_LEADER case and so falls through to NPC_BehaviorSet_Default(), which does handle it.
+
+Charmed NPCs are excluded because the command was the only part of the order system that did not
+already skip them. zyk_npc_leader_lost() and zyk_release_player_npcs() both bail on charmedTime, on
+the grounds that NPC_CheckCharmed() owns the leader link for as long as the charm lasts -- but
+Cmd_Order_f() would happily stamp an order onto a charmed NPC, and those same release paths then
+refused to take it off again. Ordering one meant its leader and order bits survived a team change
+or a switch to spectator that would have cleared them for any other NPC, leaving it hunting its own
+team on behalf of someone no longer in the game.
+*/
+qboolean zyk_npc_can_take_orders(gentity_t *npc_ent, gentity_t *leader)
+{
+	if (!npc_ent || !npc_ent->client || !npc_ent->NPC)
+		return qfalse;
+
+	if (!leader || npc_ent->client->leader != leader)
+		return qfalse;
+
+	if (npc_ent->client->NPC_class == CLASS_VEHICLE ||
+		npc_ent->client->NPC_class == CLASS_WAMPA ||
+		npc_ent->client->NPC_class == CLASS_REMOTE)
+		return qfalse;
+
+	if (npc_ent->NPC->charmedTime > level.time)
+		return qfalse;
+
+	return qtrue;
+}
+
+void zyk_hold_guarding_npc(gentity_t *npc_ent)
+{
+	if (!npc_ent || !npc_ent->client || !npc_ent->NPC)
+		return;
+
+	if (!npc_ent->client->leader)
+		return;
+
+	if (!(npc_ent->client->pers.player_statuses & (1 << PLAYER_STATUS_NPC_ORDER_GUARD)))
+		return;
+
+	if (npc_ent->NPC->goalEntity == npc_ent->client->leader)
+	{
+		npc_ent->NPC->goalEntity = NULL;
+	}
+}
+
+qboolean zyk_npc_leader_lost(gentity_t *npc_ent)
+{
+	gentity_t *leader = NULL;
+
+	if (!npc_ent || !npc_ent->client || !npc_ent->NPC)
+		return qfalse;
+
+	leader = npc_ent->client->leader;
+
+	if (!leader)
+		return qfalse;
+
+	if (npc_ent->NPC->charmedTime > level.time)
+		return qfalse;
+
+	if (leader->s.number >= MAX_CLIENTS || !leader->client)
+		return qfalse;
+
+	if (!leader->inuse || leader->client->pers.connected != CON_CONNECTED)
+		return qtrue;
+
+	if (leader->client->sess.sessionTeam == TEAM_SPECTATOR)
+		return qtrue;
+
+	return qfalse;
+}
+
+/*
+GalaxyRP fix: [NPC] release every NPC this player is leading.
+
+Called from SetTeam() and SetTeamQuick() when a player actually changes team. Charmed NPCs are
+skipped for the reason given on zyk_npc_leader_lost() above -- the player is still in the game
+here, so there is no dangling pointer to force the issue, unlike ClientDisconnect(), which
+releases them too because it has to.
+
+Starts at MAX_CLIENTS like Cmd_Order_f() and ClientDisconnect(): NPCs never hold a client slot.
+*/
+void zyk_release_player_npcs(gentity_t *ent)
+{
+	int i = 0;
+
+	if (!ent || !ent->client)
+		return;
+
+	for (i = MAX_CLIENTS; i < level.num_entities; i++)
+	{
+		gentity_t *npc_ent = &g_entities[i];
+
+		if (!npc_ent->inuse || !npc_ent->client || !npc_ent->NPC)
+			continue;
+
+		if (npc_ent->client->leader != ent)
+			continue;
+
+		if (npc_ent->NPC->charmedTime > level.time)
+			continue;
+
+		zyk_release_npc_from_leader(npc_ent);
+	}
 }
 
 // zyk: counts how many allies this player has
@@ -4896,148 +6321,12 @@ int zyk_number_of_allies(gentity_t *ent, qboolean in_rpg_mode)
 	return number_of_allies;
 }
 
-// zyk: starts the boss battle music
-void zyk_start_boss_battle_music(gentity_t *ent)
-{
-	if (ent->client->pers.player_settings & (1 << 14)) // Custom
-		trap->SetConfigstring( CS_MUSIC, "music/boss_custom.mp3" );
-	else if (ent->client->pers.player_settings & (1 << 24)) // Korriban Action
-		trap->SetConfigstring( CS_MUSIC, "music/kor_lite/korrib_action.mp3" );
-	else if (ent->client->pers.player_settings & (1 << 25)) // MP Duel
-		trap->SetConfigstring( CS_MUSIC, "music/mp/duel.mp3" );
-	else // Hoth2 Action
-		trap->SetConfigstring( CS_MUSIC, "music/hoth2/hoth2_action.mp3" );
-}
-
-// zyk: spawns a RPG quest boss and set his HP based in the quantity of allies the quest player has now
-extern void clean_effect();
-extern gentity_t *NPC_SpawnType( gentity_t *ent, char *npc_type, char *targetname, qboolean isVehicle ); // zyk: used in boss battles
-extern void do_scale(gentity_t *ent, int new_size);
-void spawn_boss(gentity_t *ent,int x,int y,int z,int yaw,char *boss_name,int gx,int gy,int gz,int gyaw,int guardian_mode)
-{
-	vec3_t player_origin;
-	vec3_t player_yaw;
-	vec3_t boss_spawn_point;
-	gentity_t *npc_ent = NULL;
-	int i = 0;
-	float boss_bonus_hp = 0;
-
-	// zyk: removing trip mines and detpacks near the boss to prevent 1-hit-kill exploits
-	if ((guardian_mode >= 1 && guardian_mode <= 7) || guardian_mode == 11 || guardian_mode >= 14)
-		VectorSet(boss_spawn_point, gx, gy, gz);
-	else
-		VectorSet(boss_spawn_point, x, y, z);
-
-	for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
-	{
-		gentity_t *this_ent = &g_entities[i];
-
-		if (this_ent && Q_stricmp(this_ent->classname, "laserTrap") == 0 && 
-			Distance(this_ent->r.currentOrigin, boss_spawn_point) < 384.0)
-		{
-			this_ent->think = G_FreeEntity;
-			this_ent->nextthink = level.time;
-		}
-		else if (this_ent && Q_stricmp(this_ent->classname, "detpack") == 0 &&
-			Distance(this_ent->r.currentOrigin, boss_spawn_point) < 384.0)
-		{
-			this_ent->think = G_FreeEntity;
-			this_ent->nextthink = level.time;
-		}
-	}
-
-	// zyk: removing scale from allies and setting them with the guardian_mode value
-	// zyk: this function will be called several times during some boss battles, so after the first call the quest player will already have guardian_mode set
-	// zyk: in this case, dont reset allies, otherwise dead allies would be able to again heal players in boss battle and damage the boss
-	if (ent->client->pers.guardian_mode == 0)
-	{
-		for (i = 0; i < level.maxclients; i++)
-		{
-			gentity_t *allied_player = &g_entities[i];
-
-			if (zyk_is_ally(ent, allied_player) == qtrue && allied_player->client->sess.amrpgmode == 2 && allied_player->health > 0)
-			{
-				allied_player->client->pers.guardian_mode = guardian_mode;
-				do_scale(allied_player, 100);
-				allied_player->client->noclip = qfalse;
-			}
-		}
-	}
-
-	ent->client->pers.guardian_mode = guardian_mode;
-
-	player_origin[0] = x;
-	player_origin[1] = y;
-	player_origin[2] = z;
-	player_yaw[0] = 0;
-	player_yaw[1] = yaw;
-	player_yaw[2] = 0;
-
-	// zyk: dont teleport player in these boss battles
-	if (guardian_mode != 17 && guardian_mode != 18)
-		zyk_TeleportPlayer(ent,player_origin,player_yaw);
-
-	if ((guardian_mode >= 1 && guardian_mode <= 7) || guardian_mode == 11 || guardian_mode >= 14)
-		npc_ent = Zyk_NPC_SpawnType(boss_name,gx,gy,gz,gyaw);
-	else
-		npc_ent = NPC_SpawnType(ent,boss_name,NULL,qfalse);
-
-	if (ent->client->pers.universe_quest_counter & (1 << 29))
-	{ // zyk: Challenge Mode increases boss hp more
-		boss_bonus_hp = 1.1 * (1 + zyk_number_of_allies(ent, qtrue));
-	}
-	else
-	{
-		boss_bonus_hp = 0.25 * zyk_number_of_allies(ent, qtrue);
-	}
-
-	if (npc_ent)
-	{
-		npc_ent->NPC->stats.health += (npc_ent->NPC->stats.health * boss_bonus_hp);
-		npc_ent->client->ps.stats[STAT_MAX_HEALTH] = npc_ent->NPC->stats.health;
-		npc_ent->health = npc_ent->client->ps.stats[STAT_MAX_HEALTH];
-
-		npc_ent->client->pers.guardian_invoked_by_id = ent-g_entities;
-		npc_ent->client->pers.hunter_quest_messages = 0;
-		npc_ent->client->pers.light_quest_messages = 0;
-		npc_ent->client->pers.light_quest_timer = level.time + 7000;
-		npc_ent->client->pers.guardian_timer = level.time + 5000;
-		npc_ent->client->pers.universe_quest_timer = level.time + 11000;
-		npc_ent->client->pers.guardian_mode = guardian_mode;
-
-		if (guardian_mode == 15 || guardian_mode == 21)
-		{ // zyk: Ymir and Thor and Soul of Sorrow can have shield
-			npc_ent->client->ps.stats[STAT_ARMOR] = npc_ent->health;
-		}
-
-		if (ent->client->pers.universe_quest_counter & (1 << 29))
-		{ // zyk: if quest player is in Challenge Mode, bosses always use the improved version of powers (Universe Power)
-			npc_ent->client->pers.quest_power_status |= (1 << 13);
-
-			// zyk: they also start using magic a bit earlier
-			npc_ent->client->pers.light_quest_timer = level.time + 5000;
-			npc_ent->client->pers.guardian_timer = level.time + 3000;
-			npc_ent->client->pers.universe_quest_timer = level.time + 9000;
-		}
-	}
-
-	if (guardian_mode != 14)
-	{
-		clean_effect();
-		zyk_NPC_Kill_f("all");
-	}
-
-	// zyk: boss battle music
-	zyk_start_boss_battle_music(ent);
-
-	// zyyk: removing noclip from the player
-	ent->client->noclip = qfalse;
-}
+// GalaxyRP fix: [Guardian] zyk_start_boss_battle_music() and spawn_boss() removed here — guardian_mode/guardian_invoked_by_id are permanently dead (spawn_boss has no callers); this also removed the Challenge-Mode boss-HP-boost and boss-power-upgrade code that lived inside spawn_boss
 
 // zyk: tests if this player is one of the Duel Tournament duelists
 qboolean duel_tournament_is_duelist(gentity_t *ent)
 {
-	if ((ent->s.number == level.duelist_1_id || ent->s.number == level.duelist_2_id || ent->s.number == level.duelist_1_ally_id || ent->s.number == level.duelist_2_ally_id))
+	if (ent->s.number == level.duelist_1_id || ent->s.number == level.duelist_2_id)
 	{
 		return qtrue;
 	}
@@ -5045,114 +6334,100 @@ qboolean duel_tournament_is_duelist(gentity_t *ent)
 	return qfalse;
 }
 
-void zyk_quest_effect_spawn(gentity_t *ent, gentity_t *target_ent, char *targetname, char *spawnflags, char *effect_path, int start_time, int damage, int radius, int duration)
+/*
+DAJ_RP: [Minigames] whether this player is fighting in a mini-game right now: one of the two duelists of a live Duel
+Tournament fight (duel_tournament_mode 4), or on the roster of a running Melee Battle (melee_mode 2 -- not while it
+takes sign-ups, 1, nor in the winner's few seconds to leave the platform, 3; a player knocked out leaves the roster).
+Such a player picks nothing up (Touch_Item, g_items.c), and ClientEndFrame publishes it in ps.userInt1 so the shared
+BG_CanItemBeGrabbed -- and so cgame's pickup prediction -- refuses the same (RP_PS_MINIGAME_FIGHTER, bg_public.h).
+*/
+qboolean RP_MinigameFighter( gentity_t *ent )
 {
-	gentity_t *new_ent = G_Spawn();
-
-	if (!strstr(effect_path, ".md3"))
-	{// zyk: effect power
-		zyk_set_entity_field(new_ent, "classname", "fx_runner");
-		zyk_set_entity_field(new_ent, "spawnflags", spawnflags);
-		zyk_set_entity_field(new_ent, "targetname", targetname);
-
-		if (Q_stricmp(targetname, "zyk_effect_scream") == 0)
-			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)target_ent->r.currentOrigin[0], (int)target_ent->r.currentOrigin[1], (int)target_ent->r.currentOrigin[2] + 50));
-		else
-			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)target_ent->r.currentOrigin[0], (int)target_ent->r.currentOrigin[1], (int)target_ent->r.currentOrigin[2]));
-
-		new_ent->s.modelindex = G_EffectIndex(effect_path);
-
-		zyk_spawn_entity(new_ent);
-
-		if (damage > 0)
-			new_ent->splashDamage = damage;
-
-		if (radius > 0)
-			new_ent->splashRadius = radius;
-
-		if (start_time > 0)
-			new_ent->nextthink = level.time + start_time;
-
-		level.special_power_effects[new_ent->s.number] = ent->s.number;
-		level.special_power_effects_timer[new_ent->s.number] = level.time + duration;
-
-		if (Q_stricmp(targetname, "zyk_quest_effect_drain") == 0)
-			G_Sound(new_ent, CHAN_AUTO, G_SoundIndex("sound/effects/arc_lp.wav"));
-
-		if (Q_stricmp(targetname, "zyk_quest_effect_sand") == 0)
-			ent->client->pers.quest_power_effect1_id = new_ent->s.number;
-	}
-	else
-	{ // zyk: model power
-		zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-		zyk_set_entity_field(new_ent, "spawnflags", spawnflags);
-
-		if (Q_stricmp(targetname, "zyk_tree_of_life") == 0)
-			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)target_ent->r.currentOrigin[0], (int)target_ent->r.currentOrigin[1], (int)target_ent->r.currentOrigin[2] + 350));
-		else
-			zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)target_ent->r.currentOrigin[0], (int)target_ent->r.currentOrigin[1], (int)target_ent->r.currentOrigin[2]));
-
-		zyk_set_entity_field(new_ent, "model", effect_path);
-
-		zyk_set_entity_field(new_ent, "targetname", targetname);
-
-		zyk_spawn_entity(new_ent);
-
-		level.special_power_effects[new_ent->s.number] = ent->s.number;
-		level.special_power_effects_timer[new_ent->s.number] = level.time + duration;
-	}
-}
-
-// zyk: if this player or npc has immunity power, returns qtrue and shows Immunity effect
-qboolean zyk_check_immunity_power(gentity_t *ent)
-{
-	if (ent && ent->client && ent->client->pers.quest_power_status & (1 << 0))
+	if (!ent || !ent->client || ent->s.number < 0 || ent->s.number >= MAX_CLIENTS)
 	{
-		zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_immunity", "0", "scepter/invincibility", 0, 0, 0, 300);
-
+		return qfalse;
+	}
+	if (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(ent))
+	{
 		return qtrue;
 	}
+	if (level.melee_mode == 2 && level.melee_players[ent->s.number] != -1)
+	{
+		return qtrue;
+	}
+	return qfalse;
+}
+
+// GalaxyRP fix: [Death System] the mini-games and the Death System were written apart and never
+// introduced. G_Damage() only calls targ->die() for a player who is ALREADY downed; the first time
+// their health reaches 0 it calls paralyze_player() instead, which downs them at RP_DOWNED_HEALTH health and
+// never reaches player_die(). Both mini-games hang every piece of their death handling off
+// player_die(), so the first knockdown registered as nothing at all: the Melee Battle left the
+// player on the roster with melee_mode_quantity unchanged and gave the attacker no kill credit, so
+// the count could never fall to 1 and melee_battle_winner() never fired; the Duel Tournament never
+// set PLAYER_STATUS_DUEL_TOURNAMENT_LOSS, so the mode-4 early win never fired either. And a combat
+// knockdown does not time out -- the auto-release in ClientEndFrame() is for admin paralysis only,
+// so a downed combatant lies there until someone finishes them or they type /getup.
+//
+// Death is forced for them instead, exactly the way it already is for a player riding a vehicle:
+// the caller tests this and drops through to the same targ->die() arm that a mounted player takes.
+// player_die() calls RP_ClearDownedState() itself, so the arm that skips the explicit clear is
+// still correct for a player who somehow arrives already downed.
+//
+// Scoped to the two states where the mini-games' OWN death handlers fire -- melee_mode 2 and
+// duel_tournament_mode 4 with this player actually one of the two duelists -- and deliberately not
+// to sign-up. A player who types /meleemode and then walks off is not in an arena, and forcing
+// death on them anywhere on the map for the next twelve seconds would be a surprise with no
+// purpose: nothing downstream is waiting on it.
+//
+// The private duel needs none of this. It is the one system that reads the downed state directly
+// (see the duelInProgress block in ClientThink_real, g_active.c), ending the duel the moment either
+// side goes down, so it resolves on the first knockdown without a forced death.
+qboolean zyk_minigame_forces_death(gentity_t *ent)
+{
+	if (!ent || !ent->client || ent->s.number >= MAX_CLIENTS)
+		return qfalse;
+
+	if (level.melee_mode == 2 && level.melee_players[ent->s.number] != -1)
+		return qtrue;
+
+	if (level.duel_tournament_mode == 4 && level.duel_players[ent->s.number] != -1 &&
+		duel_tournament_is_duelist(ent) == qtrue)
+		return qtrue;
 
 	return qfalse;
 }
 
-qboolean zyk_can_hit_boss_battle_target(gentity_t *attacker, gentity_t *target)
-{
-	if (attacker->client->pers.guardian_mode == target->client->pers.guardian_mode ||
-		(attacker->NPC && attacker->client->pers.guardian_mode == 0) ||
-		(!attacker->NPC && attacker->client->pers.guardian_mode > 0 && target->NPC))
-	{
-		return qtrue;
-	}
-
-	return qfalse;
-}
+// GalaxyRP fix: [Guardian] removed zyk_can_hit_boss_battle_target() here — it was a stub always
+// returning qtrue (its condition used to gate on being in a boss battle; guardian_mode was already
+// permanently 0). Its 3 call sites in this file and g_active.c were simplified to drop the
+// always-true conjunct.
 
 // zyk: tests if the target player can be hit by the attacker gun/saber damage, force power or special power
+// GalaxyRP fix: [Force] the "which force-power disable mask is actually in force right now" rule used
+// to exist only as three inline lines inside WP_InitForcePowers (w_force.c), so every other place that
+// consulted g_forcePowerDisable kept using the plain server-wide value even in Duel and Power Duel,
+// where g_duelForcePowerDisable is meant to replace it. That left force powerups still spawning in
+// duel gametypes and the jedi/merc split deciding on the wrong mask. Factored out here so there is one
+// answer to that question and every caller gets the same one.
+int G_ForcePowerDisableValue(void)
+{
+	if (level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL)
+	{
+		return g_duelForcePowerDisable.integer;
+	}
+
+	return g_forcePowerDisable.integer;
+}
+
 qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 {
 	if (attacker && attacker->client && target && target->client && !attacker->NPC && !target->NPC)
-	{ // zyk: in a boss battle, non-quest players cannot hit quest players and vice-versa
-		if (attacker->client->sess.amrpgmode == 2 && attacker->client->pers.guardian_mode > 0 && 
-			(target->client->sess.amrpgmode != 2 || target->client->pers.guardian_mode == 0))
-		{
-			return qfalse;
-		}
-
-		if (target->client->sess.amrpgmode == 2 && target->client->pers.guardian_mode > 0 && 
-			(attacker->client->sess.amrpgmode != 2 || attacker->client->pers.guardian_mode == 0))
-		{
-			return qfalse;
-		}
+	{
+		// GalaxyRP fix: [Guardian] boss-battle non-quest/quest hit restriction removed here — guardian_mode is permanently 0 (spawn_boss has no callers)
 
 		if (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(attacker) != duel_tournament_is_duelist(target))
 		{ // zyk: cannot hit duelists in Duel Tournament
-			return qfalse;
-		}
-
-		if (level.sniper_mode > 1 && ((level.sniper_players[attacker->s.number] != -1 && level.sniper_players[target->s.number] == -1) || 
-			(level.sniper_players[attacker->s.number] == -1 && level.sniper_players[target->s.number] != -1)))
-		{ // zyk: players outside sniper battle cannot hit ones in it and vice-versa
 			return qfalse;
 		}
 
@@ -5162,30 +6437,15 @@ qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 			return qfalse;
 		}
 
-		if (level.rpg_lms_mode > 1 && ((level.rpg_lms_players[attacker->s.number] != -1 && level.rpg_lms_players[target->s.number] == -1) ||
-			(level.rpg_lms_players[attacker->s.number] == -1 && level.rpg_lms_players[target->s.number] != -1)))
-		{ // zyk: players outside rpg lms cannot hit ones in it and vice-versa
-			return qfalse;
-		}
-
-		if (attacker->client->pers.player_statuses & (1 << 26) && attacker != target)
-		{ // zyk: used nofight command, cannot hit anyone
-			return qfalse;
-		}
-
-		if (target->client->pers.player_statuses & (1 << 26) && attacker != target)
-		{ // zyk: used nofight command, cannot be hit by anyone
-			return qfalse;
-		}
+		// GalaxyRP: [nofight] the two PLAYER_STATUS_ADMIN_PARALYSIS checks that used to sit here -- "used
+		// nofight command, cannot hit anyone" and "cannot be hit by anyone" -- are gone along with
+		// the /nofight command itself; see the note where Cmd_NoFight_f used to live in g_cmds.c.
+		// The second of the two was the one that actually produced the reported invulnerability: it
+		// made a player immune to every other player, indefinitely, with no way for them to switch
+		// it back off once they had joined a team, and no indication anywhere that it was on.
 
 		if (attacker->client->noclip == qtrue || target->client->noclip == qtrue)
 		{ // zyk: noclip does not allow hitting
-			return qfalse;
-		}
-
-		if (level.duel_tournament_mode > 0 && level.duel_players[attacker->s.number] != -1 && level.duel_players[target->s.number] != -1 && 
-			level.duel_allies[attacker->s.number] == target->s.number && level.duel_allies[target->s.number] == attacker->s.number)
-		{ // zyk: Duel Tournament allies. Cannot hit each other
 			return qfalse;
 		}
 	}
@@ -5193,1518 +6453,105 @@ qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target)
 	return qtrue;
 }
 
-qboolean npcs_on_same_team(gentity_t *attacker, gentity_t *target)
+
+// GalaxyRP fix: [Magic] magic_sense() removed. The player-facing magic dispatch in
+// Cmd_ForceUse_f()/the grab-anim block in g_cmds.c was deleted earlier as permanently
+// unreachable (every power it could trigger was gated on pers.defeated_guardians or
+// pers.universe_quest_progress, which nothing in the codebase ever wrote -- they sat at the zero
+// ClientConnect's memset gives them. This note used to credit add_new_char() with writing them at
+// character creation; that function has since been removed as dead too, see g_cmds.c. Both fields
+// have since been removed from clientPersistant_t outright, for exactly that reason), and that
+// deletion took magic_sense()'s only call site with it. Its siblings magic_shield() and
+// magic_disable() survived for a while as zero-caller reference code (the quest_mage chain that
+// used to call them went with the magic engine -- see the note in G_RunFrame) and have since been
+// deleted with the rest of the effect functions;
+// magic_explosion() has since gone the same way as magic_sense(), when the custom-quest-NPC block
+// that was its last caller was removed. Nothing anywhere called magic_sense(). It also wrote
+// pers.skill_levels[4] straight into forcePowerLevel[FP_SEE] with no amrpgmode guard while
+// activating the power, which would have left a logged-out player at Sense level 0 with Force
+// Sight switched on. Its two cvars (zyk_enable_magic_sense, zyk_magic_sense_mp_cost) are gone
+// from g_xcvar.h with it.
+
+
+
+// GalaxyRP fix: [Magic] zyk_vertical_dfa_effect() used to be here -- the Duelist Vertical DFA
+// impact effect, which spawned an fx_runner with targetname "zyk_vertical_dfa". It had no callers
+// anywhere in the tree: the Duelist RPG class that invoked it went with rpg_class, which is
+// permanently 0. Nothing else in the tree creates that targetname, so the three sites that still
+// test for it -- g_misc.c's fx_runner_link() and SP_fx_runner(), and g_combat.c's radius-damage
+// exclusion list -- can no longer be reached; they are left alone here on purpose, to be judged
+// alongside the rest of the magic-effect removal rather than swept up behind this one.
+
+
+
+// GalaxyRP fix: [Magic] zyk_bomb_model_think() and zyk_add_bomb_model() used to be here -- a
+// three-second timed bomb prop ("zyk_timed_bomb") that counted down and then spawned a
+// "zyk_timed_bomb_explosion" effect. zyk_add_bomb_model() had no callers at all, and it was the
+// only thing that ever set zyk_bomb_model_think as a think, so the pair was unreachable together.
+// Nothing else creates either targetname; the one remaining test for the explosion, in
+// g_combat.c's radius-damage exclusion list, is left in place with the rest of that block.
+
+// GalaxyRP fix: [Magic] zyk_spawn_ice_element() used to be here -- it ringed a player with four
+// crystal_wall models named "zyk_elemental_ice". Its last caller went with elemental_attack() in
+// the custom-quest-NPC dispatch removal, as the note further down this file records. Nothing else
+// creates or tests that targetname, so this one comes out clean.
+
+
+
+
+extern void Jedi_DecloakPair(gentity_t *self);
+
+
+// GalaxyRP fix: [Magic] zyk_force_dash_effect() and zyk_force_dash() used to be here, the effect
+// and the animation half of the Fast Dash ability. Both were orphans: their only caller was
+// zyk_do_force_dash() in g_active.c, which had no callers of its own and has been removed with
+// them, and pers.fast_dash_timer -- written only by those two -- went with it. Nothing else
+// creates the "zyk_effect_force_dash" targetname; the two sites in g_misc.c that still test for
+// it are left alone here, with the rest of that list.
+
+// DAJ_RP: [Flame Thrower] where the flame leaves the stun baton, and which way it goes: start is the player's
+// right hand -- the stun baton's -- on the server's own copy of the player's model (players have "*r_hand" from
+// spawn, and the saber code keeps that skeleton animated every frame: WP_SaberPositionUpdate()), pushed
+// RP_FLAME_FROM_HAND along the aim to the baton's tip. Without a model or the bolt, the start is the stun baton's
+// own point -- the one WP_FireStunBaton() traces from. angles is the effect's: the aim REVERSED, ( -pitch,
+// yaw + 180, 0 ). boba/fthrw sends its fire against the direction it is given -- given the aim, it burnt
+// straight behind the player -- so it is given the opposite of the aim, and the fire goes along it, up and
+// down too. zyk's ( -pitch, roll, yaw - 180 ) was this reversal with the yaw and roll slots swapped.
+#define RP_FLAME_FROM_HAND	12.0f
+
+static void RP_FlameThrowerStart( gentity_t *self, vec3_t start, vec3_t angles )
 {
-	if (attacker->NPC && target->NPC && attacker->client->playerTeam == target->client->playerTeam)
+	vec3_t	aim, forward, right;
+	int		bolt = -1;
+
+	VectorSet( aim, self->client->ps.viewangles[PITCH], self->client->ps.viewangles[YAW], 0.0f );
+	AngleVectors( aim, forward, right, NULL );
+	VectorSet( angles, AngleNormalize180( -aim[PITCH] ), AngleNormalize360( aim[YAW] + 180.0f ), 0.0f );
+
+	if ( self->ghoul2 && trap->G2API_HaveWeGhoul2Models( self->ghoul2 ) )
 	{
-		return qtrue;
+		bolt = trap->G2API_AddBolt( self->ghoul2, 0, "*r_hand" );	// the one it has: 0 on a player
 	}
 
-	return qfalse;
-}
+	if ( bolt >= 0 )
+	{
+		mdxaBone_t	boltMatrix;
+		vec3_t		yaw;
 
-qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *target)
-{
-	int i = target->s.number;
-
-	if (attacker && target && attacker->s.number != i && target->client && target->health > 0 && zyk_can_hit_target(attacker, target) == qtrue &&
-		(i > MAX_CLIENTS || (target->client->pers.connected == CON_CONNECTED && target->client->sess.sessionTeam != TEAM_SPECTATOR &&
-			target->client->ps.duelInProgress == qfalse)))
-	{ // zyk: target is a player or npc that can be hit by the attacker
-		int is_ally = 0;
-
-		if (i < level.maxclients && !attacker->NPC &&
-			zyk_is_ally(attacker, target) == qtrue)
-		{ // zyk: allies will not be hit by this power
-			is_ally = 1;
-		}
-
-		if (OnSameTeam(attacker, target) == qtrue || npcs_on_same_team(attacker, target) == qtrue)
-		{ // zyk: if one of them is npc, also check for allies
-			is_ally = 1;
-		}
-
-		if (is_ally == 0 &&
-			zyk_can_hit_boss_battle_target(attacker, target))
-		{ // zyk: players in bosses can only hit bosses and their helper npcs. Players not in boss battles
-		  // can only hit normal enemy npcs and npcs spawned by bosses but not the bosses themselves. Unique-using npcs can hit everyone that are not their allies
-			return qtrue;
-		}
-	}
-
-	return qfalse;
-}
-
-// zyk: tests if the target entity can be hit by the attacker special power
-qboolean zyk_special_power_can_hit_target(gentity_t *attacker, gentity_t *target, int i, int min_distance, int max_distance, qboolean hit_breakable, int *targets_hit)
-{
-	if ((*targets_hit) >= zyk_max_special_power_targets.integer)
-		return qfalse;
-
-	if (attacker->s.number != i && target && target->client && target->health > 0 && zyk_can_hit_target(attacker, target) == qtrue && 
-		(i > MAX_CLIENTS || (target->client->pers.connected == CON_CONNECTED && target->client->sess.sessionTeam != TEAM_SPECTATOR && 
-		 target->client->ps.duelInProgress == qfalse)))
-	{ // zyk: target is a player or npc that can be hit by the attacker
-		int player_distance = (int)Distance(attacker->client->ps.origin,target->client->ps.origin);
-
-		if (player_distance > min_distance && player_distance < max_distance)
+		VectorSet( yaw, 0.0f, self->client->ps.viewangles[YAW], 0.0f );	// as the saber code turns it
+		if ( trap->G2API_GetBoltMatrix( self->ghoul2, 0, bolt, &boltMatrix, yaw, self->client->ps.origin, level.time,
+			NULL, self->modelScale ) )
 		{
-			int is_ally = 0;
-
-			if (i < level.maxclients && !attacker->NPC && 
-				zyk_is_ally(attacker,target) == qtrue)
-			{ // zyk: allies will not be hit by this power
-				is_ally = 1;
-			}
-
-			if (OnSameTeam(attacker, target) == qtrue || npcs_on_same_team(attacker, target) == qtrue)
-			{ // zyk: if one of them is npc, also check for allies
-				is_ally = 1;
-			}
-
-			if (is_ally == 0 && !(zyk_check_immunity_power(target)) && 
-				zyk_can_hit_boss_battle_target(attacker, target))
-			{ // zyk: Cannot hit target with Immunity Power. Players in bosses can only hit bosses and their helper npcs. Players not in boss battles
-			  // can only hit normal enemy npcs and npcs spawned by bosses but not the bosses themselves. Magic-using npcs can hit everyone that are not their allies
-				(*targets_hit)++;
-
-				return qtrue;
-			}
-		}
-	}
-	else if (i >= MAX_CLIENTS && hit_breakable == qtrue && target && !target->client && target->health > 0 && target->takedamage == qtrue)
-	{
-		int entity_distance = (int)Distance(attacker->client->ps.origin,target->r.currentOrigin);
-
-		if (entity_distance > min_distance && entity_distance < max_distance)
-		{
-			(*targets_hit)++;
-
-			return qtrue;
+			BG_GiveMeVectorFromMatrix( &boltMatrix, ORIGIN, start );
+			VectorMA( start, RP_FLAME_FROM_HAND, forward, start );
+			return;
 		}
 	}
 
-	return qfalse;
-}
-
-// zyk: Earthquake
-void earthquake(gentity_t *ent, int stun_time, int strength, int distance)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-		distance += (distance/2);
-
-	for ( i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			if (player_ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
-			{ // zyk: player can only be hit if he is on floor
-				// zyk: if using Meditate taunt, remove it
-				if (player_ent->client->ps.legsAnim == BOTH_MEDITATE && player_ent->client->ps.torsoAnim == BOTH_MEDITATE)
-				{
-					player_ent->client->ps.legsAnim = player_ent->client->ps.torsoAnim = BOTH_MEDITATE_END;
-				}
-
-				player_ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-				player_ent->client->ps.forceHandExtendTime = level.time + stun_time;
-				player_ent->client->ps.velocity[2] += strength;
-				player_ent->client->ps.forceDodgeAnim = 0;
-				player_ent->client->ps.quickerGetup = qtrue;
-
-				G_Damage(player_ent,ent,ent,NULL,NULL,strength/5,0,MOD_UNKNOWN);
-			}
-
-			if (i < level.maxclients)
-			{
-				G_ScreenShake(player_ent->client->ps.origin, player_ent,  10.0f, 4000, qtrue);
-			}
-			
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/stone_break1.mp3"));
-		}
-	}
-}
-
-// zyk: Flame Burst
-void flame_burst(gentity_t *ent, int duration)
-{
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		duration += 3000;
-	}
-
-	ent->client->pers.flame_thrower = level.time + duration;
-	ent->client->pers.quest_power_status |= (1 << 12);
-}
-
-// zyk: Blowing Wind
-void blowing_wind(gentity_t *ent, int distance, int duration)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		distance += 200;
-	}
-
-	ent->client->pers.quest_debounce1_timer = 0;
-
-	for ( i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			player_ent->client->pers.quest_power_user3_id = ent->s.number;
-			player_ent->client->pers.quest_power_status |= (1 << 8);
-			player_ent->client->pers.quest_target6_timer = level.time + duration;
-
-			// zyk: gives fall kill to the owner of this power
-			player_ent->client->ps.otherKiller = ent->s.number;
-			player_ent->client->ps.otherKillerTime = level.time + duration;
-			player_ent->client->ps.otherKillerDebounceTime = level.time + 100;
-							
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/vacuum.mp3"));
-		}
-	}
-}
-
-// zyk: Reverse Wind
-void reverse_wind(gentity_t *ent, int distance, int duration)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		distance += 200;
-	}
-
-	ent->client->pers.quest_debounce1_timer = 0;
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			player_ent->client->pers.quest_power_user3_id = ent->s.number;
-			player_ent->client->pers.quest_power_status |= (1 << 20);
-			player_ent->client->pers.quest_target6_timer = level.time + duration;
-
-			// zyk: gives fall kill to the owner of this power
-			player_ent->client->ps.otherKiller = ent->s.number;
-			player_ent->client->ps.otherKillerTime = level.time + duration;
-			player_ent->client->ps.otherKillerDebounceTime = level.time + 100;
-
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/vacuum.mp3"));
-		}
-	}
-}
-
-// zyk: Poison Mushrooms
-void poison_mushrooms(gentity_t *ent, int min_distance, int max_distance)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-		min_distance = 0;
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, min_distance, max_distance, qfalse, &targets_hit) == qtrue && 
-			(i < MAX_CLIENTS || player_ent->client->NPC_class != CLASS_VEHICLE))
-		{
-			player_ent->client->pers.quest_power_user2_id = ent->s.number;
-			player_ent->client->pers.quest_power_status |= (1 << 4);
-			player_ent->client->pers.quest_target3_timer = level.time + 200;
-			player_ent->client->pers.quest_power_hit_counter = 40;
-
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/air_burst.mp3"));
-		}
-	}
-}
-
-// zyk: Chaos Power
-void chaos_power(gentity_t *ent, int distance, int duration)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-					
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			player_ent->client->pers.quest_power_user1_id = ent->s.number;
-			player_ent->client->pers.quest_power_status |= (1 << 1);
-			player_ent->client->pers.quest_power_hit3_counter = duration/200;
-			player_ent->client->pers.quest_target1_timer = level.time + 200;
-
-			// zyk: removing emotes to prevent exploits
-			if (player_ent->client->pers.player_statuses & (1 << 1))
-			{
-				player_ent->client->pers.player_statuses &= ~(1 << 1);
-				player_ent->client->ps.forceHandExtendTime = level.time;
-			}
-
-			// zyk: if using Meditate taunt, remove it
-			if (player_ent->client->ps.legsAnim == BOTH_MEDITATE && player_ent->client->ps.torsoAnim == BOTH_MEDITATE)
-			{
-				player_ent->client->ps.legsAnim = player_ent->client->ps.torsoAnim = BOTH_MEDITATE_END;
-			}
-
-			if (player_ent->client->jetPackOn)
-			{
-				Jetpack_Off(player_ent);
-			}
-
-			// zyk:  setting anim
-			player_ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-			player_ent->client->ps.forceDodgeAnim = BOTH_SONICPAIN_END;
-			player_ent->client->ps.forceHandExtendTime = level.time + duration;
-			player_ent->client->ps.electrifyTime = level.time + duration;
-
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_chaos", "0", "ships/heavydmg", 0, 0, 0, 1000);
-		}
-	}
-}
-
-// zyk: Magic Sense
-void magic_sense(gentity_t *ent, int duration)
-{
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{ // zyk: Universe Power
-		duration += 1000;
-	}
-
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 &&
-		ent->client->pers.unique_skill_duration > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
-		!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
-	{ // zyk: Magic Master Unique Skill
-		duration += 1000;
-	}
-
-	// zyk: Magic Sense gets more duration based on Sense skill level
-	duration += (ent->client->pers.skill_levels[4] * 1000);
-
-	// zyk: Magic Sense gets more duration based on Improvements skill level
-	duration += (ent->client->pers.skill_levels[55] * 1000);
-
-	ent->client->ps.forceAllowDeactivateTime = level.time + duration;
-	ent->client->ps.fd.forcePowerLevel[FP_SEE] = ent->client->pers.skill_levels[4];
-	ent->client->ps.fd.forcePowersActive |= (1 << FP_SEE);
-	ent->client->ps.fd.forcePowerDuration[FP_SEE] = level.time + duration;
-
-	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/weapons/force/see.wav"));
-}
-
-// zyk: Lightning Dome
-extern void zyk_lightning_dome_detonate( gentity_t *ent );
-void lightning_dome(gentity_t *ent, int damage)
-{
-	gentity_t *missile;
-	vec3_t origin;
-	trace_t	tr;
-
-	VectorSet(origin, ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2] - 22);
-
-	trap->Trace( &tr, ent->client->ps.origin, NULL, NULL, origin, ent->s.number, MASK_SHOT, qfalse, 0, 0);
-
-	missile = G_Spawn();
-
-	G_SetOrigin(missile, origin);
-	//In SP the impact actually travels as a missile based on the trace fraction, but we're
-	//just going to be instant. -rww
-
-	VectorCopy( tr.plane.normal, missile->pos1 );
-
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 3) // zyk: Armored Soldier Lightning Shield has less radius
-		missile->count = 6;
-	else
-		missile->count = 9;
-
-	missile->classname = "demp2_alt_proj";
-	missile->s.weapon = WP_DEMP2;
-
-	missile->think = zyk_lightning_dome_detonate;
-	missile->nextthink = level.time;
-
-	// zyk: damage is level based
-	damage = (int)ceil(damage * (0.5 + ((ent->client->pers.level * 1.0) / 200.0)));
-
-	// zyk: Magic Master Unique Skill increases damage
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && ent->client->pers.unique_skill_duration > level.time &&
-		!(ent->client->pers.player_statuses & (1 << 21)) && !(ent->client->pers.player_statuses & (1 << 22)) && 
-		!(ent->client->pers.player_statuses & (1 << 23)))
-	{
-		damage *= 2;
-	}
-
-	missile->splashDamage = missile->damage = damage;
-	missile->splashMethodOfDeath = missile->methodOfDeath = MOD_DEMP2;
-
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 3) // zyk: Armored Soldier Lightning Shield has less radius
-		missile->splashRadius = 512;
-	else
-		missile->splashRadius = 768;
-
-	missile->r.ownerNum = ent->s.number;
-
-	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
-
-	// we don't want it to ever bounce
-	missile->bounceCount = 0;
-
-	if (ent->s.number < level.maxclients)
-		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/ambience/thunder_close1.mp3"));
-}
-
-// zyk: Ultra Strength. Increases damage and resistance to damage
-void ultra_strength(gentity_t *ent, int duration)
-{
-	ent->client->pers.quest_power_status |= (1 << 3);
-	ent->client->pers.quest_power2_timer = level.time + duration;
-
-	if (ent->s.number < level.maxclients)
-		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/ambience/thunder1.mp3"));
-}
-
-// zyk: Ultra Resistance. Increases resistance to damage
-void ultra_resistance(gentity_t *ent, int duration)
-{
-	ent->client->pers.quest_power_status |= (1 << 7);
-	ent->client->pers.quest_power3_timer = level.time + duration;
-
-	if (ent->s.number < level.maxclients)
-		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/enlightenment.mp3"));
-}
-
-// zyk: Immunity Power. Becomes immune against other special powers
-void immunity_power(gentity_t *ent, int duration)
-{
-	ent->client->pers.quest_power_status |= (1 << 0);
-	ent->client->pers.quest_power1_timer = level.time + duration;
-
-	zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_immunity", "0", "scepter/invincibility", 0, 0, 0, 300);
-
-	if (ent->s.number < level.maxclients)
-		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/boon.mp3"));
-}
-
-// zyk: Enemy Weakening
-void enemy_nerf(gentity_t *ent, int distance)
-{
-	int i = 0;
-	int targets_hit = 0;
-	int duration = 12000;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		duration += 4000;
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			player_ent->client->pers.quest_target7_timer = level.time + duration;
-			player_ent->client->pers.quest_power_status |= (1 << 21);
-
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_enemy_nerf", "0", "force/kothos_beam", 0, 0, 0, 1000);
-
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/woosh10.mp3"));
-		}
-	}
-}
-
-// zyk: used by Duelist Vertical DFA ability
-void zyk_vertical_dfa_effect(gentity_t *ent)
-{
-	gentity_t *new_ent = G_Spawn();
-
-	zyk_set_entity_field(new_ent, "classname", "fx_runner");
-	zyk_set_entity_field(new_ent, "spawnflags", "4");
-	zyk_set_entity_field(new_ent, "targetname", "zyk_vertical_dfa");
-
-	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2] - 20));
-
-	new_ent->s.modelindex = G_EffectIndex("ships/proton_impact");
-
-	zyk_spawn_entity(new_ent);
-
-	new_ent->splashDamage = 130;
-
-	new_ent->splashRadius = 600;
-
-	level.special_power_effects[new_ent->s.number] = ent->s.number;
-	level.special_power_effects_timer[new_ent->s.number] = level.time + 600;
-}
-
-void zyk_bomb_model_think(gentity_t *ent)
-{
-	// zyk: bomb timer seconds to explode. Each call to this function decrease counter until it reaches 0
-	ent->count--;
-
-	if (ent->count == 0)
-	{ // zyk: explodes the bomb
-		zyk_quest_effect_spawn(ent->parent, ent, "zyk_timed_bomb_explosion", "4", "explosions/hugeexplosion1", 0, 480, 430, 800);
-
-		ent->think = G_FreeEntity;
-		ent->nextthink = level.time + 500;
-	}
-	else
-	{
-		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/mpalarm.wav"));
-		ent->nextthink = level.time + 1000;
-	}
-}
-
-void zyk_add_bomb_model(gentity_t *ent)
-{
-	gentity_t *new_ent = G_Spawn();
-
-	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-	zyk_set_entity_field(new_ent, "spawnflags", "0");
-	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2] - 20));
-
-	zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/bomb_new_deact.md3");
-
-	zyk_set_entity_field(new_ent, "targetname", "zyk_timed_bomb");
-
-	zyk_set_entity_field(new_ent, "count", "3");
-
-	new_ent->parent = ent;
-	new_ent->think = zyk_bomb_model_think;
-	new_ent->nextthink = level.time + 1000;
-
-	zyk_spawn_entity(new_ent);
-
-	ent->wait = level.time + 5000;
-
-	G_Sound(new_ent, CHAN_AUTO, G_SoundIndex("sound/effects/cloth1.mp3"));
-}
-
-void zyk_ice_bomb_ice_think(gentity_t *ent)
-{
-	ent->nextthink = level.time + 100;
-
-	if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.rpg_class == 2 && 
-		ent->parent->client->pers.ice_bomb_counter == 3)
-	{ // zyk: keeps hitting enemies until time out
-		if (ent->wait < level.time)
-		{
-			ent->think = G_FreeEntity;
-		}
-		else
-		{
-			int i = 0;
-
-			for (i = 0; i < level.num_entities; i++)
-			{
-				gentity_t *player_ent = &g_entities[i];
-
-				if (player_ent && player_ent->client && player_ent->health > 0 &&
-					(ent->parent->client->pers.guardian_mode == player_ent->client->pers.guardian_mode ||
-					   ((ent->parent->client->pers.guardian_mode == 12 || ent->parent->client->pers.guardian_mode == 13) && player_ent->NPC &&
-						(Q_stricmp(player_ent->NPC_type, "guardian_of_universe") || Q_stricmp(player_ent->NPC_type, "quest_reborn") ||
-							Q_stricmp(player_ent->NPC_type, "quest_reborn_blue") || Q_stricmp(player_ent->NPC_type, "quest_reborn_red") ||
-							Q_stricmp(player_ent->NPC_type, "quest_reborn_boss") || Q_stricmp(player_ent->NPC_type, "quest_mage"))
-						)
-					) && 
-					zyk_can_hit_target(ent->parent, player_ent) == qtrue &&
-					(i > MAX_CLIENTS || 
-					 (player_ent->client->pers.connected == CON_CONNECTED && player_ent->client->sess.sessionTeam != TEAM_SPECTATOR &&
-					  player_ent->client->ps.duelInProgress == qfalse)
-					) &&
-					Distance(ent->s.origin, player_ent->client->ps.origin) < 90 && 
-					!(player_ent->client->pers.player_statuses & (1 << 24)))
-				{ // zyk: hit by the ice, make him trapped in the ice
-					player_ent->client->pers.stun_baton_less_speed_timer = ent->wait;
-
-					player_ent->client->pers.player_statuses |= (1 << 24);
-
-					G_Damage(player_ent, ent->parent, ent->parent, NULL, NULL, 20, 0, MOD_UNKNOWN);
-
-					G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/glass_tumble3.wav"));
-				}
-			}
-		}
-	}
-}
-
-void zyk_spawn_ice_bomb_ice(gentity_t *ent, int x_offset, int y_offset)
-{
-	gentity_t *new_ent = G_Spawn();
-
-	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-	zyk_set_entity_field(new_ent, "spawnflags", "0");
-	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0] + x_offset, (int)ent->r.currentOrigin[1] + y_offset, (int)ent->r.currentOrigin[2]));
-
-	zyk_set_entity_field(new_ent, "angles", "-89 0 0");
-
-	zyk_set_entity_field(new_ent, "model", "models/map_objects/rift/crystal_wall.md3");
-
-	zyk_set_entity_field(new_ent, "targetname", "zyk_ice_bomb_ice");
-
-	new_ent->parent = ent->parent;
-	new_ent->think = zyk_ice_bomb_ice_think;
-	new_ent->nextthink = level.time + 100;
-
-	zyk_spawn_entity(new_ent);
-
-	// zyk: ice duration
-	new_ent->wait = level.time + 4000;
-}
-
-void zyk_ice_bomb_think(gentity_t *ent)
-{
-	ent->nextthink = level.time + 100;
-
-	if (ent->parent && ent->parent->client && ent->parent->client->sess.amrpgmode == 2 && ent->parent->client->pers.rpg_class == 2 && 
-		(ent->parent->client->pers.ice_bomb_counter == 2 || ent->parent->client->pers.unique_skill_duration < level.time))
-	{ // zyk: Bounty Hunter detonated the bomb or unique duration run out. Explodes the bomb
-		ent->parent->client->pers.ice_bomb_counter = 3;
-
-		zyk_spawn_ice_bomb_ice(ent, 0, 0);
-		zyk_spawn_ice_bomb_ice(ent, 0, -80);
-		zyk_spawn_ice_bomb_ice(ent, 0, 80);
-		zyk_spawn_ice_bomb_ice(ent, -80, 0);
-		zyk_spawn_ice_bomb_ice(ent, -80, -80);
-		zyk_spawn_ice_bomb_ice(ent, -80, 80);
-		zyk_spawn_ice_bomb_ice(ent, 80, 0);
-		zyk_spawn_ice_bomb_ice(ent, 80, -80);
-		zyk_spawn_ice_bomb_ice(ent, 80, 80);
-
-		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/glass_tumble3.wav"));
-
-		ent->think = G_FreeEntity;
-	}
-}
-
-// zyk: Bounty Hunter Ice Bomb
-void zyk_ice_bomb(gentity_t *ent)
-{
-	gentity_t *new_ent = G_Spawn();
-
-	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-	zyk_set_entity_field(new_ent, "spawnflags", "0");
-	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2] - 22));
-
-	zyk_set_entity_field(new_ent, "model", "models/map_objects/imperial/cargo_sm.md3");
-
-	zyk_set_entity_field(new_ent, "targetname", "zyk_ice_bomb");
-
-	new_ent->parent = ent;
-	new_ent->think = zyk_ice_bomb_think;
-	new_ent->nextthink = level.time + 100;
-
-	zyk_spawn_entity(new_ent);
-
-	G_Sound(new_ent, CHAN_AUTO, G_SoundIndex("sound/effects/cloth1.mp3"));
-}
-
-void zyk_spawn_ice_element(gentity_t *ent, gentity_t *player_ent)
-{
-	int i = 0;
-	int initial_angle = -179;
-
-	for (i = 0; i < 4; i++)
-	{
-		gentity_t *new_ent = G_Spawn();
-
-		zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-		zyk_set_entity_field(new_ent, "spawnflags", "65537");
-		zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)player_ent->r.currentOrigin[0], (int)player_ent->r.currentOrigin[1], (int)player_ent->r.currentOrigin[2]));
-
-		zyk_set_entity_field(new_ent, "angles", va("0 %d 0", initial_angle + (i * 89)));
-
-		zyk_set_entity_field(new_ent, "mins", "-70 -70 -70");
-		zyk_set_entity_field(new_ent, "maxs", "70 70 70");
-
-		zyk_set_entity_field(new_ent, "model", "models/map_objects/rift/crystal_wall.md3");
-
-		zyk_set_entity_field(new_ent, "targetname", "zyk_elemental_ice");
-
-		zyk_spawn_entity(new_ent);
-
-		level.special_power_effects[new_ent->s.number] = ent->s.number;
-		level.special_power_effects_timer[new_ent->s.number] = level.time + 4000;
-	}
-}
-
-// zyk: Elemental Attack
-void elemental_attack(gentity_t *ent)
-{
-	int i = 0;
-	int targets_hit = 0;
-	int min_distance = 100;
-	int damage = 16;
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, min_distance, 500, qfalse, &targets_hit) == qtrue)
-		{
-			// zyk: first element, Ice
-			zyk_spawn_ice_element(ent, player_ent);
-
-			// zyk: second element, Fire. Multiplies by 2.5 because of the damage reduction in G_Damage()
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_elemental_fire", "4", "env/flame_jet", 1000, 2.5 * damage, 35, 2500);
-
-			// zyk: third element, Earth. Multiplies by 2.5 because of the damage reduction in G_Damage()
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_elemental_earth", "4", "env/rock_smash", 2500, 2.5 * damage, 35, 4000);
-
-			// zyk: fourth element, Wind
-			player_ent->client->pers.quest_power_status |= (1 << 5);
-			player_ent->client->pers.quest_power_hit_counter = -179;
-			player_ent->client->pers.quest_target4_timer = level.time + 7000;
-
-			// zyk: target is hit by the Ice element for 4 seconds
-			player_ent->client->pers.quest_power_status |= (1 << 26);
-			player_ent->client->pers.quest_target11_timer = level.time + 4000;
-
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/glass_tumble3.wav"));
-		}
-	}
-}
-
-// zyk: No Attack ability
-void zyk_no_attack(gentity_t *ent)
-{
-	int i = 0;
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (player_ent && player_ent->client && ent != player_ent &&
-			zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue &&
-			Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 300)
-		{
-			G_Damage(player_ent, ent, ent, NULL, NULL, 15, 0, MOD_UNKNOWN);
-
-			player_ent->client->ps.weaponTime = 3000;
-			player_ent->client->ps.electrifyTime = level.time + 3000;
-			player_ent->client->pers.no_attack_timer = level.time + 3000;
-
-			if (player_ent->client->ps.weaponstate == WEAPON_CHARGING ||
-				player_ent->client->ps.weaponstate == WEAPON_CHARGING_ALT)
-			{
-				player_ent->client->ps.weaponstate = WEAPON_READY;
-			}
-		}
-	}
-
-	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/hologram_off.mp3"));
-}
-
-// zyk: Super Beam ability
-void zyk_super_beam(gentity_t *ent, int angle_yaw)
-{
-	gentity_t *new_ent = G_Spawn();
-
-	if (angle_yaw == 0)
-		angle_yaw = 1;
-
-	zyk_set_entity_field(new_ent, "classname", "fx_runner");
-	zyk_set_entity_field(new_ent, "spawnflags", "0");
-	zyk_set_entity_field(new_ent, "targetname", "zyk_super_beam");
-
-	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->client->ps.origin[0], (int)ent->client->ps.origin[1], ((int)ent->client->ps.origin[2] + ent->client->ps.viewheight)));
-	
-	zyk_set_entity_field(new_ent, "angles", va("%d %d 0", (int)ent->client->ps.viewangles[0], angle_yaw));
-
-	new_ent->s.modelindex = G_EffectIndex("env/hevil_bolt");
-
-	new_ent->parent = ent;
-
-	zyk_spawn_entity(new_ent);
-
-	level.special_power_effects[new_ent->s.number] = ent->s.number;
-	level.special_power_effects_timer[new_ent->s.number] = level.time + 2000;
-}
-
-// zyk: Force Storm ability
-extern void Boba_FlyStop(gentity_t *self);
-extern void Jedi_Decloak(gentity_t *self);
-void zyk_force_storm(gentity_t *ent)
-{
-	int i = 0;
-
-	zyk_quest_effect_spawn(ent, ent, "zyk_force_storm", "4", "env/huge_lightning", 0, 20, 120, 3000);
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (player_ent && player_ent->client && ent != player_ent &&
-			zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue &&
-			Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 380)
-		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_force_storm", "4", "env/huge_lightning", 0, 20, 120, 3000);
-
-			// zyk: decrease enemy movement speed
-			player_ent->client->pers.stun_baton_less_speed_timer = level.time + 2500;
-
-			if (!player_ent->NPC)
-			{ //disable jetpack temporarily
-				if (player_ent->client->jetPackOn)
-					Jetpack_Off(player_ent);
-				player_ent->client->jetPackToggleTime = level.time + 5000;
-			}
-			else if (player_ent->NPC && player_ent->client->NPC_class == CLASS_BOBAFETT)
-			{ // zyk: also disables npc jetpack
-				Boba_FlyStop(player_ent);
-			}
-
-			if (player_ent->client->ps.powerups[PW_CLOAKED])
-			{ // zyk: disables cloak of enemies
-				Jedi_Decloak(player_ent);
-			}
-		}
-	}
-}
-
-// zyk: Force Scream ability
-void force_scream(gentity_t *ent)
-{
-	zyk_quest_effect_spawn(ent, ent, "zyk_effect_scream", "4", "howler/sonic", 0, 18, 300, 6000);
-
-	ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-	ent->client->ps.forceDodgeAnim = BOTH_FORCE_RAGE;
-	ent->client->ps.forceHandExtendTime = level.time + 4500;
-
-	G_Sound(ent, CHAN_VOICE, G_SoundIndex("sound/chars/howler/howl.mp3"));
-}
-
-void zyk_force_dash_effect(gentity_t *ent)
-{
-	zyk_quest_effect_spawn(ent, ent, "zyk_effect_force_dash", "0", "force/rage2", 0, 0, 0, 200);
-}
-
-// zyk: Fast Dash ability
-void zyk_force_dash(gentity_t *ent)
-{
-	G_SetAnim(ent, NULL, SETANIM_BOTH, BOTH_FORCELONGLEAP_START, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD, 0);
-
-	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/woosh9.mp3"));
-
-	ent->client->pers.fast_dash_timer = 0;
-}
-
-// zyk: Healing Water
-void healing_water(gentity_t *ent, int heal_amount)
-{
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-		heal_amount += 30;
-
-	if ((ent->health + heal_amount) < ent->client->ps.stats[STAT_MAX_HEALTH])
-		ent->health += heal_amount;
-	else
-		ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
-
-	G_Sound( ent, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav") );
-}
-
-// zyk: Sleeping Flowers
-void sleeping_flowers(gentity_t *ent, int stun_time, int distance)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		distance += 100;
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			// zyk: removing emotes to prevent exploits
-			if (player_ent->client->pers.player_statuses & (1 << 1))
-			{
-				player_ent->client->pers.player_statuses &= ~(1 << 1);
-				player_ent->client->ps.forceHandExtendTime = level.time;
-			}
-
-			// zyk: if using Meditate taunt, remove it
-			if (player_ent->client->ps.legsAnim == BOTH_MEDITATE && player_ent->client->ps.torsoAnim == BOTH_MEDITATE)
-			{
-				player_ent->client->ps.legsAnim = player_ent->client->ps.torsoAnim = BOTH_MEDITATE_END;
-			}
-
-			player_ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-			player_ent->client->ps.forceHandExtendTime = level.time + stun_time;
-			player_ent->client->ps.velocity[2] += 150;
-			player_ent->client->ps.forceDodgeAnim = 0;
-			player_ent->client->ps.quickerGetup = qtrue;
-
-			player_ent->client->pers.quest_power_status |= (1 << 24);
-			player_ent->client->pers.quest_target9_timer = level.time + stun_time;
-
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_sleeping", "0", "force/heal2", 0, 0, 0, 800);
-
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/air_burst.mp3"));
-		}
-	}
-}
-
-// zyk: Water Attack
-void water_attack(gentity_t *ent, int distance, int damage)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		damage += 10;
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_acid", "4", "env/water_impact", 200, damage, 40, 9000);
-		}
-	}
-}
-
-// zyk Shifting Sand
-void shifting_sand(gentity_t *ent, int distance)
-{
-	int time_to_teleport = 1800;
-	int i = 0;
-	int targets_hit = 0;
-	int min_distance = distance;
-	int enemy_dist = 0;
-	gentity_t *this_enemy = NULL;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		distance *= 1.5;
-		min_distance = distance;
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{ // zyk: teleport to the nearest enemy
-			enemy_dist = Distance(ent->client->ps.origin, player_ent->client->ps.origin);
-
-			if (enemy_dist < min_distance)
-			{
-				min_distance = enemy_dist;
-				this_enemy = player_ent;
-			}
-		}
-	}
-
-	if (this_enemy)
-	{ // zyk: found an enemy
-		ent->client->pers.quest_power_status |= (1 << 17);
-
-		ent->client->pers.quest_power_user4_id = this_enemy->s.number;
-
-		// zyk: used to bring the player back if he gets stuck
-		VectorCopy(ent->client->ps.origin, ent->client->pers.teleport_angles);
-	}
-
-	ent->client->pers.quest_power5_timer = level.time + time_to_teleport;
-	zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_sand", "0", "env/sand_spray", 0, 0, 0, time_to_teleport);
-}
-
-// zyk: Time Power
-extern void display_yellow_bar(gentity_t *ent, int duration);
-void time_power(gentity_t *ent, int distance, int duration)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-					
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			player_ent->client->pers.quest_power_status |= (1 << 2);
-			player_ent->client->pers.quest_target2_timer = level.time + duration;
-
-			if (i < MAX_CLIENTS)
-			{ // zyk: player hit by this power
-				if (player_ent->client->pers.quest_power_usage_timer < level.time)
-				{
-					player_ent->client->pers.quest_power_usage_timer = level.time + duration;
-				}
-				else
-				{ // zyk: already used a power, so increase the cooldown time
-					player_ent->client->pers.quest_power_usage_timer += duration;
-				}
-
-				display_yellow_bar(player_ent, (player_ent->client->pers.quest_power_usage_timer - level.time));
-			}
-			else if (player_ent->NPC)
-			{ // zyk: npc or boss must also not be able to use magic
-				player_ent->client->pers.light_quest_timer += duration;
-				player_ent->client->pers.guardian_timer += duration;
-				player_ent->client->pers.universe_quest_timer += duration;
-			}
-
-			player_ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-			player_ent->client->ps.forceDodgeAnim = player_ent->client->ps.torsoAnim;
-			player_ent->client->ps.forceHandExtendTime = level.time + duration;
-
-			// zyk: disabled force powers
-			player_ent->client->ps.fd.forceDeactivateAll = 1;
-
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_time", "0", "misc/genrings", 0, 0, 0, duration);
-
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/electric_beam_lp.wav"));
-		}
-	}
-}
-
-// zyk: Water Splash. Damages the targets and heals the user
-void water_splash(gentity_t *ent, int distance, int damage)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		damage += 5;
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_watersplash", "4", "world/waterfall3", 0, damage, 200, 2500);
-
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/ambience/yavin/waterfall_medium_lp.wav"));
-		}
-	}
-}
-
-// zyk: Rockfall
-void rock_fall(gentity_t *ent, int distance, int damage)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		distance += (distance/2);
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qtrue, &targets_hit) == qtrue)
-		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_rockfall", "4", "env/rockfall_noshake", 0, damage, 100, 8000);
-		}
-	}
-}
-
-// zyk: Dome of Damage
-void dome_of_damage(gentity_t *ent, int distance, int damage)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		distance += 100;
-		zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_dome", "4", "env/dome", 1000, damage, 290, 8000);
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qtrue, &targets_hit) == qtrue)
-		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_dome", "4", "env/dome", 1000, damage, 290, 8000);
-		}
-	}
-}
-
-// zyk: Magic Shield
-void magic_shield(gentity_t *ent, int duration)
-{
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		duration += 1500;
-	}
-
-	ent->client->pers.quest_power_status |= (1 << 11);
-	ent->client->pers.quest_power4_timer = level.time + duration;
-	ent->client->invulnerableTimer = level.time + duration;
-}
-
-// zyk: Tree of Life
-void tree_of_life(gentity_t *ent)
-{
-	ent->client->pers.quest_power_status |= (1 << 19);
-	ent->client->pers.quest_power6_timer = level.time;
-	ent->client->pers.quest_power_hit2_counter = 4;
-
-	zyk_quest_effect_spawn(ent, ent, "zyk_tree_of_life", "1", "models/map_objects/yavin/tree10_b.md3", 0, 0, 0, 4000);
-}
-
-// zyk: Magic Disable
-void magic_disable(gentity_t *ent, int distance)
-{
-	int i = 0;
-	int targets_hit = 0;
-	int duration = 6000;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		duration += 2000;
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_magic_disable", "0", "env/small_electricity2", 0, 0, 0, 1500);
-
-			if (i < MAX_CLIENTS)
-			{ // zyk: player hit by this power
-				if (player_ent->client->pers.quest_power_usage_timer < level.time)
-				{
-					player_ent->client->pers.quest_power_usage_timer = level.time + duration;
-				}
-				else
-				{ // zyk: already used a power, so increase the cooldown time
-					player_ent->client->pers.quest_power_usage_timer += duration;
-				}
-
-				display_yellow_bar(player_ent, (player_ent->client->pers.quest_power_usage_timer - level.time));
-			}
-			else
-			{ // zyk: npc or boss dont get affected that much
-				player_ent->client->pers.light_quest_timer += (duration/2);
-				player_ent->client->pers.guardian_timer += (duration/2);
-				player_ent->client->pers.universe_quest_timer += (duration/2);
-			}
-
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/woosh10.mp3"));
-		}
-	}
-}
-
-// zyk: Ice Stalagmite
-void ice_stalagmite(gentity_t *ent, int distance, int damage)
-{
-	int i = 0;
-	int targets_hit = 0;
-	int min_distance = 50;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		damage += 30;
-		min_distance = 0;
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, min_distance, distance, qfalse, &targets_hit) == qtrue)
-		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_ice_stalagmite", "0", "models/map_objects/hoth/stalagmite_small.md3", 0, 0, 0, 2000);
-
-			G_Damage(player_ent,ent,ent,NULL,player_ent->client->ps.origin,damage,DAMAGE_NO_PROTECTION,MOD_UNKNOWN);
-		}
-	}
-}
-
-// zyk: Ice Boulder
-void ice_boulder(gentity_t *ent, int distance, int damage)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		distance += 50;
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 50, distance, qfalse, &targets_hit) == qtrue)
-		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_ice_boulder", "1", "models/map_objects/hoth/rock_b.md3", 0, 20, 50, 4000);
-
-			G_Damage(player_ent,ent,ent,NULL,player_ent->client->ps.origin,damage,DAMAGE_NO_PROTECTION,MOD_UNKNOWN);
-
-			player_ent->client->pers.quest_power_status |= (1 << 25);
-			player_ent->client->pers.quest_target10_timer = level.time + 4000;
-		}
-	}
-}
-
-void zyk_spawn_ice_block(gentity_t *ent, int duration, int pitch, int yaw, int x_offset, int y_offset, int z_offset)
-{
-	gentity_t *new_ent = G_Spawn();
-
-	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-	zyk_set_entity_field(new_ent, "spawnflags", "65537");
-	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0], (int)ent->r.currentOrigin[1], (int)ent->r.currentOrigin[2]));
-
-	zyk_set_entity_field(new_ent, "angles", va("%d %d 0", pitch, yaw));
-
-	if (x_offset == 0 && y_offset != 0)
-	{
-		zyk_set_entity_field(new_ent, "mins", va("%d -50 %d", y_offset * -1, y_offset * -1));
-		zyk_set_entity_field(new_ent, "maxs", va("%d 50 %d", y_offset, y_offset));
-	}
-	else if (x_offset != 0 && y_offset == 0)
-	{
-		zyk_set_entity_field(new_ent, "mins", va("-50 %d %d", x_offset * -1, x_offset * -1));
-		zyk_set_entity_field(new_ent, "maxs", va("50 %d %d", x_offset, x_offset));
-	}
-	else if (x_offset == 0 && y_offset == 0)
-	{
-		zyk_set_entity_field(new_ent, "mins", va("%d %d -50", z_offset * -1, z_offset * -1));
-		zyk_set_entity_field(new_ent, "maxs", va("%d %d 50", z_offset, z_offset));
-	}
-
-	zyk_set_entity_field(new_ent, "model", "models/map_objects/rift/crystal_wall.md3");
-
-	zyk_set_entity_field(new_ent, "targetname", "zyk_ice_block");
-
-	zyk_set_entity_field(new_ent, "zykmodelscale", "200");
-
-	zyk_spawn_entity(new_ent);
-
-	level.special_power_effects[new_ent->s.number] = ent->s.number;
-	level.special_power_effects_timer[new_ent->s.number] = level.time + duration;
-}
-
-// zyk: Ice Block
-void ice_block(gentity_t *ent, int duration)
-{
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		duration += 1000;
-	}
-
-	zyk_spawn_ice_block(ent, duration, 0, 0, -140, 0, 0);
-	zyk_spawn_ice_block(ent, duration, 0, 90, 140, 0, 0);
-	zyk_spawn_ice_block(ent, duration, 0, 179, 0, -140, 0);
-	zyk_spawn_ice_block(ent, duration, 0, -90, 0, 140, 0);
-	zyk_spawn_ice_block(ent, duration, 90, 0, 0, 0, -140);
-	zyk_spawn_ice_block(ent, duration, -90, 0, 0, 0, 140);
-
-	ent->client->pers.quest_power_status |= (1 << 22);
-	ent->client->pers.quest_power7_timer = level.time + duration;
-
-	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/glass_tumble3.wav"));
-}
-
-// zyk: Ultra Drain
-void ultra_drain(gentity_t *ent, int radius, int damage, int duration)
-{
-	zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_drain", "4", "misc/possession", 1000, damage, radius, duration);
-}
-
-// zyk: Magic Explosion
-void magic_explosion(gentity_t *ent, int radius, int damage, int duration)
-{
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_explosion", "4", "explosions/hugeexplosion1", 1500, damage, radius, duration + 1000);
-	}
-
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && ent->client->pers.unique_skill_duration > level.time &&
-		!(ent->client->pers.player_statuses & (1 << 21)) && !(ent->client->pers.player_statuses & (1 << 22)) && 
-		!(ent->client->pers.player_statuses & (1 << 23)))
-	{ // zyk: Magic Master Unique Skill increases damage
-		zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_explosion", "4", "explosions/hugeexplosion1", 500, damage * 2, radius, duration);
-	}
-	else
-	{
-		zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_explosion", "4", "explosions/hugeexplosion1", 500, damage, radius, duration);
-	}
-}
-
-// zyk: Healing Area
-void healing_area(gentity_t *ent, int damage, int duration)
-{
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		damage += 1;
-	}
-
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && ent->client->pers.unique_skill_duration > level.time &&
-		!(ent->client->pers.player_statuses & (1 << 21)) && !(ent->client->pers.player_statuses & (1 << 22)))
-	{ // zyk: Magic Master Unique Skill increases damage
-		zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_healing", "4", "env/red_cyc", 0, damage * 2, 228, duration);
-	}
-	else
-	{
-		zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_healing", "4", "env/red_cyc", 0, damage, 228, duration);
-	}
-}
-
-// zyk: Slow Motion
-void slow_motion(gentity_t *ent, int distance, int duration)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		duration += 3000;
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			player_ent->client->pers.quest_power_status |= (1 << 6);
-			player_ent->client->pers.quest_target5_timer = level.time + duration;
-
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/woosh10.mp3"));
-		}
-	}
-}
-
-// zyk: Ultra Speed
-void ultra_speed(gentity_t *ent, int duration)
-{
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		duration += 3000;
-	}
-
-	ent->client->pers.quest_power_status |= (1 << 9);
-	ent->client->pers.quest_power3_timer = level.time + duration;
-
-	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/woosh1.mp3"));
-}
-
-// zyk: Fast and Slow
-void fast_and_slow(gentity_t *ent, int distance, int duration)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		duration += 2000;
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			player_ent->client->pers.quest_power_status |= (1 << 6);
-			player_ent->client->pers.quest_target5_timer = level.time + duration;
-
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/woosh10.mp3"));
-		}
-	}
-
-	ent->client->pers.quest_power_status |= (1 << 9);
-	ent->client->pers.quest_power3_timer = level.time + duration;
-
-	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/effects/woosh1.mp3"));
-}
-
-// zyk: spawns the circle of fire around the player
-void ultra_flame_circle(gentity_t *ent, char *targetname, char *spawnflags, char *effect_path, int start_time, int damage, int radius, int duration, int xoffset, int yoffset)
-{
-	gentity_t *new_ent = G_Spawn();
-
-	zyk_set_entity_field(new_ent,"classname","fx_runner");
-	zyk_set_entity_field(new_ent,"spawnflags",spawnflags);
-	zyk_set_entity_field(new_ent,"targetname",targetname);
-	zyk_set_entity_field(new_ent,"origin",va("%d %d %d",(int)ent->r.currentOrigin[0] + xoffset,(int)ent->r.currentOrigin[1] + yoffset,(int)ent->r.currentOrigin[2]));
-
-	new_ent->s.modelindex = G_EffectIndex( effect_path );
-
-	zyk_spawn_entity(new_ent);
-
-	if (damage > 0)
-		new_ent->splashDamage = damage;
-
-	if (radius > 0)
-		new_ent->splashRadius = radius;
-
-	if (start_time > 0) 
-		new_ent->nextthink = level.time + start_time;
-
-	level.special_power_effects[new_ent->s.number] = ent->s.number;
-	level.special_power_effects_timer[new_ent->s.number] = level.time + duration;
-}
-
-// zyk: Ultra Flame
-void ultra_flame(gentity_t *ent, int distance, int damage)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		ultra_flame_circle(ent,"zyk_quest_effect_flame","4", "env/flame_jet", 200, damage, 35, 5000, 30, 30);
-		ultra_flame_circle(ent,"zyk_quest_effect_flame","4", "env/flame_jet", 200, damage, 35, 5000, -30, 30);
-		ultra_flame_circle(ent,"zyk_quest_effect_flame","4", "env/flame_jet", 200, damage, 35, 5000, 30, -30);
-		ultra_flame_circle(ent,"zyk_quest_effect_flame","4", "env/flame_jet", 200, damage, 35, 5000, -30, -30);
-	}
-
-	for (i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			zyk_quest_effect_spawn(ent, player_ent, "zyk_quest_effect_flame", "4", "env/flame_jet", 200, damage, 35, 20000);
-		}
-	}
-}
-
-// zyk: spawns the flames around the player
-void flaming_area_flames(gentity_t *ent, char *targetname, char *spawnflags, char *effect_path, int start_time, int damage, int radius, int duration, int xoffset, int yoffset)
-{
-	gentity_t *new_ent = G_Spawn();
-
-	zyk_set_entity_field(new_ent, "classname", "fx_runner");
-	zyk_set_entity_field(new_ent, "spawnflags", spawnflags);
-	zyk_set_entity_field(new_ent, "targetname", targetname);
-	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", (int)ent->r.currentOrigin[0] + xoffset, (int)ent->r.currentOrigin[1] + yoffset, (int)ent->r.currentOrigin[2]));
-
-	new_ent->s.modelindex = G_EffectIndex(effect_path);
-
-	zyk_spawn_entity(new_ent);
-
-	if (damage > 0)
-		new_ent->splashDamage = damage;
-
-	if (radius > 0)
-		new_ent->splashRadius = radius;
-
-	if (start_time > 0)
-		new_ent->nextthink = level.time + start_time;
-
-	G_Sound(new_ent, CHAN_AUTO, G_SoundIndex("sound/effects/fire_lp.wav"));
-
-	level.special_power_effects[new_ent->s.number] = ent->s.number;
-	level.special_power_effects_timer[new_ent->s.number] = level.time + duration;
-}
-
-// zyk: Flaming Area
-void flaming_area(gentity_t *ent, int damage)
-{
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		damage *= 1.4;
-	}
-
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, -60, -60);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, -60, 0);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, -60, 60);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, 0, -60);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, 0, 0);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, 0, 60);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, 50, -60);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, 60, 0);
-	flaming_area_flames(ent, "zyk_quest_effect_flaming_area", "4", "env/fire", 0, damage, 60, 6000, 60, 60);
-}
-
-// zyk: Hurricane
-void hurricane(gentity_t *ent, int distance, int duration)
-{
-	int i = 0;
-	int targets_hit = 0;
-
-	// zyk: Universe Power
-	if (ent->client->pers.quest_power_status & (1 << 13))
-	{
-		distance += 100;
-		duration += 1000;
-	}
-
-	ent->client->pers.quest_debounce1_timer = 0;
-
-	for ( i = 0; i < level.num_entities; i++)
-	{
-		gentity_t *player_ent = &g_entities[i];
-
-		if (zyk_special_power_can_hit_target(ent, player_ent, i, 0, distance, qfalse, &targets_hit) == qtrue)
-		{
-			player_ent->client->pers.quest_power_status |= (1 << 5);
-			player_ent->client->pers.quest_power_hit_counter = -179;
-			player_ent->client->pers.quest_target4_timer = level.time + duration;
-
-			// zyk: gives fall kill to the owner of this power
-			player_ent->client->ps.otherKiller = ent->s.number;
-			player_ent->client->ps.otherKillerTime = level.time + duration;
-			player_ent->client->ps.otherKillerDebounceTime = level.time + 100;
-							
-			G_Sound(player_ent, CHAN_AUTO, G_SoundIndex("sound/effects/vacuum.mp3"));
-		}
-	}
+	VectorCopy( self->client->ps.origin, start );
+	start[2] += self->client->ps.viewheight - 6;
+	VectorMA( start, 20.0f, forward, start );
+	VectorMA( start, 4.0f, right, start );
 }
 
 // zyk: fires the Boba Fett flame thrower
@@ -6716,35 +6563,29 @@ void Player_FireFlameThrower( gentity_t *self )
 	int entityList[MAX_GENTITIES];
 	int numListedEntities;
 	int e = 0;
-	int damage = zyk_flame_thrower_damage.integer;
+	int damage = rp_flame_thrower_damage.integer;
 
 	vec3_t	tfrom, tto, fwd;
 	vec3_t thispush_org, a;
 	vec3_t mins, maxs, fwdangles, forward, right, center;
-	vec3_t		origin, dir;
+	vec3_t		origin, angles;
 
 	int i;
 	float visionArc = 120;
 	float radius = 144;
 
-	self->client->cloakDebReduce = level.time + zyk_flame_thrower_cooldown.integer;
+	self->client->cloakDebReduce = level.time + rp_flame_thrower_cooldown.integer;
 
-	// zyk: Flame Burst magic power has more damage
-	if (self->client->pers.quest_power_status & (1 << 12))
-	{
-		damage += 2;
-	}
-
-	origin[0] = self->r.currentOrigin[0];
-	origin[1] = self->r.currentOrigin[1];
-	origin[2] = self->r.currentOrigin[2] + 20.0f;
-
-	dir[0] = (-1) * self->client->ps.viewangles[0];
-	dir[2] = self->client->ps.viewangles[2];
-	dir[1] = (-1) * (180 - self->client->ps.viewangles[1]);
+	// DAJ_RP: [Flame Thrower] from the stun baton, and where the player aims (RP_FlameThrowerStart above). It
+	// came from the torso (the origin + 20) and went the same way whatever way the player faced: the angles
+	// were ( -pitch, roll, yaw - 180 ), and the client makes a direction of an effect's angles from its pitch
+	// and yaw (AngleVectors, EV_PLAY_EFFECT_ID) -- the yaw slot held the roll, near 0, so every burst went along
+	// the same world axis. The damage below was always the aim's; now the flame is where it lands. The angles
+	// are the aim reversed, as the effect fires against its direction -- see RP_FlameThrowerStart().
+	RP_FlameThrowerStart( self, origin, angles );
 
 	if ((self->client->pers.flame_thrower - level.time) > 500)
-		G_PlayEffectID( G_EffectIndex("boba/fthrw"), origin, dir);
+		G_PlayEffectID( G_EffectIndex("boba/fthrw"), origin, angles);
 
 	if ((self->client->pers.flame_thrower - level.time) > 1250)
 		G_Sound( self, CHAN_WEAPON, G_SoundIndex("sound/effects/fire_lp") );
@@ -6795,11 +6636,6 @@ void Player_FireFlameThrower( gentity_t *self )
 			{ //only bother with arc rules if the victim is a client
 				entityList[e] = ENTITYNUM_NONE;
 			}
-			else if (traceEnt->client && (traceEnt->client->sess.amrpgmode == 2 || traceEnt->NPC) && 
-					 self->client->pers.quest_power_status & (1 << 12) && zyk_check_immunity_power(traceEnt))
-			{ // zyk: Immunity Power protects from Flame Burst
-				entityList[e] = ENTITYNUM_NONE;
-			}
 		}
 		traceEnt = &g_entities[entityList[e]];
 		if (traceEnt && traceEnt != self)
@@ -6810,874 +6646,67 @@ void Player_FireFlameThrower( gentity_t *self )
 	}
 }
 
-// zyk: clear effects of some special powers
-void clear_special_power_effect(gentity_t *ent)
-{
-	if (level.special_power_effects[ent->s.number] != -1 && level.special_power_effects_timer[ent->s.number] < level.time)
-	{ 
-		level.special_power_effects[ent->s.number] = -1;
+// GalaxyRP fix: [Magic] clear_special_power_effect() used to be here. G_RunFrame called it on every
+// live entity every frame; when level.special_power_effects[] held an owner for that slot and the
+// matching timer had expired it cleared the slot and freed the effect entity (immediately for a
+// misc_model_breakable, next think otherwise). It was the ONLY thing that ever freed an entity
+// spawned by a magic power, and the only thing besides the init loop that ever wrote -1.
+//
+// It went with the arrays. Nothing produces those entries any more, so the function had become a
+// per-entity, per-frame read of two ints out of a 32 KB structure that could only ever answer
+// "no". Its removal also ends a latent hazard: G_FreeEntity() never reset the array, so an effect
+// entity freed by any other path before its timer expired left a live owner id behind, and the
+// next entity to take that slot number would have been treated as that player's magic effect.
 
-		// zyk: if it is a misc_model_breakable power, remove it right now
-		if (Q_stricmp(ent->classname, "misc_model_breakable") == 0)
-			G_FreeEntity(ent);
-		else
-			ent->think = G_FreeEntity;
-	}
-}
+// GalaxyRP fix: [Magic] magic_master_has_this_power(), zyk_print_special_power(),
+// zyk_number_of_enabled_magic_powers(), and zyk_show_magic_master_powers()/
+// zyk_show_left_magic_master_powers()/zyk_show_right_magic_master_powers() removed outright.
+// This whole block gated and drove a "select which magic power occupies your left/right/main
+// slot" system (sess.selected_special_power/selected_left_special_power/selected_right_special_power)
+// that turned out to have zero live callers anywhere in the codebase -- no keybind, no console
+// command, nothing ever invoked the three zyk_show_*_magic_master_powers() functions, so a
+// player's selected slots could never move off their MAGIC_MAGIC_SENSE login default. Separately,
+// the function that actually fires a magic power (TryGrapple() in g_cmds.c, via the grapple-hook
+// key) never read any of those three selected-power fields either -- it only ever hardcodes
+// MAGIC_ULTRA_STRENGTH/MAGIC_ULTRA_RESISTANCE/MAGIC_ENEMY_WEAKENING by movement direction (see the
+// matching fix comment there), so magic_master_has_this_power()'s guardian-quest gating for the
+// other ~27 powers was never actually consulted by anything reachable either. With all six
+// functions confirmed to have no other callers (grep'd across the whole tree), removed the entire
+// dead selection/gating layer rather than leave it half-connected. The individual magic power effect
+// functions (water_splash(), earthquake(), etc.) were left untouched and are simply uncalled.
+// This note used to add that defeated_guardians "has plenty of other live uses elsewhere"; that was
+// already wrong when written -- the field had no live reader at all -- and it has since been removed
+// from clientPersistant_t as declaration-only.
 
-// zyk: shows a text message from the file based on the language set by the player. Can receive additional arguments to concat in the final string
-void zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qboolean broadcast_message, ...)
-{
-	va_list argptr;
-	char content[MAX_STRING_CHARS];
-	const char *file_content;
-	static char string[MAX_STRING_CHARS];
-	char language[128];
-	char console_cmd[64];
-	int client_id = -1;
-	FILE *text_file = NULL;
-
-	strcpy(content, "");
-	strcpy(string, "");
-	strcpy(console_cmd, "print");
-
-	if (broadcast_message == qfalse)
-		client_id = ent->s.number;
-
-	if (show_in_chat == qtrue)
-		strcpy(console_cmd, "chat");
-
-	if (ent->client->pers.player_settings & (1 << 5))
-	{
-		strcpy(language, "custom");
-	}
-	else
-	{
-		strcpy(language, "english");
-	}
-
-	text_file = fopen(va("GalaxyRP/textfiles/%s/%s.txt", language, filename), "r");
-	if (text_file)
-	{
-		fgets(content, sizeof(content), text_file);
-		if (content[strlen(content) - 1] == '\n')
-			content[strlen(content) - 1] = '\0';
-
-		fclose(text_file);
-	}
-	else
-	{
-		strcpy(content, "^1File could not be open!");
-	}
-
-	file_content = va("%s", content);
-
-	va_start(argptr, broadcast_message);
-	Q_vsnprintf(string, sizeof(string), file_content, argptr);
-	va_end(argptr);
-
-	trap->SendServerCommand(client_id, va("%s \"%s\n\"", console_cmd, string));
-}
-
-qboolean magic_master_has_this_power(gentity_t *ent, int selected_power)
-{
-	if (selected_power == MAGIC_HEALING_WATER && !(ent->client->pers.defeated_guardians & (1 << 4)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_WATER_SPLASH && !(ent->client->pers.defeated_guardians & (1 << 4)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_WATER_ATTACK && !(ent->client->pers.defeated_guardians & (1 << 4)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_EARTHQUAKE && !(ent->client->pers.defeated_guardians & (1 << 5)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_ROCKFALL && !(ent->client->pers.defeated_guardians & (1 << 5)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_SHIFTING_SAND && !(ent->client->pers.defeated_guardians & (1 << 5)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_SLEEPING_FLOWERS && !(ent->client->pers.defeated_guardians & (1 << 6)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_POISON_MUSHROOMS && !(ent->client->pers.defeated_guardians & (1 << 6)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_TREE_OF_LIFE && !(ent->client->pers.defeated_guardians & (1 << 6)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_MAGIC_SHIELD && !(ent->client->pers.defeated_guardians & (1 << 7)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_DOME_OF_DAMAGE && !(ent->client->pers.defeated_guardians & (1 << 7)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_MAGIC_DISABLE && !(ent->client->pers.defeated_guardians & (1 << 7)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_ULTRA_SPEED && !(ent->client->pers.defeated_guardians & (1 << 8)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_SLOW_MOTION && !(ent->client->pers.defeated_guardians & (1 << 8)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_FAST_AND_SLOW && !(ent->client->pers.defeated_guardians & (1 << 8)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_FLAME_BURST && !(ent->client->pers.defeated_guardians & (1 << 9)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_ULTRA_FLAME && !(ent->client->pers.defeated_guardians & (1 << 9)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_FLAMING_AREA && !(ent->client->pers.defeated_guardians & (1 << 9)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_BLOWING_WIND && !(ent->client->pers.defeated_guardians & (1 << 10)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_HURRICANE && !(ent->client->pers.defeated_guardians & (1 << 10)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_REVERSE_WIND && !(ent->client->pers.defeated_guardians & (1 << 10)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_ULTRA_RESISTANCE && !(ent->client->pers.defeated_guardians & (1 << 11)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_ULTRA_STRENGTH && !(ent->client->pers.defeated_guardians & (1 << 11)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_ENEMY_WEAKENING && !(ent->client->pers.defeated_guardians & (1 << 11)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_ICE_STALAGMITE && !(ent->client->pers.defeated_guardians & (1 << 12)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_ICE_BOULDER && !(ent->client->pers.defeated_guardians & (1 << 12)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_ICE_BLOCK && !(ent->client->pers.defeated_guardians & (1 << 12)) &&
-		ent->client->pers.defeated_guardians != NUM_OF_GUARDIANS)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_HEALING_AREA && ent->client->pers.skill_levels[55] < 1)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_MAGIC_EXPLOSION && ent->client->pers.skill_levels[55] < 2)
-	{
-		return qfalse;
-	}
-	else if (selected_power == MAGIC_LIGHTNING_DOME && ent->client->pers.skill_levels[55] < 3)
-	{
-		return qfalse;
-	}
-	else if (selected_power < MAGIC_MAGIC_SENSE || selected_power >= MAX_MAGIC_POWERS)
-	{ // zyk: if, for some reason, there is an invalid selected power value, does not allow it
-		return qfalse;
-	}
-	else if (ent->client->sess.magic_disabled_powers & (1 << selected_power))
-	{ // zyk: this power was disabled by the player
-		return qfalse;
-	}
-
-	return qtrue;
-}
-
-void zyk_print_special_power(gentity_t *ent, int selected_power, char direction)
-{
-	if (selected_power == MAGIC_MAGIC_SENSE)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^7Magic Sense   ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_HEALING_WATER)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^4Healing Water       ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_WATER_SPLASH)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^4Water Splash        ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_WATER_ATTACK)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^4Water Attack        ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_EARTHQUAKE)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^3Earthquake          ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_ROCKFALL)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^3Rockfall            ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_SHIFTING_SAND)
-	{
-		trap->SendServerCommand(ent->s.number, va("chat \"^1%c ^3Shifting Sand        ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_SLEEPING_FLOWERS)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^2Sleeping Flowers    ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_POISON_MUSHROOMS)
-	{	
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^2Poison Mushrooms    ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_TREE_OF_LIFE)
-	{
-		trap->SendServerCommand(ent->s.number, va("chat \"^1%c ^2Tree of Life         ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_MAGIC_SHIELD)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^5Magic Shield        ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_DOME_OF_DAMAGE)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^5Dome of Damage      ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_MAGIC_DISABLE)
-	{
-		trap->SendServerCommand(ent->s.number, va("chat \"^1%c ^5Magic Disable          ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_ULTRA_SPEED)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^6Ultra Speed         ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_SLOW_MOTION)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^6Slow Motion         ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_FAST_AND_SLOW)
-	{
-		trap->SendServerCommand(ent->s.number, va("chat \"^1%c ^6Fast and Slow        ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_FLAME_BURST)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^1Flame Burst         ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_ULTRA_FLAME)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^1Ultra Flame         ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_FLAMING_AREA)
-	{
-		trap->SendServerCommand(ent->s.number, va("chat \"^1%c ^1Flaming Area         ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_BLOWING_WIND)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^7Blowing Wind        ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_HURRICANE)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^7Hurricane           ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_REVERSE_WIND)
-	{
-		trap->SendServerCommand(ent->s.number, va("chat \"^1%c ^7Reverse Wind         ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_ULTRA_RESISTANCE)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^3Ultra Resistance    ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_ULTRA_STRENGTH)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^3Ultra Strength      ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_ENEMY_WEAKENING)
-	{
-		trap->SendServerCommand(ent->s.number, va("chat \"^1%c ^3Enemy Weakening      ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_ICE_STALAGMITE)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^5Ice Stalagmite      ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_ICE_BOULDER)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^5Ice Boulder         ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_ICE_BLOCK)
-	{
-		trap->SendServerCommand(ent->s.number, va("chat \"^1%c ^5Ice Block            ^3MP: ^7%d\"", direction, ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_HEALING_AREA)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^7Healing Area        ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_MAGIC_EXPLOSION)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^7Magic Explosion     ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-	else if (selected_power == MAGIC_LIGHTNING_DOME)
-	{
-		trap->SendServerCommand( ent->s.number, va("chat \"^1%c ^7Lightning Dome      ^3MP: ^7%d\"",direction,ent->client->pers.magic_power));
-	}
-}
-
-// zyk: returns the amount of magic powers that are enabled with /magic command
-int zyk_number_of_enabled_magic_powers(gentity_t *ent)
-{
-	int i = 0;
-	int number_of_enabled_powers = 0;
-
-	for (i = MAGIC_MAGIC_SENSE; i < MAX_MAGIC_POWERS; i++)
-	{
-		if (!(ent->client->sess.magic_disabled_powers & (1 << i)) && magic_master_has_this_power(ent, i) == qtrue)
-		{
-			number_of_enabled_powers++;
-		}
-	}
-
-	return number_of_enabled_powers;
-}
-
-void zyk_show_magic_master_powers(gentity_t *ent, qboolean next_power)
-{
-	if (zyk_number_of_enabled_magic_powers(ent) == 0)
-	{
-		return;
-	}
-
-	if (next_power == qtrue)
-	{
-		do
-		{
-			ent->client->sess.selected_special_power++;
-			if (ent->client->sess.selected_special_power >= MAX_MAGIC_POWERS)
-				ent->client->sess.selected_special_power = MAGIC_MAGIC_SENSE;
-		} while (magic_master_has_this_power(ent, ent->client->sess.selected_special_power) == qfalse);
-	}
-	else
-	{
-		do
-		{
-			ent->client->sess.selected_special_power--;
-			if (ent->client->sess.selected_special_power < MAGIC_MAGIC_SENSE)
-				ent->client->sess.selected_special_power = MAX_MAGIC_POWERS - 1;
-		} while (magic_master_has_this_power(ent, ent->client->sess.selected_special_power) == qfalse);
-	}
-
-	zyk_print_special_power(ent,ent->client->sess.selected_special_power,'^');
-}
-
-void zyk_show_left_magic_master_powers(gentity_t *ent, qboolean next_power)
-{
-	if (zyk_number_of_enabled_magic_powers(ent) == 0)
-	{
-		return;
-	}
-
-	if (next_power == qtrue)
-	{
-		do
-		{
-			ent->client->sess.selected_left_special_power++;
-			if (ent->client->sess.selected_left_special_power >= MAX_MAGIC_POWERS)
-				ent->client->sess.selected_left_special_power = MAGIC_MAGIC_SENSE;
-		} while (magic_master_has_this_power(ent, ent->client->sess.selected_left_special_power) == qfalse);
-	}
-	else
-	{
-		do
-		{
-			ent->client->sess.selected_left_special_power--;
-			if (ent->client->sess.selected_left_special_power < MAGIC_MAGIC_SENSE)
-				ent->client->sess.selected_left_special_power = MAX_MAGIC_POWERS - 1;
-		} while (magic_master_has_this_power(ent, ent->client->sess.selected_left_special_power) == qfalse);
-	}
-
-	zyk_print_special_power(ent,ent->client->sess.selected_left_special_power,'<');
-}
-
-void zyk_show_right_magic_master_powers(gentity_t *ent, qboolean next_power)
-{
-	if (zyk_number_of_enabled_magic_powers(ent) == 0)
-	{
-		return;
-	}
-
-	if (next_power == qtrue)
-	{
-		do
-		{
-			ent->client->sess.selected_right_special_power++;
-			if (ent->client->sess.selected_right_special_power >= MAX_MAGIC_POWERS)
-				ent->client->sess.selected_right_special_power = MAGIC_MAGIC_SENSE;
-		} while (magic_master_has_this_power(ent, ent->client->sess.selected_right_special_power) == qfalse);
-	}
-	else
-	{
-		do
-		{
-			ent->client->sess.selected_right_special_power--;
-			if (ent->client->sess.selected_right_special_power < MAGIC_MAGIC_SENSE)
-				ent->client->sess.selected_right_special_power = MAX_MAGIC_POWERS - 1;
-		} while (magic_master_has_this_power(ent, ent->client->sess.selected_right_special_power) == qfalse);
-	}
-
-	zyk_print_special_power(ent,ent->client->sess.selected_right_special_power,'>');
-}
 
 // zyk: controls the quest powers stuff
-extern void initialize_rpg_skills(gentity_t *ent);
-void quest_power_events(gentity_t *ent)
-{
-	if (ent && ent->client)
-	{
-		if (ent->health > 0)
-		{
-			if (ent->client->pers.quest_power_status & (1 << 0) && ent->client->pers.quest_power1_timer < level.time)
-			{ // zyk: Immunity Power
-				ent->client->pers.quest_power_status &= ~(1 << 0);
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 1))
-			{ // zyk: Chaos Power
-				if (ent->client->pers.quest_power_hit3_counter > 0 && ent->client->pers.quest_target1_timer < level.time)
-				{ // zyk: Chaos Power hit
-					gentity_t *chaos_user = &g_entities[ent->client->pers.quest_power_user1_id];
-
-					G_Damage(ent, chaos_user, chaos_user, NULL, NULL, 8, 0, MOD_UNKNOWN);
-					ent->client->pers.quest_power_hit3_counter--;
-					ent->client->pers.quest_target1_timer = level.time + 200;
-				}
-				
-				if (ent->client->pers.quest_power_hit3_counter == 0)
-				{ // zyk: end of Chaos Power
-					ent->client->pers.quest_power_status &= ~(1 << 1);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 2) && ent->client->pers.quest_target2_timer < level.time)
-			{ // zyk: Time Power. Remove it from target when duration ends
-				ent->client->pers.quest_power_status &= ~(1 << 2);
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 3) && ent->client->pers.quest_power2_timer < level.time)
-			{ // zyk: Ultra Strength
-				ent->client->pers.quest_power_status &= ~(1 << 3);
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 4))
-			{ // zyk: Poison Mushrooms
-				if (ent->client->pers.quest_power_status & (1 << 0))
-				{ // zyk: testing for Immunity Power in target player
-					ent->client->pers.quest_power_status &= ~(1 << 4);
-				}
-
-				if (ent->client->pers.quest_power_hit_counter > 0 && ent->client->pers.quest_target3_timer < level.time)
-				{
-					gentity_t *poison_mushrooms_user = &g_entities[ent->client->pers.quest_power_user2_id];
-
-					if (poison_mushrooms_user && poison_mushrooms_user->client)
-					{
-						zyk_quest_effect_spawn(poison_mushrooms_user, ent, "zyk_quest_effect_poison", "0", "noghri_stick/gas_cloud", 0, 0, 0, 300);
-
-						// zyk: Universe Power
-						if (poison_mushrooms_user->client->pers.quest_power_status & (1 << 13))
-							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,6,0,MOD_UNKNOWN);
-						else
-							G_Damage(ent,poison_mushrooms_user,poison_mushrooms_user,NULL,NULL,4,0,MOD_UNKNOWN);
-					}
-
-					ent->client->pers.quest_power_hit_counter--;
-					ent->client->pers.quest_target3_timer = level.time + 200;
-				}
-				else if (ent->client->pers.quest_power_hit_counter == 0 && ent->client->pers.quest_target3_timer < level.time)
-				{
-					ent->client->pers.quest_power_status &= ~(1 << 4);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 5))
-			{ // zyk: Hurricane
-				if (ent->client->pers.quest_power_status & (1 << 0))
-				{ // zyk: testing for Immunity Power in target player
-					ent->client->pers.quest_power_status &= ~(1 << 5);
-				}
-
-				if (ent->client->pers.quest_target4_timer > level.time)
-				{
-					static vec3_t forward;
-					vec3_t blow_dir;
-
-					if (ent->client->pers.quest_debounce1_timer < level.time)
-					{
-						ent->client->pers.quest_debounce1_timer = level.time + 50;
-
-						VectorSet(blow_dir, -70, ent->client->pers.quest_power_hit_counter, 0);
-
-						AngleVectors(blow_dir, forward, NULL, NULL);
-
-						VectorNormalize(forward);
-
-						VectorSet(ent->client->ps.velocity, forward[0] * 450.0, forward[1] * 450.0, forward[2] * 100.0);
-
-						ent->client->pers.quest_power_hit_counter += 8;
-						if (ent->client->pers.quest_power_hit_counter >= 180)
-							ent->client->pers.quest_power_hit_counter -= 359;
-					}
-				}
-				else
-				{
-					ent->client->pers.quest_power_status &= ~(1 << 5);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 6))
-			{ // zyk: Slow Motion
-				if (ent->client->pers.quest_power_status & (1 << 0))
-				{ // zyk: testing for Immunity Power in target player
-					ent->client->pers.quest_power_status &= ~(1 << 6);
-				}
-
-				if (ent->client->pers.quest_target5_timer < level.time)
-				{ // zyk: Slow Motion run out
-					ent->client->pers.quest_power_status &= ~(1 << 6);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 7) && ent->client->pers.quest_power3_timer < level.time)
-			{ // zyk: Ultra Resistance
-				ent->client->pers.quest_power_status &= ~(1 << 7);
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 8))
-			{ // zyk: Blowing Wind
-				if (ent->client->pers.quest_power_status & (1 << 0))
-				{ // zyk: testing for Immunity Power in target player
-					ent->client->pers.quest_power_status &= ~(1 << 8);
-				}
-
-				if (ent->client->pers.quest_target6_timer > level.time)
-				{
-					gentity_t *blowing_wind_user = &g_entities[ent->client->pers.quest_power_user3_id];
-
-					if (ent->client->pers.quest_debounce1_timer < level.time)
-					{
-						ent->client->pers.quest_debounce1_timer = level.time + 50;
-
-						if (blowing_wind_user && blowing_wind_user->client)
-						{
-							static vec3_t forward;
-							vec3_t dir;
-
-							AngleVectors(blowing_wind_user->client->ps.viewangles, forward, NULL, NULL);
-
-							VectorNormalize(forward);
-
-							if (ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
-								VectorScale(forward, 215.0, dir);
-							else
-								VectorScale(forward, 40.0, dir);
-
-							VectorAdd(ent->client->ps.velocity, dir, ent->client->ps.velocity);
-						}
-					}
-				}
-				else
-				{
-					ent->client->pers.quest_power_status &= ~(1 << 8);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 9) && ent->client->pers.quest_power3_timer < level.time)
-			{ // zyk: Ultra Speed
-				ent->client->pers.quest_power_status &= ~(1 << 9);
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 11))
-			{ // zyk: Magic Shield
-				if (ent->client->pers.quest_power4_timer < level.time)
-				{ // zyk: Magic Shield run out
-					ent->client->pers.quest_power_status &= ~(1 << 11);
-				}
-				else
-				{
-					ent->client->ps.eFlags |= EF_INVULNERABLE;
-					ent->client->invulnerableTimer = ent->client->pers.quest_power4_timer;
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 12))
-			{ // zyk: Flame Burst
-				if (ent->client->pers.flame_thrower < level.time)
-				{
-					ent->client->pers.quest_power_status &= ~(1 << 12);
-				}
-				else if (ent->client->cloakDebReduce < level.time)
-				{ // zyk: fires the flame thrower
-					Player_FireFlameThrower(ent);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 17))
-			{ // zyk: Shifting Sand
-				if (ent->client->pers.quest_power5_timer < level.time)
-				{ // zyk: after this time, teleports to the new location and add effect there too
-					if (Distance(ent->client->ps.origin, g_entities[ent->client->pers.quest_power_effect1_id].s.origin) < 100)
-					{ // zyk: only teleports if the player is near the effect
-						vec3_t origin;
-						int random_x = Q_irand(0, 1);
-						int random_y = Q_irand(0, 1);
-
-						if (random_x == 0)
-							random_x = -1;
-						if (random_y == 0)
-							random_y = -1;
-
-						gentity_t *this_enemy = &g_entities[ent->client->pers.quest_power_user4_id];
-
-						origin[0] = this_enemy->client->ps.origin[0] + (Q_irand(70, 100) * random_x);
-						origin[1] = this_enemy->client->ps.origin[1] + (Q_irand(70, 100) * random_y);
-						origin[2] = this_enemy->client->ps.origin[2] + Q_irand(40, 100);
-
-						zyk_TeleportPlayer(ent, origin, ent->client->ps.viewangles);
-
-						VectorCopy(ent->client->ps.origin, ent->client->pers.teleport_point);
-					}
-
-					ent->client->pers.quest_power_status &= ~(1 << 17);
-					ent->client->pers.quest_power_status |= (1 << 18);
-
-					ent->client->pers.quest_power5_timer = level.time + 4000;
-					zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_sand", "0", "env/sand_spray", 0, 0, 0, 2000);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 18))
-			{ // zyk: Shifting Sand after the teleport, validating if player is not suck
-				if (ent->client->pers.quest_power5_timer < level.time)
-				{
-					if (VectorCompare(ent->client->ps.origin, ent->client->pers.teleport_point) == qtrue)
-					{ // zyk: stuck, teleport back
-						zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_sand", "0", "env/sand_spray", 0, 0, 0, 1000);
-						zyk_TeleportPlayer(ent, ent->client->pers.teleport_angles, ent->client->ps.viewangles);
-						zyk_quest_effect_spawn(ent, ent, "zyk_quest_effect_sand", "0", "env/sand_spray", 0, 0, 0, 1000);
-					}
-
-					ent->client->pers.quest_power_status &= ~(1 << 18);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 19))
-			{ // zyk: Tree of Life
-				if (ent->client->pers.quest_power_hit2_counter > 0)
-				{
-					if (ent->client->pers.quest_power6_timer < level.time)
-					{
-						int heal_amount = 20;
-
-						// zyk: Universe Power
-						if (ent->client->pers.quest_power_status & (1 << 13))
-						{
-							heal_amount = 40;
-						}
-
-						if ((ent->health + heal_amount) < ent->client->ps.stats[STAT_MAX_HEALTH])
-							ent->health += heal_amount;
-						else
-							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
-
-						ent->client->pers.quest_power_hit2_counter--;
-						ent->client->pers.quest_power6_timer = level.time + 1000;
-
-						G_Sound(ent, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav"));
-					}
-				}
-				else
-				{
-					ent->client->pers.quest_power_status &= ~(1 << 19);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 20))
-			{ // zyk: Reverse Wind
-				if (ent->client->pers.quest_power_status & (1 << 0))
-				{ // zyk: testing for Immunity Power in target player
-					ent->client->pers.quest_power_status &= ~(1 << 20);
-				}
-
-				if (ent->client->pers.quest_target6_timer > level.time)
-				{
-					gentity_t *reverse_wind_user = &g_entities[ent->client->pers.quest_power_user3_id];
-
-					if (ent->client->pers.quest_debounce1_timer < level.time)
-					{
-						ent->client->pers.quest_debounce1_timer = level.time + 50;
-
-						if (reverse_wind_user && reverse_wind_user->client)
-						{
-							vec3_t dir, forward;
-
-							VectorSubtract(reverse_wind_user->client->ps.origin, ent->client->ps.origin, forward);
-							VectorNormalize(forward);
-
-							if (ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
-								VectorScale(forward, 215.0, dir);
-							else
-								VectorScale(forward, 46.0, dir);
-
-							VectorAdd(ent->client->ps.velocity, dir, ent->client->ps.velocity);
-						}
-					}
-				}
-				else
-				{
-					ent->client->pers.quest_power_status &= ~(1 << 20);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 21))
-			{ // zyk: Enemy Weakening
-				if (ent->client->pers.quest_power_status & (1 << 0))
-				{ // zyk: testing for Immunity Power in target player
-					ent->client->pers.quest_power_status &= ~(1 << 21);
-				}
-
-				if (ent->client->pers.quest_target7_timer < level.time)
-				{
-					ent->client->pers.quest_power_status &= ~(1 << 21);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 22))
-			{ // zyk: Ice Block
-				if (ent->client->pers.quest_power_status & (1 << 0))
-				{ // zyk: testing for Immunity Power in target player
-					ent->client->pers.quest_power_status &= ~(1 << 22);
-				}
-
-				if (ent->client->pers.quest_power7_timer < level.time)
-				{
-					ent->client->pers.quest_power_status &= ~(1 << 22);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 23))
-			{ // zyk: hit by Flaming Area
-				if (ent->client->pers.quest_power_status & (1 << 0))
-				{ // zyk: testing for Immunity Power in target player
-					ent->client->pers.quest_power_status &= ~(1 << 23);
-				}
-
-				if (ent->client->pers.quest_power_hit4_counter > 0 && ent->client->pers.quest_target8_timer < level.time)
-				{
-					gentity_t *flaming_area_user = &g_entities[ent->client->pers.quest_power_user5_id];
-
-					if (flaming_area_user && flaming_area_user->client)
-					{
-						zyk_quest_effect_spawn(flaming_area_user, ent, "zyk_quest_effect_flaming_area_hit", "0", "env/fire", 0, 0, 0, 300);
-
-						// zyk: Universe Power
-						if (flaming_area_user->client->pers.quest_power_status & (1 << 13))
-							G_Damage(ent, flaming_area_user, flaming_area_user, NULL, NULL, 3, 0, MOD_UNKNOWN);
-						else
-							G_Damage(ent, flaming_area_user, flaming_area_user, NULL, NULL, 2, 0, MOD_UNKNOWN);
-					}
-
-					ent->client->pers.quest_power_hit4_counter--;
-					ent->client->pers.quest_target8_timer = level.time + 200;
-				}
-				else if (ent->client->pers.quest_power_hit4_counter == 0 && ent->client->pers.quest_target8_timer < level.time)
-				{
-					ent->client->pers.quest_power_status &= ~(1 << 23);
-				}
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 24) && ent->client->pers.quest_target9_timer < level.time)
-			{ // zyk: hit by Sleeping Flowers
-				ent->client->pers.quest_power_status &= ~(1 << 24);
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 25) && ent->client->pers.quest_target10_timer < level.time)
-			{ // zyk: hit by Ice Boulder
-				ent->client->pers.quest_power_status &= ~(1 << 25);
-			}
-
-			if (ent->client->pers.quest_power_status & (1 << 26) && ent->client->pers.quest_target11_timer < level.time)
-			{ // zyk: hit by Elemental Attack
-				ent->client->pers.quest_power_status &= ~(1 << 26);
-			}
-		}
-		else if (!ent->NPC && ent->client->pers.quest_power_status & (1 << 10) && ent->client->pers.quest_power1_timer < level.time && 
-				!(ent->client->ps.eFlags & EF_DISINTEGRATION)) 
-		{ // zyk: Resurrection Power
-			ent->r.contents = CONTENTS_BODY;
-			ent->client->ps.pm_type = PM_NORMAL;
-			ent->client->ps.fallingToDeath = 0;
-			ent->client->noCorpse = qtrue;
-			ent->client->ps.eFlags &= ~EF_NODRAW;
-			ent->client->ps.eFlags2 &= ~EF2_HELD_BY_MONSTER;
-			ent->flags = 0;
-			ent->die = player_die; // zyk: must set this function again
-			initialize_rpg_skills(ent);
-			ent->client->pers.jetpack_fuel = MAX_JETPACK_FUEL;
-			ent->client->ps.jetpackFuel = 100;
-			ent->client->ps.cloakFuel = 100;
-			ent->client->pers.quest_power_status &= ~(1 << 10);
-		}
-	}
-}
+// GalaxyRP fix: [Magic] an extern for initialize_rpg_skills() used to be here. Its last caller in
+// this file was the bit-10 Resurrection Power branch of quest_power_events(), removed just below;
+// the function itself lives on with a caller in g_cmds.c.
+extern void zyk_wind_down_seeker_drone(gentity_t *ent);
+// GalaxyRP fix: [Minigames] both mini-game prepares call this before their loadout snapshot.
+extern void zyk_release_mounts_for_minigame(gentity_t *ent);
+// GalaxyRP: [Sniper Battle] the zyk_apply_character_loadout() declaration that sat here went with
+// the removal -- sniper_battle_end() was this file's only caller.
+// GalaxyRP fix: [Magic] quest_power_events() used to be here. It ran every frame for every client
+// and every NPC, and by the end it held one reachable statement: clearing quest_power_status bit 0
+// (Immunity Power) once quest_power1_timer had passed. The twenty-one status blocks around it had
+// already gone with the magic engine.
+//
+// Bit 0's only remaining producer was duel_tournament_prepare(), and its only reader,
+// zyk_check_immunity_power(), has been unreachable since the effect functions lost their caller --
+// so the bit was written and cleared but never consulted. Rather than leave a per-frame call for
+// that, the whole bit-0 pair went with this function: the set in prepare() and the clear in
+// duel_tournament_restore_duelist(). quest_power1_timer, which had no other site, went too.
+//
+// If the magic system is ever revived, note that the set and the clear are a PAIR -- see the
+// history kept on duel_tournament_restore_duelist() below for the bug that appears if one comes
+// back without the other.
 
 // zyk: damages target player with poison hits
 void poison_dart_hits(gentity_t *ent)
 {
-	if (ent && ent->client && ent->health > 0 && ent->client->pers.player_statuses & (1 << 20) && ent->client->pers.poison_dart_hit_counter > 0 && 
+	if (ent && ent->client && ent->health > 0 && ent->client->pers.player_statuses & (1 << PLAYER_STATUS_POISON_DART_HIT) && ent->client->pers.poison_dart_hit_counter > 0 && 
 		ent->client->pers.poison_dart_hit_timer < level.time)
 	{
 		gentity_t *poison_user = &g_entities[ent->client->pers.poison_dart_user_id];
@@ -7689,295 +6718,105 @@ void poison_dart_hits(gentity_t *ent)
 
 		// zyk: no more do poison damage if counter is 0
 		if (ent->client->pers.poison_dart_hit_counter == 0)
-			ent->client->pers.player_statuses &= ~(1 << 20);
+			ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_POISON_DART_HIT);
 	}
 }
 
-void zyk_print_custom_quest_info(gentity_t *ent)
-{
-	// zyk: show mission fields when player uses /customquest to print mission fields
-	if (ent->client->pers.custom_quest_print > 0 && ent->client->pers.custom_quest_print_timer < level.time)
-	{
-		char mission_content[MAX_STRING_CHARS];
-		int i = 2 * MAX_MISSION_FIELD_LINES * (ent->client->pers.custom_quest_print - 1);
-		int number_of_lines = MAX_MISSION_FIELD_LINES * (ent->client->pers.custom_quest_print - 1);
-		int quest_number = ent->client->pers.custom_quest_quest_number;
-		int mission_number = ent->client->pers.custom_quest_mission_number;
-		qboolean stop_printing = qtrue;
-
-		strcpy(mission_content, "");
-
-		while (i < level.zyk_custom_quest_mission_values_count[quest_number][mission_number])
-		{
-			if (number_of_lines == MAX_MISSION_FIELD_LINES * ent->client->pers.custom_quest_print)
-			{ // zyk: max of mission field lines per string array index
-				stop_printing = qfalse;
-				break;
-			}
-
-			strcpy(mission_content, va("%s^3%s: ^7%s\n", mission_content, level.zyk_custom_quest_missions[quest_number][mission_number][i], level.zyk_custom_quest_missions[quest_number][mission_number][i + 1]));
-			number_of_lines++;
-
-			i += 2;
-		}
-
-		if (stop_printing == qtrue)
-		{ // zyk: all info was printed, stop printing
-			ent->client->pers.custom_quest_print = 0;
-		}
-		else
-		{
-			ent->client->pers.custom_quest_print++;
-		}
-
-		// zyk: sends all mission info to client if there is info to print
-		if (Q_stricmp(mission_content, "") != 0)
-			trap->SendServerCommand(ent->s.number, va("print \"%s\"", mission_content));
-
-		// zyk: interval between each time part of the info is sent
-		ent->client->pers.custom_quest_print_timer = level.time + 200;
-	}
-}
-
-// zyk: tests if player already finished the Revelations mission of Universe Quest
-void first_second_act_objective(gentity_t *ent)
-{
-	int i = 0;
-	int count = 0;
-
-	for (i = 1; i < 3; i++)
-	{
-		if (ent->client->pers.universe_quest_counter & (1 << i))
-			count++;
-	}
-
-	if (count == 2)
-	{
-		ent->client->pers.universe_quest_progress = 9;
-
-		if (ent->client->pers.universe_quest_counter & (1 << 29))
-		{ // zyk: if player is in Challenge Mode, do not remove this bit value
-			ent->client->pers.universe_quest_counter = 0;
-			ent->client->pers.universe_quest_counter |= (1 << 29);
-		}
-		else
-		{
-			ent->client->pers.universe_quest_counter = 0;
-		}
-	}
-}
-
-// zyk: spawns the prison door in first Universe Quest mission
-void zyk_spawn_catwalk_prison(int x, int y, int z, int pitch, int yaw)
-{
-	gentity_t *door_ent = &g_entities[109];
-	qboolean door_catwalk_ok = qfalse;
-	qboolean prison_key_ok = qfalse;
-	gentity_t *new_ent = NULL;
-	int i = 0;
-
-	if (door_ent && Q_stricmp(door_ent->classname, "func_static") == 0)
-	{ // zyk: removes the map last door
-		G_FreeEntity(door_ent);
-	}
-
-	for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
-	{
-		door_ent = &g_entities[i];
-
-		if (door_ent && Q_stricmp(door_ent->targetname, "zyk_sage_prison") == 0)
-		{
-			door_catwalk_ok = qtrue;
-		}
-
-		if (door_ent && door_ent->spawnflags & 131072)
-		{
-			prison_key_ok = qtrue;
-		}
-	}
-
-	// zyk: spawning the catwalk door
-	if (door_catwalk_ok == qfalse)
-	{
-		new_ent = G_Spawn();
-
-		zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-		zyk_set_entity_field(new_ent, "spawnflags", "65537");
-		zyk_set_entity_field(new_ent, "origin", va("%d %d %d", x, y, z));
-
-		zyk_set_entity_field(new_ent, "angles", va("%d %d 0", pitch, yaw));
-
-		zyk_set_entity_field(new_ent, "mins", "-8 -64 -64");
-		zyk_set_entity_field(new_ent, "maxs", "8 64 64");
-
-		zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-		zyk_set_entity_field(new_ent, "targetname", "zyk_sage_prison");
-
-		zyk_spawn_entity(new_ent);
-	}
-
-	// zyk: spawning the key
-	if (prison_key_ok == qfalse)
-	{
-		new_ent = G_Spawn();
-
-		zyk_set_entity_field(new_ent, "classname", "weapon_stun_baton");
-		zyk_set_entity_field(new_ent, "spawnflags", "131072");
-		zyk_set_entity_field(new_ent, "origin", "-2149 5087 -2759");
-
-		zyk_spawn_entity(new_ent);
-	}
-}
-
-// zyk: spawns reborns in first Universe Quest mission
-void zyk_spawn_quest_reborns()
-{
-	Zyk_NPC_SpawnType("quest_reborn_blue", -2205, 5008, -2758, 179);
-	Zyk_NPC_SpawnType("quest_reborn_blue", -2205, 5175, -2758, 179);
-	Zyk_NPC_SpawnType("quest_reborn_blue", -2255, 5008, -2758, 179);
-	Zyk_NPC_SpawnType("quest_reborn_blue", -2255, 5175, -2758, 179);
-
-	Zyk_NPC_SpawnType("quest_reborn", -3204, 2630, -2982, -90);
-	Zyk_NPC_SpawnType("quest_reborn", -3311, 2630, -2982, -90);
-	Zyk_NPC_SpawnType("quest_reborn_blue", -3080, 2687, -2965, -90);
-
-	Zyk_NPC_SpawnType("quest_reborn", -2569, 1316, -2246, -90);
-	Zyk_NPC_SpawnType("quest_reborn_blue", -2619, 1316, -2246, -90);
-	Zyk_NPC_SpawnType("quest_reborn", -2669, 1316, -2246, -90);
-
-	Zyk_NPC_SpawnType("quest_reborn_blue", -4545, 3162, -2758, -90);
-	Zyk_NPC_SpawnType("quest_reborn", -4590, 3162, -2758, -90);
-	Zyk_NPC_SpawnType("quest_reborn", -4490, 3162, -2758, -90);
-
-	Zyk_NPC_SpawnType("quest_reborn_blue", 1700, -10, -3130, 179);
-	Zyk_NPC_SpawnType("quest_reborn_blue", 1700, -50, -3130, 179);
-}
-
-// zyk: if for some reason a sage was not spawned, try to spawn him now
-void zyk_validate_sages(gentity_t *ent)
-{
-	int i = 0;
-	qboolean sage_of_light_ok = qfalse;
-	qboolean sage_of_darkness_ok = qfalse;
-	qboolean sage_of_eternity_ok = qfalse;
-	gentity_t *npc_ent = NULL;
-
-	for (i = (MAX_CLIENTS + BODY_QUEUE_SIZE); i < level.num_entities; i++)
-	{
-		npc_ent = &g_entities[i];
-
-		if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "sage_of_light") == 0)
-		{
-			sage_of_light_ok = qtrue;
-		}
-		else if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "sage_of_darkness") == 0)
-		{
-			sage_of_darkness_ok = qtrue;
-		}
-		else if (npc_ent && npc_ent->NPC && Q_stricmp(npc_ent->NPC_type, "sage_of_eternity") == 0)
-		{
-			sage_of_eternity_ok = qtrue;
-		}
-	}
-
-	if (sage_of_light_ok == qfalse)
-	{
-		npc_ent = Zyk_NPC_SpawnType("sage_of_light", 2750, -115, -3806, 179);
-
-		if (npc_ent)
-		{ // zyk: sets the player id who must protect this sage
-			npc_ent->client->pers.universe_quest_objective_control = ent - g_entities;
-		}
-	}
-	if (sage_of_darkness_ok == qfalse)
-	{
-		npc_ent = Zyk_NPC_SpawnType("sage_of_darkness", 2750, -39, -3806, 179);
-
-		if (npc_ent)
-		{ // zyk: sets the player id who must protect this sage
-			npc_ent->client->pers.universe_quest_objective_control = ent - g_entities;
-		}
-	}
-	if (sage_of_eternity_ok == qfalse)
-	{
-		npc_ent = Zyk_NPC_SpawnType("sage_of_eternity", 2750, 39, -3806, 179);
-
-		if (npc_ent)
-		{ // zyk: sets the player id who must protect this sage
-			npc_ent->client->pers.universe_quest_objective_control = ent - g_entities;
-		}
-	}
-}
-
-// zyk: checks if the player has already all artifacts
-extern void save_account(gentity_t *ent, qboolean save_char_file);
-extern int number_of_artifacts(gentity_t *ent);
-void universe_quest_artifacts_checker(gentity_t *ent)
-{
-	if (number_of_artifacts(ent) == 8)
-	{ // zyk: after collecting all artifacts, go to next objective
-		zyk_text_message(ent, "universe/mission_2/mission_2_got_all_artifacts", qtrue, qtrue, ent->client->pers.netname);
-
-		if (ent->client->pers.universe_quest_counter & (1 << 29))
-		{ // zyk: if player is in Challenge Mode, do not remove this bit value
-			ent->client->pers.universe_quest_counter = 0;
-			ent->client->pers.universe_quest_counter |= (1 << 29);
-		}
-		else
-			ent->client->pers.universe_quest_counter = 0;
-
-		ent->client->pers.universe_quest_progress = 3;
-		ent->client->pers.universe_quest_timer = level.time + 1000;
-		ent->client->pers.universe_quest_objective_control = 4; // zyk: fourth Universe Quest objective
-		ent->client->pers.universe_quest_messages = 0;
-	}
-}
-
-// zyk: checks if the player got all crystals
-extern int number_of_crystals(gentity_t *ent);
-extern void quest_get_new_player(gentity_t *ent);
-void universe_crystals_check(gentity_t *ent)
-{
-	if (number_of_crystals(ent) == 3)
-	{
-		ent->client->pers.universe_quest_progress = 10;
-		if (ent->client->pers.universe_quest_counter & (1 << 29))
-		{ // zyk: if player is in Challenge Mode, do not remove this bit value
-			ent->client->pers.universe_quest_counter = 0;
-			ent->client->pers.universe_quest_counter |= (1 << 29);
-		}
-		else
-			ent->client->pers.universe_quest_counter = 0;
-
-		quest_get_new_player(ent);
-	}
-}
-
-extern void clean_note_model();
-void zyk_try_get_dark_quest_note(gentity_t *ent, int note_bitvalue)
-{
-	if (ent->client->pers.hunter_quest_progress != NUM_OF_OBJECTIVES && ent->client->pers.guardian_mode == 0 && 
-		!(ent->client->pers.hunter_quest_progress & (1 << note_bitvalue)) && ent->client->pers.can_play_quest == 1 &&
-		level.quest_note_id != -1 && (int)Distance(ent->client->ps.origin, g_entities[level.quest_note_id].r.currentOrigin) < 40)
-	{
-		zyk_text_message(ent, "dark/found_note", qtrue, qfalse);
-		ent->client->pers.hunter_quest_progress |= (1 << note_bitvalue);
-		clean_note_model();
-		quest_get_new_player(ent);
-	}
-}
+// GalaxyRP fix: [Quests] first_second_act_objective, zyk_spawn_catwalk_prison,
+// zyk_spawn_quest_reborns, zyk_validate_sages, universe_quest_artifacts_checker,
+// universe_crystals_check, and zyk_try_get_dark_quest_note used to live here. All were part of the
+// general (non-Guardian/Bounty) automated Universe/Dark Quest machinery driven by
+// choose_new_player/quest_get_new_player (g_cmds.c) and the dead Touch_Item block in g_items.c, which
+// are themselves fully unreachable now that quest_get_new_player's sole gate is permanently disabled
+// (see the GalaxyRP fix comment on quest_get_new_player's old location in g_cmds.c). Deleted outright,
+// along with their call sites in g_items.c.
 
 // zyk: backup player force powers
+extern void WP_EndForceEnlightenment( gentity_t *self );
+
 void player_backup_force(gentity_t *ent)
 {
 	int i = 0;
+
+	// GalaxyRP fix: [Duel Tournament] first backup wins until it has been restored. Backing up
+	// again while one is outstanding would capture the ALREADY-STRIPPED state and the player
+	// would never get their powers back. Nothing calls prepare twice per match today; this makes
+	// that a property of the pair rather than of the caller.
+	if (ent->client->pers.zyk_saved_force_valid == qtrue)
+		return;
 
 	ent->client->pers.zyk_saved_force_powers = ent->client->ps.fd.forcePowersKnown;
 
 	for (i = 0; i < NUM_FORCE_POWERS; i++)
 	{
 		ent->client->pers.zyk_saved_force_power_levels[i] = ent->client->ps.fd.forcePowerLevel[i];
+	}
+
+	ent->client->pers.zyk_saved_force_valid = qtrue;
+}
+
+// zyk: backup the loadout duel_tournament_prepare() is about to take away
+//
+// GalaxyRP fix: [Duel Tournament] see the field declarations in g_local.h. Must be called BEFORE
+// prepare strips anything -- unlike the force backup, which sits mid-function because the force
+// strip comes later, the weapon/ammo/holdable strip is the first thing prepare does.
+void player_backup_loadout(gentity_t *ent)
+{
+	int i = 0;
+
+	if (ent->client->pers.zyk_saved_loadout_valid == qtrue)
+		return;
+
+	ent->client->pers.zyk_saved_weapons = ent->client->ps.stats[STAT_WEAPONS];
+
+	for (i = 0; i < MAX_AMMO; i++)
+	{
+		ent->client->pers.zyk_saved_ammo[i] = ent->client->ps.ammo[i];
+	}
+
+	ent->client->pers.zyk_saved_holdable_items = ent->client->ps.stats[STAT_HOLDABLE_ITEMS];
+	ent->client->pers.zyk_saved_holdable_item = ent->client->ps.stats[STAT_HOLDABLE_ITEM];
+
+	ent->client->pers.zyk_saved_loadout_valid = qtrue;
+}
+
+// zyk: give back the loadout duel_tournament_prepare() took
+void player_restore_loadout(gentity_t *ent)
+{
+	int i = 0;
+
+	if (ent->client->pers.zyk_saved_loadout_valid == qfalse)
+	{ // zyk: nothing was ever taken from this player
+		return;
+	}
+
+	ent->client->pers.zyk_saved_loadout_valid = qfalse;
+
+	if (ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS))
+	{ // zyk: he died in his duel, so ClientSpawn already gave him a loadout. Putting the pre-duel
+	  // one back over the top would undo the respawn and take away anything picked up since.
+		return;
+	}
+
+	// GalaxyRP fix: [Duel Tournament] melee is OR'd back in rather than left to the saved value,
+	// so this cannot undo the (1 << WP_MELEE) player_restore_force() grants regardless of which
+	// of the two runs first.
+	ent->client->ps.stats[STAT_WEAPONS] = ent->client->pers.zyk_saved_weapons | (1 << WP_MELEE);
+
+	for (i = 0; i < MAX_AMMO; i++)
+	{
+		ent->client->ps.ammo[i] = ent->client->pers.zyk_saved_ammo[i];
+	}
+
+	ent->client->ps.stats[STAT_HOLDABLE_ITEMS] = ent->client->pers.zyk_saved_holdable_items;
+	ent->client->ps.stats[STAT_HOLDABLE_ITEM] = ent->client->pers.zyk_saved_holdable_item;
+
+	// zyk: prepare left him holding the saber it granted. If he had no saber before the duel,
+	// that bit has just gone away again and he would be holding a weapon he does not own.
+	if (!(ent->client->ps.stats[STAT_WEAPONS] & (1 << ent->client->ps.weapon)))
+	{
+		ent->client->ps.weapon = WP_MELEE;
+		ent->s.weapon = WP_MELEE;
 	}
 }
 
@@ -7986,7 +6825,14 @@ void player_restore_force(gentity_t *ent)
 {
 	int i = 0;
 
-	if (ent->client->pers.player_statuses & (1 << 27))
+	if (ent->client->pers.zyk_saved_force_valid == qfalse)
+	{ // zyk: nothing was ever backed up for this player -- see the field declaration in g_local.h
+		return;
+	}
+
+	ent->client->pers.zyk_saved_force_valid = qfalse;
+
+	if (ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS))
 	{ // zyk: do not restore force to players that died in a Duel Tournament duel, because the force was already restored
 		return;
 	}
@@ -8001,6 +6847,58 @@ void player_restore_force(gentity_t *ent)
 	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_MELEE);
 }
 
+// GalaxyRP fix: [Minigames] drop a pending backup without applying it.
+//
+// The backup/restore pair is first-wins on the way in and consume-on-use on the way out, so a
+// backup that is taken and never consumed is worse than no backup at all: the NEXT
+// player_backup_loadout() sees the valid flag still set and returns early, keeping the stale
+// snapshot, and the next restore then hands the player a loadout from a battle they left long ago
+// -- or, because the same two functions serve both mini-games, from the other mini-game entirely.
+//
+// This is for the exits that re-equip the player by themselves and so must not have the snapshot
+// applied: dying, and being dropped from a battle by ClientBegin. Both come back through
+// ClientSpawn(), which rebuilds stats[STAT_WEAPONS] from scratch (see the WP_NONE reset there), so
+// writing the snapshot first would only be overwritten a moment later.
+//
+// ClientDisconnect deliberately does NOT call this: ClientConnect memsets the whole gclient_t
+// before it does anything else, so the flags cannot survive into the next occupant of the slot,
+// and adding a call there would be dead code that reads like a live requirement.
+void player_discard_backup(gentity_t *ent)
+{
+	if (!ent || !ent->client)
+		return;
+
+	ent->client->pers.zyk_saved_force_valid = qfalse;
+	ent->client->pers.zyk_saved_loadout_valid = qfalse;
+}
+
+// GalaxyRP fix: [Duel Tournament] everything duel_tournament_prepare() applied, undone in one
+// place, so the two call sites in the mode-5 block below cannot drift apart.
+//
+// HISTORY, worth keeping because it is a trap to fall into twice. prepare() used to set
+// quest_power_status bit 0 -- the Immunity Power, which zyk_check_immunity_power() tests to block
+// quest and magic damage -- along with quest_power1_timer, the duel's SCHEDULED end. Nothing
+// cleared the bit when a duel finished early, and the only other clear ran once that original
+// deadline passed, so a duelist who won at ten seconds of a sixty-second match kept magic immunity
+// for the remaining fifty -- through the score screen, the next pairing, and into their next duel
+// or open play. Losers were covered by accident (player_die zeroes the whole of
+// quest_power_status) and so was anyone who spectated (ClientSpawn does the same); only the
+// survivor leaked it, which is exactly the player it most advantaged. The clear added here fixed
+// that.
+//
+// Both halves have since gone: bit 0 lost its last reader when the magic effect functions lost
+// theirs, so the set in prepare(), the clear below and quest_power1_timer were all removed. If the
+// immunity is ever reintroduced, reintroduce the SET AND THE CLEAR TOGETHER -- one without the
+// other is the bug described above.
+void duel_tournament_restore_duelist(gentity_t *ent)
+{
+	if (!ent || !ent->client)
+		return;
+
+	player_restore_force(ent);
+	player_restore_loadout(ent);
+}
+
 // zyk: finished the duel tournament
 void duel_tournament_end()
 {
@@ -8009,7 +6907,6 @@ void duel_tournament_end()
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
 		level.duel_players[i] = -1;
-		level.duel_allies[i] = -1;
 	}
 
 	for (i = 0; i < MAX_DUEL_MATCHES; i++)
@@ -8033,14 +6930,32 @@ void duel_tournament_end()
 	level.duel_matches_done = 0;
 	level.duelist_1_id = -1;
 	level.duelist_2_id = -1;
-	level.duelist_1_ally_id = -1;
-	level.duelist_2_ally_id = -1;
+
+	// GalaxyRP fix: [Duel Tournament] the paused flag was the one piece of tournament state this
+	// function did not reset, and nothing else clears it except a map change. Because Cmd_DuelPause_f
+	// refuses to run while no tournament exists ("There is no duel tournament now"), a tournament
+	// that was paused and then ended -- e.g. paused during signup, then everyone left -- left the flag
+	// stuck on with no way to clear it. Every later tournament on that map then sat in signup forever:
+	// the mode-1 start transition lives inside the "not paused" guard, so it simply never fired, with
+	// no message to explain why. Ending a tournament now leaves no state behind for the next one.
+	level.duel_tournament_paused = qfalse;
 }
 
 // zyk: prepare duelist for duel
 void duel_tournament_prepare(gentity_t *ent)
 {
 	int i = 0;
+
+	// GalaxyRP fix: [Minigames] off any e-web or map emplaced gun first. While a player is mounted,
+	// STAT_WEAPONS holds the gun and not their weapons, so the snapshot below would record the
+	// wrong thing -- and a live e-web would keep writing over the saber handed out below. See
+	// zyk_release_mounts_for_minigame() in g_cmds.c.
+	zyk_release_mounts_for_minigame(ent);
+
+	// GalaxyRP fix: [Duel Tournament] straight after the release above, before the strip below
+	// takes the weapons, ammo and holdable items away. player_backup_force() further down is
+	// placed the same way relative to the force strip that follows it.
+	player_backup_loadout(ent);
 
 	for (i = WP_STUN_BATON; i < WP_NUM_WEAPONS; i++)
 	{
@@ -8058,12 +6973,17 @@ void duel_tournament_prepare(gentity_t *ent)
 	ent->client->ps.stats[STAT_HOLDABLE_ITEM] = 0;
 
 	// zyk: removing the seeker drone in case if is activated
-	if (ent->client->ps.droneExistTime > (level.time + 5000))
-	{
-		ent->client->ps.droneExistTime = level.time + 5000;
-	}
+	// GalaxyRP fix: [Items] through the shared helper, which clamps one millisecond further. The
+	// clamp that used to sit here landed on the far EDGE of SeekerDroneUpdate()'s wind-down window,
+	// whose upper bound is strict -- so the drone stayed armed for the rest of this frame, and
+	// WP_ForcePowersUpdate() runs later in this same G_RunFrame() call. The duelists are teleported
+	// into the arena a few lines after this returns, so that frame is precisely the one in which a
+	// stray seeker bolt lands in a saber duel. See zyk_wind_down_seeker_drone() in g_cmds.c.
+	zyk_wind_down_seeker_drone(ent);
 
-	Jedi_Decloak(ent);
+	// GalaxyRP fix: [Cloak Item] pair-aware, like every other decloak trigger -- a duelist prepped
+	// while paired-cloaked used to leave the vehicle cloaked behind them.
+	Jedi_DecloakPair(ent);
 
 	// zyk: disable jetpack
 	Jetpack_Off(ent);
@@ -8076,19 +6996,22 @@ void duel_tournament_prepare(gentity_t *ent)
 	ent->client->ps.weapon = WP_SABER;
 	ent->s.weapon = WP_SABER;
 
-	// zyk: setting Immunity Power so every status power on the duelist will be cancelled
-	ent->client->pers.quest_power_status |= (1 << 0);
-	ent->client->pers.quest_power1_timer = level.duel_tournament_timer;
+	// GalaxyRP fix: [Magic] an Immunity Power set used to be here -- quest_power_status bit 0 plus
+	// quest_power1_timer -- so that every magic status effect on the duelist was cancelled. The
+	// blocks that did the cancelling went with the magic engine and bit 0 had no reader left, so
+	// the set and its matching clear in duel_tournament_restore_duelist() were removed together.
 
 	// zyk: reset hp and shield of duelist
 	ent->health = 100;
 	ent->client->ps.stats[STAT_ARMOR] = 100;
 
-	if ((level.duelist_1_id == ent->s.number && level.duelist_1_ally_id != -1) || (level.duelist_2_id == ent->s.number && level.duelist_2_ally_id != -1) || 
-		level.duelist_1_ally_id == ent->s.number || level.duelist_2_ally_id == ent->s.number)
-	{
-		ent->client->ps.stats[STAT_ARMOR] = 0;
-	}
+	// DAJ_RP: [Force Enlightenment] end any Enlightenment BEFORE the Force is saved. Saved while
+	// boosted, the backup held the boosted levels; the powerup clear further down then left the
+	// "boosted" flag behind, the next frame undid the boost mid-duel, and after the duel
+	// player_restore_force() handed the boosted levels back with nothing left to ever undo them -- a
+	// logged-out duelist kept level 3 in every power of their side until their next respawn. See
+	// WP_EndForceEnlightenment() (w_force.c).
+	WP_EndForceEnlightenment(ent);
 
 	player_backup_force(ent);
 
@@ -8113,7 +7036,7 @@ void duel_tournament_prepare(gentity_t *ent)
 	ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = 0;
 
 	// zyk: removing flag that is used to test if player died in a duel
-	ent->client->pers.player_statuses &= ~(1 << 27);
+	ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS);
 
 	// zyk: stop any movement
 	VectorSet(ent->client->ps.velocity, 0, 0, 0);
@@ -8122,31 +7045,15 @@ void duel_tournament_prepare(gentity_t *ent)
 // zyk: generate the teams and validates them
 int duel_tournament_generate_teams()
 {
-	int i = 0;
-	int number_of_teams = level.duelists_quantity;
+	// GalaxyRP: [Duel Tournament] this used to validate the 2v2 pairings in level.duel_allies[] and
+	// then subtract one from the count for each pair, so a team of two entered as a single
+	// competitor. With 2v2 gone (see G_TryUse in g_utils.c) every entry was permanently -1, both
+	// loops were no-ops and the count always came back as the raw number of duelists. Kept as a
+	// function, rather than folded into its one caller, because duel_number_of_teams is what
+	// duel_tournament_generate_match_table() sizes its quota from.
+	level.duel_number_of_teams = level.duelists_quantity;
 
-	// zyk: validating the teams
-	for (i = 0; i < MAX_CLIENTS; i++)
-	{
-		if (level.duel_players[i] == -1 || (level.duel_allies[i] != -1 && (level.duel_allies[level.duel_allies[i]] != i || level.duel_players[level.duel_allies[i]] == -1)))
-		{ // zyk: this team is not valid. Remove the ally
-			level.duel_allies[i] = -1;
-		}
-	}
-
-	// zyk: counting the teams
-	for (i = 0; i < MAX_CLIENTS; i++)
-	{
-		if (level.duel_allies[i] != -1 && i < level.duel_allies[i] && level.duel_allies[level.duel_allies[i]] == i)
-		{ // zyk: both players added themselves as allies
-			// zyk: must count both as a single player (team)
-			number_of_teams--;
-		}
-	}
-
-	level.duel_number_of_teams = number_of_teams;
-
-	return number_of_teams;
+	return level.duel_number_of_teams;
 }
 
 // zyk: generates the table with all the tournament matches
@@ -8174,31 +7081,40 @@ void duel_tournament_generate_match_table()
 
 		if (level.duel_players[i] != -1)
 		{ // zyk: player joined the tournament
-			// zyk: calculates matches for alone players or for the teams by using the team leader, which is the lower id
-			if (level.duel_allies[i] == -1 || i < level.duel_allies[i])
+			last_opponent_id = -1;
+
+			// GalaxyRP fix: [Duel Tournament] number_of_filled_positions used to be reset ONLY by
+			// the break below, i.e. only when this player managed to fill its full quota of
+			// positions. With the maximum 32 duelists the array is exactly full (32 players x 31
+			// opponents = 992 = 2 x MAX_DUEL_MATCHES), so the last players run the j loop to
+			// completion without ever hitting that break -- the counter then carried over into the
+			// next player, which stopped early and left matches with a first duelist but no second.
+			// Those half-filled entries sat inside the counted range, so the tournament played
+			// matches whose second duelist id was -1: an out-of-bounds entity index and a match nobody
+			// could win. Resetting per player instead makes the counter's state independent of how
+			// the loop below terminates. Verified by simulation:
+			// with exactly 32 duelists this now produces the complete 496-match round robin with no
+			// holes and no repeated pairings, and every smaller tournament is unchanged.
+			number_of_filled_positions = 0;
+
+			for (j = 0; j < MAX_DUEL_MATCHES; j++)
 			{
-				last_opponent_id = -1;
-
-				for (j = 0; j < MAX_DUEL_MATCHES; j++)
+				if (number_of_filled_positions >= max_filled_positions)
 				{
-					if (number_of_filled_positions >= max_filled_positions)
-					{
-						number_of_filled_positions = 0;
-						break;
-					}
+					break;
+				}
 
-					if (temp_matches[j][0] == -1)
-					{
-						temp_matches[j][0] = i;
-						number_of_filled_positions++;
-					}
-					else if (temp_matches[j][1] == -1 && last_opponent_id != temp_matches[j][0] && level.duel_allies[i] != temp_matches[j][0])
-					{ // zyk: will not the same opponent again (last_opponent_id) and will not add ally as opponent
-						last_opponent_id = temp_matches[j][0];
-						temp_matches[j][1] = i;
-						number_of_filled_positions++;
-						level.duel_matches_quantity++;
-					}
+				if (temp_matches[j][0] == -1)
+				{
+					temp_matches[j][0] = i;
+					number_of_filled_positions++;
+				}
+				else if (temp_matches[j][1] == -1 && last_opponent_id != temp_matches[j][0])
+				{ // zyk: will not face the same opponent again (last_opponent_id)
+					last_opponent_id = temp_matches[j][0];
+					temp_matches[j][1] = i;
+					number_of_filled_positions++;
+					level.duel_matches_quantity++;
 				}
 			}
 		}
@@ -8247,9 +7163,9 @@ void duel_tournament_prize(gentity_t *ent)
 	}
 	
 	ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL) | (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
-	ent->client->ps.ammo[AMMO_BLASTER] = zyk_max_blaster_pack_ammo.integer;
-	ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
-	ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
+	ent->client->ps.ammo[AMMO_BLASTER] = rp_max_blaster_pack_ammo.integer;
+	ent->client->ps.ammo[AMMO_POWERCELL] = rp_max_power_cell_ammo.integer;
+	ent->client->ps.ammo[AMMO_METAL_BOLTS] = rp_max_metal_bolt_ammo.integer;
 	ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN) | (1 << HI_SEEKER) | (1 << HI_MEDPAC_BIG);
 
 	ent->client->ps.jetpackFuel = 100;
@@ -8258,17 +7174,18 @@ void duel_tournament_prize(gentity_t *ent)
 	G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
 }
 
-void duel_tournament_generate_leaderboard(char *filename, char *netname)
-{
-	level.duel_leaderboard_add_ally = qfalse;
-	level.duel_leaderboard_timer = level.time + 500;
-	strcpy(level.duel_leaderboard_acc, filename);
-	strcpy(level.duel_leaderboard_name, netname);
-	level.duel_leaderboard_step = 1;
-}
+// DAJ_RP: [Duel Tournament] the Duel Tournament leaderboard (GalaxyRP/leaderboard.txt, written here
+// and read by /duelboard) is gone. It only ever recorded a winner who was logged in, and /duelmode
+// refuses logged-in players while /login, /new and /char are refused to anyone in the tournament, so
+// no winner could ever reach it: the file was never written and /duelboard always said "No leaderboard
+// yet". Removed with the command, its five-step writer in G_RunFrame() and its level fields.
 
 // zyk: determines who is the tournament winner
-extern void add_credits(gentity_t *ent, int credits);
+// GalaxyRP: [Race Mode] the add_credits() declaration that sat here went with the removal -- the
+// race prize block in G_RunFrame() was this file's only caller.
+// GalaxyRP fix: [Duel Tournament] forward declaration -- duel_tournament_valid_duelist() is
+// defined further down this file and duel_tournament_winner() now asks it who is still eligible.
+extern qboolean duel_tournament_valid_duelist(gentity_t *ent);
 void duel_tournament_winner()
 {
 	gentity_t *ent = NULL;
@@ -8277,7 +7194,16 @@ void duel_tournament_winner()
 
 	for (i = 0; i < MAX_CLIENTS; i++)
 	{
-		if (level.duel_players[i] != -1)
+		// GalaxyRP fix: [Duel Tournament] this used to test only "is a member" (duel_players[i]
+		// != -1) and then dereference g_entities[i].client unguarded, while every other consumer
+		// in the feature asks duel_tournament_valid_duelist() -- connected, not spectating, still
+		// a member. The gap mattered: SetTeam() only clears membership through ClientBegin(), and
+		// it skips that call while entities are being placed (level.load_entities_timer != 0), so
+		// a player who went to spectator during an /entload stayed a member. They could then be
+		// declared winner, have duel_tournament_prize() call ClientRespawn() on them mid-spectate,
+		// and have sess.amrpgmode read through a client pointer nothing had checked. Asking the
+		// feature's own validity test makes the winner agree with every match that was played.
+		if (duel_tournament_valid_duelist(&g_entities[i]) == qtrue)
 		{
 			if (level.duel_players[i] > max_score)
 			{ // zyk: player is in tournament and his score is higher than max_score, so for now he is the max score
@@ -8293,46 +7219,11 @@ void duel_tournament_winner()
 
 	if (ent)
 	{ // zyk: found a winner
-		gentity_t *ally = NULL;
 		char winner_info[128];
-
-		if (level.duel_allies[ent->s.number] != -1)
-		{
-			ally = &g_entities[level.duel_allies[ent->s.number]];
-		}
 
 		duel_tournament_prize(ent);
 
-		// zyk: calculating the new leaderboard if this winner is logged in his account
-		if (ent->client->sess.amrpgmode > 0)
-		{
-			duel_tournament_generate_leaderboard(G_NewString(ent->client->sess.filename), G_NewString(ent->client->pers.netname));
-		}
-
-		if (ally)
-		{
-			duel_tournament_prize(ally);
-
-			if (ally->client->sess.amrpgmode > 0)
-			{
-				if (ent->client->sess.amrpgmode > 0)
-				{
-					level.duel_leaderboard_add_ally = qtrue;
-					strcpy(level.duel_leaderboard_ally_acc, ally->client->sess.filename);
-					strcpy(level.duel_leaderboard_ally_name, ally->client->pers.netname);
-				}
-				else
-				{ // zyk: if only the ally is logged, generate only for the ally
-					duel_tournament_generate_leaderboard(G_NewString(ally->client->sess.filename), G_NewString(ally->client->pers.netname));
-				}
-			}
-
-			strcpy(winner_info, va("%s ^7/ %s", ent->client->pers.netname, ally->client->pers.netname));
-		}
-		else
-		{
-			strcpy(winner_info, ent->client->pers.netname);
-		}
+		strcpy(winner_info, ent->client->pers.netname);
 
 		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Winner is: %s^7. Prize: force power-ups, some guns and items\"", winner_info));
 	}
@@ -8345,81 +7236,89 @@ void duel_tournament_winner()
 // zyk: returns the amount of hp and shield in a string, it is the total hp and shield of a team or single duelist in Duel Tournament
 char *duel_tournament_remaining_health(gentity_t *ent)
 {
-	char health_info[128];
-	gentity_t *ally = NULL;
+	// GalaxyRP fix: [Leak] this used to end in G_NewString(health_info). G_Alloc's 4 MB pool is
+	// never freed, and this runs once or twice per match end -- a 32-duelist tournament is 496
+	// matches, so roughly 16-32 KB per tournament, and exhausting the pool calls
+	// trap->Error(ERR_DROP), which is a process exit on a dedicated server.
+	//
+	// The buffer rotates, and it has to: the tie branch below calls this function TWICE inside a
+	// single va() argument list. A single static buffer would hand both arguments the same
+	// pointer, so both duelists would print the second one's health. Four slots is the same
+	// trick va() itself uses, and leaves headroom for any future caller.
+	static char health_buffers[4][128];
+	static int  health_index = 0;
+	char *health_info = health_buffers[health_index];
 
-	if (level.duel_allies[ent->s.number] != -1)
+	health_index = (health_index + 1) % 4;
+
+	// GalaxyRP fix: [Duel Tournament] callers can now legitimately pass NULL for a match slot that
+	// holds no valid duelist (see duel_tournament_set_match_winner), and every line below reads
+	// ent->s.number / ent->client. Return an empty health string rather than crashing.
+	if (!ent || !ent->client)
 	{
-		ally = &g_entities[level.duel_allies[ent->s.number]];
+		return "";
 	}
 
-	strcpy(health_info, "");
+	health_info[0] = '\0';
 
 	if (level.duel_tournament_mode == 4)
 	{
-		if (!(ent->client->pers.player_statuses & (1 << 27)))
+		if (!(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS)))
 		{ // zyk: show health if the player did not die in duel
-			strcpy(health_info, va(" ^1%d^7/^2%d^7 ", ent->health, ent->client->ps.stats[STAT_ARMOR]));
+			Com_sprintf(health_info, sizeof(health_buffers[0]), " ^1%d^7/^2%d^7 ", ent->health, ent->client->ps.stats[STAT_ARMOR]);
 		}
 
-		if (ally && !(ally->client->pers.player_statuses & (1 << 27)))
-		{ // zyk: show health if the ally did not die in duel
-			strcpy(health_info, va("%s ^1%d^7/^2%d^7", health_info, ally->health, ally->client->ps.stats[STAT_ARMOR]));
-		}
 	}
 
-	return G_NewString(health_info);
+	return health_info;
 }
 
 // zyk: sums the score and hp score to a single duelist or to a team
 void duel_tournament_give_score(gentity_t *ent, int score)
 {
-	gentity_t *ally = NULL;
-
-	if (level.duel_allies[ent->s.number] != -1)
+	// GalaxyRP fix: [Duel Tournament] this used to dereference ent unconditionally and then do
+	// "level.duel_players[ent->s.number] += score" with no check on the current value. Two problems.
+	// First, its callers can legitimately pass NULL now that a match slot holding -1 no longer
+	// produces a bogus entity pointer. Second, and worse, -1 in duel_players[] is the sentinel for
+	// "not in the tournament" (a player who spectated, disconnected or was never signed up), so
+	// adding a score to it turned -1 back into 0 -- i.e. silently re-enrolled them as a member,
+	// without duelists_quantity being incremented to match. That happens on the "both teams invalid"
+	// tie path, and the resurrected player then reappears in /dueltable, stays eligible to win the
+	// whole tournament, and on their eventual real disconnect decrements duelists_quantity a second
+	// time, driving it negative so the "everyone left" check can never end the tournament again.
+	if (!ent || !ent->client || level.duel_players[ent->s.number] == -1)
 	{
-		ally = &g_entities[level.duel_allies[ent->s.number]];
+		return;
 	}
 
 	level.duel_players[ent->s.number] += score;
-	if (level.duel_tournament_mode == 4 && !(ent->client->pers.player_statuses & (1 << 27)))
+	if (level.duel_tournament_mode == 4 && !(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS)))
 	{ // zyk: add hp score if he did not die in duel
 		level.duel_players_hp[ent->s.number] += (ent->health + ent->client->ps.stats[STAT_ARMOR]);
-	}
-
-	if (ally)
-	{ // zyk: both players must have the same score and the same hp score
-		level.duel_players[ally->s.number] = level.duel_players[ent->s.number];
-
-		if (level.duel_tournament_mode == 4 && !(ally->client->pers.player_statuses & (1 << 27)))
-		{ // zyk: add hp score if he did not die in duel
-			level.duel_players_hp[ent->s.number] += (ally->health + ally->client->ps.stats[STAT_ARMOR]);
-		}
-
-		level.duel_players_hp[ally->s.number] = level.duel_players_hp[ent->s.number];
 	}
 }
 
 // zyk: sets the winner of the Duel Tournament match
 void duel_tournament_set_match_winner(gentity_t *winner)
 {
-	gentity_t *first_duelist = &g_entities[level.duelist_1_id];
-	gentity_t *second_duelist = &g_entities[level.duelist_2_id];
-	gentity_t *first_duelist_ally = NULL;
-	gentity_t *second_duelist_ally = NULL;
+	gentity_t *first_duelist = NULL;
+	gentity_t *second_duelist = NULL;
 
-	char ally_name[36];
-
-	strcpy(ally_name, "");
-
-	if (level.duelist_1_ally_id != -1)
+	// GalaxyRP fix: [Duel Tournament] these two used to be initialised unconditionally as
+	// &g_entities[level.duelist_N_id]. Both ids legitimately hold -1 (they are reset to it between
+	// matches, and a malformed match table can carry -1 into a match -- see the packing fix in
+	// duel_tournament_generate_match_table), and &g_entities[-1] is an out-of-bounds pointer to
+	// whatever sits before the entity array. It is not NULL, so the "ent && ent->client" guards
+	// further down accept it and then read a client pointer out of unrelated memory. The ally ids
+	// immediately below were always guarded this way; the duelist ids themselves were not.
+	if (level.duelist_1_id != -1)
 	{
-		first_duelist_ally = &g_entities[level.duelist_1_ally_id];
+		first_duelist = &g_entities[level.duelist_1_id];
 	}
 
-	if (level.duelist_2_ally_id != -1)
+	if (level.duelist_2_id != -1)
 	{
-		second_duelist_ally = &g_entities[level.duelist_2_ally_id];
+		second_duelist = &g_entities[level.duelist_2_id];
 	}
 
 	// zyk: setting score
@@ -8444,23 +7343,7 @@ void duel_tournament_set_match_winner(gentity_t *winner)
 	// zyk: showing round win message
 	if (winner)
 	{
-		gentity_t *winner_ally = NULL;
-
-		if (first_duelist_ally && level.duelist_1_id == winner->s.number)
-		{
-			winner_ally = first_duelist_ally;
-		}
-		else if (second_duelist_ally && level.duelist_2_id == winner->s.number)
-		{
-			winner_ally = second_duelist_ally;
-		}
-
-		if (winner_ally)
-		{
-			strcpy(ally_name, va("^7 / %s", winner_ally->client->pers.netname));
-		}
-
-		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s%s ^7wins! %s\"", winner->client->pers.netname, ally_name, duel_tournament_remaining_health(winner)));
+		trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7wins! %s\"", winner->client->pers.netname, duel_tournament_remaining_health(winner)));
 	}
 	else
 	{
@@ -8471,25 +7354,13 @@ void duel_tournament_set_match_winner(gentity_t *winner)
 	level.duel_matches_done++;
 }
 
-void duel_tournament_protect_duelists(gentity_t *duelist_1, gentity_t *duelist_2, gentity_t *duelist_1_ally, gentity_t *duelist_2_ally)
+void duel_tournament_protect_duelists(gentity_t *duelist_1, gentity_t *duelist_2)
 {
 	duelist_1->client->ps.eFlags |= EF_INVULNERABLE;
 	duelist_1->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECT_TIME;
 
 	duelist_2->client->ps.eFlags |= EF_INVULNERABLE;
 	duelist_2->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECT_TIME;
-
-	if (duelist_1_ally)
-	{
-		duelist_1_ally->client->ps.eFlags |= EF_INVULNERABLE;
-		duelist_1_ally->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECT_TIME;
-	}
-
-	if (duelist_2_ally)
-	{
-		duelist_2_ally->client->ps.eFlags |= EF_INVULNERABLE;
-		duelist_2_ally->client->invulnerableTimer = level.time + DUEL_TOURNAMENT_PROTECT_TIME;
-	}
 }
 
 qboolean duel_tournament_valid_duelist(gentity_t *ent)
@@ -8506,124 +7377,70 @@ qboolean duel_tournament_valid_duelist(gentity_t *ent)
 // zyk: validates duelists in Duel Tournament
 qboolean duel_tournament_validate_duelists()
 {
-	gentity_t *first_duelist = &g_entities[level.duelist_1_id];
-	gentity_t *second_duelist = &g_entities[level.duelist_2_id];
-	gentity_t *first_duelist_ally = NULL;
-	gentity_t *second_duelist_ally = NULL;
-
+	// GalaxyRP fix: [Duel Tournament] same out-of-bounds initialisation fixed in
+	// duel_tournament_set_match_winner above -- &g_entities[-1] when a duelist id holds the -1
+	// "no duelist" sentinel. duel_tournament_valid_duelist() below already treats a NULL entity as
+	// invalid, which is exactly the right answer for an empty slot; it could not do that for a
+	// pointer into out-of-bounds memory, which is non-NULL and passes its "ent && ent->client" test.
+	gentity_t *first_duelist = (level.duelist_1_id != -1) ? &g_entities[level.duelist_1_id] : NULL;
+	gentity_t *second_duelist = (level.duelist_2_id != -1) ? &g_entities[level.duelist_2_id] : NULL;
 	qboolean first_valid = qfalse;
-	qboolean first_valid_ally = qfalse;
 	qboolean second_valid = qfalse;
-	qboolean second_valid_ally = qfalse;
-
-	if (level.duelist_1_ally_id != -1)
-	{
-		first_duelist_ally = &g_entities[level.duelist_1_ally_id];
-	}
-
-	if (level.duelist_2_ally_id != -1)
-	{
-		second_duelist_ally = &g_entities[level.duelist_2_ally_id];
-	}
 
 	// zyk: removing duelists from private duels
-	if (first_duelist->client->ps.duelInProgress == qtrue)
+	// GalaxyRP fix: [Duel Tournament] NULL-guarded -- these now hold NULL for an empty match slot
+	// instead of an out-of-bounds pointer, so they have to be checked before being dereferenced.
+	// GalaxyRP fix: [Death System] both are bookkeeping, not deaths -- see g_bookkeepingDeath in
+	// g_local.h. This is the tournament getting a private duel out of the way before its own match
+	// starts; neither duelist lost anything, and neither should be charged for it. The mini-game
+	// deaths that ARE deaths -- falling off the Melee catwalk, leaving the arena mid-match -- are
+	// deliberately left counting.
+	if (first_duelist && first_duelist->client->ps.duelInProgress == qtrue)
 	{
 		first_duelist->client->ps.stats[STAT_HEALTH] = first_duelist->health = -999;
 
+		g_bookkeepingDeath = qtrue;
 		player_die(first_duelist, first_duelist, first_duelist, 100000, MOD_SUICIDE);
+		g_bookkeepingDeath = qfalse;
 	}
 
-	if (second_duelist->client->ps.duelInProgress == qtrue)
+	if (second_duelist && second_duelist->client->ps.duelInProgress == qtrue)
 	{
 		second_duelist->client->ps.stats[STAT_HEALTH] = second_duelist->health = -999;
 
+		g_bookkeepingDeath = qtrue;
 		player_die(second_duelist, second_duelist, second_duelist, 100000, MOD_SUICIDE);
-	}
-
-	if (first_duelist_ally && first_duelist_ally->client->ps.duelInProgress == qtrue)
-	{
-		first_duelist_ally->client->ps.stats[STAT_HEALTH] = first_duelist_ally->health = -999;
-
-		player_die(first_duelist_ally, first_duelist_ally, first_duelist_ally, 100000, MOD_SUICIDE);
-	}
-
-	if (second_duelist_ally && second_duelist_ally->client->ps.duelInProgress == qtrue)
-	{
-		second_duelist_ally->client->ps.stats[STAT_HEALTH] = second_duelist_ally->health = -999;
-
-		player_die(second_duelist_ally, second_duelist_ally, second_duelist_ally, 100000, MOD_SUICIDE);
+		g_bookkeepingDeath = qfalse;
 	}
 
 	// zyk: testing if duelists are still valid
-	first_valid = duel_tournament_valid_duelist(first_duelist);
-	first_valid_ally = duel_tournament_valid_duelist(first_duelist_ally);
-	second_valid = duel_tournament_valid_duelist(second_duelist);
-	second_valid_ally = duel_tournament_valid_duelist(second_duelist_ally);
+	// GalaxyRP fix: [Death System] a duelist who is downed when their match comes up forfeits it.
+	// The join guard refuses a downed player, but nothing re-checked between signing up and being
+	// picked, so anyone knocked down while waiting was teleported into the arena still downed --
+	// health reset to 100 by duel_tournament_prepare() but unable to move or attack -- and lost
+	// helplessly. Being invalid here routes them through the path a duelist who left or spectated
+	// already takes: the opponent is given the match, duel_matches_done advances, and the
+	// tournament moves on with them still in it for their remaining matches.
+	//
+	// Tested here rather than inside duel_tournament_valid_duelist(): that function is also what
+	// duel_tournament_winner() uses to pick the overall winner, and a player who happens to be
+	// downed at that instant must not be disqualified from winning the whole tournament.
+	first_valid = duel_tournament_valid_duelist(first_duelist) == qtrue &&
+		G_PlayerIsDowned(first_duelist) == qfalse;
+	second_valid = duel_tournament_valid_duelist(second_duelist) == qtrue &&
+		G_PlayerIsDowned(second_duelist) == qfalse;
 
-	// zyk: if the main team members (the ones saved in level.duel_matches) of each team are no longer valid, make the ally a main member
-	if (first_valid == qfalse && first_valid_ally == qtrue)
-	{
-		level.duel_matches[level.duel_matches_done][0] = level.duelist_1_ally_id;
-
-		level.duel_allies[level.duelist_1_ally_id] = -1;
-		level.duel_allies[level.duelist_1_id] = -1;
-
-		level.duelist_1_id = level.duelist_1_ally_id;
-		level.duelist_1_ally_id = -1;
-
-		first_duelist = &g_entities[level.duelist_1_id];
-		first_duelist_ally = NULL;
-	}
-
-	if (second_valid == qfalse && second_valid_ally == qtrue)
-	{
-		level.duel_matches[level.duel_matches_done][1] = level.duelist_2_ally_id;
-
-		level.duel_allies[level.duelist_2_ally_id] = -1;
-		level.duel_allies[level.duelist_2_id] = -1;
-
-		level.duelist_2_id = level.duelist_2_ally_id;
-		level.duelist_2_ally_id = -1;
-
-		second_duelist = &g_entities[level.duelist_2_id];
-		second_duelist_ally = NULL;
-	}
-
-	// zyk: in only main member is valid, removes ally (if he has one)
-	if (first_valid == qtrue && first_valid_ally == qfalse)
-	{
-		if (level.duelist_1_ally_id != -1)
-		{
-			level.duel_allies[level.duelist_1_ally_id] = -1;
-			level.duel_allies[level.duelist_1_id] = -1;
-		}
-
-		level.duelist_1_ally_id = -1;
-	}
-
-	if (second_valid == qtrue && second_valid_ally == qfalse)
-	{
-		if (level.duelist_2_ally_id != -1)
-		{
-			level.duel_allies[level.duelist_2_ally_id] = -1;
-			level.duel_allies[level.duelist_2_id] = -1;
-		}
-
-		level.duelist_2_ally_id = -1;
-	}
-
-	if ((first_valid == qtrue || first_valid_ally == qtrue) && (second_valid == qtrue || second_valid_ally == qtrue))
+	if (first_valid == qtrue && second_valid == qtrue)
 	{ // zyk: valid match
 		return qtrue;
 	}
-	
-	if ((first_valid == qtrue || first_valid_ally == qtrue) && second_valid == qfalse && second_valid_ally == qfalse)
-	{ // zyk: only first team valid. Gives score to it
+
+	if (first_valid == qtrue && second_valid == qfalse)
+	{ // zyk: only the first duelist is valid. Gives score to him
 		duel_tournament_set_match_winner(first_duelist);
 	}
-	else if ((second_valid == qtrue || second_valid_ally == qtrue) && first_valid == qfalse && first_valid_ally == qfalse)
-	{ // zyk: only second team valid. Gives score to it
+	else if (second_valid == qtrue && first_valid == qfalse)
+	{ // zyk: only the second duelist is valid. Gives score to him
 		duel_tournament_set_match_winner(second_duelist);
 	}
 	else
@@ -8634,188 +7451,56 @@ qboolean duel_tournament_validate_duelists()
 	return qfalse;
 }
 
-// zyk: finishes the Sniper Battle
-void sniper_battle_end()
+// GalaxyRP: [Sniper Battle] sniper_battle_end(), sniper_battle_prepare() and sniper_battle_winner()
+// used to sit here. Their only callers were the Sniper Battle block in G_RunFrame below, which is
+// gone along with the rest of the mode; see the note where Cmd_SniperMode_f used to live in g_cmds.c.
+
+// GalaxyRP: [RPG LMS] rpg_lms_end(), rpg_lms_prepare() and rpg_lms_winner() used to sit here.
+// Their only callers were the RPG LMS block in G_RunFrame below, which is gone; see the note where
+// Cmd_RpgLmsMode_f used to live in g_cmds.c.
+
+// zyk: restoring default guns and force powers to a player leaving the Melee Battle
+//
+// GalaxyRP fix: [Melee Battle] this used to be written inline in melee_battle_end()'s loop below,
+// which meant it ran only for players who were still signed up when the battle ended. A player who
+// walked out under their own steam with a second /meleemode never reached it: that branch (g_cmds.c)
+// clears level.melee_players[] for them first, so melee_battle_end()'s loop skips them even when
+// their departure is what ends the battle. They kept melee_battle_prepare()'s loadout -- WP_MELEE
+// only, binoculars only, fourteen force powers cleared from forcePowersKnown -- until their next
+// death or a map change. Lifted into its own function so the leave path and the end path restore
+// through the same code and cannot drift apart.
+//
+// GalaxyRP fix: [Melee Battle] this did not restore anything -- it re-issued a baseline. The body
+// was WP_InitForcePowers() plus an unconditional WP_BRYAR_PISTOL and a conditional saber, because
+// melee_battle_prepare() took a loadout away without ever writing it down. Everyone who fought
+// therefore walked out having permanently lost every holdable item (sentry gun, seeker, medpacs,
+// jetpack, cloak -- prepare replaces the whole field with binoculars) and every weapon except
+// saber and Bryar, including anything picked up off the map or handed to them with /give guns.
+// WP_InitForcePowers() had the same shape of problem: it rebuilt force powers from the client's
+// vanilla JKA Profile allocation rather than from what the player actually had.
+//
+// The Duel Tournament had exactly this defect and was given a real backup/restore pair; the
+// Melee Battle now uses the same one, so the two mini-games strip and restore through identical
+// code. Both halves self-guard on their validity flag, which is what makes this safe to call on
+// a player who was never prepared: melee_battle_end() reaches the whole roster including players
+// signed up for a battle that never started, and for them both calls are no-ops rather than the
+// free Bryar Pistol and profile force-rebuild the old body handed out.
+//
+// Order matches the duel's mode-5 block: force first, then loadout. player_restore_loadout()
+// ASSIGNS stats[STAT_WEAPONS] while player_restore_force() only ORs WP_MELEE into it, so the
+// reverse order would discard the assignment.
+//
+// An initialize_rpg_skills(ent) call used to close this function, for RPG characters who could
+// get into a battle while the amrpgmode==2 join guard in Cmd_MeleeMode_f was commented out. That
+// guard is live again and /login, /new and /char are refused while a player is signed up, so
+// nobody in a Melee Battle can be in RPG Mode and the call could no longer do anything.
+void melee_battle_restore(gentity_t *ent)
 {
-	int i = 0;
+	if (!ent || !ent->client)
+		return;
 
-	level.sniper_mode = 0;
-	level.sniper_mode_quantity = 0;
-
-	for (i = 0; i < MAX_CLIENTS; i++)
-	{
-		if (level.sniper_players[i] != -1)
-		{ // zyk: restoring default guns and force powers to this player
-			gentity_t *ent = &g_entities[i];
-
-			ent->client->ps.fd.forceDeactivateAll = 0;
-
-			WP_InitForcePowers(ent);
-
-			ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
-
-			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0)
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
-
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
-		}
-
-		level.sniper_players[i] = -1;
-	}
-}
-
-// zyk: sets the sniper gun with full ammo for players and remove everything else from them
-void sniper_battle_prepare()
-{
-	int i = 0;
-
-	for (i = 0; i < MAX_CLIENTS; i++)
-	{
-		gentity_t *ent = &g_entities[i];
-
-		if (level.sniper_players[i] != -1)
-		{ // zyk: a player in the Sniper Battle. Gives disruptor with full ammo and a jetpack
-			if (ent->health < 1)
-			{ // zyk: respawn him if he is dead
-				ClientRespawn(ent);
-			}
-
-			ent->client->ps.stats[STAT_WEAPONS] = 0;
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_MELEE) | (1 << WP_DISRUPTOR);
-			ent->client->ps.weapon = WP_MELEE;
-
-			ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
-
-			ent->health = 100;
-			ent->client->ps.stats[STAT_ARMOR] = 100;
-
-			ent->client->ps.stats[STAT_HOLDABLE_ITEMS] = (1 << HI_JETPACK);
-			ent->client->ps.stats[STAT_HOLDABLE_ITEM] = 0;
-
-			// zyk: removing the seeker drone in case if is activated
-			if (ent->client->ps.droneExistTime > (level.time + 5000))
-			{
-				ent->client->ps.droneExistTime = level.time + 5000;
-			}
-
-			ent->client->ps.jetpackFuel = 100;
-			ent->client->pers.jetpack_fuel = MAX_JETPACK_FUEL;
-			
-			// zyk: cannot use any force powers
-			ent->client->ps.fd.forcePowerLevel[FP_LEVITATION] = FORCE_LEVEL_1;
-			ent->client->ps.fd.forceDeactivateAll = 1;
-			ent->client->ps.fd.forcePower = 0;
-			ent->client->ps.fd.forcePowerMax = 0;
-		}
-	}
-}
-
-// zyk: shows the winner of the Sniper Battle
-void sniper_battle_winner()
-{
-	int i = 0;
-	gentity_t *ent = NULL;
-
-	for (i = 0; i < MAX_CLIENTS; i++)
-	{
-		if (level.sniper_players[i] != -1)
-		{
-			ent = &g_entities[i];
-			break;
-		}
-	}
-
-	if (ent)
-	{
-		ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
-
-		ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 20000;
-		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 20000;
-		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 20000;
-
-		ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER) | (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
-		ent->client->ps.ammo[AMMO_BLASTER] = zyk_max_blaster_pack_ammo.integer;
-		ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
-		ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
-		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN) | (1 << HI_SEEKER) | (1 << HI_MEDPAC_BIG);
-
-		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
-
-		trap->SendServerCommand(-1, va("chat \"^3Sniper Battle: ^7%s ^7is the winner! Kills: %d\"", ent->client->pers.netname, level.sniper_players[ent->s.number]));
-	}
-	else
-	{
-		trap->SendServerCommand(-1, "chat \"^3Sniper Battle: ^7No one is the winner!\"");
-	}
-}
-
-// zyk: finishes the RPG LMS
-void rpg_lms_end()
-{
-	int i = 0;
-
-	level.rpg_lms_mode = 0;
-	level.rpg_lms_quantity = 0;
-
-	for (i = 0; i < MAX_CLIENTS; i++)
-	{
-		level.rpg_lms_players[i] = -1;
-	}
-}
-
-// zyk: prepares the rpg players for the battle
-void rpg_lms_prepare()
-{
-	int i = 0;
-
-	for (i = 0; i < MAX_CLIENTS; i++)
-	{
-		gentity_t *ent = &g_entities[i];
-
-		if (level.rpg_lms_players[i] != -1)
-		{ // zyk: a player in the RPG LMS
-			if (ent->health < 1)
-			{ // zyk: respawn him if he is dead
-				ClientRespawn(ent);
-			}
-			else
-			{
-				initialize_rpg_skills(ent);
-			}
-		}
-	}
-}
-
-// zyk: shows the winner of the RPG LMS
-void rpg_lms_winner()
-{
-	int i = 0;
-	int credits = 1000;
-	gentity_t *ent = NULL;
-
-	for (i = 0; i < MAX_CLIENTS; i++)
-	{
-		if (level.rpg_lms_players[i] != -1)
-		{
-			ent = &g_entities[i];
-			break;
-		}
-	}
-
-	if (ent)
-	{
-		add_credits(ent, credits);
-
-		save_account(ent, qtrue);
-
-		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
-
-		trap->SendServerCommand(-1, va("chat \"^3RPG LMS: ^7%s ^7is the winner! prize: %d credits! Kills: %d\"", ent->client->pers.netname, credits, level.rpg_lms_players[ent->s.number]));
-	}
-	else
-	{
-		trap->SendServerCommand(-1, "chat \"^3RPG LMS: ^7No one is the winner!\"");
-	}
+	player_restore_force(ent);
+	player_restore_loadout(ent);
 }
 
 // zyk: finishes the melee battle
@@ -8830,14 +7515,7 @@ void melee_battle_end()
 	{
 		if (level.melee_players[i] != -1)
 		{ // zyk: restoring default guns and force powers to this player
-			gentity_t *ent = &g_entities[i];
-
-			WP_InitForcePowers(ent);
-
-			if (ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] > FORCE_LEVEL_0)
-				ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER);
-
-			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_BRYAR_PISTOL);
+			melee_battle_restore(&g_entities[i]);
 		}
 
 		level.melee_players[i] = -1;
@@ -8851,6 +7529,139 @@ void melee_battle_end()
 }
 
 // zyk: prepares players to fight in Melee Battle
+/*
+DAJ_RP: [Melee Battle] the ring: where its top is, who is off it, and who is lifted out of it.
+
+The ring is the catwalk Cmd_MeleeMode_f() spawns at level.melee_mode_origin -- the origin of the admin who
+typed /meleearena, 24 units over the floor he stood on. Its solid box runs from that origin up to
+RP_MELEE_RING_TOP (g_local.h), the drawn floor grating, 46 units over that floor.
+
+RP_MeleeRingTop() reads the top off the live ring, so nothing else repeats the height; with the ring gone
+(an admin removed it -- G_FreeEntity() in g_utils.c resets melee_model_id), from the stored origin.
+*/
+float RP_MeleeRingTop( void )
+{
+	if (level.melee_model_id > 0 && level.melee_model_id < ENTITYNUM_WORLD)
+	{
+		gentity_t *ring = &g_entities[level.melee_model_id];
+
+		if (ring->inuse)
+		{
+			return ring->r.currentOrigin[2] + ring->r.maxs[2];
+		}
+	}
+
+	return level.melee_mode_origin[2] + RP_MELEE_RING_TOP;
+}
+
+/*
+DAJ_RP: [Melee Battle] whether a combatant is out: downed, fallen off, or too far away.
+
+Fallen off is "origin below the ring's top", i.e. feet more than 24 units under its surface -- which standing
+or jumping on it never comes near, and standing on the floor below (origin about 46 under the top) always is.
+It was "origin below melee_mode_origin", the origin of someone standing on that same floor: a fallen combatant
+was level with the line, not below it, and whether he was out came down to rounding -- an arena loaded from its
+file keeps the height cut to a whole number, so on a floor over zero height he stood just above the line and
+fought on from the ground until he wandered 1000 units off.
+
+The other two as before. A downed combatant is treated as one who fell: with death forced
+(zyk_minigame_forces_death) nobody can be knocked down here, and melee_battle_prepare() drops anyone who
+arrived downed, so only an admin /paralyze reaches it -- which would otherwise leave a body on the catwalk
+that no punch can remove and no timer releases.
+*/
+qboolean RP_MeleeOffRing( gentity_t *ent )
+{
+	if (G_PlayerIsDowned(ent))
+	{
+		return qtrue;
+	}
+
+	if (ent->client->ps.origin[2] < RP_MeleeRingTop())
+	{ // zyk: validating if player fell of the catwalk
+		return qtrue;
+	}
+
+	if (Distance(ent->client->ps.origin, level.melee_mode_origin) > 1000.0)
+	{ // zyk: validating if player is too far from the platform
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
+/*
+DAJ_RP: [Melee Battle] anyone standing where the ring appears is lifted onto it.
+
+The ring is spawned at the first sign-up, around whoever stands there -- the admin who set it up, as often as
+not. A solid box spawned around a player traps him: every move he makes starts inside it, so he never finds
+the ground, cannot jump and cannot fall. Each live player or NPC (vehicles too) whose box overlaps the ring's
+goes straight up, where he is, until his feet are 1 unit over its top; his own mins, so a taller or shorter
+NPC lands right. No kill box and no teleport effect: he simply stands on the ring and can jump down.
+
+Left alone: spectators and anyone following somebody, the dead, and a vehicle's riders (the vehicle carries
+them).
+*/
+void RP_MeleeLiftOffRing( gentity_t *ring )
+{
+	int touch[MAX_GENTITIES];
+	vec3_t lo, hi;
+	float top;
+	int num, i, k;
+
+	if (!ring || !ring->inuse)
+	{
+		return;
+	}
+
+	VectorAdd(ring->r.currentOrigin, ring->r.mins, lo);
+	VectorAdd(ring->r.currentOrigin, ring->r.maxs, hi);
+	top = hi[2];
+
+	num = trap->EntitiesInBox(lo, hi, touch, MAX_GENTITIES);
+
+	for (i = 0; i < num; i++)
+	{
+		gentity_t *other = &g_entities[touch[i]];
+		float *org;
+		qboolean inside = qtrue;
+
+		if (other == ring || !other->inuse || !other->client || other->health <= 0)
+			continue;
+
+		if (other->s.eType != ET_PLAYER && other->s.eType != ET_NPC)
+			continue;
+
+		if (other->client->sess.sessionTeam == TEAM_SPECTATOR || (other->client->ps.pm_flags & PMF_FOLLOW))
+			continue;
+
+		if (RP_IsVehicleRider(other))
+			continue;
+
+		// the engine's list is padded by a unit; only a box that really overlaps the ring's is inside it
+		org = other->client->ps.origin;
+		for (k = 0; k < 3; k++)
+		{
+			if (org[k] + other->r.mins[k] >= hi[k] || org[k] + other->r.maxs[k] <= lo[k])
+			{
+				inside = qfalse;
+				break;
+			}
+		}
+
+		if (!inside)
+			continue;
+
+		org[2] = top - other->r.mins[2] + 1;
+		if (other->client->ps.velocity[2] < 0)
+		{
+			other->client->ps.velocity[2] = 0;
+		}
+		VectorCopy(org, other->r.currentOrigin);
+		VectorCopy(org, other->s.pos.trBase);
+		trap->LinkEntity((sharedEntity_t *)other);
+	}
+}
+
 void melee_battle_prepare()
 {
 	int i = 0;
@@ -8863,10 +7674,56 @@ void melee_battle_prepare()
 		{ // zyk: a player in the Melee Battle
 			vec3_t origin;
 
+			// GalaxyRP fix: [Death System] drop anyone who is downed when the bell rings. The join
+			// guard refuses a downed player, but nothing re-checked during the twelve-second
+			// countdown, so anyone knocked down while waiting was teleported onto the catwalk still
+			// downed -- the health reset below hides it, but they cannot move or attack -- and just
+			// lay there. The respawn above does not catch it either: a downed player sits on 50
+			// health, not below 1.
+			//
+			// Dropped rather than released: the same state backs the admin /paralyze command, and
+			// clearing it here would let a player shed an admin punishment by signing up.
+			//
+			// No special handling is needed when this takes the battle below two players. The
+			// mode-1 handler counted before calling us, but the mode-2 block in G_RunFrame() picks
+			// up whatever is left on the next frame -- one player left wins by default, none left
+			// ends the battle -- exactly as it does when someone leaves or disconnects.
+			if (G_PlayerIsDowned(ent))
+			{
+				level.melee_players[i] = -1;
+				level.melee_mode_quantity--;
+
+				trap->SendServerCommand(i, "print \"^3Melee Battle: ^7You were downed before the battle began, so you are out of it.\n\"");
+				continue;
+			}
+
 			if (ent->health < 1)
 			{ // zyk: respawn him if he is dead
 				ClientRespawn(ent);
 			}
+
+			// GalaxyRP fix: [Minigames] off any e-web or map emplaced gun before the snapshot
+			// below, for the reasons given at the same call in duel_tournament_prepare(). After
+			// the respawn above: EWebDisattach() only gives weapons back to a living player.
+			zyk_release_mounts_for_minigame(ent);
+
+			// GalaxyRP fix: [Melee Battle] write down what the battle is about to take, so
+			// melee_battle_restore() can give back exactly that. Taken AFTER the ClientRespawn()
+			// above deliberately: a player who was dead at the starting bell has already been
+			// re-equipped by ClientSpawn, and that respawn loadout -- not the corpse's -- is what
+			// they should be holding when they walk away. First statement of the strip otherwise,
+			// the same placement duel_tournament_prepare() uses.
+			player_backup_loadout(ent);
+
+			// A stale PLAYER_STATUS_DUEL_TOURNAMENT_LOSS would silently cost this player their
+			// loadout. Both restore halves treat that bit as "this player died in a duel, so
+			// ClientSpawn has already re-equipped them" and consume the backup without applying
+			// it. The bit is cleared when a tournament picks its next pair and when it prepares a
+			// duelist, so a player who lost a duel in a tournament that then ended still carries
+			// it. Cleared here for the same reason duel_tournament_prepare() clears it, and safe
+			// to clear because /meleemode refuses anyone signed up for a tournament, so nobody in
+			// a battle can be a duelist whose bit still means something.
+			ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS);
 
 			ent->client->ps.stats[STAT_WEAPONS] = 0;
 			ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_MELEE);
@@ -8885,10 +7742,40 @@ void melee_battle_prepare()
 			}
 
 			// zyk: removing the seeker drone in case if is activated
-			if (ent->client->ps.droneExistTime > (level.time + 5000))
-			{
-				ent->client->ps.droneExistTime = level.time + 5000;
-			}
+			// GalaxyRP fix: [Items] same one-frame edge case as duel_tournament_prepare() above, and
+			// worse here: a Melee Battle is punch-only, so a drone still armed as its owner is
+			// teleported onto the platform is the one ranged attack in the arena. See
+			// zyk_wind_down_seeker_drone() in g_cmds.c.
+			zyk_wind_down_seeker_drone(ent);
+
+			// DAJ_RP: [Melee Battle] and the cloak, as duel_tournament_prepare() does. The holdables were
+			// just set to the binoculars directly, which never switches an active cloak off, and nothing
+			// else ends PW_CLOAKED -- while the cloak key itself wants the cloak item, which he no longer
+			// owns. So a player cloaked at the bell stayed invisible for the whole battle and could not
+			// even turn it off.
+			Jedi_DecloakPair(ent);
+
+			// DAJ_RP: [Force Enlightenment] end any Enlightenment before the Force is saved, as
+			// duel_tournament_prepare() does and for the same reason: a backup taken while boosted is
+			// handed back by melee_battle_restore() with nothing left to undo it. WP_ForcePowersUpdate()
+			// then keeps a new Enlightenment from applying until the battle is over.
+			WP_EndForceEnlightenment(ent);
+
+			// DAJ_RP: [Melee Battle] end every power still running, as duel_tournament_prepare() does for
+			// the ones it takes away. The strip below only takes the powers out of the menu; what was
+			// switched on before the bell -- Protect, Rage, Absorb, Speed, a grip on somebody -- kept
+			// running in the fight. This also covers the jump in progress the old line below stopped.
+			zyk_stop_active_force_powers(ent);
+
+			// DAJ_RP: [Melee Battle] and the Force powerups, as duel_tournament_prepare() does: a Boon kept
+			// its faster regeneration through the battle. (The Enlightenments are already ended above.)
+			ent->client->ps.powerups[PW_FORCE_BOON] = 0;
+			ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = 0;
+			ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = 0;
+
+			// GalaxyRP fix: [Melee Battle] same as the loadout backup above, placed against the
+			// force strip that follows it exactly as duel_tournament_prepare() places its own.
+			player_backup_force(ent);
 
 			// zyk: cannot use any force powers, except Jump
 			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_PUSH);
@@ -8907,9 +7794,13 @@ void melee_battle_prepare()
 			ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_TEAM_FORCE);
 
 			// zyk: stop jumping to avoid falling from the platform
-			ent->client->ps.fd.forcePowersActive &= ~(1 << FP_LEVITATION);
+			// DAJ_RP: [Melee Battle] done above now, with every other running power
+			// (zyk_stop_active_force_powers()).
 
-			VectorSet(origin, level.melee_mode_origin[0] - 120 + ((i % 6) * 45), level.melee_mode_origin[1] - 120 + ((i/6) * 45), level.melee_mode_origin[2] + 50);
+			// DAJ_RP: [Melee Battle] onto the ring's top: the feet 24 under the origin, and zyk_TeleportPlayer()
+			// adds 1, so they start 1 unit over the surface. It was the stored origin + 50, which put the feet
+			// 5 units inside the old box's top -- every combatant arrived stuck in the platform.
+			VectorSet(origin, level.melee_mode_origin[0] - 120 + ((i % 6) * 45), level.melee_mode_origin[1] - 120 + ((i/6) * 45), RP_MeleeRingTop() - DEFAULT_MINS_2);
 
 			zyk_TeleportPlayer(ent, origin, ent->client->ps.viewangles);
 		}
@@ -8933,14 +7824,27 @@ void melee_battle_winner()
 
 	if (ent)
 	{
+		// GalaxyRP fix: [Melee Battle] restore before granting, because the prize below is applied
+		// with |= on top of whatever the winner is holding. melee_battle_restore() now ASSIGNS
+		// stats[STAT_WEAPONS] from the pre-battle snapshot, and melee_battle_end() calls it for
+		// every player still on the roster three seconds after this runs -- so leaving the restore
+		// until then would have wiped the prize weapons and holdables off the one player who
+		// earned them. Restoring first puts the prize on top of the winner's real loadout instead
+		// of on top of melee_battle_prepare()'s fists-and-binoculars, and the later call in
+		// melee_battle_end() is a no-op because both validity flags have already been consumed.
+		//
+		// This is the ordering the Duel Tournament already has: mode 5 restores the pair, and
+		// duel_tournament_prize() runs afterwards, from mode 2.
+		melee_battle_restore(ent);
+
 		ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 20000;
 		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 20000;
 		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 20000;
 
 		ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER) | (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
-		ent->client->ps.ammo[AMMO_BLASTER] = zyk_max_blaster_pack_ammo.integer;
-		ent->client->ps.ammo[AMMO_POWERCELL] = zyk_max_power_cell_ammo.integer;
-		ent->client->ps.ammo[AMMO_METAL_BOLTS] = zyk_max_metal_bolt_ammo.integer;
+		ent->client->ps.ammo[AMMO_BLASTER] = rp_max_blaster_pack_ammo.integer;
+		ent->client->ps.ammo[AMMO_POWERCELL] = rp_max_power_cell_ammo.integer;
+		ent->client->ps.ammo[AMMO_METAL_BOLTS] = rp_max_metal_bolt_ammo.integer;
 		ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN) | (1 << HI_SEEKER) | (1 << HI_MEDPAC_BIG);
 
 		G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
@@ -8951,110 +7855,6 @@ void melee_battle_winner()
 	{
 		trap->SendServerCommand(-1, "chat \"^3Melee Battle: ^7No one is the winner!\"");
 	}
-}
-
-gentity_t *zyk_quest_item(char *item_path, int x, int y, int z, char *mins, char *maxs)
-{
-	gentity_t *new_ent = G_Spawn();
-
-	if (!strstr(item_path, ".md3"))
-	{// zyk: effect
-		zyk_set_entity_field(new_ent, "classname", "fx_runner");
-		zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-		zyk_set_entity_field(new_ent, "origin", va("%d %d %d", x, y, z));
-
-		new_ent->s.modelindex = G_EffectIndex(item_path);
-
-		zyk_spawn_entity(new_ent);
-	}
-	else
-	{ // zyk: model
-		zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-		zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-		zyk_set_entity_field(new_ent, "origin", va("%d %d %d", x, y, z));
-
-		if (Q_stricmp(mins, "") != 0 && Q_stricmp(maxs, "") != 0)
-		{
-			zyk_set_entity_field(new_ent, "spawnflags", "65537");
-			zyk_set_entity_field(new_ent, "mins", mins);
-			zyk_set_entity_field(new_ent, "maxs", maxs);
-		}
-
-		if (z == -10000)
-		{ // zyk: catwalk in t3_rift quest missions. Must scale it
-			zyk_set_entity_field(new_ent, "zykmodelscale", "150");
-		}
-
-		zyk_set_entity_field(new_ent, "model", item_path);
-
-		zyk_spawn_entity(new_ent);
-	}
-
-	return new_ent;
-}
-
-// zyk: remaps quest items to the values passed as args
-void zyk_remap_quest_item(char *old_remap, char *new_remap)
-{
-	float f = level.time * 0.001;
-
-	AddRemap(old_remap, new_remap, f);
-	trap->SetConfigstring(CS_SHADERSTATE, BuildShaderStateConfig());
-}
-
-void zyk_trial_room_models()
-{
-	gentity_t *new_ent = G_Spawn();
-
-	// zyk: catwalk to block entrance
-	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-	zyk_set_entity_field(new_ent, "spawnflags", "65537");
-	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -3770, 4884, 120));
-
-	zyk_set_entity_field(new_ent, "angles", va("%d %d 0", 90, 0));
-
-	zyk_set_entity_field(new_ent, "mins", "-24 -192 -192");
-	zyk_set_entity_field(new_ent, "maxs", "24 192 192");
-	zyk_set_entity_field(new_ent, "zykmodelscale", "300");
-
-	zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-	zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-	zyk_spawn_entity(new_ent);
-
-	// zyk: adding catwalks to block the central lava
-	new_ent = G_Spawn();
-
-	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-	zyk_set_entity_field(new_ent, "spawnflags", "65537");
-	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -4470, 4628, -65));
-
-	zyk_set_entity_field(new_ent, "mins", "-256 -256 -32");
-	zyk_set_entity_field(new_ent, "maxs", "256 256 32");
-	zyk_set_entity_field(new_ent, "zykmodelscale", "400");
-
-	zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-	zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-	zyk_spawn_entity(new_ent);
-
-	new_ent = G_Spawn();
-
-	zyk_set_entity_field(new_ent, "classname", "misc_model_breakable");
-	zyk_set_entity_field(new_ent, "spawnflags", "65537");
-	zyk_set_entity_field(new_ent, "origin", va("%d %d %d", -4470, 5140, -65));
-
-	zyk_set_entity_field(new_ent, "mins", "-256 -256 -32");
-	zyk_set_entity_field(new_ent, "maxs", "256 256 32");
-	zyk_set_entity_field(new_ent, "zykmodelscale", "400");
-
-	zyk_set_entity_field(new_ent, "model", "models/map_objects/factory/catw2_b.md3");
-
-	zyk_set_entity_field(new_ent, "targetname", "zyk_quest_models");
-
-	zyk_spawn_entity(new_ent);
 }
 
 
@@ -9078,19 +7878,87 @@ int g_siegeRespawnCheck = 0;
 void SetMoverState( gentity_t *ent, moverState_t moverState, int time );
 
 extern void remove_credits(gentity_t *ent, int credits);
-extern void try_finishing_race();
-extern gentity_t *load_crystal_model(int x,int y,int z, int yaw, int crystal_number);
-extern void clean_crystal_model(int crystal_number);
-extern qboolean dark_quest_collected_notes(gentity_t *ent);
-extern qboolean light_quest_defeated_guardians(gentity_t *ent);
 extern void set_max_health(gentity_t *ent);
 extern void set_max_shield(gentity_t *ent);
-extern gentity_t *load_effect(int x,int y,int z, int spawnflags, char *fxFile);
 extern void duel_show_table(gentity_t *ent);
 extern void WP_DisruptorAltFire(gentity_t *ent);
-extern int zyk_max_magic_power(gentity_t *ent);
 extern void G_Kill( gentity_t *ent );
-extern void save_quest_file(int quest_number);
+
+/*
+================
+zyk_entity_line_vehicle_npc_spawner
+
+GalaxyRP fix: [Entity System] for one parsed entity-file line: if it is an npc_spawner whose
+npc_type names a vehicle, return that type, else NULL. Keys are matched case-insensitively, and
+the LAST classname and npc_type win, as they do when the line is spawned. Only npc_spawner: an
+NPC_Vehicle line is how a vehicle is meant to come back, and the SP-style NPC_<name> spawner
+classes set their own NPC_type. See BG_VehicleNameExists() for why the lookup is a silent one.
+================
+*/
+static const char *zyk_entity_line_vehicle_npc_spawner( char (*keys)[ZYK_ENTITY_FILE_LINE_LENGTH], char (*values)[ZYK_ENTITY_FILE_LINE_LENGTH], int pairs_x2 )
+{
+	const char *classname = NULL;
+	const char *npc_type = NULL;
+	int m;
+
+	for ( m = 0; m < pairs_x2; m += 2 )
+	{
+		if ( Q_stricmp( keys[m / 2], "classname" ) == 0 )
+			classname = values[m / 2];
+		else if ( Q_stricmp( keys[m / 2], "npc_type" ) == 0 )
+			npc_type = values[m / 2];
+	}
+
+	if ( classname && npc_type && Q_stricmp( classname, "npc_spawner" ) == 0 && BG_VehicleNameExists( npc_type ) )
+	{
+		return npc_type;
+	}
+
+	return NULL;
+}
+
+/*
+================
+RP_SpeakerAudienceFrame
+
+GalaxyRP: [Entity System] a target_speaker with a sound set is sent only to the clients that can hear it
+(SVF_BROADCASTCLIENTS, see SP_target_speaker()): its r.broadcastClients bits are set here every frame,
+after the clients have moved and before the server builds their snapshots, for every connected client
+whose eye -- the point the client listens from and the engine sends from -- is within rpAudibleRange.
+A client whose bit is clear is not sent it at all; one whose bit is set is sent it wherever it stands.
+================
+*/
+void RP_SpeakerAudienceFrame( void )
+{
+	int e, c;
+
+	for ( e = MAX_CLIENTS; e < level.num_entities && e < MAX_GENTITIES; e++ )
+	{
+		gentity_t *speaker = &g_entities[e];
+		float rangeSq;
+
+		if ( !speaker->inuse || speaker->rpAudibleRange <= 0.0f || !( speaker->r.svFlags & SVF_BROADCASTCLIENTS ) )
+			continue;
+
+		speaker->r.broadcastClients[0] = speaker->r.broadcastClients[1] = 0u;
+		rangeSq = speaker->rpAudibleRange * speaker->rpAudibleRange;
+
+		for ( c = 0; c < MAX_CLIENTS; c++ )
+		{
+			gentity_t *player = &g_entities[c];
+			vec3_t eye, d;
+
+			if ( !player->inuse || !player->client || player->client->pers.connected != CON_CONNECTED )
+				continue;
+
+			VectorCopy( player->client->ps.origin, eye );
+			eye[2] += player->client->ps.viewheight;
+			VectorSubtract( speaker->r.currentOrigin, eye, d );
+			if ( VectorLengthSquared( d ) <= rangeSq )
+				speaker->r.broadcastClients[c / 32] |= ( 1u << ( c % 32 ) );
+		}
+	}
+}
 
 void G_RunFrame( int levelTime ) {
 	int			i;
@@ -9195,6 +8063,35 @@ void G_RunFrame( int levelTime ) {
 	level.previousTime = level.time;
 	level.time = levelTime;
 
+	// GalaxyRP fix: [Configstrings] take the map-load count here rather than at the end of
+	// G_InitGame, because at the end of G_InitGame the gamestate is not finished. SV_SpawnServer
+	// clears every configstring, calls InitGame, runs four frames, and only THEN writes
+	// CS_SYSTEMINFO and CS_SERVERINFO (sv_init.cpp: SV_ClearServer, SV_InitGameProgs, the settle
+	// loop, then SV_SetConfigstring for both). So a count taken in InitGame sees neither of them --
+	// and CS_SYSTEMINFO is the largest string on the server, since sv_paks and sv_pakNames hold one
+	// entry per loaded pk3. On a pure server with a map pack that is kilobytes the old baseline, and
+	// the line it logged, simply did not know about.
+	//
+	// Waiting for CS_SYSTEMINFO to appear rather than counting frames is deliberate: the number of
+	// frames the engine runs before it writes that string is the engine's business, and map_restart
+	// takes a different path through it (configstrings survive a restart, so it is already there on
+	// the first frame). The time bound is only a backstop.
+	if ( !level.zyk_gamestate_baseline_done )
+	{
+		char sysinfo[MAX_INFO_STRING];
+
+		trap->GetConfigstring( CS_SYSTEMINFO, sysinfo, sizeof( sysinfo ) );
+
+		if ( sysinfo[0] || level.time > (level.startTime + ZYK_GAMESTATE_BASELINE_WAIT) )
+		{
+			level.zyk_gamestate_baseline_done = qtrue;
+
+			G_ResetGamestateEstimate();
+			G_LogPrintf( "gamestate after map load: %d of %d bytes used\n",
+				level.zyk_gamestate_bytes, ZYK_GAMESTATE_BUDGET );
+		}
+	}
+
 	if (g_allowNPC.integer)
 	{
 		NAV_CheckCalcPaths();
@@ -9245,34 +8142,9 @@ void G_RunFrame( int levelTime ) {
 	trap->PrecisionTimer_Start(&timer_ItemRun);
 #endif
 
-	if (level.boss_battle_music_reset_timer > 0 && level.boss_battle_music_reset_timer < level.time)
-	{ // zyk: resets music to default one
-		level.boss_battle_music_reset_timer = 0;
-		trap->SetConfigstring( CS_MUSIC, G_NewString(level.default_map_music) );
-	}
-
-	if (level.race_mode == 1 && level.race_start_timer < level.time)
-	{ // zyk: Race Mode. Tests if we should start the race
-		level.race_countdown = 3;
-		level.race_countdown_timer = level.time;
-		level.race_last_player_position = 0;
-		level.race_mode = 2;
-	}
-	else if (level.race_mode == 2 && level.race_countdown_timer < level.time)
-	{ // zyk: Race Mode. Shows the countdown messages in players screens and starts the race
-		level.race_countdown_timer = level.time + 1000;
-
-		if (level.race_countdown > 0)
-		{
-			trap->SendServerCommand( -1, va("cp \"^7Race starts in ^3%d\"", level.race_countdown));
-			level.race_countdown--;
-		}
-		else if (level.race_countdown == 0)
-		{
-			level.race_mode = 3;
-			trap->SendServerCommand( -1, "cp \"^2Go!\"");
-		}
-	}
+	// GalaxyRP fix: [Guardian] removed the boss_battle_music_reset_timer reset block here — field
+	// removed as dead (see g_local.h); this reader never fired since the field could never become
+	// nonzero.
 
 	// zyk: Melee Battle
 	if (level.melee_mode == 3 && level.melee_mode_timer < level.time)
@@ -9294,6 +8166,18 @@ void G_RunFrame( int levelTime ) {
 			level.melee_mode_timer = level.time + 3000;
 			level.melee_mode = 3;
 		}
+		// GalaxyRP fix: [Melee Battle] the "== 1" test above is the only early end, so a battle whose
+		// player count reaches 0 rather than 1 never ends early at all. That is not a corner case: the
+		// out-of-bounds kill loop that pushes players off the platform runs later in this same frame,
+		// so the last two players falling together take the count straight from 2 to 0. The battle then
+		// sat in mode 2 for its entire remaining timeout -- ten minutes at the shipped default --
+		// rejecting every attempt to join with no explanation, until the "Time is up" message finally
+		// fired. The sniper battle and the RPG LMS had the same defect; both have since been removed.
+		else if (level.melee_mode_quantity <= 0)
+		{
+			melee_battle_end();
+			trap->SendServerCommand(-1, "chat \"^3Melee Battle: ^7No players left! Melee Battle is over!\"");
+		}
 	}
 	else if (level.melee_mode == 1 && level.melee_mode_timer < level.time)
 	{
@@ -9311,97 +8195,34 @@ void G_RunFrame( int levelTime ) {
 		}
 	}
 
-	// zyk: Sniper Battle
-	if (level.sniper_mode == 2)
-	{
-		if (level.sniper_mode_timer < level.time)
-		{
-			sniper_battle_end();
-			trap->SendServerCommand(-1, "chat \"^3Sniper Battle: ^7Time is up! No winner!\"");
-		}
-		else if (level.sniper_mode_quantity == 1)
-		{
-			sniper_battle_winner();
-			sniper_battle_end();
-		}
-	}
-	else if (level.sniper_mode == 1 && level.sniper_mode_timer < level.time)
-	{
-		if (level.sniper_mode_quantity > 1)
-		{ // zyk: if at least 2 players joined in it, start the battle
-			sniper_battle_prepare();
-			level.sniper_mode = 2;
-			level.sniper_mode_timer = level.time + 600000;
-			trap->SendServerCommand(-1, "chat \"^3Sniper Battle: ^7the battle has begun! The battle will have a max of 10 minutes!\"");
-		}
-		else
-		{ // zyk: finish the battle
-			sniper_battle_end();
-			trap->SendServerCommand(-1, "chat \"^3Sniper Battle: ^7Not enough players. Sniper Battle is over!\"");
-		}
-	}
-
-	// zyk: RPG LMS
-	if (level.rpg_lms_mode == 2)
-	{
-		if (level.rpg_lms_timer < level.time)
-		{
-			rpg_lms_end();
-			trap->SendServerCommand(-1, "chat \"^3RPG LMS: ^7Time is up! No winner!\"");
-		}
-		else if (level.rpg_lms_quantity == 1)
-		{
-			rpg_lms_winner();
-			rpg_lms_end();
-		}
-	}
-	else if (level.rpg_lms_mode == 1 && level.rpg_lms_timer < level.time)
-	{
-		if (level.rpg_lms_quantity > 1)
-		{ // zyk: if at least 2 players joined in it, start the battle
-			rpg_lms_prepare();
-			level.rpg_lms_mode = 2;
-			level.rpg_lms_timer = level.time + 600000;
-			trap->SendServerCommand(-1, "chat \"^3RPG LMS: ^7the battle has begun! The battle will have a max of 10 minutes!\"");
-		}
-		else
-		{ // zyk: finish the battle
-			rpg_lms_end();
-			trap->SendServerCommand(-1, "chat \"^3RPG LMS: ^7Not enough players. RPG LMS is over!\"");
-		}
-	}
-
 	// zyk: Duel Tournament
 	if (level.duel_tournament_mode == 4)
 	{ // zyk: validations during a duel
+		// GalaxyRP fix: [Duel Tournament] this block deliberately sits OUTSIDE the
+		// "duel_tournament_paused == qfalse" wrapper further down, because leaver validation has to
+		// keep running regardless. An earlier attempt to make /duelpause hold a duel that was
+		// already under way added "&& level.duel_tournament_paused == qfalse" to the guard below,
+		// which was wrong twice over: the else arm is the "this match is over" path, so pausing
+		// abandoned the duel, and because that arm does not advance duel_matches_done the same
+		// pairing was then replayed from scratch. Cmd_DuelPause_f now refuses in mode 4 instead
+		// (see the note there), so a paused tournament can never be sitting in this state and the
+		// guard is back to asking only what it can actually answer: are both duelists still valid.
 		if (duel_tournament_validate_duelists() == qtrue)
 		{
 			gentity_t *first_duelist = &g_entities[level.duelist_1_id];
 			gentity_t *second_duelist = &g_entities[level.duelist_2_id];
-			gentity_t *first_duelist_ally = NULL;
-			gentity_t *second_duelist_ally = NULL;
 
-			if (level.duelist_1_ally_id != -1)
-			{
-				first_duelist_ally = &g_entities[level.duelist_1_ally_id];
-			}
-
-			if (level.duelist_2_ally_id != -1)
-			{
-				second_duelist_ally = &g_entities[level.duelist_2_ally_id];
-			}
-
-			if ((!(first_duelist->client->pers.player_statuses & (1 << 27)) || (first_duelist_ally && !(first_duelist_ally->client->pers.player_statuses & (1 << 27)))) &&
-				 second_duelist->client->pers.player_statuses & (1 << 27) && (!second_duelist_ally || second_duelist_ally->client->pers.player_statuses & (1 << 27)))
-			{ // zyk: first team wins
+			if (!(first_duelist->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS)) &&
+				second_duelist->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS))
+			{ // zyk: first duelist wins
 				duel_tournament_set_match_winner(first_duelist);
 
 				level.duel_tournament_mode = 5;
 				level.duel_tournament_timer = level.time + 1500;
 			}
-			else if ((!(second_duelist->client->pers.player_statuses & (1 << 27)) || (second_duelist_ally && !(second_duelist_ally->client->pers.player_statuses & (1 << 27)))) &&
-				first_duelist->client->pers.player_statuses & (1 << 27) && (!first_duelist_ally || first_duelist_ally->client->pers.player_statuses & (1 << 27)))
-			{ // zyk: second team wins
+			else if (!(second_duelist->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS)) &&
+				first_duelist->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS))
+			{ // zyk: second duelist wins
 				duel_tournament_set_match_winner(second_duelist);
 
 				level.duel_tournament_mode = 5;
@@ -9409,35 +8230,25 @@ void G_RunFrame( int levelTime ) {
 			}
 			else if (level.duel_tournament_timer < level.time)
 			{ // zyk: duel timed out
-				int first_team_health = 0;
-				int second_team_health = 0;
+				int first_duelist_health = 0;
+				int second_duelist_health = 0;
 
-				if (!(first_duelist->client->pers.player_statuses & (1 << 27)))
+				if (!(first_duelist->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS)))
 				{
-					first_team_health = first_duelist->health + first_duelist->client->ps.stats[STAT_ARMOR];
+					first_duelist_health = first_duelist->health + first_duelist->client->ps.stats[STAT_ARMOR];
 				}
 
-				if (!(second_duelist->client->pers.player_statuses & (1 << 27)))
+				if (!(second_duelist->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS)))
 				{
-					second_team_health = second_duelist->health + second_duelist->client->ps.stats[STAT_ARMOR];
+					second_duelist_health = second_duelist->health + second_duelist->client->ps.stats[STAT_ARMOR];
 				}
 
-				if (first_duelist_ally && !(first_duelist_ally->client->pers.player_statuses & (1 << 27)))
-				{
-					first_team_health += (first_duelist_ally->health + first_duelist_ally->client->ps.stats[STAT_ARMOR]);
-				}
-
-				if (second_duelist_ally && !(second_duelist_ally->client->pers.player_statuses & (1 << 27)))
-				{
-					second_team_health += (second_duelist_ally->health + second_duelist_ally->client->ps.stats[STAT_ARMOR]);
-				}
-
-				if (first_team_health > second_team_health)
-				{ // zyk: first team wins
+				if (first_duelist_health > second_duelist_health)
+				{ // zyk: first duelist wins
 					duel_tournament_set_match_winner(first_duelist);
 				}
-				else if (first_team_health < second_team_health)
-				{ // zyk: second team wins
+				else if (first_duelist_health < second_duelist_health)
+				{ // zyk: second duelist wins
 					duel_tournament_set_match_winner(second_duelist);
 				}
 				else
@@ -9448,9 +8259,9 @@ void G_RunFrame( int levelTime ) {
 				level.duel_tournament_mode = 5;
 				level.duel_tournament_timer = level.time + 1500;
 			}
-			else if (first_duelist->client->pers.player_statuses & (1 << 27) && (!first_duelist_ally || first_duelist_ally->client->pers.player_statuses & (1 << 27)) &&
-				second_duelist->client->pers.player_statuses & (1 << 27) && (!second_duelist_ally || second_duelist_ally->client->pers.player_statuses & (1 << 27)))
-			{ // zyk: tie when everyone dies at the same frame
+			else if (first_duelist->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS) &&
+				second_duelist->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS))
+			{ // zyk: tie when both duelists die on the same frame
 				duel_tournament_set_match_winner(NULL);
 
 				level.duel_tournament_mode = 5;
@@ -9458,10 +8269,41 @@ void G_RunFrame( int levelTime ) {
 			}
 		}
 		else
-		{ // zyk: match ended because one of the teams is no longer valid
+		{ // zyk: match ended because one of the duelists is no longer valid
 			level.duel_tournament_mode = 5;
 			level.duel_tournament_timer = level.time + 1500;
 		}
+	}
+
+	// GalaxyRP fix: [Duel Tournament] /duelpause used to stop the state machine below without
+	// stopping the clock. level.duel_tournament_timer is always an absolute level.time + N, and
+	// level.time keeps advancing while paused, so every pending transition expired DURING the pause
+	// and fired on the first frame after resuming. Pausing did not hold the tournament, it only
+	// deferred it and then let it snap forward.
+	//
+	// Worst in signup, where the effect was the opposite of the intent: an admin pausing mode 1 to
+	// let latecomers in burned the countdown while paused, and on resume the mode-1 branch below ran
+	// immediately -- ending the tournament outright via duel_tournament_end() if the roster was still
+	// under rp_duel_tournament_min_players. The pause killed the tournament it was meant to extend.
+	// Milder elsewhere: mode 3's three-second "X vs Y" announcement collapsed to nothing, so duelists
+	// were teleported into the arena the instant an admin resumed.
+	//
+	// Carrying the timer forward by the frame delta keeps it a valid absolute time at every instant,
+	// so nothing that reads it has to know pausing exists -- duel_show_table() (g_cmds.c) and the
+	// arena-entry freeze in bg_pmove.c both do, and both currently only run in mode 4, which cannot
+	// be paused. Storing a remaining-time delta at pause and re-basing it at resume would work too,
+	// but only while every clear of the flag goes through Cmd_DuelPause_f, and duel_tournament_end()
+	// clears it directly.
+	//
+	// Safe against a competing write: every other assignment to this timer is either inside the
+	// "not paused" block below, or in the mode-4 block above (mode 4 cannot be paused), or is
+	// Cmd_DuelMode_f's sign-up write, which is guarded by "if (level.duel_tournament_mode != 1)" and
+	// so cannot fire for a tournament already in signup -- and joining at mode 2 or later is refused
+	// outright. level.previousTime is taken at the top of G_RunFrame, well above this, so the delta
+	// here is exactly one frame.
+	if (level.duel_tournament_paused == qtrue)
+	{
+		level.duel_tournament_timer += level.time - level.previousTime;
 	}
 
 	if (level.duel_tournament_paused == qfalse)
@@ -9472,28 +8314,16 @@ void G_RunFrame( int levelTime ) {
 
 			if (level.duelist_1_id != -1)
 			{
-				player_restore_force(&g_entities[level.duelist_1_id]);
+				duel_tournament_restore_duelist(&g_entities[level.duelist_1_id]);
 			}
 
 			if (level.duelist_2_id != -1)
 			{
-				player_restore_force(&g_entities[level.duelist_2_id]);
-			}
-
-			if (level.duelist_1_ally_id != -1)
-			{
-				player_restore_force(&g_entities[level.duelist_1_ally_id]);
-			}
-
-			if (level.duelist_2_ally_id != -1)
-			{
-				player_restore_force(&g_entities[level.duelist_2_ally_id]);
+				duel_tournament_restore_duelist(&g_entities[level.duelist_2_id]);
 			}
 
 			level.duelist_1_id = -1;
 			level.duelist_2_id = -1;
-			level.duelist_1_ally_id = -1;
-			level.duelist_2_ally_id = -1;
 
 			level.duel_tournament_timer = level.time + 1500;
 			level.duel_tournament_mode = 2;
@@ -9505,19 +8335,7 @@ void G_RunFrame( int levelTime ) {
 				vec3_t zyk_origin, zyk_angles;
 				gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
 				gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
-				gentity_t *duelist_1_ally = NULL;
-				gentity_t *duelist_2_ally = NULL;
 				qboolean zyk_has_respawned = qfalse;
-
-				if (level.duelist_1_ally_id != -1)
-				{
-					duelist_1_ally = &g_entities[level.duelist_1_ally_id];
-				}
-
-				if (level.duelist_2_ally_id != -1)
-				{
-					duelist_2_ally = &g_entities[level.duelist_2_ally_id];
-				}
 
 				// zyk: respawning duelists that are still dead
 				if (duelist_1->health < 1)
@@ -9532,71 +8350,25 @@ void G_RunFrame( int levelTime ) {
 					zyk_has_respawned = qtrue;
 				}
 
-				if (duelist_1_ally && duelist_1_ally->health < 1)
-				{
-					ClientRespawn(duelist_1_ally);
-					zyk_has_respawned = qtrue;
-				}
-
-				if (duelist_2_ally && duelist_2_ally->health < 1)
-				{
-					ClientRespawn(duelist_2_ally);
-					zyk_has_respawned = qtrue;
-				}
-
-				duel_tournament_protect_duelists(duelist_1, duelist_2, duelist_1_ally, duelist_2_ally);
+				duel_tournament_protect_duelists(duelist_1, duelist_2);
 
 				if (zyk_has_respawned == qfalse)
 				{
 					// zyk: setting the max time players can duel
-					level.duel_tournament_timer = level.time + zyk_duel_tournament_duel_time.integer;
+					level.duel_tournament_timer = level.time + rp_duel_tournament_duel_time.integer;
 
 					// zyk: prepare the duelists to start duel
 					duel_tournament_prepare(duelist_1);
 					duel_tournament_prepare(duelist_2);
 
-					if (duelist_1_ally)
-					{
-						duel_tournament_prepare(duelist_1_ally);
-					}
-
-					if (duelist_2_ally)
-					{
-						duel_tournament_prepare(duelist_2_ally);
-					}
-
 					// zyk: put the duelists along the y axis
 					VectorSet(zyk_angles, 0, 90, 0);
-
-					if (duelist_1_ally)
-					{
-						VectorSet(zyk_origin, level.duel_tournament_origin[0] - 50, level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2] + 1);
-						zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
-
-						VectorSet(zyk_origin, level.duel_tournament_origin[0] + 50, level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2] + 1);
-						zyk_TeleportPlayer(duelist_1_ally, zyk_origin, zyk_angles);
-					}
-					else
-					{
-						VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2] + 1);
-						zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
-					}
+					VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] - 125, level.duel_tournament_origin[2] + 1);
+					zyk_TeleportPlayer(duelist_1, zyk_origin, zyk_angles);
 
 					VectorSet(zyk_angles, 0, -90, 0);
-
-					if (duelist_2_ally)
-					{
-						VectorSet(zyk_origin, level.duel_tournament_origin[0] - 50, level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2] + 1);
-						zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
-
-						VectorSet(zyk_origin, level.duel_tournament_origin[0] + 50, level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2] + 1);
-						zyk_TeleportPlayer(duelist_2_ally, zyk_origin, zyk_angles);
-					}
-					else
-					{
-						VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2] + 1);
-						zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
-					}
+					VectorSet(zyk_origin, level.duel_tournament_origin[0], level.duel_tournament_origin[1] + 125, level.duel_tournament_origin[2] + 1);
+					zyk_TeleportPlayer(duelist_2, zyk_origin, zyk_angles);
 
 					level.duel_tournament_mode = 4;
 				}
@@ -9614,39 +8386,24 @@ void G_RunFrame( int levelTime ) {
 		else if (level.duel_tournament_mode == 2 && level.duel_tournament_timer < level.time)
 		{ // zyk: search for duelists and put them in the arena
 			int zyk_it = 0;
-			qboolean is_in_boss = qfalse;
 
+			// GalaxyRP fix: [Guardian] removed the is_in_boss local here — its only setter ("someone
+			// fighting a quest boss") was already removed as dead (guardian_mode is permanently 0,
+			// spawn_boss has no callers), making it permanently qfalse. Both branches below that
+			// tested it are simplified accordingly.
 			for (zyk_it = 0; zyk_it < MAX_CLIENTS; zyk_it++)
 			{
 				gentity_t *this_ent = &g_entities[zyk_it];
 
 				// zyk: cleaning flag from player
 				if (this_ent && this_ent->client)
-					this_ent->client->pers.player_statuses &= ~(1 << 27);
-
-				if (this_ent && this_ent->client && this_ent->client->pers.connected == CON_CONNECTED &&
-					this_ent->client->sess.sessionTeam != TEAM_SPECTATOR && this_ent->client->sess.amrpgmode == 2 &&
-					this_ent->client->pers.guardian_mode > 0)
-				{ // zyk: validating if there is someone fighting a quest boss
-					is_in_boss = qtrue;
-				}
+					this_ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS);
 			}
 
-			if (is_in_boss == qfalse && level.duel_matches_done < level.duel_matches_quantity)
+			if (level.duel_matches_done < level.duel_matches_quantity)
 			{ // zyk: if there are still matches to be chosen, try to choose now
 				level.duelist_1_id = level.duel_matches[level.duel_matches_done][0];
 				level.duelist_2_id = level.duel_matches[level.duel_matches_done][1];
-
-				// zyk: getting the duelist allies
-				if (level.duel_allies[level.duelist_1_id] != -1)
-				{
-					level.duelist_1_ally_id = level.duel_allies[level.duelist_1_id];
-				}
-
-				if (level.duel_allies[level.duelist_2_id] != -1)
-				{
-					level.duelist_2_ally_id = level.duel_allies[level.duelist_2_id];
-				}
 
 				if (duel_tournament_validate_duelists() == qfalse)
 				{ // zyk: if not valid, show score table
@@ -9657,26 +8414,11 @@ void G_RunFrame( int levelTime ) {
 				{
 					gentity_t *duelist_1 = &g_entities[level.duelist_1_id];
 					gentity_t *duelist_2 = &g_entities[level.duelist_2_id];
-					char first_ally[36];
-					char second_ally[36];
-
-					strcpy(first_ally, "");
-					strcpy(second_ally, "");
-
-					if (level.duelist_1_ally_id != -1)
-					{
-						strcpy(first_ally, va("^7 / %s", g_entities[level.duelist_1_ally_id].client->pers.netname));
-					}
-
-					if (level.duelist_2_ally_id != -1)
-					{
-						strcpy(second_ally, va("^7 / %s", g_entities[level.duelist_2_ally_id].client->pers.netname));
-					}
 
 					level.duel_tournament_timer = level.time + 3000;
 					level.duel_tournament_mode = 3;
 
-					trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s%s ^7x %s%s\"", duelist_1->client->pers.netname, first_ally, duelist_2->client->pers.netname, second_ally));
+					trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7%s ^7x %s\"", duelist_1->client->pers.netname, duelist_2->client->pers.netname));
 				}
 			}
 
@@ -9684,18 +8426,13 @@ void G_RunFrame( int levelTime ) {
 			{ // zyk: current cycle ended. Go to next one
 				level.duel_tournament_rounds++;
 
-				if (level.duel_tournament_rounds < zyk_duel_tournament_rounds_per_match.integer)
+				if (level.duel_tournament_rounds < rp_duel_tournament_rounds_per_match.integer)
 				{
 					level.duel_matches_done = 0;
 				}
 			}
 
-			if (is_in_boss == qtrue)
-			{
-				level.duel_tournament_timer = level.time + 15000;
-				trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7Waiting for the quest player to finish boss battle!\"");
-			}
-			else if (level.duel_matches_quantity == level.duel_matches_done && level.duel_tournament_mode == 2)
+			if (level.duel_matches_quantity == level.duel_matches_done && level.duel_tournament_mode == 2)
 			{ // zyk: all matches were done. Determine the tournament winner
 				duel_tournament_winner();
 				duel_tournament_end();
@@ -9708,11 +8445,11 @@ void G_RunFrame( int levelTime ) {
 		}
 		else if (level.duel_tournament_mode == 1 && level.duel_tournament_timer < level.time)
 		{ // zyk: Duel tournament begins after validation on number of players
-			if (level.duelists_quantity > 1 && level.duelists_quantity >= zyk_duel_tournament_min_players.integer)
+			if (level.duelists_quantity > 1 && level.duelists_quantity >= rp_duel_tournament_min_players.integer)
 			{ // zyk: must have a minimum of 2 players
 				int zyk_number_of_teams = duel_tournament_generate_teams();
 
-				if (zyk_number_of_teams > 1 && zyk_number_of_teams >= zyk_duel_tournament_min_players.integer)
+				if (zyk_number_of_teams > 1 && zyk_number_of_teams >= rp_duel_tournament_min_players.integer)
 				{
 					level.duel_tournament_mode = 5;
 					level.duel_tournament_timer = level.time + 1500;
@@ -9724,276 +8461,36 @@ void G_RunFrame( int levelTime ) {
 				else
 				{
 					duel_tournament_end();
-					trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Not enough teams or single duelists (minimum of %d). Tournament is over!\"", zyk_duel_tournament_min_players.integer));
+					trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Not enough duelists (minimum of %d). Tournament is over!\"", rp_duel_tournament_min_players.integer));
 				}
 			}
 			else
 			{
 				duel_tournament_end();
-				trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Not enough teams or single duelists (minimum of %d). Tournament is over!\"", zyk_duel_tournament_min_players.integer));
+				trap->SendServerCommand(-1, va("chat \"^3Duel Tournament: ^7Not enough duelists (minimum of %d). Tournament is over!\"", rp_duel_tournament_min_players.integer));
 			}
 		}
 	}
 
-	// zyk: Duel Tournament Leaderboard is calculated here
-	if (level.duel_leaderboard_step > 0 && level.duel_leaderboard_timer < level.time)
-	{
-		if (level.duel_leaderboard_step == 1)
-		{
-			FILE *leaderboard_file = fopen("GalaxyRP/leaderboard.txt", "r");
-
-			if (leaderboard_file != NULL)
-			{ 
-				char content[64];
-				qboolean found_acc = qfalse;
-				int j = 0;
-
-				strcpy(content, "");
-
-				while (found_acc == qfalse && fgets(content, sizeof(content), leaderboard_file) != NULL)
-				{
-					if (content[strlen(content) - 1] == '\n')
-						content[strlen(content) - 1] = '\0';
-
-					if (Q_stricmp(G_NewString(content), G_NewString(level.duel_leaderboard_acc)) == 0)
-					{
-						found_acc = qtrue;
-
-						// zyk: reads player name
-						fgets(content, sizeof(content), leaderboard_file);
-						if (content[strlen(content) - 1] == '\n')
-							content[strlen(content) - 1] = '\0';
-
-						// zyk: reads score
-						fgets(content, sizeof(content), leaderboard_file);
-						if (content[strlen(content) - 1] == '\n')
-							content[strlen(content) - 1] = '\0';
-
-						level.duel_leaderboard_score = atoi(content) + 1; // zyk: sets the new number of tourmanemt victories of this winner
-						level.duel_leaderboard_step = 3;
-						level.duel_leaderboard_timer = level.time + 500;
-						level.duel_leaderboard_index = j; // zyk: current line in the file where this winner is
-					}
-					else
-					{
-						// zyk: reads player name
-						fgets(content, sizeof(content), leaderboard_file);
-						if (content[strlen(content) - 1] == '\n')
-							content[strlen(content) - 1] = '\0';
-
-						// zyk: reads score
-						fgets(content, sizeof(content), leaderboard_file);
-						if (content[strlen(content) - 1] == '\n')
-							content[strlen(content) - 1] = '\0';
-					}
-
-					j++;
-				}
-
-				fclose(leaderboard_file);
-
-				if (found_acc == qfalse)
-				{ // zyk: did not find the player, saves him at the end of the file
-					level.duel_leaderboard_step = 2;
-					level.duel_leaderboard_timer = level.time + 500;
-				}
-			}
-			else
-			{ // zyk: if file does not exist, create it with this player in it
-				level.duel_leaderboard_step = 2;
-				level.duel_leaderboard_timer = level.time + 500;
-			}
-		}
-		else if (level.duel_leaderboard_step == 2)
-		{ // zyk: add the player to the end of the file with 1 tournament win
-			FILE *leaderboard_file = fopen("GalaxyRP/leaderboard.txt", "a");
-			fprintf(leaderboard_file, "%s\n%s\n1\n", level.duel_leaderboard_acc, level.duel_leaderboard_name);
-			fclose(leaderboard_file);
-
-			level.duel_leaderboard_step = 0; // zyk: stop creating the leaderboard
-
-			if (level.duel_leaderboard_add_ally == qtrue)
-			{
-				duel_tournament_generate_leaderboard(G_NewString(level.duel_leaderboard_ally_acc), G_NewString(level.duel_leaderboard_ally_name));
-			}
-		}
-		else if (level.duel_leaderboard_step == 3)
-		{ // zyk: determines the line where this winner must be put in the file
-			if (level.duel_leaderboard_index == 0)
-			{ // zyk: already the first place, go straight to next step
-				level.duel_leaderboard_step = 4;
-				level.duel_leaderboard_timer = level.time + 500;
-			}
-			else
-			{
-				int j = 0;
-				int this_score = 0;
-				char content[64];				
-				FILE *leaderboard_file = fopen("GalaxyRP/leaderboard.txt", "r");
-
-				strcpy(content, "");
-
-				for (j = 0; j < level.duel_leaderboard_index; j++)
-				{
-					// zyk: reads acc name
-					fgets(content, sizeof(content), leaderboard_file);
-					if (content[strlen(content) - 1] == '\n')
-						content[strlen(content) - 1] = '\0';
-
-					// zyk: reads player name
-					fgets(content, sizeof(content), leaderboard_file);
-					if (content[strlen(content) - 1] == '\n')
-						content[strlen(content) - 1] = '\0';
-
-					// zyk: reads score
-					fgets(content, sizeof(content), leaderboard_file);
-					if (content[strlen(content) - 1] == '\n')
-						content[strlen(content) - 1] = '\0';
-
-					this_score = atoi(content);
-					if (level.duel_leaderboard_score > this_score)
-					{ // zyk: winner score is greater than this one, this will be the new index
-						level.duel_leaderboard_index = j;
-						break;
-					}
-				}
-
-				fclose(leaderboard_file);
-
-				level.duel_leaderboard_step = 4;
-				level.duel_leaderboard_timer = level.time + 500;
-			}
-		}
-		else if (level.duel_leaderboard_step == 4)
-		{ // zyk: saving the new leaderboard file with the updated score of the winner
-			FILE *leaderboard_file = fopen("GalaxyRP/leaderboard.txt", "r");
-			FILE *new_leaderboard_file = fopen("GalaxyRP/new_leaderboard.txt", "w");
-			int j = 0;
-			char content[64];
-
-			strcpy(content, "");
-
-			// zyk: saving players before the winner
-			for (j = 0; j < level.duel_leaderboard_index; j++)
-			{
-				// zyk: saving acc name
-				fgets(content, sizeof(content), leaderboard_file);
-				if (content[strlen(content) - 1] == '\n')
-					content[strlen(content) - 1] = '\0';
-				fprintf(new_leaderboard_file, "%s\n", content);
-
-				// zyk: saving player name
-				fgets(content, sizeof(content), leaderboard_file);
-				if (content[strlen(content) - 1] == '\n')
-					content[strlen(content) - 1] = '\0';
-				fprintf(new_leaderboard_file, "%s\n", content);
-
-				// zyk: saving score
-				fgets(content, sizeof(content), leaderboard_file);
-				if (content[strlen(content) - 1] == '\n')
-					content[strlen(content) - 1] = '\0';
-				fprintf(new_leaderboard_file, "%s\n", content);
-			}
-
-			// zyk: saving the winner
-			fprintf(new_leaderboard_file, "%s\n%s\n%d\n", level.duel_leaderboard_acc, level.duel_leaderboard_name, level.duel_leaderboard_score);
-
-			// zyk: saving the other players, except the old line of the winner
-			while (fgets(content, sizeof(content), leaderboard_file) != NULL)
-			{
-				if (content[strlen(content) - 1] == '\n')
-					content[strlen(content) - 1] = '\0';
-
-				if (Q_stricmp(content, level.duel_leaderboard_acc) != 0)
-				{
-					fprintf(new_leaderboard_file, "%s\n", content);
-
-					// zyk: saving player name
-					fgets(content, sizeof(content), leaderboard_file);
-					if (content[strlen(content) - 1] == '\n')
-						content[strlen(content) - 1] = '\0';
-					fprintf(new_leaderboard_file, "%s\n", content);
-
-					// zyk: saving score
-					fgets(content, sizeof(content), leaderboard_file);
-					if (content[strlen(content) - 1] == '\n')
-						content[strlen(content) - 1] = '\0';
-					fprintf(new_leaderboard_file, "%s\n", content);
-				}
-				else
-				{
-					fgets(content, sizeof(content), leaderboard_file);
-					if (content[strlen(content) - 1] == '\n')
-						content[strlen(content) - 1] = '\0';
-
-					fgets(content, sizeof(content), leaderboard_file);
-					if (content[strlen(content) - 1] == '\n')
-						content[strlen(content) - 1] = '\0';
-				}
-			}
-
-			fclose(leaderboard_file);
-			fclose(new_leaderboard_file);
-
-			level.duel_leaderboard_step = 5;
-			level.duel_leaderboard_timer = level.time + 500;
-		}
-		else if (level.duel_leaderboard_step == 5)
-		{ // zyk: renaming new file to leaderboard.txt
-#if defined(__linux__)
-			system("mv -f GalaxyRP/new_leaderboard.txt GalaxyRP/leaderboard.txt");
-#else
-			system("MOVE /Y \"zykmod\\new_leaderboard.txt\" \"zykmod\\leaderboard.txt\"");
-#endif
-
-			level.duel_leaderboard_step = 0; // zyk: stop creating the leaderboard
-
-			if (level.duel_leaderboard_add_ally == qtrue)
-			{
-				duel_tournament_generate_leaderboard(G_NewString(level.duel_leaderboard_ally_acc), G_NewString(level.duel_leaderboard_ally_name));
-			}
-		}
-	}
-
-	// zyk: Guardian of Map abilities
-	if (level.guardian_quest > 0)
-	{
-		gentity_t *npc_ent = &g_entities[level.guardian_quest];
-
-		if (npc_ent && npc_ent->client && npc_ent->health > 0)
-		{		
-			npc_ent->client->ps.stats[STAT_WEAPONS] = level.initial_map_guardian_weapons;
-
-			if (npc_ent->client->pers.hunter_quest_timer < level.time)
-			{
-				if (npc_ent->client->pers.hunter_quest_messages == 0)
-				{
-					healing_area(npc_ent, 5, 5000);
-					trap->SendServerCommand(-1, "chat \"^3Guardian of Map: ^7Healing Area!\"");
-					npc_ent->client->pers.hunter_quest_messages++;
-				}
-				else if (npc_ent->client->pers.hunter_quest_messages == 1)
-				{
-					magic_explosion(npc_ent, 320, 130, 900);
-					trap->SendServerCommand(-1, "chat \"^3Guardian of Map: ^7Magic Explosion!\"");
-					npc_ent->client->pers.hunter_quest_messages++;
-				}
-				else if (npc_ent->client->pers.hunter_quest_messages == 2)
-				{
-					lightning_dome(npc_ent, 70);
-					trap->SendServerCommand(-1, "chat \"^3Guardian of Map: ^7Lightning Dome!\"");
-					npc_ent->client->pers.hunter_quest_messages = 0;
-				}
-
-				npc_ent->client->pers.hunter_quest_timer = level.time + Q_irand(6000, 9000);
-			}
-		}
-	}
+	// GalaxyRP fix: [Quests] the "Guardian of Map abilities" block used to live here, driving periodic
+	// special attacks for the map_guardian NPC spawned by Cmd_GuardianQuest_f. That command was deleted
+	// as unreachable dead code (see the GalaxyRP fix comment in g_cmds.c), and level.guardian_quest --
+	// its only setter -- has been removed along with it, so this block is removed too.
 
 	if (level.load_entities_timer != 0 && level.load_entities_timer < level.time)
 	{ // zyk: loading entities from the file specified in entload command, or the default file
-		char content[2048];
+		char content[ZYK_ENTITY_FILE_LINE_LENGTH];
+		// GalaxyRP fix: [Entity System] one bounded slot per possible key/value pair, each as wide
+		// as the line buffer so nothing a well-formed line can carry gets truncated. static rather
+		// than automatic because the pair of arrays is far too large to put on G_RunFrame's stack.
+		static char zyk_keys[ZYK_MAX_SPAWN_STRING_SLOTS / 2][sizeof(content)];
+		static char zyk_values[ZYK_MAX_SPAWN_STRING_SLOTS / 2][sizeof(content)];
 		FILE *this_file = NULL;
+		// GalaxyRP fix: [Entity System] only so the refusal below can say where in the file it gave up
+		int zyk_lines_read = 0;
+		int zyk_spawned = 0;
+		int zyk_sub_bsp_lines = 0;
+		int zyk_logical_refused = 0;	// GalaxyRP: [Logical Entities] lines skipped for want of a logical slot
 
 		strcpy(content,"");
 
@@ -10002,55 +8499,267 @@ void G_RunFrame( int levelTime ) {
 
 		if (this_file != NULL)
 		{
+			// GalaxyRP fix: [Entity System] this parser trusted the file completely. The two inner loops
+			// copied into char[256] buffers with no bound on the write index and no bound on the read index
+			// either, so a key or value longer than the buffer smashed the stack, and a line containing no
+			// ';' at all ran straight off the end of content[] and kept writing until it happened to find a
+			// ';' somewhere in unrelated stack memory. Both are reachable from an ordinary preset: keys and
+			// values come from /entadd and /entedit arguments, which run to MAX_STRING_CHARS, and any file
+			// can be hand-edited or truncated. It also called G_Spawn() once per line before looking at the
+			// line, so a file of blank lines consumed the entity pool until G_Spawn's "no free entities"
+			// dropped the server.
+			//
+			// The line is now parsed into bounded buffers first and an entity is taken only once the line is
+			// known to be well formed. The buffers are as wide as content[] so nothing a valid preset can
+			// hold is truncated -- a token can never be longer than the line it came from -- and a line that
+			// is malformed, over-long or over-full is logged and skipped instead of being half-applied.
 			while (fgets(content,sizeof(content),this_file) != NULL)
 			{
-				gentity_t *new_ent = G_Spawn();
+				int j = 0; // zyk: the current key/value being used
+				int k = 0; // zyk: current spawn string position
+				int content_len = 0;
+				qboolean line_ok = qtrue;
+				qboolean line_full = qfalse;
+				gentity_t *new_ent = NULL;
 
-				if (content[strlen(content) - 1] == '\n')
-					content[strlen(content) - 1] = '\0';
+				zyk_lines_read++;
+
+				content_len = strlen(content);
+
+				if (content_len > 0 && content[content_len - 1] == '\n')
+				{
+					content[content_len - 1] = '\0';
+					content_len--;
+				}
+				else if (content_len == (int)(sizeof(content) - 1))
+				{ // zyk: no newline and the buffer is full, so fgets split this line -- it is not usable
+					G_LogPrintf("entity file %s: line longer than %d characters, skipped\n", level.load_entities_file, (int)sizeof(content) - 1);
+
+					// zyk: swallow the rest of the split line so its tail is not read as a line of its own
+					while (fgets(content, sizeof(content), this_file) != NULL && strchr(content, '\n') == NULL)
+					{
+					}
+
+					continue;
+				}
+
+				// GalaxyRP fix: [Entity System] a preset written or edited on Windows ends its lines
+				// with CRLF. Read on Linux -- or in binary-identical form on any platform where the
+				// runtime does not translate it -- only the '\n' was stripped, so the '\r' stayed on
+				// the end of the line. The parse loop below then ran one more time, the decoder took
+				// the '\r' as the start of a key and reached the end of the line looking for its ';',
+				// and "key was not terminated" refused the line. Every line, so an admin who moved a
+				// server from Windows to Linux, or who opened a preset in Notepad, lost every entity
+				// in the file and got one log line per entity saying it was malformed.
+				//
+				// It cannot eat real data: zyk_entity_file_encode() writes a carriage return that is
+				// part of a value as the two-character escape "\r", never as a bare one, so a raw
+				// '\r' at the end of a line is a line terminator and nothing else. After the '\n'
+				// test above rather than inside it, so a final line with no newline is handled too.
+				if (content_len > 0 && content[content_len - 1] == '\r')
+				{
+					content[content_len - 1] = '\0';
+					content_len--;
+				}
+
+				if (content_len == 0)
+				{ // zyk: blank line, nothing to spawn
+					continue;
+				}
+
+				// zyk: parse the whole line into the scratch buffers before allocating anything
+				while (k < content_len && line_ok == qtrue)
+				{
+					if (j + 1 >= ZYK_MAX_SPAWN_STRING_SLOTS)
+					{ // zyk: more key/value pairs than one entity can hold
+						line_ok = qfalse;
+						line_full = qtrue;
+						break;
+					}
+
+					// zyk: getting the key
+					// GalaxyRP fix: [Entity System] the two copy loops that used to sit here stopped at the
+					// first ';' in the line, so a ';' inside a value silently became a new key. They now go
+					// through zyk_entity_file_decode(), which stops only at a ';' /entsave did not escape and
+					// turns an escaped semicolon, newline, carriage return and backslash back into the
+					// characters they stand for.
+					k = zyk_entity_file_decode(content, content_len, k, zyk_keys[j / 2], (int)sizeof(zyk_keys[0]));
+
+					if (k >= content_len || content[k] != ';')
+					{ // zyk: key was not terminated -- malformed line
+						line_ok = qfalse;
+						break;
+					}
+					k++;
+
+					// zyk: getting the value
+					k = zyk_entity_file_decode(content, content_len, k, zyk_values[j / 2], (int)sizeof(zyk_values[0]));
+
+					if (k >= content_len || content[k] != ';')
+					{ // zyk: value was not terminated -- malformed line
+						line_ok = qfalse;
+						break;
+					}
+					k++;
+
+					j += 2;
+				}
+
+				if (line_ok == qfalse)
+				{
+					if (line_full == qtrue)
+						G_LogPrintf("entity file %s: more than %d key/value pairs on one line, skipped\n", level.load_entities_file, ZYK_MAX_SPAWN_STRING_SLOTS / 2);
+					else
+						G_LogPrintf("entity file %s: malformed line, skipped\n", level.load_entities_file);
+
+					continue;
+				}
+
+				if (j == 0)
+				{ // zyk: nothing on this line to spawn
+					continue;
+				}
+
+				// GalaxyRP fix: [Entity System] an npc_spawner naming a vehicle. /entsave used to write
+				// every live NPC as one of these, vehicles included, and the NPC loader always refuses a
+				// vehicle type that does not come from an NPC_Vehicle spawner -- two red console errors
+				// and nothing spawned. /entsave no longer writes them; presets saved before still hold
+				// them, so skip them here with one line in the log instead.
+				{
+					const char *vehicle_type = zyk_entity_line_vehicle_npc_spawner(zyk_keys, zyk_values, j);
+
+					if (vehicle_type)
+					{
+						G_LogPrintf("entity file %s: line %d is an npc_spawner for vehicle %s, skipped "
+							"(vehicles only spawn from NPC_Vehicle; re-save the preset to drop the line)\n",
+							level.load_entities_file, zyk_lines_read, vehicle_type);
+						continue;
+					}
+				}
+
+				// GalaxyRP fix: [Entity System] a line /entsave wrote, before it learned not to, for an entity
+				// a misc_bsp's sub-BSP spawned. Every such entity carries the BSPInstanceID key
+				// HandleEntityAdjustment() gives it. The preset's misc_bsp line rebuilds those entities
+				// itself now (see SP_misc_bsp), and this copy could not load right anyway -- its "*N" model
+				// counts in the sub-BSP's numbering -- so loading it as well would put two of each in.
+				{
+					int m;
+					qboolean sub_bsp_line = qfalse;
+
+					for (m = 0; m < j; m += 2)
+					{
+						if (Q_stricmp(zyk_keys[m / 2], "BSPInstanceID") == 0)
+						{
+							sub_bsp_line = qtrue;
+							break;
+						}
+					}
+
+					if (sub_bsp_line)
+					{
+						zyk_sub_bsp_lines++;
+						continue;
+					}
+				}
+
+				// GalaxyRP fix: [Entity System] a good line is not enough on its own. This loop takes an
+				// entity per line and nothing bounds the number of lines, so it was the one player-driven
+				// spawn path with no check at all -- /entadd, /npc, npc_spawner and the asteroid field all
+				// ask first. What it walks into is G_Spawn's trap->Error(ERR_DROP), which on a dedicated
+				// server ends the process rather than dropping a player (see G_Spawn in g_utils.c).
+				//
+				// /entload frees the map's own entities before it reads the file, so a preset that fit once
+				// fits again -- but the default.txt loaded automatically at map start frees nothing, it adds
+				// to everything the map already spawned, and no preset is bounded by anything once it has
+				// been hand-edited.
+				//
+				// The margin is /entadd's, for /entadd's reason: some classes allocate more than the one
+				// entity asked for -- func_plat builds its own trigger, an npc_spawner with no targetname
+				// spawns its NPC immediately. Stop reading rather than skipping the line: the table only
+				// fills further from here, so every later line would be refused too, and a preset half
+				// applied from the front is easier to reason about than one with holes through it.
+				//
+				// GalaxyRP fix: [Logical Entities] asked of the region the line's classname leads to, as
+				// /entadd asks (RP_SpawnRouteHasRoom): this only looked at the networked table, and a
+				// preset of logical lines walked straight into G_SpawnLogical()'s ERR_DROP -- on every
+				// map load, for a default.txt. A logical refusal skips the line and reads on, since the
+				// networked lines after it may still fit; a networked one stops the file as before.
+				{
+					rpSpawnRoute_t route;
+					int m;
+
+					RP_SpawnRouteInit(&route);
+					for (m = 0; m < j; m += 2)
+					{
+						RP_SpawnRouteNoteKey(&route, zyk_keys[m / 2], zyk_values[m / 2]);
+					}
+
+					if (RP_SpawnRouteHasRoom(&route) == qfalse)
+					{
+						if (RP_SpawnRouteIsLogical(&route))
+						{
+							if (zyk_logical_refused == 0)
+							{
+								G_LogPrintf("entity file %s: line %d (%s) skipped -- %d logical entity slots free, "
+									"%d of them reserved. Every later logical line is skipped too.\n",
+									level.load_entities_file, zyk_lines_read, route.classname, G_FreeLogicalEntityCount(),
+									ZYK_LOGICAL_ENTITY_RESERVE);
+							}
+							zyk_logical_refused++;
+							continue;
+						}
+
+						G_LogPrintf("entity file %s: stopped at line %d after %d entities -- %d entity slots "
+							"free, %d of them reserved. The rest of the file was not loaded.\n",
+							level.load_entities_file, zyk_lines_read, zyk_spawned, G_FreeEntityCount(),
+							ZYK_ENTITY_RESERVE);
+						break;
+					}
+
+					// GalaxyRP fix: [Entity System] and room in the game's memory pool, which every line's
+					// keys and values go into twice (the record and the spawn) and which is never freed
+					// within a map: G_Alloc() ends the server when it runs out, and a preset is the one
+					// place that reaches it unattended, at every map start. The line's own length bounds
+					// its decoded pairs. Stopped, as above: the pool only fills from here.
+					if (G_AllocRoomFor((int)strlen(content) * 2 + 64) == qfalse)
+					{
+						G_LogPrintf("entity file %s: stopped at line %d after %d entities -- %d bytes free in the "
+							"game's memory pool, %d of them reserved. The rest of the file was not loaded.\n",
+							level.load_entities_file, zyk_lines_read, zyk_spawned, G_AllocRemaining(), ZYK_ALLOC_RESERVE);
+						break;
+					}
+
+					// zyk: the line is good, so now take an entity for it
+					// GalaxyRP: [Logical Entities] in the region its classname belongs to, decided from
+					// the pairs already parsed above -- the same rule the map loader and /entadd use.
+					new_ent = RP_SpawnForRoute(&route);
+				}
 
 				if (new_ent)
 				{
-					int j = 0; // zyk: the current key/value being used
-					int k = 0; // zyk: current spawn string position
+					int m = 0;
 
-					while (content[k] != '\0')
+					zyk_spawned++;
+
+					while (m < j)
 					{
-						int l = 0;
-						char zyk_key[256];
-						char zyk_value[256];
-
-						// zyk: getting the key
-						while (content[k] != ';')
-						{ 
-							zyk_key[l] = content[k];
-
-							l++;
-							k++;
-						}
-						zyk_key[l] = '\0';
-						k++;
-
-						// zyk: getting the value
-						l = 0;
-						while (content[k] != ';')
-						{
-							zyk_value[l] = content[k];
-
-							l++;
-							k++;
-						}
-						zyk_value[l] = '\0';
-						k++;
-
 						// zyk: copying the key and value to the spawn string array
-						level.zyk_spawn_strings[new_ent->s.number][j] = G_NewString(zyk_key);
-						level.zyk_spawn_strings[new_ent->s.number][j + 1] = G_NewString(zyk_value);
+						// GalaxyRP fix: [Entity System] G_NewString here would translate a backslash-n a
+						// second time. zyk_entity_file_decode() has already resolved every escape, so a
+						// backslash that reaches this point is one the value really contains and must be
+						// stored as-is -- hence the copy that does not translate.
+						level.zyk_spawn_strings[new_ent->s.number][m] = G_NewStringRaw(zyk_keys[m / 2]);
+						level.zyk_spawn_strings[new_ent->s.number][m + 1] = G_NewStringRaw(zyk_values[m / 2]);
 
-						j += 2;
+						m += 2;
 					}
 
 					level.zyk_spawn_strings_values_count[new_ent->s.number] = j;
+
+					// GalaxyRP: [Entity System] a line that is one of the map's own entities, as /entsave
+					// wrote it, is still the map's: /entcut and /entrotate leave it alone. See
+					// RP_MarkMapEntities() in g_entgrab.c.
+					new_ent->rpMapEntity = RP_RecordIsMapEntity(new_ent->s.number);
 
 					// zyk: spawns the entity
 					zyk_main_spawn_entity(new_ent);
@@ -10058,16 +8767,45 @@ void G_RunFrame( int levelTime ) {
 			}
 
 			fclose(this_file);
+
+			if (zyk_sub_bsp_lines > 0)
+			{
+				G_LogPrintf("entity file %s: %d lines saved from a misc_bsp's sub-BSP skipped -- the misc_bsp "
+					"rebuilds those entities itself. Re-save the preset to drop the lines.\n",
+					level.load_entities_file, zyk_sub_bsp_lines);
+			}
+
+			if (zyk_logical_refused > 0)
+			{
+				G_LogPrintf("entity file %s: %d lines skipped for want of a logical entity slot (%d spawned).\n",
+					level.load_entities_file, zyk_logical_refused, zyk_spawned);
+			}
 		}
+
+		// GalaxyRP fix: [Logical Entities] the preset just respawned every entity through
+		// RP_SpawnForRoute(), so a trigger_shipboundary's marker is back in the logical region --
+		// where handing its number to the engine ends the server process. Promote them again, as
+		// the map spawn pass does. Above G_FindTeams() for the same reason it is above it there:
+		// that function builds teammaster/teamchain POINTER chains and moves a slave's targetname
+		// onto its master, so a free-and-reallocate has to happen first. See g_spawn.c.
+		RP_PromoteShipboundaryTargets();
 
 		// zyk: CTF need to have the flags spawned again when an entity file is loaded
 		// general initialization
 		G_FindTeams();
+		RP_ToggleMoverTeamsMatch();	// GalaxyRP: [SP Maps] see G_InitGame()
 
 		// make sure we have flags for CTF, etc
 		if( level.gametype >= GT_TEAM ) {
 			G_CheckTeamItems();
 		}
+
+		// GalaxyRP fix: [Entity System] the load above started with every non-client entity freed,
+		// the helper that runs the world's spawnscript among them, and no preset carries that helper
+		// back. Start the script again, as the map loader does, so a map that drives its spawners from
+		// it (the fighters on a siege space map) behaves after a preset load as it does at map start.
+		// See G_StartWorldSpawnScript() in g_spawn.c.
+		G_StartWorldSpawnScript( qtrue );
 
 		level.load_entities_timer = 0;
 	}
@@ -10079,6 +8817,15 @@ void G_RunFrame( int levelTime ) {
 	for (i=0 ; i<level.num_entities ; i++, ent++) {
 		if ( !ent->inuse ) {
 			continue;
+		}
+
+		// GalaxyRP: [ICARUS] a voice line that has ended completes the script task waiting on it
+		RP_IcarusSoundCheck( ent );
+
+		// GalaxyRP: [Scripts] a map model animating under SET_STARTFRAME/ENDFRAME steps a frame
+		if ( ent->rpAnimating )
+		{
+			RP_Animate( ent );
 		}
 
 		// clear events that are too old
@@ -10170,8 +8917,6 @@ void G_RunFrame( int levelTime ) {
 			continue;
 		}
 
-		clear_special_power_effect(ent);
-
 		if ( i < MAX_CLIENTS )
 		{
 			G_CheckClientTimeouts ( ent );
@@ -10257,14 +9002,8 @@ void G_RunFrame( int levelTime ) {
 
 				if (ent->client->sess.amrpgmode == 2)
 				{ // zyk: RPG Mode jetpack skill. Each level decreases fuel debounce
-					if (ent->client->pers.rpg_class == 2)
-					{ // zyk: Bounty Hunter can have a more efficient jetpack
-						jetpack_debounce_amount -= ((ent->client->pers.skill_levels[34] * 3) + (ent->client->pers.skill_levels[55]));
-					}
-					else
-					{
-						jetpack_debounce_amount -= (ent->client->pers.skill_levels[34] * 3);
-					}
+					// GalaxyRP fix: [RPG Class] Bounty Hunter jetpack efficiency bonus removed — rpg_class is permanently 0
+					jetpack_debounce_amount -= (ent->client->pers.skill_levels[34] * 3);
 
 					if (ent->client->pers.skill_levels[34] == 3) // zyk: Jetpack Upgrade decreases fuel usage
 						jetpack_debounce_amount -= 2;
@@ -10277,13 +9016,7 @@ void G_RunFrame( int levelTime ) {
 
 				ent->client->pers.jetpack_fuel -= jetpack_debounce_amount;
 
-				if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && ent->client->pers.jetpack_fuel <= 0 && 
-					ent->client->pers.magic_power >= 10 && ent->client->pers.skill_levels[55] > 0)
-				{ // zyk: Magic Master Improvements skill allows recovering jetpack fuel with magic
-					ent->client->pers.jetpack_fuel = (100 * ent->client->pers.skill_levels[55]);
-					ent->client->pers.magic_power -= 10;
-					send_rpg_events(2000);
-				}
+				// GalaxyRP fix: [RPG Class] Magic Master Improvements jetpack-fuel-from-magic recovery removed — rpg_class is permanently 0
 
 				if (ent->client->pers.jetpack_fuel <= 0)
 				{ // zyk: out of fuel. Turn jetpack off
@@ -10299,8 +9032,8 @@ void G_RunFrame( int levelTime ) {
 			if (level.duel_tournament_mode == 4)
 			{
 				if (duel_tournament_is_duelist(ent) == qtrue && 
-					!(ent->client->pers.player_statuses & (1 << 27)) && // zyk: did not die in his duel yet
-					Distance(ent->client->ps.origin, level.duel_tournament_origin) > (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0) &&
+					!(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS)) && // zyk: did not die in his duel yet
+					Distance(ent->client->ps.origin, level.duel_tournament_origin) > (DUEL_TOURNAMENT_ARENA_SIZE * rp_duel_tournament_arena_scale.value / 100.0) &&
 					ent->health > 0)
 				{ // zyk: duelists cannot leave the arena after duel begins
 					ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
@@ -10308,9 +9041,9 @@ void G_RunFrame( int levelTime ) {
 					player_die(ent, ent, ent, 100000, MOD_SUICIDE);
 				}
 				else if ((duel_tournament_is_duelist(ent) == qfalse || 
-					(level.duel_players[ent->s.number] != -1 && ent->client->pers.player_statuses & (1 << 27))) && // zyk: not a duelist or died in his duel
+					(level.duel_players[ent->s.number] != -1 && ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DUEL_TOURNAMENT_LOSS))) && // zyk: not a duelist or died in his duel
 					ent->client->sess.sessionTeam != TEAM_SPECTATOR && 
-					Distance(ent->client->ps.origin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0) &&
+					Distance(ent->client->ps.origin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * rp_duel_tournament_arena_scale.value / 100.0) &&
 					ent->health > 0)
 				{ // zyk: other players cannot enter the arena
 					ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
@@ -10321,160 +9054,24 @@ void G_RunFrame( int levelTime ) {
 
 			if (level.melee_mode == 2 && level.melee_players[ent->s.number] != -1)
 			{ // zyk: Melee Battle
-				if (ent->client->ps.origin[2] < level.melee_mode_origin[2])
-				{ // zyk: validating if player fell of the catwalk
-					ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
-					player_die(ent, ent, ent, 100000, MOD_SUICIDE);
-				}
-				else if (Distance(ent->client->ps.origin, level.melee_mode_origin) > 1000.0)
-				{ // zyk: validating if player is too far from the platform
+				// GalaxyRP fix: [Death System] a downed combatant inside the arena is treated as
+				// one who fell off it, holding melee_mode_quantity above 1 until the ten-minute
+				// timeout otherwise. player_die() clears the downed state on its way through.
+				// DAJ_RP: [Melee Battle] downed, fallen off or too far away: RP_MeleeOffRing() above,
+				// which now measures "fallen off" against the ring's top.
+				if (RP_MeleeOffRing(ent))
+				{
 					ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
 					player_die(ent, ent, ent, 100000, MOD_SUICIDE);
 				}
 			}
 
-			if (ent->client->pers.race_position > 0)
-			{ // zyk: Race Mode management
-				if (level.race_mode == 3)
-				{ // zyk: if race already started
-					if (ent->client->ps.m_iVehicleNum != level.race_mode_vehicle[ent->client->pers.race_position - 1] && ent->health > 0)
-					{ // zyk: if player loses his vehicle, he loses the race
-						trap->SendServerCommand(-1, va("chat \"^3Race System: ^7%s ^7lost his vehicle and so he lost the race!\n\"", ent->client->pers.netname));
-
-						ent->client->pers.race_position = 0;
-
-						try_finishing_race();
-					}
-					else if (level.race_map == 1)
-					{ // zyk: t2_trip map
-						if ((int)ent->client->ps.origin[0] > 3200 && (int)ent->client->ps.origin[0] < 4770 && (int)ent->client->ps.origin[1] > -11136 && (int)ent->client->ps.origin[1] < -9978)
-						{ // zyk: player reached the finish line
-							level.race_last_player_position++;
-							ent->client->pers.race_position = 0;
-
-							if (level.race_last_player_position == 1)
-							{ // zyk: this player won the race. Send message to everyone and give his prize
-								if (ent->client->sess.amrpgmode == 2)
-								{ // zyk: give him credits
-									add_credits(ent, 2000);
-									save_account(ent, qtrue);
-									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
-									trap->SendServerCommand(-1, va("chat \"^3Race System: ^7Winner: %s^7 - Prize: 2000 Credits!\"", ent->client->pers.netname));
-								}
-							}
-							else if (level.race_last_player_position == 2)
-							{ // zyk: second place
-								trap->SendServerCommand(-1, va("chat \"^3Race System: ^72nd Place - %s\"", ent->client->pers.netname));
-							}
-							else if (level.race_last_player_position == 3)
-							{ // zyk: third place
-								trap->SendServerCommand(-1, va("chat \"^3Race System: ^73rd Place - %s\"", ent->client->pers.netname));
-							}
-							else
-							{
-								trap->SendServerCommand(-1, va("chat \"^3Race System: ^7%dth Place - %s\"", level.race_last_player_position, ent->client->pers.netname));
-							}
-
-							try_finishing_race();
-						}
-						else if ((int)ent->client->ps.origin[0] > -14795 && (int)ent->client->ps.origin[0] < -13830 && (int)ent->client->ps.origin[1] > -11483 && (int)ent->client->ps.origin[1] < -8474)
-						{ // zyk: teleporting to get through the wall
-							vec3_t origin, yaw;
-
-							origin[0] = -14785;
-							origin[1] = -9252;
-							origin[2] = 1848;
-
-							yaw[0] = 0.0f;
-							yaw[1] = 179.0f;
-							yaw[2] = 0.0f;
-
-							zyk_TeleportPlayer(&g_entities[ent->client->ps.m_iVehicleNum], origin, yaw);
-						}
-						else if ((int)ent->client->ps.origin[0] > -18845 && (int)ent->client->ps.origin[0] < -17636 && (int)ent->client->ps.origin[1] > -7530 && (int)ent->client->ps.origin[1] < -6761)
-						{ // zyk: teleporting to get through the door
-							vec3_t origin, yaw;
-
-							origin[0] = -18248;
-							origin[1] = -6152;
-							origin[2] = 1722;
-
-							yaw[0] = 0.0f;
-							yaw[1] = 90.0f;
-							yaw[2] = 0.0f;
-
-							zyk_TeleportPlayer(&g_entities[ent->client->ps.m_iVehicleNum], origin, yaw);
-						}
-					}
-					else if (level.race_map == 2)
-					{ // zyk: t3_stamp map
-						if ((int)ent->client->ps.origin[1] > -174 && (int)ent->client->ps.origin[2] < -170)
-						{ // zyk: player reached the finish line
-							level.race_last_player_position++;
-							ent->client->pers.race_position = 0;
-
-							if (level.race_last_player_position == 1)
-							{ // zyk: this player won the race. Send message to everyone and give his prize
-								if (ent->client->sess.amrpgmode == 2)
-								{ // zyk: give him credits
-									add_credits(ent, 500);
-									save_account(ent, qtrue);
-									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
-									trap->SendServerCommand(-1, va("chat \"^3Race System: ^7Winner: %s^7 - Prize: 500 Credits!\"", ent->client->pers.netname));
-								}
-							}
-							else if (level.race_last_player_position == 2)
-							{ // zyk: second place
-								trap->SendServerCommand(-1, va("chat \"^3Race System: ^72nd Place - %s\"", ent->client->pers.netname));
-							}
-							else if (level.race_last_player_position == 3)
-							{ // zyk: third place
-								trap->SendServerCommand(-1, va("chat \"^3Race System: ^73rd Place - %s\"", ent->client->pers.netname));
-							}
-							else
-							{
-								trap->SendServerCommand(-1, va("chat \"^3Race System: ^7%dth Place - %s\"", level.race_last_player_position, ent->client->pers.netname));
-							}
-
-							try_finishing_race();
-						}
-					}
-				}
-				else if (level.race_map == 1 && (int)ent->client->ps.origin[0] < -4536)
-				{ // zyk: player cant start racing before the countdown timer
-					ent->client->pers.race_position = 0;
-					trap->SendServerCommand(-1, va("chat \"^3Race System: ^7%s ^7lost for trying to race before it starts!\n\"", ent->client->pers.netname));
-
-					try_finishing_race();
-				}
-				else if (level.race_map == 2 && (int)ent->client->ps.origin[1] < 1230)
-				{ // zyk: player cant start racing before the countdown timer
-					ent->client->pers.race_position = 0;
-					trap->SendServerCommand(-1, va("chat \"^3Race System: ^7%s ^7lost for trying to race before it starts!\n\"", ent->client->pers.netname));
-
-					try_finishing_race();
-				}
-			}
-
-			quest_power_events(ent);
 			poison_dart_hits(ent);
 
-			// zyk: tutorial, which teaches the player the RPG Mode features
-			if (ent->client->pers.player_statuses & (1 << 25) && ent->client->pers.tutorial_timer < level.time)
-			{
-				if (ent->client->pers.tutorial_step > 1)
-				{ // zyk: after last message, tutorial ends
-					ent->client->pers.player_statuses &= ~(1 << 25);
-				}
-				else
-				{
-					zyk_text_message(ent, va("tutorial/%d", ent->client->pers.tutorial_step), qtrue, qfalse);
-				}
-
-				// zyk: interval between messages
-				ent->client->pers.tutorial_step++;
-				ent->client->pers.tutorial_timer = level.time + 7000;
-			}
+			// GalaxyRP fix: [Dead Code] the RPG tutorial stepper used to be here, paced by
+			// pers.tutorial_timer and gated on PLAYER_STATUS_RPG_TUTORIAL -- a bit nothing set since
+			// the account-creation path that started the tutorial went. zyk_text_message(), whose only
+			// caller it was, went with it.
 
 			if (ent->client->sess.amrpgmode == 2 && ent->client->sess.sessionTeam != TEAM_SPECTATOR)
 			{ // zyk: RPG Mode skills and quests actions. Must be done if player is not at Spectator Mode
@@ -10484,177 +9081,21 @@ void G_RunFrame( int levelTime ) {
 					ent->client->ps.weaponTime = (weaponData[WP_DISRUPTOR].fireTime * 1.0)/1.4;
 				}
 
-				// zyk: Stealth Attacker using his Unique Skill, increase firerate of disruptor
-				if (ent->client->ps.weapon == WP_DISRUPTOR && ent->client->pers.rpg_class == 5 && ent->client->pers.skill_levels[38] > 0 && 
-					ent->client->pers.unique_skill_duration > level.time && ent->client->ps.weaponTime > (weaponData[WP_DISRUPTOR].fireTime * 1.0)/3.0)
-				{
-					ent->client->ps.weaponTime = (weaponData[WP_DISRUPTOR].fireTime * 1.0)/3.0;
-				}
+				// GalaxyRP fix: [RPG Class] Stealth Attacker Unique Skill disruptor firerate bonus removed — rpg_class is permanently 0
 
 				if (ent->client->ps.weapon == WP_REPEATER && ent->client->pers.skill_levels[23] == 2 && ent->client->ps.weaponTime > weaponData[WP_REPEATER].altFireTime/2)
 				{
 					ent->client->ps.weaponTime = weaponData[WP_REPEATER].altFireTime/2;
 				}
 
-				// zyk: Monk class has a faster melee fireTime
-				if (ent->client->pers.rpg_class == 4 && ent->client->ps.weapon == WP_MELEE && ent->client->pers.skill_levels[55] > 0 && 
-					ent->client->ps.weaponTime > (weaponData[WP_MELEE].fireTime * 1.8)/(ent->client->pers.skill_levels[55] + 1))
-				{
-					ent->client->ps.weaponTime = (weaponData[WP_MELEE].fireTime * 1.8)/(ent->client->pers.skill_levels[55] + 1);
-				}
-				else if (ent->client->pers.rpg_class == 8 && ent->client->pers.unique_skill_duration > level.time && ent->client->pers.player_statuses & (1 << 21) &&
-					ent->client->ps.weaponTime > (weaponData[WP_MELEE].fireTime * 0.8))
-				{ // zyk: Magic Master Faster Bolt ability makes melee faster to shoot bolts faster
-					ent->client->ps.weaponTime = weaponData[WP_MELEE].fireTime * 0.8;
-				}
+				// GalaxyRP fix: [RPG Class] Monk faster-melee and Magic Master Faster Bolt fireTime bonuses removed — rpg_class is permanently 0
 
 				if (ent->client->pers.flame_thrower > level.time && ent->client->cloakDebReduce < level.time)
 				{ // zyk: fires the flame thrower
 					Player_FireFlameThrower(ent);
 				}
 
-				if (ent->client->pers.rpg_class == 2)
-				{
-					// zyk: if the bounty hunter still has sentries, give the item to him
-					if (ent->client->pers.bounty_hunter_sentries > 0)
-						ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SENTRY_GUN);
-
-					if (ent->client->pers.thermal_vision == qtrue && ent->client->ps.zoomMode == 0)
-					{ // zyk: if the bounty hunter stops using binoculars, stop the Thermal Vision
-						ent->client->pers.thermal_vision = qfalse;
-						ent->client->ps.fd.forcePowersActive &= ~(1 << FP_SEE);
-						ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SEE);
-						ent->client->ps.fd.forcePowerLevel[FP_SEE] = FORCE_LEVEL_0;
-
-						ent->client->pers.thermal_vision_cooldown_time = level.time + 300;
-					}
-					else if (ent->client->pers.thermal_vision == qfalse && ent->client->ps.zoomMode == 2 && ent->client->pers.secrets_found & (1 << 1))
-					{ // zyk: Bounty Hunter with Upgrade, activate the Thermal Vision
-						ent->client->pers.thermal_vision = qtrue;
-						ent->client->ps.fd.forcePowersKnown |= (1 << FP_SEE);
-						ent->client->ps.fd.forcePowerLevel[FP_SEE] = FORCE_LEVEL_3;
-						ent->client->ps.fd.forcePowersActive |= (1 << FP_SEE);
-
-						// zyk: adds some time to allow deactivating the Binoculars. Force Sense is active, so using this variable to add the cooldown time
-						ent->client->ps.forceAllowDeactivateTime = level.time + 300;
-
-						ent->client->pers.thermal_vision_cooldown_time = level.time + 300;
-					}
-
-					if (ent->client->pers.secrets_found & (1 << 1) && ent->client->ps.weapon == WP_BRYAR_PISTOL && ent->client->ps.weaponTime > (weaponData[WP_BRYAR_PISTOL].fireTime * 0.3))
-					{ // zyk: Bounty Hunter Upgrade makes his pistol shoot faster
-						ent->client->ps.weaponTime = weaponData[WP_BRYAR_PISTOL].fireTime * 0.3;
-					}
-				}
-				else if (ent->client->pers.rpg_class == 4 && 
-						(ent->client->pers.player_statuses & (1 << 22) || ent->client->pers.player_statuses & (1 << 23)) &&
-						 ent->client->pers.monk_unique_timer < level.time)
-				{ // zyk: Monk unique abilities
-					int player_it = 0;
-					int push_scale = 100;
-
-					for (player_it = 0; player_it < level.num_entities; player_it++)
-					{
-						gentity_t *player_ent = &g_entities[player_it];
-
-						if (player_ent && player_ent->client && ent != player_ent &&
-							zyk_unique_ability_can_hit_target(ent, player_ent) == qtrue)
-						{ // zyk: can only hit the target if he is not knocked down yet
-							if (ent->client->pers.player_statuses & (1 << 22) && 
-								Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 80 &&
-								player_ent->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN)
-							{ // zyk: Spin Kick
-								vec3_t dir;
-
-								VectorSubtract(player_ent->client->ps.origin, ent->client->ps.origin, dir);
-								VectorNormalize(dir);
-
-								G_Damage(player_ent, ent, ent, NULL, NULL, 25, 0, MOD_MELEE);
-
-								// zyk: removing emotes to prevent exploits
-								if (player_ent->client->pers.player_statuses & (1 << 1))
-								{
-									player_ent->client->pers.player_statuses &= ~(1 << 1);
-									player_ent->client->ps.forceHandExtendTime = level.time;
-								}
-
-								player_ent->client->ps.velocity[0] = dir[0] * push_scale;
-								player_ent->client->ps.velocity[1] = dir[1] * push_scale;
-								player_ent->client->ps.velocity[2] = 250;
-
-								player_ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-								player_ent->client->ps.forceHandExtendTime = level.time + 1000;
-								player_ent->client->ps.forceDodgeAnim = 0;
-								player_ent->client->ps.quickerGetup = qtrue;
-
-								G_Sound(ent, CHAN_AUTO, G_SoundIndex(va("sound/weapons/melee/punch%d", Q_irand(1, 4))));
-							}
-							else if (ent->client->pers.player_statuses & (1 << 23) && 
-									 ent->health > 0 && 
-									 Distance(ent->client->ps.origin, player_ent->client->ps.origin) < 300)
-							{ // zyk: Meditation Drain
-								int heal_amount = 8;
-
-								G_Damage(player_ent, ent, ent, NULL, NULL, heal_amount/3, 0, MOD_MELEE);
-
-								player_ent->client->ps.electrifyTime = level.time + 1000;
-
-								if ((ent->health + heal_amount) < ent->client->pers.max_rpg_health)
-								{
-									ent->health += heal_amount;
-								}
-								else if (ent->health < ent->client->pers.max_rpg_health)
-								{
-									ent->health = ent->client->pers.max_rpg_health;
-								}
-								else if ((ent->client->ps.stats[STAT_ARMOR] + heal_amount) < ent->client->pers.max_rpg_shield)
-								{
-									ent->client->ps.stats[STAT_ARMOR] += heal_amount;
-								}
-								else
-								{
-									ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
-								}
-							}
-						}
-					}
-
-					ent->client->pers.monk_unique_timer = level.time + 200;
-				}
-				else if (ent->client->pers.rpg_class == 5)
-				{ // zyk: Stealth Attacker abilities
-					if (ent->client->pers.player_statuses & (1 << 23) && ent->client->pers.monk_unique_timer < level.time)
-					{ // zyk: Aimed Shot ability. Fires the full charged sniper shot
-						if (ent->health > 0)
-						{
-							WP_DisruptorAltFire(ent);
-						}
-
-						ent->client->pers.monk_unique_timer = level.time + 2000;
-					}
-
-					if (ent->client->pers.thermal_vision == qtrue && ent->client->ps.zoomMode == 0)
-					{ // zyk: if the stealth attacker stops using sniper scope, stop the Thermal Detector
-						ent->client->pers.thermal_vision = qfalse;
-						ent->client->ps.fd.forcePowersActive &= ~(1 << FP_SEE);
-						ent->client->ps.fd.forcePowersKnown &= ~(1 << FP_SEE);
-						ent->client->ps.fd.forcePowerLevel[FP_SEE] = FORCE_LEVEL_0;
-					}
-					else if (ent->client->pers.thermal_vision == qfalse && ent->client->ps.zoomMode == 1 && ent->client->pers.secrets_found & (1 << 7))
-					{ // zyk: Stealth Attacker with Upgrade, activate the Thermal Detector
-						ent->client->pers.thermal_vision = qtrue;
-						ent->client->ps.fd.forcePowersKnown |= (1 << FP_SEE);
-						ent->client->ps.fd.forcePowerLevel[FP_SEE] = FORCE_LEVEL_1;
-						ent->client->ps.fd.forcePowersActive |= (1 << FP_SEE);
-					}
-				}
-				else if (ent->client->pers.rpg_class == 6 && ent->client->pers.player_statuses & (1 << 22) && ent->client->pers.vertical_dfa_timer > 0 &&
-						ent->client->pers.vertical_dfa_timer < level.time && ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
-				{ // zyk: Duelist abilities. Vertical DFA should appear when player hits the ground
-					ent->client->pers.vertical_dfa_timer = 0;
-
-					zyk_vertical_dfa_effect(ent);
-				}
+				// GalaxyRP fix: [RPG Class] Bounty Hunter/Monk/Stealth Attacker/Duelist rpg_class-gated ability dispatch removed — rpg_class is permanently 0
 			}
 
 			if (level.gametype == GT_SIEGE &&
@@ -10690,6 +9131,12 @@ void G_RunFrame( int levelTime ) {
 		else if (ent->s.eType == ET_NPC)
 		{
 			int j;
+
+			// GalaxyRP fix: [Shield] NPCs never reach ClientEndFrame(), which published their shield
+			// ceiling -- so it stayed 0 and BG_CanItemBeGrabbed() refused them every shield. Before they
+			// think (and so move and touch items) below.
+			G_PublishMaxArmor( ent );
+
 			// turn off any expired powerups
 			for ( j = 0 ; j < MAX_POWERUPS ; j++ ) {
 				if ( ent->client->ps.powerups[ j ] < level.time ) {
@@ -10701,17 +9148,19 @@ void G_RunFrame( int levelTime ) {
 			WP_SaberPositionUpdate(ent, &ent->client->pers.cmd);
 			WP_SaberStartMissileBlockCheck(ent, &ent->client->pers.cmd);
 
-			quest_power_events(ent);
 			poison_dart_hits(ent);
 
-			if (ent->client->pers.universe_quest_artifact_holder_id != -1 && ent->health > 0 && ent->client->ps.powerups[PW_FORCE_BOON] < (level.time + 1000))
-			{ // zyk: artifact holder npcs. Keep their artifact (force boon) active
-				ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 1000;
-			}
+			// GalaxyRP: [Space] leaving a trigger_space, and suffocating in one, for NPCs -- the player
+			// half is in the i < MAX_CLIENTS branch above. See RP_NpcSpaceFrame() in g_trigger.c.
+			RP_NpcSpaceFrame(ent);
+
+			// GalaxyRP fix: [Quests] a per-frame top-up sat here that kept PW_FORCE_BOON alive on
+			// "artifact holder" npcs. It was gated on universe_quest_artifact_holder_id != -1, and the only
+			// value ever assigned to that field anywhere in the tree was -1, so the test never passed.
 
 			// zyk: npcs cannot enter the Duel Tournament arena
 			if (level.duel_tournament_mode == 4 && 
-				Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+				Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * rp_duel_tournament_arena_scale.value / 100.0))
 			{
 				ent->health = 0;
 				ent->client->ps.stats[STAT_HEALTH] = 0;
@@ -10722,1864 +9171,65 @@ void G_RunFrame( int levelTime ) {
 			}
 
 			// zyk: abilities of custom quest npcs
-			if (ent->client->pers.player_statuses & (1 << 28) && ent->health > 0)
-			{
-				// zyk: magic powers
-				if (ent->client->pers.light_quest_timer < level.time)
-				{
-					int random_number = Q_irand(0, 29);
-
-					if (ent->client->sess.selected_left_special_power & (1 << MAGIC_HEALING_WATER) && random_number == 0)
-					{
-						healing_water(ent, 120);
-					}
-					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_WATER_SPLASH) && random_number == 1)
-					{
-						water_splash(ent, 400, 15);
-					}
-					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_WATER_ATTACK) && random_number == 2)
-					{
-						water_attack(ent, 500, 40);
-					}
-					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_EARTHQUAKE) && random_number == 3)
-					{
-						earthquake(ent, 2000, 300, 500);
-					}
-					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_ROCKFALL) && random_number == 4)
-					{
-						rock_fall(ent, 500, 40);
-					}
-					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_SHIFTING_SAND) && random_number == 5)
-					{
-						shifting_sand(ent, 1000);
-					}
-					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_SLEEPING_FLOWERS) && random_number == 6)
-					{
-						sleeping_flowers(ent, 2500, 350);
-					}
-					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_POISON_MUSHROOMS) && random_number == 7)
-					{
-						poison_mushrooms(ent, 100, 600);
-					}
-					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_TREE_OF_LIFE) && random_number == 8)
-					{
-						tree_of_life(ent);
-					}
-					else if (ent->client->sess.selected_left_special_power & (1 << MAGIC_MAGIC_SHIELD) && random_number == 9)
-					{
-						magic_shield(ent, 6000);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_DOME_OF_DAMAGE) && random_number == 10)
-					{
-						dome_of_damage(ent, 500, 25);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_MAGIC_DISABLE) && random_number == 11)
-					{
-						magic_disable(ent, 450);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ULTRA_SPEED) && random_number == 12)
-					{
-						ultra_speed(ent, 15000);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_SLOW_MOTION) && random_number == 13)
-					{
-						slow_motion(ent, 400, 15000);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_FAST_AND_SLOW) && random_number == 14)
-					{
-						fast_and_slow(ent, 400, 6000);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_FLAME_BURST) && random_number == 15)
-					{
-						flame_burst(ent, 5000);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ULTRA_FLAME) && random_number == 16)
-					{
-						ultra_flame(ent, 500, 35);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_FLAMING_AREA) && random_number == 17)
-					{
-						flaming_area(ent, 20);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_BLOWING_WIND) && random_number == 18)
-					{
-						blowing_wind(ent, 700, 5000);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_HURRICANE) && random_number == 19)
-					{
-						hurricane(ent, 600, 5000);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_REVERSE_WIND) && random_number == 20)
-					{
-						reverse_wind(ent, 700, 5000);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ULTRA_RESISTANCE) && random_number == 21)
-					{
-						ultra_resistance(ent, 30000);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ULTRA_STRENGTH) && random_number == 22)
-					{
-						ultra_strength(ent, 30000);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ENEMY_WEAKENING) && random_number == 23)
-					{
-						enemy_nerf(ent, 450);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ICE_STALAGMITE) && random_number == 24)
-					{
-						ice_stalagmite(ent, 500, 130);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ICE_BOULDER) && random_number == 25)
-					{
-						ice_boulder(ent, 380, 40);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_ICE_BLOCK) && random_number == 26)
-					{
-						ice_block(ent, 3500);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_HEALING_AREA) && random_number == 27)
-					{
-						healing_area(ent, 2, 5000);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_MAGIC_EXPLOSION) && random_number == 28)
-					{
-						magic_explosion(ent, 320, 130, 900);
-					}
-					else if (ent->client->sess.selected_left_special_power  & (1 << MAGIC_LIGHTNING_DOME) && random_number == 29)
-					{
-						lightning_dome(ent, 70);
-					}
-
-					ent->client->pers.light_quest_timer = level.time + ent->client->pers.light_quest_messages;
-				}
-
-				// zyk: ultimate magic and quest powers
-				if (ent->client->pers.hunter_quest_timer < level.time)
-				{
-					int random_number = Q_irand(0, 7);
-
-					if (ent->client->sess.selected_right_special_power  & (1 << 0) && random_number == 0)
-					{
-						ultra_drain(ent, 450, 30, 8000);
-					}
-					else if (ent->client->sess.selected_right_special_power  & (1 << 1) && random_number == 1)
-					{
-						immunity_power(ent, 20000);
-					}
-					else if (ent->client->sess.selected_right_special_power  & (1 << 2) && random_number == 2)
-					{
-						chaos_power(ent, 400, 4600);
-					}
-					else if (ent->client->sess.selected_right_special_power  & (1 << 3) && random_number == 3)
-					{
-						time_power(ent, 400, 4000);
-					}
-					else if (ent->client->sess.selected_right_special_power  & (1 << 4) && random_number == 4)
-					{ // zyk: Light Power
-						ent->client->pers.quest_power_status |= (1 << 14);
-					}
-					else if (ent->client->sess.selected_right_special_power  & (1 << 5) && random_number == 5)
-					{ // zyk: Dark Power
-						ent->client->pers.quest_power_status |= (1 << 15);
-					}
-					else if (ent->client->sess.selected_right_special_power  & (1 << 6) && random_number == 6)
-					{ // zyk: Eternity Power
-						ent->client->pers.quest_power_status |= (1 << 16);
-					}
-					else if (ent->client->sess.selected_right_special_power  & (1 << 7) && random_number == 7)
-					{ // zyk: Universe Power
-						ent->client->pers.quest_power_status |= (1 << 13);
-					}
-
-					ent->client->pers.hunter_quest_timer = level.time + ent->client->pers.hunter_quest_messages;
-				}
-
-				// zyk: unique abilities
-				if (ent->client->pers.universe_quest_timer < level.time)
-				{
-					int random_number = Q_irand(0, 4);
-
-					if (ent->client->sess.selected_special_power & (1 << 0) && random_number == 0)
-					{
-						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
-
-						ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-						ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
-						ent->client->ps.forceHandExtendTime = level.time + 2000;
-
-						zyk_super_beam(ent, ent->client->ps.viewangles[1]);
-					}
-					else if (ent->client->sess.selected_special_power & (1 << 1) && random_number == 1)
-					{
-						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-						elemental_attack(ent);
-					}
-					else if (ent->client->sess.selected_special_power & (1 << 2) && random_number == 2)
-					{
-						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-						zyk_no_attack(ent);
-					}
-					else if (ent->client->sess.selected_special_power & (1 << 3) && random_number == 3)
-					{
-						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-						force_scream(ent);
-					}
-					else if (ent->client->sess.selected_special_power & (1 << 4) && random_number == 4)
-					{
-						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-						zyk_force_storm(ent);
-					}
-
-					ent->client->pers.universe_quest_timer = level.time + ent->client->pers.universe_quest_messages;
-				}
-			}
-
-			// zyk: quest guardians special abilities
-			if (ent->client->pers.guardian_invoked_by_id != -1 && ent->health > 0)
-			{
-				if (ent->client->pers.guardian_mode == 1 || (ent->client->pers.guardian_mode == 17 && Q_stricmp(ent->NPC_type, "guardian_boss_1") == 0))
-				{ // zyk: Guardian of Water
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						gentity_t *player_ent = &g_entities[ent->client->pers.guardian_invoked_by_id];
-						int distance = (int)Distance(ent->client->ps.origin,player_ent->client->ps.origin);
-
-						if (distance > 400)
-						{
-							healing_water(ent, 120);
-							trap->SendServerCommand( -1, "chat \"^4Guardian of Water: ^7Healing Water!\"");
-						}
-						else
-						{
-							water_splash(ent,400,15);
-							trap->SendServerCommand( -1, "chat \"^4Guardian of Water: ^7Water Splash!\"");
-						}
-
-						ent->client->pers.guardian_timer = level.time + 14000;
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						water_attack(ent, 2500, 40);
-						trap->SendServerCommand(-1, "chat \"^4Guardian of Water: ^7Water Attack!\"");
-						ent->client->pers.light_quest_timer = level.time + 11000;
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 2 || (ent->client->pers.guardian_mode == 17 && Q_stricmp(ent->NPC_type, "guardian_boss_2") == 0))
-				{ // zyk: Guardian of Earth
-					if (ent->client->pers.guardian_timer < level.time)
-					{ // zyk: uses earthquake ability
-						earthquake(ent,2000,350,3000);
-						ent->client->pers.guardian_timer = level.time + 3000 + ent->health;
-						trap->SendServerCommand( -1, "chat \"^3Guardian of Earth: ^7Earthquake!\"");
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						rock_fall(ent, 2000, 40);
-						ent->client->pers.light_quest_timer = level.time + 10000;
-						trap->SendServerCommand( -1, "chat \"^3Guardian of Earth: ^7Rockfall!\"");
-					}
-
-					if (ent->client->pers.universe_quest_timer < level.time)
-					{
-						shifting_sand(ent, 5500);
-						ent->client->pers.universe_quest_timer = level.time + 11000;
-						trap->SendServerCommand(-1, "chat \"^3Guardian of Earth: ^7Shifting Sand!\"");
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 3 || (ent->client->pers.guardian_mode == 17 && Q_stricmp(ent->NPC_type, "guardian_boss_3") == 0))
-				{ // zyk: Guardian of Forest
-					if (ent->client->pers.guardian_timer < level.time)
-					{ // zyk: uses sleeping flowers or poison mushrooms
-						if (Q_irand(0,3) != 0)
-						{
-							sleeping_flowers(ent,2500,1500);
-							trap->SendServerCommand( -1, "chat \"^2Guardian of Forest: ^7Sleeping Flowers!\"");
-							ent->client->pers.guardian_timer = level.time + 12000;
-						}
-						else
-						{
-							poison_mushrooms(ent,100,3000);
-							trap->SendServerCommand( -1, va("chat \"^2Guardian of Forest: ^7Poison Mushrooms!\""));
-							ent->client->pers.guardian_timer = level.time + 12000;
-						}
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						tree_of_life(ent);
-						ent->client->pers.light_quest_timer = level.time + 15000;
-						trap->SendServerCommand(-1, va("chat \"^2Guardian of Forest: ^7Tree of Life!\""));
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 4 || (ent->client->pers.guardian_mode == 17 && Q_stricmp(ent->NPC_type, "guardian_boss_4") == 0))
-				{ // zyk: Guardian of Intelligence
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						if (ent->client->pers.light_quest_messages == 0)
-						{
-							dome_of_damage(ent, 1700, 25);
-							ent->client->pers.light_quest_messages = 1;
-							trap->SendServerCommand( -1, "chat \"^5Guardian of Intelligence: ^7Dome of Damage!\"");
-						}
-						else
-						{
-							magic_shield(ent, 6000);
-							ent->client->pers.light_quest_messages = 0;
-							trap->SendServerCommand( -1, "chat \"^5Guardian of Intelligence: ^7Magic Shield!\"");
-						}
-
-						ent->client->pers.guardian_timer = level.time + ent->health + 8000;
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						magic_disable(ent, 500);
-						ent->client->pers.light_quest_timer = level.time + 14000;
-						trap->SendServerCommand(-1, "chat \"^5Guardian of Intelligence: ^7Magic Disable!\"");
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 5 || (ent->client->pers.guardian_mode == 17 && Q_stricmp(ent->NPC_type, "guardian_boss_5") == 0))
-				{ // zyk: Guardian of Agility
-					// zyk: adding jetpack to this boss
-					ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{ // zyk: after losing half HP, uses his special ability
-						ultra_speed(ent,10000);
-						trap->SendServerCommand( -1, "chat \"^6Guardian of Agility: ^7Ultra Speed!\"");
-						ent->client->pers.light_quest_timer = level.time + 12000;
-					}
-
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						slow_motion(ent,600,12000);
-						trap->SendServerCommand( -1, "chat \"^6Guardian of Agility: ^7Slow Motion!\"");
-						ent->client->pers.guardian_timer = level.time + 14000;
-					}
-
-					if (ent->client->pers.universe_quest_timer < level.time)
-					{
-						fast_and_slow(ent, 600, 6000);
-						ent->client->pers.universe_quest_timer = level.time + 20000;
-						trap->SendServerCommand(-1, "chat \"^6Guardian of Agility: ^7Fast and Slow!\"");
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 6 || (ent->client->pers.guardian_mode == 17 && Q_stricmp(ent->NPC_type, "guardian_boss_6") == 0))
-				{ // zyk: Guardian of Fire
-					// zyk: take him back if he falls
-					if (ent->client->ps.origin[2] < -600)
-					{
-						vec3_t origin;
-						vec3_t yaw;
-
-						origin[0] = 0.0f;
-						origin[1] = -269.0f;
-						origin[2] = -374.0f;
-						yaw[0] = 0.0f;
-						yaw[1] = 90.0f;
-						yaw[2] = 0.0f;
-						zyk_TeleportPlayer( ent, origin, yaw );
-					}
-
-					if (ent->client->pers.guardian_timer < level.time)
-					{ // zyk: fire ability
-						flame_burst(ent, 5000);
-						trap->SendServerCommand( -1, "chat \"^1Guardian of Fire: ^7Flame Burst!\"");
-						ent->client->pers.guardian_timer = level.time + 18000;
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						ultra_flame(ent, 4000, 35);
-						trap->SendServerCommand( -1, "chat \"^1Guardian of Fire: ^7Ultra Flame!\"");
-						ent->client->pers.light_quest_timer = level.time + 16000;
-					}
-
-					if (ent->client->pers.universe_quest_timer < level.time)
-					{
-						flaming_area(ent, 20);
-						ent->client->pers.universe_quest_timer = level.time + 19000;
-						trap->SendServerCommand(-1, "chat \"^1Guardian of Fire: ^7Flaming Area!\"");
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 7 || (ent->client->pers.guardian_mode == 17 && Q_stricmp(ent->NPC_type, "guardian_boss_7") == 0))
-				{ // zyk: Guardian of Wind
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						if (!Q_irand(0,1))
-						{ // zyk: randomly choose between Blowing Wind and Reverse Wind
-							blowing_wind(ent, 2500, 5000);
-							trap->SendServerCommand(-1, "chat \"^7Guardian of Wind: ^7Blowing Wind!\"");
-						}
-						else
-						{
-							reverse_wind(ent, 2500, 5000);
-							trap->SendServerCommand(-1, "chat \"^7Guardian of Wind: ^7Reverse Wind!\"");
-						}
-
-						ent->client->pers.guardian_timer = level.time + 12000;
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						hurricane(ent,700,5000);
-						trap->SendServerCommand( -1, "chat \"^7Guardian of Wind: ^7Hurricane!\"");
-						ent->client->pers.light_quest_timer = level.time + 12000;
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 16 || (ent->client->pers.guardian_mode == 17 && Q_stricmp(ent->NPC_type, "guardian_boss_10") == 0))
-				{ // zyk: Guardian of Ice
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						ice_stalagmite(ent, 500, 130);
-						ent->client->pers.guardian_timer = level.time + 16000;
-						trap->SendServerCommand( -1, "chat \"^5Guardian of Ice: ^7Ice Stalagmite!\"");
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						ice_boulder(ent, 400, 40);
-						trap->SendServerCommand( -1, "chat \"^5Guardian of Ice: ^7Ice Boulder!\"");
-						ent->client->pers.light_quest_timer = level.time + 16000;
-					}
-
-					if (ent->client->pers.universe_quest_timer < level.time)
-					{
-						ice_block(ent, 3500);
-						ent->client->pers.universe_quest_timer = level.time + 16000;
-						trap->SendServerCommand(-1, "chat \"^5Guardian of Ice: ^7Ice Block!\"");
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 8 || (ent->client->pers.guardian_mode == 18 && Q_stricmp(ent->NPC_type, "guardian_boss_9") == 0))
-				{ // zyk: Guardian of Light
-					if (ent->client->pers.hunter_quest_messages == 0 && ent->health < (ent->client->ps.stats[STAT_MAX_HEALTH]))
-					{ // zyk: after losing half HP, uses his special ability
-						ent->client->pers.hunter_quest_messages = 1;
-						ent->client->pers.quest_power_status |= (1 << 14);
-						trap->SendServerCommand( -1, "chat \"^5Guardian of Light: ^7Light Power!\"");
-					}
-
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						lightning_dome(ent, 70);
-						trap->SendServerCommand( -1, "chat \"^5Guardian of Light: ^7Lightning Dome!\"");
-						ent->client->pers.guardian_timer = level.time + 15000;
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						water_attack(ent, 4000, 40);
-						trap->SendServerCommand(-1, "chat \"^5Guardian of Light: ^7Water Attack!\"");
-						ent->client->pers.light_quest_timer = level.time + 19000;
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 9 || (ent->client->pers.guardian_mode == 18 && Q_stricmp(ent->NPC_type, "guardian_of_darkness") == 0))
-				{ // zyk: Guardian of Darkness
-					if (ent->client->pers.hunter_quest_messages == 0 && ent->health < (ent->client->ps.stats[STAT_MAX_HEALTH]))
-					{ // zyk: after losing half HP, uses his special ability
-						ent->client->pers.hunter_quest_messages = 1;
-						ent->client->pers.quest_power_status |= (1 << 15);
-						trap->SendServerCommand( -1, "chat \"^1Guardian of Darkness: ^7Dark Power!\"");
-					}
-
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						magic_explosion(ent, 320, 130, 900);
-						trap->SendServerCommand(-1, "chat \"^1Guardian of Darkness: ^7Magic Explosion!\"");
-						ent->client->pers.guardian_timer = level.time + 17000;
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						earthquake(ent, 2000, 300, 1000);
-						trap->SendServerCommand(-1, "chat \"^1Guardian of Darkness: ^7Earthquake!\"");
-						ent->client->pers.light_quest_timer = level.time + 19000;
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 10 || (ent->client->pers.guardian_mode == 18 && Q_stricmp(ent->NPC_type, "guardian_of_eternity") == 0))
-				{ // zyk: Guardian of Eternity
-					if (ent->client->pers.hunter_quest_messages == 0 && ent->health < (ent->client->ps.stats[STAT_MAX_HEALTH]))
-					{ // zyk: after losing half HP, uses his special ability
-						ent->client->pers.hunter_quest_messages = 1;
-						ent->client->pers.quest_power_status |= (1 << 16);
-						trap->SendServerCommand( -1, "chat \"^3Guardian of Eternity: ^7Eternity Power!\"");
-					}
-
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						healing_area(ent,2,5000);
-						trap->SendServerCommand( -1, "chat \"^3Guardian of Eternity: ^7Healing Area!\"");
-						ent->client->pers.guardian_timer = level.time + 15000;
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						magic_shield(ent, 6000);
-						trap->SendServerCommand(-1, "chat \"^3Guardian of Eternity: ^7Magic Shield!\"");
-						ent->client->pers.light_quest_timer = level.time + 19000;
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 11 || (ent->client->pers.guardian_mode == 17 && Q_stricmp(ent->NPC_type, "guardian_boss_8") == 0))
-				{ // zyk: Guardian of Resistance
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						ultra_resistance(ent, 10000);
-						ent->client->pers.guardian_timer = level.time + 14000;
-						trap->SendServerCommand( -1, "chat \"^3Guardian of Resistance: ^7Ultra Resistance!\"");
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						ultra_strength(ent, 10000);
-						ent->client->pers.light_quest_timer = level.time + 14000;
-						trap->SendServerCommand( -1, "chat \"^3Guardian of Resistance: ^7Ultra Strength!\"");
-					}
-
-					if (ent->client->pers.universe_quest_timer < level.time)
-					{
-						enemy_nerf(ent, 1000);
-						ent->client->pers.universe_quest_timer = level.time + 12000;
-						trap->SendServerCommand(-1, "chat \"^3Guardian of Resistance: ^7Enemy Weakening!\"");
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 12)
-				{ // zyk: Master of Evil
-					// zyk: adding jetpack to this boss
-					ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-
-					// zyk: take him back if he falls
-					if (ent->client->ps.origin[0] < 400 || ent->client->ps.origin[0] > 3600 || ent->client->ps.origin[1] < -4450 || ent->client->ps.origin[1] > -1250 || ent->client->ps.origin[2] < 2500 || ent->client->ps.origin[2] > 4000)
-					{
-						vec3_t origin;
-						vec3_t yaw;
-
-						origin[0] = 2135.0f;
-						origin[1] = -2857.0f;
-						origin[2] = 2800.0f;
-						yaw[0] = 0.0f;
-						yaw[1] = -90.0f;
-						yaw[2] = 0.0f;
-						zyk_TeleportPlayer( ent, origin, yaw );
-					}
-
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						if (ent->client->NPC_class == CLASS_REBORN)
-							ent->client->NPC_class = CLASS_BOBAFETT;
-						else
-							ent->client->NPC_class = CLASS_REBORN;
-						
-						if (ent->health < (ent->client->ps.stats[STAT_MAX_HEALTH] / 5))
-							Zyk_NPC_SpawnType("quest_mage", 2135, -2857, 2800, 90);
-						else if (ent->health < ((ent->client->ps.stats[STAT_MAX_HEALTH]/5) * 2))
-							Zyk_NPC_SpawnType("quest_reborn_boss",2135,-2857,2800,90);
-						else if (ent->health < ((ent->client->ps.stats[STAT_MAX_HEALTH]/5) * 3))
-							Zyk_NPC_SpawnType("quest_reborn_red",2135,-2857,2800,90);
-						else if (ent->health < ((ent->client->ps.stats[STAT_MAX_HEALTH]/5) * 4))
-							Zyk_NPC_SpawnType("quest_reborn_blue",2135,-2857,2800,90);
-						else if (ent->health < ent->client->ps.stats[STAT_MAX_HEALTH])
-							Zyk_NPC_SpawnType("quest_reborn",2135,-2857,2800,-90);
-
-						if (!ent->client->ps.powerups[PW_CLOAKED])
-							Jedi_Cloak(ent);
-
-						ultra_drain(ent, 450, 30, 8000);
-						trap->SendServerCommand( -1, "chat \"^1Master of Evil: ^7Ultra Drain!\"");
-
-						ent->client->pers.guardian_timer = level.time + 30000;
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						ultra_flame(ent, 4000, 35);
-						trap->SendServerCommand(-1, "chat \"^1Master of Evil: ^7Ultra Flame!\"");
-						ent->client->pers.light_quest_timer = level.time + 29000;
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 13 || (ent->client->pers.guardian_mode == 18 && Q_stricmp(ent->NPC_type, "guardian_of_universe") == 0))
-				{ // zyk: Guardian of Universe
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						gentity_t *player_ent = &g_entities[ent->client->pers.guardian_invoked_by_id];
-						gentity_t *npc_ent = NULL;
-						vec3_t origin;
-						vec3_t yaw;
-
-						origin[0] = player_ent->client->ps.origin[0];
-						origin[1] = player_ent->client->ps.origin[1];
-						origin[2] = player_ent->client->ps.origin[2] + 200;
-
-						yaw[0] = 0.0f;
-						yaw[1] = -179.0f;
-						yaw[2] = 0.0f;
-
-						zyk_TeleportPlayer( ent, origin, yaw );
-
-						if (ent->health < ent->client->ps.stats[STAT_MAX_HEALTH] && ent->client->pers.hunter_quest_messages < 15)
-						{ // zyk: she can spawn up to 15 clones
-							ent->client->pers.hunter_quest_messages++;
-							npc_ent = NPC_SpawnType(player_ent, "guardian_of_universe",NULL,qfalse);
-						}
-
-						if (npc_ent)
-						{
-							npc_ent->health = ent->client->ps.stats[STAT_MAX_HEALTH]/10;
-							npc_ent->client->ps.stats[STAT_MAX_HEALTH] = npc_ent->health;
-						}
-
-						if (ent->client->pers.guardian_mode == 18 && Q_irand(0, 1) == 0)
-						{
-							ultra_drain(ent, 450, 30, 8000);
-							trap->SendServerCommand(-1, "chat \"^2Guardian of Universe: ^7Ultra Drain!\"");
-						}
-						else
-						{
-							immunity_power(ent, 20000);
-							trap->SendServerCommand(-1, "chat \"^2Guardian of Universe: ^7Immunity Power!\"");
-						}
-
-						ent->client->pers.guardian_timer = level.time + 35000;
-					}
-
-					if (ent->health < (ent->client->ps.stats[STAT_MAX_HEALTH]/2) && ent->client->pers.light_quest_messages == 0)
-					{
-						ent->client->pers.light_quest_messages = 1;
-						ent->client->pers.quest_power_status |= (1 << 13);
-						trap->SendServerCommand( -1, "chat \"^2Guardian of Universe: ^7Universe Power!\"");
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						if (ent->client->pers.guardian_mode == 18)
-						{ // zyk: unique
-							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
-
-							ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-							ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
-							ent->client->ps.forceHandExtendTime = level.time + 2000;
-
-							zyk_super_beam(ent, ent->client->ps.viewangles[1]);
-						}
-
-						magic_explosion(ent, 320, 130, 900);
-						trap->SendServerCommand( -1, "chat \"^2Guardian of Universe: ^7Magic Explosion!\"");
-						ent->client->pers.light_quest_timer = level.time + 16000;
-					}
-
-					if (ent->client->pers.universe_quest_timer < level.time)
-					{
-						magic_shield(ent, 6000);
-						ent->client->pers.universe_quest_timer = level.time + 29000;
-						trap->SendServerCommand(-1, "chat \"^2Guardian of Universe: ^7Magic Shield!\"");
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 14)
-				{ // zyk: Guardian of Chaos
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						if (ent->client->pers.hunter_quest_messages == 0)
-						{
-							if (!ent->client->ps.powerups[PW_CLOAKED])
-								Jedi_Cloak(ent);
-
-							magic_shield(ent,6000);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Magic Shield!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 1)
-						{
-							blowing_wind(ent,3000,5000);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Blowing Wind!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 2)
-						{
-							ice_block(ent, 3500);
-							trap->SendServerCommand(-1, "chat \"^1Guardian of Chaos: ^7Ice Block!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 3)
-						{
-							healing_water(ent,120);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Healing Water!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 4)
-						{
-							immunity_power(ent,20000);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Immunity Power!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 5)
-						{
-							sleeping_flowers(ent, 2500, 1000);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Sleeping Flowers!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 6)
-						{
-							ultra_strength(ent,12000);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Ultra Strength!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 7)
-						{
-							ultra_drain(ent, 450, 30, 8000);
-							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Ultra Drain!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 8)
-						{
-							ice_stalagmite(ent, 2000, 130);
-							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Ice Stalagmite!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 9)
-						{
-							ice_boulder(ent, 1000, 40);
-							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Ice Boulder!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 10)
-						{
-							water_attack(ent, 1600, 40);
-							trap->SendServerCommand(-1, va("chat \"^1Guardian of Chaos: ^7Water Attack!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 11)
-						{
-							poison_mushrooms(ent,100,1800);
-							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Poison Mushrooms!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 12)
-						{
-							ultra_speed(ent,15000);
-							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Ultra Speed!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 13)
-						{
-							slow_motion(ent,1000,10000);
-							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Slow Motion!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 14)
-						{
-							water_splash(ent,1400,15);
-							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Water Splash!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 15)
-						{
-							rock_fall(ent, 1600, 40);
-							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Rockfall!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 16)
-						{
-							ultra_flame(ent, 2200, 35);
-							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Ultra Flame!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 17)
-						{
-							magic_disable(ent, 2200);
-							trap->SendServerCommand(-1, va("chat \"^1Guardian of Chaos: ^7Magic Disable!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 18)
-						{
-							dome_of_damage(ent, 2000, 25);
-							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Dome of Damage!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 19)
-						{
-							shifting_sand(ent, 2500);
-							trap->SendServerCommand(-1, va("chat \"^1Guardian of Chaos: ^7Shifting Sand!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 20)
-						{
-							flame_burst(ent, 5000);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Flame Burst!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 21)
-						{
-							fast_and_slow(ent, 1000, 6000);
-							trap->SendServerCommand(-1, "chat \"^1Guardian of Chaos: ^7Fast and Slow!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 22)
-						{
-							flaming_area(ent, 20);
-							trap->SendServerCommand(-1, "chat \"^1Guardian of Chaos: ^7Flaming Area!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 23)
-						{
-							hurricane(ent,1200,5000);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Hurricane!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 24)
-						{
-							enemy_nerf(ent, 2000);
-							trap->SendServerCommand(-1, "chat \"^1Guardian of Chaos: ^7Enemy Weakening!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 25)
-						{
-							lightning_dome(ent, 70);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Lightning Dome!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 26)
-						{
-							earthquake(ent,2000,300,3000);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Earthquake!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 27)
-						{
-							time_power(ent,1600, 4000);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Time Power!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 28)
-						{
-							healing_area(ent,2,5000);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Healing Area!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 29)
-						{
-							tree_of_life(ent);
-							trap->SendServerCommand(-1, "chat \"^1Guardian of Chaos: ^7Tree of Life!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 30)
-						{
-							vec3_t origin, angles;
-
-							VectorSet(origin,-2836,-26946,500);
-							VectorSet(angles,0,0,0);
-
-							zyk_TeleportPlayer(ent,origin,angles);
-
-							ultra_resistance(ent,12000);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Ultra Resistance!\"");
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 31)
-						{
-							reverse_wind(ent, 2500, 5000);
-							trap->SendServerCommand(-1, va("chat \"^1Guardian of Chaos: ^7Reverse Wind!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 32)
-						{
-							magic_explosion(ent, 320, 130, 900);
-							trap->SendServerCommand( -1, va("chat \"^1Guardian of Chaos: ^7Magic Explosion!\""));
-							ent->client->pers.hunter_quest_messages++;
-						}
-						else if (ent->client->pers.hunter_quest_messages == 33)
-						{
-							chaos_power(ent,1600, 4600);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Chaos Power!\"");
-							ent->client->pers.hunter_quest_messages = 0;
-						}
-
-						ent->client->pers.guardian_timer = level.time + (ent->health/2) + 5000;
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						if (ent->client->pers.light_quest_messages == 0)
-						{
-							ent->client->pers.light_quest_messages = 1;
-						}
-						else if (ent->client->pers.light_quest_messages == 1)
-						{
-							ent->client->pers.light_quest_messages = 2;
-							ent->client->pers.quest_power_status |= (1 << 14);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Light Power!\"");
-						}
-						else if (ent->client->pers.light_quest_messages == 2)
-						{
-							ent->client->pers.light_quest_messages = 3;
-							ent->client->pers.quest_power_status |= (1 << 15);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Dark Power!\"");
-						}
-						else if (ent->client->pers.light_quest_messages == 3)
-						{
-							ent->client->pers.light_quest_messages = 4;
-							ent->client->pers.quest_power_status |= (1 << 16);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Eternity Power!\"");
-						}
-						else if (ent->client->pers.light_quest_messages == 4)
-						{
-							ent->client->pers.light_quest_messages = 5;
-							ent->client->pers.quest_power_status |= (1 << 13);
-							trap->SendServerCommand( -1, "chat \"^1Guardian of Chaos: ^7Universe Power!\"");
-						}
-
-						ent->client->pers.light_quest_timer = level.time + 27000;
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 15 && Q_stricmp(ent->NPC_type, "ymir_boss") == 0)
-				{ // zyk: Ymir
-				  // zyk: adding jetpack to this boss
-					ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						int random_magic = Q_irand(0, 25);
-
-						if (random_magic == 0)
-						{
-							ultra_strength(ent, 30000);
-						}
-						else if (random_magic == 1)
-						{
-							poison_mushrooms(ent, 100, 600);
-						}
-						else if (random_magic == 2)
-						{
-							water_splash(ent, 400, 15);
-						}
-						else if (random_magic == 3)
-						{
-							ultra_flame(ent, 500, 35);
-						}
-						else if (random_magic == 4)
-						{
-							rock_fall(ent, 500, 40);
-						}
-						else if (random_magic == 5)
-						{
-							dome_of_damage(ent, 500, 25);
-						}
-						else if (random_magic == 6)
-						{
-							hurricane(ent, 600, 5000);
-						}
-						else if (random_magic == 7)
-						{
-							slow_motion(ent, 400, 15000);
-						}
-						else if (random_magic == 8)
-						{
-							ultra_resistance(ent, 30000);
-						}
-						else if (random_magic == 9)
-						{
-							sleeping_flowers(ent, 2500, 350);
-						}
-						else if (random_magic == 10)
-						{
-							healing_water(ent, 120);
-						}
-						else if (random_magic == 11)
-						{
-							flame_burst(ent, 5000);
-						}
-						else if (random_magic == 12)
-						{
-							earthquake(ent, 2000, 300, 500);
-						}
-						else if (random_magic == 13)
-						{
-							magic_shield(ent, 6000);
-						}
-						else if (random_magic == 14)
-						{
-							blowing_wind(ent, 700, 5000);
-						}
-						else if (random_magic == 15)
-						{
-							ultra_speed(ent, 15000);
-						}
-						else if (random_magic == 16)
-						{
-							ice_stalagmite(ent, 500, 130);
-						}
-						else if (random_magic == 17)
-						{
-							ice_boulder(ent, 380, 40);
-						}
-						else if (random_magic == 18)
-						{
-							water_attack(ent, 500, 40);
-						}
-						else if (random_magic == 19)
-						{
-							tree_of_life(ent);
-						}
-						else if (random_magic == 20)
-						{
-							magic_disable(ent, 450);
-						}
-						else if (random_magic == 21)
-						{
-							fast_and_slow(ent, 400, 6000);
-						}
-						else if (random_magic == 22)
-						{
-							flaming_area(ent, 20);
-						}
-						else if (random_magic == 23)
-						{
-							reverse_wind(ent, 700, 5000);
-						}
-						else if (random_magic == 24)
-						{
-							enemy_nerf(ent, 450);
-						}
-						else if (random_magic == 25)
-						{
-							ice_block(ent, 3500);
-						}
-
-						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 10000);
-
-						if (ent->spawnflags & 131072)
-						{ // zyk: boss is stronger now
-							ent->client->pers.guardian_timer -= 1000;
-						}
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{ // zyk: using Crystal of Magic
-						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
-
-						ent->health += 100;
-						ent->client->ps.stats[STAT_ARMOR] += 100;
-
-						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
-							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
-
-						if (ent->client->ps.stats[STAT_ARMOR] > ent->client->ps.stats[STAT_MAX_HEALTH])
-							ent->client->ps.stats[STAT_ARMOR] = ent->client->ps.stats[STAT_MAX_HEALTH];
-
-						if (ent->client->NPC_class == CLASS_REBORN)
-							ent->client->NPC_class = CLASS_BOBAFETT;
-						else
-							ent->client->NPC_class = CLASS_REBORN;
-
-						ent->client->pers.light_quest_timer = level.time + Q_irand(11000, 14000);
-
-						if (ent->spawnflags & 131072)
-						{ // zyk: boss is stronger now
-							int random_unique = Q_irand(0, 1);
-
-							if (random_unique == 0)
-							{
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-
-								elemental_attack(ent);
-							}
-							else
-							{
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-
-								zyk_no_attack(ent);
-							}
-						}
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 15 && Q_stricmp(ent->NPC_type, "thor_boss") == 0)
-				{ // zyk: Thor
-				  // zyk: adding jetpack to this boss
-					ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						int random_magic = Q_irand(0, 6);
-
-						if (random_magic == 0)
-						{
-							ultra_drain(ent, 450, 30, 8000);
-						}
-						else if (random_magic == 1)
-						{
-							immunity_power(ent, 20000);
-						}
-						else if (random_magic == 2)
-						{
-							chaos_power(ent, 400, 4600);
-						}
-						else if (random_magic == 3)
-						{
-							time_power(ent, 400, 4000);
-						}
-						else if (random_magic == 4)
-						{
-							healing_area(ent, 2, 5000);
-						}
-						else if (random_magic == 5)
-						{
-							magic_explosion(ent, 320, 130, 900);
-						}
-						else if (random_magic == 6)
-						{
-							lightning_dome(ent, 70);
-						}
-
-						ent->client->pers.guardian_timer = level.time + Q_irand(8000, 12000);
-
-						if (ent->spawnflags & 131072)
-						{ // zyk: boss is stronger now
-							ent->client->pers.guardian_timer -= 1000;
-						}
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{ // zyk: using Crystal of Magic
-						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
-
-						ent->health += 100;
-						ent->client->ps.stats[STAT_ARMOR] += 100;
-
-						if (ent->health > ent->client->ps.stats[STAT_MAX_HEALTH])
-							ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
-
-						if (ent->client->ps.stats[STAT_ARMOR] > ent->client->ps.stats[STAT_MAX_HEALTH])
-							ent->client->ps.stats[STAT_ARMOR] = ent->client->ps.stats[STAT_MAX_HEALTH];
-
-						if (ent->client->NPC_class == CLASS_REBORN)
-							ent->client->NPC_class = CLASS_BOBAFETT;
-						else
-							ent->client->NPC_class = CLASS_REBORN;
-
-						ent->client->pers.light_quest_timer = level.time + Q_irand(10000, 12000);
-
-						if (ent->spawnflags & 131072)
-						{ // zyk: boss is stronger now
-							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
-
-							ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-							ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
-							ent->client->ps.forceHandExtendTime = level.time + 2000;
-
-							zyk_super_beam(ent, ent->client->ps.viewangles[1]);
-
-							ent->client->pers.light_quest_timer -= 1000;
-						}
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 19)
-				{ // zyk: Ymir
-					// zyk: adding jetpack to this boss
-					ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_JETPACK);
-
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						int random_magic = Q_irand(0, 25);
-
-						if (random_magic == 0)
-						{
-							ultra_strength(ent, 30000);
-						}
-						else if (random_magic == 1)
-						{
-							poison_mushrooms(ent, 100, 600);
-						}
-						else if (random_magic == 2)
-						{
-							water_splash(ent, 400, 15);
-						}
-						else if (random_magic == 3)
-						{
-							ultra_flame(ent, 500, 35);
-						}
-						else if (random_magic == 4)
-						{
-							rock_fall(ent, 500, 40);
-						}
-						else if (random_magic == 5)
-						{
-							dome_of_damage(ent, 500, 25);
-						}
-						else if (random_magic == 6)
-						{
-							hurricane(ent, 600, 5000);
-						}
-						else if (random_magic == 7)
-						{
-							slow_motion(ent, 400, 15000);
-						}
-						else if (random_magic == 8)
-						{
-							ultra_resistance(ent, 30000);
-						}
-						else if (random_magic == 9)
-						{
-							sleeping_flowers(ent, 2500, 350);
-						}
-						else if (random_magic == 10)
-						{
-							healing_water(ent, 120);
-						}
-						else if (random_magic == 11)
-						{
-							flame_burst(ent, 5000);
-						}
-						else if (random_magic == 12)
-						{
-							earthquake(ent, 2000, 300, 500);
-						}
-						else if (random_magic == 13)
-						{
-							magic_shield(ent, 6000);
-						}
-						else if (random_magic == 14)
-						{
-							blowing_wind(ent, 700, 5000);
-						}
-						else if (random_magic == 15)
-						{
-							ultra_speed(ent, 15000);
-						}
-						else if (random_magic == 16)
-						{
-							ice_stalagmite(ent, 500, 130);
-						}
-						else if (random_magic == 17)
-						{
-							ice_boulder(ent, 380, 40);
-						}
-						else if (random_magic == 18)
-						{
-							water_attack(ent, 500, 40);
-						}
-						else if (random_magic == 19)
-						{
-							tree_of_life(ent);
-						}
-						else if (random_magic == 20)
-						{
-							magic_disable(ent, 450);
-						}
-						else if (random_magic == 21)
-						{
-							fast_and_slow(ent, 400, 6000);
-						}
-						else if (random_magic == 22)
-						{
-							flaming_area(ent, 20);
-						}
-						else if (random_magic == 23)
-						{
-							reverse_wind(ent, 700, 5000);
-						}
-						else if (random_magic == 24)
-						{
-							enemy_nerf(ent, 450);
-						}
-						else if (random_magic == 25)
-						{
-							ice_block(ent, 3500);
-						}
-
-						ent->client->pers.guardian_timer = level.time + Q_irand(7000, 10000);
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{ // zyk: spawning mages to help
-						int random_unique = Q_irand(0, 1);
-
-						if (ent->client->NPC_class == CLASS_REBORN)
-							ent->client->NPC_class = CLASS_BOBAFETT;
-						else
-							ent->client->NPC_class = CLASS_REBORN;
-
-						if (random_unique == 0)
-						{
-							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-
-							elemental_attack(ent);
-						}
-						else
-						{
-							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-
-							zyk_no_attack(ent);
-						}
-
-						Zyk_NPC_SpawnType("quest_mage", -6049, 1438, 57, 0);
-
-						ent->client->pers.light_quest_timer = level.time + Q_irand(12000, 14000);
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 20)
-				{ // zyk: Guardian of Time
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						int random_magic = Q_irand(0, 4);
-
-						if (random_magic == 0)
-						{
-							dome_of_damage(ent, 20000, 25);
-						}
-						else if (random_magic == 1)
-						{
-							shifting_sand(ent, 20000);
-						}
-						else if (random_magic == 2)
-						{
-							time_power(ent, 20000, 4000);
-						}
-						else if (random_magic == 3)
-						{
-							fast_and_slow(ent, 20000, 6000);
-						}
-						else if (random_magic == 4)
-						{
-							magic_disable(ent, 20000);
-						}
-
-						ent->client->pers.guardian_timer = level.time + Q_irand(8000, 11000);
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{ // zyk: using Crystal of Magic
-						ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 1000;
-
-						// zyk: Universe Power
-						ent->client->pers.quest_power_status |= (1 << 13);
-
-						ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
-
-						ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-						ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
-						ent->client->ps.forceHandExtendTime = level.time + 2000;
-
-						zyk_super_beam(ent, ent->client->ps.viewangles[1]);
-
-						ent->client->pers.light_quest_timer = level.time + ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 7000;
-					}
-				}
-				else if (ent->client->pers.guardian_mode == 21)
-				{ // zyk: Soul of Sorrow
-					if ((int)ent->client->ps.origin[2] < -10200)
-					{ // zyk: bring him back if he falls
-						vec3_t origin;
-						vec3_t yaw;
-
-						origin[0] = 2336.0f;
-						origin[1] = 3425.0f;
-						origin[2] = -9800.0f;
-						yaw[0] = 0.0f;
-						yaw[1] = 179.0f;
-						yaw[2] = 0.0f;
-						zyk_TeleportPlayer(ent, origin, yaw);
-					}
-
-					if (ent->client->pers.guardian_timer < level.time)
-					{
-						int random_magic = Q_irand(0, 25);
-						gentity_t *player_ent = &g_entities[ent->client->pers.guardian_invoked_by_id];
-						int distance = (int)Distance(ent->client->ps.origin, player_ent->client->ps.origin);
-
-						// zyk: using powers in a smarter way
-						if (distance < 300)
-						{ // zyk: close range makes boss use close range powers more frequently
-							random_magic = Q_irand(0, 12);
-						}
-						else
-						{ // zyk: long range makes boss use long range powers more frequently
-							random_magic = Q_irand(13, 25);
-						}
-
-						if (random_magic == 0)
-						{
-							immunity_power(ent, 20000);
-						}
-						else if (random_magic == 1)
-						{
-							lightning_dome(ent, 70);
-						}
-						else if (random_magic == 2)
-						{
-							ultra_drain(ent, 450, 30, 8000);
-						}
-						else if (random_magic == 3)
-						{
-							magic_explosion(ent, 320, 130, 900);
-						}
-						else if (random_magic == 4)
-						{
-							flaming_area(ent, 20);
-						}
-						else if (random_magic == 5)
-						{
-							slow_motion(ent, 5000, 15000);
-						}
-						else if (random_magic == 6)
-						{
-							sleeping_flowers(ent, 2500, 5000);
-						}
-						else if (random_magic == 7)
-						{
-							blowing_wind(ent, 5000, 1800);
-						}
-						else if (random_magic == 8)
-						{
-							flame_burst(ent, 5000);
-						}
-						else if (random_magic == 9)
-						{
-							magic_shield(ent, 6000);
-						}
-						else if (random_magic == 10)
-						{
-							healing_water(ent, 120);
-						}
-						else if (random_magic == 11)
-						{
-							healing_area(ent, 2, 5000);
-						}
-						else if (random_magic == 12)
-						{
-							enemy_nerf(ent, 5000);
-						}
-						else if (random_magic == 13)
-						{
-							water_attack(ent, 5000, 40);
-						}
-						else if (random_magic == 14)
-						{
-							shifting_sand(ent, 5000);
-						}
-						else if (random_magic == 15)
-						{
-							magic_disable(ent, 5000);
-						}
-						else if (random_magic == 16)
-						{
-							chaos_power(ent, 5000, 4600);
-						}
-						else if (random_magic == 17)
-						{
-							dome_of_damage(ent, 5000, 25);
-						}
-						else if (random_magic == 18)
-						{
-							reverse_wind(ent, 5000, 1800);
-						}
-						else if (random_magic == 19)
-						{
-							ice_boulder(ent, 5000, 40);
-						}
-						else if (random_magic == 20)
-						{
-							time_power(ent, 5000, 4000);
-						}
-						else if (random_magic == 21)
-						{
-							ice_stalagmite(ent, 5000, 130);
-						}
-						else if (random_magic == 22)
-						{
-							rock_fall(ent, 5000, 40);
-						}
-						else if (random_magic == 23)
-						{
-							poison_mushrooms(ent, 100, 5000);
-						}
-						else if (random_magic == 24)
-						{
-							ultra_flame(ent, 5000, 35);
-						}
-						else if (random_magic == 25)
-						{
-							ice_block(ent, 3500);
-						}
-
-						ent->client->pers.guardian_timer = level.time + Q_irand(8000, 10000);
-					}
-
-					if (ent->client->pers.light_quest_timer < level.time)
-					{
-						int random_unique = Q_irand(0, 2);
-
-						ent->client->pers.quest_power_status |= (1 << 13);
-
-						if (random_unique == 0)
-						{
-							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
-
-							ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-							ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
-							ent->client->ps.forceHandExtendTime = level.time + 2000;
-
-							zyk_super_beam(ent, ent->client->ps.viewangles[1]);
-						}
-						else if (random_unique == 1)
-						{
-							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-
-							zyk_no_attack(ent);
-						}
-						else if (random_unique == 2)
-						{
-							ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-
-							force_scream(ent);
-						}
-
-						ent->client->pers.light_quest_timer = level.time + ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 3000;
-					}
-
-					if (ent->client->pers.universe_quest_timer < level.time)
-					{ // zyk: destroys tiles from the background
-						int k = 0;
-						int tile_count = 0;
-						int zyk_chosen_tile = Q_irand(0, (47 - ent->client->pers.hunter_quest_messages));
-						vec3_t origin;
-						vec3_t yaw;
-
-						for (k = (MAX_CLIENTS + BODY_QUEUE_SIZE); k < level.num_entities; k++)
-						{
-							gentity_t *zyk_tile_ent = &g_entities[k];
-
-							if (zyk_tile_ent && Q_stricmp(zyk_tile_ent->targetname, "zyk_quest_models") == 0 && Q_stricmp(zyk_tile_ent->classname, "misc_model_breakable") == 0 && 
-								((int)zyk_tile_ent->s.origin[0] != 2336 || (int)zyk_tile_ent->s.origin[1] != 3425))
-							{ // zyk: do not drop the central tile
-								if (tile_count == zyk_chosen_tile)
-								{
-									gentity_t *effect_ent = zyk_quest_item("env/lbolt1", zyk_tile_ent->s.origin[0], zyk_tile_ent->s.origin[1], -9960, "", "");
-
-									if (effect_ent)
-									{
-										level.special_power_effects[effect_ent->s.number] = ent->s.number;
-										level.special_power_effects_timer[effect_ent->s.number] = level.time + 1000;
-
-										G_Sound(effect_ent, CHAN_AUTO, G_SoundIndex("sound/effects/tram_boost.mp3"));
-
-										G_FreeEntity(zyk_tile_ent);
-
-										ent->client->pers.hunter_quest_messages++;
-									}
-
-									break;
-								}
-
-								tile_count++;
-							}
-						}
-
-						// zyk: send him back to his original catwalk
-						origin[0] = 2336.0f;
-						origin[1] = 3425.0f;
-						origin[2] = -9800.0f;
-						yaw[0] = 0.0f;
-						yaw[1] = 179.0f;
-						yaw[2] = 0.0f;
-						zyk_TeleportPlayer(ent, origin, yaw);
-
-						ent->client->pers.universe_quest_timer = level.time + ((ent->health + ent->client->ps.stats[STAT_ARMOR]) / 2) + 1000;
-					}
-				}
-			}
-			else if (ent->health > 0 && Q_stricmp(ent->NPC_type, "quest_mage") == 0 && ent->enemy && ent->client->pers.guardian_timer < level.time)
-			{ // zyk: powers used by the quest_mage npc
-				int random_magic = Q_irand(0, 26);
-
-				if (random_magic == 0)
-				{
-					ultra_strength(ent, 30000);
-				}
-				else if (random_magic == 1)
-				{
-					poison_mushrooms(ent, 100, 600);
-				}
-				else if (random_magic == 2)
-				{
-					water_splash(ent, 400, 15);
-				}
-				else if (random_magic == 3)
-				{
-					ultra_flame(ent, 500, 35);
-				}
-				else if (random_magic == 4)
-				{
-					rock_fall(ent, 500, 40);
-				}
-				else if (random_magic == 5)
-				{
-					dome_of_damage(ent, 500, 25);
-				}
-				else if (random_magic == 6)
-				{
-					hurricane(ent, 600, 5000);
-				}
-				else if (random_magic == 7)
-				{
-					slow_motion(ent, 400, 15000);
-				}
-				else if (random_magic == 8)
-				{
-					ultra_resistance(ent, 30000);
-				}
-				else if (random_magic == 9)
-				{
-					sleeping_flowers(ent, 2500, 350);
-				}
-				else if (random_magic == 10)
-				{
-					healing_water(ent, 120);
-				}
-				else if (random_magic == 11)
-				{
-					flame_burst(ent, 5000);
-				}
-				else if (random_magic == 12)
-				{
-					earthquake(ent, 2000, 300, 500);
-				}
-				else if (random_magic == 13)
-				{
-					magic_shield(ent, 6000);
-				}
-				else if (random_magic == 14)
-				{
-					blowing_wind(ent, 700, 5000);
-				}
-				else if (random_magic == 15)
-				{
-					ultra_speed(ent, 15000);
-				}
-				else if (random_magic == 16)
-				{
-					ice_stalagmite(ent, 500, 130);
-				}
-				else if (random_magic == 17)
-				{
-					ice_boulder(ent, 380, 40);
-				}
-				else if (random_magic == 18)
-				{
-					water_attack(ent, 500, 40);
-				}
-				else if (random_magic == 19)
-				{
-					shifting_sand(ent, 1000);
-				}
-				else if (random_magic == 20)
-				{
-					tree_of_life(ent);
-				}
-				else if (random_magic == 21)
-				{
-					magic_disable(ent, 450);
-				}
-				else if (random_magic == 22)
-				{
-					fast_and_slow(ent, 400, 6000);
-				}
-				else if (random_magic == 23)
-				{
-					flaming_area(ent, 20);
-				}
-				else if (random_magic == 24)
-				{
-					reverse_wind(ent, 700, 5000);
-				}
-				else if (random_magic == 25)
-				{
-					enemy_nerf(ent, 450);
-				}
-				else if (random_magic == 26)
-				{
-					ice_block(ent, 3500);
-				}
-
-				ent->client->pers.guardian_timer = level.time + Q_irand(3000, 6000);
-			}
-			else if (ent->client->pers.universe_quest_messages == -10000 && ent->health > 0 && ent->enemy && Q_stricmp(ent->NPC_type, "ymir_boss") == 0)
-			{ // zyk: Ymir
-				if (ent->client->pers.guardian_timer < level.time)
-				{
-					int random_magic = Q_irand(0, 26);
-
-					if (random_magic == 0)
-					{
-						ultra_strength(ent, 30000);
-					}
-					else if (random_magic == 1)
-					{
-						poison_mushrooms(ent, 100, 600);
-					}
-					else if (random_magic == 2)
-					{
-						water_splash(ent, 400, 15);
-					}
-					else if (random_magic == 3)
-					{
-						ultra_flame(ent, 500, 35);
-					}
-					else if (random_magic == 4)
-					{
-						rock_fall(ent, 500, 40);
-					}
-					else if (random_magic == 5)
-					{
-						dome_of_damage(ent, 500, 25);
-					}
-					else if (random_magic == 6)
-					{
-						hurricane(ent, 600, 5000);
-					}
-					else if (random_magic == 7)
-					{
-						slow_motion(ent, 400, 15000);
-					}
-					else if (random_magic == 8)
-					{
-						ultra_resistance(ent, 30000);
-					}
-					else if (random_magic == 9)
-					{
-						sleeping_flowers(ent, 2500, 350);
-					}
-					else if (random_magic == 10)
-					{
-						healing_water(ent, 120);
-					}
-					else if (random_magic == 11)
-					{
-						flame_burst(ent, 5000);
-					}
-					else if (random_magic == 12)
-					{
-						earthquake(ent, 2000, 300, 500);
-					}
-					else if (random_magic == 13)
-					{
-						magic_shield(ent, 6000);
-					}
-					else if (random_magic == 14)
-					{
-						blowing_wind(ent, 700, 5000);
-					}
-					else if (random_magic == 15)
-					{
-						ultra_speed(ent, 15000);
-					}
-					else if (random_magic == 16)
-					{
-						ice_stalagmite(ent, 500, 130);
-					}
-					else if (random_magic == 17)
-					{
-						ice_boulder(ent, 380, 40);
-					}
-					else if (random_magic == 18)
-					{
-						water_attack(ent, 500, 40);
-					}
-					else if (random_magic == 19)
-					{
-						shifting_sand(ent, 1000);
-					}
-					else if (random_magic == 20)
-					{
-						tree_of_life(ent);
-					}
-					else if (random_magic == 21)
-					{
-						magic_disable(ent, 450);
-					}
-					else if (random_magic == 22)
-					{
-						fast_and_slow(ent, 400, 6000);
-					}
-					else if (random_magic == 23)
-					{
-						flaming_area(ent, 20);
-					}
-					else if (random_magic == 24)
-					{
-						reverse_wind(ent, 700, 5000);
-					}
-					else if (random_magic == 25)
-					{
-						enemy_nerf(ent, 450);
-					}
-					else if (random_magic == 26)
-					{
-						ice_block(ent, 3500);
-					}
-
-					ent->client->pers.guardian_timer = level.time + Q_irand(6000, 10000);
-				}
-
-				if (ent->client->pers.light_quest_timer < level.time)
-				{ // zyk: unique
-					ent->client->pers.light_quest_timer = level.time + Q_irand(8000, 10000);
-
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-
-					zyk_no_attack(ent);
-				}
-			}
-			else if (ent->client->pers.universe_quest_messages == -10000 && ent->health > 0 && ent->enemy && Q_stricmp(ent->NPC_type, "thor_boss") == 0)
-			{ // zyk: Thor
-				if (ent->client->pers.guardian_timer < level.time)
-				{
-					int random_magic = Q_irand(0, 6);
-
-					if (random_magic == 0)
-					{
-						ultra_drain(ent, 450, 30, 8000);
-					}
-					else if (random_magic == 1)
-					{
-						immunity_power(ent, 20000);
-					}
-					else if (random_magic == 2)
-					{
-						chaos_power(ent, 400, 4600);
-					}
-					else if (random_magic == 3)
-					{
-						time_power(ent, 400, 4000);
-					}
-					else if (random_magic == 4)
-					{
-						healing_area(ent, 2, 5000);
-					}
-					else if (random_magic == 5)
-					{
-						magic_explosion(ent, 320, 130, 900);
-					}
-					else if (random_magic == 6)
-					{
-						lightning_dome(ent, 70);
-					}
-
-					ent->client->pers.guardian_timer = level.time + Q_irand(7000, 12000);
-				}
-
-				if (ent->client->pers.light_quest_timer < level.time)
-				{ // zyk: unique
-					ent->client->pers.light_quest_timer = level.time + Q_irand(8000, 10000);
-
-					ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 2000;
-
-					ent->client->ps.forceHandExtend = HANDEXTEND_TAUNT;
-					ent->client->ps.forceDodgeAnim = BOTH_FORCE_DRAIN_START;
-					ent->client->ps.forceHandExtendTime = level.time + 2000;
-
-					zyk_super_beam(ent, ent->client->ps.viewangles[1]);
-				}
-			}
+			// GalaxyRP fix: [Magic] the custom-quest-NPC ability dispatch used to be here, 211 lines of
+			// it: a random-power chain for NPCs carrying PLAYER_STATUS_CUSTOM_QUEST_NPC, picking magic
+			// powers out of sess.selected_left_special_power and special powers out of
+			// sess.selected_special_power.
+			//
+			// Nothing has ever been able to set that status bit. The name appears exactly twice in the
+			// whole tree -- its enum entry in g_local.h and the single read that used to be on this
+			// line -- there is no "player_statuses |= (1 << PLAYER_STATUS_CUSTOM_QUEST_NPC)" anywhere,
+			// every player_statuses set in the tree uses a literal PLAYER_STATUS_* name rather than a
+			// variable bit index, and player_statuses is never restored from the database or the session
+			// string -- it is only ever assigned 0 wholesale. So the bit sat at the zero ClientConnect's
+			// memset gives it and the block never ran once.
+			//
+			// Removing it orphaned twelve functions further up this file, which went with it: chaos_power,
+			// elemental_attack, force_scream, healing_area, immunity_power, lightning_dome,
+			// magic_explosion, time_power, ultra_drain, zyk_force_storm, zyk_no_attack and
+			// zyk_super_beam. This block was their only caller; the quest_mage chain that used to sit just
+			// below called twenty-seven OTHER effect functions and none of these twelve (that chain has
+			// since gone too, and the twenty-seven, kept for a while as reference code, are now deleted
+			// as well). None of the
+			// twelve was ever taken by address (the zyk_force_storm / zyk_super_beam matches elsewhere are entity
+			// targetname strings that happen to share the names, not function pointers).
+			//
+			// Consequences worth knowing, all of them pre-existing dead weight rather than new:
+			// quest_power_status bits 1, 2 and 26 had no setter other than chaos_power, time_power and
+			// elemental_attack, so those three bits are now permanently 0 and their ~21 readers across
+			// six files are permanently-false tests. Bits 0 and 5 keep other setters. The entity
+			// targetname handling for "zyk_force_storm" and "zyk_super_beam" lives in g_misc.c, and
+			// zyk_lightning_dome_detonate() (g_weapon.c) and zyk_spawn_ice_element() lost their last
+			// callers. All left in place deliberately, to be judged on their own rather than swept up
+			// behind this one.
+			//
+			// Two corrections to the above, made in a later pass. (1) This note also named g_combat.c
+			// as holding some of that targetname handling; neither name appears in that file. (2) It
+			// said the handling "can no longer be reached either", which was wrong and was the reason
+			// a real bug sat unnoticed: the targetname handling is reached by any fx_runner carrying
+			// the name, which /entadd, /entedit, a .ent preset or a map can all supply. What the loss
+			// of zyk_super_beam() actually removed was the only writer of ent->parent on such an
+			// entity -- so the handler ran with a NULL parent and dereferenced it. See the guard and
+			// the full account in fx_runner_think() (g_misc.c).
+
+			// GalaxyRP fix: [Guardian] quest guardians special abilities dispatch removed here -- guardian_mode/guardian_invoked_by_id are permanently dead (spawn_boss has no callers); the ~40 magic-power helper functions it called (healing_water, water_splash, ultra_strength, ice_block, earthquake, magic_shield, etc.) were kept as zero-caller code for a while and have since been deleted -- see the note below
+
+			// GalaxyRP fix: [Guardian] ymir_boss and thor_boss ability sub-chains were removed here earlier,
+			// and the quest_mage chain that used to follow them has now gone too -- 115 lines picking one of
+			// twenty-seven magic powers at random (ultra_strength, poison_mushrooms, water_splash, hurricane,
+			// rock_fall, ice_block, ...) every few seconds for any NPC whose NPC_type was "quest_mage".
+			//
+			// That NPC type no longer exists: it was defined in zyk_quest_enemies.npc, one of the three quest
+			// asset files deleted with the magic orphans, so NPC_ParseParms() now fails the name outright and
+			// the condition could never be true again. This chain was the last live entry point into the
+			// magic effect system.
+			//
+			// The twenty-seven effect functions themselves were kept for a while as material to repurpose,
+			// then deleted in the magic cleanup along with the quest_power_status bitfield they wrote and
+			// every reader of it (G_Damage, ClientThink_real, the force-power checks, the flame thrower's
+			// Flame Burst bonus). Anyone reviving one of those powers starts from the git history, and
+			// needs to give it an owner link and a lifetime first: level.special_power_effects[] and
+			// clear_special_power_effect(), which used to do that, went with the chain.
 		}
 
 		// zyk: added check for mind control on npcs here. NPCs being mind controlled cant think
@@ -12590,6 +9240,18 @@ void G_RunFrame( int levelTime ) {
 		{
 			ClearNPCGlobals();
 		}
+	}
+
+	// GalaxyRP: [Logical Entities] the upper region. A logical entity is never a client, missile,
+	// mover, item or NPC and is never linked, so the only thing the loop above would do for it is
+	// G_RunThink() -- and that is all it gets. Runs after the networked loop so a logical relay
+	// fired by a networked trigger this frame thinks this frame, as it did when it was networked.
+	ent = g_logicalents;
+	for ( i = 0; i < level.num_logicalents; i++, ent++ ) {
+		if ( !ent->inuse ) {
+			continue;
+		}
+		G_RunThink( ent );
 	}
 #ifdef _G_FRAME_PERFANAL
 	iTimer_ItemRun = trap->PrecisionTimer_End(timer_ItemRun);
@@ -12617,6 +9279,8 @@ void G_RunFrame( int levelTime ) {
 			ClientEndFrame( ent );
 		}
 	}
+	// GalaxyRP: [Phase] and the same for the NPCs /npc effect has phased (g_active.c)
+	RP_PhaseNpcEndFrame();
 #ifdef _G_FRAME_PERFANAL
 	iTimer_ClientEndframe = trap->PrecisionTimer_End(timer_ClientEndframe);
 #endif
@@ -12654,6 +9318,9 @@ void G_RunFrame( int levelTime ) {
 #ifdef _G_FRAME_PERFANAL
 	trap->PrecisionTimer_Start(&timer_Queues);
 #endif
+	// GalaxyRP: [Entity System] which clients each sound-set speaker is sent to this frame
+	RP_SpeakerAudienceFrame();
+
 	//At the end of the frame, send out the ghoul2 kill queue, if there is one
 	G_SendG2KillQueue();
 

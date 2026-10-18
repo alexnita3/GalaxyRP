@@ -503,34 +503,38 @@ int G_CheckAlertEvents( gentity_t *self, qboolean checkSight, qboolean checkSoun
 	int bestSoundAlert = -1;
 	int bestSightAlert = -1;
 
-	//OJKFIXME: clientnum 0
-	if ( &g_entities[0] == NULL || g_entities[0].health <= 0 )
+	// GalaxyRP fix: [NPC] this bailed out with -1 whenever g_entities[0] had no health -- on a
+	// server where slot 0 is empty, spectating or dead no NPC ever reacted to any sound or sight
+	// event. It also ran both scans regardless of checkSight/checkSound; the callers that ask for
+	// only one (a sleeping stormtrooper listens, a following NPC looks) now get what they asked for.
+
+	if ( checkSound )
 	{
-		//player is dead
-		return -1;
+		//get sound event
+		bestSoundEvent = G_CheckSoundEvents( self, maxHearDist, ignoreAlert, mustHaveOwner, minAlertLevel );
+		//get sound event alert level
+		if ( bestSoundEvent >= 0 )
+		{
+			bestSoundAlert = level.alertEvents[bestSoundEvent].level;
+		}
 	}
 
-	//get sound event
-	bestSoundEvent = G_CheckSoundEvents( self, maxHearDist, ignoreAlert, mustHaveOwner, minAlertLevel );
-	//get sound event alert level
-	if ( bestSoundEvent >= 0 )
+	if ( checkSight )
 	{
-		bestSoundAlert = level.alertEvents[bestSoundEvent].level;
-	}
-
-	//get sight event
-	if ( self->NPC )
-	{
-		bestSightEvent = G_CheckSightEvents( self, self->NPC->stats.hfov, self->NPC->stats.vfov, maxSeeDist, ignoreAlert, mustHaveOwner, minAlertLevel );
-	}
-	else
-	{
-		bestSightEvent = G_CheckSightEvents( self, 80, 80, maxSeeDist, ignoreAlert, mustHaveOwner, minAlertLevel );//FIXME: look at cg_view to get more accurate numbers?
-	}
-	//get sight event alert level
-	if ( bestSightEvent >= 0 )
-	{
-		bestSightAlert = level.alertEvents[bestSightEvent].level;
+		//get sight event
+		if ( self->NPC )
+		{
+			bestSightEvent = G_CheckSightEvents( self, self->NPC->stats.hfov, self->NPC->stats.vfov, maxSeeDist, ignoreAlert, mustHaveOwner, minAlertLevel );
+		}
+		else
+		{
+			bestSightEvent = G_CheckSightEvents( self, 80, 80, maxSeeDist, ignoreAlert, mustHaveOwner, minAlertLevel );//FIXME: look at cg_view to get more accurate numbers?
+		}
+		//get sight event alert level
+		if ( bestSightEvent >= 0 )
+		{
+			bestSightAlert = level.alertEvents[bestSightEvent].level;
+		}
 	}
 
 	//return the one that has a higher alert (or sound if equal)

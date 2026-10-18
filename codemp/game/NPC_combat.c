@@ -357,7 +357,10 @@ void G_ForceSaberOn(gentity_t *ent)
 	{
 		G_Sound(ent, CHAN_AUTO, ent->client->saber[0].soundOn);
 	}
-	if (ent->client->saber[1].soundOn)
+	// GalaxyRP fix: [Saber Sounds] added the saber[1].model[0] test -- see Cmd_ToggleSaber_f in
+	// g_cmds.c for why an unused second saber has a playable soundOn.
+	if (ent->client->saber[1].soundOn &&
+		ent->client->saber[1].model[0])
 	{
 		G_Sound(ent, CHAN_AUTO, ent->client->saber[1].soundOn);
 	}
@@ -639,6 +642,10 @@ void ChangeWeapon( gentity_t *ent, int newWeapon )
 		if ( ent->NPC->scriptFlags & SCF_ALT_FIRE )
 		{
 			// zyk: increased 500 in burstSpacing in each difficulty level
+			// DAJ_RP: [NPC] "default" rather than "case 2": g_npcspskill above 2 (bots read the same cvar
+			// as 1-5) used to set nothing here, leaving whatever spacing the previous weapon had -- 0 for
+			// a fresh NPC, i.e. disruptor alt fire with no delay at all. Above 2 now acts as 2, as it
+			// does in every if/else ladder in this function.
 			switch( g_npcspskill.integer )
 			{
 			case 0:
@@ -647,7 +654,7 @@ void ChangeWeapon( gentity_t *ent, int newWeapon )
 			case 1:
 				ent->NPC->burstSpacing = 2000;//attackdebounce
 				break;
-			case 2:
+			default:
 				ent->NPC->burstSpacing = 1500;//attackdebounce
 				break;
 			}
@@ -670,24 +677,47 @@ void ChangeWeapon( gentity_t *ent, int newWeapon )
 		break;
 
 	case WP_REPEATER:
+		// DAJ_RP: [NPC] rate of fire rebalanced. zyk had cut this to bursts of 5-20 shots with a
+		// 0.10-0.15 s pause at every skill level -- in practice a continuous stream of ~9 bolts a
+		// second, plus a plasma bomb every 0.8 s, which made the Galak mech (a repeater NPC) a
+		// noticeable load on the server and clients. Now graded by g_npcspskill, landing near vanilla
+		// overall: bursts grow and pauses shrink with skill. The gun fires 10 shots a second inside a
+		// burst (weaponData fireTime 100), so roughly 2.3 / 3.8 / 5.6 shots a second at skill 0 / 1 /
+		// 2, against ~9 before and 3.0 / 3.9 / 5.7 in vanilla.
 		if ( ent->NPC->scriptFlags & SCF_ALT_FIRE )
-		{
+		{ // one plasma bomb at a time (the gun's own limit is one per 0.8 s); was 0.8 s at every level
 			ent->NPC->aiFlags &= ~NPCAI_BURST_WEAPON;
-			ent->NPC->burstSpacing = 800;//attackdebounce
+			if ( g_npcspskill.integer == 0 )
+				ent->NPC->burstSpacing = 2500;//attackdebounce
+			else if ( g_npcspskill.integer == 1 )
+				ent->NPC->burstSpacing = 2000;//attackdebounce
+			else
+				ent->NPC->burstSpacing = 1500;//attackdebounce
 		}
 		else
 		{
 			ent->NPC->aiFlags |= NPCAI_BURST_WEAPON;
-			ent->NPC->burstMin = 5;
-			ent->NPC->burstMean = 14;
-			ent->NPC->burstMax = 20;
-			// zyk: changed bursts and burstspacing
 			if ( g_npcspskill.integer == 0 )
-				ent->NPC->burstSpacing = 150;//attack debounce
+			{
+				ent->NPC->burstMin = 3;
+				ent->NPC->burstMean = 4;
+				ent->NPC->burstMax = 6;
+				ent->NPC->burstSpacing = 1500;//attack debounce
+			}
 			else if ( g_npcspskill.integer == 1 )
-				ent->NPC->burstSpacing = 120;//attack debounce
+			{
+				ent->NPC->burstMin = 4;
+				ent->NPC->burstMean = 6;
+				ent->NPC->burstMax = 8;
+				ent->NPC->burstSpacing = 1000;//attack debounce
+			}
 			else
-				ent->NPC->burstSpacing = 100;//attack debounce
+			{
+				ent->NPC->burstMin = 5;
+				ent->NPC->burstMean = 7;
+				ent->NPC->burstMax = 10;
+				ent->NPC->burstSpacing = 600;//attack debounce
+			}
 		}
 		break;
 
@@ -753,27 +783,41 @@ void ChangeWeapon( gentity_t *ent, int newWeapon )
 	*/
 
 	case WP_BLASTER:
+		// DAJ_RP: [NPC] rate of fire rebalanced, as for the repeater above. zyk's alt fire was bursts of
+		// 5-20 with a 0.12-0.25 s pause -- near-continuous, ~7.5 shots a second at every level -- and
+		// his main fire was 0.45 / 0.40 / 0.35 s, three levels barely apart.
 		if ( ent->NPC->scriptFlags & SCF_ALT_FIRE )
-		{
+		{ // bursts at the gun's alt rate (weaponData altFireTime 120): ~2.0 / 3.1 / 4.5 shots a second
 			ent->NPC->aiFlags |= NPCAI_BURST_WEAPON;
-			ent->NPC->burstMin = 5;
-			ent->NPC->burstMean = 14;
-			ent->NPC->burstMax = 20;
-			// zyk: changed bursts and burstspacing
 			if ( g_npcspskill.integer == 0 )
-				ent->NPC->burstSpacing = 250;//attack debounce
+			{
+				ent->NPC->burstMin = 3;
+				ent->NPC->burstMean = 4;
+				ent->NPC->burstMax = 5;
+				ent->NPC->burstSpacing = 1500;//attack debounce
+			}
 			else if ( g_npcspskill.integer == 1 )
-				ent->NPC->burstSpacing = 180;//attack debounce
+			{
+				ent->NPC->burstMin = 4;
+				ent->NPC->burstMean = 5;
+				ent->NPC->burstMax = 7;
+				ent->NPC->burstSpacing = 1100;//attack debounce
+			}
 			else
-				ent->NPC->burstSpacing = 120;//attack debounce
+			{
+				ent->NPC->burstMin = 5;
+				ent->NPC->burstMean = 7;
+				ent->NPC->burstMax = 9;
+				ent->NPC->burstSpacing = 700;//attack debounce
+			}
 		}
 		else
-		{
+		{ // single shots; skill 2 stays at 0.35 s, the gun's own limit (weaponData fireTime 350)
 			ent->NPC->aiFlags &= ~NPCAI_BURST_WEAPON;
 			if ( g_npcspskill.integer == 0 )
-				ent->NPC->burstSpacing = 450;//attack debounce
+				ent->NPC->burstSpacing = 700;//attack debounce
 			else if ( g_npcspskill.integer == 1 )
-				ent->NPC->burstSpacing = 400;//attack debounce
+				ent->NPC->burstSpacing = 500;//attack debounce
 			else
 				ent->NPC->burstSpacing = 350;//attack debounce
 		//	ent->NPC->burstSpacing = 1000;//attackdebounce
@@ -1447,106 +1491,116 @@ gentity_t *NPC_PickEnemy( gentity_t *closestTo, int enemyTeam, qboolean checkVis
 		minVis = VIS_360;
 	}
 
-	//OJKFIXME: care about clients other than 0
-	//OJKFIXME: choice[] is not size checked?
+	// GalaxyRP fix: [NPC] "find a player first" only ever looked at g_entities[0]; walk every
+	// client slot the same way, resetting the per-candidate failure flag for each.
 	if( findPlayersFirst )
 	{//try to find a player first
-		newenemy = &g_entities[0];
-		if( newenemy->client && !(newenemy->flags & FL_NOTARGET) && !(newenemy->s.eFlags & EF_NODRAW))
+		for ( entNum = 0; entNum < MAX_CLIENTS; entNum++ )
 		{
-			if( newenemy->health > 0 )
+			newenemy = &g_entities[entNum];
+			failed = qfalse;
+			if( newenemy->client && !(newenemy->flags & FL_NOTARGET) && !(newenemy->s.eFlags & EF_NODRAW))
 			{
-				if( NPC_ValidEnemy( newenemy) )//enemyTeam == TEAM_PLAYER || newenemy->client->playerTeam == enemyTeam || ( enemyTeam == TEAM_PLAYER ) )
-				{//FIXME:  check for range and FOV or vis?
-					if( newenemy != NPCS.NPC->lastEnemy )
-					{//Make sure we're not just going back and forth here
-						if ( trap->InPVS(newenemy->r.currentOrigin, NPCS.NPC->r.currentOrigin) )
-						{
-							if(NPCS.NPCInfo->behaviorState == BS_INVESTIGATE ||	NPCS.NPCInfo->behaviorState == BS_PATROL)
+				if( newenemy->health > 0 )
+				{
+					if( NPC_ValidEnemy( newenemy) )//enemyTeam == TEAM_PLAYER || newenemy->client->playerTeam == enemyTeam || ( enemyTeam == TEAM_PLAYER ) )
+					{//FIXME:  check for range and FOV or vis?
+						if( newenemy != NPCS.NPC->lastEnemy )
+						{//Make sure we're not just going back and forth here
+							if ( trap->InPVS(newenemy->r.currentOrigin, NPCS.NPC->r.currentOrigin) )
 							{
-								if(!NPCS.NPC->enemy)
+								if(NPCS.NPCInfo->behaviorState == BS_INVESTIGATE ||	NPCS.NPCInfo->behaviorState == BS_PATROL)
 								{
-									if(!InVisrange(newenemy))
+									if(!NPCS.NPC->enemy)
 									{
-										failed = qtrue;
-									}
-									else if(NPC_CheckVisibility ( newenemy, CHECK_360|CHECK_FOV|CHECK_VISRANGE ) != VIS_FOV)
-									{
-										failed = qtrue;
-									}
-								}
-							}
-
-							if ( !failed )
-							{
-								VectorSubtract( closestTo->r.currentOrigin, newenemy->r.currentOrigin, diff );
-								relDist = VectorLengthSquared(diff);
-								if ( newenemy->client->hiddenDist > 0 )
-								{
-									if( relDist > newenemy->client->hiddenDist*newenemy->client->hiddenDist )
-									{
-										//out of hidden range
-										if ( VectorLengthSquared( newenemy->client->hiddenDir ) )
-										{//They're only hidden from a certain direction, check
-											float	dot;
-											VectorNormalize( diff );
-											dot = DotProduct( newenemy->client->hiddenDir, diff );
-											if ( dot > 0.5 )
-											{//I'm not looking in the right dir toward them to see them
-												failed = qtrue;
-											}
-											else
-											{
-												Debug_Printf(&d_npcai, DEBUG_LEVEL_INFO, "%s saw %s trying to hide - hiddenDir %s targetDir %s dot %f\n", NPCS.NPC->targetname, newenemy->targetname, vtos(newenemy->client->hiddenDir), vtos(diff), dot );
-											}
+										if(!InVisrange(newenemy))
+										{
+											failed = qtrue;
 										}
-										else
+										else if(NPC_CheckVisibility ( newenemy, CHECK_360|CHECK_FOV|CHECK_VISRANGE ) != VIS_FOV)
 										{
 											failed = qtrue;
 										}
 									}
-									else
-									{
-										Debug_Printf(&d_npcai, DEBUG_LEVEL_INFO, "%s saw %s trying to hide - hiddenDist %f\n", NPCS.NPC->targetname, newenemy->targetname, newenemy->client->hiddenDist );
-									}
 								}
 
-								if(!failed)
+								if ( !failed )
 								{
-									if(findClosest)
+									VectorSubtract( closestTo->r.currentOrigin, newenemy->r.currentOrigin, diff );
+									relDist = VectorLengthSquared(diff);
+									if ( newenemy->client->hiddenDist > 0 )
 									{
-										if(relDist < bestDist)
+										if( relDist > newenemy->client->hiddenDist*newenemy->client->hiddenDist )
 										{
-											if(!NPC_EnemyTooFar(newenemy, relDist, qfalse))
-											{
-												if(checkVis)
+											//out of hidden range
+											if ( VectorLengthSquared( newenemy->client->hiddenDir ) )
+											{//They're only hidden from a certain direction, check
+												float	dot;
+												VectorNormalize( diff );
+												dot = DotProduct( newenemy->client->hiddenDir, diff );
+												if ( dot > 0.5 )
+												{//I'm not looking in the right dir toward them to see them
+													failed = qtrue;
+												}
+												else
 												{
-													if( NPC_CheckVisibility ( newenemy, visChecks ) == minVis )
+													Debug_Printf(&d_npcai, DEBUG_LEVEL_INFO, "%s saw %s trying to hide - hiddenDir %s targetDir %s dot %f\n", NPCS.NPC->targetname, newenemy->targetname, vtos(newenemy->client->hiddenDir), vtos(diff), dot );
+												}
+											}
+											else
+											{
+												failed = qtrue;
+											}
+										}
+										else
+										{
+											Debug_Printf(&d_npcai, DEBUG_LEVEL_INFO, "%s saw %s trying to hide - hiddenDist %f\n", NPCS.NPC->targetname, newenemy->targetname, newenemy->client->hiddenDist );
+										}
+									}
+
+									if(!failed)
+									{
+										if(findClosest)
+										{
+											if(relDist < bestDist)
+											{
+												if(!NPC_EnemyTooFar(newenemy, relDist, qfalse))
+												{
+													if(checkVis)
+													{
+														if( NPC_CheckVisibility ( newenemy, visChecks ) == minVis )
+														{
+															bestDist = relDist;
+															closestEnemy = newenemy;
+														}
+													}
+													else
 													{
 														bestDist = relDist;
 														closestEnemy = newenemy;
 													}
 												}
-												else
+											}
+										}
+										else if(!NPC_EnemyTooFar(newenemy, 0, qfalse))
+										{
+											if(checkVis)
+											{
+												if( NPC_CheckVisibility ( newenemy, CHECK_360|CHECK_FOV|CHECK_VISRANGE ) == VIS_FOV )
 												{
-													bestDist = relDist;
-													closestEnemy = newenemy;
+													if ( num_choices < (int)ARRAY_LEN( choice ) )
+													{
+														choice[num_choices++] = newenemy->s.number;
+													}
 												}
 											}
-										}
-									}
-									else if(!NPC_EnemyTooFar(newenemy, 0, qfalse))
-									{
-										if(checkVis)
-										{
-											if( NPC_CheckVisibility ( newenemy, CHECK_360|CHECK_FOV|CHECK_VISRANGE ) == VIS_FOV )
+											else
 											{
-												choice[num_choices++] = newenemy->s.number;
+												if ( num_choices < (int)ARRAY_LEN( choice ) )
+												{
+													choice[num_choices++] = newenemy->s.number;
+												}
 											}
-										}
-										else
-										{
-											choice[num_choices++] = newenemy->s.number;
 										}
 									}
 								}
@@ -1686,12 +1740,18 @@ gentity_t *NPC_PickEnemy( gentity_t *closestTo, int enemyTeam, qboolean checkVis
 								//if( NPC_CheckVisibility ( newenemy, CHECK_360|CHECK_FOV|CHECK_VISRANGE ) == VIS_FOV )
 								if ( NPC_CheckVisibility ( newenemy, CHECK_360|CHECK_VISRANGE ) >= VIS_360 )
 								{
-									choice[num_choices++] = newenemy->s.number;
+									if ( num_choices < (int)ARRAY_LEN( choice ) )
+									{
+										choice[num_choices++] = newenemy->s.number;
+									}
 								}
 							}
 							else
 							{
-								choice[num_choices++] = newenemy->s.number;
+								if ( num_choices < (int)ARRAY_LEN( choice ) )
+								{
+									choice[num_choices++] = newenemy->s.number;
+								}
 							}
 						}
 					}
@@ -1838,8 +1898,7 @@ gentity_t *NPC_CheckEnemy( qboolean findNew, qboolean tooFarOk, qboolean setEnem
 		}
 	}
 
-	//if ( NPC->svFlags & SVF_IGNORE_ENEMIES )
-	if (0) //rwwFIXMEFIXME: support for this flag
+	if ( NPCS.NPCInfo->scriptFlags & SCF_IGNORE_ENEMIES )
 	{//We're ignoring all enemies for now
 		if ( setEnemy )
 		{
@@ -2430,6 +2489,14 @@ SNIPE - Snipers look for these first, NOT IMPLEMENTED
 
 void SP_point_combat( gentity_t *self )
 {
+	// GalaxyRP fix: [Entity System] not after map load: combat points are matched to their waypoints
+	// once, at map start (CP_FindCombatPointWaypoints), so a later one is never used -- and it stays in
+	// level.combatPoints for the map, since the entity frees itself below.
+	if ( RP_RefuseAtRuntime( self, "combat points cannot be added after map load: they are indexed at map start, a later one is never used and cannot be removed" ) )
+	{
+		return;
+	}
+
 	if(level.numCombatPoints >= MAX_COMBAT_POINTS)
 	{
 #ifndef FINAL_BUILD
@@ -2441,7 +2508,11 @@ void SP_point_combat( gentity_t *self )
 
 	self->s.origin[2] += 0.125;
 	G_SetOrigin(self, self->s.origin);
-	trap->LinkEntity((sharedEntity_t *)self);
+	// GalaxyRP: [Logical Entities] point_combat is logical; see the waypoint note in g_nav.c.
+	if (!self->isLogical)
+	{
+		trap->LinkEntity((sharedEntity_t *)self);
+	}
 
 	if ( G_CheckInSolid( self, qtrue ) )
 	{
@@ -2974,6 +3045,36 @@ void NPC_CheckGetNewWeapon( void )
 {
 	if ( NPCS.NPC->s.weapon == WP_NONE && NPCS.NPC->enemy )
 	{//if running away because dropped weapon...
+		// GalaxyRP fix: [NPC] draw a weapon we already own before going to look for one on the ground.
+		// This function is the one place in the AI whose whole job is "this NPC needs a weapon", and it
+		// only ever searched the world for a dropped ET_ITEM -- it never looked at what the NPC is
+		// already carrying. ps.weapon is what is in an NPC's HANDS, not what it owns, and the two come
+		// apart in both directions:
+		//
+		//   * NPC_BSST_Patrol() holsters CLASS_IMPERIAL NPCs on purpose -- ChangeWeapon(NPC, WP_NONE)
+		//     with the weapon left in STAT_WEAPONS -- so a holstered imperial looked exactly like a
+		//     disarmed one and went hunting for a gun on the floor while carrying a concussion rifle.
+		//
+		//   * an NPC that really was disarmed, ran back and picked its own weapon up again was stranded
+		//     the same way: Pickup_Weapon() sets STAT_WEAPONS and ammo and nothing else, and
+		//     ChangeWeapon() is the only thing that can select an NPC's weapon -- pers.cmd is memset at
+		//     the top of every NPC_Think() and PM_BeginWeaponChange() refuses WP_NONE on its first
+		//     line -- so it sat at WP_NONE for good with the weapon back in its inventory.
+		//
+		// ChooseBestWeapon() scans up from ps.weapon + 1, which from WP_NONE is the whole list, but it
+		// returns ps.weapon UNCHANGED when the NPC owns nothing, so its answer is checked rather than
+		// trusted. An NPC that genuinely has nothing falls through to the world search below, exactly
+		// as before.
+		{
+			int wp = ChooseBestWeapon();
+
+			if ( wp > WP_NONE && HaveWeapon( wp ) )
+			{
+				ChangeWeapon( NPCS.NPC, wp );
+				return;
+			}
+		}
+
 		if ( NPCS.NPCInfo->goalEntity
 			&& NPCS.NPCInfo->goalEntity == NPCS.NPCInfo->tempGoal
 			&& NPCS.NPCInfo->goalEntity->enemy

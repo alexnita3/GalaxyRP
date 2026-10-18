@@ -167,6 +167,38 @@ char    *vtos( const vec3_t v ) {
 
 	return s;
 }
+/*
+=============
+CG_StaticModelSetCentre
+
+DAJ_RP: [Static Models] the centre of a static model's bounds, turned and scaled with it: the second point
+CG_DrawMiscStaticModels() asks the PVS about, when its first -- origin + 1 + zoffset -- is not in it.
+
+A model whose origin sits in the wall it is mounted on was culled from every viewpoint. The engine's R_inPVS() finds no
+cluster for a point inside the map's structural solid (-1) and indexes the PVS row with it anyway: it reads the byte
+before the viewer's row and tests a bit of it, which on most maps is padding and always 0. In the vanilla maps that is
+24 statics: 7 on mp/ffa5 (3 struts and 4 lamps, rotated to jut out of a wall), 3 on mp/siege_desert, 2 on mp/siege_hoth,
+7 on taspir1 and 5 on taspir2 -- and for every one of them the centre of its bounds is out in front of the wall, in
+the open. A model is drawn when either point is in the PVS: the first answers for every model as before, and the second
+can only add one whose bulk is in view.
+
+The client cannot tell a point in structural solid from one in the open: it has no cluster lookup, and the contents at
+a point are no guide -- most statics stand inside the clip brushes wrapped round them (physics_clip, solid contents but
+no wall), so a test on those would pick the second point for all of them. Asking about both needs neither. The real fix
+is the engine's: R_inPVS() answering "may be visible" for a point with no cluster.
+
+mins/maxs are the model's own bounds, unscaled: the axes already carry the scale.
+=============
+*/
+void CG_StaticModelSetCentre( cg_staticmodel_t *sm, const vec3_t mins, const vec3_t maxs ) {
+	int i;
+
+	VectorCopy( sm->org, sm->centre );
+	for ( i = 0; i < 3; i++ ) {
+		VectorMA( sm->centre, ( mins[i] + maxs[i] ) * 0.5f, sm->axes[i], sm->centre );
+	}
+}
+
 void SP_misc_model_static( void ) {
 	char* model;
 	float angle;
@@ -225,6 +257,8 @@ void SP_misc_model_static( void ) {
 
 		trap->R_ModelBounds( staticmodel->model, mins, maxs );
 
+		CG_StaticModelSetCentre( staticmodel, mins, maxs );	// DAJ_RP: [Static Models] the unscaled bounds
+
 		VectorScaleVector( mins, vScale, mins );
 		VectorScaleVector( maxs, vScale, maxs );
 
@@ -232,6 +266,7 @@ void SP_misc_model_static( void ) {
 	}
 	else {
 		staticmodel->radius = 0;
+		CG_StaticModelSetCentre( staticmodel, vec3_origin, vec3_origin );	// DAJ_RP: [Static Models]
 	}
 }
 qboolean cg_noFogOutsidePortal = qfalse;

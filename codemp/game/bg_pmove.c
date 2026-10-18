@@ -121,8 +121,13 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		50,//FP_RAGE,//duration
 		50,//FP_PROTECT,//duration
 		40,//FP_ABSORB,//duration
-		30,//FP_TEAM_HEAL,//instant
-		50,//FP_TEAM_FORCE,//instant
+		// GalaxyRP fix: [Force] Team Heal was 30/60/70/80/90 for levels 1-5 while levels 1-3 heal the
+		// same amounts (and 1-4 the same 40 for one target), so every upgrade cost more for the same
+		// heal. Team Energize was a flat 50 at every level, which with its fixed level 4/5 payout per
+		// target and (then) no level 5 cooldown made allied energizers a force source. Both now rise
+		// 40/50/60/70/80 across the five rows; see ForceTeamForceReplenish() in w_force.c.
+		40,//FP_TEAM_HEAL,//instant
+		40,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
 		0,//FP_SABER_OFFENSE,
@@ -142,7 +147,7 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		50,//FP_RAGE,//duration
 		40,//FP_PROTECT,//duration
 		30,//FP_ABSORB,//duration
-		60,//FP_TEAM_HEAL,//instant
+		50,//FP_TEAM_HEAL,//instant
 		50,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
@@ -163,8 +168,8 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		50,//FP_RAGE,//duration
 		30,//FP_PROTECT,//duration
 		20,//FP_ABSORB,//duration
-		70,//FP_TEAM_HEAL,//instant
-		50,//FP_TEAM_FORCE,//instant
+		60,//FP_TEAM_HEAL,//instant
+		60,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		20,//FP_SEE,//duration
 		0,//FP_SABER_OFFENSE,
@@ -181,11 +186,18 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		20,//FP_TELEPATHY,//instant
 		60,//FP_GRIP,//hold/duration
 		1,//FP_LIGHTNING,//hold/duration
-		100,//FP_RAGE,//duration
+		// GalaxyRP fix: [Force] was 100. This row only became reachable when the FORCE_LEVEL_3 cap
+		// on forcePowerLevel[FP_RAGE] was removed (see initialize_rpg_skills in g_cmds.c), and at
+		// 100 it would have locked Rage out entirely for any character whose force pool is under
+		// that -- the pool is 40 * the Force Power skill, so Force Power 1 and 2 (40 and 80) could
+		// no longer switch Rage on at all, having been able to at the level-3 cost of 50. Lowered
+		// so levels 4 and 5 still cost more to activate than levels 1-3 without taking the power
+		// away from anyone who has it today.
+		60,//FP_RAGE,//duration
 		20,//FP_PROTECT,//duration
 		10,//FP_ABSORB,//duration
-		80,//FP_TEAM_HEAL,//instant
-		50,//FP_TEAM_FORCE,//instant
+		70,//FP_TEAM_HEAL,//instant
+		70,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		30,//FP_SEE,//duration
 		999,//FP_SABER_OFFENSE,
@@ -202,11 +214,12 @@ int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS] =
 		20,//FP_TELEPATHY,//instant
 		80,//FP_GRIP,//hold/duration
 		1,//FP_LIGHTNING,//hold/duration
-		100,//FP_RAGE,//duration
+		// GalaxyRP fix: [Force] was 100, lowered for the same reason as the level-4 row above.
+		70,//FP_RAGE,//duration
 		20,//FP_PROTECT,//duration
 		5,//FP_ABSORB,//duration
-		90,//FP_TEAM_HEAL,//instant
-		50,//FP_TEAM_FORCE,//instant
+		80,//FP_TEAM_HEAL,//instant
+		80,//FP_TEAM_FORCE,//instant
 		20,//FP_DRAIN,//hold/duration
 		30,//FP_SEE,//duration
 		999,//FP_SABER_OFFENSE,
@@ -259,7 +272,27 @@ bgEntity_t *PM_BGEntForNum( int num )
 		return NULL;
 	}
 
-	assert(num >= 0 && num < MAX_GENTITIES);
+	// GalaxyRP fix: [Logical Entities] this was an assert alone, and an assert compiles out of a
+	// release build -- so out of every build a player ever runs. The three checks above it all
+	// return NULL on failure; this one did not, and fell straight through to the pointer
+	// arithmetic. pm->baseEnt is g_entities[MAX_GENTITIES] in the game and cg_entities
+	// [MAX_GENTITIES] in cgame (cg_predict.c), so an out-of-range number here reads past the end
+	// of a fixed array and returns a pointer into whatever follows it.
+	//
+	// Nothing reaches it today: every number that gets here comes from a trace's entityNum or from
+	// a playerState field that msg.cpp transmits in GENTITYNUM_BITS (clientNum, m_iVehicleNum,
+	// groundEntityNum, saberLockEnemy, vehTurnaroundIndex), and 10 bits cannot exceed 1023. That
+	// is what saved the logical-entity bug next door: the server wrote a number above MAX_GENTITIES
+	// into vehTurnaroundIndex and the wire truncated it, so the client read the wrong entity rather
+	// than off the end of its array -- in-range-but-wrong by accident, not by design.
+	//
+	// Make it a real check. The callers all handle NULL or are guarded here as part of the same
+	// change, so a future mistake of that kind becomes a no-op instead of an out-of-bounds read.
+	if ( num < 0 || num >= MAX_GENTITIES )
+	{
+		assert(!"PM_BGEntForNum: entity number out of range");
+		return NULL;
+	}
 
     ent = (bgEntity_t *)((byte *)pm->baseEnt + pm->entSize*(num));
 
@@ -320,26 +353,40 @@ static QINLINE qboolean PM_IsRocketTrooper(void)
 }
 
 //GalaxyRP (Alex): [New Combat Animations] This method returns the overriden saber stance depending on the current style.
+// DAJ_RP: [Saber Keys] the plain readyAnim is the fallback for every style whose own key is not set (-1), as it is in
+// the base game, where readyAnim applies to all styles. It used to count for Fast alone, so a .sab with only readyAnim
+// (a prop held in BOTH_OBJECT, a saber's BOTH_STAND9) lost it in every other style -- and disagreed with vanilla
+// clients, which predict their own stance with readyAnim in all of them. A style's own key still wins.
 int getOverridenAnimationByStyle(saberInfo_t* saber) {
+	int anim;
+
 	switch (pm->ps->fd.saberAnimLevel)
 	{
-	case SS_FAST:
-		return saber->readyAnim;
 	case SS_MEDIUM:
-		return saber->readyAnimYellow;
+		anim = saber->readyAnimYellow;
+		break;
 	case SS_STRONG:
-		return saber->readyAnimRed;
+		anim = saber->readyAnimRed;
+		break;
 	case SS_TAVION:
-		return saber->readyAnimGreen;
+		anim = saber->readyAnimGreen;
+		break;
 	case SS_DESANN:
-		return saber->readyAnimPurple;
+		anim = saber->readyAnimPurple;
+		break;
 	case SS_STAFF:
-		return saber->readyAnimStaff;
+		anim = saber->readyAnimStaff;
+		break;
 	case SS_DUAL:
-		return saber->readyAnimDual;
+		anim = saber->readyAnimDual;
+		break;
+	case SS_FAST:	// Fast has no key of its own: the plain one is Fast's
 	default:
-		return -1;
+		anim = -1;
+		break;
 	}
+
+	return ( anim != -1 ) ? anim : saber->readyAnim;
 }
 
 int PM_GetSaberStance(void)
@@ -386,15 +433,25 @@ int PM_GetSaberStance(void)
 		anim = BOTH_SABERSTAFF_STANCE;
 		break;
 	case SS_FAST:
-	case SS_TAVION:
 		anim = BOTH_SABERFAST_STANCE;
+		break;
+	// DAJ_RP: [Saber Stances] Tavion and Desann get stances of their own, as JoF_EJK gives them (they used to
+	// borrow Fast's and Medium's): Tavion the top parry pose held, Desann Kyle's relaxed JK2 stand. Both are
+	// stock animations, so every client has them. A saber's readyAnimGreen/readyAnimPurple or plain readyAnim (above) still wins.
+	// Both are in the stance lists below (slopes, BG_SaberStanceAnim, BG_InSaberStandAnim, PM_Footsteps) except
+	// that BOTH_P1_S1_T_ stays out of BG_InSaberStandAnim and BG_SaberStanceAnim: it is also the real top parry,
+	// which PM_SetSaberMove would otherwise swap for the stance (see the restart test there too).
+	case SS_TAVION:
+		anim = BOTH_P1_S1_T_;
+		break;
+	case SS_DESANN:
+		anim = BOTH_STAND9;
 		break;
 	case SS_STRONG:
 		anim = BOTH_SABERSLOW_STANCE;
 		break;
 	case SS_NONE:
 	case SS_MEDIUM:
-	case SS_DESANN:
 	default:
 		anim = BOTH_STAND2;
 		break;
@@ -1123,7 +1180,51 @@ static void PM_Friction( void ) {
 	{
 		if ( !(pm->ps->pm_flags & PMF_TIME_KNOCKBACK) )
 		{
-			control = speed;// < pm_stopspeed ? pm_stopspeed : speed;
+			// the pilot's commands as the vehicle holds them (pEnt is the fighter itself here)
+			const Vehicle_t *pCmdVeh = ( pEnt && pEnt->m_pVehicle ) ? pEnt->m_pVehicle : NULL;
+
+			// GalaxyRP fix: [Vehicles] a landed fighter never came to rest. This friction is a pure
+			// fraction of the current speed (6 per second), so it only ever approaches zero, and the
+			// only full stop is the "speed < 1" test above. But Pmove then snaps the velocity to whole
+			// numbers (trap->SnapVector, round-to-nearest), and once one step of friction removes less
+			// than half a unit per axis the rounding puts it straight back: the fighter is stuck at
+			// that speed for good. That happens below 0.5 / (6 * frametime) u/s -- about 10 u/s when a
+			// pilot's 8ms commands drive it, 1-3 u/s parked -- in whatever direction the landing left
+			// over, so a parked fighter crept across the map.
+			//
+			// Vanilla had the answer commented out on this very line: a floor on the braking speed,
+			// the pm_stopspeed rule walking players and every non-fighter vehicle already use (see the
+			// vehicle branch above). It is applied here only while the throttle is at zero -- landed,
+			// parked, suspended or dropping -- so flight is untouched. Below 100 u/s that brakes at a
+			// constant 600 u/s^2, which reaches exactly 0 whatever the frame time. Knockback still
+			// skips friction entirely, as before.
+			//
+			// Not covered, by decision: an UNPILOTED fighter parked on a slope still slides downhill,
+			// more slowly than before. That slide is not friction's to stop -- PM_FlyVehicleMove's
+			// PM_StepSlideMove(1) applies gravity and clips it along the slope within the same step,
+			// so the ship moves before any friction runs. (With a pilot aboard gravity is near zero.)
+			//
+			// GalaxyRP fix: [Vehicles] ...but not while the pilot is flying the ship up or down. Taking
+			// off, and climbing or descending near the ground, all happen at throttle 0: the landing /
+			// launch branch of FighterNPC.c's ProcessMoveCommands pushes velocity[2] by acceleration *
+			// 60 u/s^2 (jump up; crouch or back down) and never touches the throttle. The floor above
+			// brakes at 600 u/s^2, so it cancelled that push outright for any ship with acceleration
+			// 10 or less -- engine on, nothing moving, and a speedIdle 0 ship (no gravity to settle
+			// it) could neither lift off nor come down -- and weakened it for the rest. While one of
+			// those commands is held the friction is the pure fraction again, exactly as before the
+			// floor; the moment they are released the floor stops the ship dead, as it does parked.
+			// Read from the vehicle's own m_ucmd, which the server and the predicting client both
+			// have: the vehicle's pmove command has upmove cleared on the server (g_active.c) and not
+			// on the client. m_ucmd is cleared whenever the pilot leaves, so an empty ship keeps the floor.
+			if ( pm->ps->speed == 0.0f
+				&& !( pCmdVeh && ( pCmdVeh->m_ucmd.upmove || pCmdVeh->m_ucmd.forwardmove < 0 ) ) )
+			{
+				control = speed < pm_stopspeed ? pm_stopspeed : speed;
+			}
+			else
+			{
+				control = speed;
+			}
 			drop += control*pm_friction*pml.frametime;
 		}
 	}
@@ -1864,17 +1965,6 @@ static qboolean PM_CheckJump( void )
 	{//in knockdown
 		return qfalse;
 	}
-	else
-	{
-#if defined (_GAME)
-		gentity_t *player_ent = &g_entities[pm->ps->clientNum];
-
-		if (player_ent && player_ent->client && player_ent->client->pers.quest_power_status & (1 << 2))
-		{
-			return qfalse;
-		}
-#endif
-	}
 
 	if ( pm->ps->weapon == WP_SABER )
 	{
@@ -2176,10 +2266,8 @@ static qboolean PM_CheckJump( void )
 		pm->ps->fd.forcePowerLevel[FP_LEVITATION] > FORCE_LEVEL_0 &&
 		!(pm->ps->pm_flags&PMF_JUMP_HELD) &&
 		(
-#if defined( _GAME ) // zyk: Force Gunner class can use wall runs and wall flips with any weapon
-		(g_entities[pm->ps->clientNum].client->sess.amrpgmode == 2 && 
-		 g_entities[pm->ps->clientNum].client->pers.rpg_class == 7) || 
-#endif
+		// GalaxyRP fix: [RPG classes] removed a dead Force Gunner wall-run/wall-flip weapon
+		// exception gated on pers.rpg_class == 7, which is server-side-only and permanently 0
 		(pm->ps->weapon == WP_SABER || pm->ps->weapon == WP_MELEE)) &&
 		!PM_IsRocketTrooper() &&
 		!BG_HasYsalamiri(pm->gametype, pm->ps) &&
@@ -3132,6 +3220,155 @@ static void PM_FlyMove( void ) {
 
 /*
 ===================
+GalaxyRP: [Grapple Hook]
+
+Ported from TaystJK (bg_pmove.c: PM_GetGrappleAnim, PM_GrappleMove, PM_GrappleMoveTarzan), which in
+turn carries JA+'s and JAPro's grapple. The racemode, movement-style and Tribes branches are gone; so
+is the JAPro-only viewheight adjustment in the winch, which TaystJK applied on the client and not on
+the server -- here both sides run one text.
+
+The server decides whether a player is being pulled (PMF_GRAPPLE, raised in ClientThink_real) and
+where the anchor is (ps.lastHitLoc, written by Weapon_HookThink every server frame). Both are
+networked, so the client predicts the pull from the same two facts. The three numbers the pull needs
+are cvars on the server and, on the client, the same cvars read out of serverinfo (cg_servercmds.c),
+which is why every one of them is CVAR_SERVERINFO in g_xcvar.h.
+===================
+*/
+static int PM_GrappleMode( void )
+{
+#ifdef _GAME
+	return g_allowGrapple.integer;
+#else
+	return cgs.grappleMode;
+#endif
+}
+
+static int PM_GrapplePullSpeed( void )
+{
+#ifdef _GAME
+	return g_hookStrength.integer;
+#else
+	return cgs.hookStrength;
+#endif
+}
+
+static int PM_GrapplePullStrength1( void )
+{
+#ifdef _GAME
+	return g_hookStrength1.integer;
+#else
+	return cgs.hookStrength1;
+#endif
+}
+
+static int PM_GrapplePullStrength2( void )
+{
+#ifdef _GAME
+	return g_hookStrength2.integer;
+#else
+	return cgs.hookStrength2;
+#endif
+}
+
+// Picks a force-jump animation from the direction the player is actually travelling relative to
+// where they face, so a sideways swing reads as a sideways leap. Legs only while a weapon is busy.
+static void PM_GetGrappleAnim( void )
+{
+	vec3_t	facingFwd, facingRight, facingAngles;
+	int		anim = -1;
+	float	dotR, dotF;
+
+	VectorSet( facingAngles, 0, pm->ps->viewangles[YAW], 0 );
+
+	AngleVectors( facingAngles, facingFwd, facingRight, NULL );
+	dotR = DotProduct( facingRight, pm->ps->velocity );
+	dotF = DotProduct( facingFwd, pm->ps->velocity );
+
+	if ( fabsf( dotR ) > fabsf( dotF ) * 1.5f )
+	{
+		if ( dotR > 150 )
+			anim = BOTH_FORCEJUMPRIGHT1;
+		else if ( dotR < -150 )
+			anim = BOTH_FORCEJUMPLEFT1;
+	}
+	else
+	{
+		if ( dotF > 150 )
+			anim = BOTH_FORCEJUMP1;
+		else if ( dotF < -150 )
+			anim = BOTH_FORCEJUMPBACK1;
+	}
+
+	if ( anim != -1 )
+	{
+		int parts = SETANIM_BOTH;
+
+		if ( pm->ps->weaponTime )
+			parts = SETANIM_LEGS;
+
+		PM_SetAnim( parts, anim, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD );
+	}
+}
+
+// g_allowGrapple 2: the JA+ winch. Velocity is REPLACED with a constant-speed reel-in along the rope,
+// stopping 16 units short of the anchor and easing off inside the last 100. No momentum, no swing.
+static void PM_GrappleMove( void )
+{
+	vec3_t	vel, v;
+	float	vlen;
+	int		pullSpeed = PM_GrapplePullSpeed();
+
+	VectorScale( pml.forward, -16, v );
+	VectorAdd( pm->ps->lastHitLoc, v, v );
+	VectorSubtract( v, pm->ps->origin, vel );
+
+	vlen = VectorLength( vel );
+	VectorNormalize( vel );
+
+	if ( vlen <= 100.0f )
+		VectorScale( vel, ( pullSpeed / 80.0f ) * vlen, vel );
+	else
+		VectorScale( vel, pullSpeed, vel );
+
+	VectorCopy( vel, pm->ps->velocity );
+
+	pml.groundPlane = qfalse;
+
+	PM_GetGrappleAnim();
+}
+
+// g_allowGrapple 1: the swing. ACCELERATES toward the anchor and leaves gravity and air control in
+// place, so the player pendulums, keeps momentum on release, and decelerates over the last
+// pullSpeed/2 units instead of slamming into the wall.
+static void PM_GrappleMoveTarzan( void )
+{
+	vec3_t	vel;
+	float	vlen;
+	int		pullSpeed = PM_GrapplePullSpeed();
+	int		pullStrength1 = PM_GrapplePullStrength1();
+	int		pullStrength2 = PM_GrapplePullStrength2();
+
+	VectorSubtract( pm->ps->lastHitLoc, pm->ps->origin, vel );
+	vlen = VectorLength( vel );
+	VectorNormalize( vel );
+
+	// the near branch divides by pullSpeed, but it is only reachable for a positive one: vlen is a
+	// length, so "vlen < pullSpeed / 2" is false whenever pullSpeed is zero or negative
+	if ( vlen < ( pullSpeed / 2 ) )
+		PM_Accelerate( vel, 2 * vlen, vlen * ( pullStrength2 / (float)pullSpeed ) );
+	else
+		PM_Accelerate( vel, pullSpeed, pullStrength1 );
+
+	if ( vel[2] > 0.5f && pml.walking )
+		pml.walking = qfalse;
+
+	pml.groundPlane = qfalse;
+
+	PM_GetGrappleAnim();
+}
+
+/*
+===================
 PM_AirMove
 
 ===================
@@ -3827,6 +4064,12 @@ static void PM_CrashLand( void ) {
 	float		t;
 	float		a, b, c, den;
 	qboolean	didRoll = qfalse;
+	// GalaxyRP: [Grapple Hook] coming down the rope: the hook is out and holding (PMF_GRAPPLE) and the
+	// player crouches, which pauses the pull and lets him down under plain gravity -- see the pull's call
+	// in PmoveSingle(). Such a landing never hurts, from any height: it lands as a soft one does, below.
+	// Letting go of the button lowers PMF_GRAPPLE, so a player who lets go falls as anyone does, and a
+	// fall to the death is not a landing at all (trigger_hurt's fallingToDeath timer in ClientThink_real).
+	const qboolean	ropeDescent = ( ( pm->ps->pm_flags & PMF_GRAPPLE ) && ( pm->ps->pm_flags & PMF_DUCKED ) ) ? qtrue : qfalse;
 
 	// calculate the exact velocity on landing
 	dist = pm->ps->origin[2] - pml.previous_origin[2];
@@ -4020,7 +4263,7 @@ static void PM_CrashLand( void ) {
 	// SURF_NODAMAGE is used for bounce pads where you don't ever
 	// want to take damage or play a crunch sound
 	if ( !(pml.groundTrace.surfaceFlags & SURF_NODAMAGE) )  {
-		if (delta > 7)
+		if (delta > 7 && !ropeDescent)	// GalaxyRP: [Grapple Hook] a rope descent lands soft -- see ropeDescent
 		{
 			int delta_send = (int)delta;
 
@@ -5005,6 +5248,8 @@ qboolean PM_AdjustStandAnimForSlope( void )
 	case BOTH_STAND2:
 	case BOTH_SABERFAST_STANCE:
 	case BOTH_SABERSLOW_STANCE:
+	case BOTH_STAND9:		// DAJ_RP: [Saber Stances] Desann's stance (PM_GetSaberStance)
+	case BOTH_P1_S1_T_:		// DAJ_RP: [Saber Stances] Tavion's stance
 	case BOTH_ATARU:
 	case BOTH_DJEMSO:
 	case BOTH_JARKAI:
@@ -5161,6 +5406,8 @@ qboolean PM_AdjustStandAnimForSlope( void )
 		case BOTH_STAND2:
 		case BOTH_SABERFAST_STANCE:
 		case BOTH_SABERSLOW_STANCE:
+		case BOTH_STAND9:		// DAJ_RP: [Saber Stances] Desann's stance (PM_GetSaberStance)
+		case BOTH_P1_S1_T_:		// DAJ_RP: [Saber Stances] Tavion's stance
 		case BOTH_CROUCH1IDLE:
 		case BOTH_ATARU:
 		case BOTH_DJEMSO:
@@ -5449,6 +5696,7 @@ static void PM_Footsteps( void ) {
 		case BOTH_STAND2:
 		case BOTH_SABERFAST_STANCE:
 		case BOTH_SABERSLOW_STANCE:
+		case BOTH_STAND9:		// DAJ_RP: [Saber Stances] Desann's stance (Tavion's, BOTH_P1_S1_T_, is a saber anim: overridden above)
 		case BOTH_ATARU:
 		case BOTH_DJEMSO:
 		case BOTH_JARKAI:
@@ -6053,7 +6301,21 @@ void PM_FinishWeaponChange( void ) {
 	}
 
 	if ( !( pm->ps->stats[STAT_WEAPONS] & ( 1 << weapon ) ) ) {
-		weapon = WP_NONE;
+		// DAJ_RP: [Weapons] the weapon asked for was taken away while the old one was being put away -- PM_BeginWeaponChange()
+		// only starts a switch to an owned one. Stock gave no weapon at all then (a T-pose, until the player picked one
+		// himself): a Duel Tournament or Melee Battle starting, /give taken back, a /login without a respawn -- whatever
+		// took the guns or the saber and put another weapon in hand during those 200 ms lost that one too. Keep the
+		// weapon in hand, if it is owned; it is taken out again below. No weapon still for a switch to none, and when
+		// the one in hand is not owned either.
+		if ( weapon > WP_NONE && pm->ps->weapon > WP_NONE && pm->ps->weapon < WP_NUM_WEAPONS &&
+			( pm->ps->stats[STAT_WEAPONS] & ( 1 << pm->ps->weapon ) ) )
+		{
+			weapon = pm->ps->weapon;
+		}
+		else
+		{
+			weapon = WP_NONE;
+		}
 	}
 
 	if (weapon == WP_SABER)
@@ -6152,7 +6414,12 @@ void PM_RocketLock( float lockDist, qboolean vehicleLock )
 		{
 			trace_t camTrace;
 			vec3_t newEnd, shotDir;
-			if ( BG_VehTraceFromCamPos( &camTrace, PM_BGEntForNum(pm->ps->clientNum), pm->ps->origin, muzzlePoint, tr.endpos, newEnd, shotDir, (tr.fraction*lockDist) ) )
+			// GalaxyRP fix: [Logical Entities] BG_VehTraceFromCamPos() dereferences this entity's
+			// m_pVehicle without testing it, so a NULL from PM_BGEntForNum() -- which that function
+			// can now return -- has to be caught at the call site. Skipping the extra camera trace
+			// just means the main trace's result stands, which is what happens whenever it misses.
+			bgEntity_t *camEnt = PM_BGEntForNum(pm->ps->clientNum);
+			if ( camEnt && BG_VehTraceFromCamPos( &camTrace, camEnt, pm->ps->origin, muzzlePoint, tr.endpos, newEnd, shotDir, (tr.fraction*lockDist) ) )
 			{
 				memcpy( &tr, &camTrace, sizeof(tr) );
 			}
@@ -6162,7 +6429,12 @@ void PM_RocketLock( float lockDist, qboolean vehicleLock )
 	if (tr.fraction != 1 && tr.entityNum < ENTITYNUM_NONE && tr.entityNum != pm->ps->clientNum)
 	{
 		bgEntity_t *bgEnt = PM_BGEntForNum(tr.entityNum);
-		if ( bgEnt && (bgEnt->s.powerups&PW_CLOAKED) )
+		// GalaxyRP fix: [Cloak Item] PW_CLOAKED is an index into powerups[], not a mask -- this tested
+		// "s.powerups & 11", i.e. bits 0/1/3 (PW_NONE/PW_QUAD/PW_PULL), so a cloaked target stayed
+		// rocket-lockable while a player holding PW_PULL was spuriously unlockable. Every other reader
+		// of s.powerups already shifts (cg_players.c, cg_draw.c); this one site did not. Shared bg_
+		// code, so game and cgame pick the correction up together and prediction stays in step.
+		if ( bgEnt && (bgEnt->s.powerups & (1 << PW_CLOAKED)) )
 		{
 			pm->ps->rocketLockIndex = ENTITYNUM_NONE;
 			pm->ps->rocketLockTime = 0;
@@ -6217,6 +6489,34 @@ void PM_RocketLock( float lockDist, qboolean vehicleLock )
 }
 
 //---------------------------------------
+// DAJ_RP fix: [Weapons] a fire button pressed when the weapon cannot fire it: the press is dropped for this
+// frame (so the weapon goes back to ready and its animations go on as for an idle weapon) and pm->rpDryFire is
+// set, which the client's prediction turns into the dry-fire click (cg_predict.c). Nothing is sent: the server
+// does not play it, and a client without the plugin never hears it.
+static void PM_DryFire( void )
+{
+	if ( pm->cmd.buttons & (BUTTON_ATTACK|BUTTON_ALT_ATTACK) )
+	{
+		pm->rpDryFire = qtrue;
+	}
+	pm->cmd.buttons &= ~(BUTTON_ATTACK|BUTTON_ALT_ATTACK);
+}
+
+// DAJ_RP fix: [Weapons] whether a player's current weapon has the ammo for one shot of a fire mode -- the same
+// test PM_Weapon() makes before a shot. Always yes for an NPC (no ammo of its own) and for a weapon that does
+// not count ammo (-1), and for one that costs nothing (saber, melee, stun baton, the det pack's detonation).
+static qboolean PM_FireModeAffordable( qboolean altFire )
+{
+	const int ammoIndex = weaponData[pm->ps->weapon].ammoIndex;
+
+	if ( pm->ps->clientNum >= MAX_CLIENTS || pm->ps->ammo[ammoIndex] == -1 )
+	{
+		return qtrue;
+	}
+
+	return ( pm->ps->ammo[ammoIndex] >= ( altFire ? weaponData[pm->ps->weapon].altEnergyPerShot : weaponData[pm->ps->weapon].energyPerShot ) ) ? qtrue : qfalse;
+}
+
 static qboolean PM_DoChargedWeapons( qboolean vehicleRocketLock, bgEntity_t *veh )
 //---------------------------------------
 {
@@ -6261,7 +6561,8 @@ static qboolean PM_DoChargedWeapons( qboolean vehicleRocketLock, bgEntity_t *veh
 			//if ( pm->gametype == GT_SIEGE )
 			if (1)
 			{
-				if ( pm->cmd.buttons & BUTTON_ALT_ATTACK )
+				// DAJ_RP fix: [Weapons] only with the ammo for the shot -- see the note at the end of this switch
+				if ( (pm->cmd.buttons & BUTTON_ALT_ATTACK) && PM_FireModeAffordable( qtrue ) )
 				{
 					charging = qtrue;
 					altFire = qtrue;
@@ -6279,7 +6580,7 @@ static qboolean PM_DoChargedWeapons( qboolean vehicleRocketLock, bgEntity_t *veh
 		case WP_BRYAR_OLD:
 
 			// alt-fire charges the weapon
-			if ( pm->cmd.buttons & BUTTON_ALT_ATTACK )
+			if ( (pm->cmd.buttons & BUTTON_ALT_ATTACK) && PM_FireModeAffordable( qtrue ) )
 			{
 				charging = qtrue;
 				altFire = qtrue;
@@ -6290,7 +6591,7 @@ static qboolean PM_DoChargedWeapons( qboolean vehicleRocketLock, bgEntity_t *veh
 		case WP_BOWCASTER:
 
 			// primary fire charges the weapon
-			if ( pm->cmd.buttons & BUTTON_ATTACK )
+			if ( (pm->cmd.buttons & BUTTON_ATTACK) && PM_FireModeAffordable( qfalse ) )
 			{
 				charging = qtrue;
 			}
@@ -6312,17 +6613,20 @@ static qboolean PM_DoChargedWeapons( qboolean vehicleRocketLock, bgEntity_t *veh
 
 			if ( pm->cmd.buttons & BUTTON_ALT_ATTACK )
 			{
-				altFire = qtrue; // override default of not being an alt-fire
-				charging = qtrue;
+				if ( PM_FireModeAffordable( qtrue ) )
+				{
+					altFire = qtrue; // override default of not being an alt-fire
+					charging = qtrue;
+				}
 			}
-			else if ( pm->cmd.buttons & BUTTON_ATTACK )
+			else if ( (pm->cmd.buttons & BUTTON_ATTACK) && PM_FireModeAffordable( qfalse ) )
 			{
 				charging = qtrue;
 			}
 			break;
 
 		case WP_DEMP2:
-			if ( pm->cmd.buttons & BUTTON_ALT_ATTACK )
+			if ( (pm->cmd.buttons & BUTTON_ALT_ATTACK) && PM_FireModeAffordable( qtrue ) )
 			{
 				altFire = qtrue; // override default of not being an alt-fire
 				charging = qtrue;
@@ -6330,6 +6634,20 @@ static qboolean PM_DoChargedWeapons( qboolean vehicleRocketLock, bgEntity_t *veh
 			break;
 
 		case WP_DISRUPTOR:
+			// DAJ_RP fix: [Weapons] zoomed and still, the primary button charges the alt (sniper) shot, so it
+			// is the alt cost that must be covered. Without it this is a dry fire, not a normal shot: the
+			// press is dropped here (PM_DryFire()), where it used to start a charge that could never fire.
+			if ((pm->cmd.buttons & BUTTON_ATTACK) &&
+				pm->ps->zoomMode == 1 &&
+				pm->ps->zoomLocked &&
+				!pm->cmd.forwardmove &&
+				!pm->cmd.rightmove &&
+				pm->cmd.upmove <= 0 &&
+				!PM_FireModeAffordable( qtrue ))
+			{
+				PM_DryFire();
+			}
+
 			if ((pm->cmd.buttons & BUTTON_ATTACK) &&
 				pm->ps->zoomMode == 1 &&
 				pm->ps->zoomLocked)
@@ -6357,6 +6675,11 @@ static qboolean PM_DoChargedWeapons( qboolean vehicleRocketLock, bgEntity_t *veh
 			}
 
 		} // end switch
+
+		// DAJ_RP fix: [Weapons] a charge is started only with the ammo for the shot it charges (the rocket
+		// launcher's lock-on always asked; the others did not). With too little ammo the charge began again
+		// every frame the button was held -- its start event and sound with it -- and nothing could fire.
+		// Pressed without the ammo, the press goes on to PM_Weapon(), which refuses it (a dry fire).
 	}
 
 	// set up the appropriate weapon state based on the button that's down.
@@ -6476,10 +6799,6 @@ rest:
 #define BOWCASTER_CHARGE_UNIT	200.0f	// bowcaster charging gives us one more unit every 200ms--if you change this, you'll have to do the same in g_weapon
 #define BRYAR_CHARGE_UNIT		200.0f	// bryar charging gives us one more unit every 200ms--if you change this, you'll have to do the same in g_weapon
 
-#if defined( _GAME )
-extern int zyk_max_magic_power(gentity_t *ent);
-#endif
-
 int PM_ItemUsable(playerState_t *ps, int forcedUse)
 {
 	vec3_t fwd, fwdorg, dest, pos;
@@ -6487,9 +6806,6 @@ int PM_ItemUsable(playerState_t *ps, int forcedUse)
 	vec3_t mins, maxs;
 	vec3_t trtest;
 	trace_t tr;
-#if defined( _GAME )
-	gentity_t *item_user = &g_entities[ps->clientNum];
-#endif
 
 	// zyk: moved this condition here so we can test if we can use cloak in vehicles
 	if (!forcedUse)
@@ -6507,11 +6823,15 @@ int PM_ItemUsable(playerState_t *ps, int forcedUse)
 		return 0;
 	}
 
-	// GalaxyRP (Alex): [Dueling] Characters should be able to use holdables while dueling
-	/*if (ps->duelInProgress)
+	// GalaxyRP fix: [Dueling] the vanilla restriction, live again -- through the shared predicate, so
+	// this (which cgame also runs, predicting the refusal) and G_ItemUsable() and the use_cloak
+	// command cannot drift apart. It had been commented out here by 3f65a601 along with the two force
+	// power restrictions, both of which are already restored; see BG_HoldablesBlocked() in bg_misc.c
+	// for why all three had to come back and why one guard here was never enough on its own.
+	if (BG_HoldablesBlocked(ps))
 	{ //not allowed to use holdables while in a private duel.
 		return 0;
-	}*/
+	}
 
 	if (!forcedUse)
 	{
@@ -6526,29 +6846,15 @@ int PM_ItemUsable(playerState_t *ps, int forcedUse)
 	switch (forcedUse)
 	{
 	case HI_MEDPAC:
-#if defined( _GAME )
-		if (item_user && item_user->client && item_user->client->sess.amrpgmode == 2 && item_user->client->pers.secrets_found & (1 << 0))
-		{ // zyk: bacta canister with holdable items upgrade. Must allow even with max health to regen MP
-			if (ps->stats[STAT_HEALTH] >= ps->stats[STAT_MAX_HEALTH] && item_user->client->pers.magic_power == zyk_max_magic_power(item_user))
-				return 0;
-
-			return 1;
-		}
-		else
-		{
-			if (ps->stats[STAT_HEALTH] >= ps->stats[STAT_MAX_HEALTH])
-			{
-				return 0;
-			}
-			if (ps->stats[STAT_HEALTH] <= 0 ||
-				(ps->eFlags & EF_DEAD))
-			{
-				return 0;
-			}
-
-			return 1;
-		}
-#endif
+		// GalaxyRP fix: [Shop] Holdable Items Upgrade moved from secrets_found bit 0 (never persisted),
+		// to player_settings bit 0 (persisted account-wide via Accounts.PlayerSettings), to
+		// skill_levels[38] bit 0 (persisted per-character via Skills.UniqueSkill) -- see g_local.h's
+		// skill_levels field.
+		// GalaxyRP fix: [Shop] the Holdable Items Upgrade's Bacta Canister bonus is now a straight 3x
+		// heal (see ItemUse_MedPack in g_items.c), the same shape as Big Bacta's bonus below -- it no
+		// longer has any non-HP effect (used to top off magic_power), so the old "still usable at max
+		// health to top off magic_power" carve-out no longer applies. Falls through to the identical
+		// HI_MEDPAC_BIG logic just below: blocked at max health regardless of the upgrade.
 	case HI_MEDPAC_BIG:
 		if (ps->stats[STAT_HEALTH] >= ps->stats[STAT_MAX_HEALTH])
 		{
@@ -7153,10 +7459,61 @@ backAgain:
 	}
 }
 #ifdef _GAME
+// GalaxyRP fix: [Weapons] this is the alt-fire policy, and it is server-only because it reads
+// sess.loggedin and pers.skill_levels[]. It is no longer called from PM_Weapon() below: the server
+// evaluates it once per frame in ClientEndFrame() (g_active.c) and publishes the answer in
+// ps.stats[STAT_ALT_FIRE_OK], which PM_Weapon() then reads on both the server and the client. The
+// two comments inside about "the call site is #ifdef _GAME" describe the arrangement this replaced;
+// their carve-outs stay, and PM_Weapon() repeats the NPC/melee/saber ones so that they never wait on
+// the stat. Nothing about who may alt-fire what has changed.
 qboolean canAltFireWeapon(gentity_t* ent) {
 	if (ent->NPC) {
 		return qtrue;
 	}
+
+	// GalaxyRP fix: [Melee] melee's alt-attack is not a weapon mode, it is the kick -- and holding it
+	// together with attack is the grapple. Neither is a per-weapon unlock like the nine ranged cases
+	// below, so neither belongs behind this function's login check, and WP_MELEE reaching the switch
+	// only ever hit "default: return qtrue" for logged-in players anyway. Two things were wrong with
+	// letting it fall through to the login check:
+	//
+	//  - The strip this gates (see PM_Weapon) clears BUTTON_ATTACK as well as BUTTON_ALT_ATTACK, so a
+	//    logged-out player lost the grapple AND the punch that the same press would have produced --
+	//    not just the kick.
+	//  - The call site is #ifdef _GAME, so only the server ran it. The client, which never does,
+	//    predicted the kick and played the animation while the server refused it. Answering before the
+	//    login check makes both sides agree for melee, which removes that mismatch entirely.
+	//
+	// Damage is untouched by this: the melee damage multipliers live in G_Damage and still key on the
+	// Melee skill for RPG players.
+	if (ent->client->ps.weapon == WP_MELEE) {
+		return qtrue;
+	}
+
+	// GalaxyRP fix: [Saber Throw] the saber needs the same carve-out, and for the same two reasons --
+	// the melee one above was written for exactly this failure mode and only covered one of the two
+	// weapons that has it.
+	//
+	// The saber's alt-attack is not a purchasable fire mode. It is the saber throw, which already has
+	// its own gates in PM_WeaponLightsaber (saberCanThrow, FP_SABERTHROW's level and force cost,
+	// ysalamiri, BG_CanUseFPNow), and the kick, which is a movement move. Neither is the kind of thing
+	// the switch below exists to unlock, which is why WP_SABER has no case in it -- a logged-in player
+	// already reaches "default: return qtrue".
+	//
+	// And the strip this gates is server-only (#ifdef _GAME at the call site in PM_Weapon), so for a
+	// logged-out saber user the server deleted BUTTON_ALT_ATTACK before PM_WeaponLightsaber ever ran
+	// while cgame, which never runs this, predicted the whole path. The result was the reported bug:
+	// the saber throw did not work AT ALL when logged out, the kick that appeared instead was a pure
+	// client-side prediction that dealt no damage (G_KickSomeMofos reads the SERVER's ps.legsAnim,
+	// which was never set), and the animation it started had nothing on the server to reconcile
+	// against -- so it stuck, for every saber style, and only when logged out.
+	//
+	// Kept as its own block rather than folded in with WP_MELEE above: the two carve-outs are the same
+	// mechanism but different arguments, and each is worth being able to remove without the other.
+	if (ent->client->ps.weapon == WP_SABER) {
+		return qtrue;
+	}
+
 	if (ent->client->sess.loggedin == 0) {
 		return qfalse;
 	}
@@ -7188,6 +7545,22 @@ qboolean canAltFireWeapon(gentity_t* ent) {
 		break;
 	case WP_REPEATER:
 		if (ent->client->pers.skill_levels[23] > 1) {
+			return qtrue;
+		}
+		return qfalse;
+		break;
+	// GalaxyRP fix: [Weapons] WP_DEMP2 was missing from this switch, so it fell through to the
+	// "default: return qtrue" below and its alt fire worked at skill level 1 -- the only one of the
+	// ten ranged weapons with no skill gate, while its own skill description claimed "Level 2
+	// unlocks the alternate fire mode" like all the others. The gap sits exactly where WP_DEMP2
+	// belongs in the weapon enum (between WP_REPEATER and WP_FLECHETTE), which is what marks it as an
+	// omission rather than a deliberate carve-out: melee, the one real carve-out, is answered above
+	// this function's login check with its own explanation.
+	//
+	// Note this only ever removed the SKILL gate, never the login one -- that check sits above the
+	// switch, so DEMP2 alt fire was already refused for logged-out players like every other weapon.
+	case WP_DEMP2:
+		if (ent->client->pers.skill_levels[24] > 1) {
 			return qtrue;
 		}
 		return qfalse;
@@ -7253,14 +7626,46 @@ static void PM_Weapon( void )
 			return;
 		}
 	}
-	gentity_t* test_ent = &g_entities[pm->ps->clientNum];
-	if (pm->cmd.buttons & BUTTON_ALT_ATTACK) {
-		if (!canAltFireWeapon(test_ent)) {
-			pm->cmd.buttons &= ~BUTTON_ALT_ATTACK;
-			pm->cmd.buttons |= ~BUTTON_ATTACK;
-		}
-	}
 #endif
+
+	// GalaxyRP fix: [Weapons] the alt-fire gate, on BOTH sides now. This used to be
+	//
+	//     #ifdef _GAME
+	//         if (!canAltFireWeapon(&g_entities[pm->ps->clientNum])) strip
+	//     #endif
+	//
+	// because canAltFireWeapon() reads sess.loggedin and pers.skill_levels[], which cgame does not
+	// have. So the server refused the shot and the client, running this same function without the
+	// block, predicted it in full: EV_ALT_FIRE with its muzzle flash, sound and recoil, the ammo dip,
+	// weaponTime set to the alt-fire delay, WEAPON_CHARGING_ALT for the bowcaster and DEMP2, the
+	// zoomed disruptor shot -- and then the snapshot took it all back. The server now publishes its
+	// answer in ps.stats[STAT_ALT_FIRE_OK] (ClientEndFrame(), g_active.c) and this reads it, so the
+	// two sides strip the same buttons on the same frame. See the stat's comment in bg_public.h for
+	// the one-snapshot lag after a weapon switch and why it cannot matter.
+	//
+	// The three early answers canAltFireWeapon() gives are repeated here rather than trusted to the
+	// stat. NPCs have no ClientEndFrame() and so no stat; melee's alt is the kick and the grapple, the
+	// saber's is the throw and the kick, and none of those should ever wait a snapshot on a value that
+	// describes the previous weapon. For every other weapon the stat IS the decision; nothing here
+	// re-derives it, so the policy still lives in one place.
+	//
+	// The strip itself is unchanged. It used to be `pm->cmd.buttons |= ~BUTTON_ATTACK;` -- OR-ing in
+	// the bitwise complement of BUTTON_ATTACK (1) sets every other bit in the mask unconditionally,
+	// including BUTTON_ALT_ATTACK itself (undoing the clear on the line above, so a real alt-fire still
+	// went through despite failing the skill/login check just above) and BUTTON_USE_HOLDABLE (which
+	// made the "check for item using" block further down in this function fire the player's
+	// currently-selected holdable every time this branch ran, cloaking them if that happened to be the
+	// Cloak Item -- unrelated to actually wanting to use it). It ANDs with the complement, so it only
+	// clears the two attack buttons and touches nothing else in the mask.
+	if ((pm->cmd.buttons & BUTTON_ALT_ATTACK) &&
+		pm->ps->clientNum < MAX_CLIENTS &&
+		pm->ps->weapon != WP_MELEE &&
+		pm->ps->weapon != WP_SABER &&
+		!pm->ps->stats[STAT_ALT_FIRE_OK])
+	{
+		pm->cmd.buttons &= ~BUTTON_ALT_ATTACK;
+		pm->cmd.buttons &= ~BUTTON_ATTACK;
+	}
 
 	if (!pm->ps->emplacedIndex &&
 		pm->ps->weapon == WP_EMPLACED_GUN)
@@ -7554,21 +7959,11 @@ static void PM_Weapon( void )
 		PM_InRollComplete(pm->ps, pm->ps->legsAnim))
 	{
 #if defined (_GAME)
-		gentity_t *player_ent = &g_entities[pm->ps->clientNum];
-		qboolean is_a_force_gunner = qfalse;
-
-		// zyk: Force Gunner class can use weapon even if it is doing some special move
-		if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.rpg_class == 7)
+		// GalaxyRP fix: [RPG classes] removed a dead Force Gunner weapon-time exception
+		// gated on pers.rpg_class == 7, which is server-side-only and permanently 0
+		if (pm->ps->weaponTime < pm->ps->legsTimer)
 		{
-			is_a_force_gunner = qtrue;
-		}
-
-		if (is_a_force_gunner == qfalse)
-		{
-			if (pm->ps->weaponTime < pm->ps->legsTimer)
-			{
-				pm->ps->weaponTime = pm->ps->legsTimer;
-			}
+			pm->ps->weaponTime = pm->ps->legsTimer;
 		}
 #else
 		if (pm->ps->weaponTime < pm->ps->legsTimer)
@@ -7784,18 +8179,21 @@ static void PM_Weapon( void )
 					pm->ps->weaponTime += 500;
 				}
 				*/
-				return;
+				// DAJ_RP fix: [Weapons] the player keeps the weapon (zyk, above), but this used to "return" here
+				// every frame the weapon could not fire -- pressing or not -- and everything below that keeps
+				// the weapon's state and the upper body's animation was skipped: the weapon stayed "firing"
+				// with the last shot's animation frozen on its last frame, and an animation played on the
+				// upper body after that (using something, a gesture) froze too. The fire buttons are what
+				// cannot be honoured, so they are dropped instead, and the rest runs as for an idle weapon.
+				PM_DryFire();
 			}
 
+			// DAJ_RP fix: [Weapons] a det pack with none left and none planted: the same. This used to return
+			// here too, with an EV_NOAMMO every half second -- the client switched weapon on it, or with
+			// cg_autoSwitch 0 the player froze as above. It is kept now, like every other weapon.
 			if (pm->ps->weapon == WP_DET_PACK && !pm->ps->hasDetPackPlanted && pm->ps->ammo[weaponData[pm->ps->weapon].ammoIndex] < 1)
 			{
-				PM_AddEventWithParm( EV_NOAMMO, WP_NUM_WEAPONS+pm->ps->weapon );
-
-				if (pm->ps->weaponTime < 500)
-				{
-					pm->ps->weaponTime += 500;
-				}
-				return;
+				PM_DryFire();
 			}
 		}
 	}
@@ -8047,6 +8445,17 @@ static void PM_Weapon( void )
 		return;
 	}
 
+	// DAJ_RP fix: [Weapons] the fire mode pressed must be affordable before anything of the shot starts. The
+	// ammo was checked only after the attack animation had been started and the weapon set "firing", so holding
+	// a mode the ammo did not cover (the repeater's alt with under 15 bolts, say) restarted the shooting
+	// animation every frame with nothing fired. Refused now, as a dry fire: back to ready, no animation.
+	if ( !PM_FireModeAffordable( (pm->cmd.buttons & BUTTON_ALT_ATTACK) ? qtrue : qfalse ) )
+	{
+		PM_DryFire();
+		pm->ps->weaponstate = WEAPON_READY;
+		return;
+	}
+
 	if (pm->ps->weapon == WP_DISRUPTOR && pm->ps->zoomMode == 1)
 	{
 		PM_StartTorsoAnim( BOTH_ATTACK4 );
@@ -8222,18 +8631,10 @@ static void PM_Weapon( void )
 		}
 		else	// Not enough energy
 		{
-			// Switch weapons
-			if (pm->ps->weapon != WP_DET_PACK || !pm->ps->hasDetPackPlanted)
-			{
-				if (pm->ps->weapon == WP_DET_PACK)
-				{ // zyk: now player can continue with the same weapon even if it has no ammo
-					PM_AddEventWithParm( EV_NOAMMO, WP_NUM_WEAPONS+pm->ps->weapon );
-					if (pm->ps->weaponTime < 500)
-					{
-						pm->ps->weaponTime += 500;
-					}
-				}
-			}
+			// DAJ_RP fix: [Weapons] cannot happen any more: a mode the ammo does not cover is refused before
+			// the shot starts (PM_FireModeAffordable(), above). Kept as a safety net, without the weapon left
+			// "firing" -- and without the det pack's EV_NOAMMO, which switched the player's weapon
+			pm->ps->weaponstate = WEAPON_READY;
 			return;
 		}
 	}
@@ -8259,16 +8660,8 @@ static void PM_Weapon( void )
 			}
 			addTime = weaponData[pm->ps->weapon].altFireTime;
 
-#if defined (_GAME)
-			gentity_t *player_ent = &g_entities[pm->ps->clientNum];
-
-			// zyk: Armored Soldier using Unique Ability 3. Decreases altfiretime
-			if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.rpg_class == 3 &&
-				player_ent->client->pers.player_statuses & (1 << 23) && pm->ps->weapon == WP_BLASTER)
-			{
-				addTime -= 40;
-			}
-#endif
+			// GalaxyRP fix: [RPG classes] removed a dead Armored Soldier altfiretime-decrease
+			// exception gated on pers.rpg_class == 3, which is server-side-only and permanently 0
 		}
 	}
 	else {
@@ -8657,6 +9050,35 @@ void PM_AdjustAttackStates( pmove_t *pmove )
 {
 	int amount;
 
+	// GalaxyRP fix: [Vehicles] no zoom while riding anything, and drop one that is already running.
+	//
+	// The zoom narrows fov_x in CG_CalcFov(), but the camera does not follow it: CG_DrawActiveFrame()
+	// picks third person for a vehicle rider and its "always force first person when zoomed" case is
+	// an else-if BELOW that one, so on a vehicle it never runs. The result is a narrow-FOV third
+	// person camera sitting behind the player -- you zoom into your own back and the vehicle.
+	//
+	// Clearing here as well as refusing to engage below (see the m_iVehicleNum term on the disruptor
+	// block) is not belt-and-braces: a zoom started on foot survives mounting, and no entry check can
+	// catch that. That is also why this sits ABOVE the walker/fighter early return rather than after
+	// it -- a rider who boards an AT-ST while zoomed needs clearing just as much as a swoop rider,
+	// even though the return below stops them firing.
+	//
+	// Binoculars cannot be STARTED on a vehicle (PM_ItemUsable and G_ItemUsable both refuse a
+	// holdable while m_iVehicleNum is set, the cloak excepted), so in practice this is the disruptor
+	// scope -- but it is written for ps.zoomMode rather than for mode 1, because the mount case
+	// reaches both and there is nothing to be gained by letting one of them through.
+	//
+	// ps.zoomFov is deliberately left alone: CG_CalcFov() eases the view back out FROM that value, so
+	// zeroing it would animate outward from maximum magnification. Deliberately silent, too -- the
+	// manual toggle plays EV_DISRUPTOR_ZOOMSOUND, but this is not the player toggling anything.
+	if ( pmove->ps->m_iVehicleNum && pmove->ps->zoomMode )
+	{
+		pmove->ps->zoomMode = 0;
+		pmove->ps->zoomTime = pmove->ps->commandTime;
+		pmove->ps->zoomLocked = qfalse;
+		pmove->ps->zoomLockTime = 0;
+	}
+
 	if (pm_entSelf->s.NPC_class!=CLASS_VEHICLE
 		&&pmove->ps->m_iVehicleNum)
 	{ //riding a vehicle
@@ -8680,7 +9102,12 @@ void PM_AdjustAttackStates( pmove_t *pmove )
 	}
 
 	// disruptor alt-fire should toggle the zoom mode, but only bother doing this for the player?
-	if ( pmove->ps->weapon == WP_DISRUPTOR && pmove->ps->weaponstate == WEAPON_READY )
+	// GalaxyRP fix: [Vehicles] ...and not while riding one. VH_SPEEDER and VH_ANIMAL riders fall
+	// through the guard at the top of this function on purpose, because they are meant to keep
+	// firing -- but the zoom rode along on that exemption, and a zoomed rider gets a narrow-FOV
+	// THIRD person camera pointed at their own back. See the clear at the top for the full reasoning.
+	if ( pmove->ps->weapon == WP_DISRUPTOR && pmove->ps->weaponstate == WEAPON_READY
+		&& !pmove->ps->m_iVehicleNum )
 	{
 		if ( !(pmove->ps->eFlags & EF_ALT_FIRING) && (pmove->cmd.buttons & BUTTON_ALT_ATTACK) /*&&
 			pmove->cmd.upmove <= 0 && !pmove->cmd.forwardmove && !pmove->cmd.rightmove*/)
@@ -10812,8 +11239,6 @@ void PmoveSingle (pmove_t *pmove) {
 
 #if defined( _GAME )
 	gentity_t *player_ent = NULL;
-
-	int rpg_class = -1;
 #endif
 
 	pm = pmove;
@@ -10877,11 +11302,8 @@ void PmoveSingle (pmove_t *pmove) {
 
 #if defined( _GAME )
 	player_ent = &g_entities[pm->ps->clientNum];
-
-	if (player_ent && player_ent->client && player_ent->client->sess.amrpgmode == 2)
-	{
-		rpg_class = player_ent->client->pers.rpg_class;
-	}
+	// GalaxyRP fix: [RPG classes] removed the dead local rpg_class mirror of
+	// pers.rpg_class, which is server-side-only and permanently 0
 #endif
 
 	switch (pm->ps->saberMove)
@@ -10979,20 +11401,11 @@ void PmoveSingle (pmove_t *pmove) {
 	{
 		qboolean stop_meditate_anim = qtrue;
 
-#if defined( _GAME )
-		if (rpg_class == 4 &&
-			player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 21))
-		{ // zyk: Monk Meditation Strength ability does not allow stop the meditate anim
-			stop_meditate_anim = qfalse;
-		}
-		else if (rpg_class == 4 &&
-				 player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 23))
-		{ // zyk: Monk Meditation Drain ability does not allow stop the meditate anim
-			stop_meditate_anim = qfalse;
-		}
-#endif
+		// GalaxyRP fix: [RPG classes] removed dead Monk Meditation Strength/Drain
+		// exceptions gated on the local rpg_class mirror == 4, which could only ever
+		// hold 0 or -1 (pers.rpg_class is server-side-only and permanently 0)
 
-		if (stop_meditate_anim == qtrue && 
+		if (stop_meditate_anim == qtrue &&
 			((pm->cmd.buttons&BUTTON_ATTACK)
 			|| (pm->cmd.buttons&BUTTON_ALT_ATTACK)
 			|| (pm->cmd.buttons&BUTTON_FORCEPOWER)
@@ -11140,42 +11553,12 @@ void PmoveSingle (pmove_t *pmove) {
 	*/
 
 #if defined( _GAME )
-	if (rpg_class == 0 &&
-		player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 22))
-	{ // zyk: Free Warrior Super Beam ability does not allow him to move
-		stiffenedUp = qtrue;
-	}
-	else if (rpg_class == 1 &&
-		player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 21))
-	{ // zyk: Force User Force Maelstrom ability does not allow him to move
-		stiffenedUp = qtrue;
-	}
-	else if (rpg_class == 1 &&
-		player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 23))
-	{ // zyk: Force User Force Storm ability does not allow him to move
-		stiffenedUp = qtrue;
-	}
-	else if (rpg_class == 4 &&
-		player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 21))
-	{ // zyk: Monk Meditation Strength ability does not allow him to move
-		stiffenedUp = qtrue;
-	}
-	else if (rpg_class == 4 &&
-		player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 23))
-	{ // zyk: Monk Meditation Drain ability does not allow him to move
-		stiffenedUp = qtrue;
-	}
-	else if (rpg_class == 9 &&
-		player_ent->client->pers.unique_skill_duration > level.time && player_ent->client->pers.player_statuses & (1 << 22))
-	{ // zyk: Force Guardian Force Scream ability does not allow him to move
-		stiffenedUp = qtrue;
-	}
-	else if (player_ent->client->pers.player_statuses & (1 << 24))
-	{ // zyk: hit by Ice Bomb
-		stiffenedUp = qtrue;
-	}
-	else if (level.duel_tournament_mode == 4 && player_ent && player_ent->s.number < MAX_CLIENTS && duel_tournament_is_duelist(player_ent) == qtrue && 
-			 (level.duel_tournament_timer - level.time) > (zyk_duel_tournament_duel_time.integer - DUEL_TOURNAMENT_PROTECT_TIME))
+	// GalaxyRP fix: [RPG classes] the Free Warrior Super Beam (PLAYER_STATUS_UNIQUE_ABILITY_2) and
+	// Ice Bomb (PLAYER_STATUS_ICE_BOMB_HIT) freezes used to head this chain, on bits nothing has
+	// set since the class abilities and the magic engine went. The rpg_class == 1 / 4 / 9
+	// branches (Force User, Monk, Force Guardian) went earlier, for the same reason.
+	if (level.duel_tournament_mode == 4 && player_ent && player_ent->s.number < MAX_CLIENTS && duel_tournament_is_duelist(player_ent) == qtrue && 
+			 (level.duel_tournament_timer - level.time) > (rp_duel_tournament_duel_time.integer - DUEL_TOURNAMENT_PROTECT_TIME))
 	{ // zyk: Duel Tournament duelist that has just been placed in arena. Wait some time before moving
 		stiffenedUp = qtrue;
 	}
@@ -11242,12 +11625,12 @@ void PmoveSingle (pmove_t *pmove) {
 	}
 
 
-if ( pmove->cmd.buttons & BUTTON_TALK ) {
-        // keep the talk button set tho for when the cmd.serverTime > 66 msec
-        // and the same cmd is used multiple times in Pmove
-        pmove->cmd.buttons &= (BUTTON_TALK|BUTTON_WALKING);
-        // original code blocking movement is removed
-    }
+	if ( pmove->cmd.buttons & BUTTON_TALK ) {
+		// keep the talk button set tho for when the cmd.serverTime > 66 msec
+		// and the same cmd is used multiple times in Pmove
+		pmove->cmd.buttons &= (BUTTON_TALK|BUTTON_WALKING);
+		// original code blocking movement is removed
+	}
 
 	// clear all pmove local vars
 	memset (&pml, 0, sizeof(pml));
@@ -11413,13 +11796,6 @@ if ( pmove->cmd.buttons & BUTTON_TALK ) {
 	if (pm->ps->pm_type == PM_FREEZE) {
 		return;		// no movement at all
 	}
-
-#if defined( _GAME )
-	if (player_ent && player_ent->NPC && player_ent->client && player_ent->client->pers.quest_power_status & (1 << 2))
-	{ // zyk: npc hit by Time Power
-		return;
-	}
-#endif
 
 	if ( pm->ps->pm_type == PM_INTERMISSION || pm->ps->pm_type == PM_SPINTERMISSION) {
 		return;		// no movement at all
@@ -11777,6 +12153,19 @@ if ( pmove->cmd.buttons & BUTTON_TALK ) {
 		}
 		else
 		{
+			// GalaxyRP: [Grapple Hook] the pull runs BEFORE the ordinary move and does not replace it,
+			// exactly as in TaystJK: the walk/air move below still applies gravity and air control on
+			// top of whatever the pull did, which is what makes mode 1 a swing. Crouching pauses the
+			// pull without letting go, also as in TaystJK. Only the two modes this mod ships; 1 is the
+			// swing, anything else the winch (g_allowGrapple is clamped to 1 or 2 on the server).
+			if ( ( pm->ps->pm_flags & PMF_GRAPPLE ) && !( pm->ps->pm_flags & PMF_DUCKED ) )
+			{
+				if ( PM_GrappleMode() == 1 )
+					PM_GrappleMoveTarzan();
+				else
+					PM_GrappleMove();
+			}
+
 			if (pm->ps->pm_flags & PMF_TIME_WATERJUMP) {
 				PM_WaterJumpMove();
 			} else if ( pm->waterlevel > 1 ) {
@@ -11906,6 +12295,9 @@ Can be called by either the server or the client
 */
 void Pmove (pmove_t *pmove) {
 	int			finalTime;
+
+	// DAJ_RP: [Weapons] set by PM_DryFire() during this call only
+	pmove->rpDryFire = qfalse;
 
 	finalTime = pmove->cmd.serverTime;
 

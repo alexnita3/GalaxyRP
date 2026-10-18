@@ -86,7 +86,7 @@ XCVAR_DEF( cg_fallingBob,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_footsteps,						"3",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_forceModel,						"0",					CG_ForceModelChange,	CVAR_ARCHIVE )
 XCVAR_DEF( cg_fov,								"80",					NULL,					CVAR_ARCHIVE )
-XCVAR_DEF( cg_fovAspectAdjust,					"0",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cg_fovAspectAdjust,					"1",					NULL,					CVAR_ARCHIVE ) // GalaxyRP: on by default, matching TaystJK; see CG_DrawSkyBoxPortal
 XCVAR_DEF( cg_fovViewmodel,						"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_fovViewmodelAdjust,				"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_fpls,								"0",					NULL,					CVAR_NONE ) // zyk: added this back
@@ -95,6 +95,7 @@ XCVAR_DEF( cg_ghoul2Marks,						"16",					NULL,					CVAR_NONE )
 XCVAR_DEF( cg_gunX,								"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_gunY,								"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_gunZ,								"0",					NULL,					CVAR_ARCHIVE )
+XCVAR_DEF( cg_holsteredSabers,					"1",					NULL,					CVAR_ARCHIVE )	// DAJ_RP: [Holstered Sabers] 0 hides the hilts on the thigh
 XCVAR_DEF( cg_hudFiles,							"ui/jahud.txt",			NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_jumpSounds,						"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_lagometer,						"0",					NULL,					CVAR_ARCHIVE )
@@ -147,10 +148,25 @@ XCVAR_DEF( cg_weaponBob,						"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_zyk_duel_keep_colors,				"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_zyk_duel_keep_duelists_colors,	"0",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cg_zyk_duel_only_render_duelists,	"0",					NULL,					CVAR_ARCHIVE )
+// GalaxyRP: [TaystJK] whether a client module may replace TaystJK's default fs_forcegame ("taystjk")
+// with the mod folder so the engine writes there from the next map. Registered identically by ui
+// (ui_xcvar.h); see RP_AdoptTaystJKWriteFolder() in bg_misc.c. Archived: it is the opt-out for a
+// player who plays several mods on one TaystJK install.
+XCVAR_DEF( rp_taystjk_writefolder,				"1",					NULL,					CVAR_ARCHIVE )
 XCVAR_DEF( cl_paused,							"0",					NULL,					CVAR_ROM )
 XCVAR_DEF( com_buildScript,						"0",					NULL,					CVAR_NONE )
 XCVAR_DEF( com_cameraMode,						"0",					NULL,					CVAR_CHEAT )
 XCVAR_DEF( com_optvehtrace,						"0",					NULL,					CVAR_NONE )
+// GalaxyRP: [Saber RGB] the client's custom blade colours, packed 24-bit (r | g<<8 | b<<16), one
+// per saber slot. CVAR_USERINFO is what makes this work at all: the engine folds userinfo cvars
+// into the userinfo string it sends the server automatically, so setting these is all it takes for
+// ClientUserinfoChanged() to see the change -- no custom netcode on either side. CVAR_ARCHIVE
+// keeps the choice across restarts. The names deliberately match TaystJK/JAPro's, so an RGB-capable
+// client that already sets them is understood as-is. Also registered in ui_xcvar.h, because the
+// saber menu can be opened from the main menu before cgame is loaded at all, and a cvar first
+// created there by a plain Cvar_Set would not otherwise carry these flags.
+XCVAR_DEF( cp_sbRGB1,							"0",					NULL,					CVAR_ARCHIVE|CVAR_USERINFO )
+XCVAR_DEF( cp_sbRGB2,							"0",					NULL,					CVAR_ARCHIVE|CVAR_USERINFO )
 XCVAR_DEF( debugBB,								"0",					NULL,					CVAR_NONE )
 XCVAR_DEF( forcepowers,							DEFAULT_FORCEPOWERS,	NULL,					CVAR_USERINFO|CVAR_ARCHIVE )
 XCVAR_DEF( g_synchronousClients,				"0",					NULL,					CVAR_SYSTEMINFO )
@@ -177,6 +193,12 @@ XCVAR_DEF( ui_about_mapname,					"0",					NULL,					CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_about_hostname,					"0",					NULL,					CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_about_needpass,					"0",					NULL,					CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_about_botminplayers,				"0",					NULL,					CVAR_ROM|CVAR_INTERNAL )
+// GalaxyRP: [Profile UI / Force Enlightenment] mirrors the local player's login state, pushed by
+// the "supdateloggedin" server command (see CG_LoggedInUpdate_f). Registered here too (not just in
+// the UI module's ui_xcvar.h) so cgame code -- e.g. CG_GreyItem below -- can read
+// ui_loggedin.integer directly every frame via CG_UpdateCvars(), the same way it already reads
+// cg_simpleItems.integer.
+XCVAR_DEF( ui_loggedin,							"0",					NULL,					CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_myteam,							"0",					NULL,					CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_tm1_c0_cnt,						"0",					NULL,					CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_tm1_c1_cnt,						"0",					NULL,					CVAR_ROM|CVAR_INTERNAL )

@@ -828,6 +828,55 @@ static void CG_SiegeEntRenderAboveHead(centity_t *cent)
 void CG_AddRadarEnt(centity_t *cent)
 {
 	static const size_t numRadarEnts = ARRAY_LEN( cg.radarEntities );
+
+	// GalaxyRP: [Radar] cloaked things stay off the radar. One gate here covers every source --
+	// players and NPCs (cg_players.c, which vehicles also reach: CG_G2Animated ends by calling
+	// CG_Player) and anything flagged EF_RADAROBJECT (three more call sites in this file).
+	//
+	// No new plumbing is needed. BG_PlayerStateToEntityState already packs powerups[] into the
+	// transmitted s.powerups bitmask, so this reads for other players exactly as it does for
+	// yourself, arrives in every snapshot, and is right while spectating. A cloaked rider and their
+	// cloaked vehicle each carry PW_CLOAKED (Cmd_VehicleCloak_f cloaks both), so a cloaked pair
+	// disappears together without this needing to know anything about vehicles -- and a rider who
+	// cloaks solo while mounted hides only themselves, leaving the vehicle on the radar, which is
+	// the honest answer.
+	//
+	// This also filters cg.radarEntities[] for the automap (CG_AddRefentForAutoMap, cg_view.c),
+	// which consumes the same list. That is deliberate: a cloaked player should not be visible on
+	// one and not the other.
+	//
+	// Worth being clear about what this is: the radar renders entities the client already has in
+	// its snapshot, so this hides them from YOUR radar, not from a modified client. Real
+	// concealment would mean the server withholding the entity.
+	if (cent->currentState.powerups & (1 << PW_CLOAKED))
+	{
+		return;
+	}
+	// GalaxyRP: [Phase] Force ghosts and holograms stay off the radar and automap too, by the same
+	// reasoning. A player who is only walk-through (/admwalkthrough) still shows.
+	{
+		const int phase = RP_PHASE_FROM_EFLAGS( cent->currentState.eFlags );
+
+		if (phase == RP_PHASE_GHOST || phase == RP_PHASE_HOLO)
+		{
+			return;
+		}
+	}
+	// DAJ_RP: [Phase] and so does a player (or NPC) who is not drawn for you because he is Mind Tricking
+	// you -- which is also how /admhidden hides a player from everyone (RP_HiddenApplyState(), g_active.c).
+	// The same test CG_Player() uses, so the radar agrees with the screen: a viewer with Force Sight active
+	// sees him on both. Only for ET_PLAYER and ET_NPC, whose trickedentindex fields come from their Force
+	// state; other entity types reuse those fields for unrelated things.
+	if (cg.snap &&
+		(cent->currentState.eType == ET_PLAYER || cent->currentState.eType == ET_NPC) &&
+		CG_IsMindTricked(cent->currentState.trickedentindex,
+			cent->currentState.trickedentindex2,
+			cent->currentState.trickedentindex3,
+			cent->currentState.trickedentindex4,
+			cg.snap->ps.clientNum))
+	{
+		return;
+	}
 	if (cg.radarEntityCount >= numRadarEnts)
 	{
 #ifdef _DEBUG
@@ -841,6 +890,16 @@ void CG_AddRadarEnt(centity_t *cent)
 void CG_AddBracketedEnt(centity_t *cent)
 {
 	static const size_t numBracketEnts = ARRAY_LEN( cg.bracketedEntities );
+
+	// DAJ_RP: [Cloak Item] a cloaked vehicle (or anything else cloaked) gets no brackets, and so no lead indicator
+	// either -- CG_BracketEntity() (cg_draw.c) draws both, from this list only. One gate here for every source:
+	// the vehicles around a fighter's pilot (CG_Player(), cg_players.c) and EF2_BRACKET_ENTITY (CG_General()). The
+	// same reading of PW_CLOAKED as the radar's (CG_AddRadarEnt() above), and as there it hides the vehicle from
+	// this HUD only: the entity is still in the snapshot. Back on the frame the cloak drops.
+	if (cent->currentState.powerups & (1 << PW_CLOAKED))
+	{
+		return;
+	}
 	if (cg.bracketedEntityCount >= numBracketEnts)
 	{
 #ifdef _DEBUG
@@ -858,6 +917,62 @@ CG_General
 void CG_G2ServerBoneAngles(centity_t *cent);
 
 extern qboolean BG_GetRootSurfNameWithVariant( void *ghoul2, const char *rootSurfName, char *returnSurfName, int returnSize );
+
+/*
+==================
+CG_ModelEntrySkin
+
+DAJ_RP: [SP Maps] a model table entry that names a skin -- "@" and a .skin file, which a misc_model_ghoul
+with a "skin" key registers (SP_misc_model_ghoul, game/g_misc.c) -- registered, and its handle; 0 for any
+other entry. "@" is what keeps the entry from being loaded as a model, here and by older clients, which
+skip it as they skip a saber name and show the model's own skin. Called when the entry arrives (at
+connect, CG_RegisterGraphics, and later, CG_ConfigStringModified), so the skin is loaded before the model
+is drawn, and by CG_General when it builds the model.
+==================
+*/
+qhandle_t CG_ModelEntrySkin( const char *entry )
+{
+	size_t len;
+
+	if ( !entry || entry[0] != '@' )
+		return 0;
+
+	len = strlen( entry );
+	if ( len < 7 || Q_stricmp( entry + len - 5, ".skin" ) != 0 )
+		return 0;
+
+	return trap->R_RegisterSkin( entry + 1 );
+}
+
+/*
+==================
+CG_RpVectorScale
+
+DAJ_RP: [Static Models] whether this general entity carries a per-axis scale for its model: the server
+flags a misc_model_breakable with "modelscale_vec" (EF2_RP_VECTOR_SCALE, bg_public.h) and sends the three
+scales in origin2, which a general entity has no other use for here. Each must be a scale a model can be
+drawn at, 0.01 to 64 -- anything else is ignored and the model drawn as it would be without it.
+==================
+*/
+#define RP_VECTOR_SCALE_MIN		0.01f
+#define RP_VECTOR_SCALE_MAX		64.0f
+
+qboolean CG_RpVectorScale( const entityState_t *s )
+{
+	int k;
+
+	if ( s->eType != ET_GENERAL || !( s->eFlags2 & EF2_RP_VECTOR_SCALE ) )
+		return qfalse;
+
+	for ( k = 0; k < 3; k++ )
+	{
+		// zyk: the negated test also refuses a NaN
+		if ( !( s->origin2[k] >= RP_VECTOR_SCALE_MIN && s->origin2[k] <= RP_VECTOR_SCALE_MAX ) )
+			return qfalse;
+	}
+
+	return qtrue;
+}
 
 static void CG_General( centity_t *cent ) {
 	refEntity_t			ent;
@@ -1058,6 +1173,7 @@ static void CG_General( centity_t *cent ) {
 			char *limbTagName;
 			char *stubTagName;
 			int newBolt;
+			int pivotBolt;
 			int limbBit = (1 << (cent->currentState.modelGhoul2-10));
 
 			if (clEnt && (clEnt->torsoBolt & limbBit))
@@ -1206,6 +1322,18 @@ static void CG_General( centity_t *cent ) {
 				return;
 			}
 
+			// DAJ_RP: [NPC Scale] the puff at the limb's cut end below is placed by its scale, which is otherwise only
+			// set further down this function: on this first frame it would be none, or what the last entity in this
+			// slot had. The server gives a limb the size of what it was cut from (G_Dismember(), g_combat.c).
+			if (cent->currentState.iModelScale)
+			{
+				cent->modelScale[0] = cent->modelScale[1] = cent->modelScale[2] = cent->currentState.iModelScale/100.0f;
+			}
+			else
+			{
+				VectorClear(cent->modelScale);
+			}
+
 			newBolt = trap->G2API_AddBolt( cent->ghoul2, 0, limbTagName );
 			if ( newBolt != -1 )
 			{
@@ -1223,7 +1351,15 @@ static void CG_General( centity_t *cent ) {
 
 			trap->G2API_SetRootSurface(cent->ghoul2, 0, limbName);
 
-			trap->G2API_SetNewOrigin(cent->ghoul2, trap->G2API_AddBolt(cent->ghoul2, 0, rotateBone));
+			// DAJ_RP fix: a model with its own skeleton (not _humanoid.gla) may lack the limb's pivot bone. The
+			// engine ERR_DROPs on SetNewOrigin(-1) ("Bad boltindex"), dropping every client that draws the limb.
+			// Without the bone the limb keeps the model's own origin: the server placed it at the body's origin
+			// in that case too (G_GetDismemberBolt, g_combat.c), so it is drawn where it was cut from.
+			pivotBolt = trap->G2API_AddBolt(cent->ghoul2, 0, rotateBone);
+			if (pivotBolt != -1)
+			{
+				trap->G2API_SetNewOrigin(cent->ghoul2, pivotBolt);
+			}
 
 			trap->G2API_SetSurfaceOnOff(cent->ghoul2, limbCapName, 0);
 
@@ -1387,7 +1523,15 @@ Ghoul2 Insert End
 			int skin = 0;
 
 			trap->G2API_InitGhoul2Model(&cent->ghoul2, modelName, 0, 0, 0, 0, 0);
-			if (cent->ghoul2 && trap->G2API_SkinlessModel(cent->ghoul2, 0))
+
+			// DAJ_RP: [SP Maps] a skin the server names for it: a misc_model_ghoul's "skin" key, sent as a model
+			// entry "@<skin file>" in modelindex2 (SP_misc_model_ghoul, game/g_misc.c) -- see CG_ModelEntrySkin()
+			if (cent->ghoul2 && cent->currentState.modelindex2 > 0 && cent->currentState.modelindex2 < MAX_MODELS &&
+				(skin = CG_ModelEntrySkin(CG_ConfigString(CS_MODELS + cent->currentState.modelindex2))) != 0)
+			{
+				trap->G2API_SetSkin(cent->ghoul2, 0, skin, skin);
+			}
+			else if (cent->ghoul2 && trap->G2API_SkinlessModel(cent->ghoul2, 0))
 			{ //well, you'd never want a skinless model, so try to get his skin...
 				Q_strncpyz(skinName, modelName, MAX_QPATH);
 				l = strlen(skinName);
@@ -1455,7 +1599,13 @@ Ghoul2 Insert End
 	// convert angles to axis
 	AnglesToAxis( cent->lerpAngles, ent.axis );
 
-	if (cent->currentState.iModelScale)
+	if (CG_RpVectorScale(&cent->currentState))
+	{ // DAJ_RP: [Static Models] a misc_model_breakable's "modelscale_vec", scaled per axis
+		VectorCopy(cent->currentState.origin2, cent->modelScale);
+		VectorCopy(cent->modelScale, ent.modelScale);
+		ScaleModelAxis(&ent);
+	}
+	else if (cent->currentState.iModelScale)
 	{ //if the server says we have a custom scale then set it now.
 		cent->modelScale[0] = cent->modelScale[1] = cent->modelScale[2] = cent->currentState.iModelScale/100.0f;
 		VectorCopy(cent->modelScale, ent.modelScale);
@@ -1635,7 +1785,19 @@ Ghoul2 Insert End
 	}
 
 	// add to refresh list
-	trap->R_AddRefEntityToScene (&ent);
+	// GalaxyRP: [Phase] a severed limb (G_Dismember) or a player's corpse (CopyToBodyQue) of a Force
+	// ghost or a hologram carries its owner's phase bits, and is drawn the way the owner was: the two
+	// passes of CG_AddPhasedPlayerModel() in place of this one add, and everything after it runs as
+	// before. Anything else -- including a walk-through-only owner's parts -- gets the plain add. A
+	// fading or disintegrating corpse has returned above and keeps its own effect.
+	if ( !( ( cent->currentState.eType == ET_BODY ||
+			( cent->currentState.weapon == G2_MODEL_PART &&
+			  cent->currentState.modelGhoul2 >= G2_MODELPART_HEAD &&
+			  cent->currentState.modelGhoul2 <= G2_MODELPART_RLEG ) ) &&
+			CG_AddPhasedPlayerModel( cent, &ent, qtrue ) ) )
+	{
+		trap->R_AddRefEntityToScene (&ent);
+	}
 
 	if (cent->bolt3 == 999)
 	{ //this is an in-flight saber being rendered manually
@@ -1857,21 +2019,50 @@ static void CG_Speaker( centity_t *cent ) {
 	cent->miscTime = cg.time + cent->currentState.frame * 100 + cent->currentState.clientNum * 100 * Q_flrand(-1.0f, 1.0f);
 }
 
+// GalaxyRP: [Force Enlightenment] the single client-side copy of the Enlightenment pickup rule that
+// Touch_Item() enforces on the server (g_items.c). Answers "would the server refuse this item to
+// this player -- logged in, or logged out on plSide?", and is used for both jobs that need that answer: the greyed-out/unhighlighted
+// rendering of the item (CG_Item and friends below, which pass cg.snap->ps.fd.forceSide) and the
+// client-side pickup prediction in CG_TouchItem (cg_predict.c, which passes the predicted
+// playerstate's copy of the same field). Those two used to carry separate hand-written copies of the
+// rule, and they drifted: the logged-in carve-out was added here and to the server but not to the
+// prediction, so a logged-in player got no pickup sound for the color that didn't match their side --
+// prediction refused the item, and the server's own EV_ITEM_PICKUP cannot substitute for it because
+// IT_POWERUP is sent unpredicted and ps.externalEventParm is only 8 bits wide, too narrow to carry
+// the item's entity number. One function, one rule.
+//
+// The side test is written in the server's exact "!=" form rather than an "if LIGHTSIDE / else if
+// DARKSIDE" chain so that the two agree for *every* value of plSide, not merely every value that is
+// currently reachable. (fd.forceSide is in practice always FORCE_LIGHTSIDE or FORCE_DARKSIDE -- its
+// only two writers are in WP_InitForcePowers(), and BG_LegalizedForcePowers() has already clamped
+// anything else to FORCE_DARKSIDE in the string it re-parses -- but a predicate that has to be read
+// alongside that proof is a predicate waiting to be got wrong.)
 qboolean CG_GreyItem(int type, int tag, int plSide)
 {
 	if (type == IT_POWERUP &&
 		(tag == PW_FORCE_ENLIGHTENED_LIGHT || tag == PW_FORCE_ENLIGHTENED_DARK))
 	{
-		if (plSide == FORCE_LIGHTSIDE)
+		// GalaxyRP: [Force Enlightenment] DAJ_RP: logged-in players cannot pick up either
+		// Enlightenment color (see Touch_Item in g_items.c), so both are greyed out for them and
+		// neither pickup is predicted -- no pickup sound, no item vanishing for a frame. (This used to
+		// be the reverse: neither color greyed for a logged-in player.) ui_loggedin is kept in step
+		// with sess.loggedin by the "supdateloggedin" server command, which the server sends on every
+		// login/logout transition and unconditionally from ClientBegin().
+		if (ui_loggedin.integer)
 		{
-			if (tag == PW_FORCE_ENLIGHTENED_DARK)
+			return qtrue;
+		}
+
+		if (tag == PW_FORCE_ENLIGHTENED_LIGHT)
+		{
+			if (plSide != FORCE_LIGHTSIDE)
 			{
 				return qtrue;
 			}
 		}
-		else if (plSide == FORCE_DARKSIDE)
+		else
 		{
-			if (tag == PW_FORCE_ENLIGHTENED_LIGHT)
+			if (plSide != FORCE_DARKSIDE)
 			{
 				return qtrue;
 			}
@@ -1880,6 +2071,27 @@ qboolean CG_GreyItem(int type, int tag, int plSide)
 
 	return qfalse;
 }
+
+// DAJ_RP: [Still Weapons] how far above its origin a still weapon is drawn: single player's items.dat gives weapon
+// pickups a box from 2 units under the origin (a saber's from 8), so they rest that far above the floor; ours rest
+// with the origin on it (FinishSpawningItem's box starts at 0). The weapon models reach 1 to 4 units under their
+// origin, and a saber's 9.
+#define RP_STILL_ITEM_LIFT	2
+#define RP_STILL_SABER_LIFT	8
+
+// DAJ_RP: [Still Powerups] how fast a still Force Boon or Enlightenment turns, in degrees a second -- as a func_rotating
+// with speed 10 -- and the milliseconds of one turn, which the turn is taken modulo so it stays exact however long
+// the map runs
+#define RP_POWERUP_SPIN_SPEED	10
+#define RP_POWERUP_SPIN_PERIOD	( 360000 / RP_POWERUP_SPIN_SPEED )
+
+// DAJ_RP: [Weapon Scale] how far a dropped weapon drawn at 1x is lowered, from the stock amount that lowered it at 1.5
+// times its size. A dropped item rests with its origin ITEM_RADIUS + 1 over the floor (LaunchItem()'s box, and
+// G_BounceItem()'s lift when it stops); the stock amount put the model's origin h = rest - stock over the floor. At 1x
+// it goes at h / 1.5: every point of the weapon is then two thirds as high as it was at 1.5 times, so what touched the
+// floor touches it still and nothing that was above it sinks.
+#define RP_DROPPED_WEAPON_REST		( ITEM_RADIUS + 1 )
+#define RP_DROPPED_WEAPON_DROP( stock )	( RP_DROPPED_WEAPON_REST - ( RP_DROPPED_WEAPON_REST - ( stock ) ) / 1.5f )
 
 /*
 ==================
@@ -1893,6 +2105,7 @@ static void CG_Item( centity_t *cent ) {
 	int				msec;
 	float			scale;
 	weaponInfo_t	*wi;
+	qboolean		still;
 
 	es = &cent->currentState;
 	if ( es->modelindex >= bg_numItems ) {
@@ -1915,8 +2128,22 @@ Ghoul2 Insert Start
 
 	item = &bg_itemlist[ es->modelindex ];
 
+	// DAJ_RP: [Still Weapons] a placed weapon pickup the server marks (EF_RP_STILL_ITEM, RP_ItemSetStill() in g_items.c)
+	// is drawn as single player draws it: no hologram pad or cone, not raised, bobbing or spinning, at normal size, at
+	// the angles in s.apos (the map's, tilted up for VERTICAL), lifted RP_STILL_ITEM_LIFT off its origin as single
+	// player's item bounds lift it (a saber more), lit as ammo or a medpak is -- by the map, plus the minimum the
+	// renderer gives every entity -- without the hologram's blue tint (RF_MINLIGHT, below). It keeps the fade-in when it
+	// comes back and the cg_simpleItems icon. While it is taken the server does not send it at all, as with
+	// ammo (Touch_Item()), so it leaves no ghost. A gun rack's weapon carries EF_DROPPEDWEAPON too, and hangs where the
+	// rack puts it, without the lift. DAJ_RP: [Still Powerups] a marked powerup is drawn the same way, without a lift
+	// (the Ysalamiri model lies on its origin, the others float above theirs by themselves): the Ysalamiri still, the
+	// Force Boon and both Enlightenments turning slowly (RP_POWERUP_SPIN_SPEED), an Enlightenment a player cannot take
+	// greyed as before, without its grey pad. Weapons and powerups only.
+	still = ( ( item->giType == IT_WEAPON || item->giType == IT_POWERUP ) && ( es->eFlags & EF_RP_STILL_ITEM ) ) ? qtrue : qfalse;
+
 	if ((item->giType == IT_WEAPON || item->giType == IT_POWERUP) &&
 		!(cent->currentState.eFlags & EF_DROPPEDWEAPON) &&
+		!still &&
 		!cg_simpleItems.integer)
 	{
 		vec3_t uNorm;
@@ -2017,12 +2244,21 @@ Ghoul2 Insert End
 	}
 
 	if ((item->giType == IT_WEAPON || item->giType == IT_POWERUP) &&
-		!(cent->currentState.eFlags & EF_DROPPEDWEAPON))
+		!(cent->currentState.eFlags & EF_DROPPEDWEAPON) &&
+		!still)
 	{
 		cent->lerpOrigin[2] += 16;
 	}
 
-	if ((!(cent->currentState.eFlags & EF_DROPPEDWEAPON) || item->giType == IT_POWERUP) &&
+	if ( still )
+	{ // DAJ_RP: [Still Weapons] resting on the floor, as single player's item bounds (2 units under the origin, a
+	  // saber's 8) leave it; not on a gun rack, and not a powerup
+		if ( item->giType == IT_WEAPON && !( es->eFlags & EF_DROPPEDWEAPON ) )
+		{
+			cent->lerpOrigin[2] += ( item->giTag == WP_SABER ) ? RP_STILL_SABER_LIFT : RP_STILL_ITEM_LIFT;
+		}
+	}
+	else if ((!(cent->currentState.eFlags & EF_DROPPEDWEAPON) || item->giType == IT_POWERUP) &&
 		(item->giType == IT_WEAPON || item->giType == IT_POWERUP))
 	{
 		// items bob up and down continuously
@@ -2061,7 +2297,17 @@ Ghoul2 Insert End
 
 	memset (&ent, 0, sizeof(ent));
 
-	if ( (!(cent->currentState.eFlags & EF_DROPPEDWEAPON) || item->giType == IT_POWERUP) &&
+	if ( still )
+	{ // DAJ_RP: [Still Weapons] the angles the server gave it, VERTICAL's tilt included
+		VectorCopy( es->apos.trBase, cent->lerpAngles );
+		if ( item->giType == IT_POWERUP && item->giTag != PW_YSALAMIRI )
+		{ // DAJ_RP: [Still Powerups] turning slowly from its own yaw, by the server's time (the same for every player)
+			cent->lerpAngles[YAW] = AngleNormalize360( cent->lerpAngles[YAW] +
+				( cg.time % RP_POWERUP_SPIN_PERIOD ) * RP_POWERUP_SPIN_SPEED / 1000.0f );
+		}
+		AnglesToAxis( cent->lerpAngles, ent.axis );
+	}
+	else if ( (!(cent->currentState.eFlags & EF_DROPPEDWEAPON) || item->giType == IT_POWERUP) &&
 		(item->giType == IT_WEAPON || item->giType == IT_POWERUP) )
 	{ //only weapons and powerups rotate now
 		// autorotate at one of two speeds
@@ -2078,7 +2324,11 @@ Ghoul2 Insert End
 	// the weapons have their origin where they attatch to player
 	// models, so we need to offset them or they will rotate
 	// eccentricly
-	if (!(cent->currentState.eFlags & EF_DROPPEDWEAPON))
+	if ( still )
+	{ // DAJ_RP: [Still Weapons] it does not rotate, and lies where its origin is: neither the centring nor a dropped
+	  // weapon's lowering
+	}
+	else if (!(cent->currentState.eFlags & EF_DROPPEDWEAPON))
 	{
 		if ( item->giType == IT_WEAPON ) {
 			wi = &cg_weapons[item->giTag];
@@ -2100,44 +2350,55 @@ Ghoul2 Insert End
 	}
 	else
 	{
+		float drop;
+
 		wi = &cg_weapons[item->giTag];
 
+		// DAJ_RP: [Weapon Scale] the stock lowering puts a 1.5 times weapon on the floor; a dropped weapon is drawn at
+		// 1x now (below), so it is lowered by RP_DROPPED_WEAPON_DROP() of it instead. A dropped powerup takes this path
+		// too, and was never scaled: its lowering is left as it was.
 		switch(item->giTag)
 		{
 		case WP_BLASTER:
-			cent->lerpOrigin[2] -= 12;
+			drop = 12;
 			break;
 		case WP_DISRUPTOR:
-			cent->lerpOrigin[2] -= 13;
+			drop = 13;
 			break;
 		case WP_BOWCASTER:
-			cent->lerpOrigin[2] -= 16;
+			drop = 16;
 			break;
 		case WP_REPEATER:
-			cent->lerpOrigin[2] -= 12;
+			drop = 12;
 			break;
 		case WP_DEMP2:
-			cent->lerpOrigin[2] -= 10;
+			drop = 10;
 			break;
 		case WP_FLECHETTE:
-			cent->lerpOrigin[2] -= 6;
+			drop = 6;
 			break;
 		case WP_ROCKET_LAUNCHER:
-			cent->lerpOrigin[2] -= 11;
+			drop = 11;
 			break;
 		case WP_THERMAL:
-			cent->lerpOrigin[2] -= 12;
+			drop = 12;
 			break;
 		case WP_TRIP_MINE:
-			cent->lerpOrigin[2] -= 16;
+			drop = 16;
 			break;
 		case WP_DET_PACK:
-			cent->lerpOrigin[2] -= 16;
+			drop = 16;
 			break;
 		default:
-			cent->lerpOrigin[2] -= 8;
+			drop = 8;
 			break;
 		}
+
+		if ( item->giType == IT_WEAPON )
+		{
+			drop = RP_DROPPED_WEAPON_DROP( drop );
+		}
+		cent->lerpOrigin[2] -= drop;
 	}
 
 	ent.hModel = cg_items[es->modelindex].models[0];
@@ -2196,22 +2457,24 @@ Ghoul2 Insert End
 		ent.customShader = cgs.media.itemRespawningPlaceholder;
 	}
 
-	// increase the size of the weapons when they are presented as items
-	if ( item->giType == IT_WEAPON ) {
-		VectorScale( ent.axis[0], 1.5, ent.axis[0] );
-		VectorScale( ent.axis[1], 1.5, ent.axis[1] );
-		VectorScale( ent.axis[2], 1.5, ent.axis[2] );
-		ent.nonNormalizedAxes = qtrue;
-		//trap->S_AddLoopingSound( cent->currentState.number, cent->lerpOrigin, vec3_origin, cgs.media.weaponHoverSound );
-	}
+	// DAJ_RP: [Weapon Scale] weapons presented as items used to be drawn 1.5 times their size here (still ones excepted);
+	// every weapon pickup -- still, HOLOGRAM, dropped, on a gun rack -- is now drawn at its own size, as single
+	// player draws them. A HOLOGRAM weapon now spins exactly round its middle (weaponMidpoint is measured unscaled),
+	// and a dropped one is lowered for 1x (RP_DROPPED_WEAPON_DROP()).
+	//trap->S_AddLoopingSound( cent->currentState.number, cent->lerpOrigin, vec3_origin, cgs.media.weaponHoverSound );
 
-	if (!(cent->currentState.eFlags & EF_DROPPEDWEAPON) &&
+	// DAJ_RP: [Still Weapons] RF_MINLIGHT is not a minimum light in this engine: R_SetupEntityLighting() gives every
+	// entity a neutral one (+32 ambient) regardless, and this flag adds a blue-cyan one on top (16 96 150; yellow for an
+	// entity coloured 255 255 0) -- "for items rotating on their holo thing". So only the items over the hologram pad
+	// get it: a still weapon or powerup, without the pad, is lit like ammo or a medpak.
+	if (!(cent->currentState.eFlags & EF_DROPPEDWEAPON) && !still &&
 		(item->giType == IT_WEAPON || item->giType == IT_POWERUP))
 	{
 		ent.renderfx |= RF_MINLIGHT;
 	}
 
-	if (item->giType != IT_TEAM && msec >= 0 && msec < ITEM_SCALEUP_TIME && !(es->eFlags & EF_ITEMPLACEHOLDER) && !(es->eFlags & EF_DROPPEDWEAPON))
+	if (item->giType != IT_TEAM && msec >= 0 && msec < ITEM_SCALEUP_TIME && !(es->eFlags & EF_ITEMPLACEHOLDER) &&
+		(!(es->eFlags & EF_DROPPEDWEAPON) || still))	// DAJ_RP: [Still Weapons] a gun rack's fades in too
 	{	// if just respawned, fade in, but don't do this for flags.
 		float alpha;
 		int a;
@@ -2427,6 +2690,107 @@ static void CG_DistortionTrail( centity_t *cent )
 CG_Missile
 ===============
 */
+/*
+===============
+GalaxyRP: [Grapple Hook] -- drawing the rope
+
+Ported from TaystJK's CG_GrappleTrail / CG_GrappleEndpoint / CG_GrappleStartpoint (cg_ents.c), which
+draw JAPro's hook. The hook arrives as an ordinary missile in the snapshot -- ET_MISSILE, weapon
+WP_BRYAR_PISTOL, saberInFlight set: the JAPro wire signature, chosen so a TaystJK client that learns
+to honour TAYSTJK_INFO_GRAPPLE draws it too -- and CG_Missile() hands it here before it could draw a
+blaster bolt. A beam from the owner's left hand to the hook, the hook model at the far end, and a
+small glow at the hand. Nothing here is predicted: the missile's position comes from the snapshot,
+the hand from the owner's model, so the rope is right for every viewer including the owner.
+===============
+*/
+static qboolean CG_IsGrappleHook( const entityState_t *es )
+{
+	return ( es->eType == ET_MISSILE && es->weapon == WP_BRYAR_PISTOL && es->saberInFlight ) ? qtrue : qfalse;
+}
+
+static void CG_GrappleTrail( centity_t *cent )
+{
+	entityState_t	*es = &cent->currentState;
+	centity_t		*owner;
+	refEntity_t		beam, model;
+	vec3_t			handPos, dir;
+
+	if ( es->clientNum < 0 || es->clientNum >= MAX_CLIENTS )
+	{
+		return;
+	}
+
+	owner = &cg_entities[es->clientNum];
+
+	// the near end: the owner's left hand, or their chest if the model is not there to ask
+	// DAJ_RP: [Grapple Hook] the left hand, as TaystJK draws it (its bolt 1, *l_hand). This asked for the right
+	// hand, and tested it for truth: the right hand is the first bolt every client model gets (CG_LoadClientInfo),
+	// so its index is 0 and the test always failed -- the rope left from the chest fallback, never a hand. A
+	// bolt index is valid from 0 up; -1 is "no such bolt".
+	if ( owner->ghoul2 && cgs.clientinfo[es->clientNum].bolt_lhand >= 0 )
+	{
+		mdxaBone_t	boltMatrix;
+		vec3_t		tAng;
+
+		VectorSet( tAng, owner->turAngles[PITCH], owner->turAngles[YAW], owner->turAngles[ROLL] );
+		trap->G2API_GetBoltMatrix( owner->ghoul2, 0, cgs.clientinfo[es->clientNum].bolt_lhand, &boltMatrix, tAng,
+			owner->lerpOrigin, cg.time, cgs.gameModels, owner->modelScale );
+
+		handPos[0] = boltMatrix.matrix[0][3];
+		handPos[1] = boltMatrix.matrix[1][3];
+		handPos[2] = boltMatrix.matrix[2][3];
+	}
+	else
+	{
+		VectorCopy( owner->lerpOrigin, handPos );
+		handPos[2] += 24;
+	}
+
+	// the rope
+	memset( &beam, 0, sizeof( beam ) );
+	beam.reType = RT_LINE;
+	beam.customShader = cgs.media.grappleShader;
+	beam.radius = 1;
+	VectorCopy( handPos, beam.origin );
+	VectorCopy( cent->lerpOrigin, beam.oldorigin );
+	beam.shaderRGBA[0] = 255;
+	beam.shaderRGBA[1] = 0;
+	beam.shaderRGBA[2] = 0;
+	beam.shaderRGBA[3] = 255;
+	trap->R_AddRefEntityToScene( &beam );
+
+	// the hook at the far end, nose along its travel while flying and into the surface once parked
+	memset( &model, 0, sizeof( model ) );
+	model.reType = RT_MODEL;
+	model.hModel = cgs.media.grappleModel;
+
+	if ( VectorNormalize2( es->pos.trDelta, dir ) == 0 )
+	{
+		VectorCopy( es->angles, dir );		// the impact normal, set by the server on impact
+		VectorInverse( dir );
+		if ( VectorNormalize( dir ) == 0 )
+		{
+			VectorSubtract( cent->lerpOrigin, handPos, dir );
+			VectorNormalize( dir );
+		}
+	}
+
+	VectorMA( cent->lerpOrigin, -4, dir, model.origin );
+	VectorCopy( model.origin, model.lightingOrigin );
+	VectorCopy( dir, model.axis[0] );
+	RotateAroundDirection( model.axis, ( es->pos.trType == TR_STATIONARY ) ? 0.0f : cg.time * 0.25f );
+	trap->R_AddRefEntityToScene( &model );
+
+	// a glow where the rope leaves the hand
+	memset( &model, 0, sizeof( model ) );
+	model.reType = RT_SABER_GLOW;
+	model.customShader = cgs.media.redSaberGlowShader;
+	VectorCopy( handPos, model.origin );
+	VectorCopy( handPos, model.lightingOrigin );
+	model.shaderRGBA[0] = model.shaderRGBA[1] = model.shaderRGBA[2] = model.shaderRGBA[3] = 255;
+	trap->R_AddRefEntityToScene( &model );
+}
+
 static void CG_Missile( centity_t *cent ) {
 	refEntity_t			ent;
 	entityState_t		*s1;
@@ -2434,6 +2798,14 @@ static void CG_Missile( centity_t *cent ) {
 //	int	col;
 
 	s1 = &cent->currentState;
+
+	// GalaxyRP: [Grapple Hook] before the weapon lookup below would draw it as a blaster bolt
+	if ( CG_IsGrappleHook( s1 ) )
+	{
+		CG_GrappleTrail( cent );
+		return;
+	}
+
 	if ( s1->weapon > WP_NUM_WEAPONS && s1->weapon != G2_MODEL_PART ) {
 		s1->weapon = 0;
 	}
@@ -3464,8 +3836,16 @@ void CG_AddPacketEntities( qboolean isPortal ) {
 
 		if (veh->currentState.owner == cg.predictedPlayerState.clientNum)
 		{
+			//the vehicle's own predicted playerstate (vps) never carries iModelScale over the network
+			//(see vehPlayerStateFields in msg.cpp), so BG_PlayerStateToEntityState() below would zero out
+			//the scale that already arrived correctly via the normal entity snapshot. Preserve it across
+			//the overwrite so a scaled vehicle (set via "scale" in its .npc file) renders correctly for
+			//its own rider too, not just for observers.
+			int savedModelScale = veh->currentState.iModelScale;
+
 			BG_PlayerStateToEntityState( &cg.predictedVehicleState, &veh->currentState, qfalse );
 			veh->currentState.eType = ET_NPC;
+			veh->currentState.iModelScale = savedModelScale;
 
 			veh->currentState.pos.trType = TR_INTERPOLATE;
 		}

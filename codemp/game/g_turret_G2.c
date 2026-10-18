@@ -318,6 +318,27 @@ void turretG2_die ( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, 
 			}
 		}
 	}
+	// DAJ_RP fix: [Entity System] a TURBO turret has no damaged model (none exists for it, single player the same), so
+	// it went to ObjectDie() and was freed, and CANRESPAWN -- whose timer is only set above -- never brought it back.
+	// With CANRESPAWN it is kept now, hidden and not solid until turretG2_respawn() brings it back.
+	else if ( ( self->spawnflags & SPF_TURRETG2_TURBO ) && ( self->spawnflags & SPF_TURRETG2_CANRESPAWN ) )
+	{
+		turretG2_set_models( self, qtrue );	// drops its ghoul2 model: turretG2_respawn() builds it again
+		self->s.eFlags |= EF_NODRAW;
+		self->r.svFlags |= SVF_NOCLIENT;
+		self->r.contents = 0;
+		trap->LinkEntity( (sharedEntity_t *)self );
+
+		if ( self->target )
+		{
+			G_UseTargets( self, attacker );
+		}
+
+		if ( !self->genericValue5 )
+		{
+			self->genericValue5 = level.time + self->count;
+		}
+	}
 	else
 	{
 		ObjectDie( self, inflictor, attacker, damage, meansOfDeath );
@@ -357,6 +378,12 @@ static void turretG2_fire ( gentity_t *ent, vec3_t start, vec3_t dir )
 	gentity_t	*bolt;
 
 	if ( (trap->PointContents( start, ent->s.number )&MASK_SHOT) )
+	{
+		return;
+	}
+
+	// GalaxyRP fix: [Entity System] see turret_fire() in g_turret.c: no shot while the table is at the reserve
+	if ( G_EntitySlotsAvailable( 1 ) == qfalse )
 	{
 		return;
 	}
@@ -403,7 +430,9 @@ static void turretG2_fire ( gentity_t *ent, vec3_t start, vec3_t dir )
 		bolt->teamnodmg = ent->teamnodmg;
 		bolt->dflags = (DAMAGE_NO_KNOCKBACK|DAMAGE_HEAVY_WEAP_CLASS);		// Don't push them around, or else we are constantly re-aiming
 		bolt->splashDamage = ent->splashDamage;
-		bolt->splashRadius = ent->splashDamage;
+		// DAJ_RP fix: [Entity System] was ent->splashDamage (stock multiplayer too), a copy slip: splashradius is the
+		// radius, as it already is for a TURBO's bolts (WP_FireTurboLaserMissile) and for the death explosion
+		bolt->splashRadius = ent->splashRadius;
 		bolt->methodOfDeath = MOD_TARGET_LASER;//MOD_ENERGY;
 		bolt->splashMethodOfDeath = MOD_TARGET_LASER;//MOD_ENERGY;
 		bolt->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
@@ -435,6 +464,14 @@ void turretG2_respawn( gentity_t *self )
 	self->s.weapon = WP_TURRET; // crosshair code uses this to mark crosshair red
 
 	turretG2_set_models( self, qfalse );
+	// DAJ_RP fix: [Entity System] a TURBO one was hidden and not solid while dead (turretG2_die())
+	if ( self->spawnflags & SPF_TURRETG2_TURBO )
+	{
+		self->s.eFlags &= ~EF_NODRAW;
+		self->r.svFlags &= ~SVF_NOCLIENT;
+		self->r.contents = CONTENTS_BODY|CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP|CONTENTS_SHOTCLIP;	// as it spawns
+		trap->LinkEntity( (sharedEntity_t *)self );
+	}
 	self->s.health = self->health = self->genericValue6;
 	if (self->maxHealth) {
 		G_ScaleNetHealth(self);
@@ -726,6 +763,12 @@ static qboolean turretG2_find_enemies( gentity_t *self )
 
 		if ( !target->client )
 		{
+			// GalaxyRP: [SP Maps] a single-player map's misc_turret shoots clients only, as it did
+			// in single player -- see RP_SpawnSPTurret() in g_turret.c
+			if ( self->rpSpTurret )
+			{
+				continue;
+			}
 			// only attack clients
 			if ( !(target->flags&FL_BBRUSH)//not a breakable brush
 				|| !target->takedamage//is a bbrush, but invincible
@@ -745,6 +788,10 @@ static qboolean turretG2_find_enemies( gentity_t *self )
 		}
 		if ( target->client && target->client->tempSpectate >= level.time )
 		{
+			continue;
+		}
+		if ( self->rpSpTurret && target->client && target->client->playerTeam == self->rpSpTurretTeam )
+		{ // GalaxyRP: [SP Maps] single player's noDamageTeam: the team this turret leaves alone
 			continue;
 		}
 		if ( self->alliedTeam )
@@ -796,7 +843,10 @@ static qboolean turretG2_find_enemies( gentity_t *self )
 
 			if ( enemyDist < bestDist || (target->client && !foundClient))// all things equal, keep current
 			{
-				if ( self->attackDebounceTime < level.time )
+				// GalaxyRP fix: [SP Maps] the 1400ms wind-up was re-armed every time this scan
+				// re-acquired the enemy it already had -- every 500ms for a non-client target -- so a
+				// turret facing NPCs wound up forever and never fired. Only wind up for a new enemy.
+				if ( self->attackDebounceTime < level.time && !self->enemy )
 				{
 					// We haven't fired or acquired an enemy in the last 2 seconds-start-up sound
 					if ( !(self->spawnflags&SPF_TURRETG2_TURBO) )
@@ -907,6 +957,15 @@ void turretG2_base_think( gentity_t *self )
 		}
 		else if ( self->enemy->client && self->enemy->client->tempSpectate >= level.time )
 		{//don't keep going after spectators
+			self->enemy = NULL;
+		}
+		else if ( self->enemy->client && ( ( self->rpSpTurret && self->enemy->client->playerTeam == self->rpSpTurretTeam )
+			|| ( self->alliedTeam && self->enemy->client->sess.sessionTeam == self->alliedTeam ) ) )
+		{ // GalaxyRP fix: [SP Maps] joined the team this turret leaves alone: let go (the scan would never have picked them)
+			self->enemy = NULL;
+		}
+		else if ( self->enemy->flags & FL_NOTARGET )
+		{
 			self->enemy = NULL;
 		}
 		else
@@ -1148,6 +1207,25 @@ void finish_spawning_turretG2( gentity_t *base )
 	}
 
 	G_SpawnFloat( "shotspeed", "0", &base->mass );
+	// GalaxyRP fix: [Entity System] a shotspeed or wait below 100 off a spawn key (/entadd) meant
+	// missiles that never move, or one on every think, living their full 10 seconds -- the defaults
+	// below take over, as they do for 0; see misc_turret in g_turret.c
+	if ( base->mass < 100 )
+	{
+		if ( base->mass )
+		{
+			G_LogPrintf( "misc_turretG2 at %s: shotspeed %g too low, default used\n", vtos( base->s.origin ), base->mass );
+		}
+		base->mass = 0;
+	}
+	if ( base->wait < 100 )
+	{
+		if ( base->wait )
+		{
+			G_LogPrintf( "misc_turretG2 at %s: wait %g too short, default used\n", vtos( base->s.origin ), base->wait );
+		}
+		base->wait = 0;
+	}
 	if ( (base->spawnflags&SPF_TURRETG2_TURBO) )
 	{
 		if ( !base->random )
@@ -1232,7 +1310,7 @@ void finish_spawning_turretG2( gentity_t *base )
 		// How quickly to fire
 		if ( !base->wait )
 		{
-			base->wait = 150 + Q_flrand(0.0f, 1.0f) * 55;
+			base->wait = 150; // GalaxyRP: [SP Maps] single player's rate (was 150 + up to 55ms of jitter)
 		}
 
 		if ( !base->splashDamage )

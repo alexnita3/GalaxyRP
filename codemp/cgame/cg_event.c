@@ -309,15 +309,15 @@ clientkilled:
 			}
 			else
 			{
-				char sPlaceWith[256];
+				// GalaxyRP fix: [Scoreboard] just "You killed X", as in the team-gametype branch
+				// below. Stock JKA added a second line, "<Nth> place with <score>", built from
+				// PERS_RANK and PERS_SCORE -- but the mod no longer counts kills (AddScore() in
+				// g_combat.c leaves PERS_SCORE alone), so every player is tied at 0 and the line
+				// always read "Tied for 1st place with 0".
 				char sKilledStr[256];
-				trap->SE_GetStringTextString("MP_INGAME_PLACE_WITH",     sPlaceWith, sizeof(sPlaceWith));
 				trap->SE_GetStringTextString("MP_INGAME_KILLED_MESSAGE", sKilledStr, sizeof(sKilledStr));
 
-				s = va("%s %s.\n%s %s %i.", sKilledStr, targetName,
-					CG_PlaceString( cg.snap->ps.persistant[PERS_RANK] + 1 ),
-					sPlaceWith,
-					cg.snap->ps.persistant[PERS_SCORE] );
+				s = va("%s %s", sKilledStr, targetName );
 			}
 		} else {
 			char sKilledStr[256];
@@ -598,62 +598,9 @@ static void CG_ItemPickup( int itemNum ) {
 	cg.itemPickup = itemNum;
 	cg.itemPickupTime = cg.time;
 	cg.itemPickupBlendTime = cg.time;
-	// see if it should be the grabbed weapon
-	if ( cg.snap && bg_itemlist[itemNum].giType == IT_WEAPON ) {
-
-		// 0 == no switching
-		// 1 == automatically switch to best SAFE weapon
-		// 2 == automatically switch to best weapon, safe or otherwise
-		// 3 == if not saber, automatically switch to best weapon, safe or otherwise
-
-		if (0 == cg_autoSwitch.integer)
-		{
-			// don't switch
-		}
-		else if ( cg_autoSwitch.integer == 1)
-		{ //only autoselect if not explosive ("safe")
-			if (bg_itemlist[itemNum].giTag != WP_TRIP_MINE &&
-				bg_itemlist[itemNum].giTag != WP_DET_PACK &&
-				bg_itemlist[itemNum].giTag != WP_THERMAL &&
-				bg_itemlist[itemNum].giTag != WP_ROCKET_LAUNCHER &&
-				bg_itemlist[itemNum].giTag > cg.snap->ps.weapon &&
-				cg.snap->ps.weapon != WP_SABER)
-			{
-				if (!cg.snap->ps.emplacedIndex)
-				{
-					cg.weaponSelectTime = cg.time;
-				}
-				cg.weaponSelect = bg_itemlist[itemNum].giTag;
-			}
-		}
-		else if ( cg_autoSwitch.integer == 2)
-		{ //autoselect if better
-			if (bg_itemlist[itemNum].giTag > cg.snap->ps.weapon &&
-				cg.snap->ps.weapon != WP_SABER)
-			{
-				if (!cg.snap->ps.emplacedIndex)
-				{
-					cg.weaponSelectTime = cg.time;
-				}
-				cg.weaponSelect = bg_itemlist[itemNum].giTag;
-			}
-		}
-		/*
-		else if ( cg_autoswitch.integer == 3)
-		{ //autoselect if better and not using the saber as a weapon
-			if (bg_itemlist[itemNum].giTag > cg.snap->ps.weapon &&
-				cg.snap->ps.weapon != WP_SABER)
-			{
-				if (!cg.snap->ps.emplacedIndex)
-				{
-					cg.weaponSelectTime = cg.time;
-				}
-				cg.weaponSelect = bg_itemlist[itemNum].giTag;
-			}
-		}
-		*/
-		//No longer required - just not switching ever if using saber
-	}
+	// DAJ_RP: [Weapons] picking up a weapon never selects it, whatever cg_autoSwitch says. The GalaxyRP
+	// client does no weapon autoswitch at all (see CG_WeaponSelectable() in cg_weapons.c): the cvar stays
+	// registered, since the engine and the base game's menus know it, but nothing here reads it.
 
 	//rww - print pickup messages
 	if (bg_itemlist[itemNum].classname && bg_itemlist[itemNum].classname[0] &&
@@ -915,6 +862,12 @@ qboolean BG_InKnockDownOnly( int anim );
 void DoFall(centity_t *cent, entityState_t *es, int clientNum)
 {
 	int delta = es->eventParm;
+	// DAJ_RP: [dmflags] DF_NO_FALLING (8) -- the server skips a player's fall damage under this flag
+	// (ClientEvents(), g_active.c), but the "*land1" grunt below was played on the same delta > 44
+	// that the damage starts at, with no look at the flag, so a hard landing sounded hurt and was
+	// not. Players only: NPCs never take fall damage through that code at all, flag or no flag.
+	// The heavy thud stays -- it is the landing, not the injury.
+	const qboolean landGrunt = (es->number < MAX_CLIENTS && (cgs.dmflags & DF_NO_FALLING)) ? qfalse : qtrue;
 
 	if (cent->currentState.eFlags & EF_DEAD)
 	{ //corpses crack into the ground ^_^
@@ -941,16 +894,22 @@ void DoFall(centity_t *cent, entityState_t *es, int clientNum)
 	else if (delta > 50)
 	{
 		trap->S_StartSound (NULL, es->number, CHAN_AUTO, cgs.media.fallSound );
-		trap->S_StartSound( NULL, cent->currentState.number, CHAN_VOICE,
-			CG_CustomSound( cent->currentState.number, "*land1.wav" ) );
-		cent->pe.painTime = cg.time;	// don't play a pain sound right after this
+		if ( landGrunt )
+		{
+			trap->S_StartSound( NULL, cent->currentState.number, CHAN_VOICE,
+				CG_CustomSound( cent->currentState.number, "*land1.wav" ) );
+			cent->pe.painTime = cg.time;	// don't play a pain sound right after this
+		}
 	}
 	else if (delta > 44)
 	{
 		trap->S_StartSound (NULL, es->number, CHAN_AUTO, cgs.media.fallSound );
-		trap->S_StartSound( NULL, cent->currentState.number, CHAN_VOICE,
-			CG_CustomSound( cent->currentState.number, "*land1.wav" ) );
-		cent->pe.painTime = cg.time;	// don't play a pain sound right after this
+		if ( landGrunt )
+		{
+			trap->S_StartSound( NULL, cent->currentState.number, CHAN_VOICE,
+				CG_CustomSound( cent->currentState.number, "*land1.wav" ) );
+			cent->pe.painTime = cg.time;	// don't play a pain sound right after this
+		}
 	}
 	else
 	{
@@ -1285,6 +1244,91 @@ const char *CG_GetStringForVoiceSound(const char *s)
 }
 
 /*
+==================
+CG_RpPickupEntity / CG_RpPickupItemKey
+
+DAJ_RP fix: [Items] an item pickup event names the item by its entity number (0 to 1023), and the
+network carries that number in full only in the first of the playerState's two event slots: the second
+slot (eventParms[1]), the unpredicted event (externalEventParm) and every other player's event
+(entityState eventParm) are 8 bits wide in the engine's field tables, which no mod can change without
+breaking every vanilla client. An item numbered 300 arrived as 44, and the pickup was shown as whatever
+entity 44 happened to be -- another item, or a model index read as one: the name, icon and sound of the
+wrong item, now and then a weapon auto-switch, after the right item had already been shown (the 500 ms
+guard below keys on the entity, so a different entity got through). Vanilla behaves so still.
+
+A number of 256 or more cannot have lost bits and is taken as it is. A smaller one is one of N, N+256,
+N+512 and N+768: the candidate is the one the client knows as an item (or a holocron), and of those the
+one whose pickup was shown in the last 500 ms -- the same pickup coming back, which the guard then
+swallows -- or else the nearest to the player who picked it up. An item already picked up keeps its last
+state and position here, an item the server has freed (a dropped one) too. With no item among them, -1:
+the event shows nothing rather than a wrong item.
+==================
+*/
+int CG_RpPickupEntity( int parm, const vec3_t pickerOrigin )
+{
+	int k, best = -1, recent = -1;
+	float bestDist = 0.0f, recentDist = 0.0f;
+
+	if ( parm < 0 || parm >= MAX_GENTITIES )
+	{
+		return -1;
+	}
+
+	if ( parm >= 256 )
+	{
+		return parm;
+	}
+
+	for ( k = parm; k < MAX_GENTITIES; k += 256 )
+	{
+		const centity_t *c = &cg_entities[k];
+		float d;
+
+		if ( c->currentState.eType != ET_ITEM && c->currentState.eType != ET_HOLOCRON )
+		{
+			continue;
+		}
+
+		d = DistanceSquared( c->lerpOrigin, pickerOrigin );
+
+		if ( c->weapon >= cg.time && ( recent < 0 || d < recentDist ) )
+		{
+			recent = k;
+			recentDist = d;
+		}
+
+		if ( best < 0 || d < bestDist )
+		{
+			best = k;
+			bestDist = d;
+		}
+	}
+
+	return ( recent >= 0 ) ? recent : best;
+}
+
+// DAJ_RP fix: [Items] what the pickup of this entity gives, as EV_ITEM_PICKUP below reads it: the item
+// index, or for a holocron the Force power it carries (kept apart from the item indexes)
+int CG_RpPickupItemKey( int entityNum )
+{
+	const entityState_t *s;
+
+	if ( entityNum < 0 || entityNum >= MAX_GENTITIES )
+	{
+		return -1;
+	}
+
+	s = &cg_entities[entityNum].currentState;
+
+	if ( s->modelindex < 1 && s->isJediMaster )
+	{
+		return 0x10000 + s->trickedentindex4;
+	}
+
+	return s->modelindex;
+}
+
+/*
 ==============
 CG_EntityEvent
 
@@ -1294,6 +1338,8 @@ also called by CG_CheckPlayerstateEvents
 */
 #define	DEBUGNAME(x) if(cg_debugEvents.integer){trap->Print(x"\n");}
 extern void CG_ChatBox_AddString(char *chatStr); //cg_draw.c
+extern const playerState_t *cg_rpEventPS;	// DAJ_RP: [Weapons] cg_playerstate.c
+
 void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 	entityState_t	*es;
 	int				event;
@@ -1379,7 +1425,9 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 	case EV_FOOTSTEP:
 		DEBUGNAME("EV_FOOTSTEP");
-		if (cg_footsteps.integer) {
+		// DAJ_RP: [dmflags] DF_NO_FOOTSTEPS (32) -- this one is the step pmove raises on a short
+		// landing (PM_CrashLand). The walking steps are animation events; see _PlayerFootStep().
+		if (cg_footsteps.integer && !(cgs.dmflags & DF_NO_FOOTSTEPS)) {
 			footstep_t	soundType;
 			switch( es->eventParm )
 			{
@@ -1430,7 +1478,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		break;
 	case EV_FOOTSTEP_METAL:
 		DEBUGNAME("EV_FOOTSTEP_METAL");
-		if (cg_footsteps.integer) {
+		if (cg_footsteps.integer && !(cgs.dmflags & DF_NO_FOOTSTEPS)) {
 			trap->S_StartSound (NULL, es->number, CHAN_BODY,
 				cgs.media.footsteps[ FOOTSTEP_METALWALK ][rand()&3] );
 		}
@@ -1545,11 +1593,32 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			}
 			else
 			{
+				// GalaxyRP: [Force Duel] parm 1 opens an ordinary saber duel, parm 3 a full force one.
+				// The duel type cannot be carried in playerState_t -- the engine delta-encodes that
+				// struct and we replace the game modules, not the engine -- so this event is how the
+				// client learns it, and zyk_duel_is_full_force() in bg_misc.c reads it back. Without
+				// it the client would predict a saber throw as refused while the server allowed it.
+				//
+				// Set explicitly either way rather than only on 3, so a duel can never inherit the
+				// type of the one before it. Parm 2 deliberately does not touch it: that is the
+				// sabers-out announcement partway through a duel already under way.
+				if (es->number >= 0 && es->number < MAX_CLIENTS)
+				{
+					cg_duel_types[es->number] = (es->eventParm == 3) ? 1 : 0;
+				}
+
 				trap->S_StartBackgroundTrack( "music/mp/duel.mp3", "music/mp/duel.mp3", qfalse );
 			}
 		}
 		else
 		{ //ending the duel
+			// GalaxyRP: [Force Duel] and the type goes with it. TaystJK never clears its equivalent,
+			// so a client that misses the next start event keeps answering for the duel before it.
+			if (es->number >= 0 && es->number < MAX_CLIENTS)
+			{
+				cg_duel_types[es->number] = 0;
+			}
+
 			CG_StartMusic(qtrue);
 		}
 		break;
@@ -1860,12 +1929,31 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			gitem_t	*item;
 			int		index;
 			qboolean	newindex = qfalse;
+			int		itemEnt;
+			vec3_t	pickerOrigin;
 
-			index = cg_entities[es->eventParm].currentState.modelindex;		// player predicted
+			// DAJ_RP fix: [Items] the item's entity number may have reached us cut to 8 bits: find the
+			// entity it was (CG_RpPickupEntity above), or show nothing
+			if ( es->number == cg.predictedPlayerState.clientNum )
+			{
+				VectorCopy( cg.predictedPlayerState.origin, pickerOrigin );
+			}
+			else
+			{
+				VectorCopy( position, pickerOrigin );
+			}
 
-			if (index < 1 && cg_entities[es->eventParm].currentState.isJediMaster)
+			itemEnt = CG_RpPickupEntity( es->eventParm, pickerOrigin );
+			if ( itemEnt < 0 )
+			{
+				break;
+			}
+
+			index = cg_entities[itemEnt].currentState.modelindex;		// player predicted
+
+			if (index < 1 && cg_entities[itemEnt].currentState.isJediMaster)
 			{ //a holocron most likely
-				index = cg_entities[es->eventParm].currentState.trickedentindex4;
+				index = cg_entities[itemEnt].currentState.trickedentindex4;
 				trap->S_StartSound (NULL, es->number, CHAN_AUTO,	cgs.media.holocronPickup );
 
 				if (es->number == cg.snap->ps.clientNum && showPowersName[index])
@@ -1900,7 +1988,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 				break;
 			}
 
-			if (cg_entities[es->eventParm].weapon >= cg.time)
+			if (cg_entities[itemEnt].weapon >= cg.time)
 			{ //rww - an unfortunately necessary hack to prevent double item pickups
 				break;
 			}
@@ -1909,7 +1997,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			//item, this time will have expired by the time that item needs to be picked up.
 			//Of course, it's quite possible this will fail miserably, so if you've got a better
 			//solution then please do use it.
-			cg_entities[es->eventParm].weapon = cg.time+500;
+			cg_entities[itemEnt].weapon = cg.time+500;
 
 			if ( index < 1 || index >= bg_numItems ) {
 				break;
@@ -1970,7 +2058,27 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 //		trap->S_StartSound (NULL, es->number, CHAN_AUTO, cgs.media.noAmmoSound );
 		if ( es->number == cg.snap->ps.clientNum )
 		{
-			if ( CG_InFighter() || CG_InATST() || cg.snap->ps.weapon == WP_NONE )
+			// DAJ_RP: [Weapons] what the server left the player holding is in the player state this event came with
+			// (cg_rpEventPS, CG_CheckPlayerstateEvents()), not in cg.snap: predicting from the next snapshot, as in
+			// ordinary play, cg.snap is still the one before, with the weapon just taken still in hand -- so that one
+			// was "followed", the client went on asking for it, and took it up again on the next pickup.
+			const playerState_t *serverPS = cg_rpEventPS ? cg_rpEventPS : &cg.snap->ps;
+
+			if ( !serverPS->m_iVehicleNum && es->eventParm > WP_NONE && es->eventParm < WP_NUM_WEAPONS )
+			{
+				// DAJ_RP: [Weapons] the server took the weapon in hand away (a Force Pull disarm, a skill
+				// lowered, /drop: TossClientWeapon() in g_combat.c, zyk_deselect_weapon_if_active() and
+				// Cmd_Drop_f() in g_cmds.c) and has already put the player on one they still own, or on none.
+				// Select that one too -- not an autoswitch but following the server -- or the client went on
+				// asking for the weapon that is gone, and took it up again the moment one was picked up. Tested
+				// first: with no weapon left in hand the vehicle branch below would swallow it. Not on a vehicle,
+				// whose own weapons' events (g_weapon.c) number them from 0 and come only to its riders.
+				cg.snap->ps.stats[STAT_WEAPONS] &= ~(1 << es->eventParm);
+				cg.weaponSelect = serverPS->weapon;
+				cg.weaponSelectTime = cg.time;
+				trap->S_MuteSound(cg.snap->ps.clientNum, CHAN_WEAPON);	// as the switch away always did
+			}
+			else if ( CG_InFighter() || CG_InATST() || cg.snap->ps.weapon == WP_NONE )
 			{//just letting us know our vehicle is out of ammo
 				//FIXME: flash something on HUD or give some message so we know we have no ammo
 				centity_t *localCent = &cg_entities[cg.snap->ps.clientNum];
@@ -1996,21 +2104,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			{
 				cg.forceHUDTotalFlashTime = cg.time + 1000;
 			}
-			else
-			{
-				int weap = 0;
-
-				if (es->eventParm && es->eventParm < WP_NUM_WEAPONS)
-				{
-					cg.snap->ps.stats[STAT_WEAPONS] &= ~(1 << es->eventParm);
-					weap = cg.snap->ps.weapon;
-				}
-				else if (es->eventParm)
-				{
-					weap = (es->eventParm-WP_NUM_WEAPONS);
-				}
-				CG_OutOfAmmoChange(weap);
-			}
+			// DAJ_RP: [Weapons] otherwise (a weapon out of ammo) nothing: the GalaxyRP client never switches
+			// weapon by itself -- see CG_WeaponSelectable() in cg_weapons.c
 		}
 		break;
 	case EV_CHANGE_WEAPON:
@@ -2115,15 +2210,8 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 		CG_FireWeapon( cent, qtrue );
 
-		//if you just exploded your detpacks and you have no ammo left for them, autoswitch
-		if ( cg.snap->ps.clientNum == cent->currentState.number &&
-			cg.snap->ps.weapon == WP_DET_PACK )
-		{
-			if (cg.snap->ps.ammo[weaponData[WP_DET_PACK].ammoIndex] == 0)
-			{
-				CG_OutOfAmmoChange(WP_DET_PACK);
-			}
-		}
+		// DAJ_RP: [Weapons] detonating the last det packs used to switch weapon here; the GalaxyRP client
+		// never switches by itself -- the det pack stays in hand, as the server keeps it (PM_DryFire())
 
 		break;
 
@@ -2402,7 +2490,12 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 				{
 					trap->S_StartSound (NULL, es->number, CHAN_AUTO, ci->saber[0].soundOn );
 				}
-				if (ci->saber[1].soundOn)
+				// GalaxyRP fix: [Saber Sounds] added the saber[1].model[0] test -- see Cmd_ToggleSaber_f
+				// in g_cmds.c for why an unused second saber has a playable soundOn. This is the genuine
+				// ignition path, so before this fix every normal saber toggle-on played two overlapping
+				// copies of the same sound for a single-saber player.
+				if (ci->saber[1].soundOn &&
+					ci->saber[1].model[0])
 				{
 					trap->S_StartSound (NULL, es->number, CHAN_AUTO, ci->saber[1].soundOn );
 				}
@@ -2565,6 +2658,35 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		{
 			int clnum = 0;
 
+			// GalaxyRP: [Force] one npc target of Team Heal / Team Energize. The bitflags below only
+			// have room for client slots, so the server sends each npc target an event of its own,
+			// carrying the npc's number in otherEntityNum and no bitflags. See TEAM_POWER_NPC_TARGET
+			// in bg_public.h and RP_TeamPowerNPCEffect() in w_force.c.
+			if (es->generic1 == TEAM_POWER_NPC_TARGET)
+			{
+				const int npcNum = es->otherEntityNum;
+
+				if (npcNum >= MAX_CLIENTS && npcNum < ENTITYNUM_WORLD &&
+					cg_entities[npcNum].currentValid &&
+					cg_entities[npcNum].currentState.eType == ET_NPC)
+				{
+					if (es->eventParm == 1)
+					{ //eventParm 1 is heal
+						trap->S_StartSound (NULL, npcNum, CHAN_AUTO, cgs.media.teamHealSound );
+						cg_entities[npcNum].teamPowerEffectTime = cg.time + 1000;
+						cg_entities[npcNum].teamPowerType = 1;
+					}
+					else
+					{ //eventParm 2 is force regen
+						trap->S_StartSound (NULL, npcNum, CHAN_AUTO, cgs.media.teamRegenSound );
+						cg_entities[npcNum].teamPowerEffectTime = cg.time + 1000;
+						cg_entities[npcNum].teamPowerType = 0;
+					}
+				}
+
+				clnum = MAX_CLIENTS; // no bitflags on this event, skip the client walk
+			}
+
 			while (clnum < MAX_CLIENTS)
 			{
 				if (CG_InClientBitflags(es, clnum))
@@ -2641,17 +2763,11 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		DEBUGNAME("EV_USE_ITEM9");
 		//CG_UseItem( cent ); zyk: commented this, not used in mod
 
-		if (cg.snap->ps.clientNum == es->number)
-		{
-			if (es->eventParm >= 0 && es->eventParm < MAX_CLIENTS)
-			{ // zyk: player id who is allied to the player
-				cg.zyk_rpg_stuff[es->eventParm] |= (1 << 2);
-			}
-			else if (es->eventParm >= MAX_CLIENTS && es->eventParm < (MAX_CLIENTS * 2))
-			{ // zyk: player id who is no longer allied to the player
-				cg.zyk_rpg_stuff[es->eventParm-MAX_CLIENTS] &= ~(1 << 2);
-			}
-		}
+		// GalaxyRP fix: [Radar] this used to set or clear cg.zyk_rpg_stuff[n] bit 2 -- "n is an ally
+		// of mine" -- from an eventParm carrying the other player's id, offset by MAX_CLIENTS to mean
+		// "no longer an ally". The whole ally set now arrives as the two sess.ally1/ally2 bitfields
+		// in one "supdateally" server command, which is reliable, cannot be lost, and is re-sent from
+		// ClientBegin so it survives a map change -- which this never did.
 
 		break;
 	case EV_USE_ITEM10:
@@ -2670,53 +2786,22 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		DEBUGNAME("EV_USE_ITEM13");
 		//CG_UseItem( cent );zyk: commented this, not used in mod
 
-		if (cg.snap->ps.clientNum == es->number)
-		{
-			if (es->eventParm <= 100)
-			{ // zyk: current magic power
-				cg.magic_power = es->eventParm;
-			}
-			else if (es->eventParm == 101)
-			{ // zyk: Immunity Power
-				cg.immunity_power_duration = cg.time + 25000;
-			}
-			else if (es->eventParm == 102)
-			{ // zyk: Ultra Strength
-				cg.ultra_strength_duration = cg.time + 30000;
-			}
-			else if (es->eventParm == 103)
-			{ // zyk: Ultra Resistance
-				cg.ultra_resistance_duration = cg.time + 30000;
-			}
-		}
-
-		if (es->number < MAX_CLIENTS)
-		{
-			if (es->eventParm >= 104 && es->eventParm <= 114)
-			{
-				if (es->eventParm == 114) // zyk: is not in RPG Mode
-					cg.rpg_class[es->number] = -1;
-				else // zyk: set the RPG class
-					cg.rpg_class[es->number] = es->eventParm - 104;
-			}
-		}
+		// GalaxyRP fix: [Magic] the mod's RPG event cascade used to arrive here: parms 0-100 (the
+		// magic power bar), 101-103 (the Immunity / Ultra Strength / Ultra Resistance timers), 105
+		// (the Unique Skill cooldown) and 104 / 114 (the "is an RPG player" flag, which this side had
+		// already stopped reading). The server has none of those systems left and no longer sends
+		// the event at all; the handlers and the bars they drove in cg_draw.c are gone.
 
 		break;
 	case EV_USE_ITEM14:
 		DEBUGNAME("EV_USE_ITEM14");
 		//CG_UseItem( cent );zyk: commented this, not used in mod
 
-		if (cg.snap->ps.clientNum == es->number)
-		{
-			if (es->eventParm >= 0 && es->eventParm < MAX_CLIENTS)
-			{ // zyk: player id who is allied to the player
-				cg.zyk_rpg_stuff[es->eventParm] |= (1 << 2);
-			}
-			else if (es->eventParm >= MAX_CLIENTS && es->eventParm < (MAX_CLIENTS * 2))
-			{ // zyk: player id who is no longer allied to the player
-				cg.zyk_rpg_stuff[es->eventParm-MAX_CLIENTS] &= ~(1 << 2);
-			}
-		}
+		// GalaxyRP fix: [Radar] this used to set or clear cg.zyk_rpg_stuff[n] bit 2 -- "n is an ally
+		// of mine" -- from an eventParm carrying the other player's id, offset by MAX_CLIENTS to mean
+		// "no longer an ally". The whole ally set now arrives as the two sess.ally1/ally2 bitfields
+		// in one "supdateally" server command, which is reliable, cannot be lost, and is re-sent from
+		// ClientBegin so it survives a map change -- which this never did.
 		break;
 
 	case EV_ITEMUSEFAIL:
@@ -2743,23 +2828,16 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 				break;
 			}
 
-			// zyk: If 5 or 6, it is the Radar used in RPG Mode by Bounty Hunter class
-			if (es->eventParm == 5)
-			{ // zyk: if 5, add the radar
-				cg.rpg_stuff |= (1 << 0);
-			}
-			else if (es->eventParm == 6)
-			{ // zyk: if 6, remove the radar
-				cg.rpg_stuff &= ~(1 << 0);
-			}
-			else if (es->eventParm == 7)
-			{ // zyk: if 7, set the blue jetpack flame
-				cg.rpg_stuff |= (1 << 1);
-			}
-			else if (es->eventParm == 8)
-			{ // zyk: if 8, remove blue jetpack flame
-				cg.rpg_stuff &= ~(1 << 1);
-			}
+			// GalaxyRP fix: [Radar] the mod's six extra parms are all gone and this event is back to
+			// its four vanilla ones above. Parms 5/6 set and cleared cg.rpg_stuff bit 0 (the "Bounty
+			// Hunter radar upgrade"); 9/10 set and cleared cg.zyk_rpg_stuff[n] bit 1 ("hide this
+			// player from the radar"); 7/8 were the blue-jetpack flame, which moved to the entity
+			// state in an earlier pass. In both of the radar pairs only the CLEARING half was ever
+			// sent: the setters lived in branches gated on pers.rpg_class (2 = Bounty Hunter, 5 =
+			// Stealth Attacker) and rpg_class was removed as dead long ago, so neither bit could ever
+			// be 1 and every test of them in CG_DrawRadar was permanently false. The whole
+			// "else if (es->number < MAX_CLIENTS)" branch went with them -- nothing in the mod sends
+			// this event about another player any more.
 
 			if (!psStringEDRef)
 			{
@@ -2767,25 +2845,6 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			}
 
 			Com_Printf("%s\n", psStringEDRef);
-		}
-		else if (es->number < MAX_CLIENTS)
-		{ // zyk handling the jetpack effect for other players
-			if (es->eventParm == 7)
-			{ // zyk: set the blue jetpack flame
-				cg.zyk_rpg_stuff[es->number] |= (1 << 0);
-			}
-			else if (es->eventParm == 8)
-			{ // zyk: remove blue jetpack flame
-				cg.zyk_rpg_stuff[es->number] &= ~(1 << 0);
-			}
-			else if (es->eventParm == 9)
-			{ // zyk: add this player so it will not be visible by the cg player radar
-				cg.zyk_rpg_stuff[es->number] |= (1 << 1);
-			}
-			else if (es->eventParm == 10)
-			{ // zyk: remove this player so it will be visible by the cg player radar
-				cg.zyk_rpg_stuff[es->number] &= ~(1 << 1);
-			}
 		}
 		break;
 

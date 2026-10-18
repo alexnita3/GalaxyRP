@@ -1,0 +1,335 @@
+//----------------------------------------------------------------------------------------------
+// ingame_rpx_music: the Music menu of the Extras.
+// GalaxyRP: [Extras] generated with the others of ingame_rpx_*.menu; the Extras button of
+// ingame_galaxyrp.menu opens it. The list, the previews and the rpx scripts are ui_rpextras.c; the
+// commands the buttons send are built in cg_rpextras.c.
+//----------------------------------------------------------------------------------------------
+{
+	menuDef
+	{
+		name                    "ingame_rpx_music"
+		visible                 0
+		fullscreen              0
+		outOfBoundsClick
+		rect                    10 20 620 440
+		focusColor              1 1 1 1
+		disableColor            .5 .5 .5 1
+		style                   1
+		border                  1
+		descX                   310
+		descY                   424
+		descScale               0.8
+		descColor               1 .682 0 .8
+		descAlignment           ITEM_ALIGN_CENTER
+
+		onOpen
+		{
+			uiScript		rpxOpen music ingame_rpx_music
+		}
+		onClose
+		{
+			uiScript		rpxClose
+		}
+		onESC
+		{
+			play			"sound/interface/button1.wav" ;
+			close			ingame_rpx_music
+		}
+
+		itemDef
+		{
+			name                rpx_background
+			style               WINDOW_STYLE_SHADER
+			rect                0 0 620 440
+			background          "gfx/menus/menu_box_ingame"
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_title
+			style               WINDOW_STYLE_SHADER
+			background          "gfx/menus/menu_blendbox"
+			text                "^6Galaxy ^4RP^3 Extras: ^7Music"
+			rect                20 5 580 28
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          290
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           .549 .854 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_back
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                12 405 90 24
+			text                "Back"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          45
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Back to the Galaxy RP menu"
+			mouseEnter
+			{
+				setitemcolor rpx_back bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_back bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setcvar ui_rpx_back 1 ;
+				close ingame_rpx_music ;
+				open ingame_galaxyrp
+			}
+		}
+		itemDef
+		{
+			name                rpx_msg
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                110 415 500 14
+			cvar                "ui_rpx_msg"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.6
+			forecolor           1 1 .4 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_filter
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                "Filter: "
+			cvar                "ui_rpx_filter_music"
+			maxchars            30
+			maxPaintChars       30
+			rect                12 40 400 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Show only the names with this in them"
+		}
+		itemDef
+		{
+			name                rpx_list
+			type                ITEM_TYPE_LISTBOX
+			style               WINDOW_STYLE_FILLED
+			rect                12 60 400 300
+			elementwidth        380
+			elementheight       15
+			elementtype         LISTBOX_TEXT
+			feeder              FEEDER_RPX_LIST
+			font                2
+			textscale           0.6
+			textstyle           0
+			textalign           0
+			textaligny          0
+			columns             1 4 374 374
+			border              1
+			bordercolor         1 .682 0 .6
+			forecolor           1 1 1 1
+			backcolor           0 0 0 .6
+			outlinecolor        1 .682 0 .35
+			visible             1
+			descText            "Double-click a folder to open it; .. goes back up"
+			doubleclick
+			{
+				uiScript rpxEnter
+			}
+			mouseEnter
+			{
+				setitemcolor rpx_list bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_list bordercolor 1 .682 0 .6
+			}
+		}
+		itemDef
+		{
+			name                rpx_info
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                12 364 400 14
+			cvar                "ui_rpx_info"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           .8 .8 .8 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_status
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                12 378 400 14
+			cvar                "ui_rpx_status"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 1 .4 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_me
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 40 180 26
+			text                "Play for me"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          90
+			textaligny          2
+			font                2
+			textscale           0.8
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Only you hear it, until the map music changes"
+			mouseEnter
+			{
+				setitemcolor rpx_me bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_me bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo musicme
+			}
+		}
+		itemDef
+		{
+			name                rpx_all
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 72 180 26
+			text                "Play for everyone"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          90
+			textaligny          2
+			font                2
+			textscale           0.8
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Everyone on the map hears it (/playmusic)"
+			mouseEnter
+			{
+				setitemcolor rpx_all bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_all bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo musicall
+			}
+		}
+		itemDef
+		{
+			name                rpx_stop
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 112 180 22
+			text                "Stop music"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          90
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Stop the music you hear (only for you)"
+			mouseEnter
+			{
+				setitemcolor rpx_stop bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_stop bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo musicstop
+			}
+		}
+		itemDef
+		{
+			name                rpx_mapmusic
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 138 180 22
+			text                "Map music"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          90
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Play the map's music again (only for you)"
+			mouseEnter
+			{
+				setitemcolor rpx_mapmusic bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_mapmusic bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo musicmap
+			}
+		}
+	}
+}

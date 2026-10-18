@@ -24,3 +24,12 @@
 # Set line endings to LF, even on Windows. Otherwise, execution within Docker fails.
 # See https://help.github.com/articles/dealing-with-line-endings/
 *.sh text eol=lf
+
+# .command is a macOS shell script, so it needs LF for the same reason *.sh above does --
+# the rule above does not cover the extension.
+*.command text eol=lf
+
+# Batch files need CRLF. cmd.exe seeks by byte offset when it jumps to a label, and on an
+# LF-only file that seek can land mid-line, so a script built on goto/call :label silently
+# stops looping. galaxyrp_host_autorestart.bat is exactly that kind of script.
+*.bat text eol=crlf

@@ -442,10 +442,25 @@ void UpdateForceUsed()
 	// Make sure that we're still legal.
 	for (curpower=0;curpower<NUM_FORCE_POWERS;curpower++)
 	{	// Make sure that our ranks are within legal limits.
+		// GalaxyRP: [Force UI level cap] third and last of the caps that keep this menu inside the
+		// vanilla 3-level range -- the drawn stars and the click ceiling are already capped in
+		// ui_main.c; see the comment there for why. This one covers the remaining way in: the
+		// "forcepowers" cvar. UI_UpdateForcePowers() below reads that string with a bare atoi per
+		// character and, unlike BG_LegalizedForcePowers() on the server, does not check the digit is
+		// '0'-'3', so a hand-edited config could put a 4 or a 5 in here. The old ceiling was
+		// NUM_FORCE_POWER_LEVELS, which is 6 mod-wide for the admin-granted bonus levels, so it let
+		// those through -- and the point-buy loop just below then charged bgForcePowerCost[power][4]
+		// and [5], which are 0 because that inherited table only ever had four columns filled in.
+		// The rank was therefore never priced and never reduced, and got written straight back out to
+		// the cvar. The server does not grant it either way -- its parser stops dead at the first
+		// '4' and zeroes every power after it, which is what silently wiped a player's force powers.
+		// Capping at FORCE_LEVEL_3 here means the config heals itself the next time this menu runs.
+		// The admin-grant path is untouched: it sets forcePowerLevel[] from pers.skill_levels and
+		// never passes through this menu or the cvar it writes.
 		if (uiForcePowersRank[curpower]<0)
 			uiForcePowersRank[curpower]=0;
-		else if (uiForcePowersRank[curpower]>=NUM_FORCE_POWER_LEVELS)
-			uiForcePowersRank[curpower]=(NUM_FORCE_POWER_LEVELS-1);
+		else if (uiForcePowersRank[curpower]>FORCE_LEVEL_3)
+			uiForcePowersRank[curpower]=FORCE_LEVEL_3;
 
 		for (currank=FORCE_LEVEL_1;currank<=uiForcePowersRank[curpower];currank++)
 		{	// Check on this force power
