@@ -1,24 +1,23 @@
-# Galaxy RP Mod - Ultimate Edition
-
-Ultimate Edition fork modernises the **Galaxy RP** mod developed by Alex, making it natively playable on modern TaystJK engine with its Rend2 or Vulkan renderers and its logical entities system. It also introduces 64-bit mod version, as well as versions for Linux and macOS, and tackles some bugs and issues along the way. New features are also gradually added to the mod.
+# Galaxy RP Mod
 
 ![cover_image](https://user-images.githubusercontent.com/16083854/130863860-95907912-39bf-4684-be9a-db8e04f73603.png)
 
 <div align="center">
-
+  
 This project is a fork of **Zyk Mod**, which is itself a fork of [OpenJK](https://github.com/JACoders/OpenJK). The aim is to improve on the work Zyk has done and move the project into a different direction: Player Roleplaying as opposed to an "RPG" game.
 This mod will be geared towards the RP community mainly. It will have features to prevent common occurences such as "spec-hiding", "Mary-sues" and more! It will also contain features that help player immersion.
 
-[![version](https://img.shields.io/github/v/release/praviilon/galaxy_ultimate?label=Current%20Version&color=brightgreen)](https://github.com/praviilon/galaxy_ultimate/releases)
+[![version](https://img.shields.io/github/v/release/alexnita3/GalaxyRP?label=Current%20Version&color=brightgreen)](https://github.com/alexnita3/GalaxyRP/releases)
 [![discord](https://img.shields.io/badge/Discord-Join-blueviolet.svg?logo=discord&style=flat&logoColor=white)](https://discord.gg/aKnXckEFr5)
-[![issues](https://img.shields.io/github/issues/praviilon/galaxy_ultimate.svg?label=Issues%20%26%20Requests&color=red)](https://github.com/praviilon/galaxy_ultimate/issues)
+[![issues](https://img.shields.io/github/issues/alexnita3/GalaxyRP.svg?label=Issues%20%26%20Requests&color=red)](https://github.com/alexnita3/GalaxyRP/issues)
 [![guides](https://img.shields.io/badge/GalaxyRP-Website-blue.svg)](https://www.galaxyrp.uk/)
-[![license](https://img.shields.io/github/license/praviilon/galaxy_ultimate.svg?label=License&color=yellow)](#license)
+[![license](https://img.shields.io/github/license/alexnita3/GalaxyRP.svg?label=License&color=yellow)](#license)
 
 </div>
 
 # Information
-- Mod documentation and guides [here](https://www.galaxyrp.uk/)
+- Mod releases and download [here](https://github.com/alexnita3/GalaxyRP/releases)
+- Mod dcumentation and guides [here](https://www.galaxyrp.uk/)
 - Mod support **Discord** chat [here](https://discord.gg/aKnXckEFr5)
 
 # Features
@@ -49,6 +48,7 @@ The mod contains these following main features:
 - An entity system, which allows players to add, edit, list and remove entities that are in the map
 - Commands to remap shaders in a map
 - RGB Lightsaber colors
+- Hats and capes for players
 - A client-side plugin with menus
 - Many cvars at server.cfg to customize mod features
 - Countless bugfixes and optimizations
@@ -57,21 +57,20 @@ The mod contains these following main features:
 - And more...
 
 # Building
-The mod actually requires the only game-code files from the build project: `jampgame_`, `cgame_` and `ui_`. MP Engine files and SP files have been disabled for builds. You can follow the **OpenJK** guides for build process:
+The mod actually requires only the game-code files from the build project: `jampgame_`, `cgame_` and `ui_`. MP Engine files and SP files have been disabled for builds. You can follow the **OpenJK** guides for build process:
 
 * [Compilation guide](https://github.com/JACoders/OpenJK/wiki/Compilation-guide)
 * [Debugging guide](https://github.com/JACoders/OpenJK/wiki/Debugging)
 
 # Maintainers
-- Pra Viilon
-
-# Credits
-**GalaxyRP authors:**
 - Alex
 - JustJordyn
 - RepJunkie
 - TriForce
 - ZelZel
+
+**Fork Contributors**
+- Pra Viilon ([Galaxy Ultimate](https://github.com/praviilon/galaxy_ultimate))
 
 **Zyk mod author:**
 - Zyk6870
@@ -83,6 +82,14 @@ The mod actually requires the only game-code files from the build project: `jamp
 - Tayst
 - Sunny
 - Dan (eternal coders)
+
+**JOF EJK authors:**
+- Milamber
+- Daniel
+- Jediman
+- lumayaa
+- Sol-Vulpes
+- Clix (looZ149)
 
 **OpenJK authors:**
 - Ensiform
