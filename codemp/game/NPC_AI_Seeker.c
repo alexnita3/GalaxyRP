@@ -553,13 +553,13 @@ void NPC_BSSeeker_Default( void )
 		}
 	}
 	*/
-	//N/A for MP.
 	if ( NPCS.NPC->r.ownerNum < ENTITYNUM_NONE )
 	{
-		//OJKFIXME: clientnum 0
-		gentity_t *owner = &g_entities[0];
-		if ( owner->health <= 0
-			|| (owner->client && owner->client->pers.connected == CON_DISCONNECTED) )
+		// GalaxyRP fix: [NPC] this checked g_entities[0] instead of the actual owner (the client that
+		// spawned the seeker); only a client owner is a reason to leave with it
+		gentity_t *owner = &g_entities[NPCS.NPC->r.ownerNum];
+		if ( owner->client
+			&& (owner->health <= 0 || owner->client->pers.connected == CON_DISCONNECTED) )
 		{//owner is dead or gone
 			//remove me
 			G_Damage( NPCS.NPC, NULL, NULL, NULL, NULL, 10000, DAMAGE_NO_PROTECTION, MOD_TELEFRAG );
@@ -575,10 +575,9 @@ void NPC_BSSeeker_Default( void )
 
 	if ( NPCS.NPC->enemy && NPCS.NPC->enemy->health && NPCS.NPC->enemy->inuse )
 	{
-		//OJKFIXME: clientnum 0
-		if ( NPCS.NPC->client->NPC_class != CLASS_BOBAFETT && ( NPCS.NPC->enemy->s.number == 0 || ( NPCS.NPC->enemy->client && NPCS.NPC->enemy->client->NPC_class == CLASS_SEEKER )) )
+		if ( NPCS.NPC->client->NPC_class != CLASS_BOBAFETT && ( NPCS.NPC->enemy->s.number == NPCS.NPC->r.ownerNum || ( NPCS.NPC->enemy->client && NPCS.NPC->enemy->client->NPC_class == CLASS_SEEKER )) )
 		{
-			//hacked to never take the player as an enemy, even if the player shoots at it
+			//hacked to never take the owner as an enemy, even if the owner shoots at it (was: never client 0)
 			NPCS.NPC->enemy = NULL;
 		}
 		else

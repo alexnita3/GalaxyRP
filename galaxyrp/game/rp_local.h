@@ -19,26 +19,41 @@ Global definitions
 
 #define DB_PATH							"GalaxyRP/database/accounts.db"
 
-#define NUM_OF_GUARDIANS				10 // zyk: number of Light Quest guardians to be defeated 
-#define NUM_OF_OBJECTIVES				10 // zyk: number of Dark Quest objectives
-#define NUM_OF_ETERNITY_QUEST_OBJ		11 // zyk: number of Eternity Quest objectives
-#define NUM_OF_UNIVERSE_QUEST_OBJ		22 // zyk: number of Universe Quest objectives
+// GalaxyRP fix: [Database] Centralised sqlite3_open() wrapper -- see definition in g_main.c for
+// why this exists (map-change "database is locked" errors). Every place in the game module that
+// used to call sqlite3_open(DB_PATH, &db) directly should call RP_DB_Open(&db) instead.
+// Forward-declared (rather than including sqlite3.h here) since this header is pulled in by
+// g_local.h for every game module file, and not all of them already include sqlite3.h themselves
+// before that happens; sqlite3 is just an opaque "typedef struct sqlite3 sqlite3;" in sqlite3.h,
+// so redeclaring it here is safe.
+typedef struct sqlite3 sqlite3;
+#define RP_DB_BUSY_TIMEOUT_MS			5000
+int RP_DB_Open(sqlite3 **db);
+
+// GalaxyRP fix: [NPC] removed NUM_OF_GUARDIANS here. Its last user was the guardian_boss_1..10
+// loop in the /npc spawn blocklist, which has been removed along with the rest of that list;
+// the Light Quest it counted for was itself deleted as dead code in earlier work.
+// GalaxyRP fix: [Quests] NUM_OF_OBJECTIVES (Dark Quest), NUM_OF_ETERNITY_QUEST_OBJ and
+// NUM_OF_UNIVERSE_QUEST_OBJ used to be defined here; the quests are gone and nothing read them.
 #define NUM_OF_SKILLS					60 // zyk: number of RPG Mode skills
 
 #define MAX_SHADER_REMAPS				128
-#define MAX_RACERS						16 // zyk: Max racers in the map
+// GalaxyRP: [Race Mode] MAX_RACERS used to be defined here. Its only users were Cmd_RaceMode_f's
+// starting-grid search and level.race_mode_vehicle[], both removed with Race Mode itself.
 #define MAX_DUEL_MATCHES				496 // zyk: max matches a tournament may have
-#define MAX_CUSTOM_QUESTS				64 // zyk: max amount of custom quests
-#define MAX_CUSTOM_QUEST_MISSIONS		512 // zyk: max missions a custom quest can have
-#define MAX_MISSION_FIELD_LINES			8 // zyk: max lines of custom quest mission fields to send to client
-#define MAX_CUSTOM_QUEST_FIELDS			512 // zyk: max fields a custom quest mission can have
-#define MAX_BOUNTY_HUNTER_SENTRIES		5 // zyk: max sentries a Bounty Hunter can have if he has the Upgrade
+// GalaxyRP fix: [Quests] the MAX_CUSTOM_QUEST* sizes and MAX_BOUNTY_HUNTER_SENTRIES used to be
+// defined here, for the custom-quest tables in level_locals_t and the Bounty Hunter class; both
+// are gone.
 #define MAX_RPG_CHARS					60 // zyk: max RPG chars an account can have
 #define MAX_ACC_NAME_SIZE				30 // zyk: max characters an account or rpg char can have
 #define MAX_JETPACK_FUEL				10000 // zyk: max jetpack fuel the player can have
 
 #define JETPACK_SCALE					100 // zyk: used to scale the MAX_JETPACK_FUEL to set the jetpackFuel attribute. Dividing MAX_JETPACK_FUEL per JETPACK_SCALE must result in 100
-#define NUMBER_OF_SELLER_ITEMS			56 // zyk: quantity of items at the jawa seller
+// GalaxyRP fix: [Shop] NUMBER_OF_SELLER_ITEMS (56, one flat id space shared by every product the
+// jawa seller ever sold, most of it long dead) replaced by two smaller counts for the surviving
+// /buy item <n> and /buy upgrade <n> subcommands, each freshly numbered from 1.
+#define NUMBER_OF_SHOP_ITEMS			12 // zyk: quantity of items sold via /buy item <n> and /stuff item <n>
+#define NUMBER_OF_SHOP_UPGRADES			3 // zyk: quantity of upgrades sold via /buy upgrade <n> and /stuff upgrade <n>
 #define DUEL_TOURNAMENT_ARENA_SIZE		64 // zyk: default size of the globe model used as the Duel Tournament arena
 #define DUEL_TOURNAMENT_PROTECT_TIME	2000 // zyk: duration of the duelists protection in Duel Tournament
 
@@ -66,7 +81,11 @@ typedef enum {
 	ADM_SCALE,
 	ADM_PLAYERS,
 	ADM_DUELARENA,
-	ADM_CUSTOMQUEST,
+	// GalaxyRP fix: [Admin] this slot used to be ADM_CUSTOMQUEST, a leftover bit for a command
+	// that was removed from the mod. Repurposed for the /admmap map-change command (bit value
+	// stays 32768 -- 1 << 15 -- so existing accounts/configs that already granted this bit keep
+	// working, and the default admin account's full-permission bitmask already covers it).
+	ADM_CHANGEMAP,
 	ADM_CREATEITEM,
 	ADM_GOD,
 	ADM_LEVELUP,
@@ -78,46 +97,21 @@ typedef enum {
 	ADM_REMOVENEWS,
 	ADM_MUSIC,
 	ADM_GETUP,
+	// GalaxyRP: [Weather] /admweather. APPENDED, not inserted: an admin permission is a bit
+	// POSITION in this enum and every account stores the resulting bitmask in the database, so
+	// adding a name anywhere above this point renumbers every bit below it and silently changes
+	// what every saved permission means. New bits go here, immediately before ADM_NUM_CMDS.
+	// pers.bitvalue is a 32-bit int, so this one (bit 27) leaves three more before the sign bit.
+	ADM_WEATHER,
+	// GalaxyRP: [Phase] "Player effects": /admghost, /admholo, /admwalkthrough and /admhidden -- appended for the same reason as above
+	// (bit 28, bit value 268435456). Two bits remain before the sign bit.
+	ADM_PHASE,
 	ADM_NUM_CMDS
 
 } zyk_admin_t;
 
-// zyk: magic powers values
-typedef enum {
-	MAGIC_MAGIC_SENSE,
-	MAGIC_HEALING_WATER,
-	MAGIC_WATER_SPLASH,
-	MAGIC_WATER_ATTACK,
-	MAGIC_EARTHQUAKE,
-	MAGIC_ROCKFALL,
-	MAGIC_SHIFTING_SAND,
-	MAGIC_SLEEPING_FLOWERS,
-	MAGIC_POISON_MUSHROOMS,
-	MAGIC_TREE_OF_LIFE,
-	MAGIC_MAGIC_SHIELD,
-	MAGIC_DOME_OF_DAMAGE,
-	MAGIC_MAGIC_DISABLE,
-	MAGIC_ULTRA_SPEED,
-	MAGIC_SLOW_MOTION,
-	MAGIC_FAST_AND_SLOW,
-	MAGIC_FLAME_BURST,
-	MAGIC_ULTRA_FLAME,
-	MAGIC_FLAMING_AREA,
-	MAGIC_BLOWING_WIND,
-	MAGIC_HURRICANE,
-	MAGIC_REVERSE_WIND,
-	MAGIC_ULTRA_RESISTANCE,
-	MAGIC_ULTRA_STRENGTH,
-	MAGIC_ENEMY_WEAKENING,
-	MAGIC_ICE_STALAGMITE,
-	MAGIC_ICE_BOULDER,
-	MAGIC_ICE_BLOCK,
-	MAGIC_HEALING_AREA,
-	MAGIC_MAGIC_EXPLOSION,
-	MAGIC_LIGHTNING_DOME,
-	MAX_MAGIC_POWERS
-
-} zyk_magic_t;
+// GalaxyRP fix: [Magic] the zyk_magic_t enum (MAGIC_MAGIC_SENSE ... MAX_MAGIC_POWERS) used to be
+// here. Its last use was the session's power-selection defaults, removed with the magic system.
 
 // zyk: shader remap struct
 typedef struct shaderRemap_s {
@@ -128,11 +122,21 @@ typedef struct shaderRemap_s {
 
 } shaderRemap_t;
 
-#ifdef __linux__
+// GalaxyRP fix: [Shader Remap] this was "#ifdef __linux__ extern ... #else <definition> #endif",
+// which gave the table no storage at all on Linux and one copy per platform accident on Windows.
+//
+// On Windows every translation unit that includes this header took the #else branch and emitted a
+// tentative definition; the linker merges those as a common symbol, so it happened to work. On
+// Linux every unit saw only the extern and nothing anywhere defined the array -- "nm -D" on
+// jampgamex86_64.so shows remappedShaders as the one unresolved symbol in the whole module, and a
+// data relocation is resolved when the module is loaded, not lazily, so dlopen() fails and the game
+// module does not come up at all. Every shader-remap command, and the default remap preset, are
+// dead on a Linux server for that reason.
+//
+// One declaration for both platforms, with the single definition beside remapCount in g_utils.c --
+// the file that owns AddRemap(), BuildShaderStateConfig() and zyk_clear_all_remaps(). cgame and ui
+// include this header too but reference nothing in the table, so neither module changes.
 extern shaderRemap_t remappedShaders[MAX_SHADER_REMAPS];
-#else
-shaderRemap_t remappedShaders[MAX_SHADER_REMAPS];
-#endif
 
 typedef struct saber_db_info_s {
 	char	saber1Model[50];
@@ -174,11 +178,19 @@ Common / new functions
 =====================================================================
 */
 
+qboolean	zyk_ally_bit_set(gentity_t *owner, int client_id);
 qboolean	zyk_is_ally(gentity_t *ent, gentity_t *other);
 int			zyk_number_of_allies(gentity_t *ent, qboolean in_rpg_mode);
+void		zyk_remove_ally(gentity_t *ent, int client_id);
 void		send_rpg_events(int send_event_timer);
 int			zyk_get_remap_count();
 void		zyk_text_message(gentity_t *ent, char *filename, qboolean show_in_chat, qboolean broadcast_message, ...);
 qboolean	zyk_can_deflect_shots(gentity_t *ent);
+void		zyk_clear_npc_order_bits(gentity_t *npc_ent);
+void		zyk_release_npc_from_leader(gentity_t *npc_ent);
+qboolean	zyk_npc_leader_lost(gentity_t *npc_ent);
+void		zyk_hold_guarding_npc(gentity_t *npc_ent);
+qboolean	zyk_npc_can_take_orders(gentity_t *npc_ent, gentity_t *leader);
+void		zyk_release_player_npcs(gentity_t *ent);
 
 #endif // __RP_LOCAL_H__

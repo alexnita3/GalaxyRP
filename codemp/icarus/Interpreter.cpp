@@ -487,7 +487,10 @@ int CInterpreter::FindSymbol( const char *name,  keywordArray_t *table)
 
 	for (ids = table; (strcmp(ids->m_keyword, "")); ids++)
 	{
-		if (!stricmp(name, ids->m_keyword))
+		// GalaxyRP fix: [macOS/Clang build failure] stricmp is an MSVC CRT extension, not declared
+		// on Linux/macOS; Q_stricmp (declared via tokenizer.h -> q_shared.h, already included by
+		// this file) is the codebase's portable equivalent.
+		if (!Q_stricmp(name, ids->m_keyword))
 			return ids->m_tokenvalue;
 	}
 

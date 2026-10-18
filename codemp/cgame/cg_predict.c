@@ -30,6 +30,30 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 static	pmove_t		cg_pmove;
 
+/*
+=============
+CG_RestoreForceJumpLevel
+
+The engine networks ps.fd.forcePowerLevel[FP_LEVITATION] in a 2-bit field, so Force Jump 4 and 5
+arrive as 0 and 1 (see STAT_FORCE_JUMP_LEVEL in bg_public.h). The server publishes the real level in
+stats[STAT_FORCE_JUMP_LEVEL]; put it back before Pmove runs so client prediction indexes the same row
+of forceJumpHeight[]/forceJumpStrength[]/forceJumpHeightMax[] that the server used.
+
+This only ever corrects UPWARD, which is what makes it safe to run unconditionally. Truncation can
+only ever lower the value (4 -> 0, 5 -> 1), so a stat that is not greater than what arrived carries
+no information -- including the 0 a server that predates this fix would send, and the 0 a player with
+no Force Jump has. In both of those cases the comparison fails and the received value stands.
+=============
+*/
+static void CG_RestoreForceJumpLevel( playerState_t *ps )
+{
+	if ( ps->stats[STAT_FORCE_JUMP_LEVEL] > ps->fd.forcePowerLevel[FP_LEVITATION]
+		&& ps->stats[STAT_FORCE_JUMP_LEVEL] < NUM_FORCE_POWER_LEVELS )
+	{
+		ps->fd.forcePowerLevel[FP_LEVITATION] = ps->stats[STAT_FORCE_JUMP_LEVEL];
+	}
+}
+
 static	int			cg_numSolidEntities;
 static	centity_t	*cg_solidEntities[MAX_ENTITIES_IN_SNAPSHOT];
 static	int			cg_numTriggerEntities;
@@ -290,6 +314,14 @@ static void CG_ClipMoveToEntities ( const vec3_t start, const vec3_t mins, const
 			VectorCopy( vec3_origin, angles );
 
 			VectorCopy( cent->lerpOrigin, origin );
+			// DAJ_RP: [NPC Scale] a scaled vehicle is drawn lifted to stand on the ground (CG_Player(), cg_players.c), and
+			// its lerpOrigin keeps that lift until it is worked out afresh; its box is where it physically is, as the
+			// server has it. Without this the client landed the player on its box that much higher (or lower), and the
+			// server then moved him down (or up) -- a second landing.
+			if ( ent->eType == ET_NPC && ent->NPC_class == CLASS_VEHICLE && CG_RpVehicleLiftApplied( cent ) )
+			{
+				origin[2] -= cent->rpVehicleLift;
+			}
 		}
 
 
@@ -636,23 +668,25 @@ static void CG_TouchItem( centity_t *cent ) {
 			return;
 	}
 
-	if (item->giType == IT_POWERUP &&
-		(item->giTag == PW_FORCE_ENLIGHTENED_LIGHT || item->giTag == PW_FORCE_ENLIGHTENED_DARK))
+	// GalaxyRP fix: [Force Enlightenment] this used to be its own hand-written copy of the Force
+	// Enlightenment side rule, and it never got the "logged-in players can take either color"
+	// carve-out that was added to Touch_Item() on the server and to CG_GreyItem() for the rendering.
+	// The result was that a logged-in player could pick up the color that didn't match their Force
+	// side -- the server granted it -- but got no pickup sound for it, because this refused to
+	// predict the pickup and nothing else plays that sound (IT_POWERUP is sent unpredicted, and the
+	// server's EV_ITEM_PICKUP travels in ps.externalEventParm, only 8 bits, too narrow for the item's
+	// entity number). Defer to the shared predicate instead, so this and the grey-out can no longer
+	// disagree with each other or with the server.
+	//
+	// cg.predictedPlayerState is the right playerstate to ask here (prediction runs ahead of the last
+	// snapshot, which is what the rendering callers pass); fd.forceSide is server-authoritative and
+	// never changes during prediction, so the two agree in practice as well as in principle.
+	// DAJ_RP: the rule itself has since changed -- a logged-in player can no longer take either color
+	// -- and this call follows it with no change here: both colors are refused, so neither pickup is
+	// predicted and no pickup sound plays.
+	if ( CG_GreyItem( item->giType, item->giTag, cg.predictedPlayerState.fd.forceSide ) )
 	{
-		if (item->giTag == PW_FORCE_ENLIGHTENED_LIGHT)
-		{
-			if (cg.predictedPlayerState.fd.forceSide != FORCE_LIGHTSIDE)
-			{
-				return;
-			}
-		}
-		else
-		{
-			if (cg.predictedPlayerState.fd.forceSide != FORCE_DARKSIDE)
-			{
-				return;
-			}
-		}
+		return;
 	}
 
 
@@ -666,6 +700,8 @@ static void CG_TouchItem( centity_t *cent ) {
 	cent->miscTime = cg.time;
 
 	// if its a weapon, give them some predicted ammo so the autoswitch will work
+	// DAJ_RP: [Weapons] there is no autoswitch any more (CG_WeaponSelectable() in cg_weapons.c); this keeps
+	// the weapon bar and the HUD right until the server's snapshot confirms the pickup
 	if ( item->giType == IT_WEAPON ) {
 		cg.predictedPlayerState.stats[ STAT_WEAPONS ] |= 1 << item->giTag;
 		if ( !cg.predictedPlayerState.ammo[ item->giTag ] ) {
@@ -895,7 +931,10 @@ qboolean CG_UsingEWeb(void)
 
 /*
 =================
-CG_PredictPlayerState
+CG_RpPredictPlayerState
+
+The stock CG_PredictPlayerState(), renamed (DAJ_RP: [Vehicles]): the one at the end of this file runs it and then
+CG_RpPassengerState().
 
 Generates cg.predictedPlayerState for the current cg.time
 cg.predictedPlayerState is guaranteed to be valid after exiting.
@@ -924,8 +963,47 @@ extern	vmCvar_t		cg_showVehBounds;
 pmove_t cg_vehPmove;
 qboolean cg_vehPmoveSet = qfalse;
 
-void CG_PredictPlayerState( void ) {
+/*
+=================
+CG_RpDryFireClick
+
+DAJ_RP: [Weapons] the dry-fire click: the local player pressed fire and the weapon had not the ammo for that fire
+mode, so nothing fired -- PM_DryFire() (bg_pmove.c) says so through pmove_t::rpDryFire, read for the newest
+command each frame (CG_PredictPlayerState(), below). Played here only, for this player: it is not sent, so no one
+else hears it, and a client without the plugin plays none. Once when the button goes down, then every
+RP_DRYFIRE_REPEAT ms while it stays down.
+=================
+*/
+#define RP_DRYFIRE_REPEAT 500
+
+static void CG_RpDryFireClick( qboolean dry )
+{
+	static qboolean held = qfalse;
+	static int nextClick = 0;
+
+	if ( !dry )
+	{
+		held = qfalse;
+		return;
+	}
+
+	if ( nextClick - cg.time > RP_DRYFIRE_REPEAT )
+	{ // cg.time went back (a new map)
+		nextClick = 0;
+	}
+
+	if ( !held || cg.time >= nextClick )
+	{
+		trap->S_StartLocalSound( cgs.media.noAmmoSound, CHAN_LOCAL_SOUND );
+		nextClick = cg.time + RP_DRYFIRE_REPEAT;
+	}
+
+	held = qtrue;
+}
+
+static void CG_RpPredictPlayerState( void ) {
 	int			cmdNum, current, i;
+	qboolean	rpDryFire = qfalse;	// DAJ_RP: [Weapons] see CG_RpDryFireClick()
 	playerState_t	oldPlayerState;
 	playerState_t	oldVehicleState;
 	qboolean	moved;
@@ -942,6 +1020,7 @@ void CG_PredictPlayerState( void ) {
 	if ( !cg.validPPS ) {
 		cg.validPPS = qtrue;
 		cg.predictedPlayerState = cg.snap->ps;
+		CG_RestoreForceJumpLevel( &cg.predictedPlayerState );
 		if (CG_Piloting(cg.snap->ps.m_iVehicleNum))
 		{
 			cg.predictedVehicleState = cg.snap->vps;
@@ -1007,6 +1086,12 @@ void CG_PredictPlayerState( void ) {
 	if ( cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR || cg.snap->ps.pm_type == PM_SPECTATOR ) {
 		cg_pmove.tracemask &= ~CONTENTS_BODY;	// spectators can fly through bodies
 	}
+	// GalaxyRP: [Phase] /admwalkthrough, /admghost, /admholo, /admhidden -- the server moves this player through other
+	// bodies (RP_PhasePassesThrough, g_active.c), so predict the same or every pass-through would be
+	// a misprediction snapped back by the next snapshot. The mode arrives in the player's own eFlags.
+	if ( RP_PHASE_FROM_EFLAGS( cg.snap->ps.eFlags ) != RP_PHASE_NONE ) {
+		cg_pmove.tracemask &= ~CONTENTS_BODY;
+	}
 	cg_pmove.noFootsteps = ( cgs.dmflags & DF_NO_FOOTSTEPS ) > 0;
 
 	// save the state before the pmove so we can detect transitions
@@ -1041,6 +1126,7 @@ void CG_PredictPlayerState( void ) {
 	if ( cg.nextSnap && !cg.nextFrameTeleport && !cg.thisFrameTeleport ) {
 		cg.nextSnap->ps.slopeRecalcTime = cg.predictedPlayerState.slopeRecalcTime; //this is the only value we want to maintain seperately on server/client
 		cg.predictedPlayerState = cg.nextSnap->ps;
+		CG_RestoreForceJumpLevel( &cg.predictedPlayerState );
 		if (CG_Piloting(cg.nextSnap->ps.m_iVehicleNum))
 		{
 			cg.predictedVehicleState = cg.nextSnap->vps;
@@ -1049,6 +1135,7 @@ void CG_PredictPlayerState( void ) {
 	} else {
 		cg.snap->ps.slopeRecalcTime = cg.predictedPlayerState.slopeRecalcTime; //this is the only value we want to maintain seperately on server/client
 		cg.predictedPlayerState = cg.snap->ps;
+		CG_RestoreForceJumpLevel( &cg.predictedPlayerState );
 		if (CG_Piloting(cg.snap->ps.m_iVehicleNum))
 		{
 			cg.predictedVehicleState = cg.snap->vps;
@@ -1280,6 +1367,12 @@ void CG_PredictPlayerState( void ) {
 
 		Pmove (&cg_pmove);
 
+		// DAJ_RP: [Weapons] the newest command's dry fire, if any -- see CG_RpDryFireClick()
+		if ( cmdNum == current )
+		{
+			rpDryFire = cg_pmove.rpDryFire;
+		}
+
 		if (CG_Piloting(cg.predictedPlayerState.m_iVehicleNum) &&
 			cg.predictedPlayerState.pm_type != PM_INTERMISSION)
 		{ //we're riding a vehicle, let's predict it
@@ -1398,6 +1491,8 @@ void CG_PredictPlayerState( void ) {
 		trap->Print( "[%i : %i] ", cg_pmove.cmd.serverTime, cg.time );
 	}
 
+	CG_RpDryFireClick( rpDryFire );
+
 	if ( !moved ) {
 		if ( cg_showMiss.integer ) {
 			trap->Print( "not moved\n" );
@@ -1435,13 +1530,8 @@ void CG_PredictPlayerState( void ) {
 		}
 	}
 
-	if (cg.predictedPlayerState.m_iVehicleNum &&
-		!CG_Piloting(cg.predictedPlayerState.m_iVehicleNum))
-	{ //a passenger on this vehicle, bolt them in
-		centity_t *veh = &cg_entities[cg.predictedPlayerState.m_iVehicleNum];
-		VectorCopy(veh->lerpAngles, cg.predictedPlayerState.viewangles);
-		VectorCopy(veh->lerpOrigin, cg.predictedPlayerState.origin);
-	}
+	// DAJ_RP: [Vehicles] a passenger's view and vehicle state are set after all this, on every way out of
+	// here: CG_RpPassengerState(), called by CG_PredictPlayerState() below
 
 revertES:
 	if (CG_Piloting(cg.predictedPlayerState.m_iVehicleNum))
@@ -1470,4 +1560,115 @@ revertES:
 			cg_entities[i].currentState.saberMove = cgSendPS[i]->saberMove;
 		}
 	}
+}
+
+/*
+=================
+CG_RpPassengerState
+
+DAJ_RP: [Vehicles] the local player -- or the player followed -- riding a vehicle he does not pilot. Two things
+the prediction does only for a pilot (CG_Piloting()), done for a passenger here, after it, on every path it takes:
+
+1. The vehicle's playerState for the HUD (health, shields, ammo, speed, damage: CG_DrawVehicleHud(), cg_draw.c),
+   the hyperspace effect and the fighter view. The server sends it to every rider (the snapshot's vps); it was
+   only ever read for a pilot, so a passenger saw zeros, or what was left from the last vehicle he drove.
+   Interpolated between snapshots, as for a spectator following a pilot -- not predicted, being only shown.
+2. The view, as the pilot's: from the vehicle's seat -- the vehicle's position now plus where the server put the
+   passenger relative to it (AttachRiders(), g_vehicles.c: the driver tag), turned with it -- looking the
+   vehicle's way. Yaw and roll are the vehicle's; the pitch is the player's own, held within the vehicle's
+   lookPitch as a pilot's is (PM_VehicleViewAngles()), or the vehicle's when it has none, and a fighter's
+   passenger takes all three. This used to be set only at the end of a prediction that ran a command: on a
+   frame with none to run (a fresh snapshot already holding the newest one, common on a near server) the view
+   was the passenger's own server angles from the seat -- looking down, the camera went over the vehicle -- and
+   the prediction-error smoothing between the two jolted it. That smoothing is off for a passenger. A turret
+   gunner's view is the turret's (CG_CheckPassengerTurretView(), cg_view.c) and is not touched by this.
+=================
+*/
+extern void CG_CalcEntityLerpPositions( centity_t *cent );
+
+#define RP_PASSENGER_SEAT_MAX	256.0f	// a seat further from the vehicle than this is not one: its origin is used
+
+static void CG_RpPassengerState( void )
+{
+	playerState_t	*ps = &cg.predictedPlayerState;
+	centity_t		*veh;
+	vec3_t			seat;
+	float			turn, sn, cs, x, y;
+
+	if ( !cg.snap || !ps->m_iVehicleNum || ps->m_iVehicleNum >= ENTITYNUM_WORLD ||
+		ps->m_iVehicleNum != cg.snap->ps.m_iVehicleNum || CG_Piloting( ps->m_iVehicleNum ) )
+	{
+		return;
+	}
+
+	veh = &cg_entities[ps->m_iVehicleNum];
+	if ( !veh->currentValid )
+	{
+		return;
+	}
+
+	// 1. the vehicle's state, from the snapshots
+	CG_InterpolateVehiclePlayerState( qfalse );
+
+	// 2. the seat, now: the snapshot's offset of the passenger from the vehicle, turned as the vehicle has turned since
+	CG_CalcEntityLerpPositions( veh );
+	VectorSubtract( cg.snap->ps.origin, cg.snap->vps.origin, seat );
+	if ( VectorLengthSquared( seat ) > RP_PASSENGER_SEAT_MAX * RP_PASSENGER_SEAT_MAX )
+	{
+		VectorClear( seat );
+	}
+	turn = DEG2RAD( AngleSubtract( veh->lerpAngles[YAW], cg.snap->vps.viewangles[YAW] ) );
+	sn = sin( turn );
+	cs = cos( turn );
+	x = seat[0] * cs - seat[1] * sn;
+	y = seat[0] * sn + seat[1] * cs;
+	seat[0] = x;
+	seat[1] = y;
+	VectorAdd( veh->lerpOrigin, seat, ps->origin );
+
+	// 3. the view angles
+	// DAJ_RP fix: [Vehicles] the vehicle's pitch and roll folded into -180..180. They come as the server keeps them -- a
+	// fighter's pitch 0..360 (AngleNormalize360(), FighterNPC.c) -- and LerpAngle() does not fold them back: a fighter
+	// nosed up a degree came as 359, which the third-person camera's +-80 cap read as looking straight down, so a
+	// hovering one's passenger saw the camera flip between behind the ship and above it at every wobble across level.
+	// A pilot's own angles come from his commands, already folded.
+	if ( veh->m_pVehicle && veh->m_pVehicle->m_pVehicleInfo && veh->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER )
+	{
+		VectorCopy( veh->lerpAngles, ps->viewangles );
+		ps->viewangles[PITCH] = AngleNormalize180( ps->viewangles[PITCH] );
+		ps->viewangles[ROLL] = AngleNormalize180( ps->viewangles[ROLL] );
+	}
+	else
+	{
+		const float lookPitch = ( veh->m_pVehicle && veh->m_pVehicle->m_pVehicleInfo ) ? veh->m_pVehicle->m_pVehicleInfo->lookPitch : 0.0f;
+		float pitch = AngleNormalize180( veh->lerpAngles[PITCH] );
+
+		if ( lookPitch > 0.0f )
+		{
+			pitch = AngleNormalize180( ps->viewangles[PITCH] );
+			if ( pitch > lookPitch )
+				pitch = lookPitch;
+			else if ( pitch < -lookPitch )
+				pitch = -lookPitch;
+		}
+
+		ps->viewangles[PITCH] = pitch;
+		ps->viewangles[YAW] = veh->lerpAngles[YAW];
+		ps->viewangles[ROLL] = AngleNormalize180( veh->lerpAngles[ROLL] );
+	}
+
+	cg.predictedErrorTime = 0;
+}
+
+/*
+=================
+CG_PredictPlayerState
+
+Generates cg.predictedPlayerState for the current cg.time -- CG_RpPredictPlayerState() above, the stock prediction --
+and then a vehicle passenger's (CG_RpPassengerState()).
+=================
+*/
+void CG_PredictPlayerState( void ) {
+	CG_RpPredictPlayerState();
+	CG_RpPassengerState();
 }

@@ -71,8 +71,6 @@ MineMonster_Patrol
 */
 void MineMonster_Patrol( void )
 {
-	vec3_t dif;
-
 	NPCS.NPCInfo->localState = LSTATE_CLEAR;
 
 	//If we have somewhere to go, then do that
@@ -89,13 +87,13 @@ void MineMonster_Patrol( void )
 		}
 	}
 
-	//rwwFIXMEFIXME: Care about all clients, not just client 0
-	//OJKFIXME: clietnum 0
-	VectorSubtract( g_entities[0].r.currentOrigin, NPCS.NPC->r.currentOrigin, dif );
-
-	if ( VectorLengthSquared( dif ) < 256 * 256 )
 	{
-		G_SetEnemy( NPCS.NPC, &g_entities[0] );
+		// GalaxyRP fix: [NPC] any player within 256 units wakes us up, not only g_entities[0]
+		gentity_t *player = NPC_ClosestPlayerEnemy( 256 );
+		if ( player )
+		{
+			G_SetEnemy( NPCS.NPC, player );
+		}
 	}
 
 	if ( NPC_CheckEnemyExt( qtrue ) == qfalse )

@@ -105,8 +105,8 @@ qboolean Wampa_CheckRoar( gentity_t *self )
 		NPC_SetAnim( self, SETANIM_BOTH, Q_irand(BOTH_GESTURE1,BOTH_GESTURE2), (SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD) );
 		TIMER_Set( self, "rageTime", self->client->ps.legsTimer );
 
-		if (Q_stricmp(self->NPC_type, "guardian_boss_3") == 0) // zyk: executes sound of howler if this npc is the Guardian of Forest
-			G_Sound( self, CHAN_VOICE, G_SoundIndex( va("sound/chars/howler/howl.mp3") ) );
+		// GalaxyRP fix: [Quests] a guardian_boss_3 branch used to swap this roar for a howler sound.
+		// That NPC type went with the zyk_quest_*.npc asset files and can no longer be spawned.
 
 		return qtrue;
 	}
@@ -209,9 +209,8 @@ void Wampa_Slash( int boltIndex, qboolean backhand )
 	vec3_t		boltOrg;
 	int			damage = (backhand)?Q_irand(10,15):Q_irand(20,30);
 
-	// zyk: Guardian of Forest damage
-	if (Q_stricmp(NPCS.NPC->NPC_type, "guardian_boss_3") == 0)
-		damage *= 2;
+	// GalaxyRP fix: [Quests] a guardian_boss_3 branch used to double this damage. That NPC type no
+	// longer exists, so every wampa now takes the one damage path.
 
 	numEnts = NPC_GetEntsNearBolt( radiusEntNums, radius, boltIndex, boltOrg );
 
@@ -462,11 +461,8 @@ void NPC_Wampa_Pain( gentity_t *self, gentity_t *attacker, int damage )
 {
 	qboolean hitByWampa = qfalse;
 
-	// zyk: Guardian of Forest uses this AI, but bosses take no pain
-	if (Q_stricmp(self->NPC_type, "guardian_boss_3") == 0)
-	{
-		return;
-	}
+	// GalaxyRP fix: [Quests] a guardian_boss_3 early return used to sit here, making that boss immune
+	// to pain. The NPC type went with the quest assets.
 
 	if ( attacker&&attacker->client&&attacker->client->NPC_class==CLASS_WAMPA )
 	{
@@ -477,7 +473,7 @@ void NPC_Wampa_Pain( gentity_t *self, gentity_t *attacker, int damage )
 		&& attacker != self->enemy
 		&& !(attacker->flags&FL_NOTARGET) )
 	{
-		if ( (!attacker->s.number&&!Q_irand(0,3))
+		if ( (attacker->s.number < MAX_CLIENTS&&!Q_irand(0,3))
 			|| !self->enemy
 			|| self->enemy->health == 0
 			|| (self->enemy->client&&self->enemy->client->NPC_class == CLASS_WAMPA)
@@ -574,10 +570,9 @@ void NPC_BSWampa_Default( void )
 		{
 			if ( TIMER_Done(NPCS.NPC,"angrynoise") )
 			{
-				if (Q_stricmp(NPCS.NPC->NPC_type, "guardian_boss_3") == 0) // zyk: sound of howler if this npc is the Guardian of Forest
-					G_Sound( NPCS.NPC, CHAN_VOICE, G_SoundIndex( va("sound/chars/howler/howl_talk%d.mp3", Q_irand(1, 5)) ) );
-				else
-					G_Sound( NPCS.NPC, CHAN_VOICE, G_SoundIndex( va("sound/chars/wampa/misc/anger%d.wav", Q_irand(1, 2)) ) );
+				// GalaxyRP fix: [Quests] the guardian_boss_3 howler alternative was removed; that NPC type
+				// no longer exists, so only the wampa sound remains.
+				G_Sound( NPCS.NPC, CHAN_VOICE, G_SoundIndex( va("sound/chars/wampa/misc/anger%d.wav", Q_irand(1, 2)) ) );
 
 				TIMER_Set( NPCS.NPC, "angrynoise", Q_irand( 5000, 10000 ) );
 			}
@@ -640,10 +635,8 @@ void NPC_BSWampa_Default( void )
 	{
 		if ( TIMER_Done(NPCS.NPC,"idlenoise") )
 		{
-			if (Q_stricmp(NPCS.NPC->NPC_type, "guardian_boss_3") == 0) // zyk: sound of howler if this is the Guardian of Forest
-				G_Sound( NPCS.NPC, CHAN_AUTO, G_SoundIndex( va("sound/chars/howler/idle_hiss%d.mp3", Q_irand(1, 2)) ) );
-			else
-				G_Sound( NPCS.NPC, CHAN_AUTO, G_SoundIndex( "sound/chars/wampa/misc/anger3.wav" ) );
+			// GalaxyRP fix: [Quests] the guardian_boss_3 howler alternative went from here too.
+			G_Sound( NPCS.NPC, CHAN_AUTO, G_SoundIndex( "sound/chars/wampa/misc/anger3.wav" ) );
 
 			TIMER_Set( NPCS.NPC, "idlenoise", Q_irand( 2000, 4000 ) );
 		}

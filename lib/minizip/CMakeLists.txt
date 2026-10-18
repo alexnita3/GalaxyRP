@@ -25,8 +25,13 @@
 #
 # The bundled copy is produced by taking the files ioapi.{c,h} and unzip.{c,h}
 # from the contrib/minizip directory of the zlib release tarball.  The only
-# changes applied are modifications of the macros ALLOC and TRYFREE in unzip.c,
-# and a compatibility definition of the macro OF in include/ioapi.h
+# change applied is routing the ALLOC/TRYFREE macros in unzip.c through
+# openjk_minizip_malloc()/openjk_minizip_free() (see z_memman_pc.cpp) instead of
+# raw malloc()/free(), so minizip's allocations are tracked under the engine's
+# own TAG_MINIZIP zone. (Older releases of this bundled copy also needed a
+# compatibility definition of the macro OF in include/ioapi.h; that is no longer
+# necessary as of the 1.3.1 release, since upstream minizip itself dropped the
+# old K&R-style OF()-wrapped prototypes in favor of modern ones.)
 #
 # Since minizip is expected to be reference by user code as
 #
@@ -34,7 +39,7 @@
 #
 # the public header files are split into the include/minizip subdirectory.
 #
-# The current bundled copy comes from the zlib 1.2.8 release.
+# The current bundled copy comes from the zlib 1.3.1 release.
 
 # These settings only apply to this directory.
 include_directories(${ZLIB_INCLUDE_DIR})

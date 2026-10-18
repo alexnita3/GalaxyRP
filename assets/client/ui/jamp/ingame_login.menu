@@ -171,91 +171,54 @@
 			}
 		}
 
-		itemDef 
+		// GalaxyRP: [Profile UI] Logout moved to the Account menu itself (alongside Change Pass, gated
+		// on ui_loggedin) -- this screen is only ever reached while logged out, so a Logout button here
+		// never made sense next to it and was just confusing. Login button centered under the fields
+		// now that it's the only button on this screen.
+		itemDef
 		{
 			name				loginDoneButton_glow
 			style				WINDOW_STYLE_SHADER
-			rect				0 120 90 30
+			rect				73 120 105 32
 			background			"gfx/menus/menu_buttonback"
 			forecolor			1 1 1 1
 			visible				0
 			decoration
 		}
 
-		itemDef 
+		itemDef
 		{
 			name				loginDoneText
 			group				loginAccountControls
 			text				"Log in"
 			descText			"Finished logging in account"
 			type				1
-			font				3
-			textscale			.7
-			style				WINDOW_STYLE_FILLED
-			rect				20 120 100 30
+			font				2
+			textscale			1
+			style				WINDOW_STYLE_EMPTY
+			rect				73 120 105 32
 			textalign			ITEM_ALIGN_CENTER
-			textalignx			20
-			textaligny			5
+			textalignx			52
+			textaligny			2
 			forecolor			1 .682 0 1
 			visible				1
-			action 
-			{ 
+			action
+			{
 				uiScript		zykmod "login"
 				play			"sound/interface/button1.wav" ;
-				close			ingame_login
+				// GalaxyRP fix: [UI] was "close ingame_login", which only closed this submenu and left
+				// the top-bar menu open underneath (had to press Escape to actually get back into
+				// gameplay) -- same class of bug fixed for the saber menu's Apply button (987bccf9).
+				// uiScript closeingame releases the UI key-catcher and tears down the whole menu stack.
+				uiScript		closeingame
 			}
-			mouseEnter 
-			{ 
+			mouseEnter
+			{
 				show			loginDoneButton_glow
 			}
-			mouseExit 
-			{ 
+			mouseExit
+			{
 				hide			loginDoneButton_glow
-			}	  	  
-		}
-
-        itemDef 
-		{
-			name				logoutButton_glow
-			style				WINDOW_STYLE_SHADER
-			rect				170 120 90 30
-			background			"gfx/menus/menu_buttonback"
-			forecolor			1 1 1 1
-			visible				0
-			decoration
-		}
-
-		itemDef 
-		{
-			name				logoutButton
-			group				accountControls
-			text				"Logout"
-			type				ITEM_TYPE_BUTTON
-			style				WINDOW_STYLE_EMPTY
-			rect				170 120 100 30
-			font				3
-			textscale			0.6
-			textalignx			15
-			textaligny			5
-			textalign			ITEM_ALIGN_LEFT
-			textstyle			3
-			forecolor			1 .682 0 1
-			visible				1
-			descText			"Logout your account"
-  	  
-			action 
-			{ 
-				play			"sound/interface/button1.wav" ;
-				exec			"logout" ;
-				close			ingame_login
-			}
-			mouseEnter 
-			{ 
-				show			logoutButton_glow
-			}
-			mouseExit 
-			{ 
-				hide			logoutButton_glow
 			}
 		}
 	}

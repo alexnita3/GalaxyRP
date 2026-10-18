@@ -268,6 +268,28 @@ extern vec3_t gCGFallVector;
 
 /*
 ===============
+CG_CameraViewPitch
+
+DAJ_RP fix: [Vehicles] which way the view is pitched, for a vehicle camera that rises and falls with it
+(cameraPitchDependantVertOffset). Stock read the sign off the snapshot's own angles: a pilot's are his view, but a
+passenger's are his free mouse-look on the server, while his view is the vehicle's (CG_RpPassengerState(),
+cg_predict.c) -- so his camera could go up while the view went down. A passenger's view pitch, folded, is used;
+anyone else's is as before.
+===============
+*/
+static float CG_CameraViewPitch( void )
+{
+	const int vehNum = cg.predictedPlayerState.m_iVehicleNum;
+
+	if ( vehNum && vehNum < ENTITYNUM_WORLD && cg_entities[vehNum].currentState.owner != cg.predictedPlayerState.clientNum )
+	{
+		return AngleNormalize180( cg.predictedPlayerState.viewangles[PITCH] );
+	}
+	return cg.snap->ps.viewangles[PITCH];
+}
+
+/*
+===============
 CG_CalcTargetThirdPersonViewLocation
 
 ===============
@@ -304,7 +326,10 @@ static void CG_CalcIdealThirdPersonViewTarget(void)
 			{ //override the range with what the vehicle wants it to be
 				if ( veh->m_pVehicle->m_pVehicleInfo->cameraPitchDependantVertOffset )
 				{
-					if ( cg.snap->ps.viewangles[PITCH] > 0 )
+					// DAJ_RP fix: [Vehicles] which way the view is pitched: a passenger's corrected view (CG_CameraViewPitch)
+					const float viewPitch = CG_CameraViewPitch();
+
+					if ( viewPitch > 0 )
 					{
 						vertOffset = 130+cg.predictedPlayerState.viewangles[PITCH]*-10;
 						if ( vertOffset < -170 )
@@ -312,7 +337,7 @@ static void CG_CalcIdealThirdPersonViewTarget(void)
 							vertOffset = -170;
 						}
 					}
-					else if ( cg.snap->ps.viewangles[PITCH] < 0 )
+					else if ( viewPitch < 0 )
 					{
 						vertOffset = 130+cg.predictedPlayerState.viewangles[PITCH]*-5;
 						if ( vertOffset > 130 )
@@ -683,11 +708,14 @@ static void CG_OffsetThirdPersonView( void )
 				{ //override the range with what the vehicle wants it to be
 					if ( veh->m_pVehicle->m_pVehicleInfo->cameraPitchDependantVertOffset )
 					{
-						if ( cg.snap->ps.viewangles[PITCH] > 0 )
+						// DAJ_RP fix: [Vehicles] as CG_CalcIdealThirdPersonViewTarget(): CG_CameraViewPitch()
+						const float viewPitch = CG_CameraViewPitch();
+
+						if ( viewPitch > 0 )
 						{
 							pitchOffset = cg.predictedPlayerState.viewangles[PITCH]*-0.75;
 						}
-						else if ( cg.snap->ps.viewangles[PITCH] < 0 )
+						else if ( viewPitch < 0 )
 						{
 							pitchOffset = cg.predictedPlayerState.viewangles[PITCH]*-0.75;
 						}
@@ -724,6 +752,14 @@ static void CG_OffsetThirdPersonView( void )
 	}
 
 	// The next thing to do is to see if we need to calculate a new camera target location.
+
+	// DAJ_RP fix: [Vehicles] the pitch on -180..180 before it is capped, at +-80 below or +-89 in
+	// CG_ResetThirdPersonViewDamp(): a vehicle's angles can come as 0..360 -- a fighter nosed up a degree as 359 -- and
+	// 359 was capped to 80, the camera looking straight down from above. Only a pitch outside that range is touched.
+	if ( cameraFocusAngles[PITCH] > 180.0f || cameraFocusAngles[PITCH] < -180.0f )
+	{
+		cameraFocusAngles[PITCH] = AngleNormalize180( cameraFocusAngles[PITCH] );
+	}
 
 	// If we went back in time for some reason, or if we just started, reset the sample.
 	if (cameraLastFrame == 0 || cameraLastFrame > cg.time)
@@ -1780,6 +1816,22 @@ void CG_DrawSkyBoxPortal(const char *cstr)
 		}
 	}
 
+	// GalaxyRP fix: [UI] the main view applies this correction in CG_CalcFov() but the skyportal
+	// computed its own fov and did not, so with cg_fovAspectAdjust on the world was corrected and
+	// the sky behind it was not -- the two stopped lining up. Same formula, deliberately, so they
+	// cannot drift: a copy that merely looks equivalent would reintroduce exactly this bug.
+	// Matches OpenJK 97cbf1e7; TaystJK carries the same correction here and its cvar comment calls
+	// it the "skyportal issue".
+	if ( cg_fovAspectAdjust.integer ) {
+		// Based on LordHavoc's code for Darkplaces
+		// http://www.quakeworld.nu/forum/topic/53/what-does-your-qw-look-like/page/30
+		const float baseAspect = 0.75f; // 3/4
+		const float aspect = (float)cgs.glconfig.vidWidth/(float)cgs.glconfig.vidHeight;
+		const float desiredFov = fov_x;
+
+		fov_x = atan( tan( desiredFov*M_PI / 360.0f ) * baseAspect*aspect )*360.0f / M_PI;
+	}
+
 	x = cg.refdef.width / tan( fov_x / 360 * M_PI );
 	fov_y = atan2( cg.refdef.height, x );
 	fov_y = fov_y * 360 / M_PI;
@@ -1792,7 +1844,10 @@ void CG_DrawSkyBoxPortal(const char *cstr)
 
 	cg.refdef.time = cg.time;
 
-	if ( !cg.hyperspace)
+	// GalaxyRP: [Extras] not while the Effects menu's preview is drawn: its effect is a sky-portal
+	// effect too, and CG_RpxFxPass() (cg_rpextras.c) updates them all then -- twice in one frame would
+	// run the sky's effects at double speed
+	if ( !cg.hyperspace && !CG_RpxFxPassActive() )
 	{ //rww - also had to add this to add effects being rendered in portal sky areas properly.
 		trap->FX_AddScheduledEffects(qtrue);
 	}
@@ -1815,10 +1870,70 @@ void CG_DrawSkyBoxPortal(const char *cstr)
 		backuprefdef.rdflags |= RDF_NOFOG;
 	}
 
+	// DAJ_RP: [Sky Portal] the renderer now considers this map to have a sky portal until the world
+	// is loaded again -- see cg.skyPortalDrawn and CG_DrawSkyOnlyPass()
+	cg.skyPortalDrawn = qtrue;
+
 	// draw the skybox
 	trap->R_RenderScene( &cg.refdef );
 
 	cg.refdef = backuprefdef;
+}
+
+/*
+==========================
+CG_DrawSkyOnlyPass
+
+DAJ_RP: [Sky Portal] the map's own sky, drawn after an added sky portal has been removed.
+
+The first sky portal scene the renderer is given sets a "this map has a sky portal" flag of its own
+(skyboxportal in rd-vanilla/rd-vulkan, tr.world->skyboxportal in rd-rend2) that only loading the world
+map again clears. While it is set the normal view leaves out every sky surface, on the understanding
+that the portal pass has already drawn the sky, and does not clear the screen first. So once
+/entremove or /entundo cleared CS_SKYBOXORG and the portal pass stopped, nothing drew the sky any more:
+the default renderer showed whatever the last frames left behind (the "outside the map" smear), Vulkan
+its plain clear colour, and rd-rend2 kept redrawing the last portal camera it had stored -- the old
+portal image, turning with the view. vid_restart cured it only because it loads the world again.
+
+This draws the sky the portal pass would have, from the player's own viewpoint: a sky portal scene
+(RDF_SKYBOXPORTAL) without RDF_DRAWSKYBOX, which the renderers treat as "sky surfaces only". The
+normal view then draws everything else over it exactly as it does over a real portal, so the frame
+looks as it did before any portal was added. It renders no entities: called before anything is added
+to this frame's scene, and the renderer hands a scene only the entities added since the last one.
+
+Called from CG_DrawActiveFrame() after CG_CalcScreenEffects(), so that a screen shake has already
+moved cg.refdef.vieworg and this pass lines up with the view drawn after it.
+==========================
+*/
+static void CG_DrawSkyOnlyPass( void )
+{
+	refdef_t skyRefdef;
+
+	if ( cg.refdef.rdflags & RDF_NOWORLDMODEL )
+	{ // hyperspace, or anything else with no world in it: there is no sky to draw
+		return;
+	}
+
+	skyRefdef = cg.refdef;
+	skyRefdef.rdflags |= RDF_SKYBOXPORTAL;
+	skyRefdef.rdflags &= ~RDF_DRAWSKYBOX;
+	skyRefdef.time = cg.time;
+
+	// The PREVIOUS frame's area mask, deliberately, not this frame's. A renderer rebuilds its list of
+	// visible leaves only when a scene's area mask differs from the scene before it -- that is how it
+	// learns a door opened or closed. rd-rend2 does not draw a sky portal scene when it is given one: it
+	// stores it and draws it, with the world view, while handling the next scene, and both views then
+	// go by that next scene's comparison -- against this one. With this frame's mask in both, a door
+	// change was never seen: the world view kept the old leaves, and the area behind the door was drawn
+	// by neither view, so old frames showed through it until the view moved into another cluster. With
+	// the previous frame's, the world view differs from this pass exactly when its mask changed, so
+	// every renderer rebuilds then and only then. The cost is that the sky behind a door is drawn one
+	// frame late on the frame the door changes. (CG_DrawSkyBoxPortal() passes an all-clear mask instead,
+	// cg.refdef having just been cleared, which makes every world view count as changed and rebuilds
+	// the leaves every frame while any door on the map is shut.)
+	memcpy( skyRefdef.areamask, cg.lastViewAreamask, sizeof( skyRefdef.areamask ) );
+
+	trap->R_RenderScene( &skyRefdef );
 }
 
 /*
@@ -1996,6 +2111,23 @@ void CG_CalcScreenEffects(void)
 
 void CGCam_Shake( float intensity, int duration )
 {
+	// GalaxyRP fix: [Screen Shake] the clamp below only ever looked at the top of the range, so a
+	// negative intensity passed straight through it -- and a negative one is not a gentler shake,
+	// it is the same shake: CG_SE_UpdateShake() displaces by Q_flrand(-1.0f, 1.0f) * intensity,
+	// which is symmetric about zero, so only the magnitude is ever visible. MAX_SHAKE_INTENSITY
+	// was therefore one minus sign away from meaning nothing at all.
+	//
+	// Taking the magnitude rather than clamping negatives up to 0 is deliberate: a map that ships
+	// a negative "intensity" key on a target_screenshake keeps drawing exactly what it always drew
+	// (capped), instead of silently losing its shake. /shakescreen range-checks its own argument
+	// server-side (see RP_SHAKE_MIN_INTENSITY in g_cmds.c); this is the backstop for every other
+	// caller, the map-entity path above all, where the value is not ours to validate.
+	//
+	// This is a deliberate divergence from base JKA/OpenJK, whose CGCam_Shake is otherwise
+	// identical -- upstream simply never had a path that let a person type the number.
+	if ( intensity < 0 )
+		intensity = -intensity;
+
 	if ( intensity > MAX_SHAKE_INTENSITY )
 		intensity = MAX_SHAKE_INTENSITY;
 
@@ -2404,6 +2536,27 @@ extern void CG_ActualLoadDeferredPlayers( void );
 
 static int cg_siegeClassIndex = -2;
 
+/*
+=================
+CG_AS_ParsePending
+
+GalaxyRP: [Ambient Sets] the set file parsed again for the sound sets that arrived since the last frame
+(CG_ConfigStringModified() put their names on the engine's precache list): once, however many arrived.
+Each parse adds every set already loaded once more, and the area ambience (CS_GLOBAL_AMBIENT_SET) fades
+from its old copy to the new one over a second -- the engine gives a new copy a new id and fades on any
+change of id. Batching makes that once per batch instead of once per set; doing away with it needs the
+engine to skip a set it already has.
+=================
+*/
+static void CG_AS_ParsePending( void )
+{
+	if ( !cgs.ambientSetsPending )
+		return;
+
+	cgs.ambientSetsPending = qfalse;
+	trap->AS_ParseSets();
+}
+
 void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demoPlayback ) {
 	int		inwater;
 	const char *cstr;
@@ -2469,6 +2622,9 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	// set up cg.snap and possibly cg.nextSnap
 	CG_ProcessSnapshots();
 
+	// GalaxyRP: [Ambient Sets] after every server command of this frame's snapshots, before anything plays a set
+	CG_AS_ParsePending();
+
 	trap->ROFF_UpdateEntities();
 
 	// if we haven't received any snapshots yet, all
@@ -2501,6 +2657,10 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_DrawInformation();
 		return;
 	}
+
+	// GalaxyRP: [Extras] the Extras menus' requests, and whether the effect preview pass runs this
+	// frame -- before the sky portal below, which leaves its effects to that pass when it does
+	CG_RpxFrame();
 
 	// let the client system know what our weapon and zoom settings are
 	if (cg.snap && cg.snap->ps.saberLockTime > cg.time)
@@ -2629,6 +2789,15 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 
 	CG_CalcScreenEffects();
 
+	// DAJ_RP: [Sky Portal] a sky portal this client drew on this map has since been removed: draw the
+	// map's own sky, which the renderer no longer draws by itself -- see CG_DrawSkyOnlyPass(). After
+	// CG_CalcScreenEffects() for the shaken view, and before the blend blob and the packet entities
+	// below, which would otherwise go into this scene instead of the real one.
+	if ( !(cstr && cstr[0]) && cg.skyPortalDrawn )
+	{
+		CG_DrawSkyOnlyPass();
+	}
+
 	// first person blend blobs, done after AnglesToAxis
 	if ( !cg.renderingThirdPerson && cg.predictedPlayerState.pm_type != PM_SPECTATOR ) {
 		CG_DamageBlendBlob();
@@ -2638,7 +2807,6 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	if ( !cg.hyperspace ) {
 		CG_AddPacketEntities(qfalse);			// adter calcViewValues, so predicted player state is correct
 		CG_AddMarks();
-		CG_AddLocalEntities();
 	}
 	CG_AddViewWeapon( &cg.predictedPlayerState );
 
@@ -2654,8 +2822,31 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	if ( cg.testModelEntity.hModel ) {
 		CG_AddTestModel();
 	}
+
+	// GalaxyRP fix: [UI] local entities are added LAST on purpose -- this is a priority decision,
+	// not a timing one, so please do not tidy it back up with the other render-list calls above.
+	//
+	// The renderer caps the scene at MAX_REFENTITIES (2047, and REFENTITYNUM_BITS is commented
+	// "can't be increased without changing drawsurf bit packing", so it is the same on TaystJK) and
+	// RE_AddRefEntityToScene silently returns once that is hit -- its only complaint is a
+	// PRINT_DEVELOPER line nobody sees. Whatever is queued last is what disappears.
+	//
+	// Adding localents third, as this used to, spent those slots on force-push sparks and debris
+	// and let the view weapon, scheduled effects and map geometry fall off the end instead. The
+	// upstream report is light poles vanishing on mp/ffa5. Adding them here means a scene that
+	// overflows drops the effects rather than the map, which is the right way round; the trade is
+	// that some force effects can go missing in exactly those scenes. Matches OpenJK 2d618a5c,
+	// which TaystJK has also taken.
+	if ( !cg.hyperspace ) {
+		CG_AddLocalEntities();
+	}
+
 	cg.refdef.time = cg.time;
 	memcpy( cg.refdef.areamask, cg.snap->areamask, sizeof( cg.refdef.areamask ) );
+
+	// DAJ_RP: [Sky Portal] every frame, portal or not, so that the frame the sky-only pass starts on
+	// already has the right one -- see CG_DrawSkyOnlyPass()
+	memcpy( cg.lastViewAreamask, cg.refdef.areamask, sizeof( cg.lastViewAreamask ) );
 
 	// warning sounds when powerup is wearing off
 	CG_PowerupTimerSounds();
@@ -2715,6 +2906,10 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	CG_DrawActive( stereoView );
 
 	CG_DrawAutoMap();
+
+	// GalaxyRP: [Extras] last of all: the effect preview's effects are left in the scene for the Effects
+	// menu to render, so nothing may render or clear a scene after this
+	CG_RpxFxPass();
 
 	if ( cg_stats.integer ) {
 		trap->Print( "cg.clientFrame:%i\n", cg.clientFrame );

@@ -241,13 +241,11 @@ const char *CG_GetGameStatusText(void) {
 	}
 	else if ( cgs.gametype < GT_TEAM)
 	{
-		if (cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR )
-		{
-			char sPlaceWith[256];
-			trap->SE_GetStringTextString("MP_INGAME_PLACE_WITH", sPlaceWith, sizeof(sPlaceWith));
-
-			s = va("%s %s %i",CG_PlaceString( cg.snap->ps.persistant[PERS_RANK] + 1 ), sPlaceWith, cg.snap->ps.persistant[PERS_SCORE] );
-		}
+		// GalaxyRP fix: [Scoreboard] the same plain player count as the scoreboard header, for
+		// spectators too, instead of "<Nth> place with <score>" -- the mod no longer counts kills,
+		// so that always read "Tied for 1st place with 0". No shipped menu uses this owner-draw
+		// (CG_GAME_STATUS) today; fixed so a future one can't bring the old text back.
+		s = CG_PlayerCountString();
 	}
 	else
 	{
@@ -367,7 +365,8 @@ void CG_DrawNewTeamInfo(rectDef_t *rect, float text_x, float text_y, float scale
 		if ( ci->infoValid && ci->team == cg.snap->ps.persistant[PERS_TEAM]) {
 
 			xx = rect->x + 1;
-			for (j = 0; j <= PW_NUM_POWERUPS; j++) {
+			// GalaxyRP fix: [bounds] see the matching comment in cg_draw.c's CG_DrawTeamOverlay.
+			for (j = 0; j < PW_NUM_POWERUPS; j++) {
 				if (ci->powerups & (1 << j)) {
 
 					item = BG_FindItemForPowerup( j );

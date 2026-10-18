@@ -820,6 +820,16 @@ void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin)
 		G_ValidateSiegeClassForTeam(ent, team);
 	}
 
+	// GalaxyRP fix: [NPC] release any NPCs this player is leading when the team actually changes,
+	// matching the call SetTeam() makes at its own commit point -- see the longer comment there for
+	// why re-running OnSameTeam() would catch nothing. This path exists separately because SetTeam()'s
+	// Siege branch reaches SetTeamQuick() and returns before getting that far, and because g_saga.c
+	// and ClientBegin() call it directly.
+	if (ent->client->sess.sessionTeam != team)
+	{
+		zyk_release_player_npcs(ent);
+	}
+
 	ent->client->sess.sessionTeam = team;
 
 	if (team == TEAM_SPECTATOR)
@@ -1245,7 +1255,10 @@ void SP_info_siege_radaricon (gentity_t *ent)
 	G_SpawnString( "icon", "", &s );
 	if (!s || !s[0])
 	{ //that's the whole point of the entity
-        Com_Error(ERR_DROP, "misc_siege_radaricon without an icon");
+		// GalaxyRP fix: [Entity System] was Com_Error(ERR_DROP) -- a fatal error and process exit on
+		// a dedicated server. Siege only, but reachable through the entity commands. Log and free.
+		G_LogPrintf( "info_siege_radaricon at %s has no \"icon\"; not spawned.\n", vtos( ent->s.origin ) );
+		G_FreeEntity( ent );
 		return;
 	}
 
@@ -1780,7 +1793,12 @@ void SP_misc_siege_item (gentity_t *ent)
 
 	if (!ent->model || !ent->model[0])
 	{
-		trap->Error( ERR_DROP, "You must specify a model for misc_siege_item types." );
+		// GalaxyRP fix: [Entity System] was trap->Error(ERR_DROP) -- a fatal error and process exit
+		// on a dedicated server. Siege only, but reachable through the entity commands. Log and
+		// free, and return, since the old code relied on trap->Error never coming back.
+		G_LogPrintf( "misc_siege_item at %s has no model; not spawned.\n", vtos( ent->s.origin ) );
+		G_FreeEntity( ent );
+		return;
 	}
 
 	G_SpawnInt("canpickup", "1", &canpickup);
@@ -1819,6 +1837,7 @@ void SP_misc_siege_item (gentity_t *ent)
 	}
 
 	G_SpawnString( "deathfx", "", &s );
+	s = RP_EffectKeyValue( ent, "deathfx", s );	// DAJ_RP: [Weather] not a weather command
 
 	if (s && s[0])
 	{ //We have a death effect, so index it now.
@@ -1826,6 +1845,7 @@ void SP_misc_siege_item (gentity_t *ent)
 	}
 
 	G_SpawnString( "respawnfx", "", &s );
+	s = RP_EffectKeyValue( ent, "respawnfx", s );	// DAJ_RP: [Weather] not a weather command
 
 	if (s && s[0])
 	{ //We have a respawn effect, so index it now.
@@ -1844,7 +1864,8 @@ void SP_misc_siege_item (gentity_t *ent)
 	ent->s.modelindex = G_ModelIndex(ent->model);
 
 	//Is the model a ghoul2 model?
-	if ( ent->model && !Q_stricmp( &ent->model[strlen(ent->model) - 4], ".glm" ) )
+	// GalaxyRP fix: [Entity System] a model name shorter than four characters indexed before the string
+	if ( ent->model && strlen( ent->model ) >= 4 && !Q_stricmp( &ent->model[strlen(ent->model) - 4], ".glm" ) )
 	{ //apparently so.
         ent->s.modelGhoul2 = 1;
 	}

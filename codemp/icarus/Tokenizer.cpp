@@ -2102,7 +2102,10 @@ CToken* CTokenizer::TokenFromName(LPCTSTR name)
 		{
 			while (m_keywords[i].m_tokenvalue != TK_EOF)
 			{
-				if (stricmp(m_keywords[i].m_keyword, name) == 0)
+				// GalaxyRP fix: [macOS/Clang build failure] stricmp is an MSVC CRT extension, not
+				// declared on Linux/macOS; Q_stricmp (declared via tokenizer.h -> q_shared.h,
+				// already included by this file) is the codebase's portable equivalent.
+				if (Q_stricmp(m_keywords[i].m_keyword, name) == 0)
 				{
 					return CUserToken::Create(m_keywords[i].m_tokenvalue, name);
 				}

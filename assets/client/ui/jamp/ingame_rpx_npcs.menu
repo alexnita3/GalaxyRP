@@ -1,0 +1,365 @@
+//----------------------------------------------------------------------------------------------
+// ingame_rpx_npcs: the NPCs & Vehicles menu of the Extras.
+// GalaxyRP: [Extras] generated with the others of ingame_rpx_*.menu; the Extras button of
+// ingame_galaxyrp.menu opens it. The list, the previews and the rpx scripts are ui_rpextras.c; the
+// commands the buttons send are built in cg_rpextras.c.
+//----------------------------------------------------------------------------------------------
+{
+	menuDef
+	{
+		name                    "ingame_rpx_npcs"
+		visible                 0
+		fullscreen              0
+		outOfBoundsClick
+		rect                    10 20 620 440
+		focusColor              1 1 1 1
+		disableColor            .5 .5 .5 1
+		style                   1
+		border                  1
+		descX                   310
+		descY                   424
+		descScale               0.8
+		descColor               1 .682 0 .8
+		descAlignment           ITEM_ALIGN_CENTER
+
+		onOpen
+		{
+			uiScript		rpxOpen npcs ingame_rpx_npcs
+		}
+		onClose
+		{
+			uiScript		rpxClose
+		}
+		onESC
+		{
+			play			"sound/interface/button1.wav" ;
+			close			ingame_rpx_npcs
+		}
+
+		itemDef
+		{
+			name                rpx_background
+			style               WINDOW_STYLE_SHADER
+			rect                0 0 620 440
+			background          "gfx/menus/menu_box_ingame"
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_title
+			style               WINDOW_STYLE_SHADER
+			background          "gfx/menus/menu_blendbox"
+			text                "^6Galaxy ^4RP^3 Extras: ^7NPCs & Vehicles"
+			rect                20 5 580 28
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          290
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           .549 .854 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_back
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                12 405 90 24
+			text                "Back"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          45
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Back to the Galaxy RP menu"
+			mouseEnter
+			{
+				setitemcolor rpx_back bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_back bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setcvar ui_rpx_back 1 ;
+				close ingame_rpx_npcs ;
+				open ingame_galaxyrp
+			}
+		}
+		itemDef
+		{
+			name                rpx_msg
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                110 415 500 14
+			cvar                "ui_rpx_msg"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.6
+			forecolor           1 1 .4 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_tab_npcs
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                12 40 103 20
+			text                "NPCs"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          51
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "The NPC types the server has"
+			mouseEnter
+			{
+				setitemcolor rpx_tab_npcs bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_tab_npcs bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxNpcMode 0
+			}
+		}
+		itemDef
+		{
+			name                rpx_tab_veh
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                119 40 103 20
+			text                "Vehicles"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          51
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "The vehicle types the server has"
+			mouseEnter
+			{
+				setitemcolor rpx_tab_veh bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_tab_veh bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxNpcMode 1
+			}
+		}
+		itemDef
+		{
+			name                rpx_tab_npcs_on
+			style               WINDOW_STYLE_FILLED
+			rect                14 58 99 2
+			backcolor           1 1 1 1
+			visible             1
+			decoration
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+		}
+		itemDef
+		{
+			name                rpx_tab_veh_on
+			style               WINDOW_STYLE_FILLED
+			rect                121 58 99 2
+			backcolor           1 1 1 1
+			visible             1
+			decoration
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"1"
+			}
+		}
+		itemDef
+		{
+			name                rpx_filter
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                "Filter: "
+			cvar                "ui_rpx_filter_npcs"
+			maxchars            30
+			maxPaintChars       30
+			rect                12 64 210 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Show only the names with this in them"
+		}
+		itemDef
+		{
+			name                rpx_list
+			type                ITEM_TYPE_LISTBOX
+			style               WINDOW_STYLE_FILLED
+			rect                12 84 210 276
+			elementwidth        190
+			elementheight       15
+			elementtype         LISTBOX_TEXT
+			feeder              FEEDER_RPX_LIST
+			font                2
+			textscale           0.6
+			textstyle           0
+			textalign           0
+			textaligny          0
+			columns             1 4 184 184
+			border              1
+			bordercolor         1 .682 0 .6
+			forecolor           1 1 1 1
+			backcolor           0 0 0 .6
+			outlinecolor        1 .682 0 .35
+			visible             1
+			mouseEnter
+			{
+				setitemcolor rpx_list bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_list bordercolor 1 .682 0 .6
+			}
+		}
+		itemDef
+		{
+			name                rpx_info
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                12 364 210 14
+			cvar                "ui_rpx_info"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           .8 .8 .8 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_status
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                12 378 210 14
+			cvar                "ui_rpx_status"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 1 .4 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_name
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                "Name (optional): "
+			cvar                "ui_rpx_n_name"
+			maxchars            32
+			maxPaintChars       32
+			rect                232 64 380 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "A targetname for it: letters, digits, _ and -. /npc kill <name> finds it"
+		}
+		itemDef
+		{
+			name                rpx_help1
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 90 380 14
+			text                "It appears where you are aiming."
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.6
+			forecolor           .8 .8 .8 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_spawn
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 330 180 32
+			text                "Spawn"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          90
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Spawn the selected NPC or vehicle (/npc spawn), and close the menu"
+			mouseEnter
+			{
+				setitemcolor rpx_spawn bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_spawn bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo spawnnpc
+			}
+		}
+	}
+}

@@ -5,7 +5,7 @@
 *.pydevproject
 .project
 .metadata
-bin/
+/bin/
 tmp/
 *.tmp
 *.bak
@@ -103,7 +103,7 @@ DocProject/Help/html
 publish
 
 # Others
-[Bb]in
+/[Bb]in
 [Oo]bj
 sql
 TestResults
@@ -113,6 +113,7 @@ stylecop.*
 ~$*
 *.dbmdl
 Generated_Code #added for RIA/Silverlight projects
+install
 
 # Backup & report files from converting an old project file to a newer
 # Visual Studio version. Backup files are not needed, because we have git ;-)
@@ -149,7 +150,7 @@ build
 build64
 eggs
 parts
-bin
+/bin
 var
 sdist
 develop-eggs
@@ -182,8 +183,15 @@ pip-log.txt
 ## clangd
 #############
 .clangd
+compile_commands.json
 
 #############
 ## CLion
 #############
 .idea
+
+#############
+## CMake Builds
+#############
+[Bb]uild*/
+cmake-build-*

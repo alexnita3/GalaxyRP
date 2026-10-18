@@ -131,6 +131,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define FEEDER_MOVES_TITLES					0x2a			// move titles for the data pad moves screen
 #define FEEDER_SABER_SINGLE_INFO			0x2b			// saber single
 #define FEEDER_SABER_STAFF_INFO				0x2c			// saber staff
+#define FEEDER_RPX_LIST						0x30			// GalaxyRP: [Extras] the list of the open Extras menu (ui_rpextras.c)
 
 
 // Xbox specific, hope no one minds
@@ -370,6 +371,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define UI_CHAT_REPLY		295
 #define UI_CHAT_SPOT		296
 #define UI_CHAT_TACTICAL	297
+
+// GalaxyRP: [Extras] the Extras menus (ui_rpextras.c)
+#define UI_RPX_PREVIEW		300		// the Props menu's model preview
+#define UI_RPX_FXBOX		301		// the Effects menu's preview box
+#define UI_RPX_SWATCH		302		// the Props menu's light colour
+#define UI_RPX_LSWATCH		303		// the Lights menu's colour when on
+#define UI_RPX_LOFFSWATCH	304		// the Lights menu's colour when off (black while dark)
 
 #define VOICECHAT_GETFLAG			"getflag"				// command someone to get the flag
 #define VOICECHAT_OFFENSE			"offense"				// command someone to go on offense

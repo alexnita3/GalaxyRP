@@ -358,8 +358,40 @@ typedef enum
 	SABER_GREEN,
 	SABER_BLUE,
 	SABER_PURPLE,
-	NUM_SABER_COLORS
+	// GalaxyRP: [Saber RGB] everything from here on extends the original six-colour palette.
+	// SABER_RGB and the four blade-style variants below it all mean "this blade uses the player's
+	// own custom colour, rendered with a particular glow/core shader pair"; the colour itself
+	// travels separately, as a packed 24-bit integer in the "c3"/"c4" clientinfo configstring keys
+	// -- see ClientUserinfoChanged() (g_client.c) and CG_NewClientInfo() (cg_players.c). Which of
+	// these five is selected, plus SABER_BLACK, is chosen via /sabercolor (the custom colour itself)
+	// and /saberblade (the blade style among an already-RGB saber), and is server-authoritative in
+	// clientPersistant_t::saberColorMode[] (g_local.h) -- see that field for the full picture.
+	//
+	// The ordinals below deliberately match TaystJK/JAPro's own saber_colors_t exactly, so a
+	// TaystJK client rendering sabers with its own cgame (rather than ours) still reads the same
+	// values off the wire and shows our players the right colour.
+	SABER_RGB,		// classic RGB blade, using the player's own custom colour
+	SABER_FLAME1,	// RGB blade, "flame" style 1 (TaystJK/JAPro line-art variant)
+	SABER_ELEC1,	// RGB blade, "electric" style 1
+	SABER_FLAME2,	// RGB blade, "flame" style 2
+	SABER_ELEC2,	// RGB blade, "electric" style 2
+	SABER_BLACK,	// fixed black blade, no custom colour behind it
+	NUM_SABER_COLORS,	// values >= this (or < 0) are invalid and clamp to SABER_RED
+
+	// The classic palette that a .sab file's "saberColor" keyword (including "random") may select
+	// from. Kept separate from NUM_SABER_COLORS so extending the enum above never silently widens
+	// the range of colours a randomly-coloured saber can roll.
+	NUM_SABER_BASE_COLORS = SABER_PURPLE + 1
 } saber_colors_t;
+
+// GalaxyRP: [Saber RGB] helpers for the packed 24-bit saber colour carried by the "c3"/"c4"
+// clientinfo keys, the cp_sbRGB1/cp_sbRGB2 userinfo cvars, and the database columns. The layout is
+// r | (g<<8) | (b<<16), matching TaystJK/JAPro so the value is interchangeable with theirs.
+#define SABERRGB_PACK(r,g,b)	( ((r)&0xFF) | (((g)&0xFF)<<8) | (((b)&0xFF)<<16) )
+#define SABERRGB_R(v)			( (v) & 0xFF )
+#define SABERRGB_G(v)			( ((v)>>8) & 0xFF )
+#define SABERRGB_B(v)			( ((v)>>16) & 0xFF )
+#define SABERRGB_MASK			0x00FFFFFF
 
 typedef enum
 {
@@ -901,6 +933,16 @@ typedef enum {
 #define	GENTITYNUM_BITS	10		// don't need to send any more
 #define	MAX_GENTITIES	(1<<GENTITYNUM_BITS)
 
+// GalaxyRP: [Logical Entities] the game module keeps a second region of entity slots ABOVE
+// MAX_GENTITIES for entities that never need to reach the engine or a client -- spawn points,
+// target_* relays, NPC spawners, path corners, weather markers. They are never linked, never
+// networked and never handed to ICARUS, so they do not count against the 10-bit entity number
+// the protocol sends; the engine is only ever told about the first MAX_GENTITIES slots. Ported
+// from TaystJK (which took it from Jedi Knight Galaxies); see G_SpawnLogical() in g_utils.c.
+// Only the game module allocates the upper region; cgame and ui keep MAX_GENTITIES everywhere.
+#define	MAX_LOGICENTITIES	3072
+#define	MAX_ENTITIESTOTAL	(MAX_GENTITIES+MAX_LOGICENTITIES)
+
 //I am reverting. I guess. For now.
 /*
 #define	GENTITYNUM_BITS		11
@@ -1375,6 +1417,14 @@ typedef struct siegePers_s
 
 #define BUTTON_FORCE_DRAIN		2048
 
+// the engine we run on sends these bits too (a +button12 bind produces BUTTON_GRAPPLE).
+// naming them here matches the TaystJK engine's own list and only documents what already
+// arrives in usercmd_t->buttons; it does not enable any of them by itself
+#define BUTTON_GRAPPLE			4096
+#define BUTTON_DASH				8192
+#define BUTTON_STRAFEBOT		16384
+#define BUTTON_TARGET			32768
+
 // Here's an interesting bit.  The bots in TA used buttons to do additional gestures.
 // I ripped them out because I didn't want too many buttons given the fact that I was already adding some for JK2.
 // We can always add some back in if we want though.
@@ -1424,6 +1474,14 @@ typedef enum
 	GENCMD_MEDITATE,
 	GENCMD_FLOURISH,
 	GENCMD_GLOAT
+	// GalaxyRP fix: [Cloak Item] GENCMD_USE_CLOAK_VEHICLE used to be appended here -- a dedicated
+	// generic-command value for pairing vehicle+rider cloak, separate from GENCMD_USE_CLOAK (solo-only,
+	// unaffected, still above). Removed: it required a client engine with this exact enum value and a
+	// bound key to ever produce it, and the real, actually-distributed TaystJK engine has no such
+	// support (its own GENCMD_* enum stops at GENCMD_GLOAT, matching this one now again), so nothing
+	// could ever set it in practice. Vehicle-cloak is now the "/vehicle_cloak" console command instead
+	// (Cmd_VehicleCloak_f in g_cmds.c), dispatched the same way as every other slash command -- no
+	// engine-side enum or keybind required.
 } genCmds_t;
 
 // usercmd_t is sent to the server each client frame
@@ -1793,6 +1851,10 @@ typedef enum {
 #define SAY_TEAM	1
 #define SAY_TELL	2
 #define SAY_ALLY	3 // zyk: added new say mode
+// GalaxyRP: [Chat] /ooc. Not a delivery mode of its own: G_Say() translates it to SAY_ALL with
+// ooc_flag set, before the gametype test, so nothing downstream ever sees this value. Game module
+// only -- no cgame, UI or wire use, so adding it changes nothing a client can observe.
+#define SAY_OOC		4
 
 /*
 Ghoul2 Insert Start

@@ -183,6 +183,10 @@ typedef struct vehicleInfo_s {
 	int			armor;			//total points of damage it can take
 	int			shields;		//energy shield damage points
 	int			shieldRechargeMS;//energy shield milliseconds per point recharged
+	// DAJ_RP: [Vehicles] OJP's .veh key of the same name, so vehicles made for OJP work here too: when set, the
+	// shields keep recharging (at shieldRechargeMS) after they are knocked down to 0 instead of staying down.
+	// Off by default (BG_VehicleSetDefaults memsets the struct). Used by Update() in g_vehicles.c.
+	qboolean	CantKnockoutShields;
 	float		toughness;		//modifies incoming damage, 1.0 is normal, 0.5 is half, etc.  Simulates being made of tougher materials/construction
 	int			malfunctionArmorLevel;//when armor drops to or below this point, start malfunctioning
 	int			surfDestruction; //can parts of this thing be torn off on impact? -rww
@@ -372,7 +376,12 @@ typedef struct vehicleInfo_s {
 
 #define	VFOFS(x) offsetof(vehicleInfo_t, x)
 
-#define MAX_VEHICLES	128	//sigh... no more than 64 individual vehicles // zyk: default 16. Changed to 128
+// GalaxyRP fix: [Vehicles] 128 -> 256. This bounds distinct vehicle TYPES looked up by name since
+// the module loaded (VEH_VehicleIndexForName fills g_vehicleInfo lazily), not files installed and
+// not vehicles spawned. A vehicleInfo_t is ~950 bytes, so 256 is ~244 KB of static data in each
+// of game, cgame and ui. No index crosses the network: clients resolve the type by name from the
+// "$name" model config string, so this can change without any protocol concern.
+#define MAX_VEHICLES	256	//sigh... no more than 64 individual vehicles // zyk: default 16. Changed to 128
 #define VEHICLE_BASE	0
 #define VEHICLE_NONE	-1
 
@@ -636,3 +645,9 @@ typedef struct Vehicle_s
 #endif
 
 extern int BG_VehicleGetIndex( const char *vehicleName );
+// DAJ_RP: [NPC Scale] how far a vehicle of this kind, at this scale, is drawn above its origin -- see bg_vehicleLoad.c
+extern float BG_RpVehicleScaleLift( const vehicleInfo_t *vehInfo, float scale );
+#if defined(_GAME)
+// GalaxyRP fix: [Entity System] a SILENT "is this a vehicle name?" -- see bg_vehicleLoad.c
+extern qboolean BG_VehicleNameExists( const char *vehicleName );
+#endif

@@ -33,6 +33,39 @@ extern void NPC_Jedi_PlayConfusionSound( gentity_t *self );
 extern void NPC_UseResponse( gentity_t *self, gentity_t *user, qboolean useWhenDone );
 //NEEDED FOR MIND-TRICK on NPCS=========================================================
 extern void Jedi_Decloak( gentity_t *self );
+extern void Jedi_DecloakPair( gentity_t *self );
+extern qboolean Jedi_PairIsCloaked( gentity_t *self );
+
+// GalaxyRP fix: [Cloak Item] an attack that does not go through a weapon still breaks cloak. Cloak
+// already came down on weapon fire (FireWeapon, g_weapon.c) and on a saber swing (EV_SABER_ATTACK,
+// g_active.c), but the offensive Force powers, a saber throw and a kick announce themselves through
+// neither, so a cloaked player could lightning, drain, grip, push, pull, throw or kick while staying
+// invisible. Every such attack calls this at the moment it happens (w_force.c for the powers,
+// w_saber.c for the throw and the kick).
+//
+// Pair-aware for the same reason as the other hooks: riders can use the Force from the saddle (zyk
+// removed the vehicle block in BG_CanUseFPNow, bg_misc.c), so a rider's attack takes a cloaked
+// vehicle down with them even when the rider is not the cloaked half.
+//
+// Players only. The one NPC that cloaks, the Shadowtrooper, has its cloak driven every think by
+// Jedi_CheckCloak (NPC_AI_Jedi.c) from its saber state, so dropping it here would only be undone on
+// the next think -- a decloak/cloak sound pair every frame of a held grip or lightning.
+//
+// Like the weapon and saber hooks, and unlike taking damage in G_Damage, this sets no re-cloak
+// lockout: the attacker only loses the cloak, the toggle's own cooldown still applies, and the held
+// powers call this on every tick they run, so re-cloaking mid-attack does not stick.
+void RP_AttackBreaksCloak( gentity_t *self )
+{
+	if ( !self || !self->client || self->NPC )
+	{
+		return;
+	}
+
+	if ( Jedi_PairIsCloaked( self ) )
+	{
+		Jedi_DecloakPair( self );
+	}
+}
 
 extern qboolean BG_FullBodyTauntAnim( int anim );
 
@@ -152,20 +185,45 @@ const int mindTrickTime[NUM_FORCE_POWER_LEVELS] =
 	0,//none
 	5000,
 	10000,
-	15000
+	15000,
+	// GalaxyRP fix: [Force] this table is declared [NUM_FORCE_POWER_LEVELS] (6) but only ever
+	// supplied four initializers, so levels 4 and 5 were implicitly 0. It is indexed by
+	// forcePowerLevel[FP_TELEPATHY] when setting an NPC's charmedTime/confusionTime, so Mind Trick
+	// at level 4 or 5 set the expiry to level.time + 0 and wore off the same frame it was applied --
+	// mind trick did nothing at all to NPCs. Continuing the existing 5000ms-per-level progression.
+	20000,
+	25000
 };
+
+// GalaxyRP fix: [Force] claim the six force loop sounds at map load instead of waiting for the
+// first player to connect. Upstream registers them lazily inside WP_InitForcePowers(), which is
+// fine until the sound table or the gamestate byte budget is under pressure: G_SoundIndex() answers
+// 0 when a registration is refused, and 0 is also what these variables hold when nothing has been
+// registered, so a refusal is indistinguishable from "not tried yet". Every later call then walks
+// the whole table again looking for a name that will never be in it, and meanwhile Speed, Rage,
+// Protect, Absorb, See and Ysalamiri all play their loop silently. Registering here, before a
+// single map entity has asked for a sound, means these six are in the table whenever the table
+// has room for them at all.
+//
+// Safe to do unconditionally: the game module is unloaded and reloaded on every map change, so
+// these variables start at 0 again each map and never carry a stale index across.
+void WP_RegisterForceLoopSounds( void ) {
+	speedLoopSound		= G_SoundIndex( "sound/weapons/force/speedloop.wav" );
+	rageLoopSound		= G_SoundIndex( "sound/weapons/force/rageloop.wav" );
+	absorbLoopSound		= G_SoundIndex( "sound/weapons/force/absorbloop.wav" );
+	protectLoopSound	= G_SoundIndex( "sound/weapons/force/protectloop.wav" );
+	seeLoopSound		= G_SoundIndex( "sound/weapons/force/seeloop.wav" );
+	ysalamiriLoopSound	= G_SoundIndex( "sound/player/nullifyloop.wav" );
+}
 
 void WP_InitForcePowers( gentity_t *ent ) {
 	int i, i_r, lastFPKnown = -1;
 	qboolean warnClient = qfalse, warnClientLimit = qfalse, didEvent = qfalse;
 	char userinfo[MAX_INFO_STRING], forcePowers[DEFAULT_FORCEPOWERS_LEN+1], readBuf[DEFAULT_FORCEPOWERS_LEN+1];
-	int force_powers_disabled = g_forcePowerDisable.integer; 
-
-	// zyk: if gametype is Duel or Power Duel, use zyk_duelForcePowerDisable instead
-	if (level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL)
-	{
-		force_powers_disabled = zyk_duelForcePowerDisable.integer;
-	}
+	// zyk: if gametype is Duel or Power Duel, uses g_duelForcePowerDisable instead
+	// GalaxyRP fix: [Force] moved into G_ForcePowerDisableValue() (g_main.c) so the other readers of
+	// g_forcePowerDisable get the same duel-aware answer this function already did.
+	int force_powers_disabled = G_ForcePowerDisableValue();
 
 	// if server has no max rank, default to max (50)
 	if ( g_maxForceRank.integer <= 0 || g_maxForceRank.integer >= NUM_FORCE_MASTERY_LEVELS ) {
@@ -183,6 +241,9 @@ void WP_InitForcePowers( gentity_t *ent ) {
 		ent->client->ps.fd.saberAnimLevel = FORCE_LEVEL_1;
 
 	// so that the client configstring is already modified with this when we need it
+	// GalaxyRP fix: [Force] these six are registered up front by WP_RegisterForceLoopSounds() from
+	// G_InitGame() now, so by the time anyone reaches this they are already set and nothing below
+	// runs. Kept as a fallback rather than deleted: it costs nothing, and it is what upstream does.
 	if ( !speedLoopSound )
 		speedLoopSound = G_SoundIndex( "sound/weapons/force/speedloop.wav" );
 	if ( !rageLoopSound )
@@ -449,7 +510,7 @@ void WP_SpawnInitForcePowers( gentity_t *ent )
 
 	// zyk: set max force power for non-rpg mode users
 	if (ent->client->sess.amrpgmode < 2)
-		ent->client->ps.fd.forcePower = ent->client->ps.fd.forcePowerMax = zyk_max_force_power.integer;
+		ent->client->ps.fd.forcePower = ent->client->ps.fd.forcePowerMax = RP_MAX_FORCE_POWER_LOGGED_OUT;
 
 	ent->client->ps.fd.forcePowerRegenDebounceTime = level.time;
 	ent->client->ps.fd.forceGripEntityNum = ENTITYNUM_NONE;
@@ -458,14 +519,7 @@ void WP_SpawnInitForcePowers( gentity_t *ent )
 	ent->client->ps.fd.forceMindtrickTargetIndex3 = 0;
 	ent->client->ps.fd.forceMindtrickTargetIndex4 = 0;
 
-	// zyk: remove mind control from these players or npcs
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 1 && ent->client->pers.mind_controlled1_id != -1)
-	{
-		gentity_t *tricked_entity = &g_entities[ent->client->pers.mind_controlled1_id];
-		ent->client->pers.mind_controlled1_id = -1;
-		tricked_entity->client->pers.being_mind_controlled = -1;
-	}
-
+	// GalaxyRP fix: [Dead Code] rpg_class permanently 0, mind control block unreachable
 	ent->client->ps.holocronBits = 0;
 
 	i = 0;
@@ -558,6 +612,36 @@ void WP_SpawnInitForcePowers( gentity_t *ent )
 
 extern qboolean BG_InKnockDown( int anim ); //bg_pmove.c
 extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
+
+// DAJ_RP: [Force] who Grip may not take hold of: any vehicle (fighter, walker, speeder or animal, empty or
+// ridden) and the three NPC classes Push and Pull already refuse in ForceThrow() below -- Galak's mech, the
+// non-vehicle AT-ST and the Rancor. Stock refused every force power but Lightning on vehicles (the block
+// commented out in ForcePowerUsableOn()); zyk opened them all up, which let a player lift and choke a
+// fighter or a walker. The other powers stay open on vehicles; Grip alone is refused again. Asked by
+// ForcePowerUsableOn() for every caster -- player, NPC Jedi or bot -- and by the NPC Jedi's own grip
+// decisions (NPC_AI_Jedi.c), so the AI picks something else instead of a grip that cannot land.
+qboolean RP_GripRefused( const gentity_t *target )
+{
+	if (!target || !target->client)
+	{
+		return qfalse;
+	}
+
+	if (target->s.eType == ET_NPC && target->s.NPC_class == CLASS_VEHICLE)
+	{
+		return qtrue;
+	}
+
+	if (target->client->NPC_class == CLASS_GALAKMECH ||
+		target->client->NPC_class == CLASS_ATST ||
+		target->client->NPC_class == CLASS_RANCOR)
+	{
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
 int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forcePower)
 {
 	if (other && other->client && BG_HasYsalamiri(level.gametype, &other->client->ps))
@@ -571,71 +655,61 @@ int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forc
 		return 0;
 	}
 
-	// zyk: players that are not in boss battle cannot hit a boss
-	if (attacker && attacker->client && other && other->client && other->NPC && other->client->pers.guardian_invoked_by_id != -1 &&
-		(attacker->client->sess.amrpgmode != 2 || attacker->client->pers.guardian_mode == 0))
-	{
-		return 0;
-	}
+	// GalaxyRP fix: [Dead Code] guardian_mode/guardian_invoked_by_id permanently 0/-1, boss-battle check unreachable
 
-	if (other && other->client && (other->NPC || other->client->sess.amrpgmode == 2) && 
-		(forcePower == FP_PUSH || forcePower == FP_PULL || forcePower == FP_GRIP) && 
-		other->client->pers.quest_power_status & (1 << 11))
-	{ // zyk: Magic Shield protects against some force powers
-		return 0;
-	}
+	// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Force User Unique Skill / Force Guardian Force Armor checks unreachable
 
-	if (other && other->client && other->client->sess.amrpgmode == 2 && 
-		other->client->pers.rpg_class == 1 && other->client->pers.unique_skill_duration > level.time)
-	{ // zyk: Force User Unique Skill protects against force powers
-		return 0;
-	}
+	// GalaxyRP fix: [Settings] a guard used to sit here, blocking a hostile force power between allies
+	// when the target had player_settings bit 6 set (the old /settings 2, "Allow Force Powers from
+	// allies", set to OFF). That per-player choice has been removed (see the fix comment on
+	// settings_number_to_bit in Cmd_Settings_f) -- allies never block each other's force powers now,
+	// which is what this guard already did by default whenever the setting was left at ON.
 
-	if (other && other->client && other->client->sess.amrpgmode == 2 &&
-		other->client->pers.rpg_class == 9 && other->client->pers.unique_skill_duration > level.time &&
-		other->client->pers.player_statuses & (1 << 21))
-	{ // zyk: Force Guardian Force Armor protects against force powers
-		return 0;
-	}
-
-	if (forcePower != FP_TEAM_HEAL && forcePower != FP_TEAM_FORCE && attacker && attacker->client && other && other->client && 
-		attacker->client->sess.amrpgmode > 0 && other->client->sess.amrpgmode > 0 && other->client->pers.player_settings & (1 << 6) && 
-		zyk_is_ally(attacker,other) == qtrue)
-	{ // zyk: allies wont be affected by force powers if they do not allow it
-		return 0;
-	}
-
-	if (level.race_mode > 0 && level.race_mode < 3 && attacker && attacker->client && other && other->client && 
-		((attacker->client->pers.race_position > 0) || 
-		 (attacker->client->pers.race_position == 0 && other->client->pers.race_position > 0)))
-	{ // zyk: Race Mode. Cannot use force powers on targets waiting for race to start 
-		return 0;
-	}
-
-	if (other && other->client && other->NPC && other->client->pers.universe_quest_messages == -2000)
-	{ // zyk: special quest npcs that cannot be hit by force
-		return 0;
-	}
+	// GalaxyRP fix: [Quests] removed the "special quest npcs that cannot be hit by force" guard here
+	// (universe_quest_messages == -2000) — that sentinel value is never assigned anywhere in the
+	// codebase (the only remaining assignment is a reset to 0), so this was permanently dead.
 
 	if (attacker && attacker->client && !BG_CanUseFPNow(level.gametype, &attacker->client->ps, level.time, forcePower))
 	{
 		return 0;
 	}
 
-	// GalaxyRP (Alex): [Dueling] Characters should be able to use force powers while dueling
-	/*if (attacker && attacker->client && attacker->client->ps.duelInProgress)
+	// GalaxyRP fix: [Dueling] the other half of the vanilla restriction, live again, and the half
+	// that matters most. BG_CanUseFPNow() above decides whether a power may be ACTIVATED; this pair
+	// decides who it may be used ON, and with both of them commented out a duel stopped being sealed
+	// off from the rest of the map. A duellist could Grip, Mind Trick or Push a bystander who had
+	// nothing to do with the fight, and a bystander could do the same back -- Push in particular can
+	// shove a duellist past rp_duel_radius and end a duel the pusher is not even part of. G_Damage
+	// blocks the damage in both directions, but these powers do their real work through effects that
+	// never reach G_Damage: the grip hold, the trick, the knockback.
+	//
+	// OpenJK, TaystJK and JA++ all keep this sealed, and the two with full-force duels keep it sealed
+	// THERE too -- a force duellist may use powers on their own opponent and on nobody else. The
+	// shape below is TaystJK's: the ONLY opening is both players duelling, the duel being a full
+	// force one, and the target being this attacker's own duelIndex. Every other combination, in
+	// either direction, still refuses.
+	if (attacker && attacker->client && attacker->client->ps.duelInProgress)
 	{
+		if (!(other && other->client && other->client->ps.duelInProgress &&
+			attacker->s.number < MAX_CLIENTS &&
+			level.duel_types[attacker->s.number] == 1 &&
+			other->s.number == attacker->client->ps.duelIndex))
+		{
+			return 0;
+		}
+	}
+	else if (other && other->client && other->client->ps.duelInProgress)
+	{ // the attacker is not duelling, so a duellist is never a valid target for them
 		return 0;
 	}
 
-	if (other && other->client && other->client->ps.duelInProgress)
-	{
-		return 0;
-	}*/
-
 	if (forcePower == FP_GRIP)
 	{
-		if (other && other->client &&
+		if (RP_GripRefused(other))
+		{ // DAJ_RP: [Force] no gripping vehicles, Galak's mech, the AT-ST or the Rancor (see RP_GripRefused())
+			return 0;
+		}
+		else if (other && other->client &&
 			(other->client->ps.fd.forcePowersActive & (1<<FP_ABSORB)))
 		{ //don't allow gripping to begin with if they are absorbing
 			//play sound indicating that attack was absorbed
@@ -692,6 +766,46 @@ int ForcePowerUsableOn(gentity_t *attacker, gentity_t *other, forcePowers_t forc
 	return 1;
 }
 
+// GalaxyRP fix: [Force] Force Heal and Shield Heal used to cost a flat half of the server-wide
+// force maximum. That worked out to 100, but a logged-in character's pool is only a fifth of that
+// maximum per level of the Force Power skill (skill index 54) -- so at skill level 1 the whole pool
+// was 40 and neither heal could EVER be cast, and at level 2 it was affordable only from a
+// completely full bar. Costing half of the caster's OWN maximum instead means every character gets
+// exactly two heals from a full pool, at every skill level, and nothing is unreachable. Logged-out
+// players are unaffected in kind: their cost is likewise half of their own maximum, which is
+// RP_MAX_FORCE_POWER_LOGGED_OUT, so they too get exactly two heals from a full pool.
+//
+// The floor of 1 matters: forcePowerMax is legitimately 0 for a character with no levels in Force
+// Power. A cost of 0 would hit the "if ( !drain ) return qtrue;" shortcut in WP_ForcePowerAvailable
+// below and hand those players unlimited free heals.
+static int RP_ForceHealCost( gentity_t *self )
+{
+	int cost = self->client->ps.fd.forcePowerMax / 2;
+
+	return (cost > 0) ? cost : 1;
+}
+
+// GalaxyRP fix: [Force] WP_ForcePowerStart()'s overrideAmt means different things to different
+// powers. For most it is a force COST; for FP_DRAIN, FP_LIGHTNING and FP_SPEED the case arms
+// instead read it as a DURATION ("if (overrideAmt) duration = overrideAmt;"). Drain and Lightning
+// were given an escape hatch in WP_ForcePowerAvailable() so their duration is never mistaken for a
+// price, but Speed never was -- so Jedi_DodgeEvasion()'s ForceSpeed(self, 500) asked the gate for
+// 500 force. The pool tops out at RP_MAX_FORCE_POWER, so that check could never pass and the
+// force-dodge under g_forceDodge 2 never actually granted Speed, while still arming the shared
+// deactivate lock and starting the looping speed sound.
+//
+// The real cost is the one WP_ForcePowerStart() goes on to charge: overrideAmt * 0.025 (12 force
+// for the 500ms dodge). Both sites call this helper so the gate and the charge cannot drift apart
+// again. The floor of 1 matters because BG_ForcePowerDrain() treats a drain of 0 as "look the cost
+// up in the table" -- without it, a short enough duration would truncate to 0, sail through the
+// "if (!drain) return qtrue" shortcut as free, and then be charged the full table price of 50.
+static int RP_ForceSpeedCost( int overrideAmt )
+{
+	int cost = (int)(overrideAmt * 0.025);
+
+	return (cost > 0) ? cost : 1;
+}
+
 qboolean WP_ForcePowerAvailable( gentity_t *self, forcePowers_t forcePower, int overrideAmt )
 {
 	int	drain = overrideAmt ? overrideAmt :
@@ -699,12 +813,15 @@ qboolean WP_ForcePowerAvailable( gentity_t *self, forcePowers_t forcePower, int 
 
 	if (forcePower == FP_HEAL) // zyk: added the HEAL condition to keep balance
 	{
-		drain = (zyk_max_force_power.integer/2);
+		drain = RP_ForceHealCost( self );
 	}
-	else if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 1)
-	{ // zyk: Force User class. He spends less force power
-		drain *= 0.75;
+	// GalaxyRP fix: [Force] for Speed an overrideAmt is a duration, not a price -- charge what
+	// WP_ForcePowerStart() will actually take for it rather than the raw millisecond count.
+	if (forcePower == FP_SPEED && overrideAmt)
+	{
+		drain = RP_ForceSpeedCost( overrideAmt );
 	}
+	// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Force User drain-reduction branch unreachable
 
 	if (self->client->ps.fd.forcePowersActive & (1 << forcePower))
 	{ //we're probably going to deactivate it..
@@ -753,6 +870,28 @@ qboolean WP_ForcePowerUsable( gentity_t *self, forcePowers_t forcePower )
 		return qfalse;
 	}
 
+	// GalaxyRP fix: [Death System] a downed player cannot START a force power. Every one of the
+	// thirteen powers routes through this function, so this single test covers them all and both
+	// dispatch paths (the GENCMD_FORCE_* switch in g_active.c and the forcepower switch below).
+	// It has to be explicit: paralyze_player() leaves a downed player on RP_DOWNED_HEALTH health, so the dead
+	// tests just above all pass, and the only powers that refused were Grip/Lightning/Drain/Mind
+	// Trick/Push -- purely because those five also guard on forceHandExtend, which the downed state
+	// happens to pin at HANDEXTEND_KNOCKDOWN. Heal, Speed, Rage, Protect, Absorb, Seeing and the two
+	// team powers had no such guard, so a downed player could sit out rp_downed_timer healing back to
+	// full health (and, with the Shield Heal skill, full shields) and stand up untouched.
+	//
+	// Deliberately placed AFTER the dead tests and nowhere else: every toggle power (Speed, Rage,
+	// Protect, Absorb, Seeing) checks for an already-active power and calls WP_ForcePowerStop BEFORE
+	// reaching this function, so a downed player can still switch OFF something that was running when
+	// they went down -- only starting is blocked. Same shape as the cloak item's downed guard.
+	//
+	// NPCs are unaffected: the Death System never downs them (G_Damage tests !targ->NPC) and
+	// NPC_spawn.c zeroes player_statuses on every spawned NPC.
+	if ( G_PlayerIsDowned( self ) )
+	{
+		return qfalse;
+	}
+
 	if (self->client->ps.pm_flags & PMF_FOLLOW)
 	{ //specs can't use powers through people
 		return qfalse;
@@ -778,12 +917,6 @@ qboolean WP_ForcePowerUsable( gentity_t *self, forcePowers_t forcePower )
 
 	// zyk: noclip players cannot use force
 	if (self->client->noclip == qtrue)
-	{
-		return qfalse;
-	}
-
-	// zyk: Time Power affected players cannot use force powers
-	if (self->client->pers.quest_power_status & (1 << 2))
 	{
 		return qfalse;
 	}
@@ -926,17 +1059,37 @@ int WP_AbsorbConversion(gentity_t *attacked, int atdAbsLevel, gentity_t *attacke
 		addTot = 1;
 	}
 
-	if (attacked->client->sess.amrpgmode == 2 && attacked->client->pers.skill_levels[8] == 4)
-	{ // zyk: Absorb 4/4 in RPG Mode absorbs more force
-		addTot = addTot + (zyk_max_force_power.integer/10);
+	// GalaxyRP fix: [Force] this was `== 4`, so Absorb 5 silently lost the bonus that Absorb 4 got
+	// while still keeping the level-4 no-upkeep-drain benefit (which tests `< FORCE_LEVEL_4`).
+	// Spending the points to go 4 -> 5 was a straight downgrade of 20 force per absorbed hit.
+	//
+	// GalaxyRP fix: [Force] at most once a second against Lightning and Drain. Those two call this
+	// on every 50ms tick of the channel (ForceLightningDamage / ForceDrainDamage) with atForceSpent 1,
+	// so the bonus meant to reward absorbing an attack was paid twenty times a second: holding Drain
+	// on an Absorb 4+ target filled their pool at about 500 force/s instead of emptying it, which made
+	// any Drain user a free refill for an Absorb 4+ ally. The timer is per victim and shared by every
+	// attacker, so two drainers do not double it. Push and Pull are single hits with their own
+	// cooldowns and keep the bonus per hit; Grip never gets here with Absorb active (ForcePowerUsableOn
+	// refuses to grip an absorbing target). The stock "at least 1 per absorbed tick" above is unchanged.
+	if (attacked->client->sess.amrpgmode == 2 && attacked->client->pers.skill_levels[8] >= FORCE_LEVEL_4)
+	{ // zyk: Absorb 4/4 and above in RPG Mode absorbs more force
+		if (atPower != FP_LIGHTNING && atPower != FP_DRAIN)
+		{
+			addTot = addTot + (RP_MAX_FORCE_POWER/10);
+		}
+		else if (attacked->client->absorbBonusTime <= level.time)
+		{
+			addTot = addTot + (RP_MAX_FORCE_POWER/10);
+			attacked->client->absorbBonusTime = level.time + 1000;
+		}
 	}
 
 	attacked->client->ps.fd.forcePower += addTot;
 
 	if (attacked->client->sess.amrpgmode == 2 && attacked->client->ps.fd.forcePower > attacked->client->pers.max_force_power)
 		attacked->client->ps.fd.forcePower = attacked->client->pers.max_force_power;
-	else if (attacked->client->sess.amrpgmode < 2 && attacked->client->ps.fd.forcePower > zyk_max_force_power.integer)
-		attacked->client->ps.fd.forcePower = zyk_max_force_power.integer;
+	else if (attacked->client->sess.amrpgmode < 2 && attacked->client->ps.fd.forcePower > RP_MAX_FORCE_POWER_LOGGED_OUT)
+		attacked->client->ps.fd.forcePower = RP_MAX_FORCE_POWER_LOGGED_OUT;
 
 	//play sound indicating that attack was absorbed
 	if (attacked->client->forcePowerSoundDebounce < level.time)
@@ -960,11 +1113,6 @@ void WP_ForcePowerRegenerate( gentity_t *self, int overrideAmt )
 	// zyk: if hit by the Duelist Unique Skill, cannot regen force
 	if (self->client->ps.powerups[PW_QUAD] > level.time)
 	{
-		return;
-	}
-
-	if (self->client->pers.quest_power_status & (1 << 2))
-	{ // zyk: hit by Time Power. Cannot regen force
 		return;
 	}
 
@@ -992,6 +1140,23 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 	if (!WP_ForcePowerAvailable( self, forcePower, overrideAmt ))
 	{
 		return;
+	}
+
+	// GalaxyRP fix: [Cloak Item] the offensive powers break cloak the moment they start -- see
+	// RP_AttackBreaksCloak. Mind Trick is deliberately left out: it is not an attack, so it keeps
+	// the cloak like the defensive and utility powers do. Grip, Drain and Lightning also
+	// break it on every frame they are held, in WP_ForcePowerRun.
+	switch ( (int)forcePower )
+	{
+	case FP_PUSH:
+	case FP_PULL:
+	case FP_GRIP:
+	case FP_LIGHTNING:
+	case FP_DRAIN:
+		RP_AttackBreaksCloak( self );
+		break;
+	default:
+		break;
 	}
 
 	if ( BG_FullBodyTauntAnim( self->client->ps.legsAnim ) )
@@ -1222,18 +1387,14 @@ void WP_ForcePowerStart( gentity_t *self, forcePowers_t forcePower, int override
 
 	if ((int)forcePower == FP_SPEED && overrideAmt)
 	{
-		// zyk: Force User class spends less force
-		if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 1)
-			overrideAmt = forcePowerNeeded[self->client->ps.fd.forcePowerLevel[forcePower]][forcePower] * 0.75;
-
-		BG_ForcePowerDrain( &self->client->ps, forcePower, overrideAmt*0.025 );
+		// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Force User drain-reduction branch unreachable
+		// GalaxyRP fix: [Force] routed through the same helper WP_ForcePowerAvailable() gates on, so
+		// the price quoted and the price charged are the same number by construction.
+		BG_ForcePowerDrain( &self->client->ps, forcePower, RP_ForceSpeedCost( overrideAmt ) );
 	}
 	else if ((int)forcePower != FP_GRIP && (int)forcePower != FP_DRAIN)
 	{ //grip and drain drain as damage is done
-		// zyk: Force User class spends less force
-		if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 1)
-			overrideAmt = forcePowerNeeded[self->client->ps.fd.forcePowerLevel[forcePower]][forcePower] * 0.75;
-
+		// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Force User drain-reduction branch unreachable
 		BG_ForcePowerDrain( &self->client->ps, forcePower, overrideAmt );
 	}
 }
@@ -1253,14 +1414,14 @@ void ForceHeal( gentity_t *self )
 	if ( self->health >= self->client->ps.stats[STAT_MAX_HEALTH])
 	{
 		// zyk: Shield Heal skill. Done when player has full HP
-		if (self->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[36] > 0 && self->client->ps.fd.forcePower >= zyk_max_force_power.integer/2 && self->client->ps.stats[STAT_ARMOR] < self->client->pers.max_rpg_shield)
+		if (self->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[36] > 0 && self->client->ps.fd.forcePower >= RP_ForceHealCost( self ) && self->client->ps.stats[STAT_ARMOR] < self->client->pers.max_rpg_shield)
 		{
 			self->client->ps.stats[STAT_ARMOR] += 4 * self->client->pers.skill_levels[36];
 
 			if (self->client->ps.stats[STAT_ARMOR] > self->client->pers.max_rpg_shield)
 				self->client->ps.stats[STAT_ARMOR] = self->client->pers.max_rpg_shield;
 
-			self->client->ps.fd.forcePower -= zyk_max_force_power.integer/2;
+			self->client->ps.fd.forcePower -= RP_ForceHealCost( self );
 
 			G_Sound(self, CHAN_AUTO, G_SoundIndex("sound/player/pickupshield.wav"));
 		}
@@ -1321,27 +1482,30 @@ void ForceHeal( gentity_t *self )
 	//NOTE: Decided to make all levels instant.
 
 	// zyk: now heal force power requires force based on the force power max cvar
-	self->client->ps.fd.forcePower -= (zyk_max_force_power.integer/2);
+	// GalaxyRP fix: [Force] costs half the caster's own maximum rather than half the server-wide
+	// one -- see RP_ForceHealCost above. WP_ForcePowerUsable() at the top of this function has
+	// already confirmed the pool covers this exact amount (it ends by delegating to
+	// WP_ForcePowerAvailable, which charges FP_HEAL the same helper), so this cannot go negative.
+	self->client->ps.fd.forcePower -= RP_ForceHealCost( self );
 
 	G_Sound( self, CHAN_ITEM, G_SoundIndex("sound/weapons/force/heal.wav") );
 }
 
+// GalaxyRP fix: [Force] only client slots go in these bitflags. The receiving side,
+// EV_TEAM_POWER in cg_event.c, walks clients 0..MAX_CLIENTS-1 and nothing else, so a bit for any
+// higher entity was never read. Worse, Team Heal and Team Energize select NPC targets as well
+// (their loop runs over every entity, not just clients), and an NPC in slot 80 or above reached
+// the trickedentindex4 arm this function used to have with a shift of 32 or more -- undefined
+// behaviour in C. NPC targets get their own event now, see RP_TeamPowerNPCEffect() below.
 void WP_AddToClientBitflags(gentity_t *ent, int entNum)
 {
-	if (!ent)
+	if (!ent || entNum < 0 || entNum >= MAX_CLIENTS)
 	{
 		return;
 	}
 
-	if (entNum > 47)
-	{
-		ent->s.trickedentindex4 |= (1 << (entNum-48));
-	}
-	else if (entNum > 31)
-	{
-		ent->s.trickedentindex3 |= (1 << (entNum-32));
-	}
-	else if (entNum > 15)
+	// the trickedentindex3/4 arms that used to follow for slots 32..63 are gone with the bound above
+	if (entNum > 15)
 	{
 		ent->s.trickedentindex2 |= (1 << (entNum-16));
 	}
@@ -1351,6 +1515,182 @@ void WP_AddToClientBitflags(gentity_t *ent, int entNum)
 	}
 }
 
+// GalaxyRP fix: [Force] the most targets a single Team Heal or Team Energize can affect. Both
+// used to collect their targets into "int pl[MAX_CLIENTS]" while walking every entity on the map,
+// and friendly NPCs qualify as well as players -- so the 33rd qualifying target was written past
+// the end of the array, on the stack. An admin NPC event or an SP map with a large friendly squad
+// in range of a level 5 cast (768 units) was enough. The collection loops now stop once this many
+// are held, which is what keeps them in bounds; the number itself is a gameplay limit. Players sit
+// in slots 0..MAX_CLIENTS-1 and the loops walk in slot order, so every eligible player is always
+// taken before any NPC.
+#define RP_TEAM_POWER_MAX_TARGETS		100
+
+// GalaxyRP fix: [Force] the most NPC targets of one cast that are sent a visual/sound event (see
+// RP_TeamPowerNPCEffect). Every NPC in range is still healed or energized; only the effect stops
+// here. Each event is a temp entity, and one per target is exactly the "many g_sound events at
+// once" the original code folded into a single bitflag event to avoid. These events are also
+// limited by RP_TeamPowerEffectBudget() below, which keeps them out of the entity reserve.
+#define RP_TEAM_POWER_MAX_NPC_EFFECTS	16
+
+/*
+GalaxyRP fix: [Force] how many optional effect temp entities one Team Heal / Team Energize cast may
+still create: the NPC visual events (RP_TeamPowerNPCEffect) and Team Shield Heal's pickup sound
+(G_Sound -> G_SoundTempEntity), one per shielded player.
+
+Every temp entity takes a real entity slot through G_Spawn() for about 300ms, and G_Spawn() cannot
+fail politely: with every slot in use it calls trap->Error(ERR_DROP), which ends a dedicated server
+(see ZYK_ENTITY_RESERVE in g_local.h). A cast used to create one temp entity; with an NPC squad and
+Team Shield Heal it could create up to 1 + 16 + 31, all of them cosmetic, so on a map already near
+the limit the cast itself could be the allocation that took the server down. Player- and
+admin-driven spawns keep ZYK_ENTITY_RESERVE slots back for the allocations nothing can refuse (see
+G_EntitySlotsAvailable in g_utils.c); these effects now do the same.
+
+One count per cast rather than a G_EntitySlotsAvailable(1) call per effect: each temp entity lowers
+G_FreeEntityCount() by exactly one, so counting down from a single scan gives the same answer
+without rescanning the entity table up to 47 times. The 1 held back is the cast's own
+EV_TEAM_POWER event, created in the same loop and deliberately NOT budgeted -- it predates this
+change, it is the one effect players rely on, and it is exactly the kind of single, unavoidable
+allocation the reserve is kept for. The result can be zero or negative; the callers then create no
+optional effects, while every heal, shield and energize is still applied.
+*/
+static int RP_TeamPowerEffectBudget( void )
+{
+	return G_FreeEntityCount() - ZYK_ENTITY_RESERVE - 1;
+}
+
+/*
+GalaxyRP fix: [Force] who Team Heal, Team Shield Heal and Team Energize may affect.
+
+The two powers used to carry their own hand-written conditions, and they had drifted into a set
+of different holes:
+
+- Team Heal's "connected and not spectating" test sat in one half of an OR whose other half
+  (playerTeam != NPCTEAM_ENEMY) is true for every real player outside Siege, so it never
+  excluded anyone.
+  Team Energize had no alive, connected or spectator test at all. A dead, spectating or
+  connecting ally in range was picked -- and a spectating ally at full health passed Team Shield
+  Heal's test too -- so the caster paid for a cast that did nothing useful.
+- Neither excluded a downed or admin-paralyzed target. WP_ForcePowerUsable() stops a downed
+  player healing THEMSELVES back to full before standing up; an ally's Team Heal (then Team
+  Shield Heal on the next cast) did the same thing for them, and bypassed an admin punishment.
+- In FFA a caster who was not logged in (amrpgmode 0) skipped the ally test entirely, on the
+  belief that such a player has no allies. /allyadd works while logged out, and the powers reach
+  logged-out players through the admin /give force and the Duel Tournament / Melee Battle
+  enlightenment prizes -- so those casters healed and energized enemy players, neutral NPCs and
+  (Team Energize had no NPC-team test) hostile NPCs.
+
+One rule for both powers now. The caller adds its own "needs it" test, the radius and the PVS
+check.
+*/
+static qboolean RP_TeamPowerTargetValid( gentity_t *self, gentity_t *ent, forcePowers_t power )
+{
+	if ( !self || !self->client || !ent || !ent->inuse || !ent->client || ent == self )
+	{
+		return qfalse;
+	}
+
+	// alive
+	if ( ent->health <= 0 || ent->client->ps.stats[STAT_HEALTH] <= 0 || (ent->client->ps.eFlags & EF_DEAD) )
+	{
+		return qfalse;
+	}
+
+	if ( ent->NPC || ent->s.eType == ET_NPC )
+	{
+		// kept from the old Team Heal test, now applied to Team Energize as well
+		if ( ent->s.NPC_class == CLASS_VEHICLE )
+		{
+			return qfalse;
+		}
+
+		// friendly npcs only, whatever the gametype. In FFA and the team gametypes OnSameTeam()
+		// below already answers every player/npc pair this way; GT_SINGLE_PLAYER and GT_POWERDUEL
+		// return from it before that point (any two non-bots, or equal duelTeam) and would
+		// otherwise let an enemy npc through. The old Team Heal test refused NPCTEAM_ENEMY npcs.
+		if ( ent->client->playerTeam != NPCTEAM_PLAYER )
+		{
+			return qfalse;
+		}
+	}
+	else
+	{
+		// a real player: in the game, not watching it
+		if ( ent->s.number >= MAX_CLIENTS ||
+			ent->client->pers.connected != CON_CONNECTED ||
+			ent->client->sess.sessionTeam == TEAM_SPECTATOR ||
+			(ent->client->ps.pm_flags & PMF_FOLLOW) ||
+			ent->client->tempSpectate >= level.time )
+		{
+			return qfalse;
+		}
+	}
+
+	// Both states set the DOWNED bit today; tested separately so neither depends on the other.
+	// NPCs are never downed (NPC_spawn.c zeroes player_statuses), so this only ever bites players.
+	if ( G_PlayerIsDowned( ent ) || G_PlayerIsAdminParalyzed( ent ) )
+	{
+		return qfalse;
+	}
+
+	// ysalamiri, duels, Duel Tournament, Melee Battle, noclip
+	if ( !ForcePowerUsableOn( self, ent, power ) )
+	{
+		return qfalse;
+	}
+
+	// teammates, and friendly NPCs (OnSameTeam treats NPCTEAM_PLAYER NPCs as the players' side in FFA)
+	if ( OnSameTeam( self, ent ) )
+	{
+		return qtrue;
+	}
+
+	// zyk: Team Heal and Team Energize can be used in FFA, on the caster's allies.
+	// GalaxyRP fix: [Settings] this used to also allow through a target who was not an ally
+	// (self->client->pers.player_settings & (1 << 10) -- the old /settings 5, "Use healing force
+	// only at allied players", set to OFF/bypass). That per-player choice has been removed (see the
+	// fix comment on settings_number_to_bit in Cmd_Settings_f), so in FFA both powers always
+	// restrict to allies -- for every caster now, the amrpgmode 0 exemption described above
+	// having gone as well.
+	if ( level.gametype == GT_FFA && zyk_is_ally( self, ent ) == qtrue )
+	{
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
+// GalaxyRP fix: [Force] the shield ceiling Team Shield Heal fills a target to. The target test used
+// a hard-coded 100 for anyone not logged in while the heal itself capped at their max health, so
+// the two could disagree. G_PublishMaxArmor() is the one place that rule lives (max_rpg_shield for
+// a logged-in player, max health for anyone else); refreshing it here rather than reading the value
+// left over from the last ClientEndFrame keeps a max-shield change earlier this frame from being
+// missed.
+static int RP_TeamShieldHealMax( gentity_t *ent )
+{
+	G_PublishMaxArmor( ent );
+
+	return ent->client->ps.stats[STAT_MAX_ARMOR];
+}
+
+/*
+GalaxyRP fix: [Force] the visual and sound for one NPC target of Team Heal / Team Energize.
+
+The shared EV_TEAM_POWER event names its targets in a bitflag that only has room for client
+slots, so an NPC target never showed the green/blue shell or played the sound. Each NPC target now
+gets its own EV_TEAM_POWER at the NPC, with no bitflags set, the NPC's number in otherEntityNum and
+TEAM_POWER_NPC_TARGET (bg_public.h) in generic1. A cgame that predates this sees an event with no
+bits set and does nothing, so nothing breaks for players on the old plugin. Callers send it only
+while RP_TeamPowerEffectBudget() leaves room above the entity reserve.
+*/
+static void RP_TeamPowerNPCEffect( gentity_t *npc, int eventParm )
+{
+	gentity_t *te = G_TempEntity( npc->r.currentOrigin, EV_TEAM_POWER );
+
+	te->s.eventParm = eventParm; // 1 is heal, 2 is force regen, as for the player event
+	te->s.otherEntityNum = npc->s.number;
+	te->s.generic1 = TEAM_POWER_NPC_TARGET;
+}
+
 void ForceTeamHeal( gentity_t *self )
 {
 	float radius = 256;
@@ -1358,8 +1698,11 @@ void ForceTeamHeal( gentity_t *self )
 	gentity_t *ent;
 	vec3_t a;
 	int numpl = 0;
-	int pl[MAX_CLIENTS];
+	int pl[RP_TEAM_POWER_MAX_TARGETS];
 	int healthadd = 0;
+	int npc_effects = 0;
+	int effect_budget = 0;
+	qboolean shield_heal = qfalse;
 	gentity_t *te = NULL;
 
 	if ( self->health <= 0 )
@@ -1394,34 +1737,28 @@ void ForceTeamHeal( gentity_t *self )
 		radius *= 3;
 	}
 
-	// while (i < MAX_CLIENTS)  // zyk: now the condition will be the level.num_entities
-	while (i < level.num_entities)
+	// zyk: Team Shield Heal skill of RPG Mode
+	if (self->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[37] > 0)
 	{
-		int max_shield = 0;
+		shield_heal = qtrue;
+	}
 
+	// zyk: now the condition will be the level.num_entities, so Team Heal also reaches npcs.
+	// GalaxyRP fix: [Force] who qualifies is RP_TeamPowerTargetValid()'s decision now -- see the
+	// comment there -- and the loop stops at RP_TEAM_POWER_MAX_TARGETS so pl[] cannot overflow.
+	while (i < level.num_entities && numpl < RP_TEAM_POWER_MAX_TARGETS)
+	{
 		ent = &g_entities[i];
 
-		if (ent && ent->client)
-			max_shield = ent->client->ps.stats[STAT_MAX_HEALTH];
-
-		if (ent && ent->client && ent->client->sess.amrpgmode == 2)
-			max_shield = ent->client->pers.max_rpg_shield;
-
-		if (ent && ent->client && self != ent && 
-			((!ent->NPC && ent->client->pers.connected == CON_CONNECTED && ent->client->sess.sessionTeam != TEAM_SPECTATOR) || 
-			 (ent->client->playerTeam != NPCTEAM_ENEMY && ent->client->pers.guardian_invoked_by_id == -1 && ent->s.NPC_class != CLASS_VEHICLE)) && 
-			 (ent->client->ps.stats[STAT_HEALTH] < ent->client->ps.stats[STAT_MAX_HEALTH] || 
-			 (self->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[37] > 0 && 
-			 !ent->NPC && ent->client->ps.stats[STAT_HEALTH] >= ent->client->ps.stats[STAT_MAX_HEALTH] && 
-			 ((ent->client->sess.amrpgmode < 2 && ent->client->ps.stats[STAT_ARMOR] < 100) || (ent->client->sess.amrpgmode == 2 && 
-			 ent->client->ps.stats[STAT_ARMOR] < max_shield)))) && ent->client->ps.stats[STAT_HEALTH] > 0 && ForcePowerUsableOn(self, ent, FP_TEAM_HEAL) &&
-		 	trap->InPVS(self->client->ps.origin, ent->client->ps.origin) && 
-			(((self->client->sess.amrpgmode == 0 || self->client->pers.player_settings & (1 << 10) || zyk_is_ally(self, ent) == qtrue) && 
-			 g_gametype.integer == GT_FFA) || OnSameTeam(self, ent)))
-		{ // zyk: Team Heal now can be used in FFA and in npcs. It will not heal enemy npcs
+		if (RP_TeamPowerTargetValid(self, ent, FP_TEAM_HEAL) &&
+			// needs health, or (Team Shield Heal) is at full health but short on shield. Npcs get
+			// health only.
+			(ent->client->ps.stats[STAT_HEALTH] < ent->client->ps.stats[STAT_MAX_HEALTH] ||
+			 (shield_heal && !ent->NPC && ent->client->ps.stats[STAT_ARMOR] < RP_TeamShieldHealMax(ent))))
+		{
 			VectorSubtract(self->client->ps.origin, ent->client->ps.origin, a);
 
-			if (VectorLength(a) <= radius)
+			if (VectorLength(a) <= radius && trap->InPVS(self->client->ps.origin, ent->client->ps.origin))
 			{
 				pl[numpl] = i;
 				numpl++;
@@ -1437,11 +1774,17 @@ void ForceTeamHeal( gentity_t *self )
 	}
 
 	// GalaxyRP (Alex): [Force Powers] For levels 4 and 5 heal a fixed amount, otherwise, based on how many people are healed
-	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == FORCE_LEVEL_4 && numpl > 2)
+	// GalaxyRP fix: [Force] both arms used to also require numpl > 2, so with one or two allies a
+	// level 4 or 5 healer fell through to the count-scaled arms below and delivered exactly what a
+	// level 1 healer does -- the upgrade was invisible in the most common case. It also made the
+	// payout run backwards: healing two allies gave 30 each while healing three gave 50 each. The
+	// count guard is dropped so the fixed amount really is fixed, as the comment above says. Levels
+	// 1 to 3 keep the count scaling untouched.
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == FORCE_LEVEL_4)
 	{
 		healthadd = 40;
 	}
-	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == FORCE_LEVEL_5 && numpl > 2)
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL] == FORCE_LEVEL_5)
 	{
 		healthadd = 50;
 	}
@@ -1459,36 +1802,55 @@ void ForceTeamHeal( gentity_t *self )
 	}
 
 	self->client->ps.fd.forcePowerDebounce[FP_TEAM_HEAL] = level.time + 2000;
+	effect_budget = RP_TeamPowerEffectBudget();
 	i = 0;
 
 	while (i < numpl)
 	{
-		if (g_entities[pl[i]].client->ps.stats[STAT_HEALTH] > 0 &&
-			g_entities[pl[i]].health > 0)
+		gentity_t *target = &g_entities[pl[i]];
+
+		if (target->client->ps.stats[STAT_HEALTH] > 0 &&
+			target->health > 0)
 		{
-			int max_shield = g_entities[pl[i]].client->ps.stats[STAT_MAX_HEALTH];
-			if (g_entities[pl[i]].client->sess.amrpgmode == 2)
-				max_shield = g_entities[pl[i]].client->pers.max_rpg_shield;
+			int max_health = target->client->ps.stats[STAT_MAX_HEALTH];
 
 			// zyk: Team Shield Heal skill of RPG Mode
-			if (self->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[37] > 0 && !g_entities[pl[i]].NPC && g_entities[pl[i]].client->ps.stats[STAT_HEALTH] >= g_entities[pl[i]].client->ps.stats[STAT_MAX_HEALTH] && g_entities[pl[i]].client->ps.stats[STAT_ARMOR] < max_shield)
+			if (shield_heal && !target->NPC && target->client->ps.stats[STAT_HEALTH] >= max_health)
 			{ // zyk: can only be used on players with full health already
-				g_entities[pl[i]].client->ps.stats[STAT_ARMOR] += 3 * self->client->pers.skill_levels[37];
+				int max_shield = RP_TeamShieldHealMax(target);
 
-				if (g_entities[pl[i]].client->ps.stats[STAT_ARMOR] > max_shield)
-					g_entities[pl[i]].client->ps.stats[STAT_ARMOR] = max_shield;
+				if (target->client->ps.stats[STAT_ARMOR] < max_shield)
+				{
+					target->client->ps.stats[STAT_ARMOR] += 3 * self->client->pers.skill_levels[37];
 
-				G_Sound(&g_entities[pl[i]], CHAN_AUTO, G_SoundIndex("sound/player/pickupshield.wav"));
+					if (target->client->ps.stats[STAT_ARMOR] > max_shield)
+						target->client->ps.stats[STAT_ARMOR] = max_shield;
+
+					// GalaxyRP fix: [Force] the sound is a temp entity per player -- up to 31 in one
+					// cast -- so it is left out once the entity reserve is reached; the shield is not.
+					// See RP_TeamPowerEffectBudget().
+					if (effect_budget > 0)
+					{
+						G_Sound(target, CHAN_AUTO, G_SoundIndex("sound/player/pickupshield.wav"));
+						effect_budget--;
+					}
+				}
 			}
 
-			g_entities[pl[i]].client->ps.stats[STAT_HEALTH] += healthadd;
-
-			if (g_entities[pl[i]].client->ps.stats[STAT_HEALTH] > g_entities[pl[i]].client->ps.stats[STAT_MAX_HEALTH])
+			// GalaxyRP fix: [Force] health is only added to a target below its maximum. This used to
+			// run for every target and then clamp to the maximum -- which, for a target picked by
+			// Team Shield Heal (already at full health), pulled anyone ABOVE their maximum back down.
+			if (target->client->ps.stats[STAT_HEALTH] < max_health)
 			{
-				g_entities[pl[i]].client->ps.stats[STAT_HEALTH] = g_entities[pl[i]].client->ps.stats[STAT_MAX_HEALTH];
-			}
+				target->client->ps.stats[STAT_HEALTH] += healthadd;
 
-			g_entities[pl[i]].health = g_entities[pl[i]].client->ps.stats[STAT_HEALTH];
+				if (target->client->ps.stats[STAT_HEALTH] > max_health)
+				{
+					target->client->ps.stats[STAT_HEALTH] = max_health;
+				}
+
+				target->health = target->client->ps.stats[STAT_HEALTH];
+			}
 
 			//At this point we know we got one, so add him into the collective event client bitflag
 			if (!te)
@@ -1500,8 +1862,17 @@ void ForceTeamHeal( gentity_t *self )
 				BG_ForcePowerDrain( &self->client->ps, FP_TEAM_HEAL, forcePowerNeeded[self->client->ps.fd.forcePowerLevel[FP_TEAM_HEAL]][FP_TEAM_HEAL] );
 			}
 
-			WP_AddToClientBitflags(te, pl[i]);
-			//Now cramming it all into one event.. doing this many g_sound events at once was a Bad Thing.
+			if (pl[i] < MAX_CLIENTS)
+			{
+				WP_AddToClientBitflags(te, pl[i]);
+				//Now cramming it all into one event.. doing this many g_sound events at once was a Bad Thing.
+			}
+			else if (npc_effects < RP_TEAM_POWER_MAX_NPC_EFFECTS && effect_budget > 0)
+			{
+				RP_TeamPowerNPCEffect(target, 1);
+				npc_effects++;
+				effect_budget--;
+			}
 		}
 		i++;
 	}
@@ -1514,11 +1885,11 @@ void ForceTeamForceReplenish( gentity_t *self )
 	gentity_t *ent;
 	vec3_t a;
 	int numpl = 0;
-	int pl[MAX_CLIENTS];
+	int pl[RP_TEAM_POWER_MAX_TARGETS];
 	int poweradd = 0;
+	int npc_effects = 0;
+	int effect_budget = 0;
 	gentity_t *te = NULL;
-	int max_blasterpack_ammo = 0;
-	int max_powercell_ammo = 0;
 
 	if ( self->health <= 0 )
 	{
@@ -1553,39 +1924,26 @@ void ForceTeamForceReplenish( gentity_t *self )
 		radius *= 3;
 	}
 
-	// while (i < MAX_CLIENTS)  // zyk: now the condition will be the level.num_entities
-	while (i < level.num_entities)
+	// zyk: now the condition will be the level.num_entities
+	// GalaxyRP fix: [Force] who qualifies is RP_TeamPowerTargetValid()'s decision now -- see the
+	// comment there -- and the loop stops at RP_TEAM_POWER_MAX_TARGETS so pl[] cannot overflow.
+	while (i < level.num_entities && numpl < RP_TEAM_POWER_MAX_TARGETS)
 	{
 		ent = &g_entities[i];
 
-		// zyk: Bounty Hunter class has more max ammo
-		if (ent && ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 2)
-		{
-			max_blasterpack_ammo = zyk_max_blaster_pack_ammo.integer + zyk_max_blaster_pack_ammo.integer/6 * ent->client->pers.skill_levels[55];
-			max_powercell_ammo = zyk_max_power_cell_ammo.integer + zyk_max_power_cell_ammo.integer/6 * ent->client->pers.skill_levels[55];
-		}
-		else
-		{
-			max_blasterpack_ammo = zyk_max_blaster_pack_ammo.integer;
-			max_powercell_ammo = zyk_max_power_cell_ammo.integer;
-		}
-
-		// zyk: created new condition so we can use Team Energize in FFA. Also added skill_levels[55] condition to restore ammo of the target
-		if (ent && ent->client && self != ent && 
-			(ent->client->ps.fd.forcePower < ent->client->ps.fd.forcePowerMax || 
-			 (self->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[55] > 0 && !ent->NPC && 
-			  ent->client->pers.connected == CON_CONNECTED && ent->client->sess.sessionTeam != TEAM_SPECTATOR &&
-			  (ent->client->ps.ammo[AMMO_BLASTER] < max_blasterpack_ammo || ent->client->ps.ammo[AMMO_POWERCELL] < max_powercell_ammo)
-			 )
-			) && 
-			ForcePowerUsableOn(self, ent, FP_TEAM_FORCE) &&
-			trap->InPVS(self->client->ps.origin, ent->client->ps.origin) && 
-			(((self->client->sess.amrpgmode == 0 || self->client->pers.player_settings & (1 << 10) || zyk_is_ally(self, ent) == qtrue) && 
-			g_gametype.integer == GT_FFA) || OnSameTeam(self, ent)))
+		// zyk: created new condition so we can use Team Energize in FFA.
+		// GalaxyRP fix: [Skills] this used to also select a target whose force power was already full
+		// but who was short on blaster pack/power cell ammo, gated behind pers.skill_levels[55]
+		// (Improvements) > 0, so the loop below could restore their ammo instead of force power.
+		// Improvements is now a reserved/unused skill (see the matching fix comment in
+		// do_upgrade_skill() in g_cmds.c), so that ammo-regen path -- and the target-selection branch
+		// that fed it -- have been removed outright, back to selecting only targets below full force.
+		if (RP_TeamPowerTargetValid(self, ent, FP_TEAM_FORCE) &&
+			ent->client->ps.fd.forcePower < ent->client->ps.fd.forcePowerMax)
 		{
 			VectorSubtract(self->client->ps.origin, ent->client->ps.origin, a);
 
-			if (VectorLength(a) <= radius)
+			if (VectorLength(a) <= radius && trap->InPVS(self->client->ps.origin, ent->client->ps.origin))
 			{
 				pl[numpl] = i;
 				numpl++;
@@ -1601,10 +1959,13 @@ void ForceTeamForceReplenish( gentity_t *self )
 	}
 
 	// zyk: decreased amount of force recovered. Default values in order: 50, 33 and 25
-	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_4 && numpl > 2) {
+	// GalaxyRP fix: [Force] same count-guard removal as Team Heal above -- levels 4 and 5 pay their
+	// fixed amount regardless of how many allies are in range, instead of silently dropping to the
+	// level-1 payout whenever fewer than three were caught.
+	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_4) {
 		poweradd = 40;
 	}
-	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_5 && numpl > 2) {
+	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_5) {
 		poweradd = 50;
 	}
 	else if (numpl == 1)
@@ -1620,45 +1981,42 @@ void ForceTeamForceReplenish( gentity_t *self )
 		poweradd = 20;
 	}
 
-	// GalaxyRP (Alex): [Force Powers] Cooldown should go down as the ability is more advanced
-	if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_1) {
-		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 2000;
-	}
-	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_2) {
-		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 1500;
-	}
-	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_3) {
-		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 1000;
-	}
-	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_4) {
-		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 500;
-	}
-	else if (self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE] == FORCE_LEVEL_5) {
-		self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time;
-	}
+	// GalaxyRP fix: [Force] a flat 2 second cooldown at every level, the same as Team Heal. It used
+	// to shrink with the level (2000/1500/1000/500 ms) down to NONE at level 5, where only the button
+	// release (or the 300ms repeat debounce on the force_forcepowerother bind) stood between casts.
+	// Level 4 and 5 pay a fixed amount to every target for one price, so two allied level 5
+	// energizers broke even at any rate they could cast -- unlimited force for both -- and three or
+	// more gained force on every round. The cost now also rises with the level (forcePowerNeeded[] in
+	// bg_pmove.c, 40 to 80); together these end the two-player loop and bound the larger ones.
+	self->client->ps.fd.forcePowerDebounce[FP_TEAM_FORCE] = level.time + 2000;
 
 	BG_ForcePowerDrain( &self->client->ps, FP_TEAM_FORCE, forcePowerNeeded[self->client->ps.fd.forcePowerLevel[FP_TEAM_FORCE]][FP_TEAM_FORCE] );
 
+	effect_budget = RP_TeamPowerEffectBudget();
 	i = 0;
 
 	while (i < numpl)
 	{
-		// zyk: Team Energize now can recover ammo if the player has full force and improvements skill
-		if (self->client->sess.amrpgmode == 2 && !g_entities[pl[i]].NPC && g_entities[pl[i]].client->ps.fd.forcePower == g_entities[pl[i]].client->ps.fd.forcePowerMax)
-		{
-			Add_Ammo(&g_entities[pl[i]], AMMO_BLASTER, (self->client->pers.skill_levels[55] * 10));
-			Add_Ammo(&g_entities[pl[i]], AMMO_POWERCELL, (self->client->pers.skill_levels[55] * 10));
-			G_Sound(&g_entities[pl[i]], CHAN_AUTO, G_SoundIndex("sound/player/pickupenergy.wav"));
-		}
-		else
-		{
-			g_entities[pl[i]].client->ps.fd.forcePower += poweradd;
+		gentity_t *target = &g_entities[pl[i]];
 
-			if (g_entities[pl[i]].client->sess.amrpgmode == 2 && g_entities[pl[i]].client->ps.fd.forcePower > g_entities[pl[i]].client->pers.max_force_power)
-				g_entities[pl[i]].client->ps.fd.forcePower = g_entities[pl[i]].client->pers.max_force_power;
-			else if (g_entities[pl[i]].client->sess.amrpgmode < 2 && g_entities[pl[i]].client->ps.fd.forcePower > zyk_max_force_power.integer) // zyk: now it must be the cvar, because this cvar is the max force
-				g_entities[pl[i]].client->ps.fd.forcePower = zyk_max_force_power.integer;
-		}
+		// GalaxyRP fix: [Skills] this used to branch here: if the target's force power was already
+		// full, recover their blaster pack/power cell ammo instead (scaled off the now-removed
+		// Improvements skill). Since only targets below full force power are selected above now, this
+		// branch is always taken -- restore force power unconditionally.
+		target->client->ps.fd.forcePower += poweradd;
+
+		// GalaxyRP fix: [Force] cap at the target's own maximum. This used to cap a logged-in
+		// character at pers.max_force_power and everyone else -- npcs included -- at
+		// RP_MAX_FORCE_POWER_LOGGED_OUT (100), a second copy of a rule forcePowerMax already holds:
+		// initialize_rpg_skills() and the Force Power skill upgrade set it to pers.max_force_power,
+		// WP_SpawnInitForcePowers() and /logout set it to RP_MAX_FORCE_POWER_LOGGED_OUT, and
+		// WP_ForcePowerRegenerate() caps at it. For npcs the two copies agreed only by accident: an
+		// npc that knows force powers has its .npc "forcePowerMax" overwritten with 100 by
+		// WP_SpawnInitForcePowers() (NPC_Begin, amrpgmode 0), so the fixed 100 matched -- but any
+		// other route to an npc maximum above 100 would have had its force cut on being energized.
+		// The target test above already requires forcePower < forcePowerMax.
+		if (target->client->ps.fd.forcePower > target->client->ps.fd.forcePowerMax)
+			target->client->ps.fd.forcePower = target->client->ps.fd.forcePowerMax;
 
 		//At this point we know we got one, so add him into the collective event client bitflag
 		if (!te)
@@ -1667,8 +2025,17 @@ void ForceTeamForceReplenish( gentity_t *self )
 			te->s.eventParm = 2; //eventParm 1 is heal, eventParm 2 is force regen
 		}
 
-		WP_AddToClientBitflags(te, pl[i]);
-		//Now cramming it all into one event.. doing this many g_sound events at once was a Bad Thing.
+		if (pl[i] < MAX_CLIENTS)
+		{
+			WP_AddToClientBitflags(te, pl[i]);
+			//Now cramming it all into one event.. doing this many g_sound events at once was a Bad Thing.
+		}
+		else if (npc_effects < RP_TEAM_POWER_MAX_NPC_EFFECTS && effect_budget > 0)
+		{
+			RP_TeamPowerNPCEffect(target, 2);
+			npc_effects++;
+			effect_budget--;
+		}
 
 		i++;
 	}
@@ -1699,6 +2066,17 @@ void ForceGrip( gentity_t *self )
 		return;
 	}
 
+	// DAJ_RP: [Force] no grip while you are being gripped yourself -- the same "being gripped" test this
+	// function already applies to the target below, and that ItemUse_Jetpack() (g_items.c) uses to refuse the
+	// jetpack in a grip. Stock let a held player grip back for the first seconds of a hold (until the choke at
+	// grip level 2 or 3 stopped him, never at level 1), so both ended up lifting each other and floating. A
+	// refused grip costs nothing: the power never starts, like a grip at empty air. Breaking free with
+	// Push or Pull clears the mark at once (ForceThrow()); a grip that simply ends leaves it up to a second.
+	if (self->client->ps.fd.forceGripBeingGripped >= level.time)
+	{
+		return;
+	}
+
 	if ( !WP_ForcePowerUsable( self, FP_GRIP ) )
 	{
 		return;
@@ -1718,24 +2096,18 @@ void ForceGrip( gentity_t *self )
 		g_entities[tr.entityNum].client &&
 		!g_entities[tr.entityNum].client->ps.fd.forceGripCripple &&
 		g_entities[tr.entityNum].client->ps.fd.forceGripBeingGripped < level.time &&
+		// DAJ_RP: [Force] ...nor grip the one gripping you. Covers the gap the test above cannot: the target's
+		// grip on you is active from the moment it starts (WP_DoSpecificPower()), while your "being gripped"
+		// mark only comes with its first update -- so two players gripping each other on the same frame
+		// cannot both get through, the first one handled wins.
+		!( g_entities[tr.entityNum].client->ps.fd.forceGripEntityNum == self->s.number &&
+		   ( g_entities[tr.entityNum].client->ps.fd.forcePowersActive & ( 1 << FP_GRIP ) ) ) &&
 		ForcePowerUsableOn(self, &g_entities[tr.entityNum], FP_GRIP) &&
 		(g_friendlyFire.integer || !OnSameTeam(self, &g_entities[tr.entityNum])) ) //don't grip someone who's still crippled
 	{
-		// zyk: Armored Soldier Upgrade has a chance of setting ysalamiri and resist the force power
-		if (g_entities[tr.entityNum].client && g_entities[tr.entityNum].client->sess.amrpgmode == 2 && 
-			g_entities[tr.entityNum].client->pers.rpg_class == 3 && g_entities[tr.entityNum].client->pers.secrets_found & (1 << 16) && 
-			g_entities[tr.entityNum].client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,4) < 2)
-		{
-			g_entities[tr.entityNum].client->ps.powerups[PW_YSALAMIRI] = level.time + 1500;
-			return;
-		}
+		// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Armored Soldier ysalamiri-resist check unreachable
 
-		// zyk: bosses cannot be gripped by players who are not in the boss battle
-		if (g_entities[tr.entityNum].client && g_entities[tr.entityNum].NPC && g_entities[tr.entityNum].client->pers.guardian_invoked_by_id != -1 &&
-			(self->client->sess.amrpgmode != 2 || self->client->pers.guardian_mode == 0))
-		{
-			return;
-		}
+		// GalaxyRP fix: [Dead Code] guardian_mode/guardian_invoked_by_id permanently 0/-1, boss-grip check unreachable
 
 		if (g_entities[tr.entityNum].s.number < MAX_CLIENTS && g_entities[tr.entityNum].client->ps.m_iVehicleNum)
 		{ //a player on a vehicle
@@ -1821,8 +2193,13 @@ void ForceSeeing( gentity_t *self )
 
 	WP_ForcePowerStart( self, FP_SEE, 0 );
 
-	//G_Sound( self, CHAN_AUTO, G_SoundIndex("sound/weapons/force/see.wav") );
-	//G_Sound( self, TRACK_CHANNEL_5, seeLoopSound );
+	// GalaxyRP fix: these two calls were left commented out, so Force Sense played no sound at
+	// all on activation. seeLoopSound is already lazily initialized above (in the same pattern as
+	// speedLoopSound, rageLoopSound, absorbLoopSound and protectLoopSound, all of which *do* play
+	// here in their respective functions), so this just wires the activation sound back in to
+	// match every other hold-style force power.
+	G_Sound( self, CHAN_AUTO, G_SoundIndex("sound/weapons/force/see.wav") );
+	G_Sound( self, TRACK_CHANNEL_5, seeLoopSound );
 }
 
 void ForceProtect( gentity_t *self )
@@ -2012,8 +2389,8 @@ void ForceLightningDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec
 				// zyk: changed the code below so we can use the cvar zyk_FORCE_POWER_MAX instead of hardcoded 100 force power max
 				if (traceEnt->client->sess.amrpgmode == 2 && traceEnt->client->ps.fd.forcePower > traceEnt->client->pers.max_force_power)
 					traceEnt->client->ps.fd.forcePower = traceEnt->client->pers.max_force_power;
-				else if (traceEnt->client->sess.amrpgmode < 2 && traceEnt->client->ps.fd.forcePower > zyk_max_force_power.integer)
-					traceEnt->client->ps.fd.forcePower = zyk_max_force_power.integer;
+				else if (traceEnt->client->sess.amrpgmode < 2 && traceEnt->client->ps.fd.forcePower > RP_MAX_FORCE_POWER_LOGGED_OUT)
+					traceEnt->client->ps.fd.forcePower = RP_MAX_FORCE_POWER_LOGGED_OUT;
 
 				return;
 			}
@@ -2069,16 +2446,8 @@ void ForceLightningDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec
 				if (dmg)
 				{
 					//rww - Shields can now absorb lightning too.
-					if (traceEnt && traceEnt->client && traceEnt->client->sess.amrpgmode == 2 && traceEnt->client->pers.rpg_class == 5)
-					{ // zyk: Stealth Attacker absorbs electric damage
-						if (!(traceEnt->client->pers.secrets_found & (1 << 7)))
-						{ // zyk: only takes damage if he does not have the upgrade
-							dmg = (int)ceil(dmg * (1 - (0.25 * traceEnt->client->pers.skill_levels[55])));
-							G_Damage( traceEnt, self, self, dir, impactPoint, dmg, 0, MOD_FORCE_DARK );
-						}
-					}
-					else
-						G_Damage( traceEnt, self, self, dir, impactPoint, dmg, 0, MOD_FORCE_DARK );
+					// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Stealth Attacker electric-absorb branch unreachable
+					G_Damage( traceEnt, self, self, dir, impactPoint, dmg, 0, MOD_FORCE_DARK );
 				}
 				if ( traceEnt->client )
 				{
@@ -2091,35 +2460,24 @@ void ForceLightningDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec
 					{ //only update every 400ms to reduce bandwidth usage (as it is passing a 32-bit time value)
 						traceEnt->client->ps.electrifyTime = level.time + 800;
 					}
-					if ( traceEnt->client->ps.powerups[PW_CLOAKED] )
-					{//disable cloak temporarily
-						if (traceEnt->client->sess.amrpgmode < 2 || traceEnt->client->pers.rpg_class != 5)
-						{ // zyk: Stealth Attacker cloak does not decloak by lightning attack
-							Jedi_Decloak( traceEnt );
-							traceEnt->client->cloakToggleTime = level.time + Q_irand( 3000, 10000 );
-						}
-					}
+					// GalaxyRP fix: [Cloak Item] the explicit decloak-on-hit block that used to be here is
+					// gone -- the conditional G_Damage() call above (when dmg is nonzero) already runs
+					// through the new centralized "any damage decloaks" hook (see G_Damage's own GalaxyRP
+					// fix comment in g_combat.c), which covers this hit generically now, pair-aware and
+					// with the same temporary re-cloak lockout. One minor behavior change: a lightning
+					// tick with dmg == 0 (no G_Damage() call at all) no longer decloaks on its own, since
+					// there's no damage there to decloak on.
 
-					// zyk: Armored Soldier Upgrade has a chance of setting ysalamiri and resist the force power
-					if (traceEnt->client->sess.amrpgmode == 2 && traceEnt->client->pers.rpg_class == 3 && 
-						traceEnt->client->pers.secrets_found & (1 << 16) && traceEnt->client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,10) == 0)
-					{
-						traceEnt->client->ps.powerups[PW_YSALAMIRI] = level.time + 1500;
+					// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Armored Soldier ysalamiri-resist branch unreachable
+					if (!traceEnt->NPC && traceEnt->client->jetPackOn)
+					{ //disable jetpack temporarily
+						// GalaxyRP fix: [Dead Code] rpg_class permanently 0, condition always true (amrpgmode!=2 || rpg_class!=5 || ...)
+						Jetpack_Off(traceEnt);
+						traceEnt->client->jetPackToggleTime = level.time + Q_irand(3000, 10000);
 					}
-					else
-					{
-						if (!traceEnt->NPC && traceEnt->client->jetPackOn)
-						{ //disable jetpack temporarily
-							if (traceEnt->client->sess.amrpgmode != 2 || traceEnt->client->pers.rpg_class != 5 || !(traceEnt->client->pers.secrets_found & (1 << 7)))
-							{ // zyk: do not disable jetpack of Stealth Attacker with Upgrade
-								Jetpack_Off(traceEnt);
-								traceEnt->client->jetPackToggleTime = level.time + Q_irand(3000, 10000);
-							}
-						}
-						else if (traceEnt->NPC && traceEnt->client->NPC_class == CLASS_BOBAFETT)
-						{ // zyk: also disables npc jetpack
-							Boba_FlyStop(traceEnt);
-						}
+					else if (traceEnt->NPC && traceEnt->client->NPC_class == CLASS_BOBAFETT)
+					{ // zyk: also disables npc jetpack
+						Boba_FlyStop(traceEnt);
 					}
 				}
 			}
@@ -2290,6 +2648,85 @@ void ForceDrain( gentity_t *self )
 	WP_ForcePowerStart( self, FP_DRAIN, 500 );
 }
 
+/*
+GalaxyRP fix: [Force] Drain Shield's second half: "It also makes Drain suck hp/shield from the enemy
+to restore your hp/shield". zyk wrote it as a branch inside ForceDrainDamage() for a target with no
+force left, but the check wrapped around the whole drain required the target to HAVE force, and
+nothing lets force go below 0, so the branch could never run.
+
+It runs now, for a target that is alive, has no force, and is not a vehicle, when the caster is a
+logged-in character with the Drain Shield skill. Downed and admin-paralyzed targets never reach it
+(ForceDrainDamage() refuses them outright). The damage goes through G_Damage(), so every protection
+that lives there -- allies, chat protection, duels and the mini-games, invulnerability, noclip,
+Protect, Rage -- applies, and the caster is restored by exactly what the target lost in health and
+shield: nothing when the hit was refused, and never more than was taken. Health first, anything left
+over to shield, each capped at the caster's maximum.
+*/
+static qboolean RP_DrainShieldCanSteal( gentity_t *self, gentity_t *target )
+{
+	if ( !self || !self->client || self->client->sess.amrpgmode != 2 || self->client->pers.skill_levels[33] <= 0 )
+	{
+		return qfalse;
+	}
+
+	if ( !target || !target->client || target->health <= 0 || target->client->ps.fd.forcePower > 0 )
+	{
+		return qfalse;
+	}
+
+	if ( target->s.eType == ET_NPC && target->s.NPC_class == CLASS_VEHICLE )
+	{
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+// health plus shield, the two things the steal can take
+static int RP_DrainShieldPool( gentity_t *target )
+{
+	int pool = (target->health > 0) ? target->health : 0;
+
+	if ( target->client && target->client->ps.stats[STAT_ARMOR] > 0 )
+	{
+		pool += target->client->ps.stats[STAT_ARMOR];
+	}
+
+	return pool;
+}
+
+static void RP_DrainShieldRestore( gentity_t *self, int amount )
+{
+	if ( amount <= 0 || self->health <= 0 || self->client->ps.stats[STAT_HEALTH] <= 0 )
+	{
+		return;
+	}
+
+	if ( self->health < self->client->ps.stats[STAT_MAX_HEALTH] )
+	{
+		int room = self->client->ps.stats[STAT_MAX_HEALTH] - self->health;
+
+		if ( room > amount )
+		{
+			room = amount;
+		}
+
+		self->health += room;
+		self->client->ps.stats[STAT_HEALTH] = self->health;
+		amount -= room;
+	}
+
+	if ( amount > 0 && self->client->ps.stats[STAT_ARMOR] < self->client->pers.max_rpg_shield )
+	{
+		self->client->ps.stats[STAT_ARMOR] += amount;
+
+		if ( self->client->ps.stats[STAT_ARMOR] > self->client->pers.max_rpg_shield )
+		{
+			self->client->ps.stats[STAT_ARMOR] = self->client->pers.max_rpg_shield;
+		}
+	}
+}
+
 void ForceDrainDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec3_t impactPoint )
 {
 	gentity_t *tent;
@@ -2300,7 +2737,20 @@ void ForceDrainDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec3_t 
 
 	if ( traceEnt && traceEnt->takedamage )
 	{
-		if ( traceEnt->client && (!OnSameTeam(self, traceEnt) || g_friendlyFire.integer) && self->client->ps.fd.forceDrainTime < level.time && traceEnt->client->ps.fd.forcePower )
+		// GalaxyRP fix: [Force] never a corpse, a downed player or an admin-paralyzed one. The level
+		// 1-2 beam had no health test at all (only the level 3+ cone skipped corpses), so it drained
+		// the force still sitting on a dead body; and nothing refused a downed or paralyzed target,
+		// who cannot defend or start Absorb, so they were a free heal source for the whole countdown.
+		// ForceShootDrain() already filters all three; this is the backstop for any other caller.
+		if ( traceEnt->health <= 0 || G_PlayerIsDowned( traceEnt ) || G_PlayerIsAdminParalyzed( traceEnt ) )
+		{
+			return;
+		}
+
+		// GalaxyRP fix: [Force] "|| RP_DrainShieldCanSteal" -- see the comment on that function. This
+		// test alone is what made the Drain Shield steal branch below unreachable.
+		if ( traceEnt->client && (!OnSameTeam(self, traceEnt) || g_friendlyFire.integer) && self->client->ps.fd.forceDrainTime < level.time &&
+			(traceEnt->client->ps.fd.forcePower || RP_DrainShieldCanSteal(self, traceEnt)) )
 		{//an enemy or object
 			if (!traceEnt->client && traceEnt->s.eType == ET_NPC)
 			{ //g2animent
@@ -2310,18 +2760,14 @@ void ForceDrainDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec3_t 
 				}
 			}
 
-			// zyk: Armored Soldier Upgrade has a chance of setting ysalamiri and resist the force power
-			if (traceEnt->client && traceEnt->client->sess.amrpgmode == 2 && traceEnt->client->pers.rpg_class == 3 &&
-				traceEnt->client->pers.secrets_found & (1 << 16) && traceEnt->client->ps.powerups[PW_YSALAMIRI] < level.time && 
-				Q_irand(0, 10) == 0)
-			{
-				traceEnt->client->ps.powerups[PW_YSALAMIRI] = level.time + 1500;
-			}
+			// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Armored Soldier ysalamiri-resist branch unreachable
 
 			if (ForcePowerUsableOn(self, traceEnt, FP_DRAIN))
 			{
 				int modPowerLevel = -1;
 				int	dmg = 0; //Q_irand( 1, 3 );
+				int stolen = 0; // GalaxyRP fix: [Force] health+shield taken by the Drain Shield steal
+				qboolean steal_tried = qfalse;
 				if (self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_1)
 				{
 					dmg = 2; //because it's one-shot
@@ -2351,26 +2797,48 @@ void ForceDrainDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec3_t 
 
 				if (modPowerLevel != -1)
 				{
-					if (!modPowerLevel)
+					// GalaxyRP fix: [Force] this used to be an if/else chain with arms for
+					// modPowerLevel 0, 1 and 2 only. modPowerLevel is the attacker's Drain level minus
+					// the defender's Absorb level (WP_AbsorbConversion), and in vanilla that could
+					// never exceed 2 -- Drain capped at 3 and an Absorb of 0 returns -1 earlier -- so
+					// the chain was complete. Raising Drain to 5 while Absorb stays capped at 3 lets
+					// the difference reach 3 or 4, which matched no arm and left dmg at its full
+					// value: Absorb 1 cut Drain 3 from 4 damage to 2 but did nothing whatsoever
+					// against Drain 4 or 5, while still refunding force and playing the absorb sound
+					// so it looked like it had worked. Written as a clamp rather than more arms
+					// because that is what the old chain computed for every reachable case
+					// (modPowerLevel is always below dmg here) and it cannot go stale if either
+					// power's level range changes again.
+					if (modPowerLevel < dmg)
 					{
-						dmg = 0;
-					}
-					else if (modPowerLevel == 1)
-					{
-						dmg = 1;
-					}
-					else if (modPowerLevel == 2)
-					{
-						dmg = 2;
+						dmg = modPowerLevel;
 					}
 				}
 				//G_Damage( traceEnt, self, self, dir, impactPoint, dmg, 0, MOD_FORCE_DARK );
 
 				if (dmg)
 				{
-					if (self->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[33] > 0 && traceEnt->client->ps.fd.forcePower <= 0)
+					if (RP_DrainShieldCanSteal(self, traceEnt))
 					{ // zyk: Drain Shield skill. Enemy has no force. Damages him
-						G_Damage( traceEnt, self, self, NULL, impactPoint, (dmg/2), 0, MOD_FORCE_DARK );
+						// GalaxyRP fix: [Force] measured before and after, so the caster is restored
+						// by what the target really lost (see RP_DrainShieldCanSteal). dmg is cleared
+						// so the force-drain restore further down does not also pay out.
+						const int before = RP_DrainShieldPool(traceEnt);
+
+						steal_tried = qtrue;
+
+						if (dmg / 2 > 0)
+						{
+							G_Damage( traceEnt, self, self, NULL, impactPoint, (dmg/2), 0, MOD_FORCE_DARK );
+							stolen = before - RP_DrainShieldPool(traceEnt);
+
+							if (stolen < 0)
+							{
+								stolen = 0;
+							}
+						}
+
+						dmg = 0;
 					}
 					else if (traceEnt->client->ps.fd.forcePower >= dmg)
 					{
@@ -2392,6 +2860,9 @@ void ForceDrainDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec3_t 
 					traceEnt->client->ps.fd.forcePower = 0;
 				}
 
+				// GalaxyRP fix: [Force] the Drain Shield steal pays out here, health then shield
+				RP_DrainShieldRestore(self, stolen);
+
 				if (self->client->ps.stats[STAT_HEALTH] < self->client->ps.stats[STAT_MAX_HEALTH] &&
 					self->health > 0 && self->client->ps.stats[STAT_HEALTH] > 0 && dmg > 0)
 				{ // zyk: only recover hp if dmg > 0, which means enemy had force to consume
@@ -2407,7 +2878,13 @@ void ForceDrainDamage( gentity_t *self, gentity_t *traceEnt, vec3_t dir, vec3_t 
 					self->client->ps.stats[STAT_ARMOR] += 1;
 				}
 
-				traceEnt->client->ps.fd.forcePowerRegenDebounceTime = level.time + 800; //don't let the client being drained get force power back right away
+				// GalaxyRP fix: [Force] not when a Drain Shield steal was refused (an ally, chat
+				// protection, invulnerability...): a target G_Damage would not touch had its force
+				// regeneration frozen for as long as the caster held Drain on them.
+				if (!steal_tried || stolen > 0)
+				{
+					traceEnt->client->ps.fd.forcePowerRegenDebounceTime = level.time + 800; //don't let the client being drained get force power back right away
+				}
 
 				//Drain the standard amount since we just drained someone else
 
@@ -2466,6 +2943,20 @@ int ForceShootDrain( gentity_t *self )
 	{
 		return 0;
 	}
+
+	// GalaxyRP: [Force Drain FX] set the caster's hand/channel FX flag up front, before the target
+	// search below, so it refreshes every tick this function runs regardless of whether a target is
+	// actually found. It used to sit after the if/else below; the trace-line branch (levels 1-2)
+	// returns early the instant it doesn't hit a valid client, which skipped that assignment entirely
+	// and silently suppressed the caster's own hand effect whenever Drain was used on empty space at
+	// low levels -- while the arc branch (level 3+) has no such early return, so it always reached the
+	// assignment and looked correct. Moving it here matches both the arc branch's existing behavior and
+	// ForceShootLightning's sibling flag (set once, independent of whether a hit lands -- see
+	// WP_ForcePowerStart's FP_LIGHTNING case). This only touches the cosmetic FX flag: the
+	// BG_ForcePowerDrain cost and the regen debounce below are untouched and still only apply when a
+	// target is actually hit, so this doesn't change how much Force channeling costs.
+	self->client->ps.activeForcePass = self->client->ps.fd.forcePowerLevel[FP_DRAIN] + FORCE_LEVEL_3;
+
 	AngleVectors( self->client->ps.viewangles, forward, NULL, NULL );
 	VectorNormalize( forward );
 
@@ -2508,6 +2999,9 @@ int ForceShootDrain( gentity_t *self )
 			if ( traceEnt->health <= 0 )//no torturing corpses
 				continue;
 			if ( !traceEnt->client )
+				continue;
+			// GalaxyRP fix: [Force] nor the downed or the admin-paralyzed -- see ForceDrainDamage()
+			if ( G_PlayerIsDowned( traceEnt ) || G_PlayerIsAdminParalyzed( traceEnt ) )
 				continue;
 			//if ( !traceEnt->client->ps.fd.forcePower ) zyk: no longer test it here
 				//continue;
@@ -2575,11 +3069,18 @@ int ForceShootDrain( gentity_t *self )
 		}
 
 		traceEnt = &g_entities[tr.entityNum];
+
+		// GalaxyRP fix: [Force] a corpse, a downed player or an admin-paralyzed one counts as a miss:
+		// nothing is drained and, like any other miss on this branch, the tick costs nothing. The cone
+		// above skips the same three.
+		if ( traceEnt->health <= 0 || G_PlayerIsDowned( traceEnt ) || G_PlayerIsAdminParalyzed( traceEnt ) )
+		{
+			return 0;
+		}
+
 		ForceDrainDamage( self, traceEnt, forward, tr.endpos );
 		gotOneOrMore = 1;
 	}
-
-	self->client->ps.activeForcePass = self->client->ps.fd.forcePowerLevel[FP_DRAIN] + FORCE_LEVEL_3;
 
 	BG_ForcePowerDrain( &self->client->ps, FP_DRAIN, 5 ); //used to be 1, but this did, too, anger the God of Balance.
 
@@ -2830,14 +3331,7 @@ qboolean ForceTelepathyCheckDirectNPCTarget( gentity_t *self, trace_t *tr, qbool
 
 	traceEnt = &g_entities[tr->entityNum];
 
-	if (traceEnt && traceEnt->client && traceEnt->NPC)
-	{
-		// zyk: cant use Mind trick on guardians of RPG Mode
-		if (traceEnt->client->pers.guardian_invoked_by_id != -1)
-		{
-			return qfalse;
-		}
-	}
+	// GalaxyRP fix: [Dead Code] guardian_mode/guardian_invoked_by_id permanently 0/-1, guardian mind-trick block unreachable
 
 	return qtrue; // zyk: now always returns here
 
@@ -3110,20 +3604,9 @@ void ForceTelepathy(gentity_t *self)
 
 			tricked_entity = &g_entities[tr.entityNum];
 
-			// zyk: cant use Mind trick on guardians of RPG Mode
-			if (tricked_entity && tricked_entity->client && tricked_entity->client->pers.guardian_invoked_by_id != -1)
-			{
-				return;
-			}
+			// GalaxyRP fix: [Dead Code] guardian_mode/guardian_invoked_by_id permanently 0/-1, guardian mind-trick check unreachable
 
-			// zyk: Armored Soldier Upgrade has a chance of setting ysalamiri and resist the force power
-			if (tricked_entity && tricked_entity->client && tricked_entity->client->sess.amrpgmode == 2 && 
-				tricked_entity->client->pers.rpg_class == 3 && tricked_entity->client->pers.secrets_found & (1 << 16) && 
-				tricked_entity->client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,4) < 2)
-			{
-				tricked_entity->client->ps.powerups[PW_YSALAMIRI] = level.time + 1500;
-				return;
-			}
+			// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Armored Soldier ysalamiri-resist branch unreachable
 
 			if (!ForcePowerUsableOn(self, tricked_entity, FP_TELEPATHY))
 			{
@@ -3137,23 +3620,7 @@ void ForceTelepathy(gentity_t *self)
 				return;
 			}
 
-			// zyk: mind control this player, if he is not being mind controlled by someone else
-			if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 1 && 
-				(tricked_entity->NPC || (tricked_entity->client->sess.sessionTeam != TEAM_SPECTATOR && tricked_entity->inuse == qtrue)) && 
-				tricked_entity->s.NPC_class != CLASS_VEHICLE && tricked_entity->client->pers.being_mind_controlled == -1 && 
-				self->client->pers.being_mind_controlled == -1 && 
-				((tricked_entity->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[11] > tricked_entity->client->pers.skill_levels[4]) || 
-				(tricked_entity->client->sess.amrpgmode != 2 && self->client->pers.skill_levels[11] > tricked_entity->client->ps.fd.forcePowerLevel[FP_SEE])) && tricked_entity->health > 0 && 
-				self->client->ps.hasLookTarget && self->client->ps.lookTarget == tricked_entity->s.number)
-			{
-				if (self->client->pers.mind_controlled1_id == -1)
-				{
-					self->client->pers.mind_controlled1_id = tricked_entity-g_entities;
-					tricked_entity->client->pers.being_mind_controlled = self-g_entities;
-
-					trap->SendServerCommand( tricked_entity-g_entities, va("cp \"^7You are being Mind-Controlled by ^7%s\n\"", self->client->pers.netname ) );
-				}
-			}
+			// GalaxyRP fix: [Dead Code] rpg_class permanently 0, mind-control-target block unreachable
 
 			if ( !tookPower )
 			{
@@ -3223,40 +3690,14 @@ void ForceTelepathy(gentity_t *self)
 			{
 				gotatleastone = qtrue;
 
-				// zyk: cant use Mind trick on guardians of RPG Mode
-				if (ent && ent->client && ent->client->pers.guardian_invoked_by_id != -1)
-				{
-					return;
-				}
+				// GalaxyRP fix: [Dead Code] guardian_mode/guardian_invoked_by_id permanently 0/-1, guardian mind-trick check unreachable
 
-				// zyk: Armored Soldier Upgrade has a chance of setting ysalamiri and resist the force power
-				if (ent && ent->client && ent->client->sess.amrpgmode == 2 && 
-					ent->client->pers.rpg_class == 3 && ent->client->pers.secrets_found & (1 << 16) && 
-					ent->client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,4) < 2)
-				{
-					ent->client->ps.powerups[PW_YSALAMIRI] = level.time + 1500;
-					return;
-				}
+				// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Armored Soldier ysalamiri-resist branch unreachable
 
 				if (!ent->NPC) // zyk: NPCs wont have the glowing head effect of mind trick because of how the game handles the tricked entities
 					WP_AddAsMindtricked(&self->client->ps.fd, ent->s.number);
 
-				// zyk: mind control this player, if he is not being mind controlled by someone else
-				if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 1 && 
-					(ent->NPC || (ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->inuse == qtrue)) && ent->s.NPC_class != CLASS_VEHICLE && 
-					ent->client->pers.being_mind_controlled == -1 && self->client->pers.being_mind_controlled == -1 && 
-					((ent->client->sess.amrpgmode == 2 && self->client->pers.skill_levels[11] > ent->client->pers.skill_levels[4]) || 
-					(ent->client->sess.amrpgmode != 2 && self->client->pers.skill_levels[11] > ent->client->ps.fd.forcePowerLevel[FP_SEE])) && 
-					ent->health > 0 && self->client->ps.hasLookTarget && self->client->ps.lookTarget == ent->s.number)
-				{
-					if (self->client->pers.mind_controlled1_id == -1)
-					{
-						self->client->pers.mind_controlled1_id = ent-g_entities;
-						ent->client->pers.being_mind_controlled = self-g_entities;
-
-						trap->SendServerCommand( ent-g_entities, va("cp \"^7You are being Mind-Controlled by ^7%s\n\"", self->client->pers.netname ) );
-					}
-				}
+				// GalaxyRP fix: [Dead Code] rpg_class permanently 0, mind-control-target block unreachable
 			}
 			e++;
 		}
@@ -3287,6 +3728,13 @@ void GEntity_UseFunc( gentity_t *self, gentity_t *other, gentity_t *activator )
 qboolean CanCounterThrow(gentity_t *self, gentity_t *thrower, qboolean pull)
 {
 	int powerUse = 0;
+
+	// DAJ_RP: [NPC System] a frozen NPC does not push or pull back: it is thrown like anyone who cannot
+	// resist -- see RP_NpcFreeze() (NPC_spawn.c)
+	if (RP_NpcIsFrozen(self))
+	{
+		return 0;
+	}
 
 	if (self->client->ps.forceHandExtend != HANDEXTEND_NONE)
 	{
@@ -3437,6 +3885,43 @@ float forcePushPullRadius[NUM_FORCE_POWER_LEVELS] =
 //rwwFIXMEFIXME: incorporate this into the below function? Currently it's only being used by jedi AI
 
 extern void Touch_Button(gentity_t *ent, gentity_t *other, trace_t *trace );
+
+/*
+===============
+RP_ForceUsableStatic / RP_ForceStaticSeen
+
+DAJ_RP: [Force Powers] a func_static that Force Push (F_PUSH, 1) or Pull (F_PULL, 2) uses can be an invisible brush that
+is not solid at all: textures/system/caulk_nonsolid, whose only content is CONTENTS_OPAQUE -- kor1 (three), kor2 (the
+pillar, push_brush), t1_surprise, vjun2 (secret_crate) and yavin2 (open_door_switch) among the stock single player maps.
+Single player's push and pull traces take CONTENTS_OPAQUE (its MASK_OPAQUE and MASK_FORCE_PUSH, wp_saber.cpp); ours,
+MASK_PLAYERSOLID and MASK_SHOT, do not: the aimed (level 1) trace went through such a brush, and the area one found it but
+judged it out of sight whenever something solid stood between the player and its centre. So, for these only:
+  - level 1: when our trace finds no entity (nothing, or the world), the same trace that also stops at opaque brushes,
+    taken only if the first thing it meets is such a func_static for this power; a target our trace finds always wins;
+  - levels 2-5: such a func_static our line-of-sight test calls hidden is in sight when a line from the eyes that also
+    stops at opaque brushes reaches it first, single player's own test.
+Either trace stops at everything ours does and at opaque brushes besides, so it can only ever add such a func_static:
+no other target, and no solid func_static, is pushed, pulled or skipped differently.
+===============
+*/
+static qboolean RP_ForceUsableStatic( const gentity_t *ent, qboolean pull )
+{
+	return ( ent && ent->inuse && !ent->client && ent->classname && !Q_stricmp( ent->classname, "func_static" )
+		&& ( ent->spawnflags & ( pull ? 2/*F_PULL*/ : 1/*F_PUSH*/ ) ) ) ? qtrue : qfalse;
+}
+
+static qboolean RP_ForceStaticSeen( gentity_t *self, gentity_t *ent, const vec3_t eyePoint, const vec3_t ent_org, qboolean pull )
+{
+	trace_t	tr;
+
+	if ( !RP_ForceUsableStatic( ent, pull ) )
+	{
+		return qfalse;
+	}
+	trap->Trace( &tr, eyePoint, vec3_origin, vec3_origin, ent_org, self->s.number, MASK_SHOT|CONTENTS_OPAQUE, qfalse, 0, 0 );
+	return ( tr.fraction == 1.0f || tr.entityNum == ent->s.number ) ? qtrue : qfalse;
+}
+
 void ForceThrow( gentity_t *self, qboolean pull )
 {
 	//shove things in front of you away
@@ -3614,6 +4099,18 @@ void ForceThrow( gentity_t *self, qboolean pull )
 		// zyk: added CONTENTS_TRIGGER so items are traced
 		trap->Trace(&tr, tfrom, NULL, NULL, tto, self->s.number, MASK_PLAYERSOLID|CONTENTS_TRIGGER, qfalse, 0, 0);
 
+		// DAJ_RP: [Force Powers] nothing found: a non-solid push/pull func_static in the way? (RP_ForceUsableStatic)
+		if (tr.fraction == 1.0 || tr.entityNum == ENTITYNUM_NONE || tr.entityNum == ENTITYNUM_WORLD)
+		{
+			trace_t opaqueTr;
+			trap->Trace(&opaqueTr, tfrom, NULL, NULL, tto, self->s.number, MASK_PLAYERSOLID|CONTENTS_TRIGGER|CONTENTS_OPAQUE, qfalse, 0, 0);
+			if (opaqueTr.fraction != 1.0 && opaqueTr.entityNum >= 0 && opaqueTr.entityNum < ENTITYNUM_WORLD &&
+				RP_ForceUsableStatic(&g_entities[opaqueTr.entityNum], pull))
+			{
+				tr = opaqueTr;
+			}
+		}
+
 		if (tr.fraction != 1.0 &&
 			tr.entityNum != ENTITYNUM_NONE)
 		{
@@ -3749,13 +4246,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 			continue;
 		}
 
-		// zyk: Armored Soldier Upgrade has a chance of setting ysalamiri and resist the force power
-		if (ent && ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 3 && 
-			ent->client->pers.secrets_found & (1 << 16) && ent->client->ps.powerups[PW_YSALAMIRI] < level.time && Q_irand(0,3) == 0)
-		{
-			ent->client->ps.powerups[PW_YSALAMIRI] = level.time + 1500;
-			continue;
-		}
+		// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Armored Soldier ysalamiri-resist branch unreachable
 
 		if ( ent->s.eType != ET_MISSILE )
 		{
@@ -3866,7 +4357,8 @@ void ForceThrow( gentity_t *self, qboolean pull )
 			eyePoint[2] += self->client->ps.viewheight;
 			trap->Trace( &tr, eyePoint, vec3_origin, vec3_origin, ent_org, self->s.number, MASK_SHOT, qfalse, 0, 0 );
 
-			if ( tr.fraction < 1.0f && tr.entityNum != ent->s.number )
+			if ( tr.fraction < 1.0f && tr.entityNum != ent->s.number
+				&& !RP_ForceStaticSeen( self, ent, eyePoint, ent_org, pull ) )	// DAJ_RP: [Force Powers] a non-solid push/pull func_static
 			{
 				continue;
 			}
@@ -3921,12 +4413,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 					}
 				}
 
-				// zyk: Armored Soldier can resist Push and Pull if he has the Upgrade
-				if (push_list[x]->client->sess.amrpgmode == 2 && push_list[x]->client->pers.rpg_class == 3 && 
-					push_list[x]->client->pers.secrets_found & (1 << 16) && Q_irand(0,3) == 0)
-				{
-					canPullWeapon = qfalse;
-				}
+				// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Armored Soldier push/pull resist branch unreachable
 
 				pushPowerMod = pushPower;
 
@@ -4006,6 +4493,23 @@ void ForceThrow( gentity_t *self, qboolean pull )
 					{
 						int randfact = 0;
 
+						// GalaxyRP fix: [Force Powers] >= FORCE_LEVEL_3 for the top arm, not ==.
+						//
+						// forcePowerLevels_t runs to FORCE_LEVEL_5 and initialize_rpg_skills() feeds
+						// forcePowerLevel[FP_PULL] straight from skill_levels[2], whose Pull skill maxes
+						// at 5 -- so a character with Pull 4 or 5 matched none of these three arms,
+						// randfact stayed 0, and "Q_irand(1, 10) <= 0" is never true. The disarm below
+						// could not fire at all, against players or NPCs. Levelling Pull past 3 removed
+						// the ability outright: 100% at level 3, 0% at levels 4 and 5.
+						//
+						// Level 3 already means "always", so 4 and 5 land on the same 10 rather than
+						// anything stronger -- there is nothing above certainty to give them.
+						//
+						// The visionArc chain near the top of this function was extended for levels 4
+						// and 5 when the cap was raised; this chain and the knockdown below were the two
+						// the sweep missed. Fourteen of the seventeen exact FORCE_LEVEL_3 tests in this
+						// file handle 4/5 already, DoGripAction() covers them with its own
+						// "gripLevel > FORCE_LEVEL_3" branch, and these two were the remainder.
 						if (modPowerLevel == FORCE_LEVEL_1)
 						{
 							randfact = 3;
@@ -4014,21 +4518,14 @@ void ForceThrow( gentity_t *self, qboolean pull )
 						{
 							randfact = 7;
 						}
-						else if (modPowerLevel == FORCE_LEVEL_3)
+						else if (modPowerLevel >= FORCE_LEVEL_3)
 						{
 							randfact = 10;
 						}
 
-						// zyk: Stealth Attacker Upgrade protects from losing weapon to force pull
-						if (push_list[x]->client->sess.amrpgmode == 2 && push_list[x]->client->pers.rpg_class == 5 && push_list[x]->client->pers.secrets_found & (1 << 7))
-						{
-							canPullWeapon = qfalse;
-						}
+						// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Stealth Attacker pull-protect branch unreachable
 
-						if (push_list[x]->NPC && push_list[x]->client->pers.guardian_invoked_by_id != -1)
-						{ // zyk: guardians cannot have their weapon pulled from them
-							canPullWeapon = qfalse;
-						}
+						// GalaxyRP fix: [Dead Code] guardian_mode/guardian_invoked_by_id permanently 0/-1, guardian pull-protect branch unreachable
 
 						if (push_list[x]->NPC && push_list[x]->client->NPC_class == CLASS_VEHICLE)
 						{ // zyk: cannot pull anything from vehicles
@@ -4056,7 +4553,19 @@ void ForceThrow( gentity_t *self, qboolean pull )
 
 				if ((modPowerLevel > otherPushPower || push_list[x]->client->ps.m_iVehicleNum) && push_list[x]->client)
 				{
-					if (modPowerLevel == FORCE_LEVEL_3 &&
+					// GalaxyRP fix: [Force Powers] >= FORCE_LEVEL_3, same cause as the disarm chain above:
+					// this is the level-3 knockdown, and an exact test meant Push or Pull at 4 or 5 --
+					// reachable since the force cap was raised to 5 -- knocked nobody down at all. It
+					// cost both powers their signature effect at exactly the levels a player pays most
+					// for.
+					//
+					// Note the reach below is "64 * ((modPowerLevel - otherPushPower) - 1)", which was
+					// already written to scale with the attacker's level and has simply never run above
+					// 3. Letting it do so is the point of the fix rather than a separate buff, and it
+					// stays self-balancing: it keys on the DIFFERENCE between attacker and defender, so
+					// a level 5 push still only reaches 64 units against someone defending at level 3,
+					// the same as level 3 against a level 1.
+					if (modPowerLevel >= FORCE_LEVEL_3 &&
 						push_list[x]->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN)
 					{
 						dirLen = VectorLength(pushDir);
@@ -4064,18 +4573,12 @@ void ForceThrow( gentity_t *self, qboolean pull )
 						if (BG_KnockDownable(&push_list[x]->client->ps) &&
 							dirLen <= (64*((modPowerLevel - otherPushPower)-1)))
 						{ //can only do a knockdown if fairly close
-							// zyk: Armored Soldier will not be knocked down if he has the Upgrade
-							if (push_list[x]->client->sess.amrpgmode != 2 || push_list[x]->client->pers.rpg_class != 3 || 
-								!(push_list[x]->client->pers.secrets_found & (1 << 16)))
-							{
-								if (!(push_list[x]->NPC && push_list[x]->client->pers.guardian_invoked_by_id != -1 && Q_irand(0,4) > 0))
-								{ // zyk: bosses have a small chance of getting knockdown
-									push_list[x]->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-									push_list[x]->client->ps.forceHandExtendTime = level.time + 700;
-									push_list[x]->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
-									push_list[x]->client->ps.quickerGetup = qtrue;
-								}
-							}
+							// GalaxyRP fix: [Dead Code] rpg_class permanently 0, condition always true (amrpgmode!=2 || rpg_class!=3 || ...)
+							// GalaxyRP fix: [Dead Code] guardian_mode/guardian_invoked_by_id permanently 0/-1, condition always true
+							push_list[x]->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
+							push_list[x]->client->ps.forceHandExtendTime = level.time + 700;
+							push_list[x]->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
+							push_list[x]->client->ps.quickerGetup = qtrue;
 						}
 						else if (push_list[x]->s.number < MAX_CLIENTS && push_list[x]->client->ps.m_iVehicleNum &&
 							dirLen <= 128.0f )
@@ -4189,26 +4692,20 @@ void ForceThrow( gentity_t *self, qboolean pull )
 					continue;
 				}
 
-				if ( VectorCompare( vec3_origin, push_list[x]->s.origin ) )
-				{//does not have an origin brush, so pos1 & pos2 are relative to world origin, need to calc center
-					VectorSubtract( push_list[x]->r.absmax, push_list[x]->r.absmin, size );
-					VectorMA( push_list[x]->r.absmin, 0.5, size, center );
-					if ( (push_list[x]->spawnflags&1) && push_list[x]->moverState == MOVER_POS1 )
-					{//if at pos1 and started open, make sure we get the center where it *started* because we're going to add back in the relative values pos1 and pos2
-						VectorSubtract( center, push_list[x]->pos1, center );
-					}
-					else if ( !(push_list[x]->spawnflags&1) && push_list[x]->moverState == MOVER_POS2 )
-					{//if at pos2, make sure we get the center where it *started* because we're going to add back in the relative values pos1 and pos2
-						VectorSubtract( center, push_list[x]->pos2, center );
-					}
-					VectorAdd( center, push_list[x]->pos1, pos1 );
-					VectorAdd( center, push_list[x]->pos2, pos2 );
-				}
-				else
-				{//actually has an origin, pos1 and pos2 are absolute
-					VectorCopy( push_list[x]->r.currentOrigin, center );
-					VectorCopy( push_list[x]->pos1, pos1 );
-					VectorCopy( push_list[x]->pos2, pos2 );
+				// DAJ_RP: [Entity System] where the door's middle is at each end: its origin there (pos1, pos2) plus the
+				// middle of its own brushes (r.mins/r.maxs, the brush model's bounds), since a brush entity is drawn as its
+				// brushes moved by its origin. Stock took pos1 and pos2 themselves for a door with an origin, as if that
+				// origin were where the door is -- true of an origin brush, but a copy placed with /entcopy, /entaddaim or
+				// /entaddgrab (or /entadd with an origin) gets as its origin how far it was moved, so the side test below
+				// was made far from the door and push and pull swapped on one side of it. For a door without an origin
+				// this is the same point stock worked out from its absmin/absmax.
+				{
+					vec3_t	mid;
+
+					VectorAdd( push_list[x]->r.mins, push_list[x]->r.maxs, mid );
+					VectorScale( mid, 0.5f, mid );
+					VectorAdd( push_list[x]->pos1, mid, pos1 );
+					VectorAdd( push_list[x]->pos2, mid, pos2 );
 				}
 
 				if ( Distance( pos1, trFrom ) < Distance( pos2, trFrom ) )
@@ -4263,6 +4760,18 @@ void ForceThrow( gentity_t *self, qboolean pull )
 					continue;
 				}
 
+				// GalaxyRP fix: [Items] only an item someone could pick up right now. A taken map item is
+				// still an entity -- hidden, or a weapon's see-through placeholder, with no contents --
+				// waiting on RespawnItem, and pushing it used to overwrite that timer with the push one,
+				// so a push could bring an item back early or hold it back late. The contents test also
+				// skips an item that has not finished spawning (FinishSpawningItem sets them).
+				if (!push_list[x]->item ||
+					(push_list[x]->s.eFlags & (EF_NODRAW | EF_ITEMPLACEHOLDER)) ||
+					!(push_list[x]->r.contents & CONTENTS_TRIGGER))
+				{
+					continue;
+				}
+
 				// zyk: it must be the current origin, or the pushDir will use the original origin
 				VectorCopy(push_list[x]->r.currentOrigin, thispush_org);
 
@@ -4300,23 +4809,22 @@ void ForceThrow( gentity_t *self, qboolean pull )
 				push_list[x]->s.angles[PITCH] = 0;
 
 				push_list[x]->physicsObject = qtrue;
-				if (push_list[x]->item)
+
+				// GalaxyRP fix: [Items] a map item goes back to its spot after G_ItemPushReturnTime -- the
+				// same category time a pickup gets (g_adaptRespawn, the team-FFA weapon time and the
+				// thermal/trip mine/det pack rule included), or the map's own "wait" -- through
+				// G_ReturnPushedItem, which moves only this item. This used to be the raw category cvar
+				// (60s for powerups) and RespawnItem.
+				//
+				// A DROPPED item keeps its own think: the G_FreeEntity LaunchItem gave it (5 minutes). This
+				// used to replace that with the respawn one, and a dropped item has no spawn spot -- its
+				// s.origin was never set -- so it was sent to the map's 0 0 0 and then kept there for good,
+				// an entity that was never freed.
+				if (!(push_list[x]->flags & FL_DROPPED_ITEM))
 				{
-					if (push_list[x]->item->giType == IT_WEAPON)
-						push_list[x]->nextthink = level.time + g_weaponRespawn.integer * 1000;
-					else if (push_list[x]->item->giType == IT_AMMO)
-						push_list[x]->nextthink = level.time + zyk_ammo_respawn_time.integer * 1000;
-					else if (push_list[x]->item->giType == IT_HOLDABLE)
-						push_list[x]->nextthink = level.time + zyk_holdable_item_respawn_time.integer * 1000;
-					else if (push_list[x]->item->giType == IT_ARMOR)
-						push_list[x]->nextthink = level.time +zyk_shield_respawn_time.integer * 1000;
-					else if (push_list[x]->item->giType == IT_HEALTH)
-						push_list[x]->nextthink = level.time + zyk_health_respawn_time.integer * 1000;
-					else
-						push_list[x]->nextthink = level.time + 60 * 1000;
-						
+					push_list[x]->nextthink = level.time + G_ItemPushReturnTime(push_list[x]) * 1000;
+					push_list[x]->think = G_ReturnPushedItem;
 				}
-				push_list[x]->think = RespawnItem;
 
 				trap->LinkEntity ((sharedEntity_t *)push_list[x]);
 			}
@@ -4338,7 +4846,6 @@ void ForceThrow( gentity_t *self, qboolean pull )
 void WP_ForcePowerStop( gentity_t *self, forcePowers_t forcePower )
 {
 	int wasActive = self->client->ps.fd.forcePowersActive;
-	gentity_t *tricked_entity; // zyk: used to stop mind control
 
 	self->client->ps.fd.forcePowersActive &= ~( 1 << forcePower );
 
@@ -4361,13 +4868,7 @@ void WP_ForcePowerStop( gentity_t *self, forcePowers_t forcePower )
 	case FP_PULL:
 		break;
 	case FP_TELEPATHY:
-		// zyk: remove mind control from these players or npcs
-		if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 1 && self->client->pers.mind_controlled1_id != -1)
-		{
-			tricked_entity = &g_entities[self->client->pers.mind_controlled1_id];
-			self->client->pers.mind_controlled1_id = -1;
-			tricked_entity->client->pers.being_mind_controlled = -1;
-		}
+		// GalaxyRP fix: [Dead Code] rpg_class permanently 0, mind control block unreachable
 
 		if (wasActive & (1 << FP_TELEPATHY))
 		{
@@ -4383,17 +4884,9 @@ void WP_ForcePowerStop( gentity_t *self, forcePowers_t forcePower )
 		{
 			G_MuteSound(self->client->ps.fd.killSoundEntIndex[TRACK_CHANNEL_5-50], CHAN_VOICE);
 
-			if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 2 && self->client->pers.secrets_found & (1 << 1) && 
-				self->client->ps.zoomMode == 2)
-			{ // zyk: Bounty Hunter with Upgrade that stops Thermal Vision. In this case, stop binoculars
-				self->client->ps.zoomMode = 0;
-				self->client->ps.zoomTime = level.time;
-			}
+			// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Bounty Hunter stop-binoculars branch unreachable
 
-			if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 8)
-			{ // zyk: removing Sense level so he can use holdable items with force keys again
-				self->client->ps.fd.forcePowerLevel[FP_SEE] = FORCE_LEVEL_0;
-			}
+			// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Sense-level-reset branch unreachable
 		}
 		break;
 	case FP_GRIP:
@@ -4484,6 +4977,17 @@ void WP_ForcePowerStop( gentity_t *self, forcePowers_t forcePower )
 		if ( self->client->ps.fd.forcePowerLevel[FP_DRAIN] < FORCE_LEVEL_2 )
 		{//don't do it again for 3 seconds, minimum...
 			self->client->ps.fd.forcePowerDebounce[FP_DRAIN] = level.time + 3000;
+		}
+		// GalaxyRP fix: [Force] level 2 had NO arm here and the chain has no else, so it was the one
+		// drain level that never had a cooldown written at all. WP_ForcePowerStart() zeroes
+		// forcePowerDebounce on every activation and ForceShootDrain() only gates on that value being
+		// in the future, so Drain 2 could be fired every single frame -- strictly better than Drain 3
+		// and Drain 4. Vanilla read "< FORCE_LEVEL_2 -> 3000" / "else -> 1500"; that else became
+		// "else if (== FORCE_LEVEL_3)" when the level 4 and 5 arms were added, orphaning level 2.
+		// 2000ms keeps the cooldown curve monotonic across the five levels (3000/2000/1500/1000/0).
+		else if (self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_2)
+		{
+			self->client->ps.fd.forcePowerDebounce[FP_DRAIN] = level.time + 2000;
 		}
 		else if(self->client->ps.fd.forcePowerLevel[FP_DRAIN] == FORCE_LEVEL_3)
 		{// GalaxyRP (Alex): [Force Powers] Level 3 has a lower cooldown
@@ -4860,11 +5364,9 @@ static void WP_UpdateMindtrickEnts(gentity_t *self)
 				if (trap->InPVS(ent->client->ps.origin, self->client->ps.origin) &&
 					OrgVisible(ent->client->ps.origin, self->client->ps.origin, ent->s.number))
 				{
-					if (self->client->sess.amrpgmode < 2 || (self->client->pers.rpg_class != 1 && self->client->pers.rpg_class != 5))
-					{ // zyk: Force User wont stop Mind Trick (specially because it may be a Mind Control) and Stealth Attacker Ultra Cloak
-						if (ent && !ent->NPC) // zyk: remove tricked entity only for players
-							RemoveTrickedEnt(&self->client->ps.fd, i);
-					}
+					// GalaxyRP fix: [Dead Code] rpg_class permanently 0, condition always true (amrpgmode<2 || (rpg_class!=1 && rpg_class!=5))
+					if (ent && !ent->NPC) // zyk: remove tricked entity only for players
+						RemoveTrickedEnt(&self->client->ps.fd, i);
 				}
 			}
 			else if (BG_HasYsalamiri(level.gametype, &ent->client->ps))
@@ -4977,6 +5479,9 @@ static void WP_ForcePowerRun( gentity_t *self, forcePowers_t forcePower, usercmd
 			break;
 		}
 
+		// GalaxyRP fix: [Cloak Item] a held grip keeps breaking cloak, so re-cloaking while still
+		// choking someone does not stick -- see RP_AttackBreaksCloak.
+		RP_AttackBreaksCloak( self );
 		DoGripAction(self, forcePower);
 		break;
 	case FP_LEVITATION:
@@ -5056,6 +5561,9 @@ static void WP_ForcePowerRun( gentity_t *self, forcePowers_t forcePower, usercmd
 		{
 			while ( self->client->force.drainDebounce < level.time )
 			{
+				// GalaxyRP fix: [Cloak Item] every drain tick breaks cloak, not just the first -- see
+				// RP_AttackBreaksCloak.
+				RP_AttackBreaksCloak( self );
 				ForceShootDrain( self );
 				self->client->force.drainDebounce += FORCE_DEBOUNCE_TIME;
 			}
@@ -5085,6 +5593,9 @@ static void WP_ForcePowerRun( gentity_t *self, forcePowers_t forcePower, usercmd
 		{
 			while ( self->client->force.lightningDebounce < level.time )
 			{
+				// GalaxyRP fix: [Cloak Item] every lightning tick breaks cloak, not just the first -- see
+				// RP_AttackBreaksCloak.
+				RP_AttackBreaksCloak( self );
 				ForceShootLightning( self );
 				BG_ForcePowerDrain( &self->client->ps, forcePower, 0 );
 				self->client->force.lightningDebounce += FORCE_DEBOUNCE_TIME;
@@ -5503,19 +6014,13 @@ void SeekerDroneUpdate(gentity_t *self)
 				VectorNormalize(endir);
 
 				// zyk: changed shot speed from 2000 to 4000
-				// zyk: changed damage when a Bounty Hunter uses the seeker drone
-				if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 2 && self->client->pers.secrets_found & (1 << 1))
-					WP_FireGenericBlasterMissile(self, org, endir, qfalse, 20, 4000, MOD_BLASTER);
-				else
-					WP_FireGenericBlasterMissile(self, org, endir, qfalse, 15, 4000, MOD_BLASTER);
+				// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Bounty Hunter damage-bonus branch unreachable
+				WP_FireGenericBlasterMissile(self, org, endir, qfalse, 15, 4000, MOD_BLASTER);
 
 				G_SoundAtLoc( org, CHAN_WEAPON, G_SoundIndex("sound/weapons/bryar/fire.wav") );
 
-				// zyk: Bounty Hunter Upgrade has fast-shooting seeker drone
-				if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 2 && self->client->pers.secrets_found & (1 << 1))
-					self->client->ps.droneFireTime = level.time + Q_irand(200, 300);
-				else
-					self->client->ps.droneFireTime = level.time + Q_irand(400, 700);
+				// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Bounty Hunter fast-shoot branch unreachable
+				self->client->ps.droneFireTime = level.time + Q_irand(400, 700);
 			}
 		}
 	}
@@ -5759,64 +6264,303 @@ qboolean G_SpecialRollGetup(gentity_t *self)
 	return rolled;
 }
 
-void sense_health_info(gentity_t *self, gentity_t *target)
+// GalaxyRP fix: [Skills] Sense Health, reworked.
+//
+// Targeting: the skill used to read ps.lookTarget, which is not "who you are looking at" but a side
+// product of the saber auto-block routine (WP_SaberStartMissileBlockCheck): the nearest visible
+// player/NPC within 256 units, and only on frames that routine got far enough to pick one -- never
+// while your weapon was busy, while knocked down, or at all with a saber that cannot actively block.
+// It also went unchecked from one frame to the next. The skill now picks its own target: whoever is
+// under the crosshair within ZYK_SENSE_HEALTH_AIM_RANGE, else the nearest visible one within
+// ZYK_SENSE_HEALTH_NEAR_RANGE (what it effectively did before). ps.lookTarget itself is untouched --
+// head turning and /npc still use it.
+//
+// Display: it used to be a "cp" -- the big centre-print font, 30% down the screen, held for
+// cg_centerTime (3s) and overwriting every other centre print twice a second while Sight was on.
+// It is now a "sensehp" server command that the mod's cgame draws small, under the crosshair
+// (CG_DrawSenseHealth in cg_draw.c). Only the values the sensing player's skill level shows are
+// sent; the rest go out as -1, so a modified client cannot read more than its level allows.
+#define ZYK_SENSE_HEALTH_AIM_RANGE		1024
+#define ZYK_SENSE_HEALTH_NEAR_RANGE		256
+#define ZYK_SENSE_HEALTH_NAME_LENGTH	64
+
+// GalaxyRP: [Skills] a vehicle Sense Health can read: a live vehicle NPC with its vehicle data
+static qboolean zyk_sense_health_is_vehicle(const gentity_t *ent)
 {
-	int client_health = 0;
-	int client_armor = 0;
-	int client_max_armor = 0;
-	char client_name[64];
-	int magic_power = 0;
-	int max_magic_power = 0;
-	char player_type[32];
-	int skill_number = 35; // zyk: skill index of Sense Health skill
+	return (ent->s.eType == ET_NPC && ent->s.NPC_class == CLASS_VEHICLE) ? qtrue : qfalse;
+}
 
-	if (!target || !target->client)
-	{ // zyk: for some reason, this guy has no client structure. Happens to quest_ragnos npc
-		return;
+// zyk: who Sense Health may report on, checked every time. GalaxyRP: [Skills] vehicles included now
+// (they were excluded, as the old saber look target excluded them) -- but never the vehicle the
+// sensing player is riding, and only with their vehicle data in place.
+static qboolean zyk_sense_health_valid_target(const gentity_t *self, const gentity_t *target)
+{
+	if (!target || target == self || !target->inuse || !target->client)
+		return qfalse;
+
+	if (target->s.eType != ET_PLAYER && target->s.eType != ET_NPC)
+		return qfalse;
+
+	if (zyk_sense_health_is_vehicle(target))
+	{
+		if (!target->m_pVehicle || !target->m_pVehicle->m_pVehicleInfo)
+			return qfalse;
+
+		if (self->client->ps.m_iVehicleNum == target->s.number)
+			return qfalse; // zyk: your own vehicle
 	}
 
-	strcpy(player_type, "Normal Player"); // zyk: by default, consider the target as player that is not logged in his account
+	if (target->client->sess.sessionTeam == TEAM_SPECTATOR || (target->client->ps.pm_flags & PMF_FOLLOW))
+		return qfalse;
 
-	client_health = target->health;
-	client_armor = target->client->ps.stats[STAT_ARMOR];
-	client_max_armor = target->client->ps.stats[STAT_MAX_HEALTH];
+	if (target->health <= 0)
+		return qfalse;
 
-	if (target->NPC)
-	{
-		strcpy(client_name, target->NPC_type);
-	}
-	else
-	{
-		strcpy(client_name, target->client->pers.netname);
-	}
-	
-	if (self->client->pers.skill_levels[skill_number] == 1)
-	{
-		trap->SendServerCommand(self->s.number, va("cp \"^1%d\n\"", client_health));
-	}
-	else if (self->client->pers.skill_levels[skill_number] == 2)
-	{
-		trap->SendServerCommand(self->s.number, va("cp \"%s\n\n^1%d^3/^2%d\n\"", client_name, client_health, client_armor));
-	}
-	else if (self->client->pers.skill_levels[skill_number] == 3)
-	{
-		if (target->NPC)
-		{
-			strcpy(player_type, "NPC");
-		}
-		else if (target->client->sess.amrpgmode == 2)
-		{
-			strcpy(player_type, "Player");
+	return qtrue;
+}
 
-			// zyk: calculating the max armor of this player
-			client_max_armor = target->client->pers.max_rpg_shield;
-		}
+// GalaxyRP: [Skills] someone aboard a vehicle -- its pilot, a passenger, or the droid it carries. The
+// nearby search leaves them out: they sit inside the ship (a fighter's are hidden), so standing next to
+// an X-wing would otherwise show its droid or pilot rather than the ship.
+static qboolean zyk_sense_health_is_aboard(const gentity_t *ent)
+{
+	return (!zyk_sense_health_is_vehicle(ent) && (ent->client->ps.m_iVehicleNum || ent->s.m_iVehicleNum)) ? qtrue : qfalse;
+}
 
-		trap->SendServerCommand(self->s.number, va("cp \"%s\n^1%d^3/^1%d  ^2%d^3/^2%d\n^5%d^3/^5%d \n^7%s\n\"", client_name, client_health, target->client->ps.stats[STAT_MAX_HEALTH], client_armor, client_max_armor, target->client->ps.fd.forcePower, target->client->ps.fd.forcePowerMax, player_type));
+// zyk: a trace from the sensing player's eyes that looks past their own vehicle. The first trace skips
+// only the player; if it stops on the vehicle they are riding (always, from inside a fighter), it is
+// run again skipping the vehicle instead -- the rider of a fighter is not solid, so nothing is lost.
+static void zyk_sense_health_trace(gentity_t *self, trace_t *tr, vec3_t start, vec3_t end, int mask)
+{
+	const int own_vehicle = self->client->ps.m_iVehicleNum;
+
+	trap->Trace(tr, start, NULL, NULL, end, self->s.number, mask, qfalse, 0, 0);
+
+	if (own_vehicle > 0 && own_vehicle < ENTITYNUM_WORLD && tr->entityNum == own_vehicle)
+	{
+		trap->Trace(tr, start, NULL, NULL, end, own_vehicle, mask, qfalse, 0, 0);
 	}
 }
 
+// zyk: whoever is under the crosshair; else, within reach and in sight, the nearest player, or if
+// there is none the nearest NPC, or if there is none the nearest vehicle. NULL if there is nobody.
+static gentity_t *zyk_sense_health_find_target(gentity_t *self)
+{
+	int entity_list[MAX_GENTITIES];
+	int num_listed = 0;
+	int i = 0;
+	vec3_t eyes, forward, end, mins, maxs, diff;
+	trace_t tr;
+	gentity_t *best[3] = { NULL, NULL, NULL }; // zyk: nearest player, NPC, vehicle -- in that order of preference
+	float best_dist[3] = { 0.0f, 0.0f, 0.0f };
+
+	VectorCopy(self->client->ps.origin, eyes);
+	eyes[2] += self->client->ps.viewheight;
+
+	AngleVectors(self->client->ps.viewangles, forward, NULL, NULL);
+	VectorMA(eyes, ZYK_SENSE_HEALTH_AIM_RANGE, forward, end);
+
+	zyk_sense_health_trace(self, &tr, eyes, end, MASK_SHOT);
+
+	if (tr.entityNum >= 0 && tr.entityNum < ENTITYNUM_WORLD && zyk_sense_health_valid_target(self, &g_entities[tr.entityNum]))
+	{
+		return &g_entities[tr.entityNum];
+	}
+
+	for (i = 0; i < 3; i++)
+	{
+		mins[i] = self->r.currentOrigin[i] - ZYK_SENSE_HEALTH_NEAR_RANGE;
+		maxs[i] = self->r.currentOrigin[i] + ZYK_SENSE_HEALTH_NEAR_RANGE;
+	}
+
+	num_listed = trap->EntitiesInBox(mins, maxs, entity_list, MAX_GENTITIES);
+
+	for (i = 0; i < num_listed; i++)
+	{
+		gentity_t *ent = &g_entities[entity_list[i]];
+		float dist = 0.0f;
+		int kind = 0;
+
+		if (!zyk_sense_health_valid_target(self, ent) || zyk_sense_health_is_aboard(ent))
+			continue;
+
+		kind = zyk_sense_health_is_vehicle(ent) ? 2 : (ent->s.eType == ET_NPC ? 1 : 0);
+
+		VectorSubtract(self->client->ps.origin, ent->client->ps.origin, diff);
+		dist = VectorLength(diff);
+
+		if (best[kind] && dist >= best_dist[kind])
+			continue;
+
+		// zyk: in sight, the test the old look target used
+		zyk_sense_health_trace(self, &tr, eyes, ent->client->ps.origin, MASK_PLAYERSOLID);
+
+		if (tr.fraction == 1.0f || tr.entityNum == ent->s.number)
+		{
+			best[kind] = ent;
+			best_dist[kind] = dist;
+		}
+	}
+
+	return best[0] ? best[0] : (best[1] ? best[1] : best[2]);
+}
+
+// zyk: builds the "sensehp" command for this target at this skill level. Arguments, in order:
+// level, health, max health, shield, max shield, force, max force, type (0 not logged in,
+// 1 logged-in player, 2 NPC, 3 empty vehicle, 4 occupied vehicle), "name" -- -1 (or an empty name)
+// for anything the level does not show. For a vehicle, health is its hull and shield its shields
+// (the maxima from its .veh data), and force is never shown. The name goes last, bounded, with any
+// double quote turned into a single one: a player name may contain '"', which would end the quoted
+// argument early on the client.
+static void zyk_sense_health_command(const gentity_t *target, int level, char *out, int out_size)
+{
+	char name[ZYK_SENSE_HEALTH_NAME_LENGTH];
+	int health = target->health > 0 ? target->health : 0;
+	int max_health = -1, shield = -1, max_shield = -1, force = -1, max_force = -1, type = -1;
+	int i = 0;
+
+	name[0] = '\0';
+
+	if (level > 3)
+		level = 3;
+
+	if (level >= 2)
+	{
+		Q_strncpyz(name, (target->NPC && target->NPC_type) ? target->NPC_type : target->client->pers.netname, sizeof(name));
+
+		for (i = 0; name[i]; i++)
+		{
+			if (name[i] == '"')
+				name[i] = '\'';
+		}
+
+		shield = target->client->ps.stats[STAT_ARMOR];
+	}
+
+	if (level >= 3 && zyk_sense_health_is_vehicle(target))
+	{ // GalaxyRP: [Skills] a vehicle: hull, shields, empty or occupied -- no Force
+		const Vehicle_t *veh = target->m_pVehicle;
+
+		max_health = target->client->ps.stats[STAT_MAX_HEALTH];
+		max_shield = veh->m_pVehicleInfo->shields;
+		type = (veh->m_pPilot || veh->m_iNumPassengers > 0) ? 4 : 3;
+	}
+	else if (level >= 3)
+	{
+		max_health = target->client->ps.stats[STAT_MAX_HEALTH];
+		force = target->client->ps.fd.forcePower;
+		max_force = target->client->ps.fd.forcePowerMax;
+
+		// GalaxyRP fix: [Skills] the shield ceiling everyone is actually held to, published every frame
+		// by G_PublishMaxArmor(): max_rpg_shield for a logged-in player, max health for anyone else,
+		// NPCs included. The earlier rework sent no maximum for NPCs and logged-out players, on the
+		// mistaken belief they had none.
+		max_shield = target->client->ps.stats[STAT_MAX_ARMOR];
+
+		if (target->NPC)
+		{
+			type = 2;
+		}
+		else if (target->client->sess.amrpgmode == 2)
+		{
+			type = 1;
+		}
+		else
+		{
+			type = 0;
+		}
+	}
+
+	Com_sprintf(out, out_size, "sensehp %d %d %d %d %d %d %d %d \"%s\"",
+		level, health, max_health, shield, max_shield, force, max_force, type, name);
+}
+
+void sense_health_info(gentity_t *self, gentity_t *target)
+{
+	char command[MAX_STRING_CHARS];
+	const int level = self->client->pers.skill_levels[35]; // zyk: skill index of Sense Health skill
+
+	if (level < 1 || !zyk_sense_health_valid_target(self, target))
+	{
+		return;
+	}
+
+	zyk_sense_health_command(target, level, command, sizeof(command));
+	trap->SendServerCommand(self->s.number, command);
+}
+
 extern qboolean duel_tournament_is_duelist(gentity_t *ent);
+
+// DAJ_RP: [Force Enlightenment] "is this player fighting in a Melee Battle right now?" -- melee_mode 2
+// is the battle itself (1 is sign-up, 3 the few seconds after a winner is declared, by which point the
+// winner has had their Force given back and been handed their prize). melee_players[] is indexed by
+// client number, so anything past MAX_CLIENTS -- NPCs run WP_ForcePowersUpdate() too -- is never in it.
+static qboolean RP_InMeleeBattle( gentity_t *self )
+{
+	if ( !self || self->s.number < 0 || self->s.number >= MAX_CLIENTS )
+	{
+		return qfalse;
+	}
+
+	return ( level.melee_mode == 2 && level.melee_players[self->s.number] != -1 ) ? qtrue : qfalse;
+}
+
+// DAJ_RP: [Force Enlightenment] put a player's Force back the way it was before Enlightenment
+// boosted it: the vanilla undo from WP_ForcePowersUpdate(), moved here verbatim so that
+// WP_EndForceEnlightenment() below runs exactly the same code. Restores every level from the
+// snapshot taken when the boost began, stops and forgets any power that snapshot had at 0, and
+// clears the "boosted" flag. Only meaningful while forceUsingAdded is set; both callers check.
+static void WP_UndoEnlightenedPowers( gentity_t *self )
+{
+	int i = 0;
+
+	while (i < NUM_FORCE_POWERS)
+	{
+		self->client->ps.fd.forcePowerLevel[i] = self->client->ps.fd.forcePowerBaseLevel[i];
+		if (!self->client->ps.fd.forcePowerLevel[i])
+		{
+			if (self->client->ps.fd.forcePowersActive & (1 << i))
+			{
+				WP_ForcePowerStop(self, i);
+			}
+			self->client->ps.fd.forcePowersKnown &= ~(1 << i);
+		}
+
+		i++;
+	}
+
+	self->client->ps.fd.forceUsingAdded = 0;
+}
+
+// DAJ_RP: [Force Enlightenment] end a player's Enlightenment on the spot: clear both powerups and, if
+// the boost is currently applied, undo it right now rather than on the next WP_ForcePowersUpdate().
+//
+// Why "right now" matters: the undo restores a snapshot taken when the boost began. Anything that
+// rewrites the player's Force levels in the meantime -- loading a character at /login or /new, a
+// minigame saving the Force it is about to strip -- is silently overwritten by that stale snapshot
+// one frame later if the flag is still set. That is how a logout-then-login onto a full-Force
+// character came out with the logged-out player's powers instead. Callers:
+//   - zyk_reset_force_powerups() (g_cmds.c), for /new, /char new, /char use, /login and /logout,
+//     BEFORE the next character's (or the logged-out) Force is loaded;
+//   - duel_tournament_prepare() and melee_battle_prepare() (g_main.c), BEFORE player_backup_force(),
+//     so the Force saved and later restored is the player's own and not a boosted copy that would
+//     outlive the Enlightenment.
+void WP_EndForceEnlightenment( gentity_t *self )
+{
+	if ( !self || !self->client )
+	{
+		return;
+	}
+
+	self->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = 0;
+	self->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = 0;
+
+	if ( self->client->ps.fd.forceUsingAdded )
+	{
+		WP_UndoEnlightenedPowers( self );
+	}
+}
+
 void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 {
 	int			i, holo, holoregen;
@@ -5910,8 +6654,27 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 		self->client->ps.weaponTime = 0;
 		self->client->ps.weaponstate = WEAPON_READY;
 	}
+	// GalaxyRP fix: [Death System] never run the knockdown get-up machine for a downed player. This
+	// block is precisely the thing that must not happen while the PLAYER_STATUS_DOWNED bit is set, and until
+	// now nothing said so: the downed state was enforced only by ClientThink_real() holding
+	// forceHandExtendTime permanently in the future, which starves this "else if" of its second
+	// condition. Starvation is not a guarantee. ClientThink_real() skips that refresh whenever the
+	// player is noclipping, disintegrating or being Force Gripped, and half a second of lapse was
+	// enough: G_SpecialRollGetup() below reads the VICTIM'S OWN movement keys, so a downed player held
+	// in a grip and shoved around simply rolled to their feet, and a second lapse took them from
+	// "up but frozen" (forceDodgeAnim set) to the chain's final else, HANDEXTEND_WEAPONREADY, and full
+	// mobility -- still flagged downed, still FL_NOTARGET, still counting down. Gating on the state
+	// itself removes every timing margin and survives any future movetype branch.
+	//
+	// Safe at both ends. On release, RP_ReleaseFromDownedState() and help_up() (g_cmds.c) clear bit 6
+	// through RP_ClearDownedState() BEFORE calling play_animation(), so the stand-up animation is not
+	// blocked. On death, player_die() and G_Damage()'s finish-off branch clear it before targ->die(),
+	// so this block's own "health < 1 -> HANDEXTEND_NONE" cleanup still runs for a corpse. The "if"
+	// above -- which zeroes saberMove/weaponTime while the knockdown is held -- is deliberately NOT
+	// gated: that one is part of keeping a downed player down.
 	else if (self->client->ps.forceHandExtend != HANDEXTEND_NONE &&
-		self->client->ps.forceHandExtendTime < level.time)
+		self->client->ps.forceHandExtendTime < level.time &&
+		!G_PlayerIsDowned(self))
 	{
 		if (self->client->ps.forceHandExtend == HANDEXTEND_KNOCKDOWN &&
 			!self->client->ps.forceDodgeAnim)
@@ -6045,7 +6808,15 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 	i = 0;
 
 	// zyk: added the rpg mode condition, because RPG Mode players cant get power ups
-	if (self->client->sess.amrpgmode < 2 && duel_tournament_is_duelist(self) == qfalse && 
+	// DAJ_RP: [Force Enlightenment] and not for a Melee Battle combatant while the battle is on, the
+	// same way it already never applies to the two duelists of a Duel Tournament. Both minigames
+	// strip the player's Force for the match (melee_battle_prepare(), duel_tournament_prepare() in
+	// g_main.c) -- an Enlightenment picked up mid-battle would otherwise add those powers straight
+	// back as usable. It stays on the player and applies once the battle is over, on top of the
+	// Force the minigame gives back. (Any boost the player brought INTO a minigame is ended before
+	// their Force is saved -- see WP_EndForceEnlightenment() above.)
+	if (self->client->sess.amrpgmode < 2 && duel_tournament_is_duelist(self) == qfalse &&
+		!RP_InMeleeBattle(self) &&
 		(self->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] || self->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK]))
 	{ //enlightenment
 		if (!self->client->ps.fd.forceUsingAdded)
@@ -6071,24 +6842,9 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 	}
 	else if (self->client->ps.fd.forceUsingAdded)
 	{ //we don't have enlightenment but we're still using enlightened powers, so clear them back to how they should be.
-		i = 0;
-
-		while (i < NUM_FORCE_POWERS)
-		{
-			self->client->ps.fd.forcePowerLevel[i] = self->client->ps.fd.forcePowerBaseLevel[i];
-			if (!self->client->ps.fd.forcePowerLevel[i])
-			{
-				if (self->client->ps.fd.forcePowersActive & (1 << i))
-				{
-					WP_ForcePowerStop(self, i);
-				}
-				self->client->ps.fd.forcePowersKnown &= ~(1 << i);
-			}
-
-			i++;
-		}
-
-		self->client->ps.fd.forceUsingAdded = 0;
+		// DAJ_RP: [Force Enlightenment] the undo now lives in WP_UndoEnlightenedPowers() so
+		// WP_EndForceEnlightenment() can run the very same code -- unchanged.
+		WP_UndoEnlightenedPowers(self);
 	}
 
 	i = 0;
@@ -6100,13 +6856,7 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 		self->client->ps.fd.forceMindtrickTargetIndex3 = 0;
 		self->client->ps.fd.forceMindtrickTargetIndex4 = 0;
 
-		// zyk: remove mind control from these players or npcs
-		if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 1 && self->client->pers.mind_controlled1_id != -1)
-		{
-			gentity_t *tricked_entity = &g_entities[self->client->pers.mind_controlled1_id];
-			self->client->pers.mind_controlled1_id = -1;
-			tricked_entity->client->pers.being_mind_controlled = -1;
-		}
+		// GalaxyRP fix: [Dead Code] rpg_class permanently 0, mind control block unreachable
 	}
 
 	if (self->health < 1)
@@ -6211,9 +6961,8 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 		}
 	}
 
-	if ( ucmd->buttons & BUTTON_FORCE_LIGHTNING || 
-		(self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 1 && 
-		 self->client->pers.player_statuses & (1 << 21) && self->client->pers.unique_skill_duration > level.time))
+	// GalaxyRP fix: [Dead Code] rpg_class permanently 0, unique-skill disjunct always false
+	if ( ucmd->buttons & BUTTON_FORCE_LIGHTNING )
 	{ //lightning
 		WP_DoSpecificPower(self, ucmd, FP_LIGHTNING);
 	}
@@ -6269,11 +7018,17 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 				self->client->ps.fd.forcePowerDuration[i] = 0;
 			}
 			// zyk: using Sense Health skill of RPG Mode
-			else if (i == FP_SEE && self->client->sess.amrpgmode == 2 && (self->client->pers.skill_levels[35] > 0 || self->client->pers.rpg_class == 8) && 
-					 self->client->ps.fd.forcePowersActive & ( 1 << FP_SEE ) && self->client->pers.sense_health_timer < level.time && self->client->ps.hasLookTarget)
+			// GalaxyRP fix: [Dead Code] rpg_class permanently 0, rpg_class==8 disjunct always false
+			// DAJ_RP: [Settings] and only while the Sense Health Toggle (/settings 1, player_settings bit 5,
+			// inverted: set == OFF) is on. Nothing else sends "sensehp", so with it off the readout is
+			// simply never sent, and one already on screen fades out by itself within a second.
+			else if (i == FP_SEE && self->client->sess.amrpgmode == 2 && (self->client->pers.skill_levels[35] > 0) &&
+					 !(self->client->pers.player_settings & (1 << 5)) &&
+					 self->client->ps.fd.forcePowersActive & ( 1 << FP_SEE ) && self->client->pers.sense_health_timer < level.time)
 			{
-				// zyk: if you are looking at someone (player or npc), this will be the client id
-				sense_health_info(self, &g_entities[self->client->ps.lookTarget]);
+				// GalaxyRP fix: [Skills] the skill picks its own target now (crosshair, else nearest in
+				// sight) instead of ps.lookTarget -- see zyk_sense_health_find_target() above
+				sense_health_info(self, zyk_sense_health_find_target(self));
 
 				// GalaxyRP (Alex): [Force Powers] Update health display every half a second
 				self->client->pers.sense_health_timer = level.time + 500;
@@ -6298,16 +7053,11 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 		{
 			if (level.gametype != GT_HOLOCRON || g_maxHolocronCarry.value)
 			{
+				// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Monk Meditation / Force User-Duelist / Force Gunner regen branches unreachable
 				if ( self->client->ps.powerups[PW_FORCE_BOON] )
 					WP_ForcePowerRegenerate( self, 6 );
-				else if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 4 && self->client->pers.player_statuses & (1 << 21) && self->client->ps.legsAnim == BOTH_MEDITATE)
-					WP_ForcePowerRegenerate(self, 6); // zyk: Monk Meditation Strength makes him regen force faster
 				else if ( self->client->ps.isJediMaster && level.gametype == GT_JEDIMASTER )
 					WP_ForcePowerRegenerate( self, 4 ); //jedi master regenerates 4 times as fast
-				else if (self->client->sess.amrpgmode == 2 && (self->client->pers.rpg_class == 1 || self->client->pers.rpg_class == 6))
-					WP_ForcePowerRegenerate( self, (1 + self->client->pers.skill_levels[55]) ); // zyk: Force User and Duelist classes regen force faster
-				else if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 7 && self->client->pers.secrets_found & (1 << 8))
-					WP_ForcePowerRegenerate( self, 2); // zyk: Force Gunner with Upgrade regens force a bit faster
 				else
 					WP_ForcePowerRegenerate( self, 0 );
 			}
@@ -6343,6 +7093,30 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 					else
 						self->client->ps.fd.forcePowerRegenDebounceTime += Q_max(g_forceRegenTime.integer*0.7, 1);
 				}
+				// GalaxyRP: [Force Duel] a private duel regenerates force on its own clock, one cvar per
+				// kind, both adapted from TaystJK which carries the same pair. A full force duel is the
+				// one place in this mod where two players spend force against each other with nothing
+				// else going on, and an ordinary duel still spends it too -- Jump costs force, and in a
+				// saber duel that is most of what force is for.
+				//
+				// Both default to 200, the same as g_forceRegenTime, so neither changes anything until an
+				// an admin sets it -- but note the shipped galaxyrp_server.cfg sets g_forceRegenTime to 60
+				// and therefore sets these two to 60 as well, or a duel would silently regenerate slower
+				// than the rest of the map on that server.
+				//
+				// Bounds-checked on the client number for the same reason zyk_duel_is_full_force() is:
+				// this runs for NPCs too, whose ps.clientNum is an entity number rather than a client
+				// slot. An out-of-range number falls through to g_forceRegenTime, which is the safe
+				// answer -- an NPC cannot be in a private duel to begin with.
+				else if (self->client->ps.duelInProgress && self->s.number < MAX_CLIENTS &&
+					level.duel_types[self->s.number] == 1)
+				{
+					self->client->ps.fd.forcePowerRegenDebounceTime += Q_max(g_forceDuelForceRegenTime.integer, 1);
+				}
+				else if (self->client->ps.duelInProgress && self->s.number < MAX_CLIENTS)
+				{ // an ordinary saber duel
+					self->client->ps.fd.forcePowerRegenDebounceTime += Q_max(g_saberDuelForceRegenTime.integer, 1);
+				}
 				else
 				{
 					self->client->ps.fd.forcePowerRegenDebounceTime += Q_max(g_forceRegenTime.integer, 1);
@@ -6374,6 +7148,12 @@ qboolean Jedi_DodgeEvasion( gentity_t *self, gentity_t *shooter, trace_t *tr, in
 	int	dodgeAnim = -1;
 
 	if ( !self || !self->client || self->health <= 0 )
+	{
+		return qfalse;
+	}
+
+	// DAJ_RP: [NPC System] a frozen NPC does not dodge -- see RP_NpcFreeze() (NPC_spawn.c)
+	if ( RP_NpcIsFrozen( self ) )
 	{
 		return qfalse;
 	}
@@ -6444,11 +7224,7 @@ qboolean Jedi_DodgeEvasion( gentity_t *self, gentity_t *shooter, trace_t *tr, in
 		}
 	}
 
-	// zyk: Bounty Hunter with Thermal Vision cannot dodge
-	if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 2)
-	{
-		return qfalse;
-	}
+	// GalaxyRP fix: [Dead Code] rpg_class permanently 0, Bounty Hunter no-dodge branch unreachable
 
 	switch( hitLoc )
 	{

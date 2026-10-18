@@ -224,6 +224,12 @@ typedef struct clientInfo_s {
 	int				icolor1;
 	int				icolor2;
 
+	// GalaxyRP: [Saber RGB] the custom blade colour behind an icolor of SABER_RGB, unpacked from the
+	// "c3"/"c4" clientinfo keys into 0-255 components (see CG_NewClientInfo). Only meaningful when
+	// the matching icolor is SABER_RGB -- otherwise the fixed palette shader supplies the colour.
+	vec3_t			rgb1;
+	vec3_t			rgb2;
+
 	int				score;			// updated by score servercmds
 	int				location;		// location index for team mode
 	int				health;			// you only get this info about your teammates
@@ -293,6 +299,8 @@ typedef struct clientInfo_s {
 	qhandle_t		bolt_motion;
 
 	qhandle_t		bolt_llumbar;
+
+	qhandle_t		bolt_jet[2];	// DAJ_RP: NPCs only -- a model's *jet1 / *jet2 (Boba Fett's exhaust, CG_BobaJetFlames()), -1 when it has none
 
 	int				siegeIndex;
 	int				siegeDesiredTeam;
@@ -456,7 +464,15 @@ typedef struct centity_s {
 	qboolean		cloaked;
 
 	int				vChatTime;
+
+	// DAJ_RP: [NPC Scale] a scaled vehicle: how far CG_Player() lifted its drawn origin (lerpOrigin) to keep it on the
+	// ground, 0 for none, and the origin it was lifted to -- lerpOrigin is worked out afresh each frame, so it holds the
+	// lift only while it still equals that. Its riders are lifted by as much (cg_players.c).
+	float			rpVehicleLift;
+	vec3_t			rpVehicleLiftedOrigin;
 } centity_t;
+
+qboolean CG_RpVehicleLiftApplied( const centity_t *veh );	// DAJ_RP: [NPC Scale] cg_players.c
 
 
 //======================================================================
@@ -632,6 +648,20 @@ typedef struct score_s {
 	int				scoreFlags;
 	int				powerUps;
 	int				accuracy;
+	// GalaxyRP fix: [Scoreboard] the three numbers this mod actually shows. They arrive in the
+	// impressive, excellent and gauntlet wire positions (11, 12, 13) -- see
+	// DeathmatchScoreboardMessage (g_cmds.c) for why those three and not the standard slots they
+	// used to displace.
+	//
+	// score, ping and time above now mean what their names say, so a player on TaystJK, OpenJK or
+	// vanilla reads a sane scoreboard, and "ping == -1 means still connecting" works again here too.
+	int				level;
+	int				knockdowns;
+	int				deaths;
+	// The three fields whose wire positions were taken. They stay in the struct so CG_DrawMedal's
+	// CG_IMPRESSIVE, CG_EXCELLENT and CG_GAUNTLET cases still compile; none is parsed any more and
+	// each reads 0 from the memset. No shipped JKA menu uses those owner-draws, and the playerState
+	// counters behind them are untouched, so the medals themselves are unaffected.
 	int				impressiveCount;
 	int				excellentCount;
 	int				gauntletCount;
@@ -1029,40 +1059,69 @@ Ghoul2 Insert End
 	int numSpawnVarChars;
 	char spawnVarChars[MAX_SPAWN_VARS_CHARS];
 
-	// zyk: RPG stuff will be set here
-	// possible bitvalues are:
-	// 0 - Radar Upgrade
-	// 1 - Blue Jetpack Flame
-	int rpg_stuff;
+	// GalaxyRP fix: [Radar] cg.rpg_stuff used to be declared here, a two-bit client-side cache fed by
+	// EV_ITEMUSEFAIL: bit 0 "Radar Upgrade", bit 1 "Blue Jetpack Flame". Bit 1 moved to the entity
+	// state (EF_RPG_JETPACK_UPGRADE) in an earlier pass. Bit 0 turned out to be unsettable -- only its
+	// clearing event was ever sent, because the setter lived behind pers.rpg_class == 2 and rpg_class
+	// is long gone -- so every reader of it in CG_DrawRadar was a permanently-false test. With both
+	// bits gone the field had no users left.
 
-	// zyk: current amount of Magic Power (MP) of this RPG player
-	int magic_power;
+	// GalaxyRP fix: [Magic] magic_power, the immunity / ultra strength / ultra resistance durations
+	// and the unique-skill cooldown / duration fields used to be here, behind the RPG HUD bars in
+	// cg_draw.c. The server no longer has any of those systems, so the bars and their state went.
 
-	int immunity_power_duration;
-	int ultra_strength_duration;
-	int ultra_resistance_duration;
+	// GalaxyRP fix: [RPG Class] removed unused client-side rpg_class array (server-side pers.rpg_class never varied meaningfully)
 
-	// zyk: Unique Skill cooldown timer
-	int unique_cooldown_timer;
-	int unique_cooldown_duration;
-	int unique_duration_timer;
-	int unique_duration;
+	// GalaxyRP fix: [Radar] cg.zyk_rpg_stuff[MAX_CLIENTS] used to sit here, a per-slot cache with
+	// three bits: 0 "Blue Jet Flame", 1 "Stealth Attacker Upgrade, hide from radar", 2 "player
+	// ally". Bit 0 moved to the entity state, bit 1 turned out to be unsettable, and bit 2 -- the
+	// only genuinely live one -- is replaced by the two fields below.
+	//
+	// Bit 2 could not follow bit 0 into the entity state: "X is an ally" is a property of the pair
+	// (viewer, X), not of X, and an entity state is broadcast to everyone. The server keeps the
+	// truth in sess.ally1/ally2, so it simply sends those two ints instead.
 
-	// zyk: used to control in which moment the Unique duration must be set so it does not reset when a new server command sends the unique duration again
-	int unique_duration_control;
+	// GalaxyRP: [Radar] mirrors the local player's sess.ally1/ally2 -- a bit per client slot,
+	// ally1 for slots 0-15 and ally2 for 16-31, matching zyk_ally_bit_set() server-side. Pushed by
+	// the "supdateally" server command, which is reliable and sequenced rather than an entity event:
+	// it cannot be PVS-culled, cannot be lost, and is re-sent from ClientBegin, so it survives a map
+	// change. The old per-slot event cache did none of that -- allies read as enemies after every
+	// map change, because sess.ally1/ally2 ride the session string while the client cache was
+	// zeroed in CG_Init and nothing re-announced it.
+	int ally1;
+	int ally2;
 
-	// zyk: used to change the Unique bar timer
-	int using_unique_boost;
+	// GalaxyRP: [Skills] the last Sense Health reading, from the "sensehp" server command (see
+	// CG_SenseHealth_f and CG_DrawSenseHealth). time is cg.time when it arrived, 0 for none; -1 in
+	// any value means the sensing player's skill level does not show it (maxShield also when the
+	// target has no known maximum). type: 0 not logged in, 1 logged-in player, 2 NPC, 3 empty
+	// vehicle, 4 occupied vehicle, -1 hidden.
+	struct {
+		int		time;
+		int		level;
+		int		health, maxHealth;
+		int		shield, maxShield;
+		int		force, maxForce;
+		int		type;
+		char	name[64];
+	} senseHealth;
 
-	// zyk: RPG Mode class of the players
-	int rpg_class[MAX_CLIENTS];
+	// GalaxyRP: [Skills] where CG_DrawCrosshair last drew the crosshair (centre x, and y just below
+	// it and any bars it drew underneath), and on which cg.time -- the Sense Health readout sits there
+	int crosshairAnchorTime;
+	float crosshairAnchorX, crosshairAnchorY;
 
-	// zyk: sets clients which must have some RPG stuff set for this cg player to see the stuff on them
-	// Possible bitvalues:
-	// 0 - Blue Jet Flame
-	// 1 - Stealth Attacker Upgrade, which makes Radar not see this player
-	// 2 - Player ally
-	int zyk_rpg_stuff[MAX_CLIENTS];
+	// DAJ_RP: [Sky Portal] qtrue once CG_DrawSkyBoxPortal() has rendered a sky portal scene on this
+	// map. The renderer then keeps a "this map has a sky portal" flag of its own until the world is
+	// loaded again, and with it set it no longer draws the map's sky in the normal view -- so once
+	// the portal is removed (CS_SKYBOXORG cleared) CG_DrawSkyOnlyPass() has to draw that sky instead.
+	// Cleared with the rest of cg at CG_Init(), which runs exactly when the renderer's flag is reset
+	// (a map load or a vid_restart, both of which load the world map again).
+	qboolean skyPortalDrawn;
+
+	// DAJ_RP: [Sky Portal] the area mask the previous frame's world view was given (CG_DrawActiveFrame()
+	// keeps it), which CG_DrawSkyOnlyPass() hands its sky pass instead of this frame's -- see there.
+	byte lastViewAreamask[MAX_MAP_AREA_BYTES];
 } cg_t;
 
 #define MAX_TICS	14
@@ -1158,12 +1217,20 @@ typedef struct cgMedia_s {
 
 	qhandle_t	hackerIconShader;
 
+	// GalaxyRP: [Use hint] the Jedi Academy hand icon shown while looking at a usable world entity
+	// (/settings 4). gfx/hud/useableHint ships in the base JKA assets, which are shared by SP and MP,
+	// so nothing extra has to be packaged -- single player registers the same shader path.
+	qhandle_t	useableHintShader;
+
 	// Saber shaders
 	//-----------------------------
 	qhandle_t	forceCoronaShader;
 
 	qhandle_t	redSaberGlowShader;
 	qhandle_t	redSaberCoreShader;
+	// GalaxyRP: [Grapple Hook] the rope beam and the hook model at its end (CG_GrappleTrail, cg_ents.c).
+	qhandle_t	grappleShader;
+	qhandle_t	grappleModel;
 	qhandle_t	orangeSaberGlowShader;
 	qhandle_t	orangeSaberCoreShader;
 	qhandle_t	yellowSaberGlowShader;
@@ -1174,6 +1241,41 @@ typedef struct cgMedia_s {
 	qhandle_t	blueSaberCoreShader;
 	qhandle_t	purpleSaberGlowShader;
 	qhandle_t	purpleSaberCoreShader;
+	// GalaxyRP: [Saber RGB] the six shaders above are each baked to one fixed colour, so none of
+	// them can carry a custom one. These two -- ported from JAPro/TaystJK's own RGB saber assets,
+	// see assets/client/shaders/sbRGB.shader -- use "rgbGen vertex" on the glow instead, which
+	// makes the renderer multiply it by the per-entity shaderRGBA the blade is submitted with --
+	// that is what lets one glow shader draw any colour. The core shader is not tinted; see the
+	// tint comment in CG_DoSaber() (cg_players.c).
+	qhandle_t	rgbSaberGlowShader;
+	qhandle_t	rgbSaberCoreShader;
+	// GalaxyRP: [Saber RGB] the four TaystJK/JAPro "blade style" variants (Flame1/Electric1/Flame2/
+	// Electric2 -- SABER_FLAME1..SABER_ELEC2), same glow/core split and same rgbGen vertex tinting
+	// as the classic pair above, just a different glow/core texture pair per style. Numbered 2-5 to
+	// match the RGBglow2-5/RGBcore2-5 shader/asset names (see assets/client/shaders/sbRGB.shader);
+	// "1" is the untinted-name classic pair just above.
+	qhandle_t	rgbSaberGlowShader2;
+	qhandle_t	rgbSaberCoreShader2;
+	qhandle_t	rgbSaberGlowShader3;
+	qhandle_t	rgbSaberCoreShader3;
+	qhandle_t	rgbSaberGlowShader4;
+	qhandle_t	rgbSaberCoreShader4;
+	qhandle_t	rgbSaberGlowShader5;
+	qhandle_t	rgbSaberCoreShader5;
+	// GalaxyRP: [Saber RGB] swing-trail counterparts to the four blade styles above (RGBtrail2-4 --
+	// there is no RGBtrail1, the classic style's trail is the plain, untinted saberBlurShader below,
+	// and no RGBtrail5 asset exists either, so that style's trail shares swordTrailShader instead --
+	// matching TaystJK's own registration exactly, not a missing-asset bug). See CG_AddSaberBlade()
+	// in cg_players.c.
+	qhandle_t	rgbSaberTrail2Shader;
+	qhandle_t	rgbSaberTrail3Shader;
+	qhandle_t	rgbSaberTrail4Shader;
+	// GalaxyRP: [Saber RGB] the fixed black blade (SABER_BLACK) -- unlike the RGB-family shaders
+	// above these use "rgbGen identity", not "vertex" (see sbRGB.shader): the shader itself already
+	// draws black, no tint is applied or needed.
+	qhandle_t	blackSaberGlowShader;
+	qhandle_t	blackSaberCoreShader;
+	qhandle_t	blackBlurShader;
 	qhandle_t	saberBlurShader;
 	qhandle_t	swordTrailShader;
 
@@ -1209,6 +1311,10 @@ typedef struct cgMedia_s {
 	qhandle_t	refractionShader;
 
 	qhandle_t	cloakedShader;
+	// GalaxyRP: [Phase] the texture-independent overlay passes of /admholo and /admghost
+	// (assets/client/shaders/rp_phase.shader) -- see CG_AddPhasedPlayerModel() in cg_players.c.
+	qhandle_t	rpHoloOverlayShader;
+	qhandle_t	rpGhostOverlayShader;
 
 	qhandle_t	boltShader;
 
@@ -1559,7 +1665,10 @@ typedef struct cg_staticmodel_s {
 	matrix3_t		axes;
 	float			radius;
 	float			zoffset;
+	vec3_t			centre;		// DAJ_RP: [Static Models] its bounds' centre, the PVS's second point (CG_StaticModelSetCentre)
 } cg_staticmodel_t;
+
+void CG_StaticModelSetCentre( cg_staticmodel_t *sm, const vec3_t mins, const vec3_t maxs );
 
 // The client game static (cgs) structure hold everything
 // loaded or calculated from the gamestate.  It will NOT
@@ -1584,6 +1693,14 @@ typedef struct cgs_s {
 	int				debugMelee;
 	int				stepSlideFix;
 	int				noSpecMove;
+	// GalaxyRP: [Grapple Hook] the server's g_allowGrapple / g_hookStrength / g_hookStrength1 /
+	// g_hookStrength2, all CVAR_SERVERINFO, read in CG_ParseServerinfo(). The shared pull code in
+	// bg_pmove.c reads these on the client where the server reads the cvars, so prediction runs the
+	// same mode with the same numbers. Defaults match the cvars' in case a key is ever missing.
+	int				grappleMode;
+	int				hookStrength;
+	int				hookStrength1;
+	int				hookStrength2;
 	int				dmflags;
 	int				fraglimit;
 	int				duel_fraglimit;
@@ -1667,6 +1784,13 @@ typedef struct cgs_s {
 	// Tr!Force: [ModCheck] Server mod check
 	qboolean	modCheck;
 
+	// GalaxyRP: [Ambient Sets] the CS_AMBIENT_SET slots whose sound set this client has loaded -- at connect
+	// (CG_AS_Register()) or when the slot arrived later (CG_ConfigStringModified())
+	qboolean	ambientSetLoaded[MAX_AMBIENT_SETS];
+	// GalaxyRP: [Ambient Sets] such a slot arrived this frame: the set file is parsed again once, after
+	// the snapshots -- CG_AS_ParsePending() in cg_view.c
+	qboolean	ambientSetsPending;
+
 } cgs_t;
 
 typedef struct siegeExtended_s
@@ -1685,6 +1809,7 @@ extern siegeExtended_t cg_siegeExtendedData[MAX_CLIENTS];
 
 extern	cgs_t			cgs;
 extern	cg_t			cg;
+extern	int				cg_duel_types[MAX_CLIENTS];	// GalaxyRP: [Force Duel] see cg_main.c
 extern	centity_t		cg_entities[MAX_GENTITIES];
 
 extern	centity_t		*cg_permanents[MAX_GENTITIES];
@@ -1708,6 +1833,14 @@ const char *CG_ConfigString( int index );
 const char *CG_Argv( int arg );
 
 void CG_StartMusic( qboolean bForceStart );
+
+// GalaxyRP: [Extras] the Extras menus -- cg_rpextras.c
+void CG_RpxInit( void );
+void CG_RpxFrame( void );
+void CG_RpxFxPass( void );
+qboolean CG_RpxFxPassActive( void );
+void CG_RpxReply( void );
+void CG_Rpx_f( void );
 
 void CG_UpdateCvars( void );
 
@@ -1833,6 +1966,8 @@ void CG_CreateNPCClient(clientInfo_t **ci);
 void CG_DestroyNPCClient(clientInfo_t **ci);
 
 void CG_Player( centity_t *cent );
+// GalaxyRP: [Phase] also used by CG_General() for the limbs and corpses of ghosts and holograms
+qboolean CG_AddPhasedPlayerModel( centity_t *cent, const refEntity_t *legs, qboolean withOverlay );
 void CG_ResetPlayerEntity( centity_t *cent );
 void CG_AddRefEntityWithPowerups( refEntity_t *ent, entityState_t *state, int team );
 void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized );
@@ -1858,7 +1993,11 @@ void CG_LoadDeferredPlayers( void );
 //
 void CG_CheckEvents( centity_t *cent );
 const char	*CG_PlaceString( int rank );
+char		*CG_PlayerCountString( void );	// GalaxyRP: [Scoreboard] cg_scoreboard.c
 void CG_EntityEvent( centity_t *cent, vec3_t position );
+qboolean CG_RpVectorScale( const entityState_t *s );	// DAJ_RP: [Static Models] cg_ents.c: a breakable's per-axis scale
+int CG_RpPickupEntity( int parm, const vec3_t pickerOrigin );	// DAJ_RP: [Items] an item pickup's 8-bit entity number, made whole -- cg_event.c
+int CG_RpPickupItemKey( int entityNum );
 void CG_PainEvent( centity_t *cent, int health );
 void CG_ReattachLimb(centity_t *source);
 
@@ -1874,8 +2013,13 @@ void CG_S_UpdateLoopingSounds(int entityNum);
 
 void CG_SetEntitySoundPosition( centity_t *cent );
 void CG_AddPacketEntities( qboolean isPortal );
+// GalaxyRP: [Force Enlightenment] declared here because CG_TouchItem (cg_predict.c) shares this
+// predicate with the item rendering in cg_ents.c -- see the comment on the definition.
+qboolean CG_GreyItem( int type, int tag, int plSide );
 void CG_ManualEntityRender(centity_t *cent);
 void CG_Beam( centity_t *cent );
+// DAJ_RP: [SP Maps] the skin a model entry "@<file>.skin" names, registered; 0 for any other entry
+qhandle_t CG_ModelEntrySkin( const char *entry );
 void CG_AdjustPositionForMover( const vec3_t in, int moverNum, int fromTime, int toTime, vec3_t out );
 
 void CG_PositionEntityOnTag( refEntity_t *entity, const refEntity_t *parent,
@@ -1918,7 +2062,6 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
 void CG_DrawWeaponSelect( void );
 void CG_DrawIconBackground(void);
 
-void CG_OutOfAmmoChange( int oldWeapon );	// should this be in pmove?
 
 //
 // cg_marks.c
@@ -2013,6 +2156,8 @@ void CG_ParseServerinfo( void );
 void CG_SetConfigValues( void );
 void CG_ShaderStateChanged(void);
 
+qboolean CG_IsAlly( int clientNum );	// GalaxyRP: [Radar] cg_servercmds.c
+qboolean CG_CrosshairAlly( int clientNum );	// DAJ_RP: [Ally] my ally, outside the team gametypes -- cg_draw.c
 //
 // cg_playerstate.c
 //

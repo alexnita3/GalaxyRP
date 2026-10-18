@@ -1,0 +1,1223 @@
+//----------------------------------------------------------------------------------------------
+// ingame_rpx_props: the Props menu of the Extras.
+// GalaxyRP: [Extras] generated with the others of ingame_rpx_*.menu; the Extras button of
+// ingame_galaxyrp.menu opens it. The list, the previews and the rpx scripts are ui_rpextras.c; the
+// commands the buttons send are built in cg_rpextras.c.
+//----------------------------------------------------------------------------------------------
+{
+	menuDef
+	{
+		name                    "ingame_rpx_props"
+		visible                 0
+		fullscreen              0
+		outOfBoundsClick
+		rect                    10 20 620 440
+		focusColor              1 1 1 1
+		disableColor            .5 .5 .5 1
+		style                   1
+		border                  1
+		descX                   310
+		descY                   424
+		descScale               0.8
+		descColor               1 .682 0 .8
+		descAlignment           ITEM_ALIGN_CENTER
+
+		onOpen
+		{
+			uiScript		rpxOpen props ingame_rpx_props
+		}
+		onClose
+		{
+			uiScript		rpxClose
+		}
+		onESC
+		{
+			play			"sound/interface/button1.wav" ;
+			close			ingame_rpx_props
+		}
+
+		itemDef
+		{
+			name                rpx_background
+			style               WINDOW_STYLE_SHADER
+			rect                0 0 620 440
+			background          "gfx/menus/menu_box_ingame"
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_title
+			style               WINDOW_STYLE_SHADER
+			background          "gfx/menus/menu_blendbox"
+			text                "^6Galaxy ^4RP^3 Extras: ^7Props"
+			rect                20 5 580 28
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          290
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           .549 .854 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_back
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                12 405 90 24
+			text                "Back"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          45
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Back to the Galaxy RP menu"
+			mouseEnter
+			{
+				setitemcolor rpx_back bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_back bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setcvar ui_rpx_back 1 ;
+				close ingame_rpx_props ;
+				open ingame_galaxyrp
+			}
+		}
+		itemDef
+		{
+			name                rpx_msg
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                110 415 500 14
+			cvar                "ui_rpx_msg"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.6
+			forecolor           1 1 .4 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_filter
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                "Filter: "
+			cvar                "ui_rpx_filter_models"
+			maxchars            30
+			maxPaintChars       30
+			rect                12 40 210 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Show only the names with this in them"
+		}
+		itemDef
+		{
+			name                rpx_list
+			type                ITEM_TYPE_LISTBOX
+			style               WINDOW_STYLE_FILLED
+			rect                12 60 210 300
+			elementwidth        190
+			elementheight       15
+			elementtype         LISTBOX_TEXT
+			feeder              FEEDER_RPX_LIST
+			font                2
+			textscale           0.6
+			textstyle           0
+			textalign           0
+			textaligny          0
+			columns             1 4 184 184
+			border              1
+			bordercolor         1 .682 0 .6
+			forecolor           1 1 1 1
+			backcolor           0 0 0 .6
+			outlinecolor        1 .682 0 .35
+			visible             1
+			descText            "Double-click a folder to open it; .. goes back up"
+			doubleclick
+			{
+				uiScript rpxEnter
+			}
+			mouseEnter
+			{
+				setitemcolor rpx_list bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_list bordercolor 1 .682 0 .6
+			}
+		}
+		itemDef
+		{
+			name                rpx_info
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                12 364 210 14
+			cvar                "ui_rpx_info"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           .8 .8 .8 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_status
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                12 378 210 14
+			cvar                "ui_rpx_status"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 1 .4 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_preview
+			type                ITEM_TYPE_OWNERDRAW
+			ownerdraw           UI_RPX_PREVIEW
+			rect                232 40 190 150
+			font                2
+			textscale           0.7
+			forecolor           .8 .8 .8 1
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_head_prev
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 192 190 14
+			text                "Preview only"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_preview_btn
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                232 206 92 20
+			text                "Preview"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          46
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Preview only: load the selected model into the box"
+			mouseEnter
+			{
+				setitemcolor rpx_preview_btn bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_preview_btn bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxPreview
+			}
+		}
+		itemDef
+		{
+			name                rpx_reset
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                330 206 92 20
+			text                "Reset view"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          46
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Preview only: zoom back to 100%"
+			mouseEnter
+			{
+				setitemcolor rpx_reset bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_reset bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxReset prop
+			}
+		}
+		itemDef
+		{
+			name                rpx_zoom
+			type                ITEM_TYPE_INTSLIDER
+			text                "Zoom"
+			cvarint             "ui_rpx_p_zoom" 100 25 400
+			rect                272 230 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Preview only: zoom in or out (the prop is not changed)"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_zoom_value
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_p_zoom"
+			maxchars            4
+			maxPaintChars       4
+			rect                372 230 42 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Preview only: zoom in or out (the prop is not changed)"
+		}
+		itemDef
+		{
+			name                rpx_sep
+			style               WINDOW_STYLE_FILLED
+			rect                232 252 190 1
+			backcolor           1 .682 0 .5
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_head_angles
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 259 96 14
+			text                "Spawned prop"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_reset_angles
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                330 256 92 20
+			text                "Reset angles"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          46
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Spawned prop: Yaw, Pitch and Roll back to 0"
+			mouseEnter
+			{
+				setitemcolor rpx_reset_angles bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_reset_angles bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxReset angles
+			}
+		}
+		itemDef
+		{
+			name                rpx_yaw
+			type                ITEM_TYPE_INTSLIDER
+			text                "Yaw"
+			cvarint             "ui_rpx_p_yaw" 0 -180 180
+			rect                272 282 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: turn it around (degrees); the preview shows it"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_yaw_value
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_p_yaw"
+			maxchars            4
+			maxPaintChars       4
+			rect                372 282 42 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned prop: turn it around (degrees); the preview shows it"
+		}
+		itemDef
+		{
+			name                rpx_pitch
+			type                ITEM_TYPE_INTSLIDER
+			text                "Pitch"
+			cvarint             "ui_rpx_p_pitch" 0 -180 180
+			rect                272 302 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: tip it forwards or back (degrees); the preview shows it"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_pitch_value
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_p_pitch"
+			maxchars            4
+			maxPaintChars       4
+			rect                372 302 42 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned prop: tip it forwards or back (degrees); the preview shows it"
+		}
+		itemDef
+		{
+			name                rpx_roll
+			type                ITEM_TYPE_INTSLIDER
+			text                "Roll"
+			cvarint             "ui_rpx_p_roll" 0 -180 180
+			rect                272 322 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: lean it to the side (degrees); the preview shows it"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_roll_value
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_p_roll"
+			maxchars            4
+			maxPaintChars       4
+			rect                372 322 42 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned prop: lean it to the side (degrees); the preview shows it"
+		}
+		itemDef
+		{
+			name                rpx_undo
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                232 360 190 22
+			text                "Undo last"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          95
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Remove the last entity you added (/entundo)"
+			mouseEnter
+			{
+				setitemcolor rpx_undo bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_undo bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo undo
+			}
+		}
+		itemDef
+		{
+			name                rpx_selname
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                12 392 410 14
+			cvar                "ui_rpx_selname"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_head_spawn
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                432 40 180 14
+			text                "Spawned prop"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_scale
+			type                ITEM_TYPE_INTSLIDER
+			text                "Scale %"
+			cvarint             "ui_rpx_p_scale" 100 10 500
+			rect                474 56 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: size in percent (up to 1023); the preview shows the size line"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_scale_value
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_p_scale"
+			maxchars            4
+			maxPaintChars       4
+			rect                574 56 40 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned prop: size in percent (up to 1023); the preview shows the size line"
+		}
+		itemDef
+		{
+			name                rpx_faceme
+			type                ITEM_TYPE_YESNO
+			text                "Face me:"
+			cvar                "ui_rpx_p_faceme"
+			rect                432 80 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: faces you, then Yaw turns it; No: Yaw is the map direction"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_solid
+			type                ITEM_TYPE_YESNO
+			text                "Solid:"
+			cvar                "ui_rpx_p_solid"
+			rect                432 100 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: players and NPCs cannot walk through it"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_anim
+			type                ITEM_TYPE_YESNO
+			text                "Animated:"
+			cvar                "ui_rpx_p_anim"
+			rect                432 120 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: play its animation over and over (not shown in the preview)"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_break
+			type                ITEM_TYPE_YESNO
+			text                "Breakable:"
+			cvar                "ui_rpx_p_break"
+			rect                432 140 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: it can be shot or cut to pieces"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_health
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                "Health: "
+			cvar                "ui_rpx_p_health"
+			maxchars            6
+			maxPaintChars       6
+			rect                432 160 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned prop: how much damage it takes to break, when breakable"
+		}
+		itemDef
+		{
+			name                rpx_light
+			type                ITEM_TYPE_YESNO
+			text                "Light:"
+			cvar                "ui_rpx_p_light"
+			rect                432 186 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: it gives off light (the preview shows it)"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_lrad
+			type                ITEM_TYPE_INTSLIDER
+			text                "Radius"
+			cvarint             "ui_rpx_p_lrad" 200 10 1000
+			rect                474 206 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: how far the light reaches (the preview shows it)"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_lrad_value
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_p_lrad"
+			maxchars            4
+			maxPaintChars       4
+			rect                574 206 40 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned prop: how far the light reaches (the preview shows it)"
+		}
+		itemDef
+		{
+			name                rpx_lr
+			type                ITEM_TYPE_INTSLIDER
+			text                "Red"
+			cvarint             "ui_rpx_p_lr" 255 0 255
+			rect                474 226 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: the light's colour, red (the preview shows it)"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_lr_value
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_p_lr"
+			maxchars            3
+			maxPaintChars       3
+			rect                574 226 40 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned prop: the light's colour, red (the preview shows it)"
+		}
+		itemDef
+		{
+			name                rpx_lg
+			type                ITEM_TYPE_INTSLIDER
+			text                "Green"
+			cvarint             "ui_rpx_p_lg" 255 0 255
+			rect                474 246 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: the light's colour, green (the preview shows it)"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_lg_value
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_p_lg"
+			maxchars            3
+			maxPaintChars       3
+			rect                574 246 40 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned prop: the light's colour, green (the preview shows it)"
+		}
+		itemDef
+		{
+			name                rpx_lb
+			type                ITEM_TYPE_INTSLIDER
+			text                "Blue"
+			cvarint             "ui_rpx_p_lb" 255 0 255
+			rect                474 266 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: the light's colour, blue (the preview shows it)"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_lb_value
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_p_lb"
+			maxchars            3
+			maxPaintChars       3
+			rect                574 266 40 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned prop: the light's colour, blue (the preview shows it)"
+		}
+		itemDef
+		{
+			name                rpx_swatch
+			type                ITEM_TYPE_OWNERDRAW
+			ownerdraw           UI_RPX_SWATCH
+			rect                432 288 180 14
+			font                2
+			textscale           0.7
+			forecolor           .8 .8 .8 1
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_preset0
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 306 35 18
+			text                "White"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          17
+			textaligny          2
+			font                2
+			textscale           0.5
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Spawned prop: a light colour to start from"
+			mouseEnter
+			{
+				setitemcolor rpx_preset0 bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_preset0 bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setcvar ui_rpx_p_lr 255 ;
+				setcvar ui_rpx_p_lg 255 ;
+				setcvar ui_rpx_p_lb 255
+			}
+		}
+		itemDef
+		{
+			name                rpx_preset1
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                468 306 35 18
+			text                "Warm"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          17
+			textaligny          2
+			font                2
+			textscale           0.5
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Spawned prop: a light colour to start from"
+			mouseEnter
+			{
+				setitemcolor rpx_preset1 bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_preset1 bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setcvar ui_rpx_p_lr 255 ;
+				setcvar ui_rpx_p_lg 190 ;
+				setcvar ui_rpx_p_lb 120
+			}
+		}
+		itemDef
+		{
+			name                rpx_preset2
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                504 306 35 18
+			text                "Fire"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          17
+			textaligny          2
+			font                2
+			textscale           0.5
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Spawned prop: a light colour to start from"
+			mouseEnter
+			{
+				setitemcolor rpx_preset2 bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_preset2 bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setcvar ui_rpx_p_lr 255 ;
+				setcvar ui_rpx_p_lg 110 ;
+				setcvar ui_rpx_p_lb 30
+			}
+		}
+		itemDef
+		{
+			name                rpx_preset3
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                540 306 35 18
+			text                "Blue"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          17
+			textaligny          2
+			font                2
+			textscale           0.5
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Spawned prop: a light colour to start from"
+			mouseEnter
+			{
+				setitemcolor rpx_preset3 bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_preset3 bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setcvar ui_rpx_p_lr 100 ;
+				setcvar ui_rpx_p_lg 160 ;
+				setcvar ui_rpx_p_lb 255
+			}
+		}
+		itemDef
+		{
+			name                rpx_preset4
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                576 306 35 18
+			text                "Green"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          17
+			textaligny          2
+			font                2
+			textscale           0.5
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Spawned prop: a light colour to start from"
+			mouseEnter
+			{
+				setitemcolor rpx_preset4 bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_preset4 bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setcvar ui_rpx_p_lr 100 ;
+				setcvar ui_rpx_p_lg 255 ;
+				setcvar ui_rpx_p_lb 120
+			}
+		}
+		itemDef
+		{
+			name                rpx_lift
+			type                ITEM_TYPE_INTSLIDER
+			text                "Offset"
+			cvarint             "ui_rpx_p_lift" 0 0 512
+			rect                474 328 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Spawned prop: how far out from the surface you aim at it goes"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_lift_value
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_p_lift"
+			maxchars            3
+			maxPaintChars       3
+			rect                574 328 40 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Spawned prop: how far out from the surface you aim at it goes"
+		}
+		itemDef
+		{
+			name                rpx_spawn
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 350 180 24
+			text                "Spawn"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          90
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Spawn it on the surface you are aiming at (/entaddaim), and close the menu"
+			mouseEnter
+			{
+				setitemcolor rpx_spawn bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_spawn bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo spawnprop
+			}
+		}
+		itemDef
+		{
+			name                rpx_grab
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 378 180 24
+			text                "Grab"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          90
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Pick it up and close the menu; aim and use /entaddgrab to place it"
+			mouseEnter
+			{
+				setitemcolor rpx_grab bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_grab bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo grabprop
+			}
+		}
+	}
+}

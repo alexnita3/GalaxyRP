@@ -1420,9 +1420,6 @@ void CG_DrawHUD(centity_t	*cent)
 {
 	menuDef_t	*menuHUD = NULL;
 	itemDef_t	*focusItem = NULL;
-	const char *scoreStr = NULL;
-	int	scoreBias;
-	char scoreBiasStr[16];
 
 	if (cg_hudFiles.integer)
 	{
@@ -1494,64 +1491,15 @@ void CG_DrawHUD(centity_t	*cent)
 			//trap->Error( ERR_DROP, "CG_ChatBox_ArrayInsert: unable to locate HUD menu file ");
 		}
 
-		//scoreStr = va("Score: %i", cgs.clientinfo[cg.snap->ps.clientNum].score);
-		if ( cgs.gametype == GT_DUEL )
-		{//A duel that requires more than one kill to knock the current enemy back to the queue
-			//show current kills out of how many needed
-			scoreStr = va("%s: %i/%i", CG_GetStringEdString("MP_INGAME", "SCORE"), cg.snap->ps.persistant[PERS_SCORE], cgs.fraglimit);
-		}
-		else if (0 && cgs.gametype < GT_TEAM )
-		{	// This is a teamless mode, draw the score bias.
-			scoreBias = cg.snap->ps.persistant[PERS_SCORE] - cgs.scores1;
-			if (scoreBias == 0)
-			{	// We are the leader!
-				if (cgs.scores2 <= 0)
-				{	// Nobody to be ahead of yet.
-					Com_sprintf(scoreBiasStr, sizeof(scoreBiasStr), "");
-				}
-				else
-				{
-					scoreBias = cg.snap->ps.persistant[PERS_SCORE] - cgs.scores2;
-					if (scoreBias == 0)
-					{
-						Com_sprintf(scoreBiasStr, sizeof(scoreBiasStr), " (Tie)");
-					}
-					else
-					{
-						Com_sprintf(scoreBiasStr, sizeof(scoreBiasStr), " (+%d)", scoreBias);
-					}
-				}
-			}
-			else // if (scoreBias < 0)
-			{	// We are behind!
-				Com_sprintf(scoreBiasStr, sizeof(scoreBiasStr), " (%d)", scoreBias);
-			}
-			scoreStr = va("%s: %i%s", CG_GetStringEdString("MP_INGAME", "SCORE"), cg.snap->ps.persistant[PERS_SCORE], scoreBiasStr);
-		}
-		else
-		{	// Don't draw a bias.
-			scoreStr = va("%s: %i", CG_GetStringEdString("MP_INGAME", "SCORE"), cg.snap->ps.persistant[PERS_SCORE]);
-		}
-
 		menuHUD = Menus_FindByName("righthud");
 		Menu_Paint( menuHUD, qtrue );
 
 		if (menuHUD)
 		{
-			if (cgs.gametype != GT_POWERDUEL)
-			{
-				focusItem = Menu_FindItemByName(menuHUD, "score_line");
-				if (focusItem)
-				{
-					CG_DrawScaledProportionalString(
-						focusItem->window.rect.x,
-						focusItem->window.rect.y,
-						scoreStr,
-						UI_RIGHT|UI_DROPSHADOW,
-						focusItem->window.foreColor,
-						0.7f);
-				}
-			}
+			// GalaxyRP fix: [Scoreboard] the "score_line" item under the right HUD used to show
+			// "Score: <n>" (and "Score: <n>/<fraglimit>" in Duel) from PERS_SCORE. The mod no longer
+			// counts kills, so it read "Score: 0" for everyone, always. Not drawn any more; the
+			// empty item in hud.menu is harmless.
 
 			// Print scanline
 			focusItem = Menu_FindItemByName(menuHUD, "scanline");
@@ -2010,7 +1958,11 @@ qboolean CG_CheckTargetVehicle( centity_t **pTargetVeh, float *alpha )
 	{
 		//centity_t *targetVeh = &cg_entities[targetNum];
 		targetVeh = &cg_entities[targetNum];
+		// DAJ_RP: [Cloak Item] ...and not a cloaked one: its damage readout ("enemyvehicledamagehud") gave it away,
+		// from a lock or the crosshair, as the brackets did (CG_AddBracketedEnt(), cg_ents.c). Not taken as the
+		// target, it is not remembered either, so one that cloaks while aimed at drops out at once.
 		if ( targetVeh->currentState.NPC_class == CLASS_VEHICLE
+			&& !(targetVeh->currentState.powerups & (1 << PW_CLOAKED))
 			&& targetVeh->m_pVehicle
 			&& targetVeh->m_pVehicle->m_pVehicleInfo
 			&& targetVeh->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER )
@@ -3371,8 +3323,25 @@ float CG_DrawRadar ( float y )
 		return y;
 	}
 
-	if (cgs.gametype < GT_TEAM && !(cg.rpg_stuff & (1 << 0)) && !cg.predictedPlayerState.m_iVehicleNum)
-	{ // zyk: verify if this player has the Radar Upgrade in non-team gametypes. Show radar if in a vehicle
+	// GalaxyRP: [Radar] availability. At or above GT_TEAM (Team, Siege, CTF, CTY) the radar is always
+	// available and cg_drawRadar is the only toggle -- this early-out is unreachable there, so those
+	// gametypes are untouched. Below GT_TEAM a logged-in player carries it on foot; a logged-out one
+	// still needs a vehicle, exactly as before.
+	//
+	// This replaces `!(cg.rpg_stuff & (1 << 0))`, the "Bounty Hunter radar upgrade" flag, which was
+	// permanently 0 -- its only setter was a pers.rpg_class == 2 branch, and rpg_class was removed as
+	// dead. That made the old test `gametype < GT_TEAM && !vehicle`, i.e. the radar simply never drew
+	// on foot below GT_TEAM. The new condition is that same expression with one more conjunct, so it
+	// can only fire in a SUBSET of the cases it fires in today: nobody loses the radar, logged-in
+	// players gain it on foot.
+	//
+	// ui_loggedin mirrors the local player's sess.loggedin and is authoritative from ClientBegin
+	// onward -- g_client.c pushes "supdateloggedin" unconditionally on both of ClientBegin's paths,
+	// which is what stops a player who was logged in on a previous map arriving holding a stale 1.
+	// cgame already reads it this way in CG_GreyItem (cg_ents.c). "The local player" is unambiguous
+	// here because this function has already returned for spectators and followers a few lines above.
+	if (cgs.gametype < GT_TEAM && !cg.predictedPlayerState.m_iVehicleNum && !ui_loggedin.integer)
+	{
 		return y;
 	}
 
@@ -3883,24 +3852,36 @@ float CG_DrawRadar ( float y )
 					continue;
 				}
 				
-				if (cg.zyk_rpg_stuff[cent->currentState.number] & (1 << 1))
-				{ // zyk: if this is a stealth attacker with upgrade, do not draw it on radar
-					continue;
-				}
+				// GalaxyRP fix: [Radar] a "this is a Stealth Attacker with the upgrade, hide them"
+				// skip used to sit here on cg.zyk_rpg_stuff[n] bit 1. Only the CLEARING event for
+				// that bit was ever sent (EV_ITEMUSEFAIL parm 10); the setter, parm 9, came from a
+				// pers.rpg_class == 5 branch that went with rpg_class itself. The bit was therefore
+				// permanently 0 and this skip never fired once. Cloaked entities are what get kept
+				// off the radar now, and that is filtered earlier, in CG_AddRadarEnt.
 
 				if (cgs.gametype == GT_SIEGE && cl->team != local->team)
 				{ // zyk: in Siege, shows on radar only players from the same team
 					continue;
 				}
 
-				if (cgs.gametype >= GT_TEAM && cgs.gametype != GT_SIEGE && cl->team != local->team && !(cg.rpg_stuff & (1 << 0)))
-				{ // zyk: in other team gametypes, shows all players if this is a Bounty Hunter with Upgrade
+				// GalaxyRP fix: [Radar] the trailing `&& !(cg.rpg_stuff & (1 << 0))` is gone with that
+				// permanently-0 flag. Dropping a conjunct that was always TRUE leaves this condition
+				// exactly as it behaved: in Team, CTF and CTY the radar still shows teammates only.
+				if (cgs.gametype >= GT_TEAM && cgs.gametype != GT_SIEGE && cl->team != local->team)
+				{ // zyk: in other team gametypes, enemies are not shown on the radar
 					continue;
 				}
 
-				// zyk: shows red for enemies in non-team gametypes or if it is a team gametype and player is a Bounty Hunter with Upgrade
-				if ((cgs.gametype < GT_TEAM && !(cg.zyk_rpg_stuff[cent->currentState.number] & (1 << 2))) || 
-					(cgs.gametype >= GT_TEAM && cg.rpg_stuff & (1 << 0) && cl->team != local->team))
+				// zyk: shows red for enemies in non-team gametypes
+				// GalaxyRP fix: [Radar] the second disjunct, `gametype >= GT_TEAM && (cg.rpg_stuff &
+				// (1 << 0)) && cl->team != local->team`, is gone: that flag was permanently 0, so the
+				// disjunct was permanently false and removing it changes nothing. It was moot anyway
+				// -- the skip above means no enemy reaches this line in a team gametype.
+				//
+				// What is left is the below-GT_TEAM rule, and it is the only colour distinction those
+				// gametypes have: everyone who reaches here is drawn, red if they are not an ally of
+				// yours and green (the fixed teamColor above) if they are.
+				if (cgs.gametype < GT_TEAM && !CG_IsAlly(cent->currentState.number))
 				{
 					VectorCopy ( g_color_table[ColorIndex(COLOR_RED)], color);
 					color[3] = 1.0f;
@@ -4158,7 +4139,12 @@ static float CG_DrawTeamOverlay( float y, qboolean right, qboolean upper ) {
 			} else {
 				xx = x + w - TINYCHAR_WIDTH;
 			}
-			for (j = 0; j <= PW_NUM_POWERUPS; j++) {
+			// GalaxyRP fix: [bounds] "<=" ran one iteration past the last powerup, asking
+			// BG_FindItemForPowerup for PW_NUM_POWERUPS itself. That is a linear search over
+			// bg_itemlist rather than an index, and no IT_POWERUP/IT_TEAM item carries that tag, so
+			// it found nothing -- but it only stayed harmless because of what the item list happens
+			// to contain. Matches OpenJK 6a8a8809.
+			for (j = 0; j < PW_NUM_POWERUPS; j++) {
 				if (ci->powerups & (1 << j)) {
 
 					item = BG_FindItemForPowerup( j );
@@ -5030,100 +5016,9 @@ void CG_DrawGenericTimerBar(void)
 	CG_FillRect(x+1.0f, y+1.0f, CGTIMERBAR_W-2.0f, CGTIMERBAR_H-percent, cColor);
 }
 
-#define CGUNIQUEBAR_H			50.0f
-#define CGUNIQUEBAR_W			10.0f
-#define CGUNIQUEBAR_X			(SCREEN_WIDTH-CGUNIQUEBAR_W-140.0f)
-#define CGUNIQUEBAR_Y			(SCREEN_HEIGHT-CGUNIQUEBAR_H-20.0f)
-void CG_DrawUniqueSkillTimer(void)
-{ // zyk: draws the Unique Skill cooldown timer
-	vec4_t aColor;
-	vec4_t cColor;
-	float x = CGUNIQUEBAR_X;
-	float y = CGUNIQUEBAR_Y;
-	float percent = 0.0f;
-
-	if (cg.unique_cooldown_timer < cg.time)
-	{ // zyk: no longer draw Unique bar if unique cooldown time ends
-		cg.unique_cooldown_timer = 0;
-		cg.unique_cooldown_duration = 0;
-		cg.using_unique_boost = 0;
-		return;
-	}
-
-	if (cg.using_unique_boost == 1)
-	{
-		// zyk: applied the boost. Only becomes 0 again after unique bar run out
-		cg.using_unique_boost = 2;
-
-		cg.unique_cooldown_timer -= ((cg.unique_cooldown_timer - cg.time) / 5);
-		cg.unique_cooldown_duration -= (cg.unique_cooldown_duration / 5);
-	}
-
-	percent = ((float)(cg.unique_cooldown_timer - cg.time) / (float)cg.unique_cooldown_duration) * CGUNIQUEBAR_H;
-
-	//color of the bar
-	aColor[0] = 0.0;
-	aColor[1] = 0.2;
-	aColor[2] = 1.0;
-	aColor[3] = 1.0;
-
-	//color of greyed out "missing fuel"
-	cColor[0] = 0.5f;
-	cColor[1] = 0.5f;
-	cColor[2] = 0.5f;
-	cColor[3] = 0.1f;
-
-	//draw the background (black)
-	CG_DrawRect(x, y, CGUNIQUEBAR_W, CGUNIQUEBAR_H, 1.0f, colorTable[CT_BLACK]);
-
-	//now draw the part to show how much health there is in the color specified
-	CG_FillRect(x+1.0f, y+1.0f+(CGUNIQUEBAR_H-percent), CGUNIQUEBAR_W-2.0f, CGUNIQUEBAR_H-1.0f-(CGUNIQUEBAR_H-percent), aColor);
-
-	//then draw the other part greyed out
-	CG_FillRect(x+1.0f, y+1.0f, CGUNIQUEBAR_W-2.0f, CGUNIQUEBAR_H-percent, cColor);
-}
-
-#define CGUNIQUEDURATIONBAR_H			50.0f
-#define CGUNIQUEDURATIONBAR_W			10.0f
-#define CGUNIQUEDURATIONBAR_X			(SCREEN_WIDTH-CGUNIQUEDURATIONBAR_W-160.0f)
-#define CGUNIQUEDURATIONBAR_Y			(SCREEN_HEIGHT-CGUNIQUEDURATIONBAR_H-20.0f)
-void CG_DrawUniqueSkillDurationTimer(void)
-{ // zyk: draws the Unique Skill cooldown timer
-	vec4_t aColor;
-	vec4_t cColor;
-	float x = CGUNIQUEDURATIONBAR_X;
-	float y = CGUNIQUEDURATIONBAR_Y;
-	float percent = ((float)(cg.unique_duration_timer - cg.time) / (float)cg.unique_duration) * CGUNIQUEDURATIONBAR_H;
-
-	if (cg.unique_duration_timer < cg.time || cg.snap->ps.stats[STAT_HEALTH] < 1)
-	{ // zyk: no longer draw Unique duration bar if unique duration time ends
-		cg.unique_duration_timer = 0;
-		cg.unique_duration = 0;
-		cg.unique_duration_control = 0;
-		return;
-	}
-
-	//color of the bar
-	aColor[0] = 0.0;
-	aColor[1] = 1.0;
-	aColor[2] = 1.0;
-	aColor[3] = 1.0;
-
-	//color of greyed out "missing fuel"
-	cColor[0] = 0.5f;
-	cColor[1] = 0.5f;
-	cColor[2] = 0.5f;
-	cColor[3] = 0.1f;
-
-	//draw the background (black)
-	CG_DrawRect(x, y, CGUNIQUEDURATIONBAR_W, CGUNIQUEDURATIONBAR_H, 1.0f, colorTable[CT_BLACK]);
-
-	//now draw the part to show how much health there is in the color specified
-	CG_FillRect(x + 1.0f, y + 1.0f + (CGUNIQUEDURATIONBAR_H - percent), CGUNIQUEDURATIONBAR_W - 2.0f, CGUNIQUEDURATIONBAR_H - 1.0f - (CGUNIQUEDURATIONBAR_H - percent), aColor);
-
-	//then draw the other part greyed out
-	CG_FillRect(x + 1.0f, y + 1.0f, CGUNIQUEDURATIONBAR_W - 2.0f, CGUNIQUEDURATIONBAR_H - percent, cColor);
-}
+// GalaxyRP fix: [Skills] CG_DrawUniqueSkillTimer() and CG_DrawUniqueSkillDurationTimer() used to be
+// here, the Unique Skill cooldown and duration bars. Nothing has sent the events that armed them
+// (EV_USE_ITEM13 parm 105 and the duration control) since /unique and the class abilities went.
 
 /*
 =================
@@ -5177,6 +5072,57 @@ void CG_LerpCrosshairPos( float *x, float *y )
 }
 
 vec3_t cg_crosshairPos={0,0,0};
+/*
+=================
+CG_CrosshairAlly
+
+DAJ_RP fix: [Ally] whether the crosshair and the name under it show this player as a friend for being one of
+my allies (/allyadd; cg.ally1/ally2, CG_IsAlly): outside the team gametypes, as the radar does. In those the
+team decides, as before -- an ally on the other team stays an enemy.
+=================
+*/
+qboolean CG_CrosshairAlly( int clientNum )
+{
+	return ( cgs.gametype < GT_TEAM && CG_IsAlly( clientNum ) ) ? qtrue : qfalse;
+}
+
+/*
+=================
+CG_RpForceHintTarget
+
+DAJ_RP: [Force Powers] whether the crosshair, aimed at hitPoint on this entity, gets the blue Force hint and its
+swirl: single player's hint (CG_ScanForCrosshairEntity, code/cgame/cg_draw.cpp) on what Push or Pull uses. The
+server marks such a mover in s.bolt1 (g_mover.c): 1 Push uses it, 2 Pull does, 3 both -- a func_static by its
+F_PUSH/F_PULL spawnflags, a force-usable func_door (MOVER_FORCE_ACTIVATE) both. It used to show only with the
+saber out, for any power or none, at any distance. Now, with any weapon: when I know a power that uses it
+(forcePowersKnown; our levels are not sent to the client) and it is within RP_FORCE_HINT_RANGE of me -- the reach
+of levels 2-5 (ForceThrow, w_force.c, measures from the origin to the nearest edge of the target, never further
+than the point aimed at). Level 1's aimed push reaches 512 from the eyes, so the hint can show a little further
+than a level 1 push lands.
+=================
+*/
+#define RP_FORCE_HINT_RANGE	1024.0f
+static qboolean CG_RpForceHintTarget( const centity_t *cent, const float *hitPoint )
+{
+	const int known = cg.predictedPlayerState.fd.forcePowersKnown;
+	int marks;
+
+	if ( !cent || !hitPoint || cent->currentState.eType != ET_MOVER )
+	{
+		return qfalse;
+	}
+	marks = cent->currentState.bolt1;
+	if ( !marks )
+	{
+		return qfalse;
+	}
+	if ( !( ( ( marks & 1 ) && ( known & ( 1 << FP_PUSH ) ) ) || ( ( marks & 2 ) && ( known & ( 1 << FP_PULL ) ) ) ) )
+	{
+		return qfalse;
+	}
+	return ( DistanceSquared( cg.predictedPlayerState.origin, hitPoint ) <= RP_FORCE_HINT_RANGE * RP_FORCE_HINT_RANGE ) ? qtrue : qfalse;
+}
+
 static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 	float		w, h;
 	qhandle_t	hShader = 0;
@@ -5227,7 +5173,7 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 			cg_entities[cg.crosshairClientNum].currentState.eType == ET_NPC ||
 			cg_entities[cg.crosshairClientNum].currentState.shouldtarget ||
 			cg_entities[cg.crosshairClientNum].currentState.health || //always show ents with health data under crosshair
-			(cg_entities[cg.crosshairClientNum].currentState.eType == ET_MOVER && cg_entities[cg.crosshairClientNum].currentState.bolt1 && cg.predictedPlayerState.weapon == WP_SABER) ||
+			CG_RpForceHintTarget( &cg_entities[cg.crosshairClientNum], worldPoint ) ||	// DAJ_RP: [Force Powers] was ET_MOVER, bolt1, the saber out
 			(cg_entities[cg.crosshairClientNum].currentState.eType == ET_MOVER && cg_entities[cg.crosshairClientNum].currentState.teamowner)))
 		{
 			crossEnt = &cg_entities[cg.crosshairClientNum];
@@ -5244,6 +5190,12 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 					cgs.clientinfo[crossEnt->currentState.number].team == cgs.clientinfo[cg.snap->ps.clientNum].team )
 				{
 					//Allies are green
+					ecolor[0] = 0.0;//R
+					ecolor[1] = 1.0;//G
+					ecolor[2] = 0.0;//B
+				}
+				else if ( CG_CrosshairAlly( crossEnt->currentState.number ) )
+				{ // DAJ_RP fix: [Ally] one of my allies is green, as on the radar (CG_CrosshairAlly)
 					ecolor[0] = 0.0;//R
 					ecolor[1] = 1.0;//G
 					ecolor[2] = 0.0;//B
@@ -5320,7 +5272,9 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 							{ //base color on who is pilotting this thing
 								clientInfo_t *ci = &cgs.clientinfo[crossEnt->currentState.owner];
 
-								if (cgs.gametype >= GT_TEAM && ci->team == cg.predictedPlayerState.persistant[PERS_TEAM])
+								// DAJ_RP fix: [Ally] or flown by one of my allies (CG_CrosshairAlly)
+								if ((cgs.gametype >= GT_TEAM && ci->team == cg.predictedPlayerState.persistant[PERS_TEAM]) ||
+									CG_CrosshairAlly(crossEnt->currentState.owner))
 								{ //friendly
 									ecolor[0] = 0.0f;//R
 									ecolor[1] = 1.0f;//G
@@ -5397,8 +5351,8 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 					ecolor[2] = 0.0f;//B
 				}
 			}
-			else if (crossEnt->currentState.eType == ET_MOVER && crossEnt->currentState.bolt1 && cg.predictedPlayerState.weapon == WP_SABER)
-			{ //can push/pull this mover. Only show it if we're using the saber.
+			else if ( CG_RpForceHintTarget( crossEnt, worldPoint ) )
+			{ //can push/pull this mover. DAJ_RP: [Force Powers] with any weapon, a power that uses it, in reach (was: only with the saber out)
 				ecolor[0] = 0.2f;
 				ecolor[1] = 0.5f;
 				ecolor[2] = 1.0f;
@@ -5535,6 +5489,12 @@ static void CG_DrawCrosshair( vec3_t worldPoint, int chEntValid ) {
 			}
 		}
 	}
+
+	// GalaxyRP: [Skills] remember where the crosshair went (it follows the aim point with a dynamic
+	// crosshair, and any health bars pushed chY down), so the Sense Health readout can sit under it
+	cg.crosshairAnchorTime = cg.time;
+	cg.crosshairAnchorX = chX + w * 0.5f;
+	cg.crosshairAnchorY = chY + h;
 
 	if (cg.predictedPlayerState.hackingTime)
 	{ //hacking something
@@ -6351,6 +6311,101 @@ CG_`Entity
 =================
 */
 #define MAX_XHAIR_DIST_ACCURACY	20000.0f
+/*
+=================
+CG_PhaseCrosshairTrace
+
+GalaxyRP: [Phase] players under /admwalkthrough, /admghost, /admholo or /admhidden arrive with no collision box
+(s.solid 0 -- see ClientEndFrame in g_active.c), so the crosshair traces, which only test the solid
+list, go straight through them and their name never shows. This tests the segment start->end
+against a standard player box around each of them, scaled by the model scale they send, and takes
+the nearest hit if it is closer than whatever the real trace found. A slab test against an
+axis-aligned box: the same box the server gives a standing player, which is close enough for aiming
+a name tag.
+
+NPCs /npc effect has phased arrive the same way, so they are tested too: no name is drawn for an
+NPC, but the crosshair still changes colour over it like over any other NPC. Their real box is not
+sent once s.solid is 0, so they get the same standard box -- right for humanoids, a little generous
+or tight for droids and creatures, which is fine for colouring a crosshair.
+=================
+*/
+static qboolean CG_PhaseRayHitsBox( const vec3_t start, const vec3_t end, const vec3_t mins, const vec3_t maxs, float *frac )
+{
+	float tmin = 0.0f, tmax = 1.0f;
+	int i;
+
+	for ( i = 0; i < 3; i++ )
+	{
+		const float d = end[i] - start[i];
+
+		if ( d > -0.0001f && d < 0.0001f )
+		{ // parallel to this slab: must already be inside it
+			if ( start[i] < mins[i] || start[i] > maxs[i] )
+			{
+				return qfalse;
+			}
+		}
+		else
+		{
+			float t1 = ( mins[i] - start[i] ) / d;
+			float t2 = ( maxs[i] - start[i] ) / d;
+
+			if ( t1 > t2 )
+			{
+				const float tmp = t1; t1 = t2; t2 = tmp;
+			}
+			if ( t1 > tmin ) tmin = t1;
+			if ( t2 < tmax ) tmax = t2;
+			if ( tmin > tmax )
+			{
+				return qfalse;
+			}
+		}
+	}
+
+	*frac = tmin;
+	return qtrue;
+}
+
+static void CG_PhaseCrosshairTrace( trace_t *trace, const vec3_t start, const vec3_t end, int ignore )
+{
+	int i;
+
+	for ( i = 0; i < ENTITYNUM_WORLD; i++ )
+	{
+		centity_t *cent = &cg_entities[i];
+		vec3_t mins, maxs;
+		float scale, frac;
+
+		if ( i == ignore || i == cg.predictedPlayerState.clientNum )
+			continue;
+		if ( !cent->currentValid )
+			continue;
+		if ( cent->currentState.eType != ( i < MAX_CLIENTS ? ET_PLAYER : ET_NPC ) )
+			continue;
+		if ( RP_PHASE_FROM_EFLAGS( cent->currentState.eFlags ) == RP_PHASE_NONE )
+			continue;
+		if ( cent->currentState.eFlags & ( EF_DEAD | EF_NODRAW ) )
+			continue;
+
+		scale = cent->currentState.iModelScale ? cent->currentState.iModelScale / 100.0f : 1.0f;
+
+		VectorSet( mins, -15.0f * scale, -15.0f * scale, DEFAULT_MINS_2 * scale );
+		VectorSet( maxs, 15.0f * scale, 15.0f * scale, DEFAULT_MAXS_2 * scale );
+		VectorAdd( mins, cent->lerpOrigin, mins );
+		VectorAdd( maxs, cent->lerpOrigin, maxs );
+
+		if ( CG_PhaseRayHitsBox( start, end, mins, maxs, &frac ) && frac < trace->fraction )
+		{
+			trace->fraction = frac;
+			trace->entityNum = i;
+			trace->endpos[0] = start[0] + frac * ( end[0] - start[0] );
+			trace->endpos[1] = start[1] + frac * ( end[1] - start[1] );
+			trace->endpos[2] = start[2] + frac * ( end[2] - start[2] );
+		}
+	}
+}
+
 static void CG_ScanForCrosshairEntity( void ) {
 	trace_t		trace;
 	vec3_t		start, end;
@@ -6501,6 +6556,28 @@ static void CG_ScanForCrosshairEntity( void ) {
 	{
 		CG_Trace( &trace, start, vec3_origin, vec3_origin, end,
 			ignore, CONTENTS_SOLID|CONTENTS_BODY );
+	}
+
+	// GalaxyRP: [Phase] let the name of a phased player show -- see CG_PhaseCrosshairTrace(). A hidden one
+	// (/admhidden) is found too, and the stock Mind Trick test just below then keeps his name off.
+	CG_PhaseCrosshairTrace( &trace, start, end, ignore );
+
+	// DAJ_RP: [Force Powers] nothing found but the world: an invisible, non-solid brush Push or Pull uses in the way?
+	// (textures/system/caulk_nonsolid, CONTENTS_OPAQUE only -- kor2's pillar and push_brush; RP_ForceUsableStatic,
+	// w_force.c). The trace above stops only at solid brushes and bodies and goes straight through it. The same line
+	// again, stopping at opaque brushes too, taken only when the first thing it meets is such a mover that gets the
+	// Force hint (CG_RpForceHintTarget): the server's own rule for an aimed push. It can only add one of those --
+	// a world wall in front stops it first, and anything the first trace found wins.
+	if ( trace.entityNum >= ENTITYNUM_WORLD )
+	{
+		trace_t opaqueTr;
+
+		CG_Trace( &opaqueTr, start, vec3_origin, vec3_origin, end, ignore, CONTENTS_SOLID|CONTENTS_BODY|CONTENTS_OPAQUE );
+		if ( opaqueTr.fraction < 1.0f && opaqueTr.entityNum >= MAX_CLIENTS && opaqueTr.entityNum < ENTITYNUM_WORLD
+			&& CG_RpForceHintTarget( &cg_entities[opaqueTr.entityNum], opaqueTr.endpos ) )
+		{
+			trace = opaqueTr;
+		}
 	}
 
 	if (trace.entityNum < MAX_CLIENTS)
@@ -6654,6 +6731,10 @@ static void CG_DrawCrosshairNames( void ) {
 			cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR &&
 			cgs.clientinfo[cg.crosshairClientNum].duelTeam == cgs.clientinfo[cg.predictedPlayerState.clientNum].duelTeam)
 		{ //on the same duel team in powerduel, so he's a friend
+			baseColor = CT_GREEN;
+		}
+		else if (CG_CrosshairAlly(cg.crosshairClientNum))
+		{ // DAJ_RP fix: [Ally] one of my allies, or the pilot of what I aim at, as the crosshair (CG_CrosshairAlly)
 			baseColor = CT_GREEN;
 		}
 		else
@@ -7367,149 +7448,10 @@ void CG_DrawEWebHealth(void)
 	CG_FillRect(x+1.0f, y+1.0f, EWEBHEALTH_W-1.0f, EWEBHEALTH_H-percent, cColor);
 }
 
-#define RPG_BAR_Y 180.0
-#define RPG_BAR_WIDTH 10.0
-// zyk: draws the magic power bar
-void CG_DrawMagicPower(void)
-{
-	vec4_t aColor;
-	vec4_t cColor;
-	float x = 10.0;
-	float y = RPG_BAR_Y;
-	float scaled_magic_power = cg.magic_power;
-
-	//color of the bar
-	aColor[0] = 0.0f;
-	aColor[1] = 0.7f;
-	aColor[2] = 0.0f;
-	aColor[3] = 0.8f;
-
-	//color of greyed out "missing fuel"
-	cColor[0] = 0.5f;
-	cColor[1] = 0.5f;
-	cColor[2] = 0.5f;
-	cColor[3] = 0.1f;
-
-	//draw the background (black)
-	CG_DrawRect(x, y, RPG_BAR_WIDTH, JPFUELBAR_H, 1.0f, colorTable[CT_BLACK]);
-
-	//now draw the part to show how much health there is in the color specified
-	CG_FillRect(x+1.0f, y+1.0f+(JPFUELBAR_H-scaled_magic_power), RPG_BAR_WIDTH-1.0f, JPFUELBAR_H-1.0f-(JPFUELBAR_H-scaled_magic_power), aColor);
-
-	//then draw the other part greyed out
-	CG_FillRect(x+1.0f, y+1.0f, RPG_BAR_WIDTH-1.0f, JPFUELBAR_H-scaled_magic_power, cColor);
-}
-
-// zyk: draws the Immunity Power bar
-void CG_DrawImmunityPower(void)
-{
-	vec4_t aColor;
-	vec4_t cColor;
-	float x = 25.0;
-	float y = RPG_BAR_Y;
-	float scaled_duration = (((cg.immunity_power_duration - cg.time) * 1.0)/25000) * 100.0;
-
-	if (scaled_duration < 0.0 || cg.snap->ps.stats[STAT_HEALTH] < 1)
-	{
-		cg.immunity_power_duration = 0;
-		return;
-	}
-
-	//color of the bar
-	aColor[0] = 0.9f;
-	aColor[1] = 0.9f;
-	aColor[2] = 0.9f;
-	aColor[3] = 0.8f;
-
-	//color of greyed out "missing fuel"
-	cColor[0] = 0.5f;
-	cColor[1] = 0.5f;
-	cColor[2] = 0.5f;
-	cColor[3] = 0.1f;
-
-	//draw the background (black)
-	CG_DrawRect(x, y, RPG_BAR_WIDTH, JPFUELBAR_H, 1.0f, colorTable[CT_BLACK]);
-
-	//now draw the part to show how much health there is in the color specified
-	CG_FillRect(x+1.0f, y+1.0f+(JPFUELBAR_H-scaled_duration), RPG_BAR_WIDTH-1.0f, JPFUELBAR_H-1.0f-(JPFUELBAR_H-scaled_duration), aColor);
-
-	//then draw the other part greyed out
-	CG_FillRect(x+1.0f, y+1.0f, RPG_BAR_WIDTH-1.0f, JPFUELBAR_H-scaled_duration, cColor);
-}
-
-// zyk: draws the Ultra Strength bar
-void CG_DrawUltraStrength(void)
-{
-	vec4_t aColor;
-	vec4_t cColor;
-	float x = 40.0;
-	float y = RPG_BAR_Y;
-	float scaled_duration = (((cg.ultra_strength_duration - cg.time) * 1.0)/30000) * 100.0;
-
-	if (scaled_duration < 0.0 || cg.snap->ps.stats[STAT_HEALTH] < 1)
-	{
-		cg.ultra_strength_duration = 0;
-		return;
-	}
-
-	//color of the bar
-	aColor[0] = 0.9f;
-	aColor[1] = 0.1f;
-	aColor[2] = 0.1f;
-	aColor[3] = 0.8f;
-
-	//color of greyed out "missing fuel"
-	cColor[0] = 0.5f;
-	cColor[1] = 0.5f;
-	cColor[2] = 0.5f;
-	cColor[3] = 0.1f;
-
-	//draw the background (black)
-	CG_DrawRect(x, y, RPG_BAR_WIDTH, JPFUELBAR_H, 1.0f, colorTable[CT_BLACK]);
-
-	//now draw the part to show how much health there is in the color specified
-	CG_FillRect(x+1.0f, y+1.0f+(JPFUELBAR_H-scaled_duration), RPG_BAR_WIDTH-1.0f, JPFUELBAR_H-1.0f-(JPFUELBAR_H-scaled_duration), aColor);
-
-	//then draw the other part greyed out
-	CG_FillRect(x+1.0f, y+1.0f, RPG_BAR_WIDTH-1.0f, JPFUELBAR_H-scaled_duration, cColor);
-}
-
-// zyk: draws the Ultra Resistance bar
-void CG_DrawUltraResistance(void)
-{
-	vec4_t aColor;
-	vec4_t cColor;
-	float x = 55.0;
-	float y = RPG_BAR_Y;
-	float scaled_duration = (((cg.ultra_resistance_duration - cg.time) * 1.0)/30000) * 100.0;
-
-	if (scaled_duration < 0.0 || cg.snap->ps.stats[STAT_HEALTH] < 1)
-	{
-		cg.ultra_resistance_duration = 0;
-		return;
-	}
-
-	//color of the bar
-	aColor[0] = 0.1f;
-	aColor[1] = 0.1f;
-	aColor[2] = 0.9f;
-	aColor[3] = 0.8f;
-
-	//color of greyed out "missing fuel"
-	cColor[0] = 0.5f;
-	cColor[1] = 0.5f;
-	cColor[2] = 0.5f;
-	cColor[3] = 0.1f;
-
-	//draw the background (black)
-	CG_DrawRect(x, y, RPG_BAR_WIDTH, JPFUELBAR_H, 1.0f, colorTable[CT_BLACK]);
-
-	//now draw the part to show how much health there is in the color specified
-	CG_FillRect(x+1.0f, y+1.0f+(JPFUELBAR_H-scaled_duration), RPG_BAR_WIDTH-1.0f, JPFUELBAR_H-1.0f-(JPFUELBAR_H-scaled_duration), aColor);
-
-	//then draw the other part greyed out
-	CG_FillRect(x+1.0f, y+1.0f, RPG_BAR_WIDTH-1.0f, JPFUELBAR_H-scaled_duration, cColor);
-}
+// GalaxyRP fix: [Magic] CG_DrawMagicPower(), CG_DrawImmunityPower(), CG_DrawUltraStrength() and
+// CG_DrawUltraResistance() used to be here: the magic power bar and the three power timers, fed by
+// EV_USE_ITEM13 parms 0-103. The server no longer has a magic power pool or those powers, so it
+// never sends them.
 
 //draw meter showing cloak fuel when it's not full
 #define CLFUELBAR_H			100.0f
@@ -8361,6 +8303,119 @@ static void CG_Draw2DScreenTints( void )
 	}
 }
 
+/*
+=================
+CG_DrawUseHint
+
+GalaxyRP: [Use hint] draws the Jedi Academy "you can press Use here" hand icon. Single player has
+had this since release (CG_UseIcon, code/cgame/cg_draw.cpp); multiplayer never did.
+
+All this does is read one bit. The detection is server-side -- G_CanUseInFrontOf() in g_utils.c,
+evaluated once per client per frame in ClientEndFrame() -- because usability lives in server-only
+entity data (svFlags & SVF_PLAYER_USABLE, ent->use, FL_INACTIVE) that appears nowhere in
+entityState_t, so the cgame has no way to work it out for itself. The server also applies the
+per-player /settings 4 gate before setting the bit, which is why there is no setting check here: if
+the bit arrived, the player wants the icon.
+
+Position: 520,296 at 48x48 in the 640x480 virtual screen. Not SP's 50,285 -- that lands inside our
+chat box (x30, baseline y350, growing upward). This sits in the one pocket of the right side that
+nothing else claims: below the radar (520,0 120x120, on by default in every gametype here), left of
+the powerup icon column (x570+), left of the jetpack/cloak/e-web fuel bars (x617+) and the lagometer
+(x592+), and above righthud (y368+). 48x48 is the largest square that fits; wider runs into the
+powerup column.
+=================
+*/
+static void CG_DrawUseHint( void )
+{
+	if ( !cg.snap->ps.stats[STAT_USE_HINT] )
+	{
+		return;
+	}
+
+	trap->R_SetColor( NULL );
+	CG_DrawPic( 520, 296, 48, 48, cgs.media.useableHintShader );
+}
+
+// GalaxyRP: [Skills] the Sense Health readout -- the last "sensehp" reading (CG_SenseHealth_f),
+// drawn in the chat font just under the crosshair. It replaced a centre print, which used the big
+// font 30% down the screen, stayed for cg_centerTime and overwrote every other centre print while
+// the skill was on. Fully visible for SENSE_HEALTH_HOLD ms after each reading (the server sends one
+// every 500ms while there is a target), then fades out over SENSE_HEALTH_FADE ms.
+#define SENSE_HEALTH_HOLD		700
+#define SENSE_HEALTH_FADE		300
+#define SENSE_HEALTH_SCALE		0.65f	// CG_ChatBox_DrawStrings' fontScale
+#define SENSE_HEALTH_GAP		6.0f
+
+static void CG_DrawSenseHealth( void ) {
+	const int age = cg.time - cg.senseHealth.time;
+	vec4_t color = { 1.0f, 1.0f, 1.0f, 1.0f };
+	char lines[2][256];
+	int numLines = 0, i;
+	float x, y;
+
+	if ( !cg.senseHealth.time || age < 0 || age >= SENSE_HEALTH_HOLD + SENSE_HEALTH_FADE ) {
+		return; // nothing, too old -- or from before a map restart set cg.time back
+	}
+
+	if ( age > SENSE_HEALTH_HOLD ) {
+		color[3] = 1.0f - (float)(age - SENSE_HEALTH_HOLD) / SENSE_HEALTH_FADE;
+	}
+
+	if ( cg.senseHealth.level >= 2 ) {
+		// GalaxyRP: [Skills] 3 and 4 are vehicles, empty or occupied (anyone aboard, player or NPC)
+		static const char *types[5] = { "Normal Player", "Player", "NPC", "Vehicle, empty", "Vehicle, occupied" };
+
+		if ( cg.senseHealth.level >= 3 && cg.senseHealth.type >= 0 && cg.senseHealth.type <= 4 ) {
+			Com_sprintf( lines[numLines++], sizeof( lines[0] ), "%s^7  (%s)", cg.senseHealth.name, types[cg.senseHealth.type] );
+		}
+		else {
+			Com_sprintf( lines[numLines++], sizeof( lines[0] ), "%s", cg.senseHealth.name );
+		}
+	}
+
+	if ( cg.senseHealth.level == 1 ) {
+		Com_sprintf( lines[numLines++], sizeof( lines[0] ), "^1HP %d", cg.senseHealth.health );
+	}
+	else if ( cg.senseHealth.level == 2 ) {
+		Com_sprintf( lines[numLines++], sizeof( lines[0] ), "^1HP %d   ^2SH %d", cg.senseHealth.health, cg.senseHealth.shield );
+	}
+	else {
+		char shield[32];
+
+		if ( cg.senseHealth.maxShield >= 0 ) {
+			Com_sprintf( shield, sizeof( shield ), "%d/%d", cg.senseHealth.shield, cg.senseHealth.maxShield );
+		}
+		else {
+			Com_sprintf( shield, sizeof( shield ), "%d", cg.senseHealth.shield );
+		}
+
+		if ( cg.senseHealth.type >= 3 ) { // GalaxyRP: [Skills] a vehicle: hull and shields, no Force
+			Com_sprintf( lines[numLines++], sizeof( lines[0] ), "^1HP %d/%d   ^2SH %s",
+				cg.senseHealth.health, cg.senseHealth.maxHealth, shield );
+		}
+		else {
+			Com_sprintf( lines[numLines++], sizeof( lines[0] ), "^1HP %d/%d   ^2SH %s   ^5FP %d/%d",
+				cg.senseHealth.health, cg.senseHealth.maxHealth, shield, cg.senseHealth.force, cg.senseHealth.maxForce );
+		}
+	}
+
+	if ( cg.crosshairAnchorTime == cg.time ) {
+		x = cg.crosshairAnchorX;
+		y = cg.crosshairAnchorY + SENSE_HEALTH_GAP;
+	}
+	else { // no crosshair drawn this frame (cg_drawCrosshair 0, scoped, ...): where it would be
+		x = 320.0f + cg_crosshairX.integer;
+		y = 240.0f + cg_crosshairY.integer + cg_crosshairSize.value * 0.5f + SENSE_HEALTH_GAP;
+	}
+
+	for ( i = 0; i < numLines; i++ ) {
+		const float w = CG_Text_Width( lines[i], SENSE_HEALTH_SCALE, FONT_SMALL );
+
+		CG_Text_Paint( x - w * 0.5f, y, SENSE_HEALTH_SCALE, color, lines[i], 0, 0, ITEM_TEXTSTYLE_OUTLINED, FONT_SMALL );
+		y += CHATBOX_FONT_HEIGHT * SENSE_HEALTH_SCALE;
+	}
+}
+
 static void CG_Draw2D( void ) {
 	float			inTime = cg.invenSelectTime+WEAPON_SELECT_TIME;
 	float			wpTime = cg.weaponSelectTime+WEAPON_SELECT_TIME;
@@ -8376,7 +8431,8 @@ static void CG_Draw2D( void ) {
 	// Tr!Force: [CGameGeneral] Server mod check
 	if (!cgs.modCheck)
 	{
-		CG_CenterPrint("^1ALERT\nIncomplete mod detected\nDownload the full mod at:\n^5https://www.galaxyrp.uk", SCREEN_HEIGHT * .30, 0); // WIP
+		// DAJ_RP: the address is JK_URL (rp_version.h), the one the server's plugin messages give too
+		CG_CenterPrint("^1ALERT\nIncomplete mod detected\nDownload the full mod at:\n^5" JK_URL, SCREEN_HEIGHT * .30, 0); // WIP
 	}
 
 	if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_SPECTATOR)
@@ -8448,35 +8504,9 @@ static void CG_Draw2D( void ) {
 		}
 	}
 
-	if (cg_drawStatus.integer && cg.snap->ps.stats[STAT_MAX_HEALTH] > 100)
-	{
-		if (cg.magic_power < 100)
-		{ // zyk: draw magic power bar if it is not full and it is a rpg player
-			CG_DrawMagicPower();
-		}
-
-		// zyk: draw magic power duration bars
-		if (cg.immunity_power_duration > 0)
-		{
-			CG_DrawImmunityPower();
-		}
-		if (cg.ultra_strength_duration > 0)
-		{
-			CG_DrawUltraStrength();
-		}
-		if (cg.ultra_resistance_duration > 0)
-		{
-			CG_DrawUltraResistance();
-		}
-		if (cg.unique_cooldown_duration > 0)
-		{
-			CG_DrawUniqueSkillTimer();
-		}
-		if (cg.unique_duration_control > 0)
-		{
-			CG_DrawUniqueSkillDurationTimer();
-		}
-	}
+	// GalaxyRP fix: [Magic] the RPG bars used to be drawn here for a player with more than 100 max
+	// health: magic power, the Immunity / Ultra Strength / Ultra Resistance timers and the Unique
+	// Skill cooldown and duration bars. All of their triggers are gone from the server.
 
 	// Draw this before the text so that any text won't get clipped off
 	CG_DrawZoomMask();
@@ -8506,6 +8536,10 @@ static void CG_Draw2D( void ) {
 			CG_DrawAmmoWarning();
 
 			CG_DrawCrosshairNames();
+
+			// GalaxyRP: [Use hint] inside the "don't draw any status if dead or the scoreboard is
+			// showing" block, which is where single player draws its own copy of this icon too.
+			CG_DrawUseHint();
 
 			if (cg_drawStatus.integer)
 			{
@@ -8791,6 +8825,7 @@ static void CG_Draw2D( void ) {
 	// don't draw center string if scoreboard is up
 	cg.scoreBoardShowing = CG_DrawScoreboard();
 	if ( !cg.scoreBoardShowing) {
+		CG_DrawSenseHealth();	// GalaxyRP: [Skills]
 		CG_DrawCenterString();
 	}
 
@@ -8827,7 +8862,11 @@ void CG_DrawMiscStaticModels( void ) {
 			}
 		}
 
-		if( !trap->R_InPVS( cg.refdef.vieworg, cullorg, cg.refdef.areamask ) ) {
+		// DAJ_RP: [Static Models] and, when that point is not in the PVS, the centre of its bounds: the engine
+		// cannot answer for a point in solid, and culled a model whose origin is in its wall everywhere
+		// (CG_StaticModelSetCentre, cg_spawn.c)
+		if( !trap->R_InPVS( cg.refdef.vieworg, cullorg, cg.refdef.areamask ) &&
+			!trap->R_InPVS( cg.refdef.vieworg, cgs.miscStaticModels[i].centre, cg.refdef.areamask ) ) {
 			continue;
 		}
 

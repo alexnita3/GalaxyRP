@@ -32,12 +32,65 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 static vec3_t	playerMins = {-15, -15, DEFAULT_MINS_2};
 static vec3_t	playerMaxs = {15, 15, DEFAULT_MAXS_2};
 
+/*
+================
+RP_SpawnPointInSolid / RP_SpawnPointRefusedAtRuntime
+
+GalaxyRP fix: [Entity System] whether a player put on this point -- 9 units up, where ClientSpawn()
+puts one -- would be inside the world's solid, a brush entity (a door, a func_static), player clip or
+terrain, or outside the map, whose outer leaves are solid. Not inside a body: a player standing on
+the point is SpotWouldTelefrag()'s own question, and the admin stands on the point /entadd makes.
+Without the box (an intermission point: a camera) it is the point itself that is tested.
+
+RP_SpawnPointRefusedAtRuntime(): a spawn point the Entity System made is refused when a player
+spawning on it would be stuck -- an origin typed into a wall or out of the map, or a map's own point
+/entedit'ed there. The map's own points are never tested: a map spawns what it spawns.
+================
+*/
+#define RP_SPAWN_POINT_MASK		( MASK_PLAYERSOLID & ~CONTENTS_BODY )
+
+qboolean RP_SpawnPointInSolid( const vec3_t origin, qboolean playerBox )
+{
+	trace_t	tr;
+	vec3_t	start;
+
+	VectorCopy( origin, start );
+	start[2] += 9;
+
+	if ( !playerBox )
+		return ( trap->PointContents( start, ENTITYNUM_NONE ) & RP_SPAWN_POINT_MASK ) ? qtrue : qfalse;
+
+	trap->Trace( &tr, start, playerMins, playerMaxs, start, ENTITYNUM_NONE, RP_SPAWN_POINT_MASK, qfalse, 0, 0 );
+	return ( tr.startsolid || tr.allsolid ) ? qtrue : qfalse;
+}
+
+qboolean RP_SpawnPointRefusedAtRuntime( gentity_t *ent, qboolean playerBox )
+{
+	if ( !ent || !RP_EntitySystemMade( ent ) )
+		return qfalse;
+
+	if ( !RP_FINITE( ent->s.origin[0] ) || !RP_FINITE( ent->s.origin[1] ) || !RP_FINITE( ent->s.origin[2] ) )
+		return RP_RefuseAtRuntime( ent, "its origin is not a number" );
+
+	if ( RP_SpawnPointInSolid( ent->s.origin, playerBox ) )
+	{
+		return RP_RefuseAtRuntime( ent, playerBox
+			? "a player spawning there would be inside a wall, a door or outside the map. A spawn point stands where the player will, 24 units above the floor: /entaddaim sets it so on the surface aimed at, /entadd takes where you stand"
+			: "the point is inside a wall or outside the map" );
+	}
+
+	return qfalse;
+}
+
 extern int g_siegeRespawnCheck;
 
 void WP_SaberAddG2Model( gentity_t *saberent, const char *saberModel, qhandle_t saberSkin );
 void WP_SaberRemoveG2Model( gentity_t *saberent );
 extern qboolean WP_SaberStyleValidForSaber( saberInfo_t *saber1, saberInfo_t *saber2, int saberHolstered, int saberAnimLevel );
 extern qboolean WP_UseFirstValidSaberStyle( saberInfo_t *saber1, saberInfo_t *saber2, int saberHolstered, int *saberAnimLevel );
+// GalaxyRP fix: [NPC] declared here rather than by including b_local.h, which this file has never
+// pulled in. ClientDisconnect() uses it to drop the departing player as any NPC's enemy.
+extern void G_ClearEnemy( gentity_t *self );
 
 forcedata_t Client_Force[MAX_CLIENTS];
 
@@ -50,6 +103,9 @@ Targets will be fired when someone spawns in on them.
 void SP_info_player_duel( gentity_t *ent )
 {
 	int		i;
+
+	if ( RP_SpawnPointRefusedAtRuntime( ent, qtrue ) )
+		return;
 
 	G_SpawnInt( "nobots", "0", &i);
 	if ( i ) {
@@ -71,6 +127,9 @@ void SP_info_player_duel1( gentity_t *ent )
 {
 	int		i;
 
+	if ( RP_SpawnPointRefusedAtRuntime( ent, qtrue ) )
+		return;
+
 	G_SpawnInt( "nobots", "0", &i);
 	if ( i ) {
 		ent->flags |= FL_NO_BOTS;
@@ -91,6 +150,9 @@ void SP_info_player_duel2( gentity_t *ent )
 {
 	int		i;
 
+	if ( RP_SpawnPointRefusedAtRuntime( ent, qtrue ) )
+		return;
+
 	G_SpawnInt( "nobots", "0", &i);
 	if ( i ) {
 		ent->flags |= FL_NO_BOTS;
@@ -110,6 +172,9 @@ Targets will be fired when someone spawns in on them.
 */
 void SP_info_player_deathmatch( gentity_t *ent ) {
 	int		i;
+
+	if ( RP_SpawnPointRefusedAtRuntime( ent, qtrue ) )
+		return;
 
 	G_SpawnInt( "nobots", "0", &i);
 	if ( i ) {
@@ -195,6 +260,9 @@ void SP_info_player_siegeteam1(gentity_t *ent) {
 		return;
 	}
 
+	if ( RP_SpawnPointRefusedAtRuntime( ent, qtrue ) )
+		return;
+
 	G_SpawnInt("startoff", "0", &soff);
 
 	if (soff)
@@ -231,6 +299,9 @@ void SP_info_player_siegeteam2(gentity_t *ent) {
 		return;
 	}
 
+	if ( RP_SpawnPointRefusedAtRuntime( ent, qtrue ) )
+		return;
+
 	G_SpawnInt("startoff", "0", &soff);
 
 	if (soff)
@@ -251,7 +322,7 @@ RED - In a Siege game, the intermission will happen here if the Red (attacking) 
 BLUE - In a Siege game, the intermission will happen here if the Blue (defending) team wins
 */
 void SP_info_player_intermission( gentity_t *ent ) {
-
+	RP_SpawnPointRefusedAtRuntime( ent, qfalse );
 }
 
 /*QUAKED info_player_intermission_red (1 0 1) (-16 -16 -24) (16 16 32)
@@ -262,7 +333,7 @@ target - ent to look at
 target2 - ents to use when this intermission point is chosen
 */
 void SP_info_player_intermission_red( gentity_t *ent ) {
-
+	RP_SpawnPointRefusedAtRuntime( ent, qfalse );
 }
 
 /*QUAKED info_player_intermission_blue (1 0 1) (-16 -16 -24) (16 16 32)
@@ -273,7 +344,7 @@ target - ent to look at
 target2 - ents to use when this intermission point is chosen
 */
 void SP_info_player_intermission_blue( gentity_t *ent ) {
-
+	RP_SpawnPointRefusedAtRuntime( ent, qfalse );
 }
 
 #define JMSABER_RESPAWN_TIME 20000 //in case it gets stuck somewhere no one can reach
@@ -499,6 +570,14 @@ gentity_t *gJMSaberEnt = NULL;
 */
 void SP_info_jedimaster_start(gentity_t *ent)
 {
+	// GalaxyRP fix: [Entity System] not after map load: the saber it makes is marked isSaberEntity,
+	// which G_FreeEntity() refuses to free (so it could never be removed and the pool it took was gone
+	// for the map), and every one re-points the single gJMSaberEnt. The map's own is the only one.
+	if ( RP_RefuseAtRuntime( ent, "the Jedi Master saber cannot be added after map load: it could never be removed, and the map's own is the only one" ) )
+	{
+		return;
+	}
+
 	if (level.gametype != GT_JEDIMASTER)
 	{
 		gJMSaberEnt = NULL;
@@ -558,6 +637,14 @@ qboolean SpotWouldTelefrag( gentity_t *spot ) {
 	int			touch[MAX_GENTITIES];
 	gentity_t	*hit;
 	vec3_t		mins, maxs;
+
+	// GalaxyRP fix: [Entity System] a point whose player box is inside a wall or a door (a map's, or
+	// one the map's own fixes made) counts as taken, so it is never chosen over a free one -- see
+	// RP_SpawnPointInSolid(). Every selector falls back to the map's first point when none is free,
+	// as it did.
+	if ( RP_SpawnPointInSolid( spot->s.origin, qtrue ) ) {
+		return qtrue;
+	}
 
 	VectorAdd( spot->s.origin, playerMins, mins );
 	VectorAdd( spot->s.origin, playerMaxs, maxs );
@@ -683,6 +770,99 @@ SelectRandomFurthestSpawnPoint
 Chooses a player start, deathmatch start, etc
 ============
 */
+/*
+================
+RP_ProbeAroundSpawnPoint
+
+GalaxyRP: [Spawning] every spawn point has somebody standing on it (a single-player map with
+one start, a small map that is full). Rather than telefrag whoever is on the first one, try
+nine spots around it -- the point itself and 60 units out along and across each axis -- and
+take the first with a clear player box and a floor within reach. qfalse when all nine are
+taken or blocked, and the caller telefrags as before.
+================
+*/
+static qboolean RP_ProbeAroundSpawnPoint( gentity_t *spot, vec3_t origin )
+{
+	static const float	offsets[9][2] = { { 0, 0 }, { 60, 0 }, { -60, 0 }, { 0, 60 }, { 0, -60 }, { 60, 60 }, { -60, 60 }, { 60, -60 }, { -60, -60 } };
+	vec3_t				playerMins = { -15, -15, DEFAULT_MINS_2 };
+	vec3_t				playerMaxs = { 15, 15, DEFAULT_MAXS_2 };
+	trace_t				tr;
+	vec3_t				start, end;
+	int					i;
+
+	for ( i = 0; i < 9; i++ )
+	{
+		VectorCopy( spot->s.origin, start );
+		start[0] += offsets[i][0];
+		start[1] += offsets[i][1];
+		start[2] += 9 + 32;	// a little above the point, dropped onto the floor
+		VectorCopy( start, end );
+		end[2] -= 200;
+
+		trap->Trace( &tr, start, playerMins, playerMaxs, end, ENTITYNUM_NONE, MASK_PLAYERSOLID, qfalse, 0, 0 );
+		if ( tr.startsolid || tr.allsolid || tr.fraction == 1.0f )
+		{//inside something (a wall, a player) or no floor within reach
+			continue;
+		}
+
+		VectorCopy( tr.endpos, origin );
+		origin[2] += 1;
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
+/*
+================
+RP_RecordFallbackSpawnPoint / RP_FallbackSpawnPoint
+
+GalaxyRP fix: [Spawning] the spawn selectors below ended with
+trap->Error( ERR_DROP, "Couldn't find a spawn point" ) when the map had no info_player_deathmatch
+left, and on a dedicated server ERR_DROP is a process exit. /entremove refuses the map's spawn points, but an
+/entload preset that holds none (hand-written, old, or saved before a map update) still frees every
+one of the map's and brings none back, and the next spawn, respawn or spectator join ended the server.
+
+So the map's first spawn point is remembered when the map finishes loading, and a selector that finds
+none uses that spot instead. It returns NULL as the spot, the same as SelectSpectatorSpawnPoint()
+always has: ClientSpawn() only fires the spot's targets through G_UseTargets(), which ignores NULL,
+and tests it before touching ->target. If the map had no spawn point even at load -- a broken map,
+which vanilla would also have dropped -- it uses the world origin rather than end the server.
+================
+*/
+void RP_RecordFallbackSpawnPoint( void )
+{
+	gentity_t *spot = G_Find( NULL, FOFS(classname), "info_player_deathmatch" );
+
+	level.rp_fallback_spawn_set = qfalse;
+	VectorClear( level.rp_fallback_spawn_origin );
+	VectorClear( level.rp_fallback_spawn_angles );
+
+	if ( spot )
+	{
+		VectorCopy( spot->s.origin, level.rp_fallback_spawn_origin );
+		VectorCopy( spot->s.angles, level.rp_fallback_spawn_angles );
+		level.rp_fallback_spawn_set = qtrue;
+	}
+}
+
+static gentity_t *RP_FallbackSpawnPoint( vec3_t origin, vec3_t angles )
+{
+	// zyk: once per map, so a map in this state does not write a line for every respawn
+	if ( !level.rp_fallback_spawn_warned )
+	{
+		level.rp_fallback_spawn_warned = qtrue;
+		G_LogPrintf( "No info_player_deathmatch left on this map: spawning players at %s instead.\n",
+			level.rp_fallback_spawn_set ? "the map's first spawn point" : "the world origin" );
+	}
+
+	VectorCopy( level.rp_fallback_spawn_origin, origin );
+	origin[2] += 9;
+	VectorCopy( level.rp_fallback_spawn_angles, angles );
+
+	return NULL;
+}
+
 gentity_t *SelectRandomFurthestSpawnPoint ( vec3_t avoidPoint, vec3_t origin, vec3_t angles, team_t team, qboolean isbot ) {
 	gentity_t	*spot;
 	vec3_t		delta;
@@ -781,9 +961,26 @@ gentity_t *SelectRandomFurthestSpawnPoint ( vec3_t avoidPoint, vec3_t origin, ve
 			}
 		}
 		if (!numSpots) {
+			gentity_t *probe = NULL;
+
 			spot = G_Find( NULL, FOFS(classname), "info_player_deathmatch");
-			if (!spot)
-				trap->Error( ERR_DROP, "Couldn't find a spawn point" );
+			if (!spot) // GalaxyRP fix: [Spawning] was trap->Error( ERR_DROP ) -- see RP_FallbackSpawnPoint()
+				return RP_FallbackSpawnPoint( origin, angles );
+
+			// GalaxyRP: [Spawning] every point is taken: look for room beside one before telefragging
+			while ( (probe = G_Find( probe, FOFS(classname), "info_player_deathmatch" )) != NULL )
+			{
+				if ( ((probe->flags & FL_NO_BOTS) && isbot) || ((probe->flags & FL_NO_HUMANS) && !isbot) )
+				{
+					continue;
+				}
+				if ( RP_ProbeAroundSpawnPoint( probe, origin ) )
+				{
+					VectorCopy( probe->s.angles, angles );
+					return probe;
+				}
+			}
+
 			VectorCopy (spot->s.origin, origin);
 			origin[2] += 9;
 			VectorCopy (spot->s.angles, angles);
@@ -876,8 +1073,8 @@ tryAgain:
 
 		//If we got here we found no free duel or DM spots, just try the first DM spot
 		spot = G_Find( NULL, FOFS(classname), "info_player_deathmatch");
-		if (!spot)
-			trap->Error( ERR_DROP, "Couldn't find a spawn point" );
+		if (!spot) // GalaxyRP fix: [Spawning] was trap->Error( ERR_DROP ) -- see RP_FallbackSpawnPoint()
+			return RP_FallbackSpawnPoint( origin, angles );
 		VectorCopy (spot->s.origin, origin);
 		origin[2] += 9;
 		VectorCopy (spot->s.angles, angles);
@@ -999,7 +1196,10 @@ BODYQUE
 =======================================================================
 */
 
-#define BODY_SINK_TIME		30000//45000
+// DAJ_RP: [Corpses] BODY_SINK_TIME (30000 ms) is now rp_player_corpse_time, in seconds, default 30. It is
+// read once, when the corpse is laid down in CopyToBodyQue(), and kept on the body in genericValue1 so a
+// change to the cvar never shifts a corpse that is already lying there -- BodySink() compares against
+// the same number the corpse was scheduled with (no other code touches genericValue1 on a body).
 
 /*
 ===============
@@ -1027,7 +1227,7 @@ After sitting around for five seconds, fall into the ground and disappear
 =============
 */
 void BodySink( gentity_t *ent ) {
-	if ( level.time - ent->timestamp > BODY_SINK_TIME + 2500 ) {
+	if ( level.time - ent->timestamp > ent->genericValue1 + 2500 ) {
 		// the body ques are never actually freed, they are just unlinked
 		trap->UnlinkEntity( (sharedEntity_t *)ent );
 		ent->physicsObject = qfalse;
@@ -1087,6 +1287,11 @@ static qboolean CopyToBodyQue( gentity_t *ent ) {
 	body->s.eType = ET_BODY;
 	body->s.eFlags = EF_DEAD;		// clear EF_TALK, etc
 
+	// GalaxyRP: [Phase] ...but keep the phase bits, so the corpse of a Force ghost or a hologram
+	// still looks like one (drawn by CG_General(), cg_ents.c). Purely visual on a body: its contents
+	// are CONTENTS_CORPSE and nothing on the server reads these bits from an ET_BODY.
+	body->s.eFlags |= ( ent->s.eFlags & EF_RP_PHASE_MASK );
+
 	if (ent->client && (ent->client->ps.eFlags & EF_DISINTEGRATION))
 	{
 		body->s.eFlags |= EF_DISINTEGRATION;
@@ -1126,6 +1331,17 @@ static qboolean CopyToBodyQue( gentity_t *ent ) {
 	trap->SendServerCommand(-1, va("ircg %i %i %i %i", ent->s.number, body->s.number, body->s.weapon, islight));
 
 	body->r.svFlags = ent->r.svFlags | SVF_BROADCAST;
+
+	// DAJ_RP: [Phase] the corpse of a player under /admhidden stays hidden: it is not sent to anyone at all.
+	// The Mind Trick bits that hide the living player (RP_HiddenApplyState(), g_active.c) cannot do it here,
+	// because a corpse is drawn by CG_General(), which never reads them. rpHiddenCorpse also keeps its
+	// severed limbs from being sent (G_Dismember(), g_combat.c). svFlags and the flag are both rewritten on
+	// every copy, so a body-queue slot reused for somebody else's corpse is sent as usual.
+	body->rpHiddenCorpse = RP_PlayerIsHidden( ent );
+	if ( body->rpHiddenCorpse )
+	{
+		body->r.svFlags |= SVF_NOCLIENT;
+	}
 	VectorCopy (ent->r.mins, body->r.mins);
 	VectorCopy (ent->r.maxs, body->r.maxs);
 	VectorCopy (ent->r.absmin, body->r.absmin);
@@ -1142,7 +1358,8 @@ static qboolean CopyToBodyQue( gentity_t *ent ) {
 	body->r.contents = CONTENTS_CORPSE;
 	body->r.ownerNum = ent->s.number;
 
-	body->nextthink = level.time + BODY_SINK_TIME;
+	body->genericValue1 = RP_CorpseSecondsToMs( rp_player_corpse_time.integer );
+	body->nextthink = level.time + body->genericValue1;
 	body->think = BodySink;
 
 	body->die = body_die;
@@ -1449,6 +1666,24 @@ static void ClientCleanName( const char *in, char *out, int outSize )
 	}
 
 	out[outpos] = '\0';
+
+	// GalaxyRP: [Name] strip trailing spaces and trailing colour codes ("Bob ^1 ^7" -> "Bob"), so a
+	// name can't end in invisible padding. JA++ strips trailing spaces with an unguarded
+	// out[len-1] check that reads before the buffer once the name is empty; both checks here are
+	// bounded by outpos. Neither a space nor a whole colour code counts towards colorlessLen, so
+	// the empty-name check below still sees the right thing.
+	while ( outpos > 0 ) {
+		if ( out[outpos-1] == ' ' ) {
+			out[--outpos] = '\0';
+		}
+		else if ( outpos >= 2 && Q_IsColorStringExt( &out[outpos-2] ) ) {
+			outpos -= 2;
+			out[outpos] = '\0';
+		}
+		else {
+			break;
+		}
+	}
 
 	// don't allow empty names
 	if ( *out == '\0' || colorlessLen == 0 )
@@ -1959,31 +2194,41 @@ void G_ValidateSiegeClassForTeam(gentity_t *ent, int team);
 typedef struct userinfoValidate_s {
 	const char		*field, *fieldClean;
 	unsigned int	minCount, maxCount;
+	int				bit;	// GalaxyRP: [Userinfo] bit in g_userinfoValidate (layout in g_local.h)
 } userinfoValidate_t;
 
-#define UIF( x, _min, _max ) { STRING(\\) #x STRING(\\), STRING( x ), _min, _max }
+#define UIF( x, _min, _max, _bit ) { STRING(\\) #x STRING(\\), STRING( x ), _min, _max, _bit }
 static userinfoValidate_t userinfoFields[] = {
-	UIF( cl_guid,			0, 0 ), // not allowed, q3fill protection
-	UIF( cl_punkbuster,		0, 0 ), // not allowed, q3fill protection
-	UIF( ip,				0, 1 ), // engine adds this at the end
-	UIF( name,				1, 1 ),
-	UIF( rate,				1, 1 ),
-	UIF( snaps,				1, 1 ),
-	UIF( model,				1, 1 ),
-	UIF( forcepowers,		1, 1 ),
-	UIF( color1,			1, 1 ),
-	UIF( color2,			1, 1 ),
-	UIF( handicap,			1, 1 ),
-	UIF( sex,				0, 1 ),
-	UIF( cg_predictItems,	1, 1 ),
-	UIF( saber1,			1, 1 ),
-	UIF( saber2,			1, 1 ),
-	UIF( char_color_red,	1, 1 ),
-	UIF( char_color_green,	1, 1 ),
-	UIF( char_color_blue,	1, 1 ),
-	UIF( teamtask,			0, 1 ), // optional
-	UIF( password,			0, 1 ), // optional
-	UIF( teamoverlay,		0, 1 ), // only registered in cgame, not sent when connecting
+	UIF( cl_guid,			0, 0, 0 ), // not allowed, q3fill protection
+	UIF( cl_punkbuster,		0, 0, 1 ), // not allowed, q3fill protection
+	UIF( ip,				0, 1, 2 ), // engine adds this at the end
+	UIF( name,				1, 1, 3 ),
+	UIF( rate,				1, 1, 4 ),
+	UIF( snaps,				1, 1, 5 ),
+	UIF( model,				1, 1, 6 ),
+	UIF( forcepowers,		1, 1, 7 ),
+	UIF( color1,			1, 1, 8 ),
+	UIF( color2,			1, 1, 9 ),
+	UIF( handicap,			1, 1, 10 ),
+	UIF( sex,				0, 1, 11 ),
+	UIF( cg_predictItems,	1, 1, 12 ),
+	UIF( saber1,			1, 1, 13 ),
+	UIF( saber2,			1, 1, 14 ),
+	UIF( char_color_red,	1, 1, 15 ),
+	UIF( char_color_green,	1, 1, 16 ),
+	UIF( char_color_blue,	1, 1, 17 ),
+	UIF( teamtask,			0, 1, 18 ), // optional
+	UIF( password,			0, 1, 19 ), // optional
+	UIF( teamoverlay,		0, 1, 20 ), // only registered in cgame, not sent when connecting
+	// bits 21-24 are the extra checks (userinfoValidateExtra[] below)
+	// GalaxyRP: [Userinfo] keys this mod reads, each optional but never allowed twice. A duplicate
+	// matters most for cp_sbRGB1/cp_sbRGB2: when the server rewrites them (Info_SetValueForKey in
+	// g_cmds.c) only the FIRST copy is removed, so a second copy would move to the front and be
+	// re-adopted by the next ClientUserinfoChanged().
+	UIF( cp_sbRGB1,			0, 1, USERINFO_VALIDATION_NEW_FIELDS + 0 ), // saber RGB (g_client.c)
+	UIF( cp_sbRGB2,			0, 1, USERINFO_VALIDATION_NEW_FIELDS + 1 ), // saber RGB (g_client.c)
+	UIF( rpmod_client,		0, 1, USERINFO_VALIDATION_NEW_FIELDS + 2 ), // client plugin check
+	UIF( ja_guid,			0, 1, USERINFO_VALIDATION_NEW_FIELDS + 3 ), // logged on connect
 };
 static const size_t numUserinfoFields = ARRAY_LEN( userinfoFields );
 
@@ -1994,36 +2239,53 @@ static const char *userinfoValidateExtra[USERINFO_VALIDATION_MAX] = {
 	"Control characters",	// USERINFO_VALIDATION_CONTROLCHARS
 };
 
+// GalaxyRP: [Userinfo] the extra checks sit at fixed bits 21-24, not after the field count
+#define UIV_EXTRA_BIT( x )	(1 << (USERINFO_VALIDATION_LEGACY_FIELDS + (x)))
+
+// GalaxyRP: [Userinfo] name of a g_userinfoValidate bit, or NULL if the bit is unused
+static const char *G_UserinfoValidateBitName( int bit ) {
+	size_t i;
+
+	if ( bit >= USERINFO_VALIDATION_LEGACY_FIELDS && bit < USERINFO_VALIDATION_NEW_FIELDS )
+		return userinfoValidateExtra[bit - USERINFO_VALIDATION_LEGACY_FIELDS];
+
+	for ( i=0; i<numUserinfoFields; i++ ) {
+		if ( userinfoFields[i].bit == bit )
+			return userinfoFields[i].fieldClean;
+	}
+	return NULL;
+}
+
 void Svcmd_ToggleUserinfoValidation_f( void ) {
 	if ( trap->Argc() == 1 ) {
-		int i=0;
-		for ( i=0; i<numUserinfoFields; i++ ) {
-			if ( (g_userinfoValidate.integer & (1<<i)) )	trap->Print( "%2d [X] %s\n", i, userinfoFields[i].fieldClean );
-			else											trap->Print( "%2d [ ] %s\n", i, userinfoFields[i].fieldClean );
-		}
-		for ( ; i<numUserinfoFields+USERINFO_VALIDATION_MAX; i++ ) {
-			if ( (g_userinfoValidate.integer & (1<<i)) )	trap->Print( "%2d [X] %s\n", i, userinfoValidateExtra[i-numUserinfoFields] );
-			else											trap->Print( "%2d [ ] %s\n", i, userinfoValidateExtra[i-numUserinfoFields] );
+		int i;
+		for ( i=0; i<USERINFO_VALIDATION_NUM_BITS; i++ ) {
+			const char *bitName = G_UserinfoValidateBitName( i );
+
+			if ( !bitName )
+				continue;
+			if ( (g_userinfoValidate.integer & (1<<i)) )	trap->Print( "%2d [X] %s\n", i, bitName );
+			else											trap->Print( "%2d [ ] %s\n", i, bitName );
 		}
 		return;
 	}
 	else {
 		char arg[8]={0};
 		int index;
+		const char *bitName;
 
 		trap->Argv( 1, arg, sizeof( arg ) );
 		index = atoi( arg );
 
-		if ( index < 0 || index > numUserinfoFields+USERINFO_VALIDATION_MAX-1 ) {
-			Com_Printf( "ToggleUserinfoValidation: Invalid range: %i [0, %i]\n", index, numUserinfoFields+USERINFO_VALIDATION_MAX-1 );
+		if ( index < 0 || index > USERINFO_VALIDATION_NUM_BITS-1 || !(bitName = G_UserinfoValidateBitName( index )) ) {
+			Com_Printf( "ToggleUserinfoValidation: Invalid range: %i [0, %i]\n", index, USERINFO_VALIDATION_NUM_BITS-1 );
 			return;
 		}
 
-		trap->Cvar_Set( "g_userinfoValidate", va( "%i", (1 << index) ^ (g_userinfoValidate.integer & ((1 << (numUserinfoFields + USERINFO_VALIDATION_MAX)) - 1)) ) );
+		trap->Cvar_Set( "g_userinfoValidate", va( "%i", (1 << index) ^ (g_userinfoValidate.integer & ((1 << USERINFO_VALIDATION_NUM_BITS) - 1)) ) );
 		trap->Cvar_Update( &g_userinfoValidate );
 
-		if ( index < numUserinfoFields )	Com_Printf( "%s %s\n", userinfoFields[index].fieldClean,				((g_userinfoValidate.integer & (1<<index)) ? "Validated" : "Ignored") );
-		else								Com_Printf( "%s %s\n", userinfoValidateExtra[index-numUserinfoFields],	((g_userinfoValidate.integer & (1<<index)) ? "Validated" : "Ignored") );
+		Com_Printf( "%s %s\n", bitName, ((g_userinfoValidate.integer & (1<<index)) ? "Validated" : "Ignored") );
 	}
 }
 
@@ -2038,7 +2300,7 @@ char *G_ValidateUserinfo( const char *userinfo ) {
 	memset( fieldCount, 0, sizeof( fieldCount ) );
 
 	// size checks
-	if ( g_userinfoValidate.integer & (1<<(numUserinfoFields+USERINFO_VALIDATION_SIZE)) ) {
+	if ( g_userinfoValidate.integer & UIV_EXTRA_BIT( USERINFO_VALIDATION_SIZE ) ) {
 		if ( length < 1 )
 			return "Userinfo too short";
 		else if ( length >= MAX_INFO_STRING )
@@ -2046,7 +2308,7 @@ char *G_ValidateUserinfo( const char *userinfo ) {
 	}
 
 	// slash checks
-	if ( g_userinfoValidate.integer & (1<<(numUserinfoFields+USERINFO_VALIDATION_SLASH)) ) {
+	if ( g_userinfoValidate.integer & UIV_EXTRA_BIT( USERINFO_VALIDATION_SLASH ) ) {
 		// there must be a leading slash
 		if ( userinfo[0] != '\\' )
 			return "Missing leading slash";
@@ -2066,7 +2328,7 @@ char *G_ValidateUserinfo( const char *userinfo ) {
 	}
 
 	// extended characters are impossible to type, may want to disable
-	if ( g_userinfoValidate.integer & (1<<(numUserinfoFields+USERINFO_VALIDATION_EXTASCII)) ) {
+	if ( g_userinfoValidate.integer & UIV_EXTRA_BIT( USERINFO_VALIDATION_EXTASCII ) ) {
 		for ( i=0, count=0; i<length; i++ ) {
 			if ( userinfo[i] < 0 )
 				count++;
@@ -2075,9 +2337,10 @@ char *G_ValidateUserinfo( const char *userinfo ) {
 			return "Extended ASCII characters found";
 	}
 
-	// disallow \n \r ; and \"
-	if ( g_userinfoValidate.integer & (1<<(numUserinfoFields+USERINFO_VALIDATION_CONTROLCHARS)) ) {
-		if ( Q_strchrs( userinfo, "\n\r;\"" ) )
+	// disallow \n \r \t ; and \"
+	// GalaxyRP: [Userinfo] tab added (as JA++ does) -- no client can legitimately send one
+	if ( g_userinfoValidate.integer & UIV_EXTRA_BIT( USERINFO_VALIDATION_CONTROLCHARS ) ) {
+		if ( Q_strchrs( userinfo, "\n\r\t;\"" ) )
 			return "Invalid characters found";
 	}
 
@@ -2096,7 +2359,7 @@ char *G_ValidateUserinfo( const char *userinfo ) {
 
 	// count the number of fields
 	for ( i=0, info=userinfoFields; i<numUserinfoFields; i++, info++ ) {
-		if ( g_userinfoValidate.integer & (1<<i) ) {
+		if ( g_userinfoValidate.integer & (1<<info->bit) ) {
 			if ( info->minCount && !fieldCount[i] )
 				return va( "%s field not found", info->fieldClean );
 			else if ( fieldCount[i] > info->maxCount )
@@ -2169,6 +2432,16 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 			Q_strncpyz( client->pers.netname, oldname, sizeof( client->pers.netname ) );
 			Q_strncpyz( client->pers.netname_nocolor, oldname, sizeof( client->pers.netname_nocolor ) );
 			Q_StripColor( client->pers.netname_nocolor );
+
+			// GalaxyRP fix: [Name] this rejection reverts the SERVER's copy of the name back to
+			// oldname via trap->SetUserinfo above, but the client that just tried to rename is the
+			// one whose own local "name" cvar still holds the rejected new name -- nothing here
+			// told it to revert too, so its own console/display kept showing the rejected name
+			// while the server (and everyone else) had already reverted to oldname. Same root
+			// cause and same fix as CG_NameUpdate_f in cg_servercmds.c (used by set_netname() in
+			// g_cmds.c for the database-driven case); this is the other place a name change can be
+			// silently overridden -- the anti-spam cooldown on an organic, player-typed rename.
+			trap->SendServerCommand( clientNum, va( "supdatename \"%s\"\n", oldname ) );
 		}
 		else {
 			trap->SendServerCommand( -1, va( "print \"%s" S_COLOR_WHITE " %s %s\n\"", oldname, G_GetStringEdString( "MP_SVGAME", "PLRENAME" ), client->pers.netname ) );
@@ -2323,6 +2596,50 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	Q_strncpyz( color1, Info_ValueForKey( userinfo, "color1" ), sizeof( color1 ) );
 	Q_strncpyz( color2, Info_ValueForKey( userinfo, "color2" ), sizeof( color2 ) );
 
+	// GalaxyRP: [Saber RGB] custom blade colours. cp_sbRGB1/cp_sbRGB2 are CVAR_USERINFO cvars that
+	// an RGB-capable client (ours, or a TaystJK/JAPro one) sets from its saber menu, so they arrive
+	// here automatically along with the rest of the userinfo -- but the server keeps the
+	// authoritative copy in pers.saberRGB[], because the same colour can also be set by /sabercolor
+	// and restored from the character's database row on login, neither of which the client's own
+	// cvar knows about. A client without RGB support sends nothing at all, so an absent or zero
+	// value is treated as "no opinion" and deliberately does NOT clear a colour set by either of
+	// those other two routes -- otherwise every ordinary userinfo change (a name or model edit)
+	// would wipe it straight back out again.
+	{
+		int i;
+		static const char *sbRGBKey[2] = { "cp_sbRGB1", "cp_sbRGB2" };
+		static const char *colorKey[2] = { "color1", "color2" };
+
+		for ( i = 0; i < 2; i++ ) {
+			int fromClient = G_ParseSaberRGB( Info_ValueForKey( userinfo, sbRGBKey[i] ) );
+
+			if ( fromClient )
+				client->pers.saberRGB[i] = fromClient;
+		}
+
+		// GalaxyRP: [Saber RGB] which of the NUM_SABER_COLORS palette entries is selected is now
+		// server-authoritative in pers.saberColorMode[] -- set by /sabercolor, /saberblade, or
+		// restored from the database on login -- same "adopt only a plausible value, otherwise
+		// keep what the server already has" treatment as saberRGB[] above, and for the same reason
+		// (an ordinary client just echoes back whatever color1/color2 it was last told, which must
+		// not stomp a change made through one of the other two routes). Unlike saberRGB[], 0 is a
+		// legitimate, meaningful value here (SABER_RED), so this can't reuse G_ParseSaberRGB()'s
+		// "<=0 means unset" semantics -- any value inside the enum's range is adopted as-is.
+		for ( i = 0; i < 2; i++ ) {
+			int fromClient = atoi( Info_ValueForKey( userinfo, colorKey[i] ) );
+
+			if ( fromClient >= 0 && fromClient < NUM_SABER_COLORS )
+				client->pers.saberColorMode[i] = fromClient;
+		}
+
+		// pers.saberColorMode[] is authoritative for what gets published below, replacing whatever
+		// the client's own color1/color2 said -- every other client's cgame reads this off "c1"/"c2"
+		// to decide both the palette entry and (for the five RGB-family values) whether to also
+		// consult "c3"/"c4" for the actual custom colour.
+		Q_strncpyz( color1, va( "%i", client->pers.saberColorMode[0] ), sizeof( color1 ) );
+		Q_strncpyz( color2, va( "%i", client->pers.saberColorMode[1] ), sizeof( color2 ) );
+	}
+
 	// gender hints
 	s = Info_ValueForKey( userinfo, "sex" );
 	if ( !Q_stricmp( s, "female" ) )
@@ -2346,6 +2663,10 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	Q_strcat( buf, sizeof( buf ), va( "st2\\%s\\", client->pers.saber2 ) );
 	Q_strcat( buf, sizeof( buf ), va( "c1\\%s\\", color1 ) );
 	Q_strcat( buf, sizeof( buf ), va( "c2\\%s\\", color2 ) );
+	// GalaxyRP: [Saber RGB] the packed custom colour behind a SABER_RGB c1/c2 above. Key names
+	// match TaystJK/JAPro's so a TaystJK client rendering with its own cgame reads them too.
+	Q_strcat( buf, sizeof( buf ), va( "c3\\%i\\", client->pers.saberRGB[0] ) );
+	Q_strcat( buf, sizeof( buf ), va( "c4\\%i\\", client->pers.saberRGB[1] ) );
 	Q_strcat( buf, sizeof( buf ), va( "hc\\%i\\", client->pers.maxHealth ) );
 	if ( ent->r.svFlags & SVF_BOT )
 		Q_strcat( buf, sizeof( buf ), va( "skill\\%s\\", Info_ValueForKey( userinfo, "skill" ) ) );
@@ -2361,7 +2682,12 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	}
 	if ( level.gametype == GT_SIEGE ) {
 		Q_strcat( buf, sizeof( buf ), va( "siegeclass\\%s\\", className ) );
-		Q_strcat( buf, sizeof( buf ), va( "sdt\\%i\\", className ) );
+		// GalaxyRP fix: [Siege] "sdt" ("siege desired team") was being filled with className (a
+		// string) through a "%i" conversion instead of the actual desired-team value -- cg_players.c's
+		// ClientInfo parsing (CG_NewClientInfo) reads this key back with atoi() into
+		// newInfo.siegeDesiredTeam, so this was sending every client's desired Siege team as a
+		// garbage number instead of the real value.
+		Q_strcat( buf, sizeof( buf ), va( "sdt\\%i\\", client->sess.siegeDesiredTeam ) );
 	}
 
 	trap->GetConfigstring( CS_PLAYERS+clientNum, oldClientinfo, sizeof( oldClientinfo ) );
@@ -2388,18 +2714,34 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	}
 
 	// GalaxyRP (Alex): [Database] Save character's stuff as soon as they change them.
-	if (client->sess.sessionTeam == TEAM_FREE && client->sess.loggedin == qtrue) {
+	// GalaxyRP fix: [Saber] this used to also require sessionTeam == TEAM_FREE. The UPDATE below is the
+	// only place saberOneModel/saberTwoModel and the two packed blade colours are ever written to the
+	// database, so that condition meant those changes were never saved for anyone whose session team is
+	// something else: every player in a Team, CTF or Siege game (where the team is RED or BLUE, never
+	// FREE), and a logged-in player still sitting in spectator, which is the normal state right after
+	// joining. The change applied live and the client was told it had worked, then it was silently gone
+	// on the next login. Only the login check is needed here -- the save is keyed on the player's own
+	// character and is meaningless without one.
+	if (client->sess.loggedin == qtrue) {
 		sqlite3* db;
 		char* zErrMsg = 0;
 		int rc;
 		sqlite3_stmt* stmt = NULL;
 
-		rc = sqlite3_open(DB_PATH, &db);
+		rc = RP_DB_Open(&db);
 		if (rc != SQLITE_OK)
 		{
 			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
 			sqlite3_close(db);
-			return;
+			// GalaxyRP fix: [macOS/Clang build failure] this was a bare "return;" inside
+			// qboolean ClientUserinfoChanged(), which every caller treats as pass/fail for the
+			// userinfo change itself (e.g. ClientConnect() drops the client with "Failed userinfo
+			// validation" if this returns falsy). The userinfo change already succeeded by this
+			// point -- only the character DB save failed, which is already logged above -- so this
+			// must report success (qtrue), not fail validation. On Linux/GCC the missing return
+			// value was only a warning and happened to leave qtrue in the return register by luck;
+			// Clang on macOS correctly rejects it as a hard error (-Wreturn-mismatch).
+			return qtrue;
 		}
 
 		update_current_character_name_and_model(ent, db, zErrMsg, rc, stmt);
@@ -2542,8 +2884,6 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 
 	// zyk: initializing player_statuses value
 	client->pers.player_statuses = 0;
-	client->pers.custom_quest_print = 0;
-	client->pers.custom_quest_print_timer = 0;
 
 	// read or initialize the session data
 	if ( firstTime || level.newSession ) {
@@ -2643,8 +2983,15 @@ and on transition between teams, but doesn't happen on respawns
 extern qboolean	gSiegeRoundBegun;
 extern qboolean	gSiegeRoundEnded;
 extern qboolean g_dontPenalizeTeam; //g_cmds.c
-extern void select_account_and_default_character_data(gentity_t* ent, char username[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+// GalaxyRP fix: [security] kept in sync with the real definition in g_cmds.c -- see the comment
+// there for why this is declared char[32] (matching sess.filename below) rather than
+// char[MAX_STRING_CHARS].
+extern void select_account_and_default_character_data(gentity_t* ent, char username[32], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 extern void initialize_rpg_skills(gentity_t *ent);
+extern void duel_tournament_end();
+extern void melee_battle_end();
+extern void player_discard_backup(gentity_t *ent);
+extern void send_ally_update(gentity_t *ent);	// GalaxyRP: [Radar] g_cmds.c
 void SetTeamQuick(gentity_t *ent, int team, qboolean doBegin);
 void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	gentity_t	*ent;
@@ -2711,37 +3058,58 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	ent->playerState = &ent->client->ps;
 
 	// zyk: initializing attributes used in RPG mode
-	client->pers.guardian_mode = 0;
+	// GalaxyRP fix: [Guardian] guardian_mode init removed - field is permanently 0, sole writer spawn_boss() had zero callers
 	client->pers.being_mind_controlled = -1;
 	client->pers.mind_controlled1_id = -1;
-	client->pers.guardian_invoked_by_id = -1;
-
-	// zyk: cooldown time between magic powers
-	client->pers.quest_power_usage_timer = 0;
-
-	// zyk: cooldown time between unique skills and unique abilities
-	client->pers.unique_skill_timer = 0;
-	client->pers.unique_skill_duration = 0;
+	// GalaxyRP fix: [Guardian] guardian_invoked_by_id init removed - field is permanently -1, sole writer spawn_boss() had zero callers
 
 	// zyk: duelist went to spec. Reset him from duels
+	// GalaxyRP: [Force Duel] the private-duel type goes with them. It is only ever read while
+	// ps.duelInProgress is set and every path that sets that writes it first, so a stale value is
+	// unreachable -- but a slot handed to a new player should not carry the last one's state.
+	level.duel_types[ent->s.number] = 0;
+
 	if (level.duel_players[ent->s.number] > -1)
 	{
 		level.duel_players[ent->s.number] = -1;
 		level.duelists_quantity--;
 	}
 
-	// zyk: sniper battle player went to spec
-	if (level.sniper_players[ent->s.number] > -1)
+	// GalaxyRP fix: [Duel Tournament] end the tournament when this was the last duelist, exactly as
+	// Cmd_DuelMode_f's leave branch already does. Dropping the count without ending it left
+	// duel_tournament_mode at 1 and level.duel_tournament_model_id still naming the globe, and the
+	// join branch spawns a fresh globe whenever duelists_quantity is 0 -- so the next player to sign
+	// up inside the remaining signup window overwrote that id and orphaned the old entity, which
+	// nothing then frees. Repeatable at will (sign up, spectate, rejoin, sign up), one leaked entity
+	// slot and a few never-freed G_Alloc strings per lap, ending at G_Spawn()'s trap->Error(ERR_DROP)
+	// -- a process exit on a dedicated build.
+	//
+	// Scoped to signup because that is the only mode the leak exists in: the join branch refuses at
+	// duel_tournament_mode > 1, so no second globe can be spawned once the tournament starts, and the
+	// mode-2 block in G_RunFrame() (g_main.c) already ends an emptied tournament there with its own
+	// announcement. Ending early here would silence that message for no gain.
+	//
+	// GalaxyRP fix: [Duel Tournament] the "or paused" half. The reasoning above holds only while the
+	// tournament is running: the mode-2 block that ends an emptied tournament lives inside
+	// G_RunFrame()'s "not paused" wrapper, so while an admin has /duelpause on, nothing ends one at
+	// all. Everyone leaving a paused mode-2-or-later tournament left it sitting at that mode with
+	// duelists_quantity at 0 and the paused flag still set, which also refuses every new sign-up
+	// (the join branch stops at duel_tournament_mode > 1) -- so that map had no duel tournament
+	// available until somebody resumed or the map changed. Now that pausing genuinely freezes the
+	// tournament clock, that state persists instead of resolving the moment anyone resumes.
+	//
+	// This is the whole of the reachable surface: ClientBegin (this site -- re-entering the world,
+	// which is how a team change including one to spectator gets here) and ClientDisconnect are the
+	// only two routes out of the roster while paused at mode 2 or later, because Cmd_DuelMode_f
+	// refuses to let anyone leave once the tournament has started and its own leave branch already
+	// ends an emptied signup. A paused tournament cannot be at mode 0 either -- Cmd_DuelPause_f
+	// refuses there, and duel_tournament_end() clears the flag -- so the added clause cannot fire
+	// when no tournament exists.
+	if (level.duelists_quantity <= 0 &&
+		(level.duel_tournament_mode == 1 || level.duel_tournament_paused == qtrue))
 	{
-		level.sniper_players[ent->s.number] = -1;
-		level.sniper_mode_quantity--;
-	}
-
-	// zyk: rpg lms player went to spec
-	if (level.rpg_lms_players[ent->s.number] > -1)
-	{
-		level.rpg_lms_players[ent->s.number] = -1;
-		level.rpg_lms_quantity--;
+		duel_tournament_end();
+		trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7There are no duelists anymore. Tournament is over!\"");
 	}
 
 	// zyk: melee battle player went to spec
@@ -2749,11 +3117,31 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	{
 		level.melee_players[ent->s.number] = -1;
 		level.melee_mode_quantity--;
+
+		// GalaxyRP fix: [Melee Battle] drop the pre-battle snapshot melee_battle_prepare() took.
+		// Clearing level.melee_players[] on the line above removes this player from
+		// melee_battle_end()'s loop, so without this the backup would stay pending forever: their
+		// next battle's backup returns early on the stale flag and keeps the old snapshot, and so
+		// does a Duel Tournament entered later, because both mini-games share the one pair of
+		// fields. Discarded rather than applied because ClientSpawn() runs further down this same
+		// function and rebuilds the loadout from scratch anyway.
+		player_discard_backup(ent);
 	}
 
-	// zyk: sending events to client game
-	client->pers.send_event_timer = level.time + 3000;
-	client->pers.send_event_interval = level.time + 100;
+	// GalaxyRP fix: [Melee Battle] end the battle when this was the last player, exactly as
+	// Cmd_MeleeMode_f's leave branch already does. Same defect and same shape as the Duel Tournament
+	// one above: melee_mode stayed at 1 with level.melee_model_id still naming the catwalk, and the
+	// join branch spawns a fresh catwalk whenever melee_mode_quantity is 0, so the next sign-up
+	// inside the 12-second window orphaned it. The G_FreeEntity() hook that clears melee_model_id
+	// (g_utils.c) does not help here -- nothing ever frees the old entity for it to fire on.
+	//
+	// Scoped to signup for the same reason: joining is refused at melee_mode > 1, and the mode-2
+	// block in G_RunFrame() (g_main.c) already ends an emptied battle with "No players left!".
+	if (level.melee_mode == 1 && level.melee_mode_quantity <= 0)
+	{
+		melee_battle_end();
+		trap->SendServerCommand(-1, "chat \"^3Melee Battle: ^7No players left! Melee Battle is over!\"");
+	}
 
 	client->pers.skill_counter = 0;
 
@@ -2820,6 +3208,82 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	if ( ent->ghoul2 && ent->client )
 		ent->client->renderInfo.lastG2 = NULL; //update the renderinfo bolts next update.
 
+	// GalaxyRP fix: [Account] moved this account/character DB reload here from the very end of
+	// ClientBegin (where it used to run *after* ClientSpawn() below already ran) so that
+	// pers.skill_levels[]/inventory/saber/model are loaded from the database *before* ClientSpawn
+	// grants starting weapons and equipment from them. On a map change (not a full reconnect) pers
+	// is wiped fresh for the new map, so previously the very first spawn always used blank/zeroed
+	// skill data -- the reload happened too late to help it, and only a manual /kill (which calls
+	// ClientSpawn a second time, by which point the reload had already completed) picked up the
+	// correct loadout. The original "server doesn't like loading the db while it's changing maps"
+	// concern this was worked around for doesn't appear to apply to the DB read itself (this exact
+	// SQLite call already ran unconditionally within ClientBegin before this fix, just later) --
+	// the explicit initialize_rpg_skills() call below is being restored for the same reason New
+	// Zyk mod's equivalent load_account() call in ClientBegin is immediately followed by its own
+	// initialize_rpg_skills() call there too, rather than relying solely on ClientSpawn's copy
+	// (which doesn't run at all for a player kept in Spectator by the checks just below).
+	if (ent->client->sess.amrpgmode > 0)
+	{
+		// GalaxyRP fix: [Quests] a "if the target goes to spec or something, choose another target"
+		// guard used to live here. Cmd_BountyQuest_f (the only setter of level.bounty_quest_choose_target/
+		// target_id) was deleted as unreachable dead code (see the GalaxyRP fix comment in g_cmds.c),
+		// and those level fields have been removed along with it, so this guard is removed too.
+
+		// zyk: load account again
+		ent->client->sess.loggedin = qtrue;
+
+		// GalaxyRP: [Force Enlightenment] push the login state to the client immediately -- not just
+		// on the next Profile menu open (see Cmd_GalaxyRpUi_f) -- so cgame's CG_GreyItem greys out
+		// both Enlightenment pickups (DAJ_RP: logged-in players cannot take either color) as soon as
+		// they're actually logged in, not only after they happen to open the Profile UI.
+		trap->SendServerCommand(ent->s.number, va("supdateloggedin %i\n", ent->client->sess.loggedin));
+
+		sqlite3* db;
+		char* zErrMsg = 0;
+		int rc;
+		sqlite3_stmt* stmt = NULL;
+
+		rc = RP_DB_Open(&db);
+		if (rc != SQLITE_OK)
+		{
+			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+			sqlite3_close(db);
+			return;
+		}
+
+		select_account_and_default_character_data(ent, ent->client->sess.filename, db, zErrMsg, rc, stmt);
+
+		sqlite3_close(db);
+
+		initialize_rpg_skills(ent);
+	}
+	else
+	{
+		// GalaxyRP fix: [Force Enlightenment] the push above only ever sends a "1", so a client that
+		// begins a map *without* an account session was never told so. ui_loggedin is CVAR_ROM|
+		// CVAR_INTERNAL and cgame never resets it (Cvar_Register does not clobber an existing value),
+		// so a player who was logged in on the previous map or server arrives here still holding a
+		// stale "1" -- and cgame would then apply the wrong Enlightenment rule to them. (It used to
+		// un-grey and predict a pickup of the wrong-side color that Touch_Item() refuses; with the
+		// DAJ_RP rule, a stale "1" would instead grey out and refuse to predict their OWN side's
+		// color, which the server does grant, so the pickup sound would go missing.) Send the real value
+		// on this path too, so ui_loggedin is authoritative for every client from ClientBegin onward.
+		//
+		// Deliberately an else rather than a single unconditional push below the block: the block has
+		// its own early return on RP_DB_Open() failure (which must still leave the client holding the
+		// "1" the server already set), and on the normal path select_account_and_default_character_data()
+		// pushes again itself, so hoisting the call would both lose a push and duplicate one.
+		trap->SendServerCommand(ent->s.number, va("supdateloggedin %i\n", ent->client->sess.loggedin));
+	}
+
+	// GalaxyRP fix: [Radar] push the ally set every time a client begins. sess.ally1/ally2 ride the
+	// session string and so survive a map change, but cgame's copy is zeroed in CG_Init -- and the
+	// per-slot events this replaces were only ever sent when an ally was added or removed. The two
+	// went out of step on every map change, and the radar drew every ally as an enemy until the
+	// player happened to re-run /allyadd. Unconditional: a player with no allies gets 0 0, which is
+	// exactly what their client should hold.
+	send_ally_update(ent);
+
 	if ( (level.gametype == GT_POWERDUEL && client->sess.sessionTeam != TEAM_SPECTATOR && client->sess.duelTeam == DUELTEAM_FREE) ||
 		level.load_entities_timer != 0)
 	{ // zyk: keep player as spectator if entities are not placed yet
@@ -2850,7 +3314,6 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	if (rp_pluginRequired.integer && !client->pers.clientPlugin)
 	{
 		char	pluginVersion[MAX_INFO_VALUE];
-		char	clientEternal[MAX_INFO_VALUE];
 		int		allowDownload = trap->Cvar_VariableIntegerValue("sv_allowDownload");
 
 		// Force to spectator mode
@@ -2862,53 +3325,63 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 
 		// Get info
 		Q_strncpyz(pluginVersion, Info_ValueForKey(userinfo, "rpmod_client"), sizeof(pluginVersion));
-		Q_strncpyz(clientEternal, Info_ValueForKey(userinfo, "cjp_client"), sizeof(clientEternal));
 
-		// Check for EternalJK2
-		if (!strcmp(clientEternal, "1.4JAPRO")) 
+		// GalaxyRP fix: [TaystJK] dropped the EternalJK/JAPro ("cjp_client" == "1.4JAPRO") detection
+		// and its "switch to OpenJK" warning -- this mod now runs natively on TaystJK (EternalJK's
+		// modern successor), so telling a player to install EternalJK-era OpenJK no longer applies.
+		// The real client-plugin presence/version check below (rpmod_client vs JK_VERSION) is
+		// unrelated to that and is kept as-is.
+
+		// Show center print message
+		if (!VALIDSTRINGCVAR(pluginVersion))
 		{
-			trap->SendServerCommand(clientNum, "cp \"You are using ^1EternalJK\nSome features may be ^3disabled^7\nPlease use OpenJK ^5https://builds.openjk.org\"");
-			trap->SendServerCommand(clientNum, "print \"You are running in ^3Server Side^7 mode only due ^1EternalJK^7 was detected\n\"");
-			G_LogPrintf("ClientPlugin: Player does not have any plugin (Using EternalJK)\n");
+			trap->SendServerCommand(clientNum, va("cp \"Please download\n^5%s^7 client plugin.\nIf you already have it then relaunch game\nusing the script file shipped with it\"", JK_VERSION));
+			// GalaxyRP fix: [Plugin] mirror the center print message to the console too (the
+			// EternalJK branch used to be the only place that did this) so the warning is still
+			// visible after the on-screen popup fades.
+			// GalaxyRP fix: [fs_forcegame] also cover the case where the player already has the
+			// plugin/mod installed but launched TaystJK directly (or switched mods via its mod menu)
+			// instead of using the DAJ_RP launch script -- fs_forcegame then stays on its "taystjk"
+			// default, which wins filesystem search priority over GalaxyRP and silently loads
+			// TaystJK's own bundled cgame/ui instead of ours. That can only be corrected by relaunching
+			// via the script (fs_forcegame is CVAR_INIT, so no in-game command can change it).
+			trap->SendServerCommand(clientNum, va("print \"^3You do not have the required client plugin installed. The server requires ^5%s^7.\n^3If you already have it installed, your game started with the wrong engine folder override - close the game and relaunch using the script file shipped with the client.\n\"", JK_VERSION));
+			G_LogPrintf("ClientPlugin: Player does not have any plugin\n");
 		}
 		else
 		{
-			// Show center print message
-			if (!VALIDSTRINGCVAR(pluginVersion))
-			{
-				trap->SendServerCommand(clientNum, va("cp \"Please download\n^5%s^7 client plugin\nCheck the console or %s\"", JK_VERSION, (allowDownload ? "enable downloads in main menu" : "download from\n^2" JK_URL)));
-				G_LogPrintf("ClientPlugin: Player does not have any plugin\n");
-			}
-			else
-			{
-				trap->SendServerCommand(clientNum, va("cp \"Your client plugin is\n^3%s\nThe server version is ^5%s^7\nCheck the console or %s\"", pluginVersion, JK_VERSION, (allowDownload ? "enable downloads in main menu" : "download from\n^2" JK_URL)));
-				G_LogPrintf("ClientPlugin: Player is using '%s' instead '%s'\n", pluginVersion, JK_VERSION);
-			}
+			trap->SendServerCommand(clientNum, va("cp \"Your client plugin is\n^3%s\nThe server version is ^5%s^7\nCheck the console or %s\"", pluginVersion, JK_VERSION, (allowDownload ? "enable downloads in main menu" : "download from\n^2" JK_URL)));
+			// GalaxyRP fix: [Plugin] mirror the center print message to the console too (see above).
+			trap->SendServerCommand(clientNum, va("print \"^3Your client plugin is ^7%s^3, but the server requires ^5%s^7.\n\"", pluginVersion, JK_VERSION));
+			G_LogPrintf("ClientPlugin: Player is using '%s' instead '%s'\n", pluginVersion, JK_VERSION);
+		}
 
-			// Show console print message
-			if (allowDownload)
-			{
-				trap->SendServerCommand(clientNum, va("print \"Update your client plugin typing ^2/cl_allowdownload 1^7 in the console and reconnect\n\""));
-			}
-			else
-			{
-				trap->SendServerCommand(clientNum, va("print \"Download ^5%s^7 client plugin from ^2%s\n\"", JK_VERSION, JK_URL));
-			}
+		// Show console print message
+		if (allowDownload)
+		{
+			trap->SendServerCommand(clientNum, va("print \"Update your client plugin typing ^2/cl_allowdownload 1^7 in the console and reconnect\n\""));
+		}
+		else
+		{
+			trap->SendServerCommand(clientNum, va("print \"Download ^5%s^7 client plugin from ^2%s\n\"", JK_VERSION, JK_URL));
 		}
 	}
 
 	if (client->sess.sessionTeam != TEAM_SPECTATOR)
 	{
 		// Tr!Force: [Motd] Check screen message
-		if (!client->sess.motdSeen && VALIDSTRINGCVAR(zyk_screen_message.string))
+		if (!client->sess.motdSeen && VALIDSTRINGCVAR(rp_screen_message.string))
 		{
-			// Logged players can disable the screen message if they want to
-			if (ent->client->sess.amrpgmode == 0 || !(ent->client->pers.player_settings & (1 << 9)))
+			// GalaxyRP fix: [Settings] this used to be gated behind
+			// (ent->client->sess.amrpgmode == 0 || !(ent->client->pers.player_settings & (1 << 9))) --
+			// letting a logged-in RPG player disable the screen message via the old /settings 4, "Allow
+			// Screen Message". That per-player choice has been removed (see the fix comment on
+			// settings_number_to_bit in Cmd_Settings_f) -- the screen message is now always shown.
 			{
 				// Delay motd for non-plugin clients
-				int motdDelayed = rp_pluginRequired.integer && !client->pers.clientPlugin ? zyk_screen_message_timer.integer + 2 : 0;
-			
-				client->motdTime = motdDelayed ? motdDelayed : zyk_screen_message_timer.integer;
+				int motdDelayed = rp_pluginRequired.integer && !client->pers.clientPlugin ? rp_screen_message_timer.integer + 2 : 0;
+
+				client->motdTime = motdDelayed ? motdDelayed : rp_screen_message_timer.integer;
 				client->sess.motdSeen = qtrue;
 			}
 		}
@@ -2919,42 +3392,13 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	ent->client->sess.weapon_recharge_timer = 0;
 
 	//GalaxyRP (Alex): [Training Saber] Initialise values for training saber.
+	// GalaxyRP: [Training Saber fix] reset covers both saber slots now -- see the matching
+	// comment on training_stored_damageScale/2 in g_local.h.
 	ent->client->pers.training_mode = qfalse;
-	ent->client->pers.saber_stored_damage = 0;
-	ent->client->pers.saber2_stored_damage = 0;
-
-	if (ent->client->sess.amrpgmode > 0)
+	for (i = 0; i < MAX_SABERS; i++)
 	{
-		// zyk: if the target goes to spec or something, then the server must choose another target
-		if (level.bounty_quest_choose_target == qfalse && level.bounty_quest_target_id == (ent - g_entities))
-			level.bounty_quest_choose_target = qtrue;
-
-		// zyk: load account again
-
-		//ent->client->sess.accountID = -1;
-		ent->client->sess.loggedin = qtrue;
-		//ent->client->sess.amrpgmode = 0;
-
-		//TODO: find a way to bring this back in (server doesn't like loading the db while it's changing maps)
-
-		sqlite3* db;
-		char* zErrMsg = 0;
-		int rc;
-		sqlite3_stmt* stmt = NULL;
-
-		rc = sqlite3_open(DB_PATH, &db);
-		if (rc != SQLITE_OK)
-		{
-			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-			sqlite3_close(db);
-			return;
-		}
-
-		select_account_and_default_character_data(ent, ent->client->sess.filename, db, zErrMsg, rc, stmt);
-
-		sqlite3_close(db);
-
-		//initialize_rpg_skills(ent);
+		ent->client->pers.training_stored_damageScale[i] = 0;
+		ent->client->pers.training_stored_damageScale2[i] = 0;
 	}
 }
 
@@ -3300,14 +3744,12 @@ Initializes all non-persistant parts of playerState
 */
 extern saber_db_info_t select_saber_info_using_char_id(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 extern qboolean WP_HasForcePowers( const playerState_t *ps );
-extern void quest_get_new_player(gentity_t *ent);
-extern void clean_guardians(gentity_t *ent);
+// GalaxyRP fix: [Guardian] clean_guardians extern declaration removed - function was a permanent no-op and its definition was deleted from g_cmds.c
 extern void zyk_add_force_powers( gentity_t *ent );
 extern void zyk_add_guns( gentity_t *ent );
 extern void zyk_remove_force_powers( gentity_t *ent );
 extern void zyk_remove_guns( gentity_t *ent );
 extern void do_scale(gentity_t *ent, int new_size);
-extern int zyk_max_magic_power(gentity_t *ent);
 extern void zyk_load_common_settings(gentity_t *ent);
 extern void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 void ClientSpawn(gentity_t *ent) {
@@ -3331,13 +3773,25 @@ void ClientSpawn(gentity_t *ent) {
 	//first we want the userinfo so we can see if we should update this client's saber -rww
 	trap->GetUserinfo( index, userinfo, sizeof( userinfo ) );
 
-	if (ent->client->sess.loggedin) {
+	// GalaxyRP fix: only pull the saber from the database on the player's first spawn after
+	// logging in (i.e. before client->pers.saber1/2 have ever been populated). This used to run
+	// on *every* spawn (including a plain /kill respawn) and unconditionally clobbered the live
+	// userinfo saber1/saber2 keys with whatever was already stored in the database. Since those
+	// are the only values compared against client->pers.saber1/2 below to detect a saber change,
+	// a fresh saber choice picked in the UI (which only updates userinfo, not the DB) could never
+	// be detected for logged-in players -- they appeared permanently stuck on their last saved
+	// saber. Logged-out players didn't hit this branch at all, and /saber worked instantly
+	// because it calls G_SetSaber() directly. Restricting the DB read to the first spawn lets the
+	// normal userinfo-vs-pers comparison below (and the resulting DB save triggered from
+	// ClientUserinfoChanged) apply and persist saber changes made via the UI, same as it already
+	// does for logged-out players.
+	if (ent->client->sess.loggedin && (!VALIDSTRING(client->pers.saber1) || !VALIDSTRING(client->pers.saber2))) {
 		sqlite3* db;
 		char* zErrMsg = 0;
 		int rc;
 		sqlite3_stmt* stmt = NULL;
 
-		rc = sqlite3_open(DB_PATH, &db);
+		rc = RP_DB_Open(&db);
 		if (rc != SQLITE_OK)
 		{
 			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
@@ -3414,6 +3868,16 @@ void ClientSpawn(gentity_t *ent) {
 				ent->client->ps.fd.saberAnimLevelBase = ent->client->saberCycleQueue = ent->client->ps.fd.saberAnimLevel;
 			}
 		}
+
+		// GalaxyRP fix: [Saber] this block is a second, independent place (besides update_saber()
+		// in g_cmds.c) where G_SetSaber() can end up correcting/rejecting a saber -- e.g. a UI
+		// Apply that picked an invalid two-handed combo, only detected here on the player's next
+		// spawn/kill. Without this push the client's own local saber1/saber2 cvars (and thus its
+		// console echo and the saber-selection UI) never learned about the correction, same root
+		// cause as CG_SaberUpdate_f in cg_servercmds.c was added for. Scoped inside changedSaber
+		// (unlike update_saber()'s unconditional send) because ClientSpawn runs on every respawn,
+		// not just on an explicit player action -- nothing needs telling when nothing changed.
+		trap->SendServerCommand(ent - g_entities, va("supdatesaber \"%s\" \"%s\"\n", ent->client->pers.saber1, ent->client->pers.saber2));
 	}
 
 	if (client->ps.fd.forceDoInit)
@@ -3513,6 +3977,15 @@ void ClientSpawn(gentity_t *ent) {
 
 	for ( i=0; i<HL_MAX; i++ )
 		ent->locationDamage[i] = 0;
+
+	// GalaxyRP: [Grapple Hook] before the memset below wipes client->hook: a hook that survives a
+	// respawn keeps its parent pointer and would spend the rest of its lifetime writing an anchor
+	// into the new spawn's lastHitLoc. Weapon_HookThink() also refuses a hook its owner has
+	// forgotten, but this is the place the forgetting happens, so this is where it is prevented.
+	if ( client->hook )
+	{
+		Weapon_HookFree( client->hook );
+	}
 
 	memset( client, 0, sizeof( *client ) ); // bk FIXME: Com_Memset?
 	client->bodyGrabIndex = ENTITYNUM_NONE;
@@ -3646,7 +4119,7 @@ void ClientSpawn(gentity_t *ent) {
 	if ( level.gametype != GT_HOLOCRON
 		&& level.gametype != GT_JEDIMASTER
 		&& !HasSetSaberOnly()
-		&& !AllForceDisabled( g_forcePowerDisable.integer )
+		&& !AllForceDisabled( G_ForcePowerDisableValue() ) // GalaxyRP fix: [Force] duel-aware, see G_ForcePowerDisableValue()
 		&& g_jediVmerc.integer )
 	{
 		if ( level.gametype >= GT_TEAM && (client->sess.sessionTeam == TEAM_BLUE || client->sess.sessionTeam == TEAM_RED) )
@@ -3815,37 +4288,37 @@ void ClientSpawn(gentity_t *ent) {
 				{ //Max his ammo out for all the weapons he has.
 					// zyk: all weapons, including rocket launcher, will have max ammo based on the max ammo cvars
 					int ammo_type = AMMO_BLASTER;
-					int max_ammo = zyk_max_blaster_pack_ammo.integer;
+					int max_ammo = rp_max_blaster_pack_ammo.integer;
 
 					if (m == WP_DISRUPTOR || m == WP_BOWCASTER || m == WP_DEMP2)
 					{
 						ammo_type = AMMO_POWERCELL;
-						max_ammo = zyk_max_power_cell_ammo.integer;
+						max_ammo = rp_max_power_cell_ammo.integer;
 					}
 					else if (m == WP_REPEATER || m == WP_FLECHETTE || m == WP_CONCUSSION)
 					{
 						ammo_type = AMMO_METAL_BOLTS;
-						max_ammo = zyk_max_metal_bolt_ammo.integer;
+						max_ammo = rp_max_metal_bolt_ammo.integer;
 					}
 					else if (m == WP_ROCKET_LAUNCHER)
 					{
 						ammo_type = AMMO_ROCKETS;
-						max_ammo = zyk_max_rocket_ammo.integer;
+						max_ammo = rp_max_rocket_ammo.integer;
 					}
 					else if (m == WP_THERMAL)
 					{
 						ammo_type = AMMO_THERMAL;
-						max_ammo = zyk_max_thermal_ammo.integer;
+						max_ammo = rp_max_thermal_ammo.integer;
 					}
 					else if (m == WP_TRIP_MINE)
 					{
 						ammo_type = AMMO_TRIPMINE;
-						max_ammo = zyk_max_tripmine_ammo.integer;
+						max_ammo = rp_max_tripmine_ammo.integer;
 					}
 					else if (m == WP_DET_PACK)
 					{
 						ammo_type = AMMO_DETPACK;
-						max_ammo = zyk_max_detpack_ammo.integer;
+						max_ammo = rp_max_detpack_ammo.integer;
 					}
 
 					client->ps.ammo[ammo_type] = max_ammo;
@@ -3994,27 +4467,20 @@ void ClientSpawn(gentity_t *ent) {
 	}
 	else
 	{ // zyk: starting shield of the player
-		client->ps.stats[STAT_ARMOR] = zyk_starting_shield.integer;
+		client->ps.stats[STAT_ARMOR] = rp_starting_shield.integer;
 	}
 
 	G_SetOrigin( ent, spawn_origin );
 	VectorCopy( spawn_origin, client->ps.origin );
 
-	// zyk: initializing universe_quest_objective_control value
-	ent->client->pers.universe_quest_objective_control = -1;
+	// GalaxyRP fix: [Quests] removed universe_quest_objective_control init here — field removed as dead (see g_local.h)
 
 	// zyk: initializing mind control attributes on spawn time
 	ent->client->pers.being_mind_controlled = -1;
 	ent->client->pers.mind_controlled1_id = -1;
 
-	// zyk: loading default value of race_position
-	ent->client->pers.race_position = 0;
-
 	// zyk: initializing flame thrower timer
 	ent->client->pers.flame_thrower = 0;
-
-	// zyk: initializing Quest Power attributes
-	ent->client->pers.quest_power_status = 0;
 
 	// zyk: No Attack ability timer
 	ent->client->pers.no_attack_timer = 0;
@@ -4026,35 +4492,41 @@ void ClientSpawn(gentity_t *ent) {
 	// zyk: if player is logged at spawn, load his skills
 	if (ent->client->sess.amrpgmode == 2)
 	{
-		clean_guardians(ent);
+		// GalaxyRP fix: [Guardian] clean_guardians() call removed - function was a permanent no-op
 
 		initialize_rpg_skills(ent);
 
-		// zyk: getting the player who can play a quest in this map
-		quest_get_new_player(ent);
+		// GalaxyRP fix: [Quests] quest_get_new_player was removed as unreachable dead code (see the
+		// GalaxyRP fix comment on its old location in g_cmds.c).
 	}
-	else if (ent->client->pers.player_statuses & (1 << 12))
+	else if (ent->client->pers.player_statuses & (1 << PLAYER_STATUS_ADM_GIVE_FORCE))
 	{ // zyk: player received force powers from admin
 		zyk_remove_guns(ent);
 		zyk_add_force_powers(ent);
 	}
-	else if (ent->client->pers.player_statuses & (1 << 13))
+	else if (ent->client->pers.player_statuses & (1 << PLAYER_STATUS_ADM_GIVE_GUNS))
 	{ // zyk: player received guns from admin
 		zyk_remove_force_powers(ent);
 		zyk_add_guns(ent);
 	}
 
-	if (ent->client->sess.amrpgmode == 1)
-	{ // zyk: loading Admin-Only settings
-		zyk_load_common_settings(ent);
-	}
+	// GalaxyRP fix: [Account] this amrpgmode == 1 branch was unreachable dead code -- amrpgmode has
+	// not been assignable as 1 anywhere in the codebase since commit 5d35b28b8 (2022) made login
+	// always set it to 2, and for that == 2 case zyk_load_common_settings() is already called via
+	// initialize_rpg_skills() a few lines above, so nothing here was actually missing.
 
-	if (ent->client->pers.player_statuses & (1 << 4))
+	if (ent->client->pers.player_statuses & (1 << PLAYER_STATUS_SCALED))
 	{ // zyk: player is scaled, set the scale factor
 		do_scale(ent, ent->client->pers.player_scale);
 	}
 
+	// GalaxyRP fix: [gameplay/exploit] clear the chat-protection flag alongside its timer. Resetting
+	// only the timer left the PLAYER_STATUS_CHAT_PROTECTION bit -- the flag G_Damage checks to skip all damage -- set
+	// on a player who respawned while chat-protected, and with the timer back at 0 the clear branch in
+	// ClientThink_real() could never fire for them again, so they stayed permanently invulnerable
+	// while fully able to fight. See the matching comment on that block in g_active.c.
 	ent->client->pers.chat_protection_timer = 0;
+	ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_CHAT_PROTECTION);
 
 	// the respawned flag will be cleared after the attack and jump keys come up
 	client->ps.pm_flags |= PMF_RESPAWNED;
@@ -4103,6 +4575,21 @@ void ClientSpawn(gentity_t *ent) {
 			// fire the targets of the spawn point
 			G_UseTargets(spawnPoint, ent);
 
+			// GalaxyRP: [SP Maps] on a single-player map (JO and JA) the spawn points' target is the
+			// map's start script (player setup, intro, cinematic), copied onto every added spawn
+			// point. It is meant to run once, so the first spawn that fires it clears it from
+			// every deathmatch spawn point on the map; later spawns fire nothing.
+			if ( level.rp_spawn_target_once && spawnPoint && spawnPoint->target )
+			{
+				gentity_t *spot = NULL;
+
+				while ( (spot = G_Find( spot, FOFS(classname), "info_player_deathmatch" )) != NULL )
+				{
+					spot->target = NULL;
+				}
+				spawnPoint->target = NULL;
+			}
+
 			// positively link the client, even if the command times are weird
 			VectorCopy(ent->client->ps.origin, ent->r.currentOrigin);
 
@@ -4112,8 +4599,36 @@ void ClientSpawn(gentity_t *ent) {
 			trap->LinkEntity ((sharedEntity_t *)ent);
 
 			// zyk: if player is paralyzed by an admin, keeps him that way
-			if (ent->client->pers.player_statuses & (1 << 6))
+			if (ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DOWNED))
 			{
+				// GalaxyRP fix: [Death System] and keeps him untargetable with it. The downed state
+				// itself survives a respawn -- the PLAYER_STATUS_DOWNED and ADMIN_PARALYSIS bits and pers.downedTime all
+				// live in pers, which ClientSpawn() preserves wholesale -- but FL_NOTARGET does not:
+				// it sits on ent->flags, which this function clears outright with "ent->flags = 0"
+				// further up. So a downed player who respawned (a team change is the reachable route,
+				// but rcon's forceteam and the duel-queue rotation reach ClientSpawn() the same way)
+				// came back still downed, still on the clock, and alone among downed players in being
+				// shootable by NPCs and turrets again. RP_EnterDownedState() (g_cmds.c) sets this flag
+				// when the state begins; this block is where the rest of the state's presentation is
+				// already re-applied after a respawn, so the flag belongs here with it.
+				ent->flags |= FL_NOTARGET;
+
+				// GalaxyRP fix: [Death System] and the ADMIN paralysis invulnerability, for the same
+				// reason FL_NOTARGET is re-applied above: it lives on the client rather than in pers,
+				// and the g_spawnInvulnerability block a few lines up has just overwritten
+				// invulnerableTimer with its own much shorter value. Without this a paralyzed player
+				// pushed through a respawn (rcon's forceteam and the duel-queue rotation both reach
+				// ClientSpawn() directly) would serve the rest of their punishment killable, which is
+				// the one thing RP_EnterDownedState() sets the flag to prevent. pers.downedTime is the
+				// authoritative remaining time and survives the respawn alongside the status bits, so
+				// the window is rebuilt from it; the trailing second is the same slack
+				// RP_EnterDownedState() uses, and RP_ClearDownedState() still ends it at the release.
+				if (ent->client->pers.player_statuses & (1 << PLAYER_STATUS_ADMIN_PARALYSIS))
+				{
+					ent->client->invulnerableTimer = level.time + (ent->client->pers.downedTime * 1000) + 3000;
+					ent->client->ps.eFlags |= EF_INVULNERABLE;
+				}
+
 				ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
 				ent->client->ps.forceHandExtendTime = level.time + 500;
 				ent->client->ps.velocity[2] += 150;
@@ -4170,6 +4685,8 @@ void ClientSpawn(gentity_t *ent) {
 
 	// clear entity state values
 	BG_PlayerStateToEntityState( &client->ps, &ent->s, qtrue );
+	// DAJ_RP: [Phase] /admhidden -- the copy above rebuilt s from ps
+	RP_HiddenApplyState( ent, &ent->s );
 
 	//rww - make sure client has a valid icarus instance
 	trap->ICARUS_FreeEnt( (sharedEntity_t *)ent );
@@ -4182,7 +4699,7 @@ void ClientSpawn(gentity_t *ent) {
 		int rc;
 		sqlite3_stmt* stmt = NULL;
 
-		rc = sqlite3_open(DB_PATH, &db);
+		rc = RP_DB_Open(&db);
 		if (rc != SQLITE_OK)
 		{
 			trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
@@ -4234,14 +4751,19 @@ void G_ClearTeamVote( gentity_t *ent, int team ) {
 	else							return;
 
 	if ( level.teamVoteTime[voteteam] ) {
+		// GalaxyRP fix: [Vote] "+ voteteam" on both configstrings. The Red and Blue tallies sit side by side
+		// (CS_TEAMVOTE_YES + 0 / + 1), and every other writer -- Cmd_CallTeamVote_f(), Cmd_TeamVote_f() --
+		// adds the offset; this one did not, so a Blue voter leaving the team or the server overwrote RED's
+		// on-screen count with Blue's number and left Blue's showing the vote that had just been removed.
+		// Display only: the real tally is level.teamVoteYes/No, which was always updated correctly.
 		if ( ent->client->mGameFlags & PSG_TEAMVOTED ) {
 			if ( ent->client->pers.teamvote == 1 ) {
 				level.teamVoteYes[voteteam]--;
-				trap->SetConfigstring( CS_TEAMVOTE_YES, va( "%i", level.teamVoteYes[voteteam] ) );
+				trap->SetConfigstring( CS_TEAMVOTE_YES + voteteam, va( "%i", level.teamVoteYes[voteteam] ) );
 			}
 			else if ( ent->client->pers.teamvote == 2 ) {
 				level.teamVoteNo[voteteam]--;
-				trap->SetConfigstring( CS_TEAMVOTE_NO, va( "%i", level.teamVoteNo[voteteam] ) );
+				trap->SetConfigstring( CS_TEAMVOTE_NO + voteteam, va( "%i", level.teamVoteNo[voteteam] ) );
 			}
 		}
 		ent->client->mGameFlags &= ~(PSG_TEAMVOTED);
@@ -4249,7 +4771,10 @@ void G_ClearTeamVote( gentity_t *ent, int team ) {
 	}
 }
 
-extern void try_finishing_race();
+// GalaxyRP: [Account] forward-declared so ClientDisconnect (below) can flush the currently active
+// character before this client's slot is torn down -- same pattern already used in g_cmds.c for
+// Cmd_Char_f, whose own comment goes into the full history of why this matters.
+extern void save_account(gentity_t *ent, qboolean save_char_file);
 void ClientDisconnect( int clientNum ) {
 	gentity_t	*ent;
 	gentity_t	*tent;
@@ -4263,6 +4788,26 @@ void ClientDisconnect( int clientNum ) {
 	if ( !ent->client || ent->client->pers.connected == CON_DISCONNECTED ) {
 		return;
 	}
+
+	// GalaxyRP: [SP Maps] security / goodie keys leave with the player
+	RP_ClearKeys( ent );
+
+	// GalaxyRP: [Entity System] and so does an entity held with /entcopy or /entcut: a copy is not made,
+	// a cut entity goes back where it was (g_entgrab.c)
+	RP_EntGrabCancel( ent, qfalse );
+
+	// GalaxyRP: [Account] this is the server-side handler for every kind of disconnect -- a
+	// voluntary /quit or /disconnect, a /reconnect (which drops and reconnects to the same server,
+	// running through this exact same path), a connection timeout, or a kick/ban -- and it never
+	// called save_account() before. Whatever RPG progress this player had made since the last
+	// incidental save trigger (a purchase, a /settings toggle, a race win, a /char switch, etc. --
+	// there is no periodic autosave in this codebase) was silently discarded the moment their slot
+	// was reused: ClientConnect() unconditionally memset()s the whole client struct on the very
+	// next connection into this slot. Called here, first, while pers.connected is still
+	// CON_CONNECTED and every pers/sess field this player actually has is still intact -- save_account()
+	// itself is a no-op unless sess.amrpgmode == 2, so this is harmless for anyone not actually in
+	// RPG mode.
+	save_account(ent, qtrue);
 
 	i = 0;
 
@@ -4288,6 +4833,12 @@ void ClientDisconnect( int clientNum ) {
 	i = 0;
 
 	G_LeaveVehicle( ent, qtrue );
+
+	// GalaxyRP: [Grapple Hook] the slot is about to be recycled; the hook must not outlive its owner.
+	if ( ent->client->hook )
+	{
+		Weapon_HookFree( ent->client->hook );
+	}
 
 	if ( ent->client->ewebIndex )
 	{
@@ -4316,7 +4867,32 @@ void ClientDisconnect( int clientNum ) {
 
 		// They don't get to take powerups with them!
 		// Especially important for stuff like CTF flags
-		TossClientItems( ent );
+		//
+		// GalaxyRP fix: [Drop] ...but a corpse has already given them up, and this block tested only
+		// "connected" and "not a spectator", so a player who died and disconnected before respawning
+		// ran TossClientItems() a second time.
+		//
+		// Stated honestly: that second run drops NOTHING today, and this guard is belt and braces
+		// rather than a repair. It is safe only by two side effects of where player_die() happens to
+		// put things, both of them BELOW its own call to the same function -- s.weapon becomes
+		// WP_NONE, which fails the weapon test at the top of the toss, and the powerups array is
+		// memset to zero, which empties the loop underneath it. Neither line is there for this
+		// reason, and either could move. The guard says the invariant out loud instead of leaving it
+		// resting on that, and costs one comparison on a path that runs once per disconnect.
+		//
+		// ps.pm_type rather than health: player_die() sets PM_DEAD itself, so this is true for every
+		// corpse however it got there, including the direct player->die() calls in NPC_spawn.c that
+		// never pass through G_Damage and can leave health above zero. A DOWNED player is explicitly
+		// not PM_DEAD -- ClientThink_real()'s pm_type ladder suppresses it while bit 6 is set -- so
+		// one who disconnects still drops, which is what we want. Spectators are already excluded
+		// above.
+		//
+		// The test could not live inside TossClientItems() in any case: player_die() sets PM_DEAD
+		// well before it calls that function, so a guard there would cancel the ordinary death drop.
+		if ( ent->client->ps.pm_type != PM_DEAD )
+		{
+			TossClientItems( ent );
+		}
 	}
 
 	G_LogPrintf( "ClientDisconnect: %i [%s] (%s) \"%s^7\"\n", clientNum, ent->client->sess.IP, ent->client->pers.guid, ent->client->pers.netname );
@@ -4367,25 +4943,68 @@ void ClientDisconnect( int clientNum ) {
 	level.ignored_players[ent->s.number][0] = 0;
 	level.ignored_players[ent->s.number][1] = 0;
 
+	// GalaxyRP fix: [Chat] also clear this player's bit from everyone ELSE's list. Only their own
+	// row was cleared, but the list is keyed by client slot and slots are recycled: if A had
+	// /ignore'd B in slot 7, B left and C connected into slot 7, A silently ignored C without ever
+	// asking to. Clearing the column costs one pass over the client slots, once per disconnect.
+	//
+	// The trade is that an ignore no longer survives the ignored player reconnecting, which is the
+	// right way round -- forgetting is recoverable with one command, inheriting is not noticeable.
+	for ( i = 0; i < level.maxclients; i++ )
+	{
+		if ( ent->s.number < 31 )
+			level.ignored_players[i][0] &= ~(1 << ent->s.number);
+		else
+			level.ignored_players[i][1] &= ~(1 << (ent->s.number - 31));
+	}
+
 	// zyk: duelist disconnected. Reset him from duels
+	// GalaxyRP: [Force Duel] the private-duel type goes with them. It is only ever read while
+	// ps.duelInProgress is set and every path that sets that writes it first, so a stale value is
+	// unreachable -- but a slot handed to a new player should not carry the last one's state.
+	level.duel_types[ent->s.number] = 0;
+
 	if (level.duel_players[ent->s.number] > -1)
 	{
 		level.duel_players[ent->s.number] = -1;
 		level.duelists_quantity--;
 	}
 
-	// zyk: sniper battle player disconnected
-	if (level.sniper_players[ent->s.number] > -1)
+	// GalaxyRP fix: [Duel Tournament] end the tournament when this was the last duelist, exactly as
+	// Cmd_DuelMode_f's leave branch already does. Dropping the count without ending it left
+	// duel_tournament_mode at 1 and level.duel_tournament_model_id still naming the globe, and the
+	// join branch spawns a fresh globe whenever duelists_quantity is 0 -- so the next player to sign
+	// up inside the remaining signup window overwrote that id and orphaned the old entity, which
+	// nothing then frees. Repeatable at will (sign up, spectate, rejoin, sign up), one leaked entity
+	// slot and a few never-freed G_Alloc strings per lap, ending at G_Spawn()'s trap->Error(ERR_DROP)
+	// -- a process exit on a dedicated build.
+	//
+	// Scoped to signup because that is the only mode the leak exists in: the join branch refuses at
+	// duel_tournament_mode > 1, so no second globe can be spawned once the tournament starts, and the
+	// mode-2 block in G_RunFrame() (g_main.c) already ends an emptied tournament there with its own
+	// announcement. Ending early here would silence that message for no gain.
+	//
+	// GalaxyRP fix: [Duel Tournament] the "or paused" half. The reasoning above holds only while the
+	// tournament is running: the mode-2 block that ends an emptied tournament lives inside
+	// G_RunFrame()'s "not paused" wrapper, so while an admin has /duelpause on, nothing ends one at
+	// all. Everyone leaving a paused mode-2-or-later tournament left it sitting at that mode with
+	// duelists_quantity at 0 and the paused flag still set, which also refuses every new sign-up
+	// (the join branch stops at duel_tournament_mode > 1) -- so that map had no duel tournament
+	// available until somebody resumed or the map changed. Now that pausing genuinely freezes the
+	// tournament clock, that state persists instead of resolving the moment anyone resumes.
+	//
+	// This is the whole of the reachable surface: ClientBegin (this site -- re-entering the world,
+	// which is how a team change including one to spectator gets here) and ClientDisconnect are the
+	// only two routes out of the roster while paused at mode 2 or later, because Cmd_DuelMode_f
+	// refuses to let anyone leave once the tournament has started and its own leave branch already
+	// ends an emptied signup. A paused tournament cannot be at mode 0 either -- Cmd_DuelPause_f
+	// refuses there, and duel_tournament_end() clears the flag -- so the added clause cannot fire
+	// when no tournament exists.
+	if (level.duelists_quantity <= 0 &&
+		(level.duel_tournament_mode == 1 || level.duel_tournament_paused == qtrue))
 	{
-		level.sniper_players[ent->s.number] = -1;
-		level.sniper_mode_quantity--;
-	}
-
-	// zyk: rpg lms player disconnected
-	if (level.rpg_lms_players[ent->s.number] > -1)
-	{
-		level.rpg_lms_players[ent->s.number] = -1;
-		level.rpg_lms_quantity--;
+		duel_tournament_end();
+		trap->SendServerCommand(-1, "chat \"^3Duel Tournament: ^7There are no duelists anymore. Tournament is over!\"");
 	}
 
 	// zyk: melee battle player disconnected
@@ -4395,43 +5014,165 @@ void ClientDisconnect( int clientNum ) {
 		level.melee_mode_quantity--;
 	}
 
+	// GalaxyRP fix: [Melee Battle] end the battle when this was the last player, exactly as
+	// Cmd_MeleeMode_f's leave branch already does. Same defect and same shape as the Duel Tournament
+	// one above: melee_mode stayed at 1 with level.melee_model_id still naming the catwalk, and the
+	// join branch spawns a fresh catwalk whenever melee_mode_quantity is 0, so the next sign-up
+	// inside the 12-second window orphaned it. The G_FreeEntity() hook that clears melee_model_id
+	// (g_utils.c) does not help here -- nothing ever frees the old entity for it to fire on.
+	//
+	// Scoped to signup for the same reason: joining is refused at melee_mode > 1, and the mode-2
+	// block in G_RunFrame() (g_main.c) already ends an emptied battle with "No players left!".
+	if (level.melee_mode == 1 && level.melee_mode_quantity <= 0)
+	{
+		melee_battle_end();
+		trap->SendServerCommand(-1, "chat \"^3Melee Battle: ^7No players left! Melee Battle is over!\"");
+	}
+
 	// zyk: cleaning ally ids of other players who have this player as ally
+	//
+	// GalaxyRP fix: [Ally] test the bit directly instead of going through zyk_is_ally(). That
+	// helper requires ent->client->pers.connected == CON_CONNECTED, and this function sets that
+	// field to CON_DISCONNECTED a few dozen lines further down -- so the clear worked only
+	// because of the order those two statements happen to sit in. Anything that moved the
+	// disconnect flag earlier would have left every other player holding an ally bit for a slot
+	// the next person to connect would inherit, with nothing to show for it. The bit test and the
+	// clear now both go through the ally helpers, which know the ally1/ally2 layout.
 	for (i = 0; i < level.maxclients; i++)
 	{
 		gentity_t *player_ent = &g_entities[i];
 
-		if (zyk_is_ally(player_ent,ent) == qtrue)
-		{
-			if (ent->s.number > 15)
-				player_ent->client->sess.ally2 &= ~(1 << (ent->s.number-16));
-			else
-				player_ent->client->sess.ally1 &= ~(1 << ent->s.number);
+		if (!player_ent->client)
+			continue;
 
-			// zyk: sending event to update radar at client-side
-			G_AddEvent(player_ent, EV_USE_ITEM14, (ent->s.number + MAX_CLIENTS));
+		if (zyk_ally_bit_set(player_ent, ent->s.number) == qfalse)
+			continue;
+
+		zyk_remove_ally(player_ent, ent->s.number);
+
+		// zyk: sending the updated ally set to the client-side radar
+		// GalaxyRP fix: [Radar] was G_AddEvent(player_ent, EV_USE_ITEM14, ...), one bit of a per-slot
+		// client cache. send_ally_update() pushes the whole set reliably instead.
+		send_ally_update(player_ent);
+	}
+
+	// GalaxyRP fix: [NPC] release any NPC that was following this player.
+	//
+	// client->leader is a raw gentity_t *, and nothing cleared it when the leader left: not this
+	// function, not player_die(), and not G_FreeEntity(), which never clears inbound references.
+	// g_entities is a static array, so the stale pointer always addressed valid memory -- this was
+	// never a crash -- but it went wrong three ways:
+	//
+	//  1. The NPC was orphaned for good. TryUse() only claims an NPC when leader is NULL and only
+	//     releases one when leader is the player pressing Use, so a non-NULL pointer to a departed
+	//     player matched neither branch: nobody could take the NPC and nobody could free it. It
+	//     kept walking to leader->r.currentOrigin, the position the player left from.
+	//
+	//  2. Client slots are recycled, so the next person to connect into this slot inherited the
+	//     NPCs -- and /order commanded them, since it matches on leader == ent. Spawning needs
+	//     ADM_NPC, so what transferred was typically an admin's escort.
+	//
+	//  3. Worst of the three: an NPC under /order guard or /order cover picks its targets in
+	//     NPC_ValidEnemy() by asking zyk_is_ally(leader, ent) -- its leader's ally list. The loop
+	//     above has just zeroed that list, so every same-team player became a valid enemy, and
+	//     once the slot was reused the newcomer's ally list silently decided who the NPC shot.
+	//
+	// Releasing is exactly what TryUse() does when the leader presses Use again -- clear the two
+	// order bits, drop the leader, stand guard -- so the NPC stays in the world and can be claimed
+	// by anyone, and no behaviour here is new. Scans from MAX_CLIENTS like Cmd_Order_f(), since
+	// NPCs never occupy a client slot.
+	//
+	// GalaxyRP fix: [NPC] the same sweep now also drops this player as an NPC's enemy, which dangled
+	// in exactly the way leader did and for the same reason: nothing here, in player_die() or in
+	// G_FreeEntity() ever clears an inbound reference, and health is not zeroed on the way out, so a
+	// player who quit while alive stayed a live, valid-looking target.
+	//
+	// NPC_ExecuteBState() does carry a `if ( !NPC->enemy->inuse ) G_ClearEnemy()` net, but it is not
+	// enough on its own. It runs after NPC_RunBehavior(), so the bState gets one full pass against
+	// the departed player first -- firing at the origin they left from, and in NPC_BSFollowLeader()
+	// handing that same pointer to other NPCs as their enemy through the leader->enemy branch. And
+	// NPC_Think() returns before ever reaching it when the NPC is dead, ICARUS-frozen, riding or
+	// driving a vehicle, or simply has not hit nextBStateThink yet, so for those the stale pointer
+	// survives until they think again -- indefinitely, in the frozen and vehicle cases. Since client
+	// slots are recycled, that window is the whole bug: whoever connects into this slot next inherits
+	// being shot at, having done nothing.
+	//
+	// G_ClearEnemy() rather than a bare assignment, because it also drops the lookTarget and the move
+	// goal when they point at the same entity. lastEnemy is only ever compared, never dereferenced,
+	// but it is cleared too so that a recycled slot is not mistaken for "the enemy I just fought".
+	for (i = MAX_CLIENTS; i < level.num_entities; i++)
+	{
+		gentity_t *npc_ent = &g_entities[i];
+
+		if (!npc_ent->inuse || !npc_ent->client || !npc_ent->NPC)
+			continue;
+
+		if (npc_ent->enemy == ent)
+		{
+			G_ClearEnemy(npc_ent);
+		}
+
+		if (npc_ent->lastEnemy == ent)
+		{
+			npc_ent->lastEnemy = NULL;
+		}
+
+		// Charmed NPCs are released here as well, unlike the team-change path in
+		// zyk_release_player_npcs(): NPC_CheckCharmed() would not clear the leader until charmedTime
+		// expires, and this pointer cannot be left standing for that long.
+		if (npc_ent->client->leader == ent)
+		{
+			zyk_release_npc_from_leader(npc_ent);
 		}
 	}
 
-	// zyk: player is no longer part of the race, testing if it must be finished
-	if (level.quest_map == 17)
+	// GalaxyRP fix: [NPC] do the same for the other players' enemy pointers, which reach NPCs by a
+	// second route.
+	//
+	// player_die() sets self->enemy to whoever killed you (g_combat.c) and G_Damage() sets it to
+	// whoever last hurt you; nothing ever clears either, and ClientSpawn() does not reset them on the
+	// way back in. An escort NPC reads its leader's enemy directly in NPC_BSFollowLeader() and adopts
+	// it with G_SetEnemy(), a path that never consults NPC_ValidEnemy(). G_SetEnemy() does refuse an
+	// entity with inuse == 0, so a freed slot is safe -- but the moment the slot is recycled the
+	// pointer is live again, and the escort opens fire on whoever just connected, for being killed by
+	// someone who has already left. Clearing the inbound references here removes the whole sequence.
+	//
+	// A plain assignment rather than G_ClearEnemy(): that helper exists to keep an NPC's lookTarget
+	// and move goal in step with its enemy, and these are players, with neither.
+	for (i = 0; i < level.maxclients; i++)
 	{
-		ent->client->pers.race_position = 0;
+		gentity_t *player_ent = &g_entities[i];
 
-		try_finishing_race();
+		if (!player_ent->inuse || !player_ent->client)
+			continue;
+
+		if (player_ent->enemy == ent)
+		{
+			player_ent->enemy = NULL;
+		}
+
+		if (player_ent->lastEnemy == ent)
+		{
+			player_ent->lastEnemy = NULL;
+		}
 	}
+
+	// And this player's own outbound pointers, unconditionally: the slot is about to be handed to
+	// the next person who connects, and ClientSpawn() would not clear these for them. Left alone,
+	// the newcomer inherits a grudge against whoever killed the previous occupant -- and hands it
+	// to their own escort NPCs the first time they claim one.
+	ent->enemy = NULL;
+	ent->lastEnemy = NULL;
 
 	// zyk: logout player from account
 	ent->client->sess.amrpgmode = 0;
 
-	// zyk: if this player was playing a quest, find a new one to play quests in this map
-	ent->client->pers.guardian_mode = 0;
+	// GalaxyRP fix: [Guardian] guardian_mode reset removed - field is permanently 0, sole writer spawn_boss() had zero callers
 
-	if (ent->client->pers.can_play_quest == 1)
-	{
-		clean_guardians(ent);
-		level.boss_battle_music_reset_timer = level.time + 1000;
-		quest_get_new_player(ent);
-	}
+	// GalaxyRP fix: [Guardian] removed the `if (can_play_quest == 1) { boss_battle_music_reset_timer
+	// = ...; }` block here -- can_play_quest can no longer become 1 anywhere (see the GalaxyRP fix
+	// comment on quest_get_new_player's old location in g_cmds.c), and boss_battle_music_reset_timer
+	// itself has now been removed as dead (see g_local.h).
 
 	trap->UnlinkEntity ((sharedEntity_t *)ent);
 	ent->s.modelindex = 0;
@@ -4442,7 +5183,7 @@ void ClientDisconnect( int clientNum ) {
 	ent->client->sess.sessionTeam = TEAM_FREE;
 	ent->r.contents = 0;
 
-	ent->client->pers.universe_quest_objective_control = -1;
+	// GalaxyRP fix: [Quests] removed universe_quest_objective_control reset here — field removed as dead (see g_local.h)
 
 	// zyk: if this player is being mind controlled, stops mind control on him
 	if (ent->client->pers.being_mind_controlled != -1)
@@ -4457,9 +5198,9 @@ void ClientDisconnect( int clientNum ) {
 		ent->client->pers.being_mind_controlled = -1;
 	}
 
-	// zyk: if this was the target player, sets qtrue to choose another target
-	if (level.bounty_quest_choose_target == qfalse && level.bounty_quest_target_id == (ent-g_entities))
-		level.bounty_quest_choose_target = qtrue;
+	// GalaxyRP fix: [Quests] a "if this was the target player, choose another target" guard used to
+	// live here -- removed for the same reason as the equivalent guard in ClientBegin above
+	// (level.bounty_quest_choose_target/target_id no longer exist).
 
 	ent->client->pers.bitvalue = 0;
 	ent->client->pers.player_statuses = 0;

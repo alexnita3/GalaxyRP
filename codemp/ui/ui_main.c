@@ -899,6 +899,22 @@ static void UI_BuildPlayerList() {
 
 static void UI_UpdateSaberCvars(void);
 
+// GalaxyRP fix: [Menu] holding ESCAPE down could make the top-bar (UIMENU_INGAME) menu flicker
+// open and closed for as long as the key stayed physically held. The OS's own key-repeat feature
+// sends repeated "key down" events for a held key (with only one real "key up" at actual release),
+// and neither the engine's escape routing nor UI_KeyEvent() below ever distinguished those repeats
+// from a genuine new press: the first uncaught ESCAPE auto-opens this menu (see the UIMENU_INGAME
+// case below), and the very next repeat -- now that the menu is open and catching keys -- gets
+// forwarded into UI_KeyEvent(), which unconditionally closes it again on any ESCAPE keydown; once
+// closed, the next repeat reopens it, and so on for as long as the key is held. This flag breaks
+// that cycle: it's armed the moment this menu auto-opens (below) and again each time UI_KeyEvent()
+// acts on an ESCAPE press, so only the FIRST ESCAPE keydown of a given hold does anything -- every
+// repeat-generated keydown after it is ignored until UI_KeyEvent() sees the matching key-up, which
+// re-arms it for the next genuine, separate press. Confirmed present identically in stock OpenJK
+// and stock TaystJK (not a regression introduced by this mod), so this is a UI-side workaround
+// rather than a fix at its root cause in the client engine, which this mod doesn't build or ship.
+static qboolean escapeHoldSuppressed = qfalse;
+
 void UI_SetActiveMenu( uiMenuCommand_t menu ) {
 	char buf[256];
 
@@ -960,6 +976,11 @@ void UI_SetActiveMenu( uiMenuCommand_t menu ) {
 			UI_BuildPlayerList();
 			Menus_CloseAll();
 			Menus_ActivateByName("ingame");
+			// GalaxyRP fix: [Menu] see escapeHoldSuppressed's own comment above -- this is the
+			// auto-open reached when ESCAPE isn't yet caught by any menu. Arming it here means the
+			// very next repeat-generated ESCAPE keydown (still the same physical press that got us
+			// here) is ignored by UI_KeyEvent() instead of immediately closing this menu again.
+			escapeHoldSuppressed = qtrue;
 			return;
 		case UIMENU_PLAYERCONFIG:
 			// trap->Cvar_Set( "cl_paused", "1" );
@@ -1609,27 +1630,10 @@ static void UI_DrawNetGameType(rectDef_t *rect, float scale, vec4_t color, int t
 	Text_Paint(rect->x, rect->y, scale, color, UI_GetGameTypeName(uiInfo.gameTypes[ui_netGametype.integer].gtEnum) , 0, 0, textStyle, iMenuFont);
 }
 
+// DAJ_RP: [Weapons] the GalaxyRP client does no weapon autoswitch and ignores cg_autoswitch (CG_WeaponSelectable()
+// in cg_weapons.c), so the setup menu's option always reads as off, whatever the cvar holds
 static void UI_DrawAutoSwitch(rectDef_t *rect, float scale, vec4_t color, int textStyle, int iMenuFont) {
-	int switchVal = trap->Cvar_VariableValue("cg_autoswitch");
-	const char *switchString = "AUTOSWITCH1";
-	const char *stripString = NULL;
-
-	switch(switchVal)
-	{
-	case 2:
-		switchString = "AUTOSWITCH2";
-		break;
-	case 3:
-		switchString = "AUTOSWITCH3";
-		break;
-	case 0:
-		switchString = "AUTOSWITCH0";
-		break;
-	default:
-		break;
-	}
-
-	stripString = UI_GetStringEdString("MP_INGAME", (char *)switchString);
+	const char *stripString = UI_GetStringEdString("MP_INGAME", "AUTOSWITCH0");
 
 	if (stripString)
 	{
@@ -3009,6 +3013,11 @@ static void UI_OwnerDraw(float x, float y, float w, float h, float text_x, float
 	rect.w = w;
 	rect.h = h;
 
+	// GalaxyRP: [Extras] the Extras menus' previews and colour swatch -- ui_rpextras.c
+	if ( UI_RpxOwnerDraw( ownerDraw, &rect, scale, color, iMenuFont ) ) {
+		return;
+	}
+
   switch (ownerDraw)
   {
     case UI_HANDICAP:
@@ -3081,7 +3090,19 @@ static void UI_OwnerDraw(float x, float y, float w, float h, float text_x, float
 		}
 */		drawRank = uiForcePowersRank[findex];
 
-		UI_DrawForceStars(&rect, scale, color, textStyle, findex, drawRank, 0, NUM_FORCE_POWER_LEVELS-1);
+		// GalaxyRP: [Force UI level cap] ingame_playerforce.menu is the logged-out-only, vanilla-style
+		// force config screen. NUM_FORCE_POWER_LEVELS is 6 (0-5) mod-wide to support admin-granted
+		// bonus levels 4/5 for logged-in RPG players, but that grant is applied through a completely
+		// separate path (see pers.skill_levels / siege class force levels in w_force.c) -- it never
+		// goes through this menu's point-buy UI or the "forcepowers" cvar string it writes. That
+		// string is re-legalized server-side by BG_LegalizedForcePowers (bg_misc.c), whose digit
+		// parser only accepts '0'-'3' per power and silently truncates the whole rest of the list
+		// the moment it hits a '4' or '5' -- which is exactly what was wiping the player's force
+		// powers on Apply. Capping the drawn stars (here) and the click ceiling
+		// (UI_ForcePowerRank_HandleKey below) at FORCE_LEVEL_3 restores the vanilla 3-level
+		// look/behavior for this screen without touching the shared NUM_FORCE_POWER_LEVELS constant,
+		// so the logged-in admin-grant system is unaffected.
+		UI_DrawForceStars(&rect, scale, color, textStyle, findex, drawRank, 0, FORCE_LEVEL_3);
 		break;
     case UI_EFFECTS:
       break;
@@ -3806,26 +3827,10 @@ static qboolean UI_NetGameType_HandleKey(int flags, float *special, int key)
 	return qfalse;
 }
 
+// DAJ_RP: [Weapons] the click is taken and does nothing: the option is always off here (UI_DrawAutoSwitch() above),
+// and the player's own cg_autoswitch is left as it is for anything else they play
 static qboolean UI_AutoSwitch_HandleKey(int flags, float *special, int key) {
 	if (key == A_MOUSE1 || key == A_MOUSE2 || key == A_ENTER || key == A_KP_ENTER) {
-		int switchVal = trap->Cvar_VariableValue("cg_autoswitch");
-
-		if (key == A_MOUSE2) {
-			switchVal--;
-		} else {
-			switchVal++;
-		}
-
-		if (switchVal < 0)
-		{
-			switchVal = 2;
-		}
-		else if (switchVal >= 3)
-		{
-			switchVal = 0;
-		}
-
-		trap->Cvar_Set( "cg_autoswitch", va("%i", switchVal));
 		return qtrue;
 	}
 	return qfalse;
@@ -4232,7 +4237,9 @@ static qboolean UI_OwnerDrawHandleKey(int ownerDraw, int flags, float *special, 
 	case UI_FORCE_RANK_SABERTHROW:
 		findex = (ownerDraw - UI_FORCE_RANK)-1;
 		//this will give us the index as long as UI_FORCE_RANK is always one below the first force rank index
-		return UI_ForcePowerRank_HandleKey(flags, special, key, uiForcePowersRank[findex], 0, NUM_FORCE_POWER_LEVELS-1, ownerDraw);
+		// GalaxyRP: [Force UI level cap] capped at FORCE_LEVEL_3 to match the star cap above -- see the
+		// comment there for why levels 4/5 must never be reachable through this menu's click handler.
+		return UI_ForcePowerRank_HandleKey(flags, special, key, uiForcePowersRank[findex], 0, FORCE_LEVEL_3, ownerDraw);
 		break;
     case UI_EFFECTS:
       break;
@@ -5253,12 +5260,86 @@ void UI_UpdateSiegeObjectiveGraphics( void )
 
 saber_colors_t TranslateSaberColor( const char *name );
 
+/*
+GalaxyRP: [Saber RGB] pack one blade's three menu sliders into the userinfo cvar the server reads.
+
+The colour only travels when that blade is actually set to "rgb"; otherwise the cvar is cleared to
+0, which is how "no custom colour, just use the palette entry in color1/color2" is spelled
+everywhere else in this feature (see G_ParseSaberRGB in g_utils.c and pers.saberRGB[] in g_local.h).
+Sending one packed value rather than three separate cvars keeps us byte-compatible with
+TaystJK/JAPro, whose cp_sbRGB1/cp_sbRGB2 use exactly this layout.
+*/
+static void UI_PackSaberRGBCvar( qboolean secondSaber )
+{
+	const char *colorCvar = secondSaber ? "ui_saber2_color" : "ui_saber_color";
+	const char *destCvar = secondSaber ? "cp_sbRGB2" : "cp_sbRGB1";
+	saber_colors_t colorI = TranslateSaberColor( UI_Cvar_VariableString( colorCvar ) );
+	int r, g, b;
+
+	// GalaxyRP: [Saber RGB] the packed colour travels for the whole RGB family -- classic plus the
+	// four alternate blade styles the menu's "Line:" switcher can select ("rgb".."rgb5") -- not just
+	// the literal string "rgb". This used to compare the cvar string against "rgb" exactly, which
+	// cleared the packed colour back to 0 the instant a player picked any of the other four styles.
+	if ( colorI < SABER_RGB || colorI > SABER_ELEC2 ) {
+		trap->Cvar_Set( destCvar, "0" );
+		return;
+	}
+
+	r = Com_Clampi( 0, 255, (int)trap->Cvar_VariableValue( secondSaber ? "ui_sab2_r" : "ui_sab1_r" ) );
+	g = Com_Clampi( 0, 255, (int)trap->Cvar_VariableValue( secondSaber ? "ui_sab2_g" : "ui_sab1_g" ) );
+	b = Com_Clampi( 0, 255, (int)trap->Cvar_VariableValue( secondSaber ? "ui_sab2_b" : "ui_sab1_b" ) );
+
+	// GalaxyRP: [Saber RGB] a packed (r,g,b) of (0,0,0) used to be nudged to (1,1,1) here, since a
+	// packed 0 is indistinguishable from "unset" -- but that ambiguity is fine now: CG_NewClientInfo
+	// (cg_players.c) defaults a packed 0 to plain red on the render side, matching TaystJK's own
+	// legacy-compatibility behaviour, so a literal black request just renders as red like everything
+	// else that resolves to "no real colour set." A true black blade has its own dedicated palette
+	// entry (SABER_BLACK / /sabercolor <n> black) instead, unaffected by this cvar entirely.
+	trap->Cvar_Set( destCvar, va( "%i", SABERRGB_PACK( r, g, b ) ) );
+}
+
+static void UI_SanitizeAccountArg( char *str );
+
 static void UI_UpdateSaberCvars ( void )
 {
 	saber_colors_t colorI;
+	char saber1[MAX_QPATH], saber2[MAX_QPATH];
 
-	trap->Cvar_Set ( "saber1", UI_Cvar_VariableString ( "ui_saber" ) );
-	trap->Cvar_Set ( "saber2", UI_Cvar_VariableString ( "ui_saber2" ) );
+	// GalaxyRP fix: [Saber] read, sanitise and normalise the two hilts BEFORE writing them into the
+	// saber1/saber2 cvars below. These are CVAR_USERINFO cvars, and an empty value makes the engine
+	// drop the key from the userinfo string entirely rather than send an empty one -- so an empty
+	// ui_saber2 (which UI_UpdateSaberType() writes for the single and staff types) used to reach the
+	// server as "no saber2 key at all". Because the userinfo flush lands after the command queued at
+	// the end of this function, that stripped key then overwrote the "none" update_saber() had just
+	// stored server-side, and ClientSpawn()'s next-respawn diff called G_SetSaber(ent, 1, "") -- whose
+	// empty-name fallback substitutes the default saber, silently giving the player two sabers. The
+	// normalisation used to happen further down, on the local copies used to build the command only,
+	// which left the cvar itself empty and this whole path open.
+	trap->Cvar_VariableStringBuffer( "ui_saber", saber1, sizeof( saber1 ) );
+	trap->Cvar_VariableStringBuffer( "ui_saber2", saber2, sizeof( saber2 ) );
+
+	// GalaxyRP fix: [security] same quote-injection issue UI_SanitizeAccountArg documents further
+	// down for the login/password/character-name handlers -- these go into a quoted argument of a
+	// string handed to Cmd_ExecuteText below, and the engine's tokenizer has no way to escape a '"'.
+	// These two come from the saber menu's own hilt lists rather than a text field, but they are
+	// ordinary cvars that can be set directly (/set ui_saber ...), so sanitise rather than trust them.
+	UI_SanitizeAccountArg( saber1 );
+	UI_SanitizeAccountArg( saber2 );
+
+	// "none" is the canonical "no second saber" value everywhere else -- it is what the menu's own
+	// single/staff type buttons set ui_saber2 to, and what update_saber() substitutes for a missing
+	// second argument. UI_UpdateSaberType() clears ui_saber2 to an empty string instead, so normalise
+	// that here, before it can reach either the cvar or the command.
+	if ( !saber2[0] )
+		Q_strncpyz( saber2, "none", sizeof( saber2 ) );
+
+	trap->Cvar_Set ( "saber1", saber1 );
+	trap->Cvar_Set ( "saber2", saber2 );
+
+	// GalaxyRP: [Saber RGB] pack before the color1/color2 writes below, so the colour is already in
+	// place by the time the palette slot flips to SABER_RGB and the engine ships the new userinfo.
+	UI_PackSaberRGBCvar( qfalse );
+	UI_PackSaberRGBCvar( qtrue );
 
 	colorI = TranslateSaberColor( UI_Cvar_VariableString ( "ui_saber_color" ) );
 	trap->Cvar_Set ( "color1", va("%d",colorI));
@@ -5267,6 +5348,38 @@ static void UI_UpdateSaberCvars ( void )
 	colorI = TranslateSaberColor( UI_Cvar_VariableString ( "ui_saber2_color" ) );
 	trap->Cvar_Set ( "color2", va("%d",colorI) );
 	trap->Cvar_Set ( "g_saber2_color", UI_Cvar_VariableString ( "ui_saber2_color" ));
+
+	// GalaxyRP: [Saber] instant-apply the hilt/type selection immediately, matching TaystJK's own
+	// UI_UpdateSaberCvars() -- it auto-fires "cmd saber %s %s" here (gated behind a cvar the client
+	// only turns on once the connected server has advertised support for it, since TaystJK connects
+	// to many different mods' servers). We don't need that detection dance: this client only ever
+	// talks to our own server. Colours (set above) already apply live on their own via the ordinary
+	// automatic userinfo sync -- see ClientUserinfoChanged() in g_client.c -- so this call is only
+	// needed for the hilt/type, which ClientUserinfoChanged() deliberately does NOT adopt outside of
+	// a player's first-ever connect (see the fix comment there).
+	//
+	// GalaxyRP fix: [Saber] this used to fire the argument-less "updatesaber" instead, letting the
+	// server re-read whichever saber1/saber2 userinfo cvars were just set above -- which never
+	// worked, because the command overtakes the cvars it depends on. Setting a CVAR_USERINFO cvar
+	// only flags the userinfo dirty; the engine flushes it to the server later in the same frame
+	// (inside CL_SendCmd), whereas the command buffer this appends to is drained earlier
+	// (Cbuf_Execute). So "updatesaber" always arrived a step AHEAD of the saber1/saber2 values it
+	// was meant to read, the server compared its still-stale userinfo against the player's current
+	// saber, found no difference, and applied nothing at all. Passing the hilts as explicit
+	// arguments instead -- exactly what TaystJK does, and what the "/saber <a> <b>" console command
+	// (Cmd_Saber_f, g_cmds.c) already takes -- removes that ordering dependency entirely: the values
+	// travel inside the command itself, so the server no longer has to have received anything else
+	// first. update_saber() then writes them into its own copy of this client's userinfo before
+	// applying them, so the two can't disagree.
+	//
+	// The server can still refuse the instant apply (private duel, Duel Tournament duel, or a
+	// Team/Siege-family gametype -- see saber_switch_allowed() in g_cmds.c) with a chat message
+	// explaining why; update_saber() persists the requested hilt to userinfo either way, so a
+	// refused switch still takes effect on this player's next natural respawn.
+	// Nothing sensible to apply without a first hilt, and sending an empty one would likewise strip
+	// the saber1 key out of userinfo server-side; leave the player's saber alone in that case.
+	if ( saber1[0] )
+		trap->Cmd_ExecuteText( EXEC_APPEND, va( "saber \"%s\" \"%s\"\n", saber1, saber2 ) );
 }
 
 // More hard coded goodness for the menus.
@@ -5421,9 +5534,29 @@ static void UI_UpdateSaberHilt( qboolean secondSaber )
 
 static void UI_UpdateSaberColor( qboolean secondSaber )
 {
+	// GalaxyRP: [Saber RGB] the menu re-runs this whenever the colour selection changes, which is
+	// also the moment the sliders' packed value has to be refreshed -- otherwise switching a blade
+	// to "rgb" would leave cp_sbRGB1/cp_sbRGB2 holding the 0 written the last time it was on a
+	// palette colour, and the blade would come out as its fallback colour until the next Apply.
+	UI_PackSaberRGBCvar( secondSaber );
 }
 
 const char *SaberColorToString( saber_colors_t color );
+
+// GalaxyRP: [Saber RGB] unpack one blade's stored colour back into the menu's three sliders, so
+// re-opening the saber menu shows the colour actually in use -- including one the server restored
+// from the database on login and pushed down with "supdatesabercolor" (see cg_servercmds.c).
+static void UI_UnpackSaberRGBCvar( qboolean secondSaber )
+{
+	int packed = (int)trap->Cvar_VariableValue( secondSaber ? "cp_sbRGB2" : "cp_sbRGB1" );
+
+	if ( !packed )
+		return;	// no custom colour set for this blade -- leave the sliders where the player left them
+
+	trap->Cvar_Set( secondSaber ? "ui_sab2_r" : "ui_sab1_r", va( "%i", SABERRGB_R( packed ) ) );
+	trap->Cvar_Set( secondSaber ? "ui_sab2_g" : "ui_sab1_g", va( "%i", SABERRGB_G( packed ) ) );
+	trap->Cvar_Set( secondSaber ? "ui_sab2_b" : "ui_sab1_b", va( "%i", SABERRGB_B( packed ) ) );
+}
 
 static void UI_GetSaberCvars ( void )
 {
@@ -5436,6 +5569,12 @@ static void UI_GetSaberCvars ( void )
 
 	trap->Cvar_Set ( "ui_saber_color", UI_Cvar_VariableString ( "g_saber_color" ) );
 	trap->Cvar_Set ( "ui_saber2_color", UI_Cvar_VariableString ( "g_saber2_color" ) );
+
+	// GalaxyRP: [Saber RGB] SaberColorToString() above already resolves a color1/color2 of SABER_RGB
+	// to the string "rgb", so ui_saber_color is correct by this point -- this just refills the
+	// sliders behind it.
+	UI_UnpackSaberRGBCvar( qfalse );
+	UI_UnpackSaberRGBCvar( qtrue );
 }
 
 extern qboolean ItemParse_model_g2anim_go( itemDef_t *item, const char *animName );
@@ -5910,6 +6049,25 @@ void UI_UpdateSiegeStatusIcons( void ) {
 	}
 }
 
+// GalaxyRP fix: [security] the account command handlers below (and, further down, the character
+// use/delete/new handlers) build a "cmd \"login\" \"password\"\n" style string for
+// trap->Cmd_ExecuteText out of raw cvar values, wrapping each in quotes but never escaping them.
+// The engine's own tokenizer (Cmd_TokenizeString2 in qcommon/cmd.cpp) explicitly does NOT support
+// \" escaping -- a quoted token simply ends at the next '"' it sees -- so a login, password, or
+// character name containing a '"' closes that argument early and lets the rest of the string be
+// parsed as additional command text/arguments (e.g. a password of `x" ; kick "somebody`).
+// Since the wire format offers no way to embed a literal quote, strip quotes from the value
+// in place before it's ever placed inside the quoted argument.
+static void UI_SanitizeAccountArg( char *str ) {
+	char *d = str;
+	for ( char *s = str; *s; s++ ) {
+		if ( *s != '"' ) {
+			*d++ = *s;
+		}
+	}
+	*d = '\0';
+}
+
 static void UI_RunMenuScript(char **args)
 {
 	const char *name, *name2;
@@ -5917,6 +6075,12 @@ static void UI_RunMenuScript(char **args)
 
 	if (String_Parse(args, &name))
 	{
+		// GalaxyRP: [Extras] the Extras menus' scripts (rpx...) -- ui_rpextras.c
+		if ( UI_RpxScript( name, args ) )
+		{
+			return;
+		}
+
 		if (Q_stricmp(name, "StartServer") == 0)
 		{
 			int i, added = 0;
@@ -6355,8 +6519,16 @@ static void UI_RunMenuScript(char **args)
 
 					trap->Cvar_VariableStringBuffer("accLogin",zyk_login,sizeof(zyk_login));
 					trap->Cvar_VariableStringBuffer("accPassword",zyk_password,sizeof(zyk_password));
+					UI_SanitizeAccountArg(zyk_login);
+					UI_SanitizeAccountArg(zyk_password);
 
-					trap->Cmd_ExecuteText( EXEC_APPEND, va("new %s %s\n", zyk_login, zyk_password) );
+					trap->Cmd_ExecuteText( EXEC_APPEND, va("new \"%s\" \"%s\"\n", zyk_login, zyk_password) );
+
+					// GalaxyRP fix: [UI] the loginEntry/passEntry fields (ingame_register.menu) kept
+					// whatever was typed here after pressing Register, same stale-field issue the
+					// zykcharnew handler above was fixed for -- clear both the same way.
+					trap->Cvar_Set("accLogin", "");
+					trap->Cvar_Set("accPassword", "");
 				}
 				else if (Q_stricmp( "login", arg ) == 0)
 				{ // zyk: login the account
@@ -6365,16 +6537,28 @@ static void UI_RunMenuScript(char **args)
 
 					trap->Cvar_VariableStringBuffer("accLogin",zyk_login,sizeof(zyk_login));
 					trap->Cvar_VariableStringBuffer("accPassword",zyk_password,sizeof(zyk_password));
+					UI_SanitizeAccountArg(zyk_login);
+					UI_SanitizeAccountArg(zyk_password);
 
-					trap->Cmd_ExecuteText( EXEC_APPEND, va("login %s %s\n", zyk_login, zyk_password) );
+					trap->Cmd_ExecuteText( EXEC_APPEND, va("login \"%s\" \"%s\"\n", zyk_login, zyk_password) );
+
+					// GalaxyRP fix: [UI] same stale-field issue as the "new" branch above, for
+					// ingame_login.menu's own loginEntry/passEntry fields.
+					trap->Cvar_Set("accLogin", "");
+					trap->Cvar_Set("accPassword", "");
 				}
 				else if (Q_stricmp( "changepassword", arg ) == 0)
 				{ // zyk: change password of the account
 					char zyk_password[512];
 
 					trap->Cvar_VariableStringBuffer("accPassword",zyk_password,sizeof(zyk_password));
+					UI_SanitizeAccountArg(zyk_password);
 
-					trap->Cmd_ExecuteText( EXEC_APPEND, va("changepassword %s\n", zyk_password) );
+					trap->Cmd_ExecuteText( EXEC_APPEND, va("changepassword \"%s\"\n", zyk_password) );
+
+					// GalaxyRP fix: [UI] same stale-field issue as the "new"/"login" branches above, for
+					// ingame_passchange.menu's own passEntry field (accLogin isn't used on that screen).
+					trap->Cvar_Set("accPassword", "");
 				}
 				else if (strstr(arg, "actionchange"))
 				{ // zyk: sets the action (upgrade or downgrade)
@@ -6387,17 +6571,13 @@ static void UI_RunMenuScript(char **args)
 					else
 						trap->Cvar_Set("ui_zyk_action_value", "^2upgrade");
 				}
-				else if (strstr(arg, "buyaction"))
-				{ // zyk: sets the action (upgrade or downgrade)
-					char zyk_action[512];
-
-					trap->Cvar_VariableStringBuffer("ui_zyk_buy_action_value", zyk_action, sizeof(zyk_action));
-
-					if (Q_stricmp(zyk_action, "^2buy") == 0)
-						trap->Cvar_Set("ui_zyk_buy_action_value", "^3sell");
-					else
-						trap->Cvar_Set("ui_zyk_buy_action_value", "^2buy");
-				}
+				// GalaxyRP fix: [Shop] removed the "buyaction" branch here -- it toggled
+				// ui_zyk_buy_action_value between "^2buy" and "^3sell", but no button in the GalaxyRP
+				// shop menu (or any other .menu file in the mod) ever sent "buyaction" or displayed
+				// ui_zyk_buy_action_value, so it was unreachable dead code. Same underlying issue as the
+				// stale "Buy and sell..." Shop tab wording fixed alongside the /buy item|upgrade
+				// refactor: there has never been a working /sell command. See the matching
+				// ui_zyk_buy_action_value removal in ui_xcvar.h.
 			}
 		}
 		else if (Q_stricmp(name, "zykup") == 0)
@@ -6436,6 +6616,15 @@ static void UI_RunMenuScript(char **args)
 				int zyk_size = 0;
 
 				trap->Cvar_VariableStringBuffer(va("ui_zyk_rpg_char_%s", arg), zyk_char, sizeof(zyk_char));
+				// GalaxyRP fix: [security] same quote-injection issue UI_SanitizeAccountArg documents
+				// above for the login/password/changepassword handlers -- this builds a quoted
+				// "char use \"%s\"\n" string from a raw value and hands it to Cmd_ExecuteText, so an
+				// embedded '"' closes the argument early and lets the rest be parsed as additional
+				// command text. zyk_char here comes from this client's own stored per-slot character
+				// name cvar rather than a text field, but that cvar isn't guaranteed quote-free (e.g. a
+				// character created before the matching zykcharnew fix below, or set directly via
+				// /set), so sanitize it here too rather than trusting the source.
+				UI_SanitizeAccountArg(zyk_char);
 
 				trap->Cmd_ExecuteText(EXEC_APPEND, va("char use \"%s\"\n", zyk_char));
 			}
@@ -6451,8 +6640,19 @@ static void UI_RunMenuScript(char **args)
 				int zyk_size = 0;
 
 				trap->Cvar_VariableStringBuffer(va("ui_zyk_rpg_char_%s", arg), zyk_char, sizeof(zyk_char));
-				
-				trap->Cmd_ExecuteText(EXEC_APPEND, va("char delete \"%s\"\n", zyk_char));
+				// GalaxyRP fix: [security] see the matching comment in zykcharuse just above -- same
+				// quote-injection issue, same fix.
+				UI_SanitizeAccountArg(zyk_char);
+
+				// GalaxyRP fix: [Char] this sent "char delete", and Cmd_Char_f (g_cmds.c) has never had a
+				// "delete" subcommand -- only new, use and remove. So the menu's delete button printed the
+				// usage tip on the server and removed nothing, while the Cvar_Set below cleared the slot
+				// anyway, so the character looked deleted until the next list refresh put it back. The
+				// server's spelling is the one that exists; use it. The optimistic clear is fine now that
+				// the command lands: Cmd_Char_f sends a fresh "zykchars" list after every remove, which
+				// rewrites all fifteen slots (CG_ZykChars, cg_servercmds.c), so a refused remove -- the
+				// active character -- restores its slot on its own.
+				trap->Cmd_ExecuteText(EXEC_APPEND, va("char remove \"%s\"\n", zyk_char));
 				trap->Cvar_Set(va("ui_zyk_rpg_char_%s", arg), "");
 			}
 		}
@@ -6461,8 +6661,26 @@ static void UI_RunMenuScript(char **args)
 			char zyk_char[512];
 
 			trap->Cvar_VariableStringBuffer("zykCharName", zyk_char, sizeof(zyk_char));
+			// GalaxyRP fix: [security] the "new" character name typed into charEntry (ingame_galaxyrp.menu)
+			// is free-form UI text, not a tokenized command argument -- exactly the same shape of value
+			// accLogin/accPassword are, and this handler builds a quoted "char new \"%s\"\n" string from
+			// it the same way, but never called UI_SanitizeAccountArg (defined above for the account
+			// handlers) on it. An embedded '"' closes that argument early and lets the rest of the
+			// string be parsed as additional command text once Cmd_ExecuteText re-tokenizes it -- the
+			// exact bug UI_SanitizeAccountArg exists to prevent. Strip it here too, before it's ever
+			// placed inside the quoted argument.
+			UI_SanitizeAccountArg(zyk_char);
 
 			trap->Cmd_ExecuteText(EXEC_APPEND, va("char new \"%s\"\n", zyk_char));
+
+			// GalaxyRP fix: [UI] the charEntry field (ingame_galaxyrp.menu) kept whatever name was
+			// typed here after pressing Create, so the menu's own newCharDone action closing the menu
+			// (see that itemDef) would otherwise leave the same name sitting in the field for next
+			// time. /char new now switches the player onto the character it creates, exactly like
+			// zykcharuse's "char use" does, so clear the field the same optimistic way zykchardelete
+			// already clears its own char-slot cvar just above -- the server-side command handles
+			// success/failure feedback (print/cp) independently of this client-side reset.
+			trap->Cvar_Set("zykCharName", "");
 		}
 		else if (Q_stricmp(name, "setForce") == 0)
 		{
@@ -6637,7 +6855,10 @@ static void UI_RunMenuScript(char **args)
 		{
 			UI_UpdateCharacterSkin();
 		}
-#if 0
+		// GalaxyRP fix: [UI] OpenJK c79e6576 -- the four "Create Game" force/weapon handlers below
+		// were inside "#if 0 ... #endif", so the menu's force-power and weapon toggles did nothing
+		// when a listen server was started from it. Re-enabled as upstream did: the block only ever
+		// needed forcePowerDisable initialised and the ui_netGametype spelling corrected.
 		else if (Q_stricmp(name, "setui_dualforcepower") == 0)
 		{
 			int forcePowerDisable = trap->Cvar_VariableValue("g_forcePowerDisable");
@@ -6672,7 +6893,7 @@ static void UI_RunMenuScript(char **args)
 		}
 		else if (Q_stricmp(name, "dualForcePowers") == 0)
 		{
-			int	dualforcePower,i, forcePowerDisable;
+			int	dualforcePower,i, forcePowerDisable=0;
 			dualforcePower = trap->Cvar_VariableValue("ui_dualforcepower");
 
 			if (dualforcePower==0)	// All force powers
@@ -6730,8 +6951,8 @@ static void UI_RunMenuScript(char **args)
 			int	weaponDisable,i;
 			const char *cvarString;
 
-			if (uiInfo.gameTypes[ui_netGameType.integer].gtEnum == GT_DUEL ||
-				uiInfo.gameTypes[ui_netGameType.integer].gtEnum == GT_POWERDUEL)
+			if (uiInfo.gameTypes[ui_netGametype.integer].gtEnum == GT_DUEL ||
+				uiInfo.gameTypes[ui_netGametype.integer].gtEnum == GT_POWERDUEL)
 			{
 				cvarString = "g_duelWeaponDisable";
 			}
@@ -6756,7 +6977,6 @@ static void UI_RunMenuScript(char **args)
 				trap->Cvar_Set(cvarString, va("%i",weaponDisable));
 			}
 		}
-#endif
 		// If this is siege, change all the bots to humans, because we faked it earlier
 		//  swapping humans for bots on the menu
 		else if (Q_stricmp(name, "setSiegeNoBots") == 0)
@@ -6908,7 +7128,13 @@ static void UI_RunMenuScript(char **args)
 				item = (itemDef_t *) Menu_FindItemByName((menuDef_t *) menu, "hiltbut_staves");
 				if (item)
 				{
-					if (saberSingleHiltInfo[item->cursorPos])
+					// GalaxyRP fix: [UI] this checked saberSingleHiltInfo[] (the single-saber hilt
+					// list) as its "is this a real entry" guard while reading the staff-saber hilt
+					// name from the separate saberStaffHiltInfo[] array -- the two lists can have
+					// different populated lengths, so an index valid in one could be NULL/unset in
+					// the other, letting a bogus staff hilt name through (or wrongly rejecting a
+					// valid one). Guard against the same array we actually read from.
+					if (saberStaffHiltInfo[item->cursorPos])
 					{
 						trap->Cvar_Set( "ui_saber", saberStaffHiltInfo[item->cursorPos] );
 					}
@@ -7817,6 +8043,15 @@ static int UI_GetServerStatusInfo( const char *serverAddress, serverStatusInfo_t
 				info->numLines++;
 				if (info->numLines >= MAX_SERVERSTATUS_LINES)
 					break;
+				// GalaxyRP fix: [UI] bound the loop by the pings buffer as well as by the row
+				// count. The row cap alone left the buffer size as load-bearing arithmetic -- get
+				// it wrong and "sizeof(pings) - len" underflows into an unbounded write (see
+				// ui_local.h). pings is sized to outlast this check, so it should never fire; it is
+				// here so that a future change to MAX_SERVERSTATUS_LINES, or to the width of an
+				// index, truncates the list instead of corrupting memory. 4 is the widest index
+				// this loop can emit, plus its NUL.
+				if (len > (int)sizeof(info->pings) - 4)
+					break;
 				p = strchr(p, '\\');
 				if (!p)
 					break;
@@ -8028,6 +8263,12 @@ static int UI_FeederCount(float feederID)
 {
 	int team,baseClass,count=0,i;
 	static char info[MAX_STRING_CHARS];
+
+	// GalaxyRP: [Extras] the list of the open Extras menu -- ui_rpextras.c
+	if ( (int)feederID == FEEDER_RPX_LIST )
+	{
+		return UI_RpxFeederCount();
+	}
 
 	switch ( (int)feederID )
 	{
@@ -8315,6 +8556,12 @@ static const char *UI_FeederItemText(float feederID, int index, int column,
 	static int lastColumn = -1;
 	static int lastTime = 0;
 	*handle1 = *handle2 = *handle3 = -1;
+
+	// GalaxyRP: [Extras] the list of the open Extras menu -- ui_rpextras.c
+	if ( (int)feederID == FEEDER_RPX_LIST )
+	{
+		return UI_RpxFeederItemText( index );
+	}
 
 	if (feederID == FEEDER_SABER_SINGLE_INFO)
 	{
@@ -8902,6 +9149,12 @@ qboolean UI_FeederSelection(float feederFloat, int index, itemDef_t *item)
 {
 	static char info[MAX_STRING_CHARS];
 	const int feederID = feederFloat;
+
+	// GalaxyRP: [Extras] the list of the open Extras menu -- ui_rpextras.c
+	if ( feederID == FEEDER_RPX_LIST )
+	{
+		return UI_RpxFeederSelection( index );
+	}
 
 	if (feederID == FEEDER_Q3HEADS)
 	{
@@ -9559,6 +9812,54 @@ static qboolean bIsImageFile(const char* dirptr, const char* skinname)
 
 /*
 =================
+UI_FileListUsed
+
+DAJ_RP: the bytes the first <count> names of an FS_GetFileList buffer occupy, NUL separators
+included -- what BG_FileListMayBeTruncated() compares with the buffer size.
+=================
+*/
+static int UI_FileListUsed( const char *list, int count )
+{
+	int used = 0;
+
+	while ( count-- > 0 )
+	{
+		used += strlen( list + used ) + 1;
+	}
+	return used;
+}
+
+/*
+=================
+UI_AllocModelDirList
+
+DAJ_RP: the models/players folder list for UI_BuildQ3Model_List() and UI_BuildPlayerModel_List().
+FS_GetFileList() stops listing silently when its buffer is full; the stock 2048 (Q3 heads) and
+16384 (species) bytes held only some 130 and 1000-1500 folder names, so players with many model
+packs lost models from the lists. UI_MODEL_DIRLIST_SIZE holds the engine's own cap of 4095 names
+at up to 32 characters each. Heap memory, freed by the caller; the stack buffer if malloc fails.
+=================
+*/
+#define UI_MODEL_DIRLIST_SIZE	(128 * 1024)
+#define UI_MODEL_SKINLIST_SIZE	8192	// DAJ_RP: was 2048 -- the .skin files of one model folder
+
+static char *UI_AllocModelDirList( char *stackBuf, int stackSize, int *size )
+{
+	char *list = (char *)malloc( UI_MODEL_DIRLIST_SIZE );
+
+	if ( !list )
+	{
+		Com_Printf( S_COLOR_YELLOW "WARNING: Failed to allocate %d bytes of memory for the player model "
+			"directory list. Using a stack buffer of %d bytes instead.\n", UI_MODEL_DIRLIST_SIZE, stackSize );
+		*size = stackSize;
+		return stackBuf;
+	}
+	*size = UI_MODEL_DIRLIST_SIZE;
+	return list;
+}
+
+/*
+=================
 PlayerModel_BuildList
 =================
 */
@@ -9566,9 +9867,12 @@ static void UI_BuildQ3Model_List( void )
 {
 	int		numdirs;
 	int		numfiles;
-	char	dirlist[2048];
-	char	filelist[2048];
+	char	stackDirList[8192];
+	char	*dirlist;
+	int		dirListSize;
+	char	filelist[UI_MODEL_SKINLIST_SIZE];
 	char	skinname[64];
+	char	headName[MAX_QPATH * 2];
 	char*	dirptr;
 	char*	fileptr;
 	char*	check;
@@ -9579,8 +9883,11 @@ static void UI_BuildQ3Model_List( void )
 
 	uiInfo.q3HeadCount = 0;
 
+	dirlist = UI_AllocModelDirList( stackDirList, sizeof( stackDirList ), &dirListSize );
+
 	// iterate directory of all player models
-	numdirs = trap->FS_GetFileList("models/players", "/", dirlist, 2048 );
+	numdirs = trap->FS_GetFileList("models/players", "/", dirlist, dirListSize );
+	BG_FileListMayBeTruncated( "models/players", "folder", numdirs, UI_FileListUsed( dirlist, numdirs ), dirListSize );
 	dirptr  = dirlist;
 	for (i=0; i<numdirs && uiInfo.q3HeadCount < MAX_Q3PLAYERMODELS; i++,dirptr+=dirlen+1)
 	{
@@ -9592,7 +9899,8 @@ static void UI_BuildQ3Model_List( void )
 			continue;
 
 
-		numfiles = trap->FS_GetFileList( va("models/players/%s",dirptr), "skin", filelist, 2048 );
+		numfiles = trap->FS_GetFileList( va("models/players/%s",dirptr), "skin", filelist, sizeof( filelist ) );
+		BG_FileListMayBeTruncated( va("models/players/%s",dirptr), ".skin", numfiles, UI_FileListUsed( filelist, numfiles ), sizeof( filelist ) );
 		fileptr  = filelist;
 		for (j=0; j<numfiles && uiInfo.q3HeadCount < MAX_Q3PLAYERMODELS;j++,fileptr+=filelen+1)
 		{
@@ -9642,9 +9950,13 @@ static void UI_BuildQ3Model_List( void )
 
 				s = 0;
 
+				// DAJ_RP: the name built once, not by va() on every comparison -- with the lists no
+				// longer cut short this loop runs millions of times on every UI start
+				Com_sprintf( headName, sizeof( headName ), "%s%s", dirptr, skinname );
+
 				while (s < uiInfo.q3HeadCount)
 				{ //check for dupes
-					if (!Q_stricmp(va("%s%s", dirptr, skinname), uiInfo.q3HeadNames[s]))
+					if (!Q_stricmp(headName, uiInfo.q3HeadNames[s]))
 					{
 						iconExists = qtrue;
 						break;
@@ -9657,18 +9969,22 @@ static void UI_BuildQ3Model_List( void )
 					continue;
 				}
 
-				Com_sprintf( uiInfo.q3HeadNames[uiInfo.q3HeadCount], sizeof(uiInfo.q3HeadNames[uiInfo.q3HeadCount]), va("%s%s", dirptr, skinname));
+				Com_sprintf( uiInfo.q3HeadNames[uiInfo.q3HeadCount], sizeof(uiInfo.q3HeadNames[uiInfo.q3HeadCount]), "%s", headName );
 				uiInfo.q3HeadIcons[uiInfo.q3HeadCount++] = 0;//trap->R_RegisterShaderNoMip(fpath);
 				//rww - we are now registering them as they are drawn like the TA feeder, so as to decrease UI load time.
 			}
 
 			if (uiInfo.q3HeadCount >= MAX_Q3PLAYERMODELS)
 			{
-				return;
+				break; // DAJ_RP: was return -- the outer loop stops on the same test, and dirlist is freed below
 			}
 		}
 	}
 
+	if ( dirlist != stackDirList )
+	{
+		free( dirlist );
+	}
 }
 
 void UI_SiegeInit(void)
@@ -9773,10 +10089,8 @@ UI_BuildPlayerModel_List
 */
 static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 {
-	static const size_t DIR_LIST_SIZE = 16384;
-
 	int		numdirs;
-	size_t	dirListSize = DIR_LIST_SIZE;
+	int		dirListSize;
 	char	stackDirList[8192];
 	char	*dirlist;
 	char*	dirptr;
@@ -9784,16 +10098,8 @@ static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 	int		i;
 	int		j;
 
-	dirlist = malloc(DIR_LIST_SIZE);
-	if ( !dirlist )
-	{
-		Com_Printf(S_COLOR_YELLOW "WARNING: Failed to allocate %u bytes of memory for player model "
-			"directory list. Using stack allocated buffer of %u bytes instead.",
-			DIR_LIST_SIZE, sizeof(stackDirList));
-
-		dirlist = stackDirList;
-		dirListSize = sizeof(stackDirList);
-	}
+	// DAJ_RP: 16384 -> UI_MODEL_DIRLIST_SIZE (see UI_AllocModelDirList)
+	dirlist = UI_AllocModelDirList( stackDirList, sizeof( stackDirList ), &dirListSize );
 
 	uiInfo.playerSpeciesCount = 0;
 	uiInfo.playerSpeciesIndex = 0;
@@ -9802,6 +10108,7 @@ static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 
 	// iterate directory of all player models
 	numdirs = trap->FS_GetFileList("models/players", "/", dirlist, dirListSize );
+	BG_FileListMayBeTruncated( "models/players", "folder", numdirs, UI_FileListUsed( dirlist, numdirs ), dirListSize );
 	dirptr  = dirlist;
 	for (i=0; i<numdirs; i++,dirptr+=dirlen+1)
 	{
@@ -9830,7 +10137,7 @@ static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 
 		if (f)
 		{
-			char	filelist[2048];
+			char	filelist[UI_MODEL_SKINLIST_SIZE];
 			playerSpeciesInfo_t *species;
 			char                 skinname[64];
 			int                  numfiles;
@@ -9875,6 +10182,7 @@ static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 			free(buffer);
 
 			numfiles = trap->FS_GetFileList( va("models/players/%s",dirptr), ".skin", filelist, sizeof(filelist) );
+			BG_FileListMayBeTruncated( va("models/players/%s",dirptr), ".skin", numfiles, UI_FileListUsed( filelist, numfiles ), sizeof( filelist ) );
 			fileptr  = filelist;
 			for (j=0; j<numfiles; j++,fileptr+=filelen+1)
 			{
@@ -9969,6 +10277,17 @@ UI_Init
 */
 void UI_Init( qboolean inGameLoad ) {
 	const char *menuSet;
+	int rngDiscard;
+
+	// GalaxyRP fix: [RNG] same as the game and cgame modules: ui compiles its own q_math.c, so its
+	// holdrand was never seeded. Only a handful of call sites here (ui_saber.c), but leaving one of
+	// the three unseeded would just be a trap for whoever adds the next one.
+	Rand_Init( trap->Milliseconds() );
+	// Discard the first few outputs: the seed here is small on a freshly started client, and this
+	// LCG mixes a small seed poorly on its first result. See the long note in g_main.c's G_InitGame.
+	for ( rngDiscard = 0; rngDiscard < 4; rngDiscard++ ) {
+		Q_irand( 0, 1 );
+	}
 
 	// Get the list of possible languages
 	uiInfo.languageCount = trap->SE_GetNumLanguages();	// this does a dir scan, so use carefully
@@ -9983,6 +10302,9 @@ void UI_Init( qboolean inGameLoad ) {
 	UI_UpdateForcePowers();
 
 	UI_RegisterCvars();
+
+	// GalaxyRP: [TaystJK] see bg_misc.c; covers a "+set fs_game GalaxyRP" launch without the flag.
+	RP_AdoptTaystJKWriteFolder();
 	UI_InitMemory();
 
 	// cache redundant calulations
@@ -10129,6 +10451,60 @@ void UI_Init( qboolean inGameLoad ) {
 }
 
 #define	UI_FPS_FRAMES	4
+
+/*
+=================
+UI_WidthRatioCoef
+
+DAJ_RP: [Menus] how much narrower than 4:3 the screen is: the 640x480 virtual screen's aspect over the real
+one, so 1 on 4:3, 0.75 on 16:9, about 0.83 on 16:10, above 1 on 5:4. The ui draws everything in that virtual
+640x480 and the engine stretches it to the window, so a width multiplied by this comes out at its intended
+proportions. 1 with cl_ratioFix off -- the TaystJK engine's own widescreen switch, registered here with its
+default and flags, as jaPRO's and TaystJK's ui do, so it reads the same setting there and still exists on
+another engine -- or before the video size is known. Same formula as TaystJK's UI_Set2DRatio().
+=================
+*/
+static float UI_WidthRatioCoef( void )
+{
+	const glconfig_t *gl = &uiInfo.uiDC.glconfig;
+
+	if ( !cl_ratioFix.integer || gl->vidWidth <= 0 || gl->vidHeight <= 0 )
+	{
+		return 1.0f;
+	}
+
+	return (float)( SCREEN_WIDTH * gl->vidHeight ) / (float)( SCREEN_HEIGHT * gl->vidWidth );
+}
+
+// DAJ_RP: [Menus] 16:9 (0.75) and wider gets the 16:9 art; 16:10 (0.83) keeps the 4:3 one, as in TaystJK
+#define UI_WIDESCREEN_RATIO		0.76f
+
+// DAJ_RP: [Menus] the connect screen's background menu: its 16:9 version (connect_16_9.menu) on a wide screen, as in
+// TaystJK; the 4:3 one otherwise, or if that menu is not loaded. NULL if neither is.
+static menuDef_t *UI_ConnectMenu( void )
+{
+	menuDef_t *menu = NULL;
+
+	if ( UI_WidthRatioCoef() <= UI_WIDESCREEN_RATIO )
+	{
+		menu = Menus_FindByName( "Connect_16_9" );
+	}
+
+	if ( !menu )
+	{
+		menu = Menus_FindByName( "Connect" );
+	}
+
+	return menu;
+}
+
+// DAJ_RP: [Menus] the menu cursor, narrowed on a wide screen so the stretch to the window gives it back its own
+// shape, as in TaystJK; its tip, at the top left, stays on the cursor position
+static void UI_DrawCursor( void )
+{
+	UI_DrawHandlePic( (float)uiInfo.uiDC.cursorx, (float)uiInfo.uiDC.cursory, 40.0f * UI_WidthRatioCoef(), 40.0f, uiInfo.uiDC.Assets.cursor );
+}
+
 void UI_Refresh( int realtime )
 {
 	static int index;
@@ -10175,7 +10551,7 @@ void UI_Refresh( int realtime )
 	// draw cursor
 	UI_SetColor( NULL );
 	if (Menu_Count() > 0 && (trap->Key_GetCatcher() & KEYCATCH_UI)) {
-		UI_DrawHandlePic( (float)uiInfo.uiDC.cursorx, (float)uiInfo.uiDC.cursory, 40.0f, 40.0f, uiInfo.uiDC.Assets.cursor);
+		UI_DrawCursor();	// DAJ_RP: [Menus] was a 40x40 pic here -- see UI_DrawCursor()
 		//UI_DrawHandlePic( uiInfo.uiDC.cursorx, uiInfo.uiDC.cursory, 48, 48, uiInfo.uiDC.Assets.cursor);
 	}
 
@@ -10288,11 +10664,26 @@ UI_KeyEvent
 =================
 */
 void UI_KeyEvent( int key, qboolean down ) {
+	// GalaxyRP fix: [Menu] see escapeHoldSuppressed's own comment further up for the full flicker
+	// explanation. A key-up always re-arms: it means the physical press that last suppressed (or
+	// triggered) an ESCAPE action has now genuinely ended, so the next ESCAPE keydown is a real,
+	// separate press again. Checked unconditionally (not just while a menu is focused) so a release
+	// that arrives after the menu has already closed still resets this correctly.
+	if (key == A_ESCAPE && !down) {
+		escapeHoldSuppressed = qfalse;
+	}
+
 	if (Menu_Count() > 0) {
 		menuDef_t *menu = Menu_GetFocused();
 		if (menu) {
 			if (key == A_ESCAPE && down && !Menus_AnyFullScreenVisible()) {
-				Menus_CloseAll();
+				// GalaxyRP fix: [Menu] only act on the first ESCAPE keydown of a hold -- every
+				// repeat-generated keydown after it (until the matching key-up above) is ignored
+				// instead of re-closing whatever ESCAPE just opened/closed a moment ago.
+				if (!escapeHoldSuppressed) {
+					escapeHoldSuppressed = qtrue;
+					Menus_CloseAll();
+				}
 			} else {
 				Menu_HandleKey(menu, key, down );
 			}
@@ -10477,7 +10868,7 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 
 	char sStringEdTemp[256];
 
-	menuDef_t *menu = Menus_FindByName("Connect");
+	menuDef_t *menu = UI_ConnectMenu();	// DAJ_RP: [Menus] was the "Connect" menu always -- 16:9 aware now
 
 
 	if ( !overlay && menu ) {
@@ -10686,6 +11077,26 @@ static void UI_StartServerRefresh(qboolean full)
 }
 
 /*
+=================
+UI_CvarHelp
+
+GalaxyRP fix: [TaystJK] TaystJK's uiExport_t has a trailing CvarHelp field (reached from the
+engine's console cvar/command autocomplete, Cvar_DescriptionString()/Cmd_DescriptionString());
+without a matching field here a TaystJK-built engine reads past the end of this module's static
+uiExport_t object (see ui_public.h). This is a functional stub, NOT a port of JAPro's
+ui_xdocs.h/nm_xdocumentation.h cvar-help-text database (out of scope -- that's JAPro gameplay/UI
+content, not engine plumbing). Leaving helpBuffer untouched makes the engine fall back to the
+cvar's own ->description string (see Cvar_DescriptionString()), so this is safe and correct even
+though it doesn't provide GalaxyRP-specific long-form help text.
+=================
+*/
+static void UI_CvarHelp( const char *cvarName, qboolean enter, char *helpBuffer, size_t helpBufferSize ) {
+	// intentionally a no-op: no GalaxyRP-specific cvar help-text database exists (or is wanted --
+	// see comment above), so leave helpBuffer untouched and let the engine's own cvar description
+	// fallback handle it.
+}
+
+/*
 ============
 GetModuleAPI
 ============
@@ -10719,6 +11130,7 @@ Q_EXPORT uiExport_t* QDECL GetModuleAPI( int apiVersion, uiImport_t *import )
 	uie.ConsoleCommand		= UI_ConsoleCommand;
 	uie.DrawConnectScreen	= UI_DrawConnectScreen;
 	uie.MenuReset			= Menu_Reset;
+	uie.CvarHelp			= UI_CvarHelp;
 
 	return &uie;
 }

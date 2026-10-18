@@ -450,6 +450,24 @@ void G_MoverTeam( gentity_t *ent ) {
 
 	obstacle = NULL;
 
+	// GalaxyRP: [Entity System] backstop: a member no longer in use is cut off the chain before anything
+	// is moved. G_FreeEntity() unhooks a member itself now (RP_TeamDetach), so this should never find one;
+	// if it does, the chain ends there rather than moving whatever has the slot now.
+	{
+		int steps = 0;
+
+		for ( part = ent; part->teamchain && steps < MAX_GENTITIES; part = part->teamchain, steps++ )
+		{
+			if ( !part->teamchain->inuse )
+			{
+				G_LogPrintf( "G_MoverTeam: entity %d (%s) had a freed entity in its team chain; cut off\n",
+					ent->s.number, ent->classname ? ent->classname : "noclass" );
+				part->teamchain = NULL;
+				break;
+			}
+		}
+	}
+
 	// make sure all team slaves can move before commiting
 	// any moves or calling any think functions
 	// if the move is blocked, all moved objects will be backed out
@@ -480,7 +498,10 @@ void G_MoverTeam( gentity_t *ent ) {
 		}
 
 		// if the pusher has a "blocked" function, call it
-		if (ent->blocked) {
+		// GalaxyRP fix: [SP Maps] only when the master itself is moving: the team is run now while a member
+		// moves and the master stands (RP_MoverTeamMoving()), and a door that is not moving must not reverse
+		// -- open -- because a rotator of its team was blocked; that member just waits, as a rotator does
+		if (ent->blocked && ( ent->s.pos.trType != TR_STATIONARY || ent->s.apos.trType != TR_STATIONARY )) {
 			ent->blocked( ent, obstacle );
 		}
 		return;
@@ -506,6 +527,22 @@ G_RunMover
 
 ================
 */
+// GalaxyRP: [SP Maps] whether any member of the team ent leads is moving (ent alone when it leads none)
+static qboolean RP_MoverTeamMoving( const gentity_t *ent )
+{
+	const gentity_t *part;
+	int steps;
+
+	for ( part = ent, steps = 0; part && steps < MAX_GENTITIES; part = part->teamchain, steps++ )
+	{
+		if ( !part->inuse )
+			break;
+		if ( part->s.pos.trType != TR_STATIONARY || part->s.apos.trType != TR_STATIONARY )
+			return qtrue;
+	}
+	return qfalse;
+}
+
 void G_RunMover( gentity_t *ent ) {
 	// if not a team captain, don't do anything, because
 	// the captain will handle everything
@@ -514,7 +551,10 @@ void G_RunMover( gentity_t *ent ) {
 	}
 
 	// if stationary at one of the positions, don't move anything
-	if ( ent->s.pos.trType != TR_STATIONARY || ent->s.apos.trType != TR_STATIONARY ) {
+	// GalaxyRP fix: [SP Maps] -- nothing of the team: a member moving while its master stood still (a rotator
+	// in a door's team, a script moving one member, a team of rotators toggled apart) was never moved here,
+	// so the server held it where it was while every client, evaluating its trajectory, drew it moving
+	if ( RP_MoverTeamMoving( ent ) ) {
 		G_MoverTeam( ent );
 	}
 
@@ -900,11 +940,38 @@ void Use_BinaryMover( gentity_t *ent, gentity_t *other, gentity_t *activator )
 	// only the master should be used
 	if ( ent->flags & FL_TEAMSLAVE )
 	{
-		Use_BinaryMover( ent->teammaster, other, activator );
+		gentity_t *master = ent->teammaster;
+
+		// GalaxyRP fix: [Entity System] this handed the use to ent->teammaster unchecked. A NULL one
+		// crashed on the "->use" above, and a master that is itself marked as a slave recursed
+		// here -- forever if the two point at each other, since this call does not pass through
+		// GlobalUse()'s limits. Team links are raw pointers kept from G_FindTeams() while entities
+		// are removed and slots reused under them, so follow the master only when it is a live
+		// entity that is not this one and not a slave itself; otherwise the slave does nothing.
+		// And only when it is still a team master, a mover, and of this slave's own team (the "team"
+		// key G_FindTeams() linked them by, which movers keep): after /entremove of the master door,
+		// /entadd can hand its slot to anything -- another team's door included -- which a slave
+		// would otherwise run door logic on, setting an unrelated entity moving.
+		if ( !master || master == ent || !master->inuse || ( master->flags & FL_TEAMSLAVE ) ||
+			master->teammaster != master || master->s.eType != ET_MOVER ||
+			!master->team || !ent->team || strcmp( master->team, ent->team ) )
+		{
+			return;
+		}
+
+		Use_BinaryMover( master, other, activator );
 		return;
 	}
 
 	if ( ent->flags & FL_INACTIVE )
+	{
+		return;
+	}
+
+	// DAJ_RP: [Locks] a player whose account is not on the lock's list cannot use it, by any route: its
+	// own trigger, a button, the use key, a chain, a shot (g_locks.c). Not when the door uses itself --
+	// Blocked_Door() reversing it off whatever is in the way, which is passed as the activator.
+	if ( other != ent && !RP_LockAllows( ent, other, activator ) )
 	{
 		return;
 	}
@@ -928,6 +995,139 @@ void Use_BinaryMover( gentity_t *ent, gentity_t *other, gentity_t *activator )
 	{
 		Use_BinaryMover_Go(ent);
 	}
+}
+
+/*
+================
+RP_StunBatonUseMover
+
+GalaxyRP: [Shop] what a level 5 Stun Baton does to a mover it hits (the shop's Stun Baton Upgrade did, until
+DAJ_RP moved it to the skill -- see WP_FireStunBaton()). It used to be GlobalUse(),
+which gives up on an inactive mover (spawnflag INACTIVE, a target_deactivate, an ICARUS
+SET_INACTIVE) and only unlocks a locked door -- a second hit opened it, and UnLockDoors() also
+strips a non-toggle door's name, so that door's own button or script could never open it again.
+
+For the binary movers -- doors, plats and buttons -- the baton now unlocks and activates the whole
+team for good and opens it in the same hit: FL_INACTIVE and MOVER_LOCKED are cleared on every
+member (with the locked-door shader stepped to its unlocked frame, as UnLockDoors() does), the
+name is kept, and the master is used like any button would use it. A locked door already has its
+touch trigger from spawn (locked doors always get one), so from then on it opens for everyone;
+an inactive one answers its own trigger, button or use key again. The map can still lock or
+deactivate it later, and a map load restores it. Every other mover keeps plain GlobalUse().
+
+One kind of door is handled apart: a func_door that STARTS OPEN with a wait of -1. It closes once,
+when its trigger or script uses it, and Reached_BinaryMover() then clears its use function for
+good ("Done for good") -- so neither GlobalUse() nor anything else could open it again, and on
+cairn_assembly one shut everyone behind it in the spawn closet. The baton now reopens it: the
+use function is given back to every member, the team is sent back to pos1 (open, for a door
+that starts open) the way a door returns after its wait, and it stays there. The map can close it
+again, and the baton can reopen it again. While it is open or reopening the baton leaves it
+alone -- a plain use would close it, for good -- and while it is closing a plain use reverses it
+back open, as it does for any door.
+
+Only when it is shaped like a door, though: at least 64 units tall and taller than it is thick.
+The same two settings build things as well as close doorways -- yavin_trial's staircase of 16-unit
+stone steps, ns_starpad's hangar ramp, cairn_dock1's covers over a pit -- and "reopening" those
+would take the stairs, the ramp or the pit cover away again. They stay GlobalUse() no-ops.
+================
+*/
+static qboolean RP_IsOneShotClosingDoor( const gentity_t *door )
+{
+	float height, thickness;
+
+	if ( !door->classname || Q_stricmp( door->classname, "func_door" ) ||
+		!( door->spawnflags & 1 ) || door->wait >= 0 )	// START_OPEN; wait is in ms by now
+	{
+		return qfalse;
+	}
+
+	height = door->r.maxs[2] - door->r.mins[2];
+	thickness = door->r.maxs[0] - door->r.mins[0];
+	if ( door->r.maxs[1] - door->r.mins[1] < thickness )
+	{
+		thickness = door->r.maxs[1] - door->r.mins[1];
+	}
+
+	return ( height >= 64.0f && height > thickness ) ? qtrue : qfalse;
+}
+
+static void RP_StunBatonUseMoverUnlocked( gentity_t *mover, gentity_t *user );
+
+// DAJ_RP: [Locks] the baton opens everything: account locks do not stop it, nor what it sets off
+void RP_StunBatonUseMover( gentity_t *mover, gentity_t *user )
+{
+	RP_LockBypass( qtrue );
+	RP_StunBatonUseMoverUnlocked( mover, user );
+	RP_LockBypass( qfalse );
+}
+
+static void RP_StunBatonUseMoverUnlocked( gentity_t *mover, gentity_t *user )
+{
+	gentity_t *master, *member;
+
+	if ( !mover || !mover->inuse )
+	{
+		return;
+	}
+
+	master = mover;
+	if ( ( master->flags & FL_TEAMSLAVE ) && master->teammaster && master->teammaster->inuse )
+	{
+		master = master->teammaster;
+	}
+
+	if ( master->s.eType == ET_MOVER && RP_IsOneShotClosingDoor( master ) )
+	{
+		for ( member = master; member; member = member->teamchain )
+		{
+			member->flags &= ~FL_INACTIVE;
+			if ( member->spawnflags & MOVER_LOCKED )
+			{
+				member->spawnflags &= ~MOVER_LOCKED;
+				member->s.frame = 1;
+			}
+		}
+
+		if ( master->moverState == MOVER_POS2 )
+		{ // closed, for good: give the whole team its use back and send it back open
+			for ( member = master; member; member = member->teamchain )
+			{
+				if ( !member->use )
+				{
+					member->use = Use_BinaryMover;
+				}
+			}
+			master->activator = user;
+			RP_LockMarkPass( master, user );	// DAJ_RP: [Locks] what it fires on the way passes too (g_locks.c)
+			ReturnToPos1( master );
+		}
+		else if ( master->moverState == MOVER_1TO2 && master->use )
+		{ // on its way shut: a use reverses it, back open
+			Use_BinaryMover( master, user, user );
+		}
+		// open, or reopening: nothing to do
+		return;
+	}
+
+	if ( mover->use != Use_BinaryMover || !mover->classname ||
+		( Q_stricmp( mover->classname, "func_door" ) && Q_stricmp( mover->classname, "func_plat" ) &&
+		  Q_stricmp( mover->classname, "func_button" ) ) )
+	{
+		GlobalUse( mover, user, user );
+		return;
+	}
+
+	for ( member = master; member; member = member->teamchain )
+	{
+		member->flags &= ~FL_INACTIVE;
+		if ( member->spawnflags & MOVER_LOCKED )
+		{
+			member->spawnflags &= ~MOVER_LOCKED;
+			member->s.frame = 1;	// second stage of the locked-door shader anim, as UnLockDoors()
+		}
+	}
+
+	Use_BinaryMover( master, user, user );
 }
 
 
@@ -979,7 +1179,7 @@ void InitMover( gentity_t *ent )
 		}
 		else
 		{
-			ent->s.modelindex2 = G_ModelIndex( ent->model2 );
+			ent->s.modelindex2 = RP_EntityModelIndex( ent, ent->model2 );	// GalaxyRP: [Slot Reuse]
 		}
 	}
 
@@ -1057,7 +1257,11 @@ void Blocked_Door( gentity_t *ent, gentity_t *other )
 	}
 
 	// reverse direction
-	Use_BinaryMover( ent, ent, other );
+	// DAJ_RP: [Locks] as the same use going on: the one who set the door moving stays its activator, rather
+	// than whoever is in the way becoming it. A player who blocked a door took over what it fires next -- with
+	// a pass mark of his own on it (g_locks.c), past the locks of its opentarget, however long ago he got it --
+	// and anyone blocking a door an admin had just opened with /entuse took the admin's pass away from it.
+	Use_BinaryMover( ent, ent, ent->activator ? ent->activator : other );
 	if(relock)
 	{//door was locked before reverse move, relock door.
 		LockDoors(ent);
@@ -1450,20 +1654,7 @@ void SP_func_door (gentity_t *ent)
 	VectorCopy( ent->s.origin, ent->pos1 );
 
 	// calculate second position
-	if (ent->model && strncmp(ent->model, "*", 1) == 0)
-		trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
-	else if (ent->model)
-	{ // zyk: md3 model
-		ent->s.modelindex = G_ModelIndex( ent->model );
-
-		// zyk: is a solid model
-		if (ent->spawnflags & 1024)
-			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-		VectorCopy( ent->s.angles2, ent->r.currentAngles );
-		VectorCopy( ent->s.angles2, ent->s.apos.trBase );
-	}
+	zyk_set_brush_model( ent );
 
 	// zyk: saving the angles value so we can recover it later
 	VectorCopy(ent->s.angles, old_angles);
@@ -1495,6 +1686,10 @@ void SP_func_door (gentity_t *ent)
 
 	ent->nextthink = level.time + FRAMETIME;
 
+	// DAJ_RP: [Force Powers] cleared first: one spawned again in place (/entedit) keeps its struct, and a mark left from
+	// before an edit took MOVER_FORCE_ACTIVATE away would still show the crosshair's Force hint on it
+	ent->s.bolt1 = 0;
+
 	if ( !(ent->flags&FL_TEAMSLAVE) )
 	{
 		int health;
@@ -1513,7 +1708,8 @@ void SP_func_door (gentity_t *ent)
 
 			if (ent->spawnflags & MOVER_FORCE_ACTIVATE)
 			{ //so we know it's push/pullable on the client
-				ent->s.bolt1 = 1;
+				// DAJ_RP: [Force Powers] 3: Push and Pull both use it (1 Push, 2 Pull -- CG_RpForceHintTarget, cg_draw.c)
+				ent->s.bolt1 = 3;
 			}
 		}
 		else
@@ -1644,20 +1840,7 @@ void SP_func_plat (gentity_t *ent) {
 	ent->wait = 1000;
 
 	// create second position
-	if (ent->model && strncmp(ent->model, "*", 1) == 0)
-		trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
-	else if (ent->model)
-	{ // zyk: md3 model
-		ent->s.modelindex = G_ModelIndex( ent->model );
-
-		// zyk: is a solid model
-		if (ent->spawnflags & 1024)
-			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-		VectorCopy( ent->s.angles2, ent->r.currentAngles );
-		VectorCopy( ent->s.angles2, ent->s.apos.trBase );
-	}
+	zyk_set_brush_model( ent );
 
 	if ( !G_SpawnFloat( "height", "0", &height ) ) {
 		height = (ent->r.maxs[2] - ent->r.mins[2]) - lip;
@@ -1748,20 +1931,7 @@ void SP_func_button( gentity_t *ent ) {
 	VectorCopy( ent->s.origin, ent->pos1 );
 
 	// calculate second position
-	if (ent->model && strncmp(ent->model, "*", 1) == 0)
-		trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
-	else if (ent->model)
-	{ // zyk: md3 model
-		ent->s.modelindex = G_ModelIndex( ent->model );
-
-		// zyk: is a solid model
-		if (ent->spawnflags & 1024)
-			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-		VectorCopy( ent->s.angles2, ent->r.currentAngles );
-		VectorCopy( ent->s.angles2, ent->s.apos.trBase );
-	}
+	zyk_set_brush_model( ent );
 
 	G_SpawnFloat( "lip", "4", &lip );
 
@@ -1835,7 +2005,12 @@ void Reached_Train( gentity_t *ent ) {
 	}
 
 	// fire all other targets
-	G_UseTargets( next, NULL );
+	// GalaxyRP fix: [Entity System] the activator was NULL, and several use functions dereference it
+	// without a test: target_relay's red/blue-only flags, target_teleporter and target_give read
+	// activator->client, target_kill damages it. A path_corner targeting any of them crashed the
+	// server the moment a train reached it. The train is the activator now: it has no client, so
+	// those checks pass it by as they would any non-player, and it takes no damage.
+	G_UseTargets( next, ent );
 
 	// set the new trajectory
 	ent->nextTrain = next->nextTrain;
@@ -1885,6 +2060,8 @@ Think_SetupTrainTargets
 Link all the corners together
 ===============
 */
+static qboolean rp_train_path_seen[MAX_ENTITIESTOTAL];	// GalaxyRP: see Think_SetupTrainTargets()
+
 void Think_SetupTrainTargets( gentity_t *ent ) {
 	gentity_t		*path, *next, *start;
 
@@ -1896,16 +2073,22 @@ void Think_SetupTrainTargets( gentity_t *ent ) {
 		return;
 	}
 
-	//FIXME: this can go into an infinite loop if last path_corner doesn't link to first
-	//path_corner, like so:
+	// GalaxyRP fix: [Entity System] the FIXME that stood here was right: a path that loops back to
+	// any corner but the first one never came back to start, so this never ended -- 100% CPU, every
+	// client timing out, and three /entadd lines were enough to cause it:
 	// t1---->t2---->t3
 	//         ^      |
 	//          \_____|
+	// Each corner is marked as it is walked, and the walk stops once the corner it just linked has
+	// been walked already. Every corner is still linked exactly as before, so a train running along
+	// a tail into a loop keeps circling the loop, which is what such a path means.
+	memset( rp_train_path_seen, 0, sizeof( rp_train_path_seen ) );
 	start = NULL;
 	for ( path = ent->nextTrain ; path != start ; path = next ) {
 		if ( !start ) {
 			start = path;
 		}
+		rp_train_path_seen[path->s.number] = qtrue;
 
 		if ( !path->target ) {
 //			trap->Printf( "Train corner at %s without a target\n",
@@ -1931,6 +2114,10 @@ void Think_SetupTrainTargets( gentity_t *ent ) {
 		if ( next )
 		{
 			path->nextTrain = next;
+			if ( rp_train_path_seen[next->s.number] )
+			{ // zyk: walked already, so everything from here on is linked
+				break;
+			}
 		}
 		else
 		{
@@ -1959,6 +2146,7 @@ Target: next path corner and other targets to fire
 void SP_path_corner( gentity_t *self ) {
 	if ( !self->targetname ) {
 		trap->Print ("path_corner with no targetname at %s\n", vtos(self->s.origin));
+		RP_SpawnSaysWhy( self, "a path_corner needs a targetname: a train reaches it by name" );
 		G_FreeEntity( self );
 		return;
 	}
@@ -1997,24 +2185,12 @@ void SP_func_train (gentity_t *self) {
 
 	if ( !self->target ) {
 		trap->Print ("func_train without a target at %s\n", vtos(self->r.absmin));
+		RP_SpawnSaysWhy( self, "a func_train needs a target: the path_corner it starts from" );
 		G_FreeEntity( self );
 		return;
 	}
 
-	if (self->model && strncmp(self->model, "*", 1) == 0)
-		trap->SetBrushModel( (sharedEntity_t *)self, self->model );
-	else if (self->model)
-	{ // zyk: md3 model
-		self->s.modelindex = G_ModelIndex( self->model );
-
-		// zyk: is a solid model
-		if (self->spawnflags & 1024)
-			self->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-		VectorCopy( self->s.angles2, self->r.currentAngles );
-		VectorCopy( self->s.angles2, self->s.apos.trBase );
-	}
+	zyk_set_brush_model( self );
 
 	InitMover( self );
 
@@ -2057,20 +2233,7 @@ void SP_func_static( gentity_t *ent )
 {
 	int		test;
 
-	if (ent->model && strncmp(ent->model, "*", 1) == 0)
-		trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
-	else if (ent->model)
-	{ // zyk: md3 model
-		ent->s.modelindex = G_ModelIndex( ent->model );
-
-		// zyk: is a solid model
-		if (ent->spawnflags & 1024)
-			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-		VectorCopy( ent->s.angles2, ent->r.currentAngles );
-		VectorCopy( ent->s.angles2, ent->s.apos.trBase );
-	}
+	zyk_set_brush_model( ent );
 
 	VectorCopy( ent->s.origin, ent->pos1 );
 	VectorCopy( ent->s.origin, ent->pos2 );
@@ -2094,10 +2257,11 @@ void SP_func_static( gentity_t *ent )
 		ent->s.frame = 0;//first stage of anim
 	}
 
-	if ((ent->spawnflags & 1) || (ent->spawnflags & 2))
-	{ //so we know it's push/pullable on the client
-		ent->s.bolt1 = 1;
-	}
+	//so we know it's push/pullable on the client
+	// DAJ_RP: [Force Powers] which power uses it, for the crosshair's Force hint (CG_RpForceHintTarget, cg_draw.c):
+	// 1 Push (F_PUSH), 2 Pull (F_PULL), 3 both, 0 neither. It was 1 for either; a client that only tests it for non-zero
+	// is unaffected. Set either way: one spawned again in place (/entedit) keeps its struct, and its old mark with it.
+	ent->s.bolt1 = ent->spawnflags & 3;
 
 	G_SpawnInt("model2scale", "0", &ent->s.iModelScale);
 	if (ent->s.iModelScale < 0)
@@ -2119,8 +2283,12 @@ void SP_func_static( gentity_t *ent )
 	trap->LinkEntity( (sharedEntity_t *)ent );
 
 	if (level.mBSPInstanceDepth)
-	{	// this means that this guy will never be updated, moved, changed, etc.
-		ent->s.eFlags = EF_PERMANENT;
+	{	// GalaxyRP fix: [Entity System] part of a misc_bsp's sub-BSP: sent to every client like its misc_bsp
+		// (see SP_misc_bsp(), g_misc.c) rather than made EF_PERMANENT, which the engine never sends after the
+		// baseline -- a misc_bsp rebuilding its sub-BSP after map load brought its brushes back invisible.
+		// Only the permanent bit goes: this used to overwrite every flag, SWITCH_SHADER's EF_SHADER_ANIM too.
+		ent->s.eFlags &= ~EF_PERMANENT;
+		ent->r.svFlags |= SVF_BROADCAST;
 	}
 }
 
@@ -2143,32 +2311,320 @@ ROTATING
 ===============================================================================
 */
 
+/*
+================
+RP_MoverHoldAngles / RP_MoverHoldOrigin
+
+GalaxyRP fix: [SP Maps] stopping a mover in place. Its trajectory base becomes where the server has it
+now -- r.currentAngles / r.currentOrigin, what it collides as -- not where its trajectory would put it at
+level.time: a stationary mover is not run by G_RunMover(), so a base the collision never reached would
+leave players walking into a blade the screen shows elsewhere. A rotator's angles are folded into
+0..360 on both sides (fold), so the drawn and the colliding angles stay equal and its numbers do not
+grow with every turn; a pendulum's are not, since it restarts from its own angles.
+================
+*/
+static void RP_MoverHoldAngles( gentity_t *ent, qboolean fold )
+{
+	int i;
+
+	for ( i = 0; fold && i < 3; i++ )
+	{
+		ent->r.currentAngles[i] = AngleNormalize360( ent->r.currentAngles[i] );
+	}
+	VectorCopy( ent->r.currentAngles, ent->s.apos.trBase );
+	ent->s.apos.trType = TR_STATIONARY;
+	ent->s.apos.trTime = level.time;
+	trap->LinkEntity( (sharedEntity_t *)ent );
+}
+
+static void RP_MoverHoldOrigin( gentity_t *ent )
+{
+	VectorCopy( ent->r.currentOrigin, ent->s.pos.trBase );
+	ent->s.pos.trType = TR_STATIONARY;
+	ent->s.pos.trTime = level.time;
+	trap->LinkEntity( (sharedEntity_t *)ent );
+}
+
+// GalaxyRP: [SP Maps] where a sine mover (TR_SINE: bobbing, pendulum) is in its cycle at level.time, 0..1
+static float RP_MoverSinePhase( const trajectory_t *tr )
+{
+	float phase;
+
+	if ( tr->trDuration <= 0 )
+	{
+		return 0.0f;
+	}
+
+	phase = fmodf( (float)( level.time - tr->trTime ) / (float)tr->trDuration, 1.0f );
+	if ( phase < 0.0f )
+	{
+		phase += 1.0f;
+	}
+	return phase;
+}
+
+/*
+================
+RP_ToggleMover*
+
+GalaxyRP fix: [SP Maps] starting and stopping the three movers a use toggles -- func_rotating (its spin),
+func_bobbing (its bob), func_pendulum (its swing) -- for a whole team at once. A team ("team" key) moves
+as one body: G_RunMover() runs it from its master, and a use of any member reaches the master (its name
+is the team's: G_FindTeams() moves a member's targetname onto it). The per-entity toggles they had let a
+master stop while a member went on, or the other way round: the server then held the member still while
+every client, evaluating its trajectory, drew it moving.
+
+A use goes to the master, as Use_BinaryMover() takes it there, and every rotator, bobber and pendulum of
+the team is set to the opposite of what the master is doing; other members (a door) are left to their
+own use. When the master is of another class, the used entity toggles alone, as before. A member of a
+team whose master is gone or not its own does nothing, as Use_BinaryMover() does.
+
+A team starts the way its master spawned (RP_ToggleMoverTeamMatch): after G_FindTeams() at map load and
+after a preset, and whenever the Entity System links an entity into a team.
+================
+*/
+typedef enum
+{
+	RP_TOGGLE_NONE,
+	RP_TOGGLE_ROTATING,
+	RP_TOGGLE_BOBBING,
+	RP_TOGGLE_PENDULUM
+} rpToggleKind_t;
+
+static rpToggleKind_t RP_ToggleMoverKind( const gentity_t *e )
+{
+	if ( !e || !e->inuse || !e->classname || e->s.eType != ET_MOVER )
+		return RP_TOGGLE_NONE;
+	if ( !Q_stricmp( e->classname, "func_rotating" ) )
+		return RP_TOGGLE_ROTATING;
+	if ( !Q_stricmp( e->classname, "func_bobbing" ) )
+		return RP_TOGGLE_BOBBING;
+	if ( !Q_stricmp( e->classname, "func_pendulum" ) )
+		return RP_TOGGLE_PENDULUM;
+	return RP_TOGGLE_NONE;
+}
+
+static qboolean RP_ToggleMoverRunning( const gentity_t *e )
+{
+	switch ( RP_ToggleMoverKind( e ) )
+	{
+	case RP_TOGGLE_ROTATING:
+		return ( e->s.apos.trType != TR_STATIONARY ) ? qtrue : qfalse;
+	case RP_TOGGLE_BOBBING:
+		return ( e->s.pos.trType == TR_SINE ) ? qtrue : qfalse;
+	case RP_TOGGLE_PENDULUM:
+		return ( e->s.apos.trType == TR_SINE ) ? qtrue : qfalse;
+	default:
+		return qfalse;
+	}
+}
+
+// the time a sine mover restarts from so that it carries on at the place in its cycle it stopped at (radius)
+static int RP_ToggleMoverResumeTime( const trajectory_t *tr, float phase )
+{
+	return level.time - (int)floorf( 0.5f + tr->trDuration * phase );
+}
+
+/*
+Starts (run) or stops one of them. Stopping holds it where the server has it (RP_MoverHoldAngles /
+RP_MoverHoldOrigin) and keeps its place in the cycle in radius, as single player keeps it; starting
+carries on from there. atSpawn: it has only just spawned, so it has never moved -- a bobber or a pendulum
+is then held where it stands with its cycle at the start (radius 0, which is where it stands), and a
+rotator makes no start or stop sound, only its loop.
+*/
+static void RP_ToggleMoverSet( gentity_t *e, qboolean run, qboolean atSpawn )
+{
+	const rpToggleKind_t kind = RP_ToggleMoverKind( e );
+
+	if ( kind == RP_TOGGLE_NONE || RP_ToggleMoverRunning( e ) == run )
+		return;
+
+	switch ( kind )
+	{
+	case RP_TOGGLE_ROTATING:
+		if ( run )
+		{
+			if ( e->soundSet && e->soundSet[0] )
+			{
+				e->s.soundSetIndex = G_SoundSetIndex( e->soundSet );
+				if ( !atSpawn )
+					G_AddEvent( e, EV_BMODEL_SOUND, BMS_START );
+				e->s.loopSound = BMS_MID;
+				e->s.loopIsSoundset = qtrue;
+			}
+			// from the angles it stopped at, starting now
+			VectorCopy( e->r.currentAngles, e->s.apos.trBase );
+			e->s.apos.trTime = level.time;
+			e->s.apos.trType = TR_LINEAR;
+		}
+		else
+		{
+			RP_MoverHoldAngles( e, qtrue );
+			// stop the sound if it stops moving
+			e->s.loopSound = 0;
+			e->s.loopIsSoundset = qfalse;
+			if ( !atSpawn && e->soundSet && e->soundSet[0] )
+			{
+				e->s.soundSetIndex = G_SoundSetIndex( e->soundSet );
+				G_AddEvent( e, EV_BMODEL_SOUND, BMS_END );
+			}
+		}
+		break;
+
+	case RP_TOGGLE_BOBBING:
+		if ( run )
+		{
+			VectorCopy( e->s.origin, e->s.pos.trBase );
+			e->s.pos.trTime = RP_ToggleMoverResumeTime( &e->s.pos, e->radius );
+			e->s.pos.trType = TR_SINE;
+		}
+		else if ( atSpawn )
+		{
+			e->radius = 0.0f;
+			VectorCopy( e->s.origin, e->r.currentOrigin );
+			RP_MoverHoldOrigin( e );
+		}
+		else
+		{
+			e->radius = RP_MoverSinePhase( &e->s.pos );
+			RP_MoverHoldOrigin( e );
+		}
+		break;
+
+	case RP_TOGGLE_PENDULUM:
+		if ( run )
+		{
+			VectorCopy( e->s.angles, e->s.apos.trBase );
+			e->s.apos.trTime = RP_ToggleMoverResumeTime( &e->s.apos, e->radius );
+			e->s.apos.trType = TR_SINE;
+		}
+		else if ( atSpawn )
+		{
+			e->radius = 0.0f;
+			VectorCopy( e->s.angles, e->r.currentAngles );
+			RP_MoverHoldAngles( e, qfalse );
+		}
+		else
+		{
+			e->radius = RP_MoverSinePhase( &e->s.apos );
+			RP_MoverHoldAngles( e, qfalse );
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+// the master a member's use goes to: itself when it is in no team, NULL when its team is broken
+static gentity_t *RP_ToggleMoverMaster( gentity_t *self )
+{
+	gentity_t *master;
+
+	if ( !( self->flags & FL_TEAMSLAVE ) )
+		return self;
+
+	master = self->teammaster;
+	if ( !master || master == self || !master->inuse || ( master->flags & FL_TEAMSLAVE ) ||
+		master->teammaster != master || !master->team || !self->team || strcmp( master->team, self->team ) )
+	{
+		return NULL;
+	}
+	return master;
+}
+
+static void RP_ToggleMoverUse( gentity_t *self )
+{
+	gentity_t *master = RP_ToggleMoverMaster( self );
+	gentity_t *part;
+	qboolean run;
+	int steps;
+
+	if ( !master )
+		return;
+
+	if ( RP_ToggleMoverKind( master ) == RP_TOGGLE_NONE )
+	{	// a door or another mover leads the team: this one toggles alone
+		G_ActivateBehavior( self, BSET_USE );
+		RP_ToggleMoverSet( self, RP_ToggleMoverRunning( self ) ? qfalse : qtrue, qfalse );
+		return;
+	}
+
+	if ( master != self && ( master->flags & FL_INACTIVE ) )
+		return;
+
+	G_ActivateBehavior( master, BSET_USE );
+
+	run = RP_ToggleMoverRunning( master ) ? qfalse : qtrue;
+	for ( part = master, steps = 0; part && steps < MAX_GENTITIES; part = part->teamchain, steps++ )
+	{
+		if ( !part->inuse )
+			break;
+		RP_ToggleMoverSet( part, run, qfalse );
+	}
+}
+
+/*
+================
+RP_ToggleMoverTeamMatch
+
+GalaxyRP fix: [SP Maps] the rotators, bobbers and pendulums of the master's team take the state the master
+is in -- spinning or still -- so the team starts as one body the way its master spawned: the first of the
+team in the map, whose own name and START_ON / START_OFF decide. Its members' were decided by each one
+alone when it spawned, before G_FindTeams() moved a member's name onto the master: a named member started
+still and, its name gone, nothing could start it. Called after G_FindTeams() and when the Entity System
+links an entity into a team (zyk_main_spawn_entity()), so on members that have only just spawned.
+================
+*/
+void RP_ToggleMoverTeamMatch( gentity_t *master )
+{
+	gentity_t *part;
+	qboolean run;
+	int steps;
+
+	if ( !master || !master->inuse || master->teammaster != master || !master->teamchain ||
+		RP_ToggleMoverKind( master ) == RP_TOGGLE_NONE )
+	{
+		return;
+	}
+
+	run = RP_ToggleMoverRunning( master );
+	for ( part = master->teamchain, steps = 0; part && steps < MAX_GENTITIES; part = part->teamchain, steps++ )
+	{
+		if ( !part->inuse )
+			break;
+		RP_ToggleMoverSet( part, run, qtrue );
+	}
+}
+
+// every team in the map, after G_FindTeams()
+void RP_ToggleMoverTeamsMatch( void )
+{
+	int i;
+
+	for ( i = MAX_CLIENTS; i < level.num_entities; i++ )
+	{
+		gentity_t *e = &g_entities[i];
+
+		if ( e->inuse && e->teammaster == e && e->teamchain )
+			RP_ToggleMoverTeamMatch( e );
+	}
+}
+
+/*
+================
+func_rotating_use
+
+GalaxyRP fix: [SP Maps] this existed but nothing assigned it: InitMover() left every func_rotating with
+Use_BinaryMover(), and a use sent it to pos1 -- the world origin 0 0 0 -- in the middle of the map. Now
+SP_func_rotating() gives it to every rotator without health (single player gives it to the named ones;
+here the Stun Baton and PLAYER_USE reach unnamed ones too). It stops the spin where it is
+(RP_MoverHoldAngles) and starts it again from there -- for its whole team: RP_ToggleMoverUse().
+================
+*/
 void func_rotating_use( gentity_t *self, gentity_t *other, gentity_t *activator )
 {
-	if(	self->s.apos.trType == TR_LINEAR )
-	{
-		self->s.apos.trType = TR_STATIONARY;
-		// stop the sound if it stops moving
-		self->s.loopSound = 0;
-		self->s.loopIsSoundset = qfalse;
-		// play stop sound too?
-		if ( self->soundSet && self->soundSet[0] )
-		{
-			self->s.soundSetIndex = G_SoundSetIndex(self->soundSet);
-			G_AddEvent( self, EV_BMODEL_SOUND, BMS_END );
-		}
-	}
-	else
-	{
-		if ( self->soundSet && self->soundSet[0] )
-		{
-			self->s.soundSetIndex = G_SoundSetIndex(self->soundSet);
-			G_AddEvent( self, EV_BMODEL_SOUND, BMS_START );
-			self->s.loopSound = BMS_MID;
-			self->s.loopIsSoundset = qtrue;
-		}
-		self->s.apos.trType = TR_LINEAR;
-	}
+	RP_ToggleMoverUse( self );
 }
 
 /*QUAKED func_rotating (0 .5 .8) ? START_ON RADAR X_AXIS Y_AXIS IMPACT x PLAYER_USE INACTIVE
@@ -2238,29 +2694,27 @@ teamnodmg - if 1, team 1 can't damage this. If 2, team 2 can't damage this.
 void SP_func_breakable( gentity_t *self );
 void SP_func_rotating (gentity_t *ent) {
 	vec3_t spinangles;
-	if ( ent->health )
+	const qboolean breakable = ent->health ? qtrue : qfalse;	// GalaxyRP: [SP Maps] see the use below
+	if ( breakable )
 	{
 		int sav_spawnflags = ent->spawnflags;
-		ent->spawnflags = 0;
+		// DAJ_RP fix: [Entity System] all but SOLID (1024): func_rotating's flags mean other things to a breakable
+		// (16 IMPACT would be SABERONLY), which is why stock clears them here -- but SOLID is what makes an .md3
+		// model collide at all (zyk_set_brush_model()), and the same on both: without it an .md3 func_rotating with
+		// health could not be shot, so it could never break
+		ent->spawnflags = sav_spawnflags & 1024;
 		SP_func_breakable( ent );
+		// GalaxyRP fix: [Entity System] SP_func_breakable() frees an entity with no brush model
+		// instead of ending the server; everything below would then be written into a freed slot.
+		if ( !ent->inuse )
+		{
+			return;
+		}
 		ent->spawnflags = sav_spawnflags;
 	}
 	else
 	{
-		if (ent->model && strncmp(ent->model, "*", 1) == 0)
-			trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
-		else if (ent->model)
-		{ // zyk: md3 model
-			ent->s.modelindex = G_ModelIndex( ent->model );
-
-			// zyk: is a solid model
-			if (ent->spawnflags & 1024)
-				ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-			// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-			VectorCopy( ent->s.angles2, ent->r.currentAngles );
-			VectorCopy( ent->s.angles2, ent->s.apos.trBase );
-		}
+		zyk_set_brush_model( ent );
 
 		InitMover( ent );
 
@@ -2304,6 +2758,29 @@ void SP_func_rotating (gentity_t *ent) {
 		}
 	}
 	ent->s.apos.trType = TR_LINEAR;
+	// GalaxyRP fix: [SP Maps] spinning from its own angles now: trTime was left 0, so one added after map load
+	// started at the angle it would have reached spinning since the map began, and its first frame on the
+	// server turned it -- and pushed whatever stood by it -- through all of that at once
+	ent->s.apos.trTime = level.time;
+
+	// GalaxyRP fix: [SP Maps] using a func_rotating ran Use_BinaryMover() (InitMover's), which sent it to
+	// the world origin 0 0 0; one with health keeps func_breakable's use (it breaks). Every other one now
+	// starts and stops with a use. As in single player, a named one starts still unless START_ON (1) --
+	// MP used to ignore the flag and spin them all from spawn. An unnamed one has nothing that could
+	// start it, so it spins from spawn as before.
+	if ( !breakable )
+	{
+		ent->use = func_rotating_use;
+
+		if ( ent->targetname && ent->targetname[0] && !( ent->spawnflags & 1 ) )
+		{
+			ent->s.apos.trType = TR_STATIONARY;
+		}
+		else
+		{
+			G_PlayDoorLoopSound( ent );	// a spinning one hums its soundSet's loop from the start
+		}
+	}
 
 	if (!ent->damage) {
 		if ( (ent->spawnflags&16) )//IMPACT
@@ -2332,7 +2809,22 @@ BOBBING
 */
 
 
-/*QUAKED func_bobbing (0 .5 .8) ? X_AXIS Y_AXIS x x x x PLAYER_USE INACTIVE
+/*
+================
+func_bobbing_use
+
+GalaxyRP fix: [SP Maps] single player's toggle. Without it a func_bobbing kept InitMover()'s
+Use_BinaryMover(), and any use -- a target, PLAYER_USE, the Stun Baton -- sent it to the world origin
+0 0 0, where it sat still. It now stops where it is, keeping its place in the cycle (radius, as single
+player keeps it), and the next use carries on from that place.
+================
+*/
+void func_bobbing_use( gentity_t *self, gentity_t *other, gentity_t *activator )
+{
+	RP_ToggleMoverUse( self );	// for its whole team, see RP_ToggleMover*
+}
+
+/*QUAKED func_bobbing (0 .5 .8) ? X_AXIS Y_AXIS START_OFF x x x PLAYER_USE INACTIVE
 Normally bobs on the Z axis
 "model2"	.md3 model to also draw
 "height"	amplitude of bob (32 default)
@@ -2351,20 +2843,7 @@ void SP_func_bobbing (gentity_t *ent) {
 	G_SpawnInt( "dmg", "2", &ent->damage );
 	G_SpawnFloat( "phase", "0", &phase );
 
-	if (ent->model && strncmp(ent->model, "*", 1) == 0)
-		trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
-	else if (ent->model)
-	{ // zyk: md3 model
-		ent->s.modelindex = G_ModelIndex( ent->model );
-
-		// zyk: is a solid model
-		if (ent->spawnflags & 1024)
-			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-		VectorCopy( ent->s.angles2, ent->r.currentAngles );
-		VectorCopy( ent->s.angles2, ent->s.apos.trBase );
-	}
+	zyk_set_brush_model( ent );
 
 	InitMover( ent );
 
@@ -2383,6 +2862,18 @@ void SP_func_bobbing (gentity_t *ent) {
 	} else {
 		ent->s.pos.trDelta[2] = height;
 	}
+
+	// GalaxyRP fix: [SP Maps] using it starts and stops it (func_bobbing_use), and START_OFF (4) holds it
+	// still from spawn at the place in the cycle its phase gives -- both as single player has them
+	ent->use = func_bobbing_use;
+	if ( ent->spawnflags & 4 )
+	{
+		ent->radius = phase;
+		VectorMA( ent->s.pos.trBase, sin( phase * M_PI * 2 ), ent->s.pos.trDelta, ent->s.pos.trBase );
+		VectorCopy( ent->s.pos.trBase, ent->r.currentOrigin );
+		ent->s.pos.trType = TR_STATIONARY;
+		trap->LinkEntity( (sharedEntity_t *)ent );
+	}
 }
 
 /*
@@ -2394,7 +2885,21 @@ PENDULUM
 */
 
 
-/*QUAKED func_pendulum (0 .5 .8) ? x x x x x x PLAYER_USE INACTIVE
+/*
+================
+func_pendulum_use
+
+GalaxyRP fix: [SP Maps] the swing's counterpart of func_bobbing_use. Single player gives a pendulum no use
+at all, so it kept InitMover()'s Use_BinaryMover() -- a use sent it to the world origin 0 0 0. It now
+stops mid-swing where it is and carries on from the same place in its swing on the next use.
+================
+*/
+void func_pendulum_use( gentity_t *self, gentity_t *other, gentity_t *activator )
+{
+	RP_ToggleMoverUse( self );	// for its whole team, see RP_ToggleMover*
+}
+
+/*QUAKED func_pendulum (0 .5 .8) ? x x START_OFF x x x PLAYER_USE INACTIVE
 You need to have an origin brush as part of this entity.
 Pendulums always swing north / south on unrotated models.  Add an angles field to the model to allow rotation in other directions.
 Pendulum frequency is a physical constant based on the length of the beam and gravity.
@@ -2415,20 +2920,7 @@ void SP_func_pendulum(gentity_t *ent) {
 	G_SpawnInt( "dmg", "2", &ent->damage );
 	G_SpawnFloat( "phase", "0", &phase );
 
-	if (ent->model && strncmp(ent->model, "*", 1) == 0)
-		trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
-	else if (ent->model)
-	{ // zyk: md3 model
-		ent->s.modelindex = G_ModelIndex( ent->model );
-
-		// zyk: is a solid model
-		if (ent->spawnflags & 1024)
-			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-		VectorCopy( ent->s.angles2, ent->r.currentAngles );
-		VectorCopy( ent->s.angles2, ent->s.apos.trBase );
-	}
+	zyk_set_brush_model( ent );
 
 	// find pendulum length
 	length = fabs( ent->r.mins[2] );
@@ -2451,6 +2943,18 @@ void SP_func_pendulum(gentity_t *ent) {
 	ent->s.apos.trTime = ent->s.apos.trDuration * phase;
 	ent->s.apos.trType = TR_SINE;
 	ent->s.apos.trDelta[2] = speed;
+
+	// GalaxyRP fix: [SP Maps] using it stops and restarts the swing (func_pendulum_use); START_OFF (4)
+	// holds it still from spawn at the point of the swing its phase gives
+	ent->use = func_pendulum_use;
+	if ( ent->spawnflags & 4 )
+	{
+		ent->radius = phase;
+		VectorMA( ent->s.apos.trBase, sin( phase * M_PI * 2 ), ent->s.apos.trDelta, ent->s.apos.trBase );
+		VectorCopy( ent->s.apos.trBase, ent->r.currentAngles );
+		ent->s.apos.trType = TR_STATIONARY;
+		trap->LinkEntity( (sharedEntity_t *)ent );
+	}
 }
 
 /*
@@ -2747,20 +3251,7 @@ static void InitBBrush ( gentity_t *ent )
 
 	VectorCopy( ent->s.origin, ent->pos1 );
 
-	if (ent->model && strncmp(ent->model, "*", 1) == 0)
-		trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
-	else if (ent->model)
-	{ // zyk: md3 model
-		ent->s.modelindex = G_ModelIndex( ent->model );
-
-		// zyk: is a solid model
-		if (ent->spawnflags & 1024)
-			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-		VectorCopy( ent->s.angles2, ent->r.currentAngles );
-		VectorCopy( ent->s.angles2, ent->s.apos.trBase );
-	}
+	zyk_set_brush_model( ent );
 
 	ent->die = funcBBrushDie;
 
@@ -2775,7 +3266,7 @@ static void InitBBrush ( gentity_t *ent )
 	// for drawing, but clip against the brushes
 	if ( ent->model2 && ent->model2[0] )
 	{
-		ent->s.modelindex2 = G_ModelIndex( ent->model2 );
+		ent->s.modelindex2 = RP_EntityModelIndex( ent, ent->model2 );	// GalaxyRP: [Slot Reuse]
 	}
 
 	// if the "color" or "light" keys are set, setup constantLight
@@ -2890,6 +3381,7 @@ void SP_func_breakable( gentity_t *self )
 	char *s = NULL;
 
 	G_SpawnString("playfx", "", &s);
+	s = RP_EffectKeyValue(self, "playfx", s);	// DAJ_RP: [Weather] not a weather command
 
 	if (s && s[0])
 	{ //should we play a special death effect?
@@ -2969,7 +3461,14 @@ void SP_func_breakable( gentity_t *self )
 	}
 	self->team = NULL;
 	if (!self->model) {
-		trap->Error( ERR_DROP, "func_breakable with NULL model\n" );
+		// GalaxyRP fix: [Entity System] was trap->Error(ERR_DROP), which a dedicated server promotes
+		// to a fatal error and process exit. A func_breakable (or a func_rotating with health, which
+		// comes through here) without a brush model is reachable at runtime from /entadd, /entedit
+		// and /entload, so one missing key took the server down. Log it and free the entity instead;
+		// the return matters, because the old code relied on trap->Error never coming back.
+		G_LogPrintf( "%s at %s has no model; not spawned.\n", self->classname ? self->classname : "func_breakable", vtos( self->s.origin ) );
+		G_FreeEntity( self );
+		return;
 	}
 	InitBBrush( self );
 
@@ -3111,20 +3610,7 @@ Breakable glass
 "maxshards"	Max number of shards to spawn on glass break
 */
 void SP_func_glass( gentity_t *ent ) {
-	if (ent->model && strncmp(ent->model, "*", 1) == 0)
-		trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
-	else if (ent->model)
-	{ // zyk: md3 model
-		ent->s.modelindex = G_ModelIndex( ent->model );
-
-		// zyk: is a solid model
-		if (ent->spawnflags & 1024)
-			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-		VectorCopy( ent->s.angles2, ent->r.currentAngles );
-		VectorCopy( ent->s.angles2, ent->s.apos.trBase );
-	}
+	zyk_set_brush_model( ent );
 
 	InitMover( ent );
 
@@ -3168,22 +3654,14 @@ void func_wait_return_solid( gentity_t *self )
 	self->clipmask = CONTENTS_BODY;
 	if ( !(self->spawnflags&16) || G_TestEntityPosition( self ) == NULL )
 	{
-		if (self->model && strncmp(self->model, "*", 1) == 0)
-			trap->SetBrushModel( (sharedEntity_t *)self, self->model );
-		else if (self->model)
-		{ // zyk: md3 model
-			self->s.modelindex = G_ModelIndex( self->model );
+		// DAJ_RP fix: [Entity System] InitMover() sets FL_INACTIVE again from spawnflag 128: one target_activate'd
+		// and then switched off and on was inactive again (stock multiplayer is the same). It keeps the state it had.
+		const int inactive = self->flags & FL_INACTIVE;
 
-			// zyk: is a solid model
-			if (self->spawnflags & 1024)
-				self->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-			// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-			VectorCopy( self->s.angles2, self->r.currentAngles );
-			VectorCopy( self->s.angles2, self->s.apos.trBase );
-		}
+		zyk_set_brush_model( self );
 
 		InitMover( self );
+		self->flags = ( self->flags & ~FL_INACTIVE ) | inactive;
 		VectorCopy( self->s.origin, self->s.pos.trBase );
 		VectorCopy( self->s.origin, self->r.currentOrigin );
 		self->r.svFlags &= ~SVF_NOCLIENT;
@@ -3323,20 +3801,7 @@ teamuser - if 1, team 2 can't use this. If 2, team 1 can't use this.
 
 void SP_func_usable( gentity_t *self )
 {
-	if (self->model && strncmp(self->model, "*", 1) == 0)
-		trap->SetBrushModel( (sharedEntity_t *)self, self->model );
-	else if (self->model)
-	{ // zyk: md3 model
-		self->s.modelindex = G_ModelIndex( self->model );
-
-		// zyk: is a solid model
-		if (self->spawnflags & 1024)
-			self->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-		VectorCopy( self->s.angles2, self->r.currentAngles );
-		VectorCopy( self->s.angles2, self->s.apos.trBase );
-	}
+	zyk_set_brush_model( self );
 
 	InitMover( self );
 	VectorCopy( self->s.origin, self->s.pos.trBase );
@@ -3353,7 +3818,7 @@ void SP_func_usable( gentity_t *self )
 		}
 		else
 		{
-			self->s.modelindex2 = G_ModelIndex( self->model2 );
+			self->s.modelindex2 = RP_EntityModelIndex( self, self->model2 );	// GalaxyRP: [Slot Reuse]
 		}
 	}
 
@@ -3382,6 +3847,13 @@ void SP_func_usable( gentity_t *self )
 	*/
 
 	self->use = func_usable_use;
+
+	// DAJ_RP fix: [Entity System] "if it has health, it will be used whenever shot at/killed - if you want it to only
+	// be used once this way, set health to 1" (its QUAKED), and func_usable_pain/func_usable_die below do that. But
+	// G_Damage() treats every mover as a shootable door -- uses it and returns before any health is taken -- unless
+	// genericValue4 is 1, which only func_breakable and func_glass set: so every shot used it, forever, and its health
+	// did nothing (stock multiplayer is the same). 0 without health: an entity respawned in place keeps the field.
+	self->genericValue4 = self->health ? 1 : 0;
 
 	if ( self->health )
 	{
@@ -3453,20 +3925,7 @@ START_OFF - the wall will not be there
 */
 void SP_func_wall( gentity_t *ent )
 {
-	if (ent->model && strncmp(ent->model, "*", 1) == 0)
-		trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
-	else if (ent->model)
-	{ // zyk: md3 model
-		ent->s.modelindex = G_ModelIndex( ent->model );
-
-		// zyk: is a solid model
-		if (ent->spawnflags & 1024)
-			ent->r.contents = CONTENTS_SOLID|CONTENTS_OPAQUE|CONTENTS_BODY|CONTENTS_MONSTERCLIP|CONTENTS_BOTCLIP;//Was CONTENTS_SOLID, but only architecture should be this
-
-		// zyk: setting angles so if it is a md3 model (entity system) it will rotate it with these angles
-		VectorCopy( ent->s.angles2, ent->r.currentAngles );
-		VectorCopy( ent->s.angles2, ent->s.apos.trBase );
-	}
+	zyk_set_brush_model( ent );
 
 	VectorCopy( ent->s.origin, ent->pos1 );
 	VectorCopy( ent->s.origin, ent->pos2 );
@@ -3487,4 +3946,123 @@ void SP_func_wall( gentity_t *ent )
 
 	trap->LinkEntity ((sharedEntity_t *)ent);
 
+}
+
+/*
+==================================================================================================
+GalaxyRP: [SP Maps] Jedi Outcast's brush-model key panels. Both are used with the use button;
+the keys are per client (RP_*Key in g_misc.c).
+==================================================================================================
+*/
+
+/*QUAKED func_security_panel (0 .5 .8) ? x x x x x x x INACTIVE
+A brush panel that opens when a player uses it while carrying the right security key.
+
+  INACTIVE - Start off, has to be activated to be usable
+
+  "message" - name of the key the player must have
+  "target" - what to use when successfully opened
+  "target2" - what to use when the panel is used without the key
+*/
+static void func_security_panel_use( gentity_t *self, gentity_t *other, gentity_t *activator )
+{
+	if ( !activator || !activator->client || activator->s.number >= MAX_CLIENTS )
+	{
+		return;
+	}
+
+	if ( self->message && self->message[0] && !RP_HasSecurityKey( activator, self->message ) )
+	{//don't have the key
+		G_Sound( self, CHAN_AUTO, G_SoundIndex( "sound/movers/sec_panel_fail.mp3" ) );
+		G_UseTargets2( self, activator, self->target2 );
+		return;
+	}
+
+	RP_TakeSecurityKey( activator );
+	G_Sound( self, CHAN_AUTO, G_SoundIndex( "sound/movers/sec_panel_pass.mp3" ) );
+	G_UseTargets2( self, activator, self->target );
+
+	//spent
+	self->use = NULL;
+	self->r.svFlags &= ~SVF_PLAYER_USABLE;
+}
+
+void SP_func_security_panel( gentity_t *ent )
+{
+	zyk_set_brush_model( ent );
+
+	VectorCopy( ent->s.origin, ent->pos1 );
+	VectorCopy( ent->s.origin, ent->pos2 );
+
+	InitMover( ent );
+	VectorCopy( ent->s.origin, ent->s.pos.trBase );
+	VectorCopy( ent->s.origin, ent->r.currentOrigin );
+
+	G_SoundIndex( "sound/movers/sec_panel_pass.mp3" );
+	G_SoundIndex( "sound/movers/sec_panel_fail.mp3" );
+
+	if ( ent->spawnflags & 128 )
+	{
+		ent->flags |= FL_INACTIVE;
+	}
+
+	ent->r.svFlags |= SVF_PLAYER_USABLE;
+	ent->use = func_security_panel_use;
+
+	trap->LinkEntity( (sharedEntity_t *)ent );
+}
+
+/*QUAKED func_goodie_panel (0 .5 .8) ? x x x x x x x INACTIVE
+A brush panel that opens when a player uses it while carrying a goodie key; the key is used up.
+
+  INACTIVE - Start off, has to be activated to be usable
+
+  "target" - what to use when successfully opened
+  "target2" - what to use when the panel is used without a key
+*/
+static void func_goodie_panel_use( gentity_t *self, gentity_t *other, gentity_t *activator )
+{
+	if ( !activator || !activator->client || activator->s.number >= MAX_CLIENTS )
+	{
+		return;
+	}
+
+	if ( !RP_TakeGoodieKey( activator ) )
+	{//don't have one
+		G_Sound( self, CHAN_AUTO, G_SoundIndex( "sound/movers/sec_panel_fail.mp3" ) );
+		G_UseTargets2( self, activator, self->target2 );
+		return;
+	}
+
+	G_Sound( self, CHAN_AUTO, G_SoundIndex( "sound/movers/sec_panel_pass.mp3" ) );
+	G_UseTargets2( self, activator, self->target );
+
+	//spent
+	self->use = NULL;
+	self->r.svFlags &= ~SVF_PLAYER_USABLE;
+}
+
+void SP_func_goodie_panel( gentity_t *ent )
+{
+	zyk_set_brush_model( ent );
+
+	VectorCopy( ent->s.origin, ent->pos1 );
+	VectorCopy( ent->s.origin, ent->pos2 );
+
+	InitMover( ent );
+	VectorCopy( ent->s.origin, ent->s.pos.trBase );
+	VectorCopy( ent->s.origin, ent->r.currentOrigin );
+
+	G_SoundIndex( "sound/movers/sec_panel_pass.mp3" );
+	G_SoundIndex( "sound/movers/sec_panel_fail.mp3" );
+
+	if ( ent->spawnflags & 128 )
+	{
+		ent->flags |= FL_INACTIVE;
+	}
+
+	ent->r.svFlags |= SVF_PLAYER_USABLE;
+	ent->use = func_goodie_panel_use;
+
+	trap->LinkEntity( (sharedEntity_t *)ent );
 }

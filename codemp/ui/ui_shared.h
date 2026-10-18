@@ -190,6 +190,11 @@ typedef struct listBoxDef_s {
 	int numColumns;
 	columnInfo_t columnInfo[MAX_LB_COLUMNS];
 	const char *doubleClick;
+	// GalaxyRP fix: [UI] added for the "rightClick" item keyword (see ItemParse_rightClick in
+	// ui_shared.c) -- lets a listbox item run a script on right-click instead of treating it the
+	// same as a left-click, matching the TaystJK engine's own bundled UI assets (e.g. the server
+	// browser's right-click context menu in joinserver.menu).
+	const char *rightClick;
 	qboolean notselectable;
 	//JLF MPMOVED
 	qboolean	scrollhidden;
@@ -205,7 +210,7 @@ typedef struct editFieldDef_s {
 	int paintOffset;		//
 } editFieldDef_t;
 
-#define MAX_MULTI_CVARS 64//32
+#define MAX_MULTI_CVARS 256 // DAJ_RP: was 64 (stock 32), as JoF_EJK -- entries in one cvarStrList/cvarFloatList
 
 typedef struct multiDef_s {
 	const char *cvarList[MAX_MULTI_CVARS];
@@ -321,6 +326,7 @@ typedef struct itemDef_s {
 	int			xoffset;
 
 	qboolean disabledHidden;				// hide the item when 'disabled' is true (for generic image items)
+	const char	*bitMask;					// GalaxyRP fix: [UI] ITEM_TYPE_CHECKBOX bit number (0-31) in the item's cvar, ported from TaystJK
 } itemDef_t;
 
 typedef struct menuDef_s {

@@ -182,6 +182,28 @@ saber_colors_t TranslateSaberColor( const char *name ) {
 		return SABER_BLUE;
 	if ( !Q_stricmp( name, "purple" ) )
 		return SABER_PURPLE;
+	// GalaxyRP: [Saber RGB] "rgb" selects the player's own custom colour instead of one of the six
+	// fixed palette entries. The colour itself lives in cp_sbRGB1/cp_sbRGB2 (client) and in
+	// pers.saberRGB[] (server) -- this enum value only says "use it". "rgb2".."rgb5" select the same
+	// custom colour rendered with one of the four alternate blade-style shaders (flame1/electric1/
+	// flame2/electric2, also reachable via /saberblade) -- this is exactly the value set TaystJK/
+	// JAPro's own "Line:" blade-style control (rgbbladecolor_CoreStyle1/2 in ingame_saber.menu, an
+	// ITEM_TYPE_MULTI bound to this same cvar) cycles through, so its selection round-trips here
+	// unchanged both for our own client and for a TaystJK-family one.
+	if ( !Q_stricmp( name, "rgb" ) )
+		return SABER_RGB;
+	if ( !Q_stricmp( name, "rgb2" ) )
+		return SABER_FLAME1;
+	if ( !Q_stricmp( name, "rgb3" ) )
+		return SABER_ELEC1;
+	if ( !Q_stricmp( name, "rgb4" ) )
+		return SABER_FLAME2;
+	if ( !Q_stricmp( name, "rgb5" ) )
+		return SABER_ELEC2;
+	// GalaxyRP: [Saber RGB] "black" selects the fixed black-blade shader (SABER_BLACK) -- unlike
+	// "rgb" this is not a custom colour, it's its own entry in the palette.
+	if ( !Q_stricmp( name, "black" ) )
+		return SABER_BLACK;
 	if ( !Q_stricmp( name, "random" ) )
 		return (saber_colors_t)Q_irand( SABER_ORANGE, SABER_PURPLE );
 
@@ -195,8 +217,24 @@ const char *SaberColorToString( saber_colors_t color ) {
 	if ( color == SABER_GREEN )		return "green";
 	if ( color == SABER_BLUE )		return "blue";
 	if ( color == SABER_PURPLE )	return "purple";
+	// GalaxyRP: [Saber RGB] each of the five RGB-family blade styles gets its own distinct string
+	// (mirroring the "rgb".."rgb5" values TranslateSaberColor() recognises above), so the menu's
+	// blade-style switcher correctly preselects whichever style is actually active when the saber
+	// menu is (re)opened -- e.g. a saber left on "Flame" shows "Flame" again, not "Normal".
+	if ( color == SABER_RGB )		return "rgb";	// GalaxyRP: [Saber RGB]
+	if ( color == SABER_FLAME1 )	return "rgb2";	// GalaxyRP: [Saber RGB]
+	if ( color == SABER_ELEC1 )		return "rgb3";	// GalaxyRP: [Saber RGB]
+	if ( color == SABER_FLAME2 )	return "rgb4";	// GalaxyRP: [Saber RGB]
+	if ( color == SABER_ELEC2 )		return "rgb5";	// GalaxyRP: [Saber RGB]
+	if ( color == SABER_BLACK )		return "black";	// GalaxyRP: [Saber RGB]
 
-	return NULL;
+	// GalaxyRP fix: [Saber] this used to return NULL for anything outside the palette, and its only
+	// caller (UI_GetSaberCvars in ui_main.c) feeds the result straight into trap->Cvar_Set() -- so
+	// an out-of-range "color1"/"color2" value reached Cvar_Set() as a NULL string pointer. That was
+	// unreachable while the enum only had six entries and the cvar was always one of them, but it
+	// is reachable now that clients can legitimately hold other values, so fall back to the same
+	// colour TranslateSaberColor() defaults to instead.
+	return "blue";
 }
 
 saber_styles_t TranslateSaberStyle( const char *name ) {
@@ -470,6 +508,7 @@ void WP_SaberSetDefaults( saberInfo_t *saber ) {
 	saber->readyAnimGreen		= -1;			// -1 - anim to use when standing idle
 	saber->readyAnimStaff		= -1;			// -1 - anim to use when standing idle
 	saber->readyAnimDual		= -1;			// -1 - anim to use when standing idle
+	saber->idleAnim				= -1;			// DAJ_RP: [Saber Keys] -1 - every style's idle fallback (get_idle_animation_for_style, g_active.c)
 	saber->idleAnimBlue			= -1;			// -1 - anim to use when standing in place for an extended period of time
 	saber->idleAnimYellow		= -1;			// -1 - anim to use when standing in place for an extended period of time
 	saber->idleAnimRed			= -1;			// -1 - anim to use when standing in place for an extended period of time
@@ -509,6 +548,11 @@ void WP_SaberSetDefaults( saberInfo_t *saber ) {
 	saber->hitPersonEffect		= 0;			// none - if set, plays this effect when the saber/sword hits a person (instead of "saber/blood_sparks_mp.efx")
 	saber->hitOtherEffect		= 0;			// none - if set, plays this effect when the saber/sword hits something else damagable (instead of "saber/saber_cut.efx")
 	saber->bladeEffect			= 0;			// none - if set, plays this effect at the blade tag
+	saber->customBladeShader	= 0;			// DAJ_RP: [Saber Keys] none - the blade's core shader
+	saber->customGlowShader		= 0;			// none - the blade's glow shader
+	saber->customTrailShader	= 0;			// none - the swing trail's shader
+	saber->useCustomRGBColor	= qfalse;		// no customRGB
+	VectorClear( saber->customRGB );
 
 	//done in game (server-side code)
 	saber->knockbackScale		= 0;			// 0 - if non-zero, uses damage done to calculate an appropriate amount of knockback
@@ -558,7 +602,10 @@ static void Saber_ParseSaberType( saberInfo_t *saber, const char **p ) {
 	if ( COM_ParseString( p, &value ) )
 		return;
 	saberType = GetIDForString( saberTable, value );
-	if ( saberType >= SABER_SINGLE && saberType <= NUM_SABERS )
+	// GalaxyRP fix: [bounds] "<=" let NUM_SABERS itself through into saber->type. Unreachable
+	// today (saberTable ends { "", -1 } and has no NUM_SABERS row), but the same accident-of-the-
+	// table reasoning as NPC_stats.c above. Matches OpenJK 6a8a8809.
+	if ( saberType >= SABER_SINGLE && saberType < NUM_SABERS )
 		saber->type = (saberType_t)saberType;
 }
 static void Saber_ParseSaberModel( saberInfo_t *saber, const char **p ) {
@@ -1251,6 +1298,17 @@ static void Saber_ParseReadyAnimDual(saberInfo_t* saber, const char** p) {
 	if (anim >= 0 && anim < MAX_ANIMATIONS)
 		saber->readyAnimDual = anim;
 }
+// DAJ_RP: [Saber Keys] "idleAnim": the idle (saber off, 5 seconds still) for every style without its own idleAnim* key,
+// as readyAnim and kataMove are for theirs. Not a base-game key -- neither JKA nor TaystJK has one.
+static void Saber_ParseIdleAnim(saberInfo_t* saber, const char** p) {
+	const char* value;
+	int anim = -1;
+	if (COM_ParseString(p, &value))
+		return;
+	anim = GetIDForString(animTable, value);
+	if (anim >= 0 && anim < MAX_ANIMATIONS)
+		saber->idleAnim = anim;
+}
 static void Saber_ParseIdleAnimBlue(saberInfo_t* saber, const char** p) {
 	const char* value;
 	int anim = -1;
@@ -1526,6 +1584,61 @@ static void Saber_ParseNoBlade( saberInfo_t *saber, const char **p ) {
 	}
 	if ( n )
 		saber->saberFlags2 |= SFL2_NO_BLADE;
+}
+// DAJ_RP: [Holstered Sabers] "noHolster 1": not worn on the thigh, hidden -- see SFL2_RP_NO_HOLSTER (bg_public.h)
+static void Saber_ParseNoHolster( saberInfo_t *saber, const char **p ) {
+	int n;
+	if ( COM_ParseInt( p, &n ) ) {
+		SkipRestOfLine( p );
+		return;
+	}
+	if ( n )
+		saber->saberFlags2 |= SFL2_RP_NO_HOLSTER;
+}
+// DAJ_RP: [Saber Keys] TaystJK's customBladeShader / customGlowShader / customTrailShader / customRGB, same names and
+// values, so a .sab looks the same on a stock TaystJK client. Drawing only: the shaders are registered in the cgame
+// alone, the game and ui modules just read past the value (as g2MarksShader does). "none" leaves the stock one.
+static qhandle_t Saber_RpParseShader( const char **p ) {
+	const char *value;
+	// No SkipRestOfLine on a missing value: the parse stops at the line's end having already stepped onto the next
+	// line, so skipping "the rest" would throw the next key away.
+	if ( COM_ParseString( p, &value ) || !value ) {
+		return 0;
+	}
+#ifdef _CGAME
+	if ( value[0] && Q_stricmp( value, "none" ) )
+		return trap->R_RegisterShader( value );
+#endif
+	return 0;
+}
+static void Saber_ParseCustomBladeShader( saberInfo_t *saber, const char **p ) {
+	saber->customBladeShader = Saber_RpParseShader( p );
+}
+static void Saber_ParseCustomGlowShader( saberInfo_t *saber, const char **p ) {
+	saber->customGlowShader = Saber_RpParseShader( p );
+}
+static void Saber_ParseCustomTrailShader( saberInfo_t *saber, const char **p ) {
+	saber->customTrailShader = Saber_RpParseShader( p );
+}
+// "customRGB R G B", 0-255 each (clamped), kept 0-1 like the other colours the cgame's saber code works in. 0 0 0 is
+// off, as in TaystJK. Incomplete: ignored, with a warning, and any earlier customRGB on this saber is cleared -- and
+// the next line is kept (no SkipRestOfLine: a missing number means the parse already stopped at the line's end).
+static void Saber_ParseCustomRGB( saberInfo_t *saber, const char **p ) {
+	float f[3];
+	int i;
+	saber->useCustomRGBColor = qfalse;
+	VectorClear( saber->customRGB );
+	for ( i = 0; i < 3; i++ ) {
+		if ( COM_ParseFloat( p, &f[i] ) ) {
+			Com_Printf( S_COLOR_YELLOW "WARNING: incomplete customRGB in saber '%s' -- wants three numbers 0-255\n", saber->name );
+			return;
+		}
+	}
+	for ( i = 0; i < 3; i++ ) {
+		saber->customRGB[i] = Com_Clamp( 0.0f, 255.0f, f[i] ) / 255.0f;
+	}
+	if ( saber->customRGB[0] > 0.0f || saber->customRGB[1] > 0.0f || saber->customRGB[2] > 0.0f )
+		saber->useCustomRGBColor = qtrue;
 }
 static void Saber_ParseTrailStyle( saberInfo_t *saber, const char **p ) {
 	int n;
@@ -2126,6 +2239,7 @@ static keywordHash_t saberParseKeywords[] = {
 	{ "readyAnimGreen",			Saber_ParseReadyAnimGreen,		NULL	},
 	{ "readyAnimStaff",			Saber_ParseReadyAnimStaff,		NULL	},
 	{ "readyAnimDual",			Saber_ParseReadyAnimDual,		NULL	},
+	{ "idleAnim",				Saber_ParseIdleAnim,			NULL	},	// DAJ_RP: [Saber Keys]
 	{ "idleAnimBlue",			Saber_ParseIdleAnimBlue,		NULL	},
 	{ "idleAnimYellow",			Saber_ParseIdleAnimYellow,		NULL	},
 	{ "idleAnimRed",			Saber_ParseIdleAnimRed,			NULL	},
@@ -2215,6 +2329,11 @@ static keywordHash_t saberParseKeywords[] = {
 	{ "bladeEffect2",			Saber_ParseBladeEffect2,		NULL	},
 	{ "noClashFlare",			Saber_ParseNoClashFlare,		NULL	},
 	{ "noClashFlare2",			Saber_ParseNoClashFlare2,		NULL	},
+	{ "noHolster",				Saber_ParseNoHolster,			NULL	},	// DAJ_RP: [Holstered Sabers]
+	{ "customBladeShader",		Saber_ParseCustomBladeShader,	NULL	},	// DAJ_RP: [Saber Keys] TaystJK's four
+	{ "customGlowShader",		Saber_ParseCustomGlowShader,	NULL	},
+	{ "customTrailShader",		Saber_ParseCustomTrailShader,	NULL	},
+	{ "customRGB",				Saber_ParseCustomRGB,			NULL	},
 	{ NULL,						NULL,							NULL	}
 };
 static keywordHash_t *saberParseKeywordHash[KEYWORDHASH_SIZE];
@@ -2482,7 +2601,10 @@ void WP_SaberLoadParms( void )
 {
 	int				len, totallen, saberExtFNLen, fileCnt, i;
 	char			*holdChar, *marker;
-	char			saberExtensionListBuf[2048];			//	The list of file names read in
+	// GalaxyRP fix: [Vehicles] 2048 -> 16384; see MAX_VEH_EXT_LIST_SIZE in bg_vehicleLoad.c. The
+	// engine drops names silently once the list is full, and saber packs are the most numerous
+	// extension files of all.
+	char			saberExtensionListBuf[16384];			//	The list of file names read in
 	fileHandle_t	f;
 
 	len = 0;
@@ -2531,6 +2653,9 @@ void WP_SaberLoadParms( void )
 		totallen += len;
 		marker = saberParms+totallen;
 	}
+
+	// GalaxyRP fix: [Vehicles] holdChar has walked exactly the bytes the names occupied.
+	BG_FileListMayBeTruncated( "ext_data/sabers", ".sab", fileCnt, (int)(holdChar - saberExtensionListBuf), sizeof( saberExtensionListBuf ) );
 }
 
 #ifdef UI_BUILD

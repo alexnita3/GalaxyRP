@@ -271,6 +271,17 @@ typedef enum //# setType_e
 	//in-bhc tables
 	SET_LEAN,//## %t="LEAN_TYPES" # Lean left, right or stop leaning
 
+	// GalaxyRP: [Scripts] SP setters that were missing from the MP table. Appended here so the
+	// values above keep their numbers (the engine's script interrogation switch was built with them).
+	SET_SAFE_REMOVE,//## %t="BOOL_TYPES" # NPC will remove only when it's safe (no player has it in PVS)
+	SET_FORCE_PULL,//## %t="BOOL_TYPES" # Causes this ent to do a force pull at whatever level of force pull they have
+	SET_FORCE_PROTECT,//## %t="BOOL_TYPES" # Causes this ent to start a force protect at whatever level of force protect they have
+	SET_FORCE_RAGE_LEVEL,//## %t="FORCE_LEVELS" # Change force power level
+	SET_FORCE_PROTECT_LEVEL,//## %t="FORCE_LEVELS" # Change force power level
+	SET_FORCE_ABSORB_LEVEL,//## %t="FORCE_LEVELS" # Change force power level
+	SET_FORCE_DRAIN_LEVEL,//## %t="FORCE_LEVELS" # Change force power level
+	SET_FORCE_SIGHT_LEVEL,//## %t="FORCE_LEVELS" # Change force power level
+
 	//# #eol
 	SET_
 } setType_t;

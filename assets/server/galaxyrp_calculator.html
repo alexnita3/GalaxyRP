@@ -49,6 +49,9 @@
 	.checked {
 		color: blue;
 	}
+	.bitbox small {
+		font-size: 0.75em;
+	}
 	.cvar {
 		float: left;
 		font-weight: bold;
@@ -175,7 +178,11 @@
 		<label class="bitbox"><input class="box" name="userinfoValidate" num="21" type="checkbox"> Size</label>
 		<label class="bitbox"><input class="box" name="userinfoValidate" num="22" type="checkbox"> # of slashes</label>
 		<label class="bitbox"><input class="box" name="userinfoValidate" num="23" type="checkbox"> Extended ascii</label>
-		<label class="bitbox"><input class="box" name="userinfoValidate" num="24" type="checkbox"> Control characters</label>
+		<label class="bitbox"><input class="box" name="userinfoValidate" num="24" type="checkbox"> Control chars (incl. tab)</label>
+		<label class="bitbox"><input class="box" name="userinfoValidate" num="25" type="checkbox"> cp_sbRGB1</label>
+		<label class="bitbox"><input class="box" name="userinfoValidate" num="26" type="checkbox"> cp_sbRGB2</label>
+		<label class="bitbox"><input class="box" name="userinfoValidate" num="27" type="checkbox"> rpmod_client</label>
+		<label class="bitbox"><input class="box" name="userinfoValidate" num="28" type="checkbox"> ja_guid</label>
     </div>
 	
 	<!-- Section -->
@@ -190,9 +197,9 @@
 	</div>
 
     <div class="bitboxes">
-		<label class="bitbox"><input class="box" name="allowVote" num="0" type="checkbox"> capturelimit</label>
+		<label class="bitbox"><input class="box" name="allowVote" num="0" type="checkbox"> capturelimit <small>(always refused)</small></label>
 		<label class="bitbox"><input class="box" name="allowVote" num="1" type="checkbox"> clientkick</label>
-		<label class="bitbox"><input class="box" name="allowVote" num="2" type="checkbox"> fraglimit</label>
+		<label class="bitbox"><input class="box" name="allowVote" num="2" type="checkbox"> fraglimit <small>(always refused)</small></label>
 		<label class="bitbox"><input class="box" name="allowVote" num="3" type="checkbox"> warm up</label>
 		<label class="bitbox"><input class="box" name="allowVote" num="4" type="checkbox"> gametype</label>
 		<label class="bitbox"><input class="box" name="allowVote" num="5" type="checkbox"> kick player</label>
@@ -200,13 +207,13 @@
 		<label class="bitbox"><input class="box" name="allowVote" num="7" type="checkbox"> map restart</label>
 		<label class="bitbox"><input class="box" name="allowVote" num="8" type="checkbox"> nextmap</label>
 		<label class="bitbox"><input class="box" name="allowVote" num="9" type="checkbox"> poll</label>
-		<label class="bitbox"><input class="box" name="allowVote" num="10" type="checkbox"> timelimit</label>
+		<label class="bitbox"><input class="box" name="allowVote" num="10" type="checkbox"> timelimit <small>(always refused)</small></label>
     </div>
 	
 	<!-- Section -->
 	
 	<div class="title">
-      <span class="cvar">dmFlags:</span>
+      <span class="cvar">dmflags:</span>
 	  <span class="cvar_edit">
 		  <input id="dmFlags" class="value" value="0" type="number">
 		  <input name="dmFlags" class="select-all" value="All" type="button">
@@ -215,9 +222,10 @@
 	</div>
 
     <div class="bitboxes">
-		<label class="bitbox"><input class="box" name="dmFlags" num="8" type="checkbox"> No Falling</label>
-		<label class="bitbox"><input class="box" name="dmFlags" num="16" type="checkbox"> Fixed Fov</label>
-		<label class="bitbox"><input class="box" name="dmFlags" num="32" type="checkbox"> No Footsteps</label>
+		<label class="bitbox"><input class="box" name="dmFlags" num="3" type="checkbox"> No Falling Damage (8)</label>
+		<label class="bitbox"><input class="box" name="dmFlags" num="4" type="checkbox"> Fixed 80 FOV (16)</label>
+		<label class="bitbox"><input class="box" name="dmFlags" num="5" type="checkbox"> No Footsteps (32)</label>
+		<label class="bitbox"><input class="box" name="dmFlags" num="6" type="checkbox"> No Drowning (64)</label>
     </div>
 
 	<!-- Section -->
@@ -232,24 +240,24 @@
 	  </div>
   
 	  <div class="bitboxes">
-		  <label class="bitbox"><input class="box" name="default_account_permissions" num="0" type="checkbox"> NPC Spawn</label>
+		  <label class="bitbox"><input class="box" name="default_account_permissions" num="0" type="checkbox"> NPC management</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="1" type="checkbox"> No Clip</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="2" type="checkbox"> Give Admin</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="3" type="checkbox"> Teleport</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="4" type="checkbox"> Admin Protect</label>
-		  <label class="bitbox"><input class="box" name="default_account_permissions" num="5" type="checkbox"> Entity System</label>
+		  <label class="bitbox"><input class="box" name="default_account_permissions" num="5" type="checkbox"> Entities and Remaps</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="6" type="checkbox"> Silence</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="7" type="checkbox"> Client Print</label>
-		  <label class="bitbox"><input class="box" name="default_account_permissions" num="8" type="checkbox"> Placeholder</label>
-		  <label class="bitbox"><input class="box" name="default_account_permissions" num="9" type="checkbox"> Kick</label>
-		  <label class="bitbox"><input class="box" name="default_account_permissions" num="10" type="checkbox"> Paralize</label>
+		  <label class="bitbox"><input class="box" name="default_account_permissions" num="8" type="checkbox"> Shake Screen</label>
+		  <label class="bitbox"><input class="box" name="default_account_permissions" num="9" type="checkbox"> Kick / Kill Other</label>
+		  <label class="bitbox"><input class="box" name="default_account_permissions" num="10" type="checkbox"> Paralyze</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="11" type="checkbox"> Give</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="12" type="checkbox"> Scale</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="13" type="checkbox"> Players</label>
-		  <label class="bitbox"><input class="box" name="default_account_permissions" num="14" type="checkbox"> Duel Arena</label>
-		  <label class="bitbox"><input class="box" name="default_account_permissions" num="15" type="checkbox"> Placeholder</label>
+		  <label class="bitbox"><input class="box" name="default_account_permissions" num="14" type="checkbox"> Duel/Melee Arena</label>
+		  <label class="bitbox"><input class="box" name="default_account_permissions" num="15" type="checkbox"> Change Map</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="16" type="checkbox"> Create Item</label>
-		  <label class="bitbox"><input class="box" name="default_account_permissions" num="17" type="checkbox"> God Mode</label>
+		  <label class="bitbox"><input class="box" name="default_account_permissions" num="17" type="checkbox"> God Mode / No Target</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="18" type="checkbox"> Upgrade Levels</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="19" type="checkbox"> Upgrade Skills</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="20" type="checkbox"> Create Credits</label>
@@ -259,14 +267,29 @@
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="24" type="checkbox"> Remove News</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="25" type="checkbox"> Play Music</label>
 		  <label class="bitbox"><input class="box" name="default_account_permissions" num="26" type="checkbox"> Instant Revive</label>
+		  <label class="bitbox"><input class="box" name="default_account_permissions" num="27" type="checkbox"> Weather</label>
+		  <label class="bitbox"><input class="box" name="default_account_permissions" num="28" type="checkbox"> Player effects</label>
 	  </div>
 	
 	<!-- End -->
 	
     <script type="text/javascript">
+	// The bit checkboxes of one section. getElementsByName() also returns that section's
+	// All/None buttons (they share the name), so keep only the class="box" inputs.
+	function getBoxes(name) {
+		var elements = document.getElementsByName(name);
+		var boxes = [];
+		var i;
+		for (i = 0; i < elements.length; i++) {
+			if (elements[i].classList.contains("box")) {
+				boxes.push(elements[i]);
+			}
+		}
+		return boxes;
+	}
 	function updateValue(field) {
 		var value = Number(field.value);
-		var boxes = document.getElementsByName(field.id);
+		var boxes = getBoxes(field.id);
 		var i;
 		field.checkValidity();
 		for (i = 0; i < boxes.length; i++) {
@@ -282,8 +305,7 @@
 	}
 	function updateCheckbox(box) {
 		var field = document.getElementById(box.name);
-		var num = box.getAttribute("num");
-		var boxes = document.getElementsByName(box.name);
+		var boxes = getBoxes(box.name);
 		var value = 0;
 		var i;
 		for (i = 0; i < boxes.length; i++) {
@@ -296,6 +318,16 @@
 			}
 		}
 		field.value = value;
+	}
+	// "All" = every bit listed in the section (not -1, which would also set bits the game doesn't use)
+	function allBitsValue(name) {
+		var boxes = getBoxes(name);
+		var value = 0;
+		var i;
+		for (i = 0; i < boxes.length; i++) {
+			value |= (1 << boxes[i].getAttribute("num"));
+		}
+		return value;
 	}
 	function setOwnerValue(button, value) {
 		var field = document.getElementById(button.name);
@@ -321,7 +353,7 @@
 		elements = document.getElementsByClassName("select-all");
 		for (i = 0; i < elements.length; i++) {
 			elements[i].onclick = function () {
-				setOwnerValue(this, -1);
+				setOwnerValue(this, allBitsValue(this.name));
 			};
 		}
 		elements = document.getElementsByClassName("select-none");

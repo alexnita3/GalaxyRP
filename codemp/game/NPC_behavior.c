@@ -32,9 +32,9 @@ we need it...
 #include "g_nav.h"
 #include "icarus/Q3_Interface.h"
 
-extern	qboolean	showBBoxes;
-extern vec3_t NPCDEBUG_BLUE;
-extern void G_Cube( vec3_t mins, vec3_t maxs, vec3_t color, float alpha );
+// GalaxyRP fix: [NPC] the showBBoxes, NPCDEBUG_BLUE and G_Cube declarations that used to be here
+// belonged to the jump-state debug box below, which is removed with "/npc showbounds" -- see
+// Cmd_NPC_f() (NPC_spawn.c).
 extern void NPC_CheckGetNewWeapon( void );
 
 extern qboolean PM_InKnockDown( playerState_t *ps );
@@ -546,7 +546,7 @@ void NPC_BSFollowLeader (void)
 	visibility_t	leaderVis;
 	int			curAnim;
 
-	if ( !NPCS.NPC->client->leader || NPCS.NPC->client->pers.player_statuses & (1 << 18)) // zyk: if npc has received order to stand guard, do not follow leader
+	if ( !NPCS.NPC->client->leader || NPCS.NPC->client->pers.player_statuses & (1 << PLAYER_STATUS_NPC_ORDER_GUARD)) // zyk: if npc has received order to stand guard, do not follow leader
 	{//ok, stand guard until we find an enemy
 		if( NPCS.NPCInfo->tempBehavior == BS_HUNT_AND_KILL )
 		{
@@ -572,7 +572,8 @@ void NPC_BSFollowLeader (void)
 			if ( !(NPCS.NPCInfo->scriptFlags&SCF_IGNORE_ALERTS) )
 			{
 				int eventID = NPC_CheckAlertEvents( qtrue, qtrue, -1, qfalse, AEL_MINOR );
-				if ( level.alertEvents[eventID].level >= AEL_SUSPICIOUS && (NPCS.NPCInfo->scriptFlags&SCF_LOOK_FOR_ENEMIES) )
+				// GalaxyRP fix: [NPC] eventID is -1 when there is nothing to react to; this read level.alertEvents[-1] every think
+				if ( eventID > -1 && level.alertEvents[eventID].level >= AEL_SUSPICIOUS && (NPCS.NPCInfo->scriptFlags&SCF_LOOK_FOR_ENEMIES) )
 				{
 					NPCS.NPCInfo->lastAlertID = level.alertEvents[eventID].ID;
 					if ( !level.alertEvents[eventID].owner ||
@@ -874,12 +875,10 @@ void NPC_BSJump (void)
 		break;
 	case JS_JUMPING:
 
-		if ( showBBoxes )
-		{
-			VectorAdd(NPCS.NPC->r.mins, NPCS.NPC->pos1, p1);
-			VectorAdd(NPCS.NPC->r.maxs, NPCS.NPC->pos1, p2);
-			G_Cube( p1, p2, NPCDEBUG_BLUE, 0.5 );
-		}
+		// GalaxyRP fix: [NPC] a "if (showBBoxes) ... G_Cube(...)" box around the jump target used to
+		// be drawn here. It read the flag "/npc showbounds" toggled and called the same empty stub,
+		// so it drew nothing; removed with the command. p1 and p2 are still used by the jump
+		// arithmetic higher up this function.
 
 		if ( NPCS.NPC->s.groundEntityNum != ENTITYNUM_NONE)
 		{//Landed, start landing anim
@@ -938,23 +937,38 @@ void NPC_BSJump (void)
 	}
 }
 
+/*
+-------------------------
+NPC_RemoveIfOutOfPlayersPVS
+
+GalaxyRP: [NPC] the body of BS_REMOVE, shared with SCF_SAFE_REMOVE (NPC_ApplyScriptFlags). Fires
+target3 and frees the NPC next frame once no player can see it; qtrue when it did.
+-------------------------
+*/
+qboolean NPC_RemoveIfOutOfPlayersPVS( gentity_t *self )
+{
+	if ( InPlayersPVS( self->r.currentOrigin ) )
+	{
+		return qfalse;
+	}//FIXME: else allow for out of FOV???
+
+	G_UseTargets2( self, self, self->target3 );
+	self->s.eFlags |= EF_NODRAW;
+	self->s.eType = ET_INVISIBLE;
+	self->r.contents = 0;
+	self->health = 0;
+	self->targetname = NULL;
+
+	//Disappear in half a second
+	self->think = G_FreeEntity;
+	self->nextthink = level.time + FRAMETIME;
+	return qtrue;
+}
+
 void NPC_BSRemove (void)
 {
 	NPC_UpdateAngles ( qtrue, qtrue );
-	//OJKFIXME: clientnum 0
-	if( !trap->InPVS( NPCS.NPC->r.currentOrigin, g_entities[0].r.currentOrigin ) )//FIXME: use cg.vieworg?
-	{ //rwwFIXMEFIXME: Care about all clients instead of just 0?
-		G_UseTargets2( NPCS.NPC, NPCS.NPC, NPCS.NPC->target3 );
-		NPCS.NPC->s.eFlags |= EF_NODRAW;
-		NPCS.NPC->s.eType = ET_INVISIBLE;
-		NPCS.NPC->r.contents = 0;
-		NPCS.NPC->health = 0;
-		NPCS.NPC->targetname = NULL;
-
-		//Disappear in half a second
-		NPCS.NPC->think = G_FreeEntity;
-		NPCS.NPC->nextthink = level.time + FRAMETIME;
-	}//FIXME: else allow for out of FOV???
+	NPC_RemoveIfOutOfPlayersPVS( NPCS.NPC );
 }
 
 void NPC_BSSearch (void)

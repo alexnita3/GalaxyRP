@@ -44,6 +44,12 @@ XCVAR_DEF( g_spSkill,						"2",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( g_warmup,						"20",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( se_language,						"english",				NULL,				CVAR_ARCHIVE|CVAR_NORESTART )
 XCVAR_DEF( ui_galaxyrp_game,				"0",					NULL,				CVAR_ROM ) // Tr!Force: [AssetsCache] Set game cvar
+// GalaxyRP: [TaystJK] the same cvar cgame registers in cg_xcvar.h, with the same flags (flags OR
+// together across modules); see RP_AdoptTaystJKWriteFolder() in bg_misc.c.
+XCVAR_DEF( rp_taystjk_writefolder,				"1",					NULL,				CVAR_ARCHIVE )
+// DAJ_RP: [Menus] the TaystJK engine's widescreen switch (its own default and flags; jaPRO's and TaystJK's ui register
+// it too): on, the connect screen uses its 16:9 art and the cursor is not stretched -- see UI_WidthRatioCoef()
+XCVAR_DEF( cl_ratioFix,						"1",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( ui_PrecacheModels,				"0",					NULL,				CVAR_ARCHIVE )
 XCVAR_DEF( ui_actualNetGametype,			"3",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_blueteam,						DEFAULT_BLUETEAM_NAME,	NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
@@ -112,6 +118,22 @@ XCVAR_DEF( ui_saber2,						"none",					NULL,				CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_saber2_color,					"yellow",				NULL,				CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_saber_color,					"yellow",				NULL,				CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_saber_type,					"single",				NULL,				CVAR_ROM|CVAR_INTERNAL )
+// GalaxyRP: [Saber RGB] the saber menu's three colour sliders per blade. These are what the menu's
+// ITEM_TYPE_INTSLIDER items bind to; UI_UpdateSaberCvars() packs them into cp_sbRGB1/cp_sbRGB2 on
+// Apply, and UI_GetSaberCvars() unpacks them back when the menu is opened. Names match
+// TaystJK/JAPro's so their saber menu, if a player is using a client that has it, drives ours too.
+XCVAR_DEF( ui_sab1_r,						"255",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+XCVAR_DEF( ui_sab1_g,						"255",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+XCVAR_DEF( ui_sab1_b,						"255",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+XCVAR_DEF( ui_sab2_r,						"255",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+XCVAR_DEF( ui_sab2_g,						"255",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+XCVAR_DEF( ui_sab2_b,						"255",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+// The packed values the sliders above feed into. Registered here as well as in cg_xcvar.h because
+// the saber menu is reachable from the main menu, with no cgame loaded to have registered them --
+// and a cvar first created by a plain Cvar_Set would not carry CVAR_USERINFO, so the server would
+// never see the colour at all. See the matching comment in cg_xcvar.h.
+XCVAR_DEF( cp_sbRGB1,						"0",					NULL,				CVAR_ARCHIVE|CVAR_USERINFO )
+XCVAR_DEF( cp_sbRGB2,						"0",					NULL,				CVAR_ARCHIVE|CVAR_USERINFO )
 XCVAR_DEF( ui_scoreAccuracy,				"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_scoreAssists,					"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_scoreBase,					"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
@@ -135,13 +157,20 @@ XCVAR_DEF( ui_singlePlayerActive,			"0",					NULL,				CVAR_INTERNAL )
 XCVAR_DEF( ui_team_fraglimit,				"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_team_friendly,				"1",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_team_timelimit,				"20",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+// GalaxyRP: [Profile UI] whether the local player is currently logged into an account, pushed by
+// the "supdateloggedin" server command (see CG_LoggedInUpdate_f / Cmd_GalaxyRpUi_f). Registered
+// with an explicit "0" default, same as the other zyk rpg fields below, so the Profile menu's
+// cvarTest gating has a defined (logged-out) value even before the first server response arrives.
+// GalaxyRP fix: must be CVAR_ROM (matching cgame's own registration of the same cvar in
+// cg_xcvar.h), not CVAR_ARCHIVE -- cvar flags OR together across modules (see Cvar_Get() in
+// cvar.cpp), so an ARCHIVE flag here alone was enough to make the whole cvar archive to the
+// client's config and reload stale on the next launch, showing a logged-in menu for a player who
+// quit, reconnected, and stayed logged out/spectating (see the CMD_ALIVE fix on "zykmod" in
+// g_cmds.c for the other half of this bug).
+XCVAR_DEF( ui_loggedin,					"0",					NULL,				CVAR_ROM|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_rpg_level,				"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_rpg_level_up_score,		"20",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_rpg_skillpoints,			"20",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_rpg_skillcounter,			"20",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_rpg_magic_power,			"20",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_rpg_credits,				"20",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_rpg_rpgclass,				"20",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_skill_1_level,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_skill_2_level,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_skill_3_level,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
@@ -202,80 +231,52 @@ XCVAR_DEF( ui_rp_skill_57_level,			"0",					NULL,				CVAR_ARCHIVE | CVAR_INTERNA
 XCVAR_DEF( ui_rp_skill_58_level,			"0",					NULL,				CVAR_ARCHIVE | CVAR_INTERNAL)
 XCVAR_DEF( ui_rp_skill_59_level,			"0",					NULL,				CVAR_ARCHIVE | CVAR_INTERNAL)
 XCVAR_DEF( ui_rp_skill_60_level,			"0",					NULL,				CVAR_ARCHIVE | CVAR_INTERNAL)
-XCVAR_DEF( ui_rp_skill_61_level,			"0",					NULL,				CVAR_ARCHIVE | CVAR_INTERNAL)
-XCVAR_DEF( ui_rp_skill_62_level,			"0",					NULL,				CVAR_ARCHIVE | CVAR_INTERNAL)
-XCVAR_DEF( ui_zyk_setting_0_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_1_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_2_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_3_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_4_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_5_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_6_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_7_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_8_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_9_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_10_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_11_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_12_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_13_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_14_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_setting_15_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_0_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_1_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_2_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_3_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_4_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_5_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_6_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_7_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_8_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_9_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_10_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_11_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_12_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_13_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_14_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_15_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_upgrade_16_value,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_light_power,				"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_dark_power,				"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_eternity_power,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_universe_power,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_ultimate_power,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_resurrection_power,		"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_special_powers,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_universe_chapter,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_universe_text,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_universe_text2,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_universe_text3,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_universe_text4,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_light_text,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_light_text2,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_light_text3,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_light_text4,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_light_text5,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_light_text6,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_light_text7,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_light_text8,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_light_text9,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_light_text10,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_light_text11,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_dark_text,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_dark_text2,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_dark_text3,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_dark_text4,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_dark_text5,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_dark_text6,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_dark_text7,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_dark_text8,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_dark_text9,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_dark_text10,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_dark_text11,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_eternity_text,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_eternity_text2,			"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_quest_player,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+// GalaxyRP fix: [Skills] ui_rp_skill_61_level and ui_rp_skill_62_level used to follow here, and
+// ui_zyk_rpg_skillcounter used to sit up with the other ui_zyk_rpg_* cvars. All three are removed:
+// NUM_OF_SKILLS (rp_local.h) is 60, so the server only ever sends 60 skill levels and 61/62 could
+// never receive a value -- they were in fact the cause of the settings-panel misalignment fixed in
+// ui_cvars_in_order[] (cg_servercmds.c), where two extra slots shifted every setting value that
+// followed. ui_zyk_rpg_skillcounter had no reader or writer anywhere at all.
+// NOTE for future cleanups: skills 39 and 56 are NOT dead even though no menu file references
+// ui_zyk_skill_39_level or ui_zyk_skill_56_level. Those are the two reserved skills ("Unique Skill"
+// and "Improvements") that do_upgrade_skill()/do_downgrade_skill() block from purchase (g_cmds.c);
+// the server still sends a value for them, because Cmd_GalaxyRpUi_f walks all NUM_OF_SKILLS entries.
+// CG_ZykMod assigns those values into ui_cvars_in_order[] purely by position, so their two cvars have
+// to stay as placeholders -- removing them would shift every skill level after them by one.
+// GalaxyRP fix: [Settings] ui_zyk_setting_0_value through _15_value (the full 0-15 range) have now all
+// been removed here. _0_value through _4_value, _7_value, _12_value, _14_value and _15_value went in
+// earlier passes of this cleanup; _5_value, _6_value, _8_value, _9_value, _10_value, _11_value and
+// _13_value are removed in this pass along with the settings_to_sync loop that used to feed the last
+// six of them (see the fix comment on ui_cvars_in_order[] in cg_servercmds.c) and, for the settings
+// that toggled them, Cmd_Settings_f itself (g_cmds.c). None of these cvars was ever read or written by
+// any C code anywhere in codemp/game, codemp/cgame or codemp/ui -- they only ever fed the Settings
+// panel in ingame_galaxyrp.menu, which was removed entirely in an earlier pass of this cleanup.
+// GalaxyRP fix: [Shop] "1" if the player already owns the matching shop upgrade (player_settings bit
+// 0/1/2), "0" otherwise -- fed by Cmd_GalaxyRpUi_f's zykmod sync (g_cmds.c) via the 3 new entries
+// appended to ui_cvars_in_order[] in cg_servercmds.c. Drives the Shop -> Upgrades panel's
+// cvarTest/disableCvar gate in ingame_galaxyrp.menu, which greys out and disables the button for an
+// upgrade already owned. Numbered 1-3 to match the /buy upgrade 1-3 numbering used everywhere else in
+// this area of code. The pre-existing ui_zyk_upgrade_0_value through _16_value cvars that used to sit
+// directly below these three have now been removed: they were leftovers of Zyk's original "Unique
+// Upgrades" panel, whose writer (a block of trap->Cvar_Set calls in CG_ZykMod, cg_servercmds.c) was
+// deleted in "Began fixing the GalaxyRP UI" and whose only reader (the matching itemDef cvar bindings
+// in the old ingame_zykmod.menu) was deleted in "More UI refactoring, also fixed the buy button" --
+// leaving 17 XCVAR_DEFs with nothing on either end of them. They were never part of the positional
+// ui_cvars_in_order[] sync, so removing them cannot shift that array's alignment.
+XCVAR_DEF( ui_zyk_upgrade_1_owned,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+XCVAR_DEF( ui_zyk_upgrade_2_owned,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+XCVAR_DEF( ui_zyk_upgrade_3_owned,			"0",					NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+// GalaxyRP fix: [Quests] 40 quest-era cvars used to be defined here and just above:
+// ui_zyk_rpg_level_up_score, ui_zyk_rpg_magic_power, ui_zyk_rpg_rpgclass, the light / dark /
+// eternity / universe / ultimate / resurrection _power switches, ui_zyk_special_powers,
+// ui_zyk_quest_player, and the 29 quest text cvars (ui_zyk_universe_chapter, ui_zyk_universe_text..4,
+// ui_zyk_light_text..11, ui_zyk_dark_text..11, ui_zyk_eternity_text, _text2). No code in any module
+// reads or writes them; the only mention left is the orphaned Quests section of ingame_galaxyrp.menu,
+// which no button opens, and a menu reads an unregistered cvar as empty.
 XCVAR_DEF( ui_zyk_action_value,				"^2upgrade",			NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
-XCVAR_DEF( ui_zyk_buy_action_value,			"^2buy",				NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
+// GalaxyRP fix: [Shop] ui_zyk_buy_action_value removed -- it only backed the orphaned "buyaction"
+// uiScript branch removed from ui_main.c (zykmod handler), which no button ever triggered and whose
+// value no menu ever displayed.
 XCVAR_DEF( ui_zyk_rpg_char_1,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_rpg_char_2,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )
 XCVAR_DEF( ui_zyk_rpg_char_3,				"",						NULL,				CVAR_ARCHIVE|CVAR_INTERNAL )

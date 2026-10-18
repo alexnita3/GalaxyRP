@@ -1627,6 +1627,12 @@ void ST_TransferTimers( gentity_t *self, gentity_t *other )
 
 void ST_TransferMoveGoal( gentity_t *self, gentity_t *other )
 {
+	// DAJ_RP fix: [NPC] the one blocking is found by number in the squad: a member removed since the squad was last
+	// refreshed, its slot taken by something that is not an NPC, would be handed the goal (AI_GroupMemberValid)
+	if ( !self || !self->NPC || !AI_GroupMemberValid( other ) )
+	{
+		return;
+	}
 	if ( trap->ICARUS_TaskIDPending( (sharedEntity_t *)self, TID_MOVE_NAV ) )
 	{//can't transfer movegoal when a script we're running is waiting to complete
 		return;
@@ -1790,6 +1796,10 @@ void ST_Commander( void )
 		for ( i = 0; i < group->numGroup; i++ )
 		{
 			member = &g_entities[group->member[i].number];
+			if ( !AI_GroupMemberValid( member ) )
+			{//DAJ_RP fix: [NPC] removed since the squad was last refreshed (AI_GroupMemberValid, NPC_AI_Utils.c)
+				continue;
+			}
 			SetNPCGlobals( member );
 			if ( trap->ICARUS_TaskIDPending( (sharedEntity_t *)NPCS.NPC, TID_MOVE_NAV ) )
 			{//running somewhere that a script requires us to go, don't break from that
@@ -1906,6 +1916,11 @@ void ST_Commander( void )
 
 		//get the next guy
 		member = &g_entities[group->member[i].number];
+		if ( !AI_GroupMemberValid( member ) )
+		{//DAJ_RP fix: [NPC] removed since the squad was last refreshed -- a slot taken by a turret, say, has an
+			//enemy too, and was given orders as an NPC (AI_GroupMemberValid, NPC_AI_Utils.c)
+			continue;
+		}
 		if ( !member->enemy )
 		{//don't include guys that aren't angry
 			continue;
@@ -2476,7 +2491,8 @@ void NPC_BSST_Attack( void )
 
 		if (NPCS.NPC->enemy && !NPC_ClearLOS4(NPCS.NPC->enemy) && NPCS.NPC->health > 0)
 		{ // zyk: if enemy cant be seen, try getting one later
-			if (NPCS.NPC->client && NPCS.NPC->client->pers.guardian_mode == 0)
+			// GalaxyRP fix: [Guardian] "guardians find enemies differently" else-if branch removed here — guardian_mode is permanently 0 (spawn_boss has no callers), so this was always dead
+			if (NPCS.NPC->client)
 			{
 				NPCS.NPC->enemy = NULL;
 				if (NPCS.NPC->client->playerTeam == NPCTEAM_PLAYER)
@@ -2488,21 +2504,6 @@ void NPC_BSST_Attack( void )
 					NPC_BSST_Patrol();
 				}
 				return;
-			}
-			else if (NPCS.NPC->client)
-			{ // zyk: guardians have a different way to find enemies. He tries to find the quest player and his allies
-				int zyk_it = 0;
-
-				for (zyk_it = 0; zyk_it < level.maxclients; zyk_it++)
-				{
-					gentity_t *allied_player = &g_entities[zyk_it];
-
-					if (allied_player && allied_player->client && allied_player->client->pers.guardian_mode > 0 &&
-						NPC_ClearLOS4(allied_player))
-					{ // zyk: the quest player or one of his allies. If one of them is in line of sight, choose him as enemy
-						NPCS.NPC->enemy = allied_player;
-					}
-				}
 			}
 		}
 	}
@@ -2574,11 +2575,7 @@ void NPC_BSST_Attack( void )
 		enemyInFOV = qtrue;
 	}
 
-	// zyk: Guardian of Intelligence enemy is an Armored Soldier. He is smarter at choosing weapons against this class
-	if (NPCS.NPC->client->pers.guardian_mode == 4 && NPCS.NPC->enemy->client->sess.amrpgmode == 2 && NPCS.NPC->enemy->client->pers.rpg_class == 3)
-		enemy_is_armored_soldier = qtrue;
-	else if (NPCS.NPC->client->pers.guardian_mode == 2 && NPCS.NPC->enemy->client->sess.amrpgmode == 2 && NPCS.NPC->enemy->client->pers.rpg_class == 5 && NPCS.NPC->enemy->client->pers.secrets_found & (1 << 7))
-		enemy_is_stealth_attacker = qtrue; // zyk: if enemy is stealth attacker with upgrade, Guardian of Earth will not use demp2
+	// GalaxyRP fix: [Guardian] Guardian of Intelligence/Earth enemy-class detection removed here — guardian_mode is permanently 0 (spawn_boss has no callers), so this was always dead. enemy_is_armored_soldier/enemy_is_stealth_attacker keep their qfalse defaults and are still read below.
 
 	if ( enemyDist < MIN_ROCKET_DIST_SQUARED )//128
 	{//enemy within 128

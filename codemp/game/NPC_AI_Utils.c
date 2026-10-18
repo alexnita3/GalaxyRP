@@ -35,6 +35,10 @@ qboolean AI_ValidateGroupMember( AIGroupInfo_t *group, gentity_t *member );
 
 extern void G_TestLine(vec3_t start, vec3_t end, int color, int time);
 
+// DAJ_RP: [NPC Debug] d_npcai redraws a squad's lines this often, each lasting this long (AI_RefreshGroup)
+#define RP_NPCAI_LINE_MSEC	500
+#define RP_NPCAI_LINE_LIFE	600
+
 /*
 -------------------------
 AI_GetGroupSize
@@ -217,6 +221,22 @@ qboolean AI_FindSelfInPreviousGroup( gentity_t *self )
 	return qfalse;
 }
 
+/*
+-------------------------
+AI_GroupMemberValid
+
+DAJ_RP fix: [NPC] a squad keeps its members by entity number. When one is removed, its slot is empty, or
+holds something else, until the squad is next refreshed -- and the loops over a squad read every member's
+NPC data unchecked: the member check itself, the merge, an officer's death, the commander's orders. An
+empty slot, or one taken by an entity that is not an NPC (a turret, a breakable), crashed them. Each of
+them skips, or drops, a member that fails this now.
+-------------------------
+*/
+qboolean AI_GroupMemberValid( const gentity_t *member )
+{
+	return ( member && member->inuse && member->client && member->NPC ) ? qtrue : qfalse;
+}
+
 void AI_InsertGroupMember( AIGroupInfo_t *group, gentity_t *member )
 {
 	int i;
@@ -237,7 +257,7 @@ void AI_InsertGroupMember( AIGroupInfo_t *group, gentity_t *member )
 		group->member[group->numGroup++].number = member->s.number;
 		group->numState[member->NPC->squadState]++;
 	}
-	if ( !group->commander || (member->NPC->rank > group->commander->NPC->rank) )
+	if ( !group->commander || !group->commander->NPC || (member->NPC->rank > group->commander->NPC->rank) )
 	{//keep track of highest rank
 		group->commander = member;
 	}
@@ -558,6 +578,14 @@ void AI_DeleteGroupMember( AIGroupInfo_t *group, int memberNum )
 {
 	int i;
 
+	// GalaxyRP fix: [NPC] nothing checked memberNum: a stale index (a member removed twice, a
+	// group whose count shrank under a caller) read and shifted memory past member[] and could
+	// drive numGroup negative. Refuse anything outside the live members.
+	if ( !group || memberNum < 0 || memberNum >= group->numGroup || memberNum >= MAX_GROUP_MEMBERS )
+	{
+		return;
+	}
+
 	if ( group->commander && group->commander->s.number == group->member[memberNum].number )
 	{
 		group->commander = NULL;
@@ -606,16 +634,22 @@ extern void ST_MarkToCover( gentity_t *self );
 extern void ST_StartFlee( gentity_t *self, gentity_t *enemy, vec3_t dangerPoint, int dangerLevel, int minTime, int maxTime );
 void AI_GroupMemberKilled( gentity_t *self )
 {
-	AIGroupInfo_t *group = self->NPC->group;
+	AIGroupInfo_t *group;
 	gentity_t	*member;
 	qboolean	noflee = qfalse;
 	int			i;
 
+	// DAJ_RP fix: [NPC] the one killed is checked before his group is read (it was read first)
+	if ( !self || !self->NPC )
+	{
+		return;
+	}
+	group = self->NPC->group;
 	if ( !group )
 	{//what group?
 		return;
 	}
-	if ( !self || !self->NPC || self->NPC->rank < RANK_ENSIGN )
+	if ( self->NPC->rank < RANK_ENSIGN )
 	{//I'm not an officer, let's not really care for now
 		return;
 	}
@@ -625,8 +659,8 @@ void AI_GroupMemberKilled( gentity_t *self )
 	for ( i = 0; i < group->numGroup; i++ )
 	{
 		member = &g_entities[group->member[i].number];
-		if ( member == self )
-		{
+		if ( member == self || !AI_GroupMemberValid( member ) )
+		{//DAJ_RP fix: [NPC] or a member removed since the squad was last refreshed (AI_GroupMemberValid)
 			continue;
 		}
 		if ( member->NPC->rank > RANK_ENSIGN )
@@ -651,8 +685,8 @@ void AI_GroupMemberKilled( gentity_t *self )
 		for ( i = 0; i < group->numGroup; i++ )
 		{
 			member = &g_entities[group->member[i].number];
-			if ( member == self )
-			{
+			if ( member == self || !AI_GroupMemberValid( member ) )
+			{//DAJ_RP fix: [NPC] or a member removed since the squad was last refreshed
 				continue;
 			}
 			if ( member->NPC->rank < RANK_ENSIGN )
@@ -749,6 +783,12 @@ qboolean AI_RefreshGroup( AIGroupInfo_t *group )
 					for ( j = 0; j < group->numGroup; j++ )
 					{
 						member = &g_entities[group->member[j].number];
+						if ( !AI_GroupMemberValid( member ) )
+						{//DAJ_RP fix: [NPC] removed since the last refresh: dropped, not moved (AI_GroupMemberValid)
+							AI_DeleteGroupMember( group, j );
+							j--;
+							continue;
+						}
 						if ( level.groups[i].enemy == NULL )
 						{//special case for groups without enemies, must be in range
 							if ( !AI_ValidateNoEnemyGroupMember( &level.groups[i], member ) )
@@ -806,7 +846,9 @@ qboolean AI_RefreshGroup( AIGroupInfo_t *group )
 		member = &g_entities[group->member[i].number];
 
 		//Must be alive
-		if ( member->health <= 0 )
+		// DAJ_RP fix: [NPC] and still an NPC: a slot emptied or taken by something else since the last refresh
+		// was kept (only health was tested) and read as an NPC just below (AI_GroupMemberValid)
+		if ( member->health <= 0 || !AI_GroupMemberValid( member ) )
 		{
 			AI_DeleteGroupMember( group, i );
 			//keep marker at same place since we deleted this guy and shifted everyone up one
@@ -864,10 +906,30 @@ qboolean AI_RefreshGroup( AIGroupInfo_t *group )
 		{
 			group->morale += member->NPC->rank;
 		}
-		if ( group->commander && d_npcai.integer )
+	}
+	// DAJ_RP fix: [NPC Debug] d_npcai's lines from the commander to each of his squad: twice a second, each lasting a
+	// little longer so they do not blink, rather than every server frame -- every line is an entity slot (see
+	// RP_DebugLines, ai_wpnav.c) -- and none from the commander to himself. A squad whose lines are refused
+	// tries again next frame, while the ones just drawn wait, so the squads take turns.
+	if ( d_npcai.integer && group->commander && level.time >= group->rpDebugLineTime )
+	{
+		vec3_t	ends[MAX_GROUP_MEMBERS];
+		int		numEnds = 0;
+
+		for ( i = 0; i < group->numGroup && numEnds < MAX_GROUP_MEMBERS; i++ )
 		{
-			//G_DebugLine( group->commander->r.currentOrigin, member->r.currentOrigin, FRAMETIME, 0x00ff00ff, qtrue );
-			G_TestLine(group->commander->r.currentOrigin, member->r.currentOrigin, 0x00000ff, FRAMETIME);
+			member = &g_entities[group->member[i].number];
+			if ( member == group->commander )
+			{
+				continue;
+			}
+			VectorCopy( member->r.currentOrigin, ends[numEnds] );
+			numEnds++;
+		}
+		//G_DebugLine( group->commander->r.currentOrigin, member->r.currentOrigin, FRAMETIME, 0x00ff00ff, qtrue );
+		if ( !numEnds || RP_DebugLines( group->commander->r.currentOrigin, (const vec3_t *)ends, numEnds, 0x00000ff, RP_NPCAI_LINE_LIFE ) )
+		{
+			group->rpDebugLineTime = level.time + RP_NPCAI_LINE_MSEC;
 		}
 	}
 	if ( group->enemy )
@@ -954,6 +1016,29 @@ void AI_UpdateGroups( void )
 
 	if ( d_noGroupAI.integer )
 	{
+		// DAJ_RP fix: [NPC] switched on with squads formed: they were no longer refreshed, yet an NPC that did not
+		// ask for its group again (a stormtrooper while suspicious, 2-2.5 s) still used his, members removed since
+		// and all. Every squad is dissolved once; AI_GetGroup() forms no new ones while this is on.
+		for ( i = 0; i < MAX_FRAME_GROUPS; i++ )
+		{
+			if ( level.groups[i].numGroup )
+			{
+				break;
+			}
+		}
+		if ( i < MAX_FRAME_GROUPS )
+		{
+			int k;
+
+			for ( k = 0; k < level.num_entities; k++ )
+			{
+				if ( g_entities[k].inuse && g_entities[k].NPC )
+				{
+					g_entities[k].NPC->group = NULL;
+				}
+			}
+			memset( level.groups, 0, sizeof( level.groups ) );
+		}
 		return;
 	}
 	//Clear all Groups
@@ -1065,16 +1150,22 @@ gentity_t *AI_DistributeAttack( gentity_t *attacker, gentity_t *enemy, team_t te
 
 	numSurrounding = AI_GetGroupSize( enemy->r.currentOrigin, 48, team, attacker );
 
-	//First, see if we should look for the player
-	if ( enemy != &g_entities[0] )
+	//First, see if we should look for a player (on the enemy's team, alive, not spectating)
+	for ( i = 0; i < MAX_CLIENTS; i++ )
 	{
-		//rwwFIXMEFIXME: care about all clients not just 0
-		int	aroundPlayer = AI_GetGroupSize( g_entities[0].r.currentOrigin, 48, team, attacker );
-
-		//See if we're above our threshold
-		if ( aroundPlayer < threshold )
+		check = &g_entities[i];
+		if ( check == enemy || !check->inuse || !check->client
+			|| check->client->pers.connected != CON_CONNECTED
+			|| check->client->sess.sessionTeam == TEAM_SPECTATOR
+			|| check->health <= 0
+			|| check->client->playerTeam != enemy->client->playerTeam )
 		{
-			return &g_entities[0];
+			continue;
+		}
+		//See if we're above our threshold
+		if ( AI_GetGroupSize( check->r.currentOrigin, 48, team, attacker ) < threshold )
+		{
+			return check;
 		}
 	}
 

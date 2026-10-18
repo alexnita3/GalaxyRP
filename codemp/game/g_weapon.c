@@ -132,6 +132,8 @@ static vec3_t muzzle;
 extern qboolean G_BoxInBounds( vec3_t point, vec3_t mins, vec3_t maxs, vec3_t boundsMins, vec3_t boundsMaxs );
 extern qboolean G_HeavyMelee( gentity_t *attacker );
 extern void Jedi_Decloak( gentity_t *self );
+extern void Jedi_DecloakPair( gentity_t *self );
+extern qboolean Jedi_PairIsCloaked( gentity_t *self );
 
 static void WP_FireEmplaced( gentity_t *ent, qboolean altFire );
 
@@ -209,10 +211,10 @@ BRYAR PISTOL
 static void WP_FireBryarPistol( gentity_t *ent, qboolean altFire, int weapon )
 //---------------------------------------------------------
 {
-	int damage = zyk_blaster_pistol_damage.integer;
+	int damage = rp_blaster_pistol_damage.integer;
 	int count;
 
-	gentity_t	*missile = CreateMissile( muzzle, forward, zyk_blaster_pistol_velocity.integer, 10000, ent, altFire );
+	gentity_t	*missile = CreateMissile( muzzle, forward, rp_blaster_pistol_velocity.integer, 10000, ent, altFire );
 
 	missile->classname = "bryar_proj";
 	missile->s.weapon = WP_BRYAR_PISTOL;
@@ -271,42 +273,6 @@ static void WP_FireBryarPistol( gentity_t *ent, qboolean altFire, int weapon )
 	{
 		missile->methodOfDeath = MOD_BRYAR_PISTOL;
 	}
-	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
-
-	// we don't want it to bounce forever
-	missile->bounceCount = 8;
-}
-
-// zyk: used by Wrist Shot ability
-void zyk_WP_FireBryarPistol(gentity_t *ent)
-//---------------------------------------------------------
-{
-	int damage = zyk_blaster_pistol_damage.integer * 8;
-	int count = 5;
-	float boxSize = BRYAR_ALT_SIZE*(2.5);
-
-	vec3_t zyk_origin, dir, zyk_forward;
-
-	VectorSet(dir, ent->client->ps.viewangles[0], ent->client->ps.viewangles[1], 0);
-	VectorSet(zyk_origin, ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2] + 34);
-
-	AngleVectors(dir, zyk_forward, NULL, NULL);
-
-	gentity_t	*missile = CreateMissile(zyk_origin, zyk_forward, zyk_blaster_pistol_velocity.integer, 10000, ent, qtrue);
-
-	missile->classname = "bryar_proj";
-	missile->s.weapon = WP_BRYAR_PISTOL;
-
-	missile->s.generic1 = count; // The missile will then render according to the charge level.
-
-	VectorSet(missile->r.maxs, boxSize, boxSize, boxSize);
-	VectorSet(missile->r.mins, -boxSize, -boxSize, -boxSize);
-
-	missile->damage = damage;
-	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-
-	missile->methodOfDeath = MOD_BRYAR_PISTOL_ALT;
-
 	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
 
 	// we don't want it to bounce forever
@@ -433,8 +399,8 @@ BLASTER
 void WP_FireBlasterMissile( gentity_t *ent, vec3_t start, vec3_t dir, qboolean altFire )
 //---------------------------------------------------------
 {
-	int velocity	= zyk_e11_blaster_rifle_velocity.integer;
-	int	damage		= zyk_e11_blaster_rifle_damage.integer;
+	int velocity	= rp_e11_blaster_rifle_velocity.integer;
+	int	damage		= rp_e11_blaster_rifle_damage.integer;
 	gentity_t *missile;
 
 	missile = CreateMissile( start, dir, velocity, 10000, ent, altFire );
@@ -496,8 +462,8 @@ void WP_FireTurboLaserMissile( gentity_t *ent, vec3_t start, vec3_t dir )
 void WP_FireEmplacedMissile( gentity_t *ent, vec3_t start, vec3_t dir, qboolean altFire, gentity_t *ignore )
 //---------------------------------------------------------
 {
-	int velocity	= zyk_e11_blaster_rifle_velocity.integer;
-	int	damage		= zyk_e11_blaster_rifle_damage.integer;
+	int velocity	= rp_e11_blaster_rifle_velocity.integer;
+	int	damage		= rp_e11_blaster_rifle_damage.integer;
 	gentity_t *missile;
 
 	missile = CreateMissile( start, dir, velocity, 10000, ent, altFire );
@@ -564,7 +530,7 @@ DISRUPTOR
 static void WP_DisruptorMainFire( gentity_t *ent )
 //---------------------------------------------------------
 {
-	int			damage = zyk_disruptor_damage.integer;
+	int			damage = rp_disruptor_damage.integer;
 	qboolean	render_impact = qtrue;
 	vec3_t		start, end;
 	trace_t		tr;
@@ -626,7 +592,7 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 		}
 		else if (traceEnt && traceEnt->client && traceEnt->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] >= FORCE_LEVEL_3)
 		{
-			if (WP_SaberCanBlock(traceEnt, tr.endpos, 0, MOD_DISRUPTOR, qtrue, 0))
+			if (WP_SaberCanBlock(traceEnt, ent, tr.endpos, 0, MOD_DISRUPTOR, qtrue, 0))
 			{ //broadcast and stop the shot because it was blocked
 				gentity_t *te = NULL;
 
@@ -648,7 +614,10 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 				return;
 			}
 		}
-		else if ( (traceEnt->flags&FL_SHIELDED) || zyk_can_deflect_shots(traceEnt))
+		// GalaxyRP fix: [Upgrades] dropped the zyk_can_deflect_shots(traceEnt) disjunct here — the
+		// function was a stub always returning qfalse after Armored Soldier Upgrade (its only
+		// possible source of qtrue) was removed as inert/non-functional
+		else if ( traceEnt->flags&FL_SHIELDED )
 		{//stopped cold
 			return;
 		}
@@ -670,7 +639,10 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 
 	if ( render_impact )
 	{
-		if ( tr.entityNum < ENTITYNUM_WORLD && traceEnt->takedamage && zyk_can_deflect_shots(traceEnt) == qfalse)
+		// GalaxyRP fix: [Upgrades] dropped the zyk_can_deflect_shots(traceEnt)==qfalse conjunct here —
+		// the function was a stub always returning qfalse after Armored Soldier Upgrade (its only
+		// possible source of qtrue) was removed as inert/non-functional, so the conjunct was always true
+		if ( tr.entityNum < ENTITYNUM_WORLD && traceEnt->takedamage )
 		{
 			if ( traceEnt->client && LogAccuracyHit( traceEnt, ent ))
 			{
@@ -735,50 +707,11 @@ void WP_DisruptorAltFire( gentity_t *ent )
 	int			traces = DISRUPTOR_ALT_TRACES;
 	qboolean	fullCharge = qfalse;
 
-	damage = zyk_disruptor_alt_damage.integer-30;
+	damage = rp_disruptor_alt_damage.integer-30;
 
 	//VectorCopy( muzzle, muzzle2 ); // making a backup copy
 
-	if (ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 5 && ent->client->pers.player_statuses & (1 << 23))
-	{ // zyk: Stealth Attacker Aimed Shot ability
-		if (ent->client->pers.unique_skill_user_id > -1)
-		{ // zyk: if we have a target, shoot at him
-			gentity_t *target_ent = &g_entities[ent->client->pers.unique_skill_user_id];
-			vec3_t zyk_dir, zyk_enemy_origin;
-
-			// zyk: make it a full charged shot
-			ent->client->ps.weaponChargeTime = level.time - 2000;
-
-			VectorCopy(ent->client->ps.origin, muzzle);
-			muzzle[2] += 18;
-
-			VectorCopy(target_ent->client->ps.origin, zyk_enemy_origin);
-			if (target_ent->client->ps.pm_flags & PMF_DUCKED) // zyk: crouched
-			{
-				zyk_enemy_origin[2] -= 24;
-			}
-
-			VectorSubtract(zyk_enemy_origin, muzzle, zyk_dir);
-			VectorNormalize(zyk_dir);
-
-			VectorCopy(zyk_dir, forward);
-		}
-		else
-		{ // zyk if no target, shoot forward
-			vec3_t zyk_dir;
-
-			// zyk: make it a full charged shot
-			ent->client->ps.weaponChargeTime = level.time - 2000;
-
-			VectorCopy(ent->client->ps.origin, muzzle);
-			muzzle[2] += 18;
-
-			AngleVectors(ent->client->ps.viewangles, zyk_dir, NULL, NULL);
-			VectorNormalize(zyk_dir);
-
-			VectorCopy(zyk_dir, forward);
-		}
-	}
+	// GalaxyRP fix: [RPG Class] removed Stealth Attacker (rpg_class==5) Aimed Shot ability block; rpg_class is permanently 0
 
 	if (ent->client)
 	{
@@ -889,7 +822,7 @@ void WP_DisruptorAltFire( gentity_t *ent )
 		}
 		else if (traceEnt && traceEnt->client && traceEnt->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] >= FORCE_LEVEL_3)
 		{
-			if (WP_SaberCanBlock(traceEnt, tr.endpos, 0, MOD_DISRUPTOR_SNIPER, qtrue, 0))
+			if (WP_SaberCanBlock(traceEnt, ent, tr.endpos, 0, MOD_DISRUPTOR_SNIPER, qtrue, 0))
 			{ //broadcast and stop the shot because it was blocked
 				gentity_t *te = NULL;
 
@@ -966,7 +899,10 @@ void WP_DisruptorAltFire( gentity_t *ent )
 				break; // and don't try any more traces
 			}
 
-			if ( (traceEnt->flags&FL_SHIELDED) || zyk_can_deflect_shots(traceEnt))
+			// GalaxyRP fix: [Upgrades] dropped the zyk_can_deflect_shots(traceEnt) disjunct here — the
+			// function was a stub always returning qfalse after Armored Soldier Upgrade (its only
+			// possible source of qtrue) was removed as inert/non-functional
+			if ( traceEnt->flags&FL_SHIELDED )
 			{//stops us cold
 				break;
 			}
@@ -1063,9 +999,9 @@ BOWCASTER
 
 static void WP_BowcasterAltFire( gentity_t *ent )
 {
-	int	damage	= zyk_bowcaster_damage.integer;
+	int	damage	= rp_bowcaster_damage.integer;
 
-	gentity_t *missile = CreateMissile( muzzle, forward, zyk_bowcaster_velocity.integer, 10000, ent, qfalse);
+	gentity_t *missile = CreateMissile( muzzle, forward, rp_bowcaster_velocity.integer, 10000, ent, qfalse);
 
 	missile->classname = "bowcaster_proj";
 	missile->s.weapon = WP_BOWCASTER;
@@ -1094,7 +1030,7 @@ static void WP_BowcasterAltFire( gentity_t *ent )
 static void WP_BowcasterMainFire( gentity_t *ent )
 //---------------------------------------------------------
 {
-	int	damage	= zyk_bowcaster_damage.integer, count;
+	int	damage	= rp_bowcaster_damage.integer, count;
 	float bowcaster_spread = BOWCASTER_ALT_SPREAD;
 	float		vel;
 	vec3_t		angs, dir;
@@ -1142,7 +1078,7 @@ static void WP_BowcasterMainFire( gentity_t *ent )
 	for (i = 0; i < count; i++ )
 	{
 		// create a range of different velocities
-		vel = zyk_bowcaster_velocity.integer * ( Q_flrand(-1.0f, 1.0f) * BOWCASTER_VEL_RANGE + 1.0f );
+		vel = rp_bowcaster_velocity.integer * ( Q_flrand(-1.0f, 1.0f) * BOWCASTER_VEL_RANGE + 1.0f );
 
 		vectoangles( forward, angs );
 
@@ -1202,9 +1138,9 @@ REPEATER
 static void WP_RepeaterMainFire( gentity_t *ent, vec3_t dir )
 //---------------------------------------------------------
 {
-	int	damage	= zyk_repeater_damage.integer;
+	int	damage	= rp_repeater_damage.integer;
 
-	gentity_t *missile = CreateMissile( muzzle, dir, zyk_repeater_velocity.integer, 10000, ent, qfalse );
+	gentity_t *missile = CreateMissile( muzzle, dir, rp_repeater_velocity.integer, 10000, ent, qfalse );
 
 	missile->classname = "repeater_proj";
 	missile->s.weapon = WP_REPEATER;
@@ -1225,10 +1161,10 @@ static void WP_RepeaterMainFire( gentity_t *ent, vec3_t dir )
 static void WP_RepeaterAltFire( gentity_t *ent )
 //---------------------------------------------------------
 {
-	int	damage	= zyk_repeater_alt_damage.integer;
-	int splash_damage = zyk_repeater_alt_splash_damage.integer;
+	int	damage	= rp_repeater_alt_damage.integer;
+	int splash_damage = rp_repeater_alt_splash_damage.integer;
 
-	gentity_t *missile = CreateMissile( muzzle, forward, zyk_repeater_alt_velocity.integer, 10000, ent, qtrue );
+	gentity_t *missile = CreateMissile( muzzle, forward, rp_repeater_alt_velocity.integer, 10000, ent, qtrue );
 
 	missile->classname = "repeater_alt_proj";
 	missile->s.weapon = WP_REPEATER;
@@ -1306,9 +1242,9 @@ DEMP2
 
 static void WP_DEMP2_MainFire( gentity_t *ent )
 {
-	int	damage	= zyk_demp2_damage.integer;
+	int	damage	= rp_demp2_damage.integer;
 
-	gentity_t *missile = CreateMissile( muzzle, forward, zyk_demp2_velocity.integer, 10000, ent, qfalse);
+	gentity_t *missile = CreateMissile( muzzle, forward, rp_demp2_velocity.integer, 10000, ent, qfalse);
 
 	missile->classname = "demp2_proj";
 	missile->s.weapon = WP_DEMP2;
@@ -1447,15 +1383,11 @@ void DEMP2_AltRadiusDamage( gentity_t *ent )
 						gent->client->ps.electrifyTime = level.time + Q_irand( 300, 800 );
 					}
 				}
-				if ( gent->client->ps.powerups[PW_CLOAKED] )
-				{//disable cloak temporarily
-					if (myOwner->client->pers.guardian_mode == gent->client->pers.guardian_mode && 
-						(gent->client->sess.amrpgmode < 2 || gent->client->pers.rpg_class != 5))
-					{ // zyk: Stealth Attacker cloak does not decloak by DEMP2 attack. Also, non-quest players cant decloak quest players in boss battle and vice-versa
-						Jedi_Decloak( gent );
-						gent->client->cloakToggleTime = level.time + Q_irand( 3000, 10000 );
-					}
-				}
+				// GalaxyRP fix: [Cloak Item] the explicit decloak-on-hit block that used to be here is
+				// gone -- the G_Damage() call just above this block already runs through the new
+				// centralized "any damage decloaks" hook (see G_Damage's own GalaxyRP fix comment in
+				// g_combat.c), which covers this exact hit generically now, pair-aware and with the same
+				// temporary re-cloak lockout.
 			}
 		}
 	}
@@ -1505,7 +1437,7 @@ void DEMP2_AltDetonate( gentity_t *ent )
 static void WP_DEMP2_AltFire( gentity_t *ent )
 //---------------------------------------------------------
 {
-	int		damage	= zyk_demp2_alt_damage.integer;
+	int		damage	= rp_demp2_alt_damage.integer;
 	int		count, origcount;
 	float	fact;
 	vec3_t	start, end;
@@ -1585,196 +1517,17 @@ static void WP_FireDEMP2( gentity_t *ent, qboolean altFire )
 	}
 }
 
-extern qboolean npcs_on_same_team(gentity_t *attacker, gentity_t *target);
-extern qboolean zyk_check_immunity_power(gentity_t *ent);
-void zyk_lightning_dome_radius_damage( gentity_t *ent )
-{
-	float		frac = ( level.time - ent->genericValue5 ) / 800.0f; // / 1600.0f; // synchronize with demp2 effect
-	float		dist, radius, fact;
-	gentity_t	*gent;
-	int			iEntityList[MAX_GENTITIES];
-	gentity_t	*entityList[MAX_GENTITIES];
-	gentity_t	*myOwner = NULL;
-	int			numListedEntities, i, e;
-	vec3_t		mins, maxs;
-	vec3_t		v, dir;
-
-	if (ent->r.ownerNum >= 0 &&
-		ent->r.ownerNum < /*MAX_CLIENTS ... let npc's/shooters use it*/MAX_GENTITIES)
-	{
-		myOwner = &g_entities[ent->r.ownerNum];
-	}
-
-	if (!myOwner || !myOwner->inuse || !myOwner->client)
-	{
-		ent->think = G_FreeEntity;
-		ent->nextthink = level.time;
-		return;
-	}
-
-	frac *= frac * frac; // yes, this is completely ridiculous...but it causes the shell to grow slowly then "explode" at the end
-
-	radius = frac * 200.0f; // 200 is max radius...the model is aprox. 100 units tall...the fx draw code mults. this by 2.
-
-	fact = ent->count*0.6;
-
-	if (fact < 1)
-	{
-		fact = 1;
-	}
-
-	radius *= fact;
-
-	for ( i = 0 ; i < 3 ; i++ )
-	{
-		mins[i] = ent->r.currentOrigin[i] - radius;
-		maxs[i] = ent->r.currentOrigin[i] + radius;
-	}
-
-	numListedEntities = trap->EntitiesInBox( mins, maxs, iEntityList, MAX_GENTITIES );
-
-	i = 0;
-	while (i < numListedEntities)
-	{
-		entityList[i] = &g_entities[iEntityList[i]];
-		i++;
-	}
-
-	for ( e = 0 ; e < numListedEntities ; e++ )
-	{
-		gent = entityList[ e ];
-
-		if ( !gent || !gent->takedamage || !gent->r.contents )
-		{
-			continue;
-		}
-
-		// find the distance from the edge of the bounding box
-		for ( i = 0 ; i < 3 ; i++ )
-		{
-			if ( ent->r.currentOrigin[i] < gent->r.absmin[i] )
-			{
-				v[i] = gent->r.absmin[i] - ent->r.currentOrigin[i];
-			}
-			else if ( ent->r.currentOrigin[i] > gent->r.absmax[i] )
-			{
-				v[i] = ent->r.currentOrigin[i] - gent->r.absmax[i];
-			}
-			else
-			{
-				v[i] = 0;
-			}
-		}
-
-		// shape is an ellipsoid, so cut vertical distance in half`
-		v[2] *= 0.5f;
-
-		dist = VectorLength( v );
-
-		if ( dist >= radius )
-		{
-			// shockwave hasn't hit them yet
-			continue;
-		}
-
-		if (dist+(16*ent->count) < ent->genericValue6)
-		{
-			// shockwave has already hit this thing...
-			continue;
-		}
-
-		VectorCopy( gent->r.currentOrigin, v );
-		VectorSubtract( v, ent->r.currentOrigin, dir);
-
-		// push the center of mass higher than the origin so players get knocked into the air more
-		dir[2] += 12;
-
-		if (gent != myOwner)
-		{
-			if (gent->client && myOwner->client->pers.rpg_class != 3 && zyk_check_immunity_power(gent))
-			{ // zyk: Immunity Power users cannot be hit by Lightning Dome, but can be hit by Lightning Shield discharge
-				continue;
-			}
-
-			if (OnSameTeam(myOwner, gent) == qtrue || npcs_on_same_team(myOwner, gent) == qtrue)
-			{ // zyk: dont hit players or npcs on the same team
-				continue;
-			}
-
-			G_Damage( gent, myOwner, myOwner, dir, ent->r.currentOrigin, ent->damage, DAMAGE_DEATH_KNOCKBACK, ent->splashMethodOfDeath );
-			if ( gent->takedamage
-				&& gent->client )
-			{
-				if ( gent->client->ps.electrifyTime < level.time )
-				{//electrocution effect
-					if (gent->s.eType == ET_NPC && gent->s.NPC_class == CLASS_VEHICLE &&
-						gent->m_pVehicle && (gent->m_pVehicle->m_pVehicleInfo->type == VH_SPEEDER || gent->m_pVehicle->m_pVehicleInfo->type == VH_WALKER))
-					{ //do some extra stuff to speeders/walkers
-						gent->client->ps.electrifyTime = level.time + Q_irand( 3000, 4000 );
-					}
-					else if ( gent->s.NPC_class != CLASS_VEHICLE
-						|| (gent->m_pVehicle && gent->m_pVehicle->m_pVehicleInfo->type != VH_FIGHTER) )
-					{//don't do this to fighters
-						// zyk: Universe Power
-						if (myOwner->client->pers.quest_power_status & (1 << 13))
-							gent->client->ps.electrifyTime = level.time + Q_irand( 1000, 2000 );
-						else
-							gent->client->ps.electrifyTime = level.time + Q_irand( 300, 800 );
-					}
-				}
-				if ( gent->client->ps.powerups[PW_CLOAKED] )
-				{//disable cloak temporarily
-					if (myOwner->client->pers.guardian_mode == gent->client->pers.guardian_mode && 
-						(gent->client->sess.amrpgmode < 2 || gent->client->pers.rpg_class != 5))
-					{ // zyk: Stealth Attacker cloak does not decloak by DEMP2 attack. Also, non-quest players cant decloak quest players in boss battle and vice-versa
-						Jedi_Decloak( gent );
-						gent->client->cloakToggleTime = level.time + Q_irand( 3000, 10000 );
-					}
-				}
-			}
-		}
-	}
-
-	// store the last fraction so that next time around we can test against those things that fall between that last point and where the current shockwave edge is
-	ent->genericValue6 = radius;
-
-	if ( frac < 1.0f )
-	{
-		// shock is still happening so continue letting it expand
-		ent->nextthink = level.time + 50;
-	}
-	else
-	{ //don't just leave the entity around
-		ent->think = G_FreeEntity;
-		ent->nextthink = level.time;
-	}
-}
+// GalaxyRP fix: [Magic] zyk_lightning_dome_radius_damage() used to be here, the growing-shell
+// damage think for the Lightning Dome. See the note at zyk_lightning_dome_detonate() below: that
+// function was its only setter and had no callers of its own. The two externs that stood here --
+// npcs_on_same_team() and zyk_check_immunity_power() -- existed solely for it and went with it;
+// both functions have since been deleted with the rest of the magic engine.
 
 //---------------------------------------------------------
-void zyk_lightning_dome_detonate( gentity_t *ent )
-//---------------------------------------------------------
-{
-	gentity_t *efEnt;
-
-	G_SetOrigin( ent, ent->r.currentOrigin );
-	if (!ent->pos1[0] && !ent->pos1[1] && !ent->pos1[2])
-	{ //don't play effect with a 0'd out directional vector
-		ent->pos1[1] = 1;
-	}
-	//Let's just save ourself some bandwidth and play both the effect and sphere spawn in 1 event
-	efEnt = G_PlayEffect( EFFECT_EXPLOSION_DEMP2ALT, ent->r.currentOrigin, ent->pos1 );
-
-	if (efEnt)
-	{
-		efEnt->s.weapon = ent->count*2;
-	}
-
-	ent->genericValue5 = level.time;
-	ent->genericValue6 = 0;
-	ent->nextthink = level.time + 50;
-	ent->think = zyk_lightning_dome_radius_damage;
-	ent->s.eType = ET_GENERAL; // make us a missile no longer
-}
+// GalaxyRP fix: [Magic] zyk_lightning_dome_detonate() used to be here. It had no callers anywhere
+// in the tree -- the Lightning Dome power that fired it went with the magic dispatch -- and it was
+// the only thing that ever set zyk_lightning_dome_radius_damage() as a think, so the pair was
+// unreachable together and has been removed together.
 
 /*
 ======================================================================
@@ -1810,7 +1563,7 @@ static void WP_FlechetteMainFire( gentity_t *ent )
 
 		AngleVectors( angs, fwd, NULL, NULL );
 
-		missile = CreateMissile( muzzle, fwd, zyk_flechette_velocity.integer, 10000, ent, qfalse);
+		missile = CreateMissile( muzzle, fwd, rp_flechette_velocity.integer, 10000, ent, qfalse);
 
 		missile->classname = "flech_proj";
 		missile->s.weapon = WP_FLECHETTE;
@@ -1818,7 +1571,7 @@ static void WP_FlechetteMainFire( gentity_t *ent )
 		VectorSet( missile->r.maxs, FLECHETTE_SIZE, FLECHETTE_SIZE, FLECHETTE_SIZE );
 		VectorScale( missile->r.maxs, -1, missile->r.mins );
 
-		missile->damage = zyk_flechette_damage.integer;
+		missile->damage = rp_flechette_damage.integer;
 		missile->dflags = DAMAGE_DEATH_KNOCKBACK;
 		missile->methodOfDeath = MOD_FLECHETTE;
 		missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
@@ -1925,7 +1678,7 @@ static void WP_CreateFlechetteBouncyThing( vec3_t start, vec3_t fwd, gentity_t *
 //------------------------------------------------------------------------------
 {
 	// zyk: gentity_t	*missile = CreateMissile( start, fwd, 700 + Q_flrand(0.0f, 1.0f) * 700, 1500 + Q_flrand(0.0f, 1.0f) * 2000, self, qtrue );
-	gentity_t	*missile = CreateMissile( start, fwd, zyk_flechette_alt_velocity.integer, 1500 + Q_flrand(0.0f, 1.0f) * 2000, self, qtrue );
+	gentity_t	*missile = CreateMissile( start, fwd, rp_flechette_alt_velocity.integer, 1500 + Q_flrand(0.0f, 1.0f) * 2000, self, qtrue );
 
 	missile->think = WP_flechette_alt_blow;
 
@@ -1950,9 +1703,9 @@ static void WP_CreateFlechetteBouncyThing( vec3_t start, vec3_t fwd, gentity_t *
 
 	missile->bounceCount = 50;
 
-	missile->damage = zyk_flechette_alt_damage.integer;
+	missile->damage = rp_flechette_alt_damage.integer;
 	missile->dflags = 0;
-	missile->splashDamage = zyk_flechette_alt_splash_damage.integer;
+	missile->splashDamage = rp_flechette_alt_splash_damage.integer;
 	missile->splashRadius = FLECHETTE_ALT_SPLASH_RAD;
 
 	missile->r.svFlags = SVF_USE_CURRENT_ORIGIN;
@@ -2021,7 +1774,7 @@ void rocketThink( gentity_t *ent )
 	vec3_t	org;
 	float dot, dot2, dis;
 	int i;
-	float vel = (ent->spawnflags&1)?ent->speed:zyk_rocket_alt_velocity.integer;
+	float vel = (ent->spawnflags&1)?ent->speed:rp_rocket_alt_velocity.integer;
 
 	if ( ent->genericValue1 && ent->genericValue1 < level.time )
 	{//time's up, we're done, remove us
@@ -2128,6 +1881,11 @@ void rocketThink( gentity_t *ent )
 
 			// let's also slow down a lot
 			// vel *= 0.5f; zyk: no longer slow it down. Cvar controls its velocity
+			// DAJ_RP fix: [Vehicles] a vehicle's homing missile does, as stock -- see below
+			if ( (ent->spawnflags&1) )
+			{//vehicle rocket
+				vel *= 0.5f;
+			}
 		}
 		else if ( dot < 0.70f )
 		{
@@ -2164,6 +1922,16 @@ void rocketThink( gentity_t *ent )
 
 		VectorNormalize( newdir );
 
+		// DAJ_RP fix: [Vehicles] a vehicle's homing missile flies at half its speed while it homes, and at a quarter
+		// while it turns back for a target behind it, as stock. zyk dropped both halvings for the hand-held rocket,
+		// whose speed rp_rocket_alt_velocity sets now, and they went for vehicle missiles too: twice as fast, the
+		// same turn every think, so twice the turning circle -- a missile overshot a turning fighter, came to have
+		// it behind it and gave it up for good (homingFOV, above). The hand-held rocket keeps its cvar speed.
+		if ( (ent->spawnflags&1) )
+		{//vehicle rocket
+			vel *= 0.5f;
+		}
+
 		VectorScale( newdir, vel /* * 0.5f */, ent->s.pos.trDelta ); // zyk: no more scale the rocket velocity here
 		VectorCopy( newdir, ent->movedir );
 		SnapVector( ent->s.pos.trDelta );			// save net bandwidth
@@ -2191,16 +1959,16 @@ void RocketDie(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int d
 static void WP_FireRocket( gentity_t *ent, qboolean altFire )
 //---------------------------------------------------------
 {
-	int	damage	= zyk_rocket_damage.integer;
-	int splash_damage = zyk_rocket_splash_damage.integer;
-	int	vel = zyk_rocket_velocity.integer;
+	int	damage	= rp_rocket_damage.integer;
+	int splash_damage = rp_rocket_splash_damage.integer;
+	int	vel = rp_rocket_velocity.integer;
 	int dif = 0;
 	float rTime;
 	gentity_t *missile;
 
 	if ( altFire )
 	{
-		vel = zyk_rocket_alt_velocity.integer;
+		vel = rp_rocket_alt_velocity.integer;
 	}
 
 	missile = CreateMissile( muzzle, forward, vel, 30000, ent, altFire );
@@ -2276,68 +2044,6 @@ static void WP_FireRocket( gentity_t *ent, qboolean altFire )
 	{
 		splash_damage = (int)ceil(splash_damage * 1.12);
 	}
-
-	missile->splashDamage = splash_damage;
-	missile->splashRadius = ROCKET_SPLASH_RADIUS;
-
-	// we don't want it to ever bounce
-	missile->bounceCount = 0;
-}
-
-// zyk: used by Homing Rocket ability
-//---------------------------------------------------------
-void zyk_WP_FireRocket(gentity_t *ent)
-//---------------------------------------------------------
-{
-	int	damage = zyk_rocket_damage.integer * 2.1;
-	int splash_damage = zyk_rocket_splash_damage.integer * 2.1;
-	int	vel = zyk_rocket_velocity.integer * 1.2;
-	gentity_t *missile;
-	vec3_t zyk_origin, dir, zyk_forward;
-
-	// zyk: subtracts 90 to make rocket go up before targetting the enemy
-	VectorSet(dir, ent->client->ps.viewangles[0] - 90, ent->client->ps.viewangles[1], 0);
-	VectorSet(zyk_origin, ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2] + 20);
-
-	AngleVectors(dir, zyk_forward, NULL, NULL);
-
-	missile = CreateMissile(zyk_origin, zyk_forward, vel, 30000, ent, qfalse);
-
-	// zyk: sets the target
-	if (ent->client && ent->client->ps.rocketLockIndex != ENTITYNUM_NONE)
-	{
-		missile->enemy = &g_entities[ent->client->ps.rocketLockIndex];
-
-		missile->angle = 0.5f;
-		missile->think = rocketThink;
-		missile->nextthink = level.time + ROCKET_ALT_THINK_TIME;
-
-		ent->client->ps.rocketLockIndex = ENTITYNUM_NONE;
-		ent->client->ps.rocketLockTime = 0;
-		ent->client->ps.rocketTargetTime = 0;
-	}
-
-	missile->classname = "rocket_proj";
-	missile->s.weapon = WP_ROCKET_LAUNCHER;
-
-	// Make it easier to hit things
-	VectorSet(missile->r.maxs, ROCKET_SIZE, ROCKET_SIZE, ROCKET_SIZE);
-	VectorScale(missile->r.maxs, -1, missile->r.mins);
-
-	missile->damage = damage;
-	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-
-	missile->methodOfDeath = MOD_ROCKET_HOMING;
-	missile->splashMethodOfDeath = MOD_ROCKET_HOMING_SPLASH;
-
-	//===testing being able to shoot rockets out of the air==================================
-	missile->health = 10;
-	missile->takedamage = qtrue;
-	missile->r.contents = MASK_SHOT;
-	missile->die = RocketDie;
-	//===testing being able to shoot rockets out of the air==================================
-
-	missile->clipmask = MASK_SHOT;
 
 	missile->splashDamage = splash_damage;
 	missile->splashRadius = ROCKET_SPLASH_RADIUS;
@@ -2448,7 +2154,7 @@ gentity_t *WP_FireThermalDetonator( gentity_t *ent, qboolean altFire )
 	}
 
 	// get charge amount
-	chargeAmount = chargeAmount / zyk_thermal_velocity.value;
+	chargeAmount = chargeAmount / rp_thermal_velocity.value;
 
 	if ( chargeAmount > 1.0f )
 	{
@@ -2464,7 +2170,7 @@ gentity_t *WP_FireThermalDetonator( gentity_t *ent, qboolean altFire )
 	bolt->s.pos.trType = TR_GRAVITY;
 	bolt->parent = ent;
 	bolt->r.ownerNum = ent->s.number;
-	VectorScale( dir, zyk_thermal_velocity.integer * chargeAmount, bolt->s.pos.trDelta );
+	VectorScale( dir, rp_thermal_velocity.integer * chargeAmount, bolt->s.pos.trDelta );
 
 	if ( ent->health >= 0 )
 	{
@@ -2479,9 +2185,9 @@ gentity_t *WP_FireThermalDetonator( gentity_t *ent, qboolean altFire )
 	bolt->s.loopSound = G_SoundIndex( "sound/weapons/thermal/thermloop.wav" );
 	bolt->s.loopIsSoundset = qfalse;
 
-	bolt->damage = zyk_thermal_damage.integer;
+	bolt->damage = rp_thermal_damage.integer;
 	bolt->dflags = 0;
-	bolt->splashDamage = zyk_thermal_splash_damage.integer;
+	bolt->splashDamage = rp_thermal_splash_damage.integer;
 	bolt->splashRadius = TD_SPLASH_RAD;
 
 	bolt->s.eType = ET_MISSILE;
@@ -2498,79 +2204,6 @@ gentity_t *WP_FireThermalDetonator( gentity_t *ent, qboolean altFire )
 	VectorCopy (start, bolt->r.currentOrigin);
 
 	VectorCopy( start, bolt->pos2 );
-
-	bolt->bounceCount = -5;
-
-	return bolt;
-}
-
-// zyk: used by Thermal Throw ability
-gentity_t *zyk_WP_FireThermalDetonator(gentity_t *ent, int yaw)
-//---------------------------------------------------------
-{
-	gentity_t	*bolt;
-	vec3_t		dir, start;
-	float chargeAmount = 1.0f; // default of full charge
-
-	vec3_t zyk_origin, zyk_forward;
-
-	VectorSet(dir, ent->client->ps.viewangles[PITCH], yaw, 0);
-	VectorSet(zyk_origin, ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2] + 30);
-	AngleVectors(dir, zyk_forward, NULL, NULL);
-
-	VectorCopy(zyk_forward, dir);
-	VectorCopy(zyk_origin, start);
-
-	bolt = G_Spawn();
-
-	bolt->physicsObject = qtrue;
-
-	bolt->classname = "thermal_detonator";
-	bolt->think = thermalThinkStandard;
-	bolt->nextthink = level.time;
-	bolt->touch = touch_NULL;
-
-	// How 'bout we give this thing a size...
-	VectorSet(bolt->r.mins, -3.0f, -3.0f, -3.0f);
-	VectorSet(bolt->r.maxs, 3.0f, 3.0f, 3.0f);
-	bolt->clipmask = MASK_SHOT;
-
-	W_TraceSetStart(ent, start, bolt->r.mins, bolt->r.maxs);//make sure our start point isn't on the other side of a wall
-
-	// normal ones bounce, alt ones explode on impact
-	bolt->genericValue5 = level.time + TD_TIME; // How long 'til she blows
-	bolt->s.pos.trType = TR_GRAVITY;
-	bolt->parent = ent;
-	bolt->r.ownerNum = ent->s.number;
-	VectorScale(dir, zyk_thermal_velocity.integer * chargeAmount, bolt->s.pos.trDelta);
-
-	if (ent->health >= 0)
-	{
-		bolt->s.pos.trDelta[2] += 120;
-	}
-
-	bolt->s.loopSound = G_SoundIndex("sound/weapons/thermal/thermloop.wav");
-	bolt->s.loopIsSoundset = qfalse;
-
-	bolt->damage = zyk_thermal_damage.integer * 1.05;
-	bolt->dflags = 0;
-	bolt->splashDamage = zyk_thermal_splash_damage.integer * 1.05;
-	bolt->splashRadius = 160;
-
-	bolt->s.eType = ET_MISSILE;
-	bolt->r.svFlags = SVF_USE_CURRENT_ORIGIN;
-	bolt->s.weapon = WP_THERMAL;
-
-	bolt->methodOfDeath = MOD_THERMAL;
-	bolt->splashMethodOfDeath = MOD_THERMAL_SPLASH;
-
-	bolt->s.pos.trTime = level.time;		// move a bit on the very first frame
-	VectorCopy(start, bolt->s.pos.trBase);
-
-	SnapVector(bolt->s.pos.trDelta);			// save net bandwidth
-	VectorCopy(start, bolt->r.currentOrigin);
-
-	VectorCopy(start, bolt->pos2);
 
 	bolt->bounceCount = -5;
 
@@ -2850,7 +2483,7 @@ void proxMineThink(gentity_t *ent)
 	ent->nextthink = level.time + 100; // zyk: added some miliseconds to prevent slowdown
 
 	if (level.duel_tournament_mode == 4 && 
-		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * rp_duel_tournament_arena_scale.value / 100.0))
 	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
 		ent->nextthink = level.time + 50;
 		ent->think = laserTrapExplode;
@@ -2928,7 +2561,7 @@ void laserTrapThink ( gentity_t *ent )
 	ent->s.time = -1; //let all clients know to draw a beam from this guy
 
 	if (level.duel_tournament_mode == 4 && 
-		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * rp_duel_tournament_arena_scale.value / 100.0))
 	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
 		ent->touch = 0;
 		ent->nextthink = level.time + LT_DELAY_TIME;
@@ -3019,7 +2652,7 @@ void TrapThink(gentity_t *ent)
 	ent->nextthink = level.time + 50;
 
 	if (level.duel_tournament_mode == 4 && 
-		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * zyk_duel_tournament_arena_scale.value / 100.0))
+		Distance(ent->r.currentOrigin, level.duel_tournament_origin) < (DUEL_TOURNAMENT_ARENA_SIZE * rp_duel_tournament_arena_scale.value / 100.0))
 	{ // zyk: cannot place it inside a Duel Tornament arena, in this case, remove it
 		ent->touch = 0;
 		ent->think = laserTrapExplode;
@@ -3034,9 +2667,9 @@ void CreateLaserTrap( gentity_t *laserTrap, vec3_t start, gentity_t *owner )
 	laserTrap->classname = "laserTrap";
 	laserTrap->flags |= FL_BOUNCE_HALF;
 	laserTrap->s.eFlags |= EF_MISSILE_STICK;
-	laserTrap->splashDamage = zyk_tripmine_splash_damage.integer;
+	laserTrap->splashDamage = rp_tripmine_splash_damage.integer;
 	laserTrap->splashRadius = LT_SPLASH_RAD;
-	laserTrap->damage = zyk_tripmine_damage.integer;
+	laserTrap->damage = rp_tripmine_damage.integer;
 	laserTrap->methodOfDeath = MOD_TRIP_MINE_SPLASH;
 	laserTrap->splashMethodOfDeath = MOD_TRIP_MINE_SPLASH;
 	laserTrap->s.eType = ET_GENERAL;
@@ -3363,8 +2996,8 @@ void drop_charge (gentity_t *self, vec3_t start, vec3_t dir)
 
 	bolt->parent = self;
 	bolt->r.ownerNum = self->s.number;
-	bolt->damage = zyk_detpack_damage.integer; // zyk: default 100
-	bolt->splashDamage = zyk_detpack_splash_damage.integer; // zyk: default 200
+	bolt->damage = rp_detpack_damage.integer; // zyk: default 100
+	bolt->splashDamage = rp_detpack_splash_damage.integer; // zyk: default 200
 	bolt->splashRadius = 200;
 	bolt->methodOfDeath = MOD_DET_PACK_SPLASH;
 	bolt->splashMethodOfDeath = MOD_DET_PACK_SPLASH;
@@ -3551,7 +3184,7 @@ void WP_DropDetPack( gentity_t *ent, qboolean alt_fire )
 
 static void WP_FireConcussionAlt( gentity_t *ent )
 {//a rail-gun-like beam
-	int			damage = zyk_concussion_alt_damage.integer, skip, traces = DISRUPTOR_ALT_TRACES;
+	int			damage = rp_concussion_alt_damage.integer, skip, traces = DISRUPTOR_ALT_TRACES;
 	qboolean	render_impact = qtrue;
 	vec3_t		start, end;
 	vec3_t		/*muzzle2,*/ dir;
@@ -3680,11 +3313,7 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 						ent->client->accuracy_hits++;
 					}
 
-					if (traceEnt->client && ent->client->pers.guardian_mode != traceEnt->client->pers.guardian_mode &&
-						!(ent->client->pers.guardian_mode > 0 && traceEnt->NPC && traceEnt->client->pers.guardian_mode == 0))
-					{ // zyk: non quest player cant hit quest players in boss battles and vice-versa
-						break;
-					}
+					// GalaxyRP fix: [Guardian] removed always-false guardian_mode mismatch check (guardian_mode permanently 0)
 
 					noKnockBack = (traceEnt->flags&FL_NO_KNOCKBACK);//will be set if they die, I want to know if it was on *before* they died
 					if ( traceEnt && traceEnt->client && traceEnt->client->NPC_class == CLASS_GALAKMECH )
@@ -3717,10 +3346,7 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 								break;
 							}
 
-							if (traceEnt->client->sess.amrpgmode == 2 && traceEnt->client->pers.rpg_class == 9)
-							{ // zyk: Force Guardian cannot be knocked down
-								break;
-							}
+							// GalaxyRP fix: [RPG Class] removed always-false Force Guardian (rpg_class==9) knockdown-immunity check
 
 							if (traceEnt->client->ps.duelInProgress == qtrue)
 							{ // zyk: players in private duels cannot be knocked down
@@ -3842,8 +3468,8 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 static void WP_FireConcussion( gentity_t *ent )
 {//a fast rocket-like projectile
 	vec3_t	start;
-	int		damage	= zyk_concussion_damage.integer;
-	float	vel = zyk_concussion_velocity.integer;
+	int		damage	= rp_concussion_damage.integer;
+	float	vel = rp_concussion_velocity.integer;
 	gentity_t *missile;
 
 	//hold us still for a bit
@@ -3878,7 +3504,7 @@ static void WP_FireConcussion( gentity_t *ent )
 	missile->splashMethodOfDeath = MOD_CONC;
 
 	missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
-	missile->splashDamage = zyk_concussion_splash_damage.integer;
+	missile->splashDamage = rp_concussion_splash_damage.integer;
 	missile->splashRadius = CONC_SPLASH_RADIUS;
 
 	// we don't want it to ever bounce
@@ -3918,8 +3544,8 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 	trap->Trace ( &tr, muzzleStun, mins, maxs, end, ent->s.number, MASK_SHOT, qfalse, 0, 0 );
 
 	// zyk: starts flame thrower
-	if (ent->client && ent->client->sess.amrpgmode == 2 && alt_fire == qtrue && ent->client->pers.rpg_class != 1 && ent->client->pers.rpg_class != 4 && 
-		ent->client->pers.rpg_class != 6 && ent->client->pers.rpg_class != 8 && ent->client->pers.rpg_class != 9 && 
+	// GalaxyRP fix: [RPG Class] removed always-true rpg_class!=1/4/6/8/9 conjuncts (rpg_class permanently dead)
+	if (ent->client && ent->client->sess.amrpgmode == 2 && alt_fire == qtrue &&
 		ent->client->pers.skill_levels[57] > 0 && ent->client->ps.cloakFuel > 0 && ent->waterlevel < 3)
 	{ // zyk: do not use flame thrower when underwater
 		int flame_thrower_fuel_usage = 2;
@@ -3942,10 +3568,23 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 	tr_ent = &g_entities[tr.entityNum];
 
 	// zyk: Stun Baton with Stun Baton Upgrade in RPG Mode allows the player to open any door
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.secrets_found & (1 << 15) && tr_ent->s.eType == ET_MOVER && 
-		zyk_allow_stun_baton_upgrade.integer == 1)
+	// GalaxyRP fix: [Shop] Stun Baton Upgrade moved from secrets_found bit 15 (never persisted), to
+	// player_settings bit 2 (account-wide), to skill_levels[38] bit 2 (per-character) -- see g_local.h's
+	// skill_levels field.
+	// GalaxyRP fix: [Shop] cvar renamed from zyk_allow_stun_baton_upgrade to rp_stun_baton_door_unlock
+	// to match its actual scope -- it only ever gated this door-unlock effect, never the upgrade's
+	// speed-debuff effect below.
+	// GalaxyRP: [Shop] doors, plats and buttons are unlocked and activated for good and opened in the
+	// same hit, even inactive ones single player's scripts or droids would have activated -- see
+	// RP_StunBatonUseMover() in g_mover.c; every other mover gets the GlobalUse() it always did.
+	// A door that starts open and closes for good (wait -1) is reopened by it too.
+	// DAJ_RP: [Skills] this comes with Stun Baton skill level 5 now, not the shop's Stun Baton Upgrade, which
+	// keeps only the slow below. Forward-only: a character that bought the upgrade for this gets it back by
+	// raising the skill to 5.
+	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[18] >= 5 && tr_ent->s.eType == ET_MOVER &&
+		rp_stun_baton_door_unlock.integer == 1)
 	{
-		GlobalUse(tr_ent, ent, ent);
+		RP_StunBatonUseMover(tr_ent, ent);
 	}
 
 	if (tr_ent && tr_ent->takedamage && tr_ent->client)
@@ -3966,18 +3605,24 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 
 	if ( tr_ent && tr_ent->takedamage )
 	{
+		// DAJ_RP: [Shop] the target's damage tally for this frame, before the hit -- see the upgrade's slow below
+		const int hurtBefore = tr_ent->client ? tr_ent->client->damage_blood + tr_ent->client->damage_armor : 0;
+
 		G_PlayEffect( EFFECT_STUNHIT, tr.endpos, tr.plane.normal );
 
 		G_Sound( tr_ent, CHAN_WEAPON, G_SoundIndex( va("sound/weapons/melee/punch%d", Q_irand(1, 4)) ) );
 
 		// zyk: stun baton in RPG mode does more damage
+		// DAJ_RP: [Skills] up to level 4's; level 5 adds the mover use above, not damage
 		if (ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[18] > 1)
 		{
-			G_Damage( tr_ent, ent, ent, forward, tr.endpos, zyk_stun_baton_damage.integer * ent->client->pers.skill_levels[18], (DAMAGE_NO_KNOCKBACK|DAMAGE_HALF_ABSORB), MOD_STUN_BATON );
+			const int batonLevel = ent->client->pers.skill_levels[18] > 4 ? 4 : ent->client->pers.skill_levels[18];
+
+			G_Damage( tr_ent, ent, ent, forward, tr.endpos, rp_stun_baton_damage.integer * batonLevel, (DAMAGE_NO_KNOCKBACK|DAMAGE_HALF_ABSORB), MOD_STUN_BATON );
 		}
 		else
 		{
-			G_Damage( tr_ent, ent, ent, forward, tr.endpos, zyk_stun_baton_damage.integer, (DAMAGE_NO_KNOCKBACK|DAMAGE_HALF_ABSORB), MOD_STUN_BATON );
+			G_Damage( tr_ent, ent, ent, forward, tr.endpos, rp_stun_baton_damage.integer, (DAMAGE_NO_KNOCKBACK|DAMAGE_HALF_ABSORB), MOD_STUN_BATON );
 		}
 
 		if (tr_ent->client)
@@ -3995,25 +3640,21 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 			{
 				tr_ent->client->ps.electrifyTime = level.time + 700;
 
-				if (ent->client->pers.guardian_mode != tr_ent->client->pers.guardian_mode)
-				{ // zyk: non quest players cant hit quest players and vice-versa
-					if (!((ent->client->pers.guardian_mode == 12 || ent->client->pers.guardian_mode == 13) && tr_ent->NPC && 
-							(Q_stricmp(tr_ent->NPC_type, "guardian_of_universe") || Q_stricmp(tr_ent->NPC_type, "quest_reborn") || 
-							Q_stricmp(tr_ent->NPC_type, "quest_reborn_blue") || Q_stricmp(tr_ent->NPC_type, "quest_reborn_red") || 
-							Q_stricmp(tr_ent->NPC_type, "quest_reborn_boss")))
-						)
-					{
-						return;
-					}
-				}
+				// GalaxyRP fix: [Guardian] removed always-false guardian_mode mismatch check (guardian_mode permanently 0)
 
-				if (ent->client->sess.amrpgmode == 2 && ent->client->pers.secrets_found & (1 << 15) && (tr_ent->client->sess.amrpgmode < 2 || tr_ent->client->pers.rpg_class != 5) && tr_ent->client->ps.powerups[PW_CLOAKED])
-				{ // zyk: stun baton upgrade decloaks players except Stealth Attacker
-					Jedi_Decloak(tr_ent);
-				}
+				// GalaxyRP fix: [RPG Class] removed always-true guardian_mode/rpg_class decloak-immunity check
+				// GalaxyRP fix: [Shop] Stun Baton Upgrade moved from secrets_found bit 15 (never
+				// persisted), to player_settings bit 2 (account-wide), to skill_levels[38] bit 2
+				// (per-character) -- see g_local.h's skill_levels field.
+				// GalaxyRP fix: [Cloak Item] the Stun-Baton-Upgrade-exclusive decloak-on-hit block that
+				// used to be here is gone -- it's superseded by G_Damage()'s new centralized "any damage
+				// decloaks" hook (see G_Damage's own GalaxyRP fix comment in g_combat.c), which already
+				// ran for the G_Damage() call just above this point. That hook applies to any hit
+				// regardless of whether the attacker owns this upgrade, so the upgrade's decloak effect
+				// is no longer exclusive to it -- every hit decloaks now, not just Stun-Baton-Upgrade hits.
 
 				// zyk: if the player has stun baton upgrade in RPG mode, enemy has its speed decreased
-				if (ent->client->sess.amrpgmode == 2 && ent->client->pers.secrets_found & (1 << 15))
+				if (ent->client->sess.amrpgmode == 2 && ent->client->pers.skill_levels[38] & (1 << 2))
 				{
 					// zyk: allies cant be hit by it
 					if (zyk_is_ally(ent,tr_ent) == qtrue)
@@ -4021,20 +3662,31 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 						return;
 					}
 
-					// zyk: guardians cant be hit by it
-					if (tr_ent->client->pers.guardian_invoked_by_id != -1)
-					{
-						return;
-					}
+					// GalaxyRP fix: [Guardian] removed always-true guardian_invoked_by_id!=-1 check (guardian_invoked_by_id permanently -1)
 
-					// zyk: Stealth Attacker Upgrade protects against it
-					if (tr_ent->client->sess.amrpgmode == 2 && tr_ent->client->pers.rpg_class == 5 && tr_ent->client->pers.secrets_found & (1 << 7))
-					{
-						return;
-					}
+					// GalaxyRP fix: [RPG Class] removed always-false Stealth Attacker (rpg_class==5) protection check
 
 					if (zyk_can_hit_target(ent, tr_ent) == qfalse)
 					{ // zyk: testing if the target player can get hit by the stun baton
+						return;
+					}
+
+					// DAJ_RP: [Shop] only a hit that landed slows. G_Damage() above refuses a target for every
+					// reason that should spare it -- friendly fire off against a teammate or a rebel-team NPC,
+					// god mode, spawn or chat protection, /ally, a duel, the Duel Tournament, noclip -- and
+					// the slow used to be set regardless. Once G_Damage() accepts a hit it always adds at least
+					// 1 to the target's damage tally (damage is floored at 1, so rp_stun_baton_damage 0 still
+					// counts), so an unchanged tally means it was refused.
+					if (tr_ent->client->damage_blood + tr_ent->client->damage_armor <= hurtBefore)
+					{
+						return;
+					}
+
+					// DAJ_RP: [Shop] nor are the NPCs following you or one of your allies slowed, as /ally players
+					// are not above -- with friendly fire on (galaxyrp_server.cfg) they do take the hit itself
+					if (tr_ent->NPC && tr_ent->client->leader &&
+						(tr_ent->client->leader == ent || zyk_is_ally(ent, tr_ent->client->leader) == qtrue))
+					{
 						return;
 					}
 
@@ -4045,18 +3697,14 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 	}
 }
 
-int magic_fist_velocity(gentity_t *ent)
-{
-	int magic_bolt_speed = zyk_magic_fist_velocity.integer;
-
-	if (ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 8) &&
-		ent->client->pers.unique_skill_duration > level.time && ent->client->pers.player_statuses & (1 << 21))
-	{ // zyk: Magic Master Unique Ability 1 increases speed of magic bolt shots
-		magic_bolt_speed += (magic_bolt_speed * 0.2);
-	}
-
-	return magic_bolt_speed;
-}
+// GalaxyRP fix: [Magic] magic_fist_velocity() used to be defined here. It computed a launch speed
+// for the magic-bolt shot from zyk_magic_fist_velocity, with a 20% bonus for Magic Master Unique
+// Ability 1 -- and it had no callers anywhere in the tree, the magic-bolt weapon it served having
+// been removed long before. Its body was doubly dead on top of that: pers.unique_skill_duration is
+// written in four places and every one sets it to 0, so "> level.time" was permanently false, and
+// PLAYER_STATUS_UNIQUE_ABILITY_1 is one of the bits g_local.h already marks as never set.
+// Removed, and zyk_magic_fist_velocity / zyk_magic_fist_mp_cost with it -- this was their only
+// reader (see the note in g_xcvar.h).
 
 //---------------------------------------------------------
 // FireMelee
@@ -4090,412 +3738,7 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 	}
 	else
 	{
-		if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8)
-		{ // zyk: Magic Master fist attacks
-			if (ent->client->sess.magic_fist_selection == 0 && ent->client->pers.magic_power >= zyk_magic_fist_mp_cost.integer)
-			{ // zyk: Magic Bolt
-				vec3_t origin, dir, zyk_forward;
-				gentity_t *missile = NULL;
-
-				if (ent->client->ps.pm_flags & PMF_DUCKED) // zyk: crouched
-					VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 12);
-				else
-					VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 36);
-
-				VectorSet(dir, ent->client->ps.viewangles[0], ent->client->ps.viewangles[1], 0);
-
-				AngleVectors(dir, zyk_forward, NULL, NULL);
-
-				missile = CreateMissile(origin, zyk_forward, magic_fist_velocity(ent), 10000, ent, qfalse);
-
-				missile->classname = "bowcaster_proj";
-				missile->s.weapon = WP_BOWCASTER;
-
-				VectorSet(missile->r.maxs, BOWCASTER_SIZE, BOWCASTER_SIZE, BOWCASTER_SIZE);
-				VectorScale(missile->r.maxs, -1, missile->r.mins);
-
-				if (ent->client->pers.unique_skill_duration > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
-					!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
-				{// zyk: Unique Skill increases damage
-					missile->damage = zyk_magic_fist_damage.integer * 2;
-				}
-				else
-				{
-					missile->damage = zyk_magic_fist_damage.integer;
-				}
-
-				missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-				missile->methodOfDeath = MOD_MELEE;
-				missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
-
-				// we don't want it to bounce
-				missile->bounceCount = 0;
-
-				ent->client->pers.magic_power -= zyk_magic_fist_mp_cost.integer;
-
-				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/weapons/noghri/fire.mp3"));
-
-				send_rpg_events(2000);
-			}
-			else if (ent->client->sess.magic_fist_selection == 1 && ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 2))
-			{ // zyk: Electric Bolt
-				gentity_t	*missile;
-				vec3_t origin, dir, zyk_forward;
-				int fist_damage = (int)ceil(zyk_magic_fist_damage.integer * (1.6 + ((ent->client->pers.level * 1.0) / 200.0)));
-
-				if (ent->client->ps.pm_flags & PMF_DUCKED) // zyk: crouched
-					VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 12);
-				else
-					VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 36);
-			
-				VectorSet(dir, ent->client->ps.viewangles[0], ent->client->ps.viewangles[1], 0);
-
-				AngleVectors(dir, zyk_forward, NULL, NULL);
-
-				VectorNormalize(zyk_forward);
-
-				missile = CreateMissile(origin, zyk_forward, magic_fist_velocity(ent), 10000, ent, qfalse);
-
-				missile->classname = "demp2_proj";
-				missile->s.weapon = WP_DEMP2;
-
-				VectorSet(missile->r.maxs, 2, 2, 2);
-				VectorScale(missile->r.maxs, -1, missile->r.mins);
-
-				if (ent->client->pers.unique_skill_duration > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
-					!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
-				{ // zyk: Unique Skill increases damage
-					missile->damage = fist_damage * 2;
-				}
-				else
-				{
-					missile->damage = fist_damage;
-				}
-
-				missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-				missile->methodOfDeath = MOD_MELEE;
-				missile->clipmask = MASK_SHOT;
-
-				// we don't want it to ever bounce
-				missile->bounceCount = 0;
-
-				ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 2);
-
-				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/weapons/demp2/fire.mp3"));
-
-				send_rpg_events(2000);
-			}
-			else if (ent->client->sess.magic_fist_selection == 2 && ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 2))
-			{ // zyk: Instant-Hit Bolt
-				int skip, traces = DISRUPTOR_ALT_TRACES;
-				qboolean	render_impact = qtrue;
-				vec3_t		start, end;
-				vec3_t		origin, muzzle2, dir;
-				trace_t		tr;
-				gentity_t	*traceEnt, *tent;
-				float		shotRange = 8192.0f;
-				vec3_t shot_mins, shot_maxs;
-				int			i;
-				int damage = zyk_magic_fist_damage.integer * 1.2;
-
-				if (ent->client->pers.unique_skill_duration > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
-					!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
-				{// zyk: Unique Skill increases damage
-					damage *= 2;
-				}
-
-				if (ent->client->ps.pm_flags & PMF_DUCKED) // zyk: crouched
-					VectorSet(origin, ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2] + 12);
-				else
-					VectorSet(origin, ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2] + 36);
-
-				VectorCopy( origin, muzzle2 ); // making a backup copy
-
-				VectorCopy(origin, start );
-				WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );
-
-				skip = ent->s.number;
-
-				//Make it a little easier to hit guys at long range
-				VectorSet( shot_mins, -1, -1, -1 );
-				VectorSet( shot_maxs, 1, 1, 1 );
-
-				for ( i = 0; i < traces; i++ )
-				{
-					VectorMA( start, shotRange, forward, end );
-
-					//NOTE: if you want to be able to hit guys in emplaced guns, use "G2_COLLIDE, 10" instead of "G2_RETURNONHIT, 0"
-					//alternately, if you end up hitting an emplaced_gun that has a sitter, just redo this one trace with the "G2_COLLIDE, 10" to see if we it the sitter
-					//trap->trace( &tr, start, NULL, NULL, end, skip, MASK_SHOT, G2_COLLIDE, 10 );//G2_RETURNONHIT, 0 );
-					if (d_projectileGhoul2Collision.integer)
-					{
-						trap->Trace( &tr, start, shot_mins, shot_maxs, end, skip, MASK_SHOT, qfalse, G2TRFLAG_DOGHOULTRACE|G2TRFLAG_GETSURFINDEX|G2TRFLAG_HITCORPSES, g_g2TraceLod.integer );
-					}
-					else
-					{
-						trap->Trace( &tr, start, shot_mins, shot_maxs, end, skip, MASK_SHOT, qfalse, 0, 0 );
-					}
-
-					traceEnt = &g_entities[tr.entityNum];
-
-					if (d_projectileGhoul2Collision.integer && traceEnt->inuse && traceEnt->client)
-					{ //g2 collision checks -rww
-						if (traceEnt->inuse && traceEnt->client && traceEnt->ghoul2)
-						{ //since we used G2TRFLAG_GETSURFINDEX, tr.surfaceFlags will actually contain the index of the surface on the ghoul2 model we collided with.
-							traceEnt->client->g2LastSurfaceHit = tr.surfaceFlags;
-							traceEnt->client->g2LastSurfaceTime = level.time;
-						}
-
-						if (traceEnt->ghoul2)
-						{
-							tr.surfaceFlags = 0; //clear the surface flags after, since we actually care about them in here.
-						}
-					}
-					if ( tr.surfaceFlags & SURF_NOIMPACT )
-					{
-						render_impact = qfalse;
-					}
-
-					if ( tr.entityNum == ent->s.number )
-					{
-						// should never happen, but basically we don't want to consider a hit to ourselves?
-						// Get ready for an attempt to trace through another person
-						VectorCopy( tr.endpos, muzzle2 );
-						VectorCopy( tr.endpos, start );
-						skip = tr.entityNum;
-
-						continue;
-					}
-
-					if ( tr.fraction >= 1.0f )
-					{
-						// draw the beam but don't do anything else
-						break;
-					}
-
-					if ( render_impact )
-					{
-						if (( tr.entityNum < ENTITYNUM_WORLD && traceEnt->takedamage )
-							|| !Q_stricmp( traceEnt->classname, "misc_model_breakable" )
-							|| traceEnt->s.eType == ET_MOVER )
-						{
-							qboolean noKnockBack;
-
-							if ( traceEnt->client && LogAccuracyHit( traceEnt, ent ))
-							{//NOTE: hitting multiple ents can still get you over 100% accuracy
-								ent->client->accuracy_hits++;
-							}
-
-							noKnockBack = (traceEnt->flags&FL_NO_KNOCKBACK);//will be set if they die, I want to know if it was on *before* they died
-
-							if (traceEnt->client && ent->client->pers.guardian_mode != traceEnt->client->pers.guardian_mode &&
-								!(ent->client->pers.guardian_mode > 0 && traceEnt->NPC && traceEnt->client->pers.guardian_mode == 0))
-							{ // zyk: non quest player cant hit quest players in boss battles and vice-versa
-								break;
-							}
-
-							G_Damage( traceEnt, ent, ent, forward, tr.endpos, damage, DAMAGE_NO_KNOCKBACK|DAMAGE_NO_HIT_LOC, MOD_MELEE );
-
-							//do knockback and knockdown manually
-							if ( traceEnt->client )
-							{//only if we hit a client
-								vec3_t pushDir;
-								VectorCopy( forward, pushDir );
-								if ( pushDir[2] < 0.2f )
-								{
-									pushDir[2] = 0.2f;
-								}//hmm, re-normalize?  nah...
-
-								if ( traceEnt->health > 0 )
-								{//alive
-									// zyk: allies cant be knocked back
-									if (zyk_is_ally(ent,traceEnt) == qtrue)
-									{
-										break;
-									}
-
-									if (traceEnt->client->sess.amrpgmode == 2 && traceEnt->client->pers.rpg_class == 9)
-									{ // zyk Force Guardian cannot be knocked down
-										break;
-									}
-
-									if (traceEnt->client->ps.duelInProgress == qtrue)
-									{ // zyk: players in private duels cannot be knocked down
-										break;
-									}
-
-									if (zyk_can_hit_target(ent, traceEnt) == qfalse)
-									{ // zyk: cannot hit this target
-										break;
-									}
-
-									//if ( G_HasKnockdownAnims( traceEnt ) )
-									if (!noKnockBack && !traceEnt->localAnimIndex && traceEnt->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN &&
-										BG_KnockDownable(&traceEnt->client->ps)) //just check for humanoids..
-									{//knock-downable
-										//G_Knockdown( traceEnt, ent, pushDir, 400, qtrue );
-										vec3_t plPDif;
-										float pStr;
-
-										//cap it and stuff, base the strength and whether or not we can knockdown on the distance
-										//from the shooter to the target
-										VectorSubtract(traceEnt->client->ps.origin, ent->client->ps.origin, plPDif);
-										pStr = 500.0f-VectorLength(plPDif);
-										if (pStr < 150.0f)
-										{
-											pStr = 150.0f;
-										}
-										if (pStr > 200.0f)
-										{
-											traceEnt->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-											traceEnt->client->ps.forceHandExtendTime = level.time + 1100;
-											traceEnt->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
-										}
-										traceEnt->client->ps.otherKiller = ent->s.number;
-										traceEnt->client->ps.otherKillerTime = level.time + 5000;
-										traceEnt->client->ps.otherKillerDebounceTime = level.time + 100;
-
-										traceEnt->client->ps.velocity[0] += pushDir[0]*pStr;
-										traceEnt->client->ps.velocity[1] += pushDir[1]*pStr;
-										traceEnt->client->ps.velocity[2] = pStr;
-									}
-								}
-							}
-
-							if ( traceEnt->s.eType == ET_MOVER )
-							{//stop the traces on any mover
-								break;
-							}
-						}
-						else
-						{
-							//mmm..no..don't do this more than once for no reason whatsoever.
-							break; // hit solid, but doesn't take damage, so stop the shot...we _could_ allow it to shoot through walls, might be cool?
-						}
-					}
-					else // not rendering impact, must be a skybox or other similar thing?
-					{
-						break; // don't try anymore traces
-					}
-
-					// Get ready for an attempt to trace through another person
-					VectorCopy( tr.endpos, muzzle2 );
-					VectorCopy( tr.endpos, start );
-					skip = tr.entityNum;
-				}
-
-				// now go along the trail and make sight events
-				VectorSubtract( tr.endpos, origin, dir );
-
-				//let's pack all this junk into a single tempent, and send it off.
-				tent = G_TempEntity(tr.endpos, EV_CONC_ALT_IMPACT);
-				tent->s.eventParm = DirToByte(tr.plane.normal);
-				tent->s.owner = ent->s.number;
-				VectorCopy(dir, tent->s.angles);
-				VectorCopy(origin, tent->s.origin2);
-				VectorCopy(forward, tent->s.angles2);
-
-				ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 2);
-
-				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/movers/objects/green_beam_start.mp3"));
-
-				send_rpg_events(2000);
-			}
-			else if (ent->client->sess.magic_fist_selection == 3 && ent->client->pers.magic_power >= (zyk_magic_fist_mp_cost.integer * 2))
-			{ // zyk: Ultra Bolt
-				gentity_t	*missile;
-				vec3_t origin, dir, zyk_forward;
-				int fist_damage = (int)ceil(zyk_magic_fist_damage.integer * (1.5 + ((ent->client->pers.level * 1.0) / 200.0)));
-
-				if (ent->client->ps.pm_flags & PMF_DUCKED) // zyk: crouched
-					VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 12);
-				else
-					VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 36);
-			
-				VectorSet(dir, ent->client->ps.viewangles[0], ent->client->ps.viewangles[1], 0);
-
-				AngleVectors( dir, zyk_forward, NULL, NULL );
-
-				VectorNormalize(zyk_forward);
-
-				missile = CreateMissile( origin, zyk_forward, magic_fist_velocity(ent), 10000, ent, qfalse);
-
-				missile->classname = "conc_proj";
-				missile->s.weapon = WP_CONCUSSION;
-				missile->mass = 10;
-
-				// Make it easier to hit things
-				VectorSet( missile->r.maxs, ROCKET_SIZE, ROCKET_SIZE, ROCKET_SIZE );
-				VectorScale( missile->r.maxs, -1, missile->r.mins );
-
-				if (ent->client->pers.unique_skill_duration > level.time && !(ent->client->pers.player_statuses & (1 << 21)) &&
-					!(ent->client->pers.player_statuses & (1 << 22)) && !(ent->client->pers.player_statuses & (1 << 23)))
-				{ // zyk: Unique Skill increases damage
-					fist_damage *= 2;
-				}
-
-				missile->damage = fist_damage;
-
-				missile->dflags = DAMAGE_EXTRA_KNOCKBACK;
-				missile->methodOfDeath = MOD_MELEE;
-				missile->splashMethodOfDeath = MOD_MELEE;
-				missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
-
-				missile->splashDamage = fist_damage;
-
-				missile->splashRadius = CONC_SPLASH_RADIUS/2;
-
-				// we don't want it to ever bounce
-				missile->bounceCount = 0;
-
-				ent->client->pers.magic_power -= (zyk_magic_fist_mp_cost.integer * 2);
-
-				G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/weapons/concussion/fire.mp3"));
-
-				send_rpg_events(2000);
-			}
-		}
-		else if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 2 && 
-				 ent->client->pers.unique_skill_duration > level.time &&
-				 !(ent->client->pers.player_statuses & (1 << 21)) && 
-				 !(ent->client->pers.player_statuses & (1 << 22)) && 
-				 !(ent->client->pers.player_statuses & (1 << 23)) &&
-				 ent->client->ps.ammo[AMMO_METAL_BOLTS] > 0)
-		{ // zyk: Bounty Hunter Unique Skill, fire poison darts
-			vec3_t		fwd, dir, origin;
-			gentity_t	*missile;
-
-			ent->client->ps.ammo[AMMO_METAL_BOLTS] -= 1;
-
-			VectorSet(dir, ent->client->ps.viewangles[0], ent->client->ps.viewangles[1], 0);
-
-			AngleVectors( dir, fwd, NULL, NULL );
-
-			if (ent->client->ps.pm_flags & PMF_DUCKED) // zyk: crouched
-				VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 10);
-			else
-				VectorSet(origin,ent->client->ps.origin[0],ent->client->ps.origin[1],ent->client->ps.origin[2] + 35);
-
-			missile = CreateMissile( origin, fwd, 7500, 10000, ent, qfalse);
-
-			missile->classname = "flech_proj";
-			missile->s.weapon = WP_FLECHETTE;
-
-			VectorSet( missile->r.maxs, FLECHETTE_SIZE, FLECHETTE_SIZE, FLECHETTE_SIZE );
-			VectorScale( missile->r.maxs, -1, missile->r.mins );
-
-			missile->damage = 1;
-			missile->dflags = DAMAGE_DEATH_KNOCKBACK;
-			missile->methodOfDeath = MOD_MELEE;
-			missile->clipmask = MASK_SHOT | CONTENTS_LIGHTSABER;
-
-			// we don't want it to bounce forever
-			missile->bounceCount = 2;
-
-			missile->flags |= FL_BOUNCE_SHRAPNEL;
-
-			G_Sound(ent, CHAN_WEAPON, G_SoundIndex("sound/weapons/tusken_rifle/fire_gun.wav"));
-		}
+		// GalaxyRP fix: [RPG Class] removed dead Magic Master (rpg_class==8) and Bounty Hunter (rpg_class==2) unique-skill fist attack code; rpg_class permanently 0, both branches unreachable
 
 		VectorCopy(ent->client->ps.origin, muzzlePunch);
 		muzzlePunch[2] += ent->client->ps.viewheight-6;
@@ -4535,11 +3778,11 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 
 		if ( tr_ent->takedamage )
 		{ //damage them, do more damage if we're in the second right hook
-			int dmg = zyk_melee_left_hand_damage.integer;
+			int dmg = rp_melee_left_hand_damage.integer;
 
 			if (ent->client && ent->client->ps.torsoAnim == BOTH_MELEE2)
 			{ //do a tad bit more damage on the second swing
-				dmg = zyk_melee_right_hand_damage.integer;
+				dmg = rp_melee_right_hand_damage.integer;
 			}
 
 			if ( G_HeavyMelee( ent ) )
@@ -4698,6 +3941,12 @@ void WP_CalcVehMuzzle(gentity_t *ent, int muzzleNum)
 		ent->client->ps.origin, level.time, NULL, ent->modelScale);
 	BG_GiveMeVectorFromMatrix(&boltMatrix, ORIGIN, pVeh->m_vMuzzlePos[muzzleNum]);
 	BG_GiveMeVectorFromMatrix(&boltMatrix, NEGATIVE_Y, pVeh->m_vMuzzleDir[muzzleNum]);
+
+	// DAJ_RP: [NPC Scale] a scaled vehicle is drawn lifted off its origin to stand on the ground (BG_RpVehicleScaleLift(),
+	// bg_vehicleLoad.c; CG_Player(), cg_players.c), and its muzzle flash plays on that drawn model -- so its shots start
+	// from there too, not from the muzzle of a model sunk into the ground (bigger) or floating (smaller). Every vehicle
+	// shot and turret aim starts here. A client that does not lift the model sees the shot start that far off its barrel.
+	pVeh->m_vMuzzlePos[muzzleNum][2] += BG_RpVehicleScaleLift( pVeh->m_pVehicleInfo, ent->modelScale[2] );
 }
 
 void WP_VehWeapSetSolidToOwner( gentity_t *self )
@@ -5487,6 +4736,33 @@ FireWeapon
 */
 int BG_EmplacedView(vec3_t baseAngles, vec3_t angles, float *newYaw, float constraint);
 void FireWeapon( gentity_t *ent, qboolean altFire ) {
+	// GalaxyRP fix: [Cloak Item] firing any weapon (primary or alt-fire, saber/melee/stun baton
+	// included) is supposed to break cloak -- there was no code anywhere that actually did this, so a
+	// cloaked player firing back stayed invisible indefinitely. FireWeapon is the single dispatcher
+	// for every weapon type (see the switch below), called identically for EV_FIRE_WEAPON and
+	// EV_ALT_FIRE, so this one check covers "any weapon fire" without needing a copy in each of the
+	// per-weapon WP_Fire* functions. Placed before the CLASS_VEHICLE redirect below so a cloaked
+	// vehicle firing its own weapons decloaks too, matching the existing vehicle-cloak feature
+	// (Cmd_GalaxyRpUi_f/g_active.c's GENCMD_SABERATTACKCYCLE vehicle-cloak branch).
+	// Relies on the bg_pmove.c PM_Weapon fix (see its own GalaxyRP fix comment) to only ever reach
+	// here for a shot the server actually authorized -- a blocked alt-fire attempt (insufficient
+	// skill or not logged in) now short-circuits before generating EV_ALT_FIRE at all, so this never
+	// fires for a denied attempt, only for a real one.
+	// GalaxyRP fix: [Cloak Item] uses Jedi_DecloakPair now instead of a plain Jedi_Decloak -- this
+	// fires once for the rider's own shot and once for the vehicle's own shot (each entity runs its
+	// own PM_Weapon independently), so a plain per-entity decloak was exactly what caused the
+	// vehicle-fires-only-it-decloaks / rider-fires-only-they-decloak desync bug. Jedi_DecloakPair
+	// takes the other half of a paired cloak down too, whichever side actually fired.
+	// GalaxyRP fix: [Cloak Item] gate on the PAIR, not on this one entity. /use_cloak cloaks the
+	// rider alone and never touches the vehicle, so a solo-cloaked rider sat on an UNCLOAKED
+	// vehicle: this guard tested the vehicle's own flag, found it clear, and returned without ever
+	// calling Jedi_DecloakPair -- which would have found and dropped the rider's cloak. The rider
+	// stayed invisible through their own vehicle's gunfire, damage and destruction.
+	if ( ent && ent->client && Jedi_PairIsCloaked( ent ) )
+	{
+		Jedi_DecloakPair( ent );
+	}
+
 	// track shots taken for accuracy tracking. melee weapons are not tracked.
 	if( ent->s.weapon != WP_SABER && ent->s.weapon != WP_STUN_BATON && ent->s.weapon != WP_MELEE )
 	{
@@ -5497,11 +4773,7 @@ void FireWeapon( gentity_t *ent, qboolean altFire ) {
 		}
 	}
 
-	if (ent && ent->client && ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 8 && 
-		ent->client->sess.selected_special_power == 0 && ent->s.weapon == WP_MELEE)
-	{ // zyk: Magic Master can shoot from his hands
-		ent->client->accuracy_shots++;
-	}
+	// GalaxyRP fix: [RPG Class] removed dead Magic Master (rpg_class==8) accuracy-shot tracking block; rpg_class permanently 0
 
 	if ( ent && ent->client && ent->client->NPC_class == CLASS_VEHICLE )
 	{
@@ -5742,6 +5014,81 @@ static void WP_FireEmplaced( gentity_t *ent, qboolean altFire )
 
 //----------------------------------------------------------
 extern qboolean TryHeal(gentity_t *ent, gentity_t *target); //g_utils.c
+
+/*
+GalaxyRP fix: [Emplaced Gun] which weapon a rider gets back when they leave the gun.
+
+The weapon they sat down with, if they still own it. That ownership test is the point: the five
+account commands all rewrite STAT_WEAPONS while the player is still mounted -- /logout through
+zyk_remove_guns(), the four character/login paths through the skills load -- so by the time they
+stand up the stored weapon can easily be one this character never had. It used to be assigned
+back regardless, leaving the player holding a weapon with its STAT_WEAPONS bit clear and no way
+back to it except cycling weapons by hand.
+
+The fallback is the lowest-numbered weapon they do own, which is exactly what PM_Weapon()'s
+"oh no!" recovery in bg_pmove.c picks for a player left holding WP_EMPLACED_GUN with no gun under
+them. WP_EMPLACED_GUN itself is excluded as well as WP_NONE -- the caller clears its bit just
+before calling this, but handing it back here would recreate the very state that recovery exists
+to undo.
+*/
+static int zyk_emplaced_restore_weapon( gclient_t *client, int stored )
+{
+	int i = 0;
+
+	if ( stored > WP_NONE && stored < WP_NUM_WEAPONS &&
+		(client->ps.stats[STAT_WEAPONS] & (1 << stored)) )
+	{
+		return stored;
+	}
+
+	for ( i = 0; i < WP_NUM_WEAPONS; i++ )
+	{
+		if ( i != WP_NONE && i != WP_EMPLACED_GUN &&
+			(client->ps.stats[STAT_WEAPONS] & (1 << i)) )
+		{
+			return i;
+		}
+	}
+
+	return WP_NONE;
+}
+
+/*
+GalaxyRP fix: [Emplaced Gun] put a rider back on their feet and the gun back to rest, in one place.
+
+Two callers: emplaced_gun_update() below, which is the ordinary dismount, and
+zyk_stop_active_holdables() in g_cmds.c, which is the account commands. They used to be one
+caller, and the account commands simply did not release a player from a map-placed gun at all --
+the block there only handles a player's own e-web, and a player on a map gun has ewebIndex 0.
+
+The gun's own s.weapon is restored unconditionally rather than swapped back. See the comment in
+emplaced_gun_use() below for what that field is really for and what the swap did to it.
+
+rider is taken as a parameter rather than read from gun->activator because gun->activator is
+cleared here, and because the dismount branch in emplaced_gun_update() reaches this after
+ps.emplacedIndex has already been zeroed by someone else -- pmove, player_die() or StopFollowing()
+-- so neither side can be looked up from the other by then.
+*/
+void zyk_release_from_emplaced_gun( gentity_t *gun, gentity_t *rider )
+{
+	if ( !gun || !rider || !rider->client )
+	{
+		return;
+	}
+
+	rider->client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_EMPLACED_GUN);
+	rider->client->ps.weapon = zyk_emplaced_restore_weapon( rider->client, gun->genericValue6 );
+	rider->r.ownerNum = ENTITYNUM_NONE;
+	rider->client->ps.emplacedTime = level.time + 1000;
+	rider->client->ps.emplacedIndex = 0;
+	rider->client->ps.saberHolstered = 0;
+
+	gun->genericValue6 = 0;
+	gun->s.weapon = WP_EMPLACED_GUN;
+	gun->s.activeForcePass = 0;
+	gun->activator = NULL;
+}
+
 void emplaced_gun_use( gentity_t *self, gentity_t *other, trace_t *trace )
 {
 	vec3_t fwd1, fwd2;
@@ -5828,10 +5175,27 @@ void emplaced_gun_use( gentity_t *self, gentity_t *other, trace_t *trace )
 
 	self->genericValue1 = 1;
 
-	oldWeapon = activator->s.weapon;
+	// GalaxyRP fix: [Emplaced Gun] ps.weapon, not s.weapon. s.weapon is the ENTITY STATE copy,
+	// written from ps.weapon by BG_PlayerStateToEntityState() (bg_misc.c) during the PREVIOUS
+	// frame's ClientEndFrame(), while TryUse() reaches this after the current frame's pmove has
+	// already run -- so a weapon change that finished this frame had not reached s.weapon yet and
+	// the gun stored the weapon the player had just switched away from, then handed it back on
+	// dismount. ps.weapon is what the dismount side already reads; both ends now agree.
+	oldWeapon = activator->client->ps.weapon;
+
+	// GalaxyRP fix: [Emplaced Gun] a gun whose s.weapon is not WP_EMPLACED_GUN cannot happen any
+	// more -- nothing writes that field after SP_emplaced_gun() except the line below -- but it
+	// used to happen on almost every dismount, and it was permanent. Repair it rather than pass it
+	// on, and say so, because if this ever prints again something new has started writing there.
+	if ( self->s.weapon != WP_EMPLACED_GUN )
+	{
+		G_LogPrintf( "WARNING: emplaced_gun %i had s.weapon %i instead of WP_EMPLACED_GUN; repaired.\n",
+			self->s.number, self->s.weapon );
+		self->s.weapon = WP_EMPLACED_GUN;
+	}
 
 	// swap the users weapon with the emplaced gun
-	activator->client->ps.weapon = self->s.weapon;
+	activator->client->ps.weapon = WP_EMPLACED_GUN;
 	activator->client->ps.weaponstate = WEAPON_READY;
 	activator->client->ps.stats[STAT_WEAPONS] |= ( 1 << WP_EMPLACED_GUN );
 
@@ -5840,8 +5204,31 @@ void emplaced_gun_use( gentity_t *self, gentity_t *other, trace_t *trace )
 	self->s.emplacedOwner = activator->s.number;
 	self->s.activeForcePass = NUM_FORCE_POWERS+1;
 
-	// the gun will track which weapon we used to have
-	self->s.weapon = oldWeapon;
+	// GalaxyRP fix: [Emplaced Gun] the rider's previous weapon is stashed in genericValue6, a
+	// server-side field, instead of being parked in the gun's own s.weapon.
+	//
+	// s.weapon on an emplaced-type entity is not spare storage: it is how the client tells an
+	// emplaced gun from an e-web. EWeb_Create() sets WP_NONE on an e-web "for the sake of being
+	// able to differentiate client-side between this and an emplaced gun" (g_items.c), and four
+	// places read it that way -- CG_UsingEWeb() (cg_predict.c), which turns client prediction OFF
+	// for its rider; the crosshair muzzle point and the e-web health bar (both cg_draw.c); and the
+	// rider's leg angles (bg_pmove.c). Parking a rider's pistol there made the gun lie about what
+	// it was for as long as it was occupied, and a rider whose previous weapon happened to be
+	// WP_NONE turned a map gun into an "e-web" outright.
+	//
+	// Worse, it did not end at dismount. emplaced_gun_update() below SWAPPED the two values back,
+	// which only restores WP_EMPLACED_GUN if the rider's ps.weapon is still WP_EMPLACED_GUN at
+	// that instant -- and usually it is not. Leaving a gun clears ps.emplacedIndex first (pmove
+	// does it on a backward step, player_die() and StopFollowing() do it outright), and the next
+	// pmove's "oh no!" recovery in PM_Weapon() then assigns a real weapon immediately, before this
+	// entity's 50ms think gets to run. So the gun kept whatever that was, for the rest of the map;
+	// nothing ever reset it, not even the CANRESPAWN branch in emplaced_gun_update(). StopFollowing()
+	// was the clean route to the WP_NONE case: it sets ps.weapon = WP_NONE and ps.emplacedIndex = 0
+	// in the same breath.
+	//
+	// genericValue6 is free on this class -- 1 through 5 and 10 are the ones emplaced guns use --
+	// and it is not a spawn key, so no map can set it (only "genericvalue7" is exposed, g_spawn.c).
+	self->genericValue6 = oldWeapon;
 
 	//user's new owner becomes the gun ent
 	activator->r.ownerNum = self->s.number;
@@ -5882,7 +5269,6 @@ void emplaced_gun_pain( gentity_t *self, gentity_t *attacker, int damage )
 void emplaced_gun_update(gentity_t *self)
 {
 	vec3_t	smokeOrg, puffAngle;
-	int oldWeap;
 	float ownLen = 0;
 
 	if (self->health < 1 && !self->genericValue5)
@@ -5959,18 +5345,9 @@ void emplaced_gun_update(gentity_t *self)
 	if ((self->activator && self->activator->client) &&
 		(!self->activator->inuse || self->activator->client->ps.emplacedIndex != self->s.number || self->genericValue4 || ownLen > 64))
 	{ //get the user off of me then
-		self->activator->client->ps.stats[STAT_WEAPONS] &= ~(1<<WP_EMPLACED_GUN);
-
-		oldWeap = self->activator->client->ps.weapon;
-		self->activator->client->ps.weapon = self->s.weapon;
-		self->s.weapon = oldWeap;
-		self->activator->r.ownerNum = ENTITYNUM_NONE;
-		self->activator->client->ps.emplacedTime = level.time + 1000;
-		self->activator->client->ps.emplacedIndex = 0;
-		self->activator->client->ps.saberHolstered = 0;
-		self->activator = NULL;
-
-		self->s.activeForcePass = 0;
+		// GalaxyRP fix: [Emplaced Gun] this used to be an inline swap of ps.weapon and s.weapon.
+		// See zyk_release_from_emplaced_gun() above, which is now shared with the account commands.
+		zyk_release_from_emplaced_gun( self, self->activator );
 	}
 	else if (self->activator && self->activator->client)
 	{ //make sure the user is using the emplaced gun weapon
@@ -6051,6 +5428,13 @@ void SP_emplaced_gun( gentity_t *ent )
 	G_SpawnInt( "count", "600", &ent->count );
 
 	G_SpawnFloat( "constraint", "60", &ent->s.origin2[0] );
+	// GalaxyRP fix: [Entity System] the turn constraint is an angle the client compares against; off a
+	// spawn key it had no floor, ceiling or sign check, and a negative one pinned the gunner's view
+	if ( ent->s.origin2[0] < 1 || ent->s.origin2[0] > 180 )
+	{
+		G_LogPrintf( "emplaced_gun at %s: constraint %g clamped to 1..180\n", vtos( ent->s.origin ), ent->s.origin2[0] );
+		ent->s.origin2[0] = ent->s.origin2[0] < 1 ? 1 : 180;
+	}
 
 	ent->s.modelindex = G_ModelIndex( (char *)name );
 	ent->s.modelGhoul2 = 1;
@@ -6080,4 +5464,106 @@ void SP_emplaced_gun( gentity_t *ent )
 	//ent->s.teamowner = 0;
 
 	trap->LinkEntity((sharedEntity_t *)ent);
+}
+
+/*
+========================================================================================================
+GalaxyRP: [Grapple Hook] -- the hook's own lifecycle: fire, park, free.
+
+Ported from TaystJK (g_weapon.c: Weapon_GrapplingHook_Fire, Weapon_HookFree, Weapon_HookThink), which
+carries JA+'s hook. fire_grapple() and the impact branch live in g_missile.c beside the other missiles;
+the fire/release button logic is in ClientThink_real() (g_active.c); the pull itself is shared code in
+bg_pmove.c. Racemode and Tribes are gone. See the block comment on these in g_local.h for the shape.
+========================================================================================================
+*/
+
+// Fires one hook, if none is out. The muzzle is the stock JA+ one: 4 forward, 4 right of the player's
+// origin, at eye height plus 4. fireHeld is set either way -- it is the "button is still down" latch
+// that ClientThink_real() uses to decide when to let go.
+void Weapon_HookFire( gentity_t *ent )
+{
+	if ( !ent->client->fireHeld && !ent->client->hook )
+	{
+		vec3_t muzzlePoint;
+
+		AngleVectors( ent->client->ps.viewangles, forward, vright, up );
+
+		VectorCopy( ent->s.pos.trBase, muzzlePoint );
+		VectorMA( muzzlePoint, 4, forward, muzzlePoint );
+		VectorMA( muzzlePoint, 4, vright, muzzlePoint );
+		muzzlePoint[2] += ent->client->ps.viewheight + 4;
+
+		SnapVector( muzzlePoint );
+
+		fire_grapple( ent, muzzlePoint, forward );
+	}
+
+	ent->client->fireHeld = qtrue;
+}
+
+// The one way a hook goes away. Clears everything the owner holds about it -- the pointer, the pull
+// flag, both button latches -- and frees the entity. Safe on a hook whose owner is gone, and safe to
+// call on an owner whose hook pointer is already something else (a stale entity found by its own
+// think, see Weapon_HookThink): the owner's fields are only touched when this really is their hook.
+void Weapon_HookFree( gentity_t *ent )
+{
+	if ( !ent )
+	{
+		return;
+	}
+
+	if ( ent->parent && ent->parent->client && ent->parent->client->hook == ent )
+	{
+		ent->parent->client->hook = NULL;
+		ent->parent->client->ps.pm_flags &= ~PMF_GRAPPLE;
+		ent->parent->client->hookHasBeenFired = qfalse;
+		ent->parent->client->fireHeld = qfalse;
+	}
+
+	G_FreeEntity( ent );
+}
+
+// Runs every server frame once the hook has landed. Publishes the anchor into the owner's playerState
+// (ps.lastHitLoc is networked, and it is what both PM_Grapple* moves pull toward), follows a hooked
+// player, and lets go when the rope would be longer than 2048 units, the hooked player dies, or the
+// owner is no longer the owner.
+//
+// That last test is the one TaystJK lacks. ClientSpawn() memsets the client, so on a respawn the
+// owner forgot the hook while the hook still remembered the owner, and for the rest of its 30-second
+// lifetime it wrote its anchor into the respawned player's lastHitLoc every frame. ClientSpawn() now
+// frees the hook before the memset, and this is the belt to that brace.
+void Weapon_HookThink( gentity_t *ent )
+{
+	if ( !ent->parent || !ent->parent->client || ent->parent->client->hook != ent )
+	{
+		Weapon_HookFree( ent );
+		return;
+	}
+
+	if ( DistanceSquared( ent->r.currentOrigin, ent->parent->client->ps.origin ) > 2048 * 2048 )
+	{
+		Weapon_HookFree( ent );
+		return;
+	}
+
+	if ( ent->enemy && ent->enemy->client )
+	{
+		vec3_t v;
+
+		if ( ( ent->enemy->s.eFlags & EF_DEAD ) || !ent->enemy->inuse )
+		{
+			Weapon_HookFree( ent );
+			return;
+		}
+
+		VectorCopy( ent->enemy->r.currentOrigin, v );
+		SnapVectorTowards( v, ent->s.pos.trBase );
+
+		G_SetOrigin( ent, v );
+		VectorCopy( ent->enemy->s.pos.trDelta, ent->s.pos.trDelta );
+		SnapVector( ent->s.pos.trDelta );
+	}
+
+	VectorCopy( ent->r.currentOrigin, ent->parent->client->ps.lastHitLoc );
+	ent->nextthink = level.time + FRAMETIME;
 }

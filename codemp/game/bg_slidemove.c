@@ -202,7 +202,10 @@ void PM_VehicleImpact(bgEntity_t *pEnt, trace_t *trace)
 #ifdef _CGAME
 				bgEntity_t *hitEnt = PM_BGEntForNum(trace->entityNum);
 #endif
-				if ( (trace->entityNum == ENTITYNUM_WORLD || hitEnt->s.solid == SOLID_BMODEL)//bounce off any brush
+				// GalaxyRP fix: [Logical Entities] PM_BGEntForNum() returns NULL on an out-of-range
+				// number now rather than a pointer past the end of cg_entities; this deref and the
+				// one in the fighter-vs-fighter branch below were the two here that did not test it.
+				if ( (trace->entityNum == ENTITYNUM_WORLD || (hitEnt && hitEnt->s.solid == SOLID_BMODEL))//bounce off any brush
 					 && !VectorCompare(trace->plane.normal, vec3_origin) )//have a valid plane to bounce off of
 				{ //bounce off in the opposite direction of the impact
 					if (pSelfVeh->m_pVehicleInfo->type == VH_SPEEDER)
@@ -230,7 +233,8 @@ void PM_VehicleImpact(bgEntity_t *pEnt, trace_t *trace)
 #ifdef _CGAME
 					bgEntity_t *hitEnt = PM_BGEntForNum(trace->entityNum);
 #endif
-					if ( hitEnt->s.NPC_class == CLASS_VEHICLE
+					if ( hitEnt
+						&& hitEnt->s.NPC_class == CLASS_VEHICLE
 						&& hitEnt->m_pVehicle
 						&& hitEnt->m_pVehicle->m_pVehicleInfo
 						&& hitEnt->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER )

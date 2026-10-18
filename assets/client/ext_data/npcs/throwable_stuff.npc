@@ -1,0 +1,208 @@
+toss_core
+{
+	fullName		"Really Awesome Thingamajigger"
+	playerModel		toss_core
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_barrel
+{
+	fullName		"Really Awesome Barrel"
+	playerModel		toss_barrel
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_pillarbase
+{
+	fullName		"Really Awesome Pillar Base"
+	playerModel		toss_pillarbase
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_statue01
+{
+	fullName		"Really Awesome Statue"
+	playerModel		toss_statue01
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_cache
+{
+	fullName		"Really Awesome Cache of Stuff"
+	playerModel		toss_cache
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_cargo_big
+{
+	fullName		"Really Awesome Pile of Cargo"
+	playerModel		toss_cargo_big
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_cargo_sm
+{
+	fullName		"Really Awesome Cargo Crate"
+	playerModel		toss_cargo_sm
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_table
+{
+	fullName		"Really Awesome Table"
+	playerModel		toss_table
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_emod
+{
+	fullName		"Really Awesome E-Mod"
+	playerModel		toss_emod
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_crate01
+{
+	fullName		"Really Awesome Crate (1)"
+	playerModel		toss_crate01
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_crate02
+{
+	fullName		"Really Awesome Crate (2)"
+	playerModel		toss_crate02
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_crate03
+{
+	fullName		"Really Awesome Crate (3)"
+	playerModel		toss_crate03
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_crate04
+{
+	fullName		"Really Awesome Crate (4)"
+	playerModel		toss_crate04
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_falcon
+{
+	fullName		"HOLY CRAP, IT'S THE FALCON!"
+	playerModel		toss_falcon
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_bunk
+{
+	fullName		"Really Awesome Bunk"
+	playerModel		toss_bunk
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+
+toss_heater
+{
+	fullName		"Really Awesome Heater"
+	playerModel		toss_heater
+	weapon			WP_NONE
+	rank			captain
+	playerTeam		TEAM_NEUTRAL
+	enemyTeam		TEAM_NEUTRAL
+	class			CLASS_STORMTROOPER
+	health			10000
+	movetype		walk
+}
+

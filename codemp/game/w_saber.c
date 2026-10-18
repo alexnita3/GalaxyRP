@@ -118,10 +118,9 @@ qboolean G_CanBeEnemy( gentity_t *self, gentity_t *enemy )
 		return qfalse;
 	}
 
-	if (self->client->pers.guardian_mode == 0 && enemy->client->pers.guardian_mode > 0)
-	{ // zyk: cannot grab quest player or bosses if self is not in quest
-		return qfalse;
-	}
+	// GalaxyRP fix: [Guardian] removed a "cannot grab quest player or bosses" guard here; both
+	// pers.guardian_mode fields are permanently 0, so the enemy->...guardian_mode > 0 half was
+	// always false and the guard never fired.
 
 	if (level.gametype < GT_TEAM)
 		return qtrue;
@@ -299,7 +298,11 @@ void WP_ActivateSaber( gentity_t *self )
 			G_Sound(self, CHAN_WEAPON, self->client->saber[0].soundOn);
 		}
 
-		if (self->client->saber[1].soundOn)
+		// GalaxyRP fix: [Saber Sounds] added the saber[1].model[0] test -- see Cmd_ToggleSaber_f in
+		// g_cmds.c for why an unused second saber has a playable soundOn. Note WP_DeactivateSaber()
+		// just above already tests it on the way out.
+		if (self->client->saber[1].soundOn &&
+			self->client->saber[1].model[0])
 		{
 			G_Sound(self, CHAN_WEAPON, self->client->saber[1].soundOn);
 		}
@@ -1469,6 +1472,12 @@ qboolean WP_SabersCheckLock( gentity_t *ent1, gentity_t *ent2 )
 	float dist;
 	qboolean	ent1BlockingPlayer = qfalse;
 	qboolean	ent2BlockingPlayer = qfalse;
+
+	// DAJ_RP: [NPC System] a frozen NPC is never drawn into a saber lock -- see RP_NpcFreeze() (NPC_spawn.c)
+	if ( RP_NpcIsFrozen( ent1 ) || RP_NpcIsFrozen( ent2 ) )
+	{
+		return qfalse;
+	}
 
 	if ( g_debugSaberLocks.integer )
 	{
@@ -4338,7 +4347,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 		*/
 
 		// zyk: do touch damage if > 0. Players in duels will not do touch dmg based in this cvar
-		if (zyk_allow_saber_touch_damage.integer > 0 && (self->NPC || self->client->ps.duelInProgress == qfalse))
+		if (rp_allow_saber_touch_damage.integer > 0 && (self->NPC || self->client->ps.duelInProgress == qfalse))
 			dmg = SABER_NONATTACK_DAMAGE;
 		else
 			dmg = 0;
@@ -4346,23 +4355,14 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 		// zyk: tests if players in private duel should do touch damage
 		if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
 		{
-			if (zyk_allow_duel_saber_touch_damage.integer > 0)
+			if (rp_allow_duel_saber_touch_damage.integer > 0)
 				dmg = SABER_NONATTACK_DAMAGE;
 			else
 				dmg = 0;
 		}
 
-		// zyk: Duelist Unique Abilities. Heavily increases saber damage
-		if (self->client->sess.amrpgmode == 2 && self->client->pers.rpg_class == 6 && 
-			self->client->pers.unique_skill_duration > level.time)
-		{
-			if (self->client->ps.torsoAnim == BOTH_PULL_IMPALE_STAB) // zyk: Impale Stab
-				dmg = 55;
-			else if (self->client->ps.torsoAnim == BOTH_FORCELEAP2_T__B_) // zyk: Vertical DFA
-				dmg = 28;
-			else if (self->client->ps.torsoAnim == BOTH_ALORA_SPIN_THROW) // zyk: Super Throw
-				dmg = 75;
-		}
+		// GalaxyRP fix: [Dead Code] removed the Duelist (rpg_class==6) saber-damage boost here;
+		// pers.rpg_class is permanently 0, so this never applied.
 
 		idleDamage = qtrue;
 	}
@@ -4440,7 +4440,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 		// zyk: cvar that sets the saber damage in private duels and Duel Tournament
 		if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
 		{
-			dmg *= zyk_duel_saberDamageScale.value;
+			dmg *= rp_duel_saberDamageScale.value;
 		}
 		else
 		{
@@ -4625,7 +4625,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 
 		// zyk: this is the cvar to set saber blocks and parries time in miliseconds, in private duels
 		if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
-			self->client->ps.saberIdleWound = level.time + zyk_duel_saberDmgDelay_Idle.integer;
+			self->client->ps.saberIdleWound = level.time + rp_duel_saberDmgDelay_Idle.integer;
 		else
 			self->client->ps.saberIdleWound = level.time + g_saberDmgDelay_Idle.integer;
 
@@ -4634,13 +4634,13 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 		if ( !d_saberSPStyleDamage.integer//let's trying making blocks have to be blocked by a saber
 			&& g_entities[tr.entityNum].client
 			&& !unblockable
-			&& WP_SaberCanBlock(&g_entities[tr.entityNum], tr.endpos, 0, MOD_SABER, qfalse, attackStr))
+			&& WP_SaberCanBlock(&g_entities[tr.entityNum], self, tr.endpos, 0, MOD_SABER, qfalse, attackStr))
 		{//hit a client who blocked the attack (fake: didn't actually hit their saber)
 			if (dmg <= SABER_NONATTACK_DAMAGE)
 			{
 				// zyk: this is the cvar to set saber blocks and parries time in miliseconds, in private duels
 				if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
-					self->client->ps.saberIdleWound = level.time + zyk_duel_saberDmgDelay_Idle.integer;
+					self->client->ps.saberIdleWound = level.time + rp_duel_saberDmgDelay_Idle.integer;
 				else
 					self->client->ps.saberIdleWound = level.time + g_saberDmgDelay_Idle.integer;
 			}
@@ -4869,7 +4869,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 
 		// zyk: this is the cvar to set saber blocks and parries time in miliseconds, in private duels
 		if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
-			self->client->ps.saberIdleWound = level.time + zyk_duel_saberDmgDelay_Idle.integer;
+			self->client->ps.saberIdleWound = level.time + rp_duel_saberDmgDelay_Idle.integer;
 		else
 			self->client->ps.saberIdleWound = level.time + g_saberDmgDelay_Idle.integer;
 
@@ -4877,7 +4877,7 @@ static QINLINE qboolean CheckSaberDamage(gentity_t *self, int rSaberNum, int rBl
 		{
 			// zyk: this is the cvar to set saber blocks and parries time in miliseconds, in private duels
 			if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
-				self->client->ps.saberIdleWound = level.time + zyk_duel_saberDmgDelay_Idle.integer;
+				self->client->ps.saberIdleWound = level.time + rp_duel_saberDmgDelay_Idle.integer;
 			else
 				self->client->ps.saberIdleWound = level.time + g_saberDmgDelay_Idle.integer;
 		}
@@ -4919,6 +4919,15 @@ blockStuff:
 			&& rSaberNum == 0 )
 		{
 			return qfalse;
+		}
+
+		// DAJ_RP: [NPC System] a frozen NPC's lit blade still stops the blow -- the clash above has happened --
+		// but the NPC itself does not answer it: no saber lock, parry, knockaway or broken parry, and the
+		// attacker is not bounced off it either. See RP_NpcFreeze() (NPC_spawn.c).
+		if (RP_NpcIsFrozen(otherOwner))
+		{
+			self->client->ps.saberAttackWound = level.time + g_saberDmgDelay_Wound.integer;	// as at the end of this block
+			return didHit;
 		}
 
 		otherSaberLevel = G_SaberAttackPower(otherOwner, SaberAttacking(otherOwner));
@@ -5556,6 +5565,15 @@ void WP_SaberStartMissileBlockCheck( gentity_t *self, usercmd_t *ucmd  )
 		self->client->ps.hasLookTarget = qfalse;
 	}
 
+	// DAJ_RP: [NPC System] a frozen NPC does none of this: it does not take a shot's owner as its enemy, light
+	// its saber to block an incoming missile, drop from a ceiling ambush, or Force-push or jump away from a
+	// thermal detonator -- see RP_NpcFreeze() (NPC_spawn.c). (A player's head-turn look target is only ever
+	// set further down for a player, so nothing is lost there.)
+	if ( RP_NpcIsFrozen( self ) )
+	{
+		return;
+	}
+
 	if ( self->client->ps.weapon != WP_SABER && self->client->NPC_class != CLASS_BOBAFETT )
 	{
 		doFullRoutine = qfalse;
@@ -5979,7 +5997,7 @@ static QINLINE qboolean CheckThrownSaberDamaged(gentity_t *saberent, gentity_t *
 
 			if (tr.fraction == 1 || tr.entityNum == ent->s.number)
 			{ //Slice them
-				if (!saberOwner->client->ps.isJediMaster && WP_SaberCanBlock(ent, tr.endpos, 0, MOD_SABER, qfalse, 999))
+				if (!saberOwner->client->ps.isJediMaster && WP_SaberCanBlock(ent, saberOwner, tr.endpos, 0, MOD_SABER, qfalse, 999))
 				{ //they blocked it
 					WP_SaberBlockNonRandom(ent, tr.endpos, qfalse);
 
@@ -6727,13 +6745,11 @@ qboolean saberKnockOutOfHand(gentity_t *saberent, gentity_t *saberOwner, vec3_t 
 		return qfalse;
 	}
 
-	// zyk: Force Guardian with Upgrade cannot lose saber
-	if (saberOwner->client->sess.amrpgmode == 2 && saberOwner->client->pers.rpg_class == 9 && saberOwner->client->pers.secrets_found & (1 << 19))
-		return qfalse;
+	// GalaxyRP fix: [Dead Code] removed the Force Guardian with Upgrade (rpg_class==9) saber-loss
+	// immunity here; pers.rpg_class is permanently 0, so this never applied.
 
-	// zyk: guardians cannot lose saber
-	if (saberOwner->NPC && saberOwner->client->pers.guardian_invoked_by_id != -1)
-		return qfalse;
+	// GalaxyRP fix: [Guardian] removed a "guardians cannot lose saber" guard here;
+	// pers.guardian_invoked_by_id is permanently -1, so this never applied.
 
 	saberOwner->client->ps.saberInFlight = qtrue;
 	saberOwner->client->ps.saberEntityState = 1;
@@ -6752,9 +6768,9 @@ qboolean saberKnockOutOfHand(gentity_t *saberent, gentity_t *saberOwner, vec3_t 
 
 	// zyk: cvar that sets the saber damage in private duels
 	if (!saberOwner->NPC && (saberOwner->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(saberOwner) == qtrue)))
-		saberent->damage = zyk_saber_throw_damage.integer * zyk_duel_saberDamageScale.value;
+		saberent->damage = rp_saber_throw_damage.integer * rp_duel_saberDamageScale.value;
 	else
-		saberent->damage = zyk_saber_throw_damage.integer * g_saberDamageScale.value; // zyk: throw damage will also be scaled
+		saberent->damage = rp_saber_throw_damage.integer * g_saberDamageScale.value; // zyk: throw damage will also be scaled
 
 	saberent->methodOfDeath = MOD_SABER;
 	saberent->splashMethodOfDeath = MOD_SABER;
@@ -7038,7 +7054,13 @@ void saberBackToOwner(gentity_t *saberent)
 		return;
 	}
 
-	if (saberOwner->health < 1 || !saberOwner->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE])
+	// GalaxyRP fix: [Death System] a downed or admin-paralyzed owner counts as dead here. They sit on
+	// RP_DOWNED_HEALTH, so the health test alone let a saber thrown just before going down keep
+	// flying -- steered by the downed player's view, homing at level 3+ and still dealing throw
+	// damage -- for the rest of its flight. This branch drops a prop saber and hands the real one
+	// back with the flight cleared; RP_EnterDownedState() (g_cmds.c) has already switched it off.
+	if (saberOwner->health < 1 || !saberOwner->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] ||
+		G_PlayerIsDowned(saberOwner) || G_PlayerIsAdminParalyzed(saberOwner))
 	{ //He's dead, just go back to our normal saber status
 		saberent->touch = SaberGotHit;
 		saberent->think = SaberUpdateSelf;
@@ -7239,7 +7261,9 @@ void saberFirstThrown(gentity_t *saberent)
 		return;
 	}
 
-	if (saberOwn->health < 1 || !saberOwn->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE])
+	// GalaxyRP fix: [Death System] downed or admin-paralyzed counts as dead -- see saberBackToOwner().
+	if (saberOwn->health < 1 || !saberOwn->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] ||
+		G_PlayerIsDowned(saberOwn) || G_PlayerIsAdminParalyzed(saberOwn))
 	{ //He's dead, just go back to our normal saber status
 		saberent->touch = SaberGotHit;
 		saberent->think = SaberUpdateSelf;
@@ -7337,24 +7361,28 @@ void saberFirstThrown(gentity_t *saberent)
 
 		if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_4) // zyk: level 4 makes it even faster
 			VectorScale(dir, 900, saberent->s.pos.trDelta );
-		else if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_5) // zyk: level 4 makes it even faster
+		else if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_5) // zyk: level 5 makes it faster still
 			VectorScale(dir, 1300, saberent->s.pos.trDelta);
 		else
 			VectorScale(dir, 500, saberent->s.pos.trDelta );
 
 		saberent->s.pos.trTime = level.time;
 
+		// GalaxyRP fix: [Force] levels 4 and 5 used to re-aim LESS often than level 3 while flying
+		// faster (500, 900, 1300 units/s), so a level 5 saber overshot what it was homing on. This
+		// function runs once per G_RunObject() think, every FRAMETIME (100ms), and the re-aim test
+		// above is a strict "speed < level.time", so the real intervals were 500/200/300/400ms for
+		// levels 2-5 -- up to ~520 units between corrections at level 5. Levels 4 and 5 now re-aim on
+		// every think (100ms: ~90 and ~130 units between corrections), the fastest this can go;
+		// levels 2 and 3 are unchanged (500ms and 200ms, ~250 and ~100 units).
 		if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_3)
 		{ //we'll treat them to a quicker update rate if their throw rank is high enough
 			saberent->speed = level.time + 100;
 		}
-		else if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_4)
-		{ //we'll treat them to a quicker update rate if their throw rank is high enough
-			saberent->speed = level.time + 200;
-		}
-		else if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_5)
-		{ //we'll treat them to a quicker update rate if their throw rank is high enough
-			saberent->speed = level.time + 300;
+		else if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_4 ||
+			saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] == FORCE_LEVEL_5)
+		{ //re-aim on the very next think
+			saberent->speed = level.time;
 		}
 		else
 		{
@@ -7627,10 +7655,11 @@ static void G_TossTheMofo(gentity_t *ent, vec3_t tossDir, float tossStr)
 
 	VectorMA(ent->client->ps.velocity, tossStr, tossDir, ent->client->ps.velocity);
 	ent->client->ps.velocity[2] = 200;
+	// GalaxyRP fix: [Dead Code] dropped the Guardian of Resistance knockdown-immunity clause here;
+	// pers.guardian_mode is permanently 0, so it was never == 11 or == 17.
 	if (ent->health > 0 && ent->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN &&
 		BG_KnockDownable(&ent->client->ps) &&
-		G_KickDownable(ent) && 
-		!(ent->client->pers.guardian_mode == 11 || (ent->client->pers.guardian_mode == 17 && Q_stricmp(ent->NPC_type, "guardian_boss_8") == 0))) // zyk: added Guardian of Resistance condition. This guardian cant be knocked down by melee kick
+		G_KickDownable(ent))
 	{ //if they are alive, knock them down I suppose
 		ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
 		ent->client->ps.forceHandExtendTime = level.time + 700;
@@ -7640,6 +7669,7 @@ static void G_TossTheMofo(gentity_t *ent, vec3_t tossDir, float tossStr)
 }
 
 extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
+extern void RP_AttackBreaksCloak( gentity_t *self );
 static gentity_t *G_KickTrace( gentity_t *ent, vec3_t kickDir, float kickDist, vec3_t kickEnd, int kickDamage, float kickPush )
 {
 	vec3_t	traceOrg, traceEnd, kickMins, kickMaxs;
@@ -7695,6 +7725,15 @@ static gentity_t *G_KickTrace( gentity_t *ent, vec3_t kickDir, float kickDist, v
 		}
 		if ( hitEnt->inuse )
 		{//we hit an entity
+			// GalaxyRP fix: [Cloak Item] a kick that lands on someone or something breaks the kicker's
+			// cloak -- kick moves are excluded from EV_SABER_ATTACK (bg_saber.c), so nothing else does.
+			// A kick that only meets the world or an inert brush (a wall kick, say) does not count.
+			// See RP_AttackBreaksCloak (w_force.c).
+			if ( hitEnt->client || hitEnt->takedamage )
+			{
+				RP_AttackBreaksCloak( ent );
+			}
+
 			//FIXME: don't hit same ent more than once per kick
 			if ( hitEnt->takedamage )
 			{//hurt it
@@ -7705,13 +7744,19 @@ static gentity_t *G_KickTrace( gentity_t *ent, vec3_t kickDir, float kickDist, v
 					hitEnt->client->ps.otherKillerTime = level.time + 10000;
 				}
 
+				// GalaxyRP fix: [Shields] DAMAGE_NO_ARMOR, as a punch has (g_weapon.c) and the flip-kick off
+				// someone's face has (g_active.c): a kick goes straight to health instead of being soaked
+				// by shields first. This is the one place every kick does its damage -- melee kicks, saber
+				// kicks, the hilt bash and the get-up roll kicks, all through G_KickSomeMofos() below --
+				// and it had carried only DAMAGE_NO_KNOCKBACK since the original source, so kicks were the
+				// one melee attack shields still took. A vehicle kicked takes it on the hull, as a punch.
 				if (d_saberKickTweak.integer)
 				{
-					G_Damage( hitEnt, ent, ent, kickDir, trace.endpos, kickDamage*0.2f, DAMAGE_NO_KNOCKBACK, MOD_MELEE );
+					G_Damage( hitEnt, ent, ent, kickDir, trace.endpos, kickDamage*0.2f, DAMAGE_NO_ARMOR|DAMAGE_NO_KNOCKBACK, MOD_MELEE );
 				}
 				else
 				{
-					G_Damage( hitEnt, ent, ent, kickDir, trace.endpos, kickDamage, DAMAGE_NO_KNOCKBACK, MOD_MELEE );
+					G_Damage( hitEnt, ent, ent, kickDir, trace.endpos, kickDamage, DAMAGE_NO_ARMOR|DAMAGE_NO_KNOCKBACK, MOD_MELEE );
 				}
 			}
 			if ( hitEnt->client
@@ -7765,7 +7810,7 @@ static void G_KickSomeMofos(gentity_t *ent)
 	float remainingTime = (animLength-elapsedTime);
 	float kickDist = (ent->r.maxs[0]*1.5f)+STAFF_KICK_RANGE+8.0f;//fudge factor of 8
 	// int	  kickDamage = Q_irand(10, 15);//Q_irand( 3, 8 ); //since it can only hit a guy once now
-	int	  kickDamage = zyk_melee_kick_damage.integer; // zyk: added cvar for kick damage
+	int	  kickDamage = rp_melee_kick_damage.integer; // zyk: added cvar for kick damage
 	int	  kickPush = flrand( 50.0f, 100.0f );
 	qboolean doKick = qfalse;
 	renderInfo_t *ri = &ent->client->renderInfo;
@@ -7774,11 +7819,8 @@ static void G_KickSomeMofos(gentity_t *ent)
 	VectorSet(kickEnd, 0.0f, 0.0f, 0.0f);
 	VectorSet(fwdAngs, 0.0f, ent->client->ps.viewangles[YAW], 0.0f);
 
-	// zyk: Monk class in RPG Mode causes more kick damage
-	if (ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 4)
-	{
-		kickDamage = kickDamage * 2.5;
-	}
+	// GalaxyRP fix: [Dead Code] removed the Monk (rpg_class==4) kick-damage boost here;
+	// pers.rpg_class is permanently 0, so this never applied.
 
 	//HMM... or maybe trace from origin to footRBolt/footLBolt?  Which one?  G2 trace?  Will do hitLoc, if so...
 	if ( ent->client->ps.torsoAnim == BOTH_A7_HILT )
@@ -8741,6 +8783,12 @@ nextStep:
 			{
 				vec3_t startorg, startang, dir;
 
+				// GalaxyRP fix: [Cloak Item] this is the frame the saber leaves the owner's hand on a
+				// throw, and a throw never raises EV_SABER_ATTACK (the event that decloaks a swing), so
+				// break cloak here -- see RP_AttackBreaksCloak (w_force.c). A saber knocked out of the
+				// hand never comes through here: saberKnockOutOfHand sets saberEntityState itself.
+				RP_AttackBreaksCloak( self );
+
 				VectorCopy(boltOrigin, saberent->r.currentOrigin);
 
 				VectorCopy(boltOrigin, startorg);
@@ -8784,9 +8832,9 @@ nextStep:
 
 				// zyk: cvar that sets the saber damage in private duels
 				if (!self->NPC && (self->client->ps.duelInProgress == qtrue || (level.duel_tournament_mode == 4 && duel_tournament_is_duelist(self) == qtrue)))
-					saberent->damage = zyk_saber_throw_damage.integer * zyk_duel_saberDamageScale.value;
+					saberent->damage = rp_saber_throw_damage.integer * rp_duel_saberDamageScale.value;
 				else
-					saberent->damage = zyk_saber_throw_damage.integer * g_saberDamageScale.value; // zyk: throw damage will also be scaled
+					saberent->damage = rp_saber_throw_damage.integer * g_saberDamageScale.value; // zyk: throw damage will also be scaled
 
 				saberent->methodOfDeath = MOD_SABER;
 				saberent->splashMethodOfDeath = MOD_SABER;
@@ -9401,12 +9449,87 @@ void WP_SaberBlock( gentity_t *playerent, vec3_t hitloc, qboolean missileBlock )
 	}
 }
 
-int WP_SaberCanBlock(gentity_t *self, vec3_t point, int dflags, int mod, qboolean projectile, int attackStr)
+/*
+GalaxyRP fix: [Combat] whether a would-be saber blocker is aiming at the attacker: the attacker's
+centre within RP_SABER_AIM_BLOCK_COS of the blocker's view direction (15 degrees), with no world
+geometry in between. Any distance.
+
+This replaces the "reticule on attacker" shortcut WP_SaberCanBlock() used to take on
+ps.hasLookTarget. That flag does not mean what the old comment said: WP_SaberStartMissileBlockCheck()
+sets it whenever ANY living client or NPC -- teammate, bystander, a downed player -- is within 256
+units and in sight, and it knows nothing about the attacker. Returning 1 on it skipped every later
+check: Saber Defense 0 blocked (and, through the level-0 fall-through in G_MissileImpact, reflected
+everything), blocking worked from behind and while channelling Grip/Lightning/Drain, and Defense 3+
+was immune to disruptor shots from any direction. hasLookTarget itself is left alone; it still drives
+head tracking.
+*/
+#define RP_SABER_AIM_BLOCK_COS	0.96592583f	// cos(15 degrees)
+
+static qboolean RP_SaberAimingAtAttacker( gentity_t *self, gentity_t *attacker )
+{
+	vec3_t eye, target, dir, fwd;
+	trace_t tr;
+
+	if ( !self || !self->client || !attacker || attacker == self || !attacker->inuse )
+	{
+		return qfalse;
+	}
+
+	VectorCopy( self->client->ps.origin, eye );
+	eye[2] += self->client->ps.viewheight;
+
+	// centre of the attacker's bounds (linked entities); its origin otherwise
+	if ( attacker->r.linked )
+	{
+		VectorAdd( attacker->r.absmin, attacker->r.absmax, target );
+		VectorScale( target, 0.5f, target );
+	}
+	else if ( attacker->client )
+	{
+		VectorCopy( attacker->client->ps.origin, target );
+	}
+	else
+	{
+		VectorCopy( attacker->r.currentOrigin, target );
+	}
+
+	VectorSubtract( target, eye, dir );
+	if ( VectorNormalize( dir ) <= 0.0f )
+	{
+		return qfalse;
+	}
+
+	AngleVectors( self->client->ps.viewangles, fwd, NULL, NULL );
+	if ( DotProduct( fwd, dir ) < RP_SABER_AIM_BLOCK_COS )
+	{
+		return qfalse;
+	}
+
+	trap->Trace( &tr, eye, NULL, NULL, target, self->s.number, MASK_SOLID, qfalse, 0, 0 );
+	if ( tr.fraction < 1.0f && tr.entityNum != attacker->s.number )
+	{
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+// GalaxyRP fix: [Combat] attacker added -- the entity whose attack is being blocked (a missile's
+// current owner, the disruptor shooter, the swinging player, the saber thrower), or NULL if unknown.
+// See RP_SaberAimingAtAttacker() above.
+int WP_SaberCanBlock(gentity_t *self, gentity_t *attacker, vec3_t point, int dflags, int mod, qboolean projectile, int attackStr)
 {
 	qboolean thrownSaber = qfalse;
+	qboolean aimingAtAttacker = qfalse;
 	float blockFactor = 0;
 
 	if (!self || !self->client || !point)
+	{
+		return 0;
+	}
+
+	// DAJ_RP: [NPC System] a frozen NPC blocks nothing, saber or missile -- see RP_NpcFreeze() (NPC_spawn.c)
+	if (RP_NpcIsFrozen(self))
 	{
 		return 0;
 	}
@@ -9512,16 +9635,19 @@ int WP_SaberCanBlock(gentity_t *self, vec3_t point, int dflags, int mod, qboolea
 	*/
 
 	// GalaxyRP (Alex): [Combat] If player has reticule on attacker, block it.
-	if (self->client->ps.hasLookTarget) {
-		return 1;
-	}
+	// GalaxyRP fix: [Combat] now really the attacker under the reticule -- see
+	// RP_SaberAimingAtAttacker() above. Aiming at them waives the "saber must be idle" checks just
+	// below and the facing cone further down, and nothing else: Saber Defense 1 or higher, the block
+	// cooldown, hands free of a channelled force power, and every check above this point still apply.
+	aimingAtAttacker = RP_SaberAimingAtAttacker(self, attacker);
 
-	if (SaberAttacking(self))
+	if (!aimingAtAttacker && SaberAttacking(self))
 	{ //attacking, can't block now
 		return 0;
 	}
 
-	if (self->client->ps.saberMove != LS_READY &&
+	if (!aimingAtAttacker &&
+		self->client->ps.saberMove != LS_READY &&
 		!self->client->ps.saberBlocking)
 	{
 		return 0;
@@ -9549,11 +9675,16 @@ int WP_SaberCanBlock(gentity_t *self, vec3_t point, int dflags, int mod, qboolea
 			blockFactor = 0.3f;
 		}
 	}
-	if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_4)
+	// GalaxyRP fix: [Force] these two tests used to be standalone `if`s, so the FORCE_LEVEL_3 test
+	// below started a fresh if/else chain whose terminal `else` returns 0. A player with Saber
+	// Defense 4 or 5 therefore set blockFactor, missed every arm of that chain, and fell through to
+	// `return 0` -- i.e. never autoblocked at all, strictly worse than Defense 1. Joining all five
+	// arms into one chain makes the level-4 and level-5 block factors actually take effect.
+	else if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_4)
 	{
 		blockFactor = 0.5f;
 	}
-	if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_3)
+	else if (self->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] == FORCE_LEVEL_3)
 	{
 		blockFactor = 0.7f;
 	}
@@ -9580,7 +9711,7 @@ int WP_SaberCanBlock(gentity_t *self, vec3_t point, int dflags, int mod, qboolea
 		blockFactor -= 0.25f;
 	}
 
-	if (!InFront( point, self->client->ps.origin, self->client->ps.viewangles, blockFactor )) //orig 0.2f
+	if (!aimingAtAttacker && !InFront( point, self->client->ps.origin, self->client->ps.viewangles, blockFactor )) //orig 0.2f
 	{
 		return 0;
 	}

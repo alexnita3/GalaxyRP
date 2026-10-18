@@ -28,24 +28,29 @@
 		visible						0
 		fullscreen					0
 		outOfBoundsClick										// this closes the window if it gets a click out of the rectangle
-		rect						195 140 250 180
+		rect						195 140 250 172		// GalaxyRP: [Profile UI] Join/Auto team/Red/Blue/Spectate moved back to the top-bar Join menu;
+											// a "Join or Spectate" button below Logout/Change Pass reopens that same menu from here.
+											// Sized to center the three rows (y=40/70/100, 92px tall) with equal 40px margins above
+											// and below
 		focusColor					1 1 1 1					// Focus color for text and items
 		style						1
 		border						1
-		descX						320
-		descY						428
-		descScale					1
-		descColor				1 .682 0 .8
-		descAlignment					ITEM_ALIGN_CENTER		
-		onOpen  
-		{ 
-			uiScript				update "ui_GetName"
+		// GalaxyRP fix: [UI] descX/descY/descScale/descColor/descAlignment removed -- they positioned
+		// tooltip (descText) content at fixed coordinates that landed well outside this menu's own
+		// 250x172 window rect. Since descText has been removed from every itemDef below, these settings
+		// no longer do anything and are dropped rather than left as unused dead config.
+		onOpen
+		{
 			uiScript				updateForceStatus
+			// GalaxyRP: [Profile UI] refreshes ui_loggedin (see CG_LoggedInUpdate_f / Cmd_GalaxyRpUi_f)
+			// so the Register/Login vs Logout/Change Pass gating below reflects the player's actual
+			// current login state every time this menu is opened, instead of whatever it was last set
+			// to by the separate Profile menu.
+			exec					"zykmod" ;
 			hide					highlights
 		}
-		onClose 
-		{ 
-			uiScript				update "ui_SetName"
+		onClose
+		{
 			uiScript				updateForceStatus
 			hide					highlights
 		}
@@ -58,7 +63,7 @@
 			name				background_pic
 			group				none
 			style				WINDOW_STYLE_SHADER
-			rect				0 0 250 180
+			rect				0 0 250 172
 			background			"gfx/menus/menu_box_ingame"
 			forecolor			1 1 1 1
 			visible				1
@@ -79,118 +84,33 @@
 			decoration
 		}
 
-//------------------------------------------------------------------------------------------------
-// Name entry field
-//------------------------------------------------------------------------------------------------
-		itemDef 
-		{
-			name				nameglow
-			group				mods
-			style				WINDOW_STYLE_SHADER
-			rect				25 11 250 24
-			background			"gfx/menus/menu_buttonback"			// Frame around button
-			forecolor			1 1 1 1
-			visible			0
-			decoration
-		}
-		
-		itemDef 
-		{
-			name 				namefield
-			type 				ITEM_TYPE_EDITFIELD
-			style 				0
-			text 				@MENUS_NAME1
-			cvar 				"ui_Name"
-			maxchars 			26
-			rect 				20 13 170 20
-			textalign			ITEM_ALIGN_LEFT		
-			textalignx 			0
-			textaligny 			-5
-			font				2
-			textscale			1
-			forecolor			1 .682 0 1
-			outlinecolor 			1 .5 .5 .5
-			backcolor 			0 0 0 0
-			border 				0
-			bordercolor 			0 0 0 0
-			descText			@MENUS_ENTER_YOUR_NAME_HERE
-			visible 			1 
-			action 
-			{ 
-				play			"sound/interface/button1"
-			}
-			mouseenter 
-			{ 
-				show			nameglow
-			}
-			mouseexit 
-			{ 
-				hide			nameglow
-			}
-		}
-//LOG IN BUTTONS
-		itemDef 
-		{
-			name				loginButton
-			group				highlights 
-			style				WINDOW_STYLE_SHADER
-			rect				73 70 105 32
-			background			"gfx/menus/menu_buttonback"			// Frame around button
-			forecolor			1 1 1 1
-			decoration
-			visible			0
-		}
+// GalaxyRP: [Profile UI] the player-name entry field that used to live here was removed -- it
+// duplicated the one already on the ingame_galaxyrp menu (same "ui_Name" cvar, same
+// ui_GetName/ui_SetName sync), so there is no need to maintain two copies.
+// GalaxyRP: [Profile UI] Register/Login (logged-out) and Logout/Change Pass (logged-in) now share the
+// same two slots (y=40 and y=70) instead of all three always showing at once regardless of login
+// state -- gated on ui_loggedin (kept fresh by the exec "zykmod" added to onOpen above). Only one pair
+// is ever visible for a given player.
 
-		itemDef 
-		{
-			name				login
-			group				"playerforcespectate"
-			text				"Log in"
-			type				1
-			style				WINDOW_STYLE_EMPTY
-			rect				73 70 105 32
-			textalign			ITEM_ALIGN_CENTER
-			textalignx			52
-			textaligny			2
-			font				2
-			textscale			1
-			forecolor			1 .682 0 1
-			descText			@MENUS_APPLY_CHANGES_BUT_REMAIN
-			visible			1
-			action 
-			{ 
-				play			"sound/interface/button1"
-				open			ingame_login
-				close 			ingame_player
-			}
-			mouseEnter 
-			{ 
-				show			loginButton
-			}
-			mouseExit 
-			{ 
-				hide			loginButton
-			}
-		}
-
-//REGISTER BUTTONS
-
-		itemDef 
+//REGISTER BUTTON (logged-out, slot 1)
+		itemDef
 		{
 			name				registerButton
-			group				highlights 
+			group				highlights
 			style				WINDOW_STYLE_SHADER
 			rect				73 40 105 32
 			background			"gfx/menus/menu_buttonback"			// Frame around button
 			forecolor			1 1 1 1
 			decoration
 			visible			0
+			cvartest			"ui_loggedin"
+			showcvar			{ "0" }
 		}
 
-		itemDef 
+		itemDef
 		{
 			name				register
-			group				"playerforcespectate"
+			group				none
 			text				"Register"
 			type				1
 			style				WINDOW_STYLE_EMPTY
@@ -201,197 +121,221 @@
 			font				2
 			textscale			1
 			forecolor			1 .682 0 1
-			descText			@MENUS_APPLY_CHANGES_BUT_REMAIN
 			visible			1
-			action 
-			{ 
+			cvartest			"ui_loggedin"
+			showcvar			{ "0" }
+			action
+			{
 				play			"sound/interface/button1"
 				open			ingame_register
 				close 			ingame_player
 			}
-			mouseEnter 
-			{ 
+			mouseEnter
+			{
 				show			registerButton
 			}
-			mouseExit 
-			{ 
+			mouseExit
+			{
 				hide			registerButton
 			}
 		}
 
-//REGISTER BUTTONS
-
-		itemDef 
+//LOG IN BUTTON (logged-out, slot 2)
+		itemDef
 		{
-			name				changepassButton
-			group				highlights 
+			name				loginButton
+			group				highlights
 			style				WINDOW_STYLE_SHADER
-			rect				73 100 105 32
+			rect				73 70 105 32
 			background			"gfx/menus/menu_buttonback"			// Frame around button
 			forecolor			1 1 1 1
 			decoration
 			visible			0
+			cvartest			"ui_loggedin"
+			showcvar			{ "0" }
 		}
 
-		itemDef 
+		itemDef
 		{
-			name				changepass
-			group				"playerforcespectate"
-			text				"Change Pass"
+			name				login
+			group				none
+			text				"Log in"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				73 100 105 32
+			rect				73 70 105 32
 			textalign			ITEM_ALIGN_CENTER
 			textalignx			52
 			textaligny			2
 			font				2
 			textscale			1
 			forecolor			1 .682 0 1
-			descText			@MENUS_APPLY_CHANGES_BUT_REMAIN
 			visible			1
-			action 
-			{ 
+			cvartest			"ui_loggedin"
+			showcvar			{ "0" }
+			action
+			{
+				play			"sound/interface/button1"
+				open			ingame_login
+				close 			ingame_player
+			}
+			mouseEnter
+			{
+				show			loginButton
+			}
+			mouseExit
+			{
+				hide			loginButton
+			}
+		}
+
+//LOGOUT BUTTON (logged-in, slot 1)
+		itemDef
+		{
+			name				logoutButton
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				73 40 105 32
+			background			"gfx/menus/menu_buttonback"			// Frame around button
+			forecolor			1 1 1 1
+			decoration
+			visible			0
+			cvartest			"ui_loggedin"
+			showcvar			{ "1" }
+		}
+
+		// GalaxyRP: [Profile UI] moved out of ingame_login.menu (where it sat confusingly next to the
+		// username/password fields and the Login button) onto the Account menu itself, alongside
+		// Change Pass, matching how a logged-in player actually thinks about these two actions.
+		itemDef
+		{
+			name				logout
+			group				none
+			text				"Logout"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				73 40 105 32
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			52
+			textaligny			2
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			visible			1
+			cvartest			"ui_loggedin"
+			showcvar			{ "1" }
+			action
+			{
+				play			"sound/interface/button1"
+				exec			"logout"
+				hide			highlights
+				uiScript 		closeingame
+			}
+			mouseEnter
+			{
+				show			logoutButton
+			}
+			mouseExit
+			{
+				hide			logoutButton
+			}
+		}
+
+//CHANGE PASS BUTTON (logged-in, slot 2)
+		itemDef
+		{
+			name				changepassButton
+			group				highlights
+			style				WINDOW_STYLE_SHADER
+			rect				73 70 105 32
+			background			"gfx/menus/menu_buttonback"			// Frame around button
+			forecolor			1 1 1 1
+			decoration
+			visible			0
+			cvartest			"ui_loggedin"
+			showcvar			{ "1" }
+		}
+
+		itemDef
+		{
+			name				changepass
+			group				none
+			text				"Change Pass"
+			type				1
+			style				WINDOW_STYLE_EMPTY
+			rect				73 70 105 32
+			textalign			ITEM_ALIGN_CENTER
+			textalignx			52
+			textaligny			2
+			font				2
+			textscale			1
+			forecolor			1 .682 0 1
+			visible			1
+			cvartest			"ui_loggedin"
+			showcvar			{ "1" }
+			action
+			{
 				play			"sound/interface/button1"
 				open			ingame_passchange
 				close 			ingame_player
 			}
-			mouseEnter 
-			{ 
+			mouseEnter
+			{
 				show			changepassButton
 			}
-			mouseExit 
-			{ 
+			mouseExit
+			{
 				hide			changepassButton
 			}
 		}
 
-//---------------------------------------------
-//	APPLY BUTTON
-//---------------------------------------------
-// JOIN BUTTONS
-		itemDef 
+//JOIN OR SPECTATE BUTTON (slot 3, always available regardless of login state)
+		itemDef
 		{
-			name				applyjoinButton
-			group				highlights 
+			name				joinOrSpectateButton
+			group				highlights
 			style				WINDOW_STYLE_SHADER
-			rect				5 140 105 32
-			background			"gfx/menus/menu_buttonback"			// Frame around button
-			forecolor			1 1 1 1
-			decoration
-			visible			0
-			appearance_slot		3
-		}
-
-		itemDef 
-		{
-			name				applycurrent
-			group				"playerapply"
-			text				"Join Game"
-			type				1
-			style				WINDOW_STYLE_EMPTY
-			rect				5 140 105 32
-			textalign			ITEM_ALIGN_CENTER
-			textalignx			52
-			textaligny			2
-			font				2
-			textscale			1
-			forecolor			1 .682 0 1
-			descText			@MENUS_APPLY_CHANGES_AND_JOIN
-			visible			1
-			action 
-			{ 
-				play			"sound/interface/button1"
-				uiScript		setForce "none"
-				hide			highlights
-				uiScript		closeingame
-			}
-			mouseEnter 
-			{ 
-				show			applyjoinButton
-			}
-			mouseExit 
-			{ 
-				hide			applyjoinButton
-			}
-		}
-
-		itemDef 
-		{
-			name				applyjoin
-			group				"playerforcejoin"
-			text				"Join Game"
-			type				1
-			style				WINDOW_STYLE_EMPTY
-			rect				5 140 105 32
-			textalign			ITEM_ALIGN_CENTER
-			textalignx			52
-			textaligny			2
-			font				2
-			textscale			1
-			forecolor			1 .682 0 1
-			descText			@MENUS_APPLY_CHANGES_AND_JOIN
-			visible			1
-			action 
-			{ 
-				play			"sound/interface/button1"
-				uiScript 		setForce "free"
-				hide			highlights
-				uiScript 		closeingame
-			}
-			mouseEnter 
-			{ 
-				show			applyjoinButton
-			}
-			mouseExit 
-			{ 
-				hide			applyjoinButton
-			}
-		}
-
-// APPLY SPECTATOR
-		itemDef 
-		{
-			name				applyspectateButton
-			group				highlights 
-			style				WINDOW_STYLE_SHADER
-			rect				150 140 105 32
+			rect				73 100 105 32
 			background			"gfx/menus/menu_buttonback"			// Frame around button
 			forecolor			1 1 1 1
 			decoration
 			visible			0
 		}
 
-		itemDef 
+		// GalaxyRP: [Profile UI] mirrors the top-bar "Join" button in ingame.menu -- same target (the
+		// vanilla ingame_join popup with its own Join/Auto team/Red/Blue/Spectate buttons), just
+		// reachable from the Account menu as well. GalaxyRP fix: [UI] the cvarTest "ui_singleplayeractive"
+		// / disableCvar {"1"} block that used to gray this out in Solo Game mode has been removed to
+		// match the top-bar Join button, which was never actually gated the same way (see ingame.menu).
+		itemDef
 		{
-			name				applyspectate
-			group				"playerforcespectate"
-			text				@MENUS_SPECTATE
+			name				joinOrSpectate
+			group				none
+			text				"Join or Spectate"
 			type				1
 			style				WINDOW_STYLE_EMPTY
-			rect				150 140 105 32
+			rect				73 100 105 32
 			textalign			ITEM_ALIGN_CENTER
 			textalignx			52
 			textaligny			2
 			font				2
 			textscale			1
 			forecolor			1 .682 0 1
-			descText			@MENUS_APPLY_CHANGES_BUT_REMAIN
 			visible			1
-			action 
-			{ 
+			action
+			{
 				play			"sound/interface/button1"
-				uiScript 		setForce "s"
-				hide			highlights
-				uiScript 		closeingame
+				open			ingame_join
+				close 			ingame_player
 			}
-			mouseEnter 
-			{ 
-				show			applyspectateButton
+			mouseEnter
+			{
+				show			joinOrSpectateButton
 			}
-			mouseExit 
-			{ 
-				hide			applyspectateButton
+			mouseExit
+			{
+				hide			joinOrSpectateButton
 			}
 		}
+
 	}
 }

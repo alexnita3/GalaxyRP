@@ -848,8 +848,38 @@ void CG_AddViewWeapon( playerState_t *ps ) {
 
 	if ( cg_fovViewmodel.integer )
 	{
-		float fracDistFOV = tanf( cg.refdef.fov_x * ( M_PI/180 ) * 0.5f );
-		float fracWeapFOV = ( 1.0f / fracDistFOV ) * tanf( cgFov * ( M_PI/180 ) * 0.5f );
+		float fracDistFOV, fracWeapFOV;
+
+		// GalaxyRP fix: [UI] the scale below is a RATIO of two field-of-view values, so both have
+		// to be measured the same way. cg.refdef.fov_x is aspect-corrected by CG_CalcFov() whenever
+		// cg_fovAspectAdjust is set -- which is now the default -- while cgFov is the player's raw
+		// number, so the ratio was mixing a corrected value with an uncorrected one and the gun came
+		// out wrong by exactly the correction factor, 1 / (baseAspect * aspect):
+		//
+		//   4:3   1.00   16:10  0.83   16:9  0.75   21:9  0.57   32:9  0.38
+		//
+		// i.e. a player on an ordinary 16:9 display saw the gun at three quarters of the size they
+		// asked for, and worse on ultrawide. 4:3 was unaffected, baseAspect being 3/4.
+		//
+		// Same formula as CG_CalcFov() and CG_DrawSkyBoxPortal, deliberately -- three copies of one
+		// calculation, and the suite compares them.
+		//
+		// Note this corrects the CLAMPED cgFov. TaystJK, which has this fix, captures its
+		// desiredFov before clamping, so a large cg_fovViewmodel slips past its own limit; we do not
+		// copy that. Nor do we copy its "if (!cg.zoomed)" guard: we return earlier on
+		// ps.zoomMode, so the gun is not drawn at all while zoomed.
+		if ( cg_fovAspectAdjust.integer ) {
+			// Based on LordHavoc's code for Darkplaces
+			// http://www.quakeworld.nu/forum/topic/53/what-does-your-qw-look-like/page/30
+			const float baseAspect = 0.75f; // 3/4
+			const float aspect = (float)cgs.glconfig.vidWidth/(float)cgs.glconfig.vidHeight;
+			const float desiredFov = cgFov;
+
+			cgFov = atan( tan( desiredFov*M_PI / 360.0f ) * baseAspect*aspect )*360.0f / M_PI;
+		}
+
+		fracDistFOV = tanf( cg.refdef.fov_x * ( M_PI/180 ) * 0.5f );
+		fracWeapFOV = ( 1.0f / fracDistFOV ) * tanf( cgFov * ( M_PI/180 ) * 0.5f );
 		VectorScale( hand.axis[0], fracWeapFOV, hand.axis[0] );
 	}
 
@@ -1063,13 +1093,13 @@ static qboolean CG_WeaponSelectable( int i ) {
 		return qfalse;
 	}
 
-	// zyk: if autoswitch is 0, allow player do get any weapon even if out of ammo
-	if (cg_autoSwitch.integer != 0 && 
-		cg.predictedPlayerState.ammo[weaponData[i].ammoIndex] < weaponData[i].energyPerShot &&
-		cg.predictedPlayerState.ammo[weaponData[i].ammoIndex] < weaponData[i].altEnergyPerShot)
-	{
-		return qfalse;
-	}
+	// DAJ_RP: [Weapons] a weapon with no ammo can be selected: the GalaxyRP client does no weapon autoswitch
+	// and ignores cg_autoSwitch, behaving always as zyk made it behave with 0 -- picking up a weapon does not
+	// select it (CG_ItemPickup() in cg_event.c), running out of ammo or detonating the last det packs keeps
+	// the weapon in hand (the server dry-fires it: PM_DryFire() in bg_pmove.c), and an empty one stays on the
+	// weapon keys (drawn with its no-ammo icon). The cvar is still registered -- the engine and the base
+	// game's menus know it -- but nothing reads it; the setup menu shows it off (ui_main.c). A weapon the
+	// server takes away is the one exception: the client follows the server's choice (EV_NOAMMO).
 
 	if (i == WP_DET_PACK && cg.predictedPlayerState.ammo[weaponData[i].ammoIndex] < 1 &&
 		!cg.predictedPlayerState.hasDetPackPlanted)
@@ -1755,45 +1785,8 @@ void CG_WeaponClean_f( void ) {
 
 
 
-/*
-===================
-CG_OutOfAmmoChange
-
-The current weapon has just run out of ammo
-===================
-*/
-void CG_OutOfAmmoChange( int oldWeapon )
-{
-	int		i;
-
-	// zyk: if autoswitch is 0, allow player do get any weapon even if out of ammo
-	if (cg_autoSwitch.integer == 0)
-		return;
-
-	cg.weaponSelectTime = cg.time;
-
-	for ( i = LAST_USEABLE_WEAPON ; i > 0 ; i-- )	//We don't want the emplaced or turret
-	{
-		if ( CG_WeaponSelectable( i ) )
-		{
-			/*
-			if ( 1 == cg_autoswitch.integer &&
-				( i == WP_TRIP_MINE || i == WP_DET_PACK || i == WP_THERMAL || i == WP_ROCKET_LAUNCHER) ) // safe weapon switch
-			*/
-			//rww - Don't we want to make sure i != one of these if autoswitch is 1 (safe)?
-			if (cg_autoSwitch.integer != 1 || (i != WP_TRIP_MINE && i != WP_DET_PACK && i != WP_THERMAL && i != WP_ROCKET_LAUNCHER))
-			{
-				if (i != oldWeapon)
-				{ //don't even do anything if we're just selecting the weapon we already have/had
-					cg.weaponSelect = i;
-					break;
-				}
-			}
-		}
-	}
-
-	trap->S_MuteSound(cg.snap->ps.clientNum, CHAN_WEAPON);
-}
+// DAJ_RP: [Weapons] CG_OutOfAmmoChange(), which switched to the best weapon with ammo left when the one in
+// hand ran out, is gone: the GalaxyRP client does no weapon autoswitch -- see CG_WeaponSelectable() above
 
 
 
@@ -2427,6 +2420,48 @@ void CG_CopyG2WeaponInstance(centity_t *cent, int weaponNum, void *toGhoul2)
 {
 	//rww - the -1 is because there is no "weapon" for WP_NONE
 	assert(weaponNum < MAX_WEAPONS);
+
+	// GalaxyRP fix: [Weapons] anything stripped of its weapon kept holding the model. WP_NONE is
+	// the one weapon_t member with no bg_itemlist entry, so CG_InitG2Weapons -- which only builds
+	// instances for IT_WEAPON items -- never makes one for it, and CG_G2WeaponInstance therefore
+	// returns NULL. The guard below then skipped this whole function, while both callers went on
+	// to record the new weapon anyway (ghoul2weapon = CG_G2WeaponInstance(.., WP_NONE), also NULL),
+	// so the comparison that brought us here never fired again. The old model stayed bolted to
+	// slot 1 until the entity died, lost the limb holding it, or changed model.
+	//
+	// Easy to reach, and mostly on NPCs. TossClientWeapon() (g_combat.c) sets ps.weapon to 0 when
+	// the victim has nothing else left, which is the normal outcome of a Force pull against one --
+	// NPC_SetWeapons() gives them only what their .npc file lists, so there is rarely a fallback,
+	// whereas a player usually still has melee or a saber and lands on a weapon that does have an
+	// instance. The imperials-at-ease hack in NPC_AI_Stormtrooper.c does it deliberately (and
+	// carries Raven's own commented-out removal, written against the SP weaponModel[] API that
+	// does not exist in MP), PM_FinishWeaponChange() lands here for any weapon the owner does not
+	// actually have, and zyk_deselect_weapon_if_active() does when the last weapon-granting skill
+	// is downgraded.
+	//
+	// Handled the way WP_EMPLACED_GUN and WP_MELEE already are below -- strip slot 1, and slot 2
+	// first, exactly as the non-saber branch does before every other weapon -- just hoisted above
+	// the guard so that it is reachable at all. Only two of this function's call sites can reach
+	// WP_NONE -- CG_Player() in cg_players.c and CG_CheckPlayerG2Weapons() below -- and both gate
+	// on !(eFlags & EF_DEAD) and !torsoBolt, so corpses, which player_die() also leaves on WP_NONE,
+	// are untouched and keep their weapon exactly as before. Of the rest, three are gated on
+	// weapon == WP_SABER, CG_SetInitialSnapshot() passes the FIRST_WEAPON literal (WP_BRYAR_PISTOL),
+	// and CG_ForceFPLSPlayerModel() sits inside an #if 0.
+	if (weaponNum == WP_NONE)
+	{
+		if (trap->G2API_HasGhoul2ModelOnIndex(&(toGhoul2), 2))
+		{
+			trap->G2API_RemoveGhoul2Model(&(toGhoul2), 2);
+		}
+
+		if (trap->G2API_HasGhoul2ModelOnIndex(&(toGhoul2), 1))
+		{
+			trap->G2API_RemoveGhoul2Model(&(toGhoul2), 1);
+		}
+
+		return;
+	}
+
 	if (CG_G2WeaponInstance(cent, weaponNum/*-1*/))
 	{
 		if (weaponNum == WP_SABER)
@@ -2523,7 +2558,8 @@ void CG_CheckPlayerG2Weapons(playerState_t *ps, centity_t *cent)
 	}
 
 	// should we change the gun model on this player?
-	if (cent->currentState.saberInFlight)
+	// DAJ_RP: [Saber Drop] only while the saber is the weapon -- see the same test in CG_Player (cg_players.c)
+	if (cent->currentState.saberInFlight && ps->weapon == WP_SABER)
 	{
 		cent->ghoul2weapon = CG_G2WeaponInstance(cent, WP_SABER);
 	}
@@ -2568,7 +2604,27 @@ void CG_CheckPlayerG2Weapons(playerState_t *ps, centity_t *cent)
 				trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, cgs.clientinfo[ps->clientNum].saber[1].soundOff);
 			}
 		}
-		else if (ps->weapon == WP_SABER && cent->weapon != ps->weapon && !cent->saberWasInFlight)
+		// GalaxyRP fix: [Saber Sounds] added "&& !ps->saberHolstered". The sibling "switching away"
+		// arm just above tests saberHolstered three times; this arm tested it nowhere, so a saber that
+		// was in the player's hands but NOT lit still made the ignition sound whenever this comparison
+		// fired -- and it fires on far more than a real weapon switch. cent->weapon is purely local
+		// bookkeeping for "which weapon model is bolted to our ghoul2 instance" (nothing else in cgame
+		// reads it except these sound arms), and it is reset to 0 by every respawn
+		// (CG_RestoreClientGhoul_f, the rcg/ircg server command), every saber or model change
+		// (CG_NewClientInfo), every ghoul2 rebuild and every spectator transition. Each of those then
+		// read as "switched to the saber". With /settings 3 OFF -- spawn with the saber selected but
+		// not ignited -- that meant an ignition sound on every single spawn.
+		//
+		// A genuine ignition does not come through here at all: it is EV_SABER_UNHOLSTER, raised in
+		// bg_saber.c and played in cg_event.c, which never looks at cent->weapon. So this guard cannot
+		// silence a real toggle. cg_players.c carries the same fix for other players.
+		//
+		// The two BG_SI_SetDesiredLength() calls at the bottom of this arm deliberately stay OUTSIDE
+		// the new condition: their len argument of 0 means RETRACT (BG_SI_SetLengthGradual expands -1,
+		// not 0, to lengthMax), so they reset the blade to zero to let it grow in on a real switch.
+		// Moving them under a saberHolstered test would change the blade animation.
+		else if (ps->weapon == WP_SABER && cent->weapon != ps->weapon && !cent->saberWasInFlight
+			&& !ps->saberHolstered)
 		{ //switching to the saber
 			//trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, trap->S_RegisterSound( "sound/weapons/saber/saberon.wav" ));
 			if (cgs.clientinfo[ps->clientNum].saber[0].soundOn)
@@ -2576,7 +2632,10 @@ void CG_CheckPlayerG2Weapons(playerState_t *ps, centity_t *cent)
 				trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, cgs.clientinfo[ps->clientNum].saber[0].soundOn);
 			}
 
-			if (cgs.clientinfo[ps->clientNum].saber[1].soundOn)
+			// GalaxyRP fix: [Saber Sounds] added the saber[1].model[0] test -- see Cmd_ToggleSaber_f
+			// in g_cmds.c for why an unused second saber has a playable soundOn.
+			if (cgs.clientinfo[ps->clientNum].saber[1].soundOn &&
+				cgs.clientinfo[ps->clientNum].saber[1].model[0])
 			{
 				trap->S_StartSound(cent->lerpOrigin, cent->currentState.number, CHAN_AUTO, cgs.clientinfo[ps->clientNum].saber[1].soundOn);
 			}

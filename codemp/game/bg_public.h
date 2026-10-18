@@ -449,6 +449,11 @@ extern int bgForcePowerCost[NUM_FORCE_POWERS][NUM_FORCE_POWER_LEVELS];
 #define PMF_FOLLOW			4096	// spectate following another player
 #define PMF_SCOREBOARD		8192	// spectate as a scoreboard
 #define PMF_STUCK_TO_WALL	16384	// grabbing a wall
+// GalaxyRP: [Grapple Hook] raised by the server (ClientThink_real, g_active.c) while the player's hook
+// has landed and they still qualify to be pulled; both PM_Grapple* moves in bg_pmove.c run only while
+// it is set. pm_flags is networked as 16 bits (msg.cpp), so this is the last free bit. Same value and
+// meaning as TaystJK/JA+/JAPro, which is what a TaystJK client expects to find in it.
+#define PMF_GRAPPLE			32768
 
 #define	PMF_ALL_TIMES	(PMF_TIME_WATERJUMP|PMF_TIME_LAND|PMF_TIME_KNOCKBACK)
 
@@ -528,6 +533,10 @@ typedef struct pmove_s {
 	//rww - bg entitystate access method
 	bgEntity_t	*baseEnt; //base address of the entity array (g_entities or cg_entities)
 	int			entSize; //size of the struct (gentity_t or centity_t) so things can be dynamic
+
+	// DAJ_RP: [Weapons] (out) a fire button was pressed that the weapon could not fire for want of ammo --
+	// see PM_DryFire() in bg_pmove.c. The client's prediction plays the dry-fire click from it.
+	qboolean	rpDryFire;
 } pmove_t;
 
 
@@ -565,8 +574,70 @@ typedef enum {
 	STAT_ARMOR,
 	STAT_DEAD_YAW,					// look this direction when dead (FIXME: get rid of?)
 	STAT_CLIENTS_READY,				// bit mask of clients wishing to exit the intermission (FIXME: configstring?)
-	STAT_MAX_HEALTH					// health / armor limit, changable by handicap
+	STAT_MAX_HEALTH,				// health / armor limit, changable by handicap
+	// GalaxyRP: [Use hint] 1 while the player is looking at a usable world entity within
+	// USE_DISTANCE, 0 otherwise -- see G_CanUseInFrontOf() (g_utils.c), which the server evaluates
+	// once per client per frame in ClientEndFrame(), and CG_DrawUseHint() (cg_draw.c), which draws
+	// the hand icon when this reads non-zero. Set only for players who enabled it via /settings 4,
+	// so the client needs to know nothing about the setting -- it just draws when the bit arrives.
+	// Slot 9 was free: nothing in this codebase used stats[9..15], and the engine's playerState delta
+	// already covers every slot up to MAX_STATS (msg.cpp writes a MAX_STATS-wide changed-mask and then
+	// a short for each stat that actually changed), so this needs no protocol or engine change and
+	// costs nothing on the frames where it does not flip. Chosen over a spare EF_ flag because
+	// BG_PlayerStateToEntityState() copies eFlags into the player's entityState -- an eFlags bit
+	// would be broadcast to every client on the server, while stats[] stays private to its owner.
+	STAT_USE_HINT,
+	// GalaxyRP fix: [Force] the engine networks ps.fd.forcePowerLevel[FP_LEVITATION] in a 2-bit field
+	// (msg.cpp), which carries 0-3. Force Jump reaches level 5 in RPG mode, and MSG_WriteBits does not
+	// clamp -- it counts the overflow and writes the low bits -- so a client received level 4 as 0 and
+	// level 5 as 1. Client-side movement prediction then ran against forceJumpHeight[0]/[1] while the
+	// server used [4]/[5], and the two disagreed identically every frame, which is why high-level
+	// force jumps mispredict. msg.cpp is engine code and is not built by this mod, so the field cannot
+	// be widened without shipping a custom engine. This stat carries the true level instead: stats[]
+	// is networked as a MAX_STATS-wide changed-mask plus a 16-bit short per changed slot, so it holds
+	// 0-5 without trouble, it is private to its owner rather than broadcast, and slot 10 was free.
+	// The server publishes it in ClientEndFrame() and CG_PredictPlayerState() restores the real level
+	// before Pmove runs. See cg_predict.c for why the restore only ever corrects upward.
+	STAT_FORCE_JUMP_LEVEL,
+	// GalaxyRP fix: [Shield] the shield ceiling, published so the client can decide what the server
+	// decides. BG_CanItemBeGrabbed() is shared code and its IT_ARMOR case used to compare against
+	// STAT_MAX_HEALTH, but that is the HEALTH ceiling: an RPG player's real shield cap is
+	// pers.max_rpg_shield (set_max_shield(), g_cmds.c), which lives in pers, is server-only and is
+	// ZERO for a character with no Max Shield skill. So both sides agreed a shield was grabbable,
+	// Touch_Item took it, Pickup_Armor's else-arm gave nothing, and adjustRespawnTime(1, ...) put it
+	// back one second later -- over and over, for a player who could never use it. Health never had
+	// this because its ceiling already lived in the playerState.
+	//
+	// Slot 11 was free, and this is the same trick as STAT_USE_HINT and STAT_FORCE_JUMP_LEVEL above:
+	// stats[] is networked as a MAX_STATS-wide changed-mask plus a 16-bit short per changed slot, so
+	// it needs no protocol or engine change, stays private to its owner rather than being broadcast,
+	// and costs nothing on the frames where it does not move. The largest value it can hold is
+	// pers.max_rpg_health (100 + level*2), nowhere near a short.
+	STAT_MAX_ARMOR,
+	// GalaxyRP fix: [Weapons] 1 when the server would let this player alt-fire the weapon they are
+	// holding, 0 when it would not. The decision itself is canAltFireWeapon() (bg_pmove.c, server
+	// only): NPCs, melee and the saber always may; everyone else needs to be logged in, and for the
+	// thirteen ranged guns needs that weapon's skill above level 1. It reads sess.loggedin and
+	// pers.skill_levels[], which only the server has -- so the button strip that enforces it in
+	// PM_Weapon() used to sit inside "#ifdef _GAME", and cgame, running the same PM_Weapon() without
+	// it, predicted the whole alt-fire: muzzle flash, sound, recoil, the ammo dip and the weaponTime
+	// lock, for a shot the server refused. The server publishes the answer here in ClientEndFrame()
+	// and PM_Weapon() reads it on both sides, which is the same arrangement as STAT_MAX_ARMOR above.
+	//
+	// It describes the weapon the server saw at the end of its last frame. After a weapon switch the
+	// client's predicted ps.weapon runs ahead of that by a snapshot, but no shot is possible in that
+	// window -- the change costs 200ms of weaponTime and the raise another 250ms -- and the melee and
+	// saber carve-outs are repeated in PM_Weapon() itself so a kick or a throw never waits on it.
+	// Slot 12 was free.
+	STAT_ALT_FIRE_OK,
+	// DAJ_RP: [Phase] effects a player is shown on himself and nobody else, RP_SELF_FX_* bits. Private for the
+	// same reason as the slots above: stats[] goes to the owning client's own playerState only, never into the
+	// entityState the other clients get. Written every frame in ClientEndFrame(); slot 13 was free.
+	STAT_RP_SELF_FX
 } statIndex_t;
+
+// DAJ_RP: [Phase] STAT_RP_SELF_FX bits
+#define RP_SELF_FX_HIDDEN		(1<<0)	// /admhidden: he sees the Force Push body blur on himself (CG_Player(), cg_players.c)
 
 
 // playerState_t->persistant[] indexes
@@ -589,7 +660,19 @@ typedef enum {
 	PERS_DEFEND_COUNT,				// defend awards
 	PERS_ASSIST_COUNT,				// assist awards
 	PERS_GAUNTLET_FRAG_COUNT,		// kills with the gauntlet
-	PERS_CAPTURES					// captures
+	PERS_CAPTURES,					// captures
+	// GalaxyRP fix: [Death System] how many times the Death System has knocked this player down.
+	// Separate from PERS_KILLED, which counts actual deaths: a knockdown someone is revived from is
+	// not a death, and a death that never passed through a knockdown (a vehicle, a mini-game, or
+	// rp_downed_timer 0) is not a knockdown. Counted in exactly one place, paralyze_player()
+	// (g_cmds.c), which is the gameplay knockdown path -- an admin /paralyze reaches
+	// RP_EnterDownedState() directly and is deliberately not counted here.
+	//
+	// This is the sixteenth entry and MAX_PERSISTANT (q_shared.h) is 16, so the array is exactly
+	// full. The array is transmitted whole by MSG_WriteDeltaPlayerstate either way, so this costs
+	// no bandwidth -- but there is no room for a seventeenth without raising that constant, which
+	// is part of the network protocol.
+	PERS_KNOCKED_DOWN				// Death System knockdowns (NOT admin /paralyze)
 } persEnum_t;
 
 
@@ -620,15 +703,54 @@ typedef enum {
 #define EF_ALT_FIRING			(1<<10)		// for alt-fires, mostly for lightning guns though
 #define	EF_JETPACK_ACTIVE		(1<<11)		//jetpack is activated
 
-#define EF_NOT_USED_1			(1<<12)		// not used
+#define EF_NOT_USED_1			(1<<12)		// claimed by GalaxyRP -- see EF_RPG_JETPACK_UPGRADE below
+// GalaxyRP: [Skills] set on a player whose Jetpack skill is at max level (3) in RPG Mode, so the
+// client draws the blue exhaust flame instead of the default Boba one (cg_players.c). Carried
+// here rather than pushed as an EV_ITEMUSEFAIL event into a client-side cache, which is what it
+// used to be: an entity-state bit is in every snapshot, so it is PVS-correct by construction,
+// cannot go stale when a client slot is reused, needs no resend for players who join later, and
+// is read off the same `cent` as the EF_JETPACK gate around it -- which is what makes it right
+// while spectating, where cg.snap->ps is the FOLLOWED player.
+//
+// The upstream name is kept above so a future merge from TaystJK does not silently hand this bit
+// to something else. eFlags is transmitted at its full 32 bits ({ NETF(eFlags), 32 } in msg.cpp,
+// identical in stock TaystJK), so claiming a spare bit changes nothing on the wire: a stock
+// client receives it, has no name for it, and keeps drawing the default flame.
+#define EF_RPG_JETPACK_UPGRADE	EF_NOT_USED_1
 
 #define	EF_TALK					(1<<13)		// draw a talk balloon
 #define	EF_CONNECTION			(1<<14)		// draw a connection trouble sprite
 #define	EF_NOT_USED_6			(1<<15)		// not used
 
 #define	EF_NOT_USED_2			(1<<16)		// not used
-#define	EF_NOT_USED_3			(1<<17)		// not used
-#define	EF_NOT_USED_4			(1<<18)		// not used
+#define	EF_NOT_USED_3			(1<<17)		// claimed by GalaxyRP -- see EF_RP_PHASE_MASK below
+#define	EF_NOT_USED_4			(1<<18)		// claimed by GalaxyRP -- see EF_RP_PHASE_MASK below
+
+// GalaxyRP: [Phase] the /admwalkthrough, /admghost and /admholo state of a player, as a two-bit number in
+// bits 17-18 (read it with RP_PHASE_FROM_EFLAGS, never bit by bit): 0 normal, 1 walk-through, 2 Force
+// ghost, 3 hologram. Every non-zero value means the player does not collide with other players and
+// NPCs; 2 and 3 also select the look the plugin draws and keep the player off the radar. The server
+// (ClientEndFrame, g_active.c) writes it into ps.eFlags every frame from pers.phase_mode, so it
+// survives respawns and reaches spectators and the player's own prediction (cg_predict.c) alike.
+// Same reasoning as EF_RPG_JETPACK_UPGRADE above for claiming spare bits: eFlags goes out at its full
+// 32 bits, and a client without the plugin receives them, has no name for them and draws the player
+// as usual. The upstream names are kept above for the same merge-safety reason. Bits 15 and 16 were
+// deliberately NOT used: TaystJK's own headers name them EF_ALT_DIM and EF_GRAPPLE_SWING (JA+ flags).
+#define EF_RP_PHASE_SHIFT		17
+#define EF_RP_PHASE_MASK		(EF_NOT_USED_3 | EF_NOT_USED_4)
+#define RP_PHASE_FROM_EFLAGS(f)	(((f) & EF_RP_PHASE_MASK) >> EF_RP_PHASE_SHIFT)
+
+typedef enum {
+	RP_PHASE_NONE = 0,		// normal
+	RP_PHASE_NONSOLID,		// /admwalkthrough: passes through players and NPCs, looks normal
+	RP_PHASE_GHOST,			// /admghost: walk-through, drawn as a Force ghost, off the radar
+	RP_PHASE_HOLO,			// /admholo: walk-through, drawn as a hologram, off the radar
+	// DAJ_RP: [Phase] /admhidden: walk-through and not drawn at all. Server-only -- the two bits above are
+	// full, so it goes out as RP_PHASE_NONSOLID (RP_PhaseUpdate, g_active.c), which is all a client needs
+	// to predict walking through the player. The hiding is done with the Mind Trick fields of the
+	// player's entityState instead (RP_HiddenApplyState, g_active.c), which every client honours.
+	RP_PHASE_HIDDEN
+} rpPhaseMode_t;
 
 #define	EF_BODYPUSH				(1<<19)		//rww - claiming this for fullbody push effect
 
@@ -646,7 +768,19 @@ typedef enum {
 #define EF_JETPACK				(1<<29)		//rww - wearing a jetpack
 #define EF_JETPACK_FLAMING		(1<<30)		//rww - jetpack fire effect
 
-#define	EF_NOT_USED_5			(1<<31)		// not used
+#define	EF_NOT_USED_5			(1<<31)		// claimed by GalaxyRP -- see EF_RP_STILL_ITEM below
+
+// DAJ_RP: [Still Weapons] set by the server (FinishSpawningItem, g_items.c) on every placed weapon pickup without the
+// HOLOGRAM spawnflag (4096): the GalaxyRP client draws it as single player does -- lying still where it is, at the
+// angles in its s.apos.trBase (the map's angles, tilted up for VERTICAL), with no hologram pad, cone, bob or spin, at
+// normal size (CG_Item, cg_ents.c). DAJ_RP: [Still Powerups] and on every placed powerup without HOLOGRAM: the Ysalamiri
+// is drawn lying still too, the Force Boon and both Enlightenments turning slowly, without the pad, raise or bob. Taken,
+// either is hidden and not sent until it comes back, as ammo is (Touch_Item). Dropped items and every other item type
+// never carry it. Bit 31,
+// not 15 or 16: TaystJK's headers name those EF_ALT_DIM and EF_GRAPPLE_SWING, and nothing names 31 there, in JA++ or
+// in the stock game. eFlags goes out at its full 32 bits (see EF_RPG_JETPACK_UPGRADE above); a client without the
+// plugin has no name for the bit and draws the pickup the stock way.
+#define EF_RP_STILL_ITEM		EF_NOT_USED_5
 
 //These new EF2_??? flags were added for NPCs, they really should not be used often.
 //NOTE: we only allow 10 of these!
@@ -658,7 +792,20 @@ typedef enum {
 #define	EF2_HYPERSPACE			(1<<5)		// Used to both start the hyperspace effect on the predicted client and to let the vehicle know it can now jump into hyperspace (after turning to face the proper angle)
 #define	EF2_BRACKET_ENTITY		(1<<6)		// Draw as bracketed
 #define	EF2_SHIP_DEATH			(1<<7)		// "died in ship" mode
-#define	EF2_NOT_USED_1			(1<<8)		// not used
+// DAJ_RP: [Static Models] a misc_model_breakable with "modelscale_vec": its three scales are in
+// entityState_t::origin2, which nothing else uses on one (a script's ROFF takes it: Q3_Play drops the bit,
+// and the spawn does not set it again until the entity is freed), and the GalaxyRP client draws the model
+// scaled per axis (CG_General). Other clients do not know the bit and draw it as before, unscaled. Unused by
+// the stock game, TaystJK, EternalJK and JA++ (which takes the next bit for its grapple).
+#define	EF2_RP_VECTOR_SCALE		(1<<8)
+// DAJ_RP: [Holstered Sabers] the player or NPC carries a saber: WP_SABER in its weapons. Set by
+// BG_PlayerStateToEntityState() from the playerState, never stored in ps->eFlags2. The GalaxyRP client draws the
+// hilt on the thigh while the holder has another weapon out (CG_RpAddHolsteredSabers, cg_players.c) -- the first
+// saber's only while it is not thrown, dropped or knocked away (saberInFlight, sent on its own): a dual-saber
+// holder whose first saber is on the ground still wears the second (the flag used to be cleared while it was).
+// Clients see no one's weapons but their own, and every NPC carries a default saber name ("@Kyle", NPC_stats.c) whether it has a saber or not, so the
+// server says who has one. The last of the ten bits the engine sends; JA++ uses it for its grapple.
+#define	EF2_RP_SABER_CARRIED	(1<<9)
 
 #include "../../galaxyrp/game/rp_public.h" // Tr!Force: [GameGeneral] Public header
 
@@ -1025,6 +1172,13 @@ typedef enum {
 	EV_NUM_ENTITY_EVENTS
 } entity_event_t;			// There is a maximum of 256 events (8 bits transmission, 2 high bits for uniqueness)
 
+// GalaxyRP: [Force] generic1 of an EV_TEAM_POWER sent for ONE npc target of Team Heal / Team
+// Energize, whose entity number is in otherEntityNum. The ordinary event names its player targets
+// in the trickedentindex bitflags, which only have room for client slots; an npc target gets an
+// event of its own instead (RP_TeamPowerNPCEffect in w_force.c). generic1 is 0 on the ordinary
+// event, and a cgame that predates this finds no bitflags set on the npc one and ignores it.
+#define TEAM_POWER_NPC_TARGET	1
+
 
 typedef enum {
 	GTS_RED_CAPTURE,
@@ -1182,6 +1336,13 @@ gitem_t	*BG_FindItemForPowerup( powerup_t pw );
 gitem_t	*BG_FindItemForHoldable( holdable_t pw );
 #define	ITEM_INDEX(x) ((x)-bg_itemlist)
 
+// DAJ_RP: [Minigames] playerState.userInt1, one of the three stock spare fields the engine networks as a single bit
+// (msg.cpp, the player and the pilot tables): 1 while this player fights in a mini-game -- one of the two duelists of
+// a live Duel Tournament fight, or on the roster of a running Melee Battle (RP_MinigameFighter, g_main.c). Set every
+// frame by ClientEndFrame (g_active.c), so it reaches the client with the snapshot: BG_CanItemBeGrabbed refuses every
+// item while it is set, as for a private duel (duelInProgress), and cgame's pickup prediction, which asks the same
+// function, refuses what the server refuses. Nothing else in the game, cgame or the engine uses userInt1.
+#define RP_PS_MINIGAME_FIGHTER( ps )	( (ps)->userInt1 )
 qboolean	BG_CanItemBeGrabbed( int gametype, const entityState_t *ent, const playerState_t *ps );
 
 
@@ -1194,6 +1355,7 @@ qboolean	BG_CanItemBeGrabbed( int gametype, const entityState_t *ent, const play
 #define	DF_NO_FALLING			8
 #define DF_FIXED_FOV			16
 #define	DF_NO_FOOTSTEPS			32
+#define	DF_NO_DROWN				64	// GalaxyRP: [dmflags] no drowning damage (P_WorldEffects, g_active.c); same bit as JA++
 
 //rwwRMG - added in CONTENTS_TERRAIN
 // content masks
@@ -1587,6 +1749,10 @@ typedef enum saber_styles_e {
 #define SFL2_ALWAYS_BLOCK2			(1<<15)//if set, the blades will always be blocking (good for things like shields that should always block)
 #define SFL2_NO_MANUAL_DEACTIVATE2	(1<<16)//if set, the blades cannot manually be toggled on and off
 #define SFL2_TRANSITION_DAMAGE2		(1<<17)//if set, the blade does damage in start, transition and return anims (like strong style does)
+//DAJ_RP: [Holstered Sabers] "noHolster 1" in a .sab: the cgame does not wear this saber's hilt on the thigh while
+//its owner has another weapon out, it hides it (CG_RpSaberHolsterable) -- for server admins, for any saber that
+//looks wrong holstered. The whole saber, both blade styles. Not sent over the network.
+#define SFL2_RP_NO_HOLSTER			(1<<18)
 
 #define SABER_NAME_LENGTH (64)
 typedef struct saberInfo_s {
@@ -1625,12 +1791,13 @@ typedef struct saberInfo_s {
 	int				kataMove;								// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time
 	
 	//GalaxyRP (Alex): [New Combat Animations] Katas for all style can now be changed independently.
-	int				kataMoveYellow;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR YELLOW STYLE
-	int				kataMoveRed;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR YELLOW STYLE
-	int				kataMovePurple;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR YELLOW STYLE
-	int				kataMoveGreen;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR YELLOW STYLE
-	int				kataMoveDual;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR YELLOW STYLE
-	int				kataMoveStaff;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR YELLOW STYLE
+	// DAJ_RP: the "Purple" keys belong to the Desann style and the "Green" keys to the Tavion style, for katas, ready anims and idle anims alike.
+	int				kataMoveYellow;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR MEDIUM (yellow) STYLE
+	int				kataMoveRed;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR STRONG (red) STYLE
+	int				kataMovePurple;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR DESANN (purple) STYLE
+	int				kataMoveGreen;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR TAVION (green) STYLE
+	int				kataMoveDual;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR DUAL STYLE
+	int				kataMoveStaff;							// LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time ONLY FOR STAFF STYLE
 	
 	int				lungeAtkMove;							// LS_INVALID - if set, player will execute this move when they crouch+fwd+attack
 	int				jumpAtkUpMove;							// LS_INVALID - if set, player will execute this move when they jump+attack
@@ -1646,6 +1813,7 @@ typedef struct saberInfo_s {
 	int				readyAnimGreen;							// -1 - anim to use when standing idle
 	int				readyAnimStaff;							// -1 - anim to use when standing idle
 	int				readyAnimDual;							// -1 - anim to use when standing idle
+	int				idleAnim;								// -1 - DAJ_RP: [Saber Keys] the idle for every style without its own idleAnim* key below
 	int				idleAnimBlue;							// -1 - anim to use when standing in place for an extended period of time
 	int				idleAnimYellow;							// -1 - anim to use when standing in place for an extended period of time
 	int				idleAnimRed;							// -1 - anim to use when standing in place for an extended period of time
@@ -1679,6 +1847,13 @@ typedef struct saberInfo_s {
 	int				hitPersonEffect, hitPersonEffect2;		// none - if set, plays this effect when the saber/sword hits a person (instead of "saber/blood_sparks_mp.efx")
 	int				hitOtherEffect, hitOtherEffect2;		// none - if set, plays this effect when the saber/sword hits something else damagable (instead of "saber/saber_cut.efx")
 	int				bladeEffect, bladeEffect2;				// none - if set, plays this effect at the blade tag
+	// DAJ_RP: [Saber Keys] TaystJK's four (its NEW_SABER_PARMS), same key names, for every blade of the saber.
+	// Drawing only, so the shaders are registered in the cgame alone (bg_saberLoad.c) -- 0 everywhere else.
+	qhandle_t		customBladeShader;						// none - if set, the blade's core is drawn with this shader
+	qhandle_t		customGlowShader;						// none - if set, the blade's glow is drawn with this shader
+	qhandle_t		customTrailShader;						// none - if set, the swing trail is drawn with this shader (a normal trail: not trailStyle 1 or 2)
+	qboolean		useCustomRGBColor;						// qfalse - set by a customRGB other than 0 0 0
+	float			customRGB[3];							// 0 0 0 - "customRGB R G B", 0-255 each, stored 0-1: the blades are this RGB colour, whatever the player picked
 
 	//done in game (server-side code)
 	float			knockbackScale, knockbackScale2;		// 0 - if non-zero, uses damage done to calculate an appropriate amount of knockback
@@ -1692,6 +1867,7 @@ typedef struct saberInfo_s {
 
 bgEntity_t *PM_BGEntForNum( int num );
 qboolean BG_KnockDownable(playerState_t *ps);
+qboolean BG_FileListMayBeTruncated( const char *dir, const char *ext, int fileCnt, int used, int bufsize ); // GalaxyRP fix: [Vehicles] bg_vehicleLoad.c
 qboolean BG_LegalizedForcePowers(char *powerOut, size_t powerOutSize, int maxRank, qboolean freeSaber, int teamForce, int gametype, int fpDisabled);
 
 
@@ -1768,6 +1944,10 @@ int		BG_PickAnim( int animIndex, int minAnim, int maxAnim );
 int BG_GetItemIndexByTag(int tag, int type);
 
 qboolean BG_IsItemSelectable(playerState_t *ps, int item);
+// GalaxyRP: [Dueling] the one rule for "may this player use a holdable right now" as far as
+// the private duel is concerned -- shared by PM_ItemUsable() (bg_pmove.c, predicted in cgame),
+// G_ItemUsable() (g_cmds.c) and the use_cloak command (g_active.c). See the definition.
+qboolean BG_HoldablesBlocked(playerState_t *ps);
 
 qboolean BG_HasYsalamiri(int gametype, playerState_t *ps);
 qboolean BG_CanUseFPNow(int gametype, playerState_t *ps, int time, forcePowers_t power);
@@ -1778,6 +1958,13 @@ void *BG_TempAlloc( int size );
 void BG_TempFree( int size );
 char *BG_StringAlloc ( const char *source );
 qboolean BG_OutOfMemory ( void );
+
+// GalaxyRP: [TaystJK] cgame and ui only -- see the comment on the definition in bg_misc.c. The
+// engine default this replaces is TaystJK's TAYSTJKGAME ("taystjk", q_shared.h in its tree).
+#if defined(_CGAME) || defined(UI_BUILD)
+#define RP_TAYSTJK_DEFAULT_FORCEGAME "taystjk"
+qboolean RP_AdoptTaystJKWriteFolder( void );
+#endif
 
 void BG_BLADE_ActivateTrail ( bladeInfo_t *blade, float duration );
 void BG_BLADE_DeactivateTrail ( bladeInfo_t *blade, float duration );

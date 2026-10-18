@@ -301,6 +301,44 @@ void Svcmd_ListIP_f (void)
 
 /*
 ===================
+Svcmd_EntityInfo_f
+
+GalaxyRP: [Logical Entities] the census an admin wants after this feature: how full each region
+is. "allocated" is the high-water mark (level.num_entities / level.num_logicalents), "in use" the
+slots that hold a live entity right now; the difference is slots freed and waiting for reuse.
+The networked figure is against ENTITYNUM_MAX_NORMAL, the limit G_Spawn() enforces.
+===================
+*/
+void	Svcmd_EntityInfo_f (void) {
+	int			i, inuse, total;
+	gentity_t	*e;
+
+	inuse = 0;
+	for ( e = g_entities, i = 0; i < level.num_entities; e++, i++ ) {
+		if ( e->inuse ) {
+			inuse++;
+		}
+	}
+	trap->Print( "Networked entity slots in use: %i/%i (%i slots allocated, %i free)\n",
+		inuse, ENTITYNUM_MAX_NORMAL, level.num_entities, G_FreeEntityCount() );
+	total = inuse;
+
+	inuse = 0;
+	for ( e = g_logicalents, i = 0; i < level.num_logicalents; e++, i++ ) {
+		if ( e->inuse ) {
+			inuse++;
+		}
+	}
+	trap->Print( "Logical entity slots in use: %i/%i (%i slots allocated, %i free)%s\n",
+		inuse, MAX_LOGICENTITIES, level.num_logicalents, G_FreeLogicalEntityCount(),
+		level.logical_entities_enabled ? "" : " -- rp_logical_entities was 0 at map start" );
+	total += inuse;
+
+	trap->Print( "Total entities in use: %i/%i\n", total, ENTITYNUM_MAX_NORMAL + MAX_LOGICENTITIES );
+}
+
+/*
+===================
 Svcmd_EntityList_f
 ===================
 */
@@ -308,12 +346,14 @@ void	Svcmd_EntityList_f (void) {
 	int			e;
 	gentity_t		*check;
 
-	check = g_entities;
-	for (e = 0; e < level.num_entities ; e++, check++) {
+	// GalaxyRP: [Logical Entities] both regions; a logical entity prints with an L after its
+	// number so the two are told apart at a glance.
+	RP_FOR_EACH_ENTITY( check ) {
+		e = check - g_entities;
 		if ( !check->inuse ) {
 			continue;
 		}
-		trap->Print("%3i:", e);
+		trap->Print("%4i%s:", e, check->isLogical ? "L" : " ");
 		switch ( check->s.eType ) {
 		case ET_GENERAL:
 			trap->Print("ET_GENERAL          ");
@@ -522,6 +562,7 @@ svcmd_t svcmds[] = {
 	{ "addbot",						Svcmd_AddBot_f,						qfalse },
 	{ "addip",						Svcmd_AddIP_f,						qfalse },
 	{ "botlist",					Svcmd_BotList_f,					qfalse },
+	{ "entityinfo",					Svcmd_EntityInfo_f,					qfalse },
 	{ "entitylist",					Svcmd_EntityList_f,					qfalse },
 	{ "forceteam",					Svcmd_ForceTeam_f,					qfalse },
 	{ "game_memory",				Svcmd_GameMem_f,					qfalse },

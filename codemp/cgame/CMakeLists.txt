@@ -74,6 +74,7 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/cg_predict.c"
 	"${MPDir}/cgame/cg_saga.c"
 	"${MPDir}/cgame/cg_scoreboard.c"
+	"${MPDir}/cgame/cg_rpextras.c"
 	"${MPDir}/cgame/cg_servercmds.c"
 	"${MPDir}/cgame/cg_snapshot.c"
 	"${MPDir}/cgame/cg_spawn.c"
@@ -147,38 +148,23 @@ if(NOT MSVC)
 	set_target_properties(${MPCGame} PROPERTIES PREFIX "")
 endif()
 
-if(MakeApplicationBundles AND BuildMPEngine)
-	install(TARGETS ${MPCGame}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/OpenJK"
-		COMPONENT ${JKAMPCoreComponent})
-	install(TARGETS ${MPCGame}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/base"
-		COMPONENT ${JKAMPCoreComponent})
-elseif(WIN32)
-	install(TARGETS ${MPCGame}
-		RUNTIME
-		DESTINATION "${JKAInstallDir}/OpenJK"
-		COMPONENT ${JKAMPCoreComponent})
-	if (WIN64)
-		# Don't do this on 32-bit Windows to avoid overwriting
-		# vanilla JKA's DLLs
-		install(TARGETS ${MPCGame}
-			RUNTIME
-			DESTINATION "${JKAInstallDir}/base"
-			COMPONENT ${JKAMPCoreComponent})
-	endif()
-else()
-	install(TARGETS ${MPCGame}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/OpenJK"
-		COMPONENT ${JKAMPCoreComponent})
-	install(TARGETS ${MPCGame}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/base"
-		COMPONENT ${JKAMPCoreComponent})
-endif()
+# GalaxyRP fix: [packaging] GalaxyRP is a standalone distributable, not a patch applied on top of
+# an OpenJK/base install -- removed the upstream OpenJK install() rules that used to also copy this
+# module into JediAcademy/OpenJK and JediAcademy/base (and, on macOS app bundles, into the .app's
+# OpenJK/base folders). Only the GalaxyRP destination below is used now, and NOT packed inside the
+# pk3 -- all three game-code modules ship as loose files next to it. Filename is already
+# architecture-suffixed (cgame${Architecture}...), so building for a different arch and installing
+# again just adds that arch's file next to the others rather than overwriting them.
+# GalaxyRP fix: [packaging] RUNTIME and LIBRARY each need their OWN "DESTINATION" -- in CMake's
+# install(TARGETS) syntax, a bare "RUNTIME LIBRARY DESTINATION x" only attaches DESTINATION to the
+# type keyword immediately before it (LIBRARY), leaving RUNTIME (the .dll on Windows) with no
+# destination of its own, silently falling back to the default "bin" install folder. That's why
+# this module worked correctly here on Linux (shared libs are LIBRARY artifacts) but the DLL kept
+# landing in install-x64/bin instead of GalaxyRP on Windows (DLLs are RUNTIME artifacts there).
+install(TARGETS ${MPCGame}
+	RUNTIME DESTINATION "${JKAInstallDir}/GalaxyRP"
+	LIBRARY DESTINATION "${JKAInstallDir}/GalaxyRP"
+	COMPONENT ${JKAMPCoreComponent})
 
 set_target_properties(${MPCGame} PROPERTIES COMPILE_DEFINITIONS "${MPCGameDefines}")
 

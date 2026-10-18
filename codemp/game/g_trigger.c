@@ -31,7 +31,19 @@ void InitTrigger( gentity_t *self ) {
 		G_SetMovedir (self->s.angles, self->movedir);
 
 	if (self->model) // zyk: added this condition
-		trap->SetBrushModel( (sharedEntity_t *)self, self->model );
+	{
+		// GalaxyRP fix: [Entity System] an unvalidated "*N" here reaches CM_InlineModel() and
+		// Com_Error(ERR_DROP)s the server -- see zyk_brush_model_allowed() in g_spawn.c.
+		if (zyk_brush_model_allowed(self, self->model) == qtrue)
+			trap->SetBrushModel( (sharedEntity_t *)self, self->model );
+		else
+		{ // DAJ_RP fix: [Entity System] and no brush model left from before it was spawned again in place:
+		  // with r.bmodel still set, touching it was tested against modelindex 0, the whole world model --
+		  // see zyk_set_brush_model() in g_spawn.c
+			self->r.bmodel = qfalse;
+			self->s.modelindex = 0;
+		}
+	}
 	else // zyk: if no model is set, show message in server console
 		Com_Printf( S_COLOR_RED"ERROR: trigger %s at %s has no brush model specified\n", self->targetname, vtos(self->s.origin) );
 
@@ -459,6 +471,19 @@ void Touch_Multi( gentity_t *self, gentity_t *other, trace_t *trace )
 			return;
 		}
 
+		// DAJ_RP: [Locks] a locked use trigger refuses when Use is pressed -- not on walking in, which
+		// G_TouchTriggers() leaves to this check -- and before a hold-to-use hack starts, so nobody waits
+		// through the bar to be refused. A hack under way when the lock started refusing is called off.
+		if ( !RP_LockAllows( self, other, other ) )
+		{
+			if ( other->s.number < MAX_CLIENTS && other->client->isHacking == self->s.number )
+			{
+				other->client->isHacking = 0;
+				other->client->ps.hackingTime = 0;
+			}
+			return;
+		}
+
 		if (self->genericValue7)
 		{ //we have to be holding the use key in this trigger for x milliseconds before firing
 			if (level.gametype == GT_SIEGE &&
@@ -511,6 +536,12 @@ void Touch_Multi( gentity_t *self, gentity_t *other, trace_t *trace )
 		if( !( other->client->pers.cmd.buttons & BUTTON_ATTACK ) &&
 			!( other->client->pers.cmd.buttons & BUTTON_ALT_ATTACK ) )
 		{//not pressing fire button or altfire button
+			return;
+		}
+
+		// DAJ_RP: [Locks] a locked fire trigger refuses when fire is pressed, as a use trigger does above
+		if ( !( self->spawnflags & 4 ) && !RP_LockAllows( self, other, other ) )
+		{
 			return;
 		}
 	}
@@ -629,6 +660,33 @@ idealclass	-	Can only be used by this class/these classes. You can specify use b
 				multiple classes with the use of |, e.g.:
 				"Imperial Medic|Imperial Assassin|Imperial Demolitionist"
 */
+
+/*
+==================
+RP_TriggerRegisterSoundSet
+
+GalaxyRP fix: [Ambient Sets] a trigger's "soundSet" becomes the map-wide ambience when it fires
+(multi_trigger_run sets CS_GLOBAL_AMBIENT_SET), but a client only loads a set whose name is in a
+CS_AMBIENT_SET slot -- or that was the global one when it connected -- and the engine plays nothing for
+a set it has not loaded (S_UpdateAmbientSet). The map's own triggers get their slot from
+G_PrecacheSoundsets() at the end of the map's spawn; one spawned after that (/entadd, /entaddaim,
+/entedit, an entity preset) never did, so it was silent for every player already in the game until
+they reconnected. Its name goes into a slot now, as it spawns: cgame loads a slot that arrives mid-game
+(CG_ConfigStringModified), so the set is ready before the trigger fires and plays at once, and players
+who join later load it with the rest. The name has been checked against sound/sound.txt already
+(RP_EntitySystemSpawnRefused() refuses the entity before its spawn function runs), and a full table
+or gamestate gives slot 0 -- the trigger stays silent, as it was. During the map's spawn there is
+nothing to do here: G_PrecacheSoundsets() does it.
+==================
+*/
+static void RP_TriggerRegisterSoundSet( gentity_t *ent )
+{
+	if ( level.spawning || !ent->soundSet || !ent->soundSet[0] )
+		return;
+
+	G_SoundSetIndex( ent->soundSet );
+}
+
 void SP_trigger_multiple( gentity_t *ent )
 {
 	char	*s;
@@ -653,7 +711,10 @@ void SP_trigger_multiple( gentity_t *ent )
 	G_SpawnInt("delay", "0", &ent->delay);
 
 	if ( (ent->wait > 0) && (ent->random >= ent->wait) ) {
-		ent->random = ent->wait - FRAMETIME;
+		// GalaxyRP fix: [Entity System] both are in seconds; this took off FRAMETIME (100 ms as a number)
+		// and left random at -99 s, which the think turned into a nextthink in the past about half the
+		// time -- the trigger re-fired on consecutive frames whatever wait said. As SP_func_timer does.
+		ent->random = ent->wait - 0.1f;
 		Com_Printf(S_COLOR_YELLOW"trigger_multiple has random >= wait\n");
 	}
 
@@ -677,6 +738,7 @@ void SP_trigger_multiple( gentity_t *ent )
 	}
 
 	InitTrigger( ent );
+	RP_TriggerRegisterSoundSet( ent );
 	trap->LinkEntity ((sharedEntity_t *)ent);
 }
 
@@ -752,6 +814,7 @@ void SP_trigger_once( gentity_t *ent )
 	ent->delay *= 1000;//1 = 1 msec, 1000 = 1 sec
 
 	InitTrigger( ent );
+	RP_TriggerRegisterSoundSet( ent );
 	trap->LinkEntity ((sharedEntity_t *)ent);
 }
 
@@ -789,7 +852,9 @@ void Do_Strike(gentity_t *ent)
 
 	if (localTrace.startsolid || localTrace.allsolid)
 	{ //got a bad spot, think again next frame to try another strike
-		ent->nextthink = level.time;
+		// GalaxyRP fix: [Entity System] "next frame" was every frame for the rest of the map for a
+		// trigger whose top is inside a brush (any brushless one placed with /entadd); its own wait
+		ent->nextthink = level.time + ent->wait;
 		return;
 	}
 
@@ -819,6 +884,15 @@ void Think_Strike(gentity_t *ent)
 	}
 
 	ent->nextthink = level.time + ent->wait + Q_irand(0, ent->random);
+
+	// DAJ_RP fix: [Entity System] inactive (spawnflag 128, target_deactivate): no strike, as every other trigger
+	// does nothing while inactive. The loop keeps going, so it strikes again on its own once a target_activate
+	// (which only clears the flag) switches it back on. Stock multiplayer struck on regardless.
+	if (ent->flags & FL_INACTIVE)
+	{
+		return;
+	}
+
 	Do_Strike(ent);
 }
 
@@ -855,9 +929,16 @@ void SP_trigger_lightningstrike( gentity_t *ent )
 	ent->nextthink = level.time + 500;
 
 	G_SpawnString("lightningfx", "", &s);
+	s = RP_EffectKeyValue(ent, "lightningfx", s);	// DAJ_RP: [Weather] a weather command counts as none
 	if (!s || !s[0])
 	{
-		Com_Error(ERR_DROP, "trigger_lightningstrike with no lightningfx");
+		// GalaxyRP fix: [Entity System] was Com_Error(ERR_DROP) -- a fatal error and process exit
+		// on a dedicated server, reachable at runtime through the entity commands. Log and free,
+		// and return, since the old code relied on Com_Error never coming back. The use and think
+		// set above go with the entity.
+		G_LogPrintf( "trigger_lightningstrike at %s has no \"lightningfx\"; not spawned.\n", vtos( ent->s.origin ) );
+		G_FreeEntity( ent );
+		return;
 	}
 
 	//get a configstring index for it
@@ -879,6 +960,25 @@ void SP_trigger_lightningstrike( gentity_t *ent )
 	if (!ent->damage)
 	{ //default 50
 		ent->damage = 50;
+	}
+
+	// GalaxyRP fix: [Entity System] the defaults above only replace zero; a negative wait struck every
+	// frame, a negative random put nextthink in the past, dmg and radius came straight off the keys
+	// ("radius 10000" was map-wide radius damage). Floored and capped, logged.
+	if ( ent->wait < 100 || ent->random < 0 || ent->damage < 0 || ent->radius < 0 || ent->radius > 4096 )
+	{
+		G_LogPrintf( "trigger_lightningstrike at %s: wait %g, random %g, dmg %d, radius %g clamped (wait >= 100, random >= 0, dmg >= 0, radius 0..4096)\n",
+			vtos( ent->s.origin ), ent->wait, ent->random, ent->damage, ent->radius );
+		if ( ent->wait < 100 )
+			ent->wait = 100;
+		if ( ent->random < 0 )
+			ent->random = 0;
+		if ( ent->damage < 0 )
+			ent->damage = 0;
+		if ( ent->radius < 0 )
+			ent->radius = 0;
+		if ( ent->radius > 4096 )
+			ent->radius = 4096;
 	}
 
 	InitTrigger( ent );
@@ -906,7 +1006,13 @@ void SP_trigger_always (gentity_t *ent) {
 	// we must have some delay to make sure our use targets are present
 
 	// zyk: added a wait time so it will be possible to save it in entity file (before it gets removed)
-	if (ent->spawnflags & 1024)
+	// GalaxyRP fix: [Entity System] the 300ms below is not cosmetic -- the comment above says why it
+	// exists, and trigger_always_think() fires G_UseTargets and then frees itself, so a trigger that
+	// goes off before the rest of the map has spawned finds no targets and is gone. spawnflag 1024
+	// takes the delay from "count" instead, to hold the trigger alive long enough for /entsave to
+	// capture it, but nothing stopped count being 0 or negative, which fired it a frame after spawn
+	// -- sooner than vanilla, not later. Treat 300 as the floor it already was.
+	if (ent->spawnflags & 1024 && ent->count > 300)
 		ent->nextthink = level.time + ent->count;
 	else
 		ent->nextthink = level.time + 300;
@@ -923,11 +1029,63 @@ trigger_push
 ==============================================================================
 */
 //trigger_push
+#define PUSH_PLAYERONLY	1	// GalaxyRP: [SP Maps] single player's flags 1, 8 and 32, see trigger_push_touch()
+#define PUSH_NO_TOUCH	2
 #define PUSH_LINEAR		4
+#define PUSH_NPCONLY	8
 #define PUSH_RELATIVE	16
+#define PUSH_CONVEYOR	32
 #define PUSH_MULTIPLE	2048
 //target_push
 #define PUSH_CONSTANT	2
+
+/*
+==================
+RP_PushTriggerNetSync
+
+GalaxyRP fix: [SP Maps] the client predicts every trigger_push it is sent as an arc jump pad: on touching
+it, the player's velocity becomes origin2. That is right only for an arc push that pushes now. A LINEAR
+push's origin2 is a unit direction (the server multiplies it by speed), a RELATIVE one's is the target's
+position, and an inactive one, one without its touch (spawnflag 2), an NPCONLY or a CONVEYOR one does not
+throw the player at all -- in every such case the player's own screen launched him and the server pulled
+him back. Those are now not sent to clients (SVF_NOCLIENT); the server pushes as it always did, and the
+entity type stays ET_PUSH_TRIGGER so ClientThink's sweep for fast players (g_active.c) still finds them.
+
+Called on spawn, once its push is aimed (AimAtTarget), whenever target_activate, target_deactivate or a
+script switches it, and every frame from its think while it is one that can be switched.
+==================
+*/
+void trigger_push_touch (gentity_t *self, gentity_t *other, trace_t *trace );
+
+void RP_PushTriggerNetSync( gentity_t *self )
+{
+	qboolean predicted;
+
+	if ( !self || !self->inuse || !self->classname || Q_stricmp( self->classname, "trigger_push" ) )
+	{
+		return;
+	}
+
+	predicted = ( self->touch == trigger_push_touch
+		&& !( self->flags & FL_INACTIVE )
+		&& !( self->spawnflags & ( PUSH_LINEAR | PUSH_RELATIVE | PUSH_NPCONLY | PUSH_CONVEYOR ) ) ) ? qtrue : qfalse;
+
+	if ( predicted )
+	{
+		self->r.svFlags &= ~SVF_NOCLIENT;
+	}
+	else
+	{
+		self->r.svFlags |= SVF_NOCLIENT;
+	}
+}
+
+// GalaxyRP: [SP Maps] keeps a switchable push's SVF_NOCLIENT in step with it, see RP_PushTriggerNetSync()
+static void RP_PushTriggerThink( gentity_t *self )
+{
+	RP_PushTriggerNetSync( self );
+	self->nextthink = level.time + 1;
+}
 
 void trigger_push_touch (gentity_t *self, gentity_t *other, trace_t *trace ) {
 	if ( self->flags & FL_INACTIVE )
@@ -935,7 +1093,40 @@ void trigger_push_touch (gentity_t *self, gentity_t *other, trace_t *trace ) {
 		return;
 	}
 
-	if ( !(self->spawnflags&PUSH_LINEAR) )
+	// GalaxyRP fix: [SP Maps] single player's PLAYERONLY (1), NPCONLY (8) and CONVEYOR (32), which MP had
+	// commented out: the SP maps' conveyor belts (taspir2, t3_stamp, cairn_bay, ns_hideout) pushed anyone
+	// in the air over them too, and their players-only and NPC-only pushes everyone. Players are client
+	// slots here, not only slot 0.
+	if ( self->spawnflags & PUSH_PLAYERONLY )
+	{
+		if ( other->s.number >= MAX_CLIENTS )
+		{
+			return;
+		}
+	}
+	else if ( self->spawnflags & PUSH_NPCONLY )
+	{
+		if ( !other->NPC )
+		{
+			return;
+		}
+	}
+
+	if ( self->spawnflags & PUSH_CONVEYOR )
+	{// only pushes what stands on it
+		const int groundEntityNum = other->client ? other->client->ps.groundEntityNum : other->s.groundEntityNum;
+
+		if ( groundEntityNum == ENTITYNUM_NONE )
+		{
+			return;
+		}
+	}
+
+	// GalaxyRP fix: [SP Maps] a RELATIVE push without LINEAR came here too, and was thrown as a jump pad
+	// whose velocity is origin2 -- for RELATIVE the target's position, so a player was flung at
+	// "the target's coordinates" units per second. It now takes the RELATIVE branch below, as in single
+	// player (the SP maps' conveyors are mostly RELATIVE alone).
+	if ( !(self->spawnflags&(PUSH_LINEAR|PUSH_RELATIVE)) )
 	{//normal throw
 		if ( !other->client ) {
 			return;
@@ -1084,6 +1275,20 @@ void AimAtTarget( gentity_t *self ) {
 
 	if ( self->classname && !Q_stricmp( "trigger_push", self->classname ) )
 	{
+		// GalaxyRP: [SP Maps] from here on a trigger_push is aimed: its think keeps whether clients may
+		// predict it in step (RP_PushTriggerNetSync) when it can be switched on or off, and stops otherwise
+		if ( self->targetname || self->script_targetname || ( self->spawnflags & 128 ) )
+		{
+			self->think = RP_PushTriggerThink;
+			self->nextthink = level.time + 1;
+		}
+		else
+		{
+			self->think = NULL;
+			self->nextthink = 0;
+		}
+		RP_PushTriggerNetSync( self );
+
 		if ( (self->spawnflags&PUSH_RELATIVE) )
 		{//relative, not an arc or linear
 			VectorCopy( ent->r.currentOrigin, self->s.origin2 );
@@ -1110,6 +1315,14 @@ void AimAtTarget( gentity_t *self ) {
 
 	height = ent->s.origin[2] - origin[2];
 	gravity = g_gravity.value;
+	// GalaxyRP fix: [Entity System] a target below the pusher (or no gravity) put sqrt() of a negative --
+	// NaN -- into every pushed player's velocity, and "!time" does not catch NaN. No push, logged.
+	if ( height <= 0 || gravity <= 0 ) {
+		G_LogPrintf( "%s at %s: its target is not above it (height %g, gravity %g); no push\n",
+			self->classname ? self->classname : "push", vtos( self->s.origin ), height, gravity );
+		G_FreeEntity( self );
+		return;
+	}
 	time = sqrt( height / ( .5 * gravity ) );
 	if ( !time ) {
 		G_FreeEntity( self );
@@ -1151,7 +1364,7 @@ void SP_trigger_push( gentity_t *self ) {
 
 	self->s.eType = ET_PUSH_TRIGGER;
 
-	if ( !(self->spawnflags&2) )
+	if ( !(self->spawnflags&PUSH_NO_TOUCH) )
 	{//start on
 		self->touch = trigger_push_touch;
 	}
@@ -1163,6 +1376,7 @@ void SP_trigger_push( gentity_t *self ) {
 
 	self->think = AimAtTarget;
 	self->nextthink = level.time + FRAMETIME;
+	RP_PushTriggerNetSync( self );	// GalaxyRP: [SP Maps] not sent to clients unless they may predict it
 	trap->LinkEntity ((sharedEntity_t *)self);
 }
 
@@ -1427,13 +1641,22 @@ void hurt_touch( gentity_t *self, gentity_t *other, trace_t *trace ) {
 			dmg = 99999;
 			self->timestamp = 0;
 		}
+		// GalaxyRP fix: [Combat] both G_Damage calls below used to unconditionally OR in
+		// DAMAGE_NO_PROTECTION, regardless of the NO_PROTECTION spawnflag dflags was just computed
+		// from a few lines up (self->spawnflags & 8) -- that made every trigger_hurt (lava, acid,
+		// any hazard brush a mapper places) always bypass FL_GODMODE, armor, shields and the
+		// spawn-invulnerability shield, even on brushes the mapper never marked NO_PROTECTION, and
+		// made the spawnflag itself dead weight since it could never actually change anything.
+		// Passing dflags through as-is restores the documented per-brush behavior: only a
+		// trigger_hurt explicitly flagged NO_PROTECTION ignores protection, same as every other
+		// damage source in the game already respects.
 		if (self->activator && self->activator->inuse && self->activator->client)
 		{
-			G_Damage (other, self->activator, self->activator, NULL, NULL, dmg, dflags|DAMAGE_NO_PROTECTION, MOD_TRIGGER_HURT);
+			G_Damage (other, self->activator, self->activator, NULL, NULL, dmg, dflags, MOD_TRIGGER_HURT);
 		}
 		else
 		{
-			G_Damage (other, self, self, NULL, NULL, dmg, dflags|DAMAGE_NO_PROTECTION, MOD_TRIGGER_HURT);
+			G_Damage (other, self, self, NULL, NULL, dmg, dflags, MOD_TRIGGER_HURT);
 		}
 	}
 }
@@ -1467,6 +1690,145 @@ void SP_trigger_hurt( gentity_t *self ) {
 }
 
 #define	INITIAL_SUFFOCATION_DELAY	500 //.5 seconds
+
+/*
+==================
+RP_SpaceRiderProtected
+
+GalaxyRP: [Space] whether this client rides inside a vehicle that hides its rider -- a fighter's
+cockpit -- which protects it from space. This was the player-only test in space_touch(); it now
+covers NPC pilots too, which until now could never suffocate and so never needed it.
+
+A vehicle is never a rider here, whatever its m_iVehicleNum holds: a vehicle keeps its PILOT'S
+number plus one in that field (g_vehicles.c), and with an NPC pilot that is MAX_CLIENTS or more --
+which would read as "riding a vehicle" and take the fighter itself out of space.
+==================
+*/
+static qboolean RP_SpaceRiderProtected( const gentity_t *ent )
+{
+	const gentity_t *veh;
+
+	if ( !ent->client || ent->client->NPC_class == CLASS_VEHICLE )
+	{
+		return qfalse;
+	}
+
+	if ( ent->client->ps.m_iVehicleNum < MAX_CLIENTS || ent->client->ps.m_iVehicleNum >= ENTITYNUM_WORLD )
+	{
+		return qfalse;
+	}
+
+	veh = &g_entities[ent->client->ps.m_iVehicleNum];
+
+	return ( veh->inuse && veh->client && veh->m_pVehicle && veh->m_pVehicle->m_pVehicleInfo &&
+		veh->m_pVehicle->m_pVehicleInfo->hideRider ) ? qtrue : qfalse;
+}
+
+/*
+==================
+RP_SpaceSafeClass
+
+GalaxyRP: [Space] the NPC classes that do not breathe, and so are not hurt by space: vehicles --
+which have to fly there -- and droids. Every other class suffocates, creatures included, and so
+does any class added later.
+==================
+*/
+static qboolean RP_SpaceSafeClass( int npcClass )
+{
+	switch ( npcClass )
+	{
+	case CLASS_VEHICLE:
+	case CLASS_ATST:
+	case CLASS_GALAKMECH:
+	case CLASS_MARK1:
+	case CLASS_MARK2:
+	case CLASS_PROBE:
+	case CLASS_SEEKER:
+	case CLASS_REMOTE:
+	case CLASS_SENTRY:
+	case CLASS_INTERROGATOR:
+	case CLASS_R2D2:
+	case CLASS_R5D2:
+	case CLASS_GONK:
+	case CLASS_MOUSE:
+	case CLASS_PROTOCOL:
+		return qtrue;
+	default:
+		return qfalse;
+	}
+}
+
+/*
+==================
+RP_NpcSpaceFrame
+
+GalaxyRP: [Space] the NPC half of what G_RunFrame() does for a player in a trigger_space, called
+once a frame for every NPC, vehicles included, from its NPC branch.
+
+Stock JKA only ever did this for players. space_touch() flags NPCs as well (vehicles need it to fly
+in space), but nothing took the flag off again or hurt them, so:
+
+- an NPC or vehicle that touched space once stayed "in space" until it died: no gravity wherever it
+  went, a fighter kept its drifting-when-damaged behaviour indoors, and its eventual death -- anywhere
+  -- played the choke animation and left no corpse. The exit check below is the player one.
+- no NPC ever suffocated. Now every NPC whose class breathes (RP_SpaceSafeClass) does, on the
+  player timing and damage, unless it sits inside an enclosed vehicle (RP_SpaceRiderProtected).
+==================
+*/
+void RP_NpcSpaceFrame( gentity_t *ent )
+{
+	gentity_t *spacetrigger;
+
+	if ( !ent || !ent->client )
+	{
+		return;
+	}
+
+	if ( !ent->client->inSpaceIndex || ent->client->inSpaceIndex == ENTITYNUM_NONE )
+	{
+		return;
+	}
+
+	spacetrigger = &g_entities[ent->client->inSpaceIndex];
+
+	if ( !spacetrigger->inuse ||
+		!G_PointInBounds( ent->client->ps.origin, spacetrigger->r.absmin, spacetrigger->r.absmax ) )
+	{ // no longer in space
+		ent->client->inSpaceIndex = 0;
+		return;
+	}
+
+	if ( RP_SpaceSafeClass( ent->client->NPC_class ) )
+	{
+		return;
+	}
+
+	if ( RP_SpaceRiderProtected( ent ) )
+	{ // as space_touch() does for a rider: the cockpit keeps space out
+		ent->client->inSpaceSuffocation = 0;
+		ent->client->inSpaceIndex = ENTITYNUM_NONE;
+		return;
+	}
+
+	if ( ent->client->inSpaceSuffocation < level.time )
+	{ // suffocate -- the player code in G_RunFrame(), for an NPC
+		if ( ent->health > 0 && ent->takedamage )
+		{
+			G_Damage( ent, spacetrigger, spacetrigger, NULL, ent->client->ps.origin, Q_irand( 50, 70 ), DAMAGE_NO_ARMOR, MOD_SUICIDE );
+
+			if ( ent->health > 0 )
+			{ // still alive: choke
+				G_EntitySound( ent, CHAN_VOICE, G_SoundIndex( va( "*choke%d.wav", Q_irand( 1, 3 ) ) ) );
+
+				ent->client->ps.forceHandExtend = HANDEXTEND_CHOKE;
+				ent->client->ps.forceHandExtendTime = level.time + 2000;
+			}
+		}
+
+		ent->client->inSpaceSuffocation = level.time + Q_irand( 100, 200 );
+	}
+}
+
 void space_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 {
 	if (!other || !other->inuse || !other->client )
@@ -1476,19 +1838,13 @@ void space_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 		return;
 	}
 
-	if ( other->s.number < MAX_CLIENTS//player
-		&& other->client->ps.m_iVehicleNum//in a vehicle
-		&& other->client->ps.m_iVehicleNum >= MAX_CLIENTS )
-	{//a player client inside a vehicle
-		gentity_t *veh = &g_entities[other->client->ps.m_iVehicleNum];
-
-		if (veh->inuse && veh->client && veh->m_pVehicle &&
-			veh->m_pVehicle->m_pVehicleInfo->hideRider)
-		{ //if they are "inside" a vehicle, then let that protect them from THE HORRORS OF SPACE.
-			other->client->inSpaceSuffocation = 0;
-			other->client->inSpaceIndex = ENTITYNUM_NONE;
-			return;
-		}
+	// GalaxyRP: [Space] any rider, not only a player one -- NPC pilots can suffocate now (see
+	// RP_NpcSpaceFrame) -- and never a vehicle itself; see RP_SpaceRiderProtected.
+	if ( RP_SpaceRiderProtected( other ) )
+	{ //if they are "inside" a vehicle, then let that protect them from THE HORRORS OF SPACE.
+		other->client->inSpaceSuffocation = 0;
+		other->client->inSpaceIndex = ENTITYNUM_NONE;
+		return;
 	}
 
 	if (!G_PointInBounds(other->client->ps.origin, self->r.absmin, self->r.absmax))
@@ -1537,13 +1893,57 @@ void shipboundary_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 
 	ent = G_Find (NULL, FOFS(targetname), self->target);
 	if (!ent || !ent->inuse)
-	{ //this is bad
-		trap->Error( ERR_DROP, "trigger_shipboundary has invalid target '%s'\n", self->target );
+	{
+		// GalaxyRP fix: [Logical Entities] this was trap->Error(ERR_DROP), and common.cpp promotes
+		// every ERR_DROP to ERR_FATAL on a dedicated server -- so one boundary whose marker had
+		// gone missing ended the server process the first time any fighter reached the map edge,
+		// with nothing in the log to say why (Com_Shutdown closes it before Sys_Error prints).
+		//
+		// A marker that is not there is an ordinary misconfiguration, not a reason to take everyone
+		// offline: an Entity System preset that was saved without it, an /entremove, a hand-edited
+		// file. Same fallback as the logical-target guard below, and as the "no pilot or missing
+		// parts" branch further down -- say so once, and destroy the ship that cannot be turned
+		// around. "other" was validated at the top of this function, so its origin is safe to read.
+		if ( !level.rp_shipboundary_target_warned )
+		{
+			level.rp_shipboundary_target_warned = qtrue;
+			G_LogPrintf( "%s: trigger_shipboundary target '%s' does not exist; cannot turn the "
+				"ship around, destroying it instead.\n",
+				level.mapname, self->target ? self->target : "" );
+		}
+
+		G_Damage(other, other, other, NULL, other->client->ps.origin, 99999, DAMAGE_NO_PROTECTION, MOD_SUICIDE);
 		return;
 	}
 
 	if (!other->client->ps.m_iVehicleNum || other->m_pVehicle->m_iRemovedSurfaces)
 	{ //if a vehicle touches a boundary without a pilot in it or with parts missing, just blow the thing up
+		G_Damage(other, other, other, NULL, other->client->ps.origin, 99999, DAMAGE_NO_PROTECTION, MOD_SUICIDE);
+		return;
+	}
+
+	// GalaxyRP fix: [Logical Entities] belt-and-braces behind RP_PromoteShipboundaryTargets() in
+	// g_spawn.c, which moves these markers into the networked region at the end of the spawn pass.
+	// If one is still logical here -- it was not inert, or something spawned a boundary after the
+	// pass -- then both of the lines below would hand the engine an entity number it refuses:
+	// SV_SvEntityForGentity() Com_Error(ERR_DROP)s on s.number >= MAX_GENTITIES, which a dedicated
+	// server turns into ERR_FATAL and a process exit, and vehTurnaroundIndex is only GENTITYNUM_BITS
+	// wide on the wire, so the client would read a truncated number pointing at the wrong entity.
+	//
+	// Do neither. Blow the ship up instead, with the same call the "no pilot or missing parts"
+	// branch above uses: the fighter is at the map edge with no turnaround coming, so letting it
+	// fly on is not an option, and this is a fate the code already knows how to produce there.
+	if ( ent->isLogical )
+	{
+		if ( !level.rp_shipboundary_logical_warned )
+		{
+			level.rp_shipboundary_logical_warned = qtrue;
+			G_LogPrintf( "%s: trigger_shipboundary target '%s' (classname %s) is in the logical "
+				"region; cannot turn the ship around, destroying it instead.\n",
+				level.mapname, self->target ? self->target : "",
+				ent->classname ? ent->classname : "?" );
+		}
+
 		G_Damage(other, other, other, NULL, other->client->ps.origin, 99999, DAMAGE_NO_PROTECTION, MOD_SUICIDE);
 		return;
 	}
@@ -1606,13 +2006,27 @@ void SP_trigger_shipboundary(gentity_t *self)
 
 	if (!self->target || !self->target[0])
 	{
-		trap->Error( ERR_DROP, "trigger_shipboundary without a target." );
+		// GalaxyRP fix: [Logical Entities] was trap->Error(ERR_DROP), which ends the server process
+		// on a dedicated build. A trigger this malformed cannot work whatever we do, but it is also
+		// reachable at RUNTIME, not just at map load: zyk_main_spawn_entity() calls G_CallSpawn()
+		// for every line of an Entity System preset, so one truncated /entload record -- or an
+		// /entadd of a trigger_shipboundary with a key missing -- took the whole server down. Free it
+		// instead: the trigger simply does not exist, the log says which one and where, and
+		// everyone stays connected. The return is NOT optional -- the old code relied on
+		// trap->Error never coming back, and without it execution would carry on below.
+		G_LogPrintf( "trigger_shipboundary at %s has no \"target\"; not spawned.\n", vtos( self->s.origin ) );
+		G_FreeEntity( self );
+		return;
 	}
 	G_SpawnInt("traveltime", "0", &self->genericValue1);
 
 	if (!self->genericValue1)
 	{
-		trap->Error( ERR_DROP, "trigger_shipboundary without traveltime." );
+		// GalaxyRP fix: [Logical Entities] as above -- free it rather than ending the server, and
+		// return, because the old code relied on trap->Error never coming back.
+		G_LogPrintf( "trigger_shipboundary at %s has no \"traveltime\"; not spawned.\n", vtos( self->s.origin ) );
+		G_FreeEntity( self );
+		return;
 	}
 
 	self->think = shipboundary_think;
@@ -1647,8 +2061,20 @@ void hyperspace_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 				//Get the offset from the local position
 				ent = G_Find (NULL, FOFS(targetname), self->target);
 				if (!ent || !ent->inuse)
-				{ //this is bad
-					trap->Error( ERR_DROP, "trigger_hyperspace has invalid target '%s'\n", self->target );
+				{
+					// GalaxyRP fix: [Logical Entities] was trap->Error(ERR_DROP), a process exit
+					// on a dedicated server -- see shipboundary_touch above for why that is the
+					// wrong answer to a missing marker. A hyperspace that cannot resolve its
+					// destination is not the same situation as a boundary that cannot turn a ship
+					// around, though: nothing is leaving the map, so the jump simply fails and the
+					// ship carries on flying. State is left as it is; hyperSpaceTime expires.
+					if ( !level.rp_hyperspace_target_warned )
+					{
+						level.rp_hyperspace_target_warned = qtrue;
+						G_LogPrintf( "%s: trigger_hyperspace target '%s' does not exist; the jump "
+							"cannot be completed.\n",
+							level.mapname, self->target ? self->target : "" );
+					}
 					return;
 				}
 				VectorSubtract( other->client->ps.origin, ent->s.origin, diff );
@@ -1659,8 +2085,20 @@ void hyperspace_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 				//Now get the base position of the destination
 				ent = G_Find (NULL, FOFS(targetname), self->target2);
 				if (!ent || !ent->inuse)
-				{ //this is bad
-					trap->Error( ERR_DROP, "trigger_hyperspace has invalid target2 '%s'\n", self->target2 );
+				{
+					// GalaxyRP fix: [Logical Entities] was trap->Error(ERR_DROP), a process exit
+					// on a dedicated server -- see shipboundary_touch above for why that is the
+					// wrong answer to a missing marker. A hyperspace that cannot resolve its
+					// destination is not the same situation as a boundary that cannot turn a ship
+					// around, though: nothing is leaving the map, so the jump simply fails and the
+					// ship carries on flying. State is left as it is; hyperSpaceTime expires.
+					if ( !level.rp_hyperspace_target_warned )
+					{
+						level.rp_hyperspace_target_warned = qtrue;
+						G_LogPrintf( "%s: trigger_hyperspace target2 '%s' does not exist; the jump "
+							"cannot be completed.\n",
+							level.mapname, self->target2 ? self->target2 : "" );
+					}
 					return;
 				}
 				VectorCopy( ent->s.origin, newOrg );
@@ -1671,12 +2109,10 @@ void hyperspace_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 				VectorMA( newOrg, uDiff, up, newOrg );
 				//trap->Print("hyperspace from %s to %s\n", vtos(other->client->ps.origin), vtos(newOrg) );
 				//now put them in the offset position, facing the angles that position wants them to be facing
+				// DAJ_RP fix: [Vehicles] the pilot and passengers go with it, the pilot given the new angles
+				// (RP_CarryRiders(), g_misc.c). This teleported the pilot on his own after it -- and the passengers
+				// not at all ("FIXME: and the passengers?").
 				TeleportPlayer( other, newOrg, ent->s.angles );
-				if ( other->m_pVehicle && other->m_pVehicle->m_pPilot )
-				{//teleport the pilot, too
-					TeleportPlayer( (gentity_t*)other->m_pVehicle->m_pPilot, newOrg, ent->s.angles );
-					//FIXME: and the passengers?
-				}
 				//make them face the new angle
 				//other->client->ps.hyperSpaceIndex = ent->s.number;
 				VectorCopy( ent->s.angles, other->client->ps.hyperSpaceAngles );
@@ -1690,8 +2126,17 @@ void hyperspace_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 	{
 		ent = G_Find (NULL, FOFS(targetname), self->target);
 		if (!ent || !ent->inuse)
-		{ //this is bad
-			trap->Error( ERR_DROP, "trigger_hyperspace has invalid target '%s'\n", self->target );
+		{
+			// GalaxyRP fix: [Logical Entities] as the two sites above -- a missing marker fails the
+			// jump rather than ending the server. Here the jump has not started yet, so returning
+			// simply means it never does.
+			if ( !level.rp_hyperspace_target_warned )
+			{
+				level.rp_hyperspace_target_warned = qtrue;
+				G_LogPrintf( "%s: trigger_hyperspace target '%s' does not exist; the jump cannot "
+					"be started.\n",
+					level.mapname, self->target ? self->target : "" );
+			}
 			return;
 		}
 
@@ -1742,11 +2187,19 @@ void SP_trigger_hyperspace(gentity_t *self)
 
 	if (!self->target || !self->target[0])
 	{
-		trap->Error( ERR_DROP, "trigger_hyperspace without a target." );
+		// GalaxyRP fix: [Logical Entities] as above -- free it rather than ending the server, and
+		// return, because the old code relied on trap->Error never coming back.
+		G_LogPrintf( "trigger_hyperspace at %s has no \"target\"; not spawned.\n", vtos( self->s.origin ) );
+		G_FreeEntity( self );
+		return;
 	}
 	if (!self->target2 || !self->target2[0])
 	{
-		trap->Error( ERR_DROP, "trigger_hyperspace without a target2." );
+		// GalaxyRP fix: [Logical Entities] as above -- free it rather than ending the server, and
+		// return, because the old code relied on trap->Error never coming back.
+		G_LogPrintf( "trigger_hyperspace at %s has no \"target2\"; not spawned.\n", vtos( self->s.origin ) );
+		G_FreeEntity( self );
+		return;
 	}
 
 	self->delay = Distance( self->r.absmax, self->r.absmin );//my size
@@ -1803,12 +2256,29 @@ void SP_func_timer( gentity_t *self ) {
 	G_SpawnFloat( "random", "1", &self->random);
 	G_SpawnFloat( "wait", "1", &self->wait );
 
+	// GalaxyRP fix: [Entity System] a wait of 0 or less fired the timer's targets every frame for the
+	// rest of the map (nextthink never ahead of level.time); floored at 0.1 s, the rate the mod's other
+	// timed entities use
+	if ( self->wait < 0.1f ) {
+		G_LogPrintf( "func_timer at %s: wait %g raised to 0.1\n", vtos( self->s.origin ), self->wait );
+		self->wait = 0.1f;
+	}
+
 	self->use = func_timer_use;
 	self->think = func_timer_think;
 
 	if ( self->random >= self->wait ) {
-		self->random = self->wait - 1;//NOTE: was - FRAMETIME, but FRAMETIME is in msec (100) and these numbers are in *seconds*!
+		// GalaxyRP fix: [Entity System] was wait - 1 (a whole second, these are seconds): for any wait
+		// under 1 s -- the floored one above among them -- that left random negative, and the think's
+		// wait + crandom * random then landed in the past about half the time, so the timer went on
+		// firing its targets on consecutive frames. A tenth under wait, and never below zero.
+		self->random = self->wait - 0.1f;
 		trap->Print( "func_timer at %s has random >= wait\n", vtos( self->s.origin ) );
+	}
+	// GalaxyRP fix: [Entity System] and random is never negative, whichever way it got there (a
+	// negative key, or the clamp above on a wait of exactly 0.1)
+	if ( self->random < 0 ) {
+		self->random = 0;
 	}
 
 	if ( self->spawnflags & 1 ) {
@@ -1823,12 +2293,14 @@ gentity_t *asteroid_pick_random_asteroid( gentity_t *self )
 {
 	int			t_count = 0, pick;
 	gentity_t	*t = NULL;
+	gentity_t	*only = NULL;	// DAJ_RP: [Entities] the match, for when there is just the one
 
 	while ( (t = G_Find (t, FOFS(targetname), self->target)) != NULL )
 	{
 		if (t != self)
 		{
 			t_count++;
+			only = t;
 		}
 	}
 
@@ -1837,9 +2309,13 @@ gentity_t *asteroid_pick_random_asteroid( gentity_t *self )
 		return NULL;
 	}
 
+	// DAJ_RP fix: [Entities] this returned t, which the loop above has already run to NULL -- so a field
+	// with exactly one template (the usual way to set one up) never spawned an asteroid, and logged that
+	// nothing had its target's name. Raven's code, unchanged in OpenJK and TaystJK. With several the pick
+	// below walks the list again and returns inside the loop, which was always right.
 	if(t_count == 1)
 	{
-		return t;
+		return only;
 	}
 
 	//FIXME: need a seed
@@ -1890,16 +2366,47 @@ void asteroid_field_think(gentity_t *self)
 
 	self->nextthink = level.time + 500;
 
+	// GalaxyRP fix: [Entity System] an asteroid field spawns one asteroid every think until it has
+	// self->count of them, and count comes straight off a spawn key -- "/entadd
+	// trigger_asteroid_field ... count 900" used to be a slow, patient way to walk the entity table
+	// off its end and take the server process down with it. SP_trigger_asteroid_field now clamps
+	// count, and this refuses
+	// the individual spawn as well, because the field is not the only thing competing for slots.
+	if ( numAsteroids < self->count && G_EntitySlotsAvailable( 1 ) == qfalse )
+	{
+		return;
+	}
+
 	if ( numAsteroids < self->count )
 	{
+		// GalaxyRP fix: [Entity System] the asteroid to copy is picked before a slot is taken. This
+		// took the slot first and, with no entity carrying the field's target, left it in use with
+		// nothing in it -- not counted (ownerNum never set), not thinking, never freed: one slot
+		// leaked every 500 ms for the rest of the map, from a target typo on /entadd.
+		gentity_t *copyAsteroid = asteroid_pick_random_asteroid( self );
+		gentity_t *newAsteroid;
+
+		if ( !copyAsteroid )
+		{
+			// GalaxyRP fix: [Entity System] genericValue3, not alt_fire, which is the "linear" spawn key
+			if ( !self->genericValue3 )
+			{
+				self->genericValue3 = 1;	// logged once per field
+				G_LogPrintf( "trigger_asteroid_field at %s: nothing has the targetname %s to copy, no asteroids spawned\n",
+					vtos( self->s.origin ), self->target ? self->target : "" );
+			}
+			self->nextthink = level.time + 10000;	// a template may still be added; look again later
+			return;
+		}
+		self->genericValue3 = 0;
+
 		//need to spawn a new asteroid
-		gentity_t *newAsteroid = G_Spawn();
+		newAsteroid = G_Spawn();
 		if ( newAsteroid )
 		{
 			vec3_t startSpot, endSpot, startAngles;
 			float dist, speed = flrand( self->speed * 0.25f, self->speed * 2.0f );
 			int	capAxis, axis, time = 0;
-			gentity_t *copyAsteroid = asteroid_pick_random_asteroid( self );
 			if ( copyAsteroid )
 			{
 				newAsteroid->model = copyAsteroid->model;
@@ -1990,12 +2497,61 @@ target - target this at func_rotating asteroids
 */
 void SP_trigger_asteroid_field(gentity_t *self)
 {
+	// GalaxyRP fix: [Entity System] this was the one SetBrushModel call with no model test at all,
+	// so "/entadd trigger_asteroid_field" with no model reached SV_SetBrushModel's own
+	// Com_Error(ERR_DROP, "SV_SetBrushModel: NULL"), which on a dedicated server ends the process
+	// (see ZYK_ENTITY_RESERVE in g_local.h). It now refuses the same
+	// two ways every other site does -- see zyk_brush_model_allowed() in g_spawn.c.
+	if (!self->model || zyk_brush_model_allowed(self, self->model) == qfalse)
+	{
+		if (!self->model)
+			Com_Printf( S_COLOR_RED"ERROR: trigger_asteroid_field at %s has no brush model specified\n", vtos(self->s.origin) );
+
+		self->think = G_FreeEntity;
+		self->nextthink = level.time + FRAMETIME;
+
+		return;
+	}
+
 	trap->SetBrushModel( (sharedEntity_t *)self, self->model );
 	self->r.contents = 0;
 
-	if ( !self->count )
+	// GalaxyRP fix: [Entity System] this read "self->health = 20", which is in OpenJK and TaystJK
+	// unchanged and reads as a Raven slip for "self->count = 20": the test is on count, the QUAKED
+	// comment above documents count as "how many asteroids, max, to have at one time", and
+	// asteroid_field_think only ever spawns while numAsteroids < count. As written the field was
+	// inert -- a map that did not set count spawned nothing at all, and the health it assigned was
+	// never read by anything.
+	//
+	// Corrected, but to 1 rather than Raven's 20. The default is the only part of this that can
+	// change a shipped map: a map that sets count explicitly is untouched either way, while a map
+	// that omits it goes from spawning nothing to spawning something. One asteroid is the smallest
+	// that revival can be -- and it is a live cycle, not a static entity, since each asteroid is
+	// lerped across the volume and then frees itself on arrival, so the field holds one drifting
+	// rock at a time rather than accumulating.
+	//
+	// DAJ_RP fix: [Entities] a negative count passed this test and left the field spawning nothing, saying
+	// nothing (asteroid_field_think spawns while numAsteroids < count): it means 1 as well now, with a
+	// warning, as the clamp below warns.
+	if ( self->count <= 0 )
 	{
-		self->health = 20;
+		if ( self->count < 0 )
+		{
+			Com_Printf( S_COLOR_YELLOW"WARNING: trigger_asteroid_field at %s asked for %d asteroids, using 1\n",
+				vtos(self->s.origin), self->count );
+		}
+		self->count = 1;
+	}
+
+	// GalaxyRP fix: [Entity System] count is unbounded and comes from a spawn key, so /entadd could
+	// ask for thousands of asteroids -- one per think, forever, until G_Spawn() ERR_DROPs the
+	// server. Clamped to something no real map needs to exceed; the field still refuses individual
+	// spawns when the table is tight (see asteroid_field_think).
+	if ( self->count > ZYK_MAX_ASTEROIDS )
+	{
+		Com_Printf( S_COLOR_YELLOW"WARNING: trigger_asteroid_field at %s asked for %d asteroids, clamped to %d\n",
+			vtos(self->s.origin), self->count, ZYK_MAX_ASTEROIDS );
+		self->count = ZYK_MAX_ASTEROIDS;
 	}
 
 	if ( !self->speed )
@@ -2007,4 +2563,161 @@ void SP_trigger_asteroid_field(gentity_t *self)
 	self->nextthink = level.time + 100;
 
     trap->LinkEntity((sharedEntity_t *)self);
+}
+
+/*
+==================================================================================================
+GalaxyRP: [SP Maps] single player's trigger_visible and trigger_location.
+==================================================================================================
+*/
+
+/*QUAKED trigger_visible (.1 .5 .1) (-8 -8 -8) (8 8 8) NOTRACE FORCESIGHT x x x x x INACTIVE
+Only fires when a player is looking at it, fires only once then removes itself.
+
+  NOTRACE - Doesn't check that the line of sight is clear (sees through walls, forcefields, etc)
+  FORCESIGHT - Only fires for a player with Force Sight active
+  INACTIVE - won't check for player visibility until activated
+
+  "radius" - how far this ent can be from the player's eyes, max, and still be considered "seen" (0 = any)
+  "FOV" - how far off the centre of the player's view this can be, max, and still be considered "seen" (0 = anywhere in front)
+  "target" - what to use when it fires
+*/
+extern qboolean InFOV3( vec3_t spot, vec3_t from, vec3_t fromAngles, int hFOV, int vFOV );
+
+static void trigger_visible_think( gentity_t *self )
+{
+	int i;
+
+	self->nextthink = level.time + 500;
+
+	if ( self->flags & FL_INACTIVE )
+	{
+		return;
+	}
+
+	for ( i = 0; i < MAX_CLIENTS; i++ )
+	{
+		gentity_t	*player = &g_entities[i];
+		vec3_t		eyes;
+
+		if ( !player->inuse || !player->client || player->health <= 0
+			|| player->client->pers.connected != CON_CONNECTED
+			|| player->client->sess.sessionTeam == TEAM_SPECTATOR
+			|| player->client->tempSpectate >= level.time )
+		{
+			continue;
+		}
+
+		if ( ( self->spawnflags & 2 ) && !( player->client->ps.fd.forcePowersActive & ( 1 << FP_SEE ) ) )
+		{//force sight only
+			continue;
+		}
+
+		VectorCopy( player->client->ps.origin, eyes );
+		eyes[2] += player->client->ps.viewheight;
+
+		if ( self->radius > 0 && Distance( self->s.origin, eyes ) > self->radius )
+		{
+			continue;
+		}
+
+		if ( self->genericValue1 > 0 )
+		{//FOV check
+			if ( !InFOV3( self->s.origin, eyes, player->client->ps.viewangles, self->genericValue1, self->genericValue1 ) )
+			{
+				continue;
+			}
+		}
+		else
+		{//in front of the player at all?
+			vec3_t fwd, dir;
+
+			AngleVectors( player->client->ps.viewangles, fwd, NULL, NULL );
+			VectorSubtract( self->s.origin, eyes, dir );
+			if ( DotProduct( fwd, dir ) <= 0 )
+			{
+				continue;
+			}
+		}
+
+		if ( !( self->spawnflags & 1 ) )
+		{//line of sight
+			trace_t tr;
+
+			trap->Trace( &tr, eyes, NULL, NULL, self->s.origin, player->s.number, MASK_OPAQUE, qfalse, 0, 0 );
+			if ( tr.fraction < 1.0f )
+			{
+				continue;
+			}
+		}
+
+		//seen: fire once and go away
+		self->think = G_FreeEntity;
+		self->nextthink = level.time + 100;
+		G_ActivateBehavior( self, BSET_USE );
+		G_UseTargets( self, player );
+		return;
+	}
+}
+
+void SP_trigger_visible( gentity_t *self )
+{
+	G_SpawnInt( "FOV", "0", &self->genericValue1 );
+
+	if ( self->spawnflags & 128 )
+	{
+		self->flags |= FL_INACTIVE;
+	}
+
+	G_SetOrigin( self, self->s.origin );
+	// DAJ_RP fix: [Entity System] no use function, as in single player: target_activate and target_deactivate (and
+	// scripts) switch it, by FL_INACTIVE, and being used does nothing. The port had given it a use that toggled
+	// FL_INACTIVE, so a relay or trigger firing its name switched it off -- and, inactive entities refusing other
+	// entities' uses, only /entuse could switch it back on.
+	self->use = NULL;
+	self->think = trigger_visible_think;
+	self->nextthink = level.time + 500;
+}
+
+/*QUAKED trigger_location (.1 .5 .1) ?
+When an ent is asked for its location (a script's get(SET_LOCATION), team chat's location), it
+returns this ent's "message" field if it is in it.
+
+  "message" - location name
+
+  NOTE: always rectangular
+*/
+void SP_trigger_location( gentity_t *self )
+{
+	InitTrigger( self );
+	trap->LinkEntity( (sharedEntity_t *)self );
+}
+
+// the "message" of the trigger_location the entity stands in, or NULL when it is in none
+const char *RP_TriggerLocationName( gentity_t *ent )
+{
+	int			touch[MAX_GENTITIES];
+	int			i, num;
+	vec3_t		mins, maxs;
+
+	if ( !ent )
+	{
+		return NULL;
+	}
+
+	VectorAdd( ent->r.currentOrigin, ent->r.mins, mins );
+	VectorAdd( ent->r.currentOrigin, ent->r.maxs, maxs );
+	num = trap->EntitiesInBox( mins, maxs, touch, MAX_GENTITIES );
+
+	for ( i = 0; i < num; i++ )
+	{
+		gentity_t *hit = &g_entities[touch[i]];
+
+		if ( hit->inuse && hit->classname && !strcmp( hit->classname, "trigger_location" ) && hit->message && hit->message[0] )
+		{
+			return hit->message;
+		}
+	}
+
+	return NULL;
 }

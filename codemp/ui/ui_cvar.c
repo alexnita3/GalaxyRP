@@ -120,6 +120,9 @@ void UI_RegisterCvars( void ) {
 			cv->update();
 	}
 
+	// GalaxyRP: [Extras] the Extras menus' cvars -- ui_rpextras.c
+	UI_RpxRegisterCvars();
+
 	// Tr!Force: [AssetsCache] Get client state
 	trap->GetClientState( &cstate );
 

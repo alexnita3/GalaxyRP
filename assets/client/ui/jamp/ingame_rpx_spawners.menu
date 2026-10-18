@@ -1,0 +1,1273 @@
+//----------------------------------------------------------------------------------------------
+// ingame_rpx_spawners: the Spawners menu of the Extras.
+// GalaxyRP: [Extras] generated with the others of ingame_rpx_*.menu; the Extras button of
+// ingame_galaxyrp.menu opens it. The list, the previews and the rpx scripts are ui_rpextras.c; the
+// commands the buttons send are built in cg_rpextras.c.
+//----------------------------------------------------------------------------------------------
+{
+	menuDef
+	{
+		name                    "ingame_rpx_spawners"
+		visible                 0
+		fullscreen              0
+		outOfBoundsClick
+		rect                    10 20 620 440
+		focusColor              1 1 1 1
+		disableColor            .5 .5 .5 1
+		style                   1
+		border                  1
+		descX                   310
+		descY                   424
+		descScale               0.8
+		descColor               1 .682 0 .8
+		descAlignment           ITEM_ALIGN_CENTER
+
+		onOpen
+		{
+			uiScript		rpxOpen spawners ingame_rpx_spawners
+		}
+		onClose
+		{
+			uiScript		rpxClose
+		}
+		onESC
+		{
+			play			"sound/interface/button1.wav" ;
+			close			ingame_rpx_spawners
+		}
+
+		itemDef
+		{
+			name                rpx_background
+			style               WINDOW_STYLE_SHADER
+			rect                0 0 620 440
+			background          "gfx/menus/menu_box_ingame"
+			forecolor           1 1 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_title
+			style               WINDOW_STYLE_SHADER
+			background          "gfx/menus/menu_blendbox"
+			text                "^6Galaxy ^4RP^3 Extras: ^7Spawners"
+			rect                20 5 580 28
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          290
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           .549 .854 1 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_back
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                12 405 90 24
+			text                "Back"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          45
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Back to the Galaxy RP menu"
+			mouseEnter
+			{
+				setitemcolor rpx_back bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_back bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				setcvar ui_rpx_back 1 ;
+				close ingame_rpx_spawners ;
+				open ingame_galaxyrp
+			}
+		}
+		itemDef
+		{
+			name                rpx_msg
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                110 415 500 14
+			cvar                "ui_rpx_msg"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.6
+			forecolor           1 1 .4 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_tab_npcs
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                12 40 103 20
+			text                "NPCs"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          51
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "NPC spawners: the NPC types the server has"
+			mouseEnter
+			{
+				setitemcolor rpx_tab_npcs bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_tab_npcs bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxNpcMode 0
+			}
+		}
+		itemDef
+		{
+			name                rpx_tab_veh
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                119 40 103 20
+			text                "Vehicles"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          51
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Vehicle spawners: the vehicle types the server has"
+			mouseEnter
+			{
+				setitemcolor rpx_tab_veh bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_tab_veh bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxNpcMode 1
+			}
+		}
+		itemDef
+		{
+			name                rpx_tab_npcs_on
+			style               WINDOW_STYLE_FILLED
+			rect                14 58 99 2
+			backcolor           1 1 1 1
+			visible             1
+			decoration
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+		}
+		itemDef
+		{
+			name                rpx_tab_veh_on
+			style               WINDOW_STYLE_FILLED
+			rect                121 58 99 2
+			backcolor           1 1 1 1
+			visible             1
+			decoration
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"1"
+			}
+		}
+		itemDef
+		{
+			name                rpx_filter
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                "Filter: "
+			cvar                "ui_rpx_filter_npcs"
+			maxchars            30
+			maxPaintChars       30
+			rect                12 64 210 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Show only the names with this in them"
+		}
+		itemDef
+		{
+			name                rpx_list
+			type                ITEM_TYPE_LISTBOX
+			style               WINDOW_STYLE_FILLED
+			rect                12 84 210 276
+			elementwidth        190
+			elementheight       15
+			elementtype         LISTBOX_TEXT
+			feeder              FEEDER_RPX_LIST
+			font                2
+			textscale           0.6
+			textstyle           0
+			textalign           0
+			textaligny          0
+			columns             1 4 184 184
+			border              1
+			bordercolor         1 .682 0 .6
+			forecolor           1 1 1 1
+			backcolor           0 0 0 .6
+			outlinecolor        1 .682 0 .35
+			visible             1
+			mouseEnter
+			{
+				setitemcolor rpx_list bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_list bordercolor 1 .682 0 .6
+			}
+		}
+		itemDef
+		{
+			name                rpx_info
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                12 364 210 14
+			cvar                "ui_rpx_info"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           .8 .8 .8 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_status
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                12 378 210 14
+			cvar                "ui_rpx_status"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 1 .4 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_head_sp
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 40 190 14
+			text                "Spawner"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_spname
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                "Name: "
+			cvar                "ui_rpx_sp_name"
+			maxchars            32
+			maxPaintChars       18
+			rect                232 58 190 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Required: triggers, buttons and /entuse fire the spawner by this name"
+		}
+		itemDef
+		{
+			name                rpx_help1
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 80 190 14
+			text                "Triggers, buttons and /entuse"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          95
+			textaligny          0
+			font                2
+			textscale           0.6
+			forecolor           .8 .8 .8 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_help2
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 94 190 14
+			text                "fire it by this name."
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          95
+			textaligny          0
+			font                2
+			textscale           0.6
+			forecolor           .8 .8 .8 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_spnow
+			type                ITEM_TYPE_YESNO
+			text                "Spawn one now:"
+			cvar                "ui_rpx_sp_now"
+			rect                232 116 190 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "One at once as well, not counted; again whenever the map loads it"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_spcount
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                "How many: "
+			cvar                "ui_rpx_sp_count"
+			maxchars            3
+			maxPaintChars       3
+			rect                232 140 190 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "How many times it can be fired, respawns included (1 to 999)"
+		}
+		itemDef
+		{
+			name                rpx_spunlim
+			type                ITEM_TYPE_YESNO
+			text                "No limit:"
+			cvar                "ui_rpx_sp_unlim"
+			rect                232 160 190 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "It can be fired any number of times (How many is not used)"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_spdelay
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                "Delay (s): "
+			cvar                "ui_rpx_sp_delay"
+			maxchars            4
+			maxPaintChars       4
+			rect                232 184 190 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Seconds it waits after being fired before it spawns (0 to 3600)"
+		}
+		itemDef
+		{
+			name                rpx_sprespawn
+			type                ITEM_TYPE_YESNO
+			text                "Respawn when killed:"
+			cvar                "ui_rpx_sp_respawn"
+			rect                232 204 190 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "When one it made dies, it is fired again: Delay and How many apply"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_spshy
+			type                ITEM_TYPE_YESNO
+			text                "Shy:"
+			cvar                "ui_rpx_sp_shy"
+			rect                232 224 190 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			descText            "When fired, it waits until no player is near it or looking at it"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_spsep
+			style               WINDOW_STYLE_FILLED
+			rect                232 252 190 1
+			backcolor           1 .682 0 .5
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_head_spnpc
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 259 190 14
+			text                "Spawned NPC"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_head_spveh
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 259 190 14
+			text                "Spawned vehicle"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"1"
+			}
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_spscale
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                "Scale override (%): "
+			cvar                "ui_rpx_sp_scale"
+			maxchars            3
+			maxPaintChars       3
+			rect                232 278 190 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Its size in percent, 20 to 500 (100 is normal); 0 or empty: its type's own"
+		}
+		itemDef
+		{
+			name                rpx_spscale_tip
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                232 300 190 14
+			text                "20 to 500 percent, 100 is normal."
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          95
+			textaligny          0
+			font                2
+			textscale           0.6
+			forecolor           .8 .8 .8 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_undo
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                232 360 190 22
+			text                "Undo last"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          95
+			textaligny          2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Remove the last entity you added (/entundo), with what a spawner made"
+			mouseEnter
+			{
+				setitemcolor rpx_undo bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_undo bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo undo
+			}
+		}
+		itemDef
+		{
+			name                rpx_head_npc
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                432 40 180 14
+			text                "Spawned NPC"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_head_veh
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                432 40 180 14
+			text                "Spawned vehicle"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.55
+			forecolor           1 .682 0 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"1"
+			}
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_spface
+			type                ITEM_TYPE_MULTI
+			text                "Faces:"
+			cvar                "ui_rpx_sp_face"
+			rect                432 58 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "Which way it faces: towards you, or the way you are looking"
+			cvarFloatList
+			{
+				"me" 0
+				"my way" 1
+			}
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_spnpcname_label
+			type                ITEM_TYPE_TEXT
+			style               WINDOW_STYLE_EMPTY
+			rect                432 80 180 14
+			text                "Its name (optional)"
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          0
+			font                2
+			textscale           0.6
+			forecolor           .8 .8 .8 1
+			visible             1
+			decoration
+		}
+		itemDef
+		{
+			name                rpx_spnpcname
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_sp_npcname"
+			maxchars            32
+			maxPaintChars       20
+			rect                432 96 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "Optional: its own name, for /npc kill <name> -- not the spawner's"
+		}
+		itemDef
+		{
+			name                rpx_sphealth
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                "Health: "
+			cvar                "ui_rpx_sp_health"
+			maxchars            6
+			maxPaintChars       6
+			rect                432 122 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			descText            "Its health; 0: its type's own"
+		}
+		itemDef
+		{
+			name                rpx_sphbar
+			type                ITEM_TYPE_YESNO
+			text                "Health bar:"
+			cvar                "ui_rpx_sp_hbar"
+			rect                432 142 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			descText            "Its health bar shows when it is aimed at"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_spnoai
+			type                ITEM_TYPE_YESNO
+			text                "No AI:"
+			cvar                "ui_rpx_sp_noai"
+			rect                432 162 88 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			descText            "It stands still and does nothing"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_spfrozen
+			type                ITEM_TYPE_YESNO
+			text                "Frozen:"
+			cvar                "ui_rpx_sp_frozen"
+			rect                524 162 88 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			descText            "Starts frozen, as /npc freeze leaves it: no moving or fighting until unfrozen"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_spsolid
+			type                ITEM_TYPE_YESNO
+			text                "Solid:"
+			cvar                "ui_rpx_sp_solid"
+			rect                432 182 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			descText            "No: nothing collides with it, shots and sabers pass through too"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_speffect
+			type                ITEM_TYPE_MULTI
+			text                "Effect:"
+			cvar                "ui_rpx_sp_effect"
+			rect                432 202 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			descText            "Others walk through it, it can still be hit; holo and ghost add their look"
+			cvarFloatList
+			{
+				"none" 0
+				"holo" 1
+				"ghost" 2
+				"walk-through" 3
+			}
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_spdeath
+			type                ITEM_TYPE_EDITFIELD
+			style               0
+			text                "On death fires: "
+			cvar                "ui_rpx_sp_ondeath"
+			maxchars            32
+			maxPaintChars       9
+			rect                432 226 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			descText            "Optional: the name it fires when it dies -- a door, an alarm, a relay"
+		}
+		itemDef
+		{
+			name                rpx_spteam
+			type                ITEM_TYPE_MULTI
+			text                "Team:"
+			cvar                "ui_rpx_sp_team"
+			rect                432 246 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			descText            "Which side it is on and fights; default: its type's own"
+			cvarFloatList
+			{
+				"default" 0
+				"player" 1
+				"enemy" 2
+				"neutral" 3
+				"free" 4
+			}
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		// DAJ_RP: [NPC Rewards] npccredits and npcxp: paid to the logged-in player who kills one of its NPCs
+		itemDef
+		{
+			name                rpx_spcredits
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                "Credits reward: "
+			cvar                "ui_rpx_sp_credits"
+			maxchars            6
+			maxPaintChars       6
+			rect                432 266 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			descText            "Credits for the logged-in player who kills one, 0 to 100000; 0: none"
+		}
+		itemDef
+		{
+			name                rpx_spxp
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                "XP reward: "
+			cvar                "ui_rpx_sp_xp"
+			maxchars            3
+			maxPaintChars       3
+			rect                432 286 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"0"
+			}
+			descText            "XP for the logged-in player who kills one, 0 to 100; 0: none"
+		}
+		itemDef
+		{
+			name                rpx_spvhbar
+			type                ITEM_TYPE_YESNO
+			text                "Health bar:"
+			cvar                "ui_rpx_sp_hbar"
+			rect                432 122 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"1"
+			}
+			descText            "Its health bar shows when it is aimed at"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_spvdie
+			type                ITEM_TYPE_YESNO
+			text                "Explodes if left:"
+			cvar                "ui_rpx_sp_vdie"
+			rect                432 146 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"1"
+			}
+			descText            "Once someone has ridden it: it explodes when its rider stays away"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_spvtime
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                "After (s): "
+			cvar                "ui_rpx_sp_vtime"
+			maxchars            4
+			maxPaintChars       4
+			rect                432 166 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"1"
+			}
+			descText            "Explodes if left: how many seconds its rider may stay away (1 to 3600)"
+		}
+		itemDef
+		{
+			name                rpx_spvdist
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                "Distance: "
+			cvar                "ui_rpx_sp_vdist"
+			maxchars            4
+			maxPaintChars       4
+			rect                432 186 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"1"
+			}
+			descText            "Explodes if left: how far its rider may go before it counts down"
+		}
+		itemDef
+		{
+			name                rpx_spvdock
+			type                ITEM_TYPE_YESNO
+			text                "Docked:"
+			cvar                "ui_rpx_sp_vdock"
+			rect                432 210 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"1"
+			}
+			descText            "Fighters: it hangs in the air until someone boards it"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_spvteam
+			type                ITEM_TYPE_MULTI
+			text                "Team:"
+			cvar                "ui_rpx_sp_team"
+			rect                432 230 180 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			cvarTest            "ui_rpx_npcmode"
+			showCvar
+			{
+				"1"
+			}
+			descText            "Which side it is on: NPCs attack it as they would that side"
+			cvarFloatList
+			{
+				"default" 0
+				"player" 1
+				"enemy" 2
+				"neutral" 3
+				"free" 4
+			}
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_lift
+			type                ITEM_TYPE_INTSLIDER
+			text                "Offset"
+			cvarint             "ui_rpx_sp_lift" 0 0 512
+			rect                474 308 105 18
+			textalign           ITEM_ALIGN_RIGHT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 1 1 1
+			visible             1
+			descText            "How far out from the surface you aim at the spawner goes"
+			action
+			{
+				play "sound/interface/button1.wav"
+			}
+		}
+		itemDef
+		{
+			name                rpx_lift_value
+			type                ITEM_TYPE_NUMERICFIELD
+			style               0
+			text                " "
+			cvar                "ui_rpx_sp_lift"
+			maxchars            3
+			maxPaintChars       3
+			rect                574 308 40 18
+			textalign           ITEM_ALIGN_LEFT
+			textalignx          0
+			textaligny          -2
+			font                2
+			textscale           0.7
+			forecolor           1 .682 0 1
+			outlinecolor        1 .5 .5 .5
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         .5 .5 .5 .6
+			visible             1
+			descText            "How far out from the surface you aim at the spawner goes"
+		}
+		itemDef
+		{
+			name                rpx_spawn
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 330 180 24
+			text                "Spawn"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          90
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Place it on the surface you are aiming at (/entaddaim), and close the menu"
+			mouseEnter
+			{
+				setitemcolor rpx_spawn bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_spawn bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo spawnspawner
+			}
+		}
+		itemDef
+		{
+			name                rpx_grab
+			type                ITEM_TYPE_BUTTON
+			style               WINDOW_STYLE_FILLED
+			rect                432 358 180 24
+			text                "Grab"
+			textalign           ITEM_ALIGN_CENTER
+			textalignx          90
+			textaligny          2
+			font                3
+			textscale           0.9
+			forecolor           1 .682 0 1
+			backcolor           0 0 0 .6
+			border              1
+			bordercolor         1 .682 0 .6
+			visible             1
+			descText            "Pick it up and close the menu; aim and use /entaddgrab to place it"
+			mouseEnter
+			{
+				setitemcolor rpx_grab bordercolor 1 1 1 1
+			}
+			mouseExit
+			{
+				setitemcolor rpx_grab bordercolor 1 .682 0 .6
+			}
+			action
+			{
+				play "sound/interface/button1.wav" ;
+				uiScript rpxDo grabspawner
+			}
+		}
+	}
+}

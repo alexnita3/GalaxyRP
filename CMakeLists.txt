@@ -46,8 +46,11 @@ option(BuildSPRdVanilla "Whether to create projects for the SP default renderer 
 # Configure the use of bundled libraries.  By default, we assume the user is on
 # a platform that does not require any bundling.
 #
-# Note that we always use the bundled copy of minizip, since it is modified to
-# use Z_Malloc.
+# Note that there is no UseInternalMinizip option: when minizip is built at all it is always
+# our bundled copy, since it is modified to use Z_Malloc.
+#
+# These options are only acted on when the engine, dedicated server or a renderer is being
+# built -- see the gated block further down.
 
 set(UseInternalOpenALDefault OFF)
 set(UseInternalZlibDefault   OFF)
@@ -103,7 +106,13 @@ if(WIN32)
 	endif()
 else()
 	set(X86 OFF)
-	if(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
+	# GalaxyRP fix: [TaystJK multi-arch] arm64/aarch64 must be checked BEFORE the generic "^arm"
+	# match below, or a 64-bit ARM host (e.g. Apple Silicon, aarch64 Linux) falls into the "arm"
+	# (32-bit-implying) branch instead. Matches TaystJK's own detection logic.
+	if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+		set(Architecture "arm64")
+		add_definitions(-DPNG_ARM_NEON_OPT=0)
+	elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
 		set(Architecture "arm")
 	elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^i.86$")
 		set(X86 ON)
@@ -176,11 +185,15 @@ if(WIN64)
 endif()
 
 if (APPLE)
-	set(SharedDefines "MACOS_X")
+	# GalaxyRP fix: [TaystJK multi-arch] this used to be set(SharedDefines "MACOS_X") -- an
+	# unconditional overwrite (no ${SharedDefines} on the right-hand side) that silently discarded
+	# whatever WIN64 (or any earlier) define had already been appended above. Append instead.
+	set(SharedDefines ${SharedDefines} "MACOS_X")
 endif()
 
 if (NOT WIN32 AND NOT APPLE)
-	set(SharedDefines "ARCH_STRING=\"${Architecture}\"")
+	# GalaxyRP fix: [TaystJK multi-arch] same overwrite-vs-append bug as the APPLE branch above.
+	set(SharedDefines ${SharedDefines} "ARCH_STRING=\"${Architecture}\"")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "BSD")
@@ -194,11 +207,28 @@ if(MSVC)
 	set(SharedDefines ${SharedDefines} "_SCL_SECURE_NO_WARNINGS")
 	set(SharedDefines ${SharedDefines} "_CRT_NONSTDC_NO_DEPRECATE")
 
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:SSE2")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+	# GalaxyRP fix: [TaystJK parity] /EHsc enables standard C++ exception unwind semantics --
+	# without it, MSVC emits C4530 ("C++ exception handler used, but unwind semantics are not
+	# enabled") for any code using try/catch or STL operations that can throw. TaystJK's own
+	# CMakeLists.txt sets this; DAJ_RP's did not.
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /EHsc")
 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
+	# GalaxyRP fix: [TaystJK multi-arch] /arch:SSE2 is a no-op-with-warning on x64 (SSE2 is the x64
+	# baseline already) and is invalid on an ARM64 MSVC target -- scope it to 32-bit x86 only,
+	# matching TaystJK.
+	if (Architecture STREQUAL "x86")
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:SSE2")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
+	endif()
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+
+	# GalaxyRP fix: [TaystJK parity] Suppress warnings TaystJK's own build already suppresses:
+	# 4244 = 'conversion' conversion from 'type1' to 'type2', possible loss of data
+	# 4996 = 'function': was declared deprecated
+	# 4267 = 'var' : conversion from 'size_t' to 'type', possible loss of data
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4244 /wd4996 /wd4267")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4996 /wd4267")
 
 	# We don't try to control symbol visibility under MSVC.
 	set(OPENJK_VISIBILITY_FLAGS "")
@@ -342,26 +372,55 @@ set(SharedCommonSafeFiles
 # Adding all of the projects
 #
 #=============================================================================
-if(UseInternalJPEG)
-  add_subdirectory(lib/jpeg-9a)
-else()
-  find_package(JPEG REQUIRED)
-endif()
+# GalaxyRP fix: [build] these four libraries exist for the engine, the dedicated server and the
+# renderer -- nothing else consumes JPEG_LIBRARIES, ZLIB_LIBRARIES, PNG_LIBRARIES or
+# MINIZIP_LIBRARIES (BuildSPGame deliberately is not in the list below; it links none of them).
+# The block used to run unconditionally, which had two consequences for the gamecode-only build
+# this repo actually ships:
+#
+#   1. find_package(... REQUIRED) hard-failed at configure time on any Linux or macOS box
+#      without the matching -dev packages, for libraries the mod never links. That is the
+#      failure our own CI hit (run 33105699123) and works around to this day by forcing
+#      -DUseInternalZlib/PNG/JPEG=ON; a contributor cloning the repo and running plain
+#      `cmake ..` got the same error with no such hint.
+#   2. With the internal copies selected, bundled_zlib/libpng/libjpeg were added to ALL and
+#      fully compiled -- and bundled_minizip on every platform, internal or not -- then linked
+#      by no target at all.
+#
+# Gating on the five options that actually consume them fixes both: a mod-only configure no
+# longer looks for, or builds, any of the four. The UseInternal* options themselves stay
+# declared above so they remain visible in cmake-gui/ccmake for engine builds.
+if(BuildMPEngine OR BuildMPDed OR BuildMPRdVanilla OR BuildSPEngine OR BuildSPRdVanilla)
+	if(UseInternalJPEG)
+	  # GalaxyRP fix: [libs] bumped bundled libjpeg 9a (2014) -> 9c (2018), matching TaystJK, for
+	  # renderer-side JPEG texture/screenshot loading. Folder renamed accordingly.
+	  add_subdirectory(lib/jpeg-9c)
+	else()
+	  find_package(JPEG REQUIRED)
+	endif()
 
-if(UseInternalZlib)
-  add_subdirectory(lib/zlib)
-else()
-  find_package(ZLIB REQUIRED)
-endif()
+	if(UseInternalZlib)
+	  # GalaxyRP fix: [libs] bumped bundled zlib 1.2.8 -> 1.3.1, matching TaystJK. Our old 1.2.8
+	  # predates the fix for CVE-2018-25032 (a deflate() memory-corruption bug under Z_FIXED).
+	  add_subdirectory(lib/zlib)
+	else()
+	  find_package(ZLIB REQUIRED)
+	endif()
 
-if(UseInternalPNG)
-  add_subdirectory(lib/libpng)
-else()
-  find_package(PNG REQUIRED)
-endif()
+	if(UseInternalPNG)
+	  # GalaxyRP fix: [libs] bumped bundled libpng 1.6.16 -> 1.6.53, matching TaystJK. Same 1.6
+	  # branch (API/ABI-compatible), just ~37 point releases of bug and security fixes we were
+	  # missing.
+	  add_subdirectory(lib/libpng)
+	else()
+	  find_package(PNG REQUIRED)
+	endif()
 
-# Always use bundled minizip (sets MINIZIP_{LIBRARIES,INCLUDE_DIR})
-add_subdirectory(lib/minizip)
+	# minizip is always our bundled copy -- there is no system-copy branch, because ours is
+	# patched to route allocations through Z_Malloc (sets MINIZIP_{LIBRARIES,INCLUDE_DIR}).
+	# Bundled alongside zlib's release above; see lib/minizip/CMakeLists.txt for the details.
+	add_subdirectory(lib/minizip)
+endif()
 
 # Add projects
 add_subdirectory(${SPDir})

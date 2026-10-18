@@ -573,9 +573,8 @@ void Boba_FireDecide( void )
 		NPCS.ucmd.buttons &= ~(BUTTON_ATTACK|BUTTON_ALT_ATTACK);
 	}
 
-	// zyk: Master of Evil enemy is an Armored Soldier. He is smarter at choosing weapons against this class
-	if (NPCS.NPC->client->pers.guardian_mode == 12 && NPCS.NPC->enemy && NPCS.NPC->enemy->client->sess.amrpgmode == 2 && NPCS.NPC->enemy->client->pers.rpg_class == 3)
-		enemy_is_armored_soldier = qtrue;
+	// GalaxyRP fix: [Guardian] removed a dead Master of Evil Armored Soldier detection check
+	// gated on pers.guardian_mode == 12; guardian_mode is permanently 0.
 
 	if ( enemyDist < MIN_ROCKET_DIST_SQUARED )//128
 	{//enemy within 128
@@ -934,11 +933,93 @@ void Boba_FireDecide( void )
 	}
 }
 
+/*
+=================
+RP_VehicleDroid / RP_DroidVehicle / RP_VehicleDroidCloakSync
+
+DAJ_RP: [Cloak Item] a vehicle's droid unit (the astromech in its socket, m_pDroidUnit) is cloaked and uncloaked
+with the vehicle. It is an NPC of its own, and nothing that cloaks a vehicle ever touched it: it stayed in sight
+on an invisible ship, and targetable -- NPCs and turrets fired at it and gave the ship away.
+
+The droid takes the vehicle's state, as a cloaked vehicle has it: PW_CLOAKED, and FL_NOTARGET with it (Jedi_Cloak).
+Silently -- the vehicle plays the cloak sound. At once, from Jedi_Cloak() and Jedi_Decloak() on the vehicle, which
+every cloak and uncloak goes through (/vehicle_cloak, firing, hits, death, the pilot getting off); and again every
+frame from the vehicle's AttachRiders() (g_vehicles.c), which seats the droid, so nothing that clears a vehicle's
+cloak some other way can leave the droid behind. Only while the vehicle still names it and its own vehicle number
+is the vehicle's; an ejected droid is uncloaked (G_EjectDroidUnit()).
+=================
+*/
+gentity_t *RP_VehicleDroid( gentity_t *veh )
+{
+	gentity_t *droid;
+
+	if ( !veh || !veh->inuse || !veh->client || veh->client->NPC_class != CLASS_VEHICLE || !veh->m_pVehicle ||
+		!veh->m_pVehicle->m_pDroidUnit )
+	{
+		return NULL;
+	}
+	droid = (gentity_t *)veh->m_pVehicle->m_pDroidUnit;
+	if ( droid == veh || !droid->inuse || !droid->client || droid->client->ps.m_iVehicleNum != veh->s.number )
+	{
+		return NULL;
+	}
+	return droid;
+}
+
+// DAJ_RP: [Cloak Item] the vehicle a droid unit is aboard (RP_VehicleDroid() the other way), or NULL
+gentity_t *RP_DroidVehicle( gentity_t *droid )
+{
+	gentity_t	*veh;
+	int			vehNum;
+
+	if ( !droid || !droid->client || droid->client->NPC_class == CLASS_VEHICLE )
+	{
+		return NULL;
+	}
+	vehNum = droid->client->ps.m_iVehicleNum;
+	if ( vehNum <= 0 || vehNum >= ENTITYNUM_WORLD )
+	{
+		return NULL;
+	}
+	veh = &g_entities[vehNum];
+	return ( RP_VehicleDroid( veh ) == droid ) ? veh : NULL;
+}
+
+void RP_VehicleDroidCloakSync( gentity_t *veh )
+{
+	gentity_t *droid = RP_VehicleDroid( veh );
+
+	if ( !droid )
+	{
+		return;
+	}
+	if ( veh->client->ps.powerups[PW_CLOAKED] )
+	{
+		droid->flags |= FL_NOTARGET;
+		if ( !droid->client->ps.powerups[PW_CLOAKED] )
+		{
+			droid->client->ps.powerups[PW_CLOAKED] = 2147483647; // as Jedi_Cloak()
+		}
+	}
+	else if ( droid->client->ps.powerups[PW_CLOAKED] )
+	{
+		droid->client->ps.powerups[PW_CLOAKED] = 0;
+		droid->flags &= ~FL_NOTARGET;
+	}
+}
+
 void Jedi_Cloak( gentity_t *self )
 {
 	if ( self )
 	{
-		//self->flags |= FL_NOTARGET; zyk: no more sets notarget on player when cloaked so npcs can sometimes attack him
+		// GalaxyRP fix: [Cloak Item] restored -- matches TaystJK's own Jedi_Cloak, and is what makes
+		// turret_find_enemies()/turretG2_find_enemies() (g_turret.c/g_turret_G2.c) and NPC_ValidEnemy()
+		// (NPC_utils.c) actually skip a cloaked target when picking a NEW enemy, since both already
+		// check FL_NOTARGET generically. NPC_ValidEnemy() carves out an exception so an NPC that's
+		// already engaged with this entity doesn't lose them the instant they cloak -- see its own
+		// comment. Turrets get the same "don't drop an already-locked enemy" behavior for free, since
+		// their own ongoing-enemy tracking never rechecks FL_NOTARGET at all once locked on.
+		self->flags |= FL_NOTARGET;
 		if ( self->client )
 		{
 			if ( !self->client->ps.powerups[PW_CLOAKED] )
@@ -949,6 +1030,8 @@ void Jedi_Cloak( gentity_t *self )
 				G_Sound( self, CHAN_ITEM, G_SoundIndex("sound/chars/shadowtrooper/cloak.wav") );
 			}
 		}
+		// DAJ_RP: [Cloak Item] a vehicle's droid unit with it (RP_VehicleDroidCloakSync above)
+		RP_VehicleDroidCloakSync( self );
 	}
 }
 
@@ -956,7 +1039,9 @@ void Jedi_Decloak( gentity_t *self )
 {
 	if ( self )
 	{
-		//self->flags &= ~FL_NOTARGET; zyk: no more sets notarget on player when cloaked so npcs can sometimes attack him
+		// GalaxyRP fix: [Cloak Item] restored alongside Jedi_Cloak()'s FL_NOTARGET -- see that function's
+		// comment.
+		self->flags &= ~FL_NOTARGET;
 		if ( self->client )
 		{
 			if ( self->client->ps.powerups[PW_CLOAKED] )
@@ -966,6 +1051,138 @@ void Jedi_Decloak( gentity_t *self )
 				G_Sound( self, CHAN_ITEM, G_SoundIndex("sound/chars/shadowtrooper/decloak.wav") );
 			}
 		}
+		// DAJ_RP: [Cloak Item] a vehicle's droid unit with it (RP_VehicleDroidCloakSync above)
+		RP_VehicleDroidCloakSync( self );
+	}
+}
+
+// GalaxyRP fix: [Cloak Item] the pair-partner lookup, factored out of Jedi_DecloakPair below so
+// that every question about a cloak pair -- "who is the other half?", "is either half cloaked?",
+// "take both down" -- is answered by ONE traversal. They used to be answered by hand-inlined copies
+// of this branch, and the copies did not agree: see the guards that call Jedi_PairIsCloaked() now.
+//
+// The CLASS_VEHICLE test MUST come first. ps.m_iVehicleNum is not the "am I a rider" flag it looks
+// like: g_vehicles.c sets a rider's copy to the vehicle's entity number, but it also sets a MANNED
+// VEHICLE's own copy to (pilot client number + 1). So a vehicle carrying a pilot has a non-zero
+// m_iVehicleNum too, and testing it first sent every vehicle down the rider branch, where it looked
+// up g_entities[pilotNum + 1] -- not the pilot, but whichever entity happens to occupy the next
+// slot. Branching on NPC_class first is unambiguous, and the rider branch below then only ever sees
+// a real rider, whose m_iVehicleNum carries no +1.
+//
+// Returns NULL when there is no partner, or when the partner has no client -- so every caller can
+// treat a non-NULL result as safe to dereference through ->client.
+gentity_t *Jedi_CloakPartner( gentity_t *self )
+{
+	if ( !self || !self->client )
+	{
+		return NULL;
+	}
+
+	if ( self->client->NPC_class == CLASS_VEHICLE )
+	{ //self is a vehicle -- the partner is its rider
+		if ( self->m_pVehicle && self->m_pVehicle->m_pPilot )
+		{
+			gentity_t *rider = (gentity_t *)self->m_pVehicle->m_pPilot;
+
+			if ( rider->client )
+			{
+				return rider;
+			}
+		}
+	}
+	else if ( self->client->ps.m_iVehicleNum )
+	{ //self is a rider -- the partner is the vehicle it is on
+		gentity_t *veh = &g_entities[self->client->ps.m_iVehicleNum];
+
+		if ( veh->client )
+		{
+			return veh;
+		}
+	}
+
+	return NULL;
+}
+
+// GalaxyRP fix: [Cloak Item] "is either half of this pair cloaked?". Every decloak-on-event hook
+// used to gate itself on the acting entity's OWN PW_CLOAKED before calling Jedi_DecloakPair -- an
+// optimisation that assumed a cloaked pair is always symmetric. It is not: /use_cloak cloaks the
+// rider alone and never touches the vehicle. So with a solo-cloaked rider on an uncloaked vehicle,
+// the vehicle firing its weapons, taking damage, or being destroyed all tested the VEHICLE's flag,
+// found it clear, and returned without ever calling Jedi_DecloakPair -- which would have found and
+// dropped the rider's cloak perfectly well had it been reached. The rider stayed invisible through
+// their own vehicle's gunfire. Asking about the pair instead of about one entity closes that, and
+// keeps Jedi_DecloakPair (which is idempotent and safe on an uncloaked/unmounted/non-vehicle
+// entity) as the thing that decides what actually comes down.
+qboolean Jedi_PairIsCloaked( gentity_t *self )
+{
+	gentity_t *partner, *droidVeh;
+
+	if ( !self || !self->client )
+	{
+		return qfalse;
+	}
+
+	// DAJ_RP: [Cloak Item] a vehicle's droid unit is asked about as its vehicle (RP_VehicleDroidCloakSync above)
+	droidVeh = RP_DroidVehicle( self );
+	if ( droidVeh )
+	{
+		return ( self->client->ps.powerups[PW_CLOAKED] || Jedi_PairIsCloaked( droidVeh ) ) ? qtrue : qfalse;
+	}
+
+	if ( self->client->ps.powerups[PW_CLOAKED] )
+	{
+		return qtrue;
+	}
+
+	partner = Jedi_CloakPartner( self );
+
+	if ( partner && partner->client->ps.powerups[PW_CLOAKED] )
+	{
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
+// GalaxyRP fix: [Cloak Item] shared decloak helper -- decloaks `self` (a player OR a vehicle), and
+// if `self` is one half of a mounted rider/vehicle pair where the OTHER half is ALSO currently
+// cloaked, decloaks that half too. This is the single replacement for every previous scattered
+// decloak call (weapon fire, taking damage, dying, manual toggle) so a hit/action on either side of
+// a paired cloak always takes both down together. Deliberately reads each side's
+// PW_CLOAKED live rather than tracking a separate "this cloak was paired" flag -- both entities'
+// current cloak state is already sufficient to reconstruct whether they're paired at the moment this
+// fires, and it's self-healing (a stale/desynced pair auto-corrects the next time either side is
+// decloaked, cloaked, or hit). Safe/idempotent to call on an entity that isn't cloaked, isn't
+// mounted, or isn't a vehicle at all -- see Jedi_Decloak's own internal guard.
+void Jedi_DecloakPair( gentity_t *self )
+{
+	gentity_t *partner, *droidVeh;
+
+	if ( !self || !self->client )
+	{
+		return;
+	}
+
+	// DAJ_RP: [Cloak Item] a hit on a vehicle's droid unit takes the vehicle and its pilot down, as a hit on either
+	// of them does -- the droid is not the vehicle's cloak partner (the pilot is), so on its own it would have taken
+	// only itself and the vehicle down, and left the pilot cloaked on a ship in plain sight. The droid itself follows
+	// the vehicle (Jedi_Decloak() -> RP_VehicleDroidCloakSync()), and the sync below clears it even if the vehicle was
+	// not cloaked.
+	droidVeh = RP_DroidVehicle( self );
+	if ( droidVeh )
+	{
+		Jedi_DecloakPair( droidVeh );
+		RP_VehicleDroidCloakSync( droidVeh );
+		return;
+	}
+
+	Jedi_Decloak( self );
+
+	partner = Jedi_CloakPartner( self );
+
+	if ( partner && partner->client->ps.powerups[PW_CLOAKED] )
+	{
+		Jedi_Decloak( partner );
 	}
 }
 
@@ -1815,6 +2032,7 @@ static void Jedi_CombatDistance( int enemy_dist )
 			NPCS.NPC->enemy->client->ps.saberInFlight && /*NPC->enemy->client->ps.saber[0].Active()*/ NPCS.NPC->enemy->client->ps.saberEntityNum && //enemy throwing saber
 			NPCS.NPC->client->ps.weaponTime <= 0 && //I'm not busy
 			WP_ForcePowerAvailable( NPCS.NPC, FP_GRIP, 0 ) && //I can use the power
+			!RP_GripRefused( NPCS.NPC->enemy ) && // DAJ_RP: [Force] not one Grip may not take hold of (w_force.c)
 			!Q_irand( 0, 10 ) && //don't do it all the time, averages to 1 check a second
 			Q_irand( 0, 6 ) < g_npcspskill.integer && //more likely on harder diff
 			Q_irand( RANK_CIVILIAN, RANK_CAPTAIN ) < NPCS.NPCInfo->rank )//more likely against harder enemies
@@ -1904,7 +2122,10 @@ static void Jedi_CombatDistance( int enemy_dist )
 							TIMER_Set( NPCS.NPC, "attackDelay", NPCS.NPC->client->ps.weaponTime );
 						}
 						else if ( WP_ForcePowerUsable( NPCS.NPC, FP_GRIP )
-							&& NPCS.NPC->enemy && InFOV( NPCS.NPC->enemy, NPCS.NPC, 20, 30 ) )
+							&& NPCS.NPC->enemy && InFOV( NPCS.NPC->enemy, NPCS.NPC, 20, 30 )
+							// DAJ_RP: [Force] not a vehicle, Galak's mech, the AT-ST or the Rancor: the grip
+							// would only fail (RP_GripRefused(), w_force.c), so try something else instead
+							&& !RP_GripRefused( NPCS.NPC->enemy ) )
 						{
 							//taunt
 							if ( TIMER_Done( NPCS.NPC, "chatter" ) && jediSpeechDebounceTime[NPCS.NPC->client->playerTeam] < level.time && NPCS.NPCInfo->blockedSpeechDebounceTime < level.time )
@@ -5579,10 +5800,8 @@ static void Jedi_Combat( void )
 	{
 		Boba_FireDecide();
 	}
-	else if (NPCS.client->pers.guardian_mode == 12 && NPCS.NPC->client->NPC_class == CLASS_REBORN && Boba_Flying(NPCS.NPC))
-	{ // zyk: Master of Evil switches between CLASS_REBORN and CLASS_BOBAFETT. If CLASS_REBORN and still flying, stop flying
-		Boba_FlyStop(NPCS.NPC);
-	}
+	// GalaxyRP fix: [Guardian] removed a dead Master of Evil CLASS_REBORN fly-stop branch
+	// gated on pers.guardian_mode == 12; guardian_mode is permanently 0.
 
 	//Check for certain enemy special moves
 	Jedi_CheckEnemyMovement( enemy_dist );
@@ -5658,7 +5877,7 @@ void NPC_Jedi_Pain(gentity_t *self, gentity_t *attacker, int damage)
 		// Figure out what quadrant the hit was in.
 		if ( d_JediAI.integer )
 		{
-			vec3_t	diff, fwdangles, right;
+			vec3_t	diff, fwdangles = { 0, 0, 0 }, right;	// DAJ_RP fix: [NPC Debug] pitch and roll were never set
 			float rightdot, zdiff;
 
 			VectorSubtract( point, self->client->renderInfo.eyePoint, diff );
@@ -5708,7 +5927,8 @@ qboolean Jedi_CheckDanger( void )
 {
 	int alertEvent = NPC_CheckAlertEvents( qtrue, qtrue, -1, qfalse, AEL_MINOR );
 
-	if ( level.alertEvents[alertEvent].level >= AEL_DANGER )
+	// GalaxyRP fix: [NPC] alertEvent is -1 when there is nothing to react to; this read level.alertEvents[-1]
+	if ( alertEvent > -1 && level.alertEvents[alertEvent].level >= AEL_DANGER )
 	{//run away!
 		if ( !level.alertEvents[alertEvent].owner
 			|| !level.alertEvents[alertEvent].owner->client
@@ -5915,7 +6135,7 @@ static void Jedi_Patrol( void )
 			{//have one to consider
 				if ( NPC_ClearLOS4( best_enemy ) )
 				{//we have a clear (of architecture) LOS to him
-					if ( best_enemy->s.number )
+					if ( best_enemy->s.number >= MAX_CLIENTS )
 					{//just attack
 						G_SetEnemy( NPCS.NPC, best_enemy );
 						NPCS.NPCInfo->stats.aggression = 3;
@@ -6606,7 +6826,7 @@ void NPC_BSJedi_Default( void )
 
 			if (NPCS.NPC->enemy && !NPC_ClearLOS4(NPCS.NPC->enemy) && NPCS.NPC->health > 0)
 			{ // zyk: if enemy cant be seen, try getting one later
-				if (NPCS.NPC->client && NPCS.NPC->client->pers.guardian_mode == 0)
+				if (NPCS.NPC->client)
 				{
 					NPCS.NPC->enemy = NULL;
 					if (NPCS.NPC->client->NPC_class == CLASS_BOBAFETT)
@@ -6619,21 +6839,8 @@ void NPC_BSJedi_Default( void )
 					}
 					return;
 				}
-				else if (NPCS.NPC->client)
-				{ // zyk: guardians have a different way to find enemies. He tries to find the quest player and his allies
-					int zyk_it = 0;
-
-					for (zyk_it = 0; zyk_it < level.maxclients; zyk_it++)
-					{
-						gentity_t *allied_player = &g_entities[zyk_it];
-
-						if (allied_player && allied_player->client && allied_player->client->pers.guardian_mode > 0 &&
-							NPC_ClearLOS4(allied_player))
-						{ // zyk: the quest player or one of his allies. If one of them is in line of sight, choose him as enemy
-							NPCS.NPC->enemy = allied_player;
-						}
-					}
-				}
+				// GalaxyRP fix: [Guardian] removed a dead guardian-ally-targeting else-if branch
+				// gated on pers.guardian_mode > 0; guardian_mode is permanently 0.
 			}
 		}
 

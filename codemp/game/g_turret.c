@@ -158,6 +158,13 @@ static void turret_fire ( gentity_t *ent, vec3_t start, vec3_t dir )
 		return;
 	}
 
+	// GalaxyRP fix: [Entity System] a bolt is an entity that lives 10 seconds; with the table at the
+	// reserve the shot is skipped rather than walked into G_Spawn()'s ERR_DROP (see g_utils.c)
+	if ( G_EntitySlotsAvailable( 1 ) == qfalse )
+	{
+		return;
+	}
+
 	VectorMA( start, -START_DIS, dir, org ); // dumb....
 	G_PlayEffectID( ent->genericValue13, org, dir );
 
@@ -688,12 +695,149 @@ Large 2-piece turbolaser turret
 	2 - blue
 
 "icon" - icon that represents the objective on the radar
+
+GalaxyRP: [SP Maps] on a single-player map this classname is the small ceiling turret instead -- see
+RP_SpawnSPTurret() just below.
 */
+
+/*
+------------------
+RP_SpawnSPTurret
+
+In single player -- Jedi Academy's and Jedi Outcast's alike -- misc_turret is the small turret that
+hangs from a ceiling (or sits on a floor), the one multiplayer calls misc_turretG2; the big
+two-piece Hoth turbolaser above is multiplayer's own meaning of the name. So every misc_turret on
+an SP map spawned a 144-unit Hoth turret -- two networked entities -- where the map wanted a
+ceiling turret: 67 of them across 14 Jedi Outcast maps, 13 on three Jedi Academy ones. On a map
+level.rp_sp_game names, SP_misc_turret() hands the entity to this instead, and it becomes a
+misc_turretG2 read the single-player way. The classname stays misc_turret. (level.rp_sp_game is
+kept for the whole level, so a turret an admin or a preset adds later is read the same way; a
+preset stores the map's own keys, so a reload translates them again from those, never twice.)
+
+Spawnflags. Both keep START_OFF (1) and UPSIDE_DOWN (2) where misc_turretG2 has them. Jedi
+Academy's TURBO is 4, misc_turretG2's is 8, and 4 there is CANRESPAWN; Jedi Outcast has no bit
+4 at all (and neither game uses 8). Everything else is dropped, our 32768 (UPSIDE_DOWN without
+the 22-unit drop) included. Masking with 5, as OJP does, loses UPSIDE_DOWN -- which would sink
+cairn_assembly's four floor turrets into its floor -- and turns t2_wedge's turbolasers into small
+turrets that respawn.
+
+Every other key -- radius, wait, dmg, health, splashDamage, splashRadius, shotspeed, target,
+target2, targetname -- means the same thing to misc_turretG2, with the same defaults.
+
+"team" does not. In single player it names a team the turret leaves alone: it does not target
+clients of it and takes no damage from them -- "player", "enemy" (the default) or "neutral". A
+multiplayer turret shoots every client, so these would have gunned down the map's own
+stormtroopers. The team goes in rpSpTurretTeam, read by turretG2_find_enemies() and G_Damage();
+players are always NPCTEAM_PLAYER, so a default turret still targets them. A name that is not a
+team leaves the key to misc_turretG2 and the turret leaves nobody alone, as single player's
+lookup would have.
+
+A Jedi Academy TURBO turret is a turbolaser -- t2_wedge's four, which start off and are only
+switched on by its closing cutscene, a script multiplayer cannot run. Single player gives it its
+own defaults, and so does this for any key the map leaves unset: damage 10, shot speed 4000, a
+shot every 500 ms, double size (unless "customscale" says otherwise), no damage taken, and it
+leaves only neutral clients alone. Its health, range and explosion are already the same in
+multiplayer.
+------------------
+*/
+void SP_misc_turretG2( gentity_t *base );
+
+static void RP_SpawnSPTurret( gentity_t *base )
+{
+	int		spFlags = base->spawnflags;
+	qboolean turbo = ( level.rp_sp_game == RP_SP_GAME_JA && ( spFlags & 4 ) ) ? qtrue : qfalse;
+	float	shotSpeed;
+	int		customScale;
+
+	base->spawnflags = spFlags & ( 1 | 2 );	// START_OFF, UPSIDE_DOWN
+	if ( turbo )
+	{
+		base->spawnflags |= 8;	// misc_turretG2's TURBO
+	}
+
+	base->rpSpTurret = qtrue;
+	base->rpSpTurretTeam = NPCTEAM_ENEMY;
+	if ( base->team && base->team[0] )
+	{
+		if ( !Q_stricmp( base->team, "player" ) )
+		{
+			base->rpSpTurretTeam = NPCTEAM_PLAYER;
+		}
+		else if ( !Q_stricmp( base->team, "enemy" ) )
+		{
+			base->rpSpTurretTeam = NPCTEAM_ENEMY;
+		}
+		else if ( !Q_stricmp( base->team, "neutral" ) )
+		{
+			base->rpSpTurretTeam = NPCTEAM_NEUTRAL;
+		}
+		else if ( !Q_stricmp( base->team, "free" ) )
+		{
+			base->rpSpTurretTeam = NPCTEAM_FREE;
+		}
+		else
+		{ // not a team: nobody is left alone, and misc_turretG2 reads the key as it would anywhere
+			base->rpSpTurretTeam = NPCTEAM_NUM_TEAMS;
+		}
+
+		if ( base->rpSpTurretTeam != NPCTEAM_NUM_TEAMS )
+		{ // a team name: atoi() would read it as 0 anyway, but it is not misc_turretG2's key
+			base->team = NULL;
+		}
+	}
+
+	G_SpawnFloat( "shotspeed", "0", &shotSpeed );
+	G_SpawnInt( "customscale", "0", &customScale );
+
+	if ( turbo )
+	{
+		base->rpSpTurretTeam = NPCTEAM_NEUTRAL;
+
+		// misc_turretG2 only fills in what is still 0
+		if ( !base->damage )
+		{
+			base->damage = 10;
+		}
+		if ( !base->wait )
+		{
+			base->wait = 500;
+		}
+	}
+
+	SP_misc_turretG2( base );
+
+	if ( turbo && base->inuse )
+	{
+		if ( !shotSpeed )
+		{ // misc_turretG2 reads the key itself, over whatever was here, so this goes in after it
+			base->mass = 4000;
+		}
+
+		if ( !customScale )
+		{
+			base->s.iModelScale = 200;
+			base->modelScale[0] = base->modelScale[1] = base->modelScale[2] = 2.0f;
+			VectorScale( base->r.mins, 2.0f, base->r.mins );
+			VectorScale( base->r.maxs, 2.0f, base->r.maxs );
+			base->s.g2radius = 255;	// twice misc_turretG2's 128, as far as the 8-bit field goes
+		}
+
+		base->takedamage = qfalse;
+		trap->LinkEntity( (sharedEntity_t *)base );
+	}
+}
+
 //-----------------------------------------------------
 void SP_misc_turret( gentity_t *base )
 //-----------------------------------------------------
 {
 	char* s;
+
+	if ( level.rp_sp_game != RP_SP_GAME_NONE )
+	{ // GalaxyRP: [SP Maps] the single-player turret
+		RP_SpawnSPTurret( base );
+		return;
+	}
 
 	base->s.modelindex2 = G_ModelIndex( "models/map_objects/hoth/turret_bottom.md3" );
 	base->s.modelindex = G_ModelIndex( "models/map_objects/hoth/turret_base.md3" );
@@ -799,6 +943,13 @@ qboolean turret_base_spawn_top( gentity_t *base )
 
 	//design specified shot speed
 	G_SpawnFloat( "shotspeed", "1100", &base->mass );
+	// GalaxyRP fix: [Entity System] a bolt that does not move (shotspeed 0, or backwards) never hits
+	// anything and lives its full 10 seconds -- the key comes off /entadd, so it is floored
+	if ( base->mass < 100 )
+	{
+		G_LogPrintf( "misc_turret at %s: shotspeed %g raised to 100\n", vtos( base->s.origin ), base->mass );
+		base->mass = 100;
+	}
 	top->mass = base->mass;
 
 	//even if we don't want to show health, let's at least light the crosshair up properly over ourself
@@ -816,6 +967,9 @@ qboolean turret_base_spawn_top( gentity_t *base )
 	//link them to each other
 	base->target_ent = top;
 	top->target_ent = base;
+	// GalaxyRP: [Entity System] and the top as the base's child, so /entremove, /entundo and /entedit of
+	// the base take it along (it has no record of its own) -- see RP_FreeEntityChildren() in g_spawn.c
+	RP_MarkChild( base, top );
 
 	//top->s.owner = MAX_CLIENTS; //not owned by any client
 
@@ -827,8 +981,15 @@ qboolean turret_base_spawn_top( gentity_t *base )
 	top->radius = base->radius;
 
 	// How quickly to fire
-	if ( !base->wait )
+	// GalaxyRP fix: [Entity System] the zero test let a negative or tiny wait through, and a wait
+	// already past means a bolt on every think: floored at 100 ms, the mod's rate for its other
+	// timed entities, and the default kept for anything below that
+	if ( base->wait < 100 )
 	{
+		if ( base->wait )
+		{
+			G_LogPrintf( "misc_turret at %s: wait %g too short, default used\n", vtos( base->s.origin ), base->wait );
+		}
 		base->wait = 300 + Q_flrand(0.0f, 1.0f) * 55;
 	}
 	top->wait = base->wait;

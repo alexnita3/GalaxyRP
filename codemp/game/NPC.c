@@ -127,6 +127,97 @@ Determines when it's ok to ditch the corpse
 #define REMOVE_DISTANCE		128
 #define REMOVE_DISTANCE_SQR (REMOVE_DISTANCE * REMOVE_DISTANCE)
 
+/*
+----------------------------------------
+G_OkayToRemoveCorpse
+
+GalaxyRP: [Corpses] single player's list of reasons a body has to stay: still riding a vehicle
+it cannot be ejected from, still carrying a key (NPC_Touch hands it over), still running a
+script, holding or held by a creature, being dragged.
+----------------------------------------
+*/
+qboolean G_OkayToRemoveCorpse( gentity_t *self )
+{
+	if ( self->client && self->client->NPC_class != CLASS_VEHICLE && self->s.m_iVehicleNum != 0 )
+	{//still on a vehicle, get off it first
+		Vehicle_t *pVeh = g_entities[self->s.m_iVehicleNum].m_pVehicle;
+
+		if ( pVeh && pVeh->m_pVehicleInfo && pVeh->m_pVehicleInfo->Eject )
+		{
+			if ( !pVeh->m_pVehicleInfo->Eject( pVeh, (bgEntity_t *)self, qtrue ) )
+			{//dammit, still can't get off the vehicle...
+				return qfalse;
+			}
+		}
+	}
+
+	if ( self->message )
+	{//I still have a key
+		return qfalse;
+	}
+
+	if ( trap->ICARUS_IsRunning( self->s.number ) )
+	{//still running a script
+		return qfalse;
+	}
+
+	if ( self->activator && self->activator->client && ( self->activator->client->ps.eFlags2 & EF2_HELD_BY_MONSTER ) )
+	{//still holding a victim
+		return qfalse;
+	}
+
+	if ( self->client && ( self->client->ps.eFlags2 & EF2_HELD_BY_MONSTER ) )
+	{//being held by a creature
+		return qfalse;
+	}
+
+	if ( self->client && self->client->ps.heldByClient )
+	{//being dragged
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+/*
+----------------------------------------
+RP_CorpseKeptByWatchers
+
+GalaxyRP: [Corpses] whether an enemy's body, due for removal, waits because a player is within
+REMOVE_DISTANCE of it or has it in view -- single player's rule, so a body does not vanish in front of
+someone. A body nobody can see (the small droids are hidden on death, EF_NODRAW) has nothing to wait for.
+
+DAJ_RP: [Corpses] and not for ever: players who keep a room in view (a long fight in one place) kept
+every body in it, each an NPC holding an entity slot, with no end. Once RP_CORPSE_WATCH_LIMIT has passed
+since the death the body goes whoever is looking. Only this wait is capped -- a body G_OkayToRemoveCorpse()
+keeps (a key, a script, a vehicle, a creature, being dragged) is still needed and stays until that is over.
+----------------------------------------
+*/
+qboolean RP_CorpseKeptByWatchers( gentity_t *self )
+{
+	if ( self->client->ps.eFlags & EF_NODRAW )
+	{
+		return qfalse;
+	}
+
+	if ( self->NPC && self->NPC->rpDeathTime && level.time - self->NPC->rpDeathTime >= RP_CORPSE_WATCH_LIMIT )
+	{
+		return qfalse;
+	}
+
+	if ( DistanceToClosestPlayer( self->r.currentOrigin, -1 ) <= REMOVE_DISTANCE )
+	{
+		return qtrue;
+	}
+
+	if ( InPlayersFOV( self->r.currentOrigin, -1, 110, 90, qtrue ) ) // generous FOV check
+	{
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
 void NPC_RemoveBody( gentity_t *self )
 {
 	CorpsePhysics( self );
@@ -140,7 +231,12 @@ void NPC_RemoveBody( gentity_t *self )
 	self->NPC->nextBStateThink = level.time + FRAMETIME;
 
 	if ( self->message )
-	{//I still have a key
+	{// GalaxyRP: [SP Maps] a dead key officer hands his key to whoever stands over the body
+		RP_CorpseKeyCheck( self );
+	}
+
+	if ( !G_OkayToRemoveCorpse( self ) )
+	{//a key, a script, a vehicle, a creature or a player still needs the body
 		return;
 	}
 
@@ -191,21 +287,14 @@ void NPC_RemoveBody( gentity_t *self )
 		{
 			self->nextthink = level.time + FRAMETIME; // try back in a second
 
-			/*
-			if ( DistanceSquared( g_entities[0].r.currentOrigin, self->r.currentOrigin ) <= REMOVE_DISTANCE_SQR )
+			// GalaxyRP: [Corpses] single player never removed a body in front of the player;
+			// the checks were commented out here ("Don't care about this for MP I guess") and
+			// bodies vanished while being looked at. Any player counts now -- see
+			// RP_CorpseKeptByWatchers() above.
+			if ( RP_CorpseKeptByWatchers( self ) )
 			{
 				return;
 			}
-
-			if ( (InFOV( self, &g_entities[0], 110, 90 )) ) // generous FOV check
-			{
-				if ( (NPC_ClearLOS2( &g_entities[0], self->r.currentOrigin )) )
-				{
-					return;
-				}
-			}
-			*/
-			//Don't care about this for MP I guess.
 		}
 
 		//FIXME: there are some conditions - such as heavy combat - in which we want
@@ -214,7 +303,15 @@ void NPC_RemoveBody( gentity_t *self )
 		//			placed as dead NPCs by a designer...
 		//			For now we just assume that a corpse with no enemy was
 		//			placed in the map as a corpse
-		if ( self->enemy )
+		//
+		// GalaxyRP fix: [Corpses] the "if ( self->enemy )" that used to gate the removal below is
+		// gone. It was single player's test for a designer-placed corpse, which multiplayer cannot
+		// spawn: every NPC that reaches this function died through player_die(). What the test did
+		// here was keep every corpse whose killer was not its AI enemy -- a scripted death, a
+		// fall, a droid (they have no enemy) -- lying there for the rest of the map. It matters now
+		// that player_die() no longer frees non-humanoid NPCs on the spot (g_combat.c) so their
+		// death scripts can run: their bodies come through here instead, and must leave. The
+		// script and Rancor tests below still hold a body back while it is needed.
 		{
 			//if ( !self->taskManager || !self->taskManager->IsRunning() )
 			if (!trap->ICARUS_IsRunning(self->s.number))
@@ -272,7 +369,10 @@ int BodyRemovalPadTime( gentity_t *ent )
 		// never go away
 	//	time = Q3_INFINITE;
 		// for now I'm making default 10000
-		time = 10000;
+		// DAJ_RP: [Corpses] now rp_npc_corpse_time (seconds, default 10 -- the old 10000 ms). This is
+		// re-read every frame by the removal check in NPC_Think, so a change reaches corpses already
+		// lying there as well as new ones.
+		time = RP_CorpseSecondsToMs( rp_npc_corpse_time.integer );
 		break;
 
 	}
@@ -424,6 +524,12 @@ DeadThink
 static void DeadThink ( void )
 {
 	trace_t	trace;
+
+	// GalaxyRP: [SP Maps] a dead key officer hands his key to whoever stands over the body
+	if ( NPCS.NPC->message )
+	{
+		RP_CorpseKeyCheck( NPCS.NPC );
+	}
 
 	//HACKHACKHACKHACKHACK
 	//We should really have a seperate G2 bounding box (seperate from the physics bbox) for G2 collisions only
@@ -589,33 +695,18 @@ void ClearNPCGlobals( void )
 }
 //===============
 
-extern	qboolean	showBBoxes;
-vec3_t NPCDEBUG_RED = {1.0, 0.0, 0.0};
-vec3_t NPCDEBUG_GREEN = {0.0, 1.0, 0.0};
-vec3_t NPCDEBUG_BLUE = {0.0, 0.0, 1.0};
-vec3_t NPCDEBUG_LIGHT_BLUE = {0.3f, 0.7f, 1.0};
-extern void G_Cube( vec3_t mins, vec3_t maxs, vec3_t color, float alpha );
-extern void G_Line( vec3_t start, vec3_t end, vec3_t color, float alpha );
-extern void G_Cylinder( vec3_t start, vec3_t end, float radius, vec3_t color );
-
-void NPC_ShowDebugInfo (void)
-{
-	if ( showBBoxes )
-	{
-		gentity_t	*found = NULL;
-		vec3_t		mins, maxs;
-
-		while( (found = G_Find( found, FOFS(classname), "NPC" ) ) != NULL )
-		{
-			if ( trap->InPVS( found->r.currentOrigin, g_entities[0].r.currentOrigin ) )
-			{
-				VectorAdd( found->r.currentOrigin, found->r.mins, mins );
-				VectorAdd( found->r.currentOrigin, found->r.maxs, maxs );
-				G_Cube( mins, maxs, NPCDEBUG_RED, 0.25 );
-			}
-		}
-	}
-}
+// GalaxyRP fix: [NPC] NPC_ShowDebugInfo() used to live here, with the showBBoxes extern, the four
+// NPCDEBUG_* colours and the G_Cube/G_Line/G_Cylinder declarations that existed only for it.
+//
+// Nothing called it. The call singleplayer makes, at the end of G_RunFrame beside
+// NAV::ShowDebugInfo() (code/game/g_main.cpp), was never ported to multiplayer -- and G_Cube() is an
+// empty stub here, because this module has no renderer to draw with. It was the drawing half of
+// "/npc showbounds", which is removed; see the comment where that subcommand was, in Cmd_NPC_f()
+// (NPC_spawn.c), for the whole story.
+//
+// The colours went with it: NPCDEBUG_BLUE had one other user, the jump-state box in NPC_BSJump()
+// that read the same dead flag and is removed too, and the extern for NPCDEBUG_RED in g_nav.c was
+// never used by anything there.
 
 void NPC_ApplyScriptFlags (void)
 {
@@ -700,6 +791,12 @@ void NPC_ApplyScriptFlags (void)
 	if (NPCS.NPC->client->ps.weapon == WP_THERMAL && NPCS.NPC->enemy)
 	{
 		NPCS.NPCInfo->attackHold = (int)Distance(NPCS.client->ps.origin,NPCS.NPC->enemy->client->ps.origin) * 2;
+	}
+
+	// GalaxyRP: [Scripts] SET_SAFE_REMOVE -- leave as soon as no player can see us (same as BS_REMOVE)
+	if ( NPCS.NPCInfo->scriptFlags & SCF_SAFE_REMOVE )
+	{
+		NPC_RemoveIfOutOfPlayersPVS( NPCS.NPC );
 	}
 }
 
@@ -1460,7 +1557,23 @@ void NPC_RunBehavior( int team, int bState )
 				break;
 			}
 
-			if ( NPCS.NPC->enemy && NPCS.NPC->s.weapon == WP_NONE && bState != BS_HUNT_AND_KILL && !trap->ICARUS_TaskIDPending( (sharedEntity_t *)NPCS.NPC, TID_MOVE_NAV ) )
+			// GalaxyRP fix: [NPC] added the STAT_WEAPONS term. This gate means "in battle with no weapon,
+			// run away", but it asked what is in the NPC's HANDS, and an NPC can have empty hands while
+			// still owning a gun -- NPC_BSST_Patrol() holsters CLASS_IMPERIAL NPCs exactly that way. So
+			// the moment a holstered imperial acquired an enemy this fired and returned, and
+			// NPC_BehaviorSet_Stormtrooper() -- and with it NPC_BSST_Attack(), which carries the
+			// HaveWeapon()/NPC_ChangeWeapon() chain that would have drawn the weapon -- was never
+			// reached. Rax (CLASS_IMPERIAL, WP_CONCUSSION) holsters as soon as he does not see an enemy
+			// and then flees for the rest of his life carrying a rifle he owns and cannot select.
+			//
+			// Strictly narrowing: the new term is a conjunct, so an NPC that really owns nothing still
+			// flees exactly as before. The ~(1 << WP_NONE) is there because NPC_stats.c sets bit 0 for a
+			// "weapon WP_NONE" line in a .npc file, and bit 0 is not a weapon anyone can hold. NPCs under
+			// SCF_FORCED_MARCH never reach this gate -- NPC_RunBehavior routes them to NPC_BSDefault()
+			// several branches above -- so this cannot make a marching prisoner draw a weapon.
+			if ( NPCS.NPC->enemy && NPCS.NPC->s.weapon == WP_NONE
+				&& !(NPCS.NPC->client->ps.stats[STAT_WEAPONS] & ~(1 << WP_NONE))
+				&& bState != BS_HUNT_AND_KILL && !trap->ICARUS_TaskIDPending( (sharedEntity_t *)NPCS.NPC, TID_MOVE_NAV ) )
 			{//if in battle and have no weapon, run away, fixme: when in BS_HUNT_AND_KILL, they just stand there
 				if ( bState != BS_FLEE )
 				{
@@ -1816,10 +1929,37 @@ void NPC_Think ( gentity_t *self)//, int msec )
 		return;
 	}
 
+	// GalaxyRP fix: [NPC] re-check the leader every think, instead of trusting the single
+	// OnSameTeam() test TryUse() ran when the Use key claimed this NPC. SetTeam() and SetTeamQuick()
+	// already release on a team change; this is the net under them, for the paths that write
+	// sessionTeam without going through either -- StopFollowing() being the plain example -- and for
+	// a leader whose client slot has gone away. zyk_npc_leader_lost() spells out the conditions and
+	// says which links it deliberately leaves alone.
+	//
+	// Placed above the dead/frozen/vehicle early-returns below rather than inside
+	// NPC_ExecuteBState(), so that an NPC which is not currently running a bState still lets go: the
+	// point is to stop holding the pointer, and those NPCs are precisely the ones that would hold it
+	// longest.
+	if (zyk_npc_leader_lost(self) == qtrue)
+	{
+		zyk_release_npc_from_leader(self);
+	}
+
+	// GalaxyRP fix: [NPC] an NPC under /order guard must not walk after its leader. See
+	// zyk_hold_guarding_npc() (g_main.c) for why BS_STAND_GUARD does not reach NPC_BSStandGuard()
+	// for most NPC classes, and why clearing the goal is the whole fix. Runs every think, next to
+	// the leader check above and ahead of NPC_ExecuteBState() below, because a class AI can re-take
+	// the leader as its goal on any frame -- doing this once when the order is given would not hold.
+	zyk_hold_guarding_npc(self);
+
 	// dead NPCs have a special think, don't run scripts (for now)
 	//FIXME: this breaks deathscripts
 	if ( self->health <= 0 )
 	{
+		// DAJ_RP: [NPC System] player_die() lets a frozen NPC go (RP_NpcUnfreeze(), g_combat.c); this is the
+		// net under it for a death that returns early there (intermission, no attacker), so the deathscript
+		// is not held paused by the freeze. See RP_NpcFreeze() in NPC_spawn.c.
+		RP_NpcUnfreeze( self );
 		DeadThink();
 		if ( NPCS.NPCInfo->nextBStateThink <= level.time )
 		{
@@ -1829,8 +1969,20 @@ void NPC_Think ( gentity_t *self)//, int msec )
 		return;
 	}
 
+	// DAJ_RP: [NPC System] an NPC under /npc freeze (or the spawner key "npcfreeze") keeps the engine's
+	// own freeze on: no AI below, and its ICARUS scripts paused -- the engine's task manager skips an
+	// entity with SVF_ICARUS_FREEZE (TaskManager.cpp), and G_RunThink() maintains it after this think.
+	// Put back every think, because a map script's set_icarus_freeze false or the friendly-fire turn
+	// in NPC_Pain (NPC_reactions.c) clears the flag; once put back by us, it is ours to clear again.
+	// See RP_NpcFreeze() in NPC_spawn.c.
+	if ( NPCS.NPCInfo->rpFrozen && !(NPCS.NPC->r.svFlags & SVF_ICARUS_FREEZE) )
+	{
+		NPCS.NPC->r.svFlags |= SVF_ICARUS_FREEZE;
+		NPCS.NPCInfo->rpFreezeOwnsIcarus = qtrue;
+	}
+
 	// see if NPC ai is frozen
-	if ( d_npcfreeze.value || (NPCS.NPC->r.svFlags&SVF_ICARUS_FREEZE) )
+	if ( d_npcfreeze.value || (NPCS.NPC->r.svFlags&SVF_ICARUS_FREEZE) || NPCS.NPCInfo->rpFrozen )
 	{
 		NPC_UpdateAngles( qtrue, qtrue );
 		ClientThink(self->s.number, &NPCS.ucmd);

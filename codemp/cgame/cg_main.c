@@ -45,6 +45,7 @@ Ghoul2 Insert End
 
 void CG_InitJetpackGhoul2(void);
 void CG_CleanJetpackGhoul2(void);
+void CG_RpFreeHiltGhoul2(void);
 
 void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum );
 void CG_Shutdown( void );
@@ -326,12 +327,15 @@ void CG_MiscEnt( void ) {
 
 		trap->R_ModelBounds( staticmodel->model, mins, maxs );
 
+		CG_StaticModelSetCentre( staticmodel, mins, maxs );	// DAJ_RP: [Static Models] the unscaled bounds
+
 		VectorScaleVector(mins, data->mScale, mins);
 		VectorScaleVector(maxs, data->mScale, maxs);
 
 		staticmodel->radius = RadiusFromBounds( mins, maxs );
 	} else {
 		staticmodel->radius = 0;
+		CG_StaticModelSetCentre( staticmodel, vec3_origin, vec3_origin );	// DAJ_RP: [Static Models]
 	}
 }
 
@@ -367,6 +371,16 @@ void CG_ResizeG2TempBone(mdxaBone_v *tempBone, int newCount)
 /*
 Ghoul2 Insert End
 */
+// GalaxyRP: [Force Duel] the client's copy of each player's private-duel type, read by
+// zyk_duel_is_full_force() in bg_misc.c so client prediction agrees with the server about which force
+// powers are usable. Fed by the EV_PRIVATE_DUEL event in cg_event.c and by nothing else.
+//
+// A plain global rather than a field of cg: cg is memset on more occasions than this needs to care
+// about, and TaystJK keeps its equivalent (cg_dueltypes) the same way. In practice only the local
+// client's slot is ever written -- the event handler returns early for anybody else -- and every
+// other slot reads 0, which is the ordinary saber duel and the safe answer.
+int					cg_duel_types[MAX_CLIENTS];
+
 cg_t				cg;
 cgs_t				cgs;
 centity_t			cg_entities[MAX_GENTITIES];
@@ -517,6 +531,7 @@ static void CG_AS_Register(void)
 		}
 
 		trap->AS_AddPrecacheEntry(soundName);
+		cgs.ambientSetLoaded[i] = qtrue;	// GalaxyRP: see CG_ConfigStringModified()
 	}
 	soundName = CG_ConfigString( CS_GLOBAL_AMBIENT_SET );
 	if (soundName && soundName[0] && Q_stricmp(soundName, "default"))
@@ -627,6 +642,12 @@ static void CG_RegisterSounds( void ) {
 	cgs.media.hackerIconShader			= trap->R_RegisterShaderNoMip("gfx/mp/c_icon_tech");
 
 	cgs.media.redSaberGlowShader		= trap->R_RegisterShader( "gfx/effects/sabers/red_glow" );
+
+	// GalaxyRP: [Grapple Hook] the rope and its hook. The JA+/JAPro assets, shipped in our own pk3
+	// (assets/client/models/items/grapple.md3, gfx/effects/grapple_line). Registered unconditionally
+	// -- TaystJK only does so on a JA+/JAPro server, which is why its client draws nothing here.
+	cgs.media.grappleShader				= trap->R_RegisterShader( "gfx/effects/grapple_line" );
+	cgs.media.grappleModel				= trap->R_RegisterModel( "models/items/grapple.md3" );
 	cgs.media.redSaberCoreShader		= trap->R_RegisterShader( "gfx/effects/sabers/red_line" );
 	cgs.media.orangeSaberGlowShader		= trap->R_RegisterShader( "gfx/effects/sabers/orange_glow" );
 	cgs.media.orangeSaberCoreShader		= trap->R_RegisterShader( "gfx/effects/sabers/orange_line" );
@@ -638,9 +659,40 @@ static void CG_RegisterSounds( void ) {
 	cgs.media.blueSaberCoreShader		= trap->R_RegisterShader( "gfx/effects/sabers/blue_line" );
 	cgs.media.purpleSaberGlowShader		= trap->R_RegisterShader( "gfx/effects/sabers/purple_glow" );
 	cgs.media.purpleSaberCoreShader		= trap->R_RegisterShader( "gfx/effects/sabers/purple_line" );
+	// GalaxyRP: [Saber RGB] tintable glow/core shaders, ported from JAPro/TaystJK's own RGB saber
+	// assets (assets/client/shaders/sbRGB.shader) rather than our earlier hand-generated ones. "1" is
+	// the classic RGB style (SABER_RGB); 2-5 back the four TaystJK/JAPro blade-style variants
+	// (SABER_FLAME1/ELEC1/FLAME2/ELEC2). Registered unconditionally alongside the six fixed-colour
+	// shaders so a custom-coloured blade never has to register a shader mid-frame.
+	cgs.media.rgbSaberGlowShader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBglow1" );
+	// GalaxyRP: [Saber RGB] the core/blade pass is drawn at a fixed white shaderRGBA in CG_DoSaber
+	// regardless of colour (see the tint comment there) -- RGBcore1.jpg is itself a plain white
+	// blade texture, matching how JAPro/TaystJK render it. Only the glow halo carries the tint. Same
+	// is true of all four RGBcore2-5 pairs below.
+	cgs.media.rgbSaberCoreShader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore1" );
+	cgs.media.rgbSaberGlowShader2		= trap->R_RegisterShader( "gfx/effects/sabers/RGBglow2" );
+	cgs.media.rgbSaberCoreShader2		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore2" );
+	cgs.media.rgbSaberGlowShader3		= trap->R_RegisterShader( "gfx/effects/sabers/RGBglow3" );
+	cgs.media.rgbSaberCoreShader3		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore3" );
+	cgs.media.rgbSaberGlowShader4		= trap->R_RegisterShader( "gfx/effects/sabers/RGBglow4" );
+	cgs.media.rgbSaberCoreShader4		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore4" );
+	cgs.media.rgbSaberGlowShader5		= trap->R_RegisterShader( "gfx/effects/sabers/RGBglow5" );
+	cgs.media.rgbSaberCoreShader5		= trap->R_RegisterShader( "gfx/effects/sabers/RGBcore5" );
+	// GalaxyRP: [Saber RGB] swing-trail counterparts -- see the field comments in cg_local.h for why
+	// there is no "1" or "5" here (the classic style keeps using plain saberBlurShader below, and the
+	// "5" style falls back to swordTrailShader, matching TaystJK's own registration exactly).
+	cgs.media.rgbSaberTrail2Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBtrail2" );
+	cgs.media.rgbSaberTrail3Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBtrail3" );
+	cgs.media.rgbSaberTrail4Shader		= trap->R_RegisterShader( "gfx/effects/sabers/RGBtrail4" );
+	// GalaxyRP: [Saber RGB] the fixed black blade (SABER_BLACK) -- no custom colour behind it, no
+	// tinting involved; see the field comments in cg_local.h.
+	cgs.media.blackSaberGlowShader		= trap->R_RegisterShader( "gfx/effects/sabers/blackglow" );
+	cgs.media.blackSaberCoreShader		= trap->R_RegisterShader( "gfx/effects/sabers/blackcore" );
+	cgs.media.blackBlurShader			= trap->R_RegisterShader( "gfx/effects/sabers/blacktrail" );
 	cgs.media.saberBlurShader			= trap->R_RegisterShader( "gfx/effects/sabers/saberBlur" );
 	cgs.media.swordTrailShader			= trap->R_RegisterShader( "gfx/effects/sabers/swordTrail" );
 
+	cgs.media.useableHintShader			= trap->R_RegisterShaderNoMip( "gfx/hud/useableHint" );
 	cgs.media.forceCoronaShader			= trap->R_RegisterShaderNoMip( "gfx/hud/force_swirl" );
 
 	cgs.media.yellowDroppedSaberShader	= trap->R_RegisterShader("gfx/effects/yellow_glow");
@@ -778,6 +830,9 @@ static void CG_RegisterSounds( void ) {
 	cg.loadLCARSStage = 1;
 
 	cgs.media.selectSound = trap->S_RegisterSound( "sound/weapons/change.wav" );
+	// DAJ_RP: [Weapons] the dry-fire click (CG_RpDryFireClick(), cg_predict.c); it was registered only with a
+	// vehicle's model, for the vehicles' own out-of-ammo warning
+	cgs.media.noAmmoSound = trap->S_RegisterSound( "sound/weapons/noammo.wav" );
 
 	cgs.media.teleInSound = trap->S_RegisterSound( "sound/player/telein.wav" );
 	cgs.media.teleOutSound = trap->S_RegisterSound( "sound/player/teleout.wav" );
@@ -1367,6 +1422,8 @@ Ghoul2 Insert End
 	cgs.media.refractionShader				= trap->R_RegisterShader("effects/refraction");
 
 	cgs.media.cloakedShader					= trap->R_RegisterShader( "gfx/effects/cloakedShader" );
+	cgs.media.rpHoloOverlayShader			= trap->R_RegisterShader( "gfx/effects/rp_holo_overlay" );
+	cgs.media.rpGhostOverlayShader			= trap->R_RegisterShader( "gfx/effects/rp_ghost_overlay" );
 
 	// wall marks
 	cgs.media.shadowMarkShader	= trap->R_RegisterShader( "markShadow" );
@@ -1424,6 +1481,9 @@ Ghoul2 Insert End
 		{//FIXME: register here so that stuff gets precached!!!
 			cgs.gameModels[i] = 0;
 		}
+
+		// DAJ_RP: [SP Maps] a misc_model_ghoul's skin entry: the skin, loaded now -- see CG_ModelEntrySkin()
+		CG_ModelEntrySkin( cModelName );
 	}
 	cg.loadLCARSStage = 8;
 /*
@@ -2066,7 +2126,11 @@ static const char *CG_FeederItemText(float feederID, int index, int column,
 				return info->name;
 			break;
 			case 4:
-				return va("%i", info->score);
+				// GalaxyRP fix: [Scoreboard] clientinfo.score is filled from the score wire slot,
+				// which carries PERS_SCORE again rather than the RP level -- see
+				// DeathmatchScoreboardMessage (g_cmds.c). This list column has always shown the
+				// level on a GalaxyRP client, so it reads the level's own field and keeps doing so.
+				return va("%i", sp->level);
 			break;
 			case 5:
 				return va("%4i", sp->time);
@@ -2404,7 +2468,19 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum )
 	char buf[64];
 	const char	*s;
 	int i = 0;
-	int j = 0;
+	int rngDiscard;
+
+	// GalaxyRP fix: [RNG] cgame carries its own copy of q_math.c, so its holdrand is separate from
+	// the game module's and from the engine's, and nothing was seeding it -- every client replayed
+	// the same sequence of gore, spark and death-animation picks from the same starting point on
+	// every map load. cg_players.c and cg_effects.c alone account for over a hundred call sites.
+	// There is no randomSeed parameter here, so use the engine clock as OpenJK does.
+	Rand_Init( trap->Milliseconds() );
+	// Discard the first few outputs: the seed here is small on a freshly started client, and this
+	// LCG mixes a small seed poorly on its first result. See the long note in g_main.c's G_InitGame.
+	for ( rngDiscard = 0; rngDiscard < 4; rngDiscard++ ) {
+		Q_irand( 0, 1 );
+	}
 
 	BG_InitAnimsets(); //clear it out
 
@@ -2452,27 +2528,11 @@ Ghoul2 Insert End
 
 	cg.clientNum = clientNum;
 
-	// zyk: initialize this value, used by RPG Mode
-	cg.rpg_stuff = 0;
-
-	cg.magic_power = 100;
-
-	cg.immunity_power_duration = 0;
-	cg.ultra_strength_duration = 0;
-	cg.ultra_resistance_duration = 0;
-	cg.unique_cooldown_timer = 0;
-	cg.unique_cooldown_duration = 0;
-	cg.unique_duration_timer = 0;
-	cg.unique_duration = 0;
-	cg.unique_duration_control = 0;
-	cg.using_unique_boost = 0;
-
-	// zyk: initialize the blue jet players
-	for (j = 0; j < MAX_CLIENTS; j++)
-	{
-		cg.zyk_rpg_stuff[j] = 0;
-		cg.rpg_class[j] = -1;
-	}
+	// GalaxyRP fix: [Radar] the per-slot zyk_rpg_stuff[] loop that used to sit here is gone with the
+	// array. The ally bitfields it is replaced by start at 0 the same way, and unlike that cache
+	// they are re-sent from ClientBegin, so they do not stay zero after a map change.
+	cg.ally1 = 0;
+	cg.ally2 = 0;
 
 	cgs.processedSnapshotNum = serverMessageNum;
 	cgs.serverCommandSequence = serverCommandSequence;
@@ -2563,7 +2623,14 @@ Ghoul2 Insert End
 
 	CG_RegisterCvars();
 
+	// GalaxyRP: [TaystJK] after the cvars, so rp_taystjk_writefolder exists; see bg_misc.c. This is
+	// the one place that reaches a player who joined from the server browser without the launcher.
+	RP_AdoptTaystJKWriteFolder();
+
 	CG_InitConsoleCommands();
+
+	// GalaxyRP: [Extras] the Extras menus start this map afresh -- cg_rpextras.c
+	CG_RpxInit();
 
 	cg.renderingThirdPerson = cg_thirdPerson.integer;
 
@@ -2700,6 +2767,9 @@ void CG_DestroyAllGhoul2(void)
 
 	//Clean the global jetpack instance
 	CG_CleanJetpackGhoul2();
+
+	// DAJ_RP: [Holstered Sabers] and the hilts worn on the thigh (cg_players.c)
+	CG_RpFreeHiltGhoul2();
 }
 
 /*

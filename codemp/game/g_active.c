@@ -27,6 +27,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 extern void Jedi_Cloak( gentity_t *self );
 extern void Jedi_Decloak( gentity_t *self );
+extern void Jedi_DecloakPair( gentity_t *self );
+extern qboolean Jedi_PairIsCloaked( gentity_t *self );
 
 qboolean PM_SaberInTransition( int move );
 qboolean PM_SaberInStart( int move );
@@ -138,6 +140,32 @@ void P_DamageFeedback( gentity_t *player ) {
 
 /*
 =============
+P_SealedInVehicle
+
+DAJ_RP: [Vehicles] true while a player rides a live walker or fighter -- exactly the riders G_Damage()
+(g_combat.c) refuses damage to unless DAMAGE_NO_PROTECTION is passed, which drowning does not pass.
+Kept as the same test on purpose: P_WorldEffects() asks it so that drowning and the damage it deals
+cannot disagree about who is protected.
+=============
+*/
+static qboolean P_SealedInVehicle( const gentity_t *ent )
+{
+	const gentity_t *veh;
+
+	if ( !ent->client || ent->client->ps.clientNum >= MAX_CLIENTS || !ent->client->ps.m_iVehicleNum )
+		return qfalse;
+
+	veh = &g_entities[ent->client->ps.m_iVehicleNum];
+
+	if ( !veh->m_pVehicle || veh->health <= 0 )
+		return qfalse;
+
+	return ( veh->m_pVehicle->m_pVehicleInfo->type == VH_WALKER
+		|| veh->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER ) ? qtrue : qfalse;
+}
+
+/*
+=============
 P_WorldEffects
 
 Check for lava / slime contents and drowning
@@ -163,7 +191,20 @@ void P_WorldEffects( gentity_t *ent ) {
 	//
 	// check for drowning
 	//
-	if ( waterlevel == 3 ) {
+	// GalaxyRP: [dmflags] DF_NO_DROWN (64) switches drowning off by taking the "not under water"
+	// branch below, which keeps the air supply topped up (so clearing the flag mid-dive still
+	// gives the full 12 seconds) and resets the drowning damage ramp. Only drowning: lava and
+	// slime below, and any trigger_hurt a map puts in its water, still hurt. (JA++'s version
+	// returns from this function early, which switches lava and slime off as well.)
+	//
+	// DAJ_RP: [Vehicles] and a player sealed in a live walker or fighter (P_SealedInVehicle) takes the
+	// same branch. G_Damage() already refused them the drowning damage, but the gurgle below is played
+	// before it is called, so a submerged AT-ST or fighter pilot heard himself drown every second and
+	// lost nothing -- while the damage ramp kept climbing, ready to hit at full strength the moment he
+	// climbed out. Now his air stays topped up and the ramp reset, as with DF_NO_DROWN. Speeders and
+	// animals do not seal their riders and still drown them; a destroyed vehicle stops protecting, in
+	// G_Damage() and here alike.
+	if ( waterlevel == 3 && !(dmflags.integer & DF_NO_DROWN) && !P_SealedInVehicle( ent ) ) {
 		#ifdef BASE_COMPAT
 			// envirosuit give air
 			if ( envirosuit )
@@ -174,8 +215,9 @@ void P_WorldEffects( gentity_t *ent ) {
 		if ( ent->client->airOutTime < level.time) {
 			// drown!
 			ent->client->airOutTime += 1000;
-			if ( ent->health > 0 && ent->client->tempSpectate < level.time && 
-				!(ent->client->sess.amrpgmode == 2 && ent->client->pers.rpg_class == 3 && ent->client->pers.secrets_found & (1 << 16))) 
+			// GalaxyRP fix: [Dead Code] dropped a `!(amrpgmode==2 && rpg_class==3 && ...)` clause here;
+			// pers.rpg_class is always 0 server-side, so the clause was tautologically always true.
+			if ( ent->health > 0 && ent->client->tempSpectate < level.time)
 			{ // zyk: Armored Soldier Upgrade protects from drowning
 				// take more damage the longer underwater
 				ent->damage += 2;
@@ -364,7 +406,7 @@ void DoImpact( gentity_t *self, gentity_t *other, qboolean damageSelf )
 			}
 		}
 
-		if ( damageSelf && self->takedamage )
+		if ( damageSelf && self->takedamage && !(self->flags & FL_NO_IMPACT_DMG) )
 		{
 			//Now damage me
 			//FIXME: more lenient falling damage, especially for when driving a vehicle
@@ -596,6 +638,16 @@ void	G_TouchTriggers( gentity_t *ent ) {
 			}
 		}
 
+		// DAJ_RP: [Locks] a trigger, a pickup, a door's trigger with a lock: a player whose account is
+		// not on its list does not set it off (g_locks.c). Spectators only pass through teleporters
+		// and doors, which they may. A trigger_multiple or trigger_once fired with the Use or fire button
+		// (spawnflags 4, 8) is walked into freely, its use icon and all: Touch_Multi() refuses when the
+		// button is pressed.
+		if ( hit->touch && ent->client->sess.sessionTeam != TEAM_SPECTATOR &&
+			!( hit->touch == Touch_Multi && ( hit->spawnflags & ( 4 | 8 ) ) ) && !RP_LockAllows( hit, ent, ent ) ) {
+			continue;
+		}
+
 		memset( &trace, 0, sizeof(trace) );
 
 		if ( hit->touch ) {
@@ -697,6 +749,399 @@ void G_MoverTouchPushTriggers( gentity_t *ent, vec3_t oldOrg )
 
 static void SV_PMTrace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask ) {
 	trap->Trace( results, start, mins, maxs, end, passEntityNum, contentMask, qfalse, 0, 10 );
+}
+
+/*
+=================
+GalaxyRP: [Phase] movement-only non-solidity for /admwalkthrough, /admghost, /admholo and /admhidden
+
+A phased player keeps r.contents CONTENTS_BODY. That is the whole point of doing it this way rather
+than zeroing contents: every weapon trace, saber hit, Force power, grapple and NPC still finds a
+normal body, so the player is hit, damaged and targeted exactly like anyone else. Only MOVEMENT
+collision between bodies is switched off, from three sides:
+
+  - the phased player's own Pmove drops CONTENTS_BODY from its tracemask (ClientThink_real), so they
+    walk through players and NPCs but not walls;
+  - everyone else's Pmove -- players, bots, NPCs and vehicles all move through ClientThink_real --
+    runs with the phased bodies' contents cleared for the length of the Pmove() call and put back
+    straight after (RP_PhaseHideBodies / RP_PhaseRestoreBodies). SV_ClipMoveToEntities reads
+    r.contents live, so no relink is needed, and nothing outside that window sees the change;
+  - ClientEndFrame sends phased players with s.solid 0, so every client, stock ones included,
+    predicts walking through them instead of bumping into a box the server no longer blocks with.
+
+NPCs get the same three through /npc effect: the mode lives in the NPC's own client->pers, its Pmove
+goes through ClientThink_real like a player's, and RP_PhaseNpcEndFrame() stands in for
+ClientEndFrame, which NPCs never reach.
+=================
+*/
+qboolean RP_PhasePassesThrough( const gentity_t *ent )
+{
+	if ( !ent || !ent->client )
+	{
+		return qfalse;
+	}
+
+	return ( ent->client->pers.phase_mode != RP_PHASE_NONE || ent->client->pers.phase_releasing ) ? qtrue : qfalse;
+}
+
+/*
+=================
+RP_PlayerIsHidden / RP_HiddenApplyState
+
+DAJ_RP: [Phase] /admhidden. A hidden player is walk-through like the other modes (RP_PhasePassesThrough()
+above) and, on top of that, not drawn for anyone but himself -- done with Force Mind Trick's own fields.
+A Mind Tricking player's entityState carries one bit per client he has tricked (trickedentindex for
+clients 0-15, trickedentindex2 for 16-31, and so on), and every client -- the stock cgame included --
+skips drawing him, his weapon, his saber, his shadow and the icons over his head, and the crosshair
+name, when its own bit is set (CG_IsMindTricked(), cg_players.c). A viewer with Force Sight active
+still sees him, by the same stock rule.
+
+So a hidden player's s gets every client's bit except his own, so he still sees himself in third
+person (and a spectator following him sees through his eyes as usual). Only s is touched, never
+ps.fd.forceMindtrickTargetIndex*: his own Mind Trick keeps working and ending it cannot wipe these
+bits, and bots -- which read the ps fields (BotMindTricked(), ai_main.c) -- keep targeting him. Nothing
+on the server reads a player's s.trickedentindex*, so damage, targeting and collision are untouched.
+
+s is rebuilt from ps by every BG_PlayerStateToEntityState*() call on a player, so this runs straight
+after each of those: ClientThink_real() and ClientEndFrame() here, ClientSpawn() (g_client.c) and both
+teleports (TeleportPlayer() in g_misc.c, zyk_TeleportPlayer() in g_main.c). CopyToBodyQue() uses it
+for the corpse too. Players only; NPCs cannot be hidden. Not while spectating, when nothing is drawn.
+=================
+*/
+qboolean RP_PlayerIsHidden( const gentity_t *ent )
+{
+	if ( !ent || !ent->client || ent->s.number < 0 || ent->s.number >= MAX_CLIENTS )
+	{
+		return qfalse;
+	}
+
+	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR )
+	{
+		return qfalse;
+	}
+
+	return ( ent->client->pers.phase_mode == RP_PHASE_HIDDEN ) ? qtrue : qfalse;
+}
+
+void RP_HiddenApplyState( const gentity_t *player, entityState_t *s )
+{
+	int i;
+
+	if ( !s || !RP_PlayerIsHidden( player ) )
+	{
+		return;
+	}
+
+	for ( i = 0; i < MAX_CLIENTS; i++ )
+	{
+		if ( i == player->s.number )
+		{ // he sees himself
+			continue;
+		}
+
+		if ( i < 16 )
+			s->trickedentindex |= ( 1 << i );
+		else if ( i < 32 )
+			s->trickedentindex2 |= ( 1 << ( i - 16 ) );
+		else if ( i < 48 )
+			s->trickedentindex3 |= ( 1 << ( i - 32 ) );
+		else
+			s->trickedentindex4 |= ( 1 << ( i - 48 ) );
+	}
+}
+
+static int rp_phaseHidden[MAX_GENTITIES];
+static int rp_phaseHiddenCount = 0;
+
+// GalaxyRP: [Phase] the NPCs /npc effect has given a mode, plus any still finishing a release. Kept
+// as a short list so the per-Pmove scan below never has to walk every entity slot. An entry is only
+// a hint: every reader re-checks the slot (in use, still an NPC, still passing through), and
+// RP_PhaseNpcEndFrame() drops entries that no longer are -- a freed slot is zeroed by G_FreeEntity,
+// and a new NPC in a reused slot starts with a zeroed client (NPC_Spawn_Do), so neither can inherit
+// a mode.
+static int rp_phasedNpcs[MAX_GENTITIES];
+static int rp_phasedNpcCount = 0;
+
+static qboolean RP_PhaseIsLiveNpc( const gentity_t *ent )
+{
+	return ( ent->inuse && ent->client && ent->s.eType == ET_NPC ) ? qtrue : qfalse;
+}
+
+// Adds an NPC to the list; called by /npc effect whenever it gives an NPC a mode or starts a release.
+void RP_PhaseTrackNpc( gentity_t *npc )
+{
+	int i, num;
+
+	if ( !npc || !RP_PhaseIsLiveNpc( npc ) )
+	{
+		return;
+	}
+
+	num = (int)( npc - g_entities );
+
+	for ( i = 0; i < rp_phasedNpcCount; i++ )
+	{
+		if ( rp_phasedNpcs[i] == num )
+		{
+			return;
+		}
+	}
+
+	if ( rp_phasedNpcCount < MAX_GENTITIES )
+	{
+		rp_phasedNpcs[rp_phasedNpcCount++] = num;
+	}
+}
+
+/*
+=================
+RP_StartOverlapRelease
+
+GalaxyRP fix: [Telefrag] let a player or NPC that has just arrived inside another live body walk out of
+it. Used by G_KillBox() (g_utils.c) for an arrival that could not -- or must not -- telefrag what it
+landed on: an NPC arriving on a player, or a victim the damage never reached (an ally, chat
+protection, a private duel, the arena rules, noclip, an invulnerable NPC...). Without it both bodies
+stood inside each other and neither could move.
+
+It is the tail end of a phase mode (RP_ClearPhaseMode, g_cmds.c) with no mode in front of it: the
+arriver passes through bodies and is sent as walk-through while it overlaps anyone, looks normal
+throughout, and RP_PhaseUpdate() ends the release by itself on the first end of frame that finds
+nothing solid overlapping it. An NPC is added to the phased-NPC list, which is what runs that
+check for it. A body already in a phase mode passes through anyway and is left exactly as it is.
+=================
+*/
+void RP_StartOverlapRelease( gentity_t *ent )
+{
+	if ( !ent || !ent->inuse || !ent->client )
+	{
+		return;
+	}
+
+	if ( ent->client->pers.phase_mode != RP_PHASE_NONE )
+	{
+		return;
+	}
+
+	ent->client->pers.phase_releasing = qtrue;
+
+	if ( ent->s.eType == ET_NPC )
+	{
+		RP_PhaseTrackNpc( ent );
+	}
+}
+
+static void RP_PhaseHideBody( gentity_t *other, const gentity_t *mover )
+{
+	if ( other == mover || !other->inuse || !other->client )
+		return;
+	if ( !RP_PhasePassesThrough( other ) )
+		return;
+	if ( other->r.contents != CONTENTS_BODY )
+		return;
+
+	other->r.contents = 0;
+	rp_phaseHidden[rp_phaseHiddenCount++] = (int)( other - g_entities );
+}
+
+// Only live bodies are touched: a corpse (CONTENTS_CORPSE), a rider a vehicle has Ghost()ed
+// (contents 0) and a spectator are left exactly as they are. Players are scanned by slot; NPCs come
+// from the phased-NPC list, since /npc effect is the only way an NPC gets a mode.
+static void RP_PhaseHideBodies( const gentity_t *mover )
+{
+	int i;
+
+	rp_phaseHiddenCount = 0;
+
+	for ( i = 0; i < level.maxclients; i++ )
+	{
+		gentity_t *other = &g_entities[i];
+
+		if ( other->inuse && other->client && other->client->pers.connected != CON_CONNECTED )
+			continue;
+
+		RP_PhaseHideBody( other, mover );
+	}
+
+	for ( i = 0; i < rp_phasedNpcCount; i++ )
+	{
+		gentity_t *other = &g_entities[rp_phasedNpcs[i]];
+
+		if ( !RP_PhaseIsLiveNpc( other ) )
+			continue;
+
+		RP_PhaseHideBody( other, mover );
+	}
+}
+
+// Restores only what RP_PhaseHideBodies cleared, and only if it is still cleared: if something
+// during the Pmove changed a hidden body's contents -- a vehicle impact that killed it and turned it
+// into CONTENTS_CORPSE -- that newer value is left alone.
+static void RP_PhaseRestoreBodies( void )
+{
+	int i;
+
+	for ( i = 0; i < rp_phaseHiddenCount; i++ )
+	{
+		gentity_t *other = &g_entities[rp_phaseHidden[i]];
+
+		if ( other->r.contents == 0 )
+		{
+			other->r.contents = CONTENTS_BODY;
+		}
+	}
+
+	rp_phaseHiddenCount = 0;
+}
+
+// Whether this live body overlaps another live body it would collide with once solid again: a
+// player, bot, NPC or vehicle with CONTENTS_BODY that is not itself passing through. Tested on the
+// real boxes (currentOrigin + mins/maxs) rather than on r.absmin/absmax, which SV_LinkEntity widens
+// by one unit -- standing next to someone is not standing inside them.
+static qboolean RP_PhaseOverlapsBody( gentity_t *ent )
+{
+	int touch[MAX_GENTITIES];
+	int num, i, j;
+	vec3_t mins, maxs;
+
+	if ( ent->r.contents != CONTENTS_BODY )
+	{ // dead, ghosted in a vehicle or spectating: nothing to collide with
+		return qfalse;
+	}
+
+	VectorAdd( ent->r.currentOrigin, ent->r.mins, mins );
+	VectorAdd( ent->r.currentOrigin, ent->r.maxs, maxs );
+
+	num = trap->EntitiesInBox( mins, maxs, touch, MAX_GENTITIES );
+
+	for ( i = 0; i < num; i++ )
+	{
+		gentity_t *other = &g_entities[touch[i]];
+		vec3_t omins, omaxs;
+		qboolean overlaps = qtrue;
+
+		if ( other == ent || !other->inuse || !other->client )
+			continue;
+		if ( !(other->r.contents & CONTENTS_BODY) )
+			continue;
+		if ( RP_PhasePassesThrough( other ) )
+			continue;
+
+		VectorAdd( other->r.currentOrigin, other->r.mins, omins );
+		VectorAdd( other->r.currentOrigin, other->r.maxs, omaxs );
+
+		for ( j = 0; j < 3; j++ )
+		{
+			if ( omins[j] >= maxs[j] || omaxs[j] <= mins[j] )
+			{
+				overlaps = qfalse;
+				break;
+			}
+		}
+
+		if ( overlaps )
+		{
+			return qtrue;
+		}
+	}
+
+	return qfalse;
+}
+
+// Once per frame per client (ClientEndFrame): finish a release once nothing overlaps, then write the
+// mode the clients see. A release in progress is sent as RP_PHASE_NONSOLID -- the player already
+// looks normal, but their own prediction must keep passing through bodies until the server does.
+static void RP_PhaseUpdate( gentity_t *ent )
+{
+	gclient_t *client = ent->client;
+	int sentMode;
+
+	if ( client->pers.phase_releasing )
+	{
+		if ( client->pers.phase_mode != RP_PHASE_NONE || !RP_PhaseOverlapsBody( ent ) )
+		{
+			client->pers.phase_releasing = qfalse;
+		}
+	}
+
+	sentMode = client->pers.phase_mode;
+
+	// DAJ_RP: [Phase] hidden has no value of its own on the wire (the two bits are full): clients only
+	// need to know to walk through the player, and the hiding goes by RP_HiddenApplyState() instead
+	if ( sentMode == RP_PHASE_HIDDEN )
+	{
+		sentMode = RP_PHASE_NONSOLID;
+	}
+
+	if ( sentMode == RP_PHASE_NONE && client->pers.phase_releasing )
+	{
+		sentMode = RP_PHASE_NONSOLID;
+	}
+
+	client->ps.eFlags &= ~EF_RP_PHASE_MASK;
+	client->ps.eFlags |= ( sentMode << EF_RP_PHASE_SHIFT ) & EF_RP_PHASE_MASK;
+}
+
+/*
+=================
+RP_PhaseNpcEndFrame
+
+GalaxyRP: [Phase] ClientEndFrame() for the NPCs /npc effect has phased -- NPCs never reach
+ClientEndFrame(), which only walks player slots. Called from G_RunFrame() straight after that loop,
+once every think of the frame is done, so it does for each listed NPC exactly what ClientEndFrame()
+does for a phased player:
+
+  - RP_PhaseUpdate(): finish a release that has come clear, and write the mode into ps.eFlags;
+  - the same bits into s.eFlags at once, since an NPC's ClientThink_real() -- where its state is
+    normally copied from ps -- does not necessarily run every server frame;
+  - s.solid 0 for a live phased body, so every client predicts walking through it. Nothing links an
+    NPC after this point in the frame, so it holds until the snapshot.
+
+An NPC whose mode and release are both over is written back to normal once more and then dropped
+from the list; so is a slot that is no longer an NPC at all.
+=================
+*/
+void RP_PhaseNpcEndFrame( void )
+{
+	int i = 0;
+
+	while ( i < rp_phasedNpcCount )
+	{
+		gentity_t *npc = &g_entities[rp_phasedNpcs[i]];
+		qboolean wasPassing;
+
+		if ( !RP_PhaseIsLiveNpc( npc ) )
+		{ // freed, or reused by something else: nothing of ours left on it
+			rp_phasedNpcs[i] = rp_phasedNpcs[--rp_phasedNpcCount];
+			continue;
+		}
+
+		wasPassing = RP_PhasePassesThrough( npc );
+
+		RP_PhaseUpdate( npc );
+
+		npc->s.eFlags &= ~EF_RP_PHASE_MASK;
+		npc->s.eFlags |= ( npc->client->ps.eFlags & EF_RP_PHASE_MASK );
+
+		if ( !RP_PhasePassesThrough( npc ) )
+		{ // back to normal for good. If this frame is the one that ended it, relink so s.solid is
+		  // rebuilt from r.contents now rather than at the NPC's next think -- but only an NPC that is
+		  // in the world already, and never a stale entry (a new NPC in a reused slot), which was not
+		  // passing through to begin with.
+			if ( wasPassing && npc->r.linked )
+			{
+				trap->LinkEntity( (sharedEntity_t *)npc );
+			}
+			rp_phasedNpcs[i] = rp_phasedNpcs[--rp_phasedNpcCount];
+			continue;
+		}
+
+		if ( npc->r.contents == CONTENTS_BODY )
+		{
+			npc->s.solid = 0;
+		}
+
+		i++;
+	}
 }
 
 /*
@@ -868,7 +1313,149 @@ ClientTimerActions
 Actions that happen once a second
 ==================
 */
-extern int zyk_max_magic_power(gentity_t* ent);
+/*
+==============
+RP_DownedTimerTick
+
+One second of a downed player's countdown: the on-screen timer, the decrement, and the auto-release
+that ends an admin paralysis once its time is served.
+
+GalaxyRP fix: [Death System] split out of ClientTimerActions(), which is only ever reached by a
+player who is alive and in the world: ClientThink_real() returns into ClientIntermissionThink() and
+into SpectatorThink() long before it, and returns again just above it for a player waiting to
+respawn. A downed player who became a spectator therefore froze their own countdown, and an admin
+paralysis never expired -- the target could sit the entire punishment out as a free-flying camera and
+rejoin still paralysed with the same time remaining. Being downed is state that lives in pers and
+survives a respawn; its countdown is served in wall-clock seconds wherever the player happens to be.
+
+RP_RunDownedTimer() below is the one driver, called from ClientEndFrame() which runs once per server
+frame for every connected client -- spectators, followers and intermission included -- and paced by
+the server frame delta rather than by a client's usercmd timing. See downedTimeResidual in g_local.h
+for why msec was the wrong clock for this.
+==============
+*/
+static void RP_DownedTimerTick( gentity_t *ent )
+{
+	gclient_t *client;
+
+	if ( !ent || !ent->client )
+	{
+		return;
+	}
+
+	client = ent->client;
+
+	//GalaxyRP (Alex): [Death System] This timer represents the time that a player has left until they can get up from being downed.
+	//GalaxyRP (Alex): [Death System] Not paralyzed anymore, means someone else helped you (or you helped yourself with admin permission. Set downed timer to 0 to remove message.
+	// GalaxyRP fix: [Death System] hoisted above the display. It used to run after it, which was
+	// harmless only while downedTime lived outside pers and was wiped by every ClientSpawn. Now
+	// that it survives a respawn alongside the status bits, a player finished off while downed --
+	// player_die() clears the bits, then they respawn -- would have seen one stale "You are
+	// downed. Time Remaining: N" a second later, while alive and well. Clearing first keeps the
+	// countdown and the bits in agreement at every point the message can be sent.
+	if (!G_PlayerIsDowned(ent)) {
+		client->pers.downedTime = 0;
+	}
+
+	if (client->pers.downedTime)
+	{
+		// GalaxyRP fix: [Death System] this used to be gated on "downedTime <= rp_downed_timer",
+		// which assumed the countdown could never exceed the cvar. /paralyze can now set any
+		// duration up to 900s, so with the shipped rp_downed_timer of 30 an admin paralysis showed
+		// the player nothing at all until its last 30 seconds -- immobile, with no explanation and
+		// no timer. downedTime is the authoritative remaining time, so it is simply displayed.
+		// GalaxyRP fix: [Death System] an admin paralysis says so, and does not advertise /getup or
+		// /helpup, because neither can end one.
+		if (G_PlayerIsAdminParalyzed(ent))
+		{
+			trap->SendServerCommand(ent->s.number, va("cp \"^1You were paralyzed by an admin.\nTime Remaining: %d\"", client->pers.downedTime));
+		}
+		else
+		{
+			trap->SendServerCommand(ent->s.number, va("cp \"^1You are downed.\nTime Remaining: %d\"", client->pers.downedTime));
+		}
+
+		client->pers.downedTime--;
+
+		// GalaxyRP fix: [Death System] an admin paralysis releases itself the moment its time is
+		// served. A combat knockdown does not -- there the countdown only unlocks /getup and the
+		// player chooses when to stand -- but /getup and /helpup both refuse an admin paralysis,
+		// so without this the target would stay down forever once the timer ran out.
+		if (client->pers.downedTime <= 0 && G_PlayerIsAdminParalyzed(ent)) {
+			RP_ReleaseFromDownedState(ent);
+			trap->SendServerCommand(ent->s.number, "print \"^2Your paralysis has worn off.\n\"");
+			trap->SendServerCommand(ent->s.number, "cp \"^2Your paralysis has worn off.\"");
+		}
+	}
+	else {
+		//GalaxyRP (Alex): [Death System] Can get up by themselves, but haven't yet.
+		// An admin paralysis never reaches here -- it auto-releases above the moment its countdown
+		// hits 0 -- but the check keeps this prompt from ever naming /getup and /helpup to someone
+		// they cannot help.
+		// GalaxyRP fix: [Death System] and not while spectating, now that this tick also runs on
+		// the spectator path: /getup carries CMD_ALIVE and refuses a spectator outright, so
+		// naming it to one would be advertising a command that cannot work.
+		if (G_PlayerIsDowned(ent) && !G_PlayerIsAdminParalyzed(ent) &&
+			client->sess.sessionTeam != TEAM_SPECTATOR && client->tempSpectate < level.time){
+			trap->SendServerCommand(ent->s.number, va("cp \"^1You are downed.\n^2You may get up by using ^3/getup\n^2Alternatively, someone else can do ^3/helpup ^3%s.\"", client->pers.netname_nocolor));
+		}
+	}
+}
+
+/*
+==============
+RP_RunDownedTimer
+
+Paces RP_DownedTimerTick() at 1Hz off the server frame clock. Called from ClientEndFrame(), which
+G_RunFrame() runs exactly once per server frame for every in-use client slot, above the point where
+spectators are split off -- so this reaches a player in the world, a free-flying spectator, a
+follower and a client sitting in intermission alike, and reaches each of them at the same rate.
+
+The frame delta is clamped: a single pathological delta (a server hitch, or a level.time that jumped)
+must not turn the catch-up loop into thousands of iterations, each sending a server command.
+
+ClientSpawn() calls ClientEndFrame() directly as part of settling a respawn, and SpectatorClientEndFrame()
+can reach ClientBegin() -> ClientSpawn() and so nest one inside another. Those add at most an extra
+frame delta or two to the accumulator on a respawn -- bounded, one-off, and far below the one-second
+resolution this counts in.
+==============
+*/
+static void RP_RunDownedTimer( gentity_t *ent )
+{
+	int frameMsec;
+
+	if ( !ent || !ent->client || ent->s.number >= MAX_CLIENTS )
+	{
+		return;
+	}
+
+	if ( !G_PlayerIsDowned( ent ) && !ent->client->pers.downedTime )
+	{ // not downed and nothing stale left over -- keep the accumulator clean and do nothing
+		ent->client->downedTimeResidual = 0;
+		return;
+	}
+
+	frameMsec = level.time - level.previousTime;
+
+	if ( frameMsec < 1 )
+	{
+		return;
+	}
+
+	if ( frameMsec > 1000 )
+	{ // see the note above: bound the loop below to a single pass
+		frameMsec = 1000;
+	}
+
+	ent->client->downedTimeResidual += frameMsec;
+
+	while ( ent->client->downedTimeResidual >= 1000 )
+	{
+		ent->client->downedTimeResidual -= 1000;
+		RP_DownedTimerTick( ent );
+	}
+}
+
 void ClientTimerActions( gentity_t *ent, int msec ) {
 	gclient_t	*client;
      	char 		serverMotd[MAX_STRING_CHARS];
@@ -876,25 +1463,40 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 	client = ent->client;
 	client->timeResidual += msec;
 
-	if (client->sess.amrpgmode == 2 && client->pers.unique_skill_duration < level.time)
-	{ // zyk: Unique Ability run out. Remove the flags
-		if (client->pers.player_statuses & (1 << 21))
-		{
-			client->pers.player_statuses &= ~(1 << 21);
-		}
-		else if (client->pers.player_statuses & (1 << 22))
-		{
-			client->pers.player_statuses &= ~(1 << 22);
-		}
-		else if (client->pers.player_statuses & (1 << 23))
-		{
-			client->pers.player_statuses &= ~(1 << 23);
-		}
-	}
-	
-	if (client->pers.player_statuses & (1 << 24) && client->pers.stun_baton_less_speed_timer < level.time)
-	{ // zyk: remove the Ice Bomb hit flag
-		client->pers.player_statuses &= ~(1 << 24);
+	// GalaxyRP: [rp_loginRequired] When enabled, players who are not logged into an account must
+	// stay in Spectator mode -- this catches both a freshly connected player who never logged in
+	// (sess.loggedin defaults to qfalse) and a player who /logout's while already playing, without
+	// needing a dedicated hook in Cmd_LogoutAccount_f, since this runs on every think for every
+	// non-spectator client. Adapted from the New Zyk mod's zyk_force_account_login (checked once
+	// per server frame in G_RunFrame there); here it's checked once per client think instead, which
+	// is this codebase's closest equivalent per-player periodic tick. Bots/NPCs are exempt since
+	// they never log into an account. This stacks safely with rp_pluginRequired: each cvar's
+	// enforcement is independent, so a player must satisfy both requirements (plugin present AND
+	// logged in) to stay off Spectator -- whichever one they fail keeps forcing them back.
+	if (rp_loginRequired.integer && !ent->NPC && !(ent->r.svFlags & SVF_BOT) &&
+		!client->sess.loggedin && client->sess.sessionTeam != TEAM_SPECTATOR)
+	{
+		// GalaxyRP fix: [rp_loginRequired] say why. This used to move the player to Spectator without
+		// a word, so anyone joining a team with the cvar on was yanked back a second later with no
+		// explanation and no idea what to do about it -- rp_pluginRequired at least prints a reason.
+		// Deliberately a console print, not a centerprint: a "cp" replaces whatever is already on
+		// screen, and rp_pluginRequired's own warning is a cp, so a second one would wipe it for a
+		// player who fails both checks. Console lines stack, so the two coexist.
+		//
+		// Fires once per join attempt rather than once per second: reaching this point at all means
+		// the player is a live non-spectator, and SetTeam() below cannot refuse a Spectator request
+		// from here -- its only such refusal is the Siege "tempSpectate >= level.time" guard, and a
+		// client in tempSpectate never reaches ClientTimerActions(), because ClientThink_real()
+		// returns into SpectatorThink() above it on that same condition. So the move always lands,
+		// this function stops running for them, and the message is not repeated until they try again.
+		//
+		// Both commands named here work from Spectator -- /login carries no dispatch flags at all and
+		// /new only CMD_NOINTERMISSION -- so the player can act on this without leaving the state it
+		// puts them in.
+		trap->SendServerCommand(ent->s.number, "print \"^3You must be logged in to join the game. Use ^2/login <name> <password>^3, or ^2/new <name> <password>^3 to create an account.\n\"");
+
+		SetTeam(ent, "spectator");
+		return;
 	}
 
 	while ( client->timeResidual >= 1000 )
@@ -904,186 +1506,152 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 		//GalaxyRP (Alex): [Ammo Recharge] Go check if player can recharge ammo, do it if they can.
 		RegenerateAmmo(ent, client);
 
-		if (zyk_chat_protection_timer.integer > 0)
+		// GalaxyRP fix: [gameplay/exploit] the PLAYER_STATUS_CHAT_PROTECTION bit makes G_Damage return early for this
+		// player (g_combat.c), so leaving it set means total damage immunity. Both the set and the
+		// clear used to live inside the "rp_chat_protection_timer > 0" block, and the clear also
+		// required chat_protection_timer != 0 -- so the flag could be stranded set, permanently, in
+		// two different ways. (1) An admin setting the cvar to 0 (documented as "0 to disable") while
+		// someone was currently protected: the whole block stops running, so nothing can ever clear
+		// their flag again -- the cvar meant to disable the feature instead made that player's
+		// protection permanent. (2) With no cvar change at all: ClientSpawn() resets
+		// chat_protection_timer to 0 but did not touch bit 5, so a protected player killed by a path
+		// that bypasses G_Damage (the duel-tournament arena and the melee platform both call
+		// player_die() directly) respawned with timer == 0 and the flag still set -- and with the
+		// timer at 0 the old clear branch could never fire again, leaving them invulnerable while
+		// fully able to fight. The clear now runs whenever the player simply isn't talking, regardless
+		// of the timer, and disabling the cvar actively clears any protection still in effect instead
+		// of freezing it. ClientSpawn() also clears the flag alongside the timer now, closing (2) at
+		// its source as well.
+		//
+		// GalaxyRP fix: [gameplay] pers.chat_protection_timer now holds the level.time at which the
+		// player OPENED chat, and the test below is on the time elapsed since. It used to hold the
+		// deadline, "level.time + cvar", baked in at that moment: a lowered cvar did not reach anyone
+		// already typing until they closed chat, and an absurdly large value overflowed the sum
+		// negative, which made the old "deadline < level.time" true at once -- instant protection from
+		// a setting that read as "practically never". With the elapsed form the live value applies on
+		// every one-second tick of this loop and a huge value simply never arrives. The cvar is still
+		// milliseconds, rounded up to the tick: the tick that sees chat open records the start, and
+		// since ticks are at least 1000 ms apart, 1 and 1000 both protect on the next one, 5000 on the
+		// fifth after it. 0 stays the "not talking" sentinel: this loop cannot run before level.time
+		// has advanced 1000 ms from map start, so level.time is never 0 here, and ClientSpawn() still
+		// resets the field to 0 together with the flag, which is what keeps protection from surviving
+		// a respawn.
+		if (rp_chat_protection_timer.integer > 0)
 		{ // zyk: chat protection. If 0, it is off. If greater than 0, set the timer to protect the player
 			if (client->ps.eFlags & EF_TALK && client->pers.chat_protection_timer == 0)
 			{
-				client->pers.chat_protection_timer = level.time + zyk_chat_protection_timer.integer;
+				client->pers.chat_protection_timer = level.time;
 			}
-			else if (ent->client->ps.eFlags & EF_TALK && client->pers.chat_protection_timer < level.time)
+			else if (ent->client->ps.eFlags & EF_TALK && level.time - client->pers.chat_protection_timer >= rp_chat_protection_timer.integer)
 			{
-				client->pers.player_statuses |= (1 << 5);
+				client->pers.player_statuses |= (1 << PLAYER_STATUS_CHAT_PROTECTION);
 			}
-			else if (client->pers.chat_protection_timer != 0 && !(client->ps.eFlags & EF_TALK))
+			else if (!(client->ps.eFlags & EF_TALK))
 			{
-				client->pers.player_statuses &= ~(1 << 5);
+				client->pers.player_statuses &= ~(1 << PLAYER_STATUS_CHAT_PROTECTION);
 				client->pers.chat_protection_timer = 0;
 			}
 		}
-
-		if ((ent->NPC || client->sess.amrpgmode == 2) && client->pers.quest_power_status & (1 << 14) && ent->health > 0)
-		{ // zyk: Light Power
-			if (ent->NPC)
-			{ // zyk: bosses using it
-				if ((ent->health + 2) < client->ps.stats[STAT_MAX_HEALTH])
-					ent->health += 2;
-				else
-					ent->health = client->ps.stats[STAT_MAX_HEALTH];
-			}
-			else
-			{ // zyk: players using it
-				if (ent->health < client->pers.max_rpg_health)
-					ent->health += 1;
-				else if (client->ps.stats[STAT_ARMOR] < client->pers.max_rpg_shield)
-					client->ps.stats[STAT_ARMOR] += 1;
-			}
+		else if ((client->pers.player_statuses & (1 << PLAYER_STATUS_CHAT_PROTECTION)) || client->pers.chat_protection_timer != 0)
+		{ // zyk: feature disabled -- don't leave anyone holding the protection it granted
+			client->pers.player_statuses &= ~(1 << PLAYER_STATUS_CHAT_PROTECTION);
+			client->pers.chat_protection_timer = 0;
 		}
 
-		if (client->sess.amrpgmode == 2 && !(client->pers.quest_power_status & (1 << 2)))
-		{ // zyk: auto-healing abilities will only work if player is not hit by Time Power
-			if (client->pers.rpg_class == 4 && ent->health > 0)
-			{ // zyk: Monk auto-healing ability
-				if (client->pers.unique_skill_duration > level.time && !(client->pers.player_statuses & (1 << 22)) &&
-					!(client->pers.player_statuses & (1 << 23)))
-				{ // zyk: Monk Unique Skill
-					int heal_amount = 4;
-
-					if (client->pers.player_statuses & (1 << 21) && client->ps.legsAnim == BOTH_MEDITATE)
-					{ // zyk: Meditation Strength
-						heal_amount = 60;
-					}
-
-					if ((ent->health + heal_amount) < client->pers.max_rpg_health)
-					{
-						ent->health += heal_amount;
-					}
-					else
-					{
-						ent->health = client->pers.max_rpg_health;
-					}
-				}
-				else
-				{
-					if (ent->health < client->pers.max_rpg_health)
-					{ // zyk: Monk class auto-healing
-						ent->health += 1;
-					}
-				}
-			}
-			else if (client->pers.rpg_class == 3 && ent->health > 0)
-			{ // zyk: Armored Soldier auto-shield-healing ability
-				if (client->pers.unique_skill_duration > level.time && !(client->pers.player_statuses & (1 << 21)) &&
-					!(client->pers.player_statuses & (1 << 22)) && !(client->pers.player_statuses & (1 << 23)))
-				{ // zyk: Armored Soldier Unique Skill
-					if ((client->ps.stats[STAT_ARMOR] + 4) < client->pers.max_rpg_shield)
-					{
-						client->ps.stats[STAT_ARMOR] += 4;
-					}
-					else
-					{
-						client->ps.stats[STAT_ARMOR] = client->pers.max_rpg_shield;
-					}
-				}
-				else if (client->ps.stats[STAT_ARMOR] < client->pers.max_rpg_shield)
-				{
-					client->ps.stats[STAT_ARMOR] += 1;
-				}
-			}
-
-			if (client->pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ && client->pers.universe_quest_counter & (1 << 0) &&
-				client->pers.magic_power < zyk_max_magic_power(ent) && !(client->sess.magic_more_disabled_powers & (1 << 1)))
-			{ // zyk: Final Power of Sages Sequel. Magic Regen. Adds auto-healing of mp
-				client->pers.magic_power += 1;
-				send_rpg_events(1000);
-			}
-
-			if (client->pers.player_statuses & (1 << 10))
-			{ // zyk: Healing Crystal
-				if (ent->health < client->pers.max_rpg_health)
-					ent->health += 1;
-
-				if (client->pers.magic_power < zyk_max_magic_power(ent))
-					client->pers.magic_power += 1;
-
-				if (client->ps.fd.forcePower < client->pers.max_force_power)
-					client->ps.fd.forcePower += 1;
-
-				send_rpg_events(1000);
-			}
-
-			if (client->pers.player_statuses & (1 << 11))
-			{ // zyk: Energy Crystal
-				if (client->ps.stats[STAT_ARMOR] < client->pers.max_rpg_shield)
-					client->ps.stats[STAT_ARMOR] += 1;
-
-				Add_Ammo(ent, AMMO_BLASTER, 1);
-				Add_Ammo(ent, AMMO_POWERCELL, 1);
-			}
-		}
+		// GalaxyRP fix: [Dead Code] the RPG auto-heal block used to be here -- "if (amrpgmode == 2 &&
+		// !(quest_power_status & (1 << 2)))" wrapping Magic Regen, Healing Crystal and Energy Crystal.
+		// The wrapper's own condition was reachable; all three things inside it were not. Magic Regen
+		// needed pers.universe_quest_progress == NUM_OF_UNIVERSE_QUEST_OBJ (22, galaxyrp/game/rp_local.h)
+		// and universe_quest_counter bit 0, and neither field was ever written anywhere in the tree, so
+		// both sat at 0 and 0 == 22 is false. Both fields have since been removed from
+		// clientPersistant_t entirely, along with the last branches that read them.
+		// Healing Crystal and Energy Crystal needed PLAYER_STATUS_HEALING_CRYSTAL and
+		// PLAYER_STATUS_ENERGY_CRYSTAL, two of the thirteen bits g_local.h marks as never set; each has
+		// zero "|=" sites in the tree. Nothing else lived in the block.
 
 		//GalaxyRP (Alex): [Stat Regen] Regen some stats every second. In certain animations the regen will be higher.
 		int health_regen_amount = 1 + ent->client->pers.skill_levels[59];
 		int shield_regen_amount = 1 + ent->client->pers.skill_levels[58];
 
+		// GalaxyRP fix: [Stat Regen/exploit] gated on being logged in. Everything this block reads is
+		// RPG state -- the two regen skills set the rate, pers.max_rpg_health and pers.max_rpg_shield
+		// set the ceilings -- but it was the one RPG feature in the tree checking neither
+		// sess.amrpgmode nor sess.loggedin, so it ran for logged-out players too. /logout clamps
+		// health and shield to 100 and sets STAT_MAX_HEALTH to 100; this block then walked both
+		// straight back up to the character's RPG caps at up to 6 a second (12 while meditating,
+		// which ignores rp_allow_passive_regen), leaving a logged-out player at up to 300/300 with
+		// STAT_MAX_HEALTH still reading 100. Respawning did not help: ClientSpawn refreshes
+		// STAT_MAX_HEALTH and health correctly but never touches the two pers caps.
+		//
+		// Gated the same way as RegenerateAmmo() a few lines above, which is the sibling feature and
+		// already used sess.loggedin -- /logout clears it, so the two now agree. The pers fields this
+		// reads are reset on logout as well (Cmd_LogoutAccount_f), so this is belt and braces: either
+		// change alone closes the hole.
 		//GalaxyRP (Alex): [Stat Regen] Never regen while downed or dead.
-		if (ent->health > 0 && !(ent->client->pers.player_statuses & (1 << 6))) {
-			if ((ent->health + health_regen_amount) <= client->pers.max_rpg_health) {
-				if (client->ps.legsAnim == BOTH_MEDITATE) {
-					ent->health += health_regen_amount*2;
-				}
-				else {
-					if (rp_allow_passive_regen.integer) {
-						ent->health += health_regen_amount;
-					}
+		if (ent->client->sess.loggedin == qtrue && ent->health > 0 && !(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DOWNED))) {
+			// GalaxyRP fix: [Stat Regen] top up to the maximum, instead of refusing any tick that
+			// would not fit a whole step.
+			//
+			// The guard used to be "value + amount <= max", which stops as soon as you are within
+			// amount-1 of full and then leaves you there for good, because the next tick fails the
+			// same test. Where you settled depended on how much damage you happened to take, and
+			// levelling the skill made it worse rather than better: at amount 1 you always reached
+			// full, at amount 6 you could sit five points short of your own maximum forever.
+			//
+			// Meditating went wrong in the other direction. The guard was written against amount
+			// while the branch under it added amount * 2, so it overshot the maximum by up to amount
+			// and stayed there -- nothing in the tree decays health or shield back down, so the only
+			// way off was to get hit.
+			//
+			// Testing "below the maximum" and clamping after the add fixes both ends and changes
+			// nothing in between: every tick that used to fire still fires, with the same amount, and
+			// meditating is still worth exactly double. The two resources are still decided
+			// independently, so a full health bar does not hold back shield regen or the reverse.
+			//
+			// A value already ABOVE the maximum is left alone rather than clamped down. Shield in
+			// particular can be raised past max_rpg_shield by other means, and quietly draining it
+			// here would be a new behaviour rather than a fix.
+			int health_gain = 0;
+			int shield_gain = 0;
+
+			if (client->ps.legsAnim == BOTH_MEDITATE) {
+				health_gain = health_regen_amount * 2;
+				shield_gain = shield_regen_amount * 2;
+			}
+			else if (rp_allow_passive_regen.integer) {
+				health_gain = health_regen_amount;
+				shield_gain = shield_regen_amount;
+			}
+
+			if (health_gain > 0 && ent->health < client->pers.max_rpg_health) {
+				ent->health += health_gain;
+
+				if (ent->health > client->pers.max_rpg_health) {
+					ent->health = client->pers.max_rpg_health;
 				}
 			}
-			if ((client->ps.stats[STAT_ARMOR] + shield_regen_amount) <= client->pers.max_rpg_shield){
-				if (client->ps.legsAnim == BOTH_MEDITATE) {
-					client->ps.stats[STAT_ARMOR] += shield_regen_amount * 2;
-				}
-				else {
-					if (rp_allow_passive_regen.integer) {
-						client->ps.stats[STAT_ARMOR] += shield_regen_amount;
-					}
+
+			if (shield_gain > 0 && client->ps.stats[STAT_ARMOR] < client->pers.max_rpg_shield) {
+				client->ps.stats[STAT_ARMOR] += shield_gain;
+
+				if (client->ps.stats[STAT_ARMOR] > client->pers.max_rpg_shield) {
+					client->ps.stats[STAT_ARMOR] = client->pers.max_rpg_shield;
 				}
 			}
 		}
 
 
-		if (zyk_vote_timer.integer > 0 && client->sess.vote_timer > 0)
+		if (rp_vote_timer.integer > 0 && client->sess.vote_timer > 0)
 		{ // zyk: countdown of the vote timer
 			client->sess.vote_timer--;
-		}
-
-		//GalaxyRP (Alex): [Death System] This timer represents the time that a player has left until they can get up from being downed.
-		if (client->downedTime)
-		{
-			if (client->downedTime <= rp_downed_timer.integer)
-			{
-				trap->SendServerCommand(ent->s.number, va("cp \"^1You are downed.\nTime Remaining: %d\"", client->downedTime));
-			}
-
-
-			client->downedTime--;
-
-			//GalaxyRP (Alex): [Death System] Not paralyzed anymore, means someone else helped you (or you helped yourself with admin permission. Set downed timer to 0 to remove message.
-			if (!(ent->client->pers.player_statuses & (1 << 6))) {
-				client->downedTime = 0;
-			}
-		}
-		else {
-			//GalaxyRP (Alex): [Death System] Can get up by themselves, but haven't yet.
-			if (ent->client->pers.player_statuses & (1 << 6)){
-				trap->SendServerCommand(ent->s.number, va("cp \"^1You are downed.\n^2You may get up by using ^3/getup\n^2Alternatively, someone else can do ^3/helpup ^3%s.\"", client->pers.netname_nocolor));
-			}
 		}
 
 		// Tr!Force: [Motd] Show server motd
 		if (client->motdTime)
 		{
-			if (client->motdTime <= zyk_screen_message_timer.integer)
+			if (client->motdTime <= rp_screen_message_timer.integer)
 			{
-				RPMod_StringEscape(zyk_screen_message.string, serverMotd, MAX_STRING_CHARS);
+				RPMod_StringEscape(rp_screen_message.string, serverMotd, MAX_STRING_CHARS);
 				trap->SendServerCommand(ent->s.number, va("cp \"%s\nTime: %d\"", serverMotd, client->motdTime));
 			}
 			
@@ -1091,81 +1659,14 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 		}
 	}
 
-	if (client->pers.send_event_timer > level.time && client->pers.send_event_interval < level.time)
-	{
-		client->pers.send_event_interval = level.time + 100;
-
-		if (client->pers.player_statuses & (1 << 15))
-		{ // zyk: Immunity Power
-			G_AddEvent(ent, EV_USE_ITEM13, 101);
-
-			client->pers.player_statuses &= ~(1 << 15);
-		}
-		else if (client->pers.player_statuses & (1 << 16))
-		{ // zyk: Ultra Strength
-			G_AddEvent(ent, EV_USE_ITEM13, 102);
-
-			client->pers.player_statuses &= ~(1 << 16);
-		}
-		else if (client->pers.player_statuses & (1 << 17))
-		{ // zyk: Ultra Resistance
-			G_AddEvent(ent, EV_USE_ITEM13, 103);
-
-			client->pers.player_statuses &= ~(1 << 17);
-		}
-		else if (!(client->pers.player_statuses & (1 << 14)))
-		{
-			int scaled_magic_power = ((float)client->pers.magic_power/zyk_max_magic_power(ent)) * 100.0;
-
-			G_AddEvent(ent, EV_USE_ITEM13, scaled_magic_power);
-
-			client->pers.player_statuses |= (1 << 14);
-		}
-		else if (!(client->pers.player_statuses & (1 << 2)))
-		{ // zyk: send this event after some seconds in map and if the player did not received this event yet
-			// must wait some seconds because after a map change, sometimes the event is not received by the client-side game right away
-			if (client->sess.amrpgmode == 2 && client->pers.rpg_class == 2 && client->pers.secrets_found & (1 << 1))
-			{
-				G_AddEvent(ent, EV_ITEMUSEFAIL, 5);
-			}
-			else // zyk: removing rpg stuff from client-side game
-				G_AddEvent(ent, EV_ITEMUSEFAIL, 6);
-
-			client->pers.player_statuses |= (1 << 2);
-		}
-		else if (!(client->pers.player_statuses & (1 << 3)))
-		{
-			// zyk: event to set the blue jetpack flame
-			if (client->sess.amrpgmode == 2 && client->pers.skill_levels[34] == 3)
-				G_AddEvent(ent, EV_ITEMUSEFAIL, 7);
-			else
-				G_AddEvent(ent, EV_ITEMUSEFAIL, 8);
-
-			client->pers.player_statuses |= (1 << 3);
-		}
-		else if (!(client->pers.player_statuses & (1 << 7)))
-		{ // zyk: tells the RPG class to the client-side mod to render the Force Shield effect and the resistance shield
-			if (client->sess.amrpgmode == 2)
-				G_AddEvent(ent, EV_USE_ITEM13, (104 + client->pers.rpg_class));
-			else
-				G_AddEvent(ent, EV_USE_ITEM13, 114);
-
-			client->pers.player_statuses |= (1 << 7);
-		}
-		else
-		{
-			// zyk: event to set the stealth attacker upgrade
-			if (client->sess.amrpgmode == 2 && client->pers.rpg_class == 5 && client->pers.secrets_found & (1 << 7))
-				G_AddEvent(ent, EV_ITEMUSEFAIL, 9);
-			else
-				G_AddEvent(ent, EV_ITEMUSEFAIL, 10);
-
-			client->pers.player_statuses &= ~(1 << 2);
-			client->pers.player_statuses &= ~(1 << 3);
-			client->pers.player_statuses &= ~(1 << 7);
-			client->pers.player_statuses &= ~(1 << 14);
-		}
-	}
+	// GalaxyRP fix: [Magic] the per-player event cascade used to run here: once a second for a few
+	// seconds after spawn, login and logout (send_rpg_events), it pushed the player's RPG state to
+	// the client as EV_USE_ITEM13 events -- the magic power bar, the Immunity / Ultra Strength /
+	// Ultra Resistance timers and finally the "is an RPG player" flag (parm 104 / 114) for the
+	// Force Shield draw. Every one of those readers is gone from cgame: the magic bars with the
+	// magic system, the flag with the rpg_class mirror. The cascade, its send_event_timer /
+	// send_event_interval fields, PLAYER_STATUS_SENT_FORCE_USER_EVENT and send_rpg_events() went
+	// with them.
 }
 
 /*
@@ -1312,6 +1813,11 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 					break;
 				}
 
+				if ( ent->flags & FL_NO_IMPACT_DMG )
+				{ // GalaxyRP: [Scripts] SET_NO_IMPACT_DAMAGE
+					break;
+				}
+
 				if (BG_InKnockDownOnly(ent->client->ps.legsAnim))
 				{
 					if (delta <= 14)
@@ -1373,6 +1879,21 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 			ent->client->dangerTime = level.time;
 			ent->client->ps.eFlags &= ~EF_INVULNERABLE;
 			ent->client->invulnerableTimer = 0;
+			// GalaxyRP fix: [Cloak Item] a saber swing has to break cloak like any other attack, and it
+			// was the one weapon that never did. The decloak hook lives in FireWeapon() (g_weapon.c),
+			// which is driven by EV_FIRE_WEAPON / EV_ALT_FIRE -- but PM_Weapon (bg_pmove.c) hands the
+			// saber to PM_WeaponLightsaber() and then returns via killAfterItem BEFORE the block that
+			// emits either of those, and PM_WeaponLightsaber only ever emits EV_SABER_ATTACK. So a
+			// cloaked player could swing, damage and kill while staying fully invisible. Decloaking on
+			// this event closes it at the one place the saber does announce itself, pair-aware so a
+			// mounted attacker takes their vehicle down with them.
+			// GalaxyRP fix: [Cloak Item] pair-gated, same as FireWeapon and G_Damage -- a rider swinging
+			// from the saddle must take a cloaked vehicle down with them even when the rider is not the
+			// cloaked half.
+			if ( Jedi_PairIsCloaked( ent ) )
+			{
+				Jedi_DecloakPair( ent );
+			}
 			break;
 
 		//rww - Note that these must be in the same order (ITEM#-wise) as they are in holdable_t
@@ -1611,36 +2132,75 @@ int return_idle_animation(int animation) {
 	return BOTH_STAND1IDLE1;
 }
 
-int get_idle_animation_for_style(gentity_t *ent) {
-	int idle_anim = 0;
+// DAJ_RP: [Saber Keys] one saber's idle for the current style: its own idleAnim* key for the style, else its plain
+// idleAnim (every style's fallback, as readyAnim and kataMove are for theirs); <= 0 when it has neither.
+static int G_RpSaberIdleAnim( const saberInfo_t *saber, int style )
+{
+	int anim;
 
-	switch (ent->client->ps.fd.saberAnimLevel)
+	switch (style)
 	{
 	case SS_FAST:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimBlue);
+		anim = saber->idleAnimBlue;
 		break;
 	case SS_MEDIUM:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimYellow);
+		anim = saber->idleAnimYellow;
 		break;
 	case SS_STRONG:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimRed);
+		anim = saber->idleAnimRed;
 		break;
 	case SS_DESANN:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimPurple);
+		anim = saber->idleAnimPurple;
 		break;
 	case SS_TAVION:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimGreen);
+		anim = saber->idleAnimGreen;
 		break;
 	case SS_DUAL:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimDual);
+		anim = saber->idleAnimDual;
 		break;
 	case SS_STAFF:
-		idle_anim = return_idle_animation(ent->client->saber->idleAnimStaff);
+		anim = saber->idleAnimStaff;
+		break;
+	default:
+		anim = -1;
 		break;
 	}
 
-	return idle_anim;
+	return (anim > 0) ? anim : saber->idleAnim;
+}
 
+// DAJ_RP: [Saber Keys] the first saber's idle (G_RpSaberIdleAnim), else the second saber's when there is one -- the
+// same first-then-second order the stance and kata keys use -- else the stock BOTH_STAND1IDLE1. A style outside the
+// list gets a plain key or the stock idle too (it used to get no idle at all).
+int get_idle_animation_for_style(gentity_t *ent) {
+	const int style = ent->client->ps.fd.saberAnimLevel;
+	int anim = G_RpSaberIdleAnim( &ent->client->saber[0], style );
+
+	if (anim <= 0 && ent->client->saber[1].model[0])
+	{
+		anim = G_RpSaberIdleAnim( &ent->client->saber[1], style );
+	}
+
+	return return_idle_animation(anim);
+}
+
+// DAJ_RP: [Saber Keys] an idle the player breaks out of when he moves, acts or is hurt: the stock ones, and whichever
+// G_CheckClientIdle itself last started (a .sab's idleAnim key can name any anim). That one was held to its end before,
+// the player gliding around in it, because only the stock ones were listed here. "timer" is that half's (legsTimer or
+// torsoTimer): the started one counts only while that half still holds it -- the same anim met any other way (a saber
+// stance such as Desann's BOTH_STAND9, an emote) is not an idle, and breaking out of it cut a saber's recovery short.
+static qboolean G_RpBreakableIdle( const gclient_t *client, int anim, int timer )
+{
+	switch ( anim )
+	{
+	case BOTH_STAND1IDLE1:
+	case BOTH_STAND2IDLE1:
+	case BOTH_STAND2IDLE2:
+	case BOTH_STAND3IDLE1:
+	case BOTH_STAND5IDLE1:
+		return qtrue;
+	}
+	return ( client->rpIdleAnim > 0 && anim == client->rpIdleAnim && timer > 0 ) ? qtrue : qfalse;
 }
 
 void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
@@ -1649,10 +2209,20 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 	qboolean actionPressed;
 	int buttons;
 
-	if ( !ent || !ent->client || ent->health <= 0 || (ent->client->ps.stats[STAT_HEALTH] <= 0 && !(ent->client->pers.player_statuses & (1 << 6))) ||
+	if ( !ent || !ent->client || ent->health <= 0 || (ent->client->ps.stats[STAT_HEALTH] <= 0 && !(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DOWNED))) ||
 		ent->client->sess.sessionTeam == TEAM_SPECTATOR || (ent->client->ps.pm_flags & PMF_FOLLOW))
 	{
 		return;
+	}
+
+	// DAJ_RP: [Saber Keys] forget the idle we started as soon as neither half still holds it (G_RpBreakableIdle): every
+	// frame, so one that ended while the player stood still is gone before he can light his saber into a stance using
+	// the same anim
+	if ( ent->client->rpIdleAnim
+		&& !( ent->client->ps.legsAnim == ent->client->rpIdleAnim && ent->client->ps.legsTimer > 0 )
+		&& !( ent->client->ps.torsoAnim == ent->client->rpIdleAnim && ent->client->ps.torsoTimer > 0 ) )
+	{
+		ent->client->rpIdleAnim = 0;
 	}
 
 	buttons = ucmd->buttons;
@@ -1664,7 +2234,7 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 	actionPressed = G_ActionButtonPressed(buttons);
 
 	// zyk: if the player is using an emote, keeps the emote
-	if (!ent->NPC && ent->client->pers.player_statuses & (1 << 1))
+	if (!ent->NPC && ent->client->pers.player_statuses & (1 << PLAYER_STATUS_EMOTE))
 	{
 		ent->client->ps.forceHandExtendTime = level.time + 1000;
 	}
@@ -1691,9 +2261,9 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 		qboolean brokeOut = qfalse;
 
 		// zyk: if the player is using an emote, removes it
-		if (!ent->NPC && ent->client->pers.player_statuses & (1 << 1) && actionPressed == qtrue)
+		if (!ent->NPC && ent->client->pers.player_statuses & (1 << PLAYER_STATUS_EMOTE) && actionPressed == qtrue)
 		{
-			ent->client->pers.player_statuses &= ~(1 << 1);
+			ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_EMOTE);
 			ent->client->ps.forceHandExtendTime = level.time;
 		}
 
@@ -1712,29 +2282,22 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 			|| (ent->client->ps.weapon != ent->client->pers.cmd.weapon && ent->s.eType != ET_NPC))
 		{
 			//if in an idle, break out
-			switch ( ent->client->ps.legsAnim )
+			// DAJ_RP: [Saber Keys] the stock idles and the one we started (G_RpBreakableIdle)
+			if ( G_RpBreakableIdle( ent->client, ent->client->ps.legsAnim, ent->client->ps.legsTimer ) )
 			{
-			case BOTH_STAND1IDLE1:
-			case BOTH_STAND2IDLE1:
-			case BOTH_STAND2IDLE2:
-			case BOTH_STAND3IDLE1:
-			case BOTH_STAND5IDLE1:
 				ent->client->ps.legsTimer = 0;
 				brokeOut = qtrue;
-				break;
 			}
-			switch ( ent->client->ps.torsoAnim )
+			if ( G_RpBreakableIdle( ent->client, ent->client->ps.torsoAnim, ent->client->ps.torsoTimer ) )
 			{
-			case BOTH_STAND1IDLE1:
-			case BOTH_STAND2IDLE1:
-			case BOTH_STAND2IDLE2:
-			case BOTH_STAND3IDLE1:
-			case BOTH_STAND5IDLE1:
 				ent->client->ps.torsoTimer = 0;
 				ent->client->ps.weaponTime = 0;
 				ent->client->ps.saberMove = LS_READY;
 				brokeOut = qtrue;
-				break;
+			}
+			if ( brokeOut )
+			{
+				ent->client->rpIdleAnim = 0;
 			}
 		}
 		//
@@ -1745,14 +2308,12 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 			ent->client->idleTime = level.time;
 		}
 
-		if (ent->client->sess.amrpgmode == 2 && ent->client->pers.can_play_quest == 1 && 
-			(actionPressed || ucmd->forwardmove || ucmd->rightmove || ucmd->upmove ||
-			!G_StandingAnim(ent->client->ps.legsAnim) || (ent->client->ps.weaponstate != WEAPON_READY && ent->client->ps.weapon != WP_SABER) || 
-			(ent->client->ps.weaponTime > 0 && ent->client->ps.weapon == WP_SABER) || 
-			 ent->client->ps.weaponstate == WEAPON_CHARGING || ent->client->ps.weaponstate == WEAPON_CHARGING_ALT))
-		{ // zyk: in these situations, player in rpg is no longer afk
-			ent->client->pers.quest_afk_timer = level.time + zyk_quest_afk_timer.integer;
-		}
+		// GalaxyRP fix: [Cvars] this used to refresh pers.quest_afk_timer (via zyk_quest_afk_timer,
+		// now removed) whenever a player in the general quest system was active. That system is
+		// entirely disabled now (quest_get_new_player, its sole entry point, was deleted as
+		// unreachable dead code -- see the GalaxyRP fix comment on its old location in g_cmds.c) and
+		// can_play_quest can no longer become 1 anywhere in the codebase, so this block was dead in
+		// practice and has been removed.
 
 		if (brokeOut &&
 			(ent->client->ps.weaponstate == WEAPON_CHARGING || ent->client->ps.weaponstate == WEAPON_CHARGING_ALT))
@@ -1791,6 +2352,7 @@ void G_CheckClientIdle( gentity_t *ent, usercmd_t *ucmd )
 		if ( /*PM_HasAnimation( ent, idleAnim )*/idleAnim > 0 && idleAnim < MAX_ANIMATIONS )
 		{
 			G_SetAnim(ent, ucmd, SETANIM_BOTH, idleAnim, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD, 0);
+			ent->client->rpIdleAnim = idleAnim;	// DAJ_RP: [Saber Keys] so we can break out of it (G_RpBreakableIdle)
 
 			//don't idle again after this anim for a while
 			//ent->client->idleTime = level.time + PM_AnimLength( ent->client->clientInfo.animFileIndex, (animNumber_t)idleAnim ) + Q_irand( 0, 2000 );
@@ -2275,78 +2837,12 @@ void G_SetTauntAnim( gentity_t *ent, int taunt )
 	}
 }
 
-// zyk: each client frame must make the Fast Dash ability user faster and knockdown targets
-extern qboolean zyk_unique_ability_can_hit_target(gentity_t *attacker, gentity_t *target);
-extern void zyk_force_dash_effect(gentity_t *ent);
-void zyk_do_force_dash(gentity_t *ent)
-{
-	vec3_t	forward, dir;
-	int			i, num;
-	int			touch[MAX_GENTITIES];
-	gentity_t	*hit;
-	vec3_t		mins, maxs;
-	vec3_t	range = { 30, 30, 48 };
-
-	if (ent->client->pers.quest_power_status & (1 << 2))
-	{ // zyk: hit by Time Power or knocked down. Stop Dash
-		return;
-	}
-
-	if (ent->health < 1)
-	{ // zyk: if player dies, stop dash
-		return;
-	}
-
-	// zyk: make player dash towards the direction he is looking at
-	VectorCopy(ent->client->ps.viewangles, dir);
-	AngleVectors(dir, forward, NULL, NULL);
-	VectorNormalize(forward);
-	VectorScale(forward, 2.7 * ent->client->ps.speed, forward);
-	VectorCopy(forward, ent->client->ps.velocity);
-
-	if (ent->client->pers.fast_dash_timer < level.time)
-	{
-		ent->client->pers.fast_dash_timer = level.time + 100;
-
-		zyk_force_dash_effect(ent);
-
-		VectorSubtract(ent->client->ps.origin, range, mins);
-		VectorAdd(ent->client->ps.origin, range, maxs);
-
-		num = trap->EntitiesInBox(mins, maxs, touch, MAX_GENTITIES);
-
-		for (i = 0; i < num; i++)
-		{
-			hit = &g_entities[touch[i]];
-
-			if (hit && hit != ent && hit->client && zyk_unique_ability_can_hit_target(ent, hit))
-			{ // zyk: Fast Dash ability knocks target down
-				vec3_t target_dir;
-				int target_knockdown_scale = 500;
-
-				VectorSubtract(hit->client->ps.origin, ent->client->ps.origin, target_dir);
-				VectorNormalize(target_dir);
-
-				// zyk: if using Meditate taunt, remove it
-				if (hit->client->ps.legsAnim == BOTH_MEDITATE && hit->client->ps.torsoAnim == BOTH_MEDITATE)
-				{
-					hit->client->ps.legsAnim = hit->client->ps.torsoAnim = BOTH_MEDITATE_END;
-				}
-
-				hit->client->ps.velocity[0] = target_dir[0] * target_knockdown_scale;
-				hit->client->ps.velocity[1] = target_dir[1] * target_knockdown_scale;
-				hit->client->ps.velocity[2] = 250;
-
-				hit->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-				hit->client->ps.forceHandExtendTime = level.time + 1000;
-				hit->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
-				hit->client->ps.quickerGetup = qtrue;
-
-				G_Damage(hit, ent, ent, NULL, NULL, 10, DAMAGE_NO_ARMOR, MOD_UNKNOWN);
-			}
-		}
-	}
-}
+// GalaxyRP fix: [Magic] zyk_do_force_dash() used to be here -- the per-frame half of the Fast Dash
+// ability, which accelerated the user and knocked down anyone it passed through. It had no callers
+// anywhere in the tree, and it was the only caller of zyk_force_dash_effect() (g_main.c) and the
+// only reader of pers.fast_dash_timer; all three have gone together. The two externs above it went
+// with it; zyk_unique_ability_can_hit_target() itself outlived them for a while and has since been
+// deleted with the magic effect functions.
 
 /*
 ==============
@@ -2360,15 +2856,240 @@ once for each server frame, which makes for smooth demo recording.
 ==============
 */
 extern void Boba_FlyStop( gentity_t *self );
-extern void zyk_show_magic_master_powers(gentity_t *ent, qboolean next_power);
-extern void zyk_show_left_magic_master_powers(gentity_t *ent, qboolean next_power);
-extern void zyk_show_right_magic_master_powers(gentity_t *ent, qboolean next_power);
-extern void zyk_unique_boost(gentity_t *ent);
+// GalaxyRP fix: [Magic] removed zyk_show_magic_master_powers()/zyk_show_left_magic_master_powers()/
+// zyk_show_right_magic_master_powers() externs here — all three removed as dead, along with
+// magic_master_has_this_power() and their other helpers (see g_main.c)
+// GalaxyRP fix: [Quests] removed zyk_unique_boost() extern here — function removed as dead (see g_cmds.c)
 extern void TossClientWeapon(gentity_t *self, vec3_t direction, float speed);
 extern qboolean saberKnockOutOfHand(gentity_t *saberent, gentity_t *saberOwner, vec3_t velocity);
-extern qboolean zyk_can_use_unique(gentity_t *ent);
+// GalaxyRP fix: [Skills] removed zyk_can_use_unique() extern here — function removed as dead along
+// with Cmd_Unique_f and the GENCMD_ENGAGE_DUEL Unique Skill branch above (see g_cmds.c)
 extern qboolean zyk_can_hit_target(gentity_t *attacker, gentity_t *target);
-extern qboolean zyk_can_hit_boss_battle_target(gentity_t *attacker, gentity_t *target);
+// GalaxyRP fix: [Guardian] removed zyk_can_hit_boss_battle_target() extern here — function removed
+// as dead (see g_main.c); it was a stub always returning qtrue.
+/*
+========================================================================================================
+GalaxyRP: [Grapple Hook] -- the gates and the per-frame bookkeeping.
+
+Ported from TaystJK (g_active.c: CanGrapple, CanFireGrapple, and the two "CHUNK" blocks in
+ClientThink_real). Their racemode/movement-style/Tribes tests are gone; ours are added. Three
+questions, asked in this order every frame:
+
+  RP_HookMayStayOut  -- may this player have a hook out AT ALL right now? No: it is freed. This is
+                        where the account (RP_GrappleAllowed), death, spectating, downed, private
+                        duels, mini-games, vehicles and emplaced guns are. Each of those also has
+                        its own call to Weapon_HookFree() where the state is entered, so a hook
+                        never survives even one frame into them; this is the net under those.
+  RP_CanKeepHook     -- given it may stay out, may it PULL this frame? No: PMF_GRAPPLE is lowered
+                        but the hook stays parked. Rolls and special jumps, as in TaystJK: the pull
+                        pauses through them and resumes.
+  RP_CanFireHook     -- may a new hook be fired? RP_CanKeepHook plus the jetpack being off and the
+                        saber idle, as in TaystJK (a hook fired mid-swing is a hook fired into your
+                        own blade).
+========================================================================================================
+*/
+extern qboolean duel_tournament_is_duelist( gentity_t *ent );	// g_main.c
+
+qboolean RP_HookMayStayOut( gentity_t *ent )
+{
+	if ( !ent || !ent->client )
+		return qfalse;
+	if ( !RP_GrappleAllowed( ent ) )
+		return qfalse;
+	if ( ent->client->ps.pm_type == PM_DEAD || ent->health <= 0 )
+		return qfalse;
+	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR || ent->client->tempSpectate >= level.time )
+		return qfalse;
+	if ( ent->client->ps.duelInProgress )
+		return qfalse;
+	if ( G_PlayerIsDowned( ent ) )
+		return qfalse;
+	if ( ent->client->ps.m_iVehicleNum || ent->client->ps.emplacedIndex )
+		return qfalse;
+	if ( level.duel_tournament_mode == 4 && duel_tournament_is_duelist( ent ) )
+		return qfalse;
+	if ( level.melee_mode > 0 && level.melee_players[ent->s.number] != -1 )
+		return qfalse;
+	return qtrue;
+}
+
+qboolean RP_CanKeepHook( gentity_t *ent )
+{
+	if ( !RP_HookMayStayOut( ent ) )
+		return qfalse;
+	if ( BG_InRoll( &ent->client->ps, ent->client->ps.legsAnim ) )
+		return qfalse;
+	if ( BG_InSpecialJump( ent->client->ps.legsAnim ) )
+		return qfalse;
+	return qtrue;
+}
+
+qboolean RP_CanFireHook( gentity_t *ent )
+{
+	if ( !RP_CanKeepHook( ent ) )
+		return qfalse;
+	if ( ent->client->jetPackOn )
+		return qfalse;
+	if ( !BG_SaberInIdle( ent->client->ps.saberMove ) )
+		return qfalse;
+	return qtrue;
+}
+
+/*
+==================
+RP_JumpKickLand
+
+GalaxyRP: [Jump Kick] the jump kick -- jump, then jump again with forward held next to a player or NPC
+to run up them and flip off. PM_CheckJump() (bg_pmove.c) finds the target and leaves its number in
+ps.forceKickFlip; this does the rest, once, in ClientThink_real(). It was written out inline there and
+is unchanged in who may kick whom: the team, private duel, duel tournament, melee arena and noclip
+rules (OnSameTeam, zyk_can_hit_target) all still apply, and an ally NPC counts as a teammate in FFA.
+
+What changed, and why:
+
+- Damage is rp_melee_jump_kick_damage (20 shipped), not 5% of the kicker's speed. That made a kick
+  anything from about 10 to 28 depending on how the jump happened to be going -- 20 is the middle of
+  it. G_Damage() goes on to scale it exactly as it did before, as for any melee hit: the Melee skill,
+  Force Rage, the kicker's maximum health and where it lands (g_locationBasedDamage). It still ignores
+  shields (DAMAGE_NO_ARMOR), as it always has.
+- The push follows the way the kicker faces: RP_JUMP_KICK_PUSH forward and RP_JUMP_KICK_LIFT up. It
+  used to be the reverse of the kicker's own velocity. At Jump 2 that is the same direction and, the
+  arithmetic cancelling, the same 300 units a second give or take rounding -- but at Jump 3 and above
+  the flip off the target leaves the kicker going straight up, so the "push" was straight down and
+  the target was only lifted. (Stock JKA never kicked at Jump 3; the Zyk mod turned it on.)
+- Kill credit is given whenever the kick lands. It used to be set only in the branch that pushed;
+  G_Damage() covered most of the rest, but not a hit without knockback, so a target attacking in red
+  stance that takes no knockback (FL_NO_KNOCKBACK) could be kicked off a ledge with nobody credited --
+  and with the change below, protected targets and large NPCs take no knockback from a kick at all.
+  The window is unchanged at five seconds.
+- No push or knockdown for a target the damage cannot touch either: spawn protection still running,
+  or /god (see RP_JumpKickProtected), as JA++ does. Such a target used to take no damage and still be
+  thrown and floored.
+- No push or knockdown for vehicles and large NPCs (RP_JumpKickImmovable). They still take the damage.
+  For both of these the damage's own knockback is off as well (DAMAGE_NO_KNOCKBACK). Every other
+  target still gets that small shove from the hit, as before -- it is all a target already on the
+  ground, or attacking in red stance, receives.
+- The target must have health above 0, not merely other than 0.
+
+Unchanged: the 30% knockdown chance; no push or knockdown on a target attacking in red stance, already
+knocked down -- which a downed or admin-paralysed player always is -- riding, or on an emplaced gun.
+==================
+*/
+#define RP_JUMP_KICK_PUSH	300.0f
+#define RP_JUMP_KICK_LIFT	200.0f
+
+// spawn protection still running, or /god -- the two G_Damage() checks that stop a kick's damage. Read
+// the same way here: godmode does not protect an NPC there, and protection whose time is up does not
+// count (G_Damage clears the flag itself the next time it is hit).
+static qboolean RP_JumpKickProtected( const gentity_t *target )
+{
+	if ( (target->flags & FL_GODMODE) && target->s.eType != ET_NPC )
+	{
+		return qtrue;
+	}
+
+	if ( (target->client->ps.eFlags & EF_INVULNERABLE) && target->client->invulnerableTimer > level.time )
+	{
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
+// vehicles, and the NPCs Force Push already will not move (AT-ST, Galak's mech, the rancor) plus the
+// wampa: kicked, they take the damage and stay where they are.
+static qboolean RP_JumpKickImmovable( const gentity_t *target )
+{
+	if ( target->s.eType != ET_NPC )
+	{
+		return qfalse;
+	}
+
+	switch ( target->client->NPC_class )
+	{
+	case CLASS_VEHICLE:
+	case CLASS_ATST:
+	case CLASS_GALAKMECH:
+	case CLASS_RANCOR:
+	case CLASS_WAMPA:
+		return qtrue;
+	default:
+		return qfalse;
+	}
+}
+
+static void RP_JumpKickLand( gentity_t *ent )
+{
+	gclient_t *client = ent->client;
+	gentity_t *faceKicked = &g_entities[client->ps.forceKickFlip-1];
+	qboolean protectedTarget = qfalse;
+	qboolean immovable = qfalse;
+	vec3_t fwdAngles, pushDir;
+
+	// GalaxyRP fix: [Guardian] dropped the zyk_can_hit_boss_battle_target(ent, faceKicked) conjunct
+	// here — the function was a stub always returning qtrue.
+	if (!faceKicked->client || (OnSameTeam(ent, faceKicked) && !g_friendlyFire.integer) ||
+		(faceKicked->client->ps.duelInProgress && faceKicked->client->ps.duelIndex != ent->s.number) ||
+		(ent->client->ps.duelInProgress && ent->client->ps.duelIndex != faceKicked->s.number) ||
+		!zyk_can_hit_target(ent, faceKicked))
+	{ // zyk: also validates if we can hit this target
+		return;
+	}
+
+	if ( faceKicked->health <= 0 || !faceKicked->takedamage )
+	{
+		return;
+	}
+
+	// judged before the damage, which may itself knock the target down
+	protectedTarget = RP_JumpKickProtected( faceKicked );
+	immovable = RP_JumpKickImmovable( faceKicked );
+
+	VectorSet( fwdAngles, 0, client->ps.viewangles[YAW], 0 );
+	AngleVectors( fwdAngles, pushDir, NULL, NULL );
+
+	// no knockback from the damage either for those two: G_Damage() adds it before it looks at spawn
+	// protection or godmode, so a protected target would still be nudged by a hit it takes nothing from
+	G_Damage( faceKicked, ent, ent, pushDir, client->ps.origin, rp_melee_jump_kick_damage.integer,
+		(protectedTarget || immovable) ? (DAMAGE_NO_ARMOR|DAMAGE_NO_KNOCKBACK) : DAMAGE_NO_ARMOR, MOD_MELEE );
+
+	// kill credit, whatever else happens below. G_Damage() gives it too whenever the hit has knockback
+	// (and 25 seconds for a vehicle), so this matters where it has none; it never shortens a longer
+	// credit the kicker already holds. Not on a target the kick has just killed: the credit is for a
+	// death that comes later, and there is none to come.
+	if ( faceKicked->health > 0 &&
+		( faceKicked->client->ps.otherKiller != ent->s.number || faceKicked->client->ps.otherKillerTime < level.time + 5000 ) )
+	{
+		faceKicked->client->ps.otherKiller = ent->s.number;
+		faceKicked->client->ps.otherKillerTime = level.time + 5000;
+		faceKicked->client->ps.otherKillerDebounceTime = level.time + 100;
+	}
+
+	if ( !protectedTarget && !immovable &&
+		( faceKicked->client->ps.weapon != WP_SABER ||
+		  faceKicked->client->ps.fd.saberAnimLevel != FORCE_LEVEL_3 ||
+		  (!BG_SaberInAttack(faceKicked->client->ps.saberMove) && !PM_SaberInStart(faceKicked->client->ps.saberMove) && !PM_SaberInReturn(faceKicked->client->ps.saberMove) && !PM_SaberInTransition(faceKicked->client->ps.saberMove)) ) )
+	{
+		if (faceKicked->health > 0 &&
+			faceKicked->client->ps.stats[STAT_HEALTH] > 0 &&
+			faceKicked->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN)
+		{
+			if (BG_KnockDownable(&faceKicked->client->ps) && Q_irand(1, 10) <= 3)
+			{ //only actually knock over sometimes, but always do velocity hit
+				faceKicked->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
+				faceKicked->client->ps.forceHandExtendTime = level.time + 1100;
+				faceKicked->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
+			}
+
+			faceKicked->client->ps.velocity[0] = pushDir[0]*RP_JUMP_KICK_PUSH;
+			faceKicked->client->ps.velocity[1] = pushDir[1]*RP_JUMP_KICK_PUSH;
+			faceKicked->client->ps.velocity[2] = RP_JUMP_KICK_LIFT;
+		}
+	}
+
+	G_Sound( faceKicked, CHAN_AUTO, G_SoundIndex( va("sound/weapons/melee/punch%d", Q_irand(1, 4)) ) );
+}
+
 void ClientThink_real( gentity_t *ent ) {
 	gclient_t	*client;
 	pmove_t		pmove;
@@ -2390,6 +3111,54 @@ void ClientThink_real( gentity_t *ent ) {
 	// don't think if the client is not yet connected (and thus not yet spawned in)
 	if (client->pers.connected != CON_CONNECTED && !isNPC) {
 		return;
+	}
+
+	// GalaxyRP fix: [Model] fire any forced kill deferred by select_player_character()/
+	// select_account_and_default_character_data() (see pending_relog_kill_time's declaration in
+	// g_local.h for the full race this avoids) once the buffer window has elapsed.
+	//
+	// GalaxyRP fix: [Account] ...but only if the player is still in the world. The schedule is a
+	// decision taken 300ms ago by zyk_relog_kill_required(), which refuses a spectator outright --
+	// there is no advantage to take away from someone who is not playing. Nothing re-asked that
+	// question here, so a player who left the world inside the buffer window was killed anyway.
+	//
+	// rp_loginRequired made that the normal outcome of /logout rather than a corner case. The
+	// sequence: /logout schedules the respawn while the player is still on a team; ClientTimerActions()
+	// forces them to Spectator on the very next frame, and SetTeam() kills them on the way out as it
+	// does for any team change; then 300ms later this fired a SECOND kill on the spectator they had
+	// become. One /logout, two deaths -- two EV_OBITUARY broadcasts (SVF_BROADCAST, so the whole
+	// server saw it twice), two suicides on their record and two score penalties. The second death
+	// only landed at all because SpectatorThink() resets pm_type to PM_SPECTATOR on the frame after
+	// the move, clearing the PM_DEAD that would otherwise have made player_die() refuse it.
+	//
+	// The test below is the one from the spectator split further down, so "not in the world" means
+	// the same thing in both places. Deliberately NOT a full re-ask of zyk_relog_kill_required():
+	// that would also re-read rp_seamlesslogin, and a server flipping it inside those 300ms would
+	// retroactively cancel a respawn the command had already promised. Only the "did they leave the
+	// world" half can go stale in a way that makes the kill wrong, so only that half is re-checked.
+	// (This used to say "and the duel state" too -- zyk_relog_kill_required() no longer looks at a
+	// duel at all, because the account commands refuse a duellist before they ever reach it.)
+	//
+	// The timer is cleared either way, so a skipped kill cannot sit pending and fire later when the
+	// player rejoins a team, which would kill them on the spawn they just asked for.
+	if (client->pers.pending_relog_kill_time > 0 && level.time >= client->pers.pending_relog_kill_time)
+	{
+		extern void G_Kill(gentity_t* ent);
+
+		client->pers.pending_relog_kill_time = 0;
+
+		if (client->sess.sessionTeam != TEAM_SPECTATOR && client->tempSpectate < level.time)
+		{
+			// GalaxyRP fix: [Death System] bookkeeping, not a death -- see g_bookkeepingDeath in
+			// g_local.h. The respawn is the price an account command pays for being used mid-fight
+			// (see zyk_relog_kill_required, g_cmds.c): the player loses their position and their
+			// momentum, which is the part that bites. A scoreboard death on top would charge them
+			// for typing /login. G_Kill() hands the kill to the opponent when the player is
+			// duelling, so the flag has to bracket the call rather than sit inside either branch.
+			g_bookkeepingDeath = qtrue;
+			G_Kill(ent);
+			g_bookkeepingDeath = qfalse;
+		}
 	}
 
 	// This code was moved here from clientThink to fix a problem with g_synchronousClients
@@ -2560,7 +3329,10 @@ void ClientThink_real( gentity_t *ent ) {
 	}
 
 	// spectators don't do much
-	if ( client->sess.sessionTeam == TEAM_SPECTATOR || client->tempSpectate >= level.time ) {
+	// GalaxyRP fix: [NPC] real clients only. NPCTEAM_NEUTRAL and TEAM_SPECTATOR are both 3, and an
+	// NPC's sess.sessionTeam is read straight from its spawner's "team" key (NPC_spawn.c), so a
+	// neutral NPC spawned that way ran SpectatorThink() instead of moving.
+	if ( client->ps.clientNum < MAX_CLIENTS && ( client->sess.sessionTeam == TEAM_SPECTATOR || client->tempSpectate >= level.time ) ) {
 		if ( client->sess.spectatorState == SPECTATOR_SCOREBOARD ) {
 			return;
 		}
@@ -2604,11 +3376,74 @@ void ClientThink_real( gentity_t *ent ) {
 		client->ps.eFlags &= ~EF_JETPACK;
 	}
 
+	// GalaxyRP fix: [Skills] the blue jetpack exhaust flame used to be pushed to the client as an
+	// EV_ITEMUSEFAIL event (parm 7 on / 8 off) and cached there in cg.rpg_stuff / cg.zyk_rpg_stuff[].
+	// One push into a client-side cache had four separate failure modes: events ride the snapshot and
+	// are PVS-culled, so anyone who could not see the player during the ~3s window after their spawn
+	// never learned; nothing re-announced afterwards; the cache was only ever zeroed in CG_Init, so a
+	// reused client slot inherited the previous occupant's colour; and the render had to ask "is this
+	// me?" via cg.snap->ps.clientNum, which is the FOLLOWED player while spectating, so a spectator saw
+	// their own flame colour on whoever they were watching.
+	//
+	// Carrying it as an entity-state bit removes all four at once, because none of that machinery is
+	// left: the bit is in every snapshot for every player the client can see, it is recomputed here
+	// every frame rather than cached, and cg_players.c reads it off the same `cent` as the EF_JETPACK
+	// gate around it. Set unconditionally in both directions, so /skillup, /skilldown, login, logout
+	// and leaving RPG Mode all take effect on the next frame with nothing to resend.
+	if (client->sess.amrpgmode == 2 && client->pers.skill_levels[34] == 3)
+	{
+		client->ps.eFlags |= EF_RPG_JETPACK_UPGRADE;
+	}
+	else
+	{
+		client->ps.eFlags &= ~EF_RPG_JETPACK_UPGRADE;
+	}
+
+	// zyk: paralyzed by an admin. Keep him this way
+	// GalaxyRP fix: [Death System] hoisted out of the movetype chain below, and it now asserts the
+	// knockdown instead of only postponing its expiry.
+	//
+	// It used to sit in the innermost else of that chain -- not noclipping, not disintegrating, not
+	// dead, and not Force Gripped -- so any of those four states stopped it. And all it wrote was
+	// forceHandExtendTime, which keeps a downed player down only indirectly, by starving the get-up
+	// machine in WP_ForcePowersUpdate() (w_force.c) of its "forceHandExtendTime < level.time"
+	// condition. Half a second of lapse was enough for that machine to run, and G_SpecialRollGetup()
+	// reads the downed player's own movement keys: held in a Force Grip and shoved around, they
+	// rolled to their feet, and a second lapse carried them to HANDEXTEND_WEAPONREADY and full
+	// mobility while still flagged downed. Resuming the refresh afterwards held nothing, because
+	// forceHandExtend had already been changed and this never set it back.
+	//
+	// Writing all three fields makes the state self-repairing: whatever overwrote forceHandExtend is
+	// undone on the next think. That also clears up a long-standing cosmetic -- Force Grip's squeeze
+	// sets HANDEXTEND_CHOKE on its victim, which used to stick for the rest of the countdown, so a
+	// gripped player spent it choking instead of lying down. forceDodgeAnim 0 is the "still down"
+	// variant in bg_pmove.c's HANDEXTEND_KNOCKDOWN case (non-zero selects a get-up animation), and is
+	// what RP_EnterDownedState() sets on the way in.
+	//
+	// Running above the chain means this also applies while gripped, so the knockdown pose now wins
+	// over the choke pose. The real guarantee is the gate in WP_ForcePowersUpdate(); this is the
+	// repair that keeps the presentation honest and stops any single missed frame mattering.
+	if (client->pers.player_statuses & (1 << PLAYER_STATUS_DOWNED))
+	{
+		client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
+		client->ps.forceDodgeAnim = 0;
+		client->ps.forceHandExtendTime = level.time + 500;
+	}
+
+	// GalaxyRP fix: [Jetpack] a rider never has the jetpack on. Board() (g_vehicles.c) switches it off when a
+	// player gets in; this catches any other way into a vehicle. Left on, the rider kept its flames, sound and fuel
+	// drain until the fuel ran out -- and could not switch it off, since the use key, which toggles the jetpack,
+	// gets out of the vehicle instead (TryUse()). killJetFlags below then clears the flags this frame.
+	if ( client->jetPackOn && client->ps.m_iVehicleNum )
+	{
+		Jetpack_Off( ent );
+	}
+
 	if ( client->noclip ) {
 		client->ps.pm_type = PM_NOCLIP;
 	} else if ( client->ps.eFlags & EF_DISINTEGRATION ) {
 		client->ps.pm_type = PM_NOCLIP;
-	} else if ( client->ps.stats[STAT_HEALTH] <= 0 && !(ent->client->pers.player_statuses & (1 << 6))) {
+	} else if ( client->ps.stats[STAT_HEALTH] <= 0 && !(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DOWNED))) {
 		client->ps.pm_type = PM_DEAD;
 	} else {
 		if (client->ps.forceGripChangeMovetype)
@@ -2627,35 +3462,6 @@ void ClientThink_real( gentity_t *ent ) {
 			else
 			{
 				client->ps.pm_type = PM_NORMAL;
-			}
-
-			if (client->pers.quest_power_status & (1 << 2))
-			{ // zyk: player hit by Time Power
-				if (client->jetPackOn)
-				{
-					Jetpack_Off(ent);
-				}
-
-				if ( client->ps.saberHolstered < 2 )
-				{
-					client->ps.saberHolstered = 2;
-					if (client->saber[0].soundOff)
-					{
-						G_Sound(ent, CHAN_AUTO, client->saber[0].soundOff);
-					}
-					if (client->saber[1].soundOff &&
-						client->saber[1].model[0])
-					{
-						G_Sound(ent, CHAN_AUTO, client->saber[1].soundOff);
-					}
-					//prevent anything from being done for 400ms after holster
-					client->ps.weaponTime = 400;
-				}
-			}
-
-			if (client->pers.player_statuses & (1 << 6))
-			{ // zyk: paralyzed by an admin. Keep him this way
-				client->ps.forceHandExtendTime = level.time + 500;
 			}
 		}
 	}
@@ -2883,26 +3689,6 @@ void ClientThink_real( gentity_t *ent ) {
 			//ent->client->ps.speed = ent->client->ps.basespeed = NPC_GetRunSpeed( ent );
 		}
 
-		if (client->pers.quest_power_status & (1 << 6))
-		{ // zyk: hit by Slow Motion. Decrease speed
-			client->ps.speed /= 2;
-		}
-
-		if (client->pers.quest_power_status & (1 << 1))
-		{ // zyk: hit by Chaos Power. Decrease speed
-			client->ps.speed /= 2;
-		}
-
-		if (client->pers.quest_power_status & (1 << 2))
-		{ // zyk: hit by Time Power. Do not move at all
-			client->ps.speed = 0;
-		}
-		
-		if (client->pers.quest_power_status & (1 << 9))
-		{ // zyk: using Ultra Speed. Increase speed
-			client->ps.speed *= 2;
-		}
-
 		if (client->pers.stun_baton_less_speed_timer > level.time)
 		{ // zyk: stun baton 3/3 decreases speed
 			client->ps.speed /= 2;
@@ -2927,44 +3713,27 @@ void ClientThink_real( gentity_t *ent ) {
 			zyk_player_speed *= 0.2f;
 		}
 
-		if (client->pers.quest_power_status & (1 << 6))
-		{ // zyk: hit by Slow Motion. Decrease speed
-			zyk_player_speed /= 2;
-		}
-
-		if (client->pers.quest_power_status & (1 << 1))
-		{ // zyk: hit by Chaos Power. Decrease speed
-			zyk_player_speed /= 2;
-		}
-
-		if (client->pers.quest_power_status & (1 << 2))
-		{ // zyk: hit by Time Power. Do not move at all
-			zyk_player_speed = 0;
-		}
-		
-		if (client->pers.quest_power_status & (1 << 9))
-		{ // zyk: using Ultra Speed. Increase speed
-			zyk_player_speed *= 2;
-		}
-
 		if (client->pers.stun_baton_less_speed_timer > level.time)
 		{ // zyk: stun baton 3/3 decreases speed
 			zyk_player_speed /= 2;
 		}
 
 		// GalaxyRP (Alex): [Armor Skill] Armor reduces your movement based on your level. Better the armor, slower the wearer.
-		if (client->pers.skill_levels[56] > 0) 
-		{ 
+		// GalaxyRP fix: [Armor Skill] this ran unconditionally, unlike the matching damage-resistance
+		// half of this same skill in g_combat.c (which is correctly gated on amrpgmode == 2). Since
+		// skill_levels[] is never reset on logout, a player's last character's Armor level kept
+		// slowing them down indefinitely after /logout (even through /kill and respawn) until they
+		// logged into a character with Armor level 0. Added the same amrpgmode == 2 gate.
+		if (client->sess.amrpgmode == 2 && client->pers.skill_levels[56] > 0)
+		{
 			zyk_player_speed = zyk_player_speed - (client->pers.skill_levels[56] * zyk_player_speed * 0.1);
 		}
 
 		client->ps.speed = zyk_player_speed;
 		client->ps.basespeed = zyk_player_speed;
 
-		if (client->sess.amrpgmode == 2 && client->pers.rpg_class == 7 && client->pers.player_statuses & (1 << 23))
-		{ // zyk: using Force Dash
-			zyk_do_force_dash(ent);
-		}
+		// GalaxyRP fix: [Dead Code] removed the Force Dash trigger (rpg_class==7); pers.rpg_class
+		// is always 0 server-side, so this was unreachable.
 	}
 
 	if ( !ent->NPC || !(ent->NPC->aiFlags&NPCAI_CUSTOM_GRAVITY) )
@@ -2988,11 +3757,6 @@ void ClientThink_real( gentity_t *ent ) {
 			{
 				if (client->ps.eFlags2 & EF2_SHIP_DEATH)
 				{ //float there
-					VectorClear(client->ps.velocity);
-					client->ps.gravity = 1.0f;
-				}
-				else if (client->pers.quest_power_status & (1 << 2) && client->pers.quest_target2_timer > level.time)
-				{ // zyk: hit by Time Power
 					VectorClear(client->ps.velocity);
 					client->ps.gravity = 1.0f;
 				}
@@ -3037,7 +3801,15 @@ void ClientThink_real( gentity_t *ent ) {
 
 				// zyk: this will guarantee that the player has full health at start of the duel
 				ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
-				ent->client->ps.stats[STAT_ARMOR] = (int)ceil(((ent->client->pers.skill_levels[30] * 1.0) / 5) * ent->client->pers.max_rpg_health);
+				// GalaxyRP fix: [Duel] this used to apply the RPG Max Shield formula to everyone, with no
+				// amrpgmode check. skill_levels[] and max_rpg_health are never reset on logout, so a
+				// logged-out duellist got either 0 (never logged in on this connection) or a stale value
+				// carried over from whichever character they last played -- a private duel's starting
+				// shield depended on account history rather than on any setting. Gated now, and reading
+				// pers.max_rpg_shield rather than recomputing the formula inline: set_max_shield() in
+				// g_cmds.c keeps that field current on spawn, on level change and on every Max Shield
+				// /skillup, and computes exactly this expression.
+				ent->client->ps.stats[STAT_ARMOR] = (ent->client->sess.amrpgmode == 2) ? ent->client->pers.max_rpg_shield : rp_starting_shield.integer;
 			}
 
 			if (duelAgainst
@@ -3064,7 +3836,10 @@ void ClientThink_real( gentity_t *ent ) {
 
 				// zyk: this will guarantee that the player has full health at start of the duel TEST
 				duelAgainst->health = duelAgainst->client->ps.stats[STAT_MAX_HEALTH];
-				duelAgainst->client->ps.stats[STAT_ARMOR] = (int)ceil(((duelAgainst->client->pers.skill_levels[30] * 1.0) / 5) * duelAgainst->client->pers.max_rpg_health);
+				// GalaxyRP fix: [Duel] the opponent's side of the same fix applied to the challenger just
+				// above -- see that comment for why the ungated formula was wrong for a logged-out
+				// duellist. Both sides must stay identical or the two duellists enter on different rules.
+				duelAgainst->client->ps.stats[STAT_ARMOR] = (duelAgainst->client->sess.amrpgmode == 2) ? duelAgainst->client->pers.max_rpg_shield : rp_starting_shield.integer;
 			}
 		}
 		else
@@ -3082,7 +3857,7 @@ void ClientThink_real( gentity_t *ent ) {
 			ent->client->ps.duelInProgress = 0;
 			G_AddEvent(ent, EV_PRIVATE_DUEL, 0);
 		}
-		else if (duelAgainst->health < 1 || duelAgainst->client->ps.stats[STAT_HEALTH] < 1 || duelAgainst->client->pers.player_statuses & (1 << 6))
+		else if (duelAgainst->health < 1 || duelAgainst->client->ps.stats[STAT_HEALTH] < 1 || duelAgainst->client->pers.player_statuses & (1 << PLAYER_STATUS_DOWNED))
 		{
 			int old_health = ent->health;
 			int old_shield = ent->client->ps.stats[STAT_ARMOR];
@@ -3097,7 +3872,13 @@ void ClientThink_real( gentity_t *ent ) {
 			if (ent->health > 0 && ent->client->ps.stats[STAT_HEALTH] > 0)
 			{
 				ent->client->ps.stats[STAT_HEALTH] = ent->health = ent->client->ps.stats[STAT_MAX_HEALTH];
-				ent->client->ps.stats[STAT_ARMOR] = zyk_starting_shield.integer;
+				// GalaxyRP fix: [Duel] rp_starting_shield is the shield a LOGGED-OUT player spawns with;
+				// an RPG character's is pers.max_rpg_shield, from their Max Shield skill. This line
+				// handed the logged-out value to everyone, so an RPG duellist who WON came out of the
+				// duel with their shield reset to that cvar (0 in the shipped config) instead of the
+				// full shield the line above gives them in health -- winning a duel strictly cost them
+				// shield. Mirrors the two duel-start sites earlier in this function.
+				ent->client->ps.stats[STAT_ARMOR] = (ent->client->sess.amrpgmode == 2) ? ent->client->pers.max_rpg_shield : rp_starting_shield.integer;
 
 				if (g_spawnInvulnerability.integer)
 				{
@@ -3112,7 +3893,7 @@ void ClientThink_real( gentity_t *ent ) {
 			*/
 			//Private duel announcements are now made globally because we only want one duel at a time.
 			// zyk: now announce in console
-			if (ent->health > 0 && ent->client->ps.stats[STAT_HEALTH] > 0 && !(client->pers.player_statuses & (1 << 6)))
+			if (ent->health > 0 && ent->client->ps.stats[STAT_HEALTH] > 0 && !(client->pers.player_statuses & (1 << PLAYER_STATUS_DOWNED)))
 			{
 				trap->SendServerCommand( -1, va("print \"%s ^7%s %s^7, ending with ^1%d^7/^2%d^7!\n\"", ent->client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLDUELWINNER"), duelAgainst->client->pers.netname, old_health, old_shield) );
 			}
@@ -3129,7 +3910,7 @@ void ClientThink_real( gentity_t *ent ) {
 			VectorSubtract(ent->client->ps.origin, duelAgainst->client->ps.origin, vSub);
 			subLen = VectorLength(vSub);
 
-			if (subLen >= zyk_duel_radius.integer)
+			if (subLen >= rp_duel_radius.integer)
 			{
 				ent->client->ps.duelInProgress = 0;
 				duelAgainst->client->ps.duelInProgress = 0;
@@ -3334,6 +4115,28 @@ void ClientThink_real( gentity_t *ent ) {
 		ent->client->ps.heldByClient = 0;
 	}
 
+	// GalaxyRP: [Grapple Hook] the pull flag, decided fresh every frame from three facts: a hook is
+	// out, it has landed (its think is Weapon_HookThink, not the in-flight Weapon_HookFree timer),
+	// and the owner still qualifies. pm_flags is networked, so this one line is what the client's
+	// prediction runs the pull from. A hook whose owner may no longer have one out at all is freed
+	// here as well -- see RP_HookMayStayOut() above. Real players only: NPCs never fire one.
+	if ( ent->s.number < MAX_CLIENTS && ent->client )
+	{
+		if ( ent->client->hook && !RP_HookMayStayOut( ent ) )
+		{
+			Weapon_HookFree( ent->client->hook );
+		}
+
+		if ( ent->client->hook && ent->client->hook->think == Weapon_HookThink && RP_CanKeepHook( ent ) )
+		{
+			ent->client->ps.pm_flags |= PMF_GRAPPLE;
+		}
+		else
+		{
+			ent->client->ps.pm_flags &= ~PMF_GRAPPLE;
+		}
+	}
+
 	/*
 	if ( client->ps.powerups[PW_HASTE] ) {
 		client->ps.speed *= 1.3;
@@ -3443,7 +4246,7 @@ void ClientThink_real( gentity_t *ent ) {
 	else {
 		pmove.tracemask = MASK_PLAYERSOLID;
 
-		if (zyk_duel_no_collision.integer > 0)
+		if (rp_duel_no_collision.integer > 0)
 		{ // zyk: makes duelists not collide with other players
 			int j = 0;
 
@@ -3464,6 +4267,13 @@ void ClientThink_real( gentity_t *ent ) {
 			}
 		}
 	}
+	// GalaxyRP: [Phase] a phased player walks through bodies -- see RP_PhasePassesThrough(). Dead
+	// players already trace without CONTENTS_BODY; this only matters for the living.
+	if ( RP_PhasePassesThrough( ent ) )
+	{
+		pmove.tracemask &= ~CONTENTS_BODY;
+	}
+
 	pmove.trace = SV_PMTrace;
 	pmove.pointcontents = trap->PointContents;
 	pmove.debugLevel = g_debugMove.integer;
@@ -3684,13 +4494,54 @@ void ClientThink_real( gentity_t *ent ) {
 #endif
 	}
 
+	// GalaxyRP: [Grapple Hook] fire and release, from the usercmd bit a +button12 (or +grapple) bind
+	// produces. Edge-triggered: one hook per press, hookHasBeenFired being the latch, with
+	// g_hookFloodProtect ms between shots. Letting go of the button clears the latches and lowers
+	// the pull flag; the third test then frees the hook, which is what "release" means. The hook
+	// itself is not predicted -- the client sees it as an ordinary missile in the snapshot -- so
+	// none of this needs to be shared code. Real players only, like the flag above.
+	if ( ent->s.number < MAX_CLIENTS && ent->client )
+	{
+		if ( ( pmove.cmd.buttons & BUTTON_GRAPPLE ) &&
+			!ent->client->hookHasBeenFired &&
+			ent->client->hookFireTime < level.time - g_hookFloodProtect.integer &&
+			RP_CanFireHook( ent ) )
+		{
+			Weapon_HookFire( ent );
+			ent->client->hookHasBeenFired = qtrue;
+			ent->client->hookFireTime = level.time;
+		}
+
+		if ( !( pmove.cmd.buttons & BUTTON_GRAPPLE ) &&
+			ent->client->hookHasBeenFired &&
+			ent->client->fireHeld )
+		{
+			ent->client->fireHeld = qfalse;
+			ent->client->hookHasBeenFired = qfalse;
+			ent->client->ps.pm_flags &= ~PMF_GRAPPLE;
+		}
+
+		if ( ent->client->hook && !ent->client->fireHeld )
+		{
+			Weapon_HookFree( ent->client->hook );
+		}
+	}
+
 	if (ent->client->pers.no_attack_timer > level.time)
 	{ // zyk: player hit by No Attack ability
 		pmove.cmd.buttons &= ~(BUTTON_ATTACK);
 		pmove.cmd.buttons &= ~(BUTTON_ALT_ATTACK);
 	}
 
+	// GalaxyRP: [Phase] everyone else walks through phased bodies: hidden for exactly this call and
+	// put back straight after, before anything else in this function traces against them.
+	RP_PhaseHideBodies( ent );
 	Pmove (&pmove);
+	RP_PhaseRestoreBodies();
+
+	// GalaxyRP fix: [ICARUS] Pmove just counted the animation timers down; a script waiting on
+	// one of them is told now -- see RP_IcarusAnimTaskCheck()
+	RP_IcarusAnimTaskCheck( ent );
 
 	if (ent->client->solidHack)
 	{
@@ -3748,13 +4599,23 @@ void ClientThink_real( gentity_t *ent ) {
 	}
 
 	//GalaxyRP (Alex): [Combat] This is purely for switching saber styles. The delay between switching should be 190 ms.
+	// GalaxyRP fix: [gameplay] this used to gate on `ent->client->lastGenCmdTime - 110 < level.time`,
+	// reusing the shared lastGenCmdTime field that the generic_cmd debounce block below (~line 4212)
+	// resets to `level.time + 300` every time IT fires -- which, for a held-down SABERATTACKCYCLE
+	// input, only happens roughly every 300ms. In between those resets lastGenCmdTime stays fixed,
+	// so the old condition went true 190ms into that 300ms window and then stayed true for every
+	// single frame afterward (not just once), causing Cmd_SaberAttackCycle_f() to fire on every
+	// server frame for the remaining ~110ms instead of once every ~190ms as the comment above
+	// promises. Track this debounce with its own dedicated timestamp instead of borrowing one that
+	// belongs to unrelated commands, so a fire here always waits a genuine 190ms before firing again.
 	if (pmove.cmd.generic_cmd &&
-		(pmove.cmd.generic_cmd != ent->client->lastGenCmd || ent->client->lastGenCmdTime - 110 < level.time))
+		(pmove.cmd.generic_cmd != ent->client->lastGenCmd || ent->client->lastSaberAttackCycleTime < level.time))
 	{
 		switch (pmove.cmd.generic_cmd)
 		{
 			case GENCMD_SABERATTACKCYCLE:
 				Cmd_SaberAttackCycle_f(ent);
+				ent->client->lastSaberAttackCycleTime = level.time + 190;
 				break;
 		}
 	}
@@ -3768,430 +4629,29 @@ void ClientThink_real( gentity_t *ent ) {
 		{ //these are the only two where you wouldn't care about a delay between
 			if (ent->client->sess.amrpgmode == 2)
 			{
-				if (ent->client->pers.secrets_found & (1 << 0) && pmove.cmd.generic_cmd == GENCMD_SABERATTACKCYCLE && ent->client->ps.m_iVehicleNum)
-				{ // zyk: RPG Mode Cloak Item can cloak vehicles
-					if (!g_entities[ent->client->ps.m_iVehicleNum].client->ps.powerups[PW_CLOAKED])
-					{
-						Jedi_Cloak(&g_entities[ent->client->ps.m_iVehicleNum]);
-					}
-					else
-					{
-						Jedi_Decloak(&g_entities[ent->client->ps.m_iVehicleNum]);
-					}
-				}
+				// GalaxyRP fix: [Cloak Item] the vehicle-cloak trigger that used to live here (toggling
+				// vehicle+rider cloak on GENCMD_SABERATTACKCYCLE, gated on the Holdable Items Upgrade and
+				// requiring a saber equipped) has been removed completely -- it kept colliding with
+				// unrelated saber/weapon-control behavior on that same input (see the removed guard's own
+				// history: alt-fire cross-trigger concerns, then a real vehicle weapon-control regression
+				// when the saber-equipped guard was lifted). Vehicle-cloak is now its own dedicated
+				// "/vehicle_cloak" console command (Cmd_VehicleCloak_f in g_cmds.c) instead, which has no
+				// overlap with saber styles, weapon selection, or vehicle weapon-link toggling.
+				// DAJ_RP: [Cloak Item] that command is gated on Cloak Item level 2 now, not the upgrade.
 
-				if (pmove.cmd.generic_cmd == GENCMD_ENGAGE_DUEL && zyk_can_use_unique(ent) == qtrue)
-				{ // zyk: Unique Skill, used by each RPG class
-					if (ent->client->pers.unique_skill_timer < level.time && ent->client->pers.skill_levels[38] > 0)
-					{
-						if (ent->client->pers.rpg_class == 0)
-						{ // zyk: Free Warrior
-							if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer/4))
-							{
-								ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/4);
-
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1000;
-
-								// zyk: recovers hp, shield and mp
-								if ((ent->health + 25) < ent->client->pers.max_rpg_health)
-									ent->health += 25;
-								else
-									ent->health = ent->client->pers.max_rpg_health;
-
-								if ((ent->client->ps.stats[STAT_ARMOR] + 25) < ent->client->pers.max_rpg_shield)
-									ent->client->ps.stats[STAT_ARMOR] += 25;
-								else
-									ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
-
-								if ((ent->client->pers.magic_power + 25) < zyk_max_magic_power(ent))
-									ent->client->pers.magic_power += 25;
-								else
-									ent->client->pers.magic_power = zyk_max_magic_power(ent);
-
-								G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/boon.wav"));
-
-								send_rpg_events(2000);
-
-								ent->client->pers.unique_skill_timer = level.time + 50000;
-							}
-							else
-							{
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Unique Skill: ^7needs %d force to use it\"", (zyk_max_force_power.integer/4)));
-							}
-						}
-						else if (ent->client->pers.rpg_class == 1)
-						{ // zyk: Force User
-							if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer/4))
-							{
-								ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/4);
-
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 10000;
-								ent->client->pers.unique_skill_duration = level.time + 10000;
-
-								ent->client->pers.unique_skill_timer = level.time + 50000;
-							}
-							else
-							{
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Unique Skill: ^7needs %d force to use it\"", (zyk_max_force_power.integer/4)));
-							}
-						}
-						else if (ent->client->pers.rpg_class == 2)
-						{ // zyk: Bounty Hunter
-							if (ent->client->ps.ammo[AMMO_METAL_BOLTS] >= 2)
-							{
-								ent->client->ps.ammo[AMMO_METAL_BOLTS] -= 2;
-
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-								ent->client->pers.unique_skill_duration = level.time + 25000;
-
-								ent->client->pers.unique_skill_timer = level.time + 35000;
-							}
-							else
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^3Unique Skill: ^7needs 2 metal bolts ammo to use it\"");
-							}
-						}
-						else if (ent->client->pers.rpg_class == 3)
-						{ // zyk: Armored Soldier
-							if (ent->client->ps.ammo[AMMO_POWERCELL] >= 2)
-							{
-								ent->client->ps.ammo[AMMO_POWERCELL] -= 2;
-
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
-								ent->client->pers.unique_skill_duration = level.time + 15000;
-
-								ent->client->pers.unique_skill_timer = level.time + 30000;
-							}
-							else
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^3Unique Skill: ^7needs 2 power cell ammo to use it\"");
-							}
-						}
-						else if (ent->client->pers.rpg_class == 4)
-						{ // zyk: Monk
-							if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer/4))
-							{
-								int player_it = 0;
-
-								ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/4);
-
-								// zyk: disable grip of the enemy
-								for (player_it = 0; player_it < level.num_entities; player_it++)
-								{
-									gentity_t *player_ent = &g_entities[player_it];
-
-									if (ent->s.number != player_it && player_ent && player_ent->client && 
-										player_ent->client->ps.fd.forcePowersActive & (1 << FP_GRIP) && 
-										player_ent->client->ps.fd.forceGripEntityNum == ent->s.number)
-									{
-										WP_ForcePowerStop(player_ent, FP_GRIP);
-										break;
-									}
-								}
-
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
-								ent->client->pers.unique_skill_duration = level.time + 15000;
-
-								ent->client->pers.unique_skill_timer = level.time + 30000;
-							}
-							else
-							{
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Unique Skill: ^7needs %d force to use it\"", (zyk_max_force_power.integer/4)));
-							}
-						}
-						else if (ent->client->pers.rpg_class == 5)
-						{ // zyk: Stealth Attacker
-							if (ent->client->ps.ammo[AMMO_POWERCELL] >= 2)
-							{
-								ent->client->ps.ammo[AMMO_POWERCELL] -= 2;
-
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 500;
-								ent->client->pers.unique_skill_duration = level.time + 10000;
-
-								ent->client->pers.unique_skill_timer = level.time + 45000;
-							}
-							else
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^3Unique Skill: ^7needs 2 power cell ammo to use it\"");
-							}
-						}
-						else if (ent->client->pers.rpg_class == 6)
-						{ // zyk: Duelist
-							if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer/4))
-							{
-								int player_it = 0;
-
-								ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/4);
-
-								for (player_it = 0; player_it < level.num_entities; player_it++)
-								{
-									gentity_t *player_ent = &g_entities[player_it];
-
-									if (ent->s.number != player_it && player_ent && player_ent->client)
-									{
-										int player_distance = (int)Distance(ent->client->ps.origin,player_ent->client->ps.origin);
-
-										if (player_distance < 370)
-										{
-											int found = 0;
-
-											// zyk: allies will not be hit by this power
-											if (player_it < level.maxclients && zyk_is_ally(ent,player_ent) == qtrue)
-											{
-												found = 1;
-											}
-
-											if (player_it < level.maxclients && zyk_can_hit_target(ent, player_ent) == qfalse)
-											{
-												found = 1;
-											}
-
-											if (found == 0 && ent->client->pers.guardian_mode == player_ent->client->pers.guardian_mode)
-											{
-												if (!player_ent->NPC)
-												{ //disable jetpack temporarily
-													if (player_ent->client->jetPackOn)
-														Jetpack_Off(player_ent);
-													player_ent->client->jetPackToggleTime = level.time + 8000;
-													player_ent->client->ps.powerups[PW_QUAD] = level.time + 8000;
-												}
-												else if (player_ent->NPC && player_ent->client->NPC_class == CLASS_BOBAFETT)
-												{ // zyk: also disables npc jetpack
-													Boba_FlyStop(player_ent);
-													player_ent->client->ps.powerups[PW_QUAD] = level.time + 8000;
-												}
-
-												if (player_ent->client->ps.powerups[PW_CLOAKED] && 
-													!(player_ent->client->sess.amrpgmode == 2 && player_ent->client->pers.rpg_class == 5))
-												{ // zyk: disables cloak of enemies, except Stealth Attacker
-													Jedi_Decloak(player_ent);
-												}
-
-												if (player_ent->client->ps.fd.forcePowerMax > 0)
-												{ // zyk: disables force regen
-													player_ent->client->ps.powerups[PW_QUAD] = level.time + 8000;
-
-													if (player_ent->client->ps.fd.forcePowersActive & (1 << FP_SPEED))
-													{ // zyk: disables force Speed
-														WP_ForcePowerStop(player_ent, FP_SPEED);
-													}
-												}
-											}
-										}
-									}
-								}
-
-								// zyk: recovers some MP
-								if ((ent->client->pers.magic_power + 10) < zyk_max_magic_power(ent))
-									ent->client->pers.magic_power += 10;
-								else
-									ent->client->pers.magic_power = zyk_max_magic_power(ent);
-
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1000;
-
-								send_rpg_events(2000);
-
-								ent->client->pers.unique_skill_timer = level.time + 45000;
-							}
-							else
-							{
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Unique Skill: ^7needs %d force to use it\"", (zyk_max_force_power.integer/4)));
-							}
-						}
-						else if (ent->client->pers.rpg_class == 7)
-						{ // zyk: Force Gunner
-							if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer/4))
-							{
-								int zyk_it = 0;
-								gentity_t *this_ent = NULL;
-								vec3_t uorg, vecnorm, thispush_org, vel;
-
-								VectorCopy(ent->client->ps.origin, thispush_org);
-
-								VectorCopy(ent->client->ps.origin, uorg);
-								uorg[2] += 64;
-
-								VectorSubtract(uorg, thispush_org, vecnorm);
-								VectorNormalize(vecnorm);
-
-								for (zyk_it = 0; zyk_it < level.num_entities; zyk_it++)
-								{ // zyk: finds enemies nearby and disarms them
-									this_ent = &g_entities[zyk_it];
-
-									if (this_ent && this_ent->client && ent != this_ent && 
-										((zyk_it < MAX_CLIENTS && this_ent->client->ps.duelInProgress == qfalse) || 
-										(this_ent->NPC && this_ent->client->NPC_class != CLASS_VEHICLE)))
-									{ // zyk: does not disarm a vehicle
-										int player_distance = (int)Distance(ent->client->ps.origin,this_ent->client->ps.origin);
-
-										if (player_distance < 300)
-										{
-											int found = 0;
-
-											// zyk: allies will not be hit by this power
-											if (zyk_it < level.maxclients && zyk_is_ally(ent,this_ent) == qtrue)
-											{
-												found = 1;
-											}
-
-											if (zyk_it < level.maxclients && zyk_can_hit_target(ent, this_ent) == qfalse)
-											{
-												found = 1;
-											}
-
-											if (found == 0 && ent->client->pers.guardian_mode == this_ent->client->pers.guardian_mode)
-											{
-												if (this_ent->client->ps.weapon == WP_SABER)
-												{
-													vel[0] = vecnorm[0]*100;
-													vel[1] = vecnorm[1]*100;
-													vel[2] = vecnorm[2]*100;
-													saberKnockOutOfHand(&g_entities[this_ent->client->ps.saberEntityNum],this_ent,vel);
-												}
-												else
-												{
-													TossClientWeapon(this_ent, vecnorm, 200);
-												}
-											}
-										}
-									}
-								}
-
-								if (ent->client->pers.secrets_found & (1 << 8) && ent->client->ps.stats[STAT_ARMOR] < ent->client->pers.max_rpg_shield)
-								{ // zyk: Force Gunner Upgrade restores some shield by spending some force power
-									if ((ent->client->ps.stats[STAT_ARMOR] + 25) < ent->client->pers.max_rpg_shield)
-										ent->client->ps.stats[STAT_ARMOR] += 25;
-									else
-										ent->client->ps.stats[STAT_ARMOR] = ent->client->pers.max_rpg_shield;
-
-									G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/player/pickupshield.wav"));
-								}
-
-								ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/4);
-
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 1000;
-
-								ent->client->pers.unique_skill_timer = level.time + 40000;
-							}
-							else
-							{
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Unique Skill: ^7needs %d force to use it\"", (zyk_max_force_power.integer/4)));
-							}
-						}
-						else if (ent->client->pers.rpg_class == 8)
-						{ // zyk: Magic Master
-							if (ent->client->pers.magic_power >= 2)
-							{
-								ent->client->pers.magic_power -= 2;
-
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
-								ent->client->pers.unique_skill_duration = level.time + 15000;
-
-								send_rpg_events(2000);
-
-								ent->client->pers.unique_skill_timer = level.time + 50000;
-							}
-							else
-							{
-								trap->SendServerCommand( ent->s.number, "chat \"^3Unique Skill: ^7needs at least 2 MP to use it\"");
-							}
-						}
-						else if (ent->client->pers.rpg_class == 9)
-						{ // zyk: Force Guardian
-							if (ent->client->ps.fd.forcePower >= (zyk_max_force_power.integer/4))
-							{
-								ent->client->ps.fd.forcePower -= (zyk_max_force_power.integer/4);
-
-								ent->client->ps.powerups[PW_NEUTRALFLAG] = level.time + 15000;
-								ent->client->pers.unique_skill_duration = level.time + 15000;
-
-								ent->client->pers.unique_skill_timer = level.time + 50000;
-							}
-							else
-							{
-								trap->SendServerCommand( ent->s.number, va("chat \"^3Unique Skill: ^7needs %d force to use it\"", (zyk_max_force_power.integer/4)));
-							}
-						}
-
-						zyk_unique_boost(ent);
-					}
-					else if (ent->client->pers.skill_levels[38] > 0)
-					{ // zyk: still in cooldown time, shows the time left in chat
-						trap->SendServerCommand( ent->s.number, va("chat \"^3Unique Skill: ^7%d seconds left\"", ((ent->client->pers.unique_skill_timer - level.time)/1000)));
-					}
-				}
-				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_SEEING && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master, selects next power
-					// zyk: Magic Master can choose his power here
-					zyk_show_left_magic_master_powers(ent, qtrue);
-				}
-				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_SPEED && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master, selects previous power
-					// zyk: Magic Master can choose his power here
-					zyk_show_left_magic_master_powers(ent, qfalse);
-				}
-				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_PROTECT && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master, selects next power
-					// zyk: Magic Master can choose his power here
-					zyk_show_magic_master_powers(ent, qtrue);
-				}
-				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_HEAL && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master, selects previous power
-					// zyk: Magic Master can choose his power here
-					zyk_show_magic_master_powers(ent, qfalse);
-				}
-				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_DISTRACT && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master, selects next power
-					// zyk: Magic Master can choose his power here
-					zyk_show_right_magic_master_powers(ent, qtrue);
-				}
-				else if (pmove.cmd.generic_cmd == GENCMD_FORCE_ABSORB && ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-				{ // zyk: Magic Master, selects previous power
-					// zyk: Magic Master can choose his power here
-					zyk_show_right_magic_master_powers(ent, qfalse);
-				}
-				else if (pmove.cmd.generic_cmd == GENCMD_SABERATTACKCYCLE)
-				{ 
-					if (ent->client->pers.rpg_class == 2 && ent->client->pers.secrets_found & (1 << 1) && 
-						ent->client->ps.droneExistTime >= (level.time + 5000))
-					{ // zyk: Bounty Hunter Upgrade allows getting seeker drone back with saber style key
-						ent->client->ps.droneExistTime = 0;
-						ent->client->ps.eFlags &= ~EF_SEEKERDRONE;
-						ent->client->ps.genericEnemyIndex = -1;
-						ent->client->ps.stats[STAT_HOLDABLE_ITEMS] |= (1 << HI_SEEKER);
-
-						G_Sound(ent, CHAN_AUTO, G_SoundIndex("sound/weapons/w_pkup.wav"));
-					}
-					else if (ent->client->ps.weapon == WP_MELEE && ent->client->pers.rpg_class == 8)
-					{ // zyk: Magic Master Fist attacks
-						if (ent->client->sess.magic_fist_selection < 4 && ent->client->sess.magic_fist_selection < ent->client->pers.skill_levels[55])
-							ent->client->sess.magic_fist_selection++;
-						else if (ent->client->sess.magic_fist_selection == 4)
-							ent->client->sess.magic_fist_selection = 0;
-						else
-							ent->client->sess.magic_fist_selection = 4;
-
-						if (ent->client->sess.magic_fist_selection == 0)
-						{
-							trap->SendServerCommand(ent->s.number, va("chat \"^7Normal Bolt       ^3MP: ^7%d\"", ent->client->pers.magic_power));
-						}
-						else if (ent->client->sess.magic_fist_selection == 1)
-						{
-							trap->SendServerCommand(ent->s.number, va("chat \"^7Electric Bolt     ^3MP: ^7%d\"", ent->client->pers.magic_power));
-						}
-						else if (ent->client->sess.magic_fist_selection == 2)
-						{
-							trap->SendServerCommand(ent->s.number, va("chat \"^7Instant-Hit Bolt  ^3MP: ^7%d\"", ent->client->pers.magic_power));
-						}
-						else if (ent->client->sess.magic_fist_selection == 3)
-						{
-							trap->SendServerCommand(ent->s.number, va("chat \"^7Ultra Bolt        ^3MP: ^7%d\"", ent->client->pers.magic_power));
-						}
-						else
-						{
-							trap->SendServerCommand(ent->s.number, va("chat \"^7None              ^3MP: ^7%d\"", ent->client->pers.magic_power));
-						}
-					}
+				// GalaxyRP fix: [Skills] removed the GENCMD_ENGAGE_DUEL Unique Skill (skill index 38) heal
+				// branch that used to be here -- skill 38 is being removed the same way as 39-42 (see the
+				// skills[] comment in g_cmds.c), and this was its only trigger. Engaging a duel via this
+				// key still runs normally through the switch statement below (Cmd_EngageDuel_f); only the
+				// bonus heal that used to fire alongside it for players with skill 38 leveled is gone, so
+				// pressing this key can no longer reach that ability at all, regardless of skill level.
+				if (pmove.cmd.generic_cmd == GENCMD_SABERATTACKCYCLE)
+				{
+					// GalaxyRP fix: [Dead Code] removed the Bounty Hunter seeker-drone-recovery
+					// (rpg_class==2) and Magic Master fist-selection-cycling (rpg_class==8) branches
+					// here; pers.rpg_class is always 0 server-side, so both guards were tautologically
+					// false. Branch intentionally left empty (harmless no-op) rather than removing the
+					// enclosing else-if, to avoid disturbing the surrounding if/else-if chain.
 				}
 			}
 
@@ -4211,7 +4671,7 @@ void ClientThink_real( gentity_t *ent ) {
 			}
 			else
 			{
-				Cmd_EngageDuel_f(ent);
+				Cmd_EngageDuel_f(ent, 0);
 			}
 			break;
 		case GENCMD_FORCE_HEAL:
@@ -4365,19 +4825,58 @@ void ClientThink_real( gentity_t *ent ) {
 			}
 			break;
 		case GENCMD_USE_CLOAK:
-			if ( (ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK)) &&
-				G_ItemUsable(&ent->client->ps, HI_CLOAK) )
+			// GalaxyRP fix: [Cloak Item] "use_cloak" is now solo-only, on foot OR mounted -- pairing with
+			// a vehicle is exclusively the "/vehicle_cloak" console command's job now (Cmd_VehicleCloak_f
+			// in g_cmds.c), which keeps the two commands' responsibilities clean: this one only ever
+			// touches `ent`, never the vehicle. G_ItemUsable() is deliberately not used here at all (it unconditionally
+			// returns 0 while mounted, which would block this on-vehicle case, and its only other
+			// real-world effect for HI_CLOAK is the same "is player alive" check done explicitly below)
+			// -- just possession + alive + off-cooldown. Toggle direction reads `ent`'s own PW_CLOAKED
+			// (not the vehicle's) -- if this player is currently part of a paired cloak, decloaking goes
+			// through Jedi_DecloakPair so the vehicle comes down too; this is what fixes the old "wrong
+			// toggle direction after the vehicle auto-decloaked from its own weapon fire" bug from the
+			// previous single-command design.
+			// GalaxyRP fix: [Cloak Item] the downed test below. Being downed is supposed to break cloak
+			// (paralyze_player does exactly that), but it also leaves the player on RP_DOWNED_HEALTH health -- so they
+			// passed every aliveness gate here and could simply press use_cloak again a second later and
+			// lie there invisible for the rest of rp_downed_timer. It gates only the CLOAK direction:
+			// the decloak branch stays reachable, so a player downed while cloaked can always turn it
+			// off, and losing the item still forces it off elsewhere.
+			if ( ent->client->cloakToggleTime < level.time &&
+				ent->client->ps.stats[STAT_HEALTH] > 0 && !(ent->client->ps.eFlags & EF_DEAD) &&
+				ent->client->ps.pm_type != PM_DEAD &&
+				(ent->client->ps.powerups[PW_CLOAKED] ||
+					!(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DOWNED))) &&
+				(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_CLOAK)) )
 			{
 				if ( ent->client->ps.powerups[PW_CLOAKED] )
-				{//decloak
-					Jedi_Decloak( ent );
+				{//decloak (self, plus the vehicle too if paired)
+					Jedi_DecloakPair( ent );
 				}
-				else
-				{//cloak
+				// GalaxyRP fix: [Dueling] holdables are refused inside a private duel again, and this
+				// command is the one that has to ask for itself: it deliberately does not go through
+				// G_ItemUsable() (see the note above), so the guard added there does not cover it.
+				//
+				// Gated on the CLOAKING direction only, exactly like the downed test in this same
+				// condition and like ItemUse_Jetpack's Jetpack_Off/Jetpack_On split. A guard on the
+				// whole toggle would leave a player who entered the duel already cloaked stuck
+				// invisible until it ended -- nothing else clears PW_CLOAKED, and with the duel over
+				// they would have been invisible for the whole fight. Cmd_EngageDuel_f() decloaks both
+				// players when the duel starts, so this is the backstop rather than the fix.
+				else if ( !BG_HoldablesBlocked( &ent->client->ps ) )
+				{//cloak (self only, regardless of mount state)
 					Jedi_Cloak( ent );
 				}
+				ent->client->cloakToggleTime = level.time + 1000; // matches g_items.c's CLOAK_TOGGLE_TIME
 			}
 			break;
+		// GalaxyRP fix: [Cloak Item] the GENCMD_USE_CLOAK_VEHICLE case that used to live here was
+		// removed -- it required a client engine with a matching generic-command value and a bound
+		// key to ever produce it, which the real, actually-distributed TaystJK engine has no support
+		// for at all (its own GENCMD_* enum stops at GENCMD_GLOAT), making this permanently
+		// unreachable in practice. Replaced with a genuine "/vehicle_cloak" console command
+		// (Cmd_VehicleCloak_f in g_cmds.c) instead, which needs no client-engine cooperation -- see
+		// that function for the identical vehicle+rider pairing logic that used to be here.
 		case GENCMD_TAUNT:
 			G_SetTauntAnim( ent, TAUNT_TAUNT );
 			break;
@@ -4415,11 +4914,21 @@ void ClientThink_real( gentity_t *ent ) {
 		ent->s.eType = ET_NPC;
 	}
 
+	// DAJ_RP: [Phase] /admhidden -- the copy above rebuilt s from ps
+	RP_HiddenApplyState( ent, &ent->s );
+
 	SendPendingPredictableEvents( &ent->client->ps );
 
-	if ( !( ent->client->ps.eFlags & EF_FIRING ) ) {
-		client->fireHeld = qfalse;		// for grapple
-	}
+	// GalaxyRP fix: [Grapple Hook] the Quake 3 line that used to be here --
+	//
+	//     if ( !( ent->client->ps.eFlags & EF_FIRING ) ) client->fireHeld = qfalse;  // for grapple
+	//
+	// -- is gone. Q3's offhand hook fired with the ATTACK button, so "not firing" meant "let go". Ours
+	// fires with BUTTON_GRAPPLE, and fireHeld is the latch the release block above reads; with this
+	// line still here every ClientThink_real that saw attack up cleared the latch, the next usercmd
+	// freed the hook, and g_hookFloodProtect later the still-held button fired a fresh one: a hook
+	// that lived for one frame and a fire sound every 600ms. TaystJK removed the line too. fireHeld
+	// is now written only by Weapon_HookFire(), Weapon_HookFree() and G_FreeEntity()'s detach net.
 
 	// use the snapped origin for linking so it matches client predicted versions
 	VectorCopy( ent->s.pos.trBase, ent->r.currentOrigin );
@@ -4478,54 +4987,10 @@ void ClientThink_real( gentity_t *ent ) {
 //	G_VehicleAttachDroidUnit( ent );
 
 	// Did we kick someone in our pmove sequence?
+	// GalaxyRP: [Jump Kick] what the kick does is RP_JumpKickLand() above.
 	if (client->ps.forceKickFlip)
 	{
-		gentity_t *faceKicked = &g_entities[client->ps.forceKickFlip-1];
-
-		if (faceKicked && faceKicked->client && (!OnSameTeam(ent, faceKicked) || g_friendlyFire.integer) &&
-			(!faceKicked->client->ps.duelInProgress || faceKicked->client->ps.duelIndex == ent->s.number) &&
-			(!ent->client->ps.duelInProgress || ent->client->ps.duelIndex == faceKicked->s.number) &&
-			zyk_can_hit_target(ent, faceKicked) && zyk_can_hit_boss_battle_target(ent, faceKicked))
-		{ // zyk: also validates if we can hit this target
-			if ( faceKicked && faceKicked->client && faceKicked->health && faceKicked->takedamage )
-			{//push them away and do pain
-				vec3_t oppDir;
-				int strength = (int)VectorNormalize2( client->ps.velocity, oppDir );
-
-				strength *= 0.05;
-
-				VectorScale( oppDir, -1, oppDir );
-
-				G_Damage( faceKicked, ent, ent, oppDir, client->ps.origin, strength, DAMAGE_NO_ARMOR, MOD_MELEE );
-
-				if ( faceKicked->client->ps.weapon != WP_SABER ||
-					 faceKicked->client->ps.fd.saberAnimLevel != FORCE_LEVEL_3 ||
-					 (!BG_SaberInAttack(faceKicked->client->ps.saberMove) && !PM_SaberInStart(faceKicked->client->ps.saberMove) && !PM_SaberInReturn(faceKicked->client->ps.saberMove) && !PM_SaberInTransition(faceKicked->client->ps.saberMove)) )
-				{
-					if (faceKicked->health > 0 &&
-						faceKicked->client->ps.stats[STAT_HEALTH] > 0 &&
-						faceKicked->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN)
-					{
-						if (BG_KnockDownable(&faceKicked->client->ps) && Q_irand(1, 10) <= 3)
-						{ //only actually knock over sometimes, but always do velocity hit
-							faceKicked->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-							faceKicked->client->ps.forceHandExtendTime = level.time + 1100;
-							faceKicked->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
-						}
-
-						faceKicked->client->ps.otherKiller = ent->s.number;
-						faceKicked->client->ps.otherKillerTime = level.time + 5000;
-						faceKicked->client->ps.otherKillerDebounceTime = level.time + 100;
-
-						faceKicked->client->ps.velocity[0] = oppDir[0]*(strength*40);
-						faceKicked->client->ps.velocity[1] = oppDir[1]*(strength*40);
-						faceKicked->client->ps.velocity[2] = 200;
-					}
-				}
-
-				G_Sound( faceKicked, CHAN_AUTO, G_SoundIndex( va("sound/weapons/melee/punch%d", Q_irand(1, 4)) ) );
-			}
-		}
+		RP_JumpKickLand( ent );
 
 		client->ps.forceKickFlip = 0;
 	}
@@ -4533,7 +4998,7 @@ void ClientThink_real( gentity_t *ent ) {
 	// check for respawning
 	if ( client->ps.stats[STAT_HEALTH] <= 0
 		&& !(client->ps.eFlags2&EF2_HELD_BY_MONSTER)//can't respawn while being eaten
-		&& ent->s.eType != ET_NPC && level.load_entities_timer == 0 && !(ent->client->pers.player_statuses & (1 << 6))) { // zyk: cannot respawn while entities are being loaded
+		&& ent->s.eType != ET_NPC && level.load_entities_timer == 0 && !(ent->client->pers.player_statuses & (1 << PLAYER_STATUS_DOWNED))) { // zyk: cannot respawn while entities are being loaded
 		// wait for the attack button to be pressed
 		if ( level.time > client->respawnTime && !gDoSlowMoDuel ) {
 			// forcerespawn is to prevent users from waiting out powerups
@@ -4791,6 +5256,62 @@ void SpectatorClientEndFrame( gentity_t *ent ) {
 
 /*
 ==============
+G_PublishMaxArmor
+
+GalaxyRP fix: [Shield] publish the shield ceiling so BG_CanItemBeGrabbed() -- which cgame runs
+too -- refuses a shield the server is going to refuse. See STAT_MAX_ARMOR in bg_public.h for the
+bug this closes; in short, an RPG player's cap is pers.max_rpg_shield, which is server-only and
+is zero without the Max Shield skill, so the shared predicate was comparing against the wrong
+number and every shield was consumed for nothing and respawned a second later.
+
+NPCs: they have clients and do pick shields up (Touch_Item only needs other->client, and their
+amrpgmode is 0). ClientEndFrame() only ever runs for player slots, though -- G_RunFrame's end-of-
+frame loop stops at level.maxclients -- so an NPC's ceiling stayed at zero and it could never pick
+a shield up again. GalaxyRP fix: [Shield] this was a block inside ClientEndFrame(); it is a function
+now so G_RunFrame can run it for NPCs too, before they move and touch items.
+
+In ClientEndFrame it is called above the spectator early-return, for the same reason STAT_USE_HINT
+is: SpectatorClientEndFrame() copies the followed player's whole playerState over a follower's, this
+stat included.
+
+Written unconditionally every frame rather than only when it changes, because zero is a
+LEGITIMATE ceiling here -- it is exactly the case being fixed -- so it cannot double as a "not
+published yet" sentinel. Writing it always also means it tracks /skillup, login, logout and
+respawn with no extra bookkeeping, and the playerState delta only spends bits when it moves.
+A ceiling changed mid-frame is seen one frame late, which costs at most a single frame of a
+just-upgraded player being refused a shield.
+
+Non-RPG players and NPCs get STAT_MAX_HEALTH, which is precisely what the predicate compared
+against before this change -- their behaviour is unchanged to the bit.
+
+The three arms mirror Pickup_Armor()'s (g_items.c) one for one, including the last. sess.amrpgmode
+only ever holds 0 or 2, so that arm is unreachable today -- but Pickup_Armor's else gives nothing
+for any other value, and a ceiling of 0 is what makes this predicate agree with it there too.
+Matching its shape rather than its reachable cases is the cheap way to keep "grabbable" and
+"actually gives something" exact complements whatever amrpgmode turns out to hold.
+==============
+*/
+void G_PublishMaxArmor( gentity_t *ent )
+{
+	if ( ent->client )
+	{
+		if ( ent->client->sess.amrpgmode == 2 )
+		{
+			ent->client->ps.stats[STAT_MAX_ARMOR] = ent->client->pers.max_rpg_shield;
+		}
+		else if ( ent->client->sess.amrpgmode < 2 )
+		{
+			ent->client->ps.stats[STAT_MAX_ARMOR] = ent->client->ps.stats[STAT_MAX_HEALTH];
+		}
+		else
+		{
+			ent->client->ps.stats[STAT_MAX_ARMOR] = 0;
+		}
+	}
+}
+
+/*
+==============
 ClientEndFrame
 
 Called at the end of each server frame for each connected client
@@ -4807,6 +5328,100 @@ void ClientEndFrame( gentity_t *ent ) {
 		isNPC = qtrue;
 	}
 
+	// GalaxyRP: [Use hint] evaluate the usable-entity hand icon once per client per frame, here at the
+	// end of the frame so origin and view angles are already final. Deliberately placed ABOVE the
+	// spectator early-return below, so a player who was looking at a door and then died or went to
+	// free-fly spectate has the stat cleared rather than keeping its last value forever with the client
+	// still drawing it. Note this is not literally "every path": SpectatorClientEndFrame runs straight
+	// after and copies the followed player's whole playerState over a follower's, this stat included,
+	// so a follower sees whatever the player they are watching sees. That is consistent with a follower
+	// inheriting the rest of that player's HUD, so it is left alone. G_CanUseInFrontOf() (g_utils.c) itself also refuses for
+	// dead and spectating players, so this is belt and braces, not duplication.
+	// The gate is the whole cost story: the trace runs only for a logged-in player who turned the
+	// feature on via /settings 4 (bit 6 is inverted -- clear == ON), so a server where nobody enabled
+	// it pays nothing but this comparison. Gating here rather than client-side also means the setting
+	// itself never has to be networked: the client draws whenever the bit arrives.
+	if ( ent->s.number < MAX_CLIENTS && ent->client )
+	{
+		if ( ent->client->sess.loggedin == qtrue && !(ent->client->pers.player_settings & (1 << 6))
+			&& G_CanUseInFrontOf( ent ) )
+		{
+			ent->client->ps.stats[STAT_USE_HINT] = 1;
+		}
+		else
+		{
+			ent->client->ps.stats[STAT_USE_HINT] = 0;
+		}
+
+		// GalaxyRP fix: [Force] publish the true Force Jump level for the client's movement
+		// prediction. The copy the engine networks inside playerState is a 2-bit field and silently
+		// truncates levels 4 and 5 to 0 and 1; see STAT_FORCE_JUMP_LEVEL in bg_public.h. Written
+		// unconditionally and every frame so it tracks /skillup, respawns and logout with no extra
+		// bookkeeping -- the playerState delta only spends bits on the frames where it changes.
+		ent->client->ps.stats[STAT_FORCE_JUMP_LEVEL] = ent->client->ps.fd.forcePowerLevel[FP_LEVITATION];
+
+		// DAJ_RP: [Minigames] publish "fighting in a mini-game" for the shared pickup rule and cgame's pickup
+		// prediction (RP_PS_MINIGAME_FIGHTER, bg_public.h). Every frame, so it follows the battle and the fight as
+		// they begin and end; a one-bit field, so only 0 or 1 may be written.
+		ent->client->ps.userInt1 = RP_MinigameFighter( ent ) ? 1 : 0;
+
+		// DAJ_RP: [Entity Bounds] /settings 6 -- the aimed entity's box and the nearby point-entity
+		// markers, drawn for this client only. Here, with the use hint, so the view is final for the
+		// frame and a free-flying spectator (the early return below) still gets it. The function does
+		// its own gating and costs one comparison chain for anyone who has not turned it on.
+		RP_EntBoundsFrame( ent );
+
+		// GalaxyRP: [Entity System] an entity held with /entcopy or /entcut: the preview follows the aim,
+		// and the hold is let go of if the admin may no longer hold it (g_entgrab.c)
+		RP_EntGrabFrame( ent );
+	}
+
+	// GalaxyRP fix: [Shield] publish the shield ceiling so BG_CanItemBeGrabbed() -- which cgame runs
+	// too -- refuses a shield the server is going to refuse. See G_PublishMaxArmor() above.
+	G_PublishMaxArmor( ent );
+
+	// GalaxyRP fix: [Weapons] publish whether this player may alt-fire what they are holding, so the
+	// button strip in PM_Weapon() -- which cgame runs too -- refuses the same shot the server refuses.
+	// canAltFireWeapon() is the policy and stays server-only; this is its one caller now. See
+	// STAT_ALT_FIRE_OK in bg_public.h for the mispredict this closes.
+	//
+	// Placed beside the STAT_MAX_ARMOR block above and for the same reasons: every client every frame,
+	// above the spectator early-return so a follower's copied playerState carries it, and written
+	// unconditionally because 0 is a real answer, not a "not yet published" sentinel. Its own block
+	// rather than a line inside the shield one, so each publish can be read -- and lifted -- alone. A
+	// change mid-frame -- login, logout, a skill bought -- is seen one frame late; a weapon switch is
+	// covered by the change and raise times, see the stat's comment. NPCs, if they reach here, get
+	// canAltFireWeapon()'s unconditional qtrue, and PM_Weapon() does not consult the stat for them in
+	// any case.
+	if ( ent->client )
+	{
+		ent->client->ps.stats[STAT_ALT_FIRE_OK] = canAltFireWeapon( ent ) ? 1 : 0;
+	}
+
+	// DAJ_RP: [Phase] tell a hidden player he is hidden -- his own client draws the Force Push body blur on
+	// him in third person (CG_Player(), cg_players.c). Through stats[], so no other client is told; see
+	// STAT_RP_SELF_FX in bg_public.h. Every frame, above the spectator split like the two above: it drops at
+	// once on /admhidden off, and a spectator (whom RP_PlayerIsHidden() never counts) gets 0. A spectator
+	// following a hidden player is copied his playerState, bit and all; his client does not draw for him.
+	if ( ent->client )
+	{
+		if ( RP_PlayerIsHidden( ent ) )
+		{
+			ent->client->ps.stats[STAT_RP_SELF_FX] |= RP_SELF_FX_HIDDEN;
+		}
+		else
+		{
+			ent->client->ps.stats[STAT_RP_SELF_FX] &= ~RP_SELF_FX_HIDDEN;
+		}
+	}
+
+	// GalaxyRP fix: [Death System] serve a downed player's countdown, here for the same structural
+	// reason the block above is here: this runs for every client every server frame, and it runs
+	// ABOVE the spectator split below. ClientTimerActions() reaches neither a spectator nor a client
+	// in intermission, so a countdown left to it stopped the moment its owner left the world. See
+	// RP_RunDownedTimer() and RP_DownedTimerTick() above.
+	RP_RunDownedTimer( ent );
+
 	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR ) {
 		SpectatorClientEndFrame( ent );
 		return;
@@ -4815,6 +5430,19 @@ void ClientEndFrame( gentity_t *ent ) {
 	// turn off any expired powerups
 	for ( i = 0 ; i < MAX_POWERUPS ; i++ ) {
 		if ( ent->client->ps.powerups[ i ] < level.time ) {
+			// GalaxyRP fix: [Cloak Item] PW_CLOAKED is half of a pair -- Jedi_Cloak() sets FL_NOTARGET
+			// alongside it and Jedi_Decloak() clears both, and NPC_ValidEnemy() (NPC_utils.c) relies on
+			// the two never being out of step. Zeroing the powerup here on its own would strip the
+			// cloak while leaving the player permanently untargetable by every NPC, turret and seeker
+			// until their next respawn. In practice this loop cannot currently reach cloak -- it is
+			// stored as a flat 2147483647, which only falls below level.time after ~24.9 days on a
+			// single map -- but it is the generic expiry path, so it is the one that would bite first
+			// if cloak were ever given a real duration. Routed through the same helper every other
+			// decloak uses rather than clearing the flag inline, because FL_NOTARGET has other owners
+			// (/notarget, the downed state, ICARUS SET_NOTARGET) and this keeps one rule, not two.
+			if ( i == PW_CLOAKED && ent->client->ps.powerups[ i ] ) {
+				Jedi_Decloak( ent );
+			}
 			ent->client->ps.powerups[ i ] = 0;
 		}
 	}
@@ -4855,6 +5483,10 @@ void ClientEndFrame( gentity_t *ent ) {
 
 	G_SetClientSound (ent);
 
+	// GalaxyRP: [Phase] finish a release that has come clear, and write the mode clients see into
+	// ps.eFlags, where the state copy below carries it into s.eFlags.
+	RP_PhaseUpdate( ent );
+
 	// set the latest infor
 	if (g_smoothClients.integer) {
 		BG_PlayerStateToEntityStateExtraPolate( &ent->client->ps, &ent->s, ent->client->ps.commandTime, qfalse );
@@ -4862,6 +5494,21 @@ void ClientEndFrame( gentity_t *ent ) {
 	}
 	else {
 		BG_PlayerStateToEntityState( &ent->client->ps, &ent->s, qfalse );
+	}
+
+	// DAJ_RP: [Phase] /admhidden -- the copy above rebuilt s from ps
+	RP_HiddenApplyState( ent, &ent->s );
+
+	// GalaxyRP: [Phase] no collision box in the snapshot for a live phased body. SV_LinkEntity packs
+	// s.solid from r.contents, which stays CONTENTS_BODY so that shots and powers still hit; clients
+	// use s.solid only to build the list they predict movement against, so zeroing it here makes
+	// every client -- a stock one included -- walk through this player the way the server now lets
+	// them. Nothing on the server reads a player's s.solid, and the next link rebuilds it, so it is
+	// redone every frame: ClientEndFrame runs after every think of the frame, and nothing relinks a
+	// client between here and the snapshot.
+	if ( RP_PhasePassesThrough( ent ) && ent->r.contents == CONTENTS_BODY )
+	{
+		ent->s.solid = 0;
 	}
 
 	if (isNPC)

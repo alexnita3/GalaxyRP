@@ -71,6 +71,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define	SCF_NO_ACROBATICS	0x00800000	//Jedi won't jump, roll or cartwheel
 #define	SCF_USE_SUBTITLES	0x01000000	//Regardless of subtitle setting, this NPC will display subtitles when it speaks lines
 #define	SCF_NO_ALERT_TALK	0x02000000	//Will not say alert sounds, but still can be woken up by alerts
+#define	SCF_IGNORE_ENEMIES	0x04000000	//Will not acquire or keep enemies (SET_IGNOREENEMIES) - GalaxyRP: [Scripts] was an SP svFlag
+#define	SCF_SAFE_REMOVE		0x80000000	//Remove NPC when it's safe (no player has it in PVS) (SET_SAFE_REMOVE) - GalaxyRP: [Scripts]
 
 //#ifdef __DEBUG
 
@@ -280,6 +282,17 @@ typedef struct
 	int			ffireCount;		//sigh... you'd think I'd be able to find a way to do this without having to use 3 int fields, but...
 	int			ffireDebounce;
 	int			ffireFadeDebounce;
+
+	// DAJ_RP: [Corpses] level.time the NPC died. timeOfDeath above is pushed forward again and again
+	// while the body waits to be removed, so this keeps the moment itself: a body no longer waits for
+	// players to look away once RP_CORPSE_WATCH_LIMIT has passed since it (NPC_RemoveBody, NPC.c).
+	int			rpDeathTime;
+
+	// DAJ_RP: [NPC System] /npc freeze and the spawner key "npcfreeze" -- see RP_NpcFreeze() (NPC_spawn.c).
+	// rpFrozen: the NPC is frozen, NPC_Think() runs only its physics. rpFreezeOwnsIcarus: the freeze set
+	// SVF_ICARUS_FREEZE itself, so letting go clears it; when a map script had already set it, it stays.
+	qboolean	rpFrozen;
+	qboolean	rpFreezeOwnsIcarus;
 } gNPC_t;
 
 void G_SquadPathsInit(void);
