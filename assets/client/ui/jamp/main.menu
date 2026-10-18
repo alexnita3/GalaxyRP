@@ -183,7 +183,7 @@
 			name				multiplayer_title
 			style				WINDOW_STYLE_EMPTY
 			rect				120 120 400 24
-			text				"Galaxy RP Ultimate Edition"
+			text				"Galaxy RP"
 			font				2
 			textscale			1
 			textaligny			0
