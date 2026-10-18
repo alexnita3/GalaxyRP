@@ -65,12 +65,10 @@ The mod actually requires only the game-code files from the build project: `jamp
 # Maintainers
 - Alex
 - JustJordyn
+- Pra Viilon
 - RepJunkie
 - TriForce
 - ZelZel
-
-**Fork Contributors**
-- Pra Viilon ([Galaxy Ultimate](https://github.com/praviilon/galaxy_ultimate))
 
 **Zyk mod author:**
 - Zyk6870
