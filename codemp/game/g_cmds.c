@@ -4840,8 +4840,13 @@ void update_current_character_name_and_model(gentity_t* ent, sqlite3* db, char* 
 	sqlite3_bind_text(stmt, 3, modelName, -1, SQLITE_TRANSIENT);
 	sqlite3_bind_text(stmt, 4, ent->client->pers.saber1, -1, SQLITE_TRANSIENT);
 	sqlite3_bind_text(stmt, 5, ent->client->pers.saber2, -1, SQLITE_TRANSIENT);
-	sqlite3_bind_int(stmt, 6, SABER_STORED_PACK(ent->client->pers.saberColorMode[0], ent->client->pers.saberRGB[0]));
-	sqlite3_bind_int(stmt, 7, SABER_STORED_PACK(ent->client->pers.saberColorMode[1], ent->client->pers.saberRGB[1]));
+	// GLX_U: [Cosmetics] the hat goes with the first saber's colour, the cape with the second's, as
+	// an id above the colour's 32 bits -- see RP_STORED_PACK (g_local.h). A name not on the saved list
+	// is stored as 0, none.
+	sqlite3_bind_int64(stmt, 6, RP_STORED_PACK(SABER_STORED_PACK(ent->client->pers.saberColorMode[0], ent->client->pers.saberRGB[0]),
+		G_RpCosmeticId(RP_COSMETIC_HAT, ent->client->pers.cosmetic[RP_COSMETIC_HAT])));
+	sqlite3_bind_int64(stmt, 7, RP_STORED_PACK(SABER_STORED_PACK(ent->client->pers.saberColorMode[1], ent->client->pers.saberRGB[1]),
+		G_RpCosmeticId(RP_COSMETIC_CAPE, ent->client->pers.cosmetic[RP_COSMETIC_CAPE])));
 	sqlite3_bind_int(stmt, 8, ent->client->pers.CharID);
 	rc = sqlite3_step(stmt);
 	if (rc != SQLITE_DONE)
@@ -5012,6 +5017,7 @@ qboolean select_player_character(gentity_t* ent, char *character_name, sqlite3* 
 		char saber2Model[30];
 		int saber1Color;
 		int saber2Color;
+		sqlite3_int64 stored1, stored2;	// GLX_U: [Cosmetics]
 		// GalaxyRP fix: [security] strcpy() into these fixed 30-byte stack buffers had no length
 		// check against the value read from the Characters table -- a saber-model name of 30+
 		// characters in the database (whether from a corrupted row or a maliciously edited one)
@@ -5019,9 +5025,12 @@ qboolean select_player_character(gentity_t* ent, char *character_name, sqlite3* 
 		// GalaxyRP fix: [Database] now zyk_db_column_string(), which is NULL-safe as well as bounded,
 		// and an empty result is put back to the default -- see zyk_default_empty_saber_models().
 		zyk_db_column_string(saber1Model, sizeof(saber1Model), stmt, 11);
-		saber1Color = sqlite3_column_int(stmt, 12);
+		// GLX_U: [Cosmetics] 64-bit reads: the hat and cape ids sit above the colour's 32 bits.
+		stored1 = sqlite3_column_int64(stmt, 12);
+		saber1Color = RP_STORED_COLOR(stored1);
 		zyk_db_column_string(saber2Model, sizeof(saber2Model), stmt, 13);
-		saber2Color = sqlite3_column_int(stmt, 14);
+		stored2 = sqlite3_column_int64(stmt, 14);
+		saber2Color = RP_STORED_COLOR(stored2);
 		zyk_default_empty_saber_models(saber1Model, sizeof(saber1Model), saber2Model, sizeof(saber2Model));
 
 		// GalaxyRP: [Saber RGB] restore the character's custom blade colours and blade styles. These
@@ -5035,6 +5044,10 @@ qboolean select_player_character(gentity_t* ent, char *character_name, sqlite3* 
 		ent->client->pers.saberRGB[1] = (saber2Color & SABERRGB_SET) ? (saber2Color & SABERRGB_MASK) : 0;
 		ent->client->pers.saberColorMode[0] = G_ValidateSaberColorMode( SABER_STORED_MODE(saber1Color) );
 		ent->client->pers.saberColorMode[1] = G_ValidateSaberColorMode( SABER_STORED_MODE(saber2Color) );
+		// GLX_U: [Cosmetics] and this character's hat and cape, for the same reason: the save that
+		// update_saber() can trigger writes them back to this row. An id not on the list gives none.
+		Q_strncpyz( ent->client->pers.cosmetic[RP_COSMETIC_HAT], G_RpCosmeticName( RP_COSMETIC_HAT, RP_STORED_COSMETIC(stored1) ), sizeof( ent->client->pers.cosmetic[0] ) );
+		Q_strncpyz( ent->client->pers.cosmetic[RP_COSMETIC_CAPE], G_RpCosmeticName( RP_COSMETIC_CAPE, RP_STORED_COSMETIC(stored2) ), sizeof( ent->client->pers.cosmetic[0] ) );
 
 		// GalaxyRP fix: [Saber RGB] patch the server's cached userinfo (cp_sbRGB1/cp_sbRGB2/color1/
 		// color2) to match this character's just-loaded colours *before* update_saber() below runs.
@@ -5527,13 +5540,17 @@ void select_account_and_default_character_data(gentity_t* ent, char username[32]
 		char saber2Model[30];
 		int saber1Color;
 		int saber2Color;
+		sqlite3_int64 stored1, stored2;	// GLX_U: [Cosmetics]
 		// GalaxyRP fix: [security] same fixed-size stack-buffer overflow as select_player_character()
 		// above -- bound the copy to the destination's size instead of trusting the DB value's length.
 		// GalaxyRP fix: [Database] NULL-safe too now, with the same empty-model default -- see there.
 		zyk_db_column_string(saber1Model, sizeof(saber1Model), stmt, 17);
-		saber1Color = sqlite3_column_int(stmt, 18);
+		// GLX_U: [Cosmetics] 64-bit reads: the hat and cape ids sit above the colour's 32 bits.
+		stored1 = sqlite3_column_int64(stmt, 18);
+		saber1Color = RP_STORED_COLOR(stored1);
 		zyk_db_column_string(saber2Model, sizeof(saber2Model), stmt, 19);
-		saber2Color = sqlite3_column_int(stmt, 20);
+		stored2 = sqlite3_column_int64(stmt, 20);
+		saber2Color = RP_STORED_COLOR(stored2);
 		zyk_default_empty_saber_models(saber1Model, sizeof(saber1Model), saber2Model, sizeof(saber2Model));
 
 		// GalaxyRP fix: [Account] apply the loaded account/character fields to ent->client, and mark
@@ -5614,6 +5631,10 @@ void select_account_and_default_character_data(gentity_t* ent, char username[32]
 		ent->client->pers.saberRGB[1] = (saber2Color & SABERRGB_SET) ? (saber2Color & SABERRGB_MASK) : 0;
 		ent->client->pers.saberColorMode[0] = G_ValidateSaberColorMode( SABER_STORED_MODE(saber1Color) );
 		ent->client->pers.saberColorMode[1] = G_ValidateSaberColorMode( SABER_STORED_MODE(saber2Color) );
+		// GLX_U: [Cosmetics] and this character's hat and cape, for the same reason: the save that
+		// update_saber() can trigger writes them back to this row. An id not on the list gives none.
+		Q_strncpyz( ent->client->pers.cosmetic[RP_COSMETIC_HAT], G_RpCosmeticName( RP_COSMETIC_HAT, RP_STORED_COSMETIC(stored1) ), sizeof( ent->client->pers.cosmetic[0] ) );
+		Q_strncpyz( ent->client->pers.cosmetic[RP_COSMETIC_CAPE], G_RpCosmeticName( RP_COSMETIC_CAPE, RP_STORED_COSMETIC(stored2) ), sizeof( ent->client->pers.cosmetic[0] ) );
 
 		// GalaxyRP fix: [Saber RGB] same reason as select_player_character()'s matching call above --
 		// sync the cached userinfo to this character's just-loaded colours before update_saber() below
@@ -10843,6 +10864,10 @@ void Cmd_EngageDuel_f(gentity_t *ent, int duel_type)
 			ent->client->ps.duelInProgress = qtrue;
 			challenged->client->ps.duelInProgress = qtrue;
 
+			// DAJ_RP: [Training Saber] both fight at their saber's real damage -- see RP_TrainingOff()
+			RP_TrainingOff(ent, "for the duel");
+			RP_TrainingOff(challenged, "for the duel");
+
 			// GalaxyRP: [Grapple Hook] a duel is sealed off from the map; neither duellist keeps a rope
 			// into it. Their hooks are refused for the duel's length by RP_HookMayStayOut().
 			if ( ent->client->hook )
@@ -12964,12 +12989,16 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				trap->SendServerCommand(ent - g_entities, "print \"^3/use_cloak: ^7Activates or deactivates your Cloak Item, on foot or while riding a vehicle. Never cloaks the vehicle itself.\n\
 ^3/vehicle_cloak: ^7While piloting a vehicle with the Cloak Item at level 2, cloaks or decloaks the vehicle together with you.\n\
 ^3/updateforce: ^7Applies your force power menu pick instantly, no respawn needed (logged-out players only).\n\"");
+				// GLX_U: [Cosmetics] /cosmetics (a client command, the cgame's) goes with the other looks
+				// commands here; with it this block is 926 of SV_SendServerCommand's 1022 characters, so a
+				// further line belongs in a message of its own.
 				trap->SendServerCommand(ent - g_entities, "print \"^3/maplist <page (optional)>: ^7Lists the maps you can vote for in the current gametype, for /callvote map.\n\
 ^3/saber <saber1> <saber2>: ^7Changes lightsabers of the player.\n\
 ^3/sabercolor <1|2> <r g b>/<color name>: ^7Sets the RGB or a preset color of saber 1 or 2. Run with no arguments to see current colors.\n\
 ^3/saberblade <1|2> <type>: ^7Sets the RGB blade style (classic/flame1/electric1/flame2/electric2) of saber 1 or 2.\n\
 ^3/updatesaber: ^7Applies your saber menu pick instantly, no respawn needed.\n\
-^3/scale <size> ^7or ^3/scale <player name or ID> <size>: ^7Scales your character model, 20 to 500 (default 100). ^3/scale help ^7lists sizes next to real-life heights. ^1Scaling other players needs the Scale admin flag.\n\"");
+^3/scale <size> ^7or ^3/scale <player name or ID> <size>: ^7Scales your character model, 20 to 500 (default 100). ^3/scale help ^7lists sizes next to real-life heights. ^1Scaling other players needs the Scale admin flag.\n\
+^3/cosmetics <hats|capes|clear> <number or name>: ^7Puts on a hat or cape, or takes it off if you already wear it. ^3/cosmetics hats ^7or ^3capes ^7lists them. Saved with a logged-in character.\n\"");
 				// GalaxyRP fix: [Death System] split here for the same reason the Misc section above is
 				// split twice: saying what /getup and /helpup actually do -- neither ends an admin
 				// paralysis, only a combat knockdown -- took this block past SV_SendServerCommand's hard
@@ -22982,8 +23011,10 @@ static void G_SyncSaberColorUserinfo( gentity_t *ent ) {
 	trap->GetUserinfo( ent->s.number, userinfo, sizeof( userinfo ) );
 	Info_SetValueForKey( userinfo, "cp_sbRGB1", va( "%i", ent->client->pers.saberRGB[0] ) );
 	Info_SetValueForKey( userinfo, "cp_sbRGB2", va( "%i", ent->client->pers.saberRGB[1] ) );
-	Info_SetValueForKey( userinfo, "color1", va( "%i", ent->client->pers.saberColorMode[0] ) );
-	Info_SetValueForKey( userinfo, "color2", va( "%i", ent->client->pers.saberColorMode[1] ) );
+	// GLX_U: [Cosmetics] with the hat and cape after the number, or ClientUserinfoChanged() would read
+	// them back out of this cache as none
+	Info_SetValueForKey( userinfo, "color1", va( "%i%s", ent->client->pers.saberColorMode[0], ent->client->pers.cosmetic[RP_COSMETIC_HAT] ) );
+	Info_SetValueForKey( userinfo, "color2", va( "%i%s", ent->client->pers.saberColorMode[1], ent->client->pers.cosmetic[RP_COSMETIC_CAPE] ) );
 	trap->SetUserinfo( ent->s.number, userinfo );
 }
 
@@ -23038,9 +23069,14 @@ void update_saber_colors( gentity_t *ent ) {
 	// the client's menu holding the right value rather than whatever it last sent. Four ints now
 	// (mode1 rgb1 mode2 rgb2) instead of two, so the receiving end can restore color1/color2 and
 	// the palette-name cvars too, not just the RGB payload -- see CG_SaberColorUpdate_f.
-	trap->SendServerCommand( ent - g_entities, va( "supdatesabercolor %i %i %i %i\n",
+	// GLX_U: [Cosmetics] then the hat and cape, "-" for none, so the client's own color1/color2 carry
+	// what this character wears (restored on login) rather than sending back what it had before. An
+	// older client reads the first four and ignores these.
+	trap->SendServerCommand( ent - g_entities, va( "supdatesabercolor %i %i %i %i %s %s\n",
 		ent->client->pers.saberColorMode[0], ent->client->pers.saberRGB[0],
-		ent->client->pers.saberColorMode[1], ent->client->pers.saberRGB[1] ) );
+		ent->client->pers.saberColorMode[1], ent->client->pers.saberRGB[1],
+		ent->client->pers.cosmetic[RP_COSMETIC_HAT][0] ? ent->client->pers.cosmetic[RP_COSMETIC_HAT] : "-",
+		ent->client->pers.cosmetic[RP_COSMETIC_CAPE][0] ? ent->client->pers.cosmetic[RP_COSMETIC_CAPE] : "-" ) );
 }
 
 // Reads one 0-255 colour channel from a /sabercolor argument.
@@ -23412,6 +23448,7 @@ void Cmd_DuelMode_f(gentity_t *ent) {
 			// plain logged-out player, his own force profile and nothing more (rp_give_lift()). After every
 			// refusal above, so a refused sign-up keeps it.
 			rp_give_lift(ent);
+			RP_TrainingOff(ent, "for the Duel Tournament");	// DAJ_RP: [Training Saber] and his training saber, the same way
 
 			level.duel_tournament_mode = 1;
 			level.duel_players[ent->s.number] = 0;
@@ -24088,6 +24125,7 @@ void Cmd_MeleeMode_f(gentity_t *ent) {
 		// DAJ_RP: [Admin] whatever an admin gave him with /give goes now, on signing up: he fights as a
 		// plain logged-out player (rp_give_lift()). After every refusal above, so a refused sign-up keeps it.
 		rp_give_lift(ent);
+		RP_TrainingOff(ent, "for the Melee Battle");	// DAJ_RP: [Training Saber] and his training saber, the same way
 
 		level.melee_players[ent->s.number] = 0;
 		level.melee_mode = 1;
@@ -24862,6 +24900,45 @@ static qboolean Training_IsLiveActive(gentity_t* ent)
 	return qtrue;
 }
 
+// DAJ_RP: [Training Saber] training mode's undo, shared by "/training off" and RP_TrainingOff(): both saber slots'
+// damage scales back to what "/training on" stored, and the flag down.
+static void Training_Restore(gentity_t* ent)
+{
+	int i;
+
+	for (i = 0; i < MAX_SABERS; i++)
+	{
+		ent->client->saber[i].damageScale = ent->client->pers.training_stored_damageScale[i];
+		ent->client->saber[i].damageScale2 = ent->client->pers.training_stored_damageScale2[i];
+	}
+
+	ent->client->pers.training_mode = qfalse;
+}
+
+// DAJ_RP: [Training Saber] is this player's training saber on right now (Training_IsLiveActive(), which also clears a
+// flag gone stale)? A thrown saber reads it (CheckThrownSaberDamaged(), w_saber.c): its damage is the throw's own, not
+// the saber's damage scales that "/training on" zeroes, so it used to hit at full damage.
+qboolean RP_TrainingActive(gentity_t* ent)
+{
+	if (!ent || !ent->client)
+		return qfalse;
+
+	return Training_IsLiveActive(ent);
+}
+
+// DAJ_RP: [Training Saber] turns a player's training saber off, as "/training off" does, and tells him why ("for the
+// duel"), when a private duel he is in is accepted (Cmd_EngageDuel_f()) and when he signs up for the Duel Tournament or
+// the Melee Battle (Cmd_DuelMode_f(), Cmd_MeleeMode_f()): he fights at his saber's real damage. Nothing, and no word,
+// when it is not on. "/training on" is not refused afterwards: it is a handicap he may take on, not a gain.
+void RP_TrainingOff(gentity_t* ent, const char* why)
+{
+	if (!RP_TrainingActive(ent))
+		return;
+
+	Training_Restore(ent);
+	trap->SendServerCommand(ent->s.number, va("print \"Training saber is ^1INACTIVE^7: turned off %s.\n\"", why));
+}
+
 //GalaxyRP (Alex): [Training Saber] This method activates and deactivates the training saber, making it so that when active, you do very little damage.
 
 // GalaxyRP: [Training Saber fix] rewritten from a single no-argument toggle to explicit
@@ -24929,13 +25006,7 @@ void Cmd_TrainingMode_f(gentity_t* ent) {
 			return;
 		}
 
-		for (i = 0; i < MAX_SABERS; i++)
-		{
-			ent->client->saber[i].damageScale = ent->client->pers.training_stored_damageScale[i];
-			ent->client->saber[i].damageScale2 = ent->client->pers.training_stored_damageScale2[i];
-		}
-
-		ent->client->pers.training_mode = qfalse;
+		Training_Restore(ent);
 
 		trap->SendServerCommand(ent->s.number, "print \"Training saber is ^1INACTIVE\n\"");
 	}

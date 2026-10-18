@@ -2636,8 +2636,17 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 		// the client's own color1/color2 said -- every other client's cgame reads this off "c1"/"c2"
 		// to decide both the palette entry and (for the five RGB-family values) whether to also
 		// consult "c3"/"c4" for the actual custom colour.
-		Q_strncpyz( color1, va( "%i", client->pers.saberColorMode[0] ), sizeof( color1 ) );
-		Q_strncpyz( color2, va( "%i", client->pers.saberColorMode[1] ), sizeof( color2 ) );
+		// GLX_U: [Cosmetics] the hat and cape the client asks for ride after the saber number in its
+		// color1/color2, as TaystJK sends them ("5santahat"), and go back out the same way, so a
+		// TaystJK cgame shows them as well as ours. Read from the full userinfo value, not the
+		// 16-byte copy above, so an overlong one is refused rather than cut down to another name.
+		// No name means none: that is what a client sends after /cosmetics clear.
+		G_RpCosmeticFromColor( Info_ValueForKey( userinfo, "color1" ), client->pers.cosmetic[RP_COSMETIC_HAT], sizeof( client->pers.cosmetic[0] ) );
+		G_RpCosmeticFromColor( Info_ValueForKey( userinfo, "color2" ), client->pers.cosmetic[RP_COSMETIC_CAPE], sizeof( client->pers.cosmetic[0] ) );
+
+		// at most 2 digits and 13 letters: fits color1[16]
+		Q_strncpyz( color1, va( "%i%s", client->pers.saberColorMode[0], client->pers.cosmetic[RP_COSMETIC_HAT] ), sizeof( color1 ) );
+		Q_strncpyz( color2, va( "%i%s", client->pers.saberColorMode[1], client->pers.cosmetic[RP_COSMETIC_CAPE] ), sizeof( color2 ) );
 	}
 
 	// gender hints

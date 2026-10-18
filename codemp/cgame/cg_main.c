@@ -1425,6 +1425,8 @@ Ghoul2 Insert End
 	cgs.media.rpHoloOverlayShader			= trap->R_RegisterShader( "gfx/effects/rp_holo_overlay" );
 	cgs.media.rpGhostOverlayShader			= trap->R_RegisterShader( "gfx/effects/rp_ghost_overlay" );
 
+	CG_RpLoadCosmetics();	// GLX_U: [Cosmetics] before CG_RegisterClients() reads anyone's
+
 	// wall marks
 	cgs.media.shadowMarkShader	= trap->R_RegisterShader( "markShadow" );
 	cgs.media.wakeMarkShader	= trap->R_RegisterShader( "wake" );

@@ -7838,8 +7838,20 @@ void melee_battle_winner()
 		melee_battle_restore(ent);
 
 		ent->client->ps.powerups[PW_FORCE_BOON] = level.time + 20000;
-		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 20000;
-		ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 20000;
+
+		// DAJ_RP fix: [Melee Battle] the winner's own side's Enlightenment only, as duel_tournament_prize() gives it,
+		// read from the Force restored above. It gave both: the boost was the same (either one raises only the
+		// player's own side's powers, WP_ForcePowersUpdate() in w_force.c), but the client draws the dark aura
+		// whenever the dark one is on (cg_players.c), so a light-side winner glowed red, and the HUD showed two
+		// Enlightenment timers. A winner of neither side gets neither, as in the Duel Tournament.
+		if (ent->client->ps.fd.forceSide == FORCE_LIGHTSIDE)
+		{
+			ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_LIGHT] = level.time + 20000;
+		}
+		else if (ent->client->ps.fd.forceSide == FORCE_DARKSIDE)
+		{
+			ent->client->ps.powerups[PW_FORCE_ENLIGHTENED_DARK] = level.time + 20000;
+		}
 
 		ent->client->ps.stats[STAT_WEAPONS] |= (1 << WP_SABER) | (1 << WP_BLASTER) | (1 << WP_DISRUPTOR) | (1 << WP_REPEATER);
 		ent->client->ps.ammo[AMMO_BLASTER] = rp_max_blaster_pack_ammo.integer;
