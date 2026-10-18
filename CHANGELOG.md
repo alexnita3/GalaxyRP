@@ -1,4 +1,4 @@
-# Changelog. Galaxy RP Ultimate Edition
+# Changelog. Galaxy RP
 
 
 
