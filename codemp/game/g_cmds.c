@@ -8921,30 +8921,30 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		//
 		// Matching stays case sensitive, exactly as strstr() was: "/ME waves" is plain chat today
 		// and still is.
-		int best = -1;
-		int best_len = 0;
+		int best_match_index = -1;
+		int best_match_length = 0;
 
 		for (int i = 0; i < ARRAY_LEN(chat_modifiers); i++) {
-			int mod_len = strlen(chat_modifiers[i].chat_modifier);
+			int modifier_length = strlen(chat_modifiers[i].chat_modifier);
 
-			if (strncmp(text, chat_modifiers[i].chat_modifier, mod_len) != 0)
+			if (strncmp(text, chat_modifiers[i].chat_modifier, modifier_length) != 0)
 				continue;
 
 			// a modifier only counts when the word ends right after it -- see
 			// zyk_chat_word_char(). End of line qualifies, and so does any punctuation that does
 			// not live inside a word, so "/me, then waves" and "/do. the door opens" work while
 			// "/method actors only" and "/c'mon everyone" stay plain chat.
-			if (zyk_chat_word_char(text[mod_len]))
+			if (zyk_chat_word_char(text[modifier_length]))
 				continue;
 
-			if (mod_len > best_len) {
-				best = i;
-				best_len = mod_len;
+			if (modifier_length > best_match_length) {
+				best_match_index = i;
+				best_match_length = modifier_length;
 			}
 		}
 
-		if (best != -1) {
-			delete_chat_command(text, best_len);
+		if (best_match_index != -1) {
+			delete_chat_command(text, best_match_length);
 			// GalaxyRP fix: [Chat] the arguments meant for va()'s "%s: %s: %s\n" format were
 			// being passed to the outer G_LogPrintf() call instead, so va() formatted its
 			// string with zero of the three %s values it needed. That made it read
@@ -8953,7 +8953,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			// (/c, /low, /long, /me, /do, /force, /my, /shout, the language modifiers, etc)
 			// was used. The three values now go directly to G_LogPrintf(), matching the
 			// plain-chat log call a few lines below.
-			G_LogPrintf("%s: %s: %s\n", chat_modifiers[best].chat_modifier, ent->client->pers.netname, text);
+			G_LogPrintf("%s: %s: %s\n", chat_modifiers[best_match_index].chat_modifier, ent->client->pers.netname, text);
 
 			// GalaxyRP fix: [Chat] this used to iterate j < level.numConnectedClients while
 			// indexing g_entities[j] directly, which only lines up with the actual connected
@@ -8974,7 +8974,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 				// at any distance, exactly as it does for the chat G_SayTo() delivers.
 				if (zyk_chat_is_ignored(ent, other))
 					continue;
-				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_modifiers[best].distance || zyk_ignores_chat_distance(other) || other->client->sess.sessionTeam == TEAM_SPECTATOR)
+				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_modifiers[best_match_index].distance || zyk_ignores_chat_distance(other) || other->client->sess.sessionTeam == TEAM_SPECTATOR)
 				{
 					// GalaxyRP fix: [Chat] send to j, not other->client->ps.clientNum. A recipient
 					// must be addressed by their own entity index: SpectatorClientEndFrame
@@ -8986,7 +8986,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 					// none of them while that player received each line twice, once more per
 					// follower. The condition just above deliberately lets spectators hear
 					// everything regardless of distance, which is exactly the case this broke.
-					trap->SendServerCommand(j, va(chat_modifiers[best].chat_format, ent->client->pers.netname, text));
+					trap->SendServerCommand(j, va(chat_modifiers[best_match_index].chat_format, ent->client->pers.netname, text));
 				}
 				else
 					continue;
