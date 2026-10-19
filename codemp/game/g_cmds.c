@@ -21948,11 +21948,14 @@ static void RP_PhaseCommand( gentity_t *ent, int mode, const char *cmdName )
 	// [Alex] Default to yourself, changes later from args.
 	gentity_t *target = ent;
 	int newMode;
+	qboolean isSelfTargeted = (trap->Argc() == 1);
+	qboolean isHoloOrGhost = (mode == RP_PHASE_HOLO || mode == RP_PHASE_GHOST);
 
-	// [Alex] Allow holo and ghost on yourself without admin rights.
-	if ((ADM_PHASE != RP_PHASE_HOLO && ADM_PHASE != RP_PHASE_GHOST) && trap->Argc() != 1)
+	// [Alex] Don't check admin rights for self targeted holo or ghost commands.
+	if (!(isHoloOrGhost && isSelfTargeted))
 	{
-		if (!check_admin_command(ent, ADM_PHASE, qtrue)) {
+		if (!check_admin_command(ent, ADM_PHASE, qtrue))
+		{
 			return;
 		}
 	}
