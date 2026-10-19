@@ -12989,6 +12989,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 ^7Type a modifier at the start of a chat box message: ^3/me draws a blaster.\n\
 ^7Modifiers work on normal speech only - the chat box, or ^3/say^7.\n\
 ^7Most take a range suffix: ^3low ^7to speak quietly, ^3long ^7to carry further, ^3all ^7for server-wide.\n\
+^7Text in quotes shows in ^2green^7, the speech colour: ^3/me nods. ''^2Follow me.^3''\n\
 \n\
 ^7Speech ranges: ^3whisper ^765, ^3low ^765, normal 700, ^3shout ^71500, ^3long ^72000, ^3all ^7server-wide.\n\
 ^7Action ranges: ^3low ^7200, normal 1200, ^3long ^72000, ^3all ^7server-wide.\n\
