@@ -12941,6 +12941,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				// paralysis, only a combat knockdown -- took this block past SV_SendServerCommand's hard
 				// 1022 characters, and going over does not truncate, it silently drops the whole section.
 				trap->SendServerCommand(ent - g_entities, "print \"\
+^3/afk: ^7Goes AFK after 20 seconds without input: a protection bubble and a comlink animation until you move, look around or press a key. Also happens on its own after a longer while.\n\
 ^3/getup: ^7Gets you up from a combat knockdown, once your timer runs out. Cannot end an admin paralysis.\n\
 ^3/helpup <player name>: ^7Helps a nearby player up from a combat knockdown. Cannot end an admin paralysis.\n\
 ^3/training <on|off>: ^7Turns training saber mode (near-zero damage) on or off.\n\
@@ -22299,6 +22300,49 @@ void Cmd_Unparalyze_f( gentity_t *ent ) {
 Cmd_Players_f
 ==================
 */
+/*
+==================
+Cmd_Afk_f
+
+GLX_U: [AFK] /afk: goes AFK after RP_AFK_COMMAND_DELAY seconds without input (rp_afk_time if lower), so
+it can't be typed to dodge a hit; any input before then cancels it (RP_AfkThink, g_active.c). Typed
+while AFK, it brings the player back.
+==================
+*/
+void Cmd_Afk_f( gentity_t *ent ) {
+	int delay;
+
+	if ( rp_afk_time.integer <= 0 )
+	{
+		trap->SendServerCommand( ent - g_entities, "print \"AFK is switched off on this server.\n\"" );
+		return;
+	}
+
+	if ( ent->client->pers.player_statuses & ( 1 << PLAYER_STATUS_AFK ) )
+	{
+		RP_AfkLeave( ent );
+		trap->SendServerCommand( ent - g_entities, "print \"You are back.\n\"" );
+		return;
+	}
+
+	if ( !RP_CanGoAfk( ent ) )
+	{
+		trap->SendServerCommand( ent - g_entities, "print \"You can't go AFK right now.\n\"" );
+		return;
+	}
+
+	if ( ent->client->pers.afkRequestAt )
+	{
+		delay = ( ent->client->pers.afkRequestAt - level.time + 999 ) / 1000;
+		trap->SendServerCommand( ent - g_entities, va( "print \"Going AFK in %d second%s.\n\"", delay, delay == 1 ? "" : "s" ) );
+		return;
+	}
+
+	delay = ( rp_afk_time.integer < RP_AFK_COMMAND_DELAY ) ? rp_afk_time.integer : RP_AFK_COMMAND_DELAY;
+	ent->client->pers.afkRequestAt = level.time + delay * 1000;
+	trap->SendServerCommand( ent - g_entities, va( "print \"Going AFK in %d second%s. Don't move.\n\"", delay, delay == 1 ? "" : "s" ) );
+}
+
 void Cmd_Players_f( gentity_t *ent ) {
 	char content[MAX_STRING_CHARS];
 	int i = 0;
@@ -22345,6 +22389,12 @@ void Cmd_Players_f( gentity_t *ent ) {
 				else
 				{
 					Q_strcat(entry, sizeof(entry), "^7(not logged in)");
+				}
+
+				// GLX_U: [AFK]
+				if (player->client->pers.player_statuses & (1 << PLAYER_STATUS_AFK))
+				{
+					Q_strcat(entry, sizeof(entry), " ^5(AFK)");
 				}
 
 				Q_strcat(entry, sizeof(entry), "^7\n");
@@ -25222,6 +25272,7 @@ command_t commands[] = {
 	{ "admindown",			Cmd_AdminDown_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "adminlist",			Cmd_AdminList_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "adminup",			Cmd_AdminUp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "afk",				Cmd_Afk_f,					CMD_NOINTERMISSION },	// GLX_U: [AFK]
 	{ "admmap",				Cmd_AdmMap_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "admweather",			Cmd_AdmWeather_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "admwalkthrough",		Cmd_AdmWalkthrough_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },

@@ -438,6 +438,9 @@ XCVAR_DEF( rp_flame_thrower_damage,	"2",			NULL,				CVAR_ARCHIVE|CVAR_NORESTART,
 // DAJ_RP: [Ammo] RP_CVU_addAmmoScale (g_cvar.c) snaps it into RP_AMMO_SCALE_MIN..RP_AMMO_SCALE_MAX.
 XCVAR_DEF( rp_add_ammo_scale,	"0.5",					RP_CVU_addAmmoScale,	CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( rp_chat_protection_timer,	"0",			NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
+// GLX_U: [AFK] seconds without input before a player goes AFK (bubble + comlink animation), 0 = off, /afk too.
+// RP_CVU_afkTime (g_cvar.c) holds it to 0..3600.
+XCVAR_DEF( rp_afk_time,				"120",		RP_CVU_afkTime,		CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( rp_change_map_gametype_vote, "1",			NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( rp_vote_timer,	"0",						NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )
 XCVAR_DEF( rp_allow_saber_touch_damage, "1",			NULL,				CVAR_ARCHIVE|CVAR_NORESTART,					qtrue )

@@ -4572,6 +4572,7 @@ void ClientSpawn(gentity_t *ent) {
 	// while fully able to fight. See the matching comment on that block in g_active.c.
 	ent->client->pers.chat_protection_timer = 0;
 	ent->client->pers.player_statuses &= ~(1 << PLAYER_STATUS_CHAT_PROTECTION);
+	RP_AfkReset(ent);	// GLX_U: [AFK] nothing AFK carries over a respawn
 
 	// the respawned flag will be cleared after the attack and jump keys come up
 	client->ps.pm_flags |= PMF_RESPAWNED;

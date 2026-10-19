@@ -896,7 +896,8 @@ typedef enum {
 	// nothing read the old bit any more, and both ClientConnect and ClientDisconnect zero the whole
 	// field, so no stale bit survives a rejoin. Read it through G_PlayerIsAdminParalyzed().
 	PLAYER_STATUS_ADMIN_PARALYSIS,
-	PLAYER_STATUS_DUEL_TOURNAMENT_LOSS       // has just lost his duel in the Duel Tournament
+	PLAYER_STATUS_DUEL_TOURNAMENT_LOSS,      // has just lost his duel in the Duel Tournament
+	PLAYER_STATUS_AFK                        // GLX_U: [AFK] away: protection bubble and comlink animation, g_active.c
 } playerStatus_t;
 
 // GLX_U: [Cosmetics] a hat or cape name: up to 13 characters and the NUL, TaystJK's own
@@ -1020,6 +1021,17 @@ typedef struct clientPersistant_s {
 	// GalaxyRP fix: [gameplay] holds the level.time at which the player opened chat (0 = not talking),
 	// not the deadline -- see the block in ClientTimerActions() for why. Reset to 0 by ClientSpawn().
 	int chat_protection_timer;
+
+	// GLX_U: [AFK] see RP_AfkThink() in g_active.c. All reset by ClientSpawn() (RP_AfkReset)
+	int afkLastActive;			// level.time of the last input
+	int afkRequestAt;			// a pending /afk goes off at this level.time, 0 if none
+	int afkStart;				// when the player went AFK
+	int afkSavedInvulnerable;	// invulnerableTimer when the player went AFK (spawn/revive protection)
+	int afkBubbleUntil;			// the invulnerableTimer the AFK bubble last set
+	qboolean afkOwnAnim;		// the comlink animation is ours (not an emote or meditation the player was in)
+	int afkPrevButtons;			// the previous usercmd, to see what changed
+	int afkPrevWeapon;
+	int afkPrevAngles[3];
 
 	// GalaxyRP fix: [Shop] seller_invoked_by_id removed -- it only supported Cmd_CallSeller_f
 	// (/callseller), which has itself been removed for good (see g_cmds.c).
@@ -2480,6 +2492,11 @@ void SaveRegisteredItems( void );
 // RP_DownedSystemEnabled() in g_utils.c. The cvar is CVAR_LATCH, so this cannot change mid-map.
 qboolean RP_DownedSystemEnabled( void );
 qboolean RP_MinigameFighter( gentity_t *ent );	// DAJ_RP: [Minigames] g_main.c
+// GLX_U: [AFK] g_active.c
+#define RP_AFK_COMMAND_DELAY	20		// seconds /afk waits without input (rp_afk_time if lower)
+qboolean RP_CanGoAfk( gentity_t *ent );
+void RP_AfkLeave( gentity_t *ent );
+void RP_AfkReset( gentity_t *ent );
 // GalaxyRP fix: [Death System] set around a player_die() call that is bookkeeping rather than a
 // death -- a team or class change, a forced move to Spectator, the respawn an account command
 // charges, or a mini-game tearing down a private duel it needs out of the way. player_die() is the
@@ -3134,6 +3151,7 @@ void RP_CVU_allowCosmetics(void);	// GLX_U: [Cosmetics] g_cvar.c
 void RP_CVU_downedTimer(void);
 void RP_CVU_downedInvulnerabilityTimer(void);
 void RP_CVU_screenMessageTimer(void);
+void RP_CVU_afkTime(void);	// GLX_U: [AFK] g_cvar.c
 void RP_CVU_flameThrowerCooldown(void);
 
 // DAJ_RP: [Corpses] rp_npc_corpse_time, rp_limb_lifetime and rp_player_corpse_time, all in seconds and

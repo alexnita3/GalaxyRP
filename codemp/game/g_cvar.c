@@ -145,6 +145,19 @@ void RP_CVU_allowCosmetics(void)
 	G_RpRepublishCosmetics();
 }
 
+// GLX_U: [AFK] 0 (off) to an hour
+void RP_CVU_afkTime(void)
+{
+	if (rp_afk_time.integer > 3600)
+	{
+		RP_SnapCvar(&rp_afk_time, "rp_afk_time", 3600, "maximum is 3600");
+	}
+	else if (rp_afk_time.integer < 0)
+	{
+		RP_SnapCvar(&rp_afk_time, "rp_afk_time", 0, "minimum is 0, which switches AFK off");
+	}
+}
+
 void RP_CVU_screenMessageTimer(void)
 {
 	RP_ClampNonNegativeCvar(&rp_screen_message_timer, "rp_screen_message_timer");

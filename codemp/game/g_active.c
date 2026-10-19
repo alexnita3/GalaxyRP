@@ -1438,6 +1438,177 @@ static void RP_RunDownedTimer( gentity_t *ent )
 	}
 }
 
+/*
+===============================================================================
+GLX_U: [AFK]
+
+A player with no input for rp_afk_time seconds (or for the /afk countdown) is AFK: the spawn protection
+bubble (EF_INVULNERABLE, drawn by every client; G_Damage refuses players and NPCs) and the comlink
+animation, held the way emotes are. The first input ends it. An open chat box sends no input, so a
+long message counts as idle; BUTTON_TALK (also set while alt-tabbed) and BUTTON_ANY are ignored.
+===============================================================================
+*/
+#define RP_AFK_BUBBLE_MS		1500	// how far ahead the bubble's invulnerableTimer is kept
+#define RP_AFK_ANIM_START_MS	800		// BOTH_TALKCOMM1START: 16 frames at 20 fps
+
+static qboolean RP_IsAfk( const gentity_t *ent ) {
+	return ( ent->client->pers.player_statuses & ( 1 << PLAYER_STATUS_AFK ) ) ? qtrue : qfalse;
+}
+
+qboolean RP_CanGoAfk( gentity_t *ent ) {
+	gclient_t *cl = ent ? ent->client : NULL;
+
+	if ( !cl || ent->NPC || ( ent->r.svFlags & SVF_BOT ) || ent->s.number >= MAX_CLIENTS )
+		return qfalse;
+	if ( level.intermissiontime || cl->pers.connected != CON_CONNECTED )
+		return qfalse;
+	if ( cl->sess.sessionTeam == TEAM_SPECTATOR || ( cl->ps.pm_flags & PMF_FOLLOW ) || cl->tempSpectate >= level.time )
+		return qfalse;
+	if ( ent->health <= 0 || cl->ps.stats[STAT_HEALTH] <= 0 || cl->ps.pm_type == PM_DEAD || ( cl->ps.eFlags & EF_DEAD ) )
+		return qfalse;
+	if ( cl->pers.player_statuses & ( ( 1 << PLAYER_STATUS_DOWNED ) | ( 1 << PLAYER_STATUS_ADMIN_PARALYSIS ) ) )
+		return qfalse;
+	if ( cl->ps.m_iVehicleNum || cl->ps.duelInProgress || RP_MinigameFighter( ent ) )
+		return qfalse;
+	return qtrue;
+}
+
+static void RP_AfkEnter( gentity_t *ent, qboolean announce ) {
+	gclient_t *cl = ent->client;
+
+	cl->pers.player_statuses |= ( 1 << PLAYER_STATUS_AFK );
+	cl->pers.afkRequestAt = 0;
+	cl->pers.afkStart = level.time;
+	// spawn or revive protection still running comes back when the player does
+	cl->pers.afkSavedInvulnerable = ( cl->ps.eFlags & EF_INVULNERABLE ) ? cl->invulnerableTimer : 0;
+	cl->ps.eFlags |= EF_INVULNERABLE;
+	cl->invulnerableTimer = cl->pers.afkBubbleUntil = level.time + RP_AFK_BUBBLE_MS;
+	// an emote or meditation the player is in stays: the bubble is added to it
+	cl->pers.afkOwnAnim = ( !( cl->pers.player_statuses & ( 1 << PLAYER_STATUS_EMOTE ) ) && cl->ps.forceHandExtend != HANDEXTEND_TAUNT ) ? qtrue : qfalse;
+
+	if ( announce )
+		trap->SendServerCommand( ent - g_entities, "print \"You are AFK. Move, look around or press a key to come back.\n\"" );
+}
+
+// each frame while AFK: keep the bubble and the comlink animation up
+static void RP_AfkHold( gentity_t *ent ) {
+	gclient_t *cl = ent->client;
+
+	cl->ps.eFlags |= EF_INVULNERABLE;
+	cl->invulnerableTimer = cl->pers.afkBubbleUntil = level.time + RP_AFK_BUBBLE_MS;
+
+	if ( cl->pers.afkOwnAnim ) {
+		cl->ps.forceHandExtend = HANDEXTEND_TAUNT;
+		cl->ps.forceDodgeAnim = ( level.time - cl->pers.afkStart < RP_AFK_ANIM_START_MS ) ? BOTH_TALKCOMM1START : BOTH_TALKCOMM1;
+		cl->ps.forceHandExtendTime = level.time + 1000;
+	}
+}
+
+void RP_AfkLeave( gentity_t *ent ) {
+	gclient_t *cl = ent ? ent->client : NULL;
+
+	if ( !cl || !RP_IsAfk( ent ) )
+		return;
+
+	cl->pers.player_statuses &= ~( 1 << PLAYER_STATUS_AFK );
+
+	// the bubble is still ours (an attack, a revive or a respawn did not replace it): put back what was there
+	if ( cl->invulnerableTimer == cl->pers.afkBubbleUntil ) {
+		if ( cl->pers.afkSavedInvulnerable > level.time ) {
+			cl->invulnerableTimer = cl->pers.afkSavedInvulnerable;
+		}
+		else {
+			cl->ps.eFlags &= ~EF_INVULNERABLE;
+			cl->invulnerableTimer = 0;
+		}
+	}
+
+	if ( cl->pers.afkOwnAnim && cl->ps.forceHandExtend == HANDEXTEND_TAUNT &&
+		( cl->ps.forceDodgeAnim == BOTH_TALKCOMM1START || cl->ps.forceDodgeAnim == BOTH_TALKCOMM1 ) ) {
+		cl->ps.forceHandExtend = HANDEXTEND_NONE;
+		cl->ps.forceHandExtendTime = level.time;
+	}
+
+	cl->pers.afkOwnAnim = qfalse;
+	cl->pers.afkBubbleUntil = 0;
+	cl->pers.afkSavedInvulnerable = 0;
+}
+
+// ClientSpawn: nothing AFK carries over, and the idle clock starts now
+void RP_AfkReset( gentity_t *ent ) {
+	gclient_t *cl = ent->client;
+
+	cl->pers.player_statuses &= ~( 1 << PLAYER_STATUS_AFK );
+	cl->pers.afkLastActive = level.time;
+	cl->pers.afkRequestAt = 0;
+	cl->pers.afkStart = 0;
+	cl->pers.afkSavedInvulnerable = 0;
+	cl->pers.afkBubbleUntil = 0;
+	cl->pers.afkOwnAnim = qfalse;
+}
+
+// every usercmd, before Pmove, so the first input after AFK is not held by the animation
+static void RP_AfkThink( gentity_t *ent, usercmd_t *ucmd ) {
+	gclient_t *cl = ent->client;
+	qboolean input;
+
+	if ( !cl || ent->NPC || ( ent->r.svFlags & SVF_BOT ) || ent->s.number >= MAX_CLIENTS )
+		return;
+
+	input = ( ucmd->forwardmove || ucmd->rightmove || ucmd->upmove ) ? qtrue : qfalse;
+	// a bound key held. Not BUTTON_TALK (chat box, console, alt-tab) and not BUTTON_ANY: the key that sends
+	// a chat line or closes the console is still down for a moment after, and would cancel /afk at once
+	if ( ucmd->buttons & ~( BUTTON_TALK | BUTTON_WALKING | BUTTON_ANY ) )
+		input = qtrue;
+	if ( ( ucmd->buttons ^ cl->pers.afkPrevButtons ) & BUTTON_WALKING )	// walk toggled
+		input = qtrue;
+	if ( ucmd->weapon != cl->pers.afkPrevWeapon ||
+		ucmd->angles[0] != cl->pers.afkPrevAngles[0] || ucmd->angles[1] != cl->pers.afkPrevAngles[1] ||
+		ucmd->angles[2] != cl->pers.afkPrevAngles[2] )
+		input = qtrue;
+
+	cl->pers.afkPrevButtons = ucmd->buttons;
+	cl->pers.afkPrevWeapon = ucmd->weapon;
+	cl->pers.afkPrevAngles[0] = ucmd->angles[0];
+	cl->pers.afkPrevAngles[1] = ucmd->angles[1];
+	cl->pers.afkPrevAngles[2] = ucmd->angles[2];
+
+	if ( input ) {
+		cl->pers.afkLastActive = level.time;
+		if ( cl->pers.afkRequestAt ) {
+			cl->pers.afkRequestAt = 0;
+			trap->SendServerCommand( ent - g_entities, "print \"AFK cancelled.\n\"" );
+		}
+		RP_AfkLeave( ent );
+		return;
+	}
+
+	if ( RP_IsAfk( ent ) ) {
+		if ( rp_afk_time.integer <= 0 || !RP_CanGoAfk( ent ) )
+			RP_AfkLeave( ent );
+		else
+			RP_AfkHold( ent );
+	}
+}
+
+// once a second, from ClientTimerActions
+static void RP_AfkTick( gentity_t *ent ) {
+	gclient_t *cl = ent->client;
+
+	if ( ent->NPC || ( ent->r.svFlags & SVF_BOT ) || ent->s.number >= MAX_CLIENTS || RP_IsAfk( ent ) )
+		return;
+
+	if ( rp_afk_time.integer <= 0 || !RP_CanGoAfk( ent ) ) {
+		cl->pers.afkRequestAt = 0;		// a pending /afk that can no longer go off is dropped quietly
+		return;
+	}
+
+	if ( cl->pers.afkRequestAt && level.time >= cl->pers.afkRequestAt )
+		RP_AfkEnter( ent, qtrue );
+	else if ( level.time - cl->pers.afkLastActive >= rp_afk_time.integer * 1000 )
+		RP_AfkEnter( ent, qfalse );
+}
+
 void ClientTimerActions( gentity_t *ent, int msec ) {
 	gclient_t	*client;
      	char 		serverMotd[MAX_STRING_CHARS];
@@ -1539,6 +1710,8 @@ void ClientTimerActions( gentity_t *ent, int msec ) {
 			client->pers.player_statuses &= ~(1 << PLAYER_STATUS_CHAT_PROTECTION);
 			client->pers.chat_protection_timer = 0;
 		}
+
+		RP_AfkTick(ent);	// GLX_U: [AFK]
 
 		// GalaxyRP fix: [Dead Code] the RPG auto-heal block used to be here -- "if (amrpgmode == 2 &&
 		// !(quest_power_status & (1 << 2)))" wrapping Magic Regen, Healing Crystal and Energy Crystal.
@@ -3283,6 +3456,8 @@ void ClientThink_real( gentity_t *ent ) {
 	if ( msec > 200 ) {
 		msec = 200;
 	}
+
+	RP_AfkThink( ent, ucmd );	// GLX_U: [AFK] before Pmove
 
 	if ( pmove_msec.integer < 8 ) {
 		trap->Cvar_Set("pmove_msec", "8");
