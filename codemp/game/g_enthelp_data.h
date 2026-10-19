@@ -888,7 +888,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"2048|NO_EXPLOSION|No explosion when destroyed.\n"
 		"4096|START_OFF|Starts hidden and not solid. Using it makes it visible (still not solid), and without USE_NOT_BREAK that use also breaks it.\n"
 		"65536|NO_DEFAULT_BOX|No default box: only mins/maxs set it.",
-		"model||The .md3 to show (required). The Entity System refuses one not on the server, not an .md3 or with no model slot.\n"
+		"model||The .md3 to show (required; see /list md3). The Entity System refuses one not on the server, not an .md3 or with no model slot.\n"
 		"health|0|Damage it takes before breaking. 0: it cannot be shot (using it still breaks it).\n"
 		"material|8|Chunks: 0 metal, 1 glass, 2 sparks, 3 metal and sparks, 4 brown stone, 5 tan stone, 6 glass and metal, 7 blue metal, 8 none, 9 grey stone, 10 mixed metal, 11 yellow crate, 12 grate, 13 rope bits, 14 red crate, 15 white metal.\n"
 		"radius|1|Scales how many chunks it throws.\n"
@@ -935,7 +935,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"1|SOLID|Blocks movement and shots with its box.\n"
 		"2|LOOP|Plays the frames over and over (needs more than one frame).\n"
 		"4096|START_OFF|Starts hidden and not solid.",
-		"model||Any .glm: as given or under models/, with .glm added when there is no extension (required).\n"
+		"model||Any .glm: as given or under models/, with .glm added when there is no extension (required; see /list glm).\n"
 		"skin||Skin name: test shows model_test.skin from the model's folder. Empty or default: the model's own. A missing file shows the default skin.\n"
 		"mins|-16 -16 -16|Box corner: what SOLID blocks and the entity commands aim at.\n"
 		"maxs|16 16 16|Box corner.\n"
@@ -1198,7 +1198,7 @@ static const rpEntHelp_t rp_ent_help[] = {
 		"shows how full the slots are and how many can be reused.",
 		NULL,
 		"model||As typed, else under models/ with .md3 added (.glm for misc_model_ghoul) when it has no extension: "
-		"map_objects/kejim/cargo_small works, and the record keeps what you typed. /list models <folder> lists the .md3 files.\n"
+		"map_objects/kejim/cargo_small works, and the record keeps what you typed. /list md3 <folder> lists the .md3 files, /list glm <folder> the .glm ones.\n"
 		"modelscale|0|misc_model_breakable and misc_model_ghoul: one scale for the drawn model and its box, drawn from 0.01 to "
 		"10.23 (1 is normal). A breakable is raised so its box keeps its bottom where it was.\n"
 		"zykmodelscale||The drawn size as a percentage (100 is normal, up to 1023), taking over from modelscale. The box is not "

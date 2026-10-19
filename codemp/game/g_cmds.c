@@ -12738,7 +12738,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				trap->SendServerCommand(ent-g_entities, "print \"\n^2/list force: ^7lists force power skills\n^2/list weapons: ^7lists weapon skills\n^2/list protect: ^7lists protection skills\n^2/list ammo: ^7lists ammo skills\n^2/list items: ^7lists holdable items skills\n^2/list [skill number]: ^7lists info about a skill\n^2/list commands: ^7lists the Galaxy Mod console commands\n^2/list chat: ^7lists chat commands and RP chat modifiers\n\"");
 				// GalaxyRP: [Listings] the server-side listings (g_rplist.c), in a message of their own so the
 				// one above keeps its headroom under SV_SendServerCommand's 1022 characters.
-				trap->SendServerCommand(ent-g_entities, "print \"^2/list models <folder> <page>: ^7lists the .md3 model files, starting in map_objects. ^2/ ^7for the models folder itself\n\
+				trap->SendServerCommand(ent-g_entities, "print \"^2/list md3 <folder> <page>: ^7lists the .md3 model files, starting in map_objects. ^2/ ^7for the models folder itself\n\
 ^2/list glm <folder> <page>: ^7lists the .glm model files, starting in players. ^2/ ^7for the models folder itself\n\
 ^2/list effects <folder> <page>: ^7lists the effect files\n\
 ^2/list sounds <folder> <page>: ^7lists the sound files\n\
@@ -12949,7 +12949,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 ^3/where: ^7Displays your current coordinates.\n\n\"");
 			}
 			else if (RP_ListCommand(ent, arg1))
-			{ // GalaxyRP: [Listings] /list models, glm, effects, sounds, music, maps, npcs, vehicles -- g_rplist.c
+			{ // GalaxyRP: [Listings] /list md3, glm, effects, sounds, music, maps, npcs, vehicles -- g_rplist.c
 			}
 			else if (Q_stricmp( arg1, "chat" ) == 0)
 			{
@@ -20704,7 +20704,7 @@ void Cmd_EntitiesAndRemaps_f( gentity_t *ent ) {
 	lines[n++] = "^3/entuse <name>: ^7Uses every entity with that targetname, as a trigger or a button would: spawners, lights, effects, doors. NPCs and vehicles are left alone.\n";
 	lines[n++] = "^3/enttrigger <entity id (optional)>: ^7Activates the entity you aim at, or that id, as a level 5 Stun Baton does: a door, lift or button opens even when locked or inactive, anything else is used. Account locks do not stop it.\n";
 	lines[n++] = "^3/entslots: ^7Shows how full the map's model, effect and sound slots are, and how many can be reused.\n";
-	lines[n++] = "^3/list models ^7and ^3/list effects^7: Show the model and effect files the server has, for props.\n";
+	lines[n++] = "^3/list md3^7, ^3/list glm ^7and ^3/list effects^7: Show the .md3 and .glm model files and the effect files the server has, for props.\n";
 	lines[n++] = "^3/settings 6: ^7Entity Bounds -- draws the box of the entity you aim at, and marks nearby spawn points, targets and other point entities. The map's static models are drawn and marked in ^1red^7.\n";
 	lines[n++] = "^3/removepickups: ^7Removes all pickups from the current map (ammo, health, shield, and weapons), the map's own (^3M^7) included.\n";
 	lines[n++] = "^3/spawnplatform <height (optional)>: ^7Spawns a platform under your feet. Without a height it stays put; with one it is a lift that rises that many units when someone steps onto it, lowered to fit under a ceiling.\n";
