@@ -8833,10 +8833,22 @@ void format_text_in_quotes(char* original_text) {
 			if (closing_quote_index + 1 >= text_length)
 				break;
 
-			insertString(original_text, "^6", closing_quote_index, MAX_SAY_TEXT);
+			// [Alex] Defaults to white text after the quotes, if nothing's found. (hopefulyl shouldn't ever happen)
+			char restore_color[3] = "^7";
+			for (int color_index = 0; color_index + 1 < i;) {
+				if (original_text[color_index] == '^' &&
+					original_text[color_index + 1] >= '0' && original_text[color_index + 1] <= '9') {
+					restore_color[1] = original_text[color_index + 1];
+					color_index += 2;
+				} else {
+					color_index++;
+				}
+			}
+
+			insertString(original_text, restore_color, closing_quote_index + 2, MAX_SAY_TEXT);
 			insertString(original_text, "^2", i + 2, MAX_SAY_TEXT);
 			text_length += 4;
-			i = closing_quote_index + 8;
+			i = closing_quote_index + 6;
 		} else {
 			i++;
 		}
