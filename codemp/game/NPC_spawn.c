@@ -5864,43 +5864,6 @@ static void RP_NpcKillAim_f( gentity_t *ent )
 	trap->SendServerCommand( ent-g_entities, va( "print \"%s ^7killed.\n\"", label ) );
 }
 
-/*
-==================
-RP_NpcEffect_f
-
-GalaxyRP: [NPC System] /npc effect <holo|ghost|walkthrough|clear> on the NPC in the crosshair -- the
-NPC side of /admholo, /admghost and /admwalkthrough (g_cmds.c), and the same pers.phase_mode underneath,
-so an NPC in a mode behaves exactly like a phased player: hit, damaged and targeted like any other,
-only movement passes through (RP_PhasePassesThrough(), g_active.c), and ghost/holo get the client
-plugin's look and stay off the radar.
-
-Not a toggle: holo, ghost and walkthrough set that mode (switching straight from one to another is
-fine), and only clear takes it off. Clearing goes through the same release as a player's, so an NPC
-cleared while standing inside somebody stays walk-through until the two are apart.
-
-An NPC can also be non-solid from the map, outside this system: the NOTSOLID spawnflag gives it
-contents 0 (nothing can hit it either), and a script's SET_SOLID false gives it CONTENTS_CORPSE.
-Any of these commands makes it a normal CONTENTS_BODY again -- holo/ghost/walkthrough into this
-system's walk-through-but-hittable body, clear into a plain solid one (through the release, so it
-cannot trap anyone). A script that later sets it non-solid again wins, as it would have anyway.
-
-Vehicles are refused -- their physics and riders are a different beast -- and so is an NPC riding
-one. The mode lasts until clear, the NPC's removal, or a map change; the next NPC in that slot
-starts with a zeroed client.
-
-DAJ_RP: [NPC System] the walk-through mode is "walkthrough", and is named so in the replies: it was "nonsolid"
-("is now non-solid"), which read as the NOTSOLID spawnflag -- an NPC nothing touches at all -- when this one is
-hit like any other. /admwalkthrough on a player (was /admsolid) uses the same word (RP_PhaseModeName(), g_cmds.c).
-There is no /npc effect for /admhidden: an NPC cannot be hidden.
-==================
-*/
-// DAJ_RP: [NPC System] what /npc effect calls a mode in its replies -- since /admsolid became /admwalkthrough,
-// the same word a player's mode is given
-static const char *RP_NpcEffectName( int mode )
-{
-	return RP_PhaseModeName( mode );
-}
-
 static void RP_NpcEffect_f( gentity_t *ent )
 {
 	char arg[MAX_STRING_CHARS];
@@ -5970,7 +5933,7 @@ static void RP_NpcEffect_f( gentity_t *ent )
 	{
 		if ( npc->client->pers.phase_mode == mode && !mapNonSolid )
 		{
-			trap->SendServerCommand( ent-g_entities, va( "print \"%s ^7is already %s.\n\"", label, RP_NpcEffectName( mode ) ) );
+			trap->SendServerCommand( ent-g_entities, va( "print \"%s ^7is already %s.\n\"", label, convert_phase_mode_to_text( mode )) );
 			return;
 		}
 
@@ -5993,13 +5956,13 @@ static void RP_NpcEffect_f( gentity_t *ent )
 	}
 	else
 	{
-		trap->SendServerCommand( ent-g_entities, va( "print \"%s ^7is now %s%s.\n\"", label, RP_NpcEffectName( mode ),
+		trap->SendServerCommand( ent-g_entities, va( "print \"%s ^7is now %s%s.\n\"", label, convert_phase_mode_to_text( mode ),
 			mapNonSolid ? " ^7(it spawned non-solid; it can be hit now)" : "" ) );
 	}
 
 	G_LogPrintf( "npc effect: %s ^7made NPC %s (%d) %s\n", ent->client->pers.netname,
 		( npc->NPC_type && npc->NPC_type[0] ) ? npc->NPC_type : "npc", npc->s.number,
-		( mode == RP_PHASE_NONE ) ? "normal" : RP_NpcEffectName( mode ) );
+		( mode == RP_PHASE_NONE ) ? "normal" : convert_phase_mode_to_text( mode ) );
 }
 
 /*

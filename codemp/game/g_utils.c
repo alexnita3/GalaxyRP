@@ -3391,7 +3391,7 @@ that for free -- the victim died and a corpse blocks nobody -- but here three th
     solid body in the spot, and its call here only comes after that check has passed, so a newly
     spawned NPC never lands on a live player. An NPC spawned not-solid, spawnflag 64, skips both.)
 
-And a body already passing through bodies -- /admwalkthrough, /admghost, /admholo, /admhidden, /npc effect,
+And a body already passing through bodies -- /admwalkthrough, /ghost, /holo, /admhidden, /npc effect,
 or the tail of a release -- on either side cannot get stuck, so it is neither telefragged nor released.
 
 DAJ_RP: [Vehicles] nor is anyone aboard the same vehicle (RP_VehicleOf() above): its riders all sit at its one driver
