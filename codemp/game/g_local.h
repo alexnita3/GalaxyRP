@@ -2728,7 +2728,7 @@ int			G_GamestateBytesUsed( void );
 void		RP_SlotRestore( int restart );
 int			RP_PlaySoundIndex( const char *name, char *reason, int reasonSize );
 void		Cmd_EntSlots_f( gentity_t *ent );
-// GalaxyRP: [Listings] /list models|effects|sounds|music|maps|npcs|vehicles, /maplist and the file
+// GalaxyRP: [Listings] /list md3|glm|effects|sounds|music|maps|npcs|vehicles, /maplist and the file
 // checks of /playsound and /playmusic -- g_rplist.c
 qboolean	RP_ListCommand( gentity_t *ent, const char *what );
 void		RP_ListVotableMaps( gentity_t *ent, int page );

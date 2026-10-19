@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-GalaxyRP: [Listings] the server-side listings: /list models, effects, sounds, music, maps, npcs and
+GalaxyRP: [Listings] the server-side listings: /list md3, glm, effects, sounds, music, maps, npcs and
 vehicles, and /maplist. Also the file checks /playsound and /playmusic make before they touch the
 sound table or the music configstring.
 
@@ -446,7 +446,8 @@ typedef struct {
 } rpListSource_t;
 
 static const rpListSource_t rp_listSources[] = {
-	{ "models", "model", "Models", "models", "map_objects", { ".md3", NULL }, qfalse, qfalse, qfalse,
+	// GLX_U: [Listings] /list md3, was /list models
+	{ "md3", "md3s", "MD3 models", "models", "map_objects", { ".md3", NULL }, qfalse, qfalse, qfalse,
 		"^7Use a name as the ^3model ^7key of a misc_model_breakable.\n" },
 	{ "effects", "effect", "Effects", "effects", "", { ".efx", NULL }, qfalse, qfalse, qfalse,
 		"^7Use a name as the ^3fxFile ^7key of an fx_runner.\n" },
@@ -456,6 +457,9 @@ static const rpListSource_t rp_listSources[] = {
 		"^7Play one with ^3/playmusic <path>^7.\n" },
 	{ "maps", "map", "Maps", "maps", "", { ".bsp", NULL }, qfalse, qfalse, qtrue,
 		"^7Vote for one with ^3/callvote map <name>^7.\n" },
+	// GLX_U: [Listings] /list glm. Kept last: rpx_kinds[] below refers to the rows above by index.
+	{ "glm", "glms", "GLM models", "models", "players", { ".glm", NULL }, qfalse, qfalse, qfalse,
+		"^7Use a name as the ^3model ^7key of a misc_model_ghoul. A folder under players is a player model: its name is what ^3/model ^7and an NPC type's ^3playerModel ^7take.\n" },
 };
 
 /*
@@ -1134,7 +1138,7 @@ Commands
 ==================
 RP_ListCommand
 
-/list models|effects|sounds|music|maps|npcs|vehicles [folder or text] [page], from Cmd_ListAccount_f
+/list md3|glm|effects|sounds|music|maps|npcs|vehicles [folder or text] [page], from Cmd_ListAccount_f
 (logged-in players). qfalse when "what" is none of these, so the caller goes on to its own words.
 A lone number after the word is the page.
 ==================
@@ -1321,7 +1325,7 @@ typedef struct {
 } rpxKind_t;
 
 static const rpxKind_t rpx_kinds[] = {
-	{ "models",		0 },
+	{ "models",		0 },	// GLX_U: the /rpxlist word (rp_extras.h), not the /list one (md3)
 	{ "effects",	1 },
 	{ "sounds",		2 },
 	{ "music",		3 },
