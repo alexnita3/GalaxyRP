@@ -1086,9 +1086,7 @@ static void CG_RpPredictPlayerState( void ) {
 	if ( cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR || cg.snap->ps.pm_type == PM_SPECTATOR ) {
 		cg_pmove.tracemask &= ~CONTENTS_BODY;	// spectators can fly through bodies
 	}
-	// GalaxyRP: [Phase] /admwalkthrough, /admghost, /admholo, /admhidden -- the server moves this player through other
-	// bodies (RP_PhasePassesThrough, g_active.c), so predict the same or every pass-through would be
-	// a misprediction snapped back by the next snapshot. The mode arrives in the player's own eFlags.
+	// Alex: [Phase] Remove bodies from the trace mask if we're phased, so we can move through them.
 	if ( RP_PHASE_FROM_EFLAGS( cg.snap->ps.eFlags ) != RP_PHASE_NONE ) {
 		cg_pmove.tracemask &= ~CONTENTS_BODY;
 	}

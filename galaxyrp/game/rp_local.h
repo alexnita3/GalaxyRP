@@ -103,7 +103,7 @@ typedef enum {
 	// what every saved permission means. New bits go here, immediately before ADM_NUM_CMDS.
 	// pers.bitvalue is a 32-bit int, so this one (bit 27) leaves three more before the sign bit.
 	ADM_WEATHER,
-	// GalaxyRP: [Phase] "Player effects": /admghost, /admholo, /admwalkthrough and /admhidden -- appended for the same reason as above
+	// GalaxyRP: [Phase] "Player effects": /ghost, /holo, /admwalkthrough and /admhidden -- appended for the same reason as above
 	// (bit 28, bit value 268435456). Two bits remain before the sign bit.
 	ADM_PHASE,
 	ADM_NUM_CMDS

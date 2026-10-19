@@ -955,7 +955,7 @@ typedef struct clientPersistant_s {
 	// zyk: a bitfield of playerStatus_t values -- see the enum above this struct.
 	int player_statuses;
 
-	// GalaxyRP: [Phase] /admwalkthrough, /admghost, /admholo, /admhidden -- an rpPhaseMode_t (bg_public.h). In pers, so
+	// GalaxyRP: [Phase] /admwalkthrough, /ghost, /holo, /admhidden -- an rpPhaseMode_t (bg_public.h). In pers, so
 	// it survives death and respawn (ClientSpawn keeps pers); ClientConnect zeroes the whole client,
 	// so a map change or a reconnect clears it, and RP_ClearPhaseMode() clears it on /login, /logout,
 	// /new and /char. phase_releasing is the tail of a mode that has just been turned off: the player
@@ -3219,14 +3219,14 @@ qboolean RP_CanKeepHook( gentity_t *ent );
 qboolean RP_CanFireHook( gentity_t *ent );
 #define RP_HOOK_CLASSNAME "rp_hook"
 
-// GalaxyRP: [Phase] /admwalkthrough, /admghost, /admholo, /admhidden and /npc effect -- g_active.c,
+// GalaxyRP: [Phase] /admwalkthrough, /ghost, /holo, /admhidden and /npc effect -- g_active.c,
 // g_cmds.c and NPC_spawn.c
 qboolean RP_PhasePassesThrough( const gentity_t *ent );
 // DAJ_RP: [Phase] /admhidden -- see RP_HiddenApplyState() in g_active.c
 qboolean RP_PlayerIsHidden( const gentity_t *ent );
 void RP_HiddenApplyState( const gentity_t *player, entityState_t *s );
 void RP_ClearPhaseMode( gentity_t *ent );
-const char *RP_PhaseModeName( int mode );
+const char *convert_phase_mode_to_text( int mode );
 void RP_PhaseTrackNpc( gentity_t *npc );
 // GalaxyRP: [Entity System] an npc_spawner's "npceffect" value: RP_PHASE_* for holo/ghost/walkthrough,
 // RP_PHASE_NONE for an empty one, -1 for anything else -- see NPC_spawn.c

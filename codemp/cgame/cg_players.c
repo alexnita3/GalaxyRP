@@ -9845,49 +9845,22 @@ void CG_CheckThirdPersonAlpha( centity_t *cent, refEntity_t *legs )
 	}
 }
 
-/*
-===============
-CG_AddPhasedPlayerModel
-
-GalaxyRP: [Phase] draws a player whom /admholo or /admghost has turned into a hologram or a Force
-ghost, in place of the plain model. Returns qfalse, drawing nothing, for anyone else -- including a
-player who is only walk-through (/admwalkthrough), who looks normal -- so every caller can fall back to its
-own R_AddRefEntityToScene. The mode comes from the two phase bits of eFlags (bg_public.h).
-
-The effect has to work on any player model, and a customShader replaces every surface of a model
-with one fixed shader that cannot refer to the surface's own texture. So it is two passes of the same
-posed model, as the force shells are drawn:
-
-  1. The model with its own textures, restyled by the renderer's per-entity overrides (both TaystJK
-     renderers honour them): RF_RGB_TINT forces the entity colour onto every stage of the model's
-     shaders, RF_FORCE_ENT_ALPHA forces translucent blending at the entity alpha, RF_ALPHA_DEPTH
-     makes that translucent pass write depth.
-       hologram: tinted ( 0.35 0.55 1.0 ) and translucent at 200. The hologram skin's own colour,
-                 ( 0.1 0.2 1.0 ), is too dark here: the tint MULTIPLIES the texture and drops the
-                 lighting, and the skin could get away with it only because it was added, not
-                 blended -- the renderers have no per-entity additive override. At 0.1 / 0.2 the
-                 red and green that carry a skin's detail are crushed and the model reads as a
-                 dark blue shape behind the overlay; 0.35 / 0.55 keeps the detail and stays blue.
-       ghost:    translucent with a flicker like the ghost skin's, alphaGen wave sin 0.55 0.1 0.1
-                 0.1 (the skin uses 0.7; a little more see-through suits the model pass here),
-                 computed here, and depth-writing like the skin's depthWrite; lighting is untouched.
-  2. The same model again with a customShader holding only the texture-independent stages
-     (assets/client/shaders/rp_phase.shader): scanlines + broken-camera noise for the hologram,
-     the pulsing blue glow for the ghost. RF_FORCEPOST keeps it after pass 1 in the vanilla
-     renderer, which post-renders RF_FORCE_ENT_ALPHA entities; the Vulkan renderer draws both in
-     sort order, where the additive overlay already comes after the opaque-sorted model.
-
-An alpha the caller has already asked for -- the third-person alpha, a cloak fade -- is kept: the
-lower of that and the phase's own wins. withOverlay is qfalse during a cloak fade, where only the
-fading model is wanted. Both passes skip the shadow (CG_PlayerShadow skips the blob too).
-===============
-*/
 #define RP_HOLO_TINT_R		89		// 0.35
 #define RP_HOLO_TINT_G		140		// 0.55
 #define RP_HOLO_TINT_B		255		// 1.0
 #define RP_HOLO_ALPHA		200		// 0.78
 #define RP_GHOST_ALPHA_BASE	0.55f	// flicker between 0.45 and 0.65
 #define RP_GHOST_ALPHA_AMP	0.1f
+/*
+===============
+CG_AddPhasedPlayerModel
+
+GalaxyRP: [Phase] draws the special appearance for a player marked as a Force ghost or hologram.
+
+For alpha, the lower of that and the phase's own wins. withOverlay is qfalse during a cloak fade,
+where only the fading model is wanted. Both passes skip the shadow (CG_PlayerShadow skips the blob too).
+===============
+*/
 qboolean CG_AddPhasedPlayerModel( centity_t *cent, const refEntity_t *legs, qboolean withOverlay )
 {
 	const int phase = RP_PHASE_FROM_EFLAGS( cent->currentState.eFlags );

@@ -661,17 +661,6 @@ typedef enum {
 	PERS_ASSIST_COUNT,				// assist awards
 	PERS_GAUNTLET_FRAG_COUNT,		// kills with the gauntlet
 	PERS_CAPTURES,					// captures
-	// GalaxyRP fix: [Death System] how many times the Death System has knocked this player down.
-	// Separate from PERS_KILLED, which counts actual deaths: a knockdown someone is revived from is
-	// not a death, and a death that never passed through a knockdown (a vehicle, a mini-game, or
-	// rp_downed_timer 0) is not a knockdown. Counted in exactly one place, paralyze_player()
-	// (g_cmds.c), which is the gameplay knockdown path -- an admin /paralyze reaches
-	// RP_EnterDownedState() directly and is deliberately not counted here.
-	//
-	// This is the sixteenth entry and MAX_PERSISTANT (q_shared.h) is 16, so the array is exactly
-	// full. The array is transmitted whole by MSG_WriteDeltaPlayerstate either way, so this costs
-	// no bandwidth -- but there is no room for a seventeenth without raising that constant, which
-	// is part of the network protocol.
 	PERS_KNOCKED_DOWN				// Death System knockdowns (NOT admin /paralyze)
 } persEnum_t;
 
@@ -705,18 +694,8 @@ typedef enum {
 
 #define EF_NOT_USED_1			(1<<12)		// claimed by GalaxyRP -- see EF_RPG_JETPACK_UPGRADE below
 // GalaxyRP: [Skills] set on a player whose Jetpack skill is at max level (3) in RPG Mode, so the
-// client draws the blue exhaust flame instead of the default Boba one (cg_players.c). Carried
-// here rather than pushed as an EV_ITEMUSEFAIL event into a client-side cache, which is what it
-// used to be: an entity-state bit is in every snapshot, so it is PVS-correct by construction,
-// cannot go stale when a client slot is reused, needs no resend for players who join later, and
-// is read off the same `cent` as the EF_JETPACK gate around it -- which is what makes it right
-// while spectating, where cg.snap->ps is the FOLLOWED player.
-//
-// The upstream name is kept above so a future merge from TaystJK does not silently hand this bit
-// to something else. eFlags is transmitted at its full 32 bits ({ NETF(eFlags), 32 } in msg.cpp,
-// identical in stock TaystJK), so claiming a spare bit changes nothing on the wire: a stock
-// client receives it, has no name for it, and keeps drawing the default flame.
-#define EF_RPG_JETPACK_UPGRADE	EF_NOT_USED_1
+// client draws the blue exhaust flame instead of the default Boba one (cg_players.c).
+#define EF_RPG_JETPACK_UPGRADE	EF_NOT_USED_1 // name is kept to make merging from taystJK easier
 
 #define	EF_TALK					(1<<13)		// draw a talk balloon
 #define	EF_CONNECTION			(1<<14)		// draw a connection trouble sprite
@@ -726,16 +705,7 @@ typedef enum {
 #define	EF_NOT_USED_3			(1<<17)		// claimed by GalaxyRP -- see EF_RP_PHASE_MASK below
 #define	EF_NOT_USED_4			(1<<18)		// claimed by GalaxyRP -- see EF_RP_PHASE_MASK below
 
-// GalaxyRP: [Phase] the /admwalkthrough, /admghost and /admholo state of a player, as a two-bit number in
-// bits 17-18 (read it with RP_PHASE_FROM_EFLAGS, never bit by bit): 0 normal, 1 walk-through, 2 Force
-// ghost, 3 hologram. Every non-zero value means the player does not collide with other players and
-// NPCs; 2 and 3 also select the look the plugin draws and keep the player off the radar. The server
-// (ClientEndFrame, g_active.c) writes it into ps.eFlags every frame from pers.phase_mode, so it
-// survives respawns and reaches spectators and the player's own prediction (cg_predict.c) alike.
-// Same reasoning as EF_RPG_JETPACK_UPGRADE above for claiming spare bits: eFlags goes out at its full
-// 32 bits, and a client without the plugin receives them, has no name for them and draws the player
-// as usual. The upstream names are kept above for the same merge-safety reason. Bits 15 and 16 were
-// deliberately NOT used: TaystJK's own headers name them EF_ALT_DIM and EF_GRAPPLE_SWING (JA+ flags).
+// [Phase] Alex: Tells the code which bit to use to store phase modes.
 #define EF_RP_PHASE_SHIFT		17
 #define EF_RP_PHASE_MASK		(EF_NOT_USED_3 | EF_NOT_USED_4)
 #define RP_PHASE_FROM_EFLAGS(f)	(((f) & EF_RP_PHASE_MASK) >> EF_RP_PHASE_SHIFT)
@@ -743,13 +713,9 @@ typedef enum {
 typedef enum {
 	RP_PHASE_NONE = 0,		// normal
 	RP_PHASE_NONSOLID,		// /admwalkthrough: passes through players and NPCs, looks normal
-	RP_PHASE_GHOST,			// /admghost: walk-through, drawn as a Force ghost, off the radar
-	RP_PHASE_HOLO,			// /admholo: walk-through, drawn as a hologram, off the radar
-	// DAJ_RP: [Phase] /admhidden: walk-through and not drawn at all. Server-only -- the two bits above are
-	// full, so it goes out as RP_PHASE_NONSOLID (RP_PhaseUpdate, g_active.c), which is all a client needs
-	// to predict walking through the player. The hiding is done with the Mind Trick fields of the
-	// player's entityState instead (RP_HiddenApplyState, g_active.c), which every client honours.
-	RP_PHASE_HIDDEN
+	RP_PHASE_GHOST,			// /ghost: walk-through, drawn as a Force ghost, off the radar
+	RP_PHASE_HOLO,			// /holo: walk-through, drawn as a hologram, off the radar
+	RP_PHASE_HIDDEN			// /admhidden: walk-through and not drawn at all.
 } rpPhaseMode_t;
 
 #define	EF_BODYPUSH				(1<<19)		//rww - claiming this for fullbody push effect

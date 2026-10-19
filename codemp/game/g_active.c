@@ -753,25 +753,7 @@ static void SV_PMTrace( trace_t *results, const vec3_t start, const vec3_t mins,
 
 /*
 =================
-GalaxyRP: [Phase] movement-only non-solidity for /admwalkthrough, /admghost, /admholo and /admhidden
-
-A phased player keeps r.contents CONTENTS_BODY. That is the whole point of doing it this way rather
-than zeroing contents: every weapon trace, saber hit, Force power, grapple and NPC still finds a
-normal body, so the player is hit, damaged and targeted exactly like anyone else. Only MOVEMENT
-collision between bodies is switched off, from three sides:
-
-  - the phased player's own Pmove drops CONTENTS_BODY from its tracemask (ClientThink_real), so they
-    walk through players and NPCs but not walls;
-  - everyone else's Pmove -- players, bots, NPCs and vehicles all move through ClientThink_real --
-    runs with the phased bodies' contents cleared for the length of the Pmove() call and put back
-    straight after (RP_PhaseHideBodies / RP_PhaseRestoreBodies). SV_ClipMoveToEntities reads
-    r.contents live, so no relink is needed, and nothing outside that window sees the change;
-  - ClientEndFrame sends phased players with s.solid 0, so every client, stock ones included,
-    predicts walking through them instead of bumping into a box the server no longer blocks with.
-
-NPCs get the same three through /npc effect: the mode lives in the NPC's own client->pers, its Pmove
-goes through ClientThink_real like a player's, and RP_PhaseNpcEndFrame() stands in for
-ClientEndFrame, which NPCs never reach.
+GalaxyRP: [Phase] Turn body collisions on/off for a player.
 =================
 */
 qboolean RP_PhasePassesThrough( const gentity_t *ent )

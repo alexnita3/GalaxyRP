@@ -6315,18 +6315,10 @@ CG_`Entity
 =================
 CG_PhaseCrosshairTrace
 
-GalaxyRP: [Phase] players under /admwalkthrough, /admghost, /admholo or /admhidden arrive with no collision box
-(s.solid 0 -- see ClientEndFrame in g_active.c), so the crosshair traces, which only test the solid
-list, go straight through them and their name never shows. This tests the segment start->end
-against a standard player box around each of them, scaled by the model scale they send, and takes
-the nearest hit if it is closer than whatever the real trace found. A slab test against an
-axis-aligned box: the same box the server gives a standing player, which is close enough for aiming
-a name tag.
+GalaxyRP: Checks whether a straight line from start to end passes through a 3D box defined by mins and maxs.
 
-NPCs /npc effect has phased arrive the same way, so they are tested too: no name is drawn for an
-NPC, but the crosshair still changes colour over it like over any other NPC. Their real box is not
-sent once s.solid is 0, so they get the same standard box -- right for humanoids, a little generous
-or tight for droids and creatures, which is fine for colouring a crosshair.
+It returns true if the line hits the box. If it does, it puts the hit’s position along the line in frac: 
+0 means at the start, 1 means at the end. The caller uses that to find where the crosshair ray first hits a phased player or NPC.
 =================
 */
 static qboolean CG_PhaseRayHitsBox( const vec3_t start, const vec3_t end, const vec3_t mins, const vec3_t maxs, float *frac )
