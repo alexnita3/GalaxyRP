@@ -1,6 +1,6 @@
 /*
 ===========================================================================
-GalaxyRP: [Listings] the server-side listings: /list models, effects, sounds, music, maps, npcs and
+GalaxyRP: [Listings] the server-side listings: /list models, glm, effects, sounds, music, maps, npcs and
 vehicles, and /maplist. Also the file checks /playsound and /playmusic make before they touch the
 sound table or the music configstring.
 
@@ -456,6 +456,9 @@ static const rpListSource_t rp_listSources[] = {
 		"^7Play one with ^3/playmusic <path>^7.\n" },
 	{ "maps", "map", "Maps", "maps", "", { ".bsp", NULL }, qfalse, qfalse, qtrue,
 		"^7Vote for one with ^3/callvote map <name>^7.\n" },
+	// GLX_U: [Listings] /list glm. Kept last: rpx_kinds[] below refers to the rows above by index.
+	{ "glm", "glms", "GLM models", "models", "players", { ".glm", NULL }, qfalse, qfalse, qfalse,
+		"^7A folder under players is a player model: its name is what ^3/model ^7and an NPC type's ^3playerModel ^7take.\n" },
 };
 
 /*
@@ -1134,7 +1137,7 @@ Commands
 ==================
 RP_ListCommand
 
-/list models|effects|sounds|music|maps|npcs|vehicles [folder or text] [page], from Cmd_ListAccount_f
+/list models|glm|effects|sounds|music|maps|npcs|vehicles [folder or text] [page], from Cmd_ListAccount_f
 (logged-in players). qfalse when "what" is none of these, so the caller goes on to its own words.
 A lone number after the word is the page.
 ==================

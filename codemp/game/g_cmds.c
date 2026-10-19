@@ -12738,7 +12738,8 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 				trap->SendServerCommand(ent-g_entities, "print \"\n^2/list force: ^7lists force power skills\n^2/list weapons: ^7lists weapon skills\n^2/list protect: ^7lists protection skills\n^2/list ammo: ^7lists ammo skills\n^2/list items: ^7lists holdable items skills\n^2/list [skill number]: ^7lists info about a skill\n^2/list commands: ^7lists the Galaxy Mod console commands\n^2/list chat: ^7lists chat commands and RP chat modifiers\n\"");
 				// GalaxyRP: [Listings] the server-side listings (g_rplist.c), in a message of their own so the
 				// one above keeps its headroom under SV_SendServerCommand's 1022 characters.
-				trap->SendServerCommand(ent-g_entities, "print \"^2/list models <folder> <page>: ^7lists the model files, starting in map_objects. ^2/ ^7for the models folder itself\n\
+				trap->SendServerCommand(ent-g_entities, "print \"^2/list models <folder> <page>: ^7lists the .md3 model files, starting in map_objects. ^2/ ^7for the models folder itself\n\
+^2/list glm <folder> <page>: ^7lists the .glm model files, starting in players. ^2/ ^7for the models folder itself\n\
 ^2/list effects <folder> <page>: ^7lists the effect files\n\
 ^2/list sounds <folder> <page>: ^7lists the sound files\n\
 ^2/list music <folder> <page>: ^7lists the music files\n\
@@ -12948,7 +12949,7 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 ^3/where: ^7Displays your current coordinates.\n\n\"");
 			}
 			else if (RP_ListCommand(ent, arg1))
-			{ // GalaxyRP: [Listings] /list models, effects, sounds, music, maps, npcs, vehicles -- g_rplist.c
+			{ // GalaxyRP: [Listings] /list models, glm, effects, sounds, music, maps, npcs, vehicles -- g_rplist.c
 			}
 			else if (Q_stricmp( arg1, "chat" ) == 0)
 			{
