@@ -8665,29 +8665,17 @@ G_Say
 
 /*
 ==================
-zyk_chat_is_ignored
+check_if_player_ignores_other
 
 GalaxyRP fix: [Chat] true when 'other' has /ignore'd 'ent'.
-
-This test used to live only inside G_SayTo(), which meant /ignore covered exactly the chat that
-goes through G_SayTo -- plain say, OOC, team, ally and /tell -- and silently missed the two
-delivery paths that call trap->SendServerCommand() directly: the chat_modifiers loop in G_Say()
-(all 34 RP modifiers: /me, /do, /my, /force, /shout, the languages, /npc, /comm, /thought) and
-zyk_send_chat_within_distance() (/roll and /flipcoin). On an RP server the modifiers are most of
-what anyone actually says, so ignoring a player silenced their ordinary conversation while every
-emote and action they performed still appeared. Extracted here so all three senders share one
-test and it cannot drift again.
-
-The 31 split is the storage layout, not an off-by-one: ignored_players[victim] is an int[2] and
-slot numbers 0..30 live in word 0, 31 and up in word 1 at bit (number - 31).
 ==================
 */
-static qboolean zyk_chat_is_ignored( gentity_t *ent, gentity_t *other )
+static qboolean check_if_player_ignores_other( gentity_t *ent, gentity_t *other )
 {
 	if ( !ent || !other || !other->client )
 		return qfalse;
 
-	if ( ent->s.number < 31 )
+	if ( ent->s.number < MAX_CLIENTS - 1)
 		return (level.ignored_players[other->s.number][0] & (1 << ent->s.number)) ? qtrue : qfalse;
 
 	return (level.ignored_players[other->s.number][1] & (1 << (ent->s.number - 31))) ? qtrue : qfalse;
@@ -8757,7 +8745,7 @@ static void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, cons
 	}
 
 	// zyk: if player is ignored, then he cant say anything to the target player
-	if ( zyk_chat_is_ignored( ent, other ) )
+	if ( check_if_player_ignores_other( ent, other ) )
 	{
 		return;
 	}
@@ -8776,34 +8764,7 @@ static void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, cons
 	}
 }
 
-/*
-==================
-zyk_chat_word_char
-
-GalaxyRP fix: [Chat] true when c continues a word, which is how G_Say() decides a chat modifier
-was written as a word of its own rather than as the start of a longer one.
-
-The first cut of that test accepted only a space or the end of the line. That kept "/method
-actors only" and "/come on" out of the modifier path, but it also threw away ordinary RP writing:
-"/me, then waves", "/me: waves", "/do. the door opens" and "/all! everyone" all fell through to
-plain chat, which they had not done before. Accepting "anything that is not a letter or a digit"
-fixes those and reopens a worse hole -- /c is two characters, so "/c'mon everyone" would go out
-server-wide as "'mon everyone".
-
-Treating the apostrophe as part of a word settles both: punctuation that ends a sentence ends the
-word, punctuation that lives inside one does not. The only thing that costs is "/me's hand
-twitches", and /my already produces that exact line -- /me formats as "%s^3%s" and /my as
-"%s^3's %s", so "/my hand twitches" and "/me's hand twitches" render identically.
-
-The digit rule carries exactly one pair: without it /ryl would swallow /ryl2. Bytes at 0x80 and
-above count as word characters so a UTF-8 character right after a modifier reads as part of the
-word. Written out as explicit ASCII ranges rather than isalnum() -- no locale dependence, and no
-signed-char undefined behaviour on a high-bit byte.
-
-A NUL is not a word character, so end-of-line needs no separate test: a bare "/me" still matches.
-==================
-*/
-static qboolean zyk_chat_word_char( char c )
+static qboolean is_character_not_a_word_delimiter( char c )
 {
 	unsigned char u = (unsigned char)c;
 
@@ -8833,27 +8794,14 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	//variable used for OOC chat (or team chat)
 	int ooc_flag = 0;
 	char ooc_text[700] = "";
-	// GalaxyRP fix: [cleanup] max_voice_distance (600) and broadcast_distance (999999999) were
-	// declared and initialised here and never read by anything -- both compilers warned. The
-	// values they held live in the VOICE_DISTANCE / BROADCAST_DISTANCE constants at the top of
-	// this file, which is where chat_modifiers[] already takes them from.
-
-	// GalaxyRP: [Chat] /ooc. OOC is not a delivery mode of its own -- it is SAY_ALL plus ooc_flag,
-	// the state the branch below produces when /say_team is used in a non-team gametype. SAY_OOC
-	// exists only to reach that same state on demand, so it is translated here and nothing
-	// downstream ever sees it: the switch, the receiver loop and G_SayTo() all deal in SAY_ALL
-	// exactly as they already do for the /say_team route. Translating it BEFORE the gametype test
-	// is what makes /ooc gametype-independent, the way Cmd_AllyChat_f's hard-coded SAY_ALLY makes
-	// /allychat gametype-independent -- and it means OOC is now global in team gametypes too,
-	// since the ooc branch of the SAY_ALL case breaks before `distance = 700` is ever reached.
+	
+	// [Alex]: SAY_OOC exists to set this flag. Then it's treated as SAY_ALL, but altered in OOC format.
 	if ( mode == SAY_OOC ) {
 		ooc_flag = 1;
 		mode = SAY_ALL;
 	}
 
-	// zyk: /say_team outside a team gametype is OOC chat. Kept as a legacy alias now that /ooc
-	// exists -- Cmd_SayTeam_f is unchanged, so it still yields SAY_ALLY for a player with allies,
-	// SAY_TEAM in team gametypes, and OOC only here.
+	// Team chat is becomes OOC chat in non-team gametypes.
 	if ( level.gametype < GT_TEAM && mode == SAY_TEAM ) {
 		ooc_flag = 1;
 		mode = SAY_ALL;
@@ -8881,11 +8829,6 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			strcat(ooc_text, text);
 			strcat(ooc_text, end);
 
-			// GalaxyRP fix: [Chat] a bare `ooc_text;` expression statement stood here. It evaluated
-			// the array's decayed address and threw it away -- no effect on anything -- and was the
-			// sole source of this file's two -Wunused-value warnings (gcc "statement with no effect",
-			// clang "expression result unused"). Removed.
-
 			G_LogPrintf("ooc: %s: %s\n", ent->client->pers.netname, text);
 			Com_sprintf(name, sizeof(name), "%s%c%c"EC": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE);
 			color = COLOR_RED;
@@ -8893,34 +8836,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			break;
 		}
 
-		// GalaxyRP fix: [Chat] pick the chat modifier by a longest-prefix match that has to be
-		// followed by a space or by the end of the line. This replaces a strstr() over the whole
-		// message guarded only by "the line starts with some slash", which was wrong twice over:
-		//
-		//  1. strstr() found a modifier ANYWHERE in the line, so any message beginning with '/'
-		//     that merely mentioned another modifier was dispatched as that modifier, at its
-		//     range, with the first strlen(modifier) characters eaten out of the message -- and
-		//     since /low, /long and /all sit at indices 0, 1 and 2 they won nearly every contest.
-		//     "/me says use /all to broadcast" went out server-wide as "says use /all to
-		//     broadcast"; "/shout Everyone use /all for server chat!" as "ut Everyone use...".
-		//
-		//  2. the first entry whose string appeared anywhere won, so the table's own rule -- a
-		//     shorter modifier must be listed after every longer one it prefixes -- had to hold by
-		//     hand, and it did not: /npc preceded /npclow and /npcall, making both unreachable
-		//     ("/npclow psst" spoke at 600 units as "low psst"). Taking the LONGEST prefix makes
-		//     table order irrelevant, so that class of mistake cannot come back. All 36 entries
-		//     resolve to themselves under this rule; the 20 prefix pairs (/c before /catharese and
-		//     /comm, /me before /melow..., /ryl before /ryl2, and the rest) are all decided by
-		//     length, not position.
-		//
-		// Requiring a delimiter closes a third, older hole: neither the old code nor a bare prefix
-		// test needed anything after the modifier, so ordinary words fired it. /c is two characters,
-		// so "/come on, we're leaving" broadcast "ome on, we're leaving" to the whole server;
-		// likewise "/doctor arrives", "/allies gather", "/lowering the ramp", "/cargo bay is
-		// sealed", "/comment on the plan". A modifier now has to be a whole word.
-		//
-		// Matching stays case sensitive, exactly as strstr() was: "/ME waves" is plain chat today
-		// and still is.
+		// GalaxyRP fix: [Chat] searches for chat modifiers. Longest match wins. Case sensitive.
 		int best_match_index = -1;
 		int best_match_length = 0;
 
@@ -8930,11 +8846,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			if (strncmp(text, chat_modifiers[i].chat_modifier, modifier_length) != 0)
 				continue;
 
-			// a modifier only counts when the word ends right after it -- see
-			// zyk_chat_word_char(). End of line qualifies, and so does any punctuation that does
-			// not live inside a word, so "/me, then waves" and "/do. the door opens" work while
-			// "/method actors only" and "/c'mon everyone" stay plain chat.
-			if (zyk_chat_word_char(text[modifier_length]))
+			if (is_character_not_a_word_delimiter(text[modifier_length]))
 				continue;
 
 			if (modifier_length > best_match_length) {
@@ -8945,47 +8857,22 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 
 		if (best_match_index != -1) {
 			delete_chat_command(text, best_match_length);
-			// GalaxyRP fix: [Chat] the arguments meant for va()'s "%s: %s: %s\n" format were
-			// being passed to the outer G_LogPrintf() call instead, so va() formatted its
-			// string with zero of the three %s values it needed. That made it read
-			// nonexistent variadic arguments (garbage stack/register values) as string
-			// pointers, which crashed the server almost every time any chat modifier
-			// (/c, /low, /long, /me, /do, /force, /my, /shout, the language modifiers, etc)
-			// was used. The three values now go directly to G_LogPrintf(), matching the
-			// plain-chat log call a few lines below.
+			
+			// [Alex]: Log chat to the server log.
 			G_LogPrintf("%s: %s: %s\n", chat_modifiers[best_match_index].chat_modifier, ent->client->pers.netname, text);
 
-			// GalaxyRP fix: [Chat] this used to iterate j < level.numConnectedClients while
-			// indexing g_entities[j] directly, which only lines up with the actual connected
-			// clients when they happen to occupy a contiguous block of the lowest-numbered
-			// slots. Any gap (a lower-numbered player disconnecting while a higher-numbered
-			// one stays connected, for example) meant some connected players never got the
-			// message while an empty slot's stale/zeroed clientNum could get sent to instead.
-			// Now iterates every valid client slot (like the plain-chat loop below already
-			// does) and skips any slot that isn't an actual connected player.
 			for (j = 0; j < level.maxclients; j++) {
 
 				other = &g_entities[j];
 				if (!other->inuse || !other->client || other->client->pers.connected != CON_CONNECTED)
 					continue;
-				// GalaxyRP fix: [Chat] honour /ignore here too. This loop sends straight to the
-				// client and never reaches G_SayTo(), where the test used to live, so every RP
-				// modifier ignored the ignore list. Checked before the range test so it applies
-				// at any distance, exactly as it does for the chat G_SayTo() delivers.
-				if (zyk_chat_is_ignored(ent, other))
+				
+				if (check_if_player_ignores_other(ent, other))
 					continue;
+
 				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_modifiers[best_match_index].distance || zyk_ignores_chat_distance(other) || other->client->sess.sessionTeam == TEAM_SPECTATOR)
 				{
-					// GalaxyRP fix: [Chat] send to j, not other->client->ps.clientNum. A recipient
-					// must be addressed by their own entity index: SpectatorClientEndFrame
-					// (g_active.c) copies the followed player's whole playerState over a
-					// follower's, clientNum included, and only StopFollowing puts it back, so on
-					// a follower that field names the player they are WATCHING. Every
-					// distance-scoped RP modifier routes through this one loop -- /me, /do, /my,
-					// /shout, /low, the language ones -- so a spectator following a player saw
-					// none of them while that player received each line twice, once more per
-					// follower. The condition just above deliberately lets spectators hear
-					// everything regardless of distance, which is exactly the case this broke.
+					// [Alex]: Send the chat message to the client.
 					trap->SendServerCommand(j, va(chat_modifiers[best_match_index].chat_format, ent->client->pers.netname, text));
 				}
 				else
@@ -9005,13 +8892,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		// zyk: if player is silenced by an admin, he cannot say anything
 		if (ent->client->pers.player_statuses & (1 << PLAYER_STATUS_SILENCED))
 			return;
-
-		//This should be visible at all times
-		// GalaxyRP fix: [Chat] logged ooc_text instead of text. ooc_text is written in exactly one
-		// place -- the OOC branch of the SAY_ALL case above -- and that branch also reassigns mode
-		// to SAY_ALL, which is the only assignment to mode anywhere in this function. So SAY_TEAM
-		// can never be reached with ooc_text holding anything, and every genuine team-chat line was
-		// written to the log as an empty string. Logs text, like every other say log here.
+		
 		G_LogPrintf( "sayteam: %s: %s\n", ent->client->pers.netname, text);
 		if (Team_GetLocationMsg(ent, location, sizeof(location)))
 		{
@@ -9070,20 +8951,6 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		if (mode == SAY_ALL || mode == SAY_TEAM)
 		{
 			if (mode == SAY_ALL) {
-
-				// GalaxyRP fix: [Chat] spectators hear ordinary chat regardless of range, matching the
-				// two other distance-scoped receiver loops -- the chat_modifiers dispatch above (every
-				// /me, /do, /my, /shout and language variant) and zyk_send_chat_within_distance()
-				// (/roll and /flipcoin), both of which already exempted them. Plain chat was the only
-				// one that did not, so a spectator heard every in-character action on the map but only
-				// ordinary conversation within 700 units -- backwards, since following a conversation
-				// is most of what spectating is for. An admin holding ADM_IGNORECHATDISTANCE was never
-				// affected either way; this is about spectators who do not hold it.
-				//
-				// Safe on a stale client slot: this loop validates nothing before reading other->client
-				// (g_entities[i].client is assigned for every slot in G_InitGame, so it is never NULL),
-				// but an unoccupied slot reads TEAM_FREE rather than TEAM_SPECTATOR, and G_SayTo()
-				// below rejects any slot that is not inuse/connected before sending anything.
 				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= distance || zyk_ignores_chat_distance(other) || other->client->sess.sessionTeam == TEAM_SPECTATOR)
 				{
 					if (ooc_flag == 1) {
@@ -9096,15 +8963,6 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			}
 			else
 			{
-				// GalaxyRP fix: [Chat] sent ooc_text instead of text, so genuine team chat delivered an
-				// empty message to every team-mate. This arm is reachable only with mode == SAY_TEAM
-				// (the outer test admits SAY_ALL and SAY_TEAM, the inner one takes SAY_ALL), and mode
-				// is SAY_TEAM only in team gametypes. ooc_text is filled in just one place -- the OOC
-				// branch of the SAY_ALL case -- which also sets mode to SAY_ALL, the function's only
-				// assignment to mode; so that branch and this arm are mutually exclusive and ooc_text
-				// was still its "" initialiser every time. Unnoticed because the mod runs FFA, where
-				// Cmd_SayTeam_f routes SAY_TEAM to SAY_ALLY or to OOC and never reaches here. Sends
-				// text, which is what the SAY_TEAM case prepared name, color and locMsg for.
 				G_SayTo(ent, other, mode, color, name, text, locMsg);
 			}
 		}
@@ -11552,10 +11410,10 @@ static void zyk_send_chat_within_distance(gentity_t *ent, int distance, const ch
 		if (!other->inuse || !other->client || other->client->pers.connected != CON_CONNECTED)
 			continue;
 
-		// GalaxyRP fix: [Chat] honour /ignore here too -- see zyk_chat_is_ignored(). This sender
+		// GalaxyRP fix: [Chat] honour /ignore here too -- see check_if_player_ignores_other(). This sender
 		// also bypasses G_SayTo(), so /roll and /flipcoin used to reach a player who had ignored
 		// the roller. Checked before the range test, like the other two senders.
-		if (zyk_chat_is_ignored(ent, other))
+		if (check_if_player_ignores_other(ent, other))
 			continue;
 
 		if (Distance(ent->client->ps.origin, other->client->ps.origin) <= distance ||
