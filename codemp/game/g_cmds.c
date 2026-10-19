@@ -12782,7 +12782,9 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 ^3/removexp <player name>: ^7Removes one xp from the player.\n\
 ^3/skillup <player name> <skill number> <number of levels (optional)>: ^7upgrades a skill.\n\
 ^3/skilldown <player name> <skill number> <number of levels (optional)>: ^7downgrades a skill.\n\
-^3/god: ^7Makes you invincible.\n\
+^3/upgradereset <player name or ID>: ^7Removes the three permanent shop upgrades from the player's character, so they can be bought again.\n\" ");
+				// GLX_U: [Shop] split here: /upgradereset took the block above past 1022 characters
+				trap->SendServerCommand(ent - g_entities, "print \"^3/god: ^7Makes you invincible.\n\
 ^3/notarget <player name (optional)>: ^7Makes NPCs, turrets and seekers ignore you, or another player.\n\
 ^3/players <player name (optional)> <force/weapons/protect/ammo/items (optional)>: ^7With no name, lists every player's ID, name, IP and login status. With a name, shows their account, character, level, XP and skill points; add a category to see their skill levels in it.\n\"");
 				trap->SendServerCommand(ent - g_entities, "print \"^3/telemark: ^7Sets a marker you can teleport to later.\n\
@@ -19256,7 +19258,7 @@ void Cmd_AdminList_f( gentity_t *ent ) {
 		}
 		else if (command_number == ADM_SKILL)
 		{
-			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/skillup ^7or ^3/skilldown <player name> <skill number> <number of levels (optional)> ^7to increase or decrease the skill levels of a player respectively\n\n\"");
+			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/skillup ^7or ^3/skilldown <player name> <skill number> <number of levels (optional)> ^7to increase or decrease the skill levels of a player respectively.\nUse ^3/upgradereset <player name or ID> ^7to remove the three permanent shop upgrades (Holdable Items Upgrade, Impact Reducer, Stun Baton Upgrade) from a player's character.\n\n\"");
 		}
 		else if (command_number == ADM_CREATECREDITS)
 		{
@@ -20004,6 +20006,76 @@ void Cmd_RpModeDown_f( gentity_t *ent ) {
 		// GalaxyRP (Alex): [Database] Only update the skills table.
 		update_skills_table_row_with_current_values(&g_entities[client_id]);
 	}
+}
+
+/*
+==================
+Cmd_UpgradeReset_f
+
+GLX_U: [Shop] /upgradereset <player name or ID>: clears the 3 permanent shop upgrades, bits 0-2 of
+skill_levels[38] (see Cmd_Buy_f), from the player's character. ADM_SKILL, checks as /skilldown.
+Every effect reads the bit when it happens, so nothing else needs undoing. No refund.
+==================
+*/
+void Cmd_UpgradeReset_f( gentity_t *ent ) {
+	static const char *upgrade_names[3] = { "Holdable Items Upgrade", "Impact Reducer", "Stun Baton Upgrade" };
+	char arg1[MAX_STRING_CHARS];
+	char removed[128] = "";
+	gentity_t *target;
+	int client_id, i;
+
+	if (!check_admin_command(ent, ADM_SKILL, qtrue))
+	{
+		return;
+	}
+
+	if (trap->Argc() != 2)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Usage: ^3/upgradereset <player name or ID>\n\"");
+		return;
+	}
+
+	trap->Argv(1, arg1, sizeof(arg1));
+	client_id = ClientNumberFromString(ent, arg1, qfalse);
+
+	if (client_id == -1)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"Player not found on server.\n\"");
+		return;
+	}
+
+	target = &g_entities[client_id];
+
+	if (target->client->sess.amrpgmode < 2)
+	{
+		trap->SendServerCommand(ent - g_entities, "print \"The player is not logged in\n\"");
+		return;
+	}
+
+	for (i = 0; i < 3; i++)
+	{
+		if (target->client->pers.skill_levels[38] & (1 << i))
+		{
+			Q_strcat(removed, sizeof(removed), va("%s%s", removed[0] ? ", " : "", upgrade_names[i]));
+		}
+	}
+
+	if (!removed[0])
+	{
+		trap->SendServerCommand(ent - g_entities, va("print \"%s ^7has no shop upgrades to reset.\n\"", target->client->pers.netname));
+		return;
+	}
+
+	target->client->pers.skill_levels[38] &= ~((1 << 0) | (1 << 1) | (1 << 2));
+	update_skills_table_row_with_current_values(target);
+
+	trap->SendServerCommand(ent - g_entities, va("print \"Removed %s^7's shop upgrades: %s.\n\"", target->client->pers.netname, removed));
+	if (target != ent)
+	{
+		trap->SendServerCommand(target - g_entities, va("print \"An admin removed your shop upgrades: %s.\n\"", removed));
+	}
+
+	G_LogPrintf("upgradereset: %s ^7removed %s^7's shop upgrades: %s\n", ent->client->pers.netname, target->client->pers.netname, removed);
 }
 
 int calculate_skillpoints_for_level(int level) {
@@ -25358,6 +25430,7 @@ command_t commands[] = {
 	{ "teleportaim",		Cmd_TeleportAim_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "training",			Cmd_TrainingMode_f,			CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN },
+	{ "upgradereset",		Cmd_UpgradeReset_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },	// GLX_U: [Shop]
 	// GalaxyRP fix: [Cloak Item] replaces the old GENCMD_USE_CLOAK_VEHICLE generic-command mechanism
 	// (see Cmd_VehicleCloak_f's own doc comment for why that was unreachable). No CMD_ALIVE, matching
 	// the original generic_cmd switch, which never gated on aliveness either.
