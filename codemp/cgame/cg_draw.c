@@ -6313,11 +6313,11 @@ CG_`Entity
 #define MAX_XHAIR_DIST_ACCURACY	20000.0f
 /*
 =================
-CG_PhaseCrosshairTrace
+CG_PhaseRayHitsBox
 
 GalaxyRP: Checks whether a straight line from start to end passes through a 3D box defined by mins and maxs.
 
-It returns true if the line hits the box. If it does, it puts the hit’s position along the line in frac: 
+It returns true if the line hits the box. If it does, it puts the hit's position along the line in frac:
 0 means at the start, 1 means at the end. The caller uses that to find where the crosshair ray first hits a phased player or NPC.
 =================
 */
@@ -6359,6 +6359,7 @@ static qboolean CG_PhaseRayHitsBox( const vec3_t start, const vec3_t end, const 
 	return qtrue;
 }
 
+// GLX_U: [Phase] phased players and NPCs arrive with s.solid 0, so the crosshair also tests a standard box around each
 static void CG_PhaseCrosshairTrace( trace_t *trace, const vec3_t start, const vec3_t end, int ignore )
 {
 	int i;

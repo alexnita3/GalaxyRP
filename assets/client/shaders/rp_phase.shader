@@ -1,4 +1,4 @@
-// GalaxyRP: [Phase] overlay passes for /admholo and /admghost.
+// GalaxyRP: [Phase] overlay passes for /holo and /ghost.
 //
 // These are drawn by the client plugin as a second pass over a player's own model
 // (CG_AddPhasedPlayerModel in cg_players.c). The first pass is the player's normal model with its

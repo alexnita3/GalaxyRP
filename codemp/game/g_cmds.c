@@ -12810,8 +12810,8 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 ^3/noclip: ^7Makes you able to go through walls.\n\" ");
 				// DAJ_RP: [Phase] the Player effects commands get a message of their own: with /admhidden added
 				// to the one above it would pass SV_SendServerCommand's 1022 characters and be dropped whole.
-				trap->SendServerCommand(ent - g_entities, "print \"^3/ghost <player name (optional)>: ^7Turns a player (or you) into a Force ghost: see-through, glowing, passes through people, off the radar. Again to turn it off.\n\
-^3/holo <player name (optional)>: ^7Turns a player (or you) into a hologram: blue, scanlines, passes through people, off the radar. Again to turn it off.\n\
+				// GLX_U: [Phase] /ghost and /holo are player commands now (Misc below); only their use on others is here.
+				trap->SendServerCommand(ent - g_entities, "print \"^3/ghost ^7or ^3/holo <player name or ID>: ^7Same as in Misc, on another player.\n\
 ^3/admwalkthrough <player name (optional)>: ^7Lets a player (or you) walk through other players and NPCs, with no change in look. Again to turn it off.\n\
 ^3/admhidden <player name (optional)>: ^7Makes a player (or you) invisible to everyone else and walk-through, off the radar. They can still be hit and targeted; Force Sight sees them. Again to turn it off.\n\n\" ");
 				trap->SendServerCommand(ent - g_entities, "print \"^3--------RP Inventory System--------\n\
@@ -12936,6 +12936,10 @@ void Cmd_ListAccount_f( gentity_t *ent ) {
 ^3/updatesaber: ^7Applies your saber menu pick instantly, no respawn needed.\n\
 ^3/scale <size> ^7or ^3/scale <player name or ID> <size>: ^7Scales your character model, 20 to 500 (default 100). ^3/scale help ^7lists sizes next to real-life heights. ^1Scaling other players needs the Scale admin flag.\n\
 ^3/cosmetics <hats|capes|clear> <number or name>: ^7Puts on a hat or cape, or takes it off if you already wear it. ^3/cosmetics hats ^7or ^3capes ^7lists them. Saved with a logged-in character.\n\"");
+				// GLX_U: [Phase] /ghost and /holo next to /scale, in a message of their own (the block above is at 926)
+				trap->SendServerCommand(ent - g_entities, "print \"^3/ghost <player name or ID (optional)>: ^7Turns you into a Force ghost: see-through, glowing, passes through people, off the radar. Again to turn it off. ^1Using it on other players needs the Player effects admin flag.\n\
+^3/holo <player name or ID (optional)>: ^7Turns you into a hologram: blue, scanlines, passes through people, off the radar. Again to turn it off. ^1Using it on other players needs the Player effects admin flag.\n\
+^7Only players with the GalaxyRP client see the ghost and hologram look.\n\"");
 				// GalaxyRP fix: [Death System] split here for the same reason the Misc section above is
 				// split twice: saying what /getup and /helpup actually do -- neither ends an admin
 				// paralysis, only a combat knockdown -- took this block past SV_SendServerCommand's hard
@@ -19297,9 +19301,10 @@ Run ^3/admweather ^7on its own to see the current weather, or ^3/admweather list
 		}
 		else if (command_number == ADM_PHASE)
 		{
-			trap->SendServerCommand(ent - g_entities, "print \"\nUse ^3/ghost^7, ^3/holo^7, ^3/admwalkthrough ^7or ^3/admhidden <player name (optional)> ^7to make a player a Force ghost, a hologram, just walk-through, or hidden. Without a name it applies to you.\n\
+			// GLX_U: [Phase] anyone may /ghost and /holo themselves; the flag covers using them on others
+			trap->SendServerCommand(ent - g_entities, "print \"\nThis flag enables ^3/admwalkthrough ^7and ^3/admhidden <player name (optional)> ^7on anyone (without a name they apply to you), and ^3/ghost ^7and ^3/holo <player name> ^7on other players. Anyone can use ^3/ghost ^7and ^3/holo ^7on themselves.\n\
 All four let the player pass through other players and NPCs. The ghost and hologram also change how they look and hide them from the radar; a hidden player is not drawn at all and is off the radar too, though Force Sight still sees them. The same command again turns it off, and each one replaces the others.\n\
-Damage and targeting are not affected. The ghost and hologram look is only seen by players with the client plugin; hidden works for everyone.\n\n\"");
+Damage and targeting are not affected. The ghost and hologram look is only seen by players with the GalaxyRP client; hidden works for everyone.\n\n\"");
 		}
 		else
 		{
@@ -21948,21 +21953,17 @@ static void RP_PhaseCommand( gentity_t *ent, int mode, const char *cmdName )
 	// [Alex] Default to yourself, changes later from args.
 	gentity_t *target = ent;
 	int newMode;
-	qboolean isSelfTargeted = (trap->Argc() == 1);
 	qboolean isHoloOrGhost = (mode == RP_PHASE_HOLO || mode == RP_PHASE_GHOST);
-
-	// [Alex] Don't check admin rights for self targeted holo or ghost commands.
-	if (!(isHoloOrGhost && isSelfTargeted))
-	{
-		if (!check_admin_command(ent, ADM_PHASE, qtrue))
-		{
-			return;
-		}
-	}
 
 	if ( trap->Argc() > 2 )
 	{
 		trap->SendServerCommand( ent-g_entities, va("print \"^1Command Usage: ^3/%s ^2<player name or ID (optional)>\n^7Without a name it applies to you. Run it again to turn it off.\n\"", cmdName) );
+		return;
+	}
+
+	// GLX_U: [Phase] /admwalkthrough and /admhidden always need the flag
+	if ( !isHoloOrGhost && !check_admin_command( ent, ADM_PHASE, qtrue ) )
+	{
 		return;
 	}
 
@@ -21979,6 +21980,12 @@ static void RP_PhaseCommand( gentity_t *ent, int mode, const char *cmdName )
 		}
 
 		target = &g_entities[client_id];
+	}
+
+	// GLX_U: [Phase] /holo and /ghost need the flag only on another player, as /scale does
+	if ( isHoloOrGhost && target != ent && !check_admin_command( ent, ADM_PHASE, qtrue ) )
+	{
+		return;
 	}
 
 	if ( !target->inuse || !target->client )
