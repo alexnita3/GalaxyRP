@@ -8794,7 +8794,7 @@ void insertString(char text[], const char text_to_add[], int position, int buffe
 		text[position + i] = text_to_add[i];
 }
 
-void format_text_in_quotes(char* original_text) {
+void format_text_in_quotes(char* original_text, int buffer_size) {
 	int text_length = strlen(original_text);
 	// [Alex]: Counter for how many complete ''..'' spans are in the text.
 	int quote_pairs = 0;
@@ -8819,7 +8819,7 @@ void format_text_in_quotes(char* original_text) {
 	}
 
 	// [Alex]: Check that adding the formatting codes won't exceed the buffer size.
-	if (quote_pairs == 0 || text_length + quote_pairs * 4 >= MAX_SAY_TEXT)
+	if (quote_pairs == 0 || text_length + quote_pairs * 4 >= buffer_size)
 		return;
 
 	for (int i = 0; i + 1 < text_length;) {
@@ -8845,8 +8845,8 @@ void format_text_in_quotes(char* original_text) {
 				}
 			}
 
-			insertString(original_text, restore_color, closing_quote_index + 2, MAX_SAY_TEXT);
-			insertString(original_text, "^2", i + 2, MAX_SAY_TEXT);
+			insertString(original_text, "^2", i + 2, buffer_size);
+			insertString(original_text, restore_color, closing_quote_index + 2, buffer_size);
 			text_length += 4;
 			i = closing_quote_index + 6;
 		} else {
@@ -8931,10 +8931,14 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		}
 
 		if (best_match_index != -1) {
-			delete_chat_command(text, best_match_length);
+			char formatted_chat[MAX_STRING_CHARS];
 
-			format_text_in_quotes(text);
-			
+			delete_chat_command(text, best_match_length);
+			// [Alex]: format text and place it into formatted_chat
+			Com_sprintf(formatted_chat, sizeof(formatted_chat),
+				chat_modifiers[best_match_index].chat_format, ent->client->pers.netname, text);
+			format_text_in_quotes(formatted_chat, sizeof(formatted_chat));
+
 			// [Alex]: Log chat to the server log.
 			G_LogPrintf("%s: %s: %s\n", chat_modifiers[best_match_index].chat_modifier, ent->client->pers.netname, text);
 
@@ -8950,7 +8954,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 				if (Distance(ent->client->ps.origin, other->client->ps.origin) <= chat_modifiers[best_match_index].distance || zyk_ignores_chat_distance(other) || other->client->sess.sessionTeam == TEAM_SPECTATOR)
 				{
 					// [Alex]: Send the chat message to the client.
-					trap->SendServerCommand(j, va(chat_modifiers[best_match_index].chat_format, ent->client->pers.netname, text));
+					trap->SendServerCommand(j, formatted_chat);
 				}
 				else
 					continue;
