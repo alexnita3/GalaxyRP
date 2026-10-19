@@ -2575,6 +2575,7 @@ int		G_ValidateSaberColorMode( int decodedMode );
 // digits, '_' and '-', 1-13 of them, starting with a letter or '_'. "none", an empty, overlong or
 // otherwise bad name give "".
 void		G_RpCosmeticFromColor( const char *colorValue, char *out, int outSize );
+void		G_RpRepublishCosmetics( void );	// GLX_U: [Cosmetics] rp_allow_cosmetics changed, g_client.c
 int			G_RpCosmeticId( int slot, const char *name );		// 0 for none or not on the list
 const char	*G_RpCosmeticName( int slot, int id );				// "" for 0 or an id not on the list
 void	RPMod_StringEscape(char *in, char *out, int outSize);
@@ -3125,6 +3126,7 @@ void QDECL G_SecurityLogPrintf( const char *fmt, ... );
 void SendScoreboardMessageToAllClients( void );
 const char *G_GetStringEdString(char *refSection, char *refName);
 void RP_CVU_pluginRequired(void);
+void RP_CVU_allowCosmetics(void);	// GLX_U: [Cosmetics] g_cvar.c
 
 // GalaxyRP fix: [validation] cvar-update callbacks (see g_cvar.c) that clamp these timer/cooldown
 // cvars back to 0 the moment they're set to a negative value -- see RP_ClampNonNegativeCvar's

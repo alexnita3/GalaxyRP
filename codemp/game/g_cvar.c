@@ -134,6 +134,17 @@ void RP_CVU_downedInvulnerabilityTimer(void)
 	}
 }
 
+// GLX_U: [Cosmetics] only 0 and 1; then show or hide everyone's hats and capes at once
+void RP_CVU_allowCosmetics(void)
+{
+	if (rp_allow_cosmetics.integer != 0 && rp_allow_cosmetics.integer != 1)
+	{
+		RP_SnapCvar(&rp_allow_cosmetics, "rp_allow_cosmetics", 1, "0 or 1");
+	}
+
+	G_RpRepublishCosmetics();
+}
+
 void RP_CVU_screenMessageTimer(void)
 {
 	RP_ClampNonNegativeCvar(&rp_screen_message_timer, "rp_screen_message_timer");

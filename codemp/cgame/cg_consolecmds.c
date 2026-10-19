@@ -307,6 +307,12 @@ It only changes the name after the saber number in color1 (hats) or color2 (cape
 it on to everyone, and saves it with a logged-in character.
 =================
 */
+// GLX_U: [Cosmetics] the server's rp_allow_cosmetics is 0: the choice is kept, nobody sees it for now
+static void CG_CosmeticsOffNote( void ) {
+	if ( !cgs.rpAllowCosmetics )
+		Com_Printf( S_COLOR_YELLOW"Hats and capes are switched off on this server."S_COLOR_WHITE" Your choice is kept and shows when they are switched back on.\n" );
+}
+
 static void CG_Cosmetics_f( void ) {
 	char arg[MAX_QPATH];
 	int kind, i;
@@ -353,6 +359,7 @@ static void CG_Cosmetics_f( void ) {
 				!Q_stricmp( worn, cgs.rpCosmetics[kind][i].name ) ? S_COLOR_GREEN"  (worn)"S_COLOR_WHITE : "" );
 		}
 		Com_Printf( "Use /cosmetics %s <number> to wear one, again to take it off.\n", kind ? "capes" : "hats" );
+		CG_CosmeticsOffNote();
 		return;
 	}
 
@@ -383,6 +390,7 @@ static void CG_Cosmetics_f( void ) {
 	else {
 		CG_RpSetCvarCosmetic( cvarName, cgs.rpCosmetics[kind][i].name );
 		Com_Printf( S_COLOR_YELLOW"%s"S_COLOR_WHITE" on.\n", cgs.rpCosmetics[kind][i].name );
+		CG_CosmeticsOffNote();
 	}
 }
 

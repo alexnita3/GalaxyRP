@@ -1811,6 +1811,7 @@ typedef struct cgs_s {
 	// models/cosmetics/hats/ and models/cosmetics/capes/, TaystJK's folders, listed at load
 	rpCosmetic_t	rpCosmetics[2][RP_COSMETICS_MAX];
 	int				rpNumCosmetics[2];
+	qboolean		rpAllowCosmetics;	// GLX_U: [Cosmetics] the server's rp_allow_cosmetics, from the serverinfo
 } cgs_t;
 
 typedef struct siegeExtended_s

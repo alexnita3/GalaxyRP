@@ -159,6 +159,12 @@ void CG_ParseServerinfo( void ) {
 		v = Info_ValueForKey( info, "g_hookStrength2" );	cgs.hookStrength2 = v[0] ? atoi( v ) : 40;
 	}
 
+	// GLX_U: [Cosmetics] a server without the key (an older one) allows them
+	{
+		const char *v = Info_ValueForKey( info, "rp_allow_cosmetics" );
+		cgs.rpAllowCosmetics = ( !v[0] || atoi( v ) ) ? qtrue : qfalse;
+	}
+
 	cgs.noSpecMove = atoi( Info_ValueForKey( info, "g_noSpecMove" ) );
 
 	cgs.siegeTeamSwitch = atoi( Info_ValueForKey( info, "g_siegeTeamSwitch" ) );

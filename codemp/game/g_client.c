@@ -2371,6 +2371,40 @@ char *G_ValidateUserinfo( const char *userinfo ) {
 }
 
 
+// GLX_U: [Cosmetics] the c1/c2 everyone draws from: "<saber mode><name>", or just the mode while
+// rp_allow_cosmetics is 0. pers.cosmetic[] is kept either way, so it is still saved and synced.
+static void G_RpPublishedColor( int saberMode, const char *cosmetic, char *out, int outSize ) {
+	Q_strncpyz( out, va( "%i%s", saberMode, rp_allow_cosmetics.integer ? cosmetic : "" ), outSize );
+}
+
+// GLX_U: [Cosmetics] rp_allow_cosmetics changed: rewrite c1/c2 in every player's configstring.
+// No ClientUserinfoChanged(), so nothing is saved or re-validated.
+void G_RpRepublishCosmetics( void ) {
+	char raw[MAX_INFO_STRING], cs[MAX_INFO_STRING], color[16];
+	int i;
+
+	for ( i = 0; i < MAX_CLIENTS; i++ ) {
+		gclient_t *cl = g_entities[i].client;
+
+		if ( !g_entities[i].inuse || !cl || cl->pers.connected != CON_CONNECTED )
+			continue;
+
+		trap->GetConfigstring( CS_PLAYERS + i, raw, sizeof( raw ) );
+		if ( !raw[0] )
+			continue;
+
+		// built as "n\name\t\0\..." with no leading slash, which Info_SetValueForKey needs:
+		// without it the new pair runs into the first key
+		Com_sprintf( cs, sizeof( cs ), "%s%s", raw[0] == '\\' ? "" : "\\", raw );
+
+		G_RpPublishedColor( cl->pers.saberColorMode[0], cl->pers.cosmetic[RP_COSMETIC_HAT], color, sizeof( color ) );
+		Info_SetValueForKey( cs, "c1", color );
+		G_RpPublishedColor( cl->pers.saberColorMode[1], cl->pers.cosmetic[RP_COSMETIC_CAPE], color, sizeof( color ) );
+		Info_SetValueForKey( cs, "c2", color );
+		trap->SetConfigstring( CS_PLAYERS + i, cs );
+	}
+}
+
 extern void update_current_character_name_and_model(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 qboolean ClientUserinfoChanged( int clientNum ) {
 	gentity_t *ent = g_entities + clientNum;
@@ -2644,9 +2678,9 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 		G_RpCosmeticFromColor( Info_ValueForKey( userinfo, "color1" ), client->pers.cosmetic[RP_COSMETIC_HAT], sizeof( client->pers.cosmetic[0] ) );
 		G_RpCosmeticFromColor( Info_ValueForKey( userinfo, "color2" ), client->pers.cosmetic[RP_COSMETIC_CAPE], sizeof( client->pers.cosmetic[0] ) );
 
-		// at most 2 digits and 13 letters: fits color1[16]
-		Q_strncpyz( color1, va( "%i%s", client->pers.saberColorMode[0], client->pers.cosmetic[RP_COSMETIC_HAT] ), sizeof( color1 ) );
-		Q_strncpyz( color2, va( "%i%s", client->pers.saberColorMode[1], client->pers.cosmetic[RP_COSMETIC_CAPE] ), sizeof( color2 ) );
+		// at most 2 digits and 13 letters: fits color1[16]. GLX_U: no name while rp_allow_cosmetics is 0
+		G_RpPublishedColor( client->pers.saberColorMode[0], client->pers.cosmetic[RP_COSMETIC_HAT], color1, sizeof( color1 ) );
+		G_RpPublishedColor( client->pers.saberColorMode[1], client->pers.cosmetic[RP_COSMETIC_CAPE], color2, sizeof( color2 ) );
 	}
 
 	// gender hints
