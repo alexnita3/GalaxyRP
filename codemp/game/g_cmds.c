@@ -8780,6 +8780,69 @@ void delete_chat_command(char *original_text, int no_of_chars) {
 	strcpy(original_text, text);
 }
 
+void insertString(char text[], const char text_to_add[], int position, int buffer_size) {
+	int text_length = strlen(text);
+	int addition_length = strlen(text_to_add);
+
+	if (position < 0 || position > text_length || text_length + addition_length >= buffer_size)
+		return;
+
+	for (int i = text_length; i >= position; --i)
+		text[i + addition_length] = text[i];
+
+	for (int i = 0; i < addition_length; ++i)
+		text[position + i] = text_to_add[i];
+}
+
+void format_text_in_quotes(char* original_text) {
+	int text_length = strlen(original_text);
+	// [Alex]: Counter for how many complete ''..'' spans are in the text.
+	int quote_pairs = 0;
+
+	for (int i = 0; i + 1 < text_length;) {
+		// [Alex]: The game turns " into '' when sending chat messages, so look for that.
+		if (original_text[i] == '\'' && original_text[i + 1] == '\'') {
+			int closing_quote_index = i + 2;
+
+			while (closing_quote_index + 1 < text_length &&
+				(original_text[closing_quote_index] != '\'' || original_text[closing_quote_index + 1] != '\''))
+				closing_quote_index++;
+
+			if (closing_quote_index + 1 >= text_length)
+				break;
+
+			quote_pairs++;
+			i = closing_quote_index + 2;
+		} else {
+			i++;
+		}
+	}
+
+	// [Alex]: Check that adding the formatting codes won't exceed the buffer size.
+	if (quote_pairs == 0 || text_length + quote_pairs * 4 >= MAX_SAY_TEXT)
+		return;
+
+	for (int i = 0; i + 1 < text_length;) {
+		if (original_text[i] == '\'' && original_text[i + 1] == '\'') {
+			int closing_quote_index = i + 2;
+
+			while (closing_quote_index + 1 < text_length &&
+				(original_text[closing_quote_index] != '\'' || original_text[closing_quote_index + 1] != '\''))
+				closing_quote_index++;
+
+			if (closing_quote_index + 1 >= text_length)
+				break;
+
+			insertString(original_text, "^6", closing_quote_index, MAX_SAY_TEXT);
+			insertString(original_text, "^2", i + 2, MAX_SAY_TEXT);
+			text_length += 4;
+			i = closing_quote_index + 8;
+		} else {
+			i++;
+		}
+	}
+}
+
 void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) {
 	int			j;
 	gentity_t	*other;
@@ -8857,6 +8920,8 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 
 		if (best_match_index != -1) {
 			delete_chat_command(text, best_match_length);
+
+			format_text_in_quotes(text);
 			
 			// [Alex]: Log chat to the server log.
 			G_LogPrintf("%s: %s: %s\n", chat_modifiers[best_match_index].chat_modifier, ent->client->pers.netname, text);
