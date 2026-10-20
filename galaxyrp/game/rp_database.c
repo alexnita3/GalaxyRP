@@ -2,6 +2,7 @@
 #include "sqlite/sqlite3.h"
 
 #define MAX_CHARACTERS_PER_ACCOUNT 15
+#define MAX_NEWS_CHANNELS 16				// GalaxyRP (Alex): Max number of news channels.
 
 /*
 =================
@@ -1796,4 +1797,58 @@ qboolean insert_news_table_row(gentity_t* ent, char* channel, char* news_text) {
 	sqlite3_close(db);
 
 	return (rc == SQLITE_DONE) ? qtrue : qfalse;
+}
+
+// GalaxyRP (Alex): [Database] Check if a channel name exists.
+int news_channel_exists(const char* channel, sqlite3* db, sqlite3_stmt* stmt)
+{
+	int found = -1;
+
+	if (sqlite3_prepare_v2(db, "SELECT count(*) FROM News WHERE channel = ? COLLATE NOCASE", -1, &stmt, NULL) != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return -1;
+	}
+
+	sqlite3_bind_text(stmt, 1, channel, -1, SQLITE_TRANSIENT);
+
+	if (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		found = (sqlite3_column_int(stmt, 0) > 0) ? 1 : 0;
+	}
+	else
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+	}
+
+	sqlite3_finalize(stmt);
+
+	return found;
+}
+
+// GalaxyRP (Alex): [News] how many distinct channels exist?
+int news_channel_count(sqlite3* db, sqlite3_stmt* stmt)
+{
+	int count = -1;
+
+	if (sqlite3_prepare_v2(db, "SELECT count(*) FROM (SELECT DISTINCT channel COLLATE NOCASE FROM News)", -1, &stmt, NULL) != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return -1;
+	}
+
+	if (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		count = sqlite3_column_int(stmt, 0);
+	}
+	else
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+	}
+
+	sqlite3_finalize(stmt);
+
+	return count;
 }

@@ -210,5 +210,8 @@ void select_news_from_channel(gentity_t* ent, char* channel, int numberOfEntries
 qboolean delete_news_table_row_with_id(gentity_t* ent, int newsID);
 void update_current_character_name_and_model(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 void update_current_character_scale(gentity_t* ent, sqlite3* db);
+qboolean insert_news_table_row(gentity_t* ent, char* channel, char* news_text);
+int news_channel_exists(const char* channel, sqlite3* db, sqlite3_stmt* stmt);
+int news_channel_count(sqlite3* db, sqlite3_stmt* stmt);
 
 #endif // __RP_LOCAL_H__

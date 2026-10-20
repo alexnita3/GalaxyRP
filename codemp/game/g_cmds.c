@@ -62,29 +62,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define MAX_ITEMS_PER_CHARACTER 50
 #define MAX_ITEM_NAME_LENGTH 64
 
-// GalaxyRP fix: [News] how many distinct channels the news system may hold, and how long a channel
-// name may be.
-//
-// Neither was bounded before, and channels are minted implicitly: /newsadd <channel> <text> on an
-// unused name creates one, so a typo ("genral" beside "general") silently adds a channel. That
-// matters because select_news_channels() lists every DISTINCT channel with no LIMIT, one
-// zyk_print_long_line() per row, and SV_AddServerCommand drops the client once
-// MAX_RELIABLE_COMMANDS + 1 (129) commands are outstanding -- so around 128 channels made
-// /newschannels disconnect whoever ran it. That command carries no flags at all: no login, no admin
-// gate, not even CMD_NOINTERMISSION, so the state would have hit every player who tried it,
-// including one who had only just connected.
-//
-// The name cap is a second ceiling on the same command and one more besides. A name over roughly
-// 900 characters costs two commands per row instead of one, halving the count above; and
-// Cmd_News_f's "Viewing entries in channel %s" header goes out as a single unsplit command, which
-// SV_SendServerCommand drops WHOLE past 1022 characters, so a long enough name made that header
-// vanish. trap->Argv() allowed up to MAX_STRING_CHARS - 1 of them.
-//
-// The channel cap bounds growth only: it is tested just for a channel that does not exist yet, so
-// posting to the channels already in use keeps working at the limit. The length cap is deliberately
-// unconditional -- a simple rule, checked before the database is even opened. A pre-existing
-// channel whose name is longer stays readable and listed; it just cannot take new entries.
-#define MAX_NEWS_CHANNELS 16
+// GalaxyRP fix: [News] Maximum length of a single news channel name.
 #define MAX_NEWS_CHANNEL_LENGTH 32
 
 // GalaxyRP fix: [Attributes] how long a character description set with /attributes may be, and what
@@ -3461,66 +3439,6 @@ void zyk_print_long_line(gentity_t *ent, const char *prefix, const char *text)
 
 		pos += take;
 	}
-}
-
-// GalaxyRP fix: [News] does this channel already hold at least one entry? Matched COLLATE NOCASE,
-// the same way select_news_from_channel() groups entries and select_news_channels() lists them, so
-// the cap below agrees with what a player actually sees -- posting to "General" when "general"
-// exists has always gone to the same channel, and must not be counted as creating a new one.
-// Returns -1 if the question could not be answered, distinct from a real "no".
-static int news_channel_exists(const char *channel, sqlite3 *db, sqlite3_stmt *stmt)
-{
-	int found = -1;
-
-	if (sqlite3_prepare_v2(db, "SELECT count(*) FROM News WHERE channel = ? COLLATE NOCASE", -1, &stmt, NULL) != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return -1;
-	}
-
-	sqlite3_bind_text(stmt, 1, channel, -1, SQLITE_TRANSIENT);
-
-	if (sqlite3_step(stmt) == SQLITE_ROW)
-	{
-		found = (sqlite3_column_int(stmt, 0) > 0) ? 1 : 0;
-	}
-	else
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-	}
-
-	sqlite3_finalize(stmt);
-
-	return found;
-}
-
-// GalaxyRP fix: [News] how many distinct channels exist, or -1 if the count could not be read.
-// Collated the same way as everything else that groups channels, so this counts exactly the rows
-// /newschannels would print -- which is the number that has to stay under MAX_NEWS_CHANNELS.
-static int news_channel_count(sqlite3 *db, sqlite3_stmt *stmt)
-{
-	int count = -1;
-
-	if (sqlite3_prepare_v2(db, "SELECT count(*) FROM (SELECT DISTINCT channel COLLATE NOCASE FROM News)", -1, &stmt, NULL) != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return -1;
-	}
-
-	if (sqlite3_step(stmt) == SQLITE_ROW)
-	{
-		count = sqlite3_column_int(stmt, 0);
-	}
-	else
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-	}
-
-	sqlite3_finalize(stmt);
-
-	return count;
 }
 
 void display_news(gentity_t* ent, int newsID, char* newsText, char* date) {
