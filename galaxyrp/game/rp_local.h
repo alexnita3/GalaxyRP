@@ -31,6 +31,17 @@ void zyk_drop_other_sessions_on_account(gentity_t *ent, int accountID);
 void G_SyncSaberColorUserinfo(gentity_t *ent);
 void G_SyncNameModelUserinfo(gentity_t *ent, const char *netName, const char *modelName);
 
+void do_scale(gentity_t *ent, int new_size);
+void update_saber(gentity_t *ent, char *saber1Model, char *saber2Model, int number_of_args);
+void set_netname(gentity_t *ent, char netName[MAX_STRING_CHARS]);
+void set_model(gentity_t *ent, char modelName[MAX_STRING_CHARS]);
+void zyk_reset_force_powerups(gentity_t *ent);
+void zyk_stop_active_holdables(gentity_t *ent);
+void zyk_apply_character_skills(gentity_t *ent);
+void zyk_apply_character_loadout(gentity_t *ent);
+void zyk_schedule_relog_kill(gentity_t *ent);
+qboolean zyk_check_user_input(char *user_input, int user_input_size);
+
 #define NUM_OF_SKILLS					60 // zyk: number of RPG Mode skills
 
 #define MAX_SHADER_REMAPS				128
