@@ -43,28 +43,16 @@ void update_skills_table_row_with_current_values(gentity_t* ent);
 qboolean insert_weapons_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt, int charID);
 void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
 
-// GalaxyRP fix: [NPC] removed NUM_OF_GUARDIANS here. Its last user was the guardian_boss_1..10
-// loop in the /npc spawn blocklist, which has been removed along with the rest of that list;
-// the Light Quest it counted for was itself deleted as dead code in earlier work.
-// GalaxyRP fix: [Quests] NUM_OF_OBJECTIVES (Dark Quest), NUM_OF_ETERNITY_QUEST_OBJ and
-// NUM_OF_UNIVERSE_QUEST_OBJ used to be defined here; the quests are gone and nothing read them.
 #define NUM_OF_SKILLS					60 // zyk: number of RPG Mode skills
 
 #define MAX_SHADER_REMAPS				128
-// GalaxyRP: [Race Mode] MAX_RACERS used to be defined here. Its only users were Cmd_RaceMode_f's
-// starting-grid search and level.race_mode_vehicle[], both removed with Race Mode itself.
 #define MAX_DUEL_MATCHES				496 // zyk: max matches a tournament may have
-// GalaxyRP fix: [Quests] the MAX_CUSTOM_QUEST* sizes and MAX_BOUNTY_HUNTER_SENTRIES used to be
-// defined here, for the custom-quest tables in level_locals_t and the Bounty Hunter class; both
-// are gone.
 #define MAX_RPG_CHARS					60 // zyk: max RPG chars an account can have
 #define MAX_ACC_NAME_SIZE				30 // zyk: max characters an account or rpg char can have
 #define MAX_JETPACK_FUEL				10000 // zyk: max jetpack fuel the player can have
 
 #define JETPACK_SCALE					100 // zyk: used to scale the MAX_JETPACK_FUEL to set the jetpackFuel attribute. Dividing MAX_JETPACK_FUEL per JETPACK_SCALE must result in 100
-// GalaxyRP fix: [Shop] NUMBER_OF_SELLER_ITEMS (56, one flat id space shared by every product the
-// jawa seller ever sold, most of it long dead) replaced by two smaller counts for the surviving
-// /buy item <n> and /buy upgrade <n> subcommands, each freshly numbered from 1.
+
 #define NUMBER_OF_SHOP_ITEMS			12 // zyk: quantity of items sold via /buy item <n> and /stuff item <n>
 #define NUMBER_OF_SHOP_UPGRADES			3 // zyk: quantity of upgrades sold via /buy upgrade <n> and /stuff upgrade <n>
 #define DUEL_TOURNAMENT_ARENA_SIZE		64 // zyk: default size of the globe model used as the Duel Tournament arena
@@ -94,10 +82,6 @@ typedef enum {
 	ADM_SCALE,
 	ADM_PLAYERS,
 	ADM_DUELARENA,
-	// GalaxyRP fix: [Admin] this slot used to be ADM_CUSTOMQUEST, a leftover bit for a command
-	// that was removed from the mod. Repurposed for the /admmap map-change command (bit value
-	// stays 32768 -- 1 << 15 -- so existing accounts/configs that already granted this bit keep
-	// working, and the default admin account's full-permission bitmask already covers it).
 	ADM_CHANGEMAP,
 	ADM_CREATEITEM,
 	ADM_GOD,
@@ -110,21 +94,11 @@ typedef enum {
 	ADM_REMOVENEWS,
 	ADM_MUSIC,
 	ADM_GETUP,
-	// GalaxyRP: [Weather] /admweather. APPENDED, not inserted: an admin permission is a bit
-	// POSITION in this enum and every account stores the resulting bitmask in the database, so
-	// adding a name anywhere above this point renumbers every bit below it and silently changes
-	// what every saved permission means. New bits go here, immediately before ADM_NUM_CMDS.
-	// pers.bitvalue is a 32-bit int, so this one (bit 27) leaves three more before the sign bit.
 	ADM_WEATHER,
-	// GalaxyRP: [Phase] "Player effects": /ghost, /holo, /admwalkthrough and /admhidden -- appended for the same reason as above
-	// (bit 28, bit value 268435456). Two bits remain before the sign bit.
-	ADM_PHASE,
+	ADM_PHASE, // GalaxyRP (Alex): [Phase] Used to allow giving players different effects.
 	ADM_NUM_CMDS
 
 } zyk_admin_t;
-
-// GalaxyRP fix: [Magic] the zyk_magic_t enum (MAGIC_MAGIC_SENSE ... MAX_MAGIC_POWERS) used to be
-// here. Its last use was the session's power-selection defaults, removed with the magic system.
 
 // zyk: shader remap struct
 typedef struct shaderRemap_s {
@@ -135,20 +109,6 @@ typedef struct shaderRemap_s {
 
 } shaderRemap_t;
 
-// GalaxyRP fix: [Shader Remap] this was "#ifdef __linux__ extern ... #else <definition> #endif",
-// which gave the table no storage at all on Linux and one copy per platform accident on Windows.
-//
-// On Windows every translation unit that includes this header took the #else branch and emitted a
-// tentative definition; the linker merges those as a common symbol, so it happened to work. On
-// Linux every unit saw only the extern and nothing anywhere defined the array -- "nm -D" on
-// jampgamex86_64.so shows remappedShaders as the one unresolved symbol in the whole module, and a
-// data relocation is resolved when the module is loaded, not lazily, so dlopen() fails and the game
-// module does not come up at all. Every shader-remap command, and the default remap preset, are
-// dead on a Linux server for that reason.
-//
-// One declaration for both platforms, with the single definition beside remapCount in g_utils.c --
-// the file that owns AddRemap(), BuildShaderStateConfig() and zyk_clear_all_remaps(). cgame and ui
-// include this header too but reference nothing in the table, so neither module changes.
 extern shaderRemap_t remappedShaders[MAX_SHADER_REMAPS];
 
 typedef struct saber_db_info_s {
