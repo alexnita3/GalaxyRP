@@ -1914,12 +1914,6 @@ Inventory Table Methods
 =====================================================================
 */
 
-// GalaxyRP fix: [Items] how many items a given character holds, or -1 if the count could not be
-// read. Takes a CharID rather than a gentity_t because the two callers ask about different people:
-// inventory_add_item() asks about the player running /createitem, and Cmd_GiveItem_f() asks about
-// the RECIPIENT of a /giveitem -- which is the half that stops one player filling another player's
-// inventory past the point where /inventory disconnects them. -1 is distinct from a real count so a
-// failed read refuses the action rather than silently reading as "empty" and waving it through.
 int inventory_item_count(int charID, sqlite3* db, sqlite3_stmt* stmt)
 {
 	int count = -1;
@@ -1990,19 +1984,7 @@ void inventory_display_end(gentity_t* ent) {
 	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
 }
 
-// GalaxyRP fix: [security] this used to build its INSERT via va("...VALUES('%i',\"%s\")"...) with
-// the item name spliced straight into the query text -- unlike its siblings
-// update_chars_table_row_with_current_values() and the since-removed insert_inv_table_row(), which
-// were already hardened the same way, this one was missed. A name containing a double quote (e.g.
-// /createitem Vader"s Saber) broke the query outright with a silently-swallowed SQL error, and a
-// deliberately crafted name could inject arbitrary SQL. Bound as a parameter instead. Also now
-// returns qboolean so Cmd_CreateItem_f can tell whether the item was actually created before
-// logging it as created.
 qboolean inventory_add_item(gentity_t* ent, char item_to_add[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-	// GalaxyRP fix: [Items] refuse once this character is at MAX_ITEMS_PER_CHARACTER -- see the
-	// constant for why the collection has to be bounded at all. Placed here rather than in
-	// Cmd_CreateItem_f so that any future caller of this function inherits the limit instead of
-	// having to remember it, and ahead of the INSERT so a refused creation writes nothing.
 	int item_count = inventory_item_count(ent->client->pers.CharID, db, stmt);
 
 	if (item_count < 0)
@@ -2057,10 +2039,6 @@ void inventory_remove_item(gentity_t* ent, int id_to_be_removed, sqlite3* db, ch
 	return;
 }
 
-// GalaxyRP fix: [Items] the name of an item this character owns, for the /giveitem messages. Read
-// through zyk_db_column_string() (NULL-safe, bounded) and cleaned with zyk_clean_text(), because
-// it is about to be printed into two players' consoles and a row can predate /createitem's
-// cleaning. Returns qfalse if there is no such item on this character, or it could not be read.
 qboolean inventory_item_name(int itemID, int charID, char* out, int out_size, sqlite3* db, sqlite3_stmt* stmt)
 {
 	qboolean found = qfalse;
@@ -2092,18 +2070,6 @@ qboolean inventory_item_name(int itemID, int charID, char* out, int out_size, sq
 	return found;
 }
 
-// GalaxyRP fix: [Items] returns whether the item actually moved, and prints nothing itself.
-//
-// It used to splice both ids into the UPDATE with va(), report nothing back, and print "Item was
-// transferred." on its own -- after which Cmd_GiveItem_f printed "You've given an item to ..." as
-// well, so the giver saw two lines, and both appeared even when the UPDATE had failed. The caller
-// now says what happened, once.
-//
-// The UPDATE is bound, and matches the GIVER's CharID as well as the item id. Cmd_GiveItem_f checks
-// ownership first, but that is a separate statement; matching the owner here as well means the move
-// itself can only ever take an item from the character giving it, whatever else touched the row in
-// between (another program with the database open, say) and whoever calls this next. Exactly one
-// row changed is the only success.
 qboolean inventory_transfer_item(gentity_t* ent, gentity_t* otherEnt, int itemID, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	qboolean moved = qfalse;
 
@@ -2139,8 +2105,6 @@ void inventory_add_create_item_log(gentity_t* ent, char created_item_name[MAX_ST
 
 	log_file = fopen("GalaxyRP/logs/itemlog.txt", "a+");
 
-	// GalaxyRP fix: [Items] fopen() can return NULL (e.g. if GalaxyRP/logs/ doesn't exist yet) --
-	// fputs()/fclose() on a NULL FILE* is undefined behavior. Skip logging instead of crashing.
 	if (log_file == NULL) {
 		trap->Print("Warning: could not open GalaxyRP/logs/itemlog.txt for writing.\n");
 		return;
@@ -2201,17 +2165,8 @@ void inventory_display_items(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc,
 		int itemID;
 		char item[MAX_STRING_CHARS];
 		itemID = sqlite3_column_int(stmt, 0);
-		// GalaxyRP fix: [Items] this used to be strcpy(item, sqlite3_column_text(stmt, 1)) -- the
-		// same unbounded, NULL-unsafe read zyk_db_column_string() was written for in the news
-		// reads. sqlite3_column_text() returns NULL for a NULL column and strcpy() with a NULL
-		// source is undefined behaviour, not an empty string; the Items table declares ItemName
-		// without NOT NULL, so only inventory_add_item() being the sole writer kept that off the
-		// table. The copy was unbounded too, fitting only because /createitem's name comes through
-		// trap->Argv() into a buffer of the same size -- a property of the caller, not of the copy.
+
 		zyk_db_column_string(item, sizeof(item), stmt, 1);
-		// GalaxyRP fix: [security] cleaned on the way out, as inventory_item_name() does: the
-		// item may have been named by another player and given to this one, and a row made by
-		// an older build was never cleaned at all -- see zyk_clean_text().
 		zyk_clean_text(item);
 
 		trap->SendServerCommand(ent - g_entities, va("print \"^3%i. ^2%s\n\"", itemID, item));
