@@ -1,9 +1,17 @@
 #include "../../codemp/game/g_local.h"
 #include "sqlite/sqlite3.h"
 
-void run_db_query(const char *query, sqlite3 *db)
+/*
+=================
+HELPER METHODS for interacting with the database
+
+The methods in the area are used to split up database actions into multiple helper methods, that can be used in multiple areas without code dupplication.
+=================
+*/
+
+void run_db_query(const char* query, sqlite3* db)
 {
-	char *zErrMsg = NULL;
+	char* zErrMsg = NULL;
 	int rc = sqlite3_exec(db, query, NULL, NULL, &zErrMsg);
 
 	if (rc != SQLITE_OK)
@@ -13,23 +21,10 @@ void run_db_query(const char *query, sqlite3 *db)
 	}
 }
 
-
 /*
-=================
-ACCOUNT AREA
-=================
-*/
-
-/*
-=================
-HELPER METHODS for interacting with the database
-
-The methods in the area are used to split up database actions into multiple helper methods, that can be used in multiple areas without code dupplication.
-=================
-*/
-
-/*
-----ACCOUNTS TABLE----
+=====================================================================
+Accounts Table Methods
+=====================================================================
 */
 
 // GalaxyRP (Alex): [Database] SELECT This method selects a row form the accounts table, and assigns the values to the entity.
@@ -332,7 +327,9 @@ qboolean is_password_correct(gentity_t* ent, char* username, char* password, sql
 }
 
 /*
-----CHARACTERS TABLE----
+=====================================================================
+Characters Table Methods
+=====================================================================
 */
 
 void update_credits_value(gentity_t* ent) {
@@ -570,7 +567,9 @@ void update_chars_table_row_with_current_values(gentity_t* ent) {
 }
 
 /*
-----SKILLS TABLE----
+=====================================================================
+Skills Table Methods
+=====================================================================
 */
 
 // GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the skills table, with default values.
@@ -673,7 +672,9 @@ void update_skills_table_row_with_current_values(gentity_t* ent) {
 }
 
 /*
-----WEAPONS TABLE----
+=====================================================================
+Weapons Table Methods
+=====================================================================
 */
 
 // GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the weapons table, with default values.
