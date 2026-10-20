@@ -1513,20 +1513,6 @@ void update_weapons_table_row_with_current_values(gentity_t* ent) {
 */
 
 // GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the news table, requires the channel and text be passed into it.
-/*
-GalaxyRP fix: [Database] copy a TEXT column into a fixed-size buffer safely.
-
-The news reads used to do strcpy(dest, sqlite3_column_text(stmt, n)) straight into a
-char[MAX_STRING_CHARS]. Two problems with that. sqlite3_column_text() returns NULL for a NULL
-column, and strcpy() with a NULL source is undefined behaviour, not an empty string -- the News
-table declares neither channel nor text NOT NULL, so only the fact that insert_news_table_row() is
-the sole writer kept that off the table. And the copy was unbounded: it happened to fit because
-/newsadd's arguments come through trap->Argv() into buffers of the same size, so nothing the mod
-itself stores can be too long, but that is a property of the caller, not of the copy.
-
-It also returns const unsigned char *, which strcpy() takes as const char * -- three -Wpointer-sign
-warnings, silenced here by casting once in the one place that knows why it is safe.
-*/
 void zyk_db_column_string(char* dest, int dest_size, sqlite3_stmt* stmt, int column)
 {
 	const unsigned char* value = NULL;
@@ -1563,11 +1549,6 @@ void select_news_channels(gentity_t* ent) {
 	trap->SendServerCommand(ent - g_entities, "print \"^3Existing channels:\n\"");
 
 	// GalaxyRP (Alex): [Database] Select all info from all character related tables.
-	// GalaxyRP fix: [logic] select_news_from_channel() matches channel names case-insensitively
-	// (COLLATE NOCASE), so /news treats "general" and "General" as the same channel -- but this DISTINCT
-	// had no collation, so /newschannels could list them as two separate channels even though /news
-	// merges their entries. Collate the same way here so the channel list matches what /news actually
-	// groups together.
 	char select_channels_query[] = "SELECT DISTINCT channel COLLATE NOCASE \
 		from News\
 		ORDER BY channel COLLATE NOCASE";
@@ -1577,12 +1558,7 @@ void select_news_channels(gentity_t* ent) {
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		// GalaxyRP fix: [Database] close the handle on the way out. Both error paths in this
-		// function finalized the statement and returned without ever calling sqlite3_close(), so
-		// every failed query leaked a connection -- and this one is reached from /newschannels,
-		// which carries no login or admin gate at all, so the leak was drivable from outside.
-		// insert_news_table_row() and delete_news_table_row_with_id() already close on every path;
-		// the two SELECTs were the odd ones out.
+
 		sqlite3_close(db);
 		return;
 	}
@@ -1624,10 +1600,6 @@ void select_news_from_channel(gentity_t* ent, char* channel, int numberOfEntries
 		return;
 	}
 
-	// GalaxyRP fix: [security] this used to build the query text via va("...channel = '%s'...LIMIT %i",
-	// channel, numberOfEntries) -- splicing the raw channel name straight into the SQL string.
-	// Reachable via /news <channel> <count>, a public command any connected (even unauthenticated)
-	// player can run. Bind both values as parameters instead.
 	char select_news_query[] = "SELECT newsID, text, date\
 		from(SELECT newsID, text, date from News WHERE channel = ? COLLATE NOCASE ORDER BY newsID DESC LIMIT ?) \
 		ORDER BY newsID ASC";
@@ -1637,9 +1609,7 @@ void select_news_from_channel(gentity_t* ent, char* channel, int numberOfEntries
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		// GalaxyRP fix: [Database] close the handle on the way out -- same leak as the one fixed in
-		// select_news_channels() above, and this is the worse of the two: /news is public as well,
-		// and it hits the database on every invocation with no cooldown.
+
 		sqlite3_close(db);
 		return;
 	}
@@ -1675,13 +1645,6 @@ void select_news_from_channel(gentity_t* ent, char* channel, int numberOfEntries
 }
 
 // GalaxyRP (Alex): [Database] DELETE This method deletes a news table row which is associated with the ID given.
-// GalaxyRP fix: [security/Database] this used to build the query text via va("...newsID='%i'...", newsID)
-// and run it through run_db_query() (a bare sqlite3_exec() wrapper). newsID always comes from atoi(), so
-// this wasn't actually exploitable, but it was the last news-table query still splicing instead of
-// binding, inconsistent with the rest of this file's DB layer -- fixed for consistency and in case this
-// function is ever changed to take a raw string. run_db_query() also never reported success/failure or
-// rows-affected back to the caller, so Cmd_NewsRemove_f couldn't tell whether anything was actually
-// deleted; this now returns qtrue only when a row was actually removed (via sqlite3_changes()).
 qboolean delete_news_table_row_with_id(gentity_t* ent, int newsID) {
 	sqlite3* db;
 	int rc;
@@ -1732,38 +1695,12 @@ The methods do broader actions, which are a combination of multiple actions that
 // GalaxyRP (Alex): [Database] This method saves the player's name, scale and model to the database. All the information is taken from ent. (Characters tables)
 void update_current_character_name_and_model(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
-	// GalaxyRP fix: [Char] this used to re-derive "this player's" own client slot via
-	// ClientNumberFromString(), which either treats the name as a raw slot index (if it's purely
-	// numeric) or does a case-insensitive SUBSTRING search across every connected player's name and
-	// returns the first match by ascending slot -- neither of which is guaranteed to be this player.
-	// A numeric player name, or a name that happens to be a substring of another, earlier-slot
-	// player's name (e.g. "Vader" vs. an earlier-joined "DarthVaderFan"), returned that OTHER
-	// player's slot instead, and the userinfo (model/saber1/saber2) fetched below then belonged to
-	// them, not to ent. In the functions that save this to the database (e.g.
-	// update_current_character_and_account()) that wrong value gets written straight into ent's own
-	// Characters.ModelName row -- real save-path data corruption from nothing more than an ordinary
-	// name collision. ent is already the exact right entity at every one of these call sites, so this
-	// never needed to be looked up by name at all.
+
 	int clientNum = ent->s.number;
 
 	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
 	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
 
-	// GalaxyRP fix: [security] this used to go through run_db_query() with the player's netname,
-	// model name, and saber model names (all player-controlled -- netname/model via userinfo, saber
-	// names via the saber selection UI/commands) spliced straight into the UPDATE text via
-	// va("...\"%s\"...'%s'..."). This runs on ClientUserinfoChanged() -- i.e. every time a player
-	// changes their name or model -- making it a frequently-reachable, unauthenticated injection
-	// point. Bind every value as a parameter instead.
-	// GalaxyRP: [Saber RGB] saberOneColor/saberTwoColor join the saber models here -- this function
-	// already runs on every userinfo change, which is exactly when a colour or blade style can have
-	// changed (see update_saber_colors() in this file, which routes every change through
-	// ClientUserinfoChanged for precisely this reason). Each column now packs two independent things
-	// via SABER_STORED_PACK (g_local.h): which of the NUM_SABER_COLORS palette entries is selected
-	// (bits 25-28), and the custom RGB payload behind it, if any, tagged with SABERRGB_SET so it can
-	// never be mistaken for the legacy schema default (bare 1, no mode/RGB bits set at all) these
-	// columns still hold on every pre-existing character row -- that legacy default decodes to mode
-	// 0 (SABER_RED) with no RGB payload, a reasonable default for a row this feature predates.
 	rc = sqlite3_prepare_v2(db, "UPDATE Characters SET ModelScale=?, NetName=?, ModelName=?, saberOneModel=?, saberTwoModel=?, saberOneColor=?, saberTwoColor=? WHERE CharID=?", -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -1795,11 +1732,6 @@ void update_current_character_name_and_model(gentity_t* ent, sqlite3* db, char* 
 }
 
 // GalaxyRP (Alex): [Database] This method saves the player's scale to the database. All the information is taken from ent. (Characters tables)
-// GalaxyRP fix: [Database] this used to compute clientNum/userinfo/modelName via GetUserinfo() on every
-// call and never use modelName for anything -- the UPDATE below only ever touched ModelScale. Dropped
-// the dead lookup. Also converted from run_db_query()/va()-spliced text to a parameterized statement,
-// matching the rest of the DB layer -- both values here were always plain ints (iModelScale, CharID) so
-// this wasn't exploitable, but it was the last scale-related query still splicing instead of binding.
 void update_current_character_scale(gentity_t* ent, sqlite3* db) {
 	int rc;
 	sqlite3_stmt* stmt = 0;
