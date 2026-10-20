@@ -24,24 +24,6 @@ typedef struct sqlite3 sqlite3;
 typedef struct sqlite3_stmt sqlite3_stmt;
 #define RP_DB_BUSY_TIMEOUT_MS			5000
 int RP_DB_Open(sqlite3 **db);
-void run_db_query(const char *query, sqlite3 *db);
-qboolean select_accounts_table_row(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
-int select_account_id_from_username(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
-qboolean insert_accounts_table_row(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
-int select_number_of_accounts_with_username(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
-void update_accounts_table_row_with_current_values(gentity_t* ent);
-void update_accounts_table_row_with_default_char(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
-qboolean is_password_correct(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
-void update_credits_value(gentity_t* ent);
-qboolean insert_chars_table_row(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt, int* out_charID);
-int select_number_of_characters_with_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
-int select_number_of_characters(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
-int select_char_id_using_char_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
-void update_chars_table_row_with_current_values(gentity_t* ent);
-qboolean insert_skills_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt, int charID);
-void update_skills_table_row_with_current_values(gentity_t* ent);
-qboolean insert_weapons_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt, int charID);
-void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
 
 #define NUM_OF_SKILLS					60 // zyk: number of RPG Mode skills
 
@@ -167,5 +149,30 @@ qboolean	zyk_npc_leader_lost(gentity_t *npc_ent);
 void		zyk_hold_guarding_npc(gentity_t *npc_ent);
 qboolean	zyk_npc_can_take_orders(gentity_t *npc_ent, gentity_t *leader);
 void		zyk_release_player_npcs(gentity_t *ent);
+
+/*
+=====================================================================
+Database functions
+=====================================================================
+*/
+
+void run_db_query(const char* query, sqlite3* db);
+qboolean select_accounts_table_row(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+int select_account_id_from_username(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+qboolean insert_accounts_table_row(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+int select_number_of_accounts_with_username(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+void update_accounts_table_row_with_current_values(gentity_t* ent);
+void update_accounts_table_row_with_default_char(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+qboolean is_password_correct(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+void update_credits_value(gentity_t* ent);
+qboolean insert_chars_table_row(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt, int* out_charID);
+int select_number_of_characters_with_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+int select_number_of_characters(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+int select_char_id_using_char_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+void update_chars_table_row_with_current_values(gentity_t* ent);
+qboolean insert_skills_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt, int charID);
+void update_skills_table_row_with_current_values(gentity_t* ent);
+qboolean insert_weapons_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt, int charID);
+void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 
 #endif // __RP_LOCAL_H__
