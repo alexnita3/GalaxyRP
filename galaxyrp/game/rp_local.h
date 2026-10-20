@@ -52,6 +52,27 @@ void display_news(gentity_t* ent, int newsID, char* newsText, char* date);
 #define MAX_ACC_NAME_SIZE				30 // zyk: max characters an account or rpg char can have
 #define MAX_JETPACK_FUEL				10000 // zyk: max jetpack fuel the player can have
 
+// GalaxyRP fix: [Items] how many items one character may hold, and how long an item's name may be.
+//
+// Neither was bounded before. /inventory sends one reliable server command per item -- three from
+// inventory_display_beginning(), one per row, one from inventory_display_end() -- and
+// SV_AddServerCommand (sv_main.cpp) drops the client outright with "Server command overflow" once
+// MAX_RELIABLE_COMMANDS + 1 (129) of them are outstanding unacknowledged. So a character holding
+// around 125 items was disconnected the moment they typed /inventory or /inv, every time, with no
+// way to see their own item ids to trash any. Reachable against somebody else too, through repeated
+// /createitem and /giveitem. At 50 a full listing costs 54 commands, comfortably inside the window.
+//
+// The name cap is a separate ceiling with the same root: each row goes out as its own print, and
+// SV_SendServerCommand drops a formatted message over 1022 characters WHOLE rather than truncating
+// it (see RP_LIST_FLUSH_AT below), so a name past roughly 1005 characters made that item invisible
+// in /inventory for good -- still there, still transferable by id, just never shown. trap->Argv()
+// allowed up to MAX_STRING_CHARS - 1 of them.
+//
+// Both caps bound growth only. A character that already holds more than 50 items keeps every one of
+// them and can still trash and give them away; it simply cannot gain more until it is back under.
+#define MAX_ITEMS_PER_CHARACTER		50
+#define MAX_ITEM_NAME_LENGTH		64
+
 #define JETPACK_SCALE					100 // zyk: used to scale the MAX_JETPACK_FUEL to set the jetpackFuel attribute. Dividing MAX_JETPACK_FUEL per JETPACK_SCALE must result in 100
 
 #define NUMBER_OF_SHOP_ITEMS			12 // zyk: quantity of items sold via /buy item <n> and /stuff item <n>
@@ -213,5 +234,19 @@ void update_current_character_scale(gentity_t* ent, sqlite3* db);
 qboolean insert_news_table_row(gentity_t* ent, char* channel, char* news_text);
 int news_channel_exists(const char* channel, sqlite3* db, sqlite3_stmt* stmt);
 int news_channel_count(sqlite3* db, sqlite3_stmt* stmt);
+
+
+int inventory_item_count(int charID, sqlite3* db, sqlite3_stmt* stmt);
+qboolean inventory_does_player_own_item(gentity_t* ent, int itemID, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+void inventory_display_beginning(gentity_t* ent);
+void inventory_display_end(gentity_t* ent);
+qboolean inventory_add_item(gentity_t* ent, char item_to_add[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+void inventory_remove_item(gentity_t* ent, int id_to_be_removed, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+qboolean inventory_item_name(int itemID, int charID, char* out, int out_size, sqlite3* db, sqlite3_stmt* stmt);
+qboolean inventory_transfer_item(gentity_t* ent, gentity_t* otherEnt, int itemID, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+void inventory_add_create_item_log(gentity_t* ent, char created_item_name[MAX_STRING_CHARS]);
+void inventory_display_items(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+
+int zyk_clean_text(char* text);
 
 #endif // __RP_LOCAL_H__

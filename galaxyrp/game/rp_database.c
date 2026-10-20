@@ -43,6 +43,61 @@ void zyk_db_column_string(char* dest, int dest_size, sqlite3_stmt* stmt, int col
 }
 
 /*
+GalaxyRP fix: [Attributes] [Items] put player-written text into the shape it is stored and shown in:
+every control character (line breaks, tabs, anything below a space, and DEL) becomes a space, and
+leading and trailing spaces are trimmed. Colour codes are ordinary characters and are kept, and so
+are bytes above 127 -- the engine's own MSG_ReadString stopped filtering those so players could
+write in European languages, and descriptions and item names are exactly where they would.
+
+Line breaks are the reason this exists. The text ends up printed into somebody else's console -- a
+character description by /examine, an item name by /inventory and /giveitem -- and one containing a
+line break could append lines of its own that look like anything: an admin message, a server
+notice. An item name also goes into itemlog.txt, where a line break would forge a log entry. A
+default server strips them before the mod ever sees the text (sv_filterCommands), but that is a
+setting; this makes it the mod's rule.
+
+Used by /attributes when a description is set, by /examine when one is shown (so a row written by
+hand or by an older build is cleaned on the way out too), by /createitem on a new item's name, and
+by /giveitem on the name it prints. Works in place and returns the resulting length. It was
+zyk_clean_description() until the item commands needed it as well; it moved up here, ahead of the
+inventory code, unchanged.
+
+It also breaks up "@@@" (RP_BreakStringEdRefs, g_utils.c): the client expands three '@' in a printed
+line as a reference to one of the server's own phrases, and the stock client can overflow a buffer
+doing it, so a description or item name holding a run of them could crash whoever read it.
+*/
+int zyk_clean_text(char* text)
+{
+	char* p = NULL;
+	char* start = NULL;
+	int len = 0;
+
+	if (!text)
+		return 0;
+
+	for (p = text; *p; p++)
+	{
+		if ((unsigned char)*p < ' ' || (unsigned char)*p == 0x7f)
+			*p = ' ';
+	}
+
+	RP_BreakStringEdRefs(text);
+
+	start = text;
+	while (*start == ' ')
+		start++;
+
+	if (start != text)
+		memmove(text, start, strlen(start) + 1);
+
+	len = (int)strlen(text);
+	while (len > 0 && text[len - 1] == ' ')
+		text[--len] = '\0';
+
+	return len;
+}
+
+/*
 =====================================================================
 All Table Methods
 =====================================================================
@@ -1576,7 +1631,7 @@ void update_weapons_table_row_with_current_values(gentity_t* ent) {
 
 /*
 =====================================================================
-NEWS Table Methods
+News Table Methods
 =====================================================================
 */
 
@@ -1851,4 +1906,317 @@ int news_channel_count(sqlite3* db, sqlite3_stmt* stmt)
 	sqlite3_finalize(stmt);
 
 	return count;
+}
+
+/*
+=====================================================================
+Inventory Table Methods
+=====================================================================
+*/
+
+// GalaxyRP fix: [Items] how many items a given character holds, or -1 if the count could not be
+// read. Takes a CharID rather than a gentity_t because the two callers ask about different people:
+// inventory_add_item() asks about the player running /createitem, and Cmd_GiveItem_f() asks about
+// the RECIPIENT of a /giveitem -- which is the half that stops one player filling another player's
+// inventory past the point where /inventory disconnects them. -1 is distinct from a real count so a
+// failed read refuses the action rather than silently reading as "empty" and waving it through.
+int inventory_item_count(int charID, sqlite3* db, sqlite3_stmt* stmt)
+{
+	int count = -1;
+
+	if (sqlite3_prepare_v2(db, va("SELECT count(ItemID) FROM Items WHERE CharID='%i'", charID), -1, &stmt, NULL) != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return -1;
+	}
+
+	if (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		count = sqlite3_column_int(stmt, 0);
+	}
+	else
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+	}
+
+	sqlite3_finalize(stmt);
+
+	return count;
+}
+
+qboolean inventory_does_player_own_item(gentity_t* ent, int itemID, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt)
+{
+	rc = sqlite3_prepare_v2(db, va("SELECT count(ItemID) FROM Items WHERE ItemID='%i' AND CharID='%i'", itemID, ent->client->pers.CharID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return qfalse;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return qfalse;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		int numberOfItems;
+
+		numberOfItems = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+
+		if (numberOfItems != 1) {
+			trap->SendServerCommand(ent - g_entities, "print \"^2You do not own this item.\n\"");
+			trap->SendServerCommand(ent - g_entities, "cp \"^2You do not own this item.\n\"");
+
+			return qfalse;
+		}
+		return qtrue;
+	}
+
+	return qfalse;
+}
+
+void inventory_display_beginning(gentity_t* ent) {
+	trap->SendServerCommand(ent->s.number, "print \"^2Inventory\n\"");
+	trap->SendServerCommand(ent->s.number, va("print \"^3[Credits: %i]\n\"", ent->client->pers.credits));
+	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
+}
+
+void inventory_display_end(gentity_t* ent) {
+	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
+}
+
+// GalaxyRP fix: [security] this used to build its INSERT via va("...VALUES('%i',\"%s\")"...) with
+// the item name spliced straight into the query text -- unlike its siblings
+// update_chars_table_row_with_current_values() and the since-removed insert_inv_table_row(), which
+// were already hardened the same way, this one was missed. A name containing a double quote (e.g.
+// /createitem Vader"s Saber) broke the query outright with a silently-swallowed SQL error, and a
+// deliberately crafted name could inject arbitrary SQL. Bound as a parameter instead. Also now
+// returns qboolean so Cmd_CreateItem_f can tell whether the item was actually created before
+// logging it as created.
+qboolean inventory_add_item(gentity_t* ent, char item_to_add[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	// GalaxyRP fix: [Items] refuse once this character is at MAX_ITEMS_PER_CHARACTER -- see the
+	// constant for why the collection has to be bounded at all. Placed here rather than in
+	// Cmd_CreateItem_f so that any future caller of this function inherits the limit instead of
+	// having to remember it, and ahead of the INSERT so a refused creation writes nothing.
+	int item_count = inventory_item_count(ent->client->pers.CharID, db, stmt);
+
+	if (item_count < 0)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"^1Could not read your inventory. Item not created.\n\"");
+		return qfalse;
+	}
+
+	if (item_count >= MAX_ITEMS_PER_CHARACTER)
+	{
+		trap->SendServerCommand(ent->s.number, va("print \"^1Your inventory is full (%d items). Trash or give something away first.\n\"", MAX_ITEMS_PER_CHARACTER));
+		return qfalse;
+	}
+
+	rc = sqlite3_prepare_v2(db, "INSERT INTO Items(CharID, ItemName) VALUES(?, ?)", -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return qfalse;
+	}
+	sqlite3_bind_int(stmt, 1, ent->client->pers.CharID);
+	sqlite3_bind_text(stmt, 2, item_to_add, -1, SQLITE_TRANSIENT);
+	rc = sqlite3_step(stmt);
+	sqlite3_finalize(stmt);
+	if (rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		return qfalse;
+	}
+	trap->SendServerCommand(ent->s.number, "print \"Item added to your inventory.\n\"");
+
+	return qtrue;
+}
+
+void inventory_remove_item(gentity_t* ent, int id_to_be_removed, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+
+	if (inventory_does_player_own_item(ent, id_to_be_removed, db, zErrMsg, rc, stmt) == qfalse) {
+		return;
+	}
+
+	//trap->Print(va("DELETE FROM Items WHERE ItemID='%i'", id_to_be_removed));
+	rc = sqlite3_exec(db, va("DELETE FROM Items WHERE ItemID='%i'", id_to_be_removed), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return;
+	}
+	trap->SendServerCommand(ent->s.number, "print \"Item was removed.\n\"");
+
+	return;
+}
+
+// GalaxyRP fix: [Items] the name of an item this character owns, for the /giveitem messages. Read
+// through zyk_db_column_string() (NULL-safe, bounded) and cleaned with zyk_clean_text(), because
+// it is about to be printed into two players' consoles and a row can predate /createitem's
+// cleaning. Returns qfalse if there is no such item on this character, or it could not be read.
+qboolean inventory_item_name(int itemID, int charID, char* out, int out_size, sqlite3* db, sqlite3_stmt* stmt)
+{
+	qboolean found = qfalse;
+
+	if (!out || out_size < 1)
+		return qfalse;
+
+	out[0] = '\0';
+
+	if (sqlite3_prepare_v2(db, "SELECT ItemName FROM Items WHERE ItemID=? AND CharID=?", -1, &stmt, NULL) != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return qfalse;
+	}
+
+	sqlite3_bind_int(stmt, 1, itemID);
+	sqlite3_bind_int(stmt, 2, charID);
+
+	if (sqlite3_step(stmt) == SQLITE_ROW)
+	{
+		zyk_db_column_string(out, out_size, stmt, 0);
+		zyk_clean_text(out);
+		found = qtrue;
+	}
+
+	sqlite3_finalize(stmt);
+
+	return found;
+}
+
+// GalaxyRP fix: [Items] returns whether the item actually moved, and prints nothing itself.
+//
+// It used to splice both ids into the UPDATE with va(), report nothing back, and print "Item was
+// transferred." on its own -- after which Cmd_GiveItem_f printed "You've given an item to ..." as
+// well, so the giver saw two lines, and both appeared even when the UPDATE had failed. The caller
+// now says what happened, once.
+//
+// The UPDATE is bound, and matches the GIVER's CharID as well as the item id. Cmd_GiveItem_f checks
+// ownership first, but that is a separate statement; matching the owner here as well means the move
+// itself can only ever take an item from the character giving it, whatever else touched the row in
+// between (another program with the database open, say) and whoever calls this next. Exactly one
+// row changed is the only success.
+qboolean inventory_transfer_item(gentity_t* ent, gentity_t* otherEnt, int itemID, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	qboolean moved = qfalse;
+
+	rc = sqlite3_prepare_v2(db, "UPDATE Items SET CharID=? WHERE ItemID=? AND CharID=?", -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return qfalse;
+	}
+
+	sqlite3_bind_int(stmt, 1, otherEnt->client->pers.CharID);
+	sqlite3_bind_int(stmt, 2, itemID);
+	sqlite3_bind_int(stmt, 3, ent->client->pers.CharID);
+
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+	}
+	else
+	{
+		moved = (sqlite3_changes(db) == 1) ? qtrue : qfalse;
+	}
+
+	sqlite3_finalize(stmt);
+
+	return moved;
+}
+
+void inventory_add_create_item_log(gentity_t* ent, char created_item_name[MAX_STRING_CHARS]) {
+	FILE* log_file = NULL;
+
+	log_file = fopen("GalaxyRP/logs/itemlog.txt", "a+");
+
+	// GalaxyRP fix: [Items] fopen() can return NULL (e.g. if GalaxyRP/logs/ doesn't exist yet) --
+	// fputs()/fclose() on a NULL FILE* is undefined behavior. Skip logging instead of crashing.
+	if (log_file == NULL) {
+		trap->Print("Warning: could not open GalaxyRP/logs/itemlog.txt for writing.\n");
+		return;
+	}
+
+	fputs(va("%s created the item: %s\n", ent->client->pers.netname, created_item_name), log_file);
+	fclose(log_file);
+
+	return;
+}
+
+void inventory_display_items(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt)
+{
+	//trap->Print(va("SELECT Count(ItemID) FROM Items WHERE CharID='%i'", ent->client->pers.CharID));
+	rc = sqlite3_prepare_v2(db, va("SELECT Count(ItemID) FROM Items WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		int itemCount;
+		itemCount = sqlite3_column_int(stmt, 0);
+
+		if (itemCount == 0) {
+			trap->SendServerCommand(ent->s.number, "print \"Nothing to show.\n\"");
+			sqlite3_finalize(stmt);
+			return;
+		}
+	}
+	sqlite3_finalize(stmt);
+
+	//trap->Print(va("SELECT ItemID, ItemName FROM Items WHERE CharID='%i'", ent->client->pers.CharID));
+	rc = sqlite3_prepare_v2(db, va("SELECT ItemID, ItemName FROM Items WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	while (rc == SQLITE_ROW) {
+		int itemID;
+		char item[MAX_STRING_CHARS];
+		itemID = sqlite3_column_int(stmt, 0);
+		// GalaxyRP fix: [Items] this used to be strcpy(item, sqlite3_column_text(stmt, 1)) -- the
+		// same unbounded, NULL-unsafe read zyk_db_column_string() was written for in the news
+		// reads. sqlite3_column_text() returns NULL for a NULL column and strcpy() with a NULL
+		// source is undefined behaviour, not an empty string; the Items table declares ItemName
+		// without NOT NULL, so only inventory_add_item() being the sole writer kept that off the
+		// table. The copy was unbounded too, fitting only because /createitem's name comes through
+		// trap->Argv() into a buffer of the same size -- a property of the caller, not of the copy.
+		zyk_db_column_string(item, sizeof(item), stmt, 1);
+		// GalaxyRP fix: [security] cleaned on the way out, as inventory_item_name() does: the
+		// item may have been named by another player and given to this one, and a row made by
+		// an older build was never cleaned at all -- see zyk_clean_text().
+		zyk_clean_text(item);
+
+		trap->SendServerCommand(ent - g_entities, va("print \"^3%i. ^2%s\n\"", itemID, item));
+		rc = sqlite3_step(stmt);
+	}
+
+	sqlite3_finalize(stmt);
 }
