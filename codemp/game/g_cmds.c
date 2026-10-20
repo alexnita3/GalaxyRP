@@ -41,15 +41,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define MAX_EMOTE_WORDS 11;
 #define MAX_CHAT_MODIFIERS 24;
 
-// GalaxyRP fix: [Char] the character-select UI (ingame_galaxyrp.menu) only ever had 15 character-slot
-// itemDefs (ui_zyk_rpg_char_1 through _15), and CG_ZykChars (cg_servercmds.c) has always silently capped
-// its own display at 15 -- but nothing server-side ever enforced that as an actual limit on how many
-// characters an account could create. create_new_character() below now refuses a 16th character using
-// this same constant, and select_character_list_for_ui() below uses it as a defensive cap on how many
-// rows it will ever accumulate into a fixed-size buffer, so the two are guaranteed to agree by
-// construction rather than by two separately-maintained "15"s drifting apart.
-#define MAX_CHARACTERS_PER_ACCOUNT 15
-
 // GalaxyRP fix: [Items] how many items one character may hold, and how long an item's name may be.
 //
 // Neither was bounded before. /inventory sends one reliable server command per item -- three from
@@ -3377,7 +3368,7 @@ itself stores can be too long, but that is a property of the caller, not of the 
 It also returns const unsigned char *, which strcpy() takes as const char * -- three -Wpointer-sign
 warnings, silenced here by casting once in the one place that knows why it is safe.
 */
-static void zyk_db_column_string(char *dest, int dest_size, sqlite3_stmt *stmt, int column)
+void zyk_db_column_string(char *dest, int dest_size, sqlite3_stmt *stmt, int column)
 {
 	const unsigned char *value = NULL;
 
@@ -3406,7 +3397,7 @@ second (what insert_chars_table_row() and create_new_character() write -- that c
 is saber_1 too, but "none" is what a character without a second saber actually has). A non-empty
 value is never touched, whatever it says.
 */
-static void zyk_default_empty_saber_models(char *saber1, int saber1_size, char *saber2, int saber2_size)
+void zyk_default_empty_saber_models(char *saber1, int saber1_size, char *saber2, int saber2_size)
 {
 	if (saber1 && saber1_size > 0 && saber1[0] == '\0')
 		Q_strncpyz(saber1, "saber_1", saber1_size);
@@ -3971,8 +3962,6 @@ void update_current_character_scale(gentity_t* ent, sqlite3* db) {
 }
 
 void update_saber(gentity_t* ent, char* saber1Model, char* saber2Model, int number_of_args);
-static void G_SyncSaberColorUserinfo( gentity_t *ent );
-static void G_SyncNameModelUserinfo( gentity_t *ent, const char *netName, const char *modelName );
 
 // GalaxyRP fix: [Account] nothing ever stopped two connections from holding the same account at the
 // same time, and the damage was silent.
@@ -4000,7 +3989,7 @@ static void G_SyncNameModelUserinfo( gentity_t *ent, const char *netName, const 
 // reads anything, which is the single point both /login and ClientBegin()'s map-change relogin pass
 // through. In /login it sits after the password check, so this is only ever reachable by someone who
 // could have logged into the account anyway.
-static void zyk_drop_other_sessions_on_account( gentity_t *ent, int accountID )
+void zyk_drop_other_sessions_on_account( gentity_t *ent, int accountID )
 {
 	int i;
 	int dropped = 0;
@@ -20728,7 +20717,7 @@ any of them the same three things have to happen, which is what update_saber_col
 // re-saving it as if it were this character's own -- and the update_saber_colors() call those two
 // functions already make *after* update_saber() only republishes whatever pers.saberRGB[] holds by
 // then, so it was faithfully re-saving and re-publishing the corruption instead of catching it.
-static void G_SyncSaberColorUserinfo( gentity_t *ent ) {
+void G_SyncSaberColorUserinfo( gentity_t *ent ) {
 	char userinfo[MAX_INFO_STRING] = { 0 };
 
 	if ( !ent || !ent->client )
@@ -20763,7 +20752,7 @@ static void G_SyncSaberColorUserinfo( gentity_t *ent ) {
 // synchronous character-load call itself; syncing the cache here too closes the same later window
 // (a further respawn, or any other unrelated userinfo change) that G_SyncSaberColorUserinfo() closes
 // for saber colour.
-static void G_SyncNameModelUserinfo( gentity_t *ent, const char *netName, const char *modelName ) {
+void G_SyncNameModelUserinfo( gentity_t *ent, const char *netName, const char *modelName ) {
 	char userinfo[MAX_INFO_STRING] = { 0 };
 
 	if ( !ent || !ent->client || !netName || !modelName )
