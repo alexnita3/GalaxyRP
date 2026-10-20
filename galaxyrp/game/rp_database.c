@@ -1,6 +1,8 @@
 #include "../../codemp/game/g_local.h"
 #include "sqlite/sqlite3.h"
 
+#define MAX_CHARACTERS_PER_ACCOUNT 15
+
 /*
 =================
 HELPER METHODS for interacting with the database

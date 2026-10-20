@@ -24,6 +24,12 @@ typedef struct sqlite3 sqlite3;
 typedef struct sqlite3_stmt sqlite3_stmt;
 #define RP_DB_BUSY_TIMEOUT_MS			5000
 int RP_DB_Open(sqlite3 **db);
+void run_db_query(const char *query, sqlite3 *db);
+void zyk_db_column_string(char *dest, int dest_size, sqlite3_stmt *stmt, int column);
+void zyk_default_empty_saber_models(char *saber1, int saber1_size, char *saber2, int saber2_size);
+void zyk_drop_other_sessions_on_account(gentity_t *ent, int accountID);
+void G_SyncSaberColorUserinfo(gentity_t *ent);
+void G_SyncNameModelUserinfo(gentity_t *ent, const char *netName, const char *modelName);
 
 #define NUM_OF_SKILLS					60 // zyk: number of RPG Mode skills
 
