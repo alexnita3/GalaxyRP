@@ -29,6 +29,7 @@ Global definitions
 typedef struct sqlite3 sqlite3;
 #define RP_DB_BUSY_TIMEOUT_MS			5000
 int RP_DB_Open(sqlite3 **db);
+void run_db_query(const char *query, sqlite3 *db);
 
 // GalaxyRP fix: [NPC] removed NUM_OF_GUARDIANS here. Its last user was the guardian_boss_1..10
 // loop in the /npc spawn blocklist, which has been removed along with the rest of that list;

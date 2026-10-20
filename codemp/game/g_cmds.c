@@ -2664,18 +2664,6 @@ void set_netname(gentity_t* ent, char netName[MAX_STRING_CHARS])
 	return;
 }
 
-// GalaxyRP (Alex): [Database] This generic method is strictly for running INSERT, UPDATE, DROP and CREATE statements.
-void run_db_query(char* query, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt){
-	//trap->Print(query);
-	rc = sqlite3_exec(db, query, 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return;
-	}
-}
-
 /*
 ----ITEMS TABLE----
 */
@@ -3031,9 +3019,7 @@ qboolean is_password_correct(gentity_t* ent, char* username, char* password, sql
 
 void update_credits_value(gentity_t* ent) {
 	sqlite3* db;
-	char* zErrMsg = 0;
 	int rc;
-	sqlite3_stmt* stmt = 0;
 
 	rc = RP_DB_Open(&db);
 	if (rc != SQLITE_OK)
@@ -3047,7 +3033,7 @@ void update_credits_value(gentity_t* ent) {
 	run_db_query(va(update_char_query,
 		ent->client->pers.credits,
 		ent->client->pers.CharID
-	), db, zErrMsg, rc, stmt);
+	), db);
 
 	sqlite3_close(db);
 
@@ -3385,8 +3371,8 @@ void update_chars_table_row_with_current_values(gentity_t* ent) {
 // GalaxyRP fix: [stability] now returns qboolean (used to be void, going through the void run_db_query()
 // wrapper) -- its one caller, Cmd_Register_F, needs to know whether this row actually got created before
 // it marks the session logged in. Calls sqlite3_exec() directly instead of going through run_db_query()
-// so the result can be reported; run_db_query() itself is left untouched since ~20 other call sites in
-// this file use it for fire-and-forget UPDATE/DELETE statements where a return value isn't needed.
+// so the result can be reported; the remaining run_db_query() callers use it for fire-and-forget UPDATE
+// statements where a return value isn't needed.
 // GalaxyRP fix: [Database] takes the CharID this row belongs to. The INSERT used to leave CharID
 // out of the column list entirely and rely on SQLite handing Characters, Skills and Weapons the
 // same auto-assigned rowid -- true only while all three tables stay in perfect lockstep. A
@@ -3411,9 +3397,7 @@ qboolean insert_skills_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int
 // GalaxyRP (Alex): [Database] UPDATE This method updated a skills table row with information contained within the entity with which it's called. Also updates the skillpoint values, since there's no instance where a skill is updated and the skillpoints are not.
 void update_skills_table_row_with_current_values(gentity_t* ent) {
 	sqlite3* db;
-	char* zErrMsg = 0;
 	int rc;
-	sqlite3_stmt* stmt = 0;
 
 	rc = RP_DB_Open(&db);
 	if (rc != SQLITE_OK)
@@ -3487,7 +3471,7 @@ void update_skills_table_row_with_current_values(gentity_t* ent) {
 		ent->client->pers.skill_levels[59], //Health Regen
 		ent->client->pers.CharID,
 		ent->client->pers.skillpoints,
-		ent->client->pers.CharID), db, zErrMsg, rc, stmt);
+		ent->client->pers.CharID), db);
 
 	sqlite3_close(db);
 
@@ -4246,9 +4230,7 @@ void zyk_schedule_relog_kill( gentity_t *ent )
 void update_weapons_table_row_with_current_values(gentity_t* ent) {
 
 	sqlite3* db;
-	char* zErrMsg = 0;
 	int rc;
-	sqlite3_stmt* stmt = 0;
 
 	rc = RP_DB_Open(&db);
 	if (rc != SQLITE_OK)
@@ -4268,7 +4250,7 @@ void update_weapons_table_row_with_current_values(gentity_t* ent) {
 		ent->client->ps.ammo[AMMO_TRIPMINE],
 		ent->client->ps.ammo[AMMO_DETPACK],
 		ent->client->pers.CharID
-	), db, zErrMsg, rc, stmt);
+	), db);
 
 	sqlite3_close(db);
 
@@ -6235,7 +6217,7 @@ void update_current_character_and_account(gentity_t* ent) {
 		ent->client->ps.ammo[AMMO_TRIPMINE],
 		ent->client->ps.ammo[AMMO_DETPACK],
 		ent->client->pers.CharID
-	), db, zErrMsg, rc, stmt);
+	), db);
 
 	sqlite3_close(db);
 
