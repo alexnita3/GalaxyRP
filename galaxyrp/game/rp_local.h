@@ -41,6 +41,8 @@ void zyk_apply_character_skills(gentity_t *ent);
 void zyk_apply_character_loadout(gentity_t *ent);
 void zyk_schedule_relog_kill(gentity_t *ent);
 qboolean zyk_check_user_input(char *user_input, int user_input_size);
+void zyk_print_long_line(gentity_t* ent, const char* prefix, const char* text);
+void display_news(gentity_t* ent, int newsID, char* newsText, char* date);
 
 #define NUM_OF_SKILLS					60 // zyk: number of RPG Mode skills
 
@@ -199,5 +201,14 @@ void select_account_and_default_character_data(gentity_t* ent, char username[32]
 qboolean create_new_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 void remove_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
 void update_current_character_and_account(gentity_t* ent);
+
+
+void update_weapons_table_row_with_current_values(gentity_t* ent);
+void zyk_db_column_string(char* dest, int dest_size, sqlite3_stmt* stmt, int column);
+void select_news_channels(gentity_t* ent);
+void select_news_from_channel(gentity_t* ent, char* channel, int numberOfEntries);
+qboolean delete_news_table_row_with_id(gentity_t* ent, int newsID);
+void update_current_character_name_and_model(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt);
+void update_current_character_scale(gentity_t* ent, sqlite3* db);
 
 #endif // __RP_LOCAL_H__
