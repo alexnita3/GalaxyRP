@@ -64,6 +64,7 @@ set(MPGameGameFiles
 	"${MPDir}/game/g_items.c"
 	"${MPDir}/game/g_log.c"
 	"${MPDir}/game/g_main.c"
+	"${RPDir}/game/rp_database.c" # GalaxyRP database helpers
 	"${MPDir}/game/g_mem.c"
 	"${MPDir}/game/g_misc.c"
 	"${MPDir}/game/g_missile.c"
