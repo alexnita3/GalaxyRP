@@ -29,30 +29,11 @@ The methods in the area are used to split up database actions into multiple help
 */
 
 /*
-----ITEMS TABLE----
-*/
-
-// GalaxyRP fix: [Items] insert_inv_table_row() used to be here: a second INSERT into Items that
-// nothing called. It had been given a bound statement for safety, but not the
-// MAX_ITEMS_PER_CHARACTER cap inventory_add_item() carries, and it announced "Item added" whether
-// the INSERT worked or not -- so the first caller anyone wired up to it would have reopened both
-// holes. inventory_add_item() is the one way to create an item.
-
-
-/*
 ----ACCOUNTS TABLE----
 */
 
 // GalaxyRP (Alex): [Database] SELECT This method selects a row form the accounts table, and assigns the values to the entity.
-// GalaxyRP fix: [stability] now returns qboolean (used to be void) -- its one caller, Cmd_Register_F,
-// needs to know whether the row it just inserted was actually found and loaded before it can safely
-// mark the session logged in. See the matching fix on Cmd_Register_F for the full reasoning.
 qboolean select_accounts_table_row(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-	// GalaxyRP fix: [security] this used to build the query text via va("...Username='%s'", username)
-	// -- splicing the raw username straight into the SQL string. A username containing a single quote
-	// (the SQL string delimiter) could break out of the literal and inject arbitrary SQL, executed
-	// with this game server's full database privileges -- reachable via /new (Cmd_Register_F). Bind
-	// the value as a parameter instead, so it can never be interpreted as SQL syntax.
 	rc = sqlite3_prepare_v2(db, "SELECT AccountID, PlayerSettings, AdminLevel FROM Accounts WHERE Username = ? COLLATE NOCASE", -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -80,22 +61,11 @@ qboolean select_accounts_table_row(gentity_t* ent, char* username, sqlite3* db, 
 		return qtrue;
 	}
 
-	// GalaxyRP fix: [stability] this row-not-found path (rc == SQLITE_DONE) used to leave stmt
-	// unfinalized and gave the caller no way to tell the lookup came up empty -- same missing-finalize
-	// leak class fixed in several other functions in this file (sqlite3_close() on a connection with an
-	// outstanding unfinalized statement returns SQLITE_BUSY and leaves it open instead of actually
-	// closing it), plus a silent failure that let Cmd_Register_F carry on as if the account it had just
-	// looked up actually existed.
 	sqlite3_finalize(stmt);
 	return qfalse;
 }
 
 // GalaxyRP (Alex): [Database] SELECT This method selects the id of an account going by the username provided. Usernames should be unique.
-// GalaxyRP fix: [stability] this function currently has zero callers anywhere in the codebase
-// (confirmed via a full-repo grep), so neither bug below is reachable today -- fixed anyway for
-// correctness/safety in case it's ever wired up later. (The "unreachable today, fixed for
-// consistency" treatment it was compared with here, insert_inv_table_row(), has since been removed
-// outright.)
 int select_account_id_from_username(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	// GalaxyRP fix: [stability] accountID used to be declared uninitialized here and was only ever
 	// assigned inside the "row found" branch below -- the not-found (rc == SQLITE_DONE) fallthrough
@@ -142,13 +112,6 @@ int select_account_id_from_username(gentity_t* ent, char* username, sqlite3* db,
 }
 
 // GalaxyRP (Alex): [Database] INSERT This method inserts a new row into the accounts table, using the username and password provided, and default values for everything else.
-// GalaxyRP fix: [stability] now returns qboolean (used to be void) -- its one caller, Cmd_Register_F,
-// needs to know whether the account row it asked for actually got created before it does anything that
-// assumes it exists. This can now fail two ways: a genuine DB error, or -- now that Accounts.Username has
-// a real UNIQUE index (see InitializeGalaxyRpTables() in g_main.c) -- a duplicate-username race that the
-// app-level check-then-insert in Cmd_Register_F can't fully close on its own (two players submitting /new
-// for the same username within the same narrow window can both pass that check before either INSERT
-// commits; the database itself is now the actual source of truth for uniqueness).
 qboolean insert_accounts_table_row(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	// GalaxyRP fix: [security] this used to go through run_db_query(), which executes a fully
 	// pre-formatted SQL string via sqlite3_exec() with no parameter binding -- username and password
@@ -334,10 +297,6 @@ void update_accounts_table_row_with_default_char(gentity_t* ent, char* character
 }
 
 qboolean is_password_correct(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-	// GalaxyRP fix: [security] same va("...%s...")-into-SQL-text issue as
-	// select_number_of_accounts_with_username() above -- bind username instead. Reachable via /login
-	// with the account's own password compared afterward in C via strcmp(), never itself placed into
-	// SQL text here.
 	rc = sqlite3_prepare_v2(db, "SELECT Password FROM Accounts WHERE Username = ? COLLATE NOCASE", -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -368,11 +327,6 @@ qboolean is_password_correct(gentity_t* ent, char* username, char* password, sql
 		return qfalse;
 	}
 
-	// GalaxyRP fix: [stability] this row-not-found path (rc == SQLITE_DONE) used to return without ever
-	// finalizing stmt -- same missing-finalize leak class fixed elsewhere in this file (sqlite3_close()
-	// on a connection with an outstanding unfinalized statement returns SQLITE_BUSY and leaves it open
-	// instead of actually closing it). Reachable via a TOCTOU race with the username-existence check
-	// Cmd_Login_F runs just before calling this.
 	sqlite3_finalize(stmt);
 	return qfalse;
 }
@@ -405,24 +359,7 @@ void update_credits_value(gentity_t* ent) {
 }
 
 // GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the character table, with default values. ASSUMES PLAYER IS ALREADY LOGGED IN.
-// GalaxyRP fix: [stability] now returns qboolean (used to be void) -- its one caller, Cmd_Register_F,
-// needs to know whether this row actually got created before it marks the session logged in or proceeds
-// to create the matching Skills/Weapons rows. See the matching fix on Cmd_Register_F.
-// GalaxyRP fix: [Database] reports the new row's CharID through out_charID so the Skills and
-// Weapons rows that follow it in Cmd_Register_F can be bound to this character explicitly --
-// see the comment on those two inserts. Read via sqlite3_last_insert_rowid() immediately after
-// the step below, while this INSERT is still the last statement executed on this connection.
 qboolean insert_chars_table_row(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt, int* out_charID) {
-	// GalaxyRP fix: [security] this used to go through run_db_query() with the character name
-	// spliced straight into the INSERT text via va("...%s..."). Reachable via /new, using the new
-	// account's own username as its first character's name. Prepare/bind/step directly instead.
-	// GalaxyRP fix: [Saber] saberTwoModel is set explicitly to "none" here, exactly as in
-	// create_new_character()'s own Characters INSERT -- see the longer comment there. Left out, the
-	// column takes its ALTER TABLE default of 'saber_1', and every character-load path reads any
-	// saberTwoModel other than "none" as "this character dual-wields" -- so the account's very first
-	// character (this is the /new registration path) came up dual-wielding, with both slots falling
-	// back to the default saber because 'saber_1' is not a real hilt, without the player ever
-	// choosing it.
 	rc = sqlite3_prepare_v2(db, "INSERT INTO Characters(AccountID, Credits, Level, ModelScale, Name, SkillPoints, Description, NetName, ModelName, xp, saberTwoModel) VALUES(?, '100', '1', '100', ?, '1', 'Nothing to show.', 'DefaultName', 'kyle', 0, 'none')", -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -450,35 +387,7 @@ qboolean insert_chars_table_row(gentity_t* ent, char* character_name, sqlite3* d
 }
 
 // GalaxyRP (Alex): [Database] SELECT This method returns the number of characters that exist with one name. (Useful for preventing duplicates)
-// GalaxyRP fix: [Account] character names and account usernames are compared case-insensitively
-// everywhere -- every WHERE on Characters.Name or Accounts.Username in this file and in g_main.c
-// carries COLLATE NOCASE, and the two UNIQUE indexes that back them (g_main.c) are built on the
-// same collation.
-//
-// The database compared bytes, so "Admin" and "admin" were two characters and two accounts. For
-// accounts that was merely confusing. For characters it was a trap, because the two "is this the
-// one I already have loaded?" guards in this file -- Cmd_Char_f's /char use branch and
-// remove_character() -- were written with Q_stricmp: with "Admin" active, "/char use admin" and
-// "/char remove admin" were both refused as the active character, so a player who had created the
-// pair could neither switch to nor delete the other one. Logging out did not help either, since
-// Accounts.DefaultChar is rewritten from the active name on every save. The guards were right and
-// the storage was wrong; this brings the storage into line with them.
-//
-// Per comparison rather than on the column: CREATE TABLE IF NOT EXISTS never alters a table that
-// already exists, so a column-level COLLATE would only apply to databases created after this change.
-// Written into the query it applies to every database, migrated or not. NOCASE folds only ASCII A-Z,
-// which is exactly enough -- zyk_check_user_input() restricts both kinds of name to ASCII letters
-// and digits before they can reach any of this.
-//
-// One consequence: a name a player TYPES may differ in case from the one STORED, so anywhere the
-// stored spelling matters it is now read back from the row rather than echoed from the argument --
-// see the sess.rpgchar copy in select_player_character(). The login path already did this.
 int select_number_of_characters_with_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-
-	// GalaxyRP fix: [security] this used to build the query text via va("...Name='%s'", character_name)
-	// -- splicing the raw character name straight into the SQL string. Reachable via /new
-	// (Cmd_Register_F, using the new account's own username as its first character's name) and via
-	// /char new <name>. Bind the value as a parameter instead.
 	rc = sqlite3_prepare_v2(db, "SELECT count(CharID) FROM Characters WHERE AccountID=? AND Name = ? COLLATE NOCASE", -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -506,21 +415,11 @@ int select_number_of_characters_with_name(gentity_t* ent, char* character_name, 
 
 	}
 
-	// GalaxyRP fix: [stability] this fallthrough (rc == SQLITE_DONE, no row at all) used to return
-	// without ever finalizing stmt -- effectively dead in practice for a bare COUNT(*) query (which
-	// always yields exactly one row), but the same missing-finalize class of bug fixed just below in
-	// select_char_id_using_char_name() and further down in select_player_character(), which are
-	// reachable. Finalized here too for the same reason: sqlite3_close() on a connection with an
-	// outstanding prepared statement returns SQLITE_BUSY and leaves the connection open, silently
-	// leaking it, since none of this file's callers check that return value.
 	sqlite3_finalize(stmt);
 	return 0;
 }
 
-// GalaxyRP fix: [Char] companion to select_number_of_characters_with_name() just above -- that one counts
-// how many characters an account has with one specific name (duplicate-name check), this counts the
-// account's total character count regardless of name, for create_new_character()'s MAX_CHARACTERS_PER_ACCOUNT
-// check below.
+// GalaxyRP (Alex): [Database] Counts the number of total characters an account has.
 int select_number_of_characters(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 
 	rc = sqlite3_prepare_v2(db, "SELECT count(CharID) FROM Characters WHERE AccountID=?", -1, &stmt, NULL);
@@ -556,9 +455,6 @@ int select_number_of_characters(gentity_t* ent, sqlite3* db, char* zErrMsg, int 
 int select_char_id_using_char_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	int charID = -1;
 
-	// GalaxyRP fix: [security] this used to build the query text via va("...Name='%s'", character_name)
-	// -- splicing the raw character name straight into the SQL string. Reachable via /char remove
-	// <name>. Bind the value as a parameter instead.
 	rc = sqlite3_prepare_v2(db, "SELECT CharID FROM Characters WHERE AccountID=? AND Name = ? COLLATE NOCASE", -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -580,15 +476,6 @@ int select_char_id_using_char_name(gentity_t* ent, char* character_name, sqlite3
 		charID = sqlite3_column_int(stmt, 0);
 	}
 
-	// GalaxyRP fix: [stability] this used to only finalize inside the "row found" branch above --
-	// every call where the character name doesn't exist for this account (rc == SQLITE_DONE, no row)
-	// fell through to "return charID" (-1, the correct not-found sentinel) with the prepared statement
-	// never finalized. sqlite3_close() on a connection with an outstanding unfinalized statement
-	// returns SQLITE_BUSY and leaves the connection open instead of actually closing it -- and every
-	// caller of the RP_DB_Open()/sqlite3_close() pair in this file ignores that return value, so this
-	// silently leaked a full database connection (and its WAL lock / file descriptor) on every call
-	// that didn't find a match. Trivially reachable via a simple typo: /char remove <a name that
-	// doesn't exist> hits exactly this path. Finalizing unconditionally here closes that leak.
 	sqlite3_finalize(stmt);
 
 	return charID;
@@ -600,25 +487,12 @@ saber_db_info_t select_saber_info_using_char_id(gentity_t* ent, sqlite3* db, cha
 	char saber2Model[50] = "";
 	saber_db_info_t saber_info = { "none", "none" };
 
-	// GalaxyRP fix: [security] this used to also SELECT saberOneColor/saberTwoColor and strcpy() the
-	// results into two-byte stack buffers -- safe only for as long as those columns held nothing but
-	// the untouched single-digit schema default. They now hold real packed colour values (up to eight
-	// digits, see g_local.h), which would have overflowed both buffers on every call. Nothing in this
-	// function ever read either value -- it returns saber models only -- so the columns are simply no
-	// longer selected; the blade colours are restored by select_player_character() and
-	// select_account_and_default_character_data(), which read them into pers.saberRGB[] properly.
-	// GalaxyRP fix: [security] this used to build the query text via va("...CharID='%i'", ...) --
-	// ent->client->pers.CharID is always a server-derived int, never attacker-controlled text, so this
-	// was never actually exploitable, but it was inconsistent with the bound-parameter style the rest of
-	// this file's queries were hardened to. Bound here too for consistency.
 	rc = sqlite3_prepare_v2(db, "SELECT saberOneModel, saberTwoModel FROM Characters WHERE CharID=?", -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		// GalaxyRP fix: this is a non-void function (returns saber_db_info_t) -- a bare "return;"
-		// here is undefined behaviour (the caller reads whatever garbage was on the stack for the
-		// return value) instead of falling back to the safe "none"/"none" default declared above.
+
 		return saber_info;
 	}
 	sqlite3_bind_int(stmt, 1, ent->client->pers.CharID);
@@ -627,31 +501,17 @@ saber_db_info_t select_saber_info_using_char_id(gentity_t* ent, sqlite3* db, cha
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		return saber_info; // GalaxyRP fix: same as above -- return the safe default, not garbage.
+		return saber_info;
 	}
 	if (rc == SQLITE_ROW)
 	{
-
-		// GalaxyRP fix: [security] bound both copies to their destination the same way the two
-		// character-load paths already do -- a saber-model name of 50+ characters in the database
-		// would otherwise overflow these stack buffers.
 		Q_strncpyz(saber1Model, sqlite3_column_text(stmt, 0), sizeof(saber1Model));
 		Q_strncpyz(saber2Model, sqlite3_column_text(stmt, 1), sizeof(saber2Model));
 
-		// GalaxyRP fix: [Saber] only copy out when a row was actually read. These two locals start
-		// empty, and the copies below used to run unconditionally -- so on the row-not-found path they
-		// overwrote saber_info's own {"none", "none"} defaults with empty strings. An empty saber name
-		// then reaches Info_SetValueForKey in ClientSpawn(), which DELETES the key rather than storing
-		// an empty value, and the resulting missing saber2 resolves to the default saber, silently
-		// giving the player two sabers. The "none" defaults exist precisely to avoid that.
 		strcpy(saber_info.saber1Model, saber1Model);
 		strcpy(saber_info.saber2Model, saber2Model);
 	}
 
-	// GalaxyRP fix: [stability] finalize on every path, not just the row-found one -- same leak class
-	// as select_weapons_table_row_from_entity() and the other lookups in this file. This one runs from
-	// ClientSpawn()'s first-spawn saber restore, so a character row that cannot be found leaked the
-	// connection there too.
 	sqlite3_finalize(stmt);
 
 	return saber_info;
@@ -675,29 +535,11 @@ void update_chars_table_row_with_current_values(gentity_t* ent) {
 
 	// GalaxyRP (Alex): [Database] Grab the model and display name, so they can be saved in the database.
 	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
-	// GalaxyRP fix: [Char] this used to re-derive "this player's" own client slot via
-	// ClientNumberFromString(), which either treats the name as a raw slot index (if it's purely
-	// numeric) or does a case-insensitive SUBSTRING search across every connected player's name and
-	// returns the first match by ascending slot -- neither of which is guaranteed to be this player.
-	// A numeric player name, or a name that happens to be a substring of another, earlier-slot
-	// player's name (e.g. "Vader" vs. an earlier-joined "DarthVaderFan"), returned that OTHER
-	// player's slot instead, and the userinfo (model/saber1/saber2) fetched below then belonged to
-	// them, not to ent. In the functions that save this to the database (e.g.
-	// update_current_character_and_account()) that wrong value gets written straight into ent's own
-	// Characters.ModelName row -- real save-path data corruption from nothing more than an ordinary
-	// name collision. ent is already the exact right entity at every one of these call sites, so this
-	// never needed to be looked up by name at all.
 	int clientNum = ent->s.number;
 
 	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
 	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
 
-
-	// GalaxyRP fix: [security] this used to go through run_db_query() with the player's description
-	// and netname (both freely player-editable text -- e.g. via /desc) spliced straight into the
-	// UPDATE text via va("...\"%s\"..."). This function is called on every credits/level/skillpoint
-	// change (5 call sites), so it's a frequently-reachable, unauthenticated injection point. Bind
-	// every value as a parameter instead.
 	rc = sqlite3_prepare_v2(db, "UPDATE Characters SET Credits=?, Level=?, ModelScale=?, Skillpoints=?, Description=?, NetName=?, ModelName=?, xp=? WHERE CharID=?", -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
@@ -732,18 +574,6 @@ void update_chars_table_row_with_current_values(gentity_t* ent) {
 */
 
 // GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the skills table, with default values.
-// GalaxyRP fix: [stability] now returns qboolean (used to be void, going through the void run_db_query()
-// wrapper) -- its one caller, Cmd_Register_F, needs to know whether this row actually got created before
-// it marks the session logged in. Calls sqlite3_exec() directly instead of going through run_db_query()
-// so the result can be reported; the remaining run_db_query() callers use it for fire-and-forget UPDATE
-// statements where a return value isn't needed.
-// GalaxyRP fix: [Database] takes the CharID this row belongs to. The INSERT used to leave CharID
-// out of the column list entirely and rely on SQLite handing Characters, Skills and Weapons the
-// same auto-assigned rowid -- true only while all three tables stay in perfect lockstep. A
-// failure partway through Cmd_Register_F's three inserts breaks that lockstep permanently, and
-// every later CharID-less insert pair then binds mismatched ids, silently giving new characters
-// somebody else's skills row. See the longer comment in create_admin_account() (g_main.c), and
-// create_new_character() below, which was written later and already binds CharID properly.
 qboolean insert_skills_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt, int charID) {
 	char insert_new_entry_to_skills_table[] = "INSERT INTO Skills(CharID, Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('%i', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
 
@@ -847,11 +677,6 @@ void update_skills_table_row_with_current_values(gentity_t* ent) {
 */
 
 // GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the weapons table, with default values.
-// GalaxyRP fix: [stability] same reasoning and same treatment as insert_skills_table_row() just above --
-// now returns qboolean and calls sqlite3_exec() directly instead of the void run_db_query() wrapper, so
-// its one caller, Cmd_Register_F, can tell whether this row actually got created.
-// GalaxyRP fix: [Database] takes the CharID this row belongs to, for the same reason
-// insert_skills_table_row() above does -- see that comment.
 qboolean insert_weapons_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt, int charID) {
 	char insert_new_entry_to_weapons_table[] = "INSERT INTO Weapons(CharID, AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('%i', '0', '0', '0', '0', '0', '0', '0')";
 
@@ -884,13 +709,6 @@ void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zEr
 	}
 	if (rc == SQLITE_ROW)
 	{
-		// GalaxyRP fix: [gameplay] this used to be a contiguous loop (ps.ammo[i] = column(i - 1))
-		// that assumed the ammo_t enum maps 1:1 onto this table's 7 ammo columns. It doesn't --
-		// AMMO_EMPLACED sits between AMMO_ROCKETS and AMMO_THERMAL in the enum but the Weapons
-		// table has no AmmoEmplaced column at all (the save path already skips it), so every
-		// column from AmmoThermal onward was landing one enum slot early, and the final iteration
-		// (AMMO_DETPACK) read past the last real column. Read each column explicitly instead,
-		// mirroring the explicit list the save path uses.
 		ent->client->ps.ammo[AMMO_BLASTER] = sqlite3_column_int(stmt, 1);
 		ent->client->ps.ammo[AMMO_POWERCELL] = sqlite3_column_int(stmt, 2);
 		ent->client->ps.ammo[AMMO_METAL_BOLTS] = sqlite3_column_int(stmt, 3);
@@ -903,12 +721,5 @@ void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zEr
 		RP_ClampAmmoToCaps(ent);
 	}
 
-	// GalaxyRP fix: [stability] the finalize used to live inside the SQLITE_ROW branch above, so the
-	// row-not-found path fell out of this function with the statement still live. sqlite3_close()
-	// then refuses to close the connection (it returns SQLITE_BUSY, which the caller does not check),
-	// leaking the handle and its WAL lock. This is the same leak class already fixed in the sibling
-	// lookups in this file. It is reachable in practice: this runs from ClientSpawn() for every
-	// logged-in player, and a session whose character could not be resolved keeps loggedin set with
-	// CharID left at 0, so the query legitimately matches no row -- on every single respawn.
 	sqlite3_finalize(stmt);
 }
