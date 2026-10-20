@@ -23,6 +23,330 @@ void run_db_query(const char* query, sqlite3* db)
 	}
 }
 
+void zyk_db_column_string(char* dest, int dest_size, sqlite3_stmt* stmt, int column)
+{
+	const unsigned char* value = NULL;
+
+	if (!dest || dest_size < 1)
+		return;
+
+	value = sqlite3_column_text(stmt, column);
+
+	if (!value)
+	{
+		dest[0] = '\0';
+		return;
+	}
+
+	Q_strncpyz(dest, (const char*)value, dest_size);
+}
+
+/*
+=====================================================================
+All Table Methods
+=====================================================================
+*/
+
+// GalaxyRP (Alex): [Database] This method loads the account information, as well as the information related to the default character, and assigns it to the entity.
+void select_account_and_default_character_data(gentity_t* ent, char username[32], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char password[256], name[256], description[MAX_STRING_CHARS], netName[MAX_STRING_CHARS], modelName[MAX_STRING_CHARS];
+	int accountID, player_settings, adminLevel, charID, credits, level, modelScale, skillpoints;
+
+	// GalaxyRP fix: [Account] Don't allow two connections to log in on the same account.
+	zyk_drop_other_sessions_on_account(ent, select_account_id_from_username(ent, username, db, zErrMsg, rc, stmt));
+
+	char select_account_table_row[] = "SELECT *\
+		FROM Accounts, Characters\
+		INNER JOIN Skills\
+		ON Skills.CharID = Characters.CharID\
+		INNER JOIN Weapons\
+		ON Weapons.CharID = Characters.CharID\
+		WHERE Accounts.Username = ? COLLATE NOCASE\
+		AND Characters.AccountID = Accounts.AccountID\
+		AND Characters.CharID = (\
+			SELECT CharID\
+			FROM Characters\
+			Where Characters.AccountID = Accounts.AccountID\
+			AND Characters.Name = COALESCE(NULLIF(?, ''), (\
+				SELECT DefaultChar\
+				FROM Accounts\
+				WHERE Accounts.Username = ? COLLATE NOCASE)) COLLATE NOCASE\
+			)";
+
+	rc = sqlite3_prepare_v2(db, select_account_table_row, -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	sqlite3_bind_text(stmt, 1, username, -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 2, ent->client->sess.rpgchar, -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 3, username, -1, SQLITE_TRANSIENT);
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		accountID = sqlite3_column_int(stmt, 0);
+		player_settings = sqlite3_column_int(stmt, 1);
+		adminLevel = sqlite3_column_int(stmt, 2);
+		zyk_db_column_string(password, sizeof(password), stmt, 3);
+		zyk_db_column_string(username, sizeof(ent->client->sess.filename), stmt, 4);
+		charID = sqlite3_column_int(stmt, 7);
+		credits = sqlite3_column_int(stmt, 8);
+		level = sqlite3_column_int(stmt, 9);
+		modelScale = sqlite3_column_int(stmt, 10);
+		zyk_db_column_string(name, sizeof(name), stmt, 11);
+		skillpoints = sqlite3_column_int(stmt, 12);
+		zyk_db_column_string(description, sizeof(description), stmt, 13);
+		zyk_db_column_string(netName, sizeof(netName), stmt, 14);
+		zyk_db_column_string(modelName, sizeof(modelName), stmt, 15);
+
+		// GalaxyRP (Alex): [XP System] Grab XP value from database.
+		ent->client->pers.xp = sqlite3_column_int(stmt, 16);
+
+		char saber1Model[30];
+		char saber2Model[30];
+		int saber1Color;
+		int saber2Color;
+		sqlite3_int64 stored1, stored2;	// GLX_U: [Cosmetics]
+		zyk_db_column_string(saber1Model, sizeof(saber1Model), stmt, 17);
+		// GLX_U: [Cosmetics] 64-bit reads: the hat and cape ids sit above the colour's 32 bits.
+		stored1 = sqlite3_column_int64(stmt, 18);
+		saber1Color = RP_STORED_COLOR(stored1);
+		zyk_db_column_string(saber2Model, sizeof(saber2Model), stmt, 19);
+		stored2 = sqlite3_column_int64(stmt, 20);
+		saber2Color = RP_STORED_COLOR(stored2);
+		zyk_default_empty_saber_models(saber1Model, sizeof(saber1Model), saber2Model, sizeof(saber2Model));
+
+		ent->client->sess.accountID = accountID;
+		ent->client->pers.player_settings = player_settings;
+		ent->client->pers.bitvalue = adminLevel;
+		Q_strncpyz(ent->client->pers.password, password, sizeof(ent->client->pers.password));
+		Q_strncpyz(ent->client->sess.filename, username, sizeof(ent->client->sess.filename));
+		ent->client->pers.CharID = charID;
+		ent->client->pers.credits = credits;
+		ent->client->pers.level = level;
+
+		// Carry over silence
+		ent->client->pers.player_statuses &= (1 << PLAYER_STATUS_SILENCED);
+
+		do_scale(ent, modelScale);
+		Q_strncpyz(ent->client->sess.rpgchar, name, sizeof(ent->client->sess.rpgchar));
+		ent->client->pers.skillpoints = skillpoints;
+		Q_strncpyz(ent->client->pers.description, description, sizeof(ent->client->pers.description));
+
+		// GalaxyRP: [Saber RGB] restore this character's custom blade colours and blade styles.
+		ent->client->pers.saberRGB[0] = (saber1Color & SABERRGB_SET) ? (saber1Color & SABERRGB_MASK) : 0;
+		ent->client->pers.saberRGB[1] = (saber2Color & SABERRGB_SET) ? (saber2Color & SABERRGB_MASK) : 0;
+		ent->client->pers.saberColorMode[0] = G_ValidateSaberColorMode(SABER_STORED_MODE(saber1Color));
+		ent->client->pers.saberColorMode[1] = G_ValidateSaberColorMode(SABER_STORED_MODE(saber2Color));
+		// GLX_U: [Cosmetics] and this character's hat and cape, for the same reason: the save that
+		// update_saber() can trigger writes them back to this row. An id not on the list gives none.
+		Q_strncpyz(ent->client->pers.cosmetic[RP_COSMETIC_HAT], G_RpCosmeticName(RP_COSMETIC_HAT, RP_STORED_COSMETIC(stored1)), sizeof(ent->client->pers.cosmetic[0]));
+		Q_strncpyz(ent->client->pers.cosmetic[RP_COSMETIC_CAPE], G_RpCosmeticName(RP_COSMETIC_CAPE, RP_STORED_COSMETIC(stored2)), sizeof(ent->client->pers.cosmetic[0]));
+
+		G_SyncSaberColorUserinfo(ent);
+
+		G_SyncNameModelUserinfo(ent, netName, modelName);
+
+		ent->client->sess.loggedin = qtrue;
+
+		trap->SendServerCommand(ent->s.number, va("supdateloggedin %i\n", ent->client->sess.loggedin));
+
+		int number_of_sabers = 1;
+
+		if (strcmp(saber2Model, "none") != 0) {
+			number_of_sabers = 2;
+		}
+		update_saber(ent, saber1Model, saber2Model, number_of_sabers + 1);
+
+		// GalaxyRP (Alex): [Database] Column 21 is a duplicate of CharID, no need to grab that.
+		for (int i = 0; i < NUM_OF_SKILLS; i++) {
+			ent->client->pers.skill_levels[i] = sqlite3_column_int(stmt, i + 22);
+		}
+
+		ent->client->ps.ammo[AMMO_BLASTER] = sqlite3_column_int(stmt, 83);
+		ent->client->ps.ammo[AMMO_POWERCELL] = sqlite3_column_int(stmt, 84);
+		ent->client->ps.ammo[AMMO_METAL_BOLTS] = sqlite3_column_int(stmt, 85);
+		ent->client->ps.ammo[AMMO_ROCKETS] = sqlite3_column_int(stmt, 86);
+		ent->client->ps.ammo[AMMO_THERMAL] = sqlite3_column_int(stmt, 87);
+		ent->client->ps.ammo[AMMO_TRIPMINE] = sqlite3_column_int(stmt, 88);
+		ent->client->ps.ammo[AMMO_DETPACK] = sqlite3_column_int(stmt, 89);
+
+		// DAJ_RP: [Ammo] and never above the server's caps -- see RP_ClampAmmoToCaps() (g_items.c).
+		RP_ClampAmmoToCaps(ent);
+
+		sqlite3_finalize(stmt);
+
+		set_netname(ent, netName);
+		set_model(ent, modelName);
+
+
+		update_saber_colors(ent);
+
+		ent->client->sess.amrpgmode = 2;
+
+		return;
+	}
+
+	sqlite3_finalize(stmt);
+	G_LogPrintf("WARNING: select_account_and_default_character_data found no matching account+character row for username '%s' (selected character '%s') -- account/character data was not loaded.\n", username, ent->client->sess.rpgchar);
+
+	return;
+}
+
+// GalaxyRP (Alex): [Database] This method updates the account, Characters, Skills and Weapons tables with current values. ASSUMES THE PLAYER IS LOGGED IN!!!
+void update_current_character_and_account(gentity_t* ent) {
+	sqlite3* db;
+	char* zErrMsg = 0;
+	int rc;
+	sqlite3_stmt* stmt = NULL;
+
+	rc = RP_DB_Open(&db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return;
+	}
+
+	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
+	int clientNum = ent->s.number;
+
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
+
+	rc = sqlite3_prepare_v2(db, "UPDATE Characters SET Credits=?, Level=?, ModelScale=?, Skillpoints=?, Description=?, NetName=?, ModelName=?, xp=? WHERE CharID=?", -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	sqlite3_bind_int(stmt, 1, ent->client->pers.credits);
+	sqlite3_bind_int(stmt, 2, ent->client->pers.level);
+	sqlite3_bind_int(stmt, 3, ent->client->ps.iModelScale);
+	sqlite3_bind_int(stmt, 4, ent->client->pers.skillpoints);
+	sqlite3_bind_text(stmt, 5, ent->client->pers.description, -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 6, ent->client->pers.netname, -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 7, modelName, -1, SQLITE_TRANSIENT);
+	sqlite3_bind_int(stmt, 8, ent->client->pers.xp);
+	sqlite3_bind_int(stmt, 9, ent->client->pers.CharID);
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+	}
+	sqlite3_finalize(stmt);
+
+	rc = sqlite3_prepare_v2(db, "UPDATE Accounts SET PlayerSettings=?, AdminLevel=?, DefaultChar=? WHERE AccountID=?", -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		sqlite3_close(db);
+		return;
+	}
+	sqlite3_bind_int(stmt, 1, ent->client->pers.player_settings);
+	sqlite3_bind_int(stmt, 2, ent->client->pers.bitvalue);
+	sqlite3_bind_text(stmt, 3, ent->client->sess.rpgchar, -1, SQLITE_TRANSIENT);
+	sqlite3_bind_int(stmt, 4, ent->client->sess.accountID);
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+	}
+	sqlite3_finalize(stmt);
+
+	char update_character_query[] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i', Armor='%i', Flamethrower='%i', ShieldRegen='%i', HealthRegen='%i' WHERE CharID='%i';\
+		UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'";
+
+	run_db_query(va(update_character_query,
+		ent->client->pers.skill_levels[0],	//Jump
+		ent->client->pers.skill_levels[1],	//Push
+		ent->client->pers.skill_levels[2],	//Pull
+		ent->client->pers.skill_levels[3],	//Speed
+		ent->client->pers.skill_levels[4],	//Sense
+		ent->client->pers.skill_levels[5],	//SaberAttack
+		ent->client->pers.skill_levels[6],	//SaberDefense
+		ent->client->pers.skill_levels[7],	//SaberThrow
+		ent->client->pers.skill_levels[8],	//Absorb
+		ent->client->pers.skill_levels[9],	//Heal
+		ent->client->pers.skill_levels[10],	//Protect
+		ent->client->pers.skill_levels[11],	//MindTrick
+		ent->client->pers.skill_levels[12],	//TeamHeal
+		ent->client->pers.skill_levels[13],	//Lightning
+		ent->client->pers.skill_levels[14],	//Grip
+		ent->client->pers.skill_levels[15],	//Drain
+		ent->client->pers.skill_levels[16],	//Rage
+		ent->client->pers.skill_levels[17],	//TeamEnergize
+		ent->client->pers.skill_levels[18],	//StunBaton
+		ent->client->pers.skill_levels[19],	//BlasterPistol
+		ent->client->pers.skill_levels[20],	//BlasterRifle
+		ent->client->pers.skill_levels[21],	//Disruptor
+		ent->client->pers.skill_levels[22],	//Bowcaster
+		ent->client->pers.skill_levels[23],	//Repeater
+		ent->client->pers.skill_levels[24],	//DEMP2
+		ent->client->pers.skill_levels[25],	//Flechette
+		ent->client->pers.skill_levels[26],	//RocketLauncher
+		ent->client->pers.skill_levels[27],	//ConcussionRifle
+		ent->client->pers.skill_levels[28],	//BryarPistol
+		ent->client->pers.skill_levels[29],	//Melee
+		ent->client->pers.skill_levels[30],	//MaxShield
+		ent->client->pers.skill_levels[31],	//ShieldStrength
+		ent->client->pers.skill_levels[32],	//HealthStrength
+		ent->client->pers.skill_levels[33],	//DrainShield
+		ent->client->pers.skill_levels[34],	//Jetpack
+		ent->client->pers.skill_levels[35],	//SenseHealth
+		ent->client->pers.skill_levels[36],	//ShieldHeal
+		ent->client->pers.skill_levels[37],	//TeamShieldHeal
+		ent->client->pers.skill_levels[38],	//UniqueSkill
+		ent->client->pers.skill_levels[39],	//BlasterPack
+		ent->client->pers.skill_levels[40],	//PowerCell
+		ent->client->pers.skill_levels[41],	//MetalBolts
+		ent->client->pers.skill_levels[42],	//Rockets
+		ent->client->pers.skill_levels[43],	//Thermals
+		ent->client->pers.skill_levels[44],	//TripMines
+		ent->client->pers.skill_levels[45],	//Detpacks
+		ent->client->pers.skill_levels[46],	//Binoculars
+		ent->client->pers.skill_levels[47],	//BactaCanister
+		ent->client->pers.skill_levels[48],	//SentryGun
+		ent->client->pers.skill_levels[49],	//SeekerDrone
+		ent->client->pers.skill_levels[50],	//Eweb
+		ent->client->pers.skill_levels[51],	//BigBacta
+		ent->client->pers.skill_levels[52],	//ForceField
+		ent->client->pers.skill_levels[53],	//CloakItem
+		ent->client->pers.skill_levels[54],	//ForcePower
+		ent->client->pers.skill_levels[55], //Improvements
+		ent->client->pers.skill_levels[56], //Armor
+		ent->client->pers.skill_levels[57], //Flamethrower
+		ent->client->pers.skill_levels[58], //Shield Regen
+		ent->client->pers.skill_levels[59], //Health Regen
+		ent->client->pers.CharID,
+		ent->client->ps.ammo[AMMO_BLASTER],
+		ent->client->ps.ammo[AMMO_POWERCELL],
+		ent->client->ps.ammo[AMMO_METAL_BOLTS],
+		ent->client->ps.ammo[AMMO_ROCKETS],
+		ent->client->ps.ammo[AMMO_THERMAL],
+		ent->client->ps.ammo[AMMO_TRIPMINE],
+		ent->client->ps.ammo[AMMO_DETPACK],
+		ent->client->pers.CharID
+	), db);
+
+	sqlite3_close(db);
+
+	return;
+}
+
 /*
 =====================================================================
 Accounts Table Methods
@@ -568,178 +892,68 @@ void update_chars_table_row_with_current_values(gentity_t* ent) {
 	return;
 }
 
-/*
-=====================================================================
-Skills Table Methods
-=====================================================================
-*/
+// GalaxyRP (Alex): [Database] This method saves the player's name, scale and model to the database. All the information is taken from ent. (Characters tables)
+void update_current_character_name_and_model(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
 
-// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the skills table, with default values.
-qboolean insert_skills_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt, int charID) {
-	char insert_new_entry_to_skills_table[] = "INSERT INTO Skills(CharID, Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('%i', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
+	int clientNum = ent->s.number;
 
-	rc = sqlite3_exec(db, va(insert_new_entry_to_skills_table, charID), 0, 0, &zErrMsg);
+	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
+	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
+
+	rc = sqlite3_prepare_v2(db, "UPDATE Characters SET ModelScale=?, NetName=?, ModelName=?, saberOneModel=?, saberTwoModel=?, saberOneColor=?, saberTwoColor=? WHERE CharID=?", -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return qfalse;
-	}
-
-	return qtrue;
-}
-
-// GalaxyRP (Alex): [Database] UPDATE This method updated a skills table row with information contained within the entity with which it's called. Also updates the skillpoint values, since there's no instance where a skill is updated and the skillpoints are not.
-void update_skills_table_row_with_current_values(gentity_t* ent) {
-	sqlite3* db;
-	int rc;
-
-	rc = RP_DB_Open(&db);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
 		return;
 	}
-
-	char update_skills_query[] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i', Armor='%i', Flamethrower='%i', ShieldRegen='%i', HealthRegen='%i' WHERE CharID='%i'; UPDATE Characters SET SkillPoints='%i' WHERE CharID='%i';";
-	run_db_query(va(update_skills_query,
-		ent->client->pers.skill_levels[0],	//Jump
-		ent->client->pers.skill_levels[1],	//Push
-		ent->client->pers.skill_levels[2],	//Pull
-		ent->client->pers.skill_levels[3],	//Speed
-		ent->client->pers.skill_levels[4],	//Sense
-		ent->client->pers.skill_levels[5],	//SaberAttack
-		ent->client->pers.skill_levels[6],	//SaberDefense
-		ent->client->pers.skill_levels[7],	//SaberThrow
-		ent->client->pers.skill_levels[8],	//Absorb
-		ent->client->pers.skill_levels[9],	//Heal
-		ent->client->pers.skill_levels[10],	//Protect
-		ent->client->pers.skill_levels[11],	//MindTrick
-		ent->client->pers.skill_levels[12],	//TeamHeal
-		ent->client->pers.skill_levels[13],	//Lightning
-		ent->client->pers.skill_levels[14],	//Grip
-		ent->client->pers.skill_levels[15],	//Drain
-		ent->client->pers.skill_levels[16],	//Rage
-		ent->client->pers.skill_levels[17],	//TeamEnergize
-		ent->client->pers.skill_levels[18],	//StunBaton
-		ent->client->pers.skill_levels[19],	//BlasterPistol
-		ent->client->pers.skill_levels[20],	//BlasterRifle
-		ent->client->pers.skill_levels[21],	//Disruptor
-		ent->client->pers.skill_levels[22],	//Bowcaster
-		ent->client->pers.skill_levels[23],	//Repeater
-		ent->client->pers.skill_levels[24],	//DEMP2
-		ent->client->pers.skill_levels[25],	//Flechette
-		ent->client->pers.skill_levels[26],	//RocketLauncher
-		ent->client->pers.skill_levels[27],	//ConcussionRifle
-		ent->client->pers.skill_levels[28],	//BryarPistol
-		ent->client->pers.skill_levels[29],	//Melee
-		ent->client->pers.skill_levels[30],	//MaxShield
-		ent->client->pers.skill_levels[31],	//ShieldStrength
-		ent->client->pers.skill_levels[32],	//HealthStrength
-		ent->client->pers.skill_levels[33],	//DrainShield
-		ent->client->pers.skill_levels[34],	//Jetpack
-		ent->client->pers.skill_levels[35],	//SenseHealth
-		ent->client->pers.skill_levels[36],	//ShieldHeal
-		ent->client->pers.skill_levels[37],	//TeamShieldHeal
-		ent->client->pers.skill_levels[38],	//UniqueSkill
-		ent->client->pers.skill_levels[39],	//BlasterPack
-		ent->client->pers.skill_levels[40],	//PowerCell
-		ent->client->pers.skill_levels[41],	//MetalBolts
-		ent->client->pers.skill_levels[42],	//Rockets
-		ent->client->pers.skill_levels[43],	//Thermals
-		ent->client->pers.skill_levels[44],	//TripMines
-		ent->client->pers.skill_levels[45],	//Detpacks
-		ent->client->pers.skill_levels[46],	//Binoculars
-		ent->client->pers.skill_levels[47],	//BactaCanister
-		ent->client->pers.skill_levels[48],	//SentryGun
-		ent->client->pers.skill_levels[49],	//SeekerDrone
-		ent->client->pers.skill_levels[50],	//Eweb
-		ent->client->pers.skill_levels[51],	//BigBacta
-		ent->client->pers.skill_levels[52],	//ForceField
-		ent->client->pers.skill_levels[53],	//CloakItem
-		ent->client->pers.skill_levels[54],	//ForcePower
-		ent->client->pers.skill_levels[55], //Improvements
-		ent->client->pers.skill_levels[56], //Armor
-		ent->client->pers.skill_levels[57], //Flamethrower
-		ent->client->pers.skill_levels[58], //Shield Regen
-		ent->client->pers.skill_levels[59], //Health Regen
-		ent->client->pers.CharID,
-		ent->client->pers.skillpoints,
-		ent->client->pers.CharID), db);
-
-	sqlite3_close(db);
+	sqlite3_bind_int(stmt, 1, ent->client->ps.iModelScale);
+	sqlite3_bind_text(stmt, 2, ent->client->pers.netname, -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 3, modelName, -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 4, ent->client->pers.saber1, -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 5, ent->client->pers.saber2, -1, SQLITE_TRANSIENT);
+	// GLX_U: [Cosmetics] the hat goes with the first saber's colour, the cape with the second's, as
+	// an id above the colour's 32 bits -- see RP_STORED_PACK (g_local.h). A name not on the saved list
+	// is stored as 0, none.
+	sqlite3_bind_int64(stmt, 6, RP_STORED_PACK(SABER_STORED_PACK(ent->client->pers.saberColorMode[0], ent->client->pers.saberRGB[0]),
+		G_RpCosmeticId(RP_COSMETIC_HAT, ent->client->pers.cosmetic[RP_COSMETIC_HAT])));
+	sqlite3_bind_int64(stmt, 7, RP_STORED_PACK(SABER_STORED_PACK(ent->client->pers.saberColorMode[1], ent->client->pers.saberRGB[1]),
+		G_RpCosmeticId(RP_COSMETIC_CAPE, ent->client->pers.cosmetic[RP_COSMETIC_CAPE])));
+	sqlite3_bind_int(stmt, 8, ent->client->pers.CharID);
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+	}
+	sqlite3_finalize(stmt);
 
 	return;
 }
 
-/*
-=====================================================================
-Weapons Table Methods
-=====================================================================
-*/
+// GalaxyRP (Alex): [Database] This method saves the player's scale to the database. All the information is taken from ent. (Characters tables)
+void update_current_character_scale(gentity_t* ent, sqlite3* db) {
+	int rc;
+	sqlite3_stmt* stmt = 0;
 
-// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the weapons table, with default values.
-qboolean insert_weapons_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt, int charID) {
-	char insert_new_entry_to_weapons_table[] = "INSERT INTO Weapons(CharID, AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('%i', '0', '0', '0', '0', '0', '0', '0')";
-
-	rc = sqlite3_exec(db, va(insert_new_entry_to_weapons_table, charID), 0, 0, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-		return qfalse;
-	}
-
-	return qtrue;
-}
-
-// GalaxyRP (Alex): [Database] SELECT This method grabs all the values from a weapons table row (ASSUMES THE PLAYERS IS ALREADY LOGGED IN), and assigns them to the entity.
-void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-	rc = sqlite3_prepare_v2(db, va("SELECT * FROM Weapons WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
+	rc = sqlite3_prepare_v2(db, "UPDATE Characters SET ModelScale=? WHERE CharID=?", -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
 		return;
 	}
+	sqlite3_bind_int(stmt, 1, ent->client->ps.iModelScale);
+	sqlite3_bind_int(stmt, 2, ent->client->pers.CharID);
 	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	if (rc != SQLITE_DONE)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
 	}
-	if (rc == SQLITE_ROW)
-	{
-		ent->client->ps.ammo[AMMO_BLASTER] = sqlite3_column_int(stmt, 1);
-		ent->client->ps.ammo[AMMO_POWERCELL] = sqlite3_column_int(stmt, 2);
-		ent->client->ps.ammo[AMMO_METAL_BOLTS] = sqlite3_column_int(stmt, 3);
-		ent->client->ps.ammo[AMMO_ROCKETS] = sqlite3_column_int(stmt, 4);
-		ent->client->ps.ammo[AMMO_THERMAL] = sqlite3_column_int(stmt, 5);
-		ent->client->ps.ammo[AMMO_TRIPMINE] = sqlite3_column_int(stmt, 6);
-		ent->client->ps.ammo[AMMO_DETPACK] = sqlite3_column_int(stmt, 7);
-
-		// DAJ_RP: [Ammo] and never above the server's caps -- see RP_ClampAmmoToCaps() (g_items.c).
-		RP_ClampAmmoToCaps(ent);
-	}
-
 	sqlite3_finalize(stmt);
+
+	return;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // GalaxyRP (Alex): [Database] This method changes the character used currently by the player. It reassigns skills, weapons, userinfo, and changes the default character associated with the account.
 qboolean select_player_character(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt, qboolean announce_switch) {
@@ -979,162 +1193,6 @@ void select_character_list_for_ui(gentity_t* ent, sqlite3* db, char* zErrMsg, in
 	sqlite3_finalize(stmt);
 }
 
-// GalaxyRP (Alex): [Database] This method loads the account information, as well as the information related to the default character, and assigns it to the entity.
-void select_account_and_default_character_data(gentity_t* ent, char username[32], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-	char password[256], name[256], description[MAX_STRING_CHARS], netName[MAX_STRING_CHARS], modelName[MAX_STRING_CHARS];
-	int accountID, player_settings, adminLevel, charID, credits, level, modelScale, skillpoints;
-
-	// GalaxyRP fix: [Account] Don't allow two connections to log in on the same account.
-	zyk_drop_other_sessions_on_account(ent, select_account_id_from_username(ent, username, db, zErrMsg, rc, stmt));
-
-	char select_account_table_row[] = "SELECT *\
-		FROM Accounts, Characters\
-		INNER JOIN Skills\
-		ON Skills.CharID = Characters.CharID\
-		INNER JOIN Weapons\
-		ON Weapons.CharID = Characters.CharID\
-		WHERE Accounts.Username = ? COLLATE NOCASE\
-		AND Characters.AccountID = Accounts.AccountID\
-		AND Characters.CharID = (\
-			SELECT CharID\
-			FROM Characters\
-			Where Characters.AccountID = Accounts.AccountID\
-			AND Characters.Name = COALESCE(NULLIF(?, ''), (\
-				SELECT DefaultChar\
-				FROM Accounts\
-				WHERE Accounts.Username = ? COLLATE NOCASE)) COLLATE NOCASE\
-			)";
-
-	rc = sqlite3_prepare_v2(db, select_account_table_row, -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	sqlite3_bind_text(stmt, 1, username, -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 2, ent->client->sess.rpgchar, -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 3, username, -1, SQLITE_TRANSIENT);
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	if (rc == SQLITE_ROW)
-	{
-		accountID = sqlite3_column_int(stmt, 0);
-		player_settings = sqlite3_column_int(stmt, 1);
-		adminLevel = sqlite3_column_int(stmt, 2);
-		zyk_db_column_string(password, sizeof(password), stmt, 3);
-		zyk_db_column_string(username, sizeof(ent->client->sess.filename), stmt, 4);
-		charID = sqlite3_column_int(stmt, 7);
-		credits = sqlite3_column_int(stmt, 8);
-		level = sqlite3_column_int(stmt, 9);
-		modelScale = sqlite3_column_int(stmt, 10);
-		zyk_db_column_string(name, sizeof(name), stmt, 11);
-		skillpoints = sqlite3_column_int(stmt, 12);
-		zyk_db_column_string(description, sizeof(description), stmt, 13);
-		zyk_db_column_string(netName, sizeof(netName), stmt, 14);
-		zyk_db_column_string(modelName, sizeof(modelName), stmt, 15);
-
-		// GalaxyRP (Alex): [XP System] Grab XP value from database.
-		ent->client->pers.xp = sqlite3_column_int(stmt, 16);
-
-		char saber1Model[30];
-		char saber2Model[30];
-		int saber1Color;
-		int saber2Color;
-		sqlite3_int64 stored1, stored2;	// GLX_U: [Cosmetics]
-		zyk_db_column_string(saber1Model, sizeof(saber1Model), stmt, 17);
-		// GLX_U: [Cosmetics] 64-bit reads: the hat and cape ids sit above the colour's 32 bits.
-		stored1 = sqlite3_column_int64(stmt, 18);
-		saber1Color = RP_STORED_COLOR(stored1);
-		zyk_db_column_string(saber2Model, sizeof(saber2Model), stmt, 19);
-		stored2 = sqlite3_column_int64(stmt, 20);
-		saber2Color = RP_STORED_COLOR(stored2);
-		zyk_default_empty_saber_models(saber1Model, sizeof(saber1Model), saber2Model, sizeof(saber2Model));
-
-		ent->client->sess.accountID = accountID;
-		ent->client->pers.player_settings = player_settings;
-		ent->client->pers.bitvalue = adminLevel;
-		Q_strncpyz(ent->client->pers.password, password, sizeof(ent->client->pers.password));
-		Q_strncpyz(ent->client->sess.filename, username, sizeof(ent->client->sess.filename));
-		ent->client->pers.CharID = charID;
-		ent->client->pers.credits = credits;
-		ent->client->pers.level = level;
-
-		// Carry over silence
-		ent->client->pers.player_statuses &= (1 << PLAYER_STATUS_SILENCED);
-
-		do_scale(ent, modelScale);
-		Q_strncpyz(ent->client->sess.rpgchar, name, sizeof(ent->client->sess.rpgchar));
-		ent->client->pers.skillpoints = skillpoints;
-		Q_strncpyz(ent->client->pers.description, description, sizeof(ent->client->pers.description));
-
-		// GalaxyRP: [Saber RGB] restore this character's custom blade colours and blade styles.
-		ent->client->pers.saberRGB[0] = (saber1Color & SABERRGB_SET) ? (saber1Color & SABERRGB_MASK) : 0;
-		ent->client->pers.saberRGB[1] = (saber2Color & SABERRGB_SET) ? (saber2Color & SABERRGB_MASK) : 0;
-		ent->client->pers.saberColorMode[0] = G_ValidateSaberColorMode(SABER_STORED_MODE(saber1Color));
-		ent->client->pers.saberColorMode[1] = G_ValidateSaberColorMode(SABER_STORED_MODE(saber2Color));
-		// GLX_U: [Cosmetics] and this character's hat and cape, for the same reason: the save that
-		// update_saber() can trigger writes them back to this row. An id not on the list gives none.
-		Q_strncpyz(ent->client->pers.cosmetic[RP_COSMETIC_HAT], G_RpCosmeticName(RP_COSMETIC_HAT, RP_STORED_COSMETIC(stored1)), sizeof(ent->client->pers.cosmetic[0]));
-		Q_strncpyz(ent->client->pers.cosmetic[RP_COSMETIC_CAPE], G_RpCosmeticName(RP_COSMETIC_CAPE, RP_STORED_COSMETIC(stored2)), sizeof(ent->client->pers.cosmetic[0]));
-
-		G_SyncSaberColorUserinfo(ent);
-
-		G_SyncNameModelUserinfo(ent, netName, modelName);
-
-		ent->client->sess.loggedin = qtrue;
-
-		trap->SendServerCommand(ent->s.number, va("supdateloggedin %i\n", ent->client->sess.loggedin));
-
-		int number_of_sabers = 1;
-
-		if (strcmp(saber2Model, "none") != 0) {
-			number_of_sabers = 2;
-		}
-		update_saber(ent, saber1Model, saber2Model, number_of_sabers + 1);
-
-		// GalaxyRP (Alex): [Database] Column 21 is a duplicate of CharID, no need to grab that.
-		for (int i = 0; i < NUM_OF_SKILLS; i++) {
-			ent->client->pers.skill_levels[i] = sqlite3_column_int(stmt, i + 22);
-		}
-
-		ent->client->ps.ammo[AMMO_BLASTER] = sqlite3_column_int(stmt, 83);
-		ent->client->ps.ammo[AMMO_POWERCELL] = sqlite3_column_int(stmt, 84);
-		ent->client->ps.ammo[AMMO_METAL_BOLTS] = sqlite3_column_int(stmt, 85);
-		ent->client->ps.ammo[AMMO_ROCKETS] = sqlite3_column_int(stmt, 86);
-		ent->client->ps.ammo[AMMO_THERMAL] = sqlite3_column_int(stmt, 87);
-		ent->client->ps.ammo[AMMO_TRIPMINE] = sqlite3_column_int(stmt, 88);
-		ent->client->ps.ammo[AMMO_DETPACK] = sqlite3_column_int(stmt, 89);
-
-		// DAJ_RP: [Ammo] and never above the server's caps -- see RP_ClampAmmoToCaps() (g_items.c).
-		RP_ClampAmmoToCaps(ent);
-
-		sqlite3_finalize(stmt);
-
-		set_netname(ent, netName);
-		set_model(ent, modelName);
-
-
-		update_saber_colors(ent);
-
-		ent->client->sess.amrpgmode = 2;
-
-		return;
-	}
-
-	sqlite3_finalize(stmt);
-	G_LogPrintf("WARNING: select_account_and_default_character_data found no matching account+character row for username '%s' (selected character '%s') -- account/character data was not loaded.\n", username, ent->client->sess.rpgchar);
-
-	return;
-}
-
 // GalaxyRP (Alex): [Database] This method creates a new character associated with the account the player is currently logged in, and adds the default data in all the tables. ASSUMES PLAYER IS LOGGED IN!
 qboolean create_new_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
 	int newCharID = 0;
@@ -1325,12 +1383,31 @@ void remove_character(gentity_t* ent, char char_name[MAX_STRING_CHARS], sqlite3*
 	return;
 }
 
-// GalaxyRP (Alex): [Database] This method updates the account, Characters, Skills and Weapons tables with current values. ASSUMES THE PLAYER IS LOGGED IN!!!
-void update_current_character_and_account(gentity_t* ent) {
+/*
+=====================================================================
+Skills Table Methods
+=====================================================================
+*/
+
+// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the skills table, with default values.
+qboolean insert_skills_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt, int charID) {
+	char insert_new_entry_to_skills_table[] = "INSERT INTO Skills(CharID, Jump, Push, Pull, Speed, Sense, SaberAttack, SaberDefense, SaberThrow, Absorb, Heal, Protect, MindTrick, TeamHeal, Lightning, Grip, Drain, Rage, TeamEnergize, StunBaton, BlasterPistol, BlasterRifle, Disruptor, Bowcaster, Repeater, DEMP2, Flechette, RocketLauncher, ConcussionRifle, BryarPistol, Melee, MaxShield, ShieldStrength, HealthStrength, DrainShield, Jetpack, SenseHealth, ShieldHeal, TeamShieldHeal, UniqueSkill, BlasterPack, PowerCell, MetalBolts, Rockets, Thermals, TripMines, Detpacks, Binoculars, BactaCanister, SentryGun, SeekerDrone, Eweb, BigBacta, ForceField, CloakItem, ForcePower, Improvements) VALUES('%i', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0')";
+
+	rc = sqlite3_exec(db, va(insert_new_entry_to_skills_table, charID), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return qfalse;
+	}
+
+	return qtrue;
+}
+
+// GalaxyRP (Alex): [Database] UPDATE This method updated a skills table row with information contained within the entity with which it's called. Also updates the skillpoint values, since there's no instance where a skill is updated and the skillpoints are not.
+void update_skills_table_row_with_current_values(gentity_t* ent) {
 	sqlite3* db;
-	char* zErrMsg = 0;
 	int rc;
-	sqlite3_stmt* stmt = NULL;
 
 	rc = RP_DB_Open(&db);
 	if (rc != SQLITE_OK)
@@ -1340,59 +1417,8 @@ void update_current_character_and_account(gentity_t* ent) {
 		return;
 	}
 
-	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
-	int clientNum = ent->s.number;
-
-	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
-	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
-
-	rc = sqlite3_prepare_v2(db, "UPDATE Characters SET Credits=?, Level=?, ModelScale=?, Skillpoints=?, Description=?, NetName=?, ModelName=?, xp=? WHERE CharID=?", -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	sqlite3_bind_int(stmt, 1, ent->client->pers.credits);
-	sqlite3_bind_int(stmt, 2, ent->client->pers.level);
-	sqlite3_bind_int(stmt, 3, ent->client->ps.iModelScale);
-	sqlite3_bind_int(stmt, 4, ent->client->pers.skillpoints);
-	sqlite3_bind_text(stmt, 5, ent->client->pers.description, -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 6, ent->client->pers.netname, -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 7, modelName, -1, SQLITE_TRANSIENT);
-	sqlite3_bind_int(stmt, 8, ent->client->pers.xp);
-	sqlite3_bind_int(stmt, 9, ent->client->pers.CharID);
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-	}
-	sqlite3_finalize(stmt);
-
-	rc = sqlite3_prepare_v2(db, "UPDATE Accounts SET PlayerSettings=?, AdminLevel=?, DefaultChar=? WHERE AccountID=?", -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		return;
-	}
-	sqlite3_bind_int(stmt, 1, ent->client->pers.player_settings);
-	sqlite3_bind_int(stmt, 2, ent->client->pers.bitvalue);
-	sqlite3_bind_text(stmt, 3, ent->client->sess.rpgchar, -1, SQLITE_TRANSIENT);
-	sqlite3_bind_int(stmt, 4, ent->client->sess.accountID);
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-	}
-	sqlite3_finalize(stmt);
-
-	char update_character_query[] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i', Armor='%i', Flamethrower='%i', ShieldRegen='%i', HealthRegen='%i' WHERE CharID='%i';\
-		UPDATE Weapons SET AmmoBlaster='%i', AmmoPowercell='%i', AmmoMetalBolts='%i', AmmoRockets='%i', AmmoThermal='%i', AmmoTripmine='%i', AmmoDetpack='%i' WHERE CharID='%i'";
-
-	run_db_query(va(update_character_query,
+	char update_skills_query[] = "UPDATE Skills SET Jump='%i', Push='%i', Pull='%i', Speed='%i', Sense='%i', SaberAttack='%i', SaberDefense='%i', SaberThrow='%i', Absorb='%i', Heal='%i', Protect='%i', MindTrick='%i', TeamHeal='%i', Lightning='%i', Grip='%i', Drain='%i', Rage='%i', TeamEnergize='%i', StunBaton='%i', BlasterPistol='%i', BlasterRifle='%i', Disruptor='%i', Bowcaster='%i', Repeater='%i', DEMP2='%i', Flechette='%i', RocketLauncher='%i', ConcussionRifle='%i', BryarPistol='%i', Melee='%i', MaxShield='%i', ShieldStrength='%i', HealthStrength='%i', DrainShield='%i', Jetpack='%i', SenseHealth='%i', ShieldHeal='%i', TeamShieldHeal='%i', UniqueSkill='%i', BlasterPack='%i', PowerCell='%i', MetalBolts='%i', Rockets='%i', Thermals='%i', TripMines='%i', Detpacks='%i', Binoculars='%i', BactaCanister='%i', SentryGun='%i', SeekerDrone='%i', Eweb='%i', BigBacta='%i', ForceField='%i', CloakItem='%i', ForcePower='%i', Improvements='%i', Armor='%i', Flamethrower='%i', ShieldRegen='%i', HealthRegen='%i' WHERE CharID='%i'; UPDATE Characters SET SkillPoints='%i' WHERE CharID='%i';";
+	run_db_query(va(update_skills_query,
 		ent->client->pers.skill_levels[0],	//Jump
 		ent->client->pers.skill_levels[1],	//Push
 		ent->client->pers.skill_levels[2],	//Pull
@@ -1454,28 +1480,67 @@ void update_current_character_and_account(gentity_t* ent) {
 		ent->client->pers.skill_levels[58], //Shield Regen
 		ent->client->pers.skill_levels[59], //Health Regen
 		ent->client->pers.CharID,
-		ent->client->ps.ammo[AMMO_BLASTER],
-		ent->client->ps.ammo[AMMO_POWERCELL],
-		ent->client->ps.ammo[AMMO_METAL_BOLTS],
-		ent->client->ps.ammo[AMMO_ROCKETS],
-		ent->client->ps.ammo[AMMO_THERMAL],
-		ent->client->ps.ammo[AMMO_TRIPMINE],
-		ent->client->ps.ammo[AMMO_DETPACK],
-		ent->client->pers.CharID
-	), db);
+		ent->client->pers.skillpoints,
+		ent->client->pers.CharID), db);
 
 	sqlite3_close(db);
 
 	return;
 }
 
+/*
+=====================================================================
+Weapons Table Methods
+=====================================================================
+*/
 
+// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the weapons table, with default values.
+qboolean insert_weapons_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt, int charID) {
+	char insert_new_entry_to_weapons_table[] = "INSERT INTO Weapons(CharID, AmmoBlaster, AmmoPowercell, AmmoMetalBolts, AmmoRockets, AmmoThermal, AmmoTripmine, AmmoDetpack) VALUES('%i', '0', '0', '0', '0', '0', '0', '0')";
 
+	rc = sqlite3_exec(db, va(insert_new_entry_to_weapons_table, charID), 0, 0, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", zErrMsg);
+		sqlite3_free(zErrMsg);
+		return qfalse;
+	}
 
+	return qtrue;
+}
 
+// GalaxyRP (Alex): [Database] SELECT This method grabs all the values from a weapons table row (ASSUMES THE PLAYERS IS ALREADY LOGGED IN), and assigns them to the entity.
+void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
+	rc = sqlite3_prepare_v2(db, va("SELECT * FROM Weapons WHERE CharID='%i'", ent->client->pers.CharID), -1, &stmt, NULL);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	rc = sqlite3_step(stmt);
+	if (rc != SQLITE_ROW && rc != SQLITE_DONE)
+	{
+		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
+		sqlite3_finalize(stmt);
+		return;
+	}
+	if (rc == SQLITE_ROW)
+	{
+		ent->client->ps.ammo[AMMO_BLASTER] = sqlite3_column_int(stmt, 1);
+		ent->client->ps.ammo[AMMO_POWERCELL] = sqlite3_column_int(stmt, 2);
+		ent->client->ps.ammo[AMMO_METAL_BOLTS] = sqlite3_column_int(stmt, 3);
+		ent->client->ps.ammo[AMMO_ROCKETS] = sqlite3_column_int(stmt, 4);
+		ent->client->ps.ammo[AMMO_THERMAL] = sqlite3_column_int(stmt, 5);
+		ent->client->ps.ammo[AMMO_TRIPMINE] = sqlite3_column_int(stmt, 6);
+		ent->client->ps.ammo[AMMO_DETPACK] = sqlite3_column_int(stmt, 7);
 
+		// DAJ_RP: [Ammo] and never above the server's caps -- see RP_ClampAmmoToCaps() (g_items.c).
+		RP_ClampAmmoToCaps(ent);
+	}
 
-
+	sqlite3_finalize(stmt);
+}
 
 // GalaxyRP (Alex): [Database] UPDATE This method updated a weapons table row with information contained within the entity with which it's called.
 void update_weapons_table_row_with_current_values(gentity_t* ent) {
@@ -1509,27 +1574,10 @@ void update_weapons_table_row_with_current_values(gentity_t* ent) {
 }
 
 /*
-----NEWS TABLE----
+=====================================================================
+NEWS Table Methods
+=====================================================================
 */
-
-// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the news table, requires the channel and text be passed into it.
-void zyk_db_column_string(char* dest, int dest_size, sqlite3_stmt* stmt, int column)
-{
-	const unsigned char* value = NULL;
-
-	if (!dest || dest_size < 1)
-		return;
-
-	value = sqlite3_column_text(stmt, column);
-
-	if (!value)
-	{
-		dest[0] = '\0';
-		return;
-	}
-
-	Q_strncpyz(dest, (const char*)value, dest_size);
-}
 
 // GalaxyRP (Alex): [Database] SELECT This method selects all the unique channels from the news table.
 void select_news_channels(gentity_t* ent) {
@@ -1684,67 +1732,60 @@ qboolean delete_news_table_row_with_id(gentity_t* ent, int newsID) {
 	return deleted;
 }
 
-/*
-=================
-DATABASE ACTIONS for interacting with the database
-
-The methods do broader actions, which are a combination of multiple actions that will almost always be used together.
-=================
-*/
-
-// GalaxyRP (Alex): [Database] This method saves the player's name, scale and model to the database. All the information is taken from ent. (Characters tables)
-void update_current_character_name_and_model(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt* stmt) {
-	char userinfo[MAX_INFO_STRING], modelName[MAX_INFO_STRING];
-
-	int clientNum = ent->s.number;
-
-	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
-	Q_strncpyz(modelName, Info_ValueForKey(userinfo, "model"), sizeof(modelName));
-
-	rc = sqlite3_prepare_v2(db, "UPDATE Characters SET ModelScale=?, NetName=?, ModelName=?, saberOneModel=?, saberTwoModel=?, saberOneColor=?, saberTwoColor=? WHERE CharID=?", -1, &stmt, NULL);
-	if (rc != SQLITE_OK)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		return;
-	}
-	sqlite3_bind_int(stmt, 1, ent->client->ps.iModelScale);
-	sqlite3_bind_text(stmt, 2, ent->client->pers.netname, -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 3, modelName, -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 4, ent->client->pers.saber1, -1, SQLITE_TRANSIENT);
-	sqlite3_bind_text(stmt, 5, ent->client->pers.saber2, -1, SQLITE_TRANSIENT);
-	// GLX_U: [Cosmetics] the hat goes with the first saber's colour, the cape with the second's, as
-	// an id above the colour's 32 bits -- see RP_STORED_PACK (g_local.h). A name not on the saved list
-	// is stored as 0, none.
-	sqlite3_bind_int64(stmt, 6, RP_STORED_PACK(SABER_STORED_PACK(ent->client->pers.saberColorMode[0], ent->client->pers.saberRGB[0]),
-		G_RpCosmeticId(RP_COSMETIC_HAT, ent->client->pers.cosmetic[RP_COSMETIC_HAT])));
-	sqlite3_bind_int64(stmt, 7, RP_STORED_PACK(SABER_STORED_PACK(ent->client->pers.saberColorMode[1], ent->client->pers.saberRGB[1]),
-		G_RpCosmeticId(RP_COSMETIC_CAPE, ent->client->pers.cosmetic[RP_COSMETIC_CAPE])));
-	sqlite3_bind_int(stmt, 8, ent->client->pers.CharID);
-	rc = sqlite3_step(stmt);
-	if (rc != SQLITE_DONE)
-	{
-		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
-	}
-	sqlite3_finalize(stmt);
-
-	return;
-}
-
-// GalaxyRP (Alex): [Database] This method saves the player's scale to the database. All the information is taken from ent. (Characters tables)
-void update_current_character_scale(gentity_t* ent, sqlite3* db) {
+// GalaxyRP (Alex): [Database] INSERT This method inserts a new row in the news table, requires the channel and text be passed into it.
+qboolean insert_news_table_row(gentity_t* ent, char* channel, char* news_text) {
+	sqlite3* db;
 	int rc;
 	sqlite3_stmt* stmt = 0;
+	int exists = 0;
+	int channels = 0;
 
-	rc = sqlite3_prepare_v2(db, "UPDATE Characters SET ModelScale=? WHERE CharID=?", -1, &stmt, NULL);
+	rc = RP_DB_Open(&db);
+	if (rc != SQLITE_OK)
+	{
+		trap->Print("Can't open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return qfalse;
+	}
+
+	exists = news_channel_exists(channel, db, stmt);
+
+	if (exists < 0)
+	{
+		trap->SendServerCommand(ent->s.number, "print \"^1Could not read the news channels. Nothing was added.\n\"");
+		sqlite3_close(db);
+		return qfalse;
+	}
+
+	if (exists == 0)
+	{
+		channels = news_channel_count(db, stmt);
+
+		if (channels < 0)
+		{
+			trap->SendServerCommand(ent->s.number, "print \"^1Could not read the news channels. Nothing was added.\n\"");
+			sqlite3_close(db);
+			return qfalse;
+		}
+
+		if (channels >= MAX_NEWS_CHANNELS)
+		{
+			trap->SendServerCommand(ent->s.number, va("print \"^1There are already %d news channels. Post to an existing one, or clear a channel out with /newsremove first.\n\"", MAX_NEWS_CHANNELS));
+			sqlite3_close(db);
+			return qfalse;
+		}
+	}
+
+	rc = sqlite3_prepare_v2(db, "INSERT INTO News(channel, text) VALUES (?, ?)", -1, &stmt, NULL);
 	if (rc != SQLITE_OK)
 	{
 		trap->Print("SQL error: %s\n", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		return;
+		sqlite3_close(db);
+		return qfalse;
 	}
-	sqlite3_bind_int(stmt, 1, ent->client->ps.iModelScale);
-	sqlite3_bind_int(stmt, 2, ent->client->pers.CharID);
+	sqlite3_bind_text(stmt, 1, channel, -1, SQLITE_TRANSIENT);
+	sqlite3_bind_text(stmt, 2, news_text, -1, SQLITE_TRANSIENT);
 	rc = sqlite3_step(stmt);
 	if (rc != SQLITE_DONE)
 	{
@@ -1752,6 +1793,7 @@ void update_current_character_scale(gentity_t* ent, sqlite3* db) {
 	}
 	sqlite3_finalize(stmt);
 
-	return;
-}
+	sqlite3_close(db);
 
+	return (rc == SQLITE_DONE) ? qtrue : qfalse;
+}
