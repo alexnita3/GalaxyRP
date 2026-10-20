@@ -19,17 +19,29 @@ Global definitions
 
 #define DB_PATH							"GalaxyRP/database/accounts.db"
 
-// GalaxyRP fix: [Database] Centralised sqlite3_open() wrapper -- see definition in g_main.c for
-// why this exists (map-change "database is locked" errors). Every place in the game module that
-// used to call sqlite3_open(DB_PATH, &db) directly should call RP_DB_Open(&db) instead.
-// Forward-declared (rather than including sqlite3.h here) since this header is pulled in by
-// g_local.h for every game module file, and not all of them already include sqlite3.h themselves
-// before that happens; sqlite3 is just an opaque "typedef struct sqlite3 sqlite3;" in sqlite3.h,
-// so redeclaring it here is safe.
+// GalaxyRP fix: [Database] Centralised sqlite3_open() wrapper -- see definition in rp_database.c
 typedef struct sqlite3 sqlite3;
+typedef struct sqlite3_stmt sqlite3_stmt;
 #define RP_DB_BUSY_TIMEOUT_MS			5000
 int RP_DB_Open(sqlite3 **db);
 void run_db_query(const char *query, sqlite3 *db);
+qboolean select_accounts_table_row(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
+int select_account_id_from_username(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
+qboolean insert_accounts_table_row(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
+int select_number_of_accounts_with_username(gentity_t* ent, char* username, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
+void update_accounts_table_row_with_current_values(gentity_t* ent);
+void update_accounts_table_row_with_default_char(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
+qboolean is_password_correct(gentity_t* ent, char* username, char* password, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
+void update_credits_value(gentity_t* ent);
+qboolean insert_chars_table_row(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt, int* out_charID);
+int select_number_of_characters_with_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
+int select_number_of_characters(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
+int select_char_id_using_char_name(gentity_t* ent, char* character_name, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
+void update_chars_table_row_with_current_values(gentity_t* ent);
+qboolean insert_skills_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt, int charID);
+void update_skills_table_row_with_current_values(gentity_t* ent);
+qboolean insert_weapons_table_row(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt, int charID);
+void select_weapons_table_row_from_entity(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
 
 // GalaxyRP fix: [NPC] removed NUM_OF_GUARDIANS here. Its last user was the guardian_boss_1..10
 // loop in the /npc spawn blocklist, which has been removed along with the rest of that list;
@@ -143,6 +155,8 @@ typedef struct saber_db_info_s {
 	char	saber1Model[50];
 	char	saber2Model[50];
 } saber_db_info_t;
+
+saber_db_info_t select_saber_info_using_char_id(gentity_t* ent, sqlite3* db, char* zErrMsg, int rc, sqlite3_stmt *stmt);
 
 typedef struct chat_modifiers_s {
 	const char* chat_modifier;
