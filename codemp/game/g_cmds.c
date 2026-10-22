@@ -8127,10 +8127,6 @@ void Cmd_Teleport_f( gentity_t *ent )
 			return;
 		}
 
-		// GalaxyRP fix: [Guardian] a guardian_mode>0 guard blocking teleport-a-player-to-coordinates
-		// while the target was in a guardian battle used to be here. guardian_mode is permanently 0
-		// now, so it was unreachable.
-
 		trap->Argv( 2,  arg2, sizeof( arg2 ) );
 		trap->Argv( 3,  arg3, sizeof( arg3 ) );
 		trap->Argv( 4,  arg4, sizeof( arg4 ) );
@@ -8153,9 +8149,6 @@ Cmd_Telemark_f
 */
 void Cmd_Telemark_f(gentity_t* ent)
 {
-	// GalaxyRP fix: [Admin] /telemark had no permission gate of its own (only CMD_LOGGEDIN), even
-	// though the only thing that ever reads what it saves is /teleport, which does require ADM_TELE.
-	// Gate it on the same bit so the two commands depend on one permission consistently.
 	if (!check_admin_command(ent, ADM_TELE, qtrue))
 	{
 		return;
@@ -8393,10 +8386,6 @@ void Cmd_CreditSpend_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
 	int value = 0;
 
-	// GalaxyRP fix: [consistency] standardized argument-count validation across all 3 credit
-	// commands (see Cmd_CreditCreate_f/Cmd_CreditGive_f below) -- this used to only reject
-	// Argc() > 2, so "/spendcredits" with no argument at all fell through to the misleading
-	// "Value must be an integer" message further down instead of a clear usage message.
 	if (trap->Argc() != 2)
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"^1Command Usage: ^3/spendcredits ^2<value>\n^1Example: ^3/spendcredits ^2350\"");
@@ -8405,12 +8394,6 @@ void Cmd_CreditSpend_f(gentity_t *ent) {
 
 	trap->Argv(1, arg1, sizeof(arg1));
 
-	// GalaxyRP fix: [consistency] dropped the strtol() pre-check -- it parsed the same string
-	// independently from the atoi() call below (two parses of one value, checked two different
-	// ways) and could report the technically-wrong "Value must be an integer" for a literal "0"
-	// (0 is a valid integer, just not a positive one -- the value < 1 check below already reports
-	// that case correctly). All 3 credit commands now validate their numeric argument the same
-	// way: atoi() followed by a single "must be positive" check.
 	value = atoi(arg1);
 
 	if (value < 1)
@@ -8429,10 +8412,6 @@ void Cmd_CreditSpend_f(gentity_t *ent) {
 
 	update_credits_value(ent);
 
-	// GalaxyRP fix: [Economy] no audit trail existed for any of the 3 credit commands -- the chat
-	// broadcast below is only visible to players online at that moment and isn't persisted
-	// anywhere. Log to the server log too, same convention as AdminUp/AdminDown's grant/revoke
-	// logging elsewhere in this file.
 	G_LogPrintf("CreditSpend: %s^7 spent %d credits\n", ent->client->pers.netname, value);
 
 	trap->SendServerCommand(-1, va("chat \"^3Credit System: ^7%s ^7spent ^2%d ^7credits.\n\"", ent->client->pers.netname, value));
@@ -8456,10 +8435,6 @@ void Cmd_CreditCreate_f(gentity_t *ent) {
 		return;
 	}
 
-	// GalaxyRP fix: [consistency] standardized argument-count validation across all 3 credit
-	// commands -- this used to fall through with no amount argument at all straight to the
-	// misleading "Can only use positive values" message below, unlike Cmd_CreditGive_f's explicit
-	// "You must specify the amount of credits." check for the same case.
 	if (trap->Argc() == 2)
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"You must specify the amount of credits.\n\"");
@@ -8489,23 +8464,9 @@ void Cmd_CreditCreate_f(gentity_t *ent) {
 		return;
 	}
 
-	// GalaxyRP fix: [Economy] cap the requested amount up front instead of letting an
-	// arbitrarily large typed-in value reach add_credits() -- add_credits() itself is now
-	// overflow-safe regardless (see its own GalaxyRP fix comment), but capping here as well
-	// means the amount this command logs and broadcasts to the server always matches what was
-	// actually applied, rather than reporting the huge originally-typed number while silently
-	// applying a smaller clamped one.
 	if (value > rp_max_rpg_credits.integer)
 		value = rp_max_rpg_credits.integer;
 
-	// GalaxyRP fix: [validation] this had no equivalent of Cmd_CreditGive_f's own target check --
-	// ClientNumberFromString(..., qfalse) only requires the target be connected, not logged in, so
-	// a not-yet-logged-in target (pers.CharID == 0) could be "credited" here: add_credits() would
-	// mutate that connection's in-memory pers.credits, but update_credits_value()'s UPDATE ...
-	// WHERE CharID='0' matches no row (CharID is a SQLite INTEGER PRIMARY KEY, always >= 1 for a
-	// real character), so nothing was actually persisted -- yet this command still reported "Done."
-	// and broadcast a server-wide "credits created" message for a transaction that never happened.
-	// Same check, same message, as Cmd_CreditGive_f below.
 	if (g_entities[client_id].client->sess.amrpgmode < 2)
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"The player is not logged in\n\"");
@@ -8515,11 +8476,6 @@ void Cmd_CreditCreate_f(gentity_t *ent) {
 	add_credits(&g_entities[client_id], value);
 	update_credits_value(&g_entities[client_id]);
 
-	// GalaxyRP fix: [Economy] no audit trail existed for any of the 3 credit commands -- the chat
-	// broadcast below is only visible to players online at that moment and isn't persisted
-	// anywhere. Log to the server log too, same convention as AdminUp/AdminDown's grant/revoke
-	// logging elsewhere in this file. This is the one of the three that matters most: it's the
-	// command that creates credits from nothing rather than just moving them between balances.
 	G_LogPrintf("CreditCreate: %s^7 created %d credits and gave them to %s^7\n", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname);
 
 	//broadcast the transaction to the whole server
@@ -8568,11 +8524,6 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 		return;
 	}
 
-	// GalaxyRP fix: [Economy] same cap as Cmd_CreditCreate_f above -- keeps the amount this
-	// command logs/broadcasts consistent with what add_credits()/remove_credits() actually apply.
-	// The giver's own balance check just below already bounds value in practice (a giver can never
-	// have more than rp_max_rpg_credits.integer to give), but this keeps the two commands
-	// consistent and stays safe even if that cap is lowered while a player is already over it.
 	if (value > rp_max_rpg_credits.integer)
 		value = rp_max_rpg_credits.integer;
 
@@ -8595,10 +8546,6 @@ void Cmd_CreditGive_f( gentity_t *ent ) {
 	remove_credits(ent, value);
 	update_credits_value(ent);
 
-	// GalaxyRP fix: [Economy] no audit trail existed for any of the 3 credit commands -- the chat
-	// broadcast below is only visible to players online at that moment and isn't persisted
-	// anywhere. Log to the server log too, same convention as AdminUp/AdminDown's grant/revoke
-	// logging elsewhere in this file.
 	G_LogPrintf("CreditGive: %s^7 transferred %d credits to %s^7\n", ent->client->pers.netname, value, g_entities[client_id].client->pers.netname);
 
 	//broadcast the transaction to the whole server
@@ -8614,22 +8561,6 @@ Cmd_AllyList_f
 ==================
 */
 void Cmd_AllyList_f( gentity_t *ent ) {
-	// GalaxyRP fix: [Ally] this was built by repeatedly doing
-	//
-	//     strcpy(message, va("%s^7%s ^3(ally)", message, netname));
-	//
-	// into a char message[1024]. va() formats into a 32000-byte buffer and knows nothing about
-	// where the result is going, so once the accumulated list passed 1024 bytes that strcpy wrote
-	// off the end of a stack array. It did not take a crowded server: at the 36-character netname
-	// limit it overflows at 22 one-way allies, or 17 players once entries carry both "(ally)" and
-	// "(added you)", and 31 players listed both ways builds 1923 bytes. One player could reach it
-	// alone -- /allyadd caps nothing and excludes no one, so allying enough clients and running
-	// /allylist was enough. Well before that the message crossed the 1022-byte wire limit and
-	// SV_SendServerCommand dropped the whole list without a word.
-	//
-	// Each entry is now formatted into its own bounded buffer and appended with Q_strcat, and the
-	// message is flushed and continued whenever the next entry would not fit -- the same shape
-	// Cmd_IgnoreList_f() uses, and the same one /list commands uses for its sections.
 	char message[MAX_STRING_CHARS];
 	char entry[MAX_NETNAME + 64];
 	int i = 0;
@@ -8780,27 +8711,6 @@ void Cmd_AllyAdd_f( gentity_t *ent ) {
 	}
 }
 
-/*
-==================
-Cmd_AllyChat_f
-==================
-*/
-/*
-GalaxyRP fix: [Chat] the dispatch row carries no flags, like /say, /say_team, /tell and /ooc.
-
-It used to carry CMD_NOINTERMISSION, which was never a decision about ally chat -- it is simply
-the default almost every row in this table picked up (115 of 137 carry it). The flag exists to
-stop gameplay-affecting commands while the scoreboard is up; chat is not one, which is why the
-vanilla say modes were always ungated. Nothing here needs anything intermission takes away
-either: SAY_ALLY ignores distance, zyk_is_ally() reads sess.ally1/ally2 which are persistent, and
-MoveClientToIntermission() changes pm_type rather than sessionTeam, so G_SayTo()'s gates are
-unaffected.
-
-The refusal was not even quiet -- it printed CANNOT_TASK_INTERMISSION (allychat) while /say and
-/say_team kept working alongside it, so the channels were split for no reason a player could see.
-And CheckIntermissionExit() has no upper bound: below the five-second floor it waits for somebody
-to press ready, so on a server where nobody does, that state can hold for minutes.
-*/
 void Cmd_AllyChat_f( gentity_t *ent ) { // zyk: allows chatting with allies
 	char *p = NULL;
 
@@ -8877,30 +8787,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 		int len = 0;
 		strcpy(message,"");
 
-		// GalaxyRP fix: [Quests] the status line for setting 0 (RPG quests) used to be printed here.
-		// /settings 0 has been removed below (see the range-check comment further down) since the
-		// general quest system it toggled is gone, so its status line is removed here to match.
-
-		// GalaxyRP fix: [Quests] the status lines for settings 1-4 (Light/Dark/Eternity/Universe Power)
-		// used to be printed here. Those quest-completion-granted powers can no longer be earned now
-		// that the general quest system is gone (see the GalaxyRP fix comment on quest_get_new_player's
-		// old location in this file), so /settings 1-4 have been removed below and their status lines
-		// removed here to match.
-
-		// GalaxyRP fix: [Sprintf Overlap] every sprintf() below used to write into message while also
-		// reading message as its own %s argument (e.g. sprintf(message, "%s\n...", message)). Passing
-		// the same object as both destination and source to sprintf is undefined behavior per the C
-		// standard (it's unspecified whether the read happens before, during, or after the write) --
-		// GCC already flagged this with -Wrestrict. Fixed by writing to message+len instead, so each
-		// call's destination no longer overlaps anything it reads, and tracking the appended length in
-		// len rather than re-reading it back out of message.
-		// DAJ_RP: [Settings] setting 1 used to be "Language" (English/Custom) on this bit. Its only
-		// reader, zyk_text_message(), went with the RPG tutorial it served, so it did nothing at all.
-		// Bit 5 is reused for the Sense Health Toggle: whether the Sense Health readout is sent while
-		// Sense is active (see the gate at the Sense Health trigger in w_force.c). Inverted like every
-		// other toggle here (clear == ON, set == OFF), and new accounts are created with the bit SET so
-		// it starts OFF -- see insert_accounts_table_row(). Forward only: an existing account that had
-		// "English" (bit clear) comes out ON, one that had "Custom" comes out OFF.
 		if (ent->client->pers.player_settings & (1 << 5))
 		{
 			len += sprintf(message + len, "\n^3 1 - Sense Health Toggle (Requires Sense Health) - ^1OFF");
@@ -8910,51 +8796,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			len += sprintf(message + len, "\n^3 1 - Sense Health Toggle (Requires Sense Health) - ^2ON");
 		}
 
-		// GalaxyRP fix: [Settings] the status line for setting 2 (Allow Force Powers from allies) used
-		// to be printed here. That toggle has been removed below (see the range-check comment further
-		// down) -- allies never affecting each other's force powers with a hostile force power is now
-		// the permanent, always-on behavior (see the fix comment at its old ForcePowerUsableOn() gate in
-		// w_force.c), so there is no longer a per-player choice to report here.
-
-		// GalaxyRP fix: [Magic] the status line for setting 7 (Show magic cast in chat) used to be
-		// printed here. /settings 7 has been removed below (see the range-check comment further down)
-		// since the chat line it gated, zyk_show_magic_in_chat(), has been removed as dead -- it lost
-		// its only callers when the seven magic/ultimate powers it announced were themselves removed
-		// as permanently unreachable (see the fix comment on TryGrapple()'s old dispatch logic), so
-		// its status line is removed here to match.
-
-		// GalaxyRP fix: [Settings] the status line for setting 3 (Starting Single Saber Style) used to
-		// be printed here. That toggle has been removed below (see the range-check comment further
-		// down) -- starting saber style is now always whatever the base game would pick with no
-		// per-player override (see the fix comment at its old cycling logic in
-		// zyk_load_common_settings()), so there is no longer a choice to report here.
-
-		// GalaxyRP fix: [Settings] the status line for setting 4 (Allow Screen Message) used to be
-		// printed here. That toggle has been removed below (see the range-check comment further down)
-		// -- the screen message is now always shown to a logged-in RPG-mode player who hasn't seen it
-		// yet (see the fix comment at its old gate in g_client.c), so there is no longer a per-player
-		// choice to report here.
-
-		// GalaxyRP fix: [Settings] the status line for setting 5 (Use healing force only at allied
-		// players) used to be printed here. That toggle has been removed below (see the range-check
-		// comment further down) -- Team Heal and Team Energize in FFA now always restrict to allies (see
-		// the fix comments at their eligibility checks in w_force.c), so there is no longer a per-player
-		// choice to report here.
-
-		// GalaxyRP fix: [Settings] the status line for the old setting 6 (Start With Saber) used to be
-		// printed here. That toggle was removed (see the fix comment at its old gate in
-		// zyk_load_common_settings()) -- a player who owns a saber now always starts with it equipped.
-		// Its bit (11) was reused rather than left dead, though: see setting 3 below, "Activate saber
-		// on spawn".
-
-		// GalaxyRP fix: [Settings] the status line for setting 12 (Jetpack) used to be printed here.
-		// /settings 12 has been removed below (see the range-check comment further down) -- its bit was
-		// only ever read back by this same status line, never by anything gating actual jetpack
-		// availability (that's Cmd_Jetpack_f, which checks unrelated fields), so toggling it never did
-		// anything.
-
-		// DAJ_RP: [Settings] worded like setting 5 -- the setting can only be turned ON with the "Admin
-		// Protect" admin power (see the gate further down), and only has any effect with it.
 		if (ent->client->pers.player_settings & (1 << 13))
 		{
 			len += sprintf(message + len, "\n^3 2 - Admin Protect (Requires Admin Protect admin power) - ^1OFF");
@@ -8964,11 +8805,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			len += sprintf(message + len, "\n^3 2 - Admin Protect (Requires Admin Protect admin power) - ^2ON");
 		}
 
-		// GalaxyRP fix: [Settings] new setting: reuses player_settings bit 11, freed up when the old
-		// "Start With Saber" toggle that used to own it was removed (see the comment above) -- no DB
-		// migration needed. Inverted like every other /settings toggle (clear == ON, set == OFF): ON is
-		// the default and matches the pre-existing behavior of igniting the blade immediately on spawn;
-		// OFF spawns the saber selected but not ignited. See the gate in zyk_load_common_settings().
 		if (ent->client->pers.player_settings & (1 << 11))
 		{
 			len += sprintf(message + len, "\n^3 3 - Activate Saber on Spawn - ^1OFF");
@@ -8978,10 +8814,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			len += sprintf(message + len, "\n^3 3 - Activate Saber on Spawn - ^2ON");
 		}
 
-		// GalaxyRP: [Use hint] new setting: reuses player_settings bit 6, freed up when the old "Allow
-		// Force Powers from allies" toggle that used to own it was removed -- no DB migration needed.
-		// Inverted like every other toggle here (clear == ON, set == OFF). New accounts start with it
-		// ON, i.e. insert_accounts_table_row() leaves the bit clear.
 		if (ent->client->pers.player_settings & (1 << 6))
 		{
 			len += sprintf(message + len, "\n^3 4 - Use Hint - ^1OFF");
@@ -8991,11 +8823,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			len += sprintf(message + len, "\n^3 4 - Use Hint - ^2ON");
 		}
 
-		// DAJ_RP: [Settings] new setting on bit 16, one of the bits no setting has ever used, so every
-		// account that predates it holds a 0 there -- read as ON under the inversion (clear == ON, set
-		// == OFF), which keeps existing admins hearing everything exactly as before. New accounts are
-		// created with it SET (OFF) -- see insert_accounts_table_row(). Only means anything with the
-		// "Ignore Chat Distance" admin power -- see zyk_ignores_chat_distance().
 		if (ent->client->pers.player_settings & (1 << 16))
 		{
 			len += sprintf(message + len, "\n^3 5 - Ignore Chat Distance (Requires Ignore Chat Distance admin power) - ^1OFF");
@@ -9005,13 +8832,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			len += sprintf(message + len, "\n^3 5 - Ignore Chat Distance (Requires Ignore Chat Distance admin power) - ^2ON");
 		}
 
-		// DAJ_RP: [Entity Bounds] new setting on bit 20. Nothing in this codebase's history ever wrote
-		// bits 20-23 (the old settings used 0-19 and 24-29), so the bit holds 0 on every account that
-		// predates it -- read as ON under the inversion (clear == ON, set == OFF), so existing admins with
-		// the Entity System admin power start with the display on. New accounts are created with it SET
-		// (OFF) -- see insert_accounts_table_row() -- and the built-in admin account, created with
-		// PlayerSettings '0', with it ON. Only draws anything with the Entity System admin power -- see
-		// RP_EntBoundsFrame() in g_entbounds.c.
 		if (ent->client->pers.player_settings & (1 << 20))
 		{
 			len += sprintf(message + len, "\n^3 6 - Entity Bounds (Requires Entities and Remaps admin power) - ^1OFF");
@@ -9021,10 +8841,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 			len += sprintf(message + len, "\n^3 6 - Entity Bounds (Requires Entities and Remaps admin power) - ^2ON");
 		}
 
-		// GalaxyRP fix: [Challenge Mode] the status lines for settings 14 (Boss Battle Music) and 15
-		// (Difficulty/Challenge Mode) used to be printed here. Both settings have been removed below
-		// (see the range-check comment further down) since everything downstream of Challenge Mode
-		// activation is dead, so their status lines are removed here to match.
 
 		trap->SendServerCommand( ent-g_entities, va("print \"%s\n\n^7Choose a setting above and use ^3/settings <number> ^7to turn it ^2ON ^7or ^1OFF^7\n\"", message) );
 	}
@@ -9037,27 +8853,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 		trap->Argv(1, arg1, sizeof( arg1 ));
 		value = atoi(arg1);
 
-		// GalaxyRP fix: [Settings] player-facing /settings numbers renumbered to a clean 1-2 sequence
-		// (previously 5,13 -- gaps left behind by settings 6,8,9,10,11, which are removed in this same
-		// cleanup pass: Allow Force Powers from allies, Starting Single Saber Style, Allow Screen
-		// Message, Use healing force only at allied players and Start With Saber are no longer
-		// player-configurable and now always behave the way described at each setting's old gameplay
-		// usage site -- see the fix comments in w_force.c, g_client.c and zyk_load_common_settings() --
-		// plus settings 0-4,7,12,14,15, which were removed in earlier passes of this same cleanup; see
-		// the status-line comments above for why each one is gone). The underlying player_settings bit
-		// positions below are NOT renumbered -- doing that would mean migrating every already-saved
-		// player_settings value in the database, plus updating every other reader of these bits. Instead
-		// this table translates the number the player types into the real bit index those readers still
-		// expect; everything below continues to operate on that real bit index exactly as before.
-		// GalaxyRP fix: [Settings] /settings 3 added -- "Activate Saber on Spawn" -- reusing bit 11,
-		// freed up by the old "Start With Saber" toggle removed above. This is a brand new
-		// player-facing number, not a reused one; it just happens to land on bit 11, same as the old
-		// setting 6 did, purely because that bit was already free.
-		// GalaxyRP: [Use hint] /settings 4 added -- "Use Hint" -- reusing bit 6, freed by the old
-		// "Allow Force Powers from allies" toggle. Another brand new player-facing number that just
-		// happens to land on a previously-used bit because that bit was already free.
-		// DAJ_RP: [Settings] /settings 5 added -- "Ignore Chat Distance" -- on bit 16, never used before.
-		// DAJ_RP: [Entity Bounds] /settings 6 added -- "Entity Bounds" -- on bit 20, never used before.
 		static const int settings_number_to_bit[] = { 0, 5, 13, 11, 6, 16, 20 }; // index 0 unused (rejected below)
 
 		if (value <= 0 || value >= (int)ARRAY_LEN(settings_number_to_bit))
@@ -9068,40 +8863,16 @@ void Cmd_Settings_f( gentity_t *ent ) {
 
 		value = settings_number_to_bit[value];
 
-		// GalaxyRP fix: [Settings] gate turning Admin Protect ON behind the "Admin Protect" admin
-		// command (ADM_ADMPROTECT) -- this was originally gated behind ADM_GIVEADM ("Give Admin"), but
-		// ADM_ADMPROTECT's own in-game help text (see the command_number == ADM_ADMPROTECT branch
-		// further down in this file) already documents it as "With this flag, a player can use Admin
-		// Protect option in /settings to self-protect from gameplay-related admin commands" -- i.e.
-		// the codebase itself designates ADM_ADMPROTECT, not ADM_GIVEADM, as the permission for this.
-		// Corrected here to match. It is also the same flag that gates whether Admin Protect has any
-		// effect once it IS on (see the 6 enforcement sites in Cmd_Give_f, Cmd_Scale_f and
-		// Cmd_Teleport_f), so a player can now only turn the setting on if it can actually do
-		// something for them. Turning it back OFF is never gated, so a player can always give up
-		// their own protection. Bit 13 is inverted (clear == ON, set == OFF -- see the status-line
-		// block above), so "turning ON" is the branch just below that is about to CLEAR the bit,
-		// i.e. the bit must currently be SET.
-		// check_admin_command() prints the standard "You need the Admin Protect admin command" error
-		// and returns qfalse when the caller lacks it, matching every other admin-gated command in this
-		// file.
 		if (value == 13 && (ent->client->pers.player_settings & (1 << value)) && !check_admin_command(ent, ADM_ADMPROTECT, qtrue))
 		{
 			return;
 		}
 
-		// DAJ_RP: [Settings] the same gate for Ignore Chat Distance (bit 16, /settings 5): turning it ON
-		// needs the "Ignore Chat Distance" admin power, the only thing it has any effect with (see
-		// zyk_ignores_chat_distance()). Turning it OFF is never gated. A player who switched it on before
-		// this gate existed keeps it on, harmlessly -- it still does nothing without the power.
 		if (value == 16 && (ent->client->pers.player_settings & (1 << value)) && !check_admin_command(ent, ADM_IGNORECHATDISTANCE, qtrue))
 		{
 			return;
 		}
 
-		// DAJ_RP: [Entity Bounds] the same gate for Entity Bounds (bit 20, /settings 6): turning it ON needs
-		// the Entity System admin power, the only thing it draws anything with. Turning it OFF is never
-		// gated. An account that shows it ON without the power (every account that predates the setting)
-		// simply draws nothing -- RP_EntBoundsFrame() checks the power itself.
 		if (value == 20 && (ent->client->pers.player_settings & (1 << value)) && !check_admin_command(ent, ADM_ENTITYSYSTEM, qtrue))
 		{
 			return;
@@ -9119,15 +8890,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 
 			strcpy(new_status,"^1OFF^7");
 		}
-		// GalaxyRP fix: [Settings] the old setting 3, "Starting Single Saber Style", used to have a
-		// value==8 special case here alongside the generic toggle above, cycling player_settings bits
-		// 26-29. Removed along with that setting -- see the range-check comment above. Player-facing
-		// number 3 has since been reassigned to a brand new setting, "Activate Saber on Spawn" (bit
-		// 11), which needs no special handling -- it's a plain toggle like Admin Protect.
-		// GalaxyRP fix: [Challenge Mode] the value==14 (Boss Battle Music cycling) and value==15
-		// (Difficulty/Challenge Mode activation gate) branches used to be here. Both are removed since
-		// 14 and 15 are now rejected above as invalid settings values, and everything downstream of
-		// Challenge Mode activation is dead.
 
 		save_account(ent, qfalse);
 
@@ -9147,14 +8909,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 				trap->SendServerCommand( ent-g_entities, va("print \"Sense Health Toggle %s\n\"", new_status) );
 			}
 		}
-		// GalaxyRP fix: [Settings] the value==6 (Allow Force Powers from allies), value==8 (Starting
-		// Single Saber Style), value==9 (Allow Screen Message) and value==10 (Use healing force only at
-		// allied players) print branches used to be here. Removed along with those settings -- see the
-		// range-check comment above. value==11 used to be here too, printing for the old "Start With
-		// Saber" -- that setting is also removed, but the bit itself is back in use below for the new
-		// "Activate Saber on Spawn".
-		// GalaxyRP fix: [Magic] the value==7 (Show magic cast in chat) print branch used to be here.
-		// Removed since 7 is now rejected above as an invalid settings value.
 		else if (value == 13)
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Admin Protect %s\n\"", new_status) );
@@ -9163,12 +8917,6 @@ void Cmd_Settings_f( gentity_t *ent ) {
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Activate Saber on Spawn %s\n\"", new_status) );
 		}
-		// GalaxyRP fix: [Use hint] this branch was missing when /settings 4 was added, so the toggle
-		// flipped the bit and saved it but printed nothing at all -- the player had no way to tell
-		// whether they had just turned the hint on or off, or whether the command had worked. Every
-		// player-facing setting needs an entry here -- if you add one to settings_number_to_bit[] above,
-		// add its status line and its confirmation together, or the toggle will silently do nothing
-		// visible.
 		else if (value == 6)
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Use Hint %s\n\"", new_status) );
@@ -9183,53 +8931,9 @@ void Cmd_Settings_f( gentity_t *ent ) {
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Entity Bounds %s\n\"", new_status) );
 		}
-		// GalaxyRP fix: [Challenge Mode] the value==14 (Boss Battle Music) and value==15 (Difficulty)
-		// print branches used to be here. Removed since 14 and 15 are now rejected above as invalid
-		// settings values.
-
-		// GalaxyRP fix: [Quests] the value==0 kill-on-toggle block used to be here, forcing a player
-		// out of round when toggling RPG quests. Removed since 0 is now rejected above as an invalid
-		// settings value.
 
 	}
 }
-
-// GalaxyRP fix: [Dead Code] zyk_config_filename(), zyk_legacy_config_filename() and save_config()
-// removed as a self-contained dead cluster, alongside zyk_remove_configs() above. save_config() (the
-// only writer of the per-character "<user>_<char>_freewarrior.txt" config file -- level, all 56
-// skill_levels[], and a derived Unique Ability flag) had zero callers anywhere in the codebase.
-// zyk_config_filename() had exactly one caller -- save_config() itself -- so it was only reachable
-// through dead code. zyk_legacy_config_filename() had zero callers, full stop. No load/read
-// counterpart for this file format exists anywhere in the repo either (checked for fopen(...,"r")/
-// fscanf() against this path pattern), so nothing was ever reading these files back in. Confirmed via
-// a full-repo search that neither function name nor the "freewarrior" filename fragment appears
-// anywhere else. zyk_create_dir(), save_config()'s only helper call, is left in place -- it's still
-// used by several other live callers throughout this file (entities/, remaps/, duelarena/,
-// meleearena/, customquests/ directory creation).
-
-// GalaxyRP fix: [Quests] Cmd_GuardianQuest_f and Cmd_BountyQuest_f used to live here. Both were
-// fully dead -- an unconditional `return;` as their first statement, and Cmd_GuardianQuest_f was not
-// even registered in the commands[] dispatch table (Cmd_BountyQuest_f's entry was already commented
-// out there). Deleted outright, along with the now-unreferenced zyk_allow_guardian_quest/
-// zyk_allow_bounty_quest cvars, per the same convention used for other confirmed-unreachable code in
-// this file.
-
-// GalaxyRP fix: [Cvars] Cmd_PlayerMode_f (which read zyk_allow_rpg_mode, now removed) used to live
-// here. It was already fully orphaned before this change -- not registered in the commands[] dispatch
-// table, not commented out there either, and not prototyped or called from anywhere else in the
-// codebase -- so it has been deleted outright rather than short-circuited, per the same convention
-// used for other confirmed-unreachable code in this file.
-
-// GalaxyRP: [Race Mode] zyk_spawn_race_line() and Cmd_RaceMode_f() -- the "/racemode" command --
-// used to sit here, and the command's row in commands[] below went with them. Cmd_RaceMode_f was
-// the only way into Race Mode: joining set pers.race_position and level.race_mode, which is what
-// every other Race Mode branch in the mod tested for. With the zyk_allow_race_mode and
-// zyk_start_race_timer cvars gone and the whole feature removed, nothing can raise that state any
-// more, so all of it -- try_finishing_race() above, the countdown and per-racer handling in
-// G_RunFrame() (g_main.c), the force-power and damage immunity during the countdown (w_force.c and
-// g_combat.c), the death handling in player_die() (g_combat.c), the disconnect reset (g_client.c),
-// the spawnflag-2 branch of zyk_mini_gamer_joiner_do() (g_misc.c) and the level_locals_t and
-// clientPersistant_t fields themselves (g_local.h) -- has been removed with it.
 
 /*
 ==================
@@ -9247,21 +8951,12 @@ void Cmd_Drop_f( gentity_t *ent ) {
 	int ammo_count = 0;
 	qboolean has_ammo_type = qfalse;
 
-	// GalaxyRP fix: [Death System] a downed player keeps RP_DOWNED_HEALTH health, so CMD_ALIVE waves them through
-	// and nothing else here stopped them throwing their weapon (or their selected holdable, on melee)
-	// away while lying incapacitated. Same explicit test the force powers and holdable items use --
-	// the knockdown animation that pins them down blocks weapon FIRE, but never reached this command.
 	if (G_PlayerIsDowned(ent))
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"^1You cannot do this while you are downed.\n\"");
 		return;
 	}
 
-	// GalaxyRP fix: [Drop] riding a vehicle was never checked. The item spawns at ps.origin,
-	// which while mounted is inside or under the vehicle, and the ammo transfer below reads
-	// ps.ammo[] -- whose slot 0 the vehicle's own weapon uses (see the fix further down).
-	// Neither is something a passenger should be able to reach, so the command is refused
-	// outright while mounted rather than half-guarded.
 	if (ent->client->ps.m_iVehicleNum)
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"^1You cannot do this while riding a vehicle.\n\"");
@@ -9331,26 +9026,10 @@ void Cmd_Drop_f( gentity_t *ent ) {
 
 		launched->count = bg_itemlist[BG_GetItemIndexByTag(weapon, IT_WEAPON)].quantity;
 
-		// GalaxyRP fix: [Drop] the ammo transfer used to run for every weapon, including the ones whose
-		// ammoIndex is AMMO_NONE. AMMO_NONE is 0, and slot 0 is not spare -- it holds the ammo for a
-		// vehicle's own weapon (bg_pmove.c reads ps.ammo[0] for that, and cg_draw.c draws it). Of the
-		// three AMMO_NONE weapons only the stun baton reaches here; the saber and melee take the two
-		// branches above. On foot slot 0 is zero so the arithmetic subtracted nothing and this was
-		// invisible, but a mounted player -- and the stun baton is on PM_WeaponOkOnVehicle's allowed
-		// list -- had up to half a weapon's worth of vehicle ammo moved into a dropped baton. Dropping
-		// while mounted is refused outright now, so this is the second lock on the same door: a weapon
-		// with no ammo type simply carries no ammo, which is what it always looked like it did.
 		has_ammo_type = (weaponData[weapon].ammoIndex != AMMO_NONE) ? qtrue : qfalse;
 
 		if (has_ammo_type == qtrue)
 		{
-			// zyk: setting amount of ammo in this dropped weapon
-			// DAJ_RP: [Ammo] the ceiling and the stored count come from RP_ScaledAmmo() and
-			// RP_DropAmmoCount() (g_items.c), shared with the death drop and the Force Pull disarm. The
-			// scale is clamped to 0.01..1.0, and the count is never 0 -- which Pickup_Weapon() reads as
-			// the weapon's full default quantity, so above a scale of 1 dropping a weapon with a round
-			// or two left used to hand out a full pack -- and never gives back more than was taken off
-			// the dropper (at some scales the float quotient used to round up by one: +1 per drop).
 			current_ammo = ent->client->ps.ammo[weaponData[weapon].ammoIndex];
 			ammo_count = RP_ScaledAmmo(bg_itemlist[BG_GetItemIndexByTag(weapon, IT_WEAPON)].quantity);
 
@@ -9370,16 +9049,6 @@ void Cmd_Drop_f( gentity_t *ent ) {
 			launched->count = -1;
 		}
 
-		// GalaxyRP fix: [Drop] the first clause used to carry "&& weapon != WP_DET_PACK", and the second
-		// excludes the det pack as well, so for that one weapon the test could never be true and it was
-		// never taken off the player. Once its ammo reached zero every further /drop still spawned an
-		// item -- carrying no ammo, since count is -1 by then -- and left the weapon in hand to do it
-		// again, as fast as the engine's flood protection allows. Dropped items live for five minutes
-		// here (see LaunchItem in g_items.c), so one player could hold a few hundred entities open.
-		// The det pack now leaves with its last charge, exactly as the thermal and the trip mine do.
-		//
-		// The ammo read is gated too: for a weapon with no ammo type it means nothing, and the second
-		// clause is true for all of those anyway, so the outcome is unchanged for them.
 		if ((has_ammo_type == qtrue && ent->client->ps.ammo[weaponData[weapon].ammoIndex] < 1) ||
 			(weapon != WP_THERMAL && weapon != WP_DET_PACK && weapon != WP_TRIP_MINE))
 		{
@@ -9388,10 +9057,6 @@ void Cmd_Drop_f( gentity_t *ent ) {
 			ent->s.weapon = WP_MELEE;
 			ent->client->ps.weapon = WP_MELEE;
 
-			// DAJ_RP: [Weapons] and the client is told, as TossClientWeapon() (g_combat.c) tells it after a Force Pull
-			// disarm: the GalaxyRP client selects what the server put in hand (EV_NOAMMO, cg_event.c). Without it the
-			// client went on asking for the weapon just dropped, its bar still showed it, and picking it up again
-			// switched straight back to it. A stock client picks its own best weapon, as after a disarm.
 			G_AddEvent(ent, EV_NOAMMO, weapon);
 		}
 	}
@@ -9403,30 +9068,12 @@ Cmd_Jetpack_f
 ==================
 */
 void Cmd_Jetpack_f( gentity_t *ent ) {
-	// GalaxyRP fix: [Melee Battle] this tested "melee_mode > 1", the only guard in the codebase that
-	// scoped a Melee Battle to "has been prepared" rather than "is signed up" -- /logout, /login,
-	// /new, /char and /give all use > 0, and zyk_minigame_name() is written that way too. So a
-	// signed-up player could still take a jetpack during the sign-up phase (mode 1). Harmless as it
-	// stands, because melee_battle_prepare() snapshots the loadout and then strips holdables down to
-	// binoculars at the bell, and the restore hands the jetpack back afterwards -- but it was the odd
-	// one out, and the bare "//<-" marker left on the line suggests it had already been questioned.
-	// Matched to the rest at > 0. The Duel Tournament is deliberately NOT added here: nothing about
-	// it is broken today (ItemUse_Jetpack refuses to switch a jetpack on for a duelist in a live
-	// match, and duel_tournament_prepare() strips and restores the same way), and refusing /jetpack
-	// across sign-up and the gaps between matches would cost participants ordinary play for no gain.
+
 	if (level.melee_mode > 0 && level.melee_players[ent->s.number] != -1)
 	{ // zyk: cannot get jetpack in Melee Battle
 		return;
 	}
 
-	// GalaxyRP fix: [Jetpack] zyk_allow_jetpack_in_siege has been removed -- jetpack is now never
-	// allowed in Siege, full stop (this is exactly the cvar's old default, "0"/never-allow, just no
-	// longer configurable).
-	// GalaxyRP fix: [Jetpack] the "(amrpgmode < 2 || skill_levels[34] > 0)" clause that used to sit
-	// in this condition has moved into jetpack_command_allowed(), which now answers the whole
-	// question -- see the long comment there for why the rule may not be spread across two fields.
-	// DAJ_RP: [Admin] a player given force powers with /give <player> force used to be refused here too.
-	// Removed: the cvar answers for him as for any other player, and so it does for a /give guns player.
 	if (!(ent->client->ps.stats[STAT_HOLDABLE_ITEMS] & (1 << HI_JETPACK)) && jetpack_command_allowed(ent) &&
 		level.gametype != GT_SIEGE && level.gametype != GT_JEDIMASTER)
 	{ // zyk: gets jetpack if player does not have it. RPG players need jetpack skill to get it
@@ -9441,56 +9088,6 @@ void Cmd_Jetpack_f( gentity_t *ent ) {
 	}
 }
 
-/*
-==================
-Cmd_VehicleCloak_f
-
-GalaxyRP fix: [Cloak Item] moved here from g_active.c's ClientThink_real(), where this used to run as
-the GENCMD_USE_CLOAK_VEHICLE case of the pmove.cmd.generic_cmd switch -- reachable only by a client
-engine that has that generic-command value and a bound key wired up to send it, which the real,
-actually-distributed TaystJK engine has no support for at all (checked directly against TaystJK's own
-client source: its GENCMD_* enum stops at GENCMD_GLOAT, and its own input-command table has no
-"use_cloak_vehicle" entry). That made the old "/use_cloak_vehicle" permanently unreachable -- typing
-it just got forwarded to the server as plain text and fell through to the "Unknown command" fallback
-below, same as any other unrecognised command. "/vehicle_cloak" is a genuine console command instead,
-dispatched through this same commands[] table exactly like every other slash command here -- reachable
-from any client that can type, no engine-side cooperation required. Solo "/use_cloak" (GENCMD_USE_CLOAK,
-still in g_active.c) is untouched -- it's a real, pre-existing native TaystJK command and keeps working
-exactly as it did before.
-
-Pairs vehicle+pilot cloak. Only usable by the vehicle's pilot (no-op otherwise -- on foot, or as a
-passenger; see the DAJ_RP note at the end). Toggle direction reads the VEHICLE's own PW_CLOAKED:
-  - vehicle not cloaked -> cloak the vehicle AND unconditionally cloak the rider too (Jedi_Cloak is
-    idempotent, so this is safe even if the rider is already solo-cloaked from a prior "/use_cloak" --
-    it just upgrades them to paired).
-  - vehicle cloaked, rider also cloaked -> decloak both (the normal toggle-off).
-  - vehicle cloaked, rider NOT cloaked (shouldn't happen in normal play, but a stray one-sided decloak
-    from somewhere could leave this state) -> cloak the rider instead of decloaking, to resync toward
-    paired rather than toward off.
-Possession/skill requirements only gate the two cloak/resync directions -- decloaking the pair is
-never blocked by a missing item or skill level, so a player can never get stuck cloaked just because
-they later lost the item or dropped the Cloak Item skill below level 2 (matches how
-zyk_adjust_holdable_items already forces a decloak on item loss elsewhere). The manual-use cooldown
-(vehicleCloakToggleTime) still applies to all three directions, so
-rapid re-issuing the command is debounced consistently regardless of direction. Deliberately registered
-below with CMD_ALIVE. That was deliberately absent at first, to mirror the original generic_cmd
-switch, which never gated on aliveness -- but a following spectator has the followed player's
-playerState copied over their own, so without the flag a spectator could cloak or decloak a stranger's
-vehicle. The flag costs nothing real: a dead player's vehicle is already decloaked by player_die's own
-Jedi_DecloakPair, so the decloak direction has nothing left to do by the time CMD_ALIVE would block it.
-
-DAJ_RP: [Cloak Item] the requirement is the Cloak Item in the inventory plus the Cloak Item skill at
-level 2. It used to be the item plus the Holdable Items Upgrade, which keeps its other bonuses. A
-forward-only change: no character's skill level or upgrade is migrated.
-
-DAJ_RP: [Cloak Item] pilot only, so a cloaked vehicle is always its pilot's doing. The vehicle loses its
-cloak when that pilot gets off (Eject(), g_vehicles.c, and G_LeaveVehicle() above), even when a passenger
-is promoted to pilot. A passenger still decloaks it by firing (his own weapon, or a turret --
-VEH_TurretCheckFire(), g_vehicleTurret.c), swinging a saber, being hit or switching his own cloak off:
-each goes through Jedi_DecloakPair() on the passenger, which reaches the vehicle and never the pilot or
-another passenger.
-==================
-*/
 void Cmd_VehicleCloak_f( gentity_t *ent ) {
 	extern void Jedi_Cloak( gentity_t *self );
 	extern void Jedi_DecloakPair( gentity_t *self );
@@ -9499,12 +9096,6 @@ void Cmd_VehicleCloak_f( gentity_t *ent ) {
 	{
 		gentity_t *veh = &g_entities[ent->client->ps.m_iVehicleNum];
 
-		// DAJ_RP: [Cloak Item] the pilot only. The cloak pair is the vehicle and its pilot -- the vehicle's
-		// partner is m_pPilot (Jedi_CloakPartner) -- so a passenger who cloaked it was left out of every
-		// pair path: his "off" decloaked the vehicle and the PILOT but not himself, damage, fire and the
-		// vehicle's death took the vehicle and pilot down but left him cloaked, and the pilot stayed visible
-		// on an invisible vehicle that his own /vehicle_cloak could not switch off. Refused silently in all
-		// three directions, like every other refusal here; passengers keep /use_cloak for themselves.
 		if ( !veh->m_pVehicle || veh->m_pVehicle->m_pPilot != (bgEntity_t *)ent )
 		{
 			return;
@@ -9520,12 +9111,6 @@ void Cmd_VehicleCloak_f( gentity_t *ent ) {
 					ent->client->vehicleCloakToggleTime = level.time + 1000;
 				}
 			}
-			// GalaxyRP fix: [Cloak Item] the downed test, matching the two other cloak entry points
-			// (GENCMD_USE_CLOAK in g_active.c and ItemUse_UseCloak in g_items.c). A downed player keeps
-			// RP_DOWNED_HEALTH health and so passes every aliveness check above; without this they could still cloak
-			// themselves and the vehicle while down. paralyze_player does not eject a mounted player,
-			// so the state is reachable. Gates only the cloak/resync directions -- the decloak-both
-			// branch above stays gated on the cooldown alone, as designed.
 			else if ( ent->client->vehicleCloakToggleTime < level.time &&
 				veh->client->cloakToggleTime < level.time &&
 				ent->client->ps.stats[STAT_HEALTH] > 0 && !(ent->client->ps.eFlags & EF_DEAD) &&
@@ -9556,18 +9141,6 @@ void Cmd_VehicleCloak_f( gentity_t *ent ) {
 	}
 }
 
-// GalaxyRP fix: [security] one length test for the six commands that build a file path out of a
-// name the admin typed. zyk_check_user_input() already refuses anything but letters and digits, but
-// it bounds the length only by MAX_STRING_CHARS, and every one of those six splices the result into
-// "GalaxyRP/<kind>/<map>/<name>.txt". /entload then copied that path into
-// level.load_entities_file, a char[512], with a plain strcpy() -- a 1023-character name builds a
-// 1054-byte path, which ran over the rest of level_locals_t including the last_spawned_entity
-// pointer. That copy is bounded now too; refusing the name here is what stops a path from being
-// built over-long at all, and refusing beats truncating for the same reason /remap refuses an
-// over-long shader name: a silently shortened name opens a different file than the one asked for.
-//
-// It lives beside zyk_check_user_input()'s callers rather than inside it because character names
-// and account usernames go through that helper as well and have limits of their own.
 static qboolean zyk_preset_name_too_long( gentity_t *ent, const char *name )
 {
 	if ( name && (int)strlen(name) > ZYK_PRESET_NAME_MAX )
@@ -9605,26 +9178,12 @@ void Cmd_Remap_f( gentity_t *ent ) {
 	trap->Argv( 1, arg1, sizeof( arg1 ) );
 	trap->Argv( 2, arg2, sizeof( arg2 ) );
 
-	// GalaxyRP fix: [security] neither argument was checked at all, and both went straight into
-	// char[MAX_QPATH] fields through an unbounded strcpy in AddRemap(). They also go straight out
-	// to every client: BuildShaderStateConfig() joins them with '=', ':' and '@', and the client
-	// takes them apart with strstr on those characters into its own char[MAX_QPATH] stack buffers
-	// (CG_ShaderStateChanged, cg_servercmds.c), where the copy length is the distance to the
-	// separator rather than the size of the buffer. So one over-long name here overran a global
-	// array on the server and a stack buffer on every machine connected to it.
-	//
-	// Refused rather than truncated, matching /paralyze's out-of-range handling: an admin who
-	// mistypes a shader path should be told, not handed a different remap than the one they asked
-	// for. See zyk_valid_shader_name() (g_utils.c) for the rule.
 	if (zyk_valid_shader_name(arg1) == qfalse || zyk_valid_shader_name(arg2) == qfalse)
 	{
 		trap->SendServerCommand( ent-g_entities, va("print \"Invalid shader name. Each must be 1-%i characters, with no spaces and none of ^3= : @^7\n\"", MAX_QPATH - 1) );
 		return;
 	}
 
-	// GalaxyRP fix: [cleanup] G_NewString() dropped -- AddRemap() copies into its own buffers, so
-	// the allocation bought nothing, and G_NewString() turns a typed backslash-n into a real
-	// linefeed, which would have put a newline into a shader name after it had passed validation.
 	AddRemap(arg1, arg2, f);
 	trap->SetConfigstring(CS_SHADERSTATE, BuildShaderStateConfig());
 
@@ -9661,10 +9220,6 @@ void Cmd_RemapList_f(gentity_t *ent) {
 	
 	page = atoi(arg1);
 
-	// GalaxyRP fix: [Shader Remap] this tested only for 0. A negative page reached the paging
-	// arithmetic below as i = 8 * (page - 1), so "/remaplist -1" started at remappedShaders[-16] and
-	// read eight entries from BEFORE the table -- about a kilobyte of whatever globals sit there,
-	// printed to the admin's console. Pages are 1-based, so anything under 1 is not a page.
 	if (page < 1)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Invalid page number\n\"");
@@ -9674,14 +9229,6 @@ void Cmd_RemapList_f(gentity_t *ent) {
 	// zyk: makes i start from the first result of the correct page
 	i = results_per_page * (page - 1);
 
-	// GalaxyRP fix: [overflow] each row was appended with strcpy(content, va("%s...", content,
-	// ...)). va() formats into a 32000-byte buffer and knows nothing about the destination, so once
-	// the page passed content's size that strcpy wrote off the end of a stack array. A row is two
-	// MAX_QPATH shader paths, so a full page of eight builds about 1040 bytes into char
-	// content[MAX_STRING_CHARS] -- narrow, but a shader path is 63 characters and this pages
-	// through up to MAX_SHADER_REMAPS entries. The header moves into content so it is written
-	// once, rows are formatted into their own bounded buffer and appended with Q_strcat, and the
-	// message is flushed and continued whenever the next row would not fit. Same text, same order.
 	strcpy(content, "\n^3Old Shader   -   New Shader\n\n^7");
 
 	while (i < (results_per_page * page) && i < zyk_get_remap_count())
@@ -9710,17 +9257,6 @@ Cmd_RemapReset_f
 
 GalaxyRP fix: [Shader Remap] clears every remap the map is running and puts the shaders back,
 without waiting for a map change.
-
-There was no way to undo a /remap at all. /remapdeletefile removes a preset FILE, which does not
-touch the running map, and the table only ever grew -- so an admin who mistyped a shader path, or
-tried one out, was stuck looking at it until the map rotated.
-
-The work is zyk_clear_all_remaps() (g_utils.c), which lives beside the table and the configstring
-builder it has to drive in the right order. This half is only the permission check and the wording.
-Deliberately all-or-nothing rather than a /remapremove for one entry: removing one means finding it
-by name, shifting the array down, and keeping any remembered index or undo record in step with a
-table that now moves -- which is exactly the stale-reference shape that /entundo had. Emptying the
-whole table cannot invalidate an index nobody kept.
 ==================
 */
 void Cmd_RemapReset_f( gentity_t *ent ) {
@@ -9770,18 +9306,12 @@ void Cmd_RemapDeleteFile_f( gentity_t *ent ) {
 
 	trap->Argv( 1, arg1, sizeof( arg1 ) );
 
-	// GalaxyRP fix: [security] arg1 is spliced straight into the GalaxyRP/remaps/<map>/<arg1>.txt
-	// path below with no validation at all, so a value containing "../" escaped the folder. The
-	// matching /entsave, /entload and /entdeletefile paths were fixed this way already and the
-	// remap trio was simply missed; the newer Zyk mod validates all six. Same helper, same rule.
 	if (zyk_check_user_input(arg1, strlen(arg1)) == qfalse)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"Invalid file name. Only letters and numbers allowed.\n\"" );
 		return;
 	}
 
-	// GalaxyRP fix: [security] and refuse a name too long to build a sane path with -- see
-	// zyk_preset_name_too_long() above Cmd_Remap_f().
 	if (zyk_preset_name_too_long(ent, arg1) == qtrue)
 	{
 		return;
@@ -9834,18 +9364,12 @@ void Cmd_RemapSave_f( gentity_t *ent ) {
 
 	trap->Argv( 1, arg1, sizeof( arg1 ) );
 
-	// GalaxyRP fix: [security] arg1 is spliced straight into the GalaxyRP/remaps/<map>/<arg1>.txt
-	// path below with no validation at all, so a value containing "../" escaped the folder. The
-	// matching /entsave, /entload and /entdeletefile paths were fixed this way already and the
-	// remap trio was simply missed; the newer Zyk mod validates all six. Same helper, same rule.
 	if (zyk_check_user_input(arg1, strlen(arg1)) == qfalse)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"Invalid file name. Only letters and numbers allowed.\n\"" );
 		return;
 	}
 
-	// GalaxyRP fix: [security] and refuse a name too long to build a sane path with -- see
-	// zyk_preset_name_too_long() above Cmd_Remap_f().
 	if (zyk_preset_name_too_long(ent, arg1) == qtrue)
 	{
 		return;
@@ -9900,10 +9424,6 @@ void Cmd_RemapLoad_f( gentity_t *ent ) {
 
 	trap->Argv( 1, arg1, sizeof( arg1 ) );
 
-	// GalaxyRP fix: [security] arg1 is spliced straight into the GalaxyRP/remaps/<map>/<arg1>.txt
-	// path below with no validation at all, so a value containing "../" escaped the folder. The
-	// matching /entsave, /entload and /entdeletefile paths were fixed this way already and the
-	// remap trio was simply missed; the newer Zyk mod validates all six. Same helper, same rule.
 	if (zyk_check_user_input(arg1, strlen(arg1)) == qfalse)
 	{
 		trap->SendServerCommand( ent-g_entities, "print \"Invalid file name. Only letters and numbers allowed.\n\"" );
@@ -9923,14 +9443,6 @@ void Cmd_RemapLoad_f( gentity_t *ent ) {
 
 	zyk_create_dir(va("remaps/%s", zyk_mapname));
 
-	// zyk: loading remaps from the file
-	// GalaxyRP fix: [security] the read loop that used to sit here has moved into
-	// zyk_load_remap_file() (g_utils.c), which is now the only copy. The identical loop in
-	// G_InitGame()'s default-preset load had drifted out of step with this one -- this copy had
-	// been given field widths and short-record handling, that one still had bare "%s" conversions
-	// -- so the file loaded by hand was safe and the same file loaded automatically at map start
-	// was not. Sharing the reader is what stops that happening again; it also validates each
-	// record and skips the unusable ones rather than the whole file.
 	if (zyk_load_remap_file(va("GalaxyRP/remaps/%s/%s.txt", zyk_mapname, arg1)) == qtrue)
 	{
 		trap->SendServerCommand( ent-g_entities, va("print \"Remaps loaded from %s file\n\"", arg1) );
@@ -9960,11 +9472,6 @@ void Cmd_EntUndo_f(gentity_t *ent) {
 		return;
 	}
 
-	// GalaxyRP fix: [Entity System] the comment used to say "spawned by /entadd". Three commands
-	// write this slot -- /entadd, /spawnplatform and /spawndummy -- so this undoes whichever of them
-	// ran most recently. It is one step, not a stack: a second /entundo has nothing left to do.
-	// GalaxyRP: [Entity System] not while an admin holds it with /entcopy or /entcut (g_entgrab.c)
-	// DAJ_RP: [Entity System] that admin is another one (this one's own holds are refused above): who, and with what
 	if (level.last_spawned_entity && level.last_spawned_entity->rpHeldBy)
 	{
 		trap->SendServerCommand(ent->s.number, va("print \"Entity %d is %s: wait until they drop it or let go.\n\"", level.last_spawned_entity->s.number,
@@ -9975,10 +9482,6 @@ void Cmd_EntUndo_f(gentity_t *ent) {
 		gentity_t *undone = level.last_spawned_entity;
 		int undone_number = undone->s.number;
 
-		// GalaxyRP: [Entity System] an NPC or vehicle spawner takes the NPCs and vehicles it made with it
-		// (not one someone rides), quietly -- no death, nothing fired, none coming back: see
-		// RP_SpawnerRemoveChildren() in NPC_spawn.c. The spawner is only freed below if it is still the one
-		// to undo (G_FreeEntity() clears level.last_spawned_entity when it frees it some other way).
 		if (RP_IsNpcSpawnerClass(undone->classname))
 		{
 			int ridden = 0;
@@ -10002,22 +9505,12 @@ void Cmd_EntUndo_f(gentity_t *ent) {
 		else
 		trap->SendServerCommand(ent->s.number, va("print \"Entity %d cleaned\n\"", undone_number));
 
-		// GalaxyRP fix: [Entity System] freed the way /entremove frees -- a misc_bsp takes its sub-BSP's
-		// entities with it, a door or platform its trigger, a turret its top, a trip mine its laser trap.
-		// This freed the entity alone and left a door's trigger behind, still working the freed slot
-		// through its parent -- the exact hazard /entremove had been fixed for. See RP_EntRemoveFree().
 		RP_EntRemoveFree(undone, NULL);
 
-		// G_FreeEntity() clears this itself now, for entities freed by any other route as well --
-		// see the comment there. Cleared here too so the one path that always went through this
-		// command does not depend on that.
 		level.last_spawned_entity = NULL;
 	}
 	else
 	{
-		// GalaxyRP fix: [Entity System] say so. With nothing to undo this printed nothing at all,
-		// which is indistinguishable from a command that is broken or that the admin lacks rights
-		// for -- and since the undo is a single step, the second press of it is the common case.
 		trap->SendServerCommand(ent->s.number, "print \"Nothing to undo. Only the most recent /entadd, /spawnplatform or /spawndummy can be undone, and only once.\n\"");
 	}
 }
@@ -10169,9 +9662,6 @@ void Cmd_EntOrigin_f(gentity_t *ent) {
 	}
 }
 
-// GalaxyRP: [Entity System] what is wrong with an "npceffect" value on an NPC or vehicle spawner, or NULL:
-// a vehicle spawner takes none (/npc effect refuses vehicles too), an npc_spawner one of the three words
-// /npc effect takes. An empty value is none and always fine. Used by /entadd and /entedit.
 static const char *zyk_spawner_effect_problem( qboolean vehicle, const char *value )
 {
 	static char problem[256];
@@ -10195,9 +9685,6 @@ static const char *zyk_spawner_effect_problem( qboolean vehicle, const char *val
 	return NULL;
 }
 
-// GalaxyRP: [Entity System] what is wrong with an "npcteam" value on an NPC or vehicle spawner, or NULL: one of
-// the teams /npc team takes (which takes vehicles too). An empty value is none and always fine. Used by /entadd
-// and /entedit.
 static const char *zyk_spawner_team_problem( const char *value )
 {
 	static char problem[256];
@@ -10216,9 +9703,6 @@ static const char *zyk_spawner_team_problem( const char *value )
 	return NULL;
 }
 
-// DAJ_RP: [NPC System] what is wrong with an "npcfreeze" value on an NPC or vehicle spawner, or NULL: 1 or 0 on an
-// npc_spawner, none on a vehicle spawner (/npc freeze refuses vehicles too). An empty value is none and always
-// fine. Used by /entadd and /entedit.
 static const char *zyk_spawner_freeze_problem( qboolean vehicle, const char *value )
 {
 	static char problem[256];
@@ -10242,9 +9726,6 @@ static const char *zyk_spawner_freeze_problem( qboolean vehicle, const char *val
 	return NULL;
 }
 
-// DAJ_RP: [NPC Rewards] what is wrong with an "npccredits" or "npcxp" value on an NPC or vehicle spawner, or NULL:
-// a whole number from 0 to RP_REWARD_MAX_CREDITS or RP_REWARD_MAX_XP, and none on a vehicle spawner -- a vehicle
-// pays nothing (RP_PayNpcKillReward()). An empty value is none and always fine. Used by /entadd and /entedit.
 static const char *zyk_spawner_reward_problem( qboolean vehicle, const char *key, const char *value )
 {
 	static char problem[256];
@@ -10281,10 +9762,6 @@ static const char *zyk_spawner_reward_problem( qboolean vehicle, const char *key
 	return NULL;
 }
 
-// DAJ_RP: [NPC Scale] what is wrong with an "npcscale" value on an NPC or vehicle spawner, or NULL: a whole number, digits
-// only, the size of each NPC or vehicle it makes in percent -- 0 none, one outside RP_NPC_SCALE_MIN..RP_NPC_SCALE_MAX
-// brought to the nearer end without a word (RP_NpcScaleValue(), NPC_spawn.c; RP_EntScaleValueStored() stores it so). An
-// empty value is none and always fine. Used by /entadd and /entedit.
 static const char *zyk_spawner_scale_problem( const char *value )
 {
 	static char problem[256];
@@ -10304,9 +9781,6 @@ static const char *zyk_spawner_scale_problem( const char *value )
 	return NULL;
 }
 
-// DAJ_RP: [NPC Scale] the value /entadd or /entedit stores for a key of an entity of this class: an NPC or vehicle
-// spawner's "npcscale" as the size it makes (zyk_spawner_scale_problem() above has let only whole numbers through), so
-// /entsave and /entinfo show what is used; every other value as typed. value is a buffer of size bytes, changed in place.
 static void RP_EntScaleValueStored( const char *classname, const char *key, char *value, int size )
 {
 	if ( classname && RP_IsNpcSpawnerClass( classname ) && !Q_stricmp( key, "npcscale" ) && value[0] &&
@@ -10316,18 +9790,6 @@ static void RP_EntScaleValueStored( const char *classname, const char *key, char
 	}
 }
 
-/*
-==================
-zyk_entadd_spawner_problem
-
-GalaxyRP: [Entity System] what is wrong with the NPC or vehicle spawner /entadd or /entaddaim was asked
-for (RP_IsNpcSpawnerClass()), or NULL. A spawner with no targetname spawns once and is gone -- what /npc
-spawn does already -- so one must have the name a trigger, a button or /entuse fires it by. And a type the
-server does not have would make it fail later, with nothing said to anyone but the server console. The
-map classes (NPC_Stormtrooper, ...) choose their type themselves. Entity files are not read through here:
-the NPCs /entsave writes as unnamed npc_spawner lines still load.
-==================
-*/
 static const char *zyk_entadd_spawner_problem( const char *classname, int number_of_args )
 {
 	static char problem[256];
@@ -10492,24 +9954,6 @@ static const char *zyk_entadd_spawner_problem( const char *classname, int number
 	return NULL;
 }
 
-/*
-==================
-Cmd_EntAdd_f / Cmd_EntAddAim_f
-
-GalaxyRP: [Entity System] /entadd puts the entity at the origin given, else at the /entorigin position,
-else where the admin stands. /entaddaim puts it on the surface the admin aims at -- across any map, and
-through the players and NPCs in the way (RP_EntAddAimPoint) -- the way /entcopy and /entcut put one
-down (RP_EntGrabPlace in g_entgrab.c):
-its box rests on the surface, a spawn point or NPC spawner stands on it by a player's box. An origin
-among the arguments, and the /entorigin position and angles, are not used. The box of most classes is
-only known once the entity has spawned, so it is spawned at the point first and, if it turns out to have
-a box, made again once, set against the surface by it -- unless that first spawn made other entities
-beyond a trigger of its own (a misc_bsp's sub-BSP, say), which a second spawn would make twice.
-An NPC or vehicle spawner needs a targetname and a type the server has (zyk_entadd_spawner_problem()).
-==================
-*/
-// GalaxyRP: [Entity System] what the key/value arguments from `first` on would cost the pool, as
-// RP_PairsBytes() counts a record: each string rounded as G_Alloc() rounds, twice over, plus a margin
 static int zyk_args_bytes( int first, int count )
 {
 	char arg[MAX_STRING_CHARS];
@@ -10528,17 +9972,12 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 	gentity_t *new_ent = NULL;
 	int number_of_args = trap->Argc();
 	int i = 0;
-	// GalaxyRP fix: [Entity System] this was char key[64] and was filled with an unbounded
-	// strcpy() from an argument buffer eight times its size, so any key longer than 63 characters
-	// overran it. Widened to the argument width and copied with Q_strncpyz below, so no key a
-	// player can type can overflow it and no legitimate key is truncated.
 	char key[MAX_STRING_CHARS];
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
 	qboolean has_origin_set = qfalse; // zyk: if player do not pass an origin key, use the one set with /entorigin
 	qboolean has_angles_set = qfalse; // zyk: if player do not pass an angles key, use the one set with /entorigin
-	// GalaxyRP: [Entity System] /entaddaim: the surface aimed at, and whether an origin typed on the
-	// command line was left out (an /entorigin position is simply not what /entaddaim places by: no note)
+
 	vec3_t aim_point, aim_normal;
 	qboolean aim_origin_ignored = qfalse;
 	qboolean typed_origin = qfalse;	// GalaxyRP: an origin key among the arguments, known before the spawn
@@ -10550,7 +9989,6 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 		return;
 	}
 
-	// DAJ_RP: [Entity System] not while this admin holds an entity with /entcopy or /entcut (g_entgrab.c)
 	if (RP_EntRefuseWhileHolding(ent))
 	{
 		return;
@@ -10558,8 +9996,6 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 
 	if ( number_of_args < 2)
 	{
-		// DAJ_RP: [Entity System] /entaddgrab with nothing typed and nothing held (a held one is placed by
-		// Cmd_EntAddGrab_f before this)
 		if (grab)
 			trap->SendServerCommand( ent-g_entities, "print \"Usage: ^3/entaddgrab <classname> <key> <value> <key> <value>^7. Picks up a new entity, not spawned yet; aim where it should go and use ^3/entaddgrab^7 again to place it there. ^3aimoffset <units>^7 (0 to 512) puts it that far out from the surface.\n\"" );
 		else if (aim)
@@ -10576,10 +10012,6 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 		return;
 	}
 
-	// GalaxyRP fix: [Entity System] an entity can hold ZYK_MAX_SPAWN_STRING_SLOTS / 2 key/value pairs
-	// and zyk_main_set_entity_field() now refuses anything past that rather than running off the end
-	// of the row. Refusing here too means a request that cannot fit is reported instead of being
-	// applied in part and reported as a success. The classname set below occupies one of the pairs.
 	if ((1 + ((number_of_args - 2) / 2)) > (ZYK_MAX_SPAWN_STRING_SLOTS / 2))
 	{
 		trap->SendServerCommand( ent-g_entities, va("print \"An entity can hold at most %d key/value pairs, classname included.\n\"", ZYK_MAX_SPAWN_STRING_SLOTS / 2) );
@@ -10646,24 +10078,17 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 			return;
 		}
 
-		// GalaxyRP: [Entity System] across any map, and through the players and NPCs in the way -- see
-		// RP_EntAddAimPoint() in g_entgrab.c
-		// DAJ_RP: [Entity System] /entaddgrab is placed later, by where the admin aims then, as the other holds are
 		if (!grab && RP_EntAddAimPoint(ent, aim_point, aim_normal) == qfalse)
 		{
 			trap->SendServerCommand( ent-g_entities, "print \"You are not aiming at a surface.\n\"" );
 			return;
 		}
 
-		// GalaxyRP: [Entity System] aimoffset: the point moves out from the surface, and everything after --
-		// the placement, and the second one once the entity's box is known -- works from there
 		if (!grab && aim_offset > 0.0f)
 			VectorMA(aim_point, aim_offset, aim_normal, aim_point);
 	}
 	else
 	{
-		// GalaxyRP: [Entity System] /entadd with no origin and no /entorigin position puts it where the
-		// admin stands -- which, following another player, is that player's position: refused then
 		for (i = 2; i + 1 < number_of_args; i += 2)
 		{
 			trap->Argv( i, key, sizeof( key ) );
@@ -10679,9 +10104,6 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 		}
 	}
 
-	// GalaxyRP: [Logical Entities] the region depends on the classname and on two of the keys, so
-	// read the pairs once for that before an entity is taken; the loop below reads them again to
-	// apply them, exactly as before.
 	RP_SpawnRouteInit(&route);
 	RP_SpawnRouteNoteKey(&route, "classname", arg1);
 	for (i = 2; i + 1 < number_of_args; i += 2)
@@ -10691,14 +10113,6 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 		RP_SpawnRouteNoteKey(&route, key, arg2);
 	}
 
-	// GalaxyRP fix: [Entity System] /entadd is the other way an admin can walk the entity table off
-	// its end. G_Spawn() does not fail politely -- it calls trap->Error(ERR_DROP) and every player
-	// on the server is disconnected -- so refuse here while there is still room, and say why.
-	// Some classes allocate more than the one entity asked for (a mover builds its own trigger, an
-	// npc_spawner with no targetname spawns its NPC immediately), hence the margin.
-	// GalaxyRP fix: [Logical Entities] asked of the region the route leads to: G_SpawnLogical() ends
-	// the server the same way once the logical region is full, and this only ever looked at the
-	// networked table -- see RP_SpawnRouteHasRoom().
 	if ( RP_SpawnRouteHasRoom( &route ) == qfalse )
 	{
 		if ( RP_SpawnRouteIsLogical( &route ) )
@@ -10718,9 +10132,6 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 		return;
 	}
 
-	// GalaxyRP fix: [Entity System] and room in the game's memory pool, which every key and value typed
-	// goes into -- twice, with the spawn -- and which is never freed within a map: G_Alloc() ends the
-	// server when it runs out. See G_AllocRoomFor() in g_mem.c.
 	if ( G_AllocRoomFor( zyk_args_bytes( 1, number_of_args ) ) == qfalse )
 	{
 		trap->SendServerCommand( ent-g_entities,
@@ -10739,9 +10150,6 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 		strcpy(key,"");
 
 		// zyk: setting the entity classname
-		// GalaxyRP fix: [Entity System] zyk_main_set_entity_field() G_NewString()s both arguments
-		// itself, so wrapping them here allocated a second copy that was thrown away immediately.
-		// Every other caller in the mod already passes its string straight through.
 		zyk_main_set_entity_field(new_ent, "classname", arg1);
 
 		for(i = 2; i < number_of_args; i++)
@@ -10768,8 +10176,6 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 			{ // zyk: value
 				trap->Argv( i, arg2, sizeof( arg2 ) );
 
-				// GalaxyRP fix: [Entity System] see the classname above -- the helper makes its own
-				// copies, so these two allocations were pure waste, once per key/value pair typed.
 				if (aim && Q_stricmp(key, "origin") == 0)
 					continue;
 				// GalaxyRP: [Entity System] an instruction to /entaddaim, not a key of the entity (see above)
@@ -10780,9 +10186,6 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 			}
 		}
 
-		// DAJ_RP: [Entity System] /entaddgrab: not spawned, but held -- RP_EntAddGrabStart() in g_entgrab.c. Its
-		// record has the classname and the keys typed, no origin (given later, where it is placed) and no aimoffset
-		// (kept with the hold).
 		if (grab)
 		{
 			RP_EntAddGrabStart(ent, new_ent, aim_offset, aim_origin_ignored);
@@ -10801,9 +10204,6 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 		{ // zyk: if origin or angles were not passed, use the origin or angles set with /entorigin
 			if (has_origin_set == qfalse)
 			{
-				// GalaxyRP fix: [Entity System] va() strings, here and for the angles below, as the other
-				// branches pass: zyk_main_set_entity_field() copies them into the record, and a G_NewString()
-				// copy made here was never used and stayed in the level's memory pool until the map changed
 				zyk_main_set_entity_field(new_ent, "origin", va("%f %f %f", level.ent_origin[0], level.ent_origin[1], level.ent_origin[2]));
 			}
 
@@ -10813,9 +10213,7 @@ static void zyk_entadd( gentity_t *ent, qboolean aim, qboolean grab ) {
 			}
 		}
 		else if (has_origin_set == qfalse)
-		{ // GalaxyRP: [Entity System] no origin given and no /entorigin position: where the admin stands --
-		  // the point /entorigin would take, the middle of their body. Its facing is the class's own, unless
-		  // angles were given. (This used to be the point aimed at, which is /entaddaim's now.)
+		{ 
 			zyk_main_set_entity_field(new_ent, "origin", va("%f %f %f", ent->client->ps.origin[0], ent->client->ps.origin[1], ent->client->ps.origin[2]));
 		}
 
@@ -10931,10 +10329,6 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 	int entity_id = -1;
 	int first_pair = 2;
 	int i = 0;
-	// GalaxyRP fix: [Entity System] this was char key[64] and was filled with an unbounded
-	// strcpy() from an argument buffer eight times its size, so any key longer than 63 characters
-	// overran it. Widened to the argument width and copied with Q_strncpyz below, so no key a
-	// player can type can overflow it and no legitimate key is truncated.
 	char key[MAX_STRING_CHARS];
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
@@ -10950,13 +10344,6 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 		return;
 	}
 
-	// GalaxyRP: [Entity System] the entity id is optional: a first argument that starts with a digit (or
-	// a minus sign, so a negative one is still "Invalid Entity ID") is the id, and the key/value pairs
-	// start after it; anything else -- no argument, or a key -- means the entity aimed at, the way
-	// /entcopy and /entcut pick theirs (RP_EntAimTarget in g_entgrab.c), and the pairs start at once.
-	// No key starts with a digit, and a word given where the id goes used to be read as id 0, a
-	// player slot this command refuses, so no form that worked before changes. first_pair is where
-	// the pairs start; with none (number_of_args == first_pair) the entity's info is shown.
 	if (number_of_args >= 2)
 	{
 		trap->Argv( 1, arg1, sizeof( arg1 ) );
@@ -10993,8 +10380,6 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 		entity_id = aimed->s.number;
 	}
 
-	// GalaxyRP: [Logical Entities] an id is valid in either region: below level.num_entities, or
-	// from MAX_GENTITIES up to the logical high-water mark. The gap between them is never valid.
 	if (entity_id < 0 || entity_id >= MAX_GENTITIES + level.num_logicalents ||
 		(entity_id >= level.num_entities && entity_id < MAX_GENTITIES))
 	{
@@ -11049,30 +10434,10 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 
 			if (this_ent->inuse)
 			{
-				// GalaxyRP fix: [overflow] each pair was appended with strcpy(content, va("%s...",
-				// content, ...)). va() formats into a 32000-byte buffer and knows nothing about the
-				// destination, so once the listing passed content's size that strcpy wrote off the
-				// end of a stack array. This is the widest of these by far: an entity carries up to
-				// MAX_SPAWN_VARS (64) key/value pairs holding up to MAX_SPAWN_VARS_CHARS (4096)
-				// characters between them, plus 7 bytes of decoration each, so a map entity with a
-				// large spawn string builds several times char content[1024]. Pairs are now
-				// formatted into their own bounded buffer and appended with Q_strcat, and the
-				// message is flushed and continued whenever the next pair would not fit.
-				//
-				// entry is sized at the flush threshold rather than at MAX_SPAWN_VARS_CHARS on
-				// purpose. A single pair longer than that is truncated in the display instead of
-				// being carried whole, which keeps content at or below the threshold and so keeps
-				// every message inside the 1022 characters SV_SendServerCommand will send -- a
-				// buffer big enough for the largest possible pair would produce a message the
-				// engine drops silently, which is how this listing could vanish rather than
-				// overflow.
 				while (i < level.zyk_spawn_strings_values_count[entity_id])
 				{
 					char entry[RP_LIST_FLUSH_AT];
 
-					// GalaxyRP fix: [security] shown with any "@@@" run broken up -- see RP_ShownText()
-					// (g_utils.c): an admin who opened an entity another admin had given such a key
-					// would have crashed on reading it. The stored pair is untouched.
 					Com_sprintf(entry, sizeof(entry), "^3%s: ^7%s\n", RP_ShownText(level.zyk_spawn_strings[this_ent->s.number][i]), RP_ShownText(level.zyk_spawn_strings[this_ent->s.number][i + 1]));
 
 					if ((int)(strlen(content) + strlen(entry)) > RP_LIST_FLUSH_AT)
@@ -11097,60 +10462,24 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 	}
 	else
 	{
-		// GalaxyRP fix: [Entity System] the display branch above has always refused to treat a
-		// reserved slot as a normal entity, but this editing branch had no such guard, so
-		// "/entedit 3 health 100" wrote straight into a connected player's gentity_t through
-		// G_ParseField and then ran zyk_main_spawn_entity() on it. That ends in
-		// "if (!G_CallSpawn(ent)) G_FreeEntity(ent);", and classname "player" has neither an item
-		// nor a spawn function, so G_CallSpawn returned qfalse and the live player's entity was
-		// memset -- taking ent->client with it, which the next ClientThink_real() then dereferenced.
-		// Player entities are not neverFree; only the body queue is. /entremove already refuses
-		// player slots for the same reason, so this refuses the whole reserved range both commands
-		// share, which is the same boundary the display branch above uses.
 		if (entity_id < (MAX_CLIENTS + BODY_QUEUE_SIZE))
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Entity ID %d is a reserved player or body slot and cannot be edited.\n\"", entity_id) );
 			return;
 		}
-
-		// GalaxyRP fix: [Entity System] the display branch above has always tested inuse and this
-		// one never did, so a free slot -- and after any /entremove there are plenty, in the range
-		// this command accepts -- could be "edited".
-		//
-		// What made that more than a no-op is that G_FreeEntity() ends with
-		// memset(ed, 0, sizeof(*ed)) and does not put s.number back; only G_InitGentity() does, when
-		// the slot is handed out again. So a freed entity carries s.number == 0, and both
-		// zyk_main_set_entity_field() and zyk_main_spawn_entity() key everything off ent->s.number:
-		// the key/value pairs landed in CLIENT 0's spawn-string row, and the respawn then linked the
-		// thing into the world -- and could ICARUS_InitEnt() it -- as entity 0. It also left live
-		// fields, a think pointer among them, in a slot G_Spawn() hands out later.
-		//
-		// Both helpers refuse a slot that is not in use now as well (see zyk_main_set_entity_field
-		// in g_spawn.c), because this command is not the only caller that reached them without
-		// looking. This is the half that can tell the admin why nothing happened.
+		
 		if (!this_ent->inuse)
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Entity %d is not in use\n\"", entity_id) );
 			return;
 		}
 
-		// GalaxyRP fix: [Entity System] and only an entity with a key/value record: one the map, an
-		// entity file or the entity commands made. Anything the game created for itself has none,
-		// and re-running a spawn over it with no classname fails and frees it -- which is how
-		// /entedit on an NPC used to make it vanish, and on a player's saber entity left the player
-		// driving a freed slot. See RP_EntityHasSpawnKeys() in g_spawn.c. The world slot is refused
-		// here too, by name, although the id range above already keeps it out.
 		if (RP_EntityHasSpawnKeys(this_ent) == qfalse)
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Entity %d %s.\n\"", entity_id, RP_EntityRefusalReason(this_ent)) );
 			return;
 		}
 
-		// GalaxyRP: [Entity System] nor one of the map's own entities (marked M in /entlist -- see
-		// gentity_t::rpMapEntity and RP_MarkMapEntities in g_entgrab.c), which /entcut and /entrotate
-		// have always refused: the map's entities are left as the map made them. Their info is still
-		// shown above, and /entcopy places a copy that can be edited. The map's pickups, dispensers and
-		// decor that nothing in the map links to (marked E) are the exception -- RP_MapEntityExempt().
 		if (RP_MapEntityProtected(this_ent))
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Entity %d is part of the map (marked M in /entlist) and cannot be edited%s. Use ^3/entcopy^7 to place a copy of it and edit that instead.\n\"",
@@ -11158,9 +10487,6 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 			return;
 		}
 
-		// GalaxyRP: [Entity System] an entity from a misc_bsp's sub-BSP is rebuilt by its misc_bsp, not
-		// saved, so an edit to it could never last -- and respawned here, outside its sub-BSP, its "*N"
-		// model would resolve against the main map. See gentity_t::rpSubBSPOf.
 		if (this_ent->rpSubBSPOf > 0 && RP_MiscBspForInstance(this_ent->rpSubBSPOf))
 		{
 			trap->SendServerCommand( ent-g_entities, va("print \"Entity %d belongs to misc_bsp %d: edit or remove the misc_bsp instead.\n\"",
@@ -11183,12 +10509,6 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 			return;
 		}
 
-		// GalaxyRP fix: [Entity System] the classname is not editable. /entedit respawns the entity in
-		// place, in the slot it already has, through a different class's spawn function over state
-		// the old one set up -- and some classes are ones /entremove will not remove (the map's spawn points),
-		// which a class change would have removed all the same. Refuse the whole command, before any
-		// pair is applied, if any key is "classname" in any case -- that includes removing it with
-		// "zykremovekey". /entremove and /entadd make a different class instead.
 		for (i = first_pair; i + 1 < number_of_args; i += 2)
 		{
 			trap->Argv(i, key, sizeof(key));
@@ -11199,9 +10519,6 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 			}
 		}
 
-		// GalaxyRP: [Entity System] an NPC or vehicle spawner keeps its targetname -- with none it spawns
-		// once and is gone -- and a new type must be one the server has, as /entadd asks
-		// (zyk_entadd_spawner_problem()). Only what the edit changes is looked at.
 		if (RP_IsNpcSpawnerClass(this_ent->classname))
 		{
 			for (i = first_pair; i + 1 < number_of_args; i += 2)
@@ -11290,10 +10607,6 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 			}
 		}
 
-		// DAJ_RP: [Entity System] a brush model ("*N", "#name") the map does not have is refused here, before
-		// anything changes, so the entity stays as it was for another try. Spawned again with it, it would be
-		// refused and gone (RP_EntitySystemSpawnRefused() -- see RP_BrushModelProblem() in g_spawn.c).
-		// Removing the key is always fine.
 		for (i = first_pair; i + 1 < number_of_args; i += 2)
 		{
 			trap->Argv(i, key, sizeof(key));
@@ -11310,11 +10623,6 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 			}
 		}
 
-		// GalaxyRP fix: [Entity System] see zyk_main_set_entity_field(): a row that is already full
-		// silently dropped the pair rather than reporting it. Every key given here is worst case a
-		// new one, so refuse if they could not all fit. Keys that turn out to already exist are
-		// edited in place and take no extra room, so this only ever refuses early, never wrongly
-		// applies.
 		if (zyk_spawn_strings_full(this_ent) == qtrue ||
 			(level.zyk_spawn_strings_values_count[entity_id] + (number_of_args - first_pair)) > ZYK_MAX_SPAWN_STRING_SLOTS)
 		{
@@ -11322,8 +10630,6 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 			return;
 		}
 
-		// GalaxyRP fix: [Entity System] room in the game's memory pool for the pairs given and for the
-		// spawn below, which reads the whole record into the pool again -- see G_AllocRoomFor() in g_mem.c
 		if ( G_AllocRoomFor( RP_EntityRecordBytes( this_ent ) + zyk_args_bytes( first_pair, number_of_args ) ) == qfalse )
 		{
 			trap->SendServerCommand( ent-g_entities,
@@ -11334,14 +10640,6 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 			return;
 		}
 
-		// GalaxyRP: [Logical Entities] this command respawns the entity IN PLACE, in the slot it
-		// already has, and a slot cannot change region: a networked class written into a logical
-		// slot would be linked into the world under a number the engine does not know, which is a
-		// fatal error. So work out what region the entity would want after the edit -- its stored
-		// pairs overlaid with the ones given -- and refuse if that is not the region it is in.
-		// Only classname, nological and script_targetname can change the answer, so any other edit
-		// passes untouched -- and classname is refused outright above, so in practice it is the
-		// other two. The escape is the obvious one: /entremove it and /entadd it again.
 		{
 			rpSpawnRoute_t route;
 			int j = 0;
@@ -11398,25 +10696,12 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 			}
 		}
 
-		// GalaxyRP: [Entity System] edited, a map entity (one marked E: the protected ones were refused
-		// above) is not the map's any more, and the Entity System's spawn checks apply to it -- see
-		// RP_MapEntityExempt() in g_entgrab.c
 		this_ent->rpMapEntity = qfalse;
 
-		// GalaxyRP: [Entity System] a misc_bsp rebuilds its sub-BSP's entities when it spawns again, so
-		// the ones it has now go first, or there would be two of each -- and so do the trigger a door or
-		// platform made for itself (the spawn below makes it a new one: SpawnPlatTrigger at once, a
-		// door's Think_SpawnNewDoorTrigger a frame later; the old one used to stay behind, one more with
-		// every edit), a turret's top, a trip mine's laser trap, and a Ghoul2 model. One helper does all of
-		// it, the same for /entrotate and a dropped /entcut: RP_EntRespawnPrepare() in g_entgrab.c.
 		RP_EntRespawnPrepare(this_ent);
 
 		zyk_main_spawn_entity(this_ent);
 
-		// GalaxyRP fix: [Entity System] report the id that was asked for. This printed
-		// this_ent->s.number, and when the respawn freed the entity -- a failed spawn, or a class
-		// that removes itself on the server such as misc_model -- G_FreeEntity() had just zeroed it,
-		// so the admin read "Entity 0 edited" about something that no longer existed.
 		if (this_ent->inuse)
 		{
 			trap->SendServerCommand(ent-g_entities, va("print \"Entity %d edited\n\"", entity_id) );
@@ -11430,34 +10715,6 @@ void Cmd_EntEdit_f( gentity_t *ent ) {
 	}
 }
 
-// GalaxyRP fix: [Entity System] which live NPCs and vehicles /entsave leaves out, and why. It used to
-// write every NPC as an npc_spawner line and skip every vehicle, which went wrong in these ways:
-//  - an NPC whose spawner is being saved as well: the spawner makes it again on load, so it came
-//    back twice -- and since every line this writes loads back as such a spawner, any NPC in a
-//    preset doubled on each save and reload. The spawner recreates it the way the map does at
-//    start (the admin accepted that a moved NPC returns to its spawner, and that a triggered
-//    spawner's NPC is absent until the trigger fires again, as on a fresh map).
-//  - the droid riding in a vehicle: it came back on its own, standing where the vehicle had been.
-//    The vehicle spawns its droid again itself.
-//  - a vehicle: it cannot be an npc_spawner line (the NPC loader refuses a vehicle type from
-//    anything but an NPC_Vehicle spawner, "Tried to spawn a vehicle NPC ... without using
-//    NPC_Vehicle"), so every vehicle was skipped on the belief that its NPC_Vehicle spawner would
-//    bring it back. Usually it cannot: NPC_Spawn_Do() frees a spawner as soon as its use runs out,
-//    and SP_NPC_Vehicle() never gives an untargeted spawner a use at all, so a map vehicle's
-//    spawner is gone the moment the vehicle exists -- and so is the one-frame spawner behind
-//    "/npc spawn vehicle". /entload frees everything before it reads the file, so those vehicles
-//    simply vanished. A vehicle is now written as an NPC_Vehicle line of its own (see
-//    create_vehicle_spawner_for_vehicle() below), unless its spawner is alive and saved.
-//  - DAJ_RP: a corpse, or a vehicle already counting down to its explosion: written out as a
-//    spawner, it came back alive and whole. NPCs have no downed step -- they die in one call -- so
-//    the corpse lies there as an ordinary "NPC" entity until it is removed.
-//  - DAJ_RP: an NPC riding a vehicle as pilot or passenger. Now that the vehicle is saved too,
-//    both would come back at the same spot, the NPC inside the vehicle. The vehicle comes back
-//    empty instead. NPCs board only in rare ways (landing on an empty SUSPENDED vehicle, or being
-//    the activator when a map trigger or script uses the vehicle -- NPC_Use()), but they can.
-// Everything else -- /npc spawn NPCs, an NPC whose spawner was removed, an NPC standing near a
-// vehicle -- is saved as before. When the spawner link cannot be confirmed the NPC or vehicle is
-// saved, so the worst this can do is what /entsave did before for NPCs.
 typedef enum {
 	ZYK_ENTSAVE_NPC_SAVE = 0,
 	ZYK_ENTSAVE_NPC_SAVE_VEHICLE,
@@ -11483,9 +10740,6 @@ static zyk_entsave_npc_t zyk_entsave_npc_skip_reason(gentity_t *npc)
 
 	// zyk: dead, or a vehicle already counting down to its explosion (StartDeathDelay() sets
 	// m_iDieTime, and nothing but the vehicle's reset clears it).
-	// GalaxyRP: [Entity System] but not one that has yet to start up: NPC_Begin() gives it its health, and
-	// until then (the frame it was spawned in, or longer while its spot is blocked) it has none. Taken for a
-	// corpse, it was left out and lost.
 	if (!starting && (npc->health <= 0 || (npc->s.eFlags & EF_DEAD) || (npc->client && npc->client->ps.pm_type == PM_DEAD) ||
 		(npc->m_pVehicle && npc->m_pVehicle->m_iDieTime != 0)))
 	{
@@ -11537,10 +10791,6 @@ static zyk_entsave_npc_t zyk_entsave_npc_skip_reason(gentity_t *npc)
 	return is_vehicle ? ZYK_ENTSAVE_NPC_SAVE_VEHICLE : ZYK_ENTSAVE_NPC_SAVE;
 }
 
-// GalaxyRP: [Entity System] the one-time lines below carry what the NPC or vehicle IS when /entsave runs -- the
-// spawner it came from is gone, and an effect, a team or a docked fighter may have changed since. One line is
-// put together in zyk_entsave_line; zyk_entsave_add() appends one pair, escaped as every saved value is (see
-// zyk_entity_file_encode()), and says qfalse when it would not fit, so the caller can fall back.
 static char zyk_entsave_line[ZYK_ENTITY_FILE_ENCODED_LENGTH * 2];
 
 // the NPC_spawner / NPC_Vehicle spawnflags these lines carry by name (b_local.h has the first three, which this
@@ -11581,11 +10831,6 @@ static const char *zyk_entsave_team_word(int team)
 	}
 }
 
-// The "npcteam" a one-time line needs, or NULL. Only a team that differs from the one the NPC or vehicle started
-// with (gentity_t::rpBaseTeam) is written: one nobody changed comes back as its type makes it, enemyTeam and all.
-// A team /npc team or a spawner's key set is one of the four pairs RP_NpcSetTeam() makes, so it comes back
-// exactly; one a script changed some other way comes back as the nearest of them. Saved before NPC_Begin() has
-// run, it is the spawner's team still to be applied.
 static const char *zyk_entsave_team(const gentity_t *ent)
 {
 	if (!ent->rpBaseTeam)
