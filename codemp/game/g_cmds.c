@@ -16345,24 +16345,6 @@ void Cmd_MeleeMode_f(gentity_t *ent) {
 	}
 	else
 	{
-		// GalaxyRP fix: [Melee Battle] give this player their weapons and force powers back before
-		// dropping them from the roster. Every other way out of a battle already restores: death
-		// runs WP_InitForcePowers() in player_die() (g_combat.c), and going to spectator or
-		// disconnecting comes back through ClientSpawn(). Only this one -- typing /meleemode a
-		// second time while the fight is running -- restored nothing at all, because the three
-		// statements below clear level.melee_players[] first and melee_battle_end()'s loop then
-		// skips the very player who triggered it. They walked away with melee_battle_prepare()'s
-		// loadout (WP_MELEE only, binoculars only, fourteen force powers cleared) and kept it until
-		// they next died or the map changed.
-		//
-		// This used to be gated on melee_mode > 1 -- the "has been prepared" test -- because the
-		// old restore was a baseline re-issue that granted a Bryar Pistol and rebuilt force powers
-		// from the client profile, so running it on someone who merely changed their mind during
-		// signup handed them things they never had. It restores from a real snapshot now and both
-		// halves return early when no snapshot was taken, so the call is a no-op for a player
-		// leaving during signup and the gate has nothing left to decide. Called unconditionally
-		// instead, which also means this path flushes a stray backup rather than stranding it --
-		// the same contract melee_battle_end() has.
 		melee_battle_restore(ent);
 
 		level.melee_players[ent->s.number] = -1;
@@ -16399,26 +16381,12 @@ void Cmd_MeleeArena_f(gentity_t *ent) {
 		return;
 	}
 
-	// GalaxyRP fix: [Melee Battle] refuse while the mode is switched off -- the same guard, and for
-	// the same reasons, as the one on Cmd_DuelArena_f above. Cmd_MeleeMode_f already checks this
-	// cvar first, so nothing could be spawned with the mode disabled, but the destructive half of
-	// this toggle was reachable regardless.
 	if (rp_allow_melee_battle.integer != 1)
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"^3Melee Battle: ^7this mode is not allowed in this server\n\"");
 		return;
 	}
 
-	// GalaxyRP fix: [Melee Battle] refuse while a battle is running. The add branch below does
-	// VectorCopy(ent->client->ps.origin, level.melee_mode_origin) -- it re-points the arena at
-	// whoever typed the command, while the catwalk entity stays where it was spawned. G_RunFrame()
-	// (g_main.c) kills, by suicide, any combatant whose origin is below melee_mode_origin[2]
-	// ("fell off the catwalk") or more than 1000 units away from it ("too far from the platform"),
-	// so moving the origin kills every player in the battle in the same frame.
-	//
-	// Covers both branches and counts signup as running, for the same reasons set out on
-	// Cmd_DuelArena_f above. Mode 3 is the battle winding down and is refused too: melee_mode_origin
-	// is still the live arena until melee_battle_end() runs.
 	if (level.melee_mode > 0)
 	{
 		trap->SendServerCommand(ent - g_entities, "print \"Cannot change the melee arena while a Melee Battle is running\n\"");
@@ -16454,16 +16422,6 @@ void Cmd_MeleeArena_f(gentity_t *ent) {
 	}
 }
 
-// GalaxyRP: [RPG LMS] Cmd_RpgLmsMode_f() and Cmd_RpgLmsTable_f() -- the "/rpglmsmode" and
-// "/rpglmstable" commands -- used to sit here, and their rows in commands[] below went with them.
-// They were the only way into the RPG LMS: joining set level.rpg_lms_players[client] to 0 and
-// level.rpg_lms_mode to 1, which is what every other RPG LMS branch in the mod tested for. With the
-// zyk_allow_rpg_lms cvar gone and the whole feature removed, nothing can raise that state any more,
-// so all of it -- rpg_lms_end/prepare/winner and the G_RunFrame block that drove them (g_main.c),
-// the hit restriction in zyk_can_hit_target() (g_main.c), the death handling in player_die()
-// (g_combat.c), the spectator/disconnect resets (g_client.c) and the level_locals_t fields
-// themselves (g_local.h) -- has been removed with it.
-
 /*
 ==================
 Cmd_News_f
@@ -16483,11 +16441,7 @@ void Cmd_News_f(gentity_t *ent) {
 	{
 		trap->Argv(2, arg2, sizeof(arg2));
 		numberOfEntries = atoi(arg2);
-		// GalaxyRP fix: [validation] this used to print the error and fall through anyway, so
-		// /news <channel> <count> would still run with the out-of-range count -- e.g. a count over 10
-		// bypassed the cap entirely (the display loop's only bound is numberOfEntries), and a negative
-		// count got bound straight into the SQL LIMIT, which SQLite treats as "no limit" and fetches
-		// every row in the channel for nothing.
+
 		if (numberOfEntries < 1 || numberOfEntries > 10) {
 			trap->SendServerCommand(ent->s.number, "print \"Error: Can only display between one and ten entries at a time.\n\"");
 			return;
@@ -16521,18 +16475,12 @@ void Cmd_NewsRemove_f(gentity_t* ent) {
 
 	trap->Argv(1, arg1, sizeof(arg1));
 	newsID = atoi(arg1);
-	// GalaxyRP fix: [validation] newsID is the News table's INTEGER PRIMARY KEY, which (like CharID)
-	// auto-starts at 1 -- 0 is never a real row, so this used to let "ID must be positive" through for
-	// an ID of exactly 0.
+
 	if (newsID <= 0) {
 		trap->SendServerCommand(ent->s.number, "print \"ID must be positive.\n\"");
 		return;
 	}
 
-	// GalaxyRP fix: [Database] delete_news_table_row_with_id used to go through run_db_query(), which
-	// is a bare sqlite3_exec() wrapper that reports neither rows-affected nor failure back to the
-	// caller -- so this command claimed "Removed news entry with ID %i!" unconditionally, even for an
-	// ID that matched nothing. It now reports whether a row was actually deleted.
 	if (delete_news_table_row_with_id(ent, newsID))
 	{
 		trap->SendServerCommand(ent->s.number, va("print \"Removed news entry with ID %i!\n\"", newsID));
@@ -16553,8 +16501,6 @@ Cmd_UpdateNews_f
 void Cmd_UpdateNews_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
 	char arg2[MAX_STRING_CHARS];
-	// GalaxyRP fix: [cleanup] removed a dead 'FILE *news_file = NULL;' local here, left over from
-	// when news was file-backed rather than stored in the News table.
 
 	if (!check_admin_command(ent, ADM_UPDATENEWS, qtrue))
 	{
@@ -16569,33 +16515,18 @@ void Cmd_UpdateNews_f(gentity_t *ent) {
 	trap->Argv(1, arg1, sizeof(arg1));
 	trap->Argv(2, arg2, sizeof(arg2));
 
-	// GalaxyRP fix: [validation] nothing stopped an admin from posting a blank news entry (e.g.
-	// /newsadd general "" or a channel name that trims to nothing) -- reject empty channel/text instead
-	// of silently inserting an empty row.
 	if (arg1[0] == '\0' || arg2[0] == '\0')
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Usage: /newsadd <channel> <news text>\n\"");
 		return;
 	}
 
-	// GalaxyRP fix: [News] refuse a channel name past MAX_NEWS_CHANNEL_LENGTH -- see the constant for
-	// what an unbounded one costs. Checked here, before insert_news_table_row() opens a database
-	// connection below, so a rejected name never opens one. Deliberately unconditional rather than
-	// scoped to new channels: a pre-existing channel with a longer name stays readable and listed by
-	// /newschannels, it simply cannot take new entries, and one plain rule is easier to explain than
-	// "this long name works and that one does not". strlen is safe on arg1 -- trap->Argv() always
-	// NUL-terminates within the buffer it is given.
 	if ((int)strlen(arg1) > MAX_NEWS_CHANNEL_LENGTH)
 	{
 		trap->SendServerCommand(ent->s.number, va("print \"^1Channel names are limited to %d characters.\n\"", MAX_NEWS_CHANNEL_LENGTH));
 		return;
 	}
 
-	// GalaxyRP fix: [News] announce the addition only when a row was actually written.
-	// insert_news_table_row() now reports its outcome, and it has real refusal paths of its own (the
-	// channel cap), so claiming success unconditionally would have told an admin their entry had
-	// been posted when it had not. Its refusals print their own reason, so there is nothing to add
-	// on the failing branch.
 	if (insert_news_table_row(ent, arg1, arg2) == qtrue)
 	{
 		trap->SendServerCommand(ent->s.number, va("print \"Added news to channel %s\n\"", arg1));
@@ -16611,15 +16542,6 @@ void description_display_beginning(gentity_t *ent, char netname[MAX_STRING_CHARS
 void description_display_end(gentity_t *ent) {
 	trap->SendServerCommand(ent->s.number, "print \"^2================================================================================\n\"");
 }
-
-// GalaxyRP fix: [Attributes] description_add() used to be here. It wrote a description to
-// GalaxyRP/descriptions/<character name>.txt with fopen(), and nothing had called it since
-// descriptions moved into the Characters table -- /attributes saves through
-// update_chars_table_row_with_current_values() and /examine reads pers.description. Removed rather
-// than left as a file writer keyed on a player-chosen name that the next person might wire back up.
-//
-// Its neighbour zyk_clean_description() now lives near the news code as zyk_clean_text(), shared
-// with the item commands.
 
 /*
 ==================
@@ -16653,18 +16575,11 @@ void Cmd_Examine_f(gentity_t *ent) {
 		return;
 	}
 
-	// GalaxyRP fix: [Attributes] a player who is not logged in has no character, so there is no
-	// description to show. Before /logout started emptying pers.description this printed whatever
-	// their last character had written; checked on amrpgmode, the same field the CMD_LOGGEDIN gate
-	// uses, so "logged in" means one thing throughout.
 	if (target->client->sess.amrpgmode == 0) {
 		trap->SendServerCommand(ent->s.number, va("print \"%s^7 is not logged in.\n\"", target->client->pers.netname));
 		return;
 	}
 
-	// GalaxyRP fix: [Attributes] shown from a cleaned copy -- see zyk_clean_text() -- so a
-	// description that reached the database by some other road cannot put line breaks into this
-	// console either. The stored text is left as it is.
 	Q_strncpyz(description, target->client->pers.description, sizeof(description));
 
 	if (zyk_clean_text(description) == 0) {
@@ -16672,19 +16587,8 @@ void Cmd_Examine_f(gentity_t *ent) {
 		return;
 	}
 
-	// GalaxyRP fix: [cleanup] the body used to sit inside an "if (trap->Argc())" that could never be
-	// false by this point (it had just been required to be exactly 2), and passed
-	// &pers.description -- a pointer to the array, the same stray & already fixed for pers.netname
-	// in the call just below.
-	//
-	// GalaxyRP fix: [cleanup] same "extra &" pattern as the Distance() calls above --
-	// pers.netname is already a char[]; MSVC flagged the pointer-to-array this produced
-	// (C4047/C4024) against description_display_beginning()'s char* parameter.
 	description_display_beginning(ent, target->client->pers.netname);
-	// GalaxyRP fix: [Attributes] through the news system's line splitter rather than one print.
-	// SV_SendServerCommand drops a message past 1022 characters whole, not truncated; nothing
-	// /attributes accepts now comes near that (MAX_DESCRIPTION_LENGTH), but a longer description
-	// already in the database is still shown -- in pieces, instead of as an empty gap.
+
 	zyk_print_long_line(ent, "", description);
 	description_display_end(ent);
 }
@@ -16694,16 +16598,6 @@ void Cmd_Examine_f(gentity_t *ent) {
 Cmd_Attributes_f
 ==================
 */
-// GalaxyRP fix: [Attributes] in order: the usage line for anything but exactly one argument; the
-// text cleaned (zyk_clean_text); nothing left means reset to RP_DEFAULT_DESCRIPTION; past
-// MAX_DESCRIPTION_LENGTH is refused; the same text as now is not saved again; anything else is
-// stored and saved. Every outcome now says what happened -- this used to print nothing at all, not
-// even on success.
-//
-// One argument, not the rest of the line, is deliberate and unchanged: the description has to be
-// quoted, and the usage line and the /list commands entry now say so. The "unchanged" test saves a
-// database round trip -- update_chars_table_row_with_current_values() opens the database and
-// rewrites the whole character row on every call.
 void Cmd_Attributes_f(gentity_t *ent) {
 	char arg1[MAX_STRING_CHARS];
 	int len = 0;
@@ -16757,8 +16651,6 @@ void Cmd_Attributes_f(gentity_t *ent) {
 Cmd_ShakeScreen_f
 ==================
 */
-// The RP_SHAKE_* bounds this enforces, and the reasoning behind each one, are defined beside the
-// chat distance ladder near the top of this file.
 void Cmd_ShakeScreen_f(gentity_t* ent)
 {
 	int i, distanceFromPlayer, intensity, seconds, duration;
@@ -16784,9 +16676,6 @@ void Cmd_ShakeScreen_f(gentity_t* ent)
 	trap->Argv(3, arg3, sizeof(arg3));
 	seconds = atoi(arg3);
 
-	// Rejected rather than clamped, matching /paralyze's and /scale's out-of-range handling, so an
-	// admin who mistypes an argument is told instead of silently getting a different shake. Checked
-	// in argument order so the message names the first one that is wrong.
 	if (distanceFromPlayer < RP_SHAKE_MIN_DISTANCE || distanceFromPlayer > RP_SHAKE_MAX_DISTANCE)
 	{
 		trap->SendServerCommand(ent - g_entities, va("print \"Distance must be between %d and %d.\n\"",
@@ -16817,30 +16706,6 @@ void Cmd_ShakeScreen_f(gentity_t* ent)
 
 		if (g_entities[i].inuse && g_entities[i].client && g_entities[i].client->pers.connected == CON_CONNECTED && Distance(ent->client->ps.origin, other->client->ps.origin) <= distanceFromPlayer)
 		{
-			// GalaxyRP fix: [Admin] the event's position is the player's live origin, the same field the
-			// distance test above already reads. It used to be g_entities[i].s.origin, which is not a
-			// stale copy of that -- it is an unrelated point that never moves. The per-frame sync
-			// (BG_PlayerStateToEntityState, called from ClientEndFrame) copies ps.origin into
-			// s.pos.trBase and never into s.origin, and G_SetOrigin -- what ClientSpawn uses -- writes
-			// s.pos.trBase and r.currentOrigin, also not s.origin. The only things that ever write a
-			// player's s.origin are SpectatorThink (every frame, but only while spectating) and
-			// MoveClientToIntermission. So for someone actually playing it holds either (0,0,0) -- the
-			// slot as g_entities[] was memset at map load -- or wherever they last floated as a
-			// spectator, frozen there for the rest of the map.
-			//
-			// Nothing reads it today, twice over: SVF_BROADCAST short-circuits the snapshot loop before
-			// any PVS test, so the position cannot affect who receives this, and the cgame handler
-			// (EV_SCREENSHAKE) passes only angles[0] and time to CGCam_Shake, which has no origin
-			// parameter at all. It is fixed because the two things that would start reading it are both
-			// plausible -- dropping the broadcast so this is PVS-culled instead, or giving the shake a
-			// distance falloff the way CG_DoCameraShake does -- and either one would silently be
-			// culling against, or measuring from, the world origin. A temp entity at (0,0,0) usually
-			// lands in solid, where numClusters is 0 and the snapshot loop drops it for everyone.
-			//
-			// s.origin is the right field for a non-client entity -- Use_Target_Screenshake passes it
-			// for a target_screenshake, correctly -- which is where the confusion comes from. For a
-			// client it is ps.origin (or r.currentOrigin, which ClientThink_real keeps in step); see
-			// the explicit if(ent->client) branch in ai_main.c for the same distinction spelled out.
 			G_ScreenShake(g_entities[i].client->ps.origin, &g_entities[i], intensity, duration, qtrue);
 			trap->SendServerCommand(i, "print \"^3An admin shook your screen.\n\"");
 		}
@@ -16848,24 +16713,6 @@ void Cmd_ShakeScreen_f(gentity_t* ent)
 	trap->SendServerCommand(ent - g_entities, "print \"^2You shook people's screen.\n\"");
 	return;
 }
-
-// GalaxyRP: [nofight] Cmd_NoFight_f() used to sit here -- the "/nofight" command (added by Zyk in
-// 2017 and never modified since), which toggled the PLAYER_STATUS_ADMIN_PARALYSIS bit to make a player unable to
-// damage other players and, more importantly, unable to be damaged BY them. It has been removed
-// entirely, along with every check that read that bit: the two in zyk_can_hit_target() (g_main.c),
-// the sentry-gun one in G_Damage() (g_combat.c), and the "cannot join X while being in nofight
-// mode" guards on /duelmode and /melee above. There were three more -- on /rpglms, /race and
-// /sniper -- which went with the RPG LMS, Race Mode and Sniper Battle removals.
-//
-// It could only be toggled while spectating, so a player who enabled it and then joined had no way
-// to turn it back off, and nothing in the game told them it was on -- the only documentation was an
-// in-game tutorial line that was dropped when the tutorial text moved to language files. The result
-// was a player who looked normal but could not be hurt by anyone, with no console output and no
-// obvious cause, which is exactly how it was finally tracked down. Since the mode also had to be
-// entered from spectator (a couple of keystrokes away at any time), the restriction never actually
-// prevented anyone from granting themselves PvP immunity either.
-//
-// Bit 26 of player_statuses is now unused and free for reuse -- see g_local.h.
 /*
 ==================
 Cmd_ModVersion_f
@@ -16881,10 +16728,6 @@ typedef struct sound_channels_s {
 	int			channel_code;
 } sound_channels_t;
 
-// GalaxyRP fix: [cleanup] declared with an explicit size ([14]) that had to be kept in sync by hand with
-// the two hardcoded loop bounds in Cmd_ZykSound_f below -- let the compiler derive it from the
-// initializer instead, and use ARRAY_LEN() at each call site, so adding/removing an entry here can't
-// silently desync from those loops.
 const sound_channels_t sound_channels[] = {
 	{"auto",				CHAN_AUTO			},
 	{"local",				CHAN_LOCAL			},
@@ -16907,21 +16750,6 @@ const sound_channels_t sound_channels[] = {
 RP_PlaySound
 
 /playsound's play, for both of its forms: the player's cooldown, the file, the slot, the sound.
-
-GalaxyRP: [Slot Reuse] one sound every RP_PLAYSOUND_COOLDOWN (15 s) per player, whatever the name: the
-engine's flood protection lets a command through every second, or every frame when a server turns it
-off, and each new name is a configstring every client downloads and a sound file every client loads.
-Only a sound that plays starts the wait -- a typo, a missing file or a refusal do not.
-
-GalaxyRP: [Listings] a name no client can load took a slot of the sound table until the map changed,
-and played nothing -- see RP_SoundFileExists() in g_rplist.c.
-
-GalaxyRP fix: [security] G_SoundIndex() used to crash the whole server (ERR_DROP) once its sound table
-filled up with never-before-seen names, and this is a raw player-typed string. The slot now comes from
-RP_PlaySoundIndex() (g_utils.c): /playsound holds at most RP_PLAYSOUND_POOL slots at once, reusing the
-one played least recently, and a refusal says why instead of handing G_Sound() an invalid index. The
-name goes in as typed: the configstring is a copy, and a G_NewString() of it spent level memory that is
-never given back.
 ==================
 */
 static void RP_PlaySound(gentity_t *ent, int channel, const char *path)
@@ -16976,9 +16804,6 @@ void Cmd_ZykSound_f(gentity_t *ent) {
 	if (trap->Argc() < 2 || trap->Argc() > 3)
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Usage: ^3/playsound <channel> <sound file path>\n ^2Sound channels available: \n\"");
-		// GalaxyRP fix: [cleanup] this hardcoded the array length (14) instead of deriving it, so
-		// adding/removing a channel here without also updating this literal (and the matching one
-		// below) would silently desync the printed list from the array, or read past its end.
 		for (int i = 0; i < ARRAY_LEN(sound_channels); i++) {
 			trap->SendServerCommand(ent->s.number, va("print \"^3%s\n\"", sound_channels[i].channel_name));
 		}
@@ -16991,9 +16816,6 @@ void Cmd_ZykSound_f(gentity_t *ent) {
 	{
 		trap->Argv(2, arg2, sizeof(arg2));
 
-		// GalaxyRP fix: [validation] nothing rejected an empty sound path (e.g. /playsound auto "") --
-		// that fed straight into G_SoundIndex()/G_Sound(), both of which assert() a non-empty/non-zero
-		// value, so this could trip an assertion in a debug build for no reason.
 		if (arg2[0] == '\0')
 		{
 			trap->SendServerCommand(ent->s.number, "print \"Usage: ^3/playsound <channel> <sound file path>\n\"");
@@ -17046,24 +16868,18 @@ void Cmd_Music_f(gentity_t* ent) {
 
 	trap->Argv(1, audioPath, sizeof(audioPath));
 
-	// GalaxyRP fix: [validation] nothing rejected an empty path (e.g. /playmusic ""), which would
-	// silently clear the level's music track instead of doing anything resembling "play a file".
 	if (audioPath[0] == '\0')
 	{
 		trap->SendServerCommand(ent->s.number, "print \"Usage: ^3/playmusic <sound file path>\n\"");
 		return;
 	}
 
-	// GalaxyRP: [Listings] a mistyped path stopped the music for everyone and played nothing -- see
-	// RP_MusicFileExists() in g_rplist.c.
 	if (!RP_MusicFileExists(audioPath))
 	{
 		trap->SendServerCommand(ent->s.number, va("print \"Music file not found: ^3%.64s ^7(see ^3/list music^7)\n\"", audioPath));
 		return;
 	}
 
-	// GalaxyRP fix: [Music] through G_SetMusic(): two file names at most, each short of MAX_QPATH, and
-	// only while the gamestate has room -- this wrote the whole argument into CS_MUSIC
 	{
 		const char *reason = "";
 
@@ -17078,16 +16894,6 @@ void Cmd_Music_f(gentity_t* ent) {
 	return;
 }
 
-// GalaxyRP: [Training Saber fix] pers.training_mode is only ever written by this command and by
-// ClientBegin's reset -- it is never told about a saber reselection (/saber, the saber-select UI,
-// or a DB-driven saber reload on spawn), which fully re-parses the new saber's parms and resets
-// damageScale/damageScale2 back to that saber's own defaults. That leaves a window where the flag
-// still claims training mode is ACTIVE even though the player's current saber(s) are already back
-// to full damage. Rather than trust the flag blindly, treat training mode as active only when the
-// flag says so AND every saber slot's live damage scale is still actually zeroed, and self-heal the
-// flag the moment that stops being true. This is what "true status" means below, and using it for
-// the on/off guards too (not just the status print) keeps every code path agreeing with what's
-// actually applied to the player right now.
 static qboolean Training_IsLiveActive(gentity_t* ent)
 {
 	int i;
@@ -17099,9 +16905,6 @@ static qboolean Training_IsLiveActive(gentity_t* ent)
 	{
 		if (ent->client->saber[i].damageScale != 0 || ent->client->saber[i].damageScale2 != 0)
 		{
-			// Stale flag: a saber slot's live damage scale no longer matches what training mode
-			// applied, almost certainly because the player picked a new saber since. Self-heal so
-			// nothing downstream (status display, on/off guards) is fooled by the old flag value.
 			ent->client->pers.training_mode = qfalse;
 			return qfalse;
 		}
@@ -17110,8 +16913,6 @@ static qboolean Training_IsLiveActive(gentity_t* ent)
 	return qtrue;
 }
 
-// DAJ_RP: [Training Saber] training mode's undo, shared by "/training off" and RP_TrainingOff(): both saber slots'
-// damage scales back to what "/training on" stored, and the flag down.
 static void Training_Restore(gentity_t* ent)
 {
 	int i;
@@ -17125,9 +16926,6 @@ static void Training_Restore(gentity_t* ent)
 	ent->client->pers.training_mode = qfalse;
 }
 
-// DAJ_RP: [Training Saber] is this player's training saber on right now (Training_IsLiveActive(), which also clears a
-// flag gone stale)? A thrown saber reads it (CheckThrownSaberDamaged(), w_saber.c): its damage is the throw's own, not
-// the saber's damage scales that "/training on" zeroes, so it used to hit at full damage.
 qboolean RP_TrainingActive(gentity_t* ent)
 {
 	if (!ent || !ent->client)
@@ -17136,10 +16934,6 @@ qboolean RP_TrainingActive(gentity_t* ent)
 	return Training_IsLiveActive(ent);
 }
 
-// DAJ_RP: [Training Saber] turns a player's training saber off, as "/training off" does, and tells him why ("for the
-// duel"), when a private duel he is in is accepted (Cmd_EngageDuel_f()) and when he signs up for the Duel Tournament or
-// the Melee Battle (Cmd_DuelMode_f(), Cmd_MeleeMode_f()): he fights at his saber's real damage. Nothing, and no word,
-// when it is not on. "/training on" is not refused afterwards: it is a handicap he may take on, not a gain.
 void RP_TrainingOff(gentity_t* ent, const char* why)
 {
 	if (!RP_TrainingActive(ent))
@@ -17149,21 +16943,6 @@ void RP_TrainingOff(gentity_t* ent, const char* why)
 	trap->SendServerCommand(ent->s.number, va("print \"Training saber is ^1INACTIVE^7: turned off %s.\n\"", why));
 }
 
-//GalaxyRP (Alex): [Training Saber] This method activates and deactivates the training saber, making it so that when active, you do very little damage.
-
-// GalaxyRP: [Training Saber fix] rewritten from a single no-argument toggle to explicit
-// "/training on" / "/training off" verbs. The old toggle couldn't tell "turn on" from "turn off"
-// apart from its own stored state, so if that state and the live saber values ever drifted --
-// e.g. from picking a new saber while training was active, which resets damageScale/damageScale2
-// back to that saber's own defaults without training_mode being told -- the next toggle would
-// silently do the wrong thing (store the already-zeroed value as "original", or leave full damage
-// live while claiming to be active). Explicit on/off can't cross those states the same way: "on"
-// while already on and "off" while already off are both harmless no-ops that don't touch anything
-// live, and turning it on is the point where the player is warned about the exact conditions that
-// deactivate it, rather than needing to be told after the fact.
-// "/training" with no argument now reports the true current status (see Training_IsLiveActive)
-// alongside the usage tip, so a player who switched saber, /kill'd, or rejoined always sees what's
-// actually applied rather than a possibly-stale flag.
 void Cmd_TrainingMode_f(gentity_t* ent) {
 	char arg[MAX_TOKEN_CHARS];
 	int i;
@@ -17192,10 +16971,6 @@ void Cmd_TrainingMode_f(gentity_t* ent) {
 			return;
 		}
 
-		// GalaxyRP: [Training Saber fix] cover both saber slots (saber1 and saber2), not just the
-		// primary one -- previously only ent->client->saber[0] (equivalent to the old
-		// ent->client->saber-> shorthand) was touched, so a player's second, independently-wielded
-		// saber kept dealing full damage the whole time training mode was "active".
 		for (i = 0; i < MAX_SABERS; i++)
 		{
 			ent->client->pers.training_stored_damageScale[i] = ent->client->saber[i].damageScale;
@@ -17228,34 +17003,13 @@ void Cmd_TrainingMode_f(gentity_t* ent) {
 	return;
 }
 
-// GalaxyRP fix: [Settings] zyk_setting_status_text() used to sit here -- plain-text status words for
-// the ui_zyk_setting_N_value cvars, fed to the client via the settings_to_sync loop that used to be in
-// Cmd_GalaxyRpUi_f just below (see CG_ZykMod/ui_cvars_in_order in cg_servercmds.c). Those cvars only
-// ever fed the Settings panel in ingame_galaxyrp.menu, which was removed entirely in an earlier pass of
-// this cleanup, and the settings this function reported on (Allow Force Powers from allies, Starting
-// Single Saber Style, Allow Screen Message, Use healing force only at allied players, Start With Saber)
-// are themselves removed in this pass (see settings_number_to_bit in Cmd_Settings_f) -- so both the
-// function and its ui_cvars_in_order/XCVAR_DEF plumbing in cg_servercmds.c and ui_xcvar.h are now
-// entirely without a consumer and have been removed together.
-
 void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 	// zyk: sends info to the client-side menu if player has the client-side plugin
 	char userinfo[MAX_INFO_STRING];
 	char modelname[MAX_STRING_CHARS];
 	char saber1Model[MAX_STRING_CHARS];
 	char saber2Model[MAX_STRING_CHARS];
-	// GalaxyRP fix: [Char] this used to re-derive "this player's" own client slot via
-	// ClientNumberFromString(), which either treats the name as a raw slot index (if it's purely
-	// numeric) or does a case-insensitive SUBSTRING search across every connected player's name and
-	// returns the first match by ascending slot -- neither of which is guaranteed to be this player.
-	// A numeric player name, or a name that happens to be a substring of another, earlier-slot
-	// player's name (e.g. "Vader" vs. an earlier-joined "DarthVaderFan"), returned that OTHER
-	// player's slot instead, and the userinfo (model/saber1/saber2) fetched below then belonged to
-	// them, not to ent. In the functions that save this to the database (e.g.
-	// update_current_character_and_account()) that wrong value gets written straight into ent's own
-	// Characters.ModelName row -- real save-path data corruption from nothing more than an ordinary
-	// name collision. ent is already the exact right entity at every one of these call sites, so this
-	// never needed to be looked up by name at all.
+
 	int clientNum = ent->s.number;
 
 	trap->GetUserinfo(clientNum, userinfo, sizeof(userinfo));
@@ -17265,26 +17019,10 @@ void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 	Q_strncpyz(saber1Model, Info_ValueForKey(userinfo, "saber1"), sizeof(saber1Model));
 	Q_strncpyz(saber2Model, Info_ValueForKey(userinfo, "saber2"), sizeof(saber2Model));
 
-	// GalaxyRP fix: [stability] model/saber1/saber2 come straight from client-editable userinfo, and
-	// unlike character names (rejected outright if they contain '&' or anything non-alphanumeric,
-	// see create_new_character()'s zyk_check_user_input() check) nothing ever stripped a '~' out of
-	// these. The engine's Cvar_ValidateString (cvar.cpp) rejects '\', '"' and ';' in a userinfo value
-	// but not '~' -- and '~' is exactly the field delimiter the content string below is built from, so
-	// a player who sets e.g. their model cvar to include a literal '~' shifts every field after it in
-	// their own zykmod payload (CG_ZykMod's mismatch warning, added separately, will now at least log
-	// this instead of silently misapplying it -- but stripping it here means it can't happen at all).
-	// Purely self-inflicted either way (this command only ever sends back to ent->s.number, the same
-	// player whose cvars these are), but there's no reason to leave the gap open. netname is handled
-	// the same way, into its own local copy, a few lines below.
 	Q_strstrip(modelname, "~", NULL);
 	Q_strstrip(saber1Model, "~", NULL);
 	Q_strstrip(saber2Model, "~", NULL);
 
-	// GalaxyRP: [Profile UI] tell the client whether it is currently logged into an account, so the
-	// Profile menu can gate the Force icon and the Character Information/Skills/Characters/Shop/Games
-	// sections on login state (see CG_LoggedInUpdate_f). Sent unconditionally and before the NOGUID
-	// return below, so a logged-out player (who by definition has no GUID-backed account session)
-	// still gets a fresh "0" every time the menu is opened rather than being skipped entirely.
 	trap->SendServerCommand(ent->s.number, va("supdateloggedin %i\n", ent->client->sess.loggedin));
 
 	if (Q_stricmp(ent->client->pers.guid, "NOGUID") == 0)
@@ -17301,24 +17039,8 @@ void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 		int skillpoints = ent->client->pers.skillpoints;
 		int credits = ent->client->pers.credits;
 
-		// GalaxyRP fix: [security/stability] this whole payload used to be accumulated via
-		// strcpy(content, va("%s...", content, ...)) at every step below -- content fed back into va() as
-		// its own first argument, growing with no bound before being strcpy()'d back into this fixed
-		// 1024-byte stack buffer. Every field here is bounded in practice today (MAX_NETNAME, the client's
-		// own MAX_QPATH-capped model-packing buffer, skill levels that never exceed single digits, etc.),
-		// so this never actually overflowed in real play -- but nothing here enforced that, and a future
-		// change to any of these fields (a longer name cap, more skills, larger credit/xp values) could
-		// silently corrupt this stack buffer with no warning at all. Q_strcat never writes past the
-		// destination's declared size, so switched every append below to it: a field that wouldn't fit is
-		// safely dropped instead of corrupting memory. See the length sanity check right before this is
-		// sent, further down, for the other half of this fix.
 		content[0] = '\0';
 
-		// GalaxyRP fix: [stability] see the Q_strstrip() comment above modelname/saber1Model/
-		// saber2Model further up -- netname gets the same '~'-stripping treatment here, into its own
-		// local copy rather than mutating ent->client->pers.netname in place (that field is the
-		// player's actual display name used everywhere else; only this one payload needs a delimiter-
-		// safe copy of it).
 		char netnameForUi[MAX_NETNAME];
 		Q_strncpyz(netnameForUi, ent->client->pers.netname, sizeof(netnameForUi));
 		Q_strstrip(netnameForUi, "~", NULL);
@@ -17330,23 +17052,6 @@ void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 			Q_strcat(content, sizeof(content), va("%d/%d~", ent->client->pers.skill_levels[i], skills[i].max_level));
 		}
 
-		// GalaxyRP fix: [Settings] a settings_to_sync loop used to be appended here, after the skills
-		// loop and before the packet is sent, pushing 6 setting-status words (via the now-removed
-		// zyk_setting_status_text() above) into 6 entries that used to sit here in ui_cvars_in_order[]
-		// in cg_servercmds.c. Those cvars only ever fed the Settings panel in ingame_galaxyrp.menu, which
-		// was removed entirely in an earlier pass of this cleanup, and the settings themselves are
-		// removed in this pass (see settings_number_to_bit in Cmd_Settings_f) -- so the loop, its
-		// ui_cvars_in_order[] entries and their XCVAR_DEFs in ui_xcvar.h have all been removed together.
-
-		// GalaxyRP fix: [Shop] appended after where the settings loop above used to be, same piggyback-on-zykmod
-		// approach, in the same fixed order as the 3 new entries added to ui_cvars_in_order[] in
-		// cg_servercmds.c (ui_zyk_upgrade_1/2/3_owned). Reports whether each of the 3 kept shop
-		// upgrades (skill_levels[38] bits 0/1/2, per-character -- see the duplicate-purchase guards in
-		// Cmd_Buy_f and the doc comment on skill_levels in g_local.h; formerly player_settings bits
-		// 0/1/2, account-wide) is already owned, so the Shop -> Upgrades panel (ingame_galaxyrp.menu)
-		// can grey out and disable a button for an upgrade the player already has, instead of letting
-		// them click a purchase Cmd_Buy_f's own duplicate-purchase guard would reject anyway with a
-		// "You already have..." message.
 		{
 			int owned_bit;
 			int upgrade_bits_to_sync[] = { 0, 1, 2 };
@@ -17357,14 +17062,6 @@ void Cmd_GalaxyRpUi_f(gentity_t* ent) {
 			}
 		}
 
-		// GalaxyRP fix: [stability] defensive sanity check -- if this payload ever grows close to the
-		// buffer's real capacity (a future change to NUM_OF_SKILLS, a longer field, or a later feature
-		// piggybacking on this command), log it loudly server-side instead of letting it fail silently.
-		// Two different silent failure modes exist downstream of this buffer: Q_strcat above quietly drops
-		// whatever wouldn't fit once content is full, and even a content string that fits in this buffer
-		// can still be silently discarded in full by SV_SendServerCommand (sv_main.cpp), which refuses to
-		// send any reliable command string over 1022 bytes with no error to anyone. 900 leaves headroom
-		// for the "zykmod \"...\"" wrapper this content is embedded in below.
 		if (strlen(content) > 900) {
 			G_LogPrintf("WARNING: Cmd_GalaxyRpUi_f content for %s is %d bytes, close to the zykmod payload's safe limit.\n", ent->client->pers.netname, (int)strlen(content));
 		}
@@ -17389,18 +17086,6 @@ void Cmd_ZykChars_f(gentity_t* ent) {
 		return;
 	}
 
-	// GalaxyRP fix: [Account/security] the "zykchars" command has no CMD_LOGGEDIN flag in the commands[]
-	// table below (by design -- like /login and /new, it has to be usable before a session is logged in),
-	// but unlike Cmd_GalaxyRpUi_f (/zykmod), which explicitly checks sess.loggedin before sending any
-	// character-specific payload, this function never checked it at all. It queried
-	// select_character_list_for_ui() with sess.accountID unconditionally -- and until the matching fix in
-	// Cmd_LogoutAccount_f, that field was never reset on logout, so a /zykchars sent by the client after
-	// logging out (but before a fresh login) still returned this connection's *previous* account's
-	// character list. accountID is now reset to 0 on logout, which already stops the query from matching
-	// a real account, but check sess.loggedin here too, explicitly, matching the same defensive pattern
-	// Cmd_GalaxyRpUi_f already uses -- and send an empty list rather than nothing, so the client's own
-	// CG_ZykChars() (cg_servercmds.c) clears out any character names still cached in its
-	// ui_zyk_rpg_char_1.._15 cvars from a previous session instead of leaving them stale.
 	if (ent->client->sess.loggedin == qfalse)
 	{
 		trap->SendServerCommand(ent->s.number, "zykchars \"\"");
@@ -17455,13 +17140,6 @@ int cmdcmp( const void *a, const void *b ) {
 	return Q_stricmp( (const char *)a, ((command_t*)b)->name );
 }
 
-
-// GalaxyRP fix: [cleanup] dropped the old "This array MUST be sorted correctly by alphabetical
-// name field" comment. It has not been true for a long time -- "spawnplatform" and "spawndummy"
-// sit between "paralyze" and "playsound", among others -- and nothing requires it: ClientCommand()
-// looks entries up with Q_LinearSearch() (q_shared.c), which walks the array from index 0 and does
-// not care about order. Grouping related commands together is fine; new entries go wherever they
-// read best.
 command_t commands[] = {
 	{ "addbot",				Cmd_AddBot_f,				0 },
 	{ "admkick",			Cmd_AdmKick_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
@@ -17567,9 +17245,6 @@ command_t commands[] = {
 	{ "ghost",				Cmd_Ghost_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "givecredits",		Cmd_CreditGive_f,			CMD_RPG | CMD_NOINTERMISSION },
 	{ "giveitem",			Cmd_GiveItem_f,				CMD_LOGGEDIN},
-	// GalaxyRP fix: [XP System] CMD_NOINTERMISSION added -- /levelup, /leveldown and /removexp all
-	// carry it and this one did not, so it was the only command in the levelling group that could
-	// still mutate and persist a character during intermission.
 	{ "givexp",				Cmd_GiveXp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "god",				Cmd_God_f,					CMD_LOGGEDIN | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "helpup",				Cmd_Helpup_f,				CMD_ALIVE | CMD_NOINTERMISSION},
@@ -17592,21 +17267,11 @@ command_t commands[] = {
 	{ "new",				Cmd_Register_F,				CMD_NOINTERMISSION },
 	{ "register",			Cmd_Register_F,				CMD_NOINTERMISSION },	// DAJ_RP: [Account] an alias of /new, as /anim is of /emote
 	{ "news",				Cmd_News_f,					0 },
-	// GalaxyRP fix: [Admin] both news-writing commands gain CMD_NOINTERMISSION, matching the 121
-	// other rows in this table that carry it -- writing to the news table during intermission served
-	// no purpose and was simply an omission. /news and /newschannels are deliberately left alone:
-	// reading the board while waiting for the map to change is exactly when you would want to.
-	{ "newsadd",			Cmd_UpdateNews_f,					CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "newschannels",		Cmd_NewsChannels_f,					0 },
-	{ "newsremove",			Cmd_NewsRemove_f,					CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "newsadd",			Cmd_UpdateNews_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
+	{ "newschannels",		Cmd_NewsChannels_f,			0 },
+	{ "newsremove",			Cmd_NewsRemove_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "noclip",				Cmd_Noclip_f,				CMD_LOGGEDIN | CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "notarget",			Cmd_Notarget_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	// GalaxyRP fix: [NPC] CMD_NOINTERMISSION added. "/npc spawn" reaches NPC_Spawn_f, which takes
-	// entity slots exactly as /entadd does, and every other command that places or removes entities
-	// -- the whole Entity System and shader-remap set, /spawnplatform, /spawndummy, /removepickups --
-	// has carried this flag all along. This row was the one that did not, so an admin could still
-	// spawn NPCs into a map that was already on its way out. The other subcommands (kill, team,
-	// effect) have nothing to do during intermission either.
 	{ "npc",				Cmd_NPC_f,					CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "ooc",				Cmd_OOC_f,					0 },					// GalaxyRP: [Chat] out-of-character chat, forced in every gametype -- see Cmd_OOC_f for the flags
 	{ "order",				Cmd_Order_f,				CMD_ALIVE | CMD_NOINTERMISSION },
@@ -17614,10 +17279,6 @@ command_t commands[] = {
 	{ "unparalyze",			Cmd_Unparalyze_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "spawnplatform",		Cmd_SpawnPlatform_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "spawndummy",			Cmd_SpawnDummy_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	// GalaxyRP fix: [validation] this used to have no CMD_LOGGEDIN flag at all -- a connected but not
-	// logged-in player could run /playsound. Adding it here reuses the same central "You must be logged
-	// in" check (and message) every other logged-in-only command already goes through, rather than
-	// duplicating that check inside Cmd_ZykSound_f itself.
 	{ "playsound",			Cmd_ZykSound_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "playmusic",			Cmd_Music_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "players",			Cmd_Players_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
@@ -17629,10 +17290,8 @@ command_t commands[] = {
 	{ "remapsave",			Cmd_RemapSave_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "removexp",			Cmd_RemoveXp_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "removepickups",		Cmd_RemovePickups_f,		CMD_LOGGEDIN | CMD_NOINTERMISSION },
-	{ "roll",				Cmd_Roll_f,				CMD_NOINTERMISSION|CMD_ALIVE },
-	{ "rollall",			Cmd_RollAll_f,			CMD_NOINTERMISSION },
-	// GalaxyRP: [Extras] the listings the Extras menus show (g_rplist.c); it checks the login itself, so the
-	// menu is told why instead of the chat line CMD_LOGGEDIN prints
+	{ "roll",				Cmd_Roll_f,					CMD_NOINTERMISSION|CMD_ALIVE },
+	{ "rollall",			Cmd_RollAll_f,				CMD_NOINTERMISSION },
 	{ "rpxlist",			Cmd_RpxList_f,				0 },
 	{ "scale",				Cmd_Scale_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "silence",			Cmd_Silence_f,				CMD_LOGGEDIN | CMD_NOINTERMISSION },
@@ -17647,27 +17306,10 @@ command_t commands[] = {
 	{ "teleportaim",		Cmd_TeleportAim_f,			CMD_LOGGEDIN | CMD_NOINTERMISSION },
 	{ "training",			Cmd_TrainingMode_f,			CMD_ALIVE | CMD_NOINTERMISSION },
 	{ "trashitem",			Cmd_TrashItem_f,			CMD_LOGGEDIN },
-	// GalaxyRP fix: [Cloak Item] replaces the old GENCMD_USE_CLOAK_VEHICLE generic-command mechanism
-	// (see Cmd_VehicleCloak_f's own doc comment for why that was unreachable). No CMD_ALIVE, matching
-	// the original generic_cmd switch, which never gated on aliveness either.
 	{ "vehicle_cloak",		Cmd_VehicleCloak_f,			CMD_NOINTERMISSION|CMD_ALIVE }, // CMD_ALIVE: a following spectator inherits the followed player's ps, vehicle and cloak state -- see Cmd_VehicleCloak_f
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
-	// GalaxyRP fix: no CMD_ALIVE -- Cmd_GalaxyRpUi_f's supdateloggedin push is meant to reach the
-	// client unconditionally (see its own comment above the send), including while spectating, so a
-	// player who quit logged in and reconnected logged out/spectating gets corrected as soon as the
-	// menu's "exec zykmod" fires on open, instead of being stuck showing the logged-in menu state
-	// until they're alive again.
 	{ "zykmod",				Cmd_GalaxyRpUi_f,			CMD_NOINTERMISSION },
-	// GalaxyRP fix: [Char] dropped CMD_ALIVE -- this required the player be alive, not spectating, and not
-	// in tempSpectate just to refresh the character list, while its sibling zykmod (just above) was
-	// deliberately fixed to have no such requirement, and Cmd_Char_f itself (the actual "char use"/"char
-	// new"/"char remove" switch, g_cmds.c) has never required it either. The asymmetry meant a dead or
-	// spectating player opening the Characters tab got a "must be alive" refusal instead of a refreshed
-	// list, then could still click Use against whatever character name was left over in the client's
-	// ui_zyk_rpg_char_N cvar from the last successful refresh -- stale data with no indication anything
-	// was wrong. Character management doesn't need the player to be alive in the world any more than
-	// switching characters itself does.
-	{ "zykchars",			Cmd_ZykChars_f,			CMD_NOINTERMISSION }
+	{ "zykchars",			Cmd_ZykChars_f,				CMD_NOINTERMISSION }
 //	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },
 //	{ "kylesmash",			TryGrapple,					0 },
@@ -17737,12 +17379,6 @@ void ClientCommand( int clientNum ) {
 		return;
 	}
 
-	// GalaxyRP fix: [Dice] an "else if (Q_stricmp(cmd, \"roll\") == 0) Cmd_Roll_f(ent);" branch used to
-	// sit here. It was pure duplication: "roll" is an ordinary entry in the commands[] table above, so
-	// the fallthrough below already dispatches it to exactly the same handler after exactly the same
-	// flag checks. Worse, it was actively wrong once /roll gained flags -- it would have run whatever
-	// the table's handler was for any command reaching this point, bypassing nothing but confusing
-	// everything. Removed; the table is now the single source of truth for every command.
 	else
 		command->func( ent );
 }
